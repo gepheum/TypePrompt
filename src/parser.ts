@@ -408,6 +408,7 @@ function parseTemplatePieces(
               cursor + tag.length,
               text.length,
               raw,
+              tag.type,
             ),
           });
           cursor = text.length;
@@ -424,6 +425,7 @@ function parseTemplatePieces(
             cursor + tag.length,
             close.start,
             raw,
+            tag.type,
           ),
         });
         cursor = close.start + close.length;
@@ -601,6 +603,7 @@ function parseResponseExample(
   sectionStart: number,
   sectionEnd: number,
   sectionText: string,
+  type?: string,
 ): ResponseExample {
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
@@ -631,6 +634,7 @@ function parseResponseExample(
       line,
     },
     value,
+    type,
   };
 }
 
@@ -997,6 +1001,7 @@ function parseTagAt(
   readonly closing: boolean;
   readonly selfClosing: boolean;
   readonly hide: boolean;
+  readonly type?: string;
   readonly length: number;
 } | null {
   if (!text.startsWith("$<", pos)) {
@@ -1044,6 +1049,45 @@ function parseTagAt(
     }
   }
 
+  // Detect optional type="..." attribute (only valid on non-closing example tags)
+  let type: string | undefined;
+  if (!closing && name === "example") {
+    if (
+      text.startsWith("type", cursor) &&
+      (cursor + 4 >= text.length || !isIdentifierPart(text[cursor + 4]!))
+    ) {
+      cursor += 4;
+      while (cursor < text.length && isSpace(text[cursor]!)) {
+        cursor += 1;
+      }
+      if (text[cursor] !== "=") {
+        return null;
+      }
+      cursor += 1;
+      while (cursor < text.length && isSpace(text[cursor]!)) {
+        cursor += 1;
+      }
+      const quote = text[cursor];
+      if (quote !== '"' && quote !== "'") {
+        return null;
+      }
+      cursor += 1;
+      const valueStart = cursor;
+      while (cursor < text.length && text[cursor] !== quote) {
+        cursor += 1;
+      }
+      if (cursor >= text.length) {
+        return null;
+      }
+      type = text.slice(valueStart, cursor);
+      cursor += 1;
+
+      while (cursor < text.length && isSpace(text[cursor]!)) {
+        cursor += 1;
+      }
+    }
+  }
+
   let selfClosing = false;
   if (text[cursor] === "/") {
     selfClosing = true;
@@ -1063,6 +1107,7 @@ function parseTagAt(
     closing,
     selfClosing,
     hide,
+    type,
     length: cursor - pos,
   };
 }

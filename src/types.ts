@@ -57,6 +57,7 @@ export type ResponseSchemaDeclaration =
 export interface ResponseExample {
   readonly codeSlice: CodeSlice;
   readonly value: JsonValue | null;
+  readonly type?: string;
 }
 
 export type JsonValue =

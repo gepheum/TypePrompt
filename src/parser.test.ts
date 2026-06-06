@@ -1195,6 +1195,47 @@ describe("parseTemplateFile", () => {
     });
   });
 
+  it("parses $<example type=\"...\"> attribute", () => {
+    const parsed = parseTemplateFile(
+      [
+        "Foo:",
+        "  $<schema/>",
+        '  $<example type="Foo">',
+        '    {"value": "ok"}',
+        "  $</example>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      errors: [],
+      value: {
+        templates: [
+          {
+            pieces: [
+              { kind: "schema", text: "" },
+              { kind: "text", text: "\n" },
+              {
+                kind: "example",
+                example: {
+                  type: "Foo",
+                  value: {
+                    kind: "object",
+                    entries: [
+                      {
+                        key: { value: "value" },
+                        value: { kind: "string", value: "ok" },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
   // --- JSON error coverage ---
 
   it("reports empty JSON example section", () => {
