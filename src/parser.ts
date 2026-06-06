@@ -468,7 +468,6 @@ function parseTemplatePieces(
         kind: "expression",
         expression: parsedExpr.expression,
         hide: parsedExpr.hide,
-        extraIndent: currentLineExtraIndent(text, cursor),
       });
       cursor = endBrace + 1;
       continue;
@@ -486,7 +485,6 @@ function parseTemplatePieces(
         kind: "expression",
         expression,
         hide: false,
-        extraIndent: currentLineExtraIndent(text, cursor),
       });
       cursor = end;
       continue;
@@ -1235,12 +1233,6 @@ function findClosingTag(
     }
   }
   return null;
-}
-
-function currentLineExtraIndent(text: string, cursor: number): string {
-  const lineStart = text.lastIndexOf("\n", cursor - 1) + 1;
-  const leading = text.slice(lineStart, cursor).match(/^[ \t]*/);
-  return leading ? leading[0] : "";
 }
 
 function lineSlice(line: Line): CodeSlice {

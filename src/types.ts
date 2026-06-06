@@ -23,8 +23,6 @@ export type TemplatePiece =
       readonly kind: "expression";
       readonly expression: string;
       readonly hide: boolean;
-      // Indent beyond the regular template indent of the line containing "$"
-      readonly extraIndent: string;
     }
   | {
       readonly kind: "schema";
