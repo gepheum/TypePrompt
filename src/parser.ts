@@ -335,28 +335,6 @@ function parseTemplatePieces(
     if (tag && !tag.closing) {
       flushText();
       if (tag.name === "schema") {
-        schemaCount += 1;
-        if (tag.selfClosing) {
-          const startPos = mapBodyPosToSource(body, cursor);
-          const endPos = mapBodyPosToSource(body, cursor + tag.length);
-          const line = findLineByPos(state.lines, startPos);
-          pieces.push({
-            kind: "schema",
-            text: "",
-            schema: {
-              codeSlice: {
-                text: "",
-                startPos,
-                endPos,
-                line,
-              },
-              declarations: [],
-            },
-          });
-          cursor += tag.length;
-          continue;
-        }
-
         const close = findClosingTag(text, cursor + tag.length, tag.name);
         if (!close) {
           state.errors.push({
@@ -504,13 +482,6 @@ function parseTemplatePieces(
   }
 
   flushText();
-
-  if (schemaCount !== 1) {
-    state.errors.push({
-      message: "Template must contain exactly one schema section",
-      codeSlice: bodySlice(state, body, 0, text.length),
-    });
-  }
 
   return {
     pieces,
@@ -997,7 +968,6 @@ function parseTagAt(
 ): {
   readonly name: "example" | "schema";
   readonly closing: boolean;
-  readonly selfClosing: boolean;
   readonly hide: boolean;
   readonly type?: string;
   readonly length: number;
@@ -1086,9 +1056,10 @@ function parseTagAt(
     }
   }
 
-  let selfClosing = false;
   if (text[cursor] === "/") {
-    selfClosing = true;
+    if (name === "schema") {
+      return null;
+    }
     cursor += 1;
     while (cursor < text.length && isSpace(text[cursor]!)) {
       cursor += 1;
@@ -1103,7 +1074,6 @@ function parseTagAt(
   return {
     name,
     closing,
-    selfClosing,
     hide,
     type,
     length: cursor - pos,

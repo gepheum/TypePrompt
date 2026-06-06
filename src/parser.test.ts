@@ -79,7 +79,7 @@ describe("parseTemplateFile", () => {
   });
 
   it("requires end of line after ':'", () => {
-    const parsed = parseTemplateFile(["Foo:  ", "  $<schema/>"].join("\n"));
+    const parsed = parseTemplateFile(["Foo:  ", "  $<schema>$</schema>"].join("\n"));
 
     expect(parsed).toMatch({
       errors: [
@@ -98,7 +98,7 @@ describe("parseTemplateFile", () => {
 
   it("reports body indentation mismatch", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  first", " second", "  $<schema/>"].join("\n"),
+      ["Foo:", "  first", " second", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -128,19 +128,15 @@ describe("parseTemplateFile", () => {
     });
   });
 
-  it("requires exactly one schema section", () => {
+  it("allows templates with zero or multiple schema sections", () => {
     const none = parseTemplateFile(["Foo:", "  plain text"].join("\n"));
 
     const many = parseTemplateFile(
-      ["Foo:", "  $<schema/>", "  $<schema/>"].join("\n"),
+      ["Foo:", "  $<schema>$</schema>", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(none).toMatch({
-      errors: [
-        {
-          message: "Template must contain exactly one schema section",
-        },
-      ],
+      errors: [],
       value: {
         templates: [
           {
@@ -157,11 +153,7 @@ describe("parseTemplateFile", () => {
     });
 
     expect(many).toMatch({
-      errors: [
-        {
-          message: "Template must contain exactly one schema section",
-        },
-      ],
+      errors: [],
       value: {
         templates: [
           {
@@ -184,22 +176,20 @@ describe("parseTemplateFile", () => {
     });
   });
 
-  it("parses schema self-closing as valid schema section", () => {
+  it("rejects schema self-closing tags", () => {
     const parsed = parseTemplateFile(
       ["Foo:", "  before", "  $<schema   />", "  after"].join("\n"),
     );
 
     expect(parsed).toMatch({
-      errors: [],
+      errors: [{ message: "Invalid '$' sequence" }],
       value: {
         templates: [
           {
             name: { text: "Foo" },
             parameters: [],
             pieces: [
-              { kind: "text", text: "before\n" },
-              { kind: "schema", text: "" },
-              { kind: "text", text: "\nafter" },
+              { kind: "text", text: "before\n$<schema   />\nafter" },
             ],
           },
         ],
@@ -211,13 +201,13 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"a": [1, true, null, ]}',
         "  $</example>",
         "",
         "Bar:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
       ].join("\n"),
     );
 
@@ -260,11 +250,11 @@ describe("parseTemplateFile", () => {
       [
         "Foo:",
         "  bad: $-x",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "",
         "Bar:",
         "  ok $name",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
       ].join("\n"),
     );
 
@@ -338,10 +328,10 @@ describe("parseTemplateFile", () => {
         "# comment before first template",
         "",
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "# comment between templates",
         "Bar:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "# trailing comment",
       ].join("\n"),
     );
@@ -356,7 +346,7 @@ describe("parseTemplateFile", () => {
 
   it("keeps indented # lines as template body text", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  # not a top-level comment", "  $<schema/>"].join("\n"),
+      ["Foo:", "  # not a top-level comment", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -375,7 +365,7 @@ describe("parseTemplateFile", () => {
   });
 
   it("reports header without identifier", () => {
-    const parsed = parseTemplateFile([":", "Foo:", "  $<schema/>"].join("\n"));
+    const parsed = parseTemplateFile([":", "Foo:", "  $<schema>$</schema>"].join("\n"));
 
     expect(parsed).toMatch({
       errors: [
@@ -396,7 +386,7 @@ describe("parseTemplateFile", () => {
 
   it("reports missing variant identifier", () => {
     const parsed = parseTemplateFile(
-      ["Foo/:", "Bar:", "  $<schema/>"].join("\n"),
+      ["Foo/:", "Bar:", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -417,7 +407,7 @@ describe("parseTemplateFile", () => {
 
   it("reports missing colon in header", () => {
     const parsed = parseTemplateFile(
-      ["Foo/Bar", "Baz:", "  $<schema/>"].join("\n"),
+      ["Foo/Bar", "Baz:", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -439,7 +429,7 @@ describe("parseTemplateFile", () => {
 
   it("allows empty lines in template body without indentation", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "", "  line", "", "  $<schema/>"].join("\n"),
+      ["Foo:", "", "  line", "", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -460,7 +450,7 @@ describe("parseTemplateFile", () => {
 
   it("preserves unindented empty lines as text line breaks within body", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  first", "", "  second", "", "", "  $<schema/>"].join("\n"),
+      ["Foo:", "  first", "", "  second", "", "", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -480,7 +470,7 @@ describe("parseTemplateFile", () => {
 
   it("supports $$ as escaped dollar", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  price is $$5 and $$10", "  $<schema/>"].join("\n"),
+      ["Foo:", "  price is $$5 and $$10", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -501,7 +491,7 @@ describe("parseTemplateFile", () => {
 
   it("reports invalid braced placeholder modifiers", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  ${name:oops}", "  $<schema/>"].join("\n"),
+      ["Foo:", "  ${name:oops}", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -526,7 +516,7 @@ describe("parseTemplateFile", () => {
 
   it("reports missing closing brace in braced placeholder", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  hello ${name", "  $<schema/>"].join("\n"),
+      ["Foo:", "  hello ${name", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -607,7 +597,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"text": "value with $</example> and #</example> inside"}',
         "  $</example>",
@@ -715,7 +705,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"a": [1, 2, 3], "b": false}',
         "  $</example>",
@@ -766,13 +756,13 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    [1, 2,",
         "  $</example>",
         "Bar:",
         "  text $param",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
       ].join("\n"),
     );
 
@@ -800,7 +790,7 @@ describe("parseTemplateFile", () => {
 
   it("sets hide:true on ${ name : hide } expression", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  ${ x : hide }", "  $<schema/>"].join("\n"),
+      ["Foo:", "  ${ x : hide }", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -822,7 +812,7 @@ describe("parseTemplateFile", () => {
 
   it("sets hide:false on simple $name expression", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  $x and ${y}", "  $<schema/>"].join("\n"),
+      ["Foo:", "  $x and ${y}", "  $<schema>$</schema>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -876,9 +866,9 @@ describe("parseTemplateFile", () => {
     });
   });
 
-  it("accepts $<schema/> self-closing", () => {
+  it("accepts inline empty schema section", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  before $<schema/> after"].join("\n"),
+      ["Foo:", "  before $<schema>$</schema> after"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -901,10 +891,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(["Foo:", "  $<response/>"].join("\n"));
 
     expect(parsed).toMatch({
-      errors: [
-        { message: "Invalid '$' sequence" },
-        { message: "Template must contain exactly one schema section" },
-      ],
+      errors: [{ message: "Invalid '$' sequence" }],
       value: {
         templates: [
           {
@@ -1151,7 +1138,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    {",
         '      "name": "Alice",',
@@ -1199,7 +1186,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         '  $<example type="Foo">',
         '    {"value": "ok"}',
         "  $</example>",
@@ -1240,7 +1227,7 @@ describe("parseTemplateFile", () => {
 
   it("reports empty JSON example section", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  $<schema/>", "  $<example>", "  $</example>"].join("\n"),
+      ["Foo:", "  $<schema>$</schema>", "  $<example>", "  $</example>"].join("\n"),
     );
 
     expect(parsed).toMatch({
@@ -1263,7 +1250,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    42 extra",
         "  $</example>",
@@ -1293,7 +1280,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"key" 1}',
         "  $</example>",
@@ -1310,7 +1297,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"a": 1 "b": 2}',
         "  $</example>",
@@ -1327,7 +1314,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"a": 1',
         "  $</example>",
@@ -1344,7 +1331,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    [1 2]",
         "  $</example>",
@@ -1361,7 +1348,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    [1, 2",
         "  $</example>",
@@ -1378,7 +1365,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    {1: 2}",
         "  $</example>",
@@ -1395,7 +1382,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    "hello',
         "  $</example>",
@@ -1412,7 +1399,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    falsy",
         "  $</example>",
@@ -1427,7 +1414,7 @@ describe("parseTemplateFile", () => {
 
   it("reports invalid null keyword", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  $<schema/>", "  $<example>", "    nul", "  $</example>"].join(
+      ["Foo:", "  $<schema>$</schema>", "  $<example>", "    nul", "  $</example>"].join(
         "\n",
       ),
     );
@@ -1440,7 +1427,7 @@ describe("parseTemplateFile", () => {
 
   it("parses ellipsis as a standalone JSON value", () => {
     const parsed = parseTemplateFile(
-      ["Foo:", "  $<schema/>", "  $<example>", "    ...", "  $</example>"].join(
+      ["Foo:", "  $<schema>$</schema>", "  $<example>", "    ...", "  $</example>"].join(
         "\n",
       ),
     );
@@ -1465,7 +1452,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    [1, ..., {"a": ...}]',
         "  $</example>",
@@ -1509,7 +1496,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         '    {"foo": true, ...}',
         "  $</example>",
@@ -1550,7 +1537,7 @@ describe("parseTemplateFile", () => {
     const parsed = parseTemplateFile(
       [
         "Foo:",
-        "  $<schema/>",
+        "  $<schema>$</schema>",
         "  $<example>",
         "    { ... }",
         "  $</example>",
@@ -1592,7 +1579,7 @@ describe("parseTemplateFile", () => {
 
     for (const [input, expectedValue] of cases) {
       const parsed = parseTemplateFile(
-        ["Foo:", "  $<schema/>", `  $<example>${input}$</example>`].join("\n"),
+        ["Foo:", "  $<schema>$</schema>", `  $<example>${input}$</example>`].join("\n"),
       );
 
       expect(parsed.errors).toMatch([]);
