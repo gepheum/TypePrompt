@@ -515,45 +515,7 @@ function parseResponseSchema(
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);
-  const declarations: ResponseSchemaDeclaration[] = [];
-
-  const declarationRegex = /(interface|type)\s+([A-Za-z_][A-Za-z0-9_]*)\b/g;
-  let match: RegExpExecArray | null = declarationRegex.exec(sectionText);
-  while (match) {
-    const keyword = match[1]!;
-    const nameText = match[2]!;
-    const nameStartInSection = match.index + match[0].lastIndexOf(nameText);
-    const nameAbsPos = startPos + nameStartInSection;
-    const nameLine = findLineByPos(state.lines, nameAbsPos);
-    const nameSlice: CodeSlice = {
-      text: nameText,
-      startPos: nameAbsPos,
-      endPos: nameAbsPos + nameText.length,
-      line: nameLine,
-    };
-    const declSlice: CodeSlice = {
-      text: match[0],
-      startPos: startPos + match.index,
-      endPos: startPos + match.index + match[0].length,
-      line: nameLine,
-    };
-
-    declarations.push(
-      keyword === "interface"
-        ? {
-            kind: "interface",
-            name: nameSlice,
-            codeSlice: declSlice,
-          }
-        : {
-            kind: "type",
-            name: nameSlice,
-            codeSlice: declSlice,
-          },
-    );
-
-    match = declarationRegex.exec(sectionText);
-  }
+  const declarations = parseSchemaDeclarations(sectionText, startPos, state.lines);
 
   return {
     codeSlice: {
@@ -564,6 +526,713 @@ function parseResponseSchema(
     },
     declarations,
   };
+}
+
+function parseSchemaDeclarations(
+  text: string,
+  sectionStartPos: number,
+  lines: readonly Line[],
+): ResponseSchemaDeclaration[] {
+  const declarations: ResponseSchemaDeclaration[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const keyword = readTopLevelKeyword(text, cursor);
+    if (!keyword) {
+      cursor += 1;
+      continue;
+    }
+
+    if (keyword.word === "interface") {
+      const parsed = parseInterfaceDeclaration(text, keyword.start, sectionStartPos, lines);
+      if (parsed) {
+        declarations.push(parsed.declaration);
+        cursor = parsed.nextCursor;
+        continue;
+      }
+    }
+
+    if (keyword.word === "type") {
+      const parsed = parseTypeDeclaration(text, keyword.start, sectionStartPos, lines);
+      if (parsed) {
+        declarations.push(parsed.declaration);
+        cursor = parsed.nextCursor;
+        continue;
+      }
+    }
+
+    cursor = keyword.end;
+  }
+
+  return declarations;
+}
+
+function readTopLevelKeyword(
+  text: string,
+  from: number,
+): { readonly word: "interface" | "type"; readonly start: number; readonly end: number } | null {
+  let depthCurly = 0;
+  let depthSquare = 0;
+  let depthParen = 0;
+  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+
+  for (let cursor = from; cursor < text.length; cursor += 1) {
+    const ch = text[cursor]!;
+    const next = text[cursor + 1];
+
+    if (mode === "normal") {
+      if (ch === "'") {
+        mode = "single";
+        continue;
+      }
+      if (ch === '"') {
+        mode = "double";
+        continue;
+      }
+      if (ch === "`") {
+        mode = "template";
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        mode = "block-comment";
+        cursor += 1;
+        continue;
+      }
+
+      if (ch === "{") {
+        depthCurly += 1;
+        continue;
+      }
+      if (ch === "}") {
+        depthCurly = Math.max(0, depthCurly - 1);
+        continue;
+      }
+      if (ch === "[") {
+        depthSquare += 1;
+        continue;
+      }
+      if (ch === "]") {
+        depthSquare = Math.max(0, depthSquare - 1);
+        continue;
+      }
+      if (ch === "(") {
+        depthParen += 1;
+        continue;
+      }
+      if (ch === ")") {
+        depthParen = Math.max(0, depthParen - 1);
+        continue;
+      }
+
+      if (depthCurly !== 0 || depthSquare !== 0 || depthParen !== 0) {
+        continue;
+      }
+
+      if (!isIdentifierStart(ch)) {
+        continue;
+      }
+      let end = cursor + 1;
+      while (end < text.length && isIdentifierPart(text[end]!)) {
+        end += 1;
+      }
+
+      const word = text.slice(cursor, end);
+      if (word !== "interface" && word !== "type") {
+        cursor = end - 1;
+        continue;
+      }
+
+      return { word, start: cursor, end };
+    }
+
+    if (mode === "single") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "'") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "double") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === '"') {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "template") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "`") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (ch === "\n") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "block-comment") {
+      if (ch === "*" && next === "/") {
+        mode = "normal";
+        cursor += 1;
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseInterfaceDeclaration(
+  text: string,
+  keywordStart: number,
+  sectionStartPos: number,
+  lines: readonly Line[],
+): { readonly declaration: ResponseSchemaDeclaration; readonly nextCursor: number } | null {
+  let cursor = keywordStart + "interface".length;
+  while (cursor < text.length && /\s/.test(text[cursor]!)) {
+    cursor += 1;
+  }
+  if (cursor >= text.length || !isIdentifierStart(text[cursor]!)) {
+    return null;
+  }
+
+  const nameStart = cursor;
+  cursor += 1;
+  while (cursor < text.length && isIdentifierPart(text[cursor]!)) {
+    cursor += 1;
+  }
+  const nameEnd = cursor;
+
+  while (cursor < text.length && /\s/.test(text[cursor]!)) {
+    cursor += 1;
+  }
+  if (text[cursor] !== "{") {
+    return null;
+  }
+  const bodyStart = cursor + 1;
+  const bodyEnd = findMatchingBrace(text, cursor);
+  if (bodyEnd < 0) {
+    return null;
+  }
+
+  const nameAbsStart = sectionStartPos + nameStart;
+  const nameSlice: CodeSlice = {
+    text: text.slice(nameStart, nameEnd),
+    startPos: nameAbsStart,
+    endPos: sectionStartPos + nameEnd,
+    line: findLineByPos(lines, nameAbsStart),
+  };
+
+  const declarationAbsStart = sectionStartPos + keywordStart;
+  const declarationAbsEnd = sectionStartPos + bodyEnd + 1;
+  const fields = parseInterfaceFields(
+    text.slice(bodyStart, bodyEnd),
+    sectionStartPos + bodyStart,
+    lines,
+  );
+
+  return {
+    declaration: {
+      kind: "interface",
+      name: nameSlice,
+      codeSlice: {
+        text: text.slice(keywordStart, bodyEnd + 1),
+        startPos: declarationAbsStart,
+        endPos: declarationAbsEnd,
+        line: findLineByPos(lines, declarationAbsStart),
+      },
+      fields,
+    },
+    nextCursor: bodyEnd + 1,
+  };
+}
+
+function parseInterfaceFields(
+  text: string,
+  bodyStartPos: number,
+  lines: readonly Line[],
+): ReadonlyArray<{
+  readonly name: CodeSlice;
+  readonly optional: boolean;
+  readonly type: { readonly text: string; readonly codeSlice: CodeSlice };
+  readonly codeSlice: CodeSlice;
+}> {
+  const fields: Array<{
+    readonly name: CodeSlice;
+    readonly optional: boolean;
+    readonly type: { readonly text: string; readonly codeSlice: CodeSlice };
+    readonly codeSlice: CodeSlice;
+  }> = [];
+
+  const segments = splitTopLevelSemicolonSegments(text);
+  for (const segment of segments) {
+    const raw = text.slice(segment.start, segment.end);
+    const leading = raw.match(/^\s*/)?.[0].length ?? 0;
+    const trailing = raw.match(/\s*$/)?.[0].length ?? 0;
+    const trimmed = raw.slice(leading, Math.max(leading, raw.length - trailing));
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)(\?)?\s*:\s*(.+)$/s);
+    if (!match) {
+      continue;
+    }
+
+    const nameText = match[1]!;
+    const optional = Boolean(match[2]);
+    const colonIndex = trimmed.indexOf(":");
+    const typeRaw = trimmed.slice(colonIndex + 1);
+    const typeLeading = typeRaw.match(/^\s*/)?.[0].length ?? 0;
+    const typeText = typeRaw.slice(typeLeading).trimEnd();
+    if (typeText.length === 0) {
+      continue;
+    }
+
+    const memberStartInBody = segment.start + leading;
+    const memberStartPos = bodyStartPos + memberStartInBody;
+    const memberEndPos = memberStartPos + trimmed.length;
+    const typeStartInMember = colonIndex + 1 + typeLeading;
+    const typeStartPos = memberStartPos + typeStartInMember;
+    const nameStartPos = memberStartPos;
+    const nameEndPos = nameStartPos + nameText.length;
+
+    fields.push({
+      name: {
+        text: nameText,
+        startPos: nameStartPos,
+        endPos: nameEndPos,
+        line: findLineByPos(lines, nameStartPos),
+      },
+      optional,
+      type: {
+        text: typeText,
+        codeSlice: {
+          text: typeText,
+          startPos: typeStartPos,
+          endPos: typeStartPos + typeText.length,
+          line: findLineByPos(lines, typeStartPos),
+        },
+      },
+      codeSlice: {
+        text: trimmed,
+        startPos: memberStartPos,
+        endPos: memberEndPos,
+        line: findLineByPos(lines, memberStartPos),
+      },
+    });
+  }
+
+  return fields;
+}
+
+function splitTopLevelSemicolonSegments(
+  text: string,
+): ReadonlyArray<{ readonly start: number; readonly end: number }> {
+  const segments: Array<{ readonly start: number; readonly end: number }> = [];
+  let depthCurly = 0;
+  let depthSquare = 0;
+  let depthParen = 0;
+  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let segmentStart = 0;
+
+  for (let cursor = 0; cursor < text.length; cursor += 1) {
+    const ch = text[cursor]!;
+    const next = text[cursor + 1];
+
+    if (mode === "normal") {
+      if (ch === "'") {
+        mode = "single";
+        continue;
+      }
+      if (ch === '"') {
+        mode = "double";
+        continue;
+      }
+      if (ch === "`") {
+        mode = "template";
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        mode = "block-comment";
+        cursor += 1;
+        continue;
+      }
+
+      if (ch === "{") {
+        depthCurly += 1;
+        continue;
+      }
+      if (ch === "}") {
+        depthCurly = Math.max(0, depthCurly - 1);
+        continue;
+      }
+      if (ch === "[") {
+        depthSquare += 1;
+        continue;
+      }
+      if (ch === "]") {
+        depthSquare = Math.max(0, depthSquare - 1);
+        continue;
+      }
+      if (ch === "(") {
+        depthParen += 1;
+        continue;
+      }
+      if (ch === ")") {
+        depthParen = Math.max(0, depthParen - 1);
+        continue;
+      }
+
+      if (ch === ";" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+        segments.push({ start: segmentStart, end: cursor });
+        segmentStart = cursor + 1;
+      }
+      continue;
+    }
+
+    if (mode === "single") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "'") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "double") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === '"') {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "template") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "`") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (ch === "\n") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "block-comment") {
+      if (ch === "*" && next === "/") {
+        mode = "normal";
+        cursor += 1;
+      }
+    }
+  }
+
+  if (segmentStart < text.length) {
+    segments.push({ start: segmentStart, end: text.length });
+  }
+
+  return segments;
+}
+
+function parseTypeDeclaration(
+  text: string,
+  keywordStart: number,
+  sectionStartPos: number,
+  lines: readonly Line[],
+): { readonly declaration: ResponseSchemaDeclaration; readonly nextCursor: number } | null {
+  let cursor = keywordStart + "type".length;
+  while (cursor < text.length && /\s/.test(text[cursor]!)) {
+    cursor += 1;
+  }
+  if (cursor >= text.length || !isIdentifierStart(text[cursor]!)) {
+    return null;
+  }
+
+  const nameStart = cursor;
+  cursor += 1;
+  while (cursor < text.length && isIdentifierPart(text[cursor]!)) {
+    cursor += 1;
+  }
+  const nameEnd = cursor;
+
+  while (cursor < text.length && /\s/.test(text[cursor]!)) {
+    cursor += 1;
+  }
+  if (text[cursor] !== "=") {
+    return null;
+  }
+  cursor += 1;
+
+  const typeValueStart = cursor;
+  const statementEnd = findTopLevelStatementEnd(text, typeValueStart);
+  const valueEnd =
+    statementEnd > typeValueStart && text[statementEnd - 1] === ";"
+      ? statementEnd - 1
+      : statementEnd;
+  const valueRaw = text.slice(typeValueStart, valueEnd);
+  const leading = valueRaw.match(/^\s*/)?.[0].length ?? 0;
+  const trailing = valueRaw.match(/\s*$/)?.[0].length ?? 0;
+  const valueText = valueRaw.slice(leading, Math.max(leading, valueRaw.length - trailing));
+  if (valueText.length === 0) {
+    return null;
+  }
+
+  const declarationAbsStart = sectionStartPos + keywordStart;
+  const declarationAbsEnd = sectionStartPos + statementEnd;
+  const nameAbsStart = sectionStartPos + nameStart;
+  const valueAbsStart = sectionStartPos + typeValueStart + leading;
+
+  return {
+    declaration: {
+      kind: "type",
+      name: {
+        text: text.slice(nameStart, nameEnd),
+        startPos: nameAbsStart,
+        endPos: sectionStartPos + nameEnd,
+        line: findLineByPos(lines, nameAbsStart),
+      },
+      codeSlice: {
+        text: text.slice(keywordStart, statementEnd),
+        startPos: declarationAbsStart,
+        endPos: declarationAbsEnd,
+        line: findLineByPos(lines, declarationAbsStart),
+      },
+      valueType: {
+        text: valueText,
+        codeSlice: {
+          text: valueText,
+          startPos: valueAbsStart,
+          endPos: valueAbsStart + valueText.length,
+          line: findLineByPos(lines, valueAbsStart),
+        },
+      },
+    },
+    nextCursor: statementEnd,
+  };
+}
+
+function findTopLevelStatementEnd(text: string, start: number): number {
+  let depthCurly = 0;
+  let depthSquare = 0;
+  let depthParen = 0;
+  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+
+  for (let cursor = start; cursor < text.length; cursor += 1) {
+    const ch = text[cursor]!;
+    const next = text[cursor + 1];
+
+    if (mode === "normal") {
+      if (ch === "'") {
+        mode = "single";
+        continue;
+      }
+      if (ch === '"') {
+        mode = "double";
+        continue;
+      }
+      if (ch === "`") {
+        mode = "template";
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        mode = "block-comment";
+        cursor += 1;
+        continue;
+      }
+
+      if (ch === "{") {
+        depthCurly += 1;
+        continue;
+      }
+      if (ch === "}") {
+        depthCurly = Math.max(0, depthCurly - 1);
+        continue;
+      }
+      if (ch === "[") {
+        depthSquare += 1;
+        continue;
+      }
+      if (ch === "]") {
+        depthSquare = Math.max(0, depthSquare - 1);
+        continue;
+      }
+      if (ch === "(") {
+        depthParen += 1;
+        continue;
+      }
+      if (ch === ")") {
+        depthParen = Math.max(0, depthParen - 1);
+        continue;
+      }
+
+      if (ch === ";" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+        return cursor + 1;
+      }
+      continue;
+    }
+
+    if (mode === "single") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "'") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "double") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === '"') {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "template") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "`") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (ch === "\n") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "block-comment") {
+      if (ch === "*" && next === "/") {
+        mode = "normal";
+        cursor += 1;
+      }
+    }
+  }
+
+  return text.length;
+}
+
+function findMatchingBrace(text: string, openBracePos: number): number {
+  let depth = 0;
+  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+
+  for (let cursor = openBracePos; cursor < text.length; cursor += 1) {
+    const ch = text[cursor]!;
+    const next = text[cursor + 1];
+
+    if (mode === "normal") {
+      if (ch === "'") {
+        mode = "single";
+        continue;
+      }
+      if (ch === '"') {
+        mode = "double";
+        continue;
+      }
+      if (ch === "`") {
+        mode = "template";
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        mode = "block-comment";
+        cursor += 1;
+        continue;
+      }
+
+      if (ch === "{") {
+        depth += 1;
+        continue;
+      }
+      if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          return cursor;
+        }
+      }
+      continue;
+    }
+
+    if (mode === "single") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "'") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "double") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === '"') {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "template") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "`") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (ch === "\n") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "block-comment") {
+      if (ch === "*" && next === "/") {
+        mode = "normal";
+        cursor += 1;
+      }
+    }
+  }
+
+  return -1;
 }
 
 function parseResponseExample(

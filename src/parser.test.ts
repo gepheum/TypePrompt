@@ -866,6 +866,96 @@ describe("parseTemplateFile", () => {
     });
   });
 
+  it("parses interface fields with optional marker and type", () => {
+    const parsed = parseTemplateFile(
+      [
+        "Foo:",
+        "  $<schema>",
+        "    interface User {",
+        "      id: string;",
+        "      nickname?: string | null;",
+        "      profile: { age: number; active: boolean };",
+        "    }",
+        "  $</schema>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      errors: [],
+      value: {
+        templates: [
+          {
+            pieces: [
+              {
+                kind: "schema",
+                schema: {
+                  declarations: [
+                    {
+                      kind: "interface",
+                      name: { text: "User" },
+                      fields: [
+                        {
+                          name: { text: "id" },
+                          optional: false,
+                          type: { text: "string" },
+                        },
+                        {
+                          name: { text: "nickname" },
+                          optional: true,
+                          type: { text: "string | null" },
+                        },
+                        {
+                          name: { text: "profile" },
+                          optional: false,
+                          type: { text: "{ age: number; active: boolean }" },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  it("parses type declaration value type text", () => {
+    const parsed = parseTemplateFile(
+      [
+        "Foo:",
+        "  $<schema>",
+        "    type Payload = { ok: boolean } | null;",
+        "  $</schema>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      errors: [],
+      value: {
+        templates: [
+          {
+            pieces: [
+              {
+                kind: "schema",
+                schema: {
+                  declarations: [
+                    {
+                      kind: "type",
+                      name: { text: "Payload" },
+                      valueType: { text: "{ ok: boolean } | null" },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
   it("accepts inline empty schema section", () => {
     const parsed = parseTemplateFile(
       ["Foo:", "  before $<schema>$</schema> after"].join("\n"),

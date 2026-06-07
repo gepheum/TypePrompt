@@ -40,16 +40,30 @@ export interface ResponseSchema {
   readonly declarations: readonly ResponseSchemaDeclaration[];
 }
 
+export interface ResponseSchemaTypeRef {
+  readonly text: string;
+  readonly codeSlice: CodeSlice;
+}
+
+export interface ResponseSchemaField {
+  readonly name: CodeSlice;
+  readonly optional: boolean;
+  readonly type: ResponseSchemaTypeRef;
+  readonly codeSlice: CodeSlice;
+}
+
 export type ResponseSchemaDeclaration =
   | {
       readonly kind: "interface";
       readonly name: CodeSlice;
       readonly codeSlice: CodeSlice;
+      readonly fields: readonly ResponseSchemaField[];
     }
   | {
       readonly kind: "type";
       readonly name: CodeSlice;
       readonly codeSlice: CodeSlice;
+      readonly valueType: ResponseSchemaTypeRef;
     };
 
 export interface ResponseExample {
