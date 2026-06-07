@@ -27,46 +27,81 @@ export type TemplatePiece =
   | {
       readonly kind: "schema";
       readonly text: string;
-      readonly schema: ResponseSchema | null;
+      readonly schema: Schema | null;
     }
   | {
       readonly kind: "example";
       readonly text: string;
-      readonly example: ResponseExample;
+      readonly example: Example;
     };
 
-export interface ResponseSchema {
+export interface Schema {
   readonly codeSlice: CodeSlice;
-  readonly declarations: readonly ResponseSchemaDeclaration[];
+  readonly declarations: readonly SchemaDeclaration[];
 }
 
-export interface ResponseSchemaTypeRef {
-  readonly text: string;
+export interface TypeNameRef {
+  readonly kind: "type-name";
+  readonly name: CodeSlice;
   readonly codeSlice: CodeSlice;
 }
 
-export interface ResponseSchemaField {
+export interface StringLiteralTypeRef {
+  readonly kind: "string-literal";
+  readonly value: string;
+  readonly codeSlice: CodeSlice;
+}
+
+export interface InlineInterfaceTypeRef {
+  readonly kind: "inline-interface";
+  readonly fields: readonly SchemaField[];
+  readonly codeSlice: CodeSlice;
+}
+
+export interface ArrayTypeRef {
+  readonly kind: "array";
+  readonly elementType: TypeRef;
+  readonly codeSlice: CodeSlice;
+}
+
+export interface UnionTypeRef {
+  readonly kind: "union";
+  readonly members: readonly (
+    | StringLiteralTypeRef
+    | InlineInterfaceTypeRef
+  )[];
+  readonly codeSlice: CodeSlice;
+}
+
+export type TypeRef =
+  | TypeNameRef
+  | StringLiteralTypeRef
+  | InlineInterfaceTypeRef
+  | ArrayTypeRef
+  | UnionTypeRef;
+
+export interface SchemaField {
   readonly name: CodeSlice;
   readonly optional: boolean;
-  readonly type: ResponseSchemaTypeRef;
+  readonly type: TypeRef;
   readonly codeSlice: CodeSlice;
 }
 
-export type ResponseSchemaDeclaration =
+export type SchemaDeclaration =
   | {
       readonly kind: "interface";
       readonly name: CodeSlice;
       readonly codeSlice: CodeSlice;
-      readonly fields: readonly ResponseSchemaField[];
+      readonly fields: readonly SchemaField[];
     }
   | {
       readonly kind: "type";
       readonly name: CodeSlice;
       readonly codeSlice: CodeSlice;
-      readonly valueType: ResponseSchemaTypeRef;
+      readonly valueType: TypeRef;
     };
 
-export interface ResponseExample {
+export interface Example {
   readonly codeSlice: CodeSlice;
   readonly value: JsonValue | null;
   readonly type?: string;

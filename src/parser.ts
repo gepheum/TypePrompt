@@ -11,9 +11,15 @@ import type {
   JsonString,
   JsonValue,
   Line,
-  ResponseExample,
-  ResponseSchema,
-  ResponseSchemaDeclaration,
+  Example,
+  ArrayTypeRef,
+  Schema,
+  SchemaDeclaration,
+  SchemaField,
+  InlineInterfaceTypeRef,
+  StringLiteralTypeRef,
+  TypeRef,
+  UnionTypeRef,
   Result,
   Template,
   TemplateFile,
@@ -511,7 +517,7 @@ function parseResponseSchema(
   sectionStart: number,
   sectionEnd: number,
   sectionText: string,
-): ResponseSchema | null {
+): Schema | null {
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);
@@ -532,8 +538,8 @@ function parseSchemaDeclarations(
   text: string,
   sectionStartPos: number,
   lines: readonly Line[],
-): ResponseSchemaDeclaration[] {
-  const declarations: ResponseSchemaDeclaration[] = [];
+): SchemaDeclaration[] {
+  const declarations: SchemaDeclaration[] = [];
   let cursor = 0;
 
   while (cursor < text.length) {
@@ -700,7 +706,7 @@ function parseInterfaceDeclaration(
   keywordStart: number,
   sectionStartPos: number,
   lines: readonly Line[],
-): { readonly declaration: ResponseSchemaDeclaration; readonly nextCursor: number } | null {
+): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
   let cursor = keywordStart + "interface".length;
   while (cursor < text.length && /\s/.test(text[cursor]!)) {
     cursor += 1;
@@ -764,18 +770,8 @@ function parseInterfaceFields(
   text: string,
   bodyStartPos: number,
   lines: readonly Line[],
-): ReadonlyArray<{
-  readonly name: CodeSlice;
-  readonly optional: boolean;
-  readonly type: { readonly text: string; readonly codeSlice: CodeSlice };
-  readonly codeSlice: CodeSlice;
-}> {
-  const fields: Array<{
-    readonly name: CodeSlice;
-    readonly optional: boolean;
-    readonly type: { readonly text: string; readonly codeSlice: CodeSlice };
-    readonly codeSlice: CodeSlice;
-  }> = [];
+): readonly SchemaField[] {
+  const fields: SchemaField[] = [];
 
   const segments = splitTopLevelSemicolonSegments(text);
   for (const segment of segments) {
@@ -809,6 +805,10 @@ function parseInterfaceFields(
     const typeStartPos = memberStartPos + typeStartInMember;
     const nameStartPos = memberStartPos;
     const nameEndPos = nameStartPos + nameText.length;
+    const typeRef = parseSchemaTypeRef(typeText, typeStartPos, lines);
+    if (!typeRef) {
+      continue;
+    }
 
     fields.push({
       name: {
@@ -818,15 +818,7 @@ function parseInterfaceFields(
         line: findLineByPos(lines, nameStartPos),
       },
       optional,
-      type: {
-        text: typeText,
-        codeSlice: {
-          text: typeText,
-          startPos: typeStartPos,
-          endPos: typeStartPos + typeText.length,
-          line: findLineByPos(lines, typeStartPos),
-        },
-      },
+      type: typeRef,
       codeSlice: {
         text: trimmed,
         startPos: memberStartPos,
@@ -837,6 +829,371 @@ function parseInterfaceFields(
   }
 
   return fields;
+}
+
+function parseSchemaTypeRef(
+  rawText: string,
+  startPos: number,
+  lines: readonly Line[],
+): TypeRef | null {
+  const trimmed = trimSlice(rawText, 0, rawText.length);
+  if (trimmed.text.length === 0) {
+    return null;
+  }
+
+  const rawOffsetStart = trimmed.start;
+  let baseText = trimmed.text;
+  let baseStartPos = startPos + rawOffsetStart;
+
+  const arraySuffixes: Array<{ readonly startPos: number; readonly endPos: number }> = [];
+  while (true) {
+    const suffix = parseTopLevelArraySuffix(baseText);
+    if (!suffix) {
+      break;
+    }
+    arraySuffixes.push({
+      startPos: baseStartPos + suffix.suffixStart,
+      endPos: baseStartPos + suffix.suffixEnd,
+    });
+    baseText = suffix.baseText;
+    const baseTrimmed = trimSlice(baseText, 0, baseText.length);
+    baseStartPos += baseTrimmed.start;
+    baseText = baseTrimmed.text;
+  }
+
+  const unionParts = splitTopLevelByPipe(baseText);
+  let baseRef: TypeRef | null = null;
+
+  const nonEmptyUnionParts = unionParts
+    .map((part) => trimSlice(baseText, part.start, part.end))
+    .filter((part) => part.text.length > 0);
+
+  if (nonEmptyUnionParts.length > 1) {
+    const members: Array<
+      StringLiteralTypeRef | InlineInterfaceTypeRef
+    > = [];
+    for (const partTrimmed of nonEmptyUnionParts) {
+      const memberStartPos = baseStartPos + partTrimmed.start;
+      const member = parseUnionMemberTypeRef(partTrimmed.text, memberStartPos, lines);
+      if (!member) {
+        return null;
+      }
+      members.push(member);
+    }
+
+    baseRef = {
+      kind: "union",
+      members,
+      codeSlice: {
+        text: baseText,
+        startPos: baseStartPos,
+        endPos: baseStartPos + baseText.length,
+        line: findLineByPos(lines, baseStartPos),
+      },
+    } satisfies UnionTypeRef;
+  } else {
+    baseRef = parseSingleSchemaTypeRef(baseText, baseStartPos, lines);
+  }
+
+  if (!baseRef) {
+    return null;
+  }
+
+  let wrapped: TypeRef = baseRef;
+  for (let i = arraySuffixes.length - 1; i >= 0; i -= 1) {
+    const suffix = arraySuffixes[i]!;
+    wrapped = {
+      kind: "array",
+      elementType: wrapped,
+      codeSlice: {
+        text: rawText.slice(0, suffix.endPos - startPos),
+        startPos,
+        endPos: suffix.endPos,
+        line: findLineByPos(lines, startPos),
+      },
+    } satisfies ArrayTypeRef;
+  }
+
+  return wrapped;
+}
+
+function parseUnionMemberTypeRef(
+  text: string,
+  startPos: number,
+  lines: readonly Line[],
+): StringLiteralTypeRef | InlineInterfaceTypeRef | null {
+  const literal = parseStringLiteralTypeRef(text, startPos, lines);
+  if (literal) {
+    return literal;
+  }
+  const inlineInterface = parseInlineInterfaceTypeRef(text, startPos, lines);
+  if (inlineInterface) {
+    return inlineInterface;
+  }
+  return null;
+}
+
+function parseSingleSchemaTypeRef(
+  text: string,
+  startPos: number,
+  lines: readonly Line[],
+): TypeRef | null {
+  const inlineInterface = parseInlineInterfaceTypeRef(text, startPos, lines);
+  if (inlineInterface) {
+    return inlineInterface;
+  }
+
+  const literal = parseStringLiteralTypeRef(text, startPos, lines);
+  if (literal) {
+    return literal;
+  }
+
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(text)) {
+    return {
+      kind: "type-name",
+      name: {
+        text,
+        startPos,
+        endPos: startPos + text.length,
+        line: findLineByPos(lines, startPos),
+      },
+      codeSlice: {
+        text,
+        startPos,
+        endPos: startPos + text.length,
+        line: findLineByPos(lines, startPos),
+      },
+    };
+  }
+
+  return null;
+}
+
+function parseInlineInterfaceTypeRef(
+  text: string,
+  startPos: number,
+  lines: readonly Line[],
+): InlineInterfaceTypeRef | null {
+  if (!text.startsWith("{") || !text.endsWith("}")) {
+    return null;
+  }
+  const close = findMatchingBrace(text, 0);
+  if (close !== text.length - 1) {
+    return null;
+  }
+
+  const fields = parseInterfaceFields(text.slice(1, text.length - 1), startPos + 1, lines);
+  return {
+    kind: "inline-interface",
+    fields,
+    codeSlice: {
+      text,
+      startPos,
+      endPos: startPos + text.length,
+      line: findLineByPos(lines, startPos),
+    },
+  };
+}
+
+function parseStringLiteralTypeRef(
+  text: string,
+  startPos: number,
+  lines: readonly Line[],
+): StringLiteralTypeRef | null {
+  if (text.length < 2) {
+    return null;
+  }
+  const quote = text[0]!;
+  if ((quote !== '"' && quote !== "'") || text[text.length - 1] !== quote) {
+    return null;
+  }
+
+  return {
+    kind: "string-literal",
+    value: decodeTypeStringLiteral(text),
+    codeSlice: {
+      text,
+      startPos,
+      endPos: startPos + text.length,
+      line: findLineByPos(lines, startPos),
+    },
+  };
+}
+
+function decodeTypeStringLiteral(text: string): string {
+  if (text.startsWith('"')) {
+    try {
+      return JSON.parse(text) as string;
+    } catch {
+      return text.slice(1, -1);
+    }
+  }
+
+  const inner = text.slice(1, -1);
+  return inner.replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+}
+
+function parseTopLevelArraySuffix(
+  text: string,
+): { readonly baseText: string; readonly suffixStart: number; readonly suffixEnd: number } | null {
+  const trimmed = trimSlice(text, 0, text.length);
+  if (!trimmed.text.endsWith("]")) {
+    return null;
+  }
+
+  const localEnd = trimmed.end;
+  const closePos = localEnd - 1;
+  let cursor = closePos - 1;
+  while (cursor >= trimmed.start && /\s/.test(text[cursor]!)) {
+    cursor -= 1;
+  }
+  if (cursor < trimmed.start || text[cursor] !== "[") {
+    return null;
+  }
+
+  return {
+    baseText: text.slice(0, cursor),
+    suffixStart: cursor,
+    suffixEnd: closePos + 1,
+  };
+}
+
+function splitTopLevelByPipe(
+  text: string,
+): ReadonlyArray<{ readonly start: number; readonly end: number }> {
+  const parts: Array<{ readonly start: number; readonly end: number }> = [];
+  let depthCurly = 0;
+  let depthSquare = 0;
+  let depthParen = 0;
+  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let partStart = 0;
+
+  for (let cursor = 0; cursor < text.length; cursor += 1) {
+    const ch = text[cursor]!;
+    const next = text[cursor + 1];
+
+    if (mode === "normal") {
+      if (ch === "'") {
+        mode = "single";
+        continue;
+      }
+      if (ch === '"') {
+        mode = "double";
+        continue;
+      }
+      if (ch === "`") {
+        mode = "template";
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        mode = "block-comment";
+        cursor += 1;
+        continue;
+      }
+
+      if (ch === "{") {
+        depthCurly += 1;
+        continue;
+      }
+      if (ch === "}") {
+        depthCurly = Math.max(0, depthCurly - 1);
+        continue;
+      }
+      if (ch === "[") {
+        depthSquare += 1;
+        continue;
+      }
+      if (ch === "]") {
+        depthSquare = Math.max(0, depthSquare - 1);
+        continue;
+      }
+      if (ch === "(") {
+        depthParen += 1;
+        continue;
+      }
+      if (ch === ")") {
+        depthParen = Math.max(0, depthParen - 1);
+        continue;
+      }
+
+      if (ch === "|" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+        parts.push({ start: partStart, end: cursor });
+        partStart = cursor + 1;
+      }
+      continue;
+    }
+
+    if (mode === "single") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "'") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "double") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === '"') {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "template") {
+      if (ch === "\\") {
+        cursor += 1;
+      } else if (ch === "`") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (ch === "\n") {
+        mode = "normal";
+      }
+      continue;
+    }
+
+    if (mode === "block-comment") {
+      if (ch === "*" && next === "/") {
+        mode = "normal";
+        cursor += 1;
+      }
+    }
+  }
+
+  parts.push({ start: partStart, end: text.length });
+  return parts;
+}
+
+function trimSlice(
+  text: string,
+  start: number,
+  end: number,
+): { readonly text: string; readonly start: number; readonly end: number } {
+  let left = start;
+  let right = end;
+
+  while (left < right && /\s/.test(text[left]!)) {
+    left += 1;
+  }
+  while (right > left && /\s/.test(text[right - 1]!)) {
+    right -= 1;
+  }
+
+  return {
+    text: text.slice(left, right),
+    start: left,
+    end: right,
+  };
 }
 
 function splitTopLevelSemicolonSegments(
@@ -963,7 +1320,7 @@ function parseTypeDeclaration(
   keywordStart: number,
   sectionStartPos: number,
   lines: readonly Line[],
-): { readonly declaration: ResponseSchemaDeclaration; readonly nextCursor: number } | null {
+): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
   let cursor = keywordStart + "type".length;
   while (cursor < text.length && /\s/.test(text[cursor]!)) {
     cursor += 1;
@@ -1005,6 +1362,10 @@ function parseTypeDeclaration(
   const declarationAbsEnd = sectionStartPos + statementEnd;
   const nameAbsStart = sectionStartPos + nameStart;
   const valueAbsStart = sectionStartPos + typeValueStart + leading;
+  const valueType = parseSchemaTypeRef(valueText, valueAbsStart, lines);
+  if (!valueType) {
+    return null;
+  }
 
   return {
     declaration: {
@@ -1021,15 +1382,7 @@ function parseTypeDeclaration(
         endPos: declarationAbsEnd,
         line: findLineByPos(lines, declarationAbsStart),
       },
-      valueType: {
-        text: valueText,
-        codeSlice: {
-          text: valueText,
-          startPos: valueAbsStart,
-          endPos: valueAbsStart + valueText.length,
-          line: findLineByPos(lines, valueAbsStart),
-        },
-      },
+      valueType,
     },
     nextCursor: statementEnd,
   };
@@ -1242,7 +1595,7 @@ function parseResponseExample(
   sectionEnd: number,
   sectionText: string,
   type?: string,
-): ResponseExample {
+): Example {
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);

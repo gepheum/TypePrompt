@@ -873,7 +873,7 @@ describe("parseTemplateFile", () => {
         "  $<schema>",
         "    interface User {",
         "      id: string;",
-        "      nickname?: string | null;",
+        "      nickname?: string[];",
         "      profile: { age: number; active: boolean };",
         "    }",
         "  $</schema>",
@@ -897,17 +897,43 @@ describe("parseTemplateFile", () => {
                         {
                           name: { text: "id" },
                           optional: false,
-                          type: { text: "string" },
+                          type: { kind: "type-name", name: { text: "string" } },
                         },
                         {
                           name: { text: "nickname" },
                           optional: true,
-                          type: { text: "string | null" },
+                          type: {
+                            kind: "array",
+                            elementType: {
+                              kind: "type-name",
+                              name: { text: "string" },
+                            },
+                          },
                         },
                         {
                           name: { text: "profile" },
                           optional: false,
-                          type: { text: "{ age: number; active: boolean }" },
+                          type: {
+                            kind: "inline-interface",
+                            fields: [
+                              {
+                                name: { text: "age" },
+                                optional: false,
+                                type: {
+                                  kind: "type-name",
+                                  name: { text: "number" },
+                                },
+                              },
+                              {
+                                name: { text: "active" },
+                                optional: false,
+                                type: {
+                                  kind: "type-name",
+                                  name: { text: "boolean" },
+                                },
+                              },
+                            ],
+                          },
                         },
                       ],
                     },
@@ -926,7 +952,7 @@ describe("parseTemplateFile", () => {
       [
         "Foo:",
         "  $<schema>",
-        "    type Payload = { ok: boolean } | null;",
+        '    type Payload = "ok" | { ok: boolean };',
         "  $</schema>",
       ].join("\n"),
     );
@@ -944,7 +970,25 @@ describe("parseTemplateFile", () => {
                     {
                       kind: "type",
                       name: { text: "Payload" },
-                      valueType: { text: "{ ok: boolean } | null" },
+                      valueType: {
+                        kind: "union",
+                        members: [
+                          { kind: "string-literal", value: "ok" },
+                          {
+                            kind: "inline-interface",
+                            fields: [
+                              {
+                                name: { text: "ok" },
+                                optional: false,
+                                type: {
+                                  kind: "type-name",
+                                  name: { text: "boolean" },
+                                },
+                              },
+                            ],
+                          },
+                        ],
+                      },
                     },
                   ],
                 },
