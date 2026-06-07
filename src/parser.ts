@@ -348,10 +348,17 @@ function parseTemplatePieces(
             codeSlice: bodySlice(state, body, cursor, text.length),
           });
           const sectionRaw = text.slice(cursor + tag.length);
+          const schema = parseResponseSchema(
+            state,
+            body,
+            cursor + tag.length,
+            text.length,
+            sectionRaw,
+          );
           pieces.push({
             kind: "schema",
             text: tag.hide ? "" : sectionRaw,
-            schema: null,
+            schema,
           });
           cursor = text.length;
           continue;
@@ -517,7 +524,7 @@ function parseResponseSchema(
   sectionStart: number,
   sectionEnd: number,
   sectionText: string,
-): Schema | null {
+): Schema {
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);

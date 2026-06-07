@@ -585,7 +585,7 @@ describe("parseTemplateFile", () => {
           {
             pieces: [
               { kind: "text", text: "before\n" },
-              { kind: "schema", schema: null },
+              { kind: "schema", schema: { declarations: [{ kind: "interface", name: { text: "Out" } }] } },
             ],
           },
         ],
