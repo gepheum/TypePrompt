@@ -121,14 +121,12 @@ function parseTemplateHeaderLine(
   let cursor = 0;
 
   const parseIdentifier = (): CodeSlice | null => {
-    if (cursor >= text.length || !isIdentifierStart(text[cursor]!)) {
+    const match = matchAt(text, cursor, IDENTIFIER_RE);
+    if (!match) {
       return null;
     }
     const start = cursor;
-    cursor += 1;
-    while (cursor < text.length && isIdentifierPart(text[cursor]!)) {
-      cursor += 1;
-    }
+    cursor += match[0].length;
     return {
       text: text.slice(start, cursor),
       startPos: line.startPos + start,
@@ -138,9 +136,7 @@ function parseTemplateHeaderLine(
   };
 
   const skipSpaces = (): void => {
-    while (cursor < text.length && isSpace(text[cursor]!)) {
-      cursor += 1;
-    }
+    cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
   };
 
   const name = parseIdentifier();
@@ -305,7 +301,7 @@ function parseTemplatePieces(
 } {
   const pieces: TemplatePiece[] = [];
   const parameters = new Set<string>();
-  let schemaCount = 0;
+  const schemaCount = 0;
 
   const text = body.text;
   let cursor = 0;
@@ -323,11 +319,15 @@ function parseTemplatePieces(
   };
 
   while (cursor < text.length) {
-    const ch = text[cursor]!;
-    if (ch !== "$") {
-      textBuffer += ch;
-      cursor += 1;
-      continue;
+    const dollarPos = text.indexOf("$", cursor);
+    if (dollarPos < 0) {
+      textBuffer += text.slice(cursor);
+      cursor = text.length;
+      break;
+    }
+    if (dollarPos > cursor) {
+      textBuffer += text.slice(cursor, dollarPos);
+      cursor = dollarPos;
     }
 
     const next = text[cursor + 1];
@@ -595,64 +595,81 @@ function readTopLevelKeyword(
   let depthParen = 0;
   let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
 
-  for (let cursor = from; cursor < text.length; cursor += 1) {
+  let cursor = from;
+  while (cursor < text.length) {
+    const nextTokenIndex = findNextRegexIndex(text, cursor, KEYWORD_SCAN_TOKEN_RE);
+    if (nextTokenIndex < 0) {
+      return null;
+    }
+    cursor = nextTokenIndex;
     const ch = text[cursor]!;
     const next = text[cursor + 1];
 
     if (mode === "normal") {
       if (ch === "'") {
         mode = "single";
+        cursor += 1;
         continue;
       }
       if (ch === '"') {
         mode = "double";
+        cursor += 1;
         continue;
       }
       if (ch === "`") {
         mode = "template";
+        cursor += 1;
         continue;
       }
       if (ch === "/" && next === "/") {
         mode = "line-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
       if (ch === "/" && next === "*") {
         mode = "block-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
 
       if (ch === "{") {
         depthCurly += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "}") {
         depthCurly = Math.max(0, depthCurly - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "[") {
         depthSquare += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "]") {
         depthSquare = Math.max(0, depthSquare - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "(") {
         depthParen += 1;
+        cursor += 1;
         continue;
       }
       if (ch === ")") {
         depthParen = Math.max(0, depthParen - 1);
+        cursor += 1;
         continue;
       }
 
       if (depthCurly !== 0 || depthSquare !== 0 || depthParen !== 0) {
+        cursor += 1;
         continue;
       }
 
       if (!isIdentifierStart(ch)) {
+        cursor += 1;
         continue;
       }
       let end = cursor + 1;
@@ -662,7 +679,7 @@ function readTopLevelKeyword(
 
       const word = text.slice(cursor, end);
       if (word !== "interface" && word !== "type") {
-        cursor = end - 1;
+        cursor = end;
         continue;
       }
 
@@ -670,44 +687,71 @@ function readTopLevelKeyword(
     }
 
     if (mode === "single") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "'") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        return null;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === '"') {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_OR_NEWLINE_SCAN_RE);
+      if (nextSpecial < 0) {
+        return null;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\n") {
         mode = "normal";
+        cursor += 1;
+      } else if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
+        mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "`") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        return null;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        return null;
       }
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 1;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        return null;
       }
+      cursor = blockEnd + 2;
+      mode = "normal";
+      continue;
     }
   }
 
@@ -721,23 +765,17 @@ function parseInterfaceDeclaration(
   lines: readonly Line[],
 ): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
   let cursor = keywordStart + "interface".length;
-  while (cursor < text.length && /\s/.test(text[cursor]!)) {
-    cursor += 1;
-  }
-  if (cursor >= text.length || !isIdentifierStart(text[cursor]!)) {
+  cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
+  const nameMatch = matchAt(text, cursor, IDENTIFIER_RE);
+  if (!nameMatch) {
     return null;
   }
 
   const nameStart = cursor;
-  cursor += 1;
-  while (cursor < text.length && isIdentifierPart(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor += nameMatch[0].length;
   const nameEnd = cursor;
 
-  while (cursor < text.length && /\s/.test(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
   if (text[cursor] !== "{") {
     return null;
   }
@@ -1056,13 +1094,12 @@ function parseTopLevelArraySuffix(
 
   const localEnd = trimmed.end;
   const closePos = localEnd - 1;
-  let cursor = closePos - 1;
-  while (cursor >= trimmed.start && /\s/.test(text[cursor]!)) {
-    cursor -= 1;
-  }
-  if (cursor < trimmed.start || text[cursor] !== "[") {
+  const preClose = text.slice(trimmed.start, closePos);
+  const openMatch = preClose.match(/\[\s*$/);
+  if (!openMatch) {
     return null;
   }
+  const cursor = trimmed.start + openMatch.index!;
 
   return {
     baseText: text.slice(0, cursor),
@@ -1081,56 +1118,71 @@ function splitTopLevelByPipe(
   let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
   let partStart = 0;
 
-  for (let cursor = 0; cursor < text.length; cursor += 1) {
+  let cursor = 0;
+  while (cursor < text.length) {
+    const nextTokenIndex = findNextRegexIndex(text, cursor, SPLIT_PIPE_TOKEN_RE);
+    if (nextTokenIndex < 0) {
+      break;
+    }
+    cursor = nextTokenIndex;
     const ch = text[cursor]!;
     const next = text[cursor + 1];
 
     if (mode === "normal") {
       if (ch === "'") {
         mode = "single";
+        cursor += 1;
         continue;
       }
       if (ch === '"') {
         mode = "double";
+        cursor += 1;
         continue;
       }
       if (ch === "`") {
         mode = "template";
+        cursor += 1;
         continue;
       }
       if (ch === "/" && next === "/") {
         mode = "line-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
       if (ch === "/" && next === "*") {
         mode = "block-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
 
       if (ch === "{") {
         depthCurly += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "}") {
         depthCurly = Math.max(0, depthCurly - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "[") {
         depthSquare += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "]") {
         depthSquare = Math.max(0, depthSquare - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "(") {
         depthParen += 1;
+        cursor += 1;
         continue;
       }
       if (ch === ")") {
         depthParen = Math.max(0, depthParen - 1);
+        cursor += 1;
         continue;
       }
 
@@ -1138,48 +1190,73 @@ function splitTopLevelByPipe(
         parts.push({ start: partStart, end: cursor });
         partStart = cursor + 1;
       }
+      cursor += 1;
       continue;
     }
 
     if (mode === "single") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "'") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === '"') {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "`") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        break;
       }
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 1;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        break;
       }
+      cursor = blockEnd + 2;
+      mode = "normal";
+      continue;
     }
   }
 
@@ -1192,15 +1269,11 @@ function trimSlice(
   start: number,
   end: number,
 ): { readonly text: string; readonly start: number; readonly end: number } {
-  let left = start;
-  let right = end;
-
-  while (left < right && /\s/.test(text[left]!)) {
-    left += 1;
-  }
-  while (right > left && /\s/.test(text[right - 1]!)) {
-    right -= 1;
-  }
+  const segment = text.slice(start, end);
+  const leading = segment.match(/^\s*/)?.[0].length ?? 0;
+  const trailing = segment.match(/\s*$/)?.[0].length ?? 0;
+  const left = start + leading;
+  const right = Math.max(left, end - trailing);
 
   return {
     text: text.slice(left, right),
@@ -1219,56 +1292,71 @@ function splitTopLevelSemicolonSegments(
   let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
   let segmentStart = 0;
 
-  for (let cursor = 0; cursor < text.length; cursor += 1) {
+  let cursor = 0;
+  while (cursor < text.length) {
+    const nextTokenIndex = findNextRegexIndex(text, cursor, SPLIT_SEMICOLON_TOKEN_RE);
+    if (nextTokenIndex < 0) {
+      break;
+    }
+    cursor = nextTokenIndex;
     const ch = text[cursor]!;
     const next = text[cursor + 1];
 
     if (mode === "normal") {
       if (ch === "'") {
         mode = "single";
+        cursor += 1;
         continue;
       }
       if (ch === '"') {
         mode = "double";
+        cursor += 1;
         continue;
       }
       if (ch === "`") {
         mode = "template";
+        cursor += 1;
         continue;
       }
       if (ch === "/" && next === "/") {
         mode = "line-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
       if (ch === "/" && next === "*") {
         mode = "block-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
 
       if (ch === "{") {
         depthCurly += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "}") {
         depthCurly = Math.max(0, depthCurly - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "[") {
         depthSquare += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "]") {
         depthSquare = Math.max(0, depthSquare - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "(") {
         depthParen += 1;
+        cursor += 1;
         continue;
       }
       if (ch === ")") {
         depthParen = Math.max(0, depthParen - 1);
+        cursor += 1;
         continue;
       }
 
@@ -1276,48 +1364,73 @@ function splitTopLevelSemicolonSegments(
         segments.push({ start: segmentStart, end: cursor });
         segmentStart = cursor + 1;
       }
+      cursor += 1;
       continue;
     }
 
     if (mode === "single") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "'") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === '"') {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "`") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        break;
       }
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 1;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        break;
       }
+      cursor = blockEnd + 2;
+      mode = "normal";
+      continue;
     }
   }
 
@@ -1335,23 +1448,17 @@ function parseTypeDeclaration(
   lines: readonly Line[],
 ): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
   let cursor = keywordStart + "type".length;
-  while (cursor < text.length && /\s/.test(text[cursor]!)) {
-    cursor += 1;
-  }
-  if (cursor >= text.length || !isIdentifierStart(text[cursor]!)) {
+  cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
+  const nameMatch = matchAt(text, cursor, IDENTIFIER_RE);
+  if (!nameMatch) {
     return null;
   }
 
   const nameStart = cursor;
-  cursor += 1;
-  while (cursor < text.length && isIdentifierPart(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor += nameMatch[0].length;
   const nameEnd = cursor;
 
-  while (cursor < text.length && /\s/.test(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
   if (text[cursor] !== "=") {
     return null;
   }
@@ -1407,104 +1514,144 @@ function findTopLevelStatementEnd(text: string, start: number): number {
   let depthParen = 0;
   let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
 
-  for (let cursor = start; cursor < text.length; cursor += 1) {
+  let cursor = start;
+  while (cursor < text.length) {
+    const nextTokenIndex = findNextRegexIndex(text, cursor, STATEMENT_END_TOKEN_RE);
+    if (nextTokenIndex < 0) {
+      break;
+    }
+    cursor = nextTokenIndex;
     const ch = text[cursor]!;
     const next = text[cursor + 1];
 
     if (mode === "normal") {
       if (ch === "'") {
         mode = "single";
+        cursor += 1;
         continue;
       }
       if (ch === '"') {
         mode = "double";
+        cursor += 1;
         continue;
       }
       if (ch === "`") {
         mode = "template";
+        cursor += 1;
         continue;
       }
       if (ch === "/" && next === "/") {
         mode = "line-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
       if (ch === "/" && next === "*") {
         mode = "block-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
 
       if (ch === "{") {
         depthCurly += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "}") {
         depthCurly = Math.max(0, depthCurly - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "[") {
         depthSquare += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "]") {
         depthSquare = Math.max(0, depthSquare - 1);
+        cursor += 1;
         continue;
       }
       if (ch === "(") {
         depthParen += 1;
+        cursor += 1;
         continue;
       }
       if (ch === ")") {
         depthParen = Math.max(0, depthParen - 1);
+        cursor += 1;
         continue;
       }
 
       if (ch === ";" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
         return cursor + 1;
       }
+      cursor += 1;
       continue;
     }
 
     if (mode === "single") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "'") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === '"') {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "`") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        break;
       }
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 1;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        break;
       }
+      cursor = blockEnd + 2;
+      mode = "normal";
+      continue;
     }
   }
 
@@ -1515,36 +1662,46 @@ function findMatchingBrace(text: string, openBracePos: number): number {
   let depth = 0;
   let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
 
-  for (let cursor = openBracePos; cursor < text.length; cursor += 1) {
+  let cursor = openBracePos;
+  while (cursor < text.length) {
+    const nextTokenIndex = findNextRegexIndex(text, cursor, BRACE_MATCH_TOKEN_RE);
+    if (nextTokenIndex < 0) {
+      break;
+    }
+    cursor = nextTokenIndex;
     const ch = text[cursor]!;
     const next = text[cursor + 1];
 
     if (mode === "normal") {
       if (ch === "'") {
         mode = "single";
+        cursor += 1;
         continue;
       }
       if (ch === '"') {
         mode = "double";
+        cursor += 1;
         continue;
       }
       if (ch === "`") {
         mode = "template";
+        cursor += 1;
         continue;
       }
       if (ch === "/" && next === "/") {
         mode = "line-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
       if (ch === "/" && next === "*") {
         mode = "block-comment";
-        cursor += 1;
+        cursor += 2;
         continue;
       }
 
       if (ch === "{") {
         depth += 1;
+        cursor += 1;
         continue;
       }
       if (ch === "}") {
@@ -1552,49 +1709,75 @@ function findMatchingBrace(text: string, openBracePos: number): number {
         if (depth === 0) {
           return cursor;
         }
+        cursor += 1;
       }
+      cursor += 1;
       continue;
     }
 
     if (mode === "single") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "'") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === '"') {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
-        cursor += 1;
-      } else if (ch === "`") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else {
         mode = "normal";
+        cursor += 1;
       }
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        break;
       }
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 1;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        break;
       }
+      cursor = blockEnd + 2;
+      mode = "normal";
+      continue;
     }
   }
 
@@ -1874,12 +2057,20 @@ function parseJsonString(state: JsonParserState): JsonString | null {
   state.cursor += 1;
 
   while (state.cursor < state.text.length) {
-    const ch = state.text[state.cursor]!;
-    if (ch === "\\") {
+    const nextSpecial = findNextRegexIndex(
+      state.text,
+      state.cursor,
+      JSON_STRING_TOKEN_RE,
+    );
+    if (nextSpecial < 0) {
+      break;
+    }
+    state.cursor = nextSpecial;
+    if (state.text[state.cursor] === "\\") {
       state.cursor += 2;
       continue;
     }
-    if (ch === '"') {
+    if (state.text[state.cursor] === '"') {
       const end = state.cursor + 1;
       const raw = state.text.slice(start, end);
       state.cursor = end;
@@ -1889,7 +2080,6 @@ function parseJsonString(state: JsonParserState): JsonString | null {
         codeSlice: jsonSlice(state, start, end),
       };
     }
-    state.cursor += 1;
   }
 
   state.errors.push({
@@ -1980,12 +2170,7 @@ function decodeJsonString(raw: string): string {
 }
 
 function skipJsonSpaces(state: JsonParserState): void {
-  while (
-    state.cursor < state.text.length &&
-    /\s/.test(state.text[state.cursor]!)
-  ) {
-    state.cursor += 1;
-  }
+  state.cursor = skipWithRegex(state.text, state.cursor, WHITESPACE_RUN_RE);
 }
 
 function jsonSlice(
@@ -2015,31 +2200,25 @@ function parseTagAt(
     return null;
   }
   let cursor = pos + 2;
-  while (cursor < text.length && isSpace(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
 
   let closing = false;
   if (text[cursor] === "/") {
     closing = true;
     cursor += 1;
-    while (cursor < text.length && isSpace(text[cursor]!)) {
-      cursor += 1;
-    }
+    cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
   }
 
-  let name = "";
-  while (cursor < text.length && /[A-Za-z]/.test(text[cursor]!)) {
-    name += text[cursor]!;
-    cursor += 1;
+  const nameMatch = matchAt(text, cursor, ALPHA_WORD_RE);
+  const name = nameMatch?.[0] ?? "";
+  if (nameMatch) {
+    cursor += nameMatch[0].length;
   }
   if (name !== "example" && name !== "schema") {
     return null;
   }
 
-  while (cursor < text.length && isSpace(text[cursor]!)) {
-    cursor += 1;
-  }
+  cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
 
   // Detect optional "hide" attribute (only valid on non-closing schema tags)
   let hide = false;
@@ -2050,9 +2229,7 @@ function parseTagAt(
     ) {
       hide = true;
       cursor += 4;
-      while (cursor < text.length && isSpace(text[cursor]!)) {
-        cursor += 1;
-      }
+      cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
     }
   }
 
@@ -2064,34 +2241,31 @@ function parseTagAt(
       (cursor + 4 >= text.length || !isIdentifierPart(text[cursor + 4]!))
     ) {
       cursor += 4;
-      while (cursor < text.length && isSpace(text[cursor]!)) {
-        cursor += 1;
-      }
+      cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
       if (text[cursor] !== "=") {
         return null;
       }
       cursor += 1;
-      while (cursor < text.length && isSpace(text[cursor]!)) {
-        cursor += 1;
-      }
+      cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
       const quote = text[cursor];
       if (quote !== '"' && quote !== "'") {
         return null;
       }
       cursor += 1;
       const valueStart = cursor;
-      while (cursor < text.length && text[cursor] !== quote) {
-        cursor += 1;
+      const quoteEscaped = quote === '"' ? '"' : "'";
+      const closeValue = matchAt(text, cursor, new RegExp(`[^${quoteEscaped}]*`, "y"));
+      if (!closeValue) {
+        return null;
       }
+      cursor += closeValue[0].length;
       if (cursor >= text.length) {
         return null;
       }
       type = text.slice(valueStart, cursor);
       cursor += 1;
 
-      while (cursor < text.length && isSpace(text[cursor]!)) {
-        cursor += 1;
-      }
+      cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
     }
   }
 
@@ -2100,9 +2274,7 @@ function parseTagAt(
       return null;
     }
     cursor += 1;
-    while (cursor < text.length && isSpace(text[cursor]!)) {
-      cursor += 1;
-    }
+    cursor = skipWithRegex(text, cursor, SPACE_RUN_RE);
   }
 
   if (text[cursor] !== ">") {
@@ -2135,10 +2307,15 @@ function findClosingTag(
 
   let cursor = startPos;
   while (cursor < text.length) {
-    const ch = text[cursor]!;
-    const next = text[cursor + 1];
-
     if (mode === "normal") {
+      const nextTokenIndex = findNextRegexIndex(text, cursor, CLOSING_TAG_TOKEN_RE);
+      if (nextTokenIndex < 0) {
+        return null;
+      }
+      cursor = nextTokenIndex;
+      const ch = text[cursor]!;
+      const next = text[cursor + 1];
+
       if (ch === "'") {
         mode = "single";
         cursor += 1;
@@ -2165,11 +2342,11 @@ function findClosingTag(
         continue;
       }
       if (ch === "$" && next === "<") {
-        const tag = parseTagAt(text, cursor);
-        if (tag && tag.name === tagName && tag.closing) {
+        const closeTagMatch = matchAt(text, cursor, CLOSE_TAG_RE);
+        if (closeTagMatch && closeTagMatch[1] === tagName) {
           return {
             start: cursor,
-            length: tag.length,
+            length: closeTagMatch[0].length,
           };
         }
       }
@@ -2178,70 +2355,87 @@ function findClosingTag(
     }
 
     if (mode === "single") {
-      if (ch === "\n") {
+      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_OR_NEWLINE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\n") {
         mode = "normal";
         cursor += 1;
-        continue;
-      }
-      if (ch === "\\") {
+      } else if (text[cursor] === "\\") {
         cursor += 2;
-        continue;
-      }
-      if (ch === "'") {
+      } else {
         mode = "normal";
+        cursor += 1;
       }
-      cursor += 1;
       continue;
     }
 
     if (mode === "double") {
-      if (ch === "\n") {
+      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_OR_NEWLINE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\n") {
         mode = "normal";
         cursor += 1;
-        continue;
-      }
-      if (ch === "\\") {
+      } else if (text[cursor] === "\\") {
         cursor += 2;
-        continue;
-      }
-      if (ch === '"') {
+      } else {
         mode = "normal";
+        cursor += 1;
       }
-      cursor += 1;
       continue;
     }
 
     if (mode === "template") {
-      if (ch === "\\") {
+      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
+      if (nextSpecial < 0) {
+        break;
+      }
+      cursor = nextSpecial;
+      if (text[cursor] === "\\") {
         cursor += 2;
-        continue;
-      }
-      if (ch === "`") {
+      } else {
         mode = "normal";
+        cursor += 1;
       }
-      cursor += 1;
       continue;
     }
 
     if (mode === "line-comment") {
-      if (ch === "\n") {
-        mode = "normal";
+      const lineEnd = text.indexOf("\n", cursor);
+      if (lineEnd < 0) {
+        break;
       }
-      cursor += 1;
+      cursor = lineEnd + 1;
+      mode = "normal";
       continue;
     }
 
     if (mode === "block-comment") {
-      if (ch === "*" && next === "/") {
-        mode = "normal";
-        cursor += 2;
-        continue;
+      const blockEnd = text.indexOf("*/", cursor);
+      if (blockEnd < 0) {
+        break;
       }
-      cursor += 1;
+      cursor = blockEnd + 2;
+      mode = "normal";
       continue;
     }
   }
-  return null;
+
+  const fallbackMatch = text
+    .slice(startPos)
+    .match(new RegExp(`\\$<\\s*\\/\\s*${tagName}\\s*>`));
+  if (!fallbackMatch || fallbackMatch.index === undefined) {
+    return null;
+  }
+  return {
+    start: startPos + fallbackMatch.index,
+    length: fallbackMatch[0].length,
+  };
 }
 
 function lineSlice(line: Line): CodeSlice {
@@ -2346,30 +2540,20 @@ function splitIntoLines(content: string): Line[] {
 
   const lines: Line[] = [];
   let lineNumber = 0;
-  let cursor = 0;
-  while (cursor < content.length) {
-    const lineStart = cursor;
-    while (
-      cursor < content.length &&
-      content[cursor] !== "\n" &&
-      content[cursor] !== "\r"
-    ) {
-      cursor += 1;
-    }
-    const text = content.slice(lineStart, cursor);
+  const lineTokenRe = /([^\r\n]*)(\r\n|\n|\r|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = lineTokenRe.exec(content)) !== null) {
+    const text = match[1] ?? "";
+    const separator = match[2] ?? "";
+    const lineStart = match.index;
     lines.push({
       lineNumber,
       startPos: lineStart,
       text,
       indent: getIndent(text),
     });
-    if (cursor >= content.length) {
+    if (separator === "") {
       break;
-    }
-    if (content[cursor] === "\r" && content[cursor + 1] === "\n") {
-      cursor += 2;
-    } else {
-      cursor += 1;
     }
     lineNumber += 1;
   }
@@ -2390,6 +2574,40 @@ function isEmptyLine(line: Line): boolean {
 
 function isTopLevelCommentLine(line: Line): boolean {
   return line.indent === "" && line.text.startsWith("#");
+}
+
+const IDENTIFIER_RE = /[A-Za-z_][A-Za-z0-9_]*/y;
+const ALPHA_WORD_RE = /[A-Za-z]+/y;
+const SPACE_RUN_RE = /[ \t]*/y;
+const WHITESPACE_RUN_RE = /\s*/y;
+const KEYWORD_SCAN_TOKEN_RE = /[A-Za-z_'"`{}\[\]()\/]/g;
+const SPLIT_PIPE_TOKEN_RE = /['"`{}\[\]()|\/]/g;
+const SPLIT_SEMICOLON_TOKEN_RE = /['"`{}\[\]();\/]/g;
+const STATEMENT_END_TOKEN_RE = /['"`{}\[\]();\/]/g;
+const BRACE_MATCH_TOKEN_RE = /['"`{}\/]/g;
+const CLOSING_TAG_TOKEN_RE = /['"`$\/]/g;
+const SINGLE_QUOTE_SCAN_RE = /[\\']/g;
+const SINGLE_OR_NEWLINE_SCAN_RE = /[\\'\n]/g;
+const DOUBLE_QUOTE_SCAN_RE = /[\\"]/g;
+const DOUBLE_OR_NEWLINE_SCAN_RE = /[\\"\n]/g;
+const TEMPLATE_SCAN_RE = /[\\`]/g;
+const CLOSE_TAG_RE = /\$<\s*\/\s*(example|schema)\s*>/y;
+const JSON_STRING_TOKEN_RE = /[\\"]/g;
+
+function findNextRegexIndex(text: string, start: number, pattern: RegExp): number {
+  pattern.lastIndex = start;
+  const match = pattern.exec(text);
+  return match ? match.index : -1;
+}
+
+function matchAt(text: string, start: number, pattern: RegExp): RegExpExecArray | null {
+  pattern.lastIndex = start;
+  return pattern.exec(text);
+}
+
+function skipWithRegex(text: string, start: number, pattern: RegExp): number {
+  const match = matchAt(text, start, pattern);
+  return match ? start + match[0].length : start;
 }
 
 function isIdentifierStart(ch: string): boolean {
