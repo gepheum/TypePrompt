@@ -390,35 +390,41 @@ function parseTemplatePieces(
             codeSlice: bodySlice(state, body, cursor, text.length),
           });
           const raw = text.slice(cursor + tag.length);
-          pieces.push({
-            kind: "example",
-            text: raw,
-            example: parseResponseExample(
-              state,
-              body,
-              cursor + tag.length,
-              text.length,
-              raw,
-              tag.type,
-            ),
-          });
+          const example = parseResponseExample(
+            state,
+            body,
+            cursor + tag.length,
+            text.length,
+            raw,
+            tag.type,
+          );
+          if (example) {
+            pieces.push({
+              kind: "example",
+              text: raw,
+              example,
+            });
+          }
           cursor = text.length;
           continue;
         }
 
         const raw = text.slice(cursor + tag.length, close.start);
-        pieces.push({
-          kind: "example",
-          text: raw,
-          example: parseResponseExample(
-            state,
-            body,
-            cursor + tag.length,
-            close.start,
-            raw,
-            tag.type,
-          ),
-        });
+        const example = parseResponseExample(
+          state,
+          body,
+          cursor + tag.length,
+          close.start,
+          raw,
+          tag.type,
+        );
+        if (example) {
+          pieces.push({
+            kind: "example",
+            text: raw,
+            example,
+          });
+        }
         cursor = close.start + close.length;
         continue;
       }
@@ -1602,7 +1608,7 @@ function parseResponseExample(
   sectionEnd: number,
   sectionText: string,
   type?: string,
-): Example {
+): Example | null {
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);
@@ -1616,12 +1622,16 @@ function parseResponseExample(
 
   skipJsonSpaces(jsonState);
   const value = parseJsonValue(jsonState);
+  if (!value) {
+    return null;
+  }
   skipJsonSpaces(jsonState);
-  if (value && jsonState.cursor < jsonState.text.length) {
+  if (jsonState.cursor < jsonState.text.length) {
     state.errors.push({
       message: "Unexpected trailing content after JSON value",
       codeSlice: jsonSlice(jsonState, jsonState.cursor, jsonState.text.length),
     });
+    return null;
   }
 
   return {

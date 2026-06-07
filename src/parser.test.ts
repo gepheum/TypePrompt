@@ -225,12 +225,6 @@ describe("parseTemplateFile", () => {
               { kind: "schema", text: "" },
               { kind: "text", text: "\n" },
               {
-                kind: "example",
-                example: {
-                  value: null,
-                },
-              },
-              {
                 kind: "text",
                 text: "\n",
               },
@@ -1372,7 +1366,6 @@ describe("parseTemplateFile", () => {
             pieces: [
               { kind: "schema" },
               { kind: "text" },
-              { kind: "example", example: { value: null } },
             ],
           },
         ],
@@ -1396,14 +1389,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            pieces: [
-              { kind: "schema" },
-              { kind: "text" },
-              {
-                kind: "example",
-                example: { value: { kind: "number", value: 42 } },
-              },
-            ],
+            pieces: [{ kind: "schema" }, { kind: "text" }],
           },
         ],
       },

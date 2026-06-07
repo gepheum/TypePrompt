@@ -103,7 +103,7 @@ export type SchemaDeclaration =
 
 export interface Example {
   readonly codeSlice: CodeSlice;
-  readonly value: JsonValue | null;
+  readonly value: JsonValue;
   readonly type?: string;
 }
 
