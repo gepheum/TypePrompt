@@ -1,6 +1,9 @@
 import type {
+  ArrayTypeRef,
   CodeSlice,
   Error,
+  Example,
+  InlineInterfaceTypeRef,
   JsonArray,
   JsonBoolean,
   JsonEllipsis,
@@ -11,19 +14,16 @@ import type {
   JsonString,
   JsonValue,
   Line,
-  Example,
-  ArrayTypeRef,
+  Result,
   Schema,
   SchemaDeclaration,
   SchemaField,
-  InlineInterfaceTypeRef,
   StringLiteralTypeRef,
-  TypeRef,
-  UnionTypeRef,
-  Result,
   Template,
   TemplateFile,
   TemplatePiece,
+  TypeRef,
+  UnionTypeRef,
 } from "./types.js";
 
 interface HeaderParseResult {
@@ -301,7 +301,6 @@ function parseTemplatePieces(
 } {
   const pieces: TemplatePiece[] = [];
   const parameters = new Set<string>();
-  const schemaCount = 0;
 
   const text = body.text;
   let cursor = 0;
@@ -322,7 +321,6 @@ function parseTemplatePieces(
     const dollarPos = text.indexOf("$", cursor);
     if (dollarPos < 0) {
       textBuffer += text.slice(cursor);
-      cursor = text.length;
       break;
     }
     if (dollarPos > cursor) {
@@ -534,7 +532,11 @@ function parseResponseSchema(
   const startPos = mapBodyPosToSource(body, sectionStart);
   const endPos = mapBodyPosToSource(body, sectionEnd);
   const line = findLineByPos(state.lines, startPos);
-  const declarations = parseSchemaDeclarations(sectionText, startPos, state.lines);
+  const declarations = parseSchemaDeclarations(
+    sectionText,
+    startPos,
+    state.lines,
+  );
 
   return {
     codeSlice: {
@@ -563,7 +565,12 @@ function parseSchemaDeclarations(
     }
 
     if (keyword.word === "interface") {
-      const parsed = parseInterfaceDeclaration(text, keyword.start, sectionStartPos, lines);
+      const parsed = parseInterfaceDeclaration(
+        text,
+        keyword.start,
+        sectionStartPos,
+        lines,
+      );
       if (parsed) {
         declarations.push(parsed.declaration);
         cursor = parsed.nextCursor;
@@ -572,7 +579,12 @@ function parseSchemaDeclarations(
     }
 
     if (keyword.word === "type") {
-      const parsed = parseTypeDeclaration(text, keyword.start, sectionStartPos, lines);
+      const parsed = parseTypeDeclaration(
+        text,
+        keyword.start,
+        sectionStartPos,
+        lines,
+      );
       if (parsed) {
         declarations.push(parsed.declaration);
         cursor = parsed.nextCursor;
@@ -589,15 +601,29 @@ function parseSchemaDeclarations(
 function readTopLevelKeyword(
   text: string,
   from: number,
-): { readonly word: "interface" | "type"; readonly start: number; readonly end: number } | null {
+): {
+  readonly word: "interface" | "type";
+  readonly start: number;
+  readonly end: number;
+} | null {
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let mode:
+    | "normal"
+    | "single"
+    | "double"
+    | "template"
+    | "line-comment"
+    | "block-comment" = "normal";
 
   let cursor = from;
   while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(text, cursor, KEYWORD_SCAN_TOKEN_RE);
+    const nextTokenIndex = findNextRegexIndex(
+      text,
+      cursor,
+      KEYWORD_SCAN_TOKEN_RE,
+    );
     if (nextTokenIndex < 0) {
       return null;
     }
@@ -687,7 +713,11 @@ function readTopLevelKeyword(
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         return null;
       }
@@ -702,7 +732,11 @@ function readTopLevelKeyword(
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_OR_NEWLINE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_OR_NEWLINE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         return null;
       }
@@ -763,7 +797,10 @@ function parseInterfaceDeclaration(
   keywordStart: number,
   sectionStartPos: number,
   lines: readonly Line[],
-): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
+): {
+  readonly declaration: SchemaDeclaration;
+  readonly nextCursor: number;
+} | null {
   let cursor = keywordStart + "interface".length;
   cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
   const nameMatch = matchAt(text, cursor, IDENTIFIER_RE);
@@ -829,7 +866,10 @@ function parseInterfaceFields(
     const raw = text.slice(segment.start, segment.end);
     const leading = raw.match(/^\s*/)?.[0].length ?? 0;
     const trailing = raw.match(/\s*$/)?.[0].length ?? 0;
-    const trimmed = raw.slice(leading, Math.max(leading, raw.length - trailing));
+    const trimmed = raw.slice(
+      leading,
+      Math.max(leading, raw.length - trailing),
+    );
     if (trimmed.length === 0) {
       continue;
     }
@@ -896,7 +936,10 @@ function parseSchemaTypeRef(
   let baseText = trimmed.text;
   let baseStartPos = startPos + rawOffsetStart;
 
-  const arraySuffixes: Array<{ readonly startPos: number; readonly endPos: number }> = [];
+  const arraySuffixes: Array<{
+    readonly startPos: number;
+    readonly endPos: number;
+  }> = [];
   while (true) {
     const suffix = parseTopLevelArraySuffix(baseText);
     if (!suffix) {
@@ -913,19 +956,21 @@ function parseSchemaTypeRef(
   }
 
   const unionParts = splitTopLevelByPipe(baseText);
-  let baseRef: TypeRef | null = null;
 
   const nonEmptyUnionParts = unionParts
     .map((part) => trimSlice(baseText, part.start, part.end))
     .filter((part) => part.text.length > 0);
 
+  let baseRef: TypeRef | null;
   if (nonEmptyUnionParts.length > 1) {
-    const members: Array<
-      StringLiteralTypeRef | InlineInterfaceTypeRef
-    > = [];
+    const members: Array<StringLiteralTypeRef | InlineInterfaceTypeRef> = [];
     for (const partTrimmed of nonEmptyUnionParts) {
       const memberStartPos = baseStartPos + partTrimmed.start;
-      const member = parseUnionMemberTypeRef(partTrimmed.text, memberStartPos, lines);
+      const member = parseUnionMemberTypeRef(
+        partTrimmed.text,
+        memberStartPos,
+        lines,
+      );
       if (!member) {
         return null;
       }
@@ -1033,7 +1078,11 @@ function parseInlineInterfaceTypeRef(
     return null;
   }
 
-  const fields = parseInterfaceFields(text.slice(1, text.length - 1), startPos + 1, lines);
+  const fields = parseInterfaceFields(
+    text.slice(1, text.length - 1),
+    startPos + 1,
+    lines,
+  );
   return {
     kind: "inline-interface",
     fields,
@@ -1086,7 +1135,11 @@ function decodeTypeStringLiteral(text: string): string {
 
 function parseTopLevelArraySuffix(
   text: string,
-): { readonly baseText: string; readonly suffixStart: number; readonly suffixEnd: number } | null {
+): {
+  readonly baseText: string;
+  readonly suffixStart: number;
+  readonly suffixEnd: number;
+} | null {
   const trimmed = trimSlice(text, 0, text.length);
   if (!trimmed.text.endsWith("]")) {
     return null;
@@ -1115,12 +1168,22 @@ function splitTopLevelByPipe(
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let mode:
+    | "normal"
+    | "single"
+    | "double"
+    | "template"
+    | "line-comment"
+    | "block-comment" = "normal";
   let partStart = 0;
 
   let cursor = 0;
   while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(text, cursor, SPLIT_PIPE_TOKEN_RE);
+    const nextTokenIndex = findNextRegexIndex(
+      text,
+      cursor,
+      SPLIT_PIPE_TOKEN_RE,
+    );
     if (nextTokenIndex < 0) {
       break;
     }
@@ -1186,7 +1249,12 @@ function splitTopLevelByPipe(
         continue;
       }
 
-      if (ch === "|" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+      if (
+        ch === "|" &&
+        depthCurly === 0 &&
+        depthSquare === 0 &&
+        depthParen === 0
+      ) {
         parts.push({ start: partStart, end: cursor });
         partStart = cursor + 1;
       }
@@ -1195,7 +1263,11 @@ function splitTopLevelByPipe(
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1210,7 +1282,11 @@ function splitTopLevelByPipe(
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1289,12 +1365,22 @@ function splitTopLevelSemicolonSegments(
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let mode:
+    | "normal"
+    | "single"
+    | "double"
+    | "template"
+    | "line-comment"
+    | "block-comment" = "normal";
   let segmentStart = 0;
 
   let cursor = 0;
   while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(text, cursor, SPLIT_SEMICOLON_TOKEN_RE);
+    const nextTokenIndex = findNextRegexIndex(
+      text,
+      cursor,
+      SPLIT_SEMICOLON_TOKEN_RE,
+    );
     if (nextTokenIndex < 0) {
       break;
     }
@@ -1360,7 +1446,12 @@ function splitTopLevelSemicolonSegments(
         continue;
       }
 
-      if (ch === ";" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+      if (
+        ch === ";" &&
+        depthCurly === 0 &&
+        depthSquare === 0 &&
+        depthParen === 0
+      ) {
         segments.push({ start: segmentStart, end: cursor });
         segmentStart = cursor + 1;
       }
@@ -1369,7 +1460,11 @@ function splitTopLevelSemicolonSegments(
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1384,7 +1479,11 @@ function splitTopLevelSemicolonSegments(
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1446,7 +1545,10 @@ function parseTypeDeclaration(
   keywordStart: number,
   sectionStartPos: number,
   lines: readonly Line[],
-): { readonly declaration: SchemaDeclaration; readonly nextCursor: number } | null {
+): {
+  readonly declaration: SchemaDeclaration;
+  readonly nextCursor: number;
+} | null {
   let cursor = keywordStart + "type".length;
   cursor = skipWithRegex(text, cursor, WHITESPACE_RUN_RE);
   const nameMatch = matchAt(text, cursor, IDENTIFIER_RE);
@@ -1473,7 +1575,10 @@ function parseTypeDeclaration(
   const valueRaw = text.slice(typeValueStart, valueEnd);
   const leading = valueRaw.match(/^\s*/)?.[0].length ?? 0;
   const trailing = valueRaw.match(/\s*$/)?.[0].length ?? 0;
-  const valueText = valueRaw.slice(leading, Math.max(leading, valueRaw.length - trailing));
+  const valueText = valueRaw.slice(
+    leading,
+    Math.max(leading, valueRaw.length - trailing),
+  );
   if (valueText.length === 0) {
     return null;
   }
@@ -1512,11 +1617,21 @@ function findTopLevelStatementEnd(text: string, start: number): number {
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let mode:
+    | "normal"
+    | "single"
+    | "double"
+    | "template"
+    | "line-comment"
+    | "block-comment" = "normal";
 
   let cursor = start;
   while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(text, cursor, STATEMENT_END_TOKEN_RE);
+    const nextTokenIndex = findNextRegexIndex(
+      text,
+      cursor,
+      STATEMENT_END_TOKEN_RE,
+    );
     if (nextTokenIndex < 0) {
       break;
     }
@@ -1582,7 +1697,12 @@ function findTopLevelStatementEnd(text: string, start: number): number {
         continue;
       }
 
-      if (ch === ";" && depthCurly === 0 && depthSquare === 0 && depthParen === 0) {
+      if (
+        ch === ";" &&
+        depthCurly === 0 &&
+        depthSquare === 0 &&
+        depthParen === 0
+      ) {
         return cursor + 1;
       }
       cursor += 1;
@@ -1590,7 +1710,11 @@ function findTopLevelStatementEnd(text: string, start: number): number {
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1605,7 +1729,11 @@ function findTopLevelStatementEnd(text: string, start: number): number {
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1660,11 +1788,21 @@ function findTopLevelStatementEnd(text: string, start: number): number {
 
 function findMatchingBrace(text: string, openBracePos: number): number {
   let depth = 0;
-  let mode: "normal" | "single" | "double" | "template" | "line-comment" | "block-comment" = "normal";
+  let mode:
+    | "normal"
+    | "single"
+    | "double"
+    | "template"
+    | "line-comment"
+    | "block-comment" = "normal";
 
   let cursor = openBracePos;
   while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(text, cursor, BRACE_MATCH_TOKEN_RE);
+    const nextTokenIndex = findNextRegexIndex(
+      text,
+      cursor,
+      BRACE_MATCH_TOKEN_RE,
+    );
     if (nextTokenIndex < 0) {
       break;
     }
@@ -1716,7 +1854,11 @@ function findMatchingBrace(text: string, openBracePos: number): number {
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -1731,7 +1873,11 @@ function findMatchingBrace(text: string, openBracePos: number): number {
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_QUOTE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_QUOTE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -2254,7 +2400,11 @@ function parseTagAt(
       cursor += 1;
       const valueStart = cursor;
       const quoteEscaped = quote === '"' ? '"' : "'";
-      const closeValue = matchAt(text, cursor, new RegExp(`[^${quoteEscaped}]*`, "y"));
+      const closeValue = matchAt(
+        text,
+        cursor,
+        new RegExp(`[^${quoteEscaped}]*`, "y"),
+      );
       if (!closeValue) {
         return null;
       }
@@ -2308,7 +2458,11 @@ function findClosingTag(
   let cursor = startPos;
   while (cursor < text.length) {
     if (mode === "normal") {
-      const nextTokenIndex = findNextRegexIndex(text, cursor, CLOSING_TAG_TOKEN_RE);
+      const nextTokenIndex = findNextRegexIndex(
+        text,
+        cursor,
+        CLOSING_TAG_TOKEN_RE,
+      );
       if (nextTokenIndex < 0) {
         return null;
       }
@@ -2355,7 +2509,11 @@ function findClosingTag(
     }
 
     if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(text, cursor, SINGLE_OR_NEWLINE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        SINGLE_OR_NEWLINE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -2373,7 +2531,11 @@ function findClosingTag(
     }
 
     if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(text, cursor, DOUBLE_OR_NEWLINE_SCAN_RE);
+      const nextSpecial = findNextRegexIndex(
+        text,
+        cursor,
+        DOUBLE_OR_NEWLINE_SCAN_RE,
+      );
       if (nextSpecial < 0) {
         break;
       }
@@ -2580,12 +2742,12 @@ const IDENTIFIER_RE = /[A-Za-z_][A-Za-z0-9_]*/y;
 const ALPHA_WORD_RE = /[A-Za-z]+/y;
 const SPACE_RUN_RE = /[ \t]*/y;
 const WHITESPACE_RUN_RE = /\s*/y;
-const KEYWORD_SCAN_TOKEN_RE = /[A-Za-z_'"`{}\[\]()\/]/g;
-const SPLIT_PIPE_TOKEN_RE = /['"`{}\[\]()|\/]/g;
-const SPLIT_SEMICOLON_TOKEN_RE = /['"`{}\[\]();\/]/g;
-const STATEMENT_END_TOKEN_RE = /['"`{}\[\]();\/]/g;
-const BRACE_MATCH_TOKEN_RE = /['"`{}\/]/g;
-const CLOSING_TAG_TOKEN_RE = /['"`$\/]/g;
+const KEYWORD_SCAN_TOKEN_RE = /[A-Za-z_'"`{}[\]()/]/g;
+const SPLIT_PIPE_TOKEN_RE = /['"`{}[\]()|/]/g;
+const SPLIT_SEMICOLON_TOKEN_RE = /['"`{}[\]();/]/g;
+const STATEMENT_END_TOKEN_RE = /['"`{}[\]();/]/g;
+const BRACE_MATCH_TOKEN_RE = /['"`{}/]/g;
+const CLOSING_TAG_TOKEN_RE = /['"`$/]/g;
 const SINGLE_QUOTE_SCAN_RE = /[\\']/g;
 const SINGLE_OR_NEWLINE_SCAN_RE = /[\\'\n]/g;
 const DOUBLE_QUOTE_SCAN_RE = /[\\"]/g;
@@ -2594,13 +2756,21 @@ const TEMPLATE_SCAN_RE = /[\\`]/g;
 const CLOSE_TAG_RE = /\$<\s*\/\s*(example|schema)\s*>/y;
 const JSON_STRING_TOKEN_RE = /[\\"]/g;
 
-function findNextRegexIndex(text: string, start: number, pattern: RegExp): number {
+function findNextRegexIndex(
+  text: string,
+  start: number,
+  pattern: RegExp,
+): number {
   pattern.lastIndex = start;
   const match = pattern.exec(text);
   return match ? match.index : -1;
 }
 
-function matchAt(text: string, start: number, pattern: RegExp): RegExpExecArray | null {
+function matchAt(
+  text: string,
+  start: number,
+  pattern: RegExp,
+): RegExpExecArray | null {
   pattern.lastIndex = start;
   return pattern.exec(text);
 }
@@ -2616,8 +2786,4 @@ function isIdentifierStart(ch: string): boolean {
 
 function isIdentifierPart(ch: string): boolean {
   return /[A-Za-z0-9_]/.test(ch);
-}
-
-function isSpace(ch: string): boolean {
-  return ch === " " || ch === "\t";
 }

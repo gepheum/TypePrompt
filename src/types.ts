@@ -66,10 +66,7 @@ export interface ArrayTypeRef {
 
 export interface UnionTypeRef {
   readonly kind: "union";
-  readonly members: readonly (
-    | StringLiteralTypeRef
-    | InlineInterfaceTypeRef
-  )[];
+  readonly members: readonly (StringLiteralTypeRef | InlineInterfaceTypeRef)[];
   readonly codeSlice: CodeSlice;
 }
 
