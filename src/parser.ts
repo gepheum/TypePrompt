@@ -15,6 +15,7 @@ import type {
   JsonValue,
   Line,
   Result,
+  Schema,
   SchemaField,
   StringLiteralTypeRef,
   Template,
@@ -93,6 +94,8 @@ export function parseTemplateFile(content: string): Result<TemplateFile> {
       variantName: header.variantName,
       pieces: piecesParse.pieces,
       parameters: piecesParse.parameters,
+      schema: piecesParse.schema,
+      examples: piecesParse.examples,
     });
   }
 
@@ -297,9 +300,13 @@ function parseTemplatePieces(
 ): {
   readonly pieces: readonly TemplatePiece[];
   readonly parameters: readonly string[];
+  readonly schema: Schema | null;
+  readonly examples: readonly Example[];
 } {
   const pieces: TemplatePiece[] = [];
   const parameters = new Set<string>();
+  const templateTypes: Record<string, TypeDeclaration> = {};
+  const examples: Example[] = [];
 
   const text = body.text;
   let cursor = 0;
@@ -345,34 +352,36 @@ function parseTemplatePieces(
             codeSlice: bodySlice(state, body, cursor, text.length),
           });
           const sectionRaw = text.slice(cursor + tag.length);
-          const types = parseResponseSchema(
+          const schema = parseResponseSchema(
             state,
             body,
             cursor + tag.length,
             text.length,
             sectionRaw,
           );
+          Object.assign(templateTypes, schema.types);
           pieces.push({
             kind: "schema",
             text: tag.hide ? "" : sectionRaw,
-            types,
+            types: schema.types,
           });
           cursor = text.length;
           continue;
         }
 
         const raw = text.slice(cursor + tag.length, close.start);
-        const types = parseResponseSchema(
+        const schema = parseResponseSchema(
           state,
           body,
           cursor + tag.length,
           close.start,
           raw,
         );
+        Object.assign(templateTypes, schema.types);
         pieces.push({
           kind: "schema",
           text: tag.hide ? "" : raw,
-          types,
+          types: schema.types,
         });
         cursor = close.start + close.length;
         continue;
@@ -396,6 +405,7 @@ function parseTemplatePieces(
             tag.type,
           );
           if (example) {
+            examples.push(example);
             pieces.push({
               kind: "example",
               text: raw,
@@ -416,6 +426,7 @@ function parseTemplatePieces(
           tag.type,
         );
         if (example) {
+          examples.push(example);
           pieces.push({
             kind: "example",
             text: raw,
@@ -502,6 +513,9 @@ function parseTemplatePieces(
   return {
     pieces,
     parameters: [...parameters],
+    schema:
+      Object.keys(templateTypes).length > 0 ? { types: templateTypes } : null,
+    examples,
   };
 }
 
@@ -527,9 +541,9 @@ function parseResponseSchema(
   sectionStart: number,
   _sectionEnd: number,
   sectionText: string,
-): Record<string, TypeDeclaration> {
+): Schema {
   const startPos = mapBodyPosToSource(body, sectionStart);
-  return parseSchemaDeclarations(sectionText, startPos, state.lines);
+  return { types: parseSchemaDeclarations(sectionText, startPos, state.lines) };
 }
 
 function parseSchemaDeclarations(

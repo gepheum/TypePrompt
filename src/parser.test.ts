@@ -26,6 +26,21 @@ describe("parseTemplateFile", () => {
             name: { text: "Foo" },
             variantName: { text: "Bar" },
             parameters: ["name", "value"],
+            schema: {
+              types: {
+                Out: {
+                  kind: "interface",
+                  name: { text: "Out" },
+                },
+              },
+            },
+            examples: [
+              {
+                value: {
+                  kind: "object",
+                },
+              },
+            ],
             pieces: [
               {
                 kind: "text",
@@ -92,6 +107,42 @@ describe("parseTemplateFile", () => {
       ],
       value: {
         templates: [],
+      },
+    });
+  });
+
+  it("exposes template-level schema and examples", () => {
+    const parsed = parseTemplateFile(
+      [
+        "Foo:",
+        "  $<schema>",
+        "    type A = string;",
+        "  $</schema>",
+        "  $<schema>",
+        "    interface B { id: string; }",
+        "  $</schema>",
+        '  $<example>{"id":"x"}$</example>',
+        "  $<example>true$</example>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      errors: [],
+      value: {
+        templates: [
+          {
+            schema: {
+              types: {
+                A: { kind: "type", name: { text: "A" } },
+                B: { kind: "interface", name: { text: "B" } },
+              },
+            },
+            examples: [
+              { value: { kind: "object" } },
+              { value: { kind: "boolean", value: true } },
+            ],
+          },
+        ],
       },
     });
   });

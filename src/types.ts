@@ -12,6 +12,12 @@ export interface Template {
   readonly variantName?: CodeSlice;
   readonly pieces: readonly TemplatePiece[];
   readonly parameters: readonly string[];
+  readonly schema: Schema | null;
+  readonly examples: readonly Example[];
+}
+
+export interface Schema {
+  readonly types: Record<string, TypeDeclaration>;
 }
 
 export type TemplatePiece =
@@ -27,7 +33,7 @@ export type TemplatePiece =
   | {
       readonly kind: "schema";
       readonly text: string;
-      readonly types: Record<string, TypeDeclaration>;
+      readonly types: Schema["types"];
     }
   | {
       readonly kind: "example";
