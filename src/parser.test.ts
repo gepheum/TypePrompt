@@ -25,7 +25,7 @@ describe("parseTemplateFile", () => {
           {
             name: { text: "Foo" },
             variantName: { text: "Bar" },
-            parameters: ["name", "value"],
+            parameters: new Set(["name", "value"]),
             schema: {
               types: {
                 Out: {
@@ -162,7 +162,7 @@ describe("parseTemplateFile", () => {
         templates: [
           {
             name: { text: "Foo" },
-            parameters: [],
+            parameters: new Set(),
             pieces: [
               {
                 kind: "text",
@@ -238,7 +238,7 @@ describe("parseTemplateFile", () => {
         templates: [
           {
             name: { text: "Foo" },
-            parameters: [],
+            parameters: new Set(),
             pieces: [{ kind: "text", text: "before\n$<schema   />\nafter" }],
           },
         ],
@@ -311,7 +311,7 @@ describe("parseTemplateFile", () => {
         templates: [
           {
             name: { text: "Foo" },
-            parameters: [],
+            parameters: new Set(),
             pieces: [
               {
                 kind: "text",
@@ -329,7 +329,7 @@ describe("parseTemplateFile", () => {
           },
           {
             name: { text: "Bar" },
-            parameters: ["name"],
+            parameters: new Set(["name"]),
             pieces: [
               {
                 kind: "text",
@@ -527,7 +527,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            parameters: [],
+            parameters: new Set(),
             pieces: [
               { kind: "text", text: "price is $5 and $10\n" },
               { kind: "schema", text: "" },
@@ -552,7 +552,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            parameters: [],
+            parameters: new Set(),
             pieces: [
               { kind: "text", text: "${name:oops}\n" },
               { kind: "schema", text: "" },
@@ -577,7 +577,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            parameters: [],
+            parameters: new Set(),
             pieces: [
               { kind: "text", text: "hello ${name\n" },
               { kind: "schema", text: "" },
@@ -831,7 +831,7 @@ describe("parseTemplateFile", () => {
           },
           {
             name: { text: "Bar" },
-            parameters: ["param"],
+            parameters: new Set(["param"]),
           },
         ],
       },
@@ -850,7 +850,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            parameters: ["x"],
+            parameters: new Set(["x"]),
             pieces: [
               { kind: "expression", expression: "x", hide: true },
               { kind: "text", text: "\n" },
@@ -872,7 +872,7 @@ describe("parseTemplateFile", () => {
       value: {
         templates: [
           {
-            parameters: ["x", "y"],
+            parameters: new Set(["x", "y"]),
             pieces: [
               { kind: "expression", expression: "x", hide: false },
               { kind: "text", text: " and " },

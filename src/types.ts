@@ -9,9 +9,9 @@ export interface TemplateFile {
 
 export interface Template {
   readonly name: CodeSlice;
-  readonly variantName?: CodeSlice;
+  readonly variantName: CodeSlice | null;
   readonly pieces: readonly TemplatePiece[];
-  readonly parameters: readonly string[];
+  readonly parameters: ReadonlySet<string>;
   readonly schema: Schema | null;
   readonly examples: readonly Example[];
 }

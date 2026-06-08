@@ -91,7 +91,7 @@ export function parseTemplateFile(content: string): Result<TemplateFile> {
     const piecesParse = parseTemplatePieces(state, body);
     templates.push({
       name: header.name,
-      variantName: header.variantName,
+      variantName: header.variantName ?? null,
       pieces: piecesParse.pieces,
       parameters: piecesParse.parameters,
       schema: piecesParse.schema,
@@ -299,7 +299,7 @@ function parseTemplatePieces(
   body: BodyBuildResult,
 ): {
   readonly pieces: readonly TemplatePiece[];
-  readonly parameters: readonly string[];
+  readonly parameters: ReadonlySet<string>;
   readonly schema: Schema | null;
   readonly examples: readonly Example[];
 } {
@@ -512,7 +512,7 @@ function parseTemplatePieces(
 
   return {
     pieces,
-    parameters: [...parameters],
+    parameters,
     schema:
       Object.keys(templateTypes).length > 0 ? { types: templateTypes } : null,
     examples,
