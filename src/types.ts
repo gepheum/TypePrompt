@@ -53,7 +53,8 @@ export interface StringLiteralTypeRef {
 
 export interface InlineInterfaceTypeRef {
   readonly kind: "inline-interface";
-  readonly fields: readonly SchemaField[];
+  readonly fields: Record<string, SchemaField>;
+  readonly firstField?: SchemaField;
 }
 
 export interface ArrayTypeRef {
@@ -79,12 +80,15 @@ export interface SchemaField {
   readonly type: TypeRef;
 }
 
+export interface InterfaceDeclaration {
+  readonly kind: "interface";
+  readonly name: CodeSlice;
+  readonly fields: Record<string, SchemaField>;
+  readonly firstField?: SchemaField;
+}
+
 export type SchemaDeclaration =
-  | {
-      readonly kind: "interface";
-      readonly name: CodeSlice;
-      readonly fields: readonly SchemaField[];
-    }
+  | InterfaceDeclaration
   | {
       readonly kind: "type";
       readonly name: CodeSlice;

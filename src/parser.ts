@@ -840,7 +840,8 @@ function parseInterfaceDeclaration(
     declaration: {
       kind: "interface",
       name: nameSlice,
-      fields,
+      fields: fields.fields,
+      firstField: fields.firstField,
     },
     nextCursor: bodyEnd + 1,
   };
@@ -850,8 +851,12 @@ function parseInterfaceFields(
   text: string,
   bodyStartPos: number,
   lines: readonly Line[],
-): readonly SchemaField[] {
-  const fields: SchemaField[] = [];
+): {
+  readonly fields: Record<string, SchemaField>;
+  readonly firstField?: SchemaField;
+} {
+  const fields: Record<string, SchemaField> = {};
+  let firstField: SchemaField | undefined;
 
   const segments = splitTopLevelSemicolonSegments(text);
   for (const segment of segments) {
@@ -892,7 +897,7 @@ function parseInterfaceFields(
       continue;
     }
 
-    fields.push({
+    const field: SchemaField = {
       name: {
         text: nameText,
         startPos: nameStartPos,
@@ -901,10 +906,15 @@ function parseInterfaceFields(
       },
       optional,
       type: typeRef,
-    });
+    };
+
+    if (!firstField) {
+      firstField = field;
+    }
+    fields[nameText] = field;
   }
 
-  return fields;
+  return { fields, firstField };
 }
 
 function parseSchemaTypeRef(
@@ -1051,7 +1061,8 @@ function parseInlineInterfaceTypeRef(
   );
   return {
     kind: "inline-interface",
-    fields,
+    fields: fields.fields,
+    firstField: fields.firstField,
   };
 }
 

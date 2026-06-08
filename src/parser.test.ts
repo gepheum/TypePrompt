@@ -898,13 +898,13 @@ describe("parseTemplateFile", () => {
                     {
                       kind: "interface",
                       name: { text: "User" },
-                      fields: [
-                        {
+                      fields: {
+                        id: {
                           name: { text: "id" },
                           optional: false,
                           type: { kind: "type-name", name: { text: "string" } },
                         },
-                        {
+                        nickname: {
                           name: { text: "nickname" },
                           optional: true,
                           type: {
@@ -915,13 +915,13 @@ describe("parseTemplateFile", () => {
                             },
                           },
                         },
-                        {
+                        profile: {
                           name: { text: "profile" },
                           optional: false,
                           type: {
                             kind: "inline-interface",
-                            fields: [
-                              {
+                            fields: {
+                              age: {
                                 name: { text: "age" },
                                 optional: false,
                                 type: {
@@ -929,7 +929,7 @@ describe("parseTemplateFile", () => {
                                   name: { text: "number" },
                                 },
                               },
-                              {
+                              active: {
                                 name: { text: "active" },
                                 optional: false,
                                 type: {
@@ -937,10 +937,23 @@ describe("parseTemplateFile", () => {
                                   name: { text: "boolean" },
                                 },
                               },
-                            ],
+                            },
+                            firstField: {
+                              name: { text: "age" },
+                              optional: false,
+                              type: {
+                                kind: "type-name",
+                                name: { text: "number" },
+                              },
+                            },
                           },
                         },
-                      ],
+                      },
+                      firstField: {
+                        name: { text: "id" },
+                        optional: false,
+                        type: { kind: "type-name", name: { text: "string" } },
+                      },
                     },
                   ],
                 },
@@ -981,8 +994,8 @@ describe("parseTemplateFile", () => {
                           { kind: "string-literal", value: "ok" },
                           {
                             kind: "inline-interface",
-                            fields: [
-                              {
+                            fields: {
+                              ok: {
                                 name: { text: "ok" },
                                 optional: false,
                                 type: {
@@ -990,7 +1003,15 @@ describe("parseTemplateFile", () => {
                                   name: { text: "boolean" },
                                 },
                               },
-                            ],
+                            },
+                            firstField: {
+                              name: { text: "ok" },
+                              optional: false,
+                              type: {
+                                kind: "type-name",
+                                name: { text: "boolean" },
+                              },
+                            },
                           },
                         ],
                       },
