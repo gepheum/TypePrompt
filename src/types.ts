@@ -1,6 +1,6 @@
 export interface Result<T> {
   readonly value: T;
-  readonly errors: Error[];
+  readonly errors: readonly Error[];
 }
 
 export interface TemplateFile {
@@ -17,7 +17,7 @@ export interface Template {
 }
 
 export interface Schema {
-  readonly types: Record<string, TypeDeclaration>;
+  readonly types: Readonly<Record<string, TypeDeclaration>>;
 }
 
 export type TemplatePiece =
@@ -54,7 +54,7 @@ export interface StringLiteralTypeRef {
 
 export interface InlineInterfaceTypeRef {
   readonly kind: "inline-interface";
-  readonly fields: Record<string, SchemaField>;
+  readonly fields: Readonly<Record<string, SchemaField>>;
   readonly firstField?: SchemaField;
 }
 
@@ -84,7 +84,7 @@ export interface SchemaField {
 export interface InterfaceDeclaration {
   readonly kind: "interface";
   readonly name: CodeSlice;
-  readonly fields: Record<string, SchemaField>;
+  readonly fields: Readonly<Record<string, SchemaField>>;
   readonly firstField?: SchemaField;
 }
 
