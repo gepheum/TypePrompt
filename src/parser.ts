@@ -830,8 +830,6 @@ function parseInterfaceDeclaration(
     line: findLineByPos(lines, nameAbsStart),
   };
 
-  const declarationAbsStart = sectionStartPos + keywordStart;
-  const declarationAbsEnd = sectionStartPos + bodyEnd + 1;
   const fields = parseInterfaceFields(
     text.slice(bodyStart, bodyEnd),
     sectionStartPos + bodyStart,
@@ -842,12 +840,6 @@ function parseInterfaceDeclaration(
     declaration: {
       kind: "interface",
       name: nameSlice,
-      codeSlice: {
-        text: text.slice(keywordStart, bodyEnd + 1),
-        startPos: declarationAbsStart,
-        endPos: declarationAbsEnd,
-        line: findLineByPos(lines, declarationAbsStart),
-      },
       fields,
     },
     nextCursor: bodyEnd + 1,
@@ -891,7 +883,6 @@ function parseInterfaceFields(
 
     const memberStartInBody = segment.start + leading;
     const memberStartPos = bodyStartPos + memberStartInBody;
-    const memberEndPos = memberStartPos + trimmed.length;
     const typeStartInMember = colonIndex + 1 + typeLeading;
     const typeStartPos = memberStartPos + typeStartInMember;
     const nameStartPos = memberStartPos;
@@ -910,12 +901,6 @@ function parseInterfaceFields(
       },
       optional,
       type: typeRef,
-      codeSlice: {
-        text: trimmed,
-        startPos: memberStartPos,
-        endPos: memberEndPos,
-        line: findLineByPos(lines, memberStartPos),
-      },
     });
   }
 
@@ -980,12 +965,6 @@ function parseSchemaTypeRef(
     baseRef = {
       kind: "union",
       members,
-      codeSlice: {
-        text: baseText,
-        startPos: baseStartPos,
-        endPos: baseStartPos + baseText.length,
-        line: findLineByPos(lines, baseStartPos),
-      },
     } satisfies UnionTypeRef;
   } else {
     baseRef = parseSingleSchemaTypeRef(baseText, baseStartPos, lines);
@@ -997,16 +976,9 @@ function parseSchemaTypeRef(
 
   let wrapped: TypeRef = baseRef;
   for (let i = arraySuffixes.length - 1; i >= 0; i -= 1) {
-    const suffix = arraySuffixes[i]!;
     wrapped = {
       kind: "array",
       elementType: wrapped,
-      codeSlice: {
-        text: rawText.slice(0, suffix.endPos - startPos),
-        startPos,
-        endPos: suffix.endPos,
-        line: findLineByPos(lines, startPos),
-      },
     } satisfies ArrayTypeRef;
   }
 
@@ -1053,12 +1025,6 @@ function parseSingleSchemaTypeRef(
         endPos: startPos + text.length,
         line: findLineByPos(lines, startPos),
       },
-      codeSlice: {
-        text,
-        startPos,
-        endPos: startPos + text.length,
-        line: findLineByPos(lines, startPos),
-      },
     };
   }
 
@@ -1086,12 +1052,6 @@ function parseInlineInterfaceTypeRef(
   return {
     kind: "inline-interface",
     fields,
-    codeSlice: {
-      text,
-      startPos,
-      endPos: startPos + text.length,
-      line: findLineByPos(lines, startPos),
-    },
   };
 }
 
@@ -1111,7 +1071,7 @@ function parseStringLiteralTypeRef(
   return {
     kind: "string-literal",
     value: decodeTypeStringLiteral(text),
-    codeSlice: {
+    quoted_name: {
       text,
       startPos,
       endPos: startPos + text.length,
@@ -1133,9 +1093,7 @@ function decodeTypeStringLiteral(text: string): string {
   return inner.replace(/\\'/g, "'").replace(/\\\\/g, "\\");
 }
 
-function parseTopLevelArraySuffix(
-  text: string,
-): {
+function parseTopLevelArraySuffix(text: string): {
   readonly baseText: string;
   readonly suffixStart: number;
   readonly suffixEnd: number;
@@ -1583,8 +1541,6 @@ function parseTypeDeclaration(
     return null;
   }
 
-  const declarationAbsStart = sectionStartPos + keywordStart;
-  const declarationAbsEnd = sectionStartPos + statementEnd;
   const nameAbsStart = sectionStartPos + nameStart;
   const valueAbsStart = sectionStartPos + typeValueStart + leading;
   const valueType = parseSchemaTypeRef(valueText, valueAbsStart, lines);
@@ -1600,12 +1556,6 @@ function parseTypeDeclaration(
         startPos: nameAbsStart,
         endPos: sectionStartPos + nameEnd,
         line: findLineByPos(lines, nameAbsStart),
-      },
-      codeSlice: {
-        text: text.slice(keywordStart, statementEnd),
-        startPos: declarationAbsStart,
-        endPos: declarationAbsEnd,
-        line: findLineByPos(lines, declarationAbsStart),
       },
       valueType,
     },

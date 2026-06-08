@@ -43,31 +43,27 @@ export interface Schema {
 export interface TypeNameRef {
   readonly kind: "type-name";
   readonly name: CodeSlice;
-  readonly codeSlice: CodeSlice;
 }
 
 export interface StringLiteralTypeRef {
   readonly kind: "string-literal";
   readonly value: string;
-  readonly codeSlice: CodeSlice;
+  readonly quoted_name: CodeSlice;
 }
 
 export interface InlineInterfaceTypeRef {
   readonly kind: "inline-interface";
   readonly fields: readonly SchemaField[];
-  readonly codeSlice: CodeSlice;
 }
 
 export interface ArrayTypeRef {
   readonly kind: "array";
   readonly elementType: TypeRef;
-  readonly codeSlice: CodeSlice;
 }
 
 export interface UnionTypeRef {
   readonly kind: "union";
   readonly members: readonly (StringLiteralTypeRef | InlineInterfaceTypeRef)[];
-  readonly codeSlice: CodeSlice;
 }
 
 export type TypeRef =
@@ -81,20 +77,17 @@ export interface SchemaField {
   readonly name: CodeSlice;
   readonly optional: boolean;
   readonly type: TypeRef;
-  readonly codeSlice: CodeSlice;
 }
 
 export type SchemaDeclaration =
   | {
       readonly kind: "interface";
       readonly name: CodeSlice;
-      readonly codeSlice: CodeSlice;
       readonly fields: readonly SchemaField[];
     }
   | {
       readonly kind: "type";
       readonly name: CodeSlice;
-      readonly codeSlice: CodeSlice;
       readonly valueType: TypeRef;
     };
 
