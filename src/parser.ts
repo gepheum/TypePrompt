@@ -15,13 +15,12 @@ import type {
   JsonValue,
   Line,
   Result,
-  Schema,
-  SchemaDeclaration,
   SchemaField,
   StringLiteralTypeRef,
   Template,
   TemplateFile,
   TemplatePiece,
+  TypeDeclaration,
   TypeRef,
   UnionTypeRef,
 } from "./types.js";
@@ -346,7 +345,7 @@ function parseTemplatePieces(
             codeSlice: bodySlice(state, body, cursor, text.length),
           });
           const sectionRaw = text.slice(cursor + tag.length);
-          const schema = parseResponseSchema(
+          const types = parseResponseSchema(
             state,
             body,
             cursor + tag.length,
@@ -356,14 +355,14 @@ function parseTemplatePieces(
           pieces.push({
             kind: "schema",
             text: tag.hide ? "" : sectionRaw,
-            schema,
+            types,
           });
           cursor = text.length;
           continue;
         }
 
         const raw = text.slice(cursor + tag.length, close.start);
-        const schema = parseResponseSchema(
+        const types = parseResponseSchema(
           state,
           body,
           cursor + tag.length,
@@ -373,7 +372,7 @@ function parseTemplatePieces(
         pieces.push({
           kind: "schema",
           text: tag.hide ? "" : raw,
-          schema,
+          types,
         });
         cursor = close.start + close.length;
         continue;
@@ -526,35 +525,19 @@ function parseResponseSchema(
   state: ParseState,
   body: BodyBuildResult,
   sectionStart: number,
-  sectionEnd: number,
+  _sectionEnd: number,
   sectionText: string,
-): Schema {
+): Record<string, TypeDeclaration> {
   const startPos = mapBodyPosToSource(body, sectionStart);
-  const endPos = mapBodyPosToSource(body, sectionEnd);
-  const line = findLineByPos(state.lines, startPos);
-  const declarations = parseSchemaDeclarations(
-    sectionText,
-    startPos,
-    state.lines,
-  );
-
-  return {
-    codeSlice: {
-      text: sectionText,
-      startPos,
-      endPos,
-      line,
-    },
-    declarations,
-  };
+  return parseSchemaDeclarations(sectionText, startPos, state.lines);
 }
 
 function parseSchemaDeclarations(
   text: string,
   sectionStartPos: number,
   lines: readonly Line[],
-): SchemaDeclaration[] {
-  const declarations: SchemaDeclaration[] = [];
+): Record<string, TypeDeclaration> {
+  const declarations: Record<string, TypeDeclaration> = {};
   let cursor = 0;
 
   while (cursor < text.length) {
@@ -572,7 +555,7 @@ function parseSchemaDeclarations(
         lines,
       );
       if (parsed) {
-        declarations.push(parsed.declaration);
+        declarations[parsed.declaration.name.text] = parsed.declaration;
         cursor = parsed.nextCursor;
         continue;
       }
@@ -586,7 +569,7 @@ function parseSchemaDeclarations(
         lines,
       );
       if (parsed) {
-        declarations.push(parsed.declaration);
+        declarations[parsed.declaration.name.text] = parsed.declaration;
         cursor = parsed.nextCursor;
         continue;
       }
@@ -798,7 +781,7 @@ function parseInterfaceDeclaration(
   sectionStartPos: number,
   lines: readonly Line[],
 ): {
-  readonly declaration: SchemaDeclaration;
+  readonly declaration: TypeDeclaration;
   readonly nextCursor: number;
 } | null {
   let cursor = keywordStart + "interface".length;
@@ -1515,7 +1498,7 @@ function parseTypeDeclaration(
   sectionStartPos: number,
   lines: readonly Line[],
 ): {
-  readonly declaration: SchemaDeclaration;
+  readonly declaration: TypeDeclaration;
   readonly nextCursor: number;
 } | null {
   let cursor = keywordStart + "type".length;

@@ -50,13 +50,11 @@ describe("parseTemplateFile", () => {
               },
               {
                 kind: "schema",
-                schema: {
-                  declarations: [
-                    {
-                      kind: "interface",
-                      name: { text: "Out" },
-                    },
-                  ],
+                types: {
+                  Out: {
+                    kind: "interface",
+                    name: { text: "Out" },
+                  },
                 },
               },
               {
@@ -558,8 +556,8 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: "\n  type Out = string;\n",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Out" } }],
+                types: {
+                  Out: { kind: "type", name: { text: "Out" } },
                 },
               },
             ],
@@ -587,8 +585,8 @@ describe("parseTemplateFile", () => {
               { kind: "text", text: "before\n" },
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "interface", name: { text: "Out" } }],
+                types: {
+                  Out: { kind: "interface", name: { text: "Out" } },
                 },
               },
             ],
@@ -661,11 +659,9 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [
-                    { kind: "type", name: { text: "Marker" } },
-                    { kind: "interface", name: { text: "Out" } },
-                  ],
+                types: {
+                  Marker: { kind: "type", name: { text: "Marker" } },
+                  Out: { kind: "interface", name: { text: "Out" } },
                 },
               },
             ],
@@ -695,8 +691,8 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "interface", name: { text: "Out" } }],
+                types: {
+                  Out: { kind: "interface", name: { text: "Out" } },
                 },
               },
             ],
@@ -860,8 +856,8 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: "\n  interface Out { value: string; }\n",
-                schema: {
-                  declarations: [{ kind: "interface", name: { text: "Out" } }],
+                types: {
+                  Out: { kind: "interface", name: { text: "Out" } },
                 },
               },
             ],
@@ -893,52 +889,34 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [
-                    {
-                      kind: "interface",
-                      name: { text: "User" },
-                      fields: {
-                        id: {
-                          name: { text: "id" },
-                          optional: false,
-                          type: { kind: "type-name", name: { text: "string" } },
-                        },
-                        nickname: {
-                          name: { text: "nickname" },
-                          optional: true,
-                          type: {
-                            kind: "array",
-                            elementType: {
-                              kind: "type-name",
-                              name: { text: "string" },
-                            },
+                types: {
+                  User: {
+                    kind: "interface",
+                    name: { text: "User" },
+                    fields: {
+                      id: {
+                        name: { text: "id" },
+                        optional: false,
+                        type: { kind: "type-name", name: { text: "string" } },
+                      },
+                      nickname: {
+                        name: { text: "nickname" },
+                        optional: true,
+                        type: {
+                          kind: "array",
+                          elementType: {
+                            kind: "type-name",
+                            name: { text: "string" },
                           },
                         },
-                        profile: {
-                          name: { text: "profile" },
-                          optional: false,
-                          type: {
-                            kind: "inline-interface",
-                            fields: {
-                              age: {
-                                name: { text: "age" },
-                                optional: false,
-                                type: {
-                                  kind: "type-name",
-                                  name: { text: "number" },
-                                },
-                              },
-                              active: {
-                                name: { text: "active" },
-                                optional: false,
-                                type: {
-                                  kind: "type-name",
-                                  name: { text: "boolean" },
-                                },
-                              },
-                            },
-                            firstField: {
+                      },
+                      profile: {
+                        name: { text: "profile" },
+                        optional: false,
+                        type: {
+                          kind: "inline-interface",
+                          fields: {
+                            age: {
                               name: { text: "age" },
                               optional: false,
                               type: {
@@ -946,16 +924,32 @@ describe("parseTemplateFile", () => {
                                 name: { text: "number" },
                               },
                             },
+                            active: {
+                              name: { text: "active" },
+                              optional: false,
+                              type: {
+                                kind: "type-name",
+                                name: { text: "boolean" },
+                              },
+                            },
+                          },
+                          firstField: {
+                            name: { text: "age" },
+                            optional: false,
+                            type: {
+                              kind: "type-name",
+                              name: { text: "number" },
+                            },
                           },
                         },
                       },
-                      firstField: {
-                        name: { text: "id" },
-                        optional: false,
-                        type: { kind: "type-name", name: { text: "string" } },
-                      },
                     },
-                  ],
+                    firstField: {
+                      name: { text: "id" },
+                      optional: false,
+                      type: { kind: "type-name", name: { text: "string" } },
+                    },
+                  },
                 },
               },
             ],
@@ -983,28 +977,18 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [
-                    {
-                      kind: "type",
-                      name: { text: "Payload" },
-                      valueType: {
-                        kind: "union",
-                        members: [
-                          { kind: "string-literal", value: "ok" },
-                          {
-                            kind: "inline-interface",
-                            fields: {
-                              ok: {
-                                name: { text: "ok" },
-                                optional: false,
-                                type: {
-                                  kind: "type-name",
-                                  name: { text: "boolean" },
-                                },
-                              },
-                            },
-                            firstField: {
+                types: {
+                  Payload: {
+                    kind: "type",
+                    name: { text: "Payload" },
+                    valueType: {
+                      kind: "union",
+                      members: [
+                        { kind: "string-literal", value: "ok" },
+                        {
+                          kind: "inline-interface",
+                          fields: {
+                            ok: {
                               name: { text: "ok" },
                               optional: false,
                               type: {
@@ -1013,10 +997,18 @@ describe("parseTemplateFile", () => {
                               },
                             },
                           },
-                        ],
-                      },
+                          firstField: {
+                            name: { text: "ok" },
+                            optional: false,
+                            type: {
+                              kind: "type-name",
+                              name: { text: "boolean" },
+                            },
+                          },
+                        },
+                      ],
                     },
-                  ],
+                  },
                 },
               },
             ],
@@ -1083,8 +1075,8 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: "",
-                schema: {
-                  declarations: [{ kind: "interface", name: { text: "Out" } }],
+                types: {
+                  Out: { kind: "interface", name: { text: "Out" } },
                 },
               },
             ],
@@ -1113,8 +1105,8 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: "",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Result" } }],
+                types: {
+                  Result: { kind: "type", name: { text: "Result" } },
                 },
               },
             ],
@@ -1149,8 +1141,8 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Foo" } }],
+                types: {
+                  Foo: { kind: "type", name: { text: "Foo" } },
                 },
               },
             ],
@@ -1180,8 +1172,8 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Status" } }],
+                types: {
+                  Status: { kind: "type", name: { text: "Status" } },
                 },
               },
             ],
@@ -1209,8 +1201,8 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Shape" } }],
+                types: {
+                  Shape: { kind: "type", name: { text: "Shape" } },
                 },
               },
             ],
@@ -1242,8 +1234,8 @@ describe("parseTemplateFile", () => {
             pieces: [
               {
                 kind: "schema",
-                schema: {
-                  declarations: [{ kind: "type", name: { text: "Shape" } }],
+                types: {
+                  Shape: { kind: "type", name: { text: "Shape" } },
                 },
               },
             ],
@@ -1278,11 +1270,9 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: '\n  interface User {\n    name: string;\n    age: number;\n  }\n  type Role = "admin" | "member";\n',
-                schema: {
-                  declarations: [
-                    { kind: "interface", name: { text: "User" } },
-                    { kind: "type", name: { text: "Role" } },
-                  ],
+                types: {
+                  User: { kind: "interface", name: { text: "User" } },
+                  Role: { kind: "type", name: { text: "Role" } },
                 },
               },
             ],
@@ -1468,8 +1458,8 @@ describe("parseTemplateFile", () => {
               {
                 kind: "schema",
                 text: "\n  type A = `x\n",
-                schema: {
-                  declarations: [],
+                types: {
+                  // unterminated template literal in schema content should yield no declarations
                 },
               },
             ],

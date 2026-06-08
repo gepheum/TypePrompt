@@ -27,18 +27,13 @@ export type TemplatePiece =
   | {
       readonly kind: "schema";
       readonly text: string;
-      readonly schema: Schema;
+      readonly types: Record<string, TypeDeclaration>;
     }
   | {
       readonly kind: "example";
       readonly text: string;
       readonly example: Example;
     };
-
-export interface Schema {
-  readonly codeSlice: CodeSlice;
-  readonly declarations: readonly SchemaDeclaration[];
-}
 
 export interface TypeNameRef {
   readonly kind: "type-name";
@@ -87,7 +82,7 @@ export interface InterfaceDeclaration {
   readonly firstField?: SchemaField;
 }
 
-export type SchemaDeclaration =
+export type TypeDeclaration =
   | InterfaceDeclaration
   | {
       readonly kind: "type";
