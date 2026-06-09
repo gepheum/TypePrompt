@@ -9,6 +9,15 @@ import type {
   UnionTypeRef,
 } from "./types.js";
 
+const NATIVE_TYPE_NAMES = new Set(["string", "number", "boolean"]);
+
+function isWildcardValue(value: JsonValue): boolean {
+  return (
+    value.kind === "ellipsis" ||
+    (value.kind === "object" && Boolean(value.ellipsis) && value.entries.length === 0)
+  );
+}
+
 export function validateTemplateFile(templateFile: TemplateFile): Error[] {
   const errors: Error[] = [];
 
@@ -97,8 +106,18 @@ function matchesTypeNameRef(
   visited: Set<string>,
   getValueId: (value: JsonValue) => string,
 ): boolean {
-  if (value.kind === "ellipsis") {
+  if (isWildcardValue(value)) {
     return true;
+  }
+
+  if (typeName === "string") {
+    return value.kind === "string";
+  }
+  if (typeName === "number") {
+    return value.kind === "number";
+  }
+  if (typeName === "boolean") {
+    return value.kind === "boolean";
   }
 
   const visitKey = `${typeName}@@${getValueId(value)}`;
@@ -132,7 +151,7 @@ function matchesInterface(
   visited: Set<string>,
   getValueId: (value: JsonValue) => string,
 ): boolean {
-  if (value.kind === "ellipsis") {
+  if (isWildcardValue(value)) {
     return true;
   }
   if (value.kind !== "object") {
@@ -173,7 +192,7 @@ function matchesInlineInterface(
   visited: Set<string>,
   getValueId: (value: JsonValue) => string,
 ): boolean {
-  if (value.kind === "ellipsis") {
+  if (isWildcardValue(value)) {
     return true;
   }
   if (value.kind !== "object") {
@@ -214,7 +233,7 @@ function matchesTypeRef(
   visited: Set<string>,
   getValueId: (value: JsonValue) => string,
 ): boolean {
-  if (value.kind === "ellipsis") {
+  if (isWildcardValue(value)) {
     return true;
   }
 
@@ -271,7 +290,7 @@ function validateTypeRef(
   pushError: (message: string) => void,
 ): void {
   if (typeRef.kind === "type-name") {
-    if (!types[typeRef.name.text]) {
+    if (!types[typeRef.name.text] && !NATIVE_TYPE_NAMES.has(typeRef.name.text)) {
       pushError(`unknown type reference '${typeRef.name.text}'`);
     }
     return;

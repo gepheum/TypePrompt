@@ -138,6 +138,14 @@ function jsonBoolean(value: boolean): JsonValue {
   };
 }
 
+function jsonNumber(value: number): JsonValue {
+  return {
+    kind: "number",
+    codeSlice: slice(String(value)),
+    value,
+  };
+}
+
 function jsonObject(entries: Array<[string, JsonValue]>): JsonValue {
   return {
     kind: "object",
@@ -150,6 +158,18 @@ function jsonObject(entries: Array<[string, JsonValue]>): JsonValue {
       },
       value,
     })),
+  };
+}
+
+function jsonObjectEllipsisOnly(): JsonValue {
+  return {
+    kind: "object",
+    codeSlice: slice("{...}"),
+    entries: [],
+    ellipsis: {
+      kind: "ellipsis",
+      codeSlice: slice("..."),
+    },
   };
 }
 
@@ -204,6 +224,22 @@ describe("validateTemplateFile", () => {
     expect(validateTemplateFile(templateFile).map((e) => e.message)).toMatch([
       "Template 'UnknownRef': unknown type reference 'Missing'",
     ]);
+  });
+
+  it("accepts native type references", () => {
+    const templateFile: TemplateFile = {
+      templates: [
+        templateWithTypes("NativeRefs", {
+          Response: interfaceDecl("Response", [
+            field("name", typeName("string")),
+            field("count", typeName("number")),
+            field("ready", typeName("boolean")),
+          ]),
+        }),
+      ],
+    };
+
+    expect(validateTemplateFile(templateFile)).toMatch([]);
   });
 
   it("reports types not reachable from Response", () => {
@@ -359,6 +395,42 @@ describe("validateTemplateFile", () => {
     ]);
   });
 
+  it("matches examples against native type references", () => {
+    const template: Template = {
+      ...templateWithTypes("NativeExampleMatch", {
+        Response: interfaceDecl("Response", [
+          field("name", typeName("string")),
+          field("count", typeName("number")),
+          field("ready", typeName("boolean")),
+        ]),
+      }),
+      examples: [
+        {
+          codeSlice: slice("ok"),
+          value: jsonObject([
+            ["name", jsonString("alpha")],
+            ["count", jsonNumber(3)],
+            ["ready", jsonBoolean(true)],
+          ]),
+        },
+        {
+          codeSlice: slice("bad"),
+          value: jsonObject([
+            ["name", jsonBoolean(false)],
+            ["count", jsonString("3")],
+            ["ready", jsonNumber(1)],
+          ]),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'NativeExampleMatch': example #2 does not match type 'Response'",
+    ]);
+  });
+
   it("treats ellipsis as matching any type", () => {
     const template: Template = {
       ...templateWithTypes("ExampleEllipsis", {
@@ -381,6 +453,34 @@ describe("validateTemplateFile", () => {
             ["kind", jsonString("ok")],
             ["payload", jsonEllipsis()],
             ["ready", jsonEllipsis()],
+          ]),
+        },
+      ],
+    };
+
+    expect(validateTemplateFile({ templates: [template] })).toMatch([]);
+  });
+
+  it("treats object-only ellipsis as matching any type", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleObjectEllipsis", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([
+            field("kind", stringLiteral("ok")),
+            field(
+              "payload",
+              inlineInterface([field("flag", stringLiteral("x"))]),
+            ),
+          ]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("obj-ellipsis"),
+          value: jsonObject([
+            ["kind", jsonString("ok")],
+            ["payload", jsonObjectEllipsisOnly()],
           ]),
         },
       ],

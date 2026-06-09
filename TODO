@@ -1,0 +1,3 @@
+- figure out trimming of templates...
+- new rule: if a line solly contain a template, make it not count as a line
+- figure out proper casing of templates

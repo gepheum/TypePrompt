@@ -1,0 +1,38 @@
+# Origamic prompts: http://...
+# Generate code from this with: npx origamic gen
+
+GetFoo:
+  Hello $name,
+
+  What's up $name?
+
+  Context: $context
+
+  Make sure to match this schema:
+  $<schema hide>
+    interface FullName {
+      firstName: string;
+      lastName: string;
+    }
+
+    type Response = FullName[];
+  $</schema>
+
+  For example:
+  $<example>
+    [
+      {
+        "firstName": "Jane",
+        "lastName": "Do"
+      },
+      {
+        "firstName": "John",
+        "lastName": "Do"
+      },
+      {...},
+      ...
+    ]
+  $</example>
+
+GetName:
+  Hi
