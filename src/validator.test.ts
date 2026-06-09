@@ -4,6 +4,7 @@ import { describe, it } from "mocha";
 import type {
   CodeSlice,
   Example,
+  JsonValue,
   Schema,
   SchemaField,
   Template,
@@ -87,6 +88,26 @@ function typeDecl(name: string, valueType: TypeRef): TypeDeclaration {
   };
 }
 
+function interfaceDecl(
+  name: string,
+  fields: readonly SchemaField[],
+): TypeDeclaration {
+  const record: Record<string, SchemaField> = {};
+  let firstField: SchemaField | undefined;
+  for (const f of fields) {
+    record[f.name.text] = f;
+    if (!firstField) {
+      firstField = f;
+    }
+  }
+  return {
+    kind: "interface",
+    name: slice(name),
+    fields: record,
+    firstField,
+  };
+}
+
 function templateWithTypes(
   name: string,
   types: Record<string, TypeDeclaration>,
@@ -98,6 +119,44 @@ function templateWithTypes(
     parameters: new Set(),
     schema: { types } satisfies Schema,
     examples: [] as readonly Example[],
+  };
+}
+
+function jsonString(value: string): JsonValue {
+  return {
+    kind: "string",
+    codeSlice: slice(JSON.stringify(value)),
+    value,
+  };
+}
+
+function jsonBoolean(value: boolean): JsonValue {
+  return {
+    kind: "boolean",
+    codeSlice: slice(String(value)),
+    value,
+  };
+}
+
+function jsonObject(entries: Array<[string, JsonValue]>): JsonValue {
+  return {
+    kind: "object",
+    codeSlice: slice("{}"),
+    entries: entries.map(([key, value]) => ({
+      key: {
+        kind: "string",
+        codeSlice: slice(JSON.stringify(key)),
+        value: key,
+      },
+      value,
+    })),
+  };
+}
+
+function jsonEllipsis(): JsonValue {
+  return {
+    kind: "ellipsis",
+    codeSlice: slice("..."),
   };
 }
 
@@ -250,5 +309,183 @@ describe("validateTemplateFile", () => {
     };
 
     expect(validateTemplateFile(templateFile)).toMatch([]);
+  });
+
+  it("validates examples against Response type", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleMatch", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([
+            field("kind", stringLiteral("ok")),
+            field("status", stringLiteral("green")),
+          ]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("e1"),
+          value: jsonObject([
+            ["kind", jsonString("ok")],
+            ["status", jsonString("green")],
+          ]),
+        },
+      ],
+    };
+
+    expect(validateTemplateFile({ templates: [template] })).toMatch([]);
+  });
+
+  it("reports examples that do not match Response", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleMismatch", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([field("kind", stringLiteral("ok"))]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("bad"),
+          value: jsonObject([["kind", jsonString("not-ok")]]),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'ExampleMismatch': example #1 does not match type 'Response'",
+    ]);
+  });
+
+  it("treats ellipsis as matching any type", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleEllipsis", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([
+            field("kind", stringLiteral("ok")),
+            field(
+              "payload",
+              inlineInterface([field("flag", stringLiteral("x"))]),
+            ),
+            field("ready", stringLiteral("yes")),
+          ]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("ellipsis"),
+          value: jsonObject([
+            ["kind", jsonString("ok")],
+            ["payload", jsonEllipsis()],
+            ["ready", jsonEllipsis()],
+          ]),
+        },
+      ],
+    };
+
+    expect(validateTemplateFile({ templates: [template] })).toMatch([]);
+  });
+
+  it("rejects unexpected object keys in examples", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleExtraKey", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([field("kind", stringLiteral("ok"))]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("extra"),
+          value: jsonObject([
+            ["kind", jsonString("ok")],
+            ["other", jsonBoolean(true)],
+          ]),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'ExampleExtraKey': example #1 does not match type 'Response'",
+    ]);
+  });
+
+  it("accepts recursive Response examples", () => {
+    const template: Template = {
+      ...templateWithTypes("RecursiveOk", {
+        Response: interfaceDecl("Response", [
+          field("kind", stringLiteral("node")),
+          field("next", typeName("Response"), true),
+        ]),
+      }),
+      examples: [
+        {
+          codeSlice: slice("rec-ok"),
+          value: jsonObject([
+            ["kind", jsonString("node")],
+            [
+              "next",
+              jsonObject([
+                ["kind", jsonString("node")],
+                ["next", jsonObject([["kind", jsonString("node")]])],
+              ]),
+            ],
+          ]),
+        },
+      ],
+    };
+
+    expect(validateTemplateFile({ templates: [template] })).toMatch([]);
+  });
+
+  it("rejects invalid nested values in recursive Response examples", () => {
+    const template: Template = {
+      ...templateWithTypes("RecursiveBad", {
+        Response: interfaceDecl("Response", [
+          field("kind", stringLiteral("node")),
+          field("next", typeName("Response"), true),
+        ]),
+      }),
+      examples: [
+        {
+          codeSlice: slice("rec-bad"),
+          value: jsonObject([
+            ["kind", jsonString("node")],
+            ["next", jsonObject([["kind", jsonString("wrong")]])],
+          ]),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'RecursiveBad': example #1 does not match type 'Response'",
+    ]);
+  });
+
+  it("does not loop forever on direct self-referential aliases", () => {
+    const template: Template = {
+      ...templateWithTypes("SelfAlias", {
+        Response: typeDecl("Response", typeName("Response")),
+      }),
+      examples: [
+        {
+          codeSlice: slice("self"),
+          value: jsonString("anything"),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'SelfAlias': example #1 does not match type 'Response'",
+    ]);
   });
 });
