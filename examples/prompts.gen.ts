@@ -2,6 +2,11 @@
 
 import * as zod from "zod"
 
+export interface JsonPrompt<Response> {
+  readonly prompt: string;
+  readonly responseSchema: zod.ZodType<Response>;
+}
+
 export interface GetFooArgs {
   readonly name: string;
   readonly context: string;
@@ -26,11 +31,5 @@ export namespace GetFooResponse {
   }
 
   export type Response = readonly FullName[];
-
-}
-
-export interface JsonPrompt<Response> {
-  readonly prompt: string;
-  readonly responseSchema: zod.ZodType<Response>;
 }
 

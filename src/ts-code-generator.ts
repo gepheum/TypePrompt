@@ -10,13 +10,14 @@ class TsCodeGenerator {
   write(templates: readonly Template[]): string {
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
     this.code += 'import * as zod from "zod"\n\n';
-    for (const template of templates) {
-      this.writeTemplateTypes(template);
-    }
     this.code += "export interface JsonPrompt<Response> {\n";
     this.code += "  readonly prompt: string;\n";
     this.code += "  readonly responseSchema: zod.ZodType<Response>;\n";
     this.code += "}\n\n";
+    for (const template of templates) {
+      this.writeTemplateTypes(template);
+    }
+    this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
     return this.code;
   }
 
