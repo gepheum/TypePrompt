@@ -43,3 +43,18 @@ export namespace GetFooResponse {
   export type Response = readonly FullName[];
 }
 
+const GetFooFullNameZodType: zod.ZodType<GetFooResponse.FullName> = zod.object({
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "foo": zod.object({
+    "x": zod.number().optional(),
+    "y": zod.boolean().optional(),
+    "foos": zod.array(zod.string()),
+    "kind": zod.literal("z"),
+    "abc": zod.union([zod.literal("a"), zod.literal("b"), zod.literal("c")]),
+    "empty": zod.object({}),
+  }),
+})
+
+export const GetFooResponseZodType: zod.ZodType<GetFooResponse.Response> = zod.array(GetFooFullNameZodType)
+

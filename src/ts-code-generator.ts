@@ -1,4 +1,4 @@
-import type { Template, TypeRef } from "./types.js";
+import type { SchemaField, Template, TypeDeclaration, TypeRef } from "./types.js";
 
 export function generateCode(templates: readonly Template[]): string {
   return new TsCodeGenerator().write(templates);
@@ -75,6 +75,176 @@ class TsCodeGenerator {
       }
     }
     this.code += "}\n\n";
+
+    this.writeTemplateZodTypes(template);
+  }
+
+  private writeTemplateZodTypes(template: Template): void {
+    const { schema } = template;
+    if (!schema) return;
+
+    const definedTypeNames = new Set<string>();
+    for (const [name, declaration] of Object.entries(schema.types)) {
+      const isResponse = name === "Response";
+      const exportPrefix = isResponse ? "export " : "";
+      const constName = this.getTemplateTypeZodConstName(template.name.text, name);
+      this.code += `${exportPrefix}const ${constName}: zod.ZodType<${template.name.text}Response.${name}> = `;
+      this.writeZodForDeclaration(
+        template.name.text,
+        name,
+        declaration,
+        definedTypeNames,
+        "",
+      );
+      this.code += "\n\n";
+      definedTypeNames.add(name);
+    }
+  }
+
+  private writeZodForDeclaration(
+    templateName: string,
+    declarationName: string,
+    declaration: TypeDeclaration,
+    definedTypeNames: ReadonlySet<string>,
+    indent: string,
+  ): void {
+    if (declaration.kind === "interface") {
+      this.writeZodObjectFromFields(
+        templateName,
+        declarationName,
+        Object.values(declaration.fields),
+        definedTypeNames,
+        indent,
+      );
+      return;
+    }
+
+    this.writeZodTypeRef(
+      templateName,
+      declarationName,
+      declaration.valueType,
+      definedTypeNames,
+      indent,
+    );
+  }
+
+  private writeZodObjectFromFields(
+    templateName: string,
+    declarationName: string,
+    fields: readonly SchemaField[],
+    definedTypeNames: ReadonlySet<string>,
+    indent: string,
+  ): void {
+    if (fields.length === 0) {
+      this.code += "zod.object({})";
+      return;
+    }
+
+    this.code += "zod.object({\n";
+    for (const field of fields) {
+      this.code += `${indent}  ${JSON.stringify(field.name.text)}: `;
+      this.writeZodTypeRef(
+        templateName,
+        declarationName,
+        field.type,
+        definedTypeNames,
+        indent + "  ",
+      );
+      if (field.optional) {
+        this.code += ".optional()";
+      }
+      this.code += ",\n";
+    }
+    this.code += `${indent}})`;
+  }
+
+  private writeZodTypeRef(
+    templateName: string,
+    currentDeclarationName: string,
+    typeRef: TypeRef,
+    definedTypeNames: ReadonlySet<string>,
+    indent: string,
+  ): void {
+    switch (typeRef.kind) {
+      case "type-name": {
+        const typeName = typeRef.name.text;
+        if (typeName === "string") {
+          this.code += "zod.string()";
+          return;
+        }
+        if (typeName === "number") {
+          this.code += "zod.number()";
+          return;
+        }
+        if (typeName === "boolean") {
+          this.code += "zod.boolean()";
+          return;
+        }
+
+        const refConstName = this.getTemplateTypeZodConstName(templateName, typeName);
+        if (!definedTypeNames.has(typeName) || typeName === currentDeclarationName) {
+          this.code += `zod.lazy((): zod.ZodType<${templateName}Response.${typeName}> => ${refConstName})`;
+        } else {
+          this.code += refConstName;
+        }
+        return;
+      }
+      case "string-literal":
+        this.code += `zod.literal(${JSON.stringify(typeRef.value)})`;
+        return;
+      case "inline-interface":
+        this.writeZodObjectFromFields(
+          templateName,
+          currentDeclarationName,
+          Object.values(typeRef.fields),
+          definedTypeNames,
+          indent,
+        );
+        return;
+      case "array":
+        this.code += "zod.array(";
+        this.writeZodTypeRef(
+          templateName,
+          currentDeclarationName,
+          typeRef.elementType,
+          definedTypeNames,
+          indent,
+        );
+        this.code += ")";
+        return;
+      case "union": {
+        if (typeRef.members.length === 1) {
+          this.writeZodTypeRef(
+            templateName,
+            currentDeclarationName,
+            typeRef.members[0]!,
+            definedTypeNames,
+            indent,
+          );
+          return;
+        }
+
+        this.code += "zod.union([";
+        for (let i = 0; i < typeRef.members.length; i += 1) {
+          if (i > 0) {
+            this.code += ", ";
+          }
+          this.writeZodTypeRef(
+            templateName,
+            currentDeclarationName,
+            typeRef.members[i]!,
+            definedTypeNames,
+            indent,
+          );
+        }
+        this.code += "])";
+        return;
+      }
+    }
+  }
+
+  private getTemplateTypeZodConstName(templateName: string, typeName: string): string {
+    return `${templateName}${typeName}ZodType`;
   }
 
   private writeTypeRef(typeRef: TypeRef, eolIndent: string): void {
