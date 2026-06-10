@@ -2,6 +2,16 @@
 
 import * as zod from "zod"
 
+export class PromptMaker {
+  makeGetFoo(args: GetFooArgs): JsonPrompt<GetFooResponse.Response> {
+    throw new Error("Not implemented");
+  }
+
+  makeGetName(): string {
+    throw new Error("Not implemented");
+  }
+}
+
 export interface JsonPrompt<Response> {
   readonly prompt: string;
   readonly responseSchema: zod.ZodType<Response>;

@@ -10,6 +10,7 @@ class TsCodeGenerator {
   write(templates: readonly Template[]): string {
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
     this.code += 'import * as zod from "zod"\n\n';
+    this.writePromptMakerClass(templates);
     this.code += "export interface JsonPrompt<Response> {\n";
     this.code += "  readonly prompt: string;\n";
     this.code += "  readonly responseSchema: zod.ZodType<Response>;\n";
@@ -21,15 +22,34 @@ class TsCodeGenerator {
     return this.code;
   }
 
+  private writePromptMakerClass(templates: readonly Template[]): void {
+    this.code += "export class PromptMaker {\n";
+    for (const template of templates) {
+      const templateName = template.name.text;
+      const hasArgs = template.parameters.size > 0;
+      const returnType = template.schema
+        ? `JsonPrompt<${templateName}Response.Response>`
+        : "string";
+      const argsSignature = hasArgs ? `args: ${templateName}Args` : "";
+      this.code += `  make${templateName}(${argsSignature}): ${returnType} {\n`;
+      this.code += "    throw new Error(\"Not implemented\");\n";
+      this.code += "  }\n\n";
+    }
+    this.code += "}\n\n";
+  }
+
   private writeTemplateTypes(template: Template): void {
     const { schema } = template;
-    if (!schema) return;
 
-    this.code += `export interface ${template.name.text}Args {\n`;
-    for (const param of template.parameters) {
-      this.code += `  readonly ${param}: string;\n`;
+    if (template.parameters.size > 0) {
+      this.code += `export interface ${template.name.text}Args {\n`;
+      for (const param of template.parameters) {
+        this.code += `  readonly ${param}: string;\n`;
+      }
+      this.code += `}\n\n`;
     }
-    this.code += `}\n\n`;
+
+    if (!schema) return;
 
     this.code += `export namespace ${template.name.text}Response {\n`;
     for (const [name, declaration] of Object.entries(schema.types)) {
