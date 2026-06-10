@@ -363,7 +363,7 @@ function parseTemplatePieces(
           pieces.push({
             kind: "schema",
             text: tag.hide ? "" : sectionRaw,
-            types: schema.types,
+            schema,
           });
           cursor = text.length;
           continue;
@@ -381,7 +381,7 @@ function parseTemplatePieces(
         pieces.push({
           kind: "schema",
           text: tag.hide ? "" : raw,
-          types: schema.types,
+          schema,
         });
         cursor = close.start + close.length;
         continue;

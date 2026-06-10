@@ -242,6 +242,21 @@ describe("validateTemplateFile", () => {
     expect(validateTemplateFile(templateFile)).toMatch([]);
   });
 
+  it("rejects lowercase type declaration names", () => {
+    const templateFile: TemplateFile = {
+      templates: [
+        templateWithTypes("LowercaseTypeName", {
+          Response: typeDecl("Response", typeName("foo")),
+          foo: typeDecl("foo", stringLiteral("x")),
+        }),
+      ],
+    };
+
+    expect(validateTemplateFile(templateFile).map((e) => e.message)).toMatch([
+      "Template 'LowercaseTypeName': type name 'foo' must start with an uppercase letter",
+    ]);
+  });
+
   it("reports types not reachable from Response", () => {
     const templateFile: TemplateFile = {
       templates: [

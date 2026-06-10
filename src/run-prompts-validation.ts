@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { generateCode } from "./code-generator.js";
 import { parseTemplateFile } from "./parser.js";
 import type { Error as ParseError } from "./types.js";
 import { validateTemplateFile } from "./validator.js";
@@ -9,6 +10,7 @@ main();
 
 function main(): void {
   const promptsPath = resolve(process.cwd(), "examples", "prompts.prompts");
+  const generatedPath = resolve(process.cwd(), "examples", "prompts.gen.ts");
   const content = readFileSync(promptsPath, "utf8");
 
   const parseResult = parseTemplateFile(content);
@@ -16,6 +18,8 @@ function main(): void {
   const validatorErrors = validateTemplateFile(parseResult.value).map(
     (error) => `validator: ${error.message}`,
   );
+  const generatedCode = generateCode(parseResult.value.templates);
+  writeFileSync(generatedPath, generatedCode, "utf8");
 
   for (const error of parserErrors) {
     console.log(error);
@@ -27,6 +31,7 @@ function main(): void {
   if (parserErrors.length === 0 && validatorErrors.length === 0) {
     console.log("No parse/validation errors.");
   }
+  console.log(`Generated code written to ${generatedPath}`);
 
   if (parserErrors.length > 0 || validatorErrors.length > 0) {
     process.exitCode = 1;

@@ -33,7 +33,7 @@ export type TemplatePiece =
   | {
       readonly kind: "schema";
       readonly text: string;
-      readonly types: Schema["types"];
+      readonly schema: Schema;
     }
   | {
       readonly kind: "example";

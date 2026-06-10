@@ -36,6 +36,7 @@ export function validateTemplateFile(templateFile: TemplateFile): Error[] {
     }
 
     for (const declaration of Object.values(types)) {
+      validateTypeDeclarationName(declaration, pushError);
       validateDeclaration(declaration, types, pushError);
     }
 
@@ -96,6 +97,15 @@ function validateExamples(
     ) {
       pushError(`example #${i + 1} does not match type 'Response'`);
     }
+  }
+}
+
+function validateTypeDeclarationName(
+  declaration: TypeDeclaration,
+  pushError: (message: string) => void,
+): void {
+  if (!/^[A-Z]/.test(declaration.name.text)) {
+    pushError(`type name '${declaration.name.text}' must start with an uppercase letter`);
   }
 }
 
