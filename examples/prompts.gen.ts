@@ -2,31 +2,35 @@
 
 import * as zod from "zod"
 
-export class PromptMaker {
+export interface GetFooArgs {
+  readonly name: string;
+  readonly context: string;
 }
 
-export namespace PromptMaker {
-  export namespace GetFoo {
-    export interface FullName     {
-      readonly firstName: string;
-      readonly lastName: string;
-      readonly foo: { readonly x?: number; readonly y?: boolean; readonly foos: readonly string[]; readonly kind: "z"; readonly abc: (
+export namespace GetFooResponse {
+  export interface FullName   {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly foo: {
+      readonly x?: number;
+      readonly y?: boolean;
+      readonly foos: readonly string[];
+      readonly kind: "z";
+      readonly abc: (
         | "a"
         | "b"
         | "c"
-
-      ); };
-    }
-
-    export type Response = readonly FullName[];
-
+      );
+      readonly empty: {};
+    };
   }
+
+  export type Response = readonly FullName[];
 
 }
 
-export class JsonPrompt<Response> {
-  constructor(
-    readonly prompt: string,
-    readonly responseSchema: zod.ZodType<Response>) {}
+export interface JsonPrompt<Response> {
+  readonly prompt: string;
+  readonly responseSchema: zod.ZodType<Response>;
 }
 

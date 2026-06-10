@@ -19,6 +19,7 @@ GetFoo:
         foos: string[];
         kind: "z";
         abc: "a" | "b" | "c";
+        empty: {};
       };
     }
 
