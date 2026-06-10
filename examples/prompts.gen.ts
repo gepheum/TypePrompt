@@ -3,27 +3,22 @@
 import * as zod from "zod"
 
 export class PromptMaker {
-  makeGetTopicalUrlsPrompt(args: PromptMaker.GetTopicalUrls.Input) {
-
-  }
 }
 
 export namespace PromptMaker {
-  export namespace GetTopicalUrls {
-    export interface Input {
-      foo: string;
-      bar: string;
+  export namespace GetFoo {
+    export interface FullName {
     }
 
-    export interface Response {
+    export type Response = string;
 
-    }
   }
+
 }
 
-export class JsonRequestingPrompt<Response> {
+export class JsonPrompt<Response> {
   constructor(
     readonly prompt: string,
-    readonly zodType: zod.ZodType<Response>) {}
+    readonly responseSchema: zod.ZodType<Response>) {}
 }
 

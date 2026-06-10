@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { generateCode } from "./code-generator.js";
+import { generateCode } from "./ts-code-generator.js";
 import { parseTemplateFile } from "./parser.js";
 import type { Error as ParseError } from "./types.js";
 import { validateTemplateFile } from "./validator.js";
