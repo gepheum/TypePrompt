@@ -7,10 +7,18 @@ export class PromptMaker {
 
 export namespace PromptMaker {
   export namespace GetFoo {
-    export interface FullName {
+    export interface FullName     {
+      readonly firstName: string;
+      readonly lastName: string;
+      readonly foo: { readonly x?: number; readonly y?: boolean; readonly foos: readonly string[]; readonly kind: "z"; readonly abc: (
+        | "a"
+        | "b"
+        | "c"
+
+      ); };
     }
 
-    export type Response = string;
+    export type Response = readonly FullName[];
 
   }
 

@@ -613,6 +613,28 @@ describe("validateTemplateFile", () => {
     ]);
   });
 
+  it("allows missing required fields when object has ellipsis", () => {
+    const template: Template = {
+      ...templateWithTypes("ExamplePartialWithEllipsis", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([
+            field("a", typeName("boolean")),
+            field("b", typeName("string")),
+          ]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("partial-with-ellipsis"),
+          value: jsonObjectWithEllipsis([["a", jsonBoolean(true)]]),
+        },
+      ],
+    };
+
+    expect(validateTemplateFile({ templates: [template] })).toMatch([]);
+  });
+
   it("accepts recursive Response examples", () => {
     const template: Template = {
       ...templateWithTypes("RecursiveOk", {

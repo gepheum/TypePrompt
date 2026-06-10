@@ -170,6 +170,7 @@ function matchesInterface(
   if (value.kind !== "object") {
     return false;
   }
+  const hasEllipsis = Boolean(value.ellipsis);
 
   const entriesByKey = new Map<string, JsonValue>();
   for (const entry of value.entries) {
@@ -179,7 +180,7 @@ function matchesInterface(
   for (const field of Object.values(declaration.fields)) {
     const entryValue = entriesByKey.get(field.name.text);
     if (!entryValue) {
-      if (field.optional) {
+      if (field.optional || hasEllipsis) {
         continue;
       }
       return false;
@@ -211,6 +212,7 @@ function matchesInlineInterface(
   if (value.kind !== "object") {
     return false;
   }
+  const hasEllipsis = Boolean(value.ellipsis);
 
   const entriesByKey = new Map<string, JsonValue>();
   for (const entry of value.entries) {
@@ -220,7 +222,7 @@ function matchesInlineInterface(
   for (const field of Object.values(typeRef.fields)) {
     const entryValue = entriesByKey.get(field.name.text);
     if (!entryValue) {
-      if (field.optional) {
+      if (field.optional || hasEllipsis) {
         continue;
       }
       return false;

@@ -13,6 +13,13 @@ GetFoo:
     interface FullName {
       firstName: string;
       lastName: string;
+      foo: {
+        x?: number;
+        y?: boolean;
+        foos: string[];
+        kind: "z";
+        abc: "a" | "b" | "c";
+      };
     }
 
     type Response = FullName[];
@@ -23,11 +30,13 @@ GetFoo:
     [
       {
         "firstName": "Jane",
-        "lastName": "Do"
+        "lastName": "Do",
+        ...
       },
       {
         "firstName": "John",
-        "lastName": "Do"
+        "lastName": "Do",
+        ...
       },
       {...},
       ...
