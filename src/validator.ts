@@ -107,6 +107,9 @@ function validateTypeDeclarationName(
   if (!/^[A-Z]/.test(declaration.name.text)) {
     pushError(`type name '${declaration.name.text}' must start with an uppercase letter`);
   }
+  if (declaration.name.text.includes("_")) {
+    pushError(`type name '${declaration.name.text}' must not contain underscores`);
+  }
 }
 
 function matchesTypeNameRef(
@@ -286,6 +289,7 @@ function validateDeclaration(
 ): void {
   if (declaration.kind === "interface") {
     for (const field of Object.values(declaration.fields)) {
+      validateFieldName(field, pushError);
       validateTypeRef(field.type, types, pushError);
     }
     return;
@@ -313,6 +317,7 @@ function validateTypeRef(
 
   if (typeRef.kind === "inline-interface") {
     for (const field of Object.values(typeRef.fields)) {
+      validateFieldName(field, pushError);
       validateTypeRef(field.type, types, pushError);
     }
     return;
@@ -320,6 +325,15 @@ function validateTypeRef(
 
   if (typeRef.kind === "union") {
     validateUnion(typeRef, types, pushError);
+  }
+}
+
+function validateFieldName(
+  field: SchemaField,
+  pushError: (message: string) => void,
+): void {
+  if (field.name.text.endsWith("_")) {
+    pushError(`field name '${field.name.text}' must not end with an underscore`);
   }
 }
 

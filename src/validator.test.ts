@@ -257,6 +257,52 @@ describe("validateTemplateFile", () => {
     ]);
   });
 
+  it("rejects type names ending with an underscore", () => {
+    const templateFile: TemplateFile = {
+      templates: [
+        templateWithTypes("TrailingTypeUnderscore", {
+          Response: typeDecl("Response", typeName("Foo_")),
+          Foo_: typeDecl("Foo_", stringLiteral("x")),
+        }),
+      ],
+    };
+
+    expect(validateTemplateFile(templateFile).map((e) => e.message)).toMatch([
+      "Template 'TrailingTypeUnderscore': type name 'Foo_' must not contain underscores",
+    ]);
+  });
+
+  it("rejects type names containing underscores", () => {
+    const templateFile: TemplateFile = {
+      templates: [
+        templateWithTypes("MiddleTypeUnderscore", {
+          Response: typeDecl("Response", typeName("Foo_Bar")),
+          Foo_Bar: typeDecl("Foo_Bar", stringLiteral("x")),
+        }),
+      ],
+    };
+
+    expect(validateTemplateFile(templateFile).map((e) => e.message)).toMatch([
+      "Template 'MiddleTypeUnderscore': type name 'Foo_Bar' must not contain underscores",
+    ]);
+  });
+
+  it("rejects field names ending with an underscore", () => {
+    const templateFile: TemplateFile = {
+      templates: [
+        templateWithTypes("TrailingFieldUnderscore", {
+          Response: interfaceDecl("Response", [
+            field("value_", typeName("string")),
+          ]),
+        }),
+      ],
+    };
+
+    expect(validateTemplateFile(templateFile).map((e) => e.message)).toMatch([
+      "Template 'TrailingFieldUnderscore': field name 'value_' must not end with an underscore",
+    ]);
+  });
+
   it("reports types not reachable from Response", () => {
     const templateFile: TemplateFile = {
       templates: [
