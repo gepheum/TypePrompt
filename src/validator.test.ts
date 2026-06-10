@@ -173,6 +173,17 @@ function jsonObjectEllipsisOnly(): JsonValue {
   };
 }
 
+function jsonObjectWithEllipsis(entries: Array<[string, JsonValue]>): JsonValue {
+  const value = jsonObject(entries) as Extract<JsonValue, { kind: "object" }>;
+  return {
+    ...value,
+    ellipsis: {
+      kind: "ellipsis",
+      codeSlice: slice("..."),
+    },
+  };
+}
+
 function jsonEllipsis(): JsonValue {
   return {
     kind: "ellipsis",
@@ -573,6 +584,32 @@ describe("validateTemplateFile", () => {
       validateTemplateFile({ templates: [template] }).map((e) => e.message),
     ).toMatch([
       "Template 'ExampleExtraKey': example #1 does not match type 'Response'",
+    ]);
+  });
+
+  it("rejects unexpected object keys even when object has ellipsis", () => {
+    const template: Template = {
+      ...templateWithTypes("ExampleExtraKeyWithEllipsis", {
+        Response: typeDecl(
+          "Response",
+          inlineInterface([field("kind", stringLiteral("ok"))]),
+        ),
+      }),
+      examples: [
+        {
+          codeSlice: slice("extra-with-ellipsis"),
+          value: jsonObjectWithEllipsis([
+            ["kind", jsonString("ok")],
+            ["other", jsonBoolean(true)],
+          ]),
+        },
+      ],
+    };
+
+    expect(
+      validateTemplateFile({ templates: [template] }).map((e) => e.message),
+    ).toMatch([
+      "Template 'ExampleExtraKeyWithEllipsis': example #1 does not match type 'Response'",
     ]);
   });
 
