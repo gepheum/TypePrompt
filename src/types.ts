@@ -2,7 +2,7 @@ export interface Result<T> {
   readonly value: T;
   readonly errors: readonly Error[];
 }
-]
+
 export interface TemplateFile {
   readonly templates: readonly Template[];
 }

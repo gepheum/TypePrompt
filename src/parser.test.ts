@@ -1541,7 +1541,7 @@ describe("parseTemplateFile", () => {
                 text: "\n  type A = `x\n",
                 schema: {
                   types: {
-                  // unterminated template literal in schema content should yield no declarations
+                    // unterminated template literal in schema content should yield no declarations
                   },
                 },
               },

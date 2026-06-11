@@ -1,4 +1,9 @@
-import type { SchemaField, Template, TypeDeclaration, TypeRef } from "./types.js";
+import type {
+  SchemaField,
+  Template,
+  TypeDeclaration,
+  TypeRef,
+} from "./types.js";
 
 export function generateCode(templates: readonly Template[]): string {
   return new TsCodeGenerator().write(templates);
@@ -34,8 +39,8 @@ class TsCodeGenerator {
     this.code += "  readonly dedentedSourceCode: string;\n";
     this.code += "  readonly allArgs: readonly string[];\n";
     this.code += "  readonly pieces: readonly (\n";
-    this.code += "    | {kind: \"text\"; text: string}\n";
-    this.code += "    | {kind: \"arg\"; name: string}\n";
+    this.code += '    | {kind: "text"; text: string}\n';
+    this.code += '    | {kind: "arg"; name: string}\n';
     this.code += "  )[];\n";
     this.code += "}};\n\n";
   }
@@ -43,7 +48,8 @@ class TsCodeGenerator {
   private writeFreezeJsonSpecFunction(): void {
     this.code += "function freezeJsonSpec(jsonSpec: JsonSpec): JsonSpec {\n";
     this.code += "  const freezeValue = (value: unknown): void => {\n";
-    this.code += "    if (value === null || typeof value !== \"object\" || Object.isFrozen(value)) {\n";
+    this.code +=
+      '    if (value === null || typeof value !== "object" || Object.isFrozen(value)) {\n';
     this.code += "      return;\n";
     this.code += "    }\n";
     this.code += "    Object.freeze(value);\n";
@@ -53,7 +59,8 @@ class TsCodeGenerator {
     this.code += "      }\n";
     this.code += "      return;\n";
     this.code += "    }\n";
-    this.code += "    for (const child of Object.values(value as Record<string, unknown>)) {\n";
+    this.code +=
+      "    for (const child of Object.values(value as Record<string, unknown>)) {\n";
     this.code += "      freezeValue(child);\n";
     this.code += "    }\n";
     this.code += "  };\n";
@@ -131,7 +138,7 @@ class TsCodeGenerator {
     this.code += "): string {\n";
     this.code += "  const templateSpec = jsonSpec[templateKey]!;\n";
     this.code += "  return templateSpec.pieces.map((p) => {\n";
-    this.code += "    if (p.kind === \"text\") {\n";
+    this.code += '    if (p.kind === "text") {\n';
     this.code += "      return p.text;\n";
     this.code += "    } else {\n";
     this.code += "      const arg = args[p.name];\n";
@@ -140,7 +147,7 @@ class TsCodeGenerator {
     this.code += "      }\n";
     this.code += "      return arg;\n";
     this.code += "    }\n";
-    this.code += "  }).join(\"\");\n";
+    this.code += '  }).join("");\n';
     this.code += "}\n\n";
   }
 
@@ -159,7 +166,8 @@ class TsCodeGenerator {
       this.code += `  make${templateName}(${argsSignature}): ${returnType} {\n`;
       const argsExpression = hasArgs ? "argsRecord" : "{}";
       if (hasArgs) {
-        this.code += "    const argsRecord = args as unknown as {readonly [argName: string]: string};\n";
+        this.code +=
+          "    const argsRecord = args as unknown as {readonly [argName: string]: string};\n";
       }
       if (template.schema) {
         this.code += "    return {\n";
@@ -223,7 +231,10 @@ class TsCodeGenerator {
     for (const [name, declaration] of Object.entries(schema.types)) {
       const isResponse = name === "Response";
       const exportPrefix = isResponse ? "export " : "";
-      const constName = this.getTemplateTypeZodConstName(template.name.text, name);
+      const constName = this.getTemplateTypeZodConstName(
+        template.name.text,
+        name,
+      );
       this.code += `${exportPrefix}const ${constName}: zod.ZodType<${template.name.text}Response.${name}> = `;
       this.writeZodForDeclaration(
         template.name.text,
@@ -335,8 +346,14 @@ class TsCodeGenerator {
         if (typeName === "number") return "zod.number()";
         if (typeName === "boolean") return "zod.boolean()";
 
-        const refConstName = this.getTemplateTypeZodConstName(templateName, typeName);
-        if (!definedTypeNames.has(typeName) || typeName === currentDeclarationName) {
+        const refConstName = this.getTemplateTypeZodConstName(
+          templateName,
+          typeName,
+        );
+        if (
+          !definedTypeNames.has(typeName) ||
+          typeName === currentDeclarationName
+        ) {
           return `zod.lazy((): zod.ZodType<${templateName}Response.${typeName}> => ${refConstName})`;
         }
         return refConstName;
@@ -367,12 +384,14 @@ class TsCodeGenerator {
           );
         }
 
-        const members = typeRef.members.map((member) => this.renderZodTypeRefInline(
-          templateName,
-          currentDeclarationName,
-          member,
-          definedTypeNames,
-        ));
+        const members = typeRef.members.map((member) =>
+          this.renderZodTypeRefInline(
+            templateName,
+            currentDeclarationName,
+            member,
+            definedTypeNames,
+          ),
+        );
         return `zod.union([${members.join(", ")}])`;
       }
     }
@@ -401,8 +420,14 @@ class TsCodeGenerator {
           return;
         }
 
-        const refConstName = this.getTemplateTypeZodConstName(templateName, typeName);
-        if (!definedTypeNames.has(typeName) || typeName === currentDeclarationName) {
+        const refConstName = this.getTemplateTypeZodConstName(
+          templateName,
+          typeName,
+        );
+        if (
+          !definedTypeNames.has(typeName) ||
+          typeName === currentDeclarationName
+        ) {
           this.code += `zod.lazy((): zod.ZodType<${templateName}Response.${typeName}> => ${refConstName})`;
         } else {
           this.code += refConstName;
@@ -463,7 +488,10 @@ class TsCodeGenerator {
     }
   }
 
-  private getTemplateTypeZodConstName(templateName: string, typeName: string): string {
+  private getTemplateTypeZodConstName(
+    templateName: string,
+    typeName: string,
+  ): string {
     return `${templateName}${typeName}ZodType`;
   }
 
@@ -490,7 +518,7 @@ class TsCodeGenerator {
         }
         break;
       case "array":
-        this.code += "readonly "
+        this.code += "readonly ";
         this.writeTypeRef(typeRef.elementType, eolIndent);
         this.code += "[]";
         break;

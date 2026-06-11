@@ -14,7 +14,9 @@ const NATIVE_TYPE_NAMES = new Set(["string", "number", "boolean"]);
 function isWildcardValue(value: JsonValue): boolean {
   return (
     value.kind === "ellipsis" ||
-    (value.kind === "object" && Boolean(value.ellipsis) && value.entries.length === 0)
+    (value.kind === "object" &&
+      Boolean(value.ellipsis) &&
+      value.entries.length === 0)
   );
 }
 
@@ -105,10 +107,14 @@ function validateTypeDeclarationName(
   pushError: (message: string) => void,
 ): void {
   if (!/^[A-Z]/.test(declaration.name.text)) {
-    pushError(`type name '${declaration.name.text}' must start with an uppercase letter`);
+    pushError(
+      `type name '${declaration.name.text}' must start with an uppercase letter`,
+    );
   }
   if (declaration.name.text.includes("_")) {
-    pushError(`type name '${declaration.name.text}' must not contain underscores`);
+    pushError(
+      `type name '${declaration.name.text}' must not contain underscores`,
+    );
   }
 }
 
@@ -306,7 +312,10 @@ function validateTypeRef(
   pushError: (message: string) => void,
 ): void {
   if (typeRef.kind === "type-name") {
-    if (!types[typeRef.name.text] && !NATIVE_TYPE_NAMES.has(typeRef.name.text)) {
+    if (
+      !types[typeRef.name.text] &&
+      !NATIVE_TYPE_NAMES.has(typeRef.name.text)
+    ) {
       pushError(`unknown type reference '${typeRef.name.text}'`);
     }
     return;
@@ -335,7 +344,9 @@ function validateFieldName(
   pushError: (message: string) => void,
 ): void {
   if (field.name.text.endsWith("_")) {
-    pushError(`field name '${field.name.text}' must not end with an underscore`);
+    pushError(
+      `field name '${field.name.text}' must not end with an underscore`,
+    );
   }
 }
 

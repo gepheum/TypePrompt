@@ -115,6 +115,7 @@ function templateWithTypes(
   return {
     name: slice(name),
     variantName: null,
+    dedentedSourceCode: "",
     pieces: [],
     parameters: new Set(),
     schema: { types } satisfies Schema,
@@ -173,7 +174,9 @@ function jsonObjectEllipsisOnly(): JsonValue {
   };
 }
 
-function jsonObjectWithEllipsis(entries: Array<[string, JsonValue]>): JsonValue {
+function jsonObjectWithEllipsis(
+  entries: Array<[string, JsonValue]>,
+): JsonValue {
   const value = jsonObject(entries) as Extract<JsonValue, { kind: "object" }>;
   return {
     ...value,
@@ -198,6 +201,7 @@ describe("validateTemplateFile", () => {
         {
           name: slice("NoSchema"),
           variantName: null,
+          dedentedSourceCode: "",
           pieces: [],
           parameters: new Set(),
           schema: null,
