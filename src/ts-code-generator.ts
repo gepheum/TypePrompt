@@ -18,21 +18,120 @@ class TsCodeGenerator {
     for (const template of templates) {
       this.writeTemplateTypes(template);
     }
+    this.writeJsonSpecType();
+    this.writeJsonSpecValue(templates);
+    this.writeMakePromptImplFunction();
     this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
     return this.code;
   }
 
+  private writeJsonSpecType(): void {
+    this.code += "type JsonSpec = {readonly [templateKey: string]: {\n";
+    this.code += "  readonly name: string;\n";
+    this.code += "  readonly variant: string;\n";
+    this.code += "  readonly allArgs: readonly string[];\n";
+    this.code += "  readonly pieces: readonly (\n";
+    this.code += "    | {kind: \"text\"; text: string}\n";
+    this.code += "    | {kind: \"arg\"; name: string}\n";
+    this.code += "  )[];\n";
+    this.code += "}};\n\n";
+  }
+
+  private writeJsonSpecValue(templates: readonly Template[]): void {
+    this.code += "const jsonSpec: JsonSpec = {\n";
+    for (const template of templates) {
+      const name = template.name.text;
+      const variant = template.variantName?.text ?? "";
+      const templateKey = variant ? `${name}/${variant}` : name;
+      this.code += `  ${JSON.stringify(templateKey)}: {\n`;
+      this.code += `    name: ${JSON.stringify(name)},\n`;
+      this.code += `    variant: ${JSON.stringify(variant)},\n`;
+      this.code += "    allArgs: [";
+      let firstArg = true;
+      for (const arg of template.parameters) {
+        if (!firstArg) {
+          this.code += ", ";
+        }
+        this.code += JSON.stringify(arg);
+        firstArg = false;
+      }
+      this.code += "],\n";
+      this.code += "    pieces: [\n";
+      for (const piece of template.pieces) {
+        if (piece.kind === "text") {
+          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+          continue;
+        }
+        if (piece.kind === "expression") {
+          if (piece.hide) {
+            continue;
+          }
+          this.code += `      {kind: \"arg\", name: ${JSON.stringify(piece.expression)}},\n`;
+          continue;
+        }
+        if (piece.kind === "schema") {
+          // Hidden schema pieces are represented with empty text by the parser.
+          if (piece.text === "") {
+            continue;
+          }
+          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+          continue;
+        }
+        if (piece.kind === "example") {
+          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+        }
+      }
+      this.code += "    ],\n";
+      this.code += "  },\n";
+    }
+    this.code += "};\n\n";
+  }
+
+  private writeMakePromptImplFunction(): void {
+    this.code += "function makePromptImpl(\n";
+    this.code += "  templateKey: string,\n";
+    this.code += "  args: {readonly [argName: string]: string},\n";
+    this.code += "  jsonSpec: JsonSpec): string {\n";
+    this.code += "  const templateSpec = jsonSpec[templateKey]!;\n";
+    this.code += "  return templateSpec.pieces.map((p) => {\n";
+    this.code += "    if (p.kind === \"text\") {\n";
+    this.code += "      return p.text;\n";
+    this.code += "    } else {\n";
+    this.code += "      const arg = args[p.name];\n";
+    this.code += "      if (arg === undefined) {\n";
+    this.code += "        throw new Error(`Missing arg '${p.name}'`);\n";
+    this.code += "      }\n";
+    this.code += "      return arg;\n";
+    this.code += "    }\n";
+    this.code += "  }).join(\"\");\n";
+    this.code += "}\n\n";
+  }
+
   private writePromptMakerClass(templates: readonly Template[]): void {
     this.code += "export class PromptMaker {\n";
+    this.code += "  private readonly jsonSpec: JsonSpec = jsonSpec;\n\n";
     for (const template of templates) {
       const templateName = template.name.text;
+      const variant = template.variantName?.text ?? "";
+      const templateKey = variant ? `${templateName}/${variant}` : templateName;
       const hasArgs = template.parameters.size > 0;
       const returnType = template.schema
         ? `JsonPrompt<${templateName}Response.Response>`
         : "string";
       const argsSignature = hasArgs ? `args: ${templateName}Args` : "";
       this.code += `  make${templateName}(${argsSignature}): ${returnType} {\n`;
-      this.code += "    throw new Error(\"Not implemented\");\n";
+      const argsExpression = hasArgs ? "argsRecord" : "{}";
+      if (hasArgs) {
+        this.code += "    const argsRecord = args as unknown as {readonly [argName: string]: string};\n";
+      }
+      if (template.schema) {
+        this.code += "    return {\n";
+        this.code += `      prompt: makePromptImpl(${JSON.stringify(templateKey)}, ${argsExpression}, this.jsonSpec),\n`;
+        this.code += `      responseSchema: ${templateName}ResponseZodType,\n`;
+        this.code += "    };\n";
+      } else {
+        this.code += `    return makePromptImpl(${JSON.stringify(templateKey)}, ${argsExpression}, this.jsonSpec);\n`;
+      }
       this.code += "  }\n\n";
     }
     this.code += "}\n\n";
@@ -70,7 +169,7 @@ class TsCodeGenerator {
         }
       } else {
         this.code += `  export type ${name} = `;
-        this.writeTypeRef(declaration.valueType, "\n    ");
+        this.writeTypeRef(declaration.valueType, "\n  ");
         this.code += ";\n\n";
       }
     }

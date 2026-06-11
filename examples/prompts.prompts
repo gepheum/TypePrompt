@@ -10,6 +10,11 @@ GetFoo:
 
   Make sure to match this schema:
   $<schema hide>
+    type Recursive =
+      | "foo"
+      | {kind: "a"; r: Recursive}
+      | {kind: "b"; a: Recursive; b: Recursive};
+
     interface FullName {
       firstName: string;
       lastName: string;
@@ -20,6 +25,7 @@ GetFoo:
         kind: "z";
         abc: "a" | "b" | "c";
         empty: {};
+        rec: Recursive;
       };
     }
 
