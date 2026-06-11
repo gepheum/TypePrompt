@@ -27,9 +27,46 @@ class TsCodeGenerator {
     this.writeJsonSpecType();
     this.writeFreezeJsonSpecFunction();
     this.writeJsonSpecValue(templates);
+    this.writePromptOverriderConst();
     this.writeMakePromptImplFunction();
     this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
     return this.code;
+  }
+
+  private writePromptOverriderConst(): void {
+    this.code += "export const promptOverrider = {\n";
+    this.code += "  internalJsonSpec: jsonSpec,\n";
+    this.code +=
+      "  internalApplyOverrides(overrides: JsonSpec): PromptMaker {\n";
+    this.code +=
+      "    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {\n";
+    this.code += "      const constantTemplate = jsonSpec[templateKey];\n";
+    this.code += "      if (constantTemplate === undefined) {\n";
+    this.code +=
+      "        throw new Error(`Unknown template key '${templateKey}' in overrides`);\n";
+    this.code += "      }\n";
+    this.code +=
+      "      if (overrideTemplate.allArgs.length !== constantTemplate.allArgs.length) {\n";
+    this.code +=
+      "        throw new Error(`Override args mismatch for template '${templateKey}'`);\n";
+    this.code += "      }\n";
+    this.code +=
+      "      for (let i = 0; i < overrideTemplate.allArgs.length; i += 1) {\n";
+    this.code +=
+      "        if (overrideTemplate.allArgs[i] !== constantTemplate.allArgs[i]) {\n";
+    this.code +=
+      "          throw new Error(`Override args mismatch for template '${templateKey}'`);\n";
+    this.code += "        }\n";
+    this.code += "      }\n";
+    this.code += "    }\n";
+    this.code += "    const mergedJsonSpec = freezeJsonSpec({\n";
+    this.code += "      ...jsonSpec,\n";
+    this.code += "      ...overrides,\n";
+    this.code += "    });\n";
+    this.code +=
+      "    return new PromptMaker({internalJsonSpec: mergedJsonSpec});\n";
+    this.code += "  },\n";
+    this.code += "};\n\n";
   }
 
   private writeJsonSpecType(): void {
@@ -153,7 +190,13 @@ class TsCodeGenerator {
 
   private writePromptMakerClass(templates: readonly Template[]): void {
     this.code += "export class PromptMaker {\n";
-    this.code += "  private readonly jsonSpec: JsonSpec = jsonSpec;\n\n";
+    this.code += "  private readonly jsonSpec: JsonSpec;\n\n";
+    this.code += "  // Call with no argument.\n";
+    this.code += "  constructor(args?: {internalJsonSpec: unknown}) {\n";
+    this.code += "    this.jsonSpec = args === undefined\n";
+    this.code += "      ? jsonSpec\n";
+    this.code += "      : (args.internalJsonSpec as JsonSpec);\n";
+    this.code += "  }\n\n";
     for (const template of templates) {
       const templateName = template.name.text;
       const variant = template.variantName?.text ?? "";

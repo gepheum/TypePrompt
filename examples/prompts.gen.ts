@@ -3,7 +3,14 @@
 import * as zod from "zod"
 
 export class PromptMaker {
-  private readonly jsonSpec: JsonSpec = jsonSpec;
+  private readonly jsonSpec: JsonSpec;
+
+  // Call with no argument.
+  constructor(args?: {internalJsonSpec: unknown}) {
+    this.jsonSpec = args === undefined
+      ? jsonSpec
+      : (args.internalJsonSpec as JsonSpec);
+  }
 
   makeGetFoo(args: GetFooArgs): JsonPrompt<GetFooResponse.Response> {
     const argsRecord = args as unknown as {readonly [argName: string]: string};
@@ -130,6 +137,31 @@ const jsonSpec: JsonSpec = freezeJsonSpec({
     ],
   },
 });
+
+export const promptOverrider = {
+  internalJsonSpec: jsonSpec,
+  internalApplyOverrides(overrides: JsonSpec): PromptMaker {
+    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {
+      const constantTemplate = jsonSpec[templateKey];
+      if (constantTemplate === undefined) {
+        throw new Error(`Unknown template key '${templateKey}' in overrides`);
+      }
+      if (overrideTemplate.allArgs.length !== constantTemplate.allArgs.length) {
+        throw new Error(`Override args mismatch for template '${templateKey}'`);
+      }
+      for (let i = 0; i < overrideTemplate.allArgs.length; i += 1) {
+        if (overrideTemplate.allArgs[i] !== constantTemplate.allArgs[i]) {
+          throw new Error(`Override args mismatch for template '${templateKey}'`);
+        }
+      }
+    }
+    const mergedJsonSpec = freezeJsonSpec({
+      ...jsonSpec,
+      ...overrides,
+    });
+    return new PromptMaker({internalJsonSpec: mergedJsonSpec});
+  },
+};
 
 function makePromptImpl(
   templateKey: string,
