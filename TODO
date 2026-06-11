@@ -1,4 +1,4 @@
-- rename to TypePrompt
+- output errors in JSON...
 - example validation should look at the value of the type parameter
 - rename to typeprompt
 - ability to specify comment on param
