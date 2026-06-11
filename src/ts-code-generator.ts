@@ -5,6 +5,7 @@ export function generateCode(templates: readonly Template[]): string {
 }
 
 class TsCodeGenerator {
+  private static readonly ZOD_INLINE_MAX_LENGTH = 300;
   code = "";
 
   write(templates: readonly Template[]): string {
@@ -57,15 +58,24 @@ class TsCodeGenerator {
       }
       this.code += "],\n";
       this.code += "    pieces: [\n";
+      let pendingText = "";
+      const flushPendingText = (): void => {
+        if (pendingText === "") {
+          return;
+        }
+        this.code += `      {kind: \"text\", text: ${JSON.stringify(pendingText)}},\n`;
+        pendingText = "";
+      };
       for (const piece of template.pieces) {
         if (piece.kind === "text") {
-          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+          pendingText += piece.text;
           continue;
         }
         if (piece.kind === "expression") {
           if (piece.hide) {
             continue;
           }
+          flushPendingText();
           this.code += `      {kind: \"arg\", name: ${JSON.stringify(piece.expression)}},\n`;
           continue;
         }
@@ -74,13 +84,14 @@ class TsCodeGenerator {
           if (piece.text === "") {
             continue;
           }
-          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+          pendingText += piece.text;
           continue;
         }
         if (piece.kind === "example") {
-          this.code += `      {kind: \"text\", text: ${JSON.stringify(piece.text)}},\n`;
+          pendingText += piece.text;
         }
       }
+      flushPendingText();
       this.code += "    ],\n";
       this.code += "  },\n";
     }
@@ -234,8 +245,14 @@ class TsCodeGenerator {
     definedTypeNames: ReadonlySet<string>,
     indent: string,
   ): void {
-    if (fields.length === 0) {
-      this.code += "zod.object({})";
+    const inlineObject = this.renderZodObjectInline(
+      templateName,
+      declarationName,
+      fields,
+      definedTypeNames,
+    );
+    if (inlineObject.length <= TsCodeGenerator.ZOD_INLINE_MAX_LENGTH) {
+      this.code += inlineObject;
       return;
     }
 
@@ -255,6 +272,84 @@ class TsCodeGenerator {
       this.code += ",\n";
     }
     this.code += `${indent}})`;
+  }
+
+  private renderZodObjectInline(
+    templateName: string,
+    declarationName: string,
+    fields: readonly SchemaField[],
+    definedTypeNames: ReadonlySet<string>,
+  ): string {
+    if (fields.length === 0) {
+      return "zod.object({})";
+    }
+
+    const fieldsCode = fields.map((field) => {
+      const optionalSuffix = field.optional ? ".optional()" : "";
+      return `${JSON.stringify(field.name.text)}: ${this.renderZodTypeRefInline(
+        templateName,
+        declarationName,
+        field.type,
+        definedTypeNames,
+      )}${optionalSuffix}`;
+    });
+    return `zod.object({${fieldsCode.join(", ")}})`;
+  }
+
+  private renderZodTypeRefInline(
+    templateName: string,
+    currentDeclarationName: string,
+    typeRef: TypeRef,
+    definedTypeNames: ReadonlySet<string>,
+  ): string {
+    switch (typeRef.kind) {
+      case "type-name": {
+        const typeName = typeRef.name.text;
+        if (typeName === "string") return "zod.string()";
+        if (typeName === "number") return "zod.number()";
+        if (typeName === "boolean") return "zod.boolean()";
+
+        const refConstName = this.getTemplateTypeZodConstName(templateName, typeName);
+        if (!definedTypeNames.has(typeName) || typeName === currentDeclarationName) {
+          return `zod.lazy((): zod.ZodType<${templateName}Response.${typeName}> => ${refConstName})`;
+        }
+        return refConstName;
+      }
+      case "string-literal":
+        return `zod.literal(${JSON.stringify(typeRef.value)})`;
+      case "inline-interface":
+        return this.renderZodObjectInline(
+          templateName,
+          currentDeclarationName,
+          Object.values(typeRef.fields),
+          definedTypeNames,
+        );
+      case "array":
+        return `zod.array(${this.renderZodTypeRefInline(
+          templateName,
+          currentDeclarationName,
+          typeRef.elementType,
+          definedTypeNames,
+        )})`;
+      case "union": {
+        if (typeRef.members.length === 1) {
+          return this.renderZodTypeRefInline(
+            templateName,
+            currentDeclarationName,
+            typeRef.members[0]!,
+            definedTypeNames,
+          );
+        }
+
+        const members = typeRef.members.map((member) => this.renderZodTypeRefInline(
+          templateName,
+          currentDeclarationName,
+          member,
+          definedTypeNames,
+        ));
+        return `zod.union([${members.join(", ")}])`;
+      }
+    }
   }
 
   private writeZodTypeRef(

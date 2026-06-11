@@ -63,27 +63,12 @@ export namespace GetFooResponse {
   export type Response = readonly FullName[];
 }
 
-const GetFooRecursiveZodType: zod.ZodType<GetFooResponse.Recursive> = zod.union([zod.literal("foo"), zod.object({
-  "kind": zod.literal("a"),
-  "r": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType),
-}), zod.object({
-  "kind": zod.literal("b"),
-  "a": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType),
-  "b": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType),
-})])
+const GetFooRecursiveZodType: zod.ZodType<GetFooResponse.Recursive> = zod.union([zod.literal("foo"), zod.object({"kind": zod.literal("a"), "r": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType)}), zod.object({"kind": zod.literal("b"), "a": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType), "b": zod.lazy((): zod.ZodType<GetFooResponse.Recursive> => GetFooRecursiveZodType)})])
 
 const GetFooFullNameZodType: zod.ZodType<GetFooResponse.FullName> = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "foo": zod.object({
-    "x": zod.number().optional(),
-    "y": zod.boolean().optional(),
-    "foos": zod.array(zod.string()),
-    "kind": zod.literal("z"),
-    "abc": zod.union([zod.literal("a"), zod.literal("b"), zod.literal("c")]),
-    "empty": zod.object({}),
-    "rec": GetFooRecursiveZodType,
-  }),
+  "foo": zod.object({"x": zod.number().optional(), "y": zod.boolean().optional(), "foos": zod.array(zod.string()), "kind": zod.literal("z"), "abc": zod.union([zod.literal("a"), zod.literal("b"), zod.literal("c")]), "empty": zod.object({}), "rec": GetFooRecursiveZodType}),
 })
 
 export const GetFooResponseZodType: zod.ZodType<GetFooResponse.Response> = zod.array(GetFooFullNameZodType)
@@ -110,10 +95,7 @@ const jsonSpec: JsonSpec = {
       {kind: "arg", name: "name"},
       {kind: "text", text: "?\n\nContext: "},
       {kind: "arg", name: "context"},
-      {kind: "text", text: "\n\nMake sure to match this schema:\n"},
-      {kind: "text", text: "\n\nFor example:\n"},
-      {kind: "text", text: "\n  [\n    {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {\n      \"firstName\": \"John\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {...},\n    ...\n  ]\n"},
-      {kind: "text", text: "\n"},
+      {kind: "text", text: "\n\nMake sure to match this schema:\n\n\nFor example:\n\n  [\n    {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {\n      \"firstName\": \"John\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {...},\n    ...\n  ]\n\n"},
     ],
   },
   "GetName": {
