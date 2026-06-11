@@ -59,9 +59,25 @@ class TsCodeGenerator {
     this.code += "        }\n";
     this.code += "      }\n";
     this.code += "    }\n";
+    this.code +=
+      "    const copiedOverrides: Record<string, JsonSpec[string]> = {};\n";
+    this.code +=
+      "    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {\n";
+    this.code += "      copiedOverrides[templateKey] = {\n";
+    this.code += "        name: overrideTemplate.name,\n";
+    this.code += "        variant: overrideTemplate.variant,\n";
+    this.code +=
+      "        dedentedSourceCode: overrideTemplate.dedentedSourceCode,\n";
+    this.code += "        allArgs: [...overrideTemplate.allArgs],\n";
+    this.code +=
+      '        pieces: overrideTemplate.pieces.map((piece) => piece.kind === "text"\n';
+    this.code += '          ? {kind: "text", text: piece.text}\n';
+    this.code += '          : {kind: "arg", name: piece.name}),\n';
+    this.code += "      };\n";
+    this.code += "    }\n";
     this.code += "    const mergedJsonSpec = freezeJsonSpec({\n";
     this.code += "      ...jsonSpec,\n";
-    this.code += "      ...overrides,\n";
+    this.code += "      ...copiedOverrides,\n";
     this.code += "    });\n";
     this.code +=
       "    return new PromptMaker({internalJsonSpec: mergedJsonSpec});\n";

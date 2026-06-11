@@ -155,9 +155,21 @@ export const promptOverrider = {
         }
       }
     }
+    const copiedOverrides: Record<string, JsonSpec[string]> = {};
+    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {
+      copiedOverrides[templateKey] = {
+        name: overrideTemplate.name,
+        variant: overrideTemplate.variant,
+        dedentedSourceCode: overrideTemplate.dedentedSourceCode,
+        allArgs: [...overrideTemplate.allArgs],
+        pieces: overrideTemplate.pieces.map((piece) => piece.kind === "text"
+          ? {kind: "text", text: piece.text}
+          : {kind: "arg", name: piece.name}),
+      };
+    }
     const mergedJsonSpec = freezeJsonSpec({
       ...jsonSpec,
-      ...overrides,
+      ...copiedOverrides,
     });
     return new PromptMaker({internalJsonSpec: mergedJsonSpec});
   },
