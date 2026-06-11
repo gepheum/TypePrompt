@@ -92,6 +92,7 @@ export function parseTemplateFile(content: string): Result<TemplateFile> {
     templates.push({
       name: header.name,
       variantName: header.variantName ?? null,
+      dedentedSourceCode: body.text,
       pieces: piecesParse.pieces,
       parameters: piecesParse.parameters,
       schema: piecesParse.schema,

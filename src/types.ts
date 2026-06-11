@@ -10,6 +10,7 @@ export interface TemplateFile {
 export interface Template {
   readonly name: CodeSlice;
   readonly variantName: CodeSlice | null;
+  readonly dedentedSourceCode: string;
   readonly pieces: readonly TemplatePiece[];
   readonly parameters: ReadonlySet<string>;
   readonly schema: Schema | null;

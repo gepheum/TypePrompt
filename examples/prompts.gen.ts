@@ -76,6 +76,7 @@ export const GetFooResponseZodType: zod.ZodType<GetFooResponse.Response> = zod.a
 type JsonSpec = {readonly [templateKey: string]: {
   readonly name: string;
   readonly variant: string;
+  readonly dedentedSourceCode: string;
   readonly allArgs: readonly string[];
   readonly pieces: readonly (
     | {kind: "text"; text: string}
@@ -83,10 +84,31 @@ type JsonSpec = {readonly [templateKey: string]: {
   )[];
 }};
 
-const jsonSpec: JsonSpec = {
+function freezeJsonSpec(jsonSpec: JsonSpec): JsonSpec {
+  const freezeValue = (value: unknown): void => {
+    if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+      return;
+    }
+    Object.freeze(value);
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        freezeValue(item);
+      }
+      return;
+    }
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      freezeValue(child);
+    }
+  };
+  freezeValue(jsonSpec);
+  return jsonSpec;
+}
+
+const jsonSpec: JsonSpec = freezeJsonSpec({
   "GetFoo": {
     name: "GetFoo",
     variant: "",
+    dedentedSourceCode: "Hello $name,\n\nWhat's up $name?\n\nContext: $context\n\nMake sure to match this schema:\n$<schema hide>\n  type Recursive =\n    | \"foo\"\n    | {kind: \"a\"; r: Recursive}\n    | {kind: \"b\"; a: Recursive; b: Recursive};\n\n  interface FullName {\n    firstName: string;\n    lastName: string;\n    foo: {\n      x?: number;\n      y?: boolean;\n      foos: string[];\n      kind: \"z\";\n      abc: \"a\" | \"b\" | \"c\";\n      empty: {};\n      rec: Recursive;\n    };\n  }\n\n  type Response = FullName[];\n$</schema>\n\nFor example:\n$<example>\n  [\n    {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {\n      \"firstName\": \"John\",\n      \"lastName\": \"Do\",\n      ...\n    },\n    {...},\n    ...\n  ]\n$</example>\n",
     allArgs: ["name", "context"],
     pieces: [
       {kind: "text", text: "Hello "},
@@ -101,17 +123,19 @@ const jsonSpec: JsonSpec = {
   "GetName": {
     name: "GetName",
     variant: "",
+    dedentedSourceCode: "Hi\n\n",
     allArgs: [],
     pieces: [
       {kind: "text", text: "Hi\n\n"},
     ],
   },
-};
+});
 
 function makePromptImpl(
   templateKey: string,
   args: {readonly [argName: string]: string},
-  jsonSpec: JsonSpec): string {
+  jsonSpec: JsonSpec,
+): string {
   const templateSpec = jsonSpec[templateKey]!;
   return templateSpec.pieces.map((p) => {
     if (p.kind === "text") {

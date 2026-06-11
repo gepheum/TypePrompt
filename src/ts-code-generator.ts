@@ -20,6 +20,7 @@ class TsCodeGenerator {
       this.writeTemplateTypes(template);
     }
     this.writeJsonSpecType();
+    this.writeFreezeJsonSpecFunction();
     this.writeJsonSpecValue(templates);
     this.writeMakePromptImplFunction();
     this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
@@ -30,6 +31,7 @@ class TsCodeGenerator {
     this.code += "type JsonSpec = {readonly [templateKey: string]: {\n";
     this.code += "  readonly name: string;\n";
     this.code += "  readonly variant: string;\n";
+    this.code += "  readonly dedentedSourceCode: string;\n";
     this.code += "  readonly allArgs: readonly string[];\n";
     this.code += "  readonly pieces: readonly (\n";
     this.code += "    | {kind: \"text\"; text: string}\n";
@@ -38,8 +40,30 @@ class TsCodeGenerator {
     this.code += "}};\n\n";
   }
 
+  private writeFreezeJsonSpecFunction(): void {
+    this.code += "function freezeJsonSpec(jsonSpec: JsonSpec): JsonSpec {\n";
+    this.code += "  const freezeValue = (value: unknown): void => {\n";
+    this.code += "    if (value === null || typeof value !== \"object\" || Object.isFrozen(value)) {\n";
+    this.code += "      return;\n";
+    this.code += "    }\n";
+    this.code += "    Object.freeze(value);\n";
+    this.code += "    if (Array.isArray(value)) {\n";
+    this.code += "      for (const item of value) {\n";
+    this.code += "        freezeValue(item);\n";
+    this.code += "      }\n";
+    this.code += "      return;\n";
+    this.code += "    }\n";
+    this.code += "    for (const child of Object.values(value as Record<string, unknown>)) {\n";
+    this.code += "      freezeValue(child);\n";
+    this.code += "    }\n";
+    this.code += "  };\n";
+    this.code += "  freezeValue(jsonSpec);\n";
+    this.code += "  return jsonSpec;\n";
+    this.code += "}\n\n";
+  }
+
   private writeJsonSpecValue(templates: readonly Template[]): void {
-    this.code += "const jsonSpec: JsonSpec = {\n";
+    this.code += "const jsonSpec: JsonSpec = freezeJsonSpec({\n";
     for (const template of templates) {
       const name = template.name.text;
       const variant = template.variantName?.text ?? "";
@@ -47,6 +71,7 @@ class TsCodeGenerator {
       this.code += `  ${JSON.stringify(templateKey)}: {\n`;
       this.code += `    name: ${JSON.stringify(name)},\n`;
       this.code += `    variant: ${JSON.stringify(variant)},\n`;
+      this.code += `    dedentedSourceCode: ${JSON.stringify(template.dedentedSourceCode)},\n`;
       this.code += "    allArgs: [";
       let firstArg = true;
       for (const arg of template.parameters) {
@@ -95,14 +120,15 @@ class TsCodeGenerator {
       this.code += "    ],\n";
       this.code += "  },\n";
     }
-    this.code += "};\n\n";
+    this.code += "});\n\n";
   }
 
   private writeMakePromptImplFunction(): void {
     this.code += "function makePromptImpl(\n";
     this.code += "  templateKey: string,\n";
     this.code += "  args: {readonly [argName: string]: string},\n";
-    this.code += "  jsonSpec: JsonSpec): string {\n";
+    this.code += "  jsonSpec: JsonSpec,\n";
+    this.code += "): string {\n";
     this.code += "  const templateSpec = jsonSpec[templateKey]!;\n";
     this.code += "  return templateSpec.pieces.map((p) => {\n";
     this.code += "    if (p.kind === \"text\") {\n";
