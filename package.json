@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
+  "bin": {
+    "typeprompt": "dist/main.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
     "example:prompts": "tsx src/run-prompts-validation.ts",
     "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\"",
     "lint": "eslint src/**/*.ts",
