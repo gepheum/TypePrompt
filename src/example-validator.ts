@@ -15,37 +15,6 @@ export function validateExample(
   schema: Schema,
   typeName: string,
 ): readonly ExampleValidationError[] {
-  const valueIds = new WeakMap<object, number>();
-  let nextValueId = 1;
-
-  const getValueId = (value: JsonValue): string => {
-    if (value.kind === "string") {
-      return `string:${value.value}`;
-    }
-    if (value.kind === "number") {
-      return `number:${value.value}`;
-    }
-    if (value.kind === "boolean") {
-      return `boolean:${value.value ? "true" : "false"}`;
-    }
-    if (value.kind === "null") {
-      return "null";
-    }
-    if (value.kind === "ellipsis") {
-      return "ellipsis";
-    }
-
-    const existing = valueIds.get(value as object);
-    if (existing) {
-      return `${value.kind}:${existing}`;
-    }
-
-    const assigned = nextValueId;
-    nextValueId += 1;
-    valueIds.set(value as object, assigned);
-    return `${value.kind}:${assigned}`;
-  };
-
   if (!schema.types[typeName]) {
     return [
       {
@@ -55,15 +24,7 @@ export function validateExample(
     ];
   }
 
-  if (
-    matchesTypeNameRef(
-      typeName,
-      example.value,
-      schema.types,
-      new Set(),
-      getValueId,
-    )
-  ) {
+  if (matchesTypeNameRef(typeName, example.value, schema.types, new Map())) {
     return [];
   }
 
@@ -90,8 +51,7 @@ function matchesTypeNameRef(
   typeName: string,
   value: JsonValue,
   types: Schema["types"],
-  visited: Set<string>,
-  getValueId: (value: JsonValue) => string,
+  visited: Map<TypeDeclaration, Set<JsonValue>>,
 ): boolean {
   if (isWildcardValue(value)) {
     return true;
@@ -101,36 +61,32 @@ function matchesTypeNameRef(
     return value.kind === typeName;
   }
 
-  const visitKey = `${typeName}@@${getValueId(value)}`;
-  if (visited.has(visitKey)) {
-    return false;
-  }
-  visited.add(visitKey);
-
   const declaration = types[typeName];
   if (!declaration) {
     return false;
   }
 
+  if (!visited.has(declaration)) {
+    visited.set(declaration, new Set());
+  }
+  const valueSet = visited.get(declaration)!;
+  if (valueSet.has(value)) {
+    return false;
+  }
+  valueSet.add(value);
+
   if (declaration.kind === "interface") {
-    return matchesInterface(declaration, value, types, visited, getValueId);
+    return matchesInterface(declaration, value, types, visited);
   }
 
-  return matchesTypeRef(
-    declaration.valueType,
-    value,
-    types,
-    visited,
-    getValueId,
-  );
+  return matchesTypeRef(declaration.valueType, value, types, visited);
 }
 
 function matchesInterface(
   declaration: Extract<TypeDeclaration, { kind: "interface" }>,
   value: JsonValue,
   types: Schema["types"],
-  visited: Set<string>,
-  getValueId: (value: JsonValue) => string,
+  visited: Map<TypeDeclaration, Set<JsonValue>>,
 ): boolean {
   if (isWildcardValue(value)) {
     return true;
@@ -154,7 +110,7 @@ function matchesInterface(
       return false;
     }
 
-    if (!matchesTypeRef(field.type, entryValue, types, visited, getValueId)) {
+    if (!matchesTypeRef(field.type, entryValue, types, visited)) {
       return false;
     }
   }
@@ -172,8 +128,7 @@ function matchesInlineInterface(
   typeRef: Extract<TypeRef, { kind: "inline-interface" }>,
   value: JsonValue,
   types: Schema["types"],
-  visited: Set<string>,
-  getValueId: (value: JsonValue) => string,
+  visited: Map<TypeDeclaration, Set<JsonValue>>,
 ): boolean {
   if (isWildcardValue(value)) {
     return true;
@@ -197,7 +152,7 @@ function matchesInlineInterface(
       return false;
     }
 
-    if (!matchesTypeRef(field.type, entryValue, types, visited, getValueId)) {
+    if (!matchesTypeRef(field.type, entryValue, types, visited)) {
       return false;
     }
   }
@@ -215,21 +170,14 @@ function matchesTypeRef(
   typeRef: TypeRef,
   value: JsonValue,
   types: Schema["types"],
-  visited: Set<string>,
-  getValueId: (value: JsonValue) => string,
+  visited: Map<TypeDeclaration, Set<JsonValue>>,
 ): boolean {
   if (isWildcardValue(value)) {
     return true;
   }
 
   if (typeRef.kind === "type-name") {
-    return matchesTypeNameRef(
-      typeRef.name.text,
-      value,
-      types,
-      visited,
-      getValueId,
-    );
+    return matchesTypeNameRef(typeRef.name.text, value, types, visited);
   }
 
   if (typeRef.kind === "string-literal") {
@@ -241,15 +189,15 @@ function matchesTypeRef(
       return false;
     }
     return value.values.every((item) =>
-      matchesTypeRef(typeRef.elementType, item, types, visited, getValueId),
+      matchesTypeRef(typeRef.elementType, item, types, visited),
     );
   }
 
   if (typeRef.kind === "inline-interface") {
-    return matchesInlineInterface(typeRef, value, types, visited, getValueId);
+    return matchesInlineInterface(typeRef, value, types, visited);
   }
 
   return typeRef.members.some((member) =>
-    matchesTypeRef(member, value, types, visited, getValueId),
+    matchesTypeRef(member, value, types, visited),
   );
 }
