@@ -1,4 +1,5 @@
 import { SaxesParser } from "saxes";
+import { OffsetMap, OffsetMapEntry } from "./text-node-join.js";
 
 export type XmlDocument = {
   readonly kind: "success";
@@ -20,27 +21,14 @@ export type XmlNode = TextNode | ElementNode;
 
 export type TextNode = {
   readonly kind: "text";
-  readonly text: SourceSpan;
+  readonly sourceSpan: SourceSpan;
   /// Decoded text content (for example, "&lt;" -> "<").
   readonly decoded: string;
   /// Mapping segments from decoded offsets to source offsets.
+  /// The first element is always
+  //   `{ decodedOffset: 0, sourceOffset: sourceSpan.start }`
+  // even if the text is empty.
   readonly offsetMap: OffsetMap;
-};
-
-/// Segment-based mapping from decoded offsets back to source offsets.
-///
-/// Entries are sorted by `decodedOffset`. Each entry defines a decoded segment that
-/// starts at `decodedOffset` and ends at the next entry's `decodedOffset` (or at
-/// `decoded.length` for the last entry).
-///
-/// The decoded segment maps to the source range
-/// `[sourceOffsetStart, sourceOffsetEnd)`.
-export type OffsetMap = readonly OffsetMapEntry[];
-
-export type OffsetMapEntry = {
-  readonly decodedOffset: number;
-  readonly sourceOffsetStart: number;
-  readonly sourceOffsetEnd: number;
 };
 
 export type ElementNode = {
@@ -49,6 +37,9 @@ export type ElementNode = {
   readonly tagName: SourceSpan;
   readonly attributes: { readonly [name: string]: Attribute };
   readonly isSelfClosing: boolean;
+  /// The source offset immediately after the opening tag (or closing `/>` for
+  /// self-closing elements), i.e. the position where child content begins.
+  readonly contentPosition: number;
 };
 
 export type Attribute = {
@@ -105,7 +96,7 @@ export function parseXmlDocument(
     const decodedText = decodeXmlTextWithOffsetMap(content, cursor, end);
     appendNode({
       kind: "text",
-      text: makeSpan(content, cursor, end),
+      sourceSpan: makeSpan(content, cursor, end),
       decoded: decodedText.decoded,
       offsetMap: decodedText.offsetMap,
     });
@@ -123,15 +114,9 @@ export function parseXmlDocument(
     const decoded = content.slice(textStart, textEnd);
     appendNode({
       kind: "text",
-      text: makeSpan(content, textStart, textEnd),
+      sourceSpan: makeSpan(content, textStart, textEnd),
       decoded,
-      offsetMap: [
-        {
-          decodedOffset: 0,
-          sourceOffsetStart: textStart,
-          sourceOffsetEnd: textEnd,
-        },
-      ],
+      offsetMap: [{ decodedOffset: 0, sourceOffset: textStart }],
     });
     cursor = tokenEnd;
   });
@@ -182,6 +167,7 @@ export function parseXmlDocument(
         tagName: currentOpenTag.tagName,
         attributes: currentOpenTag.attributes,
         isSelfClosing: tag.isSelfClosing,
+        contentPosition: tokenEnd,
       },
       openingTagStart: currentOpenTag.tokenStart,
       openingTagEnd: tokenEnd,
@@ -306,6 +292,7 @@ interface OpenElement {
     readonly tagName: SourceSpan;
     readonly attributes: { readonly [name: string]: Attribute };
     readonly isSelfClosing: boolean;
+    readonly contentPosition: number;
   };
   readonly openingTagStart: number;
   readonly openingTagEnd: number;
@@ -337,7 +324,7 @@ function decodeXmlTextWithOffsetMap(
   if (raw.length === 0) {
     return {
       decoded: "",
-      offsetMap: [],
+      offsetMap: [{ decodedOffset: 0, sourceOffset: sourceStart }],
     };
   }
 
@@ -355,11 +342,13 @@ function decodeXmlTextWithOffsetMap(
       }
       const chunk = raw.slice(chunkStart, i);
       decodedParts.push(chunk);
-      offsetMap.push({
-        decodedOffset,
-        sourceOffsetStart: sourceStart + chunkStart,
-        sourceOffsetEnd: sourceStart + i,
-      });
+      const lastEntry = offsetMap.at(-1);
+      if (!lastEntry || lastEntry.decodedOffset !== decodedOffset) {
+        offsetMap.push({
+          decodedOffset,
+          sourceOffset: sourceStart + chunkStart,
+        });
+      }
       decodedOffset += chunk.length;
       continue;
     }
@@ -372,8 +361,7 @@ function decodeXmlTextWithOffsetMap(
       decodedParts.push(chunk);
       offsetMap.push({
         decodedOffset,
-        sourceOffsetStart: sourceStart + chunkStart,
-        sourceOffsetEnd: sourceStart + i,
+        sourceOffset: sourceStart + chunkStart,
       });
       decodedOffset += chunk.length;
       continue;
@@ -386,21 +374,21 @@ function decodeXmlTextWithOffsetMap(
       decodedParts.push(chunk);
       offsetMap.push({
         decodedOffset,
-        sourceOffsetStart: sourceStart + i,
-        sourceOffsetEnd: sourceStart + semicolon + 1,
+        sourceOffset: sourceStart + i,
       });
       decodedOffset += chunk.length;
       i = semicolon + 1;
       continue;
     }
 
+    // Known entity: two entries to capture the source length gap.
     decodedParts.push(decodedEntity);
+    offsetMap.push({ decodedOffset, sourceOffset: sourceStart + i });
+    decodedOffset += decodedEntity.length;
     offsetMap.push({
       decodedOffset,
-      sourceOffsetStart: sourceStart + i,
-      sourceOffsetEnd: sourceStart + semicolon + 1,
+      sourceOffset: sourceStart + semicolon + 1,
     });
-    decodedOffset += decodedEntity.length;
     i = semicolon + 1;
   }
 
@@ -603,59 +591,4 @@ function scanUnquotedAttributeValueEnd(
     i += 1;
   }
   return i;
-}
-
-/// Maps a decoded offset in a text node back to a source offset in the original XML.
-///
-/// The offset is a boundary offset into `textNode.decoded`, in the range
-/// `[0, textNode.decoded.length]`.
-export function textNodeDecodedOffsetToSourceOffset(
-  textNode: TextNode,
-  decodedOffset: number,
-): number {
-  if (!Number.isInteger(decodedOffset)) {
-    throw new RangeError("decodedOffset must be an integer");
-  }
-  if (decodedOffset < 0 || decodedOffset > textNode.decoded.length) {
-    throw new RangeError(
-      `decodedOffset out of range: ${decodedOffset} (expected 0..${textNode.decoded.length})`,
-    );
-  }
-
-  const segments = textNode.offsetMap;
-  if (segments.length === 0) {
-    // Empty decoded text has a single valid boundary at the text start.
-    return textNode.text.start;
-  }
-
-  let selected = 0;
-  for (let i = 1; i < segments.length; i += 1) {
-    if (segments[i]!.decodedOffset > decodedOffset) {
-      break;
-    }
-    selected = i;
-  }
-
-  const segment = segments[selected]!;
-  const nextDecodedOffset =
-    selected + 1 < segments.length
-      ? segments[selected + 1]!.decodedOffset
-      : textNode.decoded.length;
-
-  if (decodedOffset <= segment.decodedOffset) {
-    return segment.sourceOffsetStart;
-  }
-  if (decodedOffset >= nextDecodedOffset) {
-    return segment.sourceOffsetEnd;
-  }
-
-  const decodedSpan = nextDecodedOffset - segment.decodedOffset;
-  const sourceSpan = segment.sourceOffsetEnd - segment.sourceOffsetStart;
-  if (decodedSpan <= 0) {
-    return segment.sourceOffsetStart;
-  }
-
-  const offsetInSegment = decodedOffset - segment.decodedOffset;
-  const mappedDelta = Math.floor((offsetInSegment * sourceSpan) / decodedSpan);
-  return segment.sourceOffsetStart + mappedDelta;
 }

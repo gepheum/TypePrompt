@@ -4,14 +4,10 @@ import { describe, it } from "mocha";
 import type {
   ElementNode,
   SourceSpan,
-  TextNode,
   XmlDocument,
   XmlParseErrors,
 } from "./xml-parser.js";
-import {
-  parseXmlDocument,
-  textNodeDecodedOffsetToSourceOffset,
-} from "./xml-parser.js";
+import { parseXmlDocument } from "./xml-parser.js";
 
 function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
   expect(result).toMatch({ kind: "success" });
@@ -78,7 +74,7 @@ describe("parseXmlDocument", () => {
       content: [
         {
           kind: "text",
-          text: span(input, "before"),
+          sourceSpan: span(input, "before"),
         },
         {
           kind: "element",
@@ -97,7 +93,7 @@ describe("parseXmlDocument", () => {
           children: [
             {
               kind: "text",
-              text: span(input, "mid"),
+              sourceSpan: span(input, "mid"),
             },
             {
               kind: "element",
@@ -113,13 +109,13 @@ describe("parseXmlDocument", () => {
             },
             {
               kind: "text",
-              text: span(input, "after"),
+              sourceSpan: span(input, "after"),
             },
           ],
         },
         {
           kind: "text",
-          text: span(input, "tail"),
+          sourceSpan: span(input, "tail"),
         },
       ],
     });
@@ -138,7 +134,7 @@ describe("parseXmlDocument", () => {
       children: [
         {
           kind: "text",
-          text: span(input, "ok"),
+          sourceSpan: span(input, "ok"),
         },
       ],
     });
@@ -156,11 +152,11 @@ describe("parseXmlDocument", () => {
       children: [
         {
           kind: "text",
-          text: span(input, "abc"),
+          sourceSpan: span(input, "abc"),
         },
         {
           kind: "text",
-          text: span(input, "bcd", input.indexOf("-->") + 3),
+          sourceSpan: span(input, "bcd", input.indexOf("-->") + 3),
         },
       ],
     });
@@ -174,7 +170,7 @@ describe("parseXmlDocument", () => {
     expect(root.children).toMatch([
       {
         kind: "text",
-        text: span(input, "a<b>c"),
+        sourceSpan: span(input, "a<b>c"),
       },
     ]);
   });
@@ -194,33 +190,22 @@ describe("parseXmlDocument", () => {
       children: [
         {
           kind: "text",
-          text: span(input, "x &amp; y"),
+          sourceSpan: span(input, "x &amp; y"),
           decoded: "x & y",
           offsetMap: [
             {
               decodedOffset: 0,
-              sourceOffsetStart: input.indexOf("x &amp; y"),
-              sourceOffsetEnd: input.indexOf(
-                "&amp;",
-                input.indexOf("x &amp; y"),
-              ),
+              sourceOffset: input.indexOf("x &amp; y"),
             },
             {
               decodedOffset: 2,
-              sourceOffsetStart: input.indexOf(
-                "&amp;",
-                input.indexOf("x &amp; y"),
-              ),
-              sourceOffsetEnd:
-                input.indexOf("&amp;", input.indexOf("x &amp; y")) +
-                "&amp;".length,
+              sourceOffset: input.indexOf("&amp;", input.indexOf("x &amp; y")),
             },
             {
               decodedOffset: 3,
-              sourceOffsetStart:
+              sourceOffset:
                 input.indexOf("&amp;", input.indexOf("x &amp; y")) +
                 "&amp;".length,
-              sourceOffsetEnd: input.indexOf("x &amp; y") + "x &amp; y".length,
             },
           ],
         },
@@ -304,23 +289,24 @@ describe("parseXmlDocument", () => {
 
     expect(root.children[0]).toMatch({
       kind: "text",
-      text: span(input, "&#65; &#x42;"),
+      sourceSpan: span(input, "&#65; &#x42;"),
       decoded: "A B",
       offsetMap: [
         {
           decodedOffset: 0,
-          sourceOffsetStart: firstEntityStart,
-          sourceOffsetEnd: firstEntityEnd,
+          sourceOffset: firstEntityStart,
         },
         {
           decodedOffset: 1,
-          sourceOffsetStart: firstEntityEnd,
-          sourceOffsetEnd: secondEntityStart,
+          sourceOffset: firstEntityEnd,
         },
         {
           decodedOffset: 2,
-          sourceOffsetStart: secondEntityStart,
-          sourceOffsetEnd: secondEntityEnd,
+          sourceOffset: secondEntityStart,
+        },
+        {
+          decodedOffset: 3,
+          sourceOffset: secondEntityEnd,
         },
       ],
     });
@@ -352,106 +338,6 @@ describe("parseXmlDocument", () => {
     });
   });
 
-  it("maps decoded offsets to source offsets for plain text", () => {
-    const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
-    const textNode = root.children[0] as TextNode;
-
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("abc"),
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
-      input.indexOf("abc") + 1,
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
-      input.indexOf("abc") + 2,
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
-      input.indexOf("abc") + 3,
-    );
-  });
-
-  it("maps decoded offsets to source offsets across entity and raw segments", () => {
-    const input = "<root>x &amp; y</root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
-    const textNode = root.children[0] as TextNode;
-
-    // decoded: "x & y", source: "x &amp; y"
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("x &amp; y"),
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
-      input.indexOf("x &amp; y") + 1,
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
-      input.indexOf("&amp;"),
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
-      input.indexOf("&amp;") + "&amp;".length,
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 4)).toBe(
-      input.indexOf("&amp;") + "&amp;".length + 1,
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 5)).toBe(
-      input.indexOf("x &amp; y") + "x &amp; y".length,
-    );
-  });
-
-  it("maps end boundary of a single-entity text node", () => {
-    const input = "<root>&lt;</root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
-    const textNode = root.children[0] as TextNode;
-
-    expect(textNode.decoded).toBe("<");
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("&lt;"),
-    );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
-      input.indexOf("&lt;") + "&lt;".length,
-    );
-  });
-
-  it("throws for decoded offsets outside valid range", () => {
-    const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
-    const textNode = root.children[0] as TextNode;
-
-    let threw = false;
-    try {
-      textNodeDecodedOffsetToSourceOffset(textNode, -1);
-    } catch {
-      threw = true;
-    }
-    expect(threw).toBe(true);
-
-    threw = false;
-    try {
-      textNodeDecodedOffsetToSourceOffset(textNode, 4);
-    } catch {
-      threw = true;
-    }
-    expect(threw).toBe(true);
-  });
-
-  it("returns text start for empty decoded text nodes", () => {
-    const emptyNode: TextNode = {
-      kind: "text",
-      text: {
-        text: "",
-        start: 42,
-        end: 42,
-      },
-      decoded: "",
-      offsetMap: [],
-    };
-
-    expect(textNodeDecodedOffsetToSourceOffset(emptyNode, 0)).toBe(42);
-  });
-
   it("provides identity decoded text and offset map for CDATA text", () => {
     const input = "<root><![CDATA[a<b>c]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
@@ -460,13 +346,12 @@ describe("parseXmlDocument", () => {
 
     expect(root.children[0]).toMatch({
       kind: "text",
-      text: span(input, "a<b>c"),
+      sourceSpan: span(input, "a<b>c"),
       decoded: "a<b>c",
       offsetMap: [
         {
           decodedOffset: 0,
-          sourceOffsetStart: cdataTextStart,
-          sourceOffsetEnd: cdataTextStart + "a<b>c".length,
+          sourceOffset: cdataTextStart,
         },
       ],
     });
