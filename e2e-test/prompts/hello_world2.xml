@@ -6,8 +6,7 @@
 
   ## What's up?
 
-  Match this schema:
-  <schema>
+  Match this schema:<schema>
     interface Response {
       message: string;
     }
@@ -16,3 +15,5 @@
     {"message": "Hello"}
   </example>
 </template>
+
+
