@@ -282,4 +282,30 @@ describe("validateExample", () => {
       },
     ]);
   });
+
+  it("accepts recursive type with multiple branches where each value is distinct", () => {
+    const schema = parseSchemaOrThrow(
+      "interface Pair { left?: Pair; right?: Pair; } type Response = Pair;",
+    );
+    const valid = parseExampleOrThrow(
+      '{"left": {"left": {}, "right": {}}, "right": {"left": {}, "right": {}}}',
+    );
+
+    expect(validateExample(valid, schema, "Response")).toMatch([]);
+  });
+
+  it("rejects recursive type when a branch has invalid type", () => {
+    const schema = parseSchemaOrThrow(
+      "interface Pair { left?: Pair; right?: Pair; } type Response = Pair;",
+    );
+    const invalid = parseExampleOrThrow(
+      '{"left": {"left": {}, "right": "wrong"}, "right": {}}',
+    );
+
+    expect(validateExample(invalid, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+      },
+    ]);
+  });
 });
