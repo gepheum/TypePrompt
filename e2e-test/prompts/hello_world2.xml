@@ -1,0 +1,16 @@
+<template name="Hello world" model="gemini-1.0">
+  Say hello to <arg name="foo"/>.
+  How are you? <arg name="bar"/>.
+
+  ## What's up?
+
+  Match this schema:
+  <schema>
+    interface Response {
+      message: string;
+    }
+  $</schema>
+  $<example>
+    {"message": "Hello"}
+  $</example>
+</template>

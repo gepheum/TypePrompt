@@ -1,0 +1,12 @@
+<template name="Hello world">
+  Say hello to <arg name="foo"/>.
+
+  <schema>
+    interface Response {
+      message: string;
+    }
+  $</schema>
+  $<example>
+    {"message": "Hello"}
+  $</example>
+</template>

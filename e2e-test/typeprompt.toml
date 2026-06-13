@@ -1,0 +1,3 @@
+# TypePrompt configuration. Run "npx typeprompt gen" to generate code.
+input = "prompts"
+generatedDotTsPath = "./prompts.gen.ts"
