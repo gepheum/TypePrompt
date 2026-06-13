@@ -1,8 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { ElementNode, SourceSpan, XmlDocument, XmlParseErrors } from "./xml-parser.js";
-import { parseXmlDocument } from "./xml-parser.js";
+import type { ElementNode, SourceSpan, TextNode, XmlDocument, XmlParseErrors } from "./xml-parser.js";
+import { parseXmlDocument, textNodeDecodedOffsetToSourceOffset } from "./xml-parser.js";
 
 function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
   if (result.kind !== "success") {
@@ -35,6 +35,23 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument("")).toMatch({
       kind: "success",
       content: [],
+    });
+  });
+
+  it("tracks tag offsets when first element starts after leading whitespace", () => {
+    const input = " <foo/>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[1] as ElementNode;
+
+    expect(root).toMatch({
+      kind: "element",
+      tagName: {
+        text: "foo",
+        start: 2,
+        end: 5,
+      },
+      isSelfClosing: true,
+      children: [],
     });
   });
 
@@ -298,6 +315,82 @@ describe("parseXmlDocument", () => {
     expect(result.errors[0]).toMatch({
       message: "malformed character entity.",
     });
+  });
+
+  it("maps decoded offsets to source offsets for plain text", () => {
+    const input = "<root>abc</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const textNode = root.children[0] as TextNode;
+
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("abc"));
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("abc") + 1);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(input.indexOf("abc") + 2);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(input.indexOf("abc") + 3);
+  });
+
+  it("maps decoded offsets to source offsets across entity and raw segments", () => {
+    const input = "<root>x &amp; y</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const textNode = root.children[0] as TextNode;
+
+    // decoded: "x & y", source: "x &amp; y"
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("x &amp; y"));
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("x &amp; y") + 1);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(input.indexOf("&amp;"));
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(input.indexOf("&amp;") + "&amp;".length);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 4)).toBe(input.indexOf("&amp;") + "&amp;".length + 1);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 5)).toBe(input.indexOf("x &amp; y") + "x &amp; y".length);
+  });
+
+  it("maps end boundary of a single-entity text node", () => {
+    const input = "<root>&lt;</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const textNode = root.children[0] as TextNode;
+
+    expect(textNode.decoded).toBe("<");
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("&lt;"));
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("&lt;") + "&lt;".length);
+  });
+
+  it("throws for decoded offsets outside valid range", () => {
+    const input = "<root>abc</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const textNode = root.children[0] as TextNode;
+
+    let threw = false;
+    try {
+      textNodeDecodedOffsetToSourceOffset(textNode, -1);
+    } catch {
+      threw = true;
+    }
+    expect(threw).toBe(true);
+
+    threw = false;
+    try {
+      textNodeDecodedOffsetToSourceOffset(textNode, 4);
+    } catch {
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+
+  it("returns text start for empty decoded text nodes", () => {
+    const emptyNode: TextNode = {
+      kind: "text",
+      text: {
+        text: "",
+        start: 42,
+        end: 42,
+      },
+      decoded: "",
+      offsetMap: [],
+    };
+
+    expect(textNodeDecodedOffsetToSourceOffset(emptyNode, 0)).toBe(42);
   });
 
   it("provides identity decoded text and offset map for CDATA text", () => {

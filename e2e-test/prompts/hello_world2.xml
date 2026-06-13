@@ -1,5 +1,6 @@
 <template name="Hello world">
   <meta temperature="0.7" />
+
   Say hello to <arg name="foo"/>.
   How are you? <arg name="bar"/>.
 
