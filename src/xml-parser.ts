@@ -68,60 +68,6 @@ export interface SourceSpan {
   readonly end: number;
 }
 
-/// Maps a decoded offset in a text node back to a source offset in the original XML.
-///
-/// The offset is a boundary offset into `textNode.decoded`, in the range
-/// `[0, textNode.decoded.length]`.
-export function textNodeDecodedOffsetToSourceOffset(
-  textNode: TextNode,
-  decodedOffset: number,
-): number {
-  if (!Number.isInteger(decodedOffset)) {
-    throw new RangeError("decodedOffset must be an integer");
-  }
-  if (decodedOffset < 0 || decodedOffset > textNode.decoded.length) {
-    throw new RangeError(
-      `decodedOffset out of range: ${decodedOffset} (expected 0..${textNode.decoded.length})`,
-    );
-  }
-
-  const segments = textNode.offsetMap;
-  if (segments.length === 0) {
-    // Empty decoded text has a single valid boundary at the text start.
-    return textNode.text.start;
-  }
-
-  let selected = 0;
-  for (let i = 1; i < segments.length; i += 1) {
-    if (segments[i]!.decodedOffset > decodedOffset) {
-      break;
-    }
-    selected = i;
-  }
-
-  const segment = segments[selected]!;
-  const nextDecodedOffset = selected + 1 < segments.length
-    ? segments[selected + 1]!.decodedOffset
-    : textNode.decoded.length;
-
-  if (decodedOffset <= segment.decodedOffset) {
-    return segment.sourceOffsetStart;
-  }
-  if (decodedOffset >= nextDecodedOffset) {
-    return segment.sourceOffsetEnd;
-  }
-
-  const decodedSpan = nextDecodedOffset - segment.decodedOffset;
-  const sourceSpan = segment.sourceOffsetEnd - segment.sourceOffsetStart;
-  if (decodedSpan <= 0) {
-    return segment.sourceOffsetStart;
-  }
-
-  const offsetInSegment = decodedOffset - segment.decodedOffset;
-  const mappedDelta = Math.floor((offsetInSegment * sourceSpan) / decodedSpan);
-  return segment.sourceOffsetStart + mappedDelta;
-}
-
 /// Parses XML as a fragment and reconstructs precise source spans for nodes.
 ///
 /// We use saxes for XML correctness and error recovery, then keep a cursor into
@@ -636,4 +582,58 @@ function scanUnquotedAttributeValueEnd(content: string, cursor: number): number 
     i += 1;
   }
   return i;
+}
+
+/// Maps a decoded offset in a text node back to a source offset in the original XML.
+///
+/// The offset is a boundary offset into `textNode.decoded`, in the range
+/// `[0, textNode.decoded.length]`.
+export function textNodeDecodedOffsetToSourceOffset(
+  textNode: TextNode,
+  decodedOffset: number,
+): number {
+  if (!Number.isInteger(decodedOffset)) {
+    throw new RangeError("decodedOffset must be an integer");
+  }
+  if (decodedOffset < 0 || decodedOffset > textNode.decoded.length) {
+    throw new RangeError(
+      `decodedOffset out of range: ${decodedOffset} (expected 0..${textNode.decoded.length})`,
+    );
+  }
+
+  const segments = textNode.offsetMap;
+  if (segments.length === 0) {
+    // Empty decoded text has a single valid boundary at the text start.
+    return textNode.text.start;
+  }
+
+  let selected = 0;
+  for (let i = 1; i < segments.length; i += 1) {
+    if (segments[i]!.decodedOffset > decodedOffset) {
+      break;
+    }
+    selected = i;
+  }
+
+  const segment = segments[selected]!;
+  const nextDecodedOffset = selected + 1 < segments.length
+    ? segments[selected + 1]!.decodedOffset
+    : textNode.decoded.length;
+
+  if (decodedOffset <= segment.decodedOffset) {
+    return segment.sourceOffsetStart;
+  }
+  if (decodedOffset >= nextDecodedOffset) {
+    return segment.sourceOffsetEnd;
+  }
+
+  const decodedSpan = nextDecodedOffset - segment.decodedOffset;
+  const sourceSpan = segment.sourceOffsetEnd - segment.sourceOffsetStart;
+  if (decodedSpan <= 0) {
+    return segment.sourceOffsetStart;
+  }
+
+  const offsetInSegment = decodedOffset - segment.decodedOffset;
+  const mappedDelta = Math.floor((offsetInSegment * sourceSpan) / decodedSpan);
+  return segment.sourceOffsetStart + mappedDelta;
 }
