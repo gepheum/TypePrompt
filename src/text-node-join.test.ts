@@ -117,10 +117,13 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
 });
 
 describe("joinTextNodes", () => {
-  it("returns an empty text node for an empty list", () => {
-    const result = joinTextNodes([]);
+  it("returns an empty decoded string with a single offset entry for an empty list", () => {
+    const result = joinTextNodes([], 42);
 
-    expect(result).toMatch({ decoded: "", offsetMap: [] });
+    expect(result).toMatch({
+      decoded: "",
+      offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
+    });
   });
 
   it("returns the single node unchanged for a one-element list", () => {
@@ -129,7 +132,7 @@ describe("joinTextNodes", () => {
       offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
     };
 
-    const result = joinTextNodes([node]);
+    const result = joinTextNodes([node], 0);
 
     expect(result).toMatch({
       decoded: "abc",
@@ -147,7 +150,7 @@ describe("joinTextNodes", () => {
       offsetMap: [{ decodedOffset: 0, sourceOffset: 200 }],
     };
 
-    const result = joinTextNodes([node1, node2]);
+    const result = joinTextNodes([node1, node2], 0);
 
     expect(result.decoded).toBe("foobar");
     expect(result.offsetMap).toMatch([
@@ -172,7 +175,7 @@ describe("joinTextNodes", () => {
       offsetMap: [{ decodedOffset: 0, sourceOffset: 20 }],
     };
 
-    const result = joinTextNodes([node1, node2]);
+    const result = joinTextNodes([node1, node2], 0);
 
     expect(result.decoded).toBe("a<bcd");
     expect(result.offsetMap).toMatch([
@@ -197,7 +200,7 @@ describe("joinTextNodes", () => {
       offsetMap: [{ decodedOffset: 0, sourceOffset: 100 }],
     };
 
-    const joined = joinTextNodes([node1, node2, node3]);
+    const joined = joinTextNodes([node1, node2, node3], 0);
 
     expect(joined.decoded).toBe("hi world");
     // "hi" maps to source 5..6

@@ -1,5 +1,6 @@
 export type TextNodeJoin = {
   readonly decoded: string;
+  /// Always non-empty. The first element always has `decodedOffset: 0`.
   readonly offsetMap: OffsetMap;
 };
 
@@ -20,9 +21,15 @@ export type OffsetMapEntry = {
 
 /// Joins multiple non-overlapping text nodes into a single text node with a combined decoded string and offset map.
 /// The resulting offsetMap entries have decoded offsets relative to the start of the joined string.
+///
+/// `sourceOffset` is used as the `sourceOffset` of the first entry when `textNodes` is empty.
 export function joinTextNodes(
   textNodes: readonly TextNodeJoin[],
+  sourceOffset: number,
 ): TextNodeJoin {
+  if (textNodes.length === 0) {
+    return { decoded: "", offsetMap: [{ decodedOffset: 0, sourceOffset }] };
+  }
   let decoded = "";
   const offsetMap: OffsetMapEntry[] = [];
   let currentOffset = 0;
