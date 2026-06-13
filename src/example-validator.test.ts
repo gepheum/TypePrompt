@@ -1,0 +1,168 @@
+import { expect } from "buckwheat";
+import { describe, it } from "mocha";
+
+import type { Example } from "./example-parser.js";
+import { parseExample } from "./example-parser.js";
+import { validateExample } from "./example-validator.js";
+import type { Schema } from "./schema-parser.js";
+import { parseSchema } from "./schema-parser.js";
+
+function parseSchemaOrThrow(schemaSource: string): Schema {
+  const parsed = parseSchema(schemaSource);
+  if (parsed.kind === "error") {
+    throw new Error(
+      `Schema parse failed: ${parsed.errors
+        .map((error) => error.message)
+        .join(", ")}`,
+    );
+  }
+  return parsed;
+}
+
+function parseExampleOrThrow(exampleSource: string): Example {
+  const parsed = parseExample(exampleSource);
+  if (parsed.kind === "error") {
+    throw new Error(
+      `Example parse failed: ${parsed.errors
+        .map((error) => error.message)
+        .join(", ")}`,
+    );
+  }
+  return parsed;
+}
+
+describe("validateExample", () => {
+  it("accepts primitive examples that match the target type", () => {
+    const schema = parseSchemaOrThrow("type Response = string;");
+    const example = parseExampleOrThrow('"hello"');
+
+    expect(validateExample(example, schema, "Response")).toMatch([]);
+  });
+
+  it("reports mismatch for primitive examples", () => {
+    const schema = parseSchemaOrThrow("type Response = number;");
+    const example = parseExampleOrThrow('"hello"');
+
+    expect(validateExample(example, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+        sourceSpan: {
+          start: 0,
+          end: 7,
+        },
+      },
+    ]);
+  });
+
+  it("supports validating against a non-Response type name", () => {
+    const schema = parseSchemaOrThrow(
+      "type Response = Foo; type Foo = boolean;",
+    );
+    const example = parseExampleOrThrow("true");
+
+    expect(validateExample(example, schema, "Foo")).toMatch([]);
+  });
+
+  it("reports unknown target type names", () => {
+    const schema = parseSchemaOrThrow("type Response = string;");
+    const example = parseExampleOrThrow('"x"');
+
+    expect(validateExample(example, schema, "Missing")).toMatch([
+      {
+        message: "Unknown type 'Missing'",
+        sourceSpan: {
+          start: 0,
+          end: 3,
+        },
+      },
+    ]);
+  });
+
+  it("treats standalone ellipsis as wildcard for any type", () => {
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
+    const example = parseExampleOrThrow("...");
+
+    expect(validateExample(example, schema, "Response")).toMatch([]);
+  });
+
+  it("treats object-only ellipsis as wildcard for any type", () => {
+    const schema = parseSchemaOrThrow("type Response = string;");
+    const example = parseExampleOrThrow("{...}");
+
+    expect(validateExample(example, schema, "Response")).toMatch([]);
+  });
+
+  it("allows missing required object fields when object has ellipsis", () => {
+    const schema = parseSchemaOrThrow(
+      "interface Response { name: string; age: number; }",
+    );
+    const example = parseExampleOrThrow('{"name": "Ada", ...}');
+
+    expect(validateExample(example, schema, "Response")).toMatch([]);
+  });
+
+  it("rejects unexpected object keys even when object has ellipsis", () => {
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
+    const example = parseExampleOrThrow('{"name": "Ada", "extra": 1, ...}');
+
+    expect(validateExample(example, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+      },
+    ]);
+  });
+
+  it("validates arrays using the element type", () => {
+    const schema = parseSchemaOrThrow("type Response = string[];");
+
+    const valid = parseExampleOrThrow('["a", "b"]');
+    const invalid = parseExampleOrThrow('["a", 1]');
+
+    expect(validateExample(valid, schema, "Response")).toMatch([]);
+    expect(validateExample(invalid, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+      },
+    ]);
+  });
+
+  it("supports unions with string literals and inline interfaces", () => {
+    const schema = parseSchemaOrThrow(
+      'type Response = "ok" | { kind: "err"; message: string; };',
+    );
+
+    const successExample = parseExampleOrThrow('"ok"');
+    const errorExample = parseExampleOrThrow('{"kind": "err", "message": "x"}');
+    const badExample = parseExampleOrThrow('{"kind": "err", "message": 1}');
+
+    expect(validateExample(successExample, schema, "Response")).toMatch([]);
+    expect(validateExample(errorExample, schema, "Response")).toMatch([]);
+    expect(validateExample(badExample, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+      },
+    ]);
+  });
+
+  it("accepts recursive named type examples", () => {
+    const schema = parseSchemaOrThrow(
+      "interface Node { next?: Node; } type Response = Node;",
+    );
+    const valid = parseExampleOrThrow('{"next": {"next": {}}}');
+
+    expect(validateExample(valid, schema, "Response")).toMatch([]);
+  });
+
+  it("rejects invalid recursive named type examples", () => {
+    const schema = parseSchemaOrThrow(
+      "interface Node { next?: Node; } type Response = Node;",
+    );
+    const invalid = parseExampleOrThrow('{"next": 1}');
+
+    expect(validateExample(invalid, schema, "Response")).toMatch([
+      {
+        message: "Example does not match type 'Response'",
+      },
+    ]);
+  });
+});
