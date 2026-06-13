@@ -98,11 +98,116 @@ class SchemaParser {
       };
     }
 
+    this.validateSchema(types);
+    if (this.errors.length > 0) {
+      return {
+        kind: "error",
+        errors: this.errors,
+      };
+    }
+
     return {
       kind: "success",
       schemaSource: this.text,
       types,
     };
+  }
+
+  private validateSchema(declarations: Record<string, TypeDeclaration>): void {
+    const response = declarations.Response;
+    if (!response) {
+      this.pushError(0, 0, "Missing required type 'Response'");
+      return;
+    }
+
+    const reachable = this.collectReachableTypeNames(declarations, "Response");
+
+    for (const declaration of Object.values(declarations)) {
+      const typeName = declaration.name.text;
+      if (reachable.has(typeName)) {
+        continue;
+      }
+
+      this.pushError(
+        declaration.name.start,
+        declaration.name.end,
+        `Type '${typeName}' is not reachable from 'Response'`,
+      );
+    }
+  }
+
+  private collectReachableTypeNames(
+    declarations: Record<string, TypeDeclaration>,
+    rootTypeName: string,
+  ): Set<string> {
+    const reachable = new Set<string>();
+    const stack = [rootTypeName];
+
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      if (reachable.has(current)) {
+        continue;
+      }
+      reachable.add(current);
+
+      const declaration = declarations[current];
+      if (!declaration) {
+        continue;
+      }
+
+      const refs = new Set<string>();
+      this.collectDeclarationTypeReferences(declaration, refs);
+      for (const refName of refs) {
+        if (declarations[refName] && !reachable.has(refName)) {
+          stack.push(refName);
+        }
+      }
+    }
+
+    return reachable;
+  }
+
+  private collectDeclarationTypeReferences(
+    declaration: TypeDeclaration,
+    refs: Set<string>,
+  ): void {
+    if (declaration.kind === "interface") {
+      for (const field of Object.values(declaration.fields)) {
+        this.collectTypeReferences(field.type, refs);
+      }
+      return;
+    }
+
+    this.collectTypeReferences(declaration.valueType, refs);
+  }
+
+  private collectTypeReferences(typeRef: TypeRef, refs: Set<string>): void {
+    if (typeRef.kind === "type-name") {
+      refs.add(typeRef.name.text);
+      return;
+    }
+
+    if (typeRef.kind === "array") {
+      this.collectTypeReferences(typeRef.elementType, refs);
+      return;
+    }
+
+    if (typeRef.kind === "inline-interface") {
+      for (const field of Object.values(typeRef.fields)) {
+        this.collectTypeReferences(field.type, refs);
+      }
+      return;
+    }
+
+    if (typeRef.kind === "union") {
+      for (const member of typeRef.members) {
+        if (member.kind === "inline-interface") {
+          for (const field of Object.values(member.fields)) {
+            this.collectTypeReferences(field.type, refs);
+          }
+        }
+      }
+    }
   }
 
   private parseSchemaDeclarations(): Record<string, TypeDeclaration> {

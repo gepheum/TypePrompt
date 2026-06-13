@@ -7,7 +7,7 @@ describe("parseSchema", () => {
   it("parses valid schema declarations", () => {
     const input = [
       "interface Response {",
-      "  ok: string;",
+      "  status: Status;",
       "}",
       "type Status = 'ok' | 'error';",
     ].join("\n");
@@ -194,6 +194,10 @@ describe("parseSchema", () => {
 
   it("decodes escaped string literal values", () => {
     const input = [
+      "interface Response {",
+      "  a: A;",
+      "  b: B;",
+      "}",
       String.raw`type A = "line\nnext";`,
       String.raw`type B = 'it\'s';`,
     ].join("\n");
@@ -221,7 +225,10 @@ describe("parseSchema", () => {
   });
 
   it("falls back for invalid JSON-style escapes in double-quoted literals", () => {
-    const input = String.raw`type A = "\q";`;
+    const input = [
+      "interface Response { a: A; }",
+      String.raw`type A = "\q";`,
+    ].join("\n");
     const result = parseSchema(input);
 
     expect(result).toMatch({
@@ -265,19 +272,19 @@ describe("parseSchema", () => {
 
   it("does not terminate type declarations on semicolons inside nested structures", () => {
     const input = [
+      "type Response = A;",
       "type A = {",
       '  text: "a;b";',
       "  nested: { note: string; };",
       "};",
-      "type B = 'ok';",
     ].join("\n");
 
     const result = parseSchema(input);
     expect(result).toMatch({
       kind: "success",
       types: {
+        Response: { kind: "type" },
         A: { kind: "type" },
-        B: { kind: "type" },
       },
     });
   });
@@ -316,11 +323,42 @@ describe("parseSchema", () => {
     });
   });
 
-  it("returns success for empty schema input", () => {
+  it("reports missing Response type when schema is empty", () => {
     const result = parseSchema(" \n\t\n");
     expect(result).toMatch({
-      kind: "success",
-      types: {},
+      kind: "error",
+      errors: [
+        {
+          start: 0,
+          end: 0,
+          message: "Missing required type 'Response'",
+        },
+      ],
+    });
+  });
+
+  it("reports one error per type unreachable from Response", () => {
+    const input = [
+      "interface Response { id: string; }",
+      "interface Used { value: string; }",
+      "interface UnusedOne { value: string; }",
+      "type UnusedTwo = 'x';",
+    ].join("\n");
+
+    const result = parseSchema(input);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Type 'Used' is not reachable from 'Response'",
+        },
+        {
+          message: "Type 'UnusedOne' is not reachable from 'Response'",
+        },
+        {
+          message: "Type 'UnusedTwo' is not reachable from 'Response'",
+        },
+      ],
     });
   });
 
