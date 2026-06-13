@@ -14,6 +14,7 @@ import {
 } from "./xml-parser.js";
 
 function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
+  expect(result).toMatch({ kind: "success" });
   if (result.kind !== "success") {
     throw new Error(
       `Expected success, got errors: ${JSON.stringify(result.errors)}`,
@@ -23,6 +24,7 @@ function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
 }
 
 function expectError(result: XmlDocument | XmlParseErrors): XmlParseErrors {
+  expect(result).toMatch({ kind: "error" });
   if (result.kind !== "error") {
     throw new Error("Expected parse errors");
   }
@@ -327,16 +329,26 @@ describe("parseXmlDocument", () => {
   it("reports undefined entities", () => {
     const result = expectError(parseXmlDocument("<root>&bad;</root>"));
 
-    expect(result.errors[0]).toMatch({
-      message: "undefined entity.",
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "undefined entity.",
+        },
+      ],
     });
   });
 
   it("reports malformed character entities", () => {
     const result = expectError(parseXmlDocument("<root>&#zz;</root>"));
 
-    expect(result.errors[0]).toMatch({
-      message: "malformed character entity.",
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "malformed character entity.",
+        },
+      ],
     });
   });
 
@@ -508,16 +520,26 @@ describe("parseXmlDocument", () => {
   it("reports an attribute without a value", () => {
     const result = expectError(parseXmlDocument("<a x></a>"));
 
-    expect(result.errors[0]).toMatch({
-      message: "Attribute 'x' must have a value",
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Attribute 'x' must have a value",
+        },
+      ],
     });
   });
 
   it("reports an unquoted attribute value", () => {
     const result = expectError(parseXmlDocument("<a x=y></a>"));
 
-    expect(result.errors[0]).toMatch({
-      message: "Attribute 'x' value must be quoted",
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Attribute 'x' value must be quoted",
+        },
+      ],
     });
   });
 
