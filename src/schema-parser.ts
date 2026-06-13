@@ -114,6 +114,7 @@ class SchemaParser {
   }
 
   private validateSchema(declarations: Record<string, TypeDeclaration>): void {
+    // Schema consumers expect a top-level Response type as the entry point.
     const response = declarations.Response;
     if (!response) {
       this.pushError(0, 0, "Missing required type 'Response'");
@@ -140,6 +141,7 @@ class SchemaParser {
     declarations: Record<string, TypeDeclaration>,
     rootTypeName: string,
   ): Set<string> {
+    // Walk the type graph from Response and record every named declaration we can reach.
     const reachable = new Set<string>();
     const stack = [rootTypeName];
 
@@ -200,6 +202,7 @@ class SchemaParser {
     }
 
     if (typeRef.kind === "union") {
+      // Union members are either string literals or inline interfaces in this schema model.
       for (const member of typeRef.members) {
         if (member.kind === "inline-interface") {
           for (const field of Object.values(member.fields)) {
