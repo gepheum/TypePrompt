@@ -109,6 +109,27 @@ describe("parseXmlDocument", () => {
     });
   });
 
+  it("keeps distinct text nodes separated by a comment", () => {
+    const input = "<foo>abc<!--\n    -->bcd</foo>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root).toMatch({
+      kind: "element",
+      tagName: span(input, "foo"),
+      children: [
+        {
+          kind: "text",
+          text: span(input, "abc"),
+        },
+        {
+          kind: "text",
+          text: span(input, "bcd", input.indexOf("-->") + 3),
+        },
+      ],
+    });
+  });
+
   it("keeps CDATA text as the inner text span", () => {
     const input = "<root><![CDATA[a<b>c]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
@@ -137,6 +158,44 @@ describe("parseXmlDocument", () => {
         {
           kind: "text",
           text: span(input, "x &amp; y"),
+          decoded: "x & y",
+          offsetMap: [
+            {
+              decodedOffset: 0,
+              sourceOffsetStart: input.indexOf("x &amp; y"),
+              sourceOffsetEnd: input.indexOf("&amp;", input.indexOf("x &amp; y")),
+            },
+            {
+              decodedOffset: 2,
+              sourceOffsetStart: input.indexOf("&amp;", input.indexOf("x &amp; y")),
+              sourceOffsetEnd: input.indexOf("&amp;", input.indexOf("x &amp; y")) + "&amp;".length,
+            },
+            {
+              decodedOffset: 3,
+              sourceOffsetStart: input.indexOf("&amp;", input.indexOf("x &amp; y")) + "&amp;".length,
+              sourceOffsetEnd: input.indexOf("x &amp; y") + "x &amp; y".length,
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("provides identity decoded text and offset map for CDATA text", () => {
+    const input = "<root><![CDATA[a<b>c]]></root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const cdataTextStart = input.indexOf("a<b>c");
+
+    expect(root.children[0]).toMatch({
+      kind: "text",
+      text: span(input, "a<b>c"),
+      decoded: "a<b>c",
+      offsetMap: [
+        {
+          decodedOffset: 0,
+          sourceOffsetStart: cdataTextStart,
+          sourceOffsetEnd: cdataTextStart + "a<b>c".length,
         },
       ],
     });

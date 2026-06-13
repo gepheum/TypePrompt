@@ -23,6 +23,26 @@ export type XmlNode =
 export type TextNode = {
   readonly kind: "text";
   readonly text: SourceSpan;
+  /// Decoded text content (for example, "&lt;" -> "<").
+  readonly decoded: string;
+  /// Mapping segments from decoded offsets to source offsets.
+  readonly offsetMap: OffsetMap;
+};
+
+/// Segment-based mapping from decoded offsets back to source offsets.
+///
+/// Entries are sorted by `decodedOffset`. Each entry defines a decoded segment that
+/// starts at `decodedOffset` and ends at the next entry's `decodedOffset` (or at
+/// `decoded.length` for the last entry).
+///
+/// The decoded segment maps to the source range
+/// `[sourceOffsetStart, sourceOffsetEnd)`.
+export type OffsetMap = readonly OffsetMapEntry[];
+
+export type OffsetMapEntry = {
+  readonly decodedOffset: number;
+  readonly sourceOffsetStart: number;
+  readonly sourceOffsetEnd: number;
 };
 
 export type ElementNode = {
@@ -39,6 +59,7 @@ export type Attribute = {
 };
 
 export interface SourceSpan {
+  /// Escape sequences are *not* decoded.
   readonly text: string;
   readonly start: number;
   readonly end: number;
@@ -51,7 +72,6 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
   let cursor = 0;
 
   let currentOpenTag: CurrentOpenTag | undefined;
-  let lastStructuralErrorTokenStart: number | undefined;
   let skipExplicitCloseScanCount = 0;
 
   const parser = new SaxesParser({
@@ -61,11 +81,11 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
   });
 
   parser.on("xmldecl", () => {
-    cursor = scanProcessingInstructionEnd(content, cursor);
+    cursor = parser.position;
   });
 
   parser.on("processinginstruction", () => {
-    cursor = scanProcessingInstructionEnd(content, cursor);
+    cursor = parser.position;
   });
 
   parser.on("comment", () => {
@@ -75,9 +95,12 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
   parser.on("text", () => {
     const nextMarkup = content.indexOf("<", cursor);
     const end = nextMarkup === -1 ? content.length : nextMarkup;
+    const decodedText = decodeXmlTextWithOffsetMap(content, cursor, end);
     appendNode({
       kind: "text",
       text: makeSpan(content, cursor, end),
+      decoded: decodedText.decoded,
+      offsetMap: decodedText.offsetMap,
     });
     cursor = end;
   });
@@ -87,9 +110,20 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
     const tokenStart = cdataStart === -1 ? cursor : cdataStart;
     const tokenEndMarker = content.indexOf("]]>", tokenStart);
     const tokenEnd = tokenEndMarker === -1 ? content.length : tokenEndMarker + 3;
+    const textStart = tokenStart + "<![CDATA[".length;
+    const textEnd = tokenEnd - 3;
+    const decoded = content.slice(textStart, textEnd);
     appendNode({
       kind: "text",
-      text: makeSpan(content, tokenStart + "<![CDATA[".length, tokenEnd - 3),
+      text: makeSpan(content, textStart, textEnd),
+      decoded,
+      offsetMap: [
+        {
+          decodedOffset: 0,
+          sourceOffsetStart: textStart,
+          sourceOffsetEnd: textEnd,
+        },
+      ],
     });
     cursor = tokenEnd;
   });
@@ -160,7 +194,6 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
       if (closeTag) {
         cursor = closeTag.tokenEnd;
         if (closeTag.name.text !== tag.name) {
-          lastStructuralErrorTokenStart = closeTag.tokenStart;
           errors.push({
             start: closeTag.tokenStart,
             end: closeTag.tokenEnd,
@@ -276,6 +309,130 @@ function makeSpan(content: string, start: number, end: number): SourceSpan {
   };
 }
 
+function decodeXmlTextWithOffsetMap(
+  content: string,
+  sourceStart: number,
+  sourceEnd: number,
+): { readonly decoded: string; readonly offsetMap: OffsetMap } {
+  const raw = content.slice(sourceStart, sourceEnd);
+  if (raw.length === 0) {
+    return {
+      decoded: "",
+      offsetMap: [],
+    };
+  }
+
+  const offsetMap: OffsetMapEntry[] = [];
+  const decodedParts: string[] = [];
+  let decodedOffset = 0;
+  let i = 0;
+
+  while (i < raw.length) {
+    const char = raw[i]!;
+    if (char !== "&") {
+      const chunkStart = i;
+      while (i < raw.length && raw[i] !== "&") {
+        i += 1;
+      }
+      const chunk = raw.slice(chunkStart, i);
+      decodedParts.push(chunk);
+      offsetMap.push({
+        decodedOffset,
+        sourceOffsetStart: sourceStart + chunkStart,
+        sourceOffsetEnd: sourceStart + i,
+      });
+      decodedOffset += chunk.length;
+      continue;
+    }
+
+    const semicolon = raw.indexOf(";", i + 1);
+    if (semicolon === -1) {
+      const chunkStart = i;
+      i += 1;
+      const chunk = raw.slice(chunkStart, i);
+      decodedParts.push(chunk);
+      offsetMap.push({
+        decodedOffset,
+        sourceOffsetStart: sourceStart + chunkStart,
+        sourceOffsetEnd: sourceStart + i,
+      });
+      decodedOffset += chunk.length;
+      continue;
+    }
+
+    const entityBody = raw.slice(i + 1, semicolon);
+    const decodedEntity = decodeXmlEntity(entityBody);
+    if (decodedEntity === undefined) {
+      const chunk = raw.slice(i, semicolon + 1);
+      decodedParts.push(chunk);
+      offsetMap.push({
+        decodedOffset,
+        sourceOffsetStart: sourceStart + i,
+        sourceOffsetEnd: sourceStart + semicolon + 1,
+      });
+      decodedOffset += chunk.length;
+      i = semicolon + 1;
+      continue;
+    }
+
+    decodedParts.push(decodedEntity);
+    offsetMap.push({
+      decodedOffset,
+      sourceOffsetStart: sourceStart + i,
+      sourceOffsetEnd: sourceStart + semicolon + 1,
+    });
+    decodedOffset += decodedEntity.length;
+    i = semicolon + 1;
+  }
+
+  return {
+    decoded: decodedParts.join(""),
+    offsetMap,
+  };
+}
+
+function decodeXmlEntity(entityBody: string): string | undefined {
+  switch (entityBody) {
+    case "lt":
+      return "<";
+    case "gt":
+      return ">";
+    case "amp":
+      return "&";
+    case "quot":
+      return '"';
+    case "apos":
+      return "'";
+    default:
+      break;
+  }
+
+  if (entityBody.startsWith("#x") || entityBody.startsWith("#X")) {
+    const codePoint = Number.parseInt(entityBody.slice(2), 16);
+    return codePointToString(codePoint);
+  }
+
+  if (entityBody.startsWith("#")) {
+    const codePoint = Number.parseInt(entityBody.slice(1), 10);
+    return codePointToString(codePoint);
+  }
+
+  return undefined;
+}
+
+function codePointToString(codePoint: number): string | undefined {
+  if (!Number.isInteger(codePoint)) {
+    return undefined;
+  }
+  if (codePoint < 0 || codePoint > 0x10FFFF) {
+    return undefined;
+  }
+  if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
+    return undefined;
+  }
+  return String.fromCodePoint(codePoint);
+}
+
 function scanAttribute(
   content: string,
   cursor: number,
@@ -329,31 +486,8 @@ function scanAttribute(
   };
 }
 
-function findOpenElementIndex(
-  openElements: readonly OpenElement[],
-  tagName: string,
-): number {
-  for (let i = openElements.length - 1; i >= 0; i -= 1) {
-    if (openElements[i]!.node.tagName.text === tagName) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function findMostRecentOpenTagName(
-  openElements: readonly OpenElement[],
-): string | undefined {
-  return openElements.at(-1)?.node.tagName.text;
-}
-
 function stripSaxesErrorPrefix(message: string): string {
   return message.replace(/^\d+:\d+:\s*/, "");
-}
-
-function scanProcessingInstructionEnd(content: string, cursor: number): number {
-  const end = content.indexOf("?>", cursor);
-  return end === -1 ? content.length : end + 2;
 }
 
 function scanCommentEnd(content: string, cursor: number): number {
