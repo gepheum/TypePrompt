@@ -52,6 +52,7 @@ describe("parseXmlDocument", () => {
         {
           kind: "element",
           tagName: span(input, "root"),
+          isSelfClosing: false,
           attributes: {
             a: {
               name: span(input, "a", input.indexOf("a=\"1\"")),
@@ -70,6 +71,7 @@ describe("parseXmlDocument", () => {
             {
               kind: "element",
               tagName: span(input, "child"),
+              isSelfClosing: true,
               attributes: {
                 x: {
                   name: span(input, "x", input.indexOf('x="y"')),
@@ -100,6 +102,7 @@ describe("parseXmlDocument", () => {
     expect(root).toMatch({
       kind: "element",
       tagName: span(input, "root"),
+      isSelfClosing: false,
       children: [
         {
           kind: "text",
@@ -117,6 +120,7 @@ describe("parseXmlDocument", () => {
     expect(root).toMatch({
       kind: "element",
       tagName: span(input, "foo"),
+      isSelfClosing: false,
       children: [
         {
           kind: "text",
@@ -152,6 +156,7 @@ describe("parseXmlDocument", () => {
       attributes: {
         a: {
           value: span(input, "1 &amp; 2"),
+          decodedValue: "1 & 2",
         },
       },
       children: [
@@ -178,6 +183,120 @@ describe("parseXmlDocument", () => {
           ],
         },
       ],
+    });
+  });
+
+  it("decodes escaped and numeric entities in attribute values", () => {
+    const input = '<root a="x &lt; y" b="&#65;&#x42;" />';
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root).toMatch({
+      attributes: {
+        a: {
+          value: span(input, "x &lt; y"),
+          decodedValue: "x < y",
+        },
+        b: {
+          value: span(input, "&#65;&#x42;"),
+          decodedValue: "AB",
+        },
+      },
+      isSelfClosing: true,
+    });
+  });
+
+  it("tracks whether elements are self-closing", () => {
+    const input = "<a/><b></b>";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.content).toMatch([
+      {
+        kind: "element",
+        tagName: span(input, "a"),
+        isSelfClosing: true,
+        children: [],
+      },
+      {
+        kind: "element",
+        tagName: span(input, "b", input.indexOf("<b")),
+        isSelfClosing: false,
+        children: [],
+      },
+    ]);
+  });
+
+  it("parses > inside quoted attribute values", () => {
+    const input = '<root a="x > y"><child/></root>';
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root).toMatch({
+      tagName: span(input, "root"),
+      isSelfClosing: false,
+      attributes: {
+        a: {
+          value: span(input, "x > y"),
+        },
+      },
+      children: [
+        {
+          kind: "element",
+          tagName: span(input, "child"),
+          isSelfClosing: true,
+          children: [],
+        },
+      ],
+    });
+  });
+
+  it("decodes numeric entities and builds offset map segments", () => {
+    const input = "<root>&#65; &#x42;</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+    const textStart = input.indexOf("&#65; &#x42;");
+    const firstEntityStart = input.indexOf("&#65;", textStart);
+    const firstEntityEnd = firstEntityStart + "&#65;".length;
+    const secondEntityStart = input.indexOf("&#x42;", textStart);
+    const secondEntityEnd = secondEntityStart + "&#x42;".length;
+
+    expect(root.children[0]).toMatch({
+      kind: "text",
+      text: span(input, "&#65; &#x42;"),
+      decoded: "A B",
+      offsetMap: [
+        {
+          decodedOffset: 0,
+          sourceOffsetStart: firstEntityStart,
+          sourceOffsetEnd: firstEntityEnd,
+        },
+        {
+          decodedOffset: 1,
+          sourceOffsetStart: firstEntityEnd,
+          sourceOffsetEnd: secondEntityStart,
+        },
+        {
+          decodedOffset: 2,
+          sourceOffsetStart: secondEntityStart,
+          sourceOffsetEnd: secondEntityEnd,
+        },
+      ],
+    });
+  });
+
+  it("reports undefined entities", () => {
+    const result = expectError(parseXmlDocument("<root>&bad;</root>"));
+
+    expect(result.errors[0]).toMatch({
+      message: "undefined entity.",
+    });
+  });
+
+  it("reports malformed character entities", () => {
+    const result = expectError(parseXmlDocument("<root>&#zz;</root>"));
+
+    expect(result.errors[0]).toMatch({
+      message: "malformed character entity.",
     });
   });
 

@@ -50,12 +50,15 @@ export type ElementNode = {
   readonly children: readonly XmlNode[];
   readonly tagName: SourceSpan;
   readonly attributes: { readonly [name: string]: Attribute };
+  readonly isSelfClosing: boolean;
 };
 
 export type Attribute = {
   readonly name: SourceSpan;
   /// Inside the quotes, not including them.
-  readonly value?: SourceSpan;
+  readonly value: SourceSpan;
+  /// Decoded attribute value (for example, "&lt;" -> "<").
+  readonly decodedValue: string;
 };
 
 export interface SourceSpan {
@@ -150,6 +153,7 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
     currentOpenTag.attributes[attribute.name] = {
       name: scanned.name,
       value: scanned.value,
+      decodedValue: scanned.decodedValue,
     };
     if (scanned.error) {
       errors.push(scanned.error);
@@ -168,6 +172,7 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
         children: [],
         tagName: currentOpenTag.tagName,
         attributes: currentOpenTag.attributes,
+        isSelfClosing: tag.isSelfClosing,
       },
       openingTagStart: currentOpenTag.tokenStart,
       openingTagEnd: tokenEnd,
@@ -289,6 +294,7 @@ interface OpenElement {
     readonly children: XmlNode[];
     readonly tagName: SourceSpan;
     readonly attributes: { readonly [name: string]: Attribute };
+    readonly isSelfClosing: boolean;
   };
   readonly openingTagStart: number;
   readonly openingTagEnd: number;
@@ -439,7 +445,8 @@ function scanAttribute(
   attributeName: string,
 ): {
   readonly name: SourceSpan;
-  readonly value?: SourceSpan;
+  readonly value: SourceSpan;
+  readonly decodedValue: string;
   readonly nextCursor: number;
   readonly error?: XmlParseError;
 } {
@@ -451,6 +458,8 @@ function scanAttribute(
   if (content[valueCursor] !== "=") {
     return {
       name: makeSpan(content, safeNameStart, nameEnd),
+      value: makeSpan(content, valueCursor, valueCursor),
+      decodedValue: "",
       nextCursor: valueCursor,
       error: {
         start: safeNameStart,
@@ -465,9 +474,11 @@ function scanAttribute(
 
   if (quote !== '"' && quote !== "'") {
     const valueEnd = scanUnquotedAttributeValueEnd(content, valueCursor);
+    const value = makeSpan(content, valueCursor, valueEnd);
     return {
       name: makeSpan(content, safeNameStart, nameEnd),
-      value: makeSpan(content, valueCursor, valueEnd),
+      value,
+      decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end).decoded,
       nextCursor: valueEnd,
       error: {
         start: safeNameStart,
@@ -479,9 +490,11 @@ function scanAttribute(
 
   const quotedValueEnd = content.indexOf(quote, valueCursor + 1);
   const safeQuotedValueEnd = quotedValueEnd === -1 ? content.length : quotedValueEnd;
+  const value = makeSpan(content, valueCursor + 1, safeQuotedValueEnd);
   return {
     name: makeSpan(content, safeNameStart, nameEnd),
-    value: makeSpan(content, valueCursor + 1, safeQuotedValueEnd),
+    value,
+    decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end).decoded,
     nextCursor: safeQuotedValueEnd + 1,
   };
 }
