@@ -41,7 +41,7 @@ function main(): void {
 
   try {
     if (command.kind === "init") {
-        initializeProject(resolve(command.projectPath ?? process.cwd()));
+      initializeProject(resolve(command.projectPath ?? process.cwd()));
       return;
     }
 
@@ -114,7 +114,9 @@ function renderHelp(): void {
   console.log("Usage:");
   console.log("  npx typeprompt                 Show this help message");
   console.log("  npx typeprompt help            Show this help message");
-  console.log("  npx typeprompt init [-p PATH]  Initialize a new TypePrompt project");
+  console.log(
+    "  npx typeprompt init [-p PATH]  Initialize a new TypePrompt project",
+  );
   console.log("  npx typeprompt gen [-p PATH]   Generate TypeScript code");
 }
 
@@ -191,7 +193,9 @@ function resolveConfigPath(projectPath?: string): string {
     return join(resolved, "typeprompt.toml");
   }
 
-  return resolved.endsWith(".toml") ? resolved : join(resolved, "typeprompt.toml");
+  return resolved.endsWith(".toml")
+    ? resolved
+    : join(resolved, "typeprompt.toml");
 }
 
 function listTemplateFiles(inputDir: string): string[] {

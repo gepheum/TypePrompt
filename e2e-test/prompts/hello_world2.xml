@@ -1,4 +1,4 @@
-<template name="Hello world">
+<template name="HelloWorld" variant="FooBar">
   <meta temperature="0.7" />
 
   Say hello to <arg name="foo"/>.

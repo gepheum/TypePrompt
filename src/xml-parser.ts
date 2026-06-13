@@ -16,9 +16,7 @@ export type XmlParseError = {
   readonly message: string;
 };
 
-export type XmlNode =
-  | TextNode
-  | ElementNode;
+export type XmlNode = TextNode | ElementNode;
 
 export type TextNode = {
   readonly kind: "text";
@@ -72,7 +70,9 @@ export interface SourceSpan {
 ///
 /// We use saxes for XML correctness and error recovery, then keep a cursor into
 /// the original source to capture raw spans and decoded text metadata.
-export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors {
+export function parseXmlDocument(
+  content: string,
+): XmlDocument | XmlParseErrors {
   const errors: XmlParseError[] = [];
   const rootNodes: XmlNode[] = [];
   const openElements: OpenElement[] = [];
@@ -116,7 +116,8 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
     const cdataStart = content.indexOf("<![CDATA[", cursor);
     const tokenStart = cdataStart === -1 ? cursor : cdataStart;
     const tokenEndMarker = content.indexOf("]]>", tokenStart);
-    const tokenEnd = tokenEndMarker === -1 ? content.length : tokenEndMarker + 3;
+    const tokenEnd =
+      tokenEndMarker === -1 ? content.length : tokenEndMarker + 3;
     const textStart = tokenStart + "<![CDATA[".length;
     const textEnd = tokenEnd - 3;
     const decoded = content.slice(textStart, textEnd);
@@ -152,7 +153,11 @@ export function parseXmlDocument(content: string): XmlDocument | XmlParseErrors 
       return;
     }
 
-    const scanned = scanAttribute(content, currentOpenTag.attributeCursor, attribute.name);
+    const scanned = scanAttribute(
+      content,
+      currentOpenTag.attributeCursor,
+      attribute.name,
+    );
     currentOpenTag.attributeCursor = scanned.nextCursor;
     currentOpenTag.attributes[attribute.name] = {
       name: scanned.name,
@@ -439,10 +444,10 @@ function codePointToString(codePoint: number): string | undefined {
   if (!Number.isInteger(codePoint)) {
     return undefined;
   }
-  if (codePoint < 0 || codePoint > 0x10FFFF) {
+  if (codePoint < 0 || codePoint > 0x10ffff) {
     return undefined;
   }
-  if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
+  if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
     return undefined;
   }
   return String.fromCodePoint(codePoint);
@@ -459,8 +464,12 @@ function scanAttribute(
   readonly nextCursor: number;
   readonly error?: XmlParseError;
 } {
-  const nameStart = content.indexOf(attributeName, skipWhitespace(content, cursor));
-  const safeNameStart = nameStart === -1 ? skipWhitespace(content, cursor) : nameStart;
+  const nameStart = content.indexOf(
+    attributeName,
+    skipWhitespace(content, cursor),
+  );
+  const safeNameStart =
+    nameStart === -1 ? skipWhitespace(content, cursor) : nameStart;
   const nameEnd = safeNameStart + attributeName.length;
   let valueCursor = skipWhitespace(content, nameEnd);
 
@@ -487,7 +496,8 @@ function scanAttribute(
     return {
       name: makeSpan(content, safeNameStart, nameEnd),
       value,
-      decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end).decoded,
+      decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end)
+        .decoded,
       nextCursor: valueEnd,
       error: {
         start: safeNameStart,
@@ -498,12 +508,14 @@ function scanAttribute(
   }
 
   const quotedValueEnd = content.indexOf(quote, valueCursor + 1);
-  const safeQuotedValueEnd = quotedValueEnd === -1 ? content.length : quotedValueEnd;
+  const safeQuotedValueEnd =
+    quotedValueEnd === -1 ? content.length : quotedValueEnd;
   const value = makeSpan(content, valueCursor + 1, safeQuotedValueEnd);
   return {
     name: makeSpan(content, safeNameStart, nameEnd),
     value,
-    decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end).decoded,
+    decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end)
+      .decoded,
     nextCursor: safeQuotedValueEnd + 1,
   };
 }
@@ -541,7 +553,13 @@ function scanTagEnd(content: string, cursor: number): number {
 function scanCloseTag(
   content: string,
   cursor: number,
-): { readonly tokenStart: number; readonly name: SourceSpan; readonly tokenEnd: number } | undefined {
+):
+  | {
+      readonly tokenStart: number;
+      readonly name: SourceSpan;
+      readonly tokenEnd: number;
+    }
+  | undefined {
   const tokenStart = content.indexOf("</", cursor);
   if (tokenStart === -1) {
     return undefined;
@@ -572,7 +590,10 @@ function skipWhitespace(content: string, cursor: number): number {
   return i;
 }
 
-function scanUnquotedAttributeValueEnd(content: string, cursor: number): number {
+function scanUnquotedAttributeValueEnd(
+  content: string,
+  cursor: number,
+): number {
   let i = cursor;
   while (i < content.length) {
     const char = content[i]!;
@@ -616,9 +637,10 @@ export function textNodeDecodedOffsetToSourceOffset(
   }
 
   const segment = segments[selected]!;
-  const nextDecodedOffset = selected + 1 < segments.length
-    ? segments[selected + 1]!.decodedOffset
-    : textNode.decoded.length;
+  const nextDecodedOffset =
+    selected + 1 < segments.length
+      ? segments[selected + 1]!.decodedOffset
+      : textNode.decoded.length;
 
   if (decodedOffset <= segment.decodedOffset) {
     return segment.sourceOffsetStart;

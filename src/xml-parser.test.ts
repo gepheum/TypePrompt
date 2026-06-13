@@ -1,12 +1,23 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { ElementNode, SourceSpan, TextNode, XmlDocument, XmlParseErrors } from "./xml-parser.js";
-import { parseXmlDocument, textNodeDecodedOffsetToSourceOffset } from "./xml-parser.js";
+import type {
+  ElementNode,
+  SourceSpan,
+  TextNode,
+  XmlDocument,
+  XmlParseErrors,
+} from "./xml-parser.js";
+import {
+  parseXmlDocument,
+  textNodeDecodedOffsetToSourceOffset,
+} from "./xml-parser.js";
 
 function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
   if (result.kind !== "success") {
-    throw new Error(`Expected success, got errors: ${JSON.stringify(result.errors)}`);
+    throw new Error(
+      `Expected success, got errors: ${JSON.stringify(result.errors)}`,
+    );
   }
   return result;
 }
@@ -56,7 +67,8 @@ describe("parseXmlDocument", () => {
   });
 
   it("parses nested elements, attributes, text, and self-closing tags", () => {
-    const input = 'before<root a="1" b=\'two\'>mid<child x="y"/>after</root>tail';
+    const input =
+      'before<root a="1" b=\'two\'>mid<child x="y"/>after</root>tail';
     const result = expectSuccess(parseXmlDocument(input));
 
     expect(result).toMatch({
@@ -72,7 +84,7 @@ describe("parseXmlDocument", () => {
           isSelfClosing: false,
           attributes: {
             a: {
-              name: span(input, "a", input.indexOf("a=\"1\"")),
+              name: span(input, "a", input.indexOf('a="1"')),
               value: span(input, "1", input.indexOf('a="1"')),
             },
             b: {
@@ -112,7 +124,8 @@ describe("parseXmlDocument", () => {
   });
 
   it("skips comments and processing instructions", () => {
-    const input = '<?xml version="1.0"?><root><!--comment--><?pi target?>ok</root>';
+    const input =
+      '<?xml version="1.0"?><root><!--comment--><?pi target?>ok</root>';
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.content[0] as ElementNode;
 
@@ -185,16 +198,26 @@ describe("parseXmlDocument", () => {
             {
               decodedOffset: 0,
               sourceOffsetStart: input.indexOf("x &amp; y"),
-              sourceOffsetEnd: input.indexOf("&amp;", input.indexOf("x &amp; y")),
+              sourceOffsetEnd: input.indexOf(
+                "&amp;",
+                input.indexOf("x &amp; y"),
+              ),
             },
             {
               decodedOffset: 2,
-              sourceOffsetStart: input.indexOf("&amp;", input.indexOf("x &amp; y")),
-              sourceOffsetEnd: input.indexOf("&amp;", input.indexOf("x &amp; y")) + "&amp;".length,
+              sourceOffsetStart: input.indexOf(
+                "&amp;",
+                input.indexOf("x &amp; y"),
+              ),
+              sourceOffsetEnd:
+                input.indexOf("&amp;", input.indexOf("x &amp; y")) +
+                "&amp;".length,
             },
             {
               decodedOffset: 3,
-              sourceOffsetStart: input.indexOf("&amp;", input.indexOf("x &amp; y")) + "&amp;".length,
+              sourceOffsetStart:
+                input.indexOf("&amp;", input.indexOf("x &amp; y")) +
+                "&amp;".length,
               sourceOffsetEnd: input.indexOf("x &amp; y") + "x &amp; y".length,
             },
           ],
@@ -323,10 +346,18 @@ describe("parseXmlDocument", () => {
     const root = result.content[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("abc"));
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("abc") + 1);
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(input.indexOf("abc") + 2);
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(input.indexOf("abc") + 3);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+      input.indexOf("abc"),
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+      input.indexOf("abc") + 1,
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
+      input.indexOf("abc") + 2,
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
+      input.indexOf("abc") + 3,
+    );
   });
 
   it("maps decoded offsets to source offsets across entity and raw segments", () => {
@@ -336,12 +367,24 @@ describe("parseXmlDocument", () => {
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("x &amp; y"));
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("x &amp; y") + 1);
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(input.indexOf("&amp;"));
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(input.indexOf("&amp;") + "&amp;".length);
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 4)).toBe(input.indexOf("&amp;") + "&amp;".length + 1);
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 5)).toBe(input.indexOf("x &amp; y") + "x &amp; y".length);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+      input.indexOf("x &amp; y"),
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+      input.indexOf("x &amp; y") + 1,
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
+      input.indexOf("&amp;"),
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
+      input.indexOf("&amp;") + "&amp;".length,
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 4)).toBe(
+      input.indexOf("&amp;") + "&amp;".length + 1,
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 5)).toBe(
+      input.indexOf("x &amp; y") + "x &amp; y".length,
+    );
   });
 
   it("maps end boundary of a single-entity text node", () => {
@@ -351,8 +394,12 @@ describe("parseXmlDocument", () => {
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.decoded).toBe("<");
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(input.indexOf("&lt;"));
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(input.indexOf("&lt;") + "&lt;".length);
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+      input.indexOf("&lt;"),
+    );
+    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+      input.indexOf("&lt;") + "&lt;".length,
+    );
   });
 
   it("throws for decoded offsets outside valid range", () => {

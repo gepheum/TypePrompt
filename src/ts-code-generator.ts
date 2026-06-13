@@ -148,7 +148,7 @@ class TsCodeGenerator {
         if (pendingText === "") {
           return;
         }
-        this.code += `      {kind: \"text\", text: ${JSON.stringify(pendingText)}},\n`;
+        this.code += `      {kind: "text", text: ${JSON.stringify(pendingText)}},\n`;
         pendingText = "";
       };
       for (const piece of template.pieces) {
@@ -161,7 +161,7 @@ class TsCodeGenerator {
             continue;
           }
           flushPendingText();
-          this.code += `      {kind: \"arg\", name: ${JSON.stringify(piece.expression)}},\n`;
+          this.code += `      {kind: "arg", name: ${JSON.stringify(piece.expression)}},\n`;
           continue;
         }
         if (piece.kind === "schema") {

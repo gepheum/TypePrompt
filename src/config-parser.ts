@@ -32,7 +32,9 @@ export function parseConfigToml(args: ParseConfigTomlArgs): Config {
 
   if (!parseResult.success) {
     throw new ConfigParseError(
-      parseResult.error.issues.map((issue) => formatSchemaIssue(args.path, issue)),
+      parseResult.error.issues.map((issue) =>
+        formatSchemaIssue(args.path, issue),
+      ),
     );
   }
 

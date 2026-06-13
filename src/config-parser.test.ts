@@ -22,16 +22,14 @@ function expectConfigParseError(
 
 describe("parseConfigToml", () => {
   it("parses canonical field names", () => {
-    const config = parseConfigToml(
-      {
-        content: [
-          'input = "prompts/*.tp"',
-          'generatedDotPyPath = "out/prompts.py"',
-          'generatedDotTsPath = "out/prompts.ts"',
-        ].join("\n"),
-        path: "config.toml",
-      },
-    );
+    const config = parseConfigToml({
+      content: [
+        'input = "prompts/*.tp"',
+        'generatedDotPyPath = "out/prompts.py"',
+        'generatedDotTsPath = "out/prompts.ts"',
+      ].join("\n"),
+      path: "config.toml",
+    });
 
     expect(config).toMatch({
       input: "prompts/*.tp",
@@ -41,15 +39,13 @@ describe("parseConfigToml", () => {
   });
 
   it("accepts generatedPythonPath and generatedTypeScriptPath aliases", () => {
-    const config = parseConfigToml(
-      {
-        content: [
-          'generatedPythonPath = "out/prompts.py"',
-          'generatedTypeScriptPath = "out/prompts.ts"',
-        ].join("\n"),
-        path: "config.toml",
-      },
-    );
+    const config = parseConfigToml({
+      content: [
+        'generatedPythonPath = "out/prompts.py"',
+        'generatedTypeScriptPath = "out/prompts.ts"',
+      ].join("\n"),
+      path: "config.toml",
+    });
 
     expect(config).toMatch({
       generatedDotPyPath: "out/prompts.py",
@@ -66,7 +62,8 @@ describe("parseConfigToml", () => {
 
   it("fails on unknown fields", () => {
     expectConfigParseError(
-      () => parseConfigToml({ content: 'outputPath = "x"', path: "config.toml" }),
+      () =>
+        parseConfigToml({ content: 'outputPath = "x"', path: "config.toml" }),
       /unknown config field\(s\): 'outputPath'/,
     );
   });
@@ -81,15 +78,13 @@ describe("parseConfigToml", () => {
   it("fails on conflicting alias and canonical values", () => {
     expectConfigParseError(
       () =>
-        parseConfigToml(
-          {
-            content: [
-              'generatedDotPyPath = "a.py"',
-              'generatedPythonPath = "b.py"',
-            ].join("\n"),
-            path: "config.toml",
-          },
-        ),
+        parseConfigToml({
+          content: [
+            'generatedDotPyPath = "a.py"',
+            'generatedPythonPath = "b.py"',
+          ].join("\n"),
+          path: "config.toml",
+        }),
       /invalid value for 'generatedPythonPath': conflicts with 'generatedDotPyPath'/,
     );
   });
