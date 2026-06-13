@@ -93,6 +93,14 @@ class ExampleParser {
 
   parse(): Example | ExampleParseErrors {
     this.skipJsonSpaces();
+
+    if (this.cursor >= this.text.length && this.errors.length > 0) {
+      return {
+        kind: "error",
+        errors: this.errors,
+      };
+    }
+
     const value = this.parseJsonValue();
     if (!value) {
       return {
@@ -505,9 +513,14 @@ class ExampleParser {
         const raw = this.text.slice(start, end);
         this.cursor = end;
 
+        const decoded = decodeJsonString(raw);
+        if (decoded === null) {
+          this.pushError(start, end, "Invalid JSON string escape sequence");
+        }
+
         return {
           kind: "string",
-          value: decodeJsonString(raw),
+          value: decoded ?? raw.slice(1, -1),
           firstToken: this.exampleSlice(start, end),
         };
       }
@@ -588,7 +601,40 @@ class ExampleParser {
   }
 
   private skipJsonSpaces(): void {
-    this.cursor = skipWithRegex(this.text, this.cursor, WHITESPACE_RUN_RE);
+    while (true) {
+      this.cursor = skipWithRegex(this.text, this.cursor, WHITESPACE_RUN_RE);
+
+      if (this.text.startsWith("//", this.cursor)) {
+        this.cursor += 2;
+        while (this.cursor < this.text.length) {
+          const ch = this.text[this.cursor]!;
+          if (ch === "\n" || ch === "\r") {
+            break;
+          }
+          this.cursor += 1;
+        }
+        continue;
+      }
+
+      if (this.text.startsWith("/*", this.cursor)) {
+        const blockCommentStart = this.cursor;
+        const blockCommentEnd = this.text.indexOf("*/", this.cursor + 2);
+        if (blockCommentEnd < 0) {
+          this.pushError(
+            blockCommentStart,
+            this.text.length,
+            "Expected closing '*/' for block comment",
+          );
+          this.cursor = this.text.length;
+          return;
+        }
+
+        this.cursor = blockCommentEnd + 2;
+        continue;
+      }
+
+      return;
+    }
   }
 
   private pushError(start: number, end: number, message: string): void {
@@ -639,6 +685,11 @@ class ExampleParser {
 
   private syncToObjectDelimiter(): void {
     while (this.cursor < this.text.length) {
+      this.skipJsonSpaces();
+      if (this.cursor >= this.text.length) {
+        return;
+      }
+
       const ch = this.text[this.cursor]!;
       if (ch === "," || ch === "}" || this.isObjectEntryStart()) {
         return;
@@ -649,6 +700,11 @@ class ExampleParser {
 
   private syncToArrayDelimiter(): void {
     while (this.cursor < this.text.length) {
+      this.skipJsonSpaces();
+      if (this.cursor >= this.text.length) {
+        return;
+      }
+
       const ch = this.text[this.cursor]!;
       if (ch === "," || ch === "]" || this.isValueStartAtCursor()) {
         return;
@@ -658,11 +714,11 @@ class ExampleParser {
   }
 }
 
-function decodeJsonString(raw: string): string {
+function decodeJsonString(raw: string): string | null {
   try {
     return JSON.parse(raw) as string;
   } catch {
-    return raw.slice(1, -1);
+    return null;
   }
 }
 

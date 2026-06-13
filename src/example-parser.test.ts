@@ -78,6 +78,84 @@ describe("parseExample", () => {
     });
   });
 
+  it("parses JSON values with leading and trailing line comments", () => {
+    const result = parseExample("// before\ntrue // after");
+
+    expect(result).toMatch({
+      kind: "success",
+      value: {
+        kind: "boolean",
+        value: true,
+      },
+    });
+  });
+
+  it("parses JSON values with leading and trailing block comments", () => {
+    const result = parseExample("/* before */ [1, 2] /* after */");
+
+    expect(result).toMatch({
+      kind: "success",
+      value: {
+        kind: "array",
+        values: [
+          { kind: "number", value: 1 },
+          { kind: "number", value: 2 },
+        ],
+      },
+    });
+  });
+
+  it("parses comments between object tokens", () => {
+    const result = parseExample(
+      '{"a"/*key-value*/:/*value*/1,/*sep*/"b":/*value*/2}',
+    );
+
+    expect(result).toMatch({
+      kind: "success",
+      value: {
+        kind: "object",
+        entries: [
+          {
+            key: { kind: "string", value: "a" },
+            value: { kind: "number", value: 1 },
+          },
+          {
+            key: { kind: "string", value: "b" },
+            value: { kind: "number", value: 2 },
+          },
+        ],
+      },
+    });
+  });
+
+  it("parses comments between array values", () => {
+    const result = parseExample("[1, // between\n 2, /* between */ 3]");
+
+    expect(result).toMatch({
+      kind: "success",
+      value: {
+        kind: "array",
+        values: [
+          { kind: "number", value: 1 },
+          { kind: "number", value: 2 },
+          { kind: "number", value: 3 },
+        ],
+      },
+    });
+  });
+
+  it("does not treat comment markers inside strings as comments", () => {
+    const result = parseExample('"/* not a comment */ // still string"');
+
+    expect(result).toMatch({
+      kind: "success",
+      value: {
+        kind: "string",
+        value: "/* not a comment */ // still string",
+      },
+    });
+  });
+
   it("reports expected JSON value for empty input", () => {
     const result = parseExample("   ");
 
@@ -174,6 +252,71 @@ describe("parseExample", () => {
     });
   });
 
+  it("reports invalid JSON string escape sequences", () => {
+    const result = parseExample('"bad\\q"');
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Invalid JSON string escape sequence",
+          start: 0,
+          end: 7,
+        },
+      ],
+    });
+  });
+
+  it("reports invalid JSON string unicode escapes", () => {
+    const result = parseExample('"\\u12"');
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Invalid JSON string escape sequence",
+          start: 0,
+          end: 6,
+        },
+      ],
+    });
+  });
+
+  it("reports invalid decode for object key strings", () => {
+    const result = parseExample('{"\\q": 1}');
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Invalid JSON string escape sequence",
+          start: 1,
+          end: 5,
+        },
+      ],
+    });
+  });
+
+  it("reports each invalid JSON string decode in the same input", () => {
+    const result = parseExample('["\\q", "\\x"]');
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Invalid JSON string escape sequence",
+          start: 1,
+          end: 5,
+        },
+        {
+          message: "Invalid JSON string escape sequence",
+          start: 7,
+          end: 11,
+        },
+      ],
+    });
+  });
+
   it("reports invalid boolean keyword", () => {
     const result = parseExample("tru");
 
@@ -198,6 +341,43 @@ describe("parseExample", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Expected JSON number", start: 0, end: 1 }],
+    });
+  });
+
+  it("reports unterminated block comments at start and after a value", () => {
+    expect(parseExample("/* open")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Expected closing '*/' for block comment",
+          start: 0,
+          end: 7,
+        },
+      ],
+    });
+
+    expect(parseExample("1 /* open")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Expected closing '*/' for block comment",
+          start: 2,
+          end: 9,
+        },
+      ],
+    });
+  });
+
+  it("still reports structural errors with comments in between tokens", () => {
+    const result = parseExample("[1 /* gap */ 2]");
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Expected ',' or ']'",
+        },
+      ],
     });
   });
 
