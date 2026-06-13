@@ -4,8 +4,7 @@ import { describe, it } from "mocha";
 import type { Example } from "./example-parser.js";
 import { parseExample } from "./example-parser.js";
 import { validateExample } from "./example-validator.js";
-import type { Schema } from "./schema-parser.js";
-import { parseSchema } from "./schema-parser.js";
+import { parseSchema, Schema } from "./schema-parser.js";
 
 function parseSchemaOrThrow(schemaSource: string): Schema {
   const parsed = parseSchema(schemaSource);
