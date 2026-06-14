@@ -447,3 +447,69 @@ describe("parseXmlDocument", () => {
     });
   });
 });
+
+describe("TextNode.allWhitespace", () => {
+  it("is true for whitespace-only text", () => {
+    const input = "<root>  \t\n  </root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({ kind: "text", allWhitespace: true });
+  });
+
+  it("is false for non-whitespace text", () => {
+    const input = "<root>hello</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
+  });
+
+  it("is false for text that starts and ends with whitespace but contains non-whitespace", () => {
+    const input = "<root>  hello  </root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
+  });
+
+  it("is true for CDATA with whitespace-only content", () => {
+    const input = "<root><![CDATA[  \t\n  ]]></root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({ kind: "text", allWhitespace: true });
+  });
+
+  it("is false for CDATA with non-whitespace content", () => {
+    const input = "<root><![CDATA[hello]]></root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
+  });
+
+  it("is based on decoded content, so entities that decode to whitespace count as whitespace", () => {
+    const input = "<root>&#9;&#32;</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({
+      kind: "text",
+      decoded: "\t ",
+      allWhitespace: true,
+    });
+  });
+
+  it("is false when an entity decodes to a non-whitespace character", () => {
+    const input = "<root>&#65;</root>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const root = result.content[0] as ElementNode;
+
+    expect(root.children[0]).toMatch({
+      kind: "text",
+      decoded: "A",
+      allWhitespace: false,
+    });
+  });
+});

@@ -29,6 +29,7 @@ export type TextNode = {
   //   `{ decodedOffset: 0, sourceOffset: sourceSpan.start }`
   // even if the text is empty.
   readonly offsetMap: OffsetMap;
+  readonly allWhitespace: boolean;
 };
 
 export type ElementNode = {
@@ -99,6 +100,7 @@ export function parseXmlDocument(
       sourceSpan: makeSpan(content, cursor, end),
       decoded: decodedText.decoded,
       offsetMap: decodedText.offsetMap,
+      allWhitespace: /^\s*$/.test(decodedText.decoded),
     });
     cursor = end;
   });
@@ -117,6 +119,7 @@ export function parseXmlDocument(
       sourceSpan: makeSpan(content, textStart, textEnd),
       decoded,
       offsetMap: [{ decodedOffset: 0, sourceOffset: textStart }],
+      allWhitespace: /^\s*$/.test(decoded),
     });
     cursor = tokenEnd;
   });
