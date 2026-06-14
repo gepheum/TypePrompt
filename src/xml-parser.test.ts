@@ -448,6 +448,70 @@ describe("parseXmlDocument", () => {
   });
 });
 
+describe("ElementNode.sourceSpan", () => {
+  it("covers a self-closing element from < to />", () => {
+    const input = "<root/>";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.content[0]).toMatch({
+      kind: "element",
+      sourceSpan: { text: "<root/>", start: 0, end: 7 },
+    });
+  });
+
+  it("covers a regular element from < to >", () => {
+    const input = "<root></root>";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.content[0]).toMatch({
+      kind: "element",
+      sourceSpan: { text: "<root></root>", start: 0, end: 13 },
+    });
+  });
+
+  it("covers element content including children", () => {
+    const input = "<root><child/></root>";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.content[0]).toMatch({
+      kind: "element",
+      sourceSpan: { text: "<root><child/></root>", start: 0, end: 21 },
+    });
+  });
+
+  it("assigns independent spans to sibling elements", () => {
+    const input = "<a/><b></b>";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.content).toMatch([
+      { kind: "element", sourceSpan: { text: "<a/>", start: 0, end: 4 } },
+      { kind: "element", sourceSpan: { text: "<b></b>", start: 4, end: 11 } },
+    ]);
+  });
+
+  it("assigns correct span to a nested child element", () => {
+    const input = "<outer>  <inner/>  </outer>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const outer = result.content[0] as ElementNode;
+    const inner = outer.children[1] as ElementNode;
+
+    expect(outer.sourceSpan).toMatch({
+      text: "<outer>  <inner/>  </outer>",
+      start: 0,
+      end: 27,
+    });
+    expect(inner.sourceSpan).toMatch({ text: "<inner/>", start: 9, end: 17 });
+  });
+
+  it("span starts after leading text sibling", () => {
+    const input = "text<elem/>";
+    const result = expectSuccess(parseXmlDocument(input));
+    const elem = result.content[1] as ElementNode;
+
+    expect(elem.sourceSpan).toMatch({ text: "<elem/>", start: 4, end: 11 });
+  });
+});
+
 describe("TextNode.allWhitespace", () => {
   it("is true for whitespace-only text", () => {
     const input = "<root>  \t\n  </root>";

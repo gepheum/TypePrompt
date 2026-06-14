@@ -34,6 +34,7 @@ export type TextNode = {
 
 export type ElementNode = {
   readonly kind: "element";
+  readonly sourceSpan: SourceSpan;
   readonly children: readonly XmlNode[];
   readonly tagName: SourceSpan;
   readonly attributes: { readonly [name: string]: Attribute };
@@ -190,14 +191,19 @@ export function parseXmlDocument(
       return;
     }
 
+    // elementEnd tracks the source end of this element (inclusive of the closing `>`).
+    let elementEnd = element.openingTagEnd; // default for self-closing
+
     // During recovery, saxes can emit an explicit `closetag` after reporting an
     // unexpected close tag. This counter prevents duplicate close-tag scans.
     if (!tag.isSelfClosing && skipExplicitCloseScanCount > 0) {
       skipExplicitCloseScanCount -= 1;
+      elementEnd = cursor;
     } else if (!tag.isSelfClosing) {
       const closeTag = scanCloseTag(content, cursor);
       if (closeTag) {
         cursor = closeTag.tokenEnd;
+        elementEnd = closeTag.tokenEnd;
         if (closeTag.name.text !== tag.name) {
           errors.push({
             start: closeTag.tokenStart,
@@ -205,10 +211,15 @@ export function parseXmlDocument(
             message: `Mismatched closing tag '</${closeTag.name.text}>'; expected '</${tag.name}>'`,
           });
         }
+      } else {
+        elementEnd = cursor;
       }
     }
 
-    appendNode(element.node);
+    appendNode({
+      ...element.node,
+      sourceSpan: makeSpan(content, element.openingTagStart, elementEnd),
+    });
   });
 
   parser.on("error", (error) => {
