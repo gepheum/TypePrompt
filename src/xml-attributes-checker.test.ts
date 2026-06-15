@@ -75,8 +75,8 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          startPosition: input.indexOf("foo"),
-          endPosition: input.indexOf("foo") + "foo".length,
+          start: input.indexOf("foo"),
+          end: input.indexOf("foo") + "foo".length,
         },
       ],
     });
@@ -102,8 +102,8 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          startPosition: input.indexOf("extra"),
-          endPosition: input.indexOf("extra") + "extra".length,
+          start: input.indexOf("extra"),
+          end: input.indexOf("extra") + "extra".length,
         },
       ],
     });
@@ -133,8 +133,8 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          startPosition: input.indexOf("count"),
-          endPosition: input.indexOf("count") + "count".length,
+          start: input.indexOf("count"),
+          end: input.indexOf("count") + "count".length,
         },
       ],
     });

@@ -3,8 +3,8 @@ import { type ZodType } from "zod";
 import type { ElementNode } from "./xml-parser.js";
 
 export type XmlAttributeError = {
-  readonly startPosition: number;
-  readonly endPosition: number;
+  readonly start: number;
+  readonly end: number;
   readonly message: string;
 };
 
@@ -27,8 +27,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   for (const [name, attr] of Object.entries(element.attributes)) {
     if (!(name in expectedAttributes)) {
       errors.push({
-        startPosition: attr.name.start,
-        endPosition: attr.name.end,
+        start: attr.name.start,
+        end: attr.name.end,
         message: `Unexpected attribute '${name}'`,
       });
     }
@@ -43,14 +43,14 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       values[name] = parsed.data;
     } else if (rawValue === undefined) {
       errors.push({
-        startPosition: element.tagName.start,
-        endPosition: element.tagName.end,
+        start: element.tagName.start,
+        end: element.tagName.end,
         message: `Missing required attribute '${name}'`,
       });
     } else {
       errors.push({
-        startPosition: attr!.name.start,
-        endPosition: attr!.name.end,
+        start: attr!.name.start,
+        end: attr!.name.end,
         message: `Invalid value for attribute '${name}'`,
       });
     }
