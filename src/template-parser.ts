@@ -29,12 +29,15 @@ export type TemplateParseError = {
 
 /// Position in a source file.
 export type Position = {
-  /// 0-based
-  readonly line: number;
-  /// 0-based codepoint offset (not UTF-16 offset)
-  readonly column: number;
   // UTF-16 offset
-  readonly position: number;
+  readonly offset: number;
+  readonly position: {
+    readonly line: string;
+    /// 0-based
+    readonly lineNumber: number;
+    /// 0-based codepoint offset (not UTF-16 offset)
+    readonly columnNumber: number;
+  };
 };
 
 export type SourceFile = {
@@ -122,20 +125,43 @@ class Parser {
   ): void {
     this.errors.push({
       path: sourceFile.path,
-      startPosition: offsetToPosition(sourceFile.content, start),
-      endPosition: offsetToPosition(sourceFile.content, end),
+      startPosition: new PositionImpl(sourceFile.content, start),
+      endPosition: new PositionImpl(sourceFile.content, end),
       message,
     });
   }
 }
 
-function offsetToPosition(content: string, offset: number): Position {
-  // Assumes \n line endings; \r\n normalization is the caller's responsibility.
-  const lines = content.slice(0, offset).split("\n");
-  // Spread to count Unicode codepoints rather than UTF-16 code units.
-  return {
-    line: lines.length - 1,
-    column: [...lines[lines.length - 1]!].length,
-    position: offset,
-  };
+class PositionImpl implements Position {
+  readonly offset: number;
+  private readonly _content: string;
+
+  constructor(content: string, offset: number) {
+    this._content = content;
+    this.offset = offset;
+  }
+
+  get position(): {
+    readonly line: string;
+    readonly lineNumber: number;
+    readonly columnNumber: number;
+  } {
+    const before = this._content.slice(0, this.offset);
+    const linesBefore = before.split("\n");
+    const lineNumber = linesBefore.length - 1;
+    const lineStart = this.offset - linesBefore[lineNumber]!.length;
+    const lineEndRaw = this._content.indexOf("\n", this.offset);
+    const line = this._content.slice(
+      lineStart,
+      lineEndRaw === -1 ? this._content.length : lineEndRaw,
+    );
+    // Count codepoints rather than UTF-16 code units.
+    const columnNumber = [...linesBefore[lineNumber]!].length;
+    return { line, lineNumber, columnNumber };
+  }
+
+  toJSON() {
+    const { offset, position } = this;
+    return { offset, position };
+  }
 }
