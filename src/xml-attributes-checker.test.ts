@@ -66,14 +66,19 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("positions a missing-attribute error at the start of the element", () => {
+  it("positions a missing-attribute error at the tag name", () => {
     const input = "  <foo />";
     const el = parseElement(input);
     const result = checkXmlAttributes(el, { name: z.string() });
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ position: input.indexOf("<") }],
+      errors: [
+        {
+          startPosition: input.indexOf("foo"),
+          endPosition: input.indexOf("foo") + "foo".length,
+        },
+      ],
     });
   });
 
@@ -88,14 +93,19 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("positions an unexpected-attribute error at the attribute name", () => {
+  it("positions an unexpected-attribute error at the attribute name span", () => {
     const input = '<foo extra="y" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {});
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ position: input.indexOf("extra") }],
+      errors: [
+        {
+          startPosition: input.indexOf("extra"),
+          endPosition: input.indexOf("extra") + "extra".length,
+        },
+      ],
     });
   });
 
@@ -112,7 +122,7 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("positions a schema-validation error at the attribute name", () => {
+  it("positions a schema-validation error at the attribute name span", () => {
     const input = '<foo count="abc" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
@@ -121,7 +131,12 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ position: input.indexOf("count") }],
+      errors: [
+        {
+          startPosition: input.indexOf("count"),
+          endPosition: input.indexOf("count") + "count".length,
+        },
+      ],
     });
   });
 
