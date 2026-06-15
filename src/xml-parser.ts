@@ -3,7 +3,9 @@ import { OffsetMap, OffsetMapEntry } from "./text-node-join.js";
 
 export type XmlDocument = {
   readonly kind: "success";
-  readonly content: readonly XmlNode[];
+  readonly root: {
+    readonly children: readonly XmlNode[];
+  };
 };
 
 export type XmlParseErrors = {
@@ -286,7 +288,7 @@ export function parseXmlDocument(
 
   return {
     kind: "success",
-    content: rootNodes,
+    root: { children: rootNodes },
   };
 
   function appendNode(node: XmlNode): void {

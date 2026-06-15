@@ -24,7 +24,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   it("maps decoded offsets to source offsets for plain text", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
@@ -44,7 +44,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   it("maps decoded offsets to source offsets across entity and raw segments", () => {
     const input = "<root>x &amp; y</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
@@ -71,7 +71,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   it("maps end boundary of a single-entity text node", () => {
     const input = "<root>&lt;</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.decoded).toBe("<");
@@ -86,7 +86,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   it("throws for decoded offsets outside valid range", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     let threw = false;

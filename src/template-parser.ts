@@ -1,4 +1,4 @@
-import { parseXmlDocument } from "./xml-parser.js";
+import { parseXmlDocument, type XmlDocument } from "./xml-parser.js";
 
 export type Templates = {
   readonly kind: "success";
@@ -52,9 +52,9 @@ class Parser {
   readonly errors: TemplateParseError[] = [];
 
   parse(sourceFile: SourceFile): void {
-    const result = parseXmlDocument(sourceFile.content);
-    if (result.kind === "error") {
-      for (const error of result.errors) {
+    const xmlDocument = parseXmlDocument(sourceFile.content);
+    if (xmlDocument.kind === "error") {
+      for (const error of xmlDocument.errors) {
         const { line, column } = offsetToLineColumn(
           sourceFile.content,
           error.start,
@@ -67,7 +67,13 @@ class Parser {
           message: error.message,
         });
       }
+    } else {
+      this.parseTemplate(xmlDocument);
     }
+  }
+
+  private parseTemplate(xmlDocument: XmlDocument): void {
+    // for (const node of xmlDocument.root.children)
   }
 }
 

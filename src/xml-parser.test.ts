@@ -43,14 +43,14 @@ describe("parseXmlDocument", () => {
   it("parses an empty document", () => {
     expect(parseXmlDocument("")).toMatch({
       kind: "success",
-      content: [],
+      root: { children: [] },
     });
   });
 
   it("tracks tag offsets when first element starts after leading whitespace", () => {
     const input = " <foo/>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[1] as ElementNode;
+    const root = result.root.children[1] as ElementNode;
 
     expect(root).toMatch({
       kind: "element",
@@ -71,53 +71,55 @@ describe("parseXmlDocument", () => {
 
     expect(result).toMatch({
       kind: "success",
-      content: [
-        {
-          kind: "text",
-          sourceSpan: span(input, "before"),
-        },
-        {
-          kind: "element",
-          tagName: span(input, "root"),
-          isSelfClosing: false,
-          attributes: {
-            a: {
-              name: span(input, "a", input.indexOf('a="1"')),
-              value: span(input, "1", input.indexOf('a="1"')),
-            },
-            b: {
-              name: span(input, "b", input.indexOf("b='two'")),
-              value: span(input, "two", input.indexOf("b='two'")),
-            },
+      root: {
+        children: [
+          {
+            kind: "text",
+            sourceSpan: span(input, "before"),
           },
-          children: [
-            {
-              kind: "text",
-              sourceSpan: span(input, "mid"),
-            },
-            {
-              kind: "element",
-              tagName: span(input, "child"),
-              isSelfClosing: true,
-              attributes: {
-                x: {
-                  name: span(input, "x", input.indexOf('x="y"')),
-                  value: span(input, "y", input.indexOf('x="y"')),
-                },
+          {
+            kind: "element",
+            tagName: span(input, "root"),
+            isSelfClosing: false,
+            attributes: {
+              a: {
+                name: span(input, "a", input.indexOf('a="1"')),
+                value: span(input, "1", input.indexOf('a="1"')),
               },
-              children: [],
+              b: {
+                name: span(input, "b", input.indexOf("b='two'")),
+                value: span(input, "two", input.indexOf("b='two'")),
+              },
             },
-            {
-              kind: "text",
-              sourceSpan: span(input, "after"),
-            },
-          ],
-        },
-        {
-          kind: "text",
-          sourceSpan: span(input, "tail"),
-        },
-      ],
+            children: [
+              {
+                kind: "text",
+                sourceSpan: span(input, "mid"),
+              },
+              {
+                kind: "element",
+                tagName: span(input, "child"),
+                isSelfClosing: true,
+                attributes: {
+                  x: {
+                    name: span(input, "x", input.indexOf('x="y"')),
+                    value: span(input, "y", input.indexOf('x="y"')),
+                  },
+                },
+                children: [],
+              },
+              {
+                kind: "text",
+                sourceSpan: span(input, "after"),
+              },
+            ],
+          },
+          {
+            kind: "text",
+            sourceSpan: span(input, "tail"),
+          },
+        ],
+      },
     });
   });
 
@@ -125,7 +127,7 @@ describe("parseXmlDocument", () => {
     const input =
       '<?xml version="1.0"?><root><!--comment--><?pi target?>ok</root>';
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
       kind: "element",
@@ -143,7 +145,7 @@ describe("parseXmlDocument", () => {
   it("keeps distinct text nodes separated by a comment", () => {
     const input = "<foo>abc<!--\n    -->bcd</foo>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
       kind: "element",
@@ -165,7 +167,7 @@ describe("parseXmlDocument", () => {
   it("keeps CDATA text as the inner text span", () => {
     const input = "<root><![CDATA[a<b>c]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children).toMatch([
       {
@@ -178,7 +180,7 @@ describe("parseXmlDocument", () => {
   it("preserves raw entity text in text nodes and attribute values", () => {
     const input = '<root a="1 &amp; 2">x &amp; y</root>';
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
       attributes: {
@@ -216,7 +218,7 @@ describe("parseXmlDocument", () => {
   it("decodes escaped and numeric entities in attribute values", () => {
     const input = '<root a="x &lt; y" b="&#65;&#x42;" />';
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
       attributes: {
@@ -237,7 +239,7 @@ describe("parseXmlDocument", () => {
     const input = "<a/><b></b>";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.content).toMatch([
+    expect(result.root.children).toMatch([
       {
         kind: "element",
         tagName: span(input, "a"),
@@ -256,7 +258,7 @@ describe("parseXmlDocument", () => {
   it("parses > inside quoted attribute values", () => {
     const input = '<root a="x > y"><child/></root>';
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
       tagName: span(input, "root"),
@@ -280,7 +282,7 @@ describe("parseXmlDocument", () => {
   it("decodes numeric entities and builds offset map segments", () => {
     const input = "<root>&#65; &#x42;</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const textStart = input.indexOf("&#65; &#x42;");
     const firstEntityStart = input.indexOf("&#65;", textStart);
     const firstEntityEnd = firstEntityStart + "&#65;".length;
@@ -341,7 +343,7 @@ describe("parseXmlDocument", () => {
   it("provides identity decoded text and offset map for CDATA text", () => {
     const input = "<root><![CDATA[a<b>c]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
     const cdataTextStart = input.indexOf("a<b>c");
 
     expect(root.children[0]).toMatch({
@@ -453,7 +455,7 @@ describe("ElementNode.sourceSpan", () => {
     const input = "<root/>";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.content[0]).toMatch({
+    expect(result.root.children[0]).toMatch({
       kind: "element",
       sourceSpan: { text: "<root/>", start: 0, end: 7 },
     });
@@ -463,7 +465,7 @@ describe("ElementNode.sourceSpan", () => {
     const input = "<root></root>";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.content[0]).toMatch({
+    expect(result.root.children[0]).toMatch({
       kind: "element",
       sourceSpan: { text: "<root></root>", start: 0, end: 13 },
     });
@@ -473,7 +475,7 @@ describe("ElementNode.sourceSpan", () => {
     const input = "<root><child/></root>";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.content[0]).toMatch({
+    expect(result.root.children[0]).toMatch({
       kind: "element",
       sourceSpan: { text: "<root><child/></root>", start: 0, end: 21 },
     });
@@ -483,7 +485,7 @@ describe("ElementNode.sourceSpan", () => {
     const input = "<a/><b></b>";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.content).toMatch([
+    expect(result.root.children).toMatch([
       { kind: "element", sourceSpan: { text: "<a/>", start: 0, end: 4 } },
       { kind: "element", sourceSpan: { text: "<b></b>", start: 4, end: 11 } },
     ]);
@@ -492,7 +494,7 @@ describe("ElementNode.sourceSpan", () => {
   it("assigns correct span to a nested child element", () => {
     const input = "<outer>  <inner/>  </outer>";
     const result = expectSuccess(parseXmlDocument(input));
-    const outer = result.content[0] as ElementNode;
+    const outer = result.root.children[0] as ElementNode;
     const inner = outer.children[1] as ElementNode;
 
     expect(outer.sourceSpan).toMatch({
@@ -506,7 +508,7 @@ describe("ElementNode.sourceSpan", () => {
   it("span starts after leading text sibling", () => {
     const input = "text<elem/>";
     const result = expectSuccess(parseXmlDocument(input));
-    const elem = result.content[1] as ElementNode;
+    const elem = result.root.children[1] as ElementNode;
 
     expect(elem.sourceSpan).toMatch({ text: "<elem/>", start: 4, end: 11 });
   });
@@ -516,7 +518,7 @@ describe("TextNode.allWhitespace", () => {
   it("is true for whitespace-only text", () => {
     const input = "<root>  \t\n  </root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: true });
   });
@@ -524,7 +526,7 @@ describe("TextNode.allWhitespace", () => {
   it("is false for non-whitespace text", () => {
     const input = "<root>hello</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
   });
@@ -532,7 +534,7 @@ describe("TextNode.allWhitespace", () => {
   it("is false for text that starts and ends with whitespace but contains non-whitespace", () => {
     const input = "<root>  hello  </root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
   });
@@ -540,7 +542,7 @@ describe("TextNode.allWhitespace", () => {
   it("is true for CDATA with whitespace-only content", () => {
     const input = "<root><![CDATA[  \t\n  ]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: true });
   });
@@ -548,7 +550,7 @@ describe("TextNode.allWhitespace", () => {
   it("is false for CDATA with non-whitespace content", () => {
     const input = "<root><![CDATA[hello]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
   });
@@ -556,7 +558,7 @@ describe("TextNode.allWhitespace", () => {
   it("is based on decoded content, so entities that decode to whitespace count as whitespace", () => {
     const input = "<root>&#9;&#32;</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({
       kind: "text",
@@ -568,7 +570,7 @@ describe("TextNode.allWhitespace", () => {
   it("is false when an entity decodes to a non-whitespace character", () => {
     const input = "<root>&#65;</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.content[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({
       kind: "text",
