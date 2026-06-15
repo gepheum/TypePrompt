@@ -1,4 +1,8 @@
-import { parseXmlDocument, type XmlDocument } from "./xml-parser.js";
+import {
+  ElementNode,
+  parseXmlDocument,
+  type XmlDocument,
+} from "./xml-parser.js";
 
 export type Templates = {
   readonly kind: "success";
@@ -45,7 +49,10 @@ export function parseTemplates(
       errors: parser.errors,
     };
   }
-  throw "TODO";
+  return {
+    kind: "success",
+    templates: [],
+  };
 }
 
 class Parser {
@@ -55,25 +62,63 @@ class Parser {
     const xmlDocument = parseXmlDocument(sourceFile.content);
     if (xmlDocument.kind === "error") {
       for (const error of xmlDocument.errors) {
-        const { line, column } = offsetToLineColumn(
-          sourceFile.content,
-          error.start,
-        );
-        this.errors.push({
-          path: sourceFile.path,
-          line,
-          column,
-          position: error.start,
-          message: error.message,
-        });
+        this.pushError(sourceFile, error.start, error.message);
       }
     } else {
-      this.parseTemplate(xmlDocument);
+      this.parseTemplate(xmlDocument, sourceFile);
     }
   }
 
-  private parseTemplate(xmlDocument: XmlDocument): void {
-    // for (const node of xmlDocument.root.children)
+  private parseTemplate(
+    xmlDocument: XmlDocument,
+    sourceFile: SourceFile,
+  ): void {
+    for (const node of xmlDocument.root.children) {
+      switch (node.kind) {
+        case "element": {
+          if (node.tagName.text === "template") {
+            this.parseTemplateElement(node, sourceFile);
+          } else {
+            this.pushError(
+              sourceFile,
+              node.sourceSpan.start,
+              `Unexpected element '<${node.tagName.text}>'`,
+            );
+          }
+          break;
+        }
+        case "text": {
+          if (!node.allWhitespace) {
+            this.pushError(
+              sourceFile,
+              node.sourceSpan.start,
+              "Unexpected text content at the top level",
+            );
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  private parseTemplateElement(
+    node: ElementNode,
+    sourceFile: SourceFile,
+  ): void {}
+
+  private pushError(
+    sourceFile: SourceFile,
+    position: number,
+    message: string,
+  ): void {
+    const { line, column } = offsetToLineColumn(sourceFile.content, position);
+    this.errors.push({
+      path: sourceFile.path,
+      line,
+      column,
+      position,
+      message,
+    });
   }
 }
 
