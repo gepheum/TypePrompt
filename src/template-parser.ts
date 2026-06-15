@@ -22,13 +22,19 @@ export type TemplateParseErrors = {
 
 export type TemplateParseError = {
   readonly path: string;
+  readonly message: string;
+  readonly startPosition: Position;
+  readonly endPosition: Position;
+};
+
+/// Position in a source file.
+export type Position = {
   /// 0-based
   readonly line: number;
   /// 0-based codepoint offset (not UTF-16 offset)
   readonly column: number;
   // UTF-16 offset
   readonly position: number;
-  readonly message: string;
 };
 
 export type SourceFile = {
@@ -62,7 +68,7 @@ class Parser {
     const xmlDocument = parseXmlDocument(sourceFile.content);
     if (xmlDocument.kind === "error") {
       for (const error of xmlDocument.errors) {
-        this.pushError(sourceFile, error.start, error.message);
+        this.pushError(sourceFile, error.start, error.end, error.message);
       }
     } else {
       this.parseTemplate(xmlDocument, sourceFile);
@@ -81,7 +87,8 @@ class Parser {
           } else {
             this.pushError(
               sourceFile,
-              node.sourceSpan.start,
+              node.tagName.start,
+              node.tagName.end,
               `Unexpected element '<${node.tagName.text}>'`,
             );
           }
@@ -92,6 +99,7 @@ class Parser {
             this.pushError(
               sourceFile,
               node.sourceSpan.start,
+              node.sourceSpan.end,
               "Unexpected text content at the top level",
             );
           }
@@ -108,28 +116,26 @@ class Parser {
 
   private pushError(
     sourceFile: SourceFile,
-    position: number,
+    start: number,
+    end: number,
     message: string,
   ): void {
-    const { line, column } = offsetToLineColumn(sourceFile.content, position);
     this.errors.push({
       path: sourceFile.path,
-      line,
-      column,
-      position,
+      startPosition: offsetToPosition(sourceFile.content, start),
+      endPosition: offsetToPosition(sourceFile.content, end),
       message,
     });
   }
 }
 
-function offsetToLineColumn(
-  content: string,
-  offset: number,
-): { readonly line: number; readonly column: number } {
+function offsetToPosition(content: string, offset: number): Position {
+  // Assumes \n line endings; \r\n normalization is the caller's responsibility.
   const lines = content.slice(0, offset).split("\n");
   // Spread to count Unicode codepoints rather than UTF-16 code units.
   return {
     line: lines.length - 1,
     column: [...lines[lines.length - 1]!].length,
+    position: offset,
   };
 }
