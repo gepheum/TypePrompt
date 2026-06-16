@@ -150,10 +150,14 @@ class TemplateParser {
           const tagName = child.tagName.text;
           if (tagName === "schema") {
             const text = this.parseSchema(child, context);
-            textNodes.push(text);
+            if (text) {
+              textNodes.push(text);
+            }
           } else if (tagName === "example") {
             const text = this.parseExample(child, context);
-            textNodes.push(text);
+            if (text) {
+              textNodes.push(text);
+            }
           } else {
             context.pushError(
               child.tagName,
@@ -168,12 +172,29 @@ class TemplateParser {
         }
       }
     }
+    const {schema, examples} = this;
+    if (schema.kind === "no-schema") {
+      context.pushError(
+        templateNode.tagName,
+        "Missing <schema> element in template",
+      );
+    } else if (schema.kind === "success") {
+      for (const example of examples) {
+        const typeName = example.attributes.type ?? "Response";
+        if (schema.schema.types[typeName] === undefined) {
+          context.pushError(
+            example.CACA,
+            `Unknown type '${typeName}' in example`,
+          );
+        }
+      }
+    }
   }
 
   parseSchema(
     schemaNode: ElementNode,
     context: SourceFileContext,
-  ): TextNodeJoin {
+  ): TextNodeJoin | null {
     const text = getTextContent(schemaNode, context);
     const attributes = checkXmlAttributes(schemaNode, {
       hide: zod.enum(["false", "true"]).optional(),
@@ -181,7 +202,7 @@ class TemplateParser {
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
-      return text;
+      return null;
     }
     if (this.schema.kind !== "no-schema") {
       context.pushError(
@@ -189,7 +210,7 @@ class TemplateParser {
         "Multiple <schema> elements are not allowed",
       );
       this.schema = { kind: "error" };
-      return text;
+      return null;
     }
     const schema = parseSchema(text.decoded);
     if (schema.kind === "error") {
@@ -201,28 +222,28 @@ class TemplateParser {
         })),
       );
       this.schema = { kind: "error" };
-      return text;
+      return null;
     }
     this.schema = {
       kind: "success",
       schema: schema,
       attributes: attributes.attributes,
     };
-    return text;
+    return attributes.attributes.hide === "true" ? null : text;
   }
 
   parseExample(
     exampleNode: ElementNode,
     context: SourceFileContext,
-  ): TextNodeJoin {
+  ): TextNodeJoin | null {
     const text = getTextContent(exampleNode, context);
     const attributes = checkXmlAttributes(exampleNode, {
-      type: zod.string().optional(),
+      type: zod.string().regex(/^[A-Z_][A-Za-z0-9]*$/).optional(),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
-      return text;
+      return null;
     }
     const example = parseExample(text.decoded);
     if (example.kind === "error") {
@@ -233,7 +254,7 @@ class TemplateParser {
           message: e.message,
         })),
       );
-      return text;
+      return null;
     }
     this.examples.push({
       example: example,

@@ -15,15 +15,6 @@ export function validateExample(
   schema: Schema,
   typeName: string,
 ): readonly ExampleValidationError[] {
-  if (!schema.types[typeName]) {
-    return [
-      {
-        sourceSpan: example.value.firstToken,
-        message: `Unknown type '${typeName}'`,
-      },
-    ];
-  }
-
   if (matchesTypeNameRef(typeName, example.value, schema.types, new Map())) {
     return [];
   }
