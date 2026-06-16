@@ -10,7 +10,6 @@ describe("parseExample", () => {
 
     expect(result).toMatch({
       kind: "success",
-      exampleSource: input,
       value: {
         kind: "object",
         entries: [

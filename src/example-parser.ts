@@ -1,7 +1,6 @@
 export type Example = {
   readonly kind: "success";
   readonly value: JsonValue;
-  readonly exampleSource: string;
 };
 
 export type ExampleParseErrors = {
@@ -128,7 +127,6 @@ class ExampleParser {
     return {
       kind: "success",
       value,
-      exampleSource: this.text,
     };
   }
 

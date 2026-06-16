@@ -1,10 +1,16 @@
 import * as zod from "zod";
-import { joinTextNodes, TextNodeJoin } from "./text-node-join.js";
+import { Example, parseExample } from "./example-parser.js";
+import { parseSchema, type Schema } from "./schema-parser.js";
+import {
+  joinTextNodes,
+  textNodeDecodedOffsetToSourceOffset,
+  TextNodeJoin,
+} from "./text-node-join.js";
 import { checkXmlAttributes } from "./xml-attributes-checker.js";
 import {
-  ElementNode,
   parseXmlDocument,
-  TextNode,
+  type ElementNode,
+  type TextNode,
   type XmlDocument,
 } from "./xml-parser.js";
 
@@ -75,9 +81,7 @@ class Parser {
     const context = new SourceFileContext(sourceFile, this.errors);
     const xmlDocument = parseXmlDocument(sourceFile.content);
     if (xmlDocument.kind === "error") {
-      for (const error of xmlDocument.errors) {
-        context.pushError(error, error.message);
-      }
+      context.pushErrors(xmlDocument.errors);
     } else {
       this.parseTemplate(xmlDocument, context);
     }
@@ -135,27 +139,21 @@ class TemplateParser {
         .optional(),
     });
     if (attributes.kind === "error") {
-      for (const error of attributes.errors) {
-        context.pushError(error, error.message);
-      }
+      context.pushErrors(attributes.errors);
       return;
     }
     const { name, variant } = attributes.attributes;
-    const textNodes: TextNode[] = [];
+    const textNodes: TextNodeJoin[] = [];
     for (const child of templateNode.children) {
       switch (child.kind) {
         case "element": {
           const tagName = child.tagName.text;
           if (tagName === "schema") {
-            const textContent = getTextContent(child, context);
-            if (textContent !== null) {
-              // TODO
-            }
+            const text = this.parseSchema(child, context);
+            textNodes.push(text);
           } else if (tagName === "example") {
-            const textContent = getTextContent(child, context);
-            if (textContent !== null) {
-              // TODO
-            }
+            const text = this.parseExample(child, context);
+            textNodes.push(text);
           } else {
             context.pushError(
               child.tagName,
@@ -171,12 +169,113 @@ class TemplateParser {
       }
     }
   }
+
+  parseSchema(
+    schemaNode: ElementNode,
+    context: SourceFileContext,
+  ): TextNodeJoin {
+    const text = getTextContent(schemaNode, context);
+    const attributes = checkXmlAttributes(schemaNode, {
+      hide: zod.enum(["false", "true"]).optional(),
+    });
+    if (attributes.kind === "error") {
+      context.pushErrors(attributes.errors);
+      this.schema = { kind: "error" };
+      return text;
+    }
+    if (this.schema.kind !== "no-schema") {
+      context.pushError(
+        schemaNode.tagName,
+        "Multiple <schema> elements are not allowed",
+      );
+      this.schema = { kind: "error" };
+      return text;
+    }
+    const schema = parseSchema(text.decoded);
+    if (schema.kind === "error") {
+      context.pushErrors(
+        schema.errors.map((e) => ({
+          start: textNodeDecodedOffsetToSourceOffset(text, e.start),
+          end: textNodeDecodedOffsetToSourceOffset(text, e.end),
+          message: e.message,
+        })),
+      );
+      this.schema = { kind: "error" };
+      return text;
+    }
+    this.schema = {
+      kind: "success",
+      schema: schema,
+      attributes: attributes.attributes,
+    };
+    return text;
+  }
+
+  parseExample(
+    exampleNode: ElementNode,
+    context: SourceFileContext,
+  ): TextNodeJoin {
+    const text = getTextContent(exampleNode, context);
+    const attributes = checkXmlAttributes(exampleNode, {
+      type: zod.string().optional(),
+    });
+    if (attributes.kind === "error") {
+      context.pushErrors(attributes.errors);
+      this.schema = { kind: "error" };
+      return text;
+    }
+    const example = parseExample(text.decoded);
+    if (example.kind === "error") {
+      context.pushErrors(
+        example.errors.map((e) => ({
+          start: textNodeDecodedOffsetToSourceOffset(text, e.start),
+          end: textNodeDecodedOffsetToSourceOffset(text, e.end),
+          message: e.message,
+        })),
+      );
+      return text;
+    }
+    this.examples.push({
+      example: example,
+      attributes: attributes.attributes,
+    });
+    return text;
+  }
+
+  private schema: SchemaState = { kind: "no-schema" };
+  private readonly examples: ExampleState[] = [];
 }
+
+type SchemaAttributes = {
+  readonly hide: "false" | "true" | undefined;
+};
+
+type SchemaState =
+  | {
+      readonly kind: "no-schema";
+    }
+  | {
+      readonly kind: "error";
+    }
+  | {
+      readonly kind: "success";
+      readonly schema: Schema;
+      readonly attributes: SchemaAttributes;
+    };
+
+type ExampleAttributes = {
+  readonly type: string | undefined;
+};
+
+type ExampleState = {
+  readonly example: Example;
+  readonly attributes: ExampleAttributes;
+};
 
 function getTextContent(
   node: ElementNode,
   context: SourceFileContext,
-): TextNodeJoin | null {
+): TextNodeJoin {
   const textNodes: TextNode[] = [];
   for (const child of node.children) {
     switch (child.kind) {
@@ -203,7 +302,7 @@ class SourceFileContext {
   ) {}
 
   pushError(
-    position: {
+    range: {
       readonly start: number;
       readonly end: number;
     },
@@ -212,10 +311,18 @@ class SourceFileContext {
     const { sourceFile } = this;
     this.errors.push({
       path: sourceFile.path,
-      startPosition: new PositionImpl(sourceFile.content, position.start),
-      endPosition: new PositionImpl(sourceFile.content, position.end),
+      startPosition: new PositionImpl(sourceFile.content, range.start),
+      endPosition: new PositionImpl(sourceFile.content, range.end),
       message,
     });
+  }
+
+  pushErrors(
+    errors: ReadonlyArray<{ message: string; start: number; end: number }>,
+  ): void {
+    for (const error of errors) {
+      this.pushError({ start: error.start, end: error.end }, error.message);
+    }
   }
 }
 
