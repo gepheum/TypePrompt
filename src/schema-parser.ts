@@ -1,7 +1,6 @@
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
-  readonly schemaSource: string;
 };
 
 export type SchemaParseErrors = {
@@ -108,7 +107,6 @@ class SchemaParser {
 
     return {
       kind: "success",
-      schemaSource: this.text,
       types,
     };
   }

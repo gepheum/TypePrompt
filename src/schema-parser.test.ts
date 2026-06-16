@@ -16,7 +16,6 @@ describe("parseSchema", () => {
 
     expect(result).toMatch({
       kind: "success",
-      schemaSource: input,
       types: {
         Response: {
           kind: "interface",
