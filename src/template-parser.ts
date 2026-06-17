@@ -164,20 +164,11 @@ class TemplateParseFlow {
         case "element": {
           const tagName = child.tagName.text;
           if (tagName === "schema") {
-            const piece = flow.parseSchema(child, context);
-            if (piece) {
-              content.push(piece);
-            }
+            flow.parseSchema(child, context);
           } else if (tagName === "example") {
-            const piece = flow.parseExample(child, context);
-            if (piece) {
-              content.push(piece);
-            }
+            flow.parseExample(child, context);
           } else if (tagName === "arg") {
-            const piece = flow.parseArg(child, context);
-            if (piece) {
-              content.push(piece);
-            }
+            flow.parseArg(child, context);
           } else {
             context.pushError(
               child.tagName,
@@ -233,7 +224,7 @@ class TemplateParseFlow {
   private parseSchema(
     schemaNode: ElementNode,
     context: SourceFileContext,
-  ): TemplatePiece | null {
+  ): void {
     const text = getTextContent(schemaNode, context);
     const attributes = checkXmlAttributes(schemaNode, {
       hide: zod.enum(["false", "true"]).optional(),
@@ -241,7 +232,7 @@ class TemplateParseFlow {
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
-      return null;
+      return;
     }
     if (this.schema.kind !== "no-schema") {
       context.pushError(
@@ -249,7 +240,7 @@ class TemplateParseFlow {
         "Multiple <schema> elements are not allowed",
       );
       this.schema = { kind: "error" };
-      return null;
+      return;
     }
     const schema = parseSchema(text.decoded);
     if (schema.kind === "error") {
@@ -261,24 +252,22 @@ class TemplateParseFlow {
         })),
       );
       this.schema = { kind: "error" };
-      return null;
+      return;
     }
     this.schema = {
       kind: "success",
       schema: schema,
       hide: attributes.attributes.hide?.value === "true",
     };
-    if (attributes.attributes.hide?.value === "true") {
-      return null;
-    } else {
-      return { kind: "text", text: text };
+    if (attributes.attributes.hide?.value !== "true") {
+      this.templatePieces.push({kind: "text", text: text});
     }
   }
 
   private parseExample(
     exampleNode: ElementNode,
     context: SourceFileContext,
-  ): TemplatePiece | null {
+  ): void {
     const text = getTextContent(exampleNode, context);
     const attributes = checkXmlAttributes(exampleNode, {
       type: zod
@@ -289,7 +278,7 @@ class TemplateParseFlow {
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
-      return null;
+      return;
     }
     const example = parseExample(text.decoded);
     if (example.kind === "error") {
@@ -300,38 +289,40 @@ class TemplateParseFlow {
           message: e.message,
         })),
       );
-      return null;
+      return;
     }
     this.examples.push({
       example: example,
       type: attributes.attributes.type,
     });
-    return { kind: "text", text: text };
+    this.templatePieces.push({ kind: "text", text: text });
   }
 
   private parseArg(
     argNode: ElementNode,
     context: SourceFileContext,
-  ): TemplatePiece | null {
+  ): void {
     if (!argNode.isSelfClosing) {
       context.pushError(argNode.tagName, "<arg> elements must be self-closing");
-      return null;
+      return;
     }
     const attributes = checkXmlAttributes(argNode, {
       name: zod.string().regex(/^[a-z][a-z_0-9]*$/),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
-      return null;
+      return;
     }
-    return {
+    this.templatePieces.push({
       kind: "arg",
       name: attributes.attributes.name.value,
-    };
+    });
   }
 
+  private templatePieces: TemplatePiece[] = [];
   private schema: SchemaState = { kind: "no-schema" };
   private readonly examples: ExampleState[] = [];
+  private args: ArgState[] = [];
 }
 
 type SchemaState =
@@ -350,6 +341,14 @@ type SchemaState =
 type ExampleState = {
   readonly example: Example;
   readonly type: { start: number; end: number; value: string } | undefined;
+};
+
+type ArgState = {
+  readonly name: string;
+  readonly sourceSpan: {
+    readonly start: number;
+    readonly end: number;
+  };
 };
 
 function getTextContent(
