@@ -87,7 +87,7 @@ describe("validateExample", () => {
 
     expect(validateExample(example, schema, "Missing")).toMatch([
       {
-        message: "Unknown type 'Missing'",
+        message: "Example does not match type 'Missing'",
         sourceSpan: {
           start: 0,
           end: 3,

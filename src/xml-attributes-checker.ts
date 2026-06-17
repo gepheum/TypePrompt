@@ -11,7 +11,11 @@ export type XmlAttributeError = {
 type AttributeSchemas = Record<string, ZodType<string | undefined>>;
 
 type AttributeValues<T extends AttributeSchemas> = {
-  [K in keyof T]: T[K] extends ZodType<infer U> ? U : never;
+  [K in keyof T]: T[K] extends ZodType<infer U>
+    ? undefined extends U
+      ? { start: number; end: number; value: NonNullable<U> } | undefined
+      : { start: number; end: number; value: U }
+    : never;
 };
 
 export function checkXmlAttributes<T extends AttributeSchemas>(
@@ -40,7 +44,13 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
     const rawValue = attr?.decodedValue;
     const parsed = schema.safeParse(rawValue);
     if (parsed.success) {
-      values[name] = parsed.data;
+      if (attr !== undefined) {
+        values[name] = {
+          start: attr.name.start,
+          end: attr.name.end,
+          value: parsed.data,
+        };
+      }
     } else if (rawValue === undefined) {
       errors.push({
         start: element.tagName.start,

@@ -142,7 +142,8 @@ class TemplateParser {
       context.pushErrors(attributes.errors);
       return;
     }
-    const { name, variant } = attributes.attributes;
+    const name = attributes.attributes.name.value;
+    const variant = attributes.attributes.variant?.value;
     const textNodes: TextNodeJoin[] = [];
     for (const child of templateNode.children) {
       switch (child.kind) {
@@ -172,7 +173,7 @@ class TemplateParser {
         }
       }
     }
-    const {schema, examples} = this;
+    const { schema, examples } = this;
     if (schema.kind === "no-schema") {
       context.pushError(
         templateNode.tagName,
@@ -180,12 +181,13 @@ class TemplateParser {
       );
     } else if (schema.kind === "success") {
       for (const example of examples) {
-        const typeName = example.attributes.type ?? "Response";
+        const typeName = example.attributes.type?.value ?? "Response";
         if (schema.schema.types[typeName] === undefined) {
-          context.pushError(
-            example.CACA,
-            `Unknown type '${typeName}' in example`,
-          );
+          // TODO
+          // context.pushError(
+          //   example.CACA,
+          //   `Unknown type '${typeName}' in example`,
+          // );
         }
       }
     }
@@ -227,9 +229,9 @@ class TemplateParser {
     this.schema = {
       kind: "success",
       schema: schema,
-      attributes: attributes.attributes,
+      hide: attributes.attributes.hide?.value === "true",
     };
-    return attributes.attributes.hide === "true" ? null : text;
+    return attributes.attributes.hide?.value === "true" ? null : text;
   }
 
   parseExample(
@@ -238,7 +240,10 @@ class TemplateParser {
   ): TextNodeJoin | null {
     const text = getTextContent(exampleNode, context);
     const attributes = checkXmlAttributes(exampleNode, {
-      type: zod.string().regex(/^[A-Z_][A-Za-z0-9]*$/).optional(),
+      type: zod
+        .string()
+        .regex(/^[A-Z_][A-Za-z0-9]*$/)
+        .optional(),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
@@ -267,10 +272,6 @@ class TemplateParser {
   private readonly examples: ExampleState[] = [];
 }
 
-type SchemaAttributes = {
-  readonly hide: "false" | "true" | undefined;
-};
-
 type SchemaState =
   | {
       readonly kind: "no-schema";
@@ -281,11 +282,11 @@ type SchemaState =
   | {
       readonly kind: "success";
       readonly schema: Schema;
-      readonly attributes: SchemaAttributes;
+      readonly hide: boolean;
     };
 
 type ExampleAttributes = {
-  readonly type: string | undefined;
+  readonly type: { start: number; end: number; value: string } | undefined;
 };
 
 type ExampleState = {

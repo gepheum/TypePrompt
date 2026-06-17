@@ -31,7 +31,7 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "success",
-      attributes: { name: "hello", count: "42" },
+      attributes: { name: { value: "hello" }, count: { value: "42" } },
     });
   });
 
@@ -41,7 +41,7 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "success",
-      attributes: { title: "a & b" },
+      attributes: { title: { value: "a & b" } },
     });
   });
 
@@ -148,7 +148,7 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "success",
-      attributes: { title: "hi" },
+      attributes: { title: { value: "hi" } },
     });
   });
 
@@ -187,8 +187,8 @@ describe("checkXmlAttributes", () => {
 
     if (result.kind === "success") {
       // TypeScript should know attrs.req is string and attrs.opt is string|undefined.
-      const req: string = result.attributes.req;
-      const opt: string | undefined = result.attributes.opt;
+      const req: string = result.attributes.req.value;
+      const opt: string | undefined = result.attributes.opt?.value;
       expect(req).toBe("a");
       expect(opt).toBe(undefined);
     } else {
