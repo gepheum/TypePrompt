@@ -31,8 +31,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   for (const [name, attr] of Object.entries(element.attributes)) {
     if (!(name in expectedAttributes)) {
       errors.push({
-        start: attr.name.start,
-        end: attr.name.end,
+        start: attr.value.start,
+        end: attr.value.end,
         message: `Unexpected attribute '${name}'`,
       });
     }
@@ -46,8 +46,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
     if (parsed.success) {
       if (attr !== undefined) {
         values[name] = {
-          start: attr.name.start,
-          end: attr.name.end,
+          start: attr.value.start,
+          end: attr.value.end,
           value: parsed.data,
         };
       }
@@ -59,8 +59,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       });
     } else {
       errors.push({
-        start: attr!.name.start,
-        end: attr!.name.end,
+        start: attr!.value.start,
+        end: attr!.value.end,
         message: `Invalid value for attribute '${name}'`,
       });
     }

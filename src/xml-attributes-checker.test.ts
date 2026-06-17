@@ -93,7 +93,7 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("positions an unexpected-attribute error at the attribute name span", () => {
+  it("positions an unexpected-attribute error at the attribute value span", () => {
     const input = '<foo extra="y" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {});
@@ -102,8 +102,8 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          start: input.indexOf("extra"),
-          end: input.indexOf("extra") + "extra".length,
+          start: input.indexOf("y"),
+          end: input.indexOf("y") + "y".length,
         },
       ],
     });
@@ -122,7 +122,7 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("positions a schema-validation error at the attribute name span", () => {
+  it("positions a schema-validation error at the attribute value span", () => {
     const input = '<foo count="abc" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
@@ -133,8 +133,8 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          start: input.indexOf("count"),
-          end: input.indexOf("count") + "count".length,
+          start: input.indexOf("abc"),
+          end: input.indexOf("abc") + "abc".length,
         },
       ],
     });

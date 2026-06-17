@@ -1,5 +1,6 @@
 import * as zod from "zod";
 import { Example, parseExample } from "./example-parser.js";
+import { validateExample } from "./example-validator.js";
 import { parseSchema, type Schema } from "./schema-parser.js";
 import {
   joinTextNodes,
@@ -23,7 +24,18 @@ export type Template = {
   readonly name: string;
   /// Variant name. Can be empty.
   readonly variant: string;
+  readonly content: readonly TemplatePiece[];
 };
+
+export type TemplatePiece =
+  | {
+      readonly kind: "text";
+      readonly text: TextNodeJoin;
+    }
+  | {
+      readonly kind: "arg";
+      readonly name: string;
+    };
 
 export type TemplateParseErrors = {
   readonly kind: "error";
@@ -83,19 +95,19 @@ class Parser {
     if (xmlDocument.kind === "error") {
       context.pushErrors(xmlDocument.errors);
     } else {
-      this.parseTemplate(xmlDocument, context);
+      this.doParse(xmlDocument, context);
     }
   }
 
-  private parseTemplate(
-    xmlDocument: XmlDocument,
-    context: SourceFileContext,
-  ): void {
+  private doParse(xmlDocument: XmlDocument, context: SourceFileContext): void {
     for (const node of xmlDocument.root.children) {
       switch (node.kind) {
         case "element": {
           if (node.tagName.text === "template") {
-            this.parseTemplateElement(node, context);
+            const template = TemplateParseFlow.parse(node, context);
+            if (template) {
+              // this.pushTemplate(template);
+            }
           } else {
             context.pushError(
               node.tagName,
@@ -117,21 +129,23 @@ class Parser {
     }
   }
 
-  private parseTemplateElement(
-    node: ElementNode,
-    context: SourceFileContext,
-  ): void {}
+  private readonly templates: {
+    readonly [name: string]: {
+      // It's an error to have more than one no-variant template with the same name.
+      readonly noVariantTemplates: Template[];
+      // It's an error to have more than one template with the same name and variant.
+      readonly [variant: string]: Template[];
+    };
+  } = {};
 }
 
-class TemplateParser {
-  constructor(
-    private readonly templateNode: ElementNode,
-    private readonly context: SourceFileContext,
-  ) {}
-
-  parse(): void {
-    const { templateNode, context } = this;
-    const attributes = checkXmlAttributes(this.templateNode, {
+class TemplateParseFlow {
+  static parse(
+    templateNode: ElementNode,
+    context: SourceFileContext,
+  ): Template | null {
+    const flow = new TemplateParseFlow();
+    const attributes = checkXmlAttributes(templateNode, {
       name: zod.string().regex(/^[A-Z_][A-Za-z0-9]*$/),
       variant: zod
         .string()
@@ -140,24 +154,29 @@ class TemplateParser {
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
-      return;
+      return null;
     }
     const name = attributes.attributes.name.value;
     const variant = attributes.attributes.variant?.value;
-    const textNodes: TextNodeJoin[] = [];
+    const content: TemplatePiece[] = [];
     for (const child of templateNode.children) {
       switch (child.kind) {
         case "element": {
           const tagName = child.tagName.text;
           if (tagName === "schema") {
-            const text = this.parseSchema(child, context);
-            if (text) {
-              textNodes.push(text);
+            const piece = flow.parseSchema(child, context);
+            if (piece) {
+              content.push(piece);
             }
           } else if (tagName === "example") {
-            const text = this.parseExample(child, context);
-            if (text) {
-              textNodes.push(text);
+            const piece = flow.parseExample(child, context);
+            if (piece) {
+              content.push(piece);
+            }
+          } else if (tagName === "arg") {
+            const piece = flow.parseArg(child, context);
+            if (piece) {
+              content.push(piece);
             }
           } else {
             context.pushError(
@@ -168,35 +187,53 @@ class TemplateParser {
           break;
         }
         case "text": {
-          textNodes.push(child);
+          content.push({ kind: "text", text: child });
           break;
         }
       }
     }
-    const { schema, examples } = this;
+    const { schema, examples } = flow;
+    // Make sure we have a schema.
     if (schema.kind === "no-schema") {
       context.pushError(
         templateNode.tagName,
         "Missing <schema> element in template",
       );
     } else if (schema.kind === "success") {
+      // Validate examples.
       for (const example of examples) {
-        const typeName = example.attributes.type?.value ?? "Response";
+        const typeName = example.type?.value ?? "Response";
         if (schema.schema.types[typeName] === undefined) {
-          // TODO
-          // context.pushError(
-          //   example.CACA,
-          //   `Unknown type '${typeName}' in example`,
-          // );
+          context.pushError(example.type!, `Unknown type '${typeName}'`);
+        } else {
+          const errors = validateExample(
+            example.example,
+            schema.schema,
+            typeName,
+          );
+          context.pushErrors(
+            errors.map((e) => ({
+              message: e.message,
+              start: e.sourceSpan.start,
+              end: e.sourceSpan.end,
+            })),
+          );
         }
       }
     }
+    return {
+      name: name,
+      variant: variant ?? "",
+      content: content,
+    };
   }
 
-  parseSchema(
+  private constructor() {}
+
+  private parseSchema(
     schemaNode: ElementNode,
     context: SourceFileContext,
-  ): TextNodeJoin | null {
+  ): TemplatePiece | null {
     const text = getTextContent(schemaNode, context);
     const attributes = checkXmlAttributes(schemaNode, {
       hide: zod.enum(["false", "true"]).optional(),
@@ -231,13 +268,17 @@ class TemplateParser {
       schema: schema,
       hide: attributes.attributes.hide?.value === "true",
     };
-    return attributes.attributes.hide?.value === "true" ? null : text;
+    if (attributes.attributes.hide?.value === "true") {
+      return null;
+    } else {
+      return { kind: "text", text: text };
+    }
   }
 
-  parseExample(
+  private parseExample(
     exampleNode: ElementNode,
     context: SourceFileContext,
-  ): TextNodeJoin | null {
+  ): TemplatePiece | null {
     const text = getTextContent(exampleNode, context);
     const attributes = checkXmlAttributes(exampleNode, {
       type: zod
@@ -263,9 +304,30 @@ class TemplateParser {
     }
     this.examples.push({
       example: example,
-      attributes: attributes.attributes,
+      type: attributes.attributes.type,
     });
-    return text;
+    return { kind: "text", text: text };
+  }
+
+  private parseArg(
+    argNode: ElementNode,
+    context: SourceFileContext,
+  ): TemplatePiece | null {
+    if (!argNode.isSelfClosing) {
+      context.pushError(argNode.tagName, "<arg> elements must be self-closing");
+      return null;
+    }
+    const attributes = checkXmlAttributes(argNode, {
+      name: zod.string().regex(/^[a-z][a-z_0-9]*$/),
+    });
+    if (attributes.kind === "error") {
+      context.pushErrors(attributes.errors);
+      return null;
+    }
+    return {
+      kind: "arg",
+      name: attributes.attributes.name.value,
+    };
   }
 
   private schema: SchemaState = { kind: "no-schema" };
@@ -285,13 +347,9 @@ type SchemaState =
       readonly hide: boolean;
     };
 
-type ExampleAttributes = {
-  readonly type: { start: number; end: number; value: string } | undefined;
-};
-
 type ExampleState = {
   readonly example: Example;
-  readonly attributes: ExampleAttributes;
+  readonly type: { start: number; end: number; value: string } | undefined;
 };
 
 function getTextContent(
