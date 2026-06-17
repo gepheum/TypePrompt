@@ -146,10 +146,10 @@ class TemplateParseFlow {
   ): Template | null {
     const flow = new TemplateParseFlow();
     const attributes = checkXmlAttributes(templateNode, {
-      name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
+      name: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
       variant: zod
         .string()
-        .regex(/^[A-Z_][A-Za-z0-9]*$/)
+        .regex(/^[A-Z][A-Za-z0-9]*$/)
         .optional(),
     });
     if (attributes.kind === "error") {
@@ -307,7 +307,7 @@ class TemplateParseFlow {
       return;
     }
     const attributes = checkXmlAttributes(argNode, {
-      name: zod.string().regex(/^[a-z][a-z_0-9]*$/),
+      name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
