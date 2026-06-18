@@ -587,6 +587,20 @@ describe("parseSchema", () => {
     });
   });
 
+  it("reports ambiguity across literal members and interface discriminator literals", () => {
+    const input = "type Response = 'foo' | { kind: 'foo'; a: string; };";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'foo' conflicts with 'foo'",
+        },
+      ],
+    });
+  });
+
   it("requires string literals in types to match /^[a-z][A-Za-z0-9]*$/", () => {
     const input = "type Response = 'Bad';";
     const result = parseSchema(input);

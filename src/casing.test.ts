@@ -57,4 +57,22 @@ describe("checkNoAmbiguity", () => {
       },
     ]);
   });
+
+  it("can treat exact matches as conflicts when requested", () => {
+    const result = checkNoAmbiguity(
+      [
+        { name: "foo", start: 0, end: 3 },
+        { name: "foo", start: 10, end: 13 },
+      ],
+      { exactMatchIsConflict: true },
+    );
+
+    expect(result).toMatch([
+      {
+        message: "Name 'foo' conflicts with 'foo'",
+        start: 10,
+        end: 13,
+      },
+    ]);
+  });
 });

@@ -12,9 +12,13 @@ type Error = {
 
 export function checkNoAmbiguity(
   names: ReadonlyArray<Name>,
+  options?: {
+    readonly exactMatchIsConflict?: boolean;
+  },
 ): ReadonlyArray<Error> {
   const firstByLowercase = new Map<string, string>();
   const errors: Error[] = [];
+  const exactMatchIsConflict = options?.exactMatchIsConflict ?? false;
 
   for (const name of names) {
     const lowercase = name.name.toLowerCase();
@@ -23,7 +27,7 @@ export function checkNoAmbiguity(
       firstByLowercase.set(lowercase, name.name);
       continue;
     }
-    if (name.name !== first) {
+    if (name.name !== first || exactMatchIsConflict) {
       errors.push({
         start: name.start,
         end: name.end,

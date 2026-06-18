@@ -68,7 +68,9 @@ export type ArrayTypeRef = {
 
 export type UnionTypeRef = {
   readonly kind: "union";
-  readonly members: readonly (StringLiteralTypeRef | InlineInterfaceTypeRef)[];
+  readonly members: ReadonlyArray<
+    StringLiteralTypeRef | InlineInterfaceTypeRef
+  >;
 };
 
 export type SchemaSourceSpan = {
@@ -207,19 +209,18 @@ class SchemaParser {
       return;
     }
 
-    const literalMembers = typeRef.members
-      .filter(
-        (member): member is StringLiteralTypeRef =>
-          member.kind === "string-literal",
-      )
-      .map((member) => ({
-        name: member.value,
-        start: member.quoted_name.start,
-        end: member.quoted_name.end,
-      }));
-    this.pushErrors(checkNoAmbiguity(literalMembers));
+    const namesToCheck: Array<{
+      readonly name: string;
+      readonly start: number;
+      readonly end: number;
+    }> = [];
     for (const member of typeRef.members) {
       if (member.kind === "string-literal") {
+        namesToCheck.push({
+          name: member.value,
+          start: member.quoted_name.start,
+          end: member.quoted_name.end,
+        });
         this.validateStringLiteralName(member);
         continue;
       }
@@ -228,23 +229,14 @@ class SchemaParser {
       for (const field of Object.values(member.fields)) {
         this.validateTypeRefNoNameAmbiguity(field.type);
       }
-    }
-
-    const discriminatorLiterals: Array<{
-      readonly name: string;
-      readonly start: number;
-      readonly end: number;
-    }> = [];
-    for (const member of typeRef.members) {
-      if (member.kind !== "inline-interface") {
-        continue;
-      }
       const discriminator = this.getSingleDiscriminatorLiteral(member);
       if (discriminator) {
-        discriminatorLiterals.push(discriminator);
+        namesToCheck.push(discriminator);
       }
     }
-    this.pushErrors(checkNoAmbiguity(discriminatorLiterals));
+    this.pushErrors(
+      checkNoAmbiguity(namesToCheck, { exactMatchIsConflict: true }),
+    );
   }
 
   private getSingleDiscriminatorLiteral(member: InlineInterfaceTypeRef):
