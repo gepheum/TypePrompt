@@ -222,6 +222,7 @@ class TemplateParseFlow {
       ),
     );
     flow.coalesceTextPieces();
+    flow.trimAndDedent(context);
     return {
       name: name,
       variant: variant ?? "",
@@ -255,6 +256,146 @@ class TemplateParseFlow {
     }
     flushPendingText();
     this.templatePieces = coalesced;
+  }
+
+  private trimAndDedent(context: SourceFileContext): void {
+    const indent = this.findIndent();
+    const firstTextPieceIndex = this.templatePieces.findIndex(
+      (piece) => piece.kind === "text",
+    );
+    let lastTextPieceIndex = -1;
+    for (let i = this.templatePieces.length - 1; i >= 0; i -= 1) {
+      if (this.templatePieces[i]!.kind === "text") {
+        lastTextPieceIndex = i;
+        break;
+      }
+    }
+
+    const transformed: TemplatePiece[] = [];
+    for (let i = 0; i < this.templatePieces.length; i += 1) {
+      const piece = this.templatePieces[i]!;
+      if (piece.kind === "arg") {
+        transformed.push(piece);
+        continue;
+      }
+
+      const text = this.trimAndDedentTextPiece(piece.text, indent, {
+        trimLeadingEmptyLines: i === firstTextPieceIndex,
+        trimTrailingEmptyLines: i === lastTextPieceIndex,
+        context,
+      });
+      if (text !== null) {
+        transformed.push({ kind: "text", text });
+      }
+    }
+
+    this.templatePieces = transformed;
+  }
+
+  private findIndent(): string {
+    let currentIndent = "";
+    for (const piece of this.templatePieces) {
+      if (piece.kind === "arg") {
+        return currentIndent;
+      }
+
+      for (const character of piece.text.decoded) {
+        if (character === "\n") {
+          currentIndent = "";
+          continue;
+        }
+        if (character === " " || character === "\t") {
+          currentIndent += character;
+          continue;
+        }
+        return currentIndent;
+      }
+    }
+
+    return currentIndent;
+  }
+
+  private trimAndDedentTextPiece(
+    text: TextNodeJoin,
+    indent: string,
+    options: {
+      readonly trimLeadingEmptyLines: boolean;
+      readonly trimTrailingEmptyLines: boolean;
+      readonly context: SourceFileContext;
+    },
+  ): TextNodeJoin | null {
+    const lines = splitTextNodeJoinIntoLines(text);
+    let firstLineIndex = 0;
+    let lastLineIndex = lines.length - 1;
+
+    if (options.trimLeadingEmptyLines) {
+      while (
+        firstLineIndex <= lastLineIndex &&
+        isWhitespaceOnlyLine(lines[firstLineIndex]!.decoded)
+      ) {
+        firstLineIndex += 1;
+      }
+    }
+    if (options.trimTrailingEmptyLines) {
+      while (
+        lastLineIndex >= firstLineIndex &&
+        isWhitespaceOnlyLine(lines[lastLineIndex]!.decoded)
+      ) {
+        lastLineIndex -= 1;
+      }
+    }
+
+    if (firstLineIndex > lastLineIndex) {
+      return null;
+    }
+
+    const segments: TextNodeJoin[] = [];
+    for (let i = firstLineIndex; i <= lastLineIndex; i += 1) {
+      const line = lines[i]!;
+      const lineText = line.decoded;
+
+      if (
+        lineText.length > 0 &&
+        !isWhitespaceOnlyLine(lineText) &&
+        indent.length > 0 &&
+        !lineText.startsWith(indent)
+      ) {
+        const leadingWhitespaceLength = countLeadingWhitespace(lineText);
+        options.context.pushError(
+          {
+            start: textNodeDecodedOffsetToSourceOffset(text, line.start),
+            end: textNodeDecodedOffsetToSourceOffset(text, line.end),
+          },
+          `Expected line to start with template indent '${indent.replace(/\t/g, "\\t")}'`,
+        );
+        const contentStart =
+          line.start + Math.min(indent.length, leadingWhitespaceLength);
+        segments.push(sliceTextNodeJoin(text, contentStart, line.end));
+        if (line.hasNewline && i < lastLineIndex) {
+          segments.push(sliceTextNodeJoin(text, line.end, line.end + 1));
+        }
+        continue;
+      }
+
+      const dedentLength =
+        lineText.length === 0 || isWhitespaceOnlyLine(lineText)
+          ? Math.min(indent.length, lineText.length)
+          : indent.length;
+
+      const contentStart = line.start + dedentLength;
+      segments.push(sliceTextNodeJoin(text, contentStart, line.end));
+      if (line.hasNewline && i < lastLineIndex) {
+        segments.push(sliceTextNodeJoin(text, line.end, line.end + 1));
+      }
+    }
+
+    if (segments.length === 0) {
+      return null;
+    }
+    return joinTextNodes(
+      segments,
+      textNodeDecodedOffsetToSourceOffset(text, lines[firstLineIndex]!.start),
+    );
   }
 
   private parseSchema(
@@ -474,8 +615,100 @@ class PositionImpl implements Position {
     return { line, lineNumber, columnNumber };
   }
 
-  toJSON() {
+  toJSON(): {
+    readonly offset: number;
+    readonly position: Position["position"];
+  } {
     const { offset, position } = this;
     return { offset, position };
   }
+}
+
+function splitTextNodeJoinIntoLines(
+  text: TextNodeJoin,
+): Array<{
+  readonly start: number;
+  readonly end: number;
+  readonly hasNewline: boolean;
+  readonly decoded: string;
+}> {
+  const lines: Array<{
+    readonly start: number;
+    readonly end: number;
+    readonly hasNewline: boolean;
+    readonly decoded: string;
+  }> = [];
+  let lineStart = 0;
+  while (lineStart <= text.decoded.length) {
+    const newlineIndex = text.decoded.indexOf("\n", lineStart);
+    const lineEnd = newlineIndex === -1 ? text.decoded.length : newlineIndex;
+    lines.push({
+      start: lineStart,
+      end: lineEnd,
+      hasNewline: newlineIndex !== -1,
+      decoded: text.decoded.slice(lineStart, lineEnd),
+    });
+    if (newlineIndex === -1) {
+      break;
+    }
+    lineStart = newlineIndex + 1;
+  }
+  return lines;
+}
+
+function isWhitespaceOnlyLine(text: string): boolean {
+  return /^[ \t]*$/.test(text);
+}
+
+function countLeadingWhitespace(text: string): number {
+  let count = 0;
+  while (count < text.length) {
+    const character = text[count]!;
+    if (character !== " " && character !== "\t") {
+      break;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+function sliceTextNodeJoin(
+  text: TextNodeJoin,
+  start: number,
+  end: number,
+): TextNodeJoin {
+  if (start === end) {
+    return {
+      decoded: "",
+      offsetMap: [
+        {
+          decodedOffset: 0,
+          sourceOffset: textNodeDecodedOffsetToSourceOffset(text, start),
+        },
+      ],
+    };
+  }
+
+  const decoded = text.decoded.slice(start, end);
+  const offsetMap: {
+    readonly decodedOffset: number;
+    readonly sourceOffset: number;
+  }[] = [
+    {
+      decodedOffset: 0,
+      sourceOffset: textNodeDecodedOffsetToSourceOffset(text, start),
+    },
+  ];
+
+  for (const entry of text.offsetMap) {
+    if (entry.decodedOffset <= start || entry.decodedOffset >= end) {
+      continue;
+    }
+    offsetMap.push({
+      decodedOffset: entry.decodedOffset - start,
+      sourceOffset: entry.sourceOffset,
+    });
+  }
+
+  return { decoded, offsetMap };
 }
