@@ -341,7 +341,6 @@ class TemplateParseFlow {
     }
     const attributes = checkXmlAttributes(argNode, {
       name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
-      hide: zod.enum(["false", "true"]).optional(),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
@@ -351,12 +350,10 @@ class TemplateParseFlow {
       name: attributes.attributes.name.value,
       sourceSpan: attributes.attributes.name,
     });
-    if (attributes.attributes.hide?.value !== "true") {
-      this.templatePieces.push({
-        kind: "arg",
-        name: attributes.attributes.name.value,
-      });
-    }
+    this.templatePieces.push({
+      kind: "arg",
+      name: attributes.attributes.name.value,
+    });
   }
 
   private templatePieces: TemplatePiece[] = [];
