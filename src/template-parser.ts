@@ -260,7 +260,7 @@ class TemplateParseFlow {
       hide: attributes.attributes.hide?.value === "true",
     };
     if (attributes.attributes.hide?.value !== "true") {
-      this.templatePieces.push({kind: "text", text: text});
+      this.templatePieces.push({ kind: "text", text: text });
     }
   }
 
@@ -298,10 +298,7 @@ class TemplateParseFlow {
     this.templatePieces.push({ kind: "text", text: text });
   }
 
-  private parseArg(
-    argNode: ElementNode,
-    context: SourceFileContext,
-  ): void {
+  private parseArg(argNode: ElementNode, context: SourceFileContext): void {
     if (!argNode.isSelfClosing) {
       context.pushError(argNode.tagName, "<arg> elements must be self-closing");
       return;
@@ -317,7 +314,7 @@ class TemplateParseFlow {
     this.args.push({
       name: attributes.attributes.name.value,
       sourceSpan: attributes.attributes.name,
-    })
+    });
     if (attributes.attributes.hide?.value !== "true") {
       this.templatePieces.push({
         kind: "arg",
@@ -404,7 +401,11 @@ class SourceFileContext {
   }
 
   pushErrors(
-    errors: ReadonlyArray<{ message: string; start: number; end: number }>,
+    errors: ReadonlyArray<{
+      readonly message: string;
+      readonly start: number;
+      readonly end: number;
+    }>,
   ): void {
     for (const error of errors) {
       this.pushError({ start: error.start, end: error.end }, error.message);
