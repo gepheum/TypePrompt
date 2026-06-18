@@ -411,7 +411,7 @@ function getTextContent(
       }
     }
   }
-  return joinTextNodes(textNodes, node.contentPosition);
+  return joinTextNodes(textNodes, node.contentSpan.start);
 }
 
 class SourceFileContext {

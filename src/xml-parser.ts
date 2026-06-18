@@ -36,14 +36,13 @@ export type TextNode = {
 
 export type ElementNode = {
   readonly kind: "element";
-  readonly sourceSpan: SourceSpan;
+  /// Span covering the content between the opening and closing tags.
+  /// Empty (start === end) for self-closing elements and elements with no content.
+  readonly contentSpan: SourceSpan;
   readonly children: readonly XmlNode[];
   readonly tagName: SourceSpan;
   readonly attributes: { readonly [name: string]: Attribute };
   readonly isSelfClosing: boolean;
-  /// The source offset immediately after the opening tag (or closing `/>` for
-  /// self-closing elements), i.e. the position where child content begins.
-  readonly contentPosition: number;
 };
 
 export type Attribute = {
@@ -173,7 +172,6 @@ export function parseXmlDocument(
         tagName: currentOpenTag.tagName,
         attributes: currentOpenTag.attributes,
         isSelfClosing: tag.isSelfClosing,
-        contentPosition: tokenEnd,
       },
       openingTagStart: currentOpenTag.tokenStart,
       openingTagEnd: tokenEnd,
@@ -193,19 +191,20 @@ export function parseXmlDocument(
       return;
     }
 
-    // elementEnd tracks the source end of this element (inclusive of the closing `>`).
-    let elementEnd = element.openingTagEnd; // default for self-closing
+    // contentEnd is the source position where element content ends
+    // (start of closing tag, or same as openingTagEnd for self-closing).
+    let contentEnd = element.openingTagEnd; // default for self-closing
 
     // During recovery, saxes can emit an explicit `closetag` after reporting an
     // unexpected close tag. This counter prevents duplicate close-tag scans.
     if (!tag.isSelfClosing && skipExplicitCloseScanCount > 0) {
       skipExplicitCloseScanCount -= 1;
-      elementEnd = cursor;
+      contentEnd = cursor;
     } else if (!tag.isSelfClosing) {
       const closeTag = scanCloseTag(content, cursor);
       if (closeTag) {
         cursor = closeTag.tokenEnd;
-        elementEnd = closeTag.tokenEnd;
+        contentEnd = closeTag.tokenStart;
         if (closeTag.name.text !== tag.name) {
           errors.push({
             start: closeTag.tokenStart,
@@ -214,13 +213,13 @@ export function parseXmlDocument(
           });
         }
       } else {
-        elementEnd = cursor;
+        contentEnd = cursor;
       }
     }
 
     appendNode({
       ...element.node,
-      sourceSpan: makeSpan(content, element.openingTagStart, elementEnd),
+      contentSpan: makeSpan(content, element.openingTagEnd, contentEnd),
     });
   });
 
@@ -308,7 +307,6 @@ interface OpenElement {
     readonly tagName: SourceSpan;
     readonly attributes: { readonly [name: string]: Attribute };
     readonly isSelfClosing: boolean;
-    readonly contentPosition: number;
   };
   readonly openingTagStart: number;
   readonly openingTagEnd: number;

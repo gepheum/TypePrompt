@@ -450,67 +450,55 @@ describe("parseXmlDocument", () => {
   });
 });
 
-describe("ElementNode.sourceSpan", () => {
-  it("covers a self-closing element from < to />", () => {
+describe("ElementNode.contentSpan", () => {
+  it("is empty for a self-closing element", () => {
     const input = "<root/>";
     const result = expectSuccess(parseXmlDocument(input));
+    const root = result.root.children[0] as ElementNode;
 
-    expect(result.root.children[0]).toMatch({
-      kind: "element",
-      sourceSpan: { text: "<root/>", start: 0, end: 7 },
-    });
+    expect(root.contentSpan).toMatch({ text: "", start: 7, end: 7 });
   });
 
-  it("covers a regular element from < to >", () => {
+  it("is empty for an element with no content", () => {
     const input = "<root></root>";
     const result = expectSuccess(parseXmlDocument(input));
+    const root = result.root.children[0] as ElementNode;
 
-    expect(result.root.children[0]).toMatch({
-      kind: "element",
-      sourceSpan: { text: "<root></root>", start: 0, end: 13 },
-    });
+    // <root> ends at 6, </root> starts at 6
+    expect(root.contentSpan).toMatch({ text: "", start: 6, end: 6 });
   });
 
-  it("covers element content including children", () => {
-    const input = "<root><child/></root>";
+  it("covers text content between opening and closing tags", () => {
+    const input = "<root>hello</root>";
     const result = expectSuccess(parseXmlDocument(input));
+    const root = result.root.children[0] as ElementNode;
 
-    expect(result.root.children[0]).toMatch({
-      kind: "element",
-      sourceSpan: { text: "<root><child/></root>", start: 0, end: 21 },
-    });
+    expect(root.contentSpan).toMatch({ text: "hello", start: 6, end: 11 });
   });
 
-  it("assigns independent spans to sibling elements", () => {
-    const input = "<a/><b></b>";
-    const result = expectSuccess(parseXmlDocument(input));
-
-    expect(result.root.children).toMatch([
-      { kind: "element", sourceSpan: { text: "<a/>", start: 0, end: 4 } },
-      { kind: "element", sourceSpan: { text: "<b></b>", start: 4, end: 11 } },
-    ]);
-  });
-
-  it("assigns correct span to a nested child element", () => {
+  it("covers child elements and surrounding whitespace", () => {
     const input = "<outer>  <inner/>  </outer>";
     const result = expectSuccess(parseXmlDocument(input));
     const outer = result.root.children[0] as ElementNode;
     const inner = outer.children[1] as ElementNode;
 
-    expect(outer.sourceSpan).toMatch({
-      text: "<outer>  <inner/>  </outer>",
-      start: 0,
-      end: 27,
+    // <outer> ends at 7, </outer> starts at 19
+    expect(outer.contentSpan).toMatch({
+      text: "  <inner/>  ",
+      start: 7,
+      end: 19,
     });
-    expect(inner.sourceSpan).toMatch({ text: "<inner/>", start: 9, end: 17 });
+    // <inner/> ends at 17 — self-closing, empty contentSpan
+    expect(inner.contentSpan).toMatch({ text: "", start: 17, end: 17 });
   });
 
-  it("span starts after leading text sibling", () => {
-    const input = "text<elem/>";
+  it("starts right after the opening tag when preceded by text sibling", () => {
+    const input = "text<elem>content</elem>";
     const result = expectSuccess(parseXmlDocument(input));
     const elem = result.root.children[1] as ElementNode;
 
-    expect(elem.sourceSpan).toMatch({ text: "<elem/>", start: 4, end: 11 });
+    // <elem> starts at 4, ends at 10; </elem> starts at 17
+    expect(elem.contentSpan).toMatch({ text: "content", start: 10, end: 17 });
   });
 });
 
