@@ -1,3 +1,9 @@
+<meta>
+  interface Meta {
+    temperature?: number;
+  }
+</meta>
+
 <template name="HelloWorld" variant="FooBar">
   <meta temperature="0.7" />
 
@@ -6,14 +12,14 @@
 
   ## What's up?
 
-  Match this schema:<schema>
-    interface Response {
+  Match this schema:
+  <schema show="hide">
+    interface Foo {
       message: string;
     }
+
+    type Response = Foo[];
   </schema>
-  <example>
-    {"message": "Hello"}
-  </example>
+  For example:
+  - <example>[{"message": "Hello"}]</example>
 </template>
-
-

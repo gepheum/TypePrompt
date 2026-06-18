@@ -159,7 +159,6 @@ class TemplateParseFlow {
     }
     const name = attributes.attributes.name.value;
     const variant = attributes.attributes.variant?.value;
-    const content: TemplatePiece[] = [];
     for (const child of templateNode.children) {
       switch (child.kind) {
         case "element": {
@@ -179,7 +178,7 @@ class TemplateParseFlow {
           break;
         }
         case "text": {
-          content.push({ kind: "text", text: child });
+          flow.templatePieces.push({ kind: "text", text: child });
           break;
         }
       }
@@ -222,14 +221,41 @@ class TemplateParseFlow {
         })),
       ),
     );
+    flow.coalesceTextPieces();
     return {
       name: name,
       variant: variant ?? "",
-      content: content,
+      content: flow.templatePieces,
     };
   }
 
   private constructor() {}
+
+  private coalesceTextPieces(): void {
+    const coalesced: TemplatePiece[] = [];
+    let pendingTextNodes: TextNodeJoin[] = [];
+    const flushPendingText = (): void => {
+      if (pendingTextNodes.length === 0) {
+        return;
+      }
+      const firstSourceOffset = pendingTextNodes[0]!.offsetMap[0]!.sourceOffset;
+      coalesced.push({
+        kind: "text",
+        text: joinTextNodes(pendingTextNodes, firstSourceOffset),
+      });
+      pendingTextNodes = [];
+    };
+    for (const piece of this.templatePieces) {
+      if (piece.kind === "text") {
+        pendingTextNodes.push(piece.text);
+        continue;
+      }
+      flushPendingText();
+      coalesced.push(piece);
+    }
+    flushPendingText();
+    this.templatePieces = coalesced;
+  }
 
   private parseSchema(
     schemaNode: ElementNode,
