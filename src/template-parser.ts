@@ -1,4 +1,5 @@
 import * as zod from "zod";
+import { checkNoAmbiguity } from "./casing.js";
 import { Example, parseExample } from "./example-parser.js";
 import { validateExample } from "./example-validator.js";
 import { parseSchema, type Schema } from "./schema-parser.js";
@@ -212,6 +213,15 @@ class TemplateParseFlow {
         }
       }
     }
+    context.pushErrors(
+      checkNoAmbiguity(
+        flow.args.map((arg) => ({
+          name: arg.name,
+          start: arg.sourceSpan.start,
+          end: arg.sourceSpan.end,
+        })),
+      ),
+    );
     return {
       name: name,
       variant: variant ?? "",

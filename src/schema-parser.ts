@@ -230,53 +230,54 @@ class SchemaParser {
       }
     }
 
-    const discriminatorLiterals = typeRef.members
-      .filter(
-        (member): member is InlineInterfaceTypeRef =>
-          member.kind === "inline-interface",
-      )
-      .flatMap((member) => this.getDiscriminatorLiterals(member.firstField));
+    const discriminatorLiterals: Array<{
+      readonly name: string;
+      readonly start: number;
+      readonly end: number;
+    }> = [];
+    for (const member of typeRef.members) {
+      if (member.kind !== "inline-interface") {
+        continue;
+      }
+      const discriminator = this.getSingleDiscriminatorLiteral(member);
+      if (discriminator) {
+        discriminatorLiterals.push(discriminator);
+      }
+    }
     this.pushErrors(checkNoAmbiguity(discriminatorLiterals));
   }
 
-  private getDiscriminatorLiterals(
-    firstField: SchemaField | undefined,
-  ): ReadonlyArray<{
-    readonly name: string;
-    readonly start: number;
-    readonly end: number;
-  }> {
+  private getSingleDiscriminatorLiteral(member: InlineInterfaceTypeRef):
+    | {
+        readonly name: string;
+        readonly start: number;
+        readonly end: number;
+      }
+    | undefined {
+    const firstField = member.firstField;
     if (!firstField) {
-      return [];
+      this.pushError(
+        0,
+        0,
+        "Union interface member first field type must be a single string literal",
+      );
+      return undefined;
     }
 
-    if (firstField.type.kind === "string-literal") {
-      return [
-        {
-          name: firstField.type.value,
-          start: firstField.type.quoted_name.start,
-          end: firstField.type.quoted_name.end,
-        },
-      ];
+    if (firstField.type.kind !== "string-literal") {
+      this.pushError(
+        firstField.name.start,
+        firstField.name.end,
+        "Union interface member first field type must be a single string literal",
+      );
+      return undefined;
     }
 
-    if (firstField.type.kind !== "union") {
-      return [];
-    }
-
-    const literalMembers = firstField.type.members.filter(
-      (member): member is StringLiteralTypeRef =>
-        member.kind === "string-literal",
-    );
-    if (literalMembers.length !== firstField.type.members.length) {
-      return [];
-    }
-
-    return literalMembers.map((member) => ({
-      name: member.value,
-      start: member.quoted_name.start,
-      end: member.quoted_name.end,
-    }));
+    return {
+      name: firstField.type.value,
+      start: firstField.type.quoted_name.start,
+      end: firstField.type.quoted_name.end,
+    };
   }
 
   private validateStringLiteralName(typeRef: StringLiteralTypeRef): void {

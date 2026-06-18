@@ -1,5 +1,5 @@
-- TODO: dedenting
-- TODO: naming ambiguity in template-parser for args
+- TODO: dedenting  (coalesce)
+- TODO: ability to add doc to args...
 - TODO: handle component templates
 - TODO: <meta>
 - TODO: in joinTextNodes, make sure that it works with .... 

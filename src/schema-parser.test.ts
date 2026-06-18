@@ -600,4 +600,37 @@ describe("parseSchema", () => {
       ],
     });
   });
+
+  it("requires union-interface discriminators to be a single string literal", () => {
+    const input =
+      "type Response = { kind: 'abc' | 'abd'; a: string; } | { kind: 'abe'; b: string; };";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message:
+            "Union interface member first field type must be a single string literal",
+        },
+      ],
+    });
+  });
+
+  it("does not build UnionTypeRef for a single member type expression", () => {
+    const result = parseSchema("type Response = 'abc';");
+
+    expect(result).toMatch({
+      kind: "success",
+      types: {
+        Response: {
+          kind: "type",
+          valueType: {
+            kind: "string-literal",
+            value: "abc",
+          },
+        },
+      },
+    });
+  });
 });
