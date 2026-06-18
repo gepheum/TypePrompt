@@ -178,16 +178,12 @@ describe("parseSchema", () => {
     const result = parseSchema("type Response = 'a|b';");
 
     expect(result).toMatch({
-      kind: "success",
-      types: {
-        Response: {
-          kind: "type",
-          valueType: {
-            kind: "string-literal",
-            value: "a|b",
-          },
+      kind: "error",
+      errors: [
+        {
+          message: "String literal 'a|b' must match /^[a-z][A-Za-z0-9]*$/",
         },
-      },
+      ],
     });
   });
 
@@ -195,10 +191,8 @@ describe("parseSchema", () => {
     const input = [
       "interface Response {",
       "  a: A;",
-      "  b: B;",
       "}",
-      String.raw`type A = "line\nnext";`,
-      String.raw`type B = 'it\'s';`,
+      String.raw`type A = "\u0061bc";`,
     ].join("\n");
     const result = parseSchema(input);
 
@@ -209,14 +203,7 @@ describe("parseSchema", () => {
           kind: "type",
           valueType: {
             kind: "string-literal",
-            value: "line\nnext",
-          },
-        },
-        B: {
-          kind: "type",
-          valueType: {
-            kind: "string-literal",
-            value: "it's",
+            value: "abc",
           },
         },
       },
@@ -231,16 +218,12 @@ describe("parseSchema", () => {
     const result = parseSchema(input);
 
     expect(result).toMatch({
-      kind: "success",
-      types: {
-        A: {
-          kind: "type",
-          valueType: {
-            kind: "string-literal",
-            value: "\\q",
-          },
+      kind: "error",
+      errors: [
+        {
+          message: "String literal '\\q' must match /^[a-z][A-Za-z0-9]*$/",
         },
-      },
+      ],
     });
   });
 
@@ -273,7 +256,7 @@ describe("parseSchema", () => {
     const input = [
       "type Response = A;",
       "type A = {",
-      '  text: "a;b";',
+      '  text: "abC";',
       "  nested: { note: string; };",
       "};",
     ].join("\n");
@@ -523,6 +506,96 @@ describe("parseSchema", () => {
           message: "Unclosed interface body",
           start: openBrace,
           end: input.length,
+        },
+      ],
+    });
+  });
+
+  it("reports type names that conflict by casing", () => {
+    const input = [
+      "interface Response {",
+      "  value: response;",
+      "}",
+      "type response = 'ok';",
+    ].join("\n");
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'response' conflicts with 'Response'",
+        },
+      ],
+    });
+  });
+
+  it("reports interface field names that conflict by casing", () => {
+    const input = "interface Response { field: string; Field: string; }";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'Field' conflicts with 'field'",
+        },
+      ],
+    });
+  });
+
+  it("reports inline interface field names that conflict by casing", () => {
+    const input = "type Response = { field: string; Field: string; };";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'Field' conflicts with 'field'",
+        },
+      ],
+    });
+  });
+
+  it("reports union string literal values that conflict by casing", () => {
+    const input = "type Response = 'abC' | 'aBc';";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'aBc' conflicts with 'abC'",
+        },
+      ],
+    });
+  });
+
+  it("reports interface discriminator literals in unions that conflict by casing", () => {
+    const input =
+      "type Response = { kind: 'abC'; a: string; } | { kind: 'aBc'; b: string; };";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'aBc' conflicts with 'abC'",
+        },
+      ],
+    });
+  });
+
+  it("requires string literals in types to match /^[a-z][A-Za-z0-9]*$/", () => {
+    const input = "type Response = 'Bad';";
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "String literal 'Bad' must match /^[a-z][A-Za-z0-9]*$/",
         },
       ],
     });

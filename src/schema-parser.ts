@@ -1,3 +1,5 @@
+import { checkNoAmbiguity } from "./casing.js";
+
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
@@ -80,6 +82,8 @@ export function parseSchema(schemaSource: string): Schema | SchemaParseErrors {
 }
 
 class SchemaParser {
+  private static readonly STRING_LITERAL_NAME_RE = /^[a-z][A-Za-z0-9]*$/;
+
   private readonly errors: SchemaParseError[] = [];
   private cursor = 0;
 
@@ -97,6 +101,7 @@ class SchemaParser {
       };
     }
 
+    this.validateNoNameAmbiguity(types);
     this.validateSchema(types);
     if (this.errors.length > 0) {
       return {
@@ -133,6 +138,157 @@ class SchemaParser {
         `Type '${typeName}' is not reachable from 'Response'`,
       );
     }
+  }
+
+  private validateNoNameAmbiguity(
+    declarations: Record<string, TypeDeclaration>,
+  ): void {
+    this.pushErrors(
+      checkNoAmbiguity(
+        Object.values(declarations).map((declaration) => ({
+          name: declaration.name.text,
+          start: declaration.name.start,
+          end: declaration.name.end,
+        })),
+      ),
+    );
+
+    for (const declaration of Object.values(declarations)) {
+      this.validateDeclarationNoNameAmbiguity(declaration);
+    }
+  }
+
+  private validateDeclarationNoNameAmbiguity(
+    declaration: TypeDeclaration,
+  ): void {
+    if (declaration.kind === "interface") {
+      this.validateFieldNameAmbiguity(Object.values(declaration.fields));
+      for (const field of Object.values(declaration.fields)) {
+        this.validateTypeRefNoNameAmbiguity(field.type);
+      }
+      return;
+    }
+
+    this.validateTypeRefNoNameAmbiguity(declaration.valueType);
+  }
+
+  private validateFieldNameAmbiguity(fields: readonly SchemaField[]): void {
+    this.pushErrors(
+      checkNoAmbiguity(
+        fields.map((field) => ({
+          name: field.name.text,
+          start: field.name.start,
+          end: field.name.end,
+        })),
+      ),
+    );
+  }
+
+  private validateTypeRefNoNameAmbiguity(typeRef: TypeRef): void {
+    if (typeRef.kind === "string-literal") {
+      this.validateStringLiteralName(typeRef);
+      return;
+    }
+
+    if (typeRef.kind === "type-name") {
+      return;
+    }
+
+    if (typeRef.kind === "array") {
+      this.validateTypeRefNoNameAmbiguity(typeRef.elementType);
+      return;
+    }
+
+    if (typeRef.kind === "inline-interface") {
+      this.validateFieldNameAmbiguity(Object.values(typeRef.fields));
+      for (const field of Object.values(typeRef.fields)) {
+        this.validateTypeRefNoNameAmbiguity(field.type);
+      }
+      return;
+    }
+
+    const literalMembers = typeRef.members
+      .filter(
+        (member): member is StringLiteralTypeRef =>
+          member.kind === "string-literal",
+      )
+      .map((member) => ({
+        name: member.value,
+        start: member.quoted_name.start,
+        end: member.quoted_name.end,
+      }));
+    this.pushErrors(checkNoAmbiguity(literalMembers));
+    for (const member of typeRef.members) {
+      if (member.kind === "string-literal") {
+        this.validateStringLiteralName(member);
+        continue;
+      }
+
+      this.validateFieldNameAmbiguity(Object.values(member.fields));
+      for (const field of Object.values(member.fields)) {
+        this.validateTypeRefNoNameAmbiguity(field.type);
+      }
+    }
+
+    const discriminatorLiterals = typeRef.members
+      .filter(
+        (member): member is InlineInterfaceTypeRef =>
+          member.kind === "inline-interface",
+      )
+      .flatMap((member) => this.getDiscriminatorLiterals(member.firstField));
+    this.pushErrors(checkNoAmbiguity(discriminatorLiterals));
+  }
+
+  private getDiscriminatorLiterals(
+    firstField: SchemaField | undefined,
+  ): ReadonlyArray<{
+    readonly name: string;
+    readonly start: number;
+    readonly end: number;
+  }> {
+    if (!firstField) {
+      return [];
+    }
+
+    if (firstField.type.kind === "string-literal") {
+      return [
+        {
+          name: firstField.type.value,
+          start: firstField.type.quoted_name.start,
+          end: firstField.type.quoted_name.end,
+        },
+      ];
+    }
+
+    if (firstField.type.kind !== "union") {
+      return [];
+    }
+
+    const literalMembers = firstField.type.members.filter(
+      (member): member is StringLiteralTypeRef =>
+        member.kind === "string-literal",
+    );
+    if (literalMembers.length !== firstField.type.members.length) {
+      return [];
+    }
+
+    return literalMembers.map((member) => ({
+      name: member.value,
+      start: member.quoted_name.start,
+      end: member.quoted_name.end,
+    }));
+  }
+
+  private validateStringLiteralName(typeRef: StringLiteralTypeRef): void {
+    if (SchemaParser.STRING_LITERAL_NAME_RE.test(typeRef.value)) {
+      return;
+    }
+
+    this.pushError(
+      typeRef.quoted_name.start,
+      typeRef.quoted_name.end,
+      `String literal '${typeRef.value}' must match /^[a-z][A-Za-z0-9]*$/`,
+    );
   }
 
   private collectReachableTypeNames(
@@ -833,6 +989,18 @@ class SchemaParser {
       end: Math.max(start, end),
       message,
     });
+  }
+
+  private pushErrors(
+    errors: ReadonlyArray<{
+      readonly start: number;
+      readonly end: number;
+      readonly message: string;
+    }>,
+  ): void {
+    for (const error of errors) {
+      this.pushError(error.start, error.end, error.message);
+    }
   }
 }
 

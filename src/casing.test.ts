@@ -1,11 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { checkConsistentCasing } from "./casing.js";
+import { checkNoAmbiguity } from "./casing.js";
 
-describe("checkConsistentCasing", () => {
+describe("checkNoAmbiguity", () => {
   it("returns no errors when all casings are consistent", () => {
-    const result = checkConsistentCasing([
+    const result = checkNoAmbiguity([
       { name: "Response", start: 0, end: 8 },
       { name: "Response", start: 20, end: 28 },
       { name: "Error", start: 40, end: 45 },
@@ -15,7 +15,7 @@ describe("checkConsistentCasing", () => {
   });
 
   it("reports an error for each name that conflicts with first casing", () => {
-    const result = checkConsistentCasing([
+    const result = checkNoAmbiguity([
       { name: "Response", start: 0, end: 8 },
       { name: "response", start: 10, end: 18 },
       { name: "RESPONSE", start: 20, end: 28 },
@@ -43,7 +43,7 @@ describe("checkConsistentCasing", () => {
   });
 
   it("uses the first seen casing as the canonical one", () => {
-    const result = checkConsistentCasing([
+    const result = checkNoAmbiguity([
       { name: "response", start: 0, end: 8 },
       { name: "Response", start: 10, end: 18 },
       { name: "response", start: 20, end: 28 },

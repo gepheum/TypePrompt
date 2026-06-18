@@ -10,7 +10,7 @@ type Error = {
   readonly end: number;
 };
 
-export function checkConsistentCasing(
+export function checkNoAmbiguity(
   names: ReadonlyArray<Name>,
 ): ReadonlyArray<Error> {
   const firstByLowercase = new Map<string, string>();
