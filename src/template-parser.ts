@@ -11,6 +11,7 @@ import {
 import { checkXmlAttributes } from "./xml-attributes-checker.js";
 import {
   parseXmlDocument,
+  SourceSpan,
   type ElementNode,
   type TextNode,
   type XmlDocument,
@@ -147,25 +148,12 @@ class Parser {
     }
   }
 
-  private pushTemplate(template: Template): void {
-    const templates = this.templates;
-    const existing = templates[template.name];
-    if (existing) {
-      if (template.variant === "") {
-        existing.noVariantTemplates.push(template);
-      } else {
-        (existing[template.variant] ??= []).push(template);
-      }
-      return;
-    }
-
-    templates[template.name] = {
-      noVariantTemplates: template.variant === "" ? [template] : [],
-      ...(template.variant === "" ? {} : { [template.variant]: [template] }),
-    };
+  private pushTemplate(templateArg: TemplateArg): void {
+    // TODO...
   }
 
   getTemplates(): { readonly [name: string]: TemplateBundle } {
+    // TODO: raise errors...
     const result: { [name: string]: TemplateBundle } = {};
     for (const [name, templatesForName] of Object.entries(this.templates)) {
       const variants = Object.fromEntries(
@@ -197,9 +185,9 @@ class Parser {
   private templates: {
     [name: string]: {
       // It's an error to have more than one no-variants template with the same name.
-      readonly noVariantTemplates: Template[];
+      readonly noVariantTemplates: TemplateArg[];
       // It's an error to have more than one template with the same name and variant.
-      [variant: string]: Template[];
+      [variant: string]: TemplateArg[];
     };
   } = {};
 }
@@ -208,7 +196,7 @@ class TemplateParseFlow {
   static parse(
     templateNode: ElementNode,
     context: SourceFileContext,
-  ): Template | null {
+  ): TemplateArg | null {
     const flow = new TemplateParseFlow(context);
     const attributes = checkXmlAttributes(templateNode, {
       name: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
@@ -286,10 +274,13 @@ class TemplateParseFlow {
       ),
     );
     return {
-      name: name,
-      variant: variant ?? "",
-      content: flow.trimAndDedent(),
-      xmlContent: templateNode.contentSpan.text,
+      template: {
+        name: name,
+        variant: variant ?? "",
+        content: flow.trimAndDedent(),
+        xmlContent: templateNode.contentSpan.text,
+      },
+      tagName: templateNode.tagName,
     };
   }
 
@@ -564,6 +555,11 @@ class TemplateParseFlow {
   private readonly examples: ExampleState[] = [];
   private args: ArgState[] = [];
 }
+
+type TemplateArg = {
+  readonly template: Template;
+  readonly tagName: SourceSpan
+};
 
 type SchemaState =
   | {
