@@ -174,4 +174,50 @@ describe("parseTemplates", () => {
     const template = parseSingleTemplate(source);
     expect(template.content).toMatch([{ kind: "arg", name: "value" }]);
   });
+
+  it("sets xmlContent to the raw content between template tags", () => {
+    const source = [
+      '<template name="Demo">',
+      '  <schema hide="true">type Response = { value: string; };</schema>',
+      '  before <arg name="value" /> after',
+      '</template>',
+    ].join("\n");
+
+    const template = parseSingleTemplate(source);
+    const openTagEnd = source.indexOf(">") + 1;
+    const closeTagStart = source.lastIndexOf("</template>");
+
+    expect(template.xmlContent).toBe(source.slice(openTagEnd, closeTagStart));
+  });
+
+  it("keeps leading and trailing whitespace in xmlContent", () => {
+    const source = [
+      '<template name="Demo">',
+      '',
+      '  <schema hide="true">type Response = { value: string; };</schema>',
+      '  text',
+      '',
+      '</template>',
+    ].join("\n");
+
+    const template = parseSingleTemplate(source);
+
+    expect(template.xmlContent.startsWith("\n\n")).toBe(true);
+    expect(template.xmlContent.endsWith("\n")).toBe(true);
+  });
+
+  it("xmlContent includes nested element markup", () => {
+    const source = [
+      '<template name="Demo">',
+      '  <schema hide="true">type Response = { value: string; };</schema>',
+      '  <example type="Response">{"value":"x"}</example>',
+      '</template>',
+    ].join("\n");
+
+    const template = parseSingleTemplate(source);
+
+    expect(template.xmlContent.includes("<example type=\"Response\">"))
+      .toBe(true);
+    expect(template.xmlContent.includes("</example>")).toBe(true);
+  });
 });

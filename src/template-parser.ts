@@ -296,6 +296,153 @@ class TemplateParseFlow {
   private constructor(readonly context: SourceFileContext) {}
 
   private trimAndDedent(): TemplatePiece[] {
+    const leadingWhitespace = (text: string): string => {
+      const match = text.match(/^[ \t]*/);
+      return match ? match[0] : "";
+    };
+
+    const determineBaseIndent = (
+      firstPiece: TemplatePieceArg | undefined,
+    ): string => {
+      if (firstPiece?.kind !== "text") {
+        return "";
+      }
+
+      const firstText = firstPiece.text.decoded;
+      const firstNewline = firstText.indexOf("\n");
+      if (firstNewline === -1) {
+        return "";
+      }
+
+      const firstLine = firstText.slice(0, firstNewline);
+      if (/[^ \t]/.test(firstLine)) {
+        return "";
+      }
+
+      const lines = firstText.split("\n");
+      for (let i = 1; i < lines.length; i += 1) {
+        const line = lines[i]!;
+        if (/[^ \t]/.test(line)) {
+          return leadingWhitespace(line);
+        }
+      }
+
+      return leadingWhitespace(lines.at(-1) ?? "");
+    };
+
+    const removeIndentAfterEol = (
+      textNode: TextNodeJoin,
+      baseIndent: string,
+      context: SourceFileContext,
+    ): string => {
+      const source = textNode.decoded;
+      if (source.length === 0 || baseIndent.length === 0) {
+        return source;
+      }
+
+      let output = "";
+      let cursor = 0;
+
+      for (let i = 0; i < source.length; i += 1) {
+        if (source[i] !== "\n") {
+          continue;
+        }
+
+        output += source.slice(cursor, i + 1);
+        const next = i + 1;
+        if (next >= source.length) {
+          cursor = next;
+          continue;
+        }
+
+        if (source[next] === "\n") {
+          cursor = next;
+          continue;
+        }
+
+        if (source.startsWith(baseIndent, next)) {
+          cursor = next + baseIndent.length;
+          continue;
+        }
+
+        const sourceOffset = textNodeDecodedOffsetToSourceOffset(textNode, next);
+        context.pushError(
+          { start: sourceOffset, end: sourceOffset },
+          `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,
+        );
+        cursor = next;
+      }
+
+      output += source.slice(cursor);
+      return output;
+    };
+
+    const trimLeadingEmptyLinesInText = (text: string): string => {
+      let current = text;
+      while (true) {
+        const newline = current.indexOf("\n");
+        if (newline === -1) {
+          return /^[ \t]*$/.test(current) ? "" : current;
+        }
+        const firstLine = current.slice(0, newline);
+        if (/[^ \t]/.test(firstLine)) {
+          return current;
+        }
+        current = current.slice(newline + 1);
+      }
+    };
+
+    const trimTrailingEmptyLinesInText = (text: string): string => {
+      let current = text;
+      while (true) {
+        const newline = current.lastIndexOf("\n");
+        if (newline === -1) {
+          return /^[ \t]*$/.test(current) ? "" : current;
+        }
+        const lastLine = current.slice(newline + 1);
+        if (/[^ \t]/.test(lastLine)) {
+          return current;
+        }
+        current = current.slice(0, newline);
+      }
+    };
+
+    const trimLeadingEmptyLines = (pieces: TemplatePiece[]): void => {
+      while (pieces.length > 0 && pieces[0]!.kind === "text") {
+        const piece = pieces[0]!;
+        const trimmed = trimLeadingEmptyLinesInText(piece.text);
+        if (trimmed === piece.text) {
+          return;
+        }
+        if (trimmed.length === 0) {
+          pieces.shift();
+          continue;
+        }
+        pieces[0] = { kind: "text", text: trimmed };
+        return;
+      }
+    };
+
+    const trimTrailingEmptyLines = (pieces: TemplatePiece[]): void => {
+      while (pieces.length > 0) {
+        const index = pieces.length - 1;
+        const piece = pieces[index]!;
+        if (piece.kind !== "text") {
+          return;
+        }
+        const trimmed = trimTrailingEmptyLinesInText(piece.text);
+        if (trimmed === piece.text) {
+          return;
+        }
+        if (trimmed.length === 0) {
+          pieces.pop();
+          continue;
+        }
+        pieces[index] = { kind: "text", text: trimmed };
+        return;
+      }
+    };
+
     const baseIndent = determineBaseIndent(this.templatePieces[0]);
     const transformed: TemplatePiece[] = [];
 
@@ -549,147 +696,3 @@ class PositionImpl implements Position {
   }
 }
 
-function determineBaseIndent(firstPiece: TemplatePieceArg | undefined): string {
-  if (firstPiece?.kind !== "text") {
-    return "";
-  }
-
-  const firstText = firstPiece.text.decoded;
-  const firstNewline = firstText.indexOf("\n");
-  if (firstNewline === -1) {
-    return "";
-  }
-
-  const firstLine = firstText.slice(0, firstNewline);
-  if (/[^ \t]/.test(firstLine)) {
-    return "";
-  }
-
-  const lines = firstText.split("\n");
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i]!;
-    if (/[^ \t]/.test(line)) {
-      return leadingWhitespace(line);
-    }
-  }
-
-  return leadingWhitespace(lines.at(-1) ?? "");
-}
-
-function leadingWhitespace(text: string): string {
-  const match = text.match(/^[ \t]*/);
-  return match ? match[0] : "";
-}
-
-function removeIndentAfterEol(
-  textNode: TextNodeJoin,
-  baseIndent: string,
-  context: SourceFileContext,
-): string {
-  const source = textNode.decoded;
-  if (source.length === 0 || baseIndent.length === 0) {
-    return source;
-  }
-
-  let output = "";
-  let cursor = 0;
-
-  for (let i = 0; i < source.length; i += 1) {
-    if (source[i] !== "\n") {
-      continue;
-    }
-
-    output += source.slice(cursor, i + 1);
-    const next = i + 1;
-    if (next >= source.length) {
-      cursor = next;
-      continue;
-    }
-
-    if (source[next] === "\n") {
-      cursor = next;
-      continue;
-    }
-
-    if (source.startsWith(baseIndent, next)) {
-      cursor = next + baseIndent.length;
-      continue;
-    }
-
-    const sourceOffset = textNodeDecodedOffsetToSourceOffset(textNode, next);
-    context.pushError(
-      { start: sourceOffset, end: sourceOffset },
-      `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,
-    );
-    cursor = next;
-  }
-
-  output += source.slice(cursor);
-  return output;
-}
-
-function trimLeadingEmptyLines(pieces: TemplatePiece[]): void {
-  while (pieces.length > 0 && pieces[0]!.kind === "text") {
-    const piece = pieces[0]!;
-    const trimmed = trimLeadingEmptyLinesInText(piece.text);
-    if (trimmed === piece.text) {
-      return;
-    }
-    if (trimmed.length === 0) {
-      pieces.shift();
-      continue;
-    }
-    pieces[0] = { kind: "text", text: trimmed };
-    return;
-  }
-}
-
-function trimTrailingEmptyLines(pieces: TemplatePiece[]): void {
-  while (pieces.length > 0) {
-    const index = pieces.length - 1;
-    const piece = pieces[index]!;
-    if (piece.kind !== "text") {
-      return;
-    }
-    const trimmed = trimTrailingEmptyLinesInText(piece.text);
-    if (trimmed === piece.text) {
-      return;
-    }
-    if (trimmed.length === 0) {
-      pieces.pop();
-      continue;
-    }
-    pieces[index] = { kind: "text", text: trimmed };
-    return;
-  }
-}
-
-function trimLeadingEmptyLinesInText(text: string): string {
-  let current = text;
-  while (true) {
-    const newline = current.indexOf("\n");
-    if (newline === -1) {
-      return /^[ \t]*$/.test(current) ? "" : current;
-    }
-    const firstLine = current.slice(0, newline);
-    if (/[^ \t]/.test(firstLine)) {
-      return current;
-    }
-    current = current.slice(newline + 1);
-  }
-}
-
-function trimTrailingEmptyLinesInText(text: string): string {
-  let current = text;
-  while (true) {
-    const newline = current.lastIndexOf("\n");
-    if (newline === -1) {
-      return /^[ \t]*$/.test(current) ? "" : current;
-    }
-    const lastLine = current.slice(newline + 1);
-    if (/[^ \t]/.test(lastLine)) {
-      return current;
-    }
-    current = current.slice(0, newline);
-  }
-}
