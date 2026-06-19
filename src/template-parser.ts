@@ -18,20 +18,37 @@ import {
 
 export type Templates = {
   readonly kind: "success";
-  readonly templates: readonly Template[];
+  readonly templates: {
+    readonly [name: string]: TemplateBundle;
+  };
 };
+
+export type TemplateBundle =
+  | {
+      readonly kind: "no-variants";
+      readonly name: string;
+      readonly template: Template;
+    }
+  | {
+      readonly kind: "variants";
+      readonly name: string;
+      readonly variants: {
+        readonly [variant: string]: Template;
+      };
+    };
 
 export type Template = {
   readonly name: string;
   /// Variant name. Can be empty.
   readonly variant: string;
   readonly content: readonly TemplatePiece[];
+  // readonly xmlContent: string
 };
 
 export type TemplatePiece =
   | {
       readonly kind: "text";
-      readonly text: TextNodeJoin;
+      readonly text: string;
     }
   | {
       readonly kind: "arg";
@@ -83,7 +100,7 @@ export function parseTemplates(
   }
   return {
     kind: "success",
-    templates: [],
+    templates: parser.getTemplates(),
   };
 }
 
@@ -107,7 +124,7 @@ class Parser {
           if (node.tagName.text === "template") {
             const template = TemplateParseFlow.parse(node, context);
             if (template) {
-              // this.pushTemplate(template);
+              this.pushTemplate(template);
             }
           } else {
             context.pushError(
@@ -130,12 +147,59 @@ class Parser {
     }
   }
 
-  private readonly templates: {
-    readonly [name: string]: {
-      // It's an error to have more than one no-variant template with the same name.
-      readonly noVariantTemplates: Template[];
+  private pushTemplate(template: Template): void {
+    const templates = this.templates;
+    const existing = templates[template.name];
+    if (existing) {
+      if (template.variant === "") {
+        existing.noVariantTemplates.push(template);
+      } else {
+        (existing[template.variant] ??= []).push(template);
+      }
+      return;
+    }
+
+    templates[template.name] = {
+      noVariantTemplates: template.variant === "" ? [template] : [],
+      ...(template.variant === "" ? {} : { [template.variant]: [template] }),
+    };
+  }
+
+  getTemplates(): { readonly [name: string]: TemplateBundle } {
+    const result: { [name: string]: TemplateBundle } = {};
+    for (const [name, templatesForName] of Object.entries(this.templates)) {
+      const variants = Object.fromEntries(
+        Object.entries(templatesForName)
+          .filter(([variantName]) => variantName !== "noVariantTemplates")
+          .map(([variantName, templates]) => [variantName, templates[0]!]),
+      );
+
+      if (Object.keys(variants).length === 0) {
+        const noVariantTemplate = templatesForName.noVariantTemplates[0];
+        if (noVariantTemplate) {
+          result[name] = {
+            kind: "no-variants",
+            name,
+            template: noVariantTemplate,
+          };
+        }
+      } else {
+        result[name] = {
+          kind: "variants",
+          name,
+          variants,
+        };
+      }
+    }
+    return result;
+  }
+
+  private templates: {
+    [name: string]: {
+      // It's an error to have more than one no-variants template with the same name.
+      noVariantTemplates: Template[];
       // It's an error to have more than one template with the same name and variant.
-      readonly [variant: string]: Template[];
+      [variant: string]: Template[];
     };
   } = {};
 }
@@ -145,7 +209,7 @@ class TemplateParseFlow {
     templateNode: ElementNode,
     context: SourceFileContext,
   ): Template | null {
-    const flow = new TemplateParseFlow();
+    const flow = new TemplateParseFlow(context);
     const attributes = checkXmlAttributes(templateNode, {
       name: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
       variant: zod
@@ -164,11 +228,11 @@ class TemplateParseFlow {
         case "element": {
           const tagName = child.tagName.text;
           if (tagName === "schema") {
-            flow.parseSchema(child, context);
+            flow.parseSchema(child);
           } else if (tagName === "example") {
-            flow.parseExample(child, context);
+            flow.parseExample(child);
           } else if (tagName === "arg") {
-            flow.parseArg(child, context);
+            flow.parseArg(child);
           } else {
             context.pushError(
               child.tagName,
@@ -221,198 +285,48 @@ class TemplateParseFlow {
         })),
       ),
     );
-    flow.coalesceTextPieces();
-    flow.trimAndDedent(context);
     return {
       name: name,
       variant: variant ?? "",
-      content: flow.templatePieces,
+      content: flow.trimAndDedent(),
     };
   }
 
-  private constructor() {}
+  private constructor(readonly context: SourceFileContext) {}
 
-  private coalesceTextPieces(): void {
-    const coalesced: TemplatePiece[] = [];
-    let pendingTextNodes: TextNodeJoin[] = [];
-    const flushPendingText = (): void => {
-      if (pendingTextNodes.length === 0) {
-        return;
-      }
-      const firstSourceOffset = pendingTextNodes[0]!.offsetMap[0]!.sourceOffset;
-      coalesced.push({
-        kind: "text",
-        text: joinTextNodes(pendingTextNodes, firstSourceOffset),
-      });
-      pendingTextNodes = [];
-    };
-    for (const piece of this.templatePieces) {
-      if (piece.kind === "text") {
-        pendingTextNodes.push(piece.text);
-        continue;
-      }
-      flushPendingText();
-      coalesced.push(piece);
-    }
-    flushPendingText();
-    this.templatePieces = coalesced;
-  }
-
-  private trimAndDedent(context: SourceFileContext): void {
-    const indent = this.findIndent();
-    const firstTextPieceIndex = this.templatePieces.findIndex(
-      (piece) => piece.kind === "text",
-    );
-    let lastTextPieceIndex = -1;
-    for (let i = this.templatePieces.length - 1; i >= 0; i -= 1) {
-      if (this.templatePieces[i]!.kind === "text") {
-        lastTextPieceIndex = i;
-        break;
-      }
-    }
-
+  private trimAndDedent(): TemplatePiece[] {
+    const baseIndent = determineBaseIndent(this.templatePieces[0]);
     const transformed: TemplatePiece[] = [];
-    for (let i = 0; i < this.templatePieces.length; i += 1) {
-      const piece = this.templatePieces[i]!;
+
+    for (const piece of this.templatePieces) {
       if (piece.kind === "arg") {
         transformed.push(piece);
         continue;
       }
 
-      const text = this.trimAndDedentTextPiece(piece.text, indent, {
-        trimLeadingEmptyLines: i === firstTextPieceIndex,
-        trimTrailingEmptyLines: i === lastTextPieceIndex,
-        context,
+      transformed.push({
+        kind: "text",
+        text: removeIndentAfterEol(piece.text, baseIndent, this.context),
       });
-      if (text !== null) {
-        transformed.push({ kind: "text", text });
-      }
     }
 
-    this.templatePieces = transformed;
+    trimLeadingEmptyLines(transformed);
+    trimTrailingEmptyLines(transformed);
+    return transformed;
   }
 
-  private findIndent(): string {
-    let currentIndent = "";
-    for (const piece of this.templatePieces) {
-      if (piece.kind === "arg") {
-        return currentIndent;
-      }
-
-      for (const character of piece.text.decoded) {
-        if (character === "\n") {
-          currentIndent = "";
-          continue;
-        }
-        if (character === " " || character === "\t") {
-          currentIndent += character;
-          continue;
-        }
-        return currentIndent;
-      }
-    }
-
-    return currentIndent;
-  }
-
-  private trimAndDedentTextPiece(
-    text: TextNodeJoin,
-    indent: string,
-    options: {
-      readonly trimLeadingEmptyLines: boolean;
-      readonly trimTrailingEmptyLines: boolean;
-      readonly context: SourceFileContext;
-    },
-  ): TextNodeJoin | null {
-    const lines = splitTextNodeJoinIntoLines(text);
-    let firstLineIndex = 0;
-    let lastLineIndex = lines.length - 1;
-
-    if (options.trimLeadingEmptyLines) {
-      while (
-        firstLineIndex <= lastLineIndex &&
-        isWhitespaceOnlyLine(lines[firstLineIndex]!.decoded)
-      ) {
-        firstLineIndex += 1;
-      }
-    }
-    if (options.trimTrailingEmptyLines) {
-      while (
-        lastLineIndex >= firstLineIndex &&
-        isWhitespaceOnlyLine(lines[lastLineIndex]!.decoded)
-      ) {
-        lastLineIndex -= 1;
-      }
-    }
-
-    if (firstLineIndex > lastLineIndex) {
-      return null;
-    }
-
-    const segments: TextNodeJoin[] = [];
-    for (let i = firstLineIndex; i <= lastLineIndex; i += 1) {
-      const line = lines[i]!;
-      const lineText = line.decoded;
-
-      if (
-        lineText.length > 0 &&
-        !isWhitespaceOnlyLine(lineText) &&
-        indent.length > 0 &&
-        !lineText.startsWith(indent)
-      ) {
-        const leadingWhitespaceLength = countLeadingWhitespace(lineText);
-        options.context.pushError(
-          {
-            start: textNodeDecodedOffsetToSourceOffset(text, line.start),
-            end: textNodeDecodedOffsetToSourceOffset(text, line.end),
-          },
-          `Expected line to start with template indent '${indent.replace(/\t/g, "\\t")}'`,
-        );
-        const contentStart =
-          line.start + Math.min(indent.length, leadingWhitespaceLength);
-        segments.push(sliceTextNodeJoin(text, contentStart, line.end));
-        if (line.hasNewline && i < lastLineIndex) {
-          segments.push(sliceTextNodeJoin(text, line.end, line.end + 1));
-        }
-        continue;
-      }
-
-      const dedentLength =
-        lineText.length === 0 || isWhitespaceOnlyLine(lineText)
-          ? Math.min(indent.length, lineText.length)
-          : indent.length;
-
-      const contentStart = line.start + dedentLength;
-      segments.push(sliceTextNodeJoin(text, contentStart, line.end));
-      if (line.hasNewline && i < lastLineIndex) {
-        segments.push(sliceTextNodeJoin(text, line.end, line.end + 1));
-      }
-    }
-
-    if (segments.length === 0) {
-      return null;
-    }
-    return joinTextNodes(
-      segments,
-      textNodeDecodedOffsetToSourceOffset(text, lines[firstLineIndex]!.start),
-    );
-  }
-
-  private parseSchema(
-    schemaNode: ElementNode,
-    context: SourceFileContext,
-  ): void {
-    const text = getTextContent(schemaNode, context);
+  private parseSchema(schemaNode: ElementNode): void {
+    const text = getTextContent(schemaNode, this.context);
     const attributes = checkXmlAttributes(schemaNode, {
       hide: zod.enum(["false", "true"]).optional(),
     });
     if (attributes.kind === "error") {
-      context.pushErrors(attributes.errors);
+      this.context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
       return;
     }
     if (this.schema.kind !== "no-schema") {
-      context.pushError(
+      this.context.pushError(
         schemaNode.tagName,
         "Multiple <schema> elements are not allowed",
       );
@@ -421,7 +335,7 @@ class TemplateParseFlow {
     }
     const schema = parseSchema(text.decoded);
     if (schema.kind === "error") {
-      context.pushErrors(
+      this.context.pushErrors(
         schema.errors.map((e) => ({
           start: textNodeDecodedOffsetToSourceOffset(text, e.start),
           end: textNodeDecodedOffsetToSourceOffset(text, e.end),
@@ -441,11 +355,8 @@ class TemplateParseFlow {
     }
   }
 
-  private parseExample(
-    exampleNode: ElementNode,
-    context: SourceFileContext,
-  ): void {
-    const text = getTextContent(exampleNode, context);
+  private parseExample(exampleNode: ElementNode): void {
+    const text = getTextContent(exampleNode, this.context);
     const attributes = checkXmlAttributes(exampleNode, {
       type: zod
         .string()
@@ -453,13 +364,13 @@ class TemplateParseFlow {
         .optional(),
     });
     if (attributes.kind === "error") {
-      context.pushErrors(attributes.errors);
+      this.context.pushErrors(attributes.errors);
       this.schema = { kind: "error" };
       return;
     }
     const example = parseExample(text.decoded);
     if (example.kind === "error") {
-      context.pushErrors(
+      this.context.pushErrors(
         example.errors.map((e) => ({
           start: textNodeDecodedOffsetToSourceOffset(text, e.start),
           end: textNodeDecodedOffsetToSourceOffset(text, e.end),
@@ -475,16 +386,19 @@ class TemplateParseFlow {
     this.templatePieces.push({ kind: "text", text: text });
   }
 
-  private parseArg(argNode: ElementNode, context: SourceFileContext): void {
+  private parseArg(argNode: ElementNode): void {
     if (!argNode.isSelfClosing) {
-      context.pushError(argNode.tagName, "<arg> elements must be self-closing");
+      this.context.pushError(
+        argNode.tagName,
+        "<arg> elements must be self-closing",
+      );
       return;
     }
     const attributes = checkXmlAttributes(argNode, {
       name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
     });
     if (attributes.kind === "error") {
-      context.pushErrors(attributes.errors);
+      this.context.pushErrors(attributes.errors);
       return;
     }
     this.args.push({
@@ -497,7 +411,7 @@ class TemplateParseFlow {
     });
   }
 
-  private templatePieces: TemplatePiece[] = [];
+  private readonly templatePieces: TemplatePieceArg[] = [];
   private schema: SchemaState = { kind: "no-schema" };
   private readonly examples: ExampleState[] = [];
   private args: ArgState[] = [];
@@ -528,6 +442,16 @@ type ArgState = {
     readonly end: number;
   };
 };
+
+type TemplatePieceArg =
+  | {
+      readonly kind: "text";
+      readonly text: TextNodeJoin;
+    }
+  | {
+      readonly kind: "arg";
+      readonly name: string;
+    };
 
 function getTextContent(
   node: ElementNode,
@@ -624,91 +548,147 @@ class PositionImpl implements Position {
   }
 }
 
-function splitTextNodeJoinIntoLines(
-  text: TextNodeJoin,
-): Array<{
-  readonly start: number;
-  readonly end: number;
-  readonly hasNewline: boolean;
-  readonly decoded: string;
-}> {
-  const lines: Array<{
-    readonly start: number;
-    readonly end: number;
-    readonly hasNewline: boolean;
-    readonly decoded: string;
-  }> = [];
-  let lineStart = 0;
-  while (lineStart <= text.decoded.length) {
-    const newlineIndex = text.decoded.indexOf("\n", lineStart);
-    const lineEnd = newlineIndex === -1 ? text.decoded.length : newlineIndex;
-    lines.push({
-      start: lineStart,
-      end: lineEnd,
-      hasNewline: newlineIndex !== -1,
-      decoded: text.decoded.slice(lineStart, lineEnd),
-    });
-    if (newlineIndex === -1) {
-      break;
+function determineBaseIndent(firstPiece: TemplatePieceArg | undefined): string {
+  if (firstPiece?.kind !== "text") {
+    return "";
+  }
+
+  const firstText = firstPiece.text.decoded;
+  const firstNewline = firstText.indexOf("\n");
+  if (firstNewline === -1) {
+    return "";
+  }
+
+  const firstLine = firstText.slice(0, firstNewline);
+  if (/[^ \t]/.test(firstLine)) {
+    return "";
+  }
+
+  const lines = firstText.split("\n");
+  for (let i = 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (/[^ \t]/.test(line)) {
+      return leadingWhitespace(line);
     }
-    lineStart = newlineIndex + 1;
-  }
-  return lines;
-}
-
-function isWhitespaceOnlyLine(text: string): boolean {
-  return /^[ \t]*$/.test(text);
-}
-
-function countLeadingWhitespace(text: string): number {
-  let count = 0;
-  while (count < text.length) {
-    const character = text[count]!;
-    if (character !== " " && character !== "\t") {
-      break;
-    }
-    count += 1;
-  }
-  return count;
-}
-
-function sliceTextNodeJoin(
-  text: TextNodeJoin,
-  start: number,
-  end: number,
-): TextNodeJoin {
-  if (start === end) {
-    return {
-      decoded: "",
-      offsetMap: [
-        {
-          decodedOffset: 0,
-          sourceOffset: textNodeDecodedOffsetToSourceOffset(text, start),
-        },
-      ],
-    };
   }
 
-  const decoded = text.decoded.slice(start, end);
-  const offsetMap: {
-    readonly decodedOffset: number;
-    readonly sourceOffset: number;
-  }[] = [
-    {
-      decodedOffset: 0,
-      sourceOffset: textNodeDecodedOffsetToSourceOffset(text, start),
-    },
-  ];
+  return leadingWhitespace(lines.at(-1) ?? "");
+}
 
-  for (const entry of text.offsetMap) {
-    if (entry.decodedOffset <= start || entry.decodedOffset >= end) {
+function leadingWhitespace(text: string): string {
+  const match = text.match(/^[ \t]*/);
+  return match ? match[0] : "";
+}
+
+function removeIndentAfterEol(
+  textNode: TextNodeJoin,
+  baseIndent: string,
+  context: SourceFileContext,
+): string {
+  const source = textNode.decoded;
+  if (source.length === 0 || baseIndent.length === 0) {
+    return source;
+  }
+
+  let output = "";
+  let cursor = 0;
+
+  for (let i = 0; i < source.length; i += 1) {
+    if (source[i] !== "\n") {
       continue;
     }
-    offsetMap.push({
-      decodedOffset: entry.decodedOffset - start,
-      sourceOffset: entry.sourceOffset,
-    });
+
+    output += source.slice(cursor, i + 1);
+    const next = i + 1;
+    if (next >= source.length) {
+      cursor = next;
+      continue;
+    }
+
+    if (source[next] === "\n") {
+      cursor = next;
+      continue;
+    }
+
+    if (source.startsWith(baseIndent, next)) {
+      cursor = next + baseIndent.length;
+      continue;
+    }
+
+    const sourceOffset = textNodeDecodedOffsetToSourceOffset(textNode, next);
+    context.pushError(
+      { start: sourceOffset, end: sourceOffset },
+      `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,
+    );
+    cursor = next;
   }
 
-  return { decoded, offsetMap };
+  output += source.slice(cursor);
+  return output;
+}
+
+function trimLeadingEmptyLines(pieces: TemplatePiece[]): void {
+  while (pieces.length > 0 && pieces[0]!.kind === "text") {
+    const piece = pieces[0]!;
+    const trimmed = trimLeadingEmptyLinesInText(piece.text);
+    if (trimmed === piece.text) {
+      return;
+    }
+    if (trimmed.length === 0) {
+      pieces.shift();
+      continue;
+    }
+    pieces[0] = { kind: "text", text: trimmed };
+    return;
+  }
+}
+
+function trimTrailingEmptyLines(pieces: TemplatePiece[]): void {
+  while (pieces.length > 0) {
+    const index = pieces.length - 1;
+    const piece = pieces[index]!;
+    if (piece.kind !== "text") {
+      return;
+    }
+    const trimmed = trimTrailingEmptyLinesInText(piece.text);
+    if (trimmed === piece.text) {
+      return;
+    }
+    if (trimmed.length === 0) {
+      pieces.pop();
+      continue;
+    }
+    pieces[index] = { kind: "text", text: trimmed };
+    return;
+  }
+}
+
+function trimLeadingEmptyLinesInText(text: string): string {
+  let current = text;
+  while (true) {
+    const newline = current.indexOf("\n");
+    if (newline === -1) {
+      return /^[ \t]*$/.test(current) ? "" : current;
+    }
+    const firstLine = current.slice(0, newline);
+    if (/[^ \t]/.test(firstLine)) {
+      return current;
+    }
+    current = current.slice(newline + 1);
+  }
+}
+
+function trimTrailingEmptyLinesInText(text: string): string {
+  let current = text;
+  while (true) {
+    const newline = current.lastIndexOf("\n");
+    if (newline === -1) {
+      return /^[ \t]*$/.test(current) ? "" : current;
+    }
+    const lastLine = current.slice(newline + 1);
+    if (/[^ \t]/.test(lastLine)) {
+      return current;
+    }
+    current = current.slice(0, newline);
+  }
 }

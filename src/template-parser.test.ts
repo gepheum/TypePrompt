@@ -3,6 +3,37 @@ import { describe, it } from "mocha";
 
 import { parseTemplates } from "./template-parser.js";
 
+function parseSingleTemplate(source: string) {
+  const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+  expect(result).toMatch({ kind: "success" });
+  if (result.kind !== "success") {
+    throw new Error("Expected success");
+  }
+  const bundle = result.templates.Demo;
+  if (!bundle) {
+    throw new Error("Expected template named Demo");
+  }
+  if (bundle.kind === "variants") {
+    throw new Error("Expected no-variants bundle");
+  }
+  return bundle.template;
+}
+
+function hiddenSchemaSource(body: string): string {
+  return [
+    '<template name="Demo">',
+    '  <schema hide="true">',
+    "    type Response = { value: string; };",
+    "  </schema>",
+    body,
+    "</template>",
+  ].join("\n");
+}
+
+function inlineHiddenSchemaSource(body: string): string {
+  return `<template name="Demo"><schema hide="true">type Response = { value: string; };</schema>${body}</template>`;
+}
+
 describe("parseTemplates", () => {
   it("reports arg names that conflict by casing", () => {
     const source = [
@@ -69,26 +100,66 @@ describe("parseTemplates", () => {
     });
   });
 
-  it("dedents top-level text using the first content line", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      "    Hello",
-      "    world",
-      "</template>",
-    ].join("\n");
+  it("uses empty baseIndent when first text node has no EOL", () => {
+    const template = parseSingleTemplate(inlineHiddenSchemaSource("  foo"));
+
+    expect(template.content).toMatch([{ kind: "text", text: "  foo" }]);
+  });
+
+  it("uses empty baseIndent when first line has non-whitespace", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("foo\n  bar"),
+    );
+
+    expect(template.content).toMatch([{ kind: "text", text: "foo\n  bar" }]);
+  });
+
+  it("matches baseIndent example 2", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("  \n foo\n  bar"),
+    );
+
+    expect(template.content).toMatch([{ kind: "text", text: "foo\n bar" }]);
+  });
+
+  it("matches baseIndent example 3 (whitespace only)", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("  \n\n\n    "),
+    );
+
+    expect(template.content).toMatch([]);
+  });
+
+  it("matches baseIndent example 4", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("  \n\n\n  foo\n    "),
+    );
+
+    expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
+  });
+
+  it("reports indentation errors when EOL is not followed by EOL or baseIndent", () => {
+    const source = inlineHiddenSchemaSource("  \n  foo\n bar");
 
     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
     expect(result).toMatch({
-      kind: "success",
+      kind: "error",
+      errors: [
+        {
+          message: "Expected indentation '  ' after end-of-line",
+        },
+      ],
     });
   });
 
-  it("dedents text after an arg piece on the same indentation level", () => {
+  it("removes leading and trailing empty lines from content", () => {
+    const template = parseSingleTemplate(hiddenSchemaSource("\n\n  foo\n\n"));
+
+    expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
+  });
+
+  it("keeps arg pieces while trimming boundary empty lines", () => {
     const source = [
       '<template name="Demo">',
       '  <schema hide="true">',
@@ -96,103 +167,11 @@ describe("parseTemplates", () => {
       "  </schema>",
       "",
       '  <arg name="value" />',
-      "  Hello",
-      "  world",
-      "</template>",
-    ].join("\n");
-
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-
-    expect(result).toMatch({
-      kind: "success",
-    });
-  });
-
-  it("accepts tab-indented template bodies", () => {
-    const source = [
-      '<template name="Demo">',
-      '\t<schema hide="true">',
-      "\t\ttype Response = { value: string; };",
-      "\t</schema>",
-      "",
-      "\t\tHello",
-      "\t\tworld",
-      "</template>",
-    ].join("\n");
-
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-
-    expect(result).toMatch({
-      kind: "success",
-    });
-  });
-
-  it("reports a line that is not indented enough after dedent", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      "    Hello",
-      "  world",
-      "</template>",
-    ].join("\n");
-
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Expected line to start with template indent '    '",
-        },
-      ],
-    });
-  });
-
-  it("reports a leading body line that does not match the dedent indent", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      "    Hello",
-      "   world",
-      "</template>",
-    ].join("\n");
-
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Expected line to start with template indent '    '",
-        },
-      ],
-    });
-  });
-
-  it("allows internal blank lines without reporting indentation errors", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      "    Hello",
-      "",
-      "    world",
       "",
       "</template>",
     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-
-    expect(result).toMatch({
-      kind: "success",
-    });
+    const template = parseSingleTemplate(source);
+    expect(template.content).toMatch([{ kind: "arg", name: "value" }]);
   });
 });
