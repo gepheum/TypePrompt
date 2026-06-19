@@ -197,7 +197,7 @@ class Parser {
   private templates: {
     [name: string]: {
       // It's an error to have more than one no-variants template with the same name.
-      noVariantTemplates: Template[];
+      readonly noVariantTemplates: Template[];
       // It's an error to have more than one template with the same name and variant.
       [variant: string]: Template[];
     };
