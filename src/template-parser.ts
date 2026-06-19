@@ -42,7 +42,7 @@ export type Template = {
   /// Variant name. Can be empty.
   readonly variant: string;
   readonly content: readonly TemplatePiece[];
-  // readonly xmlContent: string
+  readonly xmlContent: string
 };
 
 export type TemplatePiece =
@@ -289,6 +289,7 @@ class TemplateParseFlow {
       name: name,
       variant: variant ?? "",
       content: flow.trimAndDedent(),
+      xmlContent: templateNode.contentSpan.text,
     };
   }
 
