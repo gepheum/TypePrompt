@@ -301,6 +301,7 @@ class TemplateParseFlow {
         xmlContent: templateNode.contentSpan.text,
       },
       tagName: templateNode.tagName,
+      schema,
     };
   }
 
@@ -601,6 +602,7 @@ class TemplateParseFlow {
 type TemplateArg = {
   readonly template: Template;
   readonly tagName: SourceSpan;
+  readonly schema: SchemaState;
 };
 
 type SchemaState =
