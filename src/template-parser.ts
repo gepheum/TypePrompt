@@ -476,7 +476,26 @@ class TemplateParseFlow {
 
     trimLeadingEmptyLines(transformed);
     trimTrailingEmptyLines(transformed);
-    return transformed;
+
+    const coalesced: TemplatePiece[] = [];
+    for (const piece of transformed) {
+      if (piece.kind !== "text") {
+        coalesced.push(piece);
+        continue;
+      }
+
+      const previous = coalesced.at(-1);
+      if (previous?.kind === "text") {
+        coalesced[coalesced.length - 1] = {
+          kind: "text",
+          text: previous.text + piece.text,
+        };
+      } else {
+        coalesced.push(piece);
+      }
+    }
+
+    return coalesced;
   }
 
   private parseSchema(schemaNode: ElementNode): void {
