@@ -16,46 +16,19 @@ import {
   type TextNode,
   type XmlDocument,
 } from "./xml-parser.js";
+import type {
+  Template,
+  TemplateBundle,
+  TemplatePiece,
+  Templates,
+} from "./template-parse-result.js";
 
-export type Templates = {
-  readonly kind: "success";
-  readonly templates: {
-    readonly [name: string]: TemplateBundle;
-  };
-};
-
-export type TemplateBundle =
-  | {
-      readonly kind: "no-variants";
-      readonly name: string;
-      readonly template: Template;
-    }
-  | {
-      readonly kind: "variants";
-      readonly name: string;
-      readonly variants: {
-        readonly [variant: string]: Template;
-      };
-    };
-
-export type Template = {
-  readonly name: string;
-  /// Variant name. Can be empty.
-  readonly variant: string;
-  readonly args: readonly string[];
-  readonly content: readonly TemplatePiece[];
-  readonly xmlContent: string;
-};
-
-export type TemplatePiece =
-  | {
-      readonly kind: "text";
-      readonly text: string;
-    }
-  | {
-      readonly kind: "arg";
-      readonly name: string;
-    };
+export type {
+  Template,
+  TemplateBundle,
+  TemplatePiece,
+  Templates,
+} from "./template-parse-result.js";
 
 export type TemplateParseErrors = {
   readonly kind: "error";
