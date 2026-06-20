@@ -1,3 +1,5 @@
+// TODO: coalesce text pieces
+
 import * as zod from "zod";
 import { checkNoAmbiguity } from "./casing.js";
 import { Example, parseExample } from "./example-parser.js";
@@ -43,7 +45,7 @@ export type Template = {
   /// Variant name. Can be empty.
   readonly variant: string;
   readonly content: readonly TemplatePiece[];
-  readonly xmlContent: string
+  readonly xmlContent: string;
 };
 
 export type TemplatePiece =
@@ -168,14 +170,19 @@ class Parser {
           result[name] = {
             kind: "no-variants",
             name,
-            template: noVariantTemplate,
+            template: noVariantTemplate.template,
           };
         }
       } else {
         result[name] = {
           kind: "variants",
           name,
-          variants,
+          variants: Object.fromEntries(
+            Object.entries(variants).map(([variantName, template]) => [
+              variantName,
+              template.template,
+            ]),
+          ),
         };
       }
     }
@@ -356,7 +363,10 @@ class TemplateParseFlow {
           continue;
         }
 
-        const sourceOffset = textNodeDecodedOffsetToSourceOffset(textNode, next);
+        const sourceOffset = textNodeDecodedOffsetToSourceOffset(
+          textNode,
+          next,
+        );
         context.pushError(
           { start: sourceOffset, end: sourceOffset },
           `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,
@@ -558,7 +568,7 @@ class TemplateParseFlow {
 
 type TemplateArg = {
   readonly template: Template;
-  readonly tagName: SourceSpan
+  readonly tagName: SourceSpan;
 };
 
 type SchemaState =
@@ -691,4 +701,3 @@ class PositionImpl implements Position {
     return { offset, position };
   }
 }
-

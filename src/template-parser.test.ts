@@ -180,7 +180,7 @@ describe("parseTemplates", () => {
       '<template name="Demo">',
       '  <schema hide="true">type Response = { value: string; };</schema>',
       '  before <arg name="value" /> after',
-      '</template>',
+      "</template>",
     ].join("\n");
 
     const template = parseSingleTemplate(source);
@@ -193,11 +193,11 @@ describe("parseTemplates", () => {
   it("keeps leading and trailing whitespace in xmlContent", () => {
     const source = [
       '<template name="Demo">',
-      '',
+      "",
       '  <schema hide="true">type Response = { value: string; };</schema>',
-      '  text',
-      '',
-      '</template>',
+      "  text",
+      "",
+      "</template>",
     ].join("\n");
 
     const template = parseSingleTemplate(source);
@@ -211,13 +211,14 @@ describe("parseTemplates", () => {
       '<template name="Demo">',
       '  <schema hide="true">type Response = { value: string; };</schema>',
       '  <example type="Response">{"value":"x"}</example>',
-      '</template>',
+      "</template>",
     ].join("\n");
 
     const template = parseSingleTemplate(source);
 
-    expect(template.xmlContent.includes("<example type=\"Response\">"))
-      .toBe(true);
+    expect(template.xmlContent.includes('<example type="Response">')).toBe(
+      true,
+    );
     expect(template.xmlContent.includes("</example>")).toBe(true);
   });
 });
