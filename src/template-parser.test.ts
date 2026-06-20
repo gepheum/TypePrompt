@@ -175,6 +175,24 @@ describe("parseTemplates", () => {
     expect(template.content).toMatch([{ kind: "arg", name: "value" }]);
   });
 
+  it("coalesces text pieces split by a single XML comment", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("Hello<!-- split -->World"),
+    );
+
+    expect(template.content).toMatch([{ kind: "text", text: "HelloWorld" }]);
+  });
+
+  it("coalesces multiple comment-split text nodes after dedent", () => {
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("\n  foo<!-- c1 -->bar<!-- c2 -->baz\n  qux"),
+    );
+
+    expect(template.content).toMatch([
+      { kind: "text", text: "foobarbaz\nqux" },
+    ]);
+  });
+
   it("sets xmlContent to the raw content between template tags", () => {
     const source = [
       '<template name="Demo">',

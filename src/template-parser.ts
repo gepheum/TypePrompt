@@ -1,5 +1,3 @@
-// TODO: coalesce text pieces
-
 import * as zod from "zod";
 import { checkNoAmbiguity } from "./casing.js";
 import { Example, parseExample } from "./example-parser.js";
