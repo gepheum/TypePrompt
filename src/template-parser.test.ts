@@ -239,4 +239,27 @@ describe("parseTemplates", () => {
     );
     expect(template.xmlContent.includes("</example>")).toBe(true);
   });
+
+  it("collects template args uniquely and sorts them alphabetically", () => {
+    const source = [
+      '<template name="Demo">',
+      '  <schema hide="true">type Response = { value: string; };</schema>',
+      '  <arg name="zeta" />',
+      '  <arg name="alpha" />',
+      '  <arg name="beta" />',
+      '  <arg name="alpha" />',
+      '  <arg name="zeta" />',
+      '</template>',
+    ].join("\n");
+
+    const template = parseSingleTemplate(source);
+
+    expect(template.args).toMatch(["alpha", "beta", "zeta"]);
+  });
+
+  it("returns empty args when template has no arg elements", () => {
+    const template = parseSingleTemplate(inlineHiddenSchemaSource("plain text"));
+
+    expect(template.args).toMatch([]);
+  });
 });
