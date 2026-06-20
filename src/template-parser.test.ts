@@ -1,9 +1,9 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseTemplates } from "./template-parser.js";
+import { parseTemplates, type Template } from "./template-parser.js";
 
-function parseSingleTemplate(source: string) {
+function parseSingleTemplate(source: string): Template {
   const result = parseTemplates([{ path: "demo.prompts", content: source }]);
   expect(result).toMatch({ kind: "success" });
   if (result.kind !== "success") {

@@ -151,7 +151,22 @@ class Parser {
   }
 
   private pushTemplate(templateArg: TemplateArg): void {
-    // TODO...
+    const template = templateArg.template;
+    const templates = this.templates;
+    const existing = templates[template.name];
+    if (existing) {
+      if (template.variant === "") {
+        existing.noVariantTemplates.push(templateArg);
+      } else {
+        (existing[template.variant] ??= []).push(templateArg);
+      }
+      return;
+    }
+
+    templates[template.name] = {
+      noVariantTemplates: template.variant === "" ? [templateArg] : [],
+      ...(template.variant === "" ? {} : { [template.variant]: [templateArg] }),
+    };
   }
 
   getTemplates(): { readonly [name: string]: TemplateBundle } {
