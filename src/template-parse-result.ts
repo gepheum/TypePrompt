@@ -20,6 +20,7 @@ export type TemplatePiece =
   | {
       readonly kind: "arg";
       readonly name: string;
+      readonly indent: string | undefined;
     };
 
 export type Schema = {

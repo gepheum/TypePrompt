@@ -534,6 +534,7 @@ class TemplateParseFlow {
     }
     const attributes = checkXmlAttributes(argNode, {
       name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
+      indent: zod.string().regex(/^[ \t]*$/).optional(),
     });
     if (attributes.kind === "error") {
       this.context.pushErrors(attributes.errors);
@@ -546,6 +547,7 @@ class TemplateParseFlow {
     this.templatePieces.push({
       kind: "arg",
       name: attributes.attributes.name.value,
+      indent: attributes.attributes.indent?.value,
     });
   }
 
@@ -595,6 +597,7 @@ type TemplatePieceArg =
   | {
       readonly kind: "arg";
       readonly name: string;
+      readonly indent: string | undefined;
     };
 
 function getTextContent(
