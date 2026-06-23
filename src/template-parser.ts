@@ -534,7 +534,10 @@ class TemplateParseFlow {
     }
     const attributes = checkXmlAttributes(argNode, {
       name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
-      indent: zod.string().regex(/^[ \t]*$/).optional(),
+      indent: zod
+        .string()
+        .regex(/^[ \t]*$/)
+        .optional(),
     });
     if (attributes.kind === "error") {
       this.context.pushErrors(attributes.errors);
