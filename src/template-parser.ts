@@ -3,6 +3,11 @@ import { checkNoAmbiguity } from "./casing.js";
 import { Example, parseExample } from "./example-parser.js";
 import { validateExample } from "./example-validator.js";
 import { parseSchema, type Schema } from "./schema-parser.js";
+import type {
+  Template,
+  TemplatePiece,
+  Templates,
+} from "./template-parse-result.js";
 import {
   joinTextNodes,
   textNodeDecodedOffsetToSourceOffset,
@@ -16,19 +21,6 @@ import {
   type TextNode,
   type XmlDocument,
 } from "./xml-parser.js";
-import type {
-  Template,
-  TemplateBundle,
-  TemplatePiece,
-  Templates,
-} from "./template-parse-result.js";
-
-export type {
-  Template,
-  TemplateBundle,
-  TemplatePiece,
-  Templates,
-} from "./template-parse-result.js";
 
 export type TemplateParseErrors = {
   readonly kind: "error";
@@ -67,6 +59,7 @@ export function parseTemplates(
   for (const sourceFile of sourceFiles) {
     parser.parse(sourceFile);
   }
+  const templates = parser.getTemplates();
   if (parser.errors.length > 0) {
     return {
       kind: "error",
@@ -75,7 +68,7 @@ export function parseTemplates(
   }
   return {
     kind: "success",
-    templates: parser.getTemplates(),
+    templates: templates,
   };
 }
 
@@ -99,7 +92,7 @@ class Parser {
           if (node.tagName.text === "template") {
             const template = TemplateParseFlow.parse(node, context);
             if (template) {
-              this.pushTemplate(template);
+              this.templates.push(template);
             }
           } else {
             context.pushError(
@@ -122,68 +115,62 @@ class Parser {
     }
   }
 
-  private pushTemplate(templateArg: TemplateArg): void {
-    const template = templateArg.template;
-    const templates = this.templates;
-    const existing = templates[template.name];
-    if (existing) {
-      if (template.variant === "") {
-        existing.noVariantTemplates.push(templateArg);
-      } else {
-        (existing[template.variant] ??= []).push(templateArg);
-      }
-      return;
-    }
+  getTemplates(): { readonly [name: string]: Template } {
+    const result: { [name: string]: Template } = {};
+    const firstByLowercase = new Map<string, TemplateArg>();
+    const firstDuplicateAlreadyReported = new Set<string>();
 
-    templates[template.name] = {
-      noVariantTemplates: template.variant === "" ? [templateArg] : [],
-      ...(template.variant === "" ? {} : { [template.variant]: [templateArg] }),
-    };
-  }
-
-  getTemplates(): { readonly [name: string]: TemplateBundle } {
-    // TODO: raise errors...
-    const result: { [name: string]: TemplateBundle } = {};
-    for (const [name, templatesForName] of Object.entries(this.templates)) {
-      const variants = Object.fromEntries(
-        Object.entries(templatesForName)
-          .filter(([variantName]) => variantName !== "noVariantTemplates")
-          .map(([variantName, templates]) => [variantName, templates[0]!]),
-      );
-
-      if (Object.keys(variants).length === 0) {
-        const noVariantTemplate = templatesForName.noVariantTemplates[0];
-        if (noVariantTemplate) {
-          result[name] = {
-            kind: "no-variants",
-            name,
-            template: noVariantTemplate.template,
-          };
+    for (const templateArg of this.templates) {
+      const name = templateArg.template.name;
+      const lowercase = name.toLowerCase();
+      const first = firstByLowercase.get(lowercase);
+      if (first === undefined) {
+        firstByLowercase.set(lowercase, templateArg);
+      } else if (first.template.name === name) {
+        const message = `Name '${name}' is duplicated`;
+        if (!firstDuplicateAlreadyReported.has(lowercase)) {
+          this.pushTemplateNameError(first, message);
+          firstDuplicateAlreadyReported.add(lowercase);
         }
+        this.pushTemplateNameError(templateArg, message);
       } else {
-        result[name] = {
-          kind: "variants",
-          name,
-          variants: Object.fromEntries(
-            Object.entries(variants).map(([variantName, template]) => [
-              variantName,
-              template.template,
-            ]),
-          ),
-        };
+        this.pushTemplateNameError(
+          templateArg,
+          `Name '${name}' conflicts with '${first.template.name}'`,
+        );
       }
     }
+
+    // Build result map - create no-variants bundles from first occurrence of each unique template name
+    for (const arg of this.templates) {
+      const name = arg.template.name;
+      if (!result[name]) {
+        result[name] = arg.template;
+      }
+    }
+
     return result;
   }
 
-  private templates: {
-    [name: string]: {
-      // It's an error to have more than one no-variants template with the same name.
-      readonly noVariantTemplates: TemplateArg[];
-      // It's an error to have more than one template with the same name and variant.
-      [variant: string]: TemplateArg[];
-    };
-  } = {};
+  private pushTemplateNameError(
+    templateArg: TemplateArg,
+    message: string,
+  ): void {
+    this.errors.push({
+      path: templateArg.sourceFile.path,
+      message,
+      startPosition: new PositionImpl(
+        templateArg.sourceFile.content,
+        templateArg.tagName.start,
+      ),
+      endPosition: new PositionImpl(
+        templateArg.sourceFile.content,
+        templateArg.tagName.end,
+      ),
+    });
+  }
+
+  private templates: TemplateArg[] = [];
 }
 
 class TemplateParseFlow {
@@ -194,17 +181,12 @@ class TemplateParseFlow {
     const flow = new TemplateParseFlow(context);
     const attributes = checkXmlAttributes(templateNode, {
       name: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-      variant: zod
-        .string()
-        .regex(/^[A-Z][A-Za-z0-9]*$/)
-        .optional(),
     });
     if (attributes.kind === "error") {
       context.pushErrors(attributes.errors);
       return null;
     }
     const name = attributes.attributes.name.value;
-    const variant = attributes.attributes.variant?.value;
     for (const child of templateNode.children) {
       switch (child.kind) {
         case "element": {
@@ -270,13 +252,12 @@ class TemplateParseFlow {
     return {
       template: {
         name: name,
-        variant: variant ?? "",
         args: [...new Set(flow.args.map((arg) => arg.name))].sort(),
         content: flow.trimAndDedent(),
         xmlContent: templateNode.contentSpan.text,
       },
       tagName: templateNode.tagName,
-      schema,
+      sourceFile: context.sourceFile,
     };
   }
 
@@ -577,7 +558,7 @@ class TemplateParseFlow {
 type TemplateArg = {
   readonly template: Template;
   readonly tagName: SourceSpan;
-  readonly schema: SchemaState;
+  readonly sourceFile: SourceFile;
 };
 
 type SchemaState =

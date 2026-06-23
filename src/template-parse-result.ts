@@ -1,28 +1,12 @@
 export type Templates = {
   readonly kind: "success";
   readonly templates: {
-    readonly [name: string]: TemplateBundle;
+    readonly [name: string]: Template;
   };
 };
 
-export type TemplateBundle =
-  | {
-      readonly kind: "no-variants";
-      readonly name: string;
-      readonly template: Template;
-    }
-  | {
-      readonly kind: "variants";
-      readonly name: string;
-      readonly variants: {
-        readonly [variant: string]: Template;
-      };
-    };
-
 export type Template = {
   readonly name: string;
-  /// Variant name. Can be empty.
-  readonly variant: string;
   readonly args: readonly string[];
   readonly content: readonly TemplatePiece[];
   readonly xmlContent: string;
@@ -45,7 +29,7 @@ export type Schema = {
 export type InterfaceDeclaration = {
   readonly kind: "interface";
   readonly name: string;
-  readonly fields: {readonly [name: string]: SchemaField};
+  readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
 
@@ -83,7 +67,7 @@ export type StringLiteralTypeRef = {
 
 export type InlineInterfaceTypeRef = {
   readonly kind: "inline-interface";
-  readonly fields: {readonly [name: string]: SchemaField};
+  readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
 

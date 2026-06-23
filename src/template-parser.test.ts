@@ -1,7 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseTemplates, type Template } from "./template-parser.js";
+import { Template } from "./template-parse-result.js";
+import { parseTemplates } from "./template-parser.js";
 
 function parseSingleTemplate(source: string): Template {
   const result = parseTemplates([{ path: "demo.prompts", content: source }]);
@@ -9,14 +10,11 @@ function parseSingleTemplate(source: string): Template {
   if (result.kind !== "success") {
     throw new Error("Expected success");
   }
-  const bundle = result.templates.Demo;
-  if (!bundle) {
+  const template = result.templates.Demo;
+  if (!template) {
     throw new Error("Expected template named Demo");
   }
-  if (bundle.kind === "variants") {
-    throw new Error("Expected no-variants bundle");
-  }
-  return bundle.template;
+  return template;
 }
 
 function hiddenSchemaSource(body: string): string {
@@ -79,6 +77,61 @@ describe("parseTemplates", () => {
 
     expect(result).toMatch({
       kind: "success",
+    });
+  });
+
+  it("reports duplicate template names on each duplicate occurrence", () => {
+    const source = [
+      '<template name="Demo">',
+      "  <schema>",
+      "    type Response = 'abc';",
+      "  </schema>",
+      "</template>",
+      '<template name="Demo">',
+      "  <schema>",
+      "    type Response = 'abc';",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'Demo' is duplicated",
+        },
+        {
+          message: "Name 'Demo' is duplicated",
+        },
+      ],
+    });
+  });
+
+  it("reports template names that conflict by casing", () => {
+    const source = [
+      '<template name="ABc">',
+      "  <schema>",
+      "    type Response = 'abc';",
+      "  </schema>",
+      "</template>",
+      '<template name="AbC">',
+      "  <schema>",
+      "    type Response = 'abc';",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Name 'AbC' conflicts with 'ABc'",
+        },
+      ],
     });
   });
 
@@ -249,7 +302,7 @@ describe("parseTemplates", () => {
       '  <arg name="beta" />',
       '  <arg name="alpha" />',
       '  <arg name="zeta" />',
-      '</template>',
+      "</template>",
     ].join("\n");
 
     const template = parseSingleTemplate(source);
@@ -258,7 +311,9 @@ describe("parseTemplates", () => {
   });
 
   it("returns empty args when template has no arg elements", () => {
-    const template = parseSingleTemplate(inlineHiddenSchemaSource("plain text"));
+    const template = parseSingleTemplate(
+      inlineHiddenSchemaSource("plain text"),
+    );
 
     expect(template.args).toMatch([]);
   });

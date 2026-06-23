@@ -69,7 +69,12 @@ describe("checkNoAmbiguity", () => {
 
     expect(result).toMatch([
       {
-        message: "Name 'foo' conflicts with 'foo'",
+        message: "Name 'foo' is duplicated",
+        start: 0,
+        end: 3,
+      },
+      {
+        message: "Name 'foo' is duplicated",
         start: 10,
         end: 13,
       },

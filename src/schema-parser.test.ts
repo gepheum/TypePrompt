@@ -595,7 +595,10 @@ describe("parseSchema", () => {
       kind: "error",
       errors: [
         {
-          message: "Name 'foo' conflicts with 'foo'",
+          message: "Name 'foo' is duplicated",
+        },
+        {
+          message: "Name 'foo' is duplicated",
         },
       ],
     });
