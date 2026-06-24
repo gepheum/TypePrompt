@@ -1,3 +1,5 @@
+// TODO: test error if invalid string literal...
+
 import { checkNoAmbiguity } from "./casing.js";
 
 export type Schema = {
@@ -376,6 +378,7 @@ class SchemaParser {
     let depthCurly = 0;
     let depthSquare = 0;
     let depthParen = 0;
+    // Carries top-level JSDoc until the next declaration keyword.
     let pendingDoc = "";
 
     while (true) {
@@ -432,6 +435,7 @@ class SchemaParser {
       if (token.kind !== "symbol") {
         continue;
       }
+      // Keep nesting depth so we only recognize declarations and docs at top level.
       if (token.text === "{") {
         depthCurly += 1;
       } else if (token.text === "}") {
@@ -621,6 +625,8 @@ class SchemaParser {
     let baseText = trimmed.text;
     let baseStart = start + rawOffsetStart;
 
+    // Strip repeated [] suffixes first so unions like A | B[] parse as (A | B)[] only
+    // when the brackets are truly outside the union expression.
     const arraySuffixes: Array<{
       readonly start: number;
       readonly end: number;
@@ -646,6 +652,7 @@ class SchemaParser {
       .filter((part) => part.text.length > 0);
 
     let baseRef: TypeRef | null;
+    // Union members are intentionally restricted by parseUnionMemberTypeRef.
     if (nonEmptyUnionParts.length > 1) {
       const members: Array<StringLiteralTypeRef | InlineInterfaceTypeRef> = [];
       for (const partTrimmed of nonEmptyUnionParts) {
@@ -1248,6 +1255,8 @@ function parseLeadingJsDoc(raw: string): {
   }
 
   let docBody = raw.slice(leadingWhitespace + 3, commentEnd);
+  // nextTokenFromText merges immediately adjacent /**...*/ blocks; keep only the
+  // final block content so doc extraction matches declaration attachment.
   const nestedMarker = docBody.lastIndexOf("/**");
   if (nestedMarker >= 0 && docBody.slice(0, nestedMarker).trim() === "") {
     docBody = docBody.slice(nestedMarker + 3);
