@@ -102,6 +102,137 @@ class SchemaParser {
     };
   }
 
+  private parseTypeDeclaration(): TypeDeclaration | null {
+    let token = this.peekToken();
+    if (token.kind === "string-end") {
+      return null;
+    }
+
+    let jsdoc: Token | undefined;
+    if (token.kind === "jsdoc") {
+      jsdoc = token;
+      this.movePast(token);
+      token = this.peekToken();
+    }
+
+    const match = this.expectThenMove(token, {
+      type: EXACT_MATCHER,
+      interface: EXACT_MATCHER,
+    });
+    switch (match) {
+      case "type": {
+        return this.parseTypeAliasDeclaration(jsdoc);
+      }
+      case "interface": {
+        return this.parseInterfaceDeclaration(jsdoc);
+      }
+      case "noMatch": {
+        return null;
+      }
+    }
+  }
+
+  private parseTypeAliasDeclaration(
+    jsdoc: Token | undefined,
+  ): TypeDeclaration | null {
+    const name = this.peekToken();
+    if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
+      return null;
+    }
+    {
+      const token = this.peekToken();
+      if (this.expectThenMove(token, { "{": EXACT_MATCHER }) === "noMatch") {
+        return null;
+      }
+    }
+    const typeRef = this.parseTypeRef();
+    if (typeRef === null) {
+      return null;
+    }
+    return {
+      kind: "type",
+      name: name,
+      valueType: typeRef,
+      doc: getDocText(jsdoc),
+    }
+  }
+
+  private parseInterfaceDeclaration(
+    jsdoc: Token | undefined,
+  ): TypeDeclaration | null {
+    const name = this.peekToken();
+    if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
+      return null;
+    }
+    {
+    const token = this.peekToken();
+      if (this.expectThenMove(token, { "{": EXACT_MATCHER }) === "noMatch") {
+        return null;
+      }
+    }
+    const fields = this.parseFields();
+    return {
+      kind: "interface",
+      name: name,
+      fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
+      firstField: fields[0],
+      doc: getDocText(jsdoc),
+    }
+  }
+
+  private parseFields(): readonly SchemaField[] {
+    const result: SchemaField[] = [];
+    while (true) {
+      const field = this.tryParseField();
+      if (field !== null) {
+        result.push(field);
+      } else {
+        break;
+      }
+    }
+    return result;
+  }
+
+  private tryParseField(): SchemaField | null {
+    let token = this.peekToken();
+    let jsdoc: Token | undefined;
+    if (token.kind === "jsdoc") {
+      jsdoc = token;
+      this.movePast(token);
+      token = this.peekToken();
+    }
+    const name = token;
+    const nameMatch = this.expectThenMove(name, {
+      identifier: IDENTIFIER_MATCHER,
+      notIdentifier: jsdoc ? NEVER_MATCHER : ALWAYS_MATCHER,
+    });
+    if (nameMatch !== "identifier") {
+      return null;
+    }
+    token = this.peekToken();
+    const optional = token.text === "?";
+    if (optional) {
+      this.movePast(token);
+      token = this.peekToken();
+    }
+    if (this.expectThenMove(token, { ":": EXACT_MATCHER }) === "noMatch") {
+      return null;
+    }
+    const typeRef = this.parseTypeRef();
+    if (typeRef === null) {
+      return null;
+    }
+    return {
+      name: name,
+      optional: optional,
+      type: typeRef,
+      doc: getDocText(jsdoc),
+    }
+  }
+
+  private parseTypeRef(): TypeRef | null {
+  }
+
   private peekToken(): Token {
     // Multiline comment:            \/\*([^*]|\*[^\/])*(\*\/)?
     // Single-line comment:          \/\/[^\n\r]*
@@ -191,7 +322,7 @@ class SchemaParser {
         }
         tokenKind = "string-literal";
       } else if (group[10] !== undefined) {
-        tokenKind = "end";
+        tokenKind = "string-end";
       } else {
         throw new Error("Unexpected regex match");
       }
@@ -214,12 +345,12 @@ class SchemaParser {
   private expectThenMove<M extends TokenMatchers>(
     token: Token,
     matchers: M,
-  ): keyof M | "no-match" {
+  ): keyof M | "noMatch" {
     for (const [id, matcher] of Object.entries(matchers)) {
       if (matcher === null) {
         continue;
       }
-      if (matcher.test(token.text, id)) {
+      if (matcher.test(token, id)) {
         this.movePast(token);
         return id;
       }
@@ -233,7 +364,7 @@ class SchemaParser {
       end: token.end,
       message: `Expected: ${descriptors}`,
     });
-    return "no-match";
+    return "noMatch";
   }
 
   private readonly tokenizerErrors: SchemaParseError[] = [];
@@ -242,19 +373,28 @@ class SchemaParser {
 }
 
 type Token = {
-  readonly kind: "identifier" | "symbol" | "string-literal" | "jsdoc" | "end";
+  readonly kind:
+    | "identifier"
+    | "symbol"
+    | "string-literal"
+    | "jsdoc"
+    | "string-end";
   readonly text: string;
   readonly start: number;
   readonly end: number;
 };
 
 type TokenMatcher = {
-  readonly test: (token: string, id: string) => boolean;
+  readonly test: (token: Token, id: string) => boolean;
+  /**
+   * Will be used to describe the expected token in error messages.
+   * Return an empty string to not include this matcher in the error message.
+   */
   readonly descriptor: (id: string) => string;
 };
 
 const EXACT_MATCHER: TokenMatcher = {
-  test: (token: string, id: string) => token === id,
+  test: (token: Token, id: string) => token.text === id,
   descriptor: (id: string) => `'${id}'`,
 };
 
@@ -263,4 +403,32 @@ const NEVER_MATCHER: TokenMatcher = {
   descriptor: () => "",
 };
 
+const ALWAYS_MATCHER: TokenMatcher = {
+  test: () => true,
+  descriptor: () => "",
+};
+
+const IDENTIFIER_MATCHER: TokenMatcher = {
+  test: (token: Token) => token.kind === "identifier",
+  descriptor: () => "identifier",
+};
+
 type TokenMatchers = { readonly [id: string]: TokenMatcher };
+
+function getDocText(jsdoc: Token | undefined): string {
+  if (!jsdoc) {
+    return "";
+  }
+  // Strip the opening `/**` and closing `*/`
+  const inner = jsdoc.text.slice(3, -2);
+  const lines = inner.split("\n").map((line) => line.trimEnd().replace(/^\s*\*? ?/, ""));
+  // Remove the first line if it's empty (artifact of `/**` on its own line)
+  if (lines.length > 0 && lines[0]!.trim() === "") {
+    lines.shift();
+  }
+  // Remove the last line if it's empty (artifact of ` */` on its own line)
+  if (lines.length > 0 && lines.at(-1)!.trim() === "") {
+    lines.pop();
+  }
+  return lines.join("\n");
+}
