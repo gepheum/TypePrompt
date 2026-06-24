@@ -95,6 +95,13 @@ export function parseSchema(schemaSource: string): Schema | SchemaParseErrors {
 class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
+  parse(): Schema | SchemaParseErrors {
+    return {
+      kind: "error",
+      errors: [...this.tokenizerErrors, ...this.parserErrors],
+    };
+  }
+
   private peekToken(): Token {
     // Multiline comment:            \/\*([^*]|\*[^\/])*(\*\/)?
     // Single-line comment:          \/\/[^\n\r]*
@@ -106,9 +113,9 @@ class SchemaParser {
     //
     // To iterate on this regex, use https://regex101.com/.
     const re =
-      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,])|("(\\.|[^\\\"\n\r])*"?)|('(\\.|[^\\\'\n\r])*'?)|($)/g;
-    // 1    2             3        4                5       6            7                8                       9                       10
-    const {schemaSource} = this;
+      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,])|("(\\.|[^\\"\n\r])*"?)|('(\\.|[^\\'\n\r])*'?)|($)/g;
+    // 1    2             3        4                5       6            7                8                      9                      10
+    const { schemaSource } = this;
     let group: RegExpExecArray | null;
     while ((group = re.exec(schemaSource)) !== null) {
       const position = re.lastIndex - group[0].length;
@@ -117,7 +124,7 @@ class SchemaParser {
       // If there is a gap between two matches, it means that we have an invalid
       // sequence of characters.
       if (position !== this.cursor) {
-        this.errors.push({
+        this.tokenizerErrors.push({
           start: this.cursor,
           end: position,
           message: "Invalid sequence of characters",
@@ -134,7 +141,7 @@ class SchemaParser {
       let tokenKind: Token["kind"];
       if (group[1] !== undefined) {
         if (!text.endsWith("*/")) {
-          this.errors.push({
+          this.tokenizerErrors.push({
             start: position,
             end: position + 2,
             message: "Unterminated multi-line comment",
@@ -152,13 +159,13 @@ class SchemaParser {
       } else if (group[5] !== undefined) {
         // Validate identifier.
         if (/^[0-9]/.test(text)) {
-          this.errors.push({
+          this.tokenizerErrors.push({
             start: position,
             end: re.lastIndex,
             message: "Invalid identifier",
           });
         } else if (text.includes("_")) {
-          this.errors.push({
+          this.tokenizerErrors.push({
             start: position,
             end: re.lastIndex,
             message: "Must not contain underscores",
@@ -170,13 +177,13 @@ class SchemaParser {
       } else if (group[8] !== undefined || group[9] !== undefined) {
         // Validate string literal.
         if (text.at(-1) !== text[0]) {
-          this.errors.push({
+          this.tokenizerErrors.push({
             start: position,
             end: re.lastIndex,
             message: "Unterminated string literal",
           });
         } else if (text.includes("\\")) {
-          this.errors.push({
+          this.tokenizerErrors.push({
             start: position,
             end: re.lastIndex,
             message: "Must not contain escape sequences",
@@ -194,16 +201,43 @@ class SchemaParser {
         text: text,
         start: position,
         end: re.lastIndex,
-        move: () => {
-          this.cursor = re.lastIndex;
-        },
       };
     }
     // Cannot happen because the regex matches the end of the string.
     throw new Error();
   }
 
-  private readonly errors: SchemaParseError[] = [];
+  private movePast(token: Token): void {
+    this.cursor = token.end;
+  }
+
+  private expectThenMove<M extends TokenMatchers>(
+    token: Token,
+    matchers: M,
+  ): keyof M | "no-match" {
+    for (const [id, matcher] of Object.entries(matchers)) {
+      if (matcher === null) {
+        continue;
+      }
+      if (matcher.test(token.text, id)) {
+        this.movePast(token);
+        return id;
+      }
+    }
+    const descriptors = Object.entries(matchers)
+      .map(([id, matcher]) => matcher.descriptor(id))
+      .filter((d) => d)
+      .join(" or ");
+    this.parserErrors.push({
+      start: token.start,
+      end: token.end,
+      message: `Expected: ${descriptors}`,
+    });
+    return "no-match";
+  }
+
+  private readonly tokenizerErrors: SchemaParseError[] = [];
+  private readonly parserErrors: SchemaParseError[] = [];
   private cursor = 0;
 }
 
@@ -212,5 +246,21 @@ type Token = {
   readonly text: string;
   readonly start: number;
   readonly end: number;
-  readonly move: () => void;
 };
+
+type TokenMatcher = {
+  readonly test: (token: string, id: string) => boolean;
+  readonly descriptor: (id: string) => string;
+};
+
+const EXACT_MATCHER: TokenMatcher = {
+  test: (token: string, id: string) => token === id,
+  descriptor: (id: string) => `'${id}'`,
+};
+
+const NEVER_MATCHER: TokenMatcher = {
+  test: () => false,
+  descriptor: () => "",
+};
+
+type TokenMatchers = { readonly [id: string]: TokenMatcher };
