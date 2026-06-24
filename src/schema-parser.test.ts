@@ -33,6 +33,81 @@ describe("parseSchema", () => {
     });
   });
 
+  it("sets doc from leading JSDoc comments on declarations and fields", () => {
+    const input = [
+      "/**",
+      " * Top-level response doc",
+      " * second line",
+      " */",
+      "interface Response {",
+      "  /** Field doc */",
+      "  value: Status;",
+      "}",
+      "/** Status doc */",
+      "type Status = 'ok';",
+    ].join("\n");
+
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "success",
+      types: {
+        Response: {
+          doc: "Top-level response doc\nsecond line",
+          fields: {
+            value: {
+              doc: "Field doc",
+            },
+          },
+        },
+        Status: {
+          doc: "Status doc",
+        },
+      },
+    });
+  });
+
+  it("does not use non-JSDoc block comments as doc", () => {
+    const input = [
+      "/* Not JSDoc */",
+      "interface Response { value: string; }",
+    ].join("\n");
+
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "success",
+      types: {
+        Response: {
+          doc: "",
+          fields: {
+            value: {
+              doc: "",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("handles adjacent jsdoc markers before declarations", () => {
+    const input = [
+      "/**/** Good doc */",
+      "interface Response { value: string; }",
+    ].join("\n");
+
+    const result = parseSchema(input);
+
+    expect(result).toMatch({
+      kind: "success",
+      types: {
+        Response: {
+          doc: "Good doc",
+        },
+      },
+    });
+  });
+
   it("returns multiple parse errors", () => {
     const input = [
       "interface { a: string; }",

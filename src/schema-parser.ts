@@ -21,6 +21,7 @@ export type InterfaceDeclaration = {
   readonly name: SchemaSourceSpan;
   readonly fields: Readonly<Record<string, SchemaField>>;
   readonly firstField?: SchemaField;
+  readonly doc: string;
 };
 
 export type TypeDeclaration =
@@ -29,12 +30,14 @@ export type TypeDeclaration =
       readonly kind: "type";
       readonly name: SchemaSourceSpan;
       readonly valueType: TypeRef;
+      readonly doc: string;
     };
 
 export type SchemaField = {
   readonly name: SchemaSourceSpan;
   readonly optional: boolean;
   readonly type: TypeRef;
+  readonly doc: string;
 };
 
 export type TypeRef =
@@ -371,8 +374,10 @@ class SchemaParser {
         continue;
       }
 
+      const doc = parseDeclarationLeadingJsDoc(this.text, keyword.start);
+
       if (keyword.word === "interface") {
-        const parsed = this.parseInterfaceDeclaration(keyword.start);
+        const parsed = this.parseInterfaceDeclaration(keyword.start, doc);
         if (parsed) {
           declarations[parsed.declaration.name.text] = parsed.declaration;
           this.cursor = parsed.nextCursor;
@@ -381,7 +386,7 @@ class SchemaParser {
       }
 
       if (keyword.word === "type") {
-        const parsed = this.parseTypeDeclaration(keyword.start);
+        const parsed = this.parseTypeDeclaration(keyword.start, doc);
         if (parsed) {
           declarations[parsed.declaration.name.text] = parsed.declaration;
           this.cursor = parsed.nextCursor;
@@ -577,7 +582,7 @@ class SchemaParser {
         continue;
       }
 
-      const blockEnd = this.text.indexOf("*/", cursor);
+      const blockEnd = this.text.indexOf("*/", Math.max(0, cursor - 1));
       if (blockEnd < 0) {
         return null;
       }
@@ -588,7 +593,10 @@ class SchemaParser {
     return null;
   }
 
-  private parseInterfaceDeclaration(keywordStart: number): {
+  private parseInterfaceDeclaration(
+    keywordStart: number,
+    doc: string,
+  ): {
     readonly declaration: TypeDeclaration;
     readonly nextCursor: number;
   } | null {
@@ -644,6 +652,7 @@ class SchemaParser {
         },
         fields: fields.fields,
         firstField: fields.firstField,
+        doc,
       },
       nextCursor: bodyEnd + 1,
     };
@@ -662,11 +671,13 @@ class SchemaParser {
     const segments = splitTopLevelSemicolonSegments(text);
     for (const segment of segments) {
       const raw = text.slice(segment.start, segment.end);
-      const leading = raw.match(/^\s*/)?.[0].length ?? 0;
-      const trailing = raw.match(/\s*$/)?.[0].length ?? 0;
-      const trimmed = raw.slice(
+      const leadingJsDoc = parseLeadingJsDoc(raw);
+      const rawWithoutDoc = raw.slice(leadingJsDoc.nextOffset);
+      const leading = rawWithoutDoc.match(/^\s*/)?.[0].length ?? 0;
+      const trailing = rawWithoutDoc.match(/\s*$/)?.[0].length ?? 0;
+      const trimmed = rawWithoutDoc.slice(
         leading,
-        Math.max(leading, raw.length - trailing),
+        Math.max(leading, rawWithoutDoc.length - trailing),
       );
       if (trimmed.length === 0) {
         continue;
@@ -676,7 +687,8 @@ class SchemaParser {
         /^([A-Za-z_][A-Za-z0-9_]*)(\?)?\s*:\s*(.+)$/s,
       );
       if (!match) {
-        const segmentStart = bodyStart + segment.start + leading;
+        const segmentStart =
+          bodyStart + segment.start + leadingJsDoc.nextOffset + leading;
         this.pushError(
           segmentStart,
           segmentStart + trimmed.length,
@@ -693,14 +705,15 @@ class SchemaParser {
       const typeText = typeRaw.slice(typeLeading).trimEnd();
       if (typeText.length === 0) {
         this.pushError(
-          bodyStart + segment.start,
+          bodyStart + segment.start + leadingJsDoc.nextOffset,
           bodyStart + segment.end,
           `Missing type for field '${nameText}'`,
         );
         continue;
       }
 
-      const memberStartInBody = segment.start + leading;
+      const memberStartInBody =
+        segment.start + leadingJsDoc.nextOffset + leading;
       const memberStart = bodyStart + memberStartInBody;
       const typeStartInMember = colonIndex + 1 + typeLeading;
       const typeStart = memberStart + typeStartInMember;
@@ -724,6 +737,7 @@ class SchemaParser {
         },
         optional,
         type: typeRef,
+        doc: leadingJsDoc.doc,
       };
 
       if (!firstField) {
@@ -896,7 +910,10 @@ class SchemaParser {
     };
   }
 
-  private parseTypeDeclaration(keywordStart: number): {
+  private parseTypeDeclaration(
+    keywordStart: number,
+    doc: string,
+  ): {
     readonly declaration: TypeDeclaration;
     readonly nextCursor: number;
   } | null {
@@ -971,6 +988,7 @@ class SchemaParser {
           end: this.sourceStart + nameEnd,
         },
         valueType,
+        doc,
       },
       nextCursor: statementEnd,
     };
@@ -1201,7 +1219,7 @@ function splitTopLevelByPipe(
     }
 
     if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", cursor);
+      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
       if (blockEnd < 0) {
         break;
       }
@@ -1398,7 +1416,7 @@ function splitTopLevelSemicolonSegments(
     }
 
     if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", cursor);
+      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
       if (blockEnd < 0) {
         break;
       }
@@ -1575,7 +1593,7 @@ function findTopLevelStatementEnd(text: string, start: number): number {
     }
 
     if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", cursor);
+      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
       if (blockEnd < 0) {
         break;
       }
@@ -1719,7 +1737,7 @@ function findMatchingBrace(text: string, openBracePos: number): number {
     }
 
     if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", cursor);
+      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
       if (blockEnd < 0) {
         break;
       }
@@ -1730,6 +1748,67 @@ function findMatchingBrace(text: string, openBracePos: number): number {
   }
 
   return -1;
+}
+
+function parseDeclarationLeadingJsDoc(
+  text: string,
+  declarationStart: number,
+): string {
+  const prefix = text.slice(0, declarationStart);
+  let searchFrom = prefix.lastIndexOf("/**");
+  while (searchFrom >= 0) {
+    const candidate = prefix.slice(searchFrom);
+    const parsed = parseLeadingJsDoc(candidate);
+    if (
+      parsed.nextOffset > 0 &&
+      candidate.slice(0, parsed.nextOffset).trimStart().startsWith("/**") &&
+      candidate.slice(parsed.nextOffset).trim() === ""
+    ) {
+      return parsed.doc;
+    }
+    searchFrom = prefix.lastIndexOf("/**", searchFrom - 1);
+  }
+  return "";
+}
+
+function parseLeadingJsDoc(raw: string): {
+  readonly doc: string;
+  readonly nextOffset: number;
+} {
+  const leadingWhitespace = raw.match(/^\s*/)?.[0].length ?? 0;
+  if (!raw.startsWith("/**", leadingWhitespace)) {
+    return { doc: "", nextOffset: 0 };
+  }
+
+  const commentEnd = raw.indexOf("*/", leadingWhitespace + 3);
+  if (commentEnd < 0) {
+    return { doc: "", nextOffset: 0 };
+  }
+
+  return {
+    doc: normalizeJsDocText(raw.slice(leadingWhitespace + 3, commentEnd)),
+    nextOffset: commentEnd + 2,
+  };
+}
+
+function normalizeJsDocText(raw: string): string {
+  const lines = raw.replace(/\r/g, "").split("\n");
+  const normalized = lines.map((line) => {
+    const withoutPrefix = line.replace(/^\s*\*/, "");
+    const withoutLeadingSpace = withoutPrefix.startsWith(" ")
+      ? withoutPrefix.slice(1)
+      : withoutPrefix;
+    return withoutLeadingSpace.trimEnd();
+  });
+
+  while (normalized.length > 0 && normalized[0] === "") {
+    normalized.shift();
+  }
+  while (normalized.length > 0 && normalized[normalized.length - 1] === "") {
+    normalized.pop();
+  }
+
+  return normalized.join("\n");
 }
 
 const IDENTIFIER_RE = /[A-Za-z_][A-Za-z0-9_]*/y;

@@ -1,4 +1,11 @@
-- TODO: component template
+- TODO: component template??
+- TO CONSIDER:
+  - add a <hide> tag?
+  - make it possible to have multiple separate <schema> tags
+  - make it possible to specify that an arg must be a JSON value of a certain type, and make it possible to format it as toon
+  - OR ACTUALLY:
+    - Always have one schema tag and always hide it
+    - Add an <enclose tag="input"></enclose> tag...
 - TODO: ability to add doc to args...
 - TODO: handle component templates
 - TODO: <meta>
@@ -10,3 +17,9 @@
 - verify that $ cannot occur within ...
 - new rule: if a line solly contain a template, make it not count as a line
 - figure out proper casing of templates
+
+
+TECHS:
+- https://github.com/google/dotprompt
+- https://www.opensourceprojects.dev/post/outlines
+- https://github.com/multica-ai/andrej-karpathy-skills
