@@ -82,6 +82,13 @@ export type SchemaSourceSpan = {
   readonly end: number;
 };
 
+type Token = {
+  readonly kind: "identifier" | "symbol" | "string-literal" | "comment";
+  readonly text: string;
+  readonly start: number;
+  readonly end: number;
+};
+
 export function parseSchema(schemaSource: string): Schema | SchemaParseErrors {
   return new SchemaParser(schemaSource, 0).parse();
 }
@@ -365,232 +372,87 @@ class SchemaParser {
 
   private parseSchemaDeclarations(): Record<string, TypeDeclaration> {
     const declarations: Record<string, TypeDeclaration> = {};
-    this.cursor = 0;
-
-    while (this.cursor < this.text.length) {
-      const keyword = this.readTopLevelKeyword(this.cursor);
-      if (!keyword) {
-        this.cursor += 1;
-        continue;
-      }
-
-      const doc = parseDeclarationLeadingJsDoc(this.text, keyword.start);
-
-      if (keyword.word === "interface") {
-        const parsed = this.parseInterfaceDeclaration(keyword.start, doc);
-        if (parsed) {
-          declarations[parsed.declaration.name.text] = parsed.declaration;
-          this.cursor = parsed.nextCursor;
-          continue;
-        }
-      }
-
-      if (keyword.word === "type") {
-        const parsed = this.parseTypeDeclaration(keyword.start, doc);
-        if (parsed) {
-          declarations[parsed.declaration.name.text] = parsed.declaration;
-          this.cursor = parsed.nextCursor;
-          continue;
-        }
-      }
-
-      this.cursor = keyword.end;
-    }
-
-    return declarations;
-  }
-
-  private readTopLevelKeyword(from: number): {
-    readonly word: "interface" | "type";
-    readonly start: number;
-    readonly end: number;
-  } | null {
+    let cursor = 0;
     let depthCurly = 0;
     let depthSquare = 0;
     let depthParen = 0;
-    let mode:
-      | "normal"
-      | "single"
-      | "double"
-      | "template"
-      | "line-comment"
-      | "block-comment" = "normal";
+    let pendingDoc = "";
 
-    let cursor = from;
-    while (cursor < this.text.length) {
-      const nextTokenIndex = findNextRegexIndex(
-        this.text,
-        cursor,
-        KEYWORD_SCAN_TOKEN_RE,
-      );
-      if (nextTokenIndex < 0) {
-        return null;
+    while (true) {
+      const token = this.nextToken(cursor);
+      if (!token) {
+        break;
       }
-      cursor = nextTokenIndex;
-      const ch = this.text[cursor]!;
-      const next = this.text[cursor + 1];
+      cursor = token.end;
 
-      if (mode === "normal") {
-        if (ch === "'") {
-          mode = "single";
-          cursor += 1;
-          continue;
-        }
-        if (ch === '"') {
-          mode = "double";
-          cursor += 1;
-          continue;
-        }
-        if (ch === "`") {
-          mode = "template";
-          cursor += 1;
-          continue;
-        }
-        if (ch === "/" && next === "/") {
-          mode = "line-comment";
-          cursor += 2;
-          continue;
-        }
-        if (ch === "/" && next === "*") {
-          mode = "block-comment";
-          cursor += 2;
-          continue;
-        }
+      const isTopLevel =
+        depthCurly === 0 && depthSquare === 0 && depthParen === 0;
 
-        if (ch === "{") {
-          depthCurly += 1;
-          cursor += 1;
+      if (token.kind === "comment") {
+        if (!isTopLevel) {
           continue;
         }
-        if (ch === "}") {
-          depthCurly = Math.max(0, depthCurly - 1);
-          cursor += 1;
-          continue;
-        }
-        if (ch === "[") {
-          depthSquare += 1;
-          cursor += 1;
-          continue;
-        }
-        if (ch === "]") {
-          depthSquare = Math.max(0, depthSquare - 1);
-          cursor += 1;
-          continue;
-        }
-        if (ch === "(") {
-          depthParen += 1;
-          cursor += 1;
-          continue;
-        }
-        if (ch === ")") {
-          depthParen = Math.max(0, depthParen - 1);
-          cursor += 1;
-          continue;
-        }
-
-        if (depthCurly !== 0 || depthSquare !== 0 || depthParen !== 0) {
-          cursor += 1;
-          continue;
-        }
-
-        if (!isIdentifierStart(ch)) {
-          cursor += 1;
-          continue;
-        }
-
-        let end = cursor + 1;
-        while (end < this.text.length && isIdentifierPart(this.text[end]!)) {
-          end += 1;
-        }
-
-        const word = this.text.slice(cursor, end);
-        if (word !== "interface" && word !== "type") {
-          cursor = end;
-          continue;
-        }
-
-        return { word, start: cursor, end };
-      }
-
-      if (mode === "single") {
-        const nextSpecial = findNextRegexIndex(
-          this.text,
-          cursor,
-          SINGLE_QUOTE_SCAN_RE,
-        );
-        if (nextSpecial < 0) {
-          return null;
-        }
-        cursor = nextSpecial;
-        if (this.text[cursor] === "\\") {
-          cursor += 2;
+        const parsed = parseLeadingJsDoc(token.text);
+        if (parsed.nextOffset === token.text.length) {
+          pendingDoc = parsed.doc;
         } else {
-          mode = "normal";
-          cursor += 1;
+          pendingDoc = "";
         }
         continue;
       }
 
-      if (mode === "double") {
-        const nextSpecial = findNextRegexIndex(
-          this.text,
-          cursor,
-          DOUBLE_OR_NEWLINE_SCAN_RE,
-        );
-        if (nextSpecial < 0) {
-          return null;
-        }
-        cursor = nextSpecial;
-        if (this.text[cursor] === "\n") {
-          mode = "normal";
-          cursor += 1;
-        } else if (this.text[cursor] === "\\") {
-          cursor += 2;
+      if (
+        isTopLevel &&
+        token.kind === "identifier" &&
+        (token.text === "interface" || token.text === "type")
+      ) {
+        const doc = pendingDoc;
+        pendingDoc = "";
+        if (token.text === "interface") {
+          const parsed = this.parseInterfaceDeclaration(token.start, doc);
+          if (parsed) {
+            declarations[parsed.declaration.name.text] = parsed.declaration;
+            cursor = parsed.nextCursor;
+            continue;
+          }
         } else {
-          mode = "normal";
-          cursor += 1;
+          const parsed = this.parseTypeDeclaration(token.start, doc);
+          if (parsed) {
+            declarations[parsed.declaration.name.text] = parsed.declaration;
+            cursor = parsed.nextCursor;
+            continue;
+          }
         }
-        continue;
       }
 
-      if (mode === "template") {
-        const nextSpecial = findNextRegexIndex(
-          this.text,
-          cursor,
-          TEMPLATE_SCAN_RE,
-        );
-        if (nextSpecial < 0) {
-          return null;
-        }
-        cursor = nextSpecial;
-        if (this.text[cursor] === "\\") {
-          cursor += 2;
-        } else {
-          mode = "normal";
-          cursor += 1;
-        }
-        continue;
+      if (isTopLevel) {
+        pendingDoc = "";
       }
 
-      if (mode === "line-comment") {
-        const lineEnd = this.text.indexOf("\n", cursor);
-        if (lineEnd < 0) {
-          return null;
-        }
-        cursor = lineEnd + 1;
-        mode = "normal";
+      if (token.kind !== "symbol") {
         continue;
       }
-
-      const blockEnd = this.text.indexOf("*/", Math.max(0, cursor - 1));
-      if (blockEnd < 0) {
-        return null;
+      if (token.text === "{") {
+        depthCurly += 1;
+      } else if (token.text === "}") {
+        depthCurly = Math.max(0, depthCurly - 1);
+      } else if (token.text === "[") {
+        depthSquare += 1;
+      } else if (token.text === "]") {
+        depthSquare = Math.max(0, depthSquare - 1);
+      } else if (token.text === "(") {
+        depthParen += 1;
+      } else if (token.text === ")") {
+        depthParen = Math.max(0, depthParen - 1);
       }
-      cursor = blockEnd + 2;
-      mode = "normal";
     }
 
-    return null;
+    this.cursor = cursor;
+    return declarations;
+  }
+
+  private nextToken(from = this.cursor): Token | null {
+    return nextTokenFromText(this.text, from);
   }
 
   private parseInterfaceDeclaration(
@@ -1061,171 +923,52 @@ function splitTopLevelByPipe(
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode:
-    | "normal"
-    | "single"
-    | "double"
-    | "template"
-    | "line-comment"
-    | "block-comment" = "normal";
   let partStart = 0;
 
   let cursor = 0;
-  while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(
-      text,
-      cursor,
-      SPLIT_PIPE_TOKEN_RE,
-    );
-    if (nextTokenIndex < 0) {
+  while (true) {
+    const token = nextTokenFromText(text, cursor);
+    if (!token) {
       break;
     }
-    cursor = nextTokenIndex;
-    const ch = text[cursor]!;
-    const next = text[cursor + 1];
-
-    if (mode === "normal") {
-      if (ch === "'") {
-        mode = "single";
-        cursor += 1;
-        continue;
-      }
-      if (ch === '"') {
-        mode = "double";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "`") {
-        mode = "template";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "/" && next === "/") {
-        mode = "line-comment";
-        cursor += 2;
-        continue;
-      }
-      if (ch === "/" && next === "*") {
-        mode = "block-comment";
-        cursor += 2;
-        continue;
-      }
-
-      if (ch === "{") {
-        depthCurly += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "}") {
-        depthCurly = Math.max(0, depthCurly - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "[") {
-        depthSquare += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "]") {
-        depthSquare = Math.max(0, depthSquare - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "(") {
-        depthParen += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === ")") {
-        depthParen = Math.max(0, depthParen - 1);
-        cursor += 1;
-        continue;
-      }
-
-      if (
-        ch === "|" &&
-        depthCurly === 0 &&
-        depthSquare === 0 &&
-        depthParen === 0
-      ) {
-        parts.push({ start: partStart, end: cursor });
-        partStart = cursor + 1;
-      }
-      cursor += 1;
+    cursor = token.end;
+    if (token.kind !== "symbol") {
       continue;
     }
 
-    if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        SINGLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
+    if (token.text === "{") {
+      depthCurly += 1;
+      continue;
+    }
+    if (token.text === "}") {
+      depthCurly = Math.max(0, depthCurly - 1);
+      continue;
+    }
+    if (token.text === "[") {
+      depthSquare += 1;
+      continue;
+    }
+    if (token.text === "]") {
+      depthSquare = Math.max(0, depthSquare - 1);
+      continue;
+    }
+    if (token.text === "(") {
+      depthParen += 1;
+      continue;
+    }
+    if (token.text === ")") {
+      depthParen = Math.max(0, depthParen - 1);
       continue;
     }
 
-    if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        DOUBLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "template") {
-      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "line-comment") {
-      const lineEnd = text.indexOf("\n", cursor);
-      if (lineEnd < 0) {
-        break;
-      }
-      cursor = lineEnd + 1;
-      mode = "normal";
-      continue;
-    }
-
-    if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
-      if (blockEnd < 0) {
-        break;
-      }
-      cursor = blockEnd + 2;
-      mode = "normal";
-      continue;
+    if (
+      token.text === "|" &&
+      depthCurly === 0 &&
+      depthSquare === 0 &&
+      depthParen === 0
+    ) {
+      parts.push({ start: partStart, end: token.start });
+      partStart = token.end;
     }
   }
 
@@ -1258,171 +1001,52 @@ function splitTopLevelSemicolonSegments(
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode:
-    | "normal"
-    | "single"
-    | "double"
-    | "template"
-    | "line-comment"
-    | "block-comment" = "normal";
   let segmentStart = 0;
 
   let cursor = 0;
-  while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(
-      text,
-      cursor,
-      SPLIT_SEMICOLON_TOKEN_RE,
-    );
-    if (nextTokenIndex < 0) {
+  while (true) {
+    const token = nextTokenFromText(text, cursor);
+    if (!token) {
       break;
     }
-    cursor = nextTokenIndex;
-    const ch = text[cursor]!;
-    const next = text[cursor + 1];
-
-    if (mode === "normal") {
-      if (ch === "'") {
-        mode = "single";
-        cursor += 1;
-        continue;
-      }
-      if (ch === '"') {
-        mode = "double";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "`") {
-        mode = "template";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "/" && next === "/") {
-        mode = "line-comment";
-        cursor += 2;
-        continue;
-      }
-      if (ch === "/" && next === "*") {
-        mode = "block-comment";
-        cursor += 2;
-        continue;
-      }
-
-      if (ch === "{") {
-        depthCurly += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "}") {
-        depthCurly = Math.max(0, depthCurly - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "[") {
-        depthSquare += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "]") {
-        depthSquare = Math.max(0, depthSquare - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "(") {
-        depthParen += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === ")") {
-        depthParen = Math.max(0, depthParen - 1);
-        cursor += 1;
-        continue;
-      }
-
-      if (
-        ch === ";" &&
-        depthCurly === 0 &&
-        depthSquare === 0 &&
-        depthParen === 0
-      ) {
-        segments.push({ start: segmentStart, end: cursor });
-        segmentStart = cursor + 1;
-      }
-      cursor += 1;
+    cursor = token.end;
+    if (token.kind !== "symbol") {
       continue;
     }
 
-    if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        SINGLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
+    if (token.text === "{") {
+      depthCurly += 1;
+      continue;
+    }
+    if (token.text === "}") {
+      depthCurly = Math.max(0, depthCurly - 1);
+      continue;
+    }
+    if (token.text === "[") {
+      depthSquare += 1;
+      continue;
+    }
+    if (token.text === "]") {
+      depthSquare = Math.max(0, depthSquare - 1);
+      continue;
+    }
+    if (token.text === "(") {
+      depthParen += 1;
+      continue;
+    }
+    if (token.text === ")") {
+      depthParen = Math.max(0, depthParen - 1);
       continue;
     }
 
-    if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        DOUBLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "template") {
-      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "line-comment") {
-      const lineEnd = text.indexOf("\n", cursor);
-      if (lineEnd < 0) {
-        break;
-      }
-      cursor = lineEnd + 1;
-      mode = "normal";
-      continue;
-    }
-
-    if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
-      if (blockEnd < 0) {
-        break;
-      }
-      cursor = blockEnd + 2;
-      mode = "normal";
-      continue;
+    if (
+      token.text === ";" &&
+      depthCurly === 0 &&
+      depthSquare === 0 &&
+      depthParen === 0
+    ) {
+      segments.push({ start: segmentStart, end: token.start });
+      segmentStart = token.end;
     }
   }
 
@@ -1437,169 +1061,50 @@ function findTopLevelStatementEnd(text: string, start: number): number {
   let depthCurly = 0;
   let depthSquare = 0;
   let depthParen = 0;
-  let mode:
-    | "normal"
-    | "single"
-    | "double"
-    | "template"
-    | "line-comment"
-    | "block-comment" = "normal";
 
   let cursor = start;
-  while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(
-      text,
-      cursor,
-      STATEMENT_END_TOKEN_RE,
-    );
-    if (nextTokenIndex < 0) {
+  while (true) {
+    const token = nextTokenFromText(text, cursor);
+    if (!token) {
       break;
     }
-    cursor = nextTokenIndex;
-    const ch = text[cursor]!;
-    const next = text[cursor + 1];
-
-    if (mode === "normal") {
-      if (ch === "'") {
-        mode = "single";
-        cursor += 1;
-        continue;
-      }
-      if (ch === '"') {
-        mode = "double";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "`") {
-        mode = "template";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "/" && next === "/") {
-        mode = "line-comment";
-        cursor += 2;
-        continue;
-      }
-      if (ch === "/" && next === "*") {
-        mode = "block-comment";
-        cursor += 2;
-        continue;
-      }
-
-      if (ch === "{") {
-        depthCurly += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "}") {
-        depthCurly = Math.max(0, depthCurly - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "[") {
-        depthSquare += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "]") {
-        depthSquare = Math.max(0, depthSquare - 1);
-        cursor += 1;
-        continue;
-      }
-      if (ch === "(") {
-        depthParen += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === ")") {
-        depthParen = Math.max(0, depthParen - 1);
-        cursor += 1;
-        continue;
-      }
-
-      if (
-        ch === ";" &&
-        depthCurly === 0 &&
-        depthSquare === 0 &&
-        depthParen === 0
-      ) {
-        return cursor + 1;
-      }
-      cursor += 1;
+    cursor = token.end;
+    if (token.kind !== "symbol") {
       continue;
     }
 
-    if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        SINGLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
+    if (token.text === "{") {
+      depthCurly += 1;
+      continue;
+    }
+    if (token.text === "}") {
+      depthCurly = Math.max(0, depthCurly - 1);
+      continue;
+    }
+    if (token.text === "[") {
+      depthSquare += 1;
+      continue;
+    }
+    if (token.text === "]") {
+      depthSquare = Math.max(0, depthSquare - 1);
+      continue;
+    }
+    if (token.text === "(") {
+      depthParen += 1;
+      continue;
+    }
+    if (token.text === ")") {
+      depthParen = Math.max(0, depthParen - 1);
       continue;
     }
 
-    if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        DOUBLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "template") {
-      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "line-comment") {
-      const lineEnd = text.indexOf("\n", cursor);
-      if (lineEnd < 0) {
-        break;
-      }
-      cursor = lineEnd + 1;
-      mode = "normal";
-      continue;
-    }
-
-    if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
-      if (blockEnd < 0) {
-        break;
-      }
-      cursor = blockEnd + 2;
-      mode = "normal";
-      continue;
+    if (
+      token.text === ";" &&
+      depthCurly === 0 &&
+      depthSquare === 0 &&
+      depthParen === 0
+    ) {
+      return token.end;
     }
   }
 
@@ -1608,167 +1113,124 @@ function findTopLevelStatementEnd(text: string, start: number): number {
 
 function findMatchingBrace(text: string, openBracePos: number): number {
   let depth = 0;
-  let mode:
-    | "normal"
-    | "single"
-    | "double"
-    | "template"
-    | "line-comment"
-    | "block-comment" = "normal";
 
   let cursor = openBracePos;
-  while (cursor < text.length) {
-    const nextTokenIndex = findNextRegexIndex(
-      text,
-      cursor,
-      BRACE_MATCH_TOKEN_RE,
-    );
-    if (nextTokenIndex < 0) {
+  while (true) {
+    const token = nextTokenFromText(text, cursor);
+    if (!token) {
       break;
     }
-    cursor = nextTokenIndex;
-    const ch = text[cursor]!;
-    const next = text[cursor + 1];
-
-    if (mode === "normal") {
-      if (ch === "'") {
-        mode = "single";
-        cursor += 1;
-        continue;
-      }
-      if (ch === '"') {
-        mode = "double";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "`") {
-        mode = "template";
-        cursor += 1;
-        continue;
-      }
-      if (ch === "/" && next === "/") {
-        mode = "line-comment";
-        cursor += 2;
-        continue;
-      }
-      if (ch === "/" && next === "*") {
-        mode = "block-comment";
-        cursor += 2;
-        continue;
-      }
-
-      if (ch === "{") {
-        depth += 1;
-        cursor += 1;
-        continue;
-      }
-      if (ch === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          return cursor;
-        }
-        cursor += 1;
-      }
-      cursor += 1;
+    cursor = token.end;
+    if (token.kind !== "symbol") {
       continue;
     }
 
-    if (mode === "single") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        SINGLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
+    if (token.text === "{") {
+      depth += 1;
       continue;
     }
-
-    if (mode === "double") {
-      const nextSpecial = findNextRegexIndex(
-        text,
-        cursor,
-        DOUBLE_QUOTE_SCAN_RE,
-      );
-      if (nextSpecial < 0) {
-        break;
+    if (token.text === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return token.start;
       }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "template") {
-      const nextSpecial = findNextRegexIndex(text, cursor, TEMPLATE_SCAN_RE);
-      if (nextSpecial < 0) {
-        break;
-      }
-      cursor = nextSpecial;
-      if (text[cursor] === "\\") {
-        cursor += 2;
-      } else {
-        mode = "normal";
-        cursor += 1;
-      }
-      continue;
-    }
-
-    if (mode === "line-comment") {
-      const lineEnd = text.indexOf("\n", cursor);
-      if (lineEnd < 0) {
-        break;
-      }
-      cursor = lineEnd + 1;
-      mode = "normal";
-      continue;
-    }
-
-    if (mode === "block-comment") {
-      const blockEnd = text.indexOf("*/", Math.max(0, cursor - 1));
-      if (blockEnd < 0) {
-        break;
-      }
-      cursor = blockEnd + 2;
-      mode = "normal";
-      continue;
     }
   }
 
   return -1;
 }
 
-function parseDeclarationLeadingJsDoc(
-  text: string,
-  declarationStart: number,
-): string {
-  const prefix = text.slice(0, declarationStart);
-  let searchFrom = prefix.lastIndexOf("/**");
-  while (searchFrom >= 0) {
-    const candidate = prefix.slice(searchFrom);
-    const parsed = parseLeadingJsDoc(candidate);
-    if (
-      parsed.nextOffset > 0 &&
-      candidate.slice(0, parsed.nextOffset).trimStart().startsWith("/**") &&
-      candidate.slice(parsed.nextOffset).trim() === ""
-    ) {
-      return parsed.doc;
-    }
-    searchFrom = prefix.lastIndexOf("/**", searchFrom - 1);
+function nextTokenFromText(text: string, from: number): Token | null {
+  let cursor = from;
+  while (cursor < text.length && /\s/.test(text[cursor]!)) {
+    cursor += 1;
   }
-  return "";
+  if (cursor >= text.length) {
+    return null;
+  }
+
+  const ch = text[cursor]!;
+  const next = text[cursor + 1];
+
+  if (ch === "/" && next === "/") {
+    const lineEnd = text.indexOf("\n", cursor + 2);
+    const end = lineEnd < 0 ? text.length : lineEnd;
+    return {
+      kind: "comment",
+      text: text.slice(cursor, end),
+      start: cursor,
+      end,
+    };
+  }
+
+  if (ch === "/" && next === "*") {
+    let blockEnd = text.indexOf("*/", cursor + 2);
+    while (blockEnd >= 0) {
+      const adjacentJsDocStart = blockEnd + 1;
+      if (!text.startsWith("/**", adjacentJsDocStart)) {
+        break;
+      }
+      const extendedEnd = text.indexOf("*/", adjacentJsDocStart + 3);
+      if (extendedEnd < 0) {
+        blockEnd = -1;
+        break;
+      }
+      blockEnd = extendedEnd;
+    }
+
+    const end = blockEnd < 0 ? text.length : blockEnd + 2;
+    return {
+      kind: "comment",
+      text: text.slice(cursor, end),
+      start: cursor,
+      end,
+    };
+  }
+
+  if (ch === "'" || ch === '"' || ch === "`") {
+    let end = cursor + 1;
+    while (end < text.length) {
+      const c = text[end]!;
+      if (c === "\\") {
+        end += 2;
+        continue;
+      }
+      if (c === ch) {
+        end += 1;
+        break;
+      }
+      if (ch !== "`" && c === "\n") {
+        break;
+      }
+      end += 1;
+    }
+    return {
+      kind: "string-literal",
+      text: text.slice(cursor, end),
+      start: cursor,
+      end,
+    };
+  }
+
+  if (isIdentifierStart(ch)) {
+    let end = cursor + 1;
+    while (end < text.length && isIdentifierPart(text[end]!)) {
+      end += 1;
+    }
+    return {
+      kind: "identifier",
+      text: text.slice(cursor, end),
+      start: cursor,
+      end,
+    };
+  }
+
+  return {
+    kind: "symbol",
+    text: ch,
+    start: cursor,
+    end: cursor + 1,
+  };
 }
 
 function parseLeadingJsDoc(raw: string): {
@@ -1785,8 +1247,14 @@ function parseLeadingJsDoc(raw: string): {
     return { doc: "", nextOffset: 0 };
   }
 
+  let docBody = raw.slice(leadingWhitespace + 3, commentEnd);
+  const nestedMarker = docBody.lastIndexOf("/**");
+  if (nestedMarker >= 0 && docBody.slice(0, nestedMarker).trim() === "") {
+    docBody = docBody.slice(nestedMarker + 3);
+  }
+
   return {
-    doc: normalizeJsDocText(raw.slice(leadingWhitespace + 3, commentEnd)),
+    doc: normalizeJsDocText(docBody),
     nextOffset: commentEnd + 2,
   };
 }
@@ -1813,25 +1281,6 @@ function normalizeJsDocText(raw: string): string {
 
 const IDENTIFIER_RE = /[A-Za-z_][A-Za-z0-9_]*/y;
 const WHITESPACE_RUN_RE = /\s*/y;
-const KEYWORD_SCAN_TOKEN_RE = /[A-Za-z_'"`{}[\]()/]/g;
-const SPLIT_PIPE_TOKEN_RE = /['"`{}[\]()|/]/g;
-const SPLIT_SEMICOLON_TOKEN_RE = /['"`{}[\]();/]/g;
-const STATEMENT_END_TOKEN_RE = /['"`{}[\]();/]/g;
-const BRACE_MATCH_TOKEN_RE = /['"`{}/]/g;
-const SINGLE_QUOTE_SCAN_RE = /[\\']/g;
-const DOUBLE_QUOTE_SCAN_RE = /[\\"]/g;
-const DOUBLE_OR_NEWLINE_SCAN_RE = /[\\"\n]/g;
-const TEMPLATE_SCAN_RE = /[\\`]/g;
-
-function findNextRegexIndex(
-  text: string,
-  start: number,
-  pattern: RegExp,
-): number {
-  pattern.lastIndex = start;
-  const match = pattern.exec(text);
-  return match ? match.index : -1;
-}
 
 function matchAt(
   text: string,
