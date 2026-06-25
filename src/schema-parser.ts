@@ -10,7 +10,7 @@ export type Schema = {
 export type SchemaParseErrors = {
   readonly kind: "error";
   readonly errors: readonly SchemaParseError[];
-}
+};
 
 export type SchemaParseError = {
   readonly start: number;

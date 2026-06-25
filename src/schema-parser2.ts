@@ -1,3 +1,5 @@
+// TODO: expect ";" after type alias declaration
+
 // =============================================================================
 // PUBLIC TYPES
 // =============================================================================
@@ -143,12 +145,21 @@ class SchemaParser {
     if (typeRef === null) {
       return null;
     }
+
+    const maybeSemicolon = this.peekToken();
+    if (maybeSemicolon.text === ";") {
+      this.movePast(maybeSemicolon);
+    } else if (!maybeSemicolon.newLine) {
+      // Will always push an error.
+      this.expectExactThenMove(";", maybeSemicolon);
+    }
+
     return {
       kind: "type",
       name: name,
       valueType: typeRef,
       doc: getDocText(jsdoc),
-    }
+    };
   }
 
   private parseInterfaceDeclaration(
@@ -168,7 +179,7 @@ class SchemaParser {
       fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
       firstField: fields[0],
       doc: getDocText(jsdoc),
-    }
+    };
   }
 
   private parseFields(): readonly SchemaField[] {
@@ -204,7 +215,7 @@ class SchemaParser {
     if (optional) {
       token = this.movePastThenPeek(token);
     }
-    if (!this.expectExactThenMove( ":", token)) {
+    if (!this.expectExactThenMove(":", token)) {
       return null;
     }
     const typeRef = this.parseTypeRef();
@@ -223,7 +234,7 @@ class SchemaParser {
       optional: optional,
       type: typeRef,
       doc: getDocText(jsdoc),
-    }
+    };
   }
 
   private parseTypeRef(context?: {
@@ -256,7 +267,7 @@ class SchemaParser {
             kind: "inline-interface",
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
             firstField: fields[0],
-          }
+          };
         }
         case "|": {
           return this.parseTypeRef({ lastTokenWasPipe: true });
@@ -266,7 +277,7 @@ class SchemaParser {
             kind: "string-literal",
             value: token.text.slice(1, -1),
             quotedName: token,
-          }
+          };
         }
         case "identifier": {
           return {
@@ -451,7 +462,9 @@ class SchemaParser {
 
   private expectExactThenMove(expected: string, token?: Token): boolean {
     token ??= this.peekToken();
-    return this.expectThenMove(token, { [expected]: EXACT_MATCHER }) !== "noMatch";
+    return (
+      this.expectThenMove(token, { [expected]: EXACT_MATCHER }) !== "noMatch"
+    );
   }
 
   private readonly tokenizerErrors: SchemaParseError[] = [];
@@ -518,7 +531,9 @@ function getDocText(jsdoc: Token | undefined): string {
   }
   // Strip the opening `/**` and closing `*/`
   const inner = jsdoc.text.slice(3, -2);
-  const lines = inner.split("\n").map((line) => line.trimEnd().replace(/^\s*\*? ?/, ""));
+  const lines = inner
+    .split("\n")
+    .map((line) => line.trimEnd().replace(/^\s*\*? ?/, ""));
   // Remove the first line if it's empty (artifact of `/**` on its own line)
   if (lines.length > 0 && lines[0]!.trim() === "") {
     lines.shift();
