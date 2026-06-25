@@ -139,11 +139,8 @@ class SchemaParser {
     if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
       return null;
     }
-    {
-      const token = this.peekToken();
-      if (this.expectThenMove(token, { "{": EXACT_MATCHER }) === "noMatch") {
-        return null;
-      }
+    if (!this.expectExactThenMove("{")) {
+      return null;
     }
     const typeRef = this.parseTypeRef();
     if (typeRef === null) {
@@ -164,11 +161,8 @@ class SchemaParser {
     if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
       return null;
     }
-    {
-    const token = this.peekToken();
-      if (this.expectThenMove(token, { "{": EXACT_MATCHER }) === "noMatch") {
-        return null;
-      }
+    if (!this.expectExactThenMove("{")) {
+      return null;
     }
     const fields = this.parseFields();
     return {
@@ -213,7 +207,7 @@ class SchemaParser {
     if (optional) {
       token = this.movePastThenPeek(token);
     }
-    if (this.expectThenMove(token, { ":": EXACT_MATCHER }) === "noMatch") {
+    if (!this.expectExactThenMove( ":", token)) {
       return null;
     }
     const typeRef = this.parseTypeRef();
@@ -225,7 +219,7 @@ class SchemaParser {
       this.movePast(token);
     } else if (token.text !== "}" && !token.newLine) {
       // Will always push an error.
-      this.expectThenMove(token, { ";": EXACT_MATCHER });
+      this.expectExactThenMove(";", token);
     }
     return {
       name: name,
@@ -254,13 +248,13 @@ class SchemaParser {
             return null;
           }
           const token = this.peekToken();
-          this.expectThenMove(token, { ")": EXACT_MATCHER });
+          this.expectExactThenMove(")", token);
           return type;
         }
         case "{": {
           const fields = this.parseFields();
           const token = this.peekToken();
-          this.expectThenMove(token, { "}": EXACT_MATCHER });
+          this.expectExactThenMove("}", token);
           return {
             kind: "inline-interface",
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
@@ -295,7 +289,7 @@ class SchemaParser {
       let token = this.peekToken();
       if (token.text === "[") {
         token = this.movePastThenPeek(token);
-        if (this.expectThenMove(token, { "]": EXACT_MATCHER }) === "noMatch") {
+        if (!this.expectExactThenMove("]", token)) {
           return null;
         }
         type = {
@@ -456,6 +450,11 @@ class SchemaParser {
       message: `Expected: ${descriptors}`,
     });
     return "noMatch";
+  }
+
+  private expectExactThenMove(expected: string, token?: Token): boolean {
+    token ??= this.peekToken();
+    return this.expectThenMove(token, { [expected]: EXACT_MATCHER }) !== "noMatch";
   }
 
   private readonly tokenizerErrors: SchemaParseError[] = [];
