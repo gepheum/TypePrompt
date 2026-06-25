@@ -1,3 +1,8 @@
+// TODO: handle comma, semciolon, line break after field...
+// TODO: make movePast() return peekToken()
+// TODO: add expectExactThenMove
+// TODO: move tokenizer to different file
+
 // =============================================================================
 // PUBLIC TYPES
 // =============================================================================
@@ -57,7 +62,7 @@ export type TypeNameRef = {
 export type StringLiteralTypeRef = {
   readonly kind: "string-literal";
   readonly value: string;
-  readonly quoted_name: SchemaSourceSpan;
+  readonly quotedName: SchemaSourceSpan;
 };
 
 export type InlineInterfaceTypeRef = {
@@ -73,9 +78,7 @@ export type ArrayTypeRef = {
 
 export type UnionTypeRef = {
   readonly kind: "union";
-  readonly members: ReadonlyArray<
-    StringLiteralTypeRef | InlineInterfaceTypeRef
-  >;
+  readonly members: TypeRef[];
 };
 
 export type SchemaSourceSpan = {
@@ -230,7 +233,85 @@ class SchemaParser {
     }
   }
 
-  private parseTypeRef(): TypeRef | null {
+  private parseTypeRef(context?: {
+    lastTokenWasPipe?: boolean;
+  }): TypeRef | null {
+    let type: TypeRef | null = ((): TypeRef | null => {
+      const token = this.peekToken();
+      const match = this.expectThenMove(token, {
+        "(": EXACT_MATCHER,
+        "{": EXACT_MATCHER,
+        "|": context?.lastTokenWasPipe ? NEVER_MATCHER : EXACT_MATCHER,
+        stringLiteral: STRING_LITERAL_MATCHER,
+        identifier: IDENTIFIER_MATCHER,
+      });
+      switch (match) {
+        case "(": {
+          const type = this.parseTypeRef();
+          if (type === null) {
+            return null;
+          }
+          const token = this.peekToken();
+          this.expectThenMove(token, { ")": EXACT_MATCHER });
+          return type;
+        }
+        case "{": {
+          const fields = this.parseFields();
+          const token = this.peekToken();
+          this.expectThenMove(token, { "}": EXACT_MATCHER });
+          return {
+            kind: "inline-interface",
+            fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
+            firstField: fields[0],
+          }
+        }
+        case "|": {
+          return this.parseTypeRef({ lastTokenWasPipe: true });
+        }
+        case "stringLiteral": {
+          return {
+            kind: "string-literal",
+            value: token.text.slice(1, -1),
+            quotedName: token,
+          }
+        }
+        case "identifier": {
+          return {
+            kind: "type-name",
+            name: token,
+          };
+        }
+        case "noMatch": {
+          return null;
+        }
+      }
+    })();
+    if (type === null) {
+      return null;
+    }
+    while (true) {
+      let token = this.peekToken();
+      if (token.text === "[") {
+        this.movePast(token);
+        token = this.peekToken();
+        if (this.expectThenMove(token, { "]": EXACT_MATCHER }) === "noMatch") {
+          return null;
+        }
+        type = {
+          kind: "array",
+          elementType: type,
+        };
+      } else if (token.text === "|") {
+        this.movePast(token);
+        const rightType = this.parseTypeRef({ lastTokenWasPipe: true });
+        if (rightType === null) {
+          return null;
+        }
+        return joinInUnion(type, rightType);
+      } else {
+        return type;
+      }
+    }
   }
 
   private peekToken(): Token {
@@ -393,11 +474,6 @@ type TokenMatcher = {
   readonly descriptor: (id: string) => string;
 };
 
-const EXACT_MATCHER: TokenMatcher = {
-  test: (token: Token, id: string) => token.text === id,
-  descriptor: (id: string) => `'${id}'`,
-};
-
 const NEVER_MATCHER: TokenMatcher = {
   test: () => false,
   descriptor: () => "",
@@ -408,9 +484,19 @@ const ALWAYS_MATCHER: TokenMatcher = {
   descriptor: () => "",
 };
 
+const EXACT_MATCHER: TokenMatcher = {
+  test: (token: Token, id: string) => token.text === id,
+  descriptor: (id: string) => `'${id}'`,
+};
+
 const IDENTIFIER_MATCHER: TokenMatcher = {
   test: (token: Token) => token.kind === "identifier",
   descriptor: () => "identifier",
+};
+
+const STRING_LITERAL_MATCHER: TokenMatcher = {
+  test: (token: Token) => token.kind === "string-literal",
+  descriptor: () => "string literal",
 };
 
 type TokenMatchers = { readonly [id: string]: TokenMatcher };
@@ -431,4 +517,30 @@ function getDocText(jsdoc: Token | undefined): string {
     lines.pop();
   }
   return lines.join("\n");
+}
+
+function joinInUnion(a: TypeRef, b: TypeRef): UnionTypeRef {
+  if (a.kind === "union") {
+    if (b.kind === "union") {
+      return {
+        kind: "union",
+        members: [...a.members, ...b.members],
+      };
+    } else {
+      return {
+        kind: "union",
+        members: [...a.members, b],
+      };
+    }
+  } else if (b.kind === "union") {
+    return {
+      kind: "union",
+      members: [a, ...b.members],
+    };
+  } else {
+    return {
+      kind: "union",
+      members: [a, b],
+    };
+  }
 }
