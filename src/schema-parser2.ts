@@ -1,4 +1,4 @@
-// TODO: expect ";" after type alias declaration
+// TODO: lenient parsing, skipt to next instruction
 
 // =============================================================================
 // PUBLIC TYPES
@@ -96,6 +96,34 @@ class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
   parse(): Schema | SchemaParseErrors {
+    const typeDeclarations: TypeDeclaration[] = [];
+
+    while (true) {
+      const typeDeclaration = this.parseTypeDeclaration();
+      if (typeDeclaration === null) {
+        if (this.peekToken().kind === "string-end") {
+          break;
+        } else if (this.tokenizerErrors.length) {
+          return {
+            kind: "error",
+            errors: this.tokenizerErrors,
+          };
+        } else {
+          // Jump to the next "type" or "interface" keyword.
+          const token = this.peekToken();
+          while (
+            token.kind !== "string-end" &&
+            token.text !== "type" &&
+            token.text !== "interface"
+          ) {
+            this.movePast(token);
+          }
+        }
+      } else {
+        typeDeclarations.push(typeDeclaration);
+      }
+    }
+
     return {
       kind: "error",
       errors: [...this.tokenizerErrors, ...this.parserErrors],
@@ -310,7 +338,7 @@ class SchemaParser {
         if (rightType === null) {
           return null;
         }
-        return joinInUnion(type, rightType);
+        return join(type, rightType);
       } else {
         return type;
       }
@@ -545,7 +573,7 @@ function getDocText(jsdoc: Token | undefined): string {
   return lines.join("\n");
 }
 
-function joinInUnion(a: TypeRef, b: TypeRef): UnionTypeRef {
+function join(a: TypeRef, b: TypeRef): UnionTypeRef {
   if (a.kind === "union") {
     if (b.kind === "union") {
       return {
