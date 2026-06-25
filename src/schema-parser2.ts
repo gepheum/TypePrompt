@@ -1,4 +1,3 @@
-// TODO: make movePast() return peekToken()
 // TODO: add expectExactThenMove
 // TODO: move tokenizer to different file
 
@@ -113,8 +112,7 @@ class SchemaParser {
     let jsdoc: Token | undefined;
     if (token.kind === "jsdoc") {
       jsdoc = token;
-      this.movePast(token);
-      token = this.peekToken();
+      token = this.movePastThenPeek(token);
     }
 
     const match = this.expectThenMove(token, {
@@ -200,8 +198,7 @@ class SchemaParser {
     let jsdoc: Token | undefined;
     if (token.kind === "jsdoc") {
       jsdoc = token;
-      this.movePast(token);
-      token = this.peekToken();
+      token = this.movePastThenPeek(token);
     }
     const name = token;
     const nameMatch = this.expectThenMove(name, {
@@ -214,8 +211,7 @@ class SchemaParser {
     token = this.peekToken();
     const optional = token.text === "?";
     if (optional) {
-      this.movePast(token);
-      token = this.peekToken();
+      token = this.movePastThenPeek(token);
     }
     if (this.expectThenMove(token, { ":": EXACT_MATCHER }) === "noMatch") {
       return null;
@@ -298,8 +294,7 @@ class SchemaParser {
     while (true) {
       let token = this.peekToken();
       if (token.text === "[") {
-        this.movePast(token);
-        token = this.peekToken();
+        token = this.movePastThenPeek(token);
         if (this.expectThenMove(token, { "]": EXACT_MATCHER }) === "noMatch") {
           return null;
         }
@@ -431,6 +426,11 @@ class SchemaParser {
 
   private movePast(token: Token): void {
     this.cursor = token.end;
+  }
+
+  private movePastThenPeek(token: Token): Token {
+    this.movePast(token);
+    return this.peekToken();
   }
 
   private expectThenMove<M extends TokenMatchers>(
