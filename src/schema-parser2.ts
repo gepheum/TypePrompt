@@ -1,4 +1,3 @@
-// TODO: handle comma, semciolon, line break after field...
 // TODO: make movePast() return peekToken()
 // TODO: add expectExactThenMove
 // TODO: move tokenizer to different file
@@ -225,6 +224,13 @@ class SchemaParser {
     if (typeRef === null) {
       return null;
     }
+    token = this.peekToken();
+    if (token.text === ";" || token.text === ",") {
+      this.movePast(token);
+    } else if (token.text !== "}" && !token.newLine) {
+      // Will always push an error.
+      this.expectThenMove(token, { ";": EXACT_MATCHER });
+    }
     return {
       name: name,
       optional: optional,
@@ -329,6 +335,7 @@ class SchemaParser {
     // 1    2             3        4                5       6            7                8                      9                      10
     const { schemaSource } = this;
     let group: RegExpExecArray | null;
+    let newLine = false;
     while ((group = re.exec(schemaSource)) !== null) {
       const position = re.lastIndex - group[0].length;
 
@@ -346,6 +353,7 @@ class SchemaParser {
 
       if (group[6] !== undefined) {
         // Skip whitespaces.
+        newLine = newLine || group[0].includes("\n");
         continue;
       }
 
@@ -362,7 +370,8 @@ class SchemaParser {
         if (text.startsWith("/**")) {
           tokenKind = "jsdoc";
         } else {
-          // Skip regular comments.
+          // Skip regular multi-line comments.
+          newLine = newLine || group[0].includes("\n");
           continue;
         }
       } else if (group[4] !== undefined) {
@@ -413,6 +422,7 @@ class SchemaParser {
         text: text,
         start: position,
         end: re.lastIndex,
+        newLine: newLine,
       };
     }
     // Cannot happen because the regex matches the end of the string.
@@ -463,6 +473,11 @@ type Token = {
   readonly text: string;
   readonly start: number;
   readonly end: number;
+  /**
+   * True if the start of this token is not on the same line as the end of the
+   * previous token.
+   */
+  readonly newLine: boolean;
 };
 
 type TokenMatcher = {
