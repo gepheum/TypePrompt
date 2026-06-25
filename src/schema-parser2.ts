@@ -1,5 +1,3 @@
-// TODO: lenient parsing, skipt to next instruction
-
 // =============================================================================
 // PUBLIC TYPES
 // =============================================================================
@@ -124,9 +122,20 @@ class SchemaParser {
       }
     }
 
+    if (this.parserErrors.length) {
+      return {
+        kind: "error",
+        errors: this.parserErrors,
+      };
+    }
+
+    ValidateSchema(typeDeclarations);
+
     return {
-      kind: "error",
-      errors: [...this.tokenizerErrors, ...this.parserErrors],
+      kind: "success",
+      types: Object.fromEntries(
+        typeDeclarations.map((t) => [t.name.text, t]),
+      ),
     };
   }
 
@@ -338,7 +347,7 @@ class SchemaParser {
         if (rightType === null) {
           return null;
         }
-        return join(type, rightType);
+        return toUnionType(type, rightType);
       } else {
         return type;
       }
@@ -573,7 +582,7 @@ function getDocText(jsdoc: Token | undefined): string {
   return lines.join("\n");
 }
 
-function join(a: TypeRef, b: TypeRef): UnionTypeRef {
+function toUnionType(a: TypeRef, b: TypeRef): UnionTypeRef {
   if (a.kind === "union") {
     if (b.kind === "union") {
       return {
