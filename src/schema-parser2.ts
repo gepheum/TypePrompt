@@ -2,6 +2,8 @@
 // PUBLIC TYPES
 // =============================================================================
 
+import { checkNoAmbiguity } from "./casing.js";
+
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
@@ -129,7 +131,13 @@ class SchemaParser {
       };
     }
 
-    ValidateSchema(typeDeclarations);
+    const validationErrors = validateSchema(typeDeclarations);
+    if (validationErrors.length) {
+      return {
+        kind: "error",
+        errors: validationErrors,
+      };
+    }
 
     return {
       kind: "success",
@@ -347,7 +355,7 @@ class SchemaParser {
         if (rightType === null) {
           return null;
         }
-        return toUnionType(type, rightType);
+        return joinTypes(type, rightType);
       } else {
         return type;
       }
@@ -582,7 +590,7 @@ function getDocText(jsdoc: Token | undefined): string {
   return lines.join("\n");
 }
 
-function toUnionType(a: TypeRef, b: TypeRef): UnionTypeRef {
+function joinTypes(a: TypeRef, b: TypeRef): UnionTypeRef {
   if (a.kind === "union") {
     if (b.kind === "union") {
       return {
@@ -606,4 +614,22 @@ function toUnionType(a: TypeRef, b: TypeRef): UnionTypeRef {
       members: [a, b],
     };
   }
+}
+
+function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[] {
+  const errors: SchemaParseError[] = [];
+
+  errors.push(...checkNoAmbiguity(
+    typeDeclarations.map((t) => ({
+      name: t.name.text,
+      start: t.name.start,
+      end: t.name.end,
+    })),
+  ));
+
+  for (const typeDeclaration of typeDeclarations) {
+
+  }
+
+  return errors;
 }
