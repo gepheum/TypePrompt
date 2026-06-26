@@ -2,6 +2,7 @@ import { checkNoAmbiguity } from "../casing.js";
 import type {
   InterfaceDeclaration,
   ResolvedTypeRef,
+  SchemaField,
   SchemaParseError,
   SchemaSourceSpan,
   TypeDeclaration,
@@ -205,7 +206,10 @@ function validateUnionType(
           errors.push({
             start: firstToken.start,
             end: firstToken.end,
-            message: `Union members must be either all strings or all interfaces; expected: ${expected}, found: ${found}`,
+            message: [
+              "Union members must be either all strings or all interfaces; ",
+              ` expected: ${expected}, found: ${found}`,
+            ].join(""),
           });
           allGood = false;
         }
@@ -250,6 +254,9 @@ function validateUnionType(
     //   - the first field of each interface has string literal type
     //   - all string literals are distinct
     //   - all first fields have the same name
+    const quotedNames: SchemaSourceSpan[] = [];
+    let discriminator: SchemaField | undefined;
+    let allGood = true;
     for (const member of members) {
       const resolvedType = resolveTypeRef(member, types, new Set())!;
       if (resolvedType.kind !== "interface") {
@@ -265,8 +272,35 @@ function validateUnionType(
           message:
             "The first field of an interface in a union must be a string literal",
         });
+        allGood = false;
         continue;
       }
+      if (!discriminator) {
+        discriminator = firstField;
+      } else if (discriminator.name.text !== firstField.name.text) {
+        errors.push({
+          start: firstField.name.start,
+          end: firstField.name.end,
+          message: [
+            "The first field of an interface in a union must have the same name as ",
+            "the other members; ",
+            `expected: ${discriminator.name.text}, found: ${firstField.name.text}`,
+          ].join(""),
+        });
+        allGood = false;
+      }
+      quotedNames.push(firstField.type.quotedName);
+    }
+    if (!allGood) {
+      errors.push(
+        ...checkNoAmbiguity(
+          quotedNames.map((q) => ({
+            name: q.text,
+            start: q.start,
+            end: q.end,
+          })),
+        ),
+      );
     }
   }
 }
