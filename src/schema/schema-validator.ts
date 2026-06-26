@@ -29,10 +29,24 @@ export function validateSchema(
     typeDeclarations.map((t) => [t.name.text, t]),
   );
 
-  // TODO: check recursive types and cycles
-
   for (const typeDeclaration of typeDeclarations) {
-    validateType(typeDeclaration, types);
+    validateType(typeDeclaration, types, errors);
+    const { name } = typeDeclaration;
+    const nameDependencies = new Set<string>();
+    collectNameDependencies(
+      typeDeclaration.kind === "type"
+        ? typeDeclaration.valueType
+        : typeDeclaration,
+      types,
+      nameDependencies,
+    );
+    if (nameDependencies.has(name.text)) {
+      errors.push({
+        start: name.start,
+        end: name.end,
+        message: `Type '${name.text}' circularly references itself`,
+      });
+    }
   }
 
   return errors;
@@ -91,11 +105,11 @@ function getFirstToken(type: TypeRef | InterfaceDeclaration): SchemaSourceSpan {
 function validateType(
   type: TypeRef | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-  errors: SchemaParseError[] = [],
+  errors: SchemaParseError[],
 ): null {
   switch (type.kind) {
     case "array": {
-      return validateType(type.elementType, types);
+      return validateType(type.elementType, types, errors);
     }
     case "interface": {
       if (type.name) {
@@ -378,3 +392,45 @@ const WORD_MUST_START_WITH_UPPERCASE =
   "Must start with uppercase letter and contain only alphanumeric characters";
 const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
+
+function collectNameDependencies(
+  type: TypeRef | InterfaceDeclaration,
+  types: { readonly [name: string]: TypeDeclaration },
+  seenNames: Set<string>,
+): null {
+  switch (type.kind) {
+    case "array": {
+      return collectNameDependencies(type.elementType, types, seenNames);
+    }
+    case "interface": {
+      for (const field of Object.values(type.fields)) {
+        collectNameDependencies(field.type, types, seenNames);
+      }
+      return null;
+    }
+    case "string-literal": {
+      return null;
+    }
+    case "type-name": {
+      const typeName = type.name.text;
+      if (seenNames.has(typeName)) {
+        return null;
+      }
+      seenNames.add(typeName);
+      const resolved = types[typeName];
+      if (!resolved) {
+        return null;
+      }
+      if (resolved.kind === "type") {
+        return collectNameDependencies(resolved.valueType, types, seenNames);
+      } else {
+        return collectNameDependencies(resolved, types, seenNames);
+      }
+    }
+    case "union": {
+      // Only collect dependencies from the first member of the union.
+      collectNameDependencies(type.members[0]!, types, seenNames);
+      return null;
+    }
+  }
+}
