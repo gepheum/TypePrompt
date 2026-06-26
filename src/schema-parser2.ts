@@ -631,13 +631,26 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
     typeDeclarations.map((t) => [t.name.text, t]),
   );
 
+  const validateTypeName = (name: SchemaSourceSpan): void => {
+    if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
+      errors.push({
+        start: name.start,
+        end: name.end,
+        message: WORD_MUST_START_WITH_UPPERCASE,
+      });
+    }
+  }
+
   const validateType = (type: TypeRef | TypeDeclaration): null => {
     switch (type.kind) {
       case "array": {
         return validateType(type.elementType);
       }
-      case "inline-interface":
       case "interface": {
+        validateTypeName(type.name);
+        // fallthrough
+      }
+      case "inline-interface": {
         errors.push(...checkNoAmbiguity(
           Object.values(type.fields).map((f) => ({
             name: f.name.text,
@@ -645,6 +658,13 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
             end: f.name.end,
           }))));
         for (const field of Object.values(type.fields)) {
+          if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
+            errors.push({
+              start: field.name.start,
+              end: field.name.end,
+              message: WORD_MUST_START_WITH_LOWERCASE,
+            });
+          }
           validateType(field.type);
         }
         return null;
@@ -654,12 +674,13 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
           errors.push({
             start: type.quotedName.start + 1,
             end: type.quotedName.end - 1,
-            message: 'Must start with lowercase letter and contain only alphanumeric characters',
+            message: WORD_MUST_START_WITH_LOWERCASE,
           });
         }
         return null;
       }
       case "type": {
+        validateTypeName(type.name);
         return validateType(type.valueType);
       }
       case "type-name": {
@@ -674,10 +695,12 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
         return null;
       }
       case "union": {
-
+        // TODO
       }
     }
   }
+
+  // TODO: check recursive types and cycles
 
   for (const typeDeclaration of typeDeclarations) {
     validateType(typeDeclaration);
@@ -685,3 +708,6 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
 
   return errors;
 }
+
+const WORD_MUST_START_WITH_UPPERCASE = 'Must start with uppercase letter and contain only alphanumeric characters';
+const WORD_MUST_START_WITH_LOWERCASE = 'Must start with lowercase letter and contain only alphanumeric characters';
