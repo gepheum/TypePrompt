@@ -2,88 +2,16 @@
 // PUBLIC TYPES
 // =============================================================================
 
-import { checkNoAmbiguity } from "./casing.js";
-
-export type Schema = {
-  readonly kind: "success";
-  readonly types: { readonly [name: string]: TypeDeclaration };
-};
-
-export type SchemaParseErrors = {
-  readonly kind: "error";
-  readonly errors: readonly SchemaParseError[];
-};
-
-export type SchemaParseError = {
-  readonly start: number;
-  readonly end: number;
-  readonly message: string;
-};
-
-export type InterfaceDeclaration = {
-  readonly kind: "interface";
-  readonly name: SchemaSourceSpan;
-  readonly fields: Readonly<Record<string, SchemaField>>;
-  readonly firstField?: SchemaField;
-  readonly doc: string;
-};
-
-export type TypeDeclaration =
-  | InterfaceDeclaration
-  | {
-      readonly kind: "type";
-      readonly name: SchemaSourceSpan;
-      readonly valueType: TypeRef;
-      readonly doc: string;
-    };
-
-export type SchemaField = {
-  readonly name: SchemaSourceSpan;
-  readonly optional: boolean;
-  readonly type: TypeRef;
-  readonly doc: string;
-};
-
-export type TypeRef =
-  | TypeNameRef
-  | StringLiteralTypeRef
-  | InlineInterfaceTypeRef
-  | ArrayTypeRef
-  | UnionTypeRef;
-
-export type TypeNameRef = {
-  readonly kind: "type-name";
-  readonly name: SchemaSourceSpan;
-};
-
-export type StringLiteralTypeRef = {
-  readonly kind: "string-literal";
-  readonly value: string;
-  readonly quotedName: SchemaSourceSpan;
-};
-
-export type InlineInterfaceTypeRef = {
-  readonly kind: "inline-interface";
-  readonly leftCurlyBracket: SchemaSourceSpan;
-  readonly fields: Readonly<Record<string, SchemaField>>;
-  readonly firstField?: SchemaField;
-};
-
-export type ArrayTypeRef = {
-  readonly kind: "array";
-  readonly elementType: TypeRef;
-};
-
-export type UnionTypeRef = {
-  readonly kind: "union";
-  readonly members: TypeRef[];
-};
-
-export type SchemaSourceSpan = {
-  readonly text: string;
-  readonly start: number;
-  readonly end: number;
-};
+import type {
+  Schema,
+  SchemaField,
+  SchemaParseError,
+  SchemaParseErrors,
+  TypeDeclaration,
+  TypeRef,
+  UnionTypeRef,
+} from "./schema-types.js";
+import { validateSchema } from "./schema-validator.js";
 
 // =============================================================================
 // LOGIC
@@ -142,9 +70,7 @@ class SchemaParser {
 
     return {
       kind: "success",
-      types: Object.fromEntries(
-        typeDeclarations.map((t) => [t.name.text, t]),
-      ),
+      types: Object.fromEntries(typeDeclarations.map((t) => [t.name.text, t])),
     };
   }
 
@@ -619,141 +545,3 @@ function joinTypes(a: TypeRef, b: TypeRef): UnionTypeRef {
     };
   }
 }
-
-function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[] {
-  const errors: SchemaParseError[] = [];
-
-  errors.push(...checkNoAmbiguity(
-    typeDeclarations.map((t) => ({
-      name: t.name.text,
-      start: t.name.start,
-      end: t.name.end,
-    })),
-  ));
-
-  const types = Object.fromEntries(
-    typeDeclarations.map((t) => [t.name.text, t]),
-  );
-
-  const getUnionKind = (type: TypeRef, seenNames: Set<string>): UnionKind => {
-    switch (type.kind) {
-      case "string-literal":
-        return "strings";
-      case "inline-interface":
-        return "interfaces";
-      case "type-name": {
-        if (seenNames.has(type.name.text)) {
-          return "error";
-        }
-        seenNames.add(type.name.text);
-        const typeDeclaration = types[type.name.text];
-        if (!typeDeclaration) {
-          return "error";
-        } else if (typeDeclaration.kind === "interface") {
-          return "interfaces";
-        } else {
-          return getUnionKind(typeDeclaration.valueType, seenNames);
-        }
-      }
-      default:
-        return "neither";
-    }
-  };
-
-  const validateTypeName = (name: SchemaSourceSpan): void => {
-    if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
-      errors.push({
-        start: name.start,
-        end: name.end,
-        message: WORD_MUST_START_WITH_UPPERCASE,
-      });
-    }
-  }
-
-  const validateType = (type: TypeRef | TypeDeclaration): null => {
-    switch (type.kind) {
-      case "array": {
-        return validateType(type.elementType);
-      }
-      case "interface": {
-        validateTypeName(type.name);
-        // fallthrough
-      }
-      case "inline-interface": {
-        errors.push(...checkNoAmbiguity(
-          Object.values(type.fields).map((f) => ({
-            name: f.name.text,
-            start: f.name.start,
-            end: f.name.end,
-          }))));
-        for (const field of Object.values(type.fields)) {
-          if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
-            errors.push({
-              start: field.name.start,
-              end: field.name.end,
-              message: WORD_MUST_START_WITH_LOWERCASE,
-            });
-          }
-          validateType(field.type);
-        }
-        return null;
-      }
-      case "string-literal": {
-        if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
-          errors.push({
-            start: type.quotedName.start + 1,
-            end: type.quotedName.end - 1,
-            message: WORD_MUST_START_WITH_LOWERCASE,
-          });
-        }
-        return null;
-      }
-      case "type": {
-        validateTypeName(type.name);
-        return validateType(type.valueType);
-      }
-      case "type-name": {
-        const typeName = type.name.text;
-        if (!types[typeName]) {
-          errors.push({
-            start: type.name.start,
-            end: type.name.end,
-            message: `Unknown type '${typeName}'`,
-          });
-        }
-        return null;
-      }
-      case "union": {
-        const {members} = type;
-        for (const member of members) {
-          validateType(member);
-        }
-        // Make sure 'members' are either all string literals or all interfaces.
-        const first = members[0]!;
-        const unionKind = getUnionKind(first, new Set());
-        if (unionKind === "neither") {
-          errors.push({
-            start: first.start,
-            end: first.end,
-            message: "Union members must be either all strings or all interfaces",
-          });
-        }
-        return null;
-      }
-    }
-  }
-
-  // TODO: check recursive types and cycles
-
-  for (const typeDeclaration of typeDeclarations) {
-    validateType(typeDeclaration);
-  }
-
-  return errors;
-}
-
-type UnionKind =
-  | "strings" | "interfaces" | "neither" | "error";
-
-const WORD_MUST_START_WITH_UPPERCASE = 'Must start with uppercase letter and contain only alphanumeric characters';
-const WORD_MUST_START_WITH_LOWERCASE = 'Must start with lowercase letter and contain only alphanumeric characters';
