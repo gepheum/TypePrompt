@@ -48,9 +48,12 @@ type UnionKind =
 function getUnionKind(
   type: TypeRef,
   types: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string>,
 ): UnionKind {
-  switch (type.kind) {
+  const resolvedType = resolveTypeRef(type, types, new Set());
+  if (!resolvedType) {
+    return "error";
+  }
+  switch (resolvedType.kind) {
     case "array": {
       return "bad:array";
     }
@@ -59,24 +62,6 @@ function getUnionKind(
     }
     case "string-literal": {
       return "good:strings";
-    }
-    case "type-name": {
-      const typeName = type.name.text;
-      if (PRIMITIVE_TYPES.has(typeName)) {
-        return "bad:primitive";
-      }
-      if (seenNames.has(typeName)) {
-        return "error";
-      }
-      seenNames.add(typeName);
-      const typeDeclaration = types[typeName];
-      if (!typeDeclaration) {
-        return "error";
-      } else if (typeDeclaration.kind === "interface") {
-        return "good:interfaces";
-      } else {
-        return getUnionKind(typeDeclaration.valueType, types, seenNames);
-      }
     }
     case "union": {
       return "bad:union";
@@ -190,7 +175,7 @@ function validateUnionType(
   }
   // Make sure 'members' are either all string literals or all interfaces.
   const first = members[0]!;
-  const unionKind = getUnionKind(first, types, new Set());
+  const unionKind = getUnionKind(first, types);
   switch (unionKind) {
     case "good:strings":
     case "good:interfaces": {
@@ -209,7 +194,7 @@ function validateUnionType(
 
   let allGood = true;
   for (const member of members.slice(1)) {
-    const memberKind = getUnionKind(member, types, new Set());
+    const memberKind = getUnionKind(member, types);
     switch (memberKind) {
       case "good:strings":
       case "good:interfaces": {
@@ -269,7 +254,7 @@ function validateUnionType(
 function resolveTypeRef(
   type: TypeRef,
   types: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string> = new Set(),
+  seenNames: Set<string>,
 ): ResolvedTypeRef | null {
   if (type.kind === "type-name") {
     if (seenNames.has(type.name.text)) {
