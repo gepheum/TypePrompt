@@ -232,6 +232,7 @@ function validateUnionType(
     errors.push(...checkNoAmbiguity(
       members.map((m) => {
         if (m.kind !== "string-literal") {
+          // Cannot happen.
           throw new Error();
         }
         return {
@@ -247,6 +248,21 @@ function validateUnionType(
     //   - all string literals are distinct
     //   - all first fields have the same name
     for (const member of members) {
+      const resolvedType = resolveTypeRef(member, types, new Set())!;
+      if (resolvedType.kind !== "interface") {
+        // Cannot happen.
+        throw new Error();
+      }
+      const firstField = resolvedType.firstField;
+      if (!firstField || firstField.type.kind !== "string-literal") {
+        const firstToken = firstField?.name ?? getFirstToken(resolvedType);
+        errors.push({
+          start: firstToken.start,
+          end: firstToken.end,
+          message: "The first field of an interface in a union must be a string literal",
+        });
+        continue;
+      }
     }
   }
 }
