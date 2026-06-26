@@ -627,8 +627,60 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
     })),
   ));
 
-  for (const typeDeclaration of typeDeclarations) {
+  const types = Object.fromEntries(
+    typeDeclarations.map((t) => [t.name.text, t]),
+  );
 
+  const validateType = (type: TypeRef | TypeDeclaration): null => {
+    switch (type.kind) {
+      case "array": {
+        return validateType(type.elementType);
+      }
+      case "inline-interface":
+      case "interface": {
+        errors.push(...checkNoAmbiguity(
+          Object.values(type.fields).map((f) => ({
+            name: f.name.text,
+            start: f.name.start,
+            end: f.name.end,
+          }))));
+        for (const field of Object.values(type.fields)) {
+          validateType(field.type);
+        }
+        return null;
+      }
+      case "string-literal": {
+        if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
+          errors.push({
+            start: type.quotedName.start + 1,
+            end: type.quotedName.end - 1,
+            message: 'Must start with lowercase letter and contain only alphanumeric characters',
+          });
+        }
+        return null;
+      }
+      case "type": {
+        return validateType(type.valueType);
+      }
+      case "type-name": {
+        const typeName = type.name.text;
+        if (!types[typeName]) {
+          errors.push({
+            start: type.name.start,
+            end: type.name.end,
+            message: `Unknown type '${typeName}'`,
+          });
+        }
+        return null;
+      }
+      case "union": {
+
+      }
+    }
+  }
+
+  for (const typeDeclaration of typeDeclarations) {
+    validateType(typeDeclaration);
   }
 
   return errors;
