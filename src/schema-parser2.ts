@@ -103,11 +103,6 @@ class SchemaParser {
       if (typeDeclaration === null) {
         if (this.peekToken().kind === "string-end") {
           break;
-        } else if (this.tokenizerErrors.length) {
-          return {
-            kind: "error",
-            errors: this.tokenizerErrors,
-          };
         } else {
           // Jump to the next "type" or "interface" keyword.
           const token = this.peekToken();
@@ -124,7 +119,12 @@ class SchemaParser {
       }
     }
 
-    if (this.parserErrors.length) {
+    if (this.tokenizerErrors.length) {
+      return {
+        kind: "error",
+        errors: this.tokenizerErrors,
+      };
+    } else if (this.parserErrors.length) {
       return {
         kind: "error",
         errors: this.parserErrors,
