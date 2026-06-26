@@ -1,6 +1,6 @@
 import { checkNoAmbiguity } from "../casing.js";
 import type {
-  InterfaceDeclaration, TypeNameRef,
+  InterfaceDeclaration,
   ResolvedTypeRef,
   SchemaParseError,
   SchemaSourceSpan,
@@ -149,7 +149,7 @@ function validateType(
       return null;
     }
   }
-};
+}
 
 function validateUnionType(
   type: UnionTypeRef,
@@ -229,20 +229,23 @@ function validateUnionType(
 
   // At this stage: members are either all string literals or all interfaces.
   if (unionKind === "good:strings") {
-    errors.push(...checkNoAmbiguity(
-      members.map((m) => {
-        if (m.kind !== "string-literal") {
-          // Cannot happen.
-          throw new Error();
-        }
-        return {
-          name: m.value,
-          start: m.quotedName.start + 1,
-          end: m.quotedName.end - 1,
-        };
-      }),
-    ));
+    errors.push(
+      ...checkNoAmbiguity(
+        members.map((m) => {
+          if (m.kind !== "string-literal") {
+            // Cannot happen.
+            throw new Error();
+          }
+          return {
+            name: m.value,
+            start: m.quotedName.start + 1,
+            end: m.quotedName.end - 1,
+          };
+        }),
+      ),
+    );
   } else {
+    const _: "good:interfaces" = unionKind;
     // Verify that all these conditions are satisfied:
     //   - the first field of each interface has string literal type
     //   - all string literals are distinct
@@ -259,7 +262,8 @@ function validateUnionType(
         errors.push({
           start: firstToken.start,
           end: firstToken.end,
-          message: "The first field of an interface in a union must be a string literal",
+          message:
+            "The first field of an interface in a union must be a string literal",
         });
         continue;
       }
@@ -307,7 +311,10 @@ function getDescForKind(kind: UnionKind): string {
   }
 }
 
-function validateTypeName(name: SchemaSourceSpan, errors: SchemaParseError[]): void {
+function validateTypeName(
+  name: SchemaSourceSpan,
+  errors: SchemaParseError[],
+): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
       start: name.start,
@@ -315,9 +322,13 @@ function validateTypeName(name: SchemaSourceSpan, errors: SchemaParseError[]): v
       message: WORD_MUST_START_WITH_UPPERCASE,
     });
   }
-};
+}
 
-const PRIMITIVE_TYPES: ReadonlySet<string> = new Set(["string", "number", "boolean"]);
+const PRIMITIVE_TYPES: ReadonlySet<string> = new Set([
+  "string",
+  "number",
+  "boolean",
+]);
 
 const WORD_MUST_START_WITH_UPPERCASE =
   "Must start with uppercase letter and contain only alphanumeric characters";

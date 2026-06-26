@@ -18,7 +18,7 @@ export type InterfaceDeclaration = {
   readonly kind: "interface";
   readonly name: SchemaSourceSpan;
   readonly leftCurlyBracket: undefined;
-  readonly fields: {readonly [name: string]: SchemaField};
+  readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
   readonly doc: string;
 };
@@ -67,7 +67,7 @@ export type InlineInterfaceTypeRef = {
   readonly kind: "interface";
   readonly name: undefined;
   readonly leftCurlyBracket: SchemaSourceSpan;
-  readonly fields: {readonly [name: string]: SchemaField};
+  readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
 
