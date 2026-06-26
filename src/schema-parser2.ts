@@ -64,6 +64,7 @@ export type StringLiteralTypeRef = {
 
 export type InlineInterfaceTypeRef = {
   readonly kind: "inline-interface";
+  readonly leftCurlyBracket: SchemaSourceSpan;
   readonly fields: Readonly<Record<string, SchemaField>>;
   readonly firstField?: SchemaField;
 };
@@ -300,16 +301,19 @@ class SchemaParser {
           if (type === null) {
             return null;
           }
-          const token = this.peekToken();
-          this.expectExactThenMove(")", token);
+          if (!this.expectExactThenMove(")")) {
+            return null;
+          }
           return type;
         }
         case "{": {
           const fields = this.parseFields();
-          const token = this.peekToken();
-          this.expectExactThenMove("}", token);
+          if (!this.expectExactThenMove("}")) {
+            return null;
+          }
           return {
             kind: "inline-interface",
+            leftCurlyBracket: token,
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
             firstField: fields[0],
           };
@@ -565,7 +569,7 @@ const IDENTIFIER_MATCHER: TokenMatcher = {
 
 const STRING_LITERAL_MATCHER: TokenMatcher = {
   test: (token: Token) => token.kind === "string-literal",
-  descriptor: () => "string literal",
+  descriptor: () => "string",
 };
 
 type TokenMatchers = { readonly [id: string]: TokenMatcher };
@@ -631,6 +635,31 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
     typeDeclarations.map((t) => [t.name.text, t]),
   );
 
+  const getUnionKind = (type: TypeRef, seenNames: Set<string>): UnionKind => {
+    switch (type.kind) {
+      case "string-literal":
+        return "strings";
+      case "inline-interface":
+        return "interfaces";
+      case "type-name": {
+        if (seenNames.has(type.name.text)) {
+          return "error";
+        }
+        seenNames.add(type.name.text);
+        const typeDeclaration = types[type.name.text];
+        if (!typeDeclaration) {
+          return "error";
+        } else if (typeDeclaration.kind === "interface") {
+          return "interfaces";
+        } else {
+          return getUnionKind(typeDeclaration.valueType, seenNames);
+        }
+      }
+      default:
+        return "neither";
+    }
+  };
+
   const validateTypeName = (name: SchemaSourceSpan): void => {
     if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
       errors.push({
@@ -695,7 +724,21 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
         return null;
       }
       case "union": {
-        // TODO
+        const {members} = type;
+        for (const member of members) {
+          validateType(member);
+        }
+        // Make sure 'members' are either all string literals or all interfaces.
+        const first = members[0]!;
+        const unionKind = getUnionKind(first, new Set());
+        if (unionKind === "neither") {
+          errors.push({
+            start: first.start,
+            end: first.end,
+            message: "Union members must be either all strings or all interfaces",
+          });
+        }
+        return null;
       }
     }
   }
@@ -708,6 +751,9 @@ function validateSchema(typeDeclarations: TypeDeclaration[]): SchemaParseError[]
 
   return errors;
 }
+
+type UnionKind =
+  | "strings" | "interfaces" | "neither" | "error";
 
 const WORD_MUST_START_WITH_UPPERCASE = 'Must start with uppercase letter and contain only alphanumeric characters';
 const WORD_MUST_START_WITH_LOWERCASE = 'Must start with lowercase letter and contain only alphanumeric characters';
