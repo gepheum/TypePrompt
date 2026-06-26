@@ -148,6 +148,7 @@ class SchemaParser {
     return {
       kind: "interface",
       name: name,
+      leftCurlyBracket: undefined,
       fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
       firstField: fields[0],
       doc: getDocText(jsdoc),
@@ -238,7 +239,8 @@ class SchemaParser {
             return null;
           }
           return {
-            kind: "inline-interface",
+            kind: "interface",
+            name: undefined,
             leftCurlyBracket: token,
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
             firstField: fields[0],

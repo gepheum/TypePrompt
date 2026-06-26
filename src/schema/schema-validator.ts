@@ -1,9 +1,12 @@
 import { checkNoAmbiguity } from "../casing.js";
 import type {
+  InterfaceDeclaration, TypeNameRef,
+  ResolvedTypeRef,
   SchemaParseError,
   SchemaSourceSpan,
   TypeDeclaration,
   TypeRef,
+  UnionTypeRef,
 } from "./schema-types.js";
 
 export function validateSchema(
@@ -34,7 +37,13 @@ export function validateSchema(
   return errors;
 }
 
-type UnionKind = "strings" | "interfaces" | "neither" | "error";
+type UnionKind =
+  | "good:strings"
+  | "good:interfaces"
+  | "bad:array"
+  | "bad:primitive"
+  | "bad:union"
+  | "error";
 
 function getUnionKind(
   type: TypeRef,
@@ -42,35 +51,45 @@ function getUnionKind(
   seenNames: Set<string>,
 ): UnionKind {
   switch (type.kind) {
-    case "string-literal":
-      return "strings";
-    case "inline-interface":
-      return "interfaces";
+    case "array": {
+      return "bad:array";
+    }
+    case "interface": {
+      return "good:interfaces";
+    }
+    case "string-literal": {
+      return "good:strings";
+    }
     case "type-name": {
-      if (seenNames.has(type.name.text)) {
+      const typeName = type.name.text;
+      if (PRIMITIVE_TYPES.has(typeName)) {
+        return "bad:primitive";
+      }
+      if (seenNames.has(typeName)) {
         return "error";
       }
-      seenNames.add(type.name.text);
-      const typeDeclaration = types[type.name.text];
+      seenNames.add(typeName);
+      const typeDeclaration = types[typeName];
       if (!typeDeclaration) {
         return "error";
       } else if (typeDeclaration.kind === "interface") {
-        return "interfaces";
+        return "good:interfaces";
       } else {
         return getUnionKind(typeDeclaration.valueType, types, seenNames);
       }
     }
-    default:
-      return "neither";
+    case "union": {
+      return "bad:union";
+    }
   }
 }
 
-function getFirstToken(type: TypeRef): SchemaSourceSpan {
+function getFirstToken(type: TypeRef | InterfaceDeclaration): SchemaSourceSpan {
   switch (type.kind) {
     case "array":
       return getFirstToken(type.elementType);
-    case "inline-interface":
-      return type.leftCurlyBracket;
+    case "interface":
+      return type.leftCurlyBracket ?? type.name;
     case "string-literal":
       return type.quotedName;
     case "type-name":
@@ -90,10 +109,9 @@ function validateType(
       return validateType(type.elementType, types);
     }
     case "interface": {
-      validateTypeName(type.name, errors);
-      // fallthrough
-    }
-    case "inline-interface": {
+      if (type.name) {
+        validateTypeName(type.name, errors);
+      }
       errors.push(
         ...checkNoAmbiguity(
           Object.values(type.fields).map((f) => ({
@@ -142,26 +160,151 @@ function validateType(
       return null;
     }
     case "union": {
-      const { members } = type;
-      for (const member of members) {
-        validateType(member, types, errors);
-      }
-      // Make sure 'members' are either all string literals or all interfaces.
-      const first = members[0]!;
-      const unionKind = getUnionKind(first, types, new Set());
-      if (unionKind === "neither") {
-        const firstToken = getFirstToken(first);
-        errors.push({
-          start: firstToken.start,
-          end: firstToken.end,
-          message:
-            "Union members must be either all strings or all interfaces",
-        });
-      }
+      validateUnionType(type, types, errors);
       return null;
     }
   }
 };
+
+function validateUnionType(
+  type: UnionTypeRef,
+  types: { readonly [name: string]: TypeDeclaration },
+  errors: SchemaParseError[] = [],
+): void {
+  const pushErrorForBadKind = (
+    kind: "bad:array" | "bad:primitive" | "bad:union",
+    type: TypeRef,
+  ): void => {
+    const found = getDescForKind(kind);
+    const firstToken = getFirstToken(type);
+    errors.push({
+      start: firstToken.start,
+      end: firstToken.end,
+      message: `Union members must be either all strings or all interfaces; found: ${found}`,
+    });
+  };
+
+  const { members } = type;
+  for (const member of members) {
+    validateType(member, types, errors);
+  }
+  // Make sure 'members' are either all string literals or all interfaces.
+  const first = members[0]!;
+  const unionKind = getUnionKind(first, types, new Set());
+  switch (unionKind) {
+    case "good:strings":
+    case "good:interfaces": {
+      break;
+    }
+    case "bad:array":
+    case "bad:primitive":
+    case "bad:union": {
+      pushErrorForBadKind(unionKind, first);
+      return;
+    }
+    case "error": {
+      return;
+    }
+  }
+
+  let allGood = true;
+  for (const member of members.slice(1)) {
+    const memberKind = getUnionKind(member, types, new Set());
+    switch (memberKind) {
+      case "good:strings":
+      case "good:interfaces": {
+        if (memberKind !== unionKind) {
+          const firstToken = getFirstToken(type);
+          const expected = getDescForKind(unionKind);
+          const found = getDescForKind(memberKind);
+          errors.push({
+            start: firstToken.start,
+            end: firstToken.end,
+            message: `Union members must be either all strings or all interfaces; expected: ${expected}, found: ${found}`,
+          });
+          allGood = false;
+        }
+        break;
+      }
+      case "bad:array":
+      case "bad:primitive":
+      case "bad:union": {
+        pushErrorForBadKind(memberKind, first);
+        allGood = false;
+        break;
+      }
+      case "error": {
+        break;
+      }
+    }
+  }
+  if (!allGood) {
+    return;
+  }
+
+  // At this stage: members are either all string literals or all interfaces.
+  if (unionKind === "good:strings") {
+    errors.push(...checkNoAmbiguity(
+      members.map((m) => {
+        if (m.kind !== "string-literal") {
+          throw new Error();
+        }
+        return {
+          name: m.value,
+          start: m.quotedName.start + 1,
+          end: m.quotedName.end - 1,
+        };
+      }),
+    ));
+  } else {
+    // Verify that all these conditions are satisfied:
+    //   - the first field of each interface has string literal type
+    //   - all string literals are distinct
+    //   - all first fields have the same name
+    for (const member of members) {
+    }
+  }
+}
+
+function resolveTypeRef(
+  type: TypeRef,
+  types: { readonly [name: string]: TypeDeclaration },
+  seenNames: Set<string> = new Set(),
+): ResolvedTypeRef | null {
+  if (type.kind === "type-name") {
+    if (seenNames.has(type.name.text)) {
+      return null;
+    }
+    seenNames.add(type.name.text);
+    const resolved = types[type.name.text];
+    if (!resolved) {
+      return null;
+    }
+    if (resolved.kind === "type") {
+      return resolveTypeRef(resolved.valueType, types, seenNames);
+    } else {
+      return resolved;
+    }
+  }
+  return type;
+}
+
+function getDescForKind(kind: UnionKind): string {
+  switch (kind) {
+    case "good:strings":
+      return "string";
+    case "good:interfaces":
+      return "interface";
+    case "bad:array":
+      return "array";
+    case "bad:primitive":
+      return "primitive";
+    case "bad:union":
+      return "union";
+    case "error":
+      return "error";
+  }
+}
 
 function validateTypeName(name: SchemaSourceSpan, errors: SchemaParseError[]): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {

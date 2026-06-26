@@ -17,7 +17,8 @@ export type SchemaParseError = {
 export type InterfaceDeclaration = {
   readonly kind: "interface";
   readonly name: SchemaSourceSpan;
-  readonly fields: Readonly<Record<string, SchemaField>>;
+  readonly leftCurlyBracket: undefined;
+  readonly fields: {readonly [name: string]: SchemaField};
   readonly firstField?: SchemaField;
   readonly doc: string;
 };
@@ -38,13 +39,18 @@ export type SchemaField = {
   readonly doc: string;
 };
 
-export type NonUnionTypeRef =
+export type TypeRef =
   | TypeNameRef
   | StringLiteralTypeRef
   | InlineInterfaceTypeRef
-  | ArrayTypeRef;
+  | ArrayTypeRef
+  | UnionTypeRef;
 
-export type TypeRef = NonUnionTypeRef | UnionTypeRef;
+export type NonUnionTypeRef = Exclude<TypeRef, UnionTypeRef>;
+
+export type ResolvedTypeRef =
+  | Exclude<TypeRef, TypeNameRef>
+  | InterfaceDeclaration;
 
 export type TypeNameRef = {
   readonly kind: "type-name";
@@ -58,9 +64,10 @@ export type StringLiteralTypeRef = {
 };
 
 export type InlineInterfaceTypeRef = {
-  readonly kind: "inline-interface";
+  readonly kind: "interface";
+  readonly name: undefined;
   readonly leftCurlyBracket: SchemaSourceSpan;
-  readonly fields: Readonly<Record<string, SchemaField>>;
+  readonly fields: {readonly [name: string]: SchemaField};
   readonly firstField?: SchemaField;
 };
 
