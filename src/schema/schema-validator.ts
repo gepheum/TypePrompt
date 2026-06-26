@@ -61,6 +61,9 @@ function getUnionKind(
     case "interface": {
       return "good:interfaces";
     }
+    case "primitive": {
+      return "bad:primitive";
+    }
     case "string-literal": {
       return "good:strings";
     }
@@ -135,7 +138,7 @@ function validateType(
     }
     case "type-name": {
       const typeName = type.name.text;
-      const isPrimitive = PRIMITIVE_TYPES.has(typeName);
+      const isPrimitive = !!isPrimitiveType(typeName);
       if (!isPrimitive && !types[typeName]) {
         errors.push({
           start: type.name.start,
@@ -311,11 +314,18 @@ function resolveTypeRef(
   seenNames: Set<string>,
 ): ResolvedTypeRef | null {
   if (type.kind === "type-name") {
-    if (seenNames.has(type.name.text)) {
+    const typeName = type.name.text;
+    {
+      const primitive = isPrimitiveType(typeName);
+      if (primitive) {
+        return { kind: "primitive", primitive: primitive };
+      }
+    }
+    if (seenNames.has(typeName)) {
       return null;
     }
-    seenNames.add(type.name.text);
-    const resolved = types[type.name.text];
+    seenNames.add(typeName);
+    const resolved = types[typeName];
     if (!resolved) {
       return null;
     }
@@ -358,11 +368,11 @@ function validateTypeName(
   }
 }
 
-const PRIMITIVE_TYPES: ReadonlySet<string> = new Set([
-  "string",
-  "number",
-  "boolean",
-]);
+function isPrimitiveType(name: string): "string" | "number" | "boolean" | null {
+  return name === "string" || name === "number" || name === "boolean"
+    ? name
+    : null;
+}
 
 const WORD_MUST_START_WITH_UPPERCASE =
   "Must start with uppercase letter and contain only alphanumeric characters";

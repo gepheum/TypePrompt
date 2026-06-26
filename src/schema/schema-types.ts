@@ -48,10 +48,6 @@ export type TypeRef =
 
 export type NonUnionTypeRef = Exclude<TypeRef, UnionTypeRef>;
 
-export type ResolvedTypeRef =
-  | Exclude<TypeRef, TypeNameRef>
-  | InterfaceDeclaration;
-
 export type TypeNameRef = {
   readonly kind: "type-name";
   readonly name: SchemaSourceSpan;
@@ -79,6 +75,16 @@ export type ArrayTypeRef = {
 export type UnionTypeRef = {
   readonly kind: "union";
   readonly members: NonUnionTypeRef[];
+};
+
+export type ResolvedTypeRef =
+  | Exclude<TypeRef, TypeNameRef>
+  | InterfaceDeclaration
+  | PrimitiveType;
+
+export type PrimitiveType = {
+  readonly kind: "primitive";
+  readonly primitive: "number" | "string" | "boolean";
 };
 
 export type SchemaSourceSpan = {
