@@ -2,25 +2,49 @@ import type {
   Interface,
   Schema,
   SchemaField,
+  SchemaParseContext,
   SchemaParseError,
   SchemaParseErrors,
   Type,
   TypeDeclaration,
   Union,
+  UnionMembers,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
 export function parseSchema(
   schemaSource: string,
-  context: "template" | "meta",
+  context: SchemaParseContext,
 ): Schema | SchemaParseErrors {
   return new SchemaParser(schemaSource).parse(context);
+}
+
+export function getUnionMembers(type: Union): UnionMembers {
+  const {members} = type;
+  const firstMember = members[0]!;
+  switch (firstMember.kind) {
+    case "string-literal": {
+      return {
+        kind: "strings",
+        members: members as (typeof firstMember)[],
+      };
+    }
+    case "interface": {
+      return {
+        kind: "interfaces",
+        members: members as (typeof firstMember)[],
+      };
+    }
+    default: {
+      throw new Error();
+    }
+  }
 }
 
 class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
-  parse(context: "template" | "meta"): Schema | SchemaParseErrors {
+  parse(context: SchemaParseContext): Schema | SchemaParseErrors {
     const typeDeclarations: TypeDeclaration[] = [];
 
     while (true) {

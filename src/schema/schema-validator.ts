@@ -1,8 +1,10 @@
 import { checkNoAmbiguity } from "../casing.js";
+import { getUnionMembers } from "./schema-parser.js";
 import type {
   InterfaceDeclaration,
   ResolvedTypeRef,
   SchemaField,
+  SchemaParseContext,
   SchemaParseError,
   SchemaSourceSpan,
   Type,
@@ -13,7 +15,7 @@ import type {
 /** Called from schema parser. */
 export function validateSchema(
   typeDeclarations: TypeDeclaration[],
-  context: "template" | "meta",
+  context: SchemaParseContext,
 ): SchemaParseError[] {
   const errors: SchemaParseError[] = [];
 
@@ -51,7 +53,7 @@ export function validateSchema(
     }
   }
 
-  const requiredTypeName = context === "meta" ? "Meta" : "Response";
+  const requiredTypeName = context.kind === "meta" ? "Meta" : "Response";
   const requiredType = types[requiredTypeName];
   if (!requiredType) {
     errors.push({
@@ -59,6 +61,8 @@ export function validateSchema(
       end: 0,
       message: `Missing required type '${requiredTypeName}'`,
     });
+  } else if (context.kind === "meta") {
+    errors.push(...verifyMetaType(requiredType, types));
   }
 
   return errors;
@@ -76,7 +80,7 @@ function getUnionKind(
   type: Type,
   types: { readonly [name: string]: TypeDeclaration },
 ): UnionKind {
-  const resolvedType = resolveTypeRef(type, types, new Set());
+  const resolvedType = resolveType(type, types);
   if (!resolvedType) {
     return "error";
   }
@@ -287,7 +291,7 @@ function validateUnionType(
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
-      const resolvedType = resolveTypeRef(member, types, new Set())!;
+      const resolvedType = resolveType(member, types)!;
       if (resolvedType.kind !== "interface") {
         // Cannot happen.
         throw new Error();
@@ -334,11 +338,14 @@ function validateUnionType(
   }
 }
 
-function resolveTypeRef(
-  type: Type,
+function resolveType(
+  type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string>,
+  seenNames: Set<string> = new Set(),
 ): ResolvedTypeRef | null {
+  if (type.kind === "type") {
+    type = type.valueType;
+  }
   if (type.kind === "type-name") {
     const typeName = type.name.text;
     {
@@ -355,11 +362,7 @@ function resolveTypeRef(
     if (!resolved) {
       return null;
     }
-    if (resolved.kind === "type") {
-      return resolveTypeRef(resolved.valueType, types, seenNames);
-    } else {
-      return resolved;
-    }
+    return resolveType(resolved, types, seenNames);
   }
   return type;
 }
@@ -456,4 +459,56 @@ function collectNameDependencies(
       return null;
     }
   }
+}
+
+function verifyMetaType(
+  metaTypeDeclaration: TypeDeclaration,
+  types: { readonly [name: string]: TypeDeclaration },
+): SchemaParseError[] {
+  const metaType = resolveType(metaTypeDeclaration, types);
+  if (!metaType) {
+    return [];
+  }
+  if (metaType.kind !== "interface") {
+    return [{
+      start: metaTypeDeclaration.name.start,
+      end: metaTypeDeclaration.name.end,
+      message: "Type 'Meta' must be an interface",
+    }];
+  }
+  const errors: SchemaParseError[] = [];
+  for (const field of Object.values(metaType.fields)) {
+    const resolvedType = resolveType(field.type, types);
+    if (!resolvedType) {
+      continue;
+    }
+    const isValid = (() => {
+      switch (resolvedType.kind) {
+        case "array":
+        case "interface":
+          return false;
+        case "primitive":
+        case "string-literal":
+          return true;
+        case "union": {
+          switch (getUnionMembers(resolvedType).kind) {
+            case "strings": {
+              return true;
+            }
+            case "interfaces": {
+              return false;
+            }
+          }
+        }
+      }
+    })();
+    if (!isValid) {
+      errors.push({
+        start: field.name.start,
+        end: field.name.end,
+        message: "Fields of type 'Meta' must be string, number, boolean",
+      });
+    }
+  }
+  return errors;
 }

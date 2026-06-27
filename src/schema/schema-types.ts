@@ -1,3 +1,12 @@
+export type SchemaParseContext =
+  | {
+    readonly kind: "meta";
+  }
+  | {
+    readonly kind: "template";
+    readonly argTypeNames: readonly string[];
+  };
+
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
@@ -48,7 +57,7 @@ export type SchemaField = {
 
 export type Type = TypeName | StringLiteral | InlineInterface | Array | Union;
 
-export type NonUnionTypeRef = Exclude<Type, Union>;
+export type NonUnionType = Exclude<Type, Union>;
 
 export type TypeName = {
   readonly kind: "type-name";
@@ -78,7 +87,8 @@ export type Array = {
 
 export type Union = {
   readonly kind: "union";
-  readonly members: NonUnionTypeRef[];
+  /** Guaranteed to contain 2+ elements. */
+  readonly members: NonUnionType[];
 };
 
 export type ResolvedTypeRef =
@@ -90,6 +100,16 @@ export type PrimitiveType = {
   readonly kind: "primitive";
   readonly primitive: "number" | "string" | "boolean";
 };
+
+export type UnionMembers =
+  | {
+    readonly kind: "strings";
+    readonly members: readonly StringLiteral[];
+  }
+  | {
+    readonly kind: "interfaces";
+    readonly members: readonly Interface[];
+  }
 
 export type SchemaSourceSpan = {
   readonly text: string;
