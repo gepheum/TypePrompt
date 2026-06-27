@@ -506,7 +506,7 @@ function verifyMetaType(
       errors.push({
         start: field.name.start,
         end: field.name.end,
-        message: "Fields of type 'Meta' must be string, number, boolean",
+        message: "Fields of 'Meta' must be strings, numbers, booleans",
       });
     }
   }
