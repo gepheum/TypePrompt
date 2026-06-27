@@ -109,6 +109,7 @@ export type UnionMembers =
   | {
     readonly kind: "interfaces";
     readonly members: readonly Interface[];
+    readonly fieldName: string;
   }
 
 export type SchemaSourceSpan = {

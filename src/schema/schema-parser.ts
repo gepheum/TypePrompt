@@ -33,6 +33,7 @@ export function getUnionMembers(type: Union): UnionMembers {
       return {
         kind: "interfaces",
         members: members as (typeof firstMember)[],
+        fieldName: firstMember.firstField!.name.text,
       };
     }
     default: {
