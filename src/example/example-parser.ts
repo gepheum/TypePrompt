@@ -1,4 +1,18 @@
-import { Example, ExampleParseError, ExampleParseErrors, ExampleSourceSpan, JsonArray, JsonBoolean, JsonEllipsis, JsonNull, JsonNumber, JsonObject, JsonObjectEntry, JsonString, JsonValue } from "./example-types.js";
+import {
+  Example,
+  ExampleParseError,
+  ExampleParseErrors,
+  ExampleSourceSpan,
+  JsonArray,
+  JsonBoolean,
+  JsonEllipsis,
+  JsonNull,
+  JsonNumber,
+  JsonObject,
+  JsonObjectEntry,
+  JsonString,
+  JsonValue,
+} from "./example-types.js";
 
 export function parseExample(
   exampleSource: string,

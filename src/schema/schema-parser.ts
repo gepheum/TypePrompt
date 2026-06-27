@@ -1,27 +1,26 @@
 import type {
+  Interface,
   Schema,
   SchemaField,
   SchemaParseError,
   SchemaParseErrors,
-  TypeDeclaration,
   Type,
+  TypeDeclaration,
   Union,
-  Interface,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
-// =============================================================================
-// LOGIC
-// =============================================================================
-
-export function parseSchema(schemaSource: string): Schema | SchemaParseErrors {
-  return new SchemaParser(schemaSource).parse();
+export function parseSchema(
+  schemaSource: string,
+  context: "template" | "meta",
+): Schema | SchemaParseErrors {
+  return new SchemaParser(schemaSource).parse(context);
 }
 
 class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
-  parse(): Schema | SchemaParseErrors {
+  parse(context: "template" | "meta"): Schema | SchemaParseErrors {
     const typeDeclarations: TypeDeclaration[] = [];
 
     while (true) {
@@ -57,7 +56,7 @@ class SchemaParser {
       };
     }
 
-    const validationErrors = validateSchema(typeDeclarations);
+    const validationErrors = validateSchema(typeDeclarations, context);
     if (validationErrors.length) {
       return {
         kind: "error",
@@ -65,7 +64,9 @@ class SchemaParser {
       };
     }
 
-    const types = Object.fromEntries(typeDeclarations.map((t) => [t.name.text, t]));
+    const types = Object.fromEntries(
+      typeDeclarations.map((t) => [t.name.text, t]),
+    );
 
     const collector = IdentifierCollector.collect(typeDeclarations);
 
@@ -214,9 +215,7 @@ class SchemaParser {
     };
   }
 
-  private parseTypeRef(context?: {
-    lastTokenWasPipe?: boolean;
-  }): Type | null {
+  private parseTypeRef(context?: { lastTokenWasPipe?: boolean }): Type | null {
     let type: Type | null = ((): Type | null => {
       const token = this.peekToken();
       const match = this.expectThenMove(token, {

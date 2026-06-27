@@ -1,7 +1,9 @@
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
-  readonly fieldNameMapping: { readonly [fieldName: string]: readonly Interface[] };
+  readonly fieldNameMapping: {
+    readonly [fieldName: string]: readonly Interface[];
+  };
   /** True if the schema contains an interface containing only optional fields. */
   readonly hasEmptyInterface: boolean;
   /** Field names and identifiers used in string literals. */
@@ -44,12 +46,7 @@ export type SchemaField = {
   readonly doc: string;
 };
 
-export type Type =
-  | TypeName
-  | StringLiteral
-  | InlineInterface
-  | Array
-  | Union;
+export type Type = TypeName | StringLiteral | InlineInterface | Array | Union;
 
 export type NonUnionTypeRef = Exclude<Type, Union>;
 

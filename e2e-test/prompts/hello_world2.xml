@@ -24,6 +24,8 @@
     Say hello to <arg name="foo" format="toon"/>.
     How are you? <arg name="bar"/>.
 
+    * <c>foo</c>: The name of the person to greet.
+
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 

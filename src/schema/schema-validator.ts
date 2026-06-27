@@ -5,13 +5,15 @@ import type {
   SchemaField,
   SchemaParseError,
   SchemaSourceSpan,
-  TypeDeclaration,
   Type,
+  TypeDeclaration,
   Union,
 } from "./schema-types.js";
 
+/** Called from schema parser. */
 export function validateSchema(
   typeDeclarations: TypeDeclaration[],
+  context: "template" | "meta",
 ): SchemaParseError[] {
   const errors: SchemaParseError[] = [];
 
@@ -47,6 +49,16 @@ export function validateSchema(
         message: `Type '${name.text}' circularly references itself`,
       });
     }
+  }
+
+  const requiredTypeName = context === "meta" ? "Meta" : "Response";
+  const requiredType = types[requiredTypeName];
+  if (!requiredType) {
+    errors.push({
+      start: 0,
+      end: 0,
+      message: `Missing required type '${requiredTypeName}'`,
+    });
   }
 
   return errors;

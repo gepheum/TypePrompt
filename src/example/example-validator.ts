@@ -4,5 +4,4 @@ import type { Example, ExampleValidationError } from "./example-types.js";
 export function validateExample(
   example: Example,
   schema: Schema,
-): readonly ExampleValidationError[] {
-}
+): readonly ExampleValidationError[] {}
