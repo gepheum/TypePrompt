@@ -2,7 +2,8 @@ import * as zod from "zod";
 import { checkNoAmbiguity } from "./casing.js";
 import { Example, parseExample } from "./example-parser.js";
 import { validateExample } from "./example-validator.js";
-import { parseSchema, type Schema } from "./schema-parser.js";
+import { parseSchema } from "./schema/schema-parser.js";
+import type { Schema } from "./schema/schema-types.js";
 import type {
   Template,
   TemplatePiece,

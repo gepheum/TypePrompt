@@ -1,6 +1,9 @@
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
+  readonly fieldNameMapping: { readonly [fieldName: string]: readonly Interface[] };
+  /** True if the schema contains an interface containing only optional fields. */
+  readonly hasEmptyInterface: boolean;
 };
 
 export type SchemaParseErrors = {
@@ -28,38 +31,38 @@ export type TypeDeclaration =
   | {
       readonly kind: "type";
       readonly name: SchemaSourceSpan;
-      readonly valueType: TypeRef;
+      readonly valueType: Type;
       readonly doc: string;
     };
 
 export type SchemaField = {
   readonly name: SchemaSourceSpan;
   readonly optional: boolean;
-  readonly type: TypeRef;
+  readonly type: Type;
   readonly doc: string;
 };
 
-export type TypeRef =
-  | TypeNameRef
-  | StringLiteralTypeRef
-  | InlineInterfaceTypeRef
-  | ArrayTypeRef
-  | UnionTypeRef;
+export type Type =
+  | TypeName
+  | StringLiteral
+  | InlineInterface
+  | Array
+  | Union;
 
-export type NonUnionTypeRef = Exclude<TypeRef, UnionTypeRef>;
+export type NonUnionTypeRef = Exclude<Type, Union>;
 
-export type TypeNameRef = {
+export type TypeName = {
   readonly kind: "type-name";
   readonly name: SchemaSourceSpan;
 };
 
-export type StringLiteralTypeRef = {
+export type StringLiteral = {
   readonly kind: "string-literal";
   readonly value: string;
   readonly quotedName: SchemaSourceSpan;
 };
 
-export type InlineInterfaceTypeRef = {
+export type InlineInterface = {
   readonly kind: "interface";
   readonly name: undefined;
   readonly leftCurlyBracket: SchemaSourceSpan;
@@ -67,18 +70,20 @@ export type InlineInterfaceTypeRef = {
   readonly firstField?: SchemaField;
 };
 
-export type ArrayTypeRef = {
+export type Interface = InterfaceDeclaration | InlineInterface;
+
+export type Array = {
   readonly kind: "array";
-  readonly elementType: TypeRef;
+  readonly elementType: Type;
 };
 
-export type UnionTypeRef = {
+export type Union = {
   readonly kind: "union";
   readonly members: NonUnionTypeRef[];
 };
 
 export type ResolvedTypeRef =
-  | Exclude<TypeRef, TypeNameRef>
+  | Exclude<Type, TypeName>
   | InterfaceDeclaration
   | PrimitiveType;
 

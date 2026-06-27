@@ -6,8 +6,8 @@ import type {
   SchemaParseError,
   SchemaSourceSpan,
   TypeDeclaration,
-  TypeRef,
-  UnionTypeRef,
+  Type,
+  Union,
 } from "./schema-types.js";
 
 export function validateSchema(
@@ -61,7 +61,7 @@ type UnionKind =
   | "error";
 
 function getUnionKind(
-  type: TypeRef,
+  type: Type,
   types: { readonly [name: string]: TypeDeclaration },
 ): UnionKind {
   const resolvedType = resolveTypeRef(type, types, new Set());
@@ -87,7 +87,7 @@ function getUnionKind(
   }
 }
 
-function getFirstToken(type: TypeRef | InterfaceDeclaration): SchemaSourceSpan {
+function getFirstToken(type: Type | InterfaceDeclaration): SchemaSourceSpan {
   switch (type.kind) {
     case "array":
       return getFirstToken(type.elementType);
@@ -103,7 +103,7 @@ function getFirstToken(type: TypeRef | InterfaceDeclaration): SchemaSourceSpan {
 }
 
 function validateType(
-  type: TypeRef | TypeDeclaration,
+  type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
   errors: SchemaParseError[],
 ): null {
@@ -170,13 +170,13 @@ function validateType(
 }
 
 function validateUnionType(
-  type: UnionTypeRef,
+  type: Union,
   types: { readonly [name: string]: TypeDeclaration },
   errors: SchemaParseError[] = [],
 ): void {
   const pushErrorForBadKind = (
     kind: "bad:array" | "bad:primitive" | "bad:union",
-    type: TypeRef,
+    type: Type,
   ): void => {
     const found = getDescForKind(kind);
     const firstToken = getFirstToken(type);
@@ -323,7 +323,7 @@ function validateUnionType(
 }
 
 function resolveTypeRef(
-  type: TypeRef,
+  type: Type,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
 ): ResolvedTypeRef | null {
@@ -393,8 +393,19 @@ const WORD_MUST_START_WITH_UPPERCASE =
 const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
 
+class IdentifierCollector {
+  private constructor(
+    readonly type: Type | InterfaceDeclaration,
+    readonly types: { readonly [name: string]: TypeDeclaration },
+  ) {}
+
+  readonly seenNames = new Set<string>();
+  readonly quotedIdentifiers = new Set<string>();
+  hasEmptyInterface = false;
+}
+
 function collectNameDependencies(
-  type: TypeRef | InterfaceDeclaration,
+  type: Type | InterfaceDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
 ): null {

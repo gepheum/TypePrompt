@@ -4,8 +4,9 @@ import type {
   SchemaParseError,
   SchemaParseErrors,
   TypeDeclaration,
-  TypeRef,
-  UnionTypeRef,
+  Type,
+  Union,
+  Interface,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
@@ -64,9 +65,19 @@ class SchemaParser {
       };
     }
 
+    const types = Object.fromEntries(typeDeclarations.map((t) => [t.name.text, t]));
+
+    const fieldNameMapping: { [fieldName: string]: Interface[] } = {};
+    for (const type of Object.values(types)) {
+      collectFieldNameMapping(type, fieldNameMapping);
+    }
+
+    TODO:AlsoCollectIdentifiers;
+
     return {
       kind: "success",
-      types: Object.fromEntries(typeDeclarations.map((t) => [t.name.text, t])),
+      types: types,
+      fieldNameMapping: fieldNameMapping,
     };
   }
 
@@ -208,8 +219,8 @@ class SchemaParser {
 
   private parseTypeRef(context?: {
     lastTokenWasPipe?: boolean;
-  }): TypeRef | null {
-    let type: TypeRef | null = ((): TypeRef | null => {
+  }): Type | null {
+    let type: Type | null = ((): Type | null => {
       const token = this.peekToken();
       const match = this.expectThenMove(token, {
         "(": EXACT_MATCHER,
@@ -518,7 +529,7 @@ function getDocText(jsdoc: Token | undefined): string {
   return lines.join("\n");
 }
 
-function joinTypes(a: TypeRef, b: TypeRef): UnionTypeRef {
+function joinTypes(a: Type, b: Type): Union {
   if (a.kind === "union") {
     if (b.kind === "union") {
       return {
@@ -541,5 +552,39 @@ function joinTypes(a: TypeRef, b: TypeRef): UnionTypeRef {
       kind: "union",
       members: [a, b],
     };
+  }
+}
+
+function collectFieldNameMapping(
+  type: Type | TypeDeclaration,
+  fieldNameMapping: { [fieldName: string]: Interface[] },
+): null {
+  switch (type.kind) {
+    case "array": {
+      collectFieldNameMapping(type.elementType, fieldNameMapping);
+      return null;
+    }
+    case "interface": {
+      for (const field of Object.values(type.fields)) {
+        const fieldName = field.name.text;
+        const interfaces = (fieldNameMapping[fieldName] ??= []);
+        interfaces.push(type);
+      }
+      return null;
+    }
+    case "string-literal":
+    case "type-name": {
+      return null;
+    }
+    case "type": {
+      collectFieldNameMapping(type.valueType, fieldNameMapping);
+      return null;
+    }
+    case "union": {
+      for (const member of type.members) {
+        collectFieldNameMapping(member, fieldNameMapping);
+      }
+      return null;
+    }
   }
 }
