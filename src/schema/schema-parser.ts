@@ -178,7 +178,6 @@ class SchemaParser {
     return {
       kind: "interface",
       name: name,
-      namingHint: { namePieces: [name.text] },
       leftCurlyBracket: undefined,
       fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
       firstField: fields[0],

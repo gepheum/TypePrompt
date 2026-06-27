@@ -17,6 +17,7 @@ export type Schema = {
   readonly hasEmptyInterface: boolean;
   /** Field names and identifiers used in string literals. */
   readonly identifiers: Set<string>;
+  readonly typeToNamingHint: Map<(Interface | Union), NamingHint>;
 };
 
 export type SchemaParseErrors = {
@@ -37,7 +38,6 @@ export type InterfaceDeclaration = {
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
   readonly doc: string;
-  readonly namingHint: NamingHint;
 };
 
 export type TypeDeclaration =
@@ -77,8 +77,6 @@ export type InlineInterface = {
   readonly leftCurlyBracket: SchemaSourceSpan;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
-  /** Always set in a valid schema, even if marked optional. */
-  namingHint?: NamingHint;
 };
 
 export type Interface = InterfaceDeclaration | InlineInterface;
@@ -92,8 +90,6 @@ export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
   readonly members: NonUnionType[];
-  /** Always set in a valid schema, even if marked optional. */
-  namingHint?: NamingHint;
 };
 
 export type ResolvedTypeRef =
