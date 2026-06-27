@@ -4,6 +4,8 @@ export type Schema = {
   readonly fieldNameMapping: { readonly [fieldName: string]: readonly Interface[] };
   /** True if the schema contains an interface containing only optional fields. */
   readonly hasEmptyInterface: boolean;
+  /** Field names and identifiers used in string literals. */
+  readonly identifiers: Set<string>;
 };
 
 export type SchemaParseErrors = {

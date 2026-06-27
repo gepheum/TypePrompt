@@ -67,17 +67,14 @@ class SchemaParser {
 
     const types = Object.fromEntries(typeDeclarations.map((t) => [t.name.text, t]));
 
-    const fieldNameMapping: { [fieldName: string]: Interface[] } = {};
-    for (const type of Object.values(types)) {
-      collectFieldNameMapping(type, fieldNameMapping);
-    }
-
-    TODO:AlsoCollectIdentifiers;
+    const collector = IdentifierCollector.collect(typeDeclarations);
 
     return {
       kind: "success",
       types: types,
-      fieldNameMapping: fieldNameMapping,
+      fieldNameMapping: collector.fieldNameMapping,
+      hasEmptyInterface: collector.hasEmptyInterface,
+      identifiers: collector.identifiers,
     };
   }
 
@@ -555,36 +552,53 @@ function joinTypes(a: Type, b: Type): Union {
   }
 }
 
-function collectFieldNameMapping(
-  type: Type | TypeDeclaration,
-  fieldNameMapping: { [fieldName: string]: Interface[] },
-): null {
-  switch (type.kind) {
-    case "array": {
-      collectFieldNameMapping(type.elementType, fieldNameMapping);
-      return null;
+class IdentifierCollector {
+  static collect(types: readonly TypeDeclaration[]): IdentifierCollector {
+    const collector = new IdentifierCollector();
+    for (const type of types) {
+      collector.doCollect(type);
     }
-    case "interface": {
-      for (const field of Object.values(type.fields)) {
-        const fieldName = field.name.text;
-        const interfaces = (fieldNameMapping[fieldName] ??= []);
-        interfaces.push(type);
+    return collector;
+  }
+
+  private doCollect(type: Type | TypeDeclaration): null {
+    switch (type.kind) {
+      case "array": {
+        this.doCollect(type.elementType);
+        return null;
       }
-      return null;
-    }
-    case "string-literal":
-    case "type-name": {
-      return null;
-    }
-    case "type": {
-      collectFieldNameMapping(type.valueType, fieldNameMapping);
-      return null;
-    }
-    case "union": {
-      for (const member of type.members) {
-        collectFieldNameMapping(member, fieldNameMapping);
+      case "interface": {
+        const fields = Object.values(type.fields);
+        for (const field of fields) {
+          const fieldName = field.name.text;
+          const interfaces = (this.fieldNameMapping[fieldName] ??= []);
+          interfaces.push(type);
+          this.identifiers.add(fieldName);
+        }
+        this.hasEmptyInterface ||= fields.every((f) => f.optional);
+        return null;
       }
-      return null;
+      case "string-literal": {
+        this.identifiers.add(type.value);
+        return null;
+      }
+      case "type": {
+        this.doCollect(type.valueType);
+        return null;
+      }
+      case "type-name": {
+        return null;
+      }
+      case "union": {
+        for (const member of type.members) {
+          this.doCollect(member);
+        }
+        return null;
+      }
     }
   }
+
+  readonly fieldNameMapping: { [fieldName: string]: Interface[] } = {};
+  hasEmptyInterface = false;
+  readonly identifiers: Set<string> = new Set();
 }
