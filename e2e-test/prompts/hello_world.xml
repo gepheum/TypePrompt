@@ -8,8 +8,8 @@
   <meta temperature="0.7" />
 
   <args>
-    <arg name="foo" type="string" />
-    <arg name="bar" type="string" />
+    <arg name="foo" />
+    <arg name="bar" />
   </args>
 
   <schema>
@@ -24,18 +24,28 @@
     Say hello to <arg name="foo" format="toon"/>.
     How are you? <arg name="bar"/>.
 
-    * <c>foo</c>: The name of the person to greet.
+    Fields:
+    - <c>foo</c>: The name of the person to greet.
+    - <c>bar</c>: Bar.
 
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
-    <enclosed tag="Input">
+    <enclosed tag="Example">
+      <enclosed tag="Input">
+        <c>{
+          "foo": "Alice"
+        }</c>
+      </enclosed>
+      <enclosed tag="Output">
+        <c>{
+          "bar": "Jon",
+          "foos": []
+        }</c>
+      </enclosed>
     </enclosed>
 
     ## Examples:
 
-    <eg>
-      
-    </eg>
   </body>
 </template>
