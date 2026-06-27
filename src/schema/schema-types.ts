@@ -37,6 +37,7 @@ export type InterfaceDeclaration = {
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
   readonly doc: string;
+  readonly namingHint: NamingHint;
 };
 
 export type TypeDeclaration =
@@ -76,6 +77,8 @@ export type InlineInterface = {
   readonly leftCurlyBracket: SchemaSourceSpan;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
+  /** Always set in a valid schema, even if marked optional. */
+  namingHint?: NamingHint;
 };
 
 export type Interface = InterfaceDeclaration | InlineInterface;
@@ -89,6 +92,8 @@ export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
   readonly members: NonUnionType[];
+  /** Always set in a valid schema, even if marked optional. */
+  namingHint?: NamingHint;
 };
 
 export type ResolvedTypeRef =
@@ -99,6 +104,16 @@ export type ResolvedTypeRef =
 export type PrimitiveType = {
   readonly kind: "primitive";
   readonly primitive: "number" | "string" | "boolean";
+};
+
+/** Hint for generating a name for an anonymous type in a targeted language. */
+export type NamingHint = {
+  /**
+   * Guaranteed to be non-empty.
+   * The first element is always an uppercased type name used in a type declaration.
+   * The remaining elements are lowercased field names.
+   */
+  readonly namePieces: readonly string[];
 };
 
 export type UnionMembers =
