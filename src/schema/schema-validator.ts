@@ -2,7 +2,6 @@ import { checkNoAmbiguity } from "../casing.js";
 import { getUnionMembers } from "./schema-parser.js";
 import type {
   InterfaceDeclaration,
-  ResolvedTypeRef,
   SchemaField,
   SchemaParseContext,
   SchemaParseError,
@@ -11,6 +10,7 @@ import type {
   TypeDeclaration,
   Union,
 } from "./schema-types.js";
+import { isPrimitiveType, resolveType } from "./type-resolver.js";
 
 /** Called from schema parser. */
 export function validateSchema(
@@ -77,10 +77,10 @@ type UnionKind =
   | "error";
 
 function getUnionKind(
-  type: Type,
+  member: Type,
   types: { readonly [name: string]: TypeDeclaration },
 ): UnionKind {
-  const resolvedType = resolveType(type, types);
+  const resolvedType = resolveType(member, types);
   if (!resolvedType) {
     return "error";
   }
@@ -338,35 +338,6 @@ function validateUnionType(
   }
 }
 
-function resolveType(
-  type: Type | TypeDeclaration,
-  types: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string> = new Set(),
-): ResolvedTypeRef | null {
-  if (type.kind === "type") {
-    type = type.valueType;
-  }
-  if (type.kind === "type-name") {
-    const typeName = type.name.text;
-    {
-      const primitive = isPrimitiveType(typeName);
-      if (primitive) {
-        return { kind: "primitive", primitive: primitive };
-      }
-    }
-    if (seenNames.has(typeName)) {
-      return null;
-    }
-    seenNames.add(typeName);
-    const resolved = types[typeName];
-    if (!resolved) {
-      return null;
-    }
-    return resolveType(resolved, types, seenNames);
-  }
-  return type;
-}
-
 function getDescForKind(kind: UnionKind): string {
   switch (kind) {
     case "good:strings":
@@ -397,27 +368,10 @@ function validateTypeName(
   }
 }
 
-function isPrimitiveType(name: string): "string" | "number" | "boolean" | null {
-  return name === "string" || name === "number" || name === "boolean"
-    ? name
-    : null;
-}
-
 const WORD_MUST_START_WITH_UPPERCASE =
   "Must start with uppercase letter and contain only alphanumeric characters";
 const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
-
-class IdentifierCollector {
-  private constructor(
-    readonly type: Type | InterfaceDeclaration,
-    readonly types: { readonly [name: string]: TypeDeclaration },
-  ) {}
-
-  readonly seenNames = new Set<string>();
-  readonly quotedIdentifiers = new Set<string>();
-  hasEmptyInterface = false;
-}
 
 function collectNameDependencies(
   type: Type | InterfaceDeclaration,
@@ -470,11 +424,13 @@ function verifyMetaType(
     return [];
   }
   if (metaType.kind !== "interface") {
-    return [{
-      start: metaTypeDeclaration.name.start,
-      end: metaTypeDeclaration.name.end,
-      message: "Type 'Meta' must be an interface",
-    }];
+    return [
+      {
+        start: metaTypeDeclaration.name.start,
+        end: metaTypeDeclaration.name.end,
+        message: "Type 'Meta' must be an interface",
+      },
+    ];
   }
   const errors: SchemaParseError[] = [];
   for (const field of Object.values(metaType.fields)) {
@@ -491,7 +447,7 @@ function verifyMetaType(
         case "string-literal":
           return true;
         case "union": {
-          switch (getUnionMembers(resolvedType).kind) {
+          switch (getUnionMembers(resolvedType, types).kind) {
             case "strings": {
               return true;
             }

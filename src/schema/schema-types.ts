@@ -1,11 +1,11 @@
 export type SchemaParseContext =
   | {
-    readonly kind: "meta";
-  }
+      readonly kind: "meta";
+    }
   | {
-    readonly kind: "template";
-    readonly argTypeNames: readonly string[];
-  };
+      readonly kind: "template";
+      readonly argTypeNames: readonly string[];
+    };
 
 export type Schema = {
   readonly kind: "success";
@@ -16,8 +16,9 @@ export type Schema = {
   /** True if the schema contains an interface containing only optional fields. */
   readonly hasEmptyInterface: boolean;
   /** Field names and identifiers used in string literals. */
-  readonly identifiers: Set<string>;
-  readonly typeToNamingHint: Map<(Interface | Union), NamingHint>;
+  readonly identifiers: ReadonlySet<string>;
+  readonly unionToMembers: ReadonlyMap<Union, UnionMembers>;
+  readonly typeToNamingHint: ReadonlyMap<Interface | Union, NamingHint>;
 };
 
 export type SchemaParseErrors = {
@@ -114,14 +115,17 @@ export type NamingHint = {
 
 export type UnionMembers =
   | {
-    readonly kind: "strings";
-    readonly members: readonly StringLiteral[];
-  }
+      readonly kind: "strings";
+      readonly members: readonly StringLiteral[];
+    }
   | {
-    readonly kind: "interfaces";
-    readonly members: readonly Interface[];
-    readonly fieldName: string;
-  }
+      readonly kind: "interfaces";
+      readonly members: ReadonlyArray<{
+        readonly interface: Interface;
+        readonly kind: string;
+      }>;
+      readonly fieldName: string;
+    };
 
 export type SchemaSourceSpan = {
   readonly text: string;

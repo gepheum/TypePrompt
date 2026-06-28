@@ -1,5 +1,6 @@
 import type {
   Interface,
+  NamingHint,
   Schema,
   SchemaField,
   SchemaParseContext,
@@ -11,35 +12,13 @@ import type {
   UnionMembers,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
+import { resolveType } from "./type-resolver.js";
 
 export function parseSchema(
   schemaSource: string,
   context: SchemaParseContext,
 ): Schema | SchemaParseErrors {
   return new SchemaParser(schemaSource).parse(context);
-}
-
-export function getUnionMembers(type: Union): UnionMembers {
-  const {members} = type;
-  const firstMember = members[0]!;
-  switch (firstMember.kind) {
-    case "string-literal": {
-      return {
-        kind: "strings",
-        members: members as (typeof firstMember)[],
-      };
-    }
-    case "interface": {
-      return {
-        kind: "interfaces",
-        members: members as (typeof firstMember)[],
-        fieldName: firstMember.firstField!.name.text,
-      };
-    }
-    default: {
-      throw new Error();
-    }
-  }
 }
 
 class SchemaParser {
@@ -94,6 +73,7 @@ class SchemaParser {
     );
 
     const collector = IdentifierCollector.collect(typeDeclarations);
+    const typeNamer = TypeNamer.nameAll(types);
 
     return {
       kind: "success",
@@ -101,6 +81,8 @@ class SchemaParser {
       fieldNameMapping: collector.fieldNameMapping,
       hasEmptyInterface: collector.hasEmptyInterface,
       identifiers: collector.identifiers,
+      unionToMembers: typeNamer.unionToMembers,
+      typeToNamingHint: typeNamer.typeToNamingHint,
     };
   }
 
@@ -625,4 +607,97 @@ class IdentifierCollector {
   readonly fieldNameMapping: { [fieldName: string]: Interface[] } = {};
   hasEmptyInterface = false;
   readonly identifiers: Set<string> = new Set();
+}
+
+class TypeNamer {
+  private constructor(
+    readonly types: { readonly [name: string]: TypeDeclaration }) {};
+
+  static nameAll(types: { readonly [name: string]: TypeDeclaration }): TypeNamer {
+    const namer = new TypeNamer(types);
+    for (const type of Object.values(types)) {
+      namer.nameType(type, { namePieces: [type.name.text] });
+    }
+    return namer;
+  }
+
+  private nameType(type: Type | TypeDeclaration, context: NamingHint): null {
+    switch (type.kind) {
+      case "array": {
+        return this.nameType(type.elementType, context);
+      }
+      case "string-literal":
+      case "type-name": {
+        return null;
+      }
+      case "interface": {
+        this.typeToNamingHint.set(type, context);
+        for (const field of Object.values(type.fields)) {
+          this.nameType(field.type, {
+            namePieces: [...context.namePieces, field.name.text],
+          });
+        }
+        return null;
+      }
+      case "type": {
+        return this.nameType(type.valueType, context);
+      }
+      case "union": {
+        this.typeToNamingHint.set(type, context);
+        const unionMembers = this.getUnionMembers(type);
+        this.unionToMembers.set(type, unionMembers);
+        switch (unionMembers.kind) {
+          case "interfaces": {
+            for (const member of unionMembers.members) {
+              this.nameType(member.interface, {
+                namePieces: [...context.namePieces, member.kind],
+              });
+            }
+            return null;
+          }
+          case "strings": {
+            return null;
+          }
+        }
+      }
+    }
+  }
+
+  private getUnionMembers(type: Union): UnionMembers {
+    const { members } = type;
+    const firstMember = members[0]!;
+    switch (firstMember.kind) {
+      case "string-literal": {
+        return {
+          kind: "strings",
+          members: members as (typeof firstMember)[],
+        };
+      }
+      case "interface": {
+        return {
+          kind: "interfaces",
+          members: members.map((m) => {
+            if (m.kind !== "interface") {
+              throw new Error();
+            }
+            const firstFieldType = resolveType(m.firstField!.type, this.types)!;
+            if (firstFieldType.kind !== "string-literal") {
+              throw new Error();
+            }
+            return {
+              interface: m,
+              kind: firstFieldType.value,
+            };
+          }),
+          fieldName: firstMember.firstField!.name.text,
+        };
+      }
+      default: {
+        throw new Error();
+      }
+    }
+  }
+
+  readonly unionToMembers = new Map<Union, UnionMembers>();
+  readonly typeToNamingHint = new Map<Interface | Union, NamingHint>();
 }

@@ -1,2 +1,4 @@
 - Use "true" and "false" as types
-- 
+- handle 'int'
+- no unused types
+- JSON schemas
