@@ -100,7 +100,7 @@ export type ResolvedTypeRef =
 
 export type PrimitiveType = {
   readonly kind: "primitive";
-  readonly primitive: "number" | "string" | "boolean";
+  readonly primitive: "number" | "string" | "boolean" | "int";
 };
 
 /** Hint for generating a name for an anonymous type in a targeted language. */

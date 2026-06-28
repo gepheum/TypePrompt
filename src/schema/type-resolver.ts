@@ -4,13 +4,14 @@ export function resolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
 ): ResolvedTypeRef | null {
-  return doResolveType(type, types, new Set());
+  return doResolveType(type, types, new Set(), null);
 }
 
 function doResolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
+  intAlias: "int" | null,
 ): ResolvedTypeRef | null {
   if (type.kind === "type") {
     type = type.valueType;
@@ -31,7 +32,8 @@ function doResolveType(
     if (!resolved) {
       return null;
     }
-    return doResolveType(resolved, types, seenNames);
+    const intAlias = typeName === "Int" ? "int" : null;
+    return doResolveType(resolved, types, seenNames, intAlias);
   }
   return type;
 }
