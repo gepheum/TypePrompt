@@ -27,10 +27,12 @@ class ExampleParser {
   constructor(private readonly text: string) {}
 
   parse(): Example | ExampleParseErrors {
-    const identifierMatch = /^\s*(\w+|"\w+")\s*$/.exec(this.text);
+    const identifierMatch = /^\s*(\w+|"(\w+)")\s*$/.exec(this.text);
     if (identifierMatch) {
-      const identifier = identifierMatch[1]!;
-      const start = identifierMatch[0]!.search(/\S/);
+      const outerStart = identifierMatch[0]!.search(/\S/);
+      const isQuoted = identifierMatch[2] !== undefined;
+      const identifier = isQuoted ? identifierMatch[2]! : identifierMatch[1]!;
+      const start = isQuoted ? outerStart + 1 : outerStart;
       return {
         kind: "success:identifier",
         identifier: {

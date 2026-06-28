@@ -6,7 +6,7 @@ export type Example =
   }
   | {
     readonly kind: "success:identifier";
-    /** Possibly-quoted identifier. */
+    /** Unquoted identifier. */
     readonly identifier: ExampleSourceSpan;
     readonly json?: undefined;
   };
