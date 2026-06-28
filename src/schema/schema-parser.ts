@@ -570,8 +570,7 @@ class IdentifierCollector {
   private doCollect(type: Type | TypeDeclaration): null {
     switch (type.kind) {
       case "array": {
-        this.doCollect(type.elementType);
-        return null;
+        return this.doCollect(type.elementType);
       }
       case "interface": {
         const fields = Object.values(type.fields);
@@ -589,8 +588,7 @@ class IdentifierCollector {
         return null;
       }
       case "type": {
-        this.doCollect(type.valueType);
-        return null;
+        return this.doCollect(type.valueType);
       }
       case "type-name": {
         return null;
