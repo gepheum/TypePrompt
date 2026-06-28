@@ -65,6 +65,12 @@ export function validateSchema(
     errors.push(...verifyMetaType(requiredType, types));
   }
 
+  // Verify that all types are used.
+  if (errors.length <= 0) {
+    const rootTypeNames = context.kind === "meta" ? ["Meta"] : ["Response", ...context.argTypeNames];
+    errors.push(...verifyAllTypesUsed(rootTypeNames, types));
+  }
+
   return errors;
 }
 
@@ -480,6 +486,36 @@ function verifyMetaType(
         start: field.name.start,
         end: field.name.end,
         message: "Fields of 'Meta' must be strings, numbers, booleans",
+      });
+    }
+  }
+  return errors;
+}
+
+function verifyAllTypesUsed(
+  rootTypeNames: string[],
+  types: { readonly [name: string]: TypeDeclaration },
+): SchemaParseError[] {
+  const errors: SchemaParseError[] = [];
+  const usedTypes = new Set<string>();
+  for (const rootTypeName of rootTypeNames) {
+    const rootType = types[rootTypeName];
+    if (rootType) {
+      if (rootType.kind === "interface") {
+        collectNameDependencies(rootType, types, usedTypes);
+      } else {
+        collectNameDependencies(rootType.valueType, types, usedTypes);
+      }
+      usedTypes.add(rootTypeName);
+    }
+  }
+  for (const type of Object.values(types)) {
+    const {name} = type;
+    if (!usedTypes.has(name.text)) {
+      errors.push({
+        start: name.start,
+        end: name.end,
+        message: `Type '${name.text}' is not used`,
       });
     }
   }
