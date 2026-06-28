@@ -25,8 +25,8 @@
     How are you? <arg name="bar"/>.
 
     Fields:
-    - <e>foo</e>: The name of the person to greet
-    - <e>bar</e>: Bar
+    - <v>foo</v>: The name of the person to greet
+    - <v>bar</v>: Bar
 
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
