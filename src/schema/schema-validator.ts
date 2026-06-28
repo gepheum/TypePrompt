@@ -1,5 +1,4 @@
 import { checkNoAmbiguity } from "../casing.js";
-import { getUnionMembers } from "./schema-parser.js";
 import type {
   InterfaceDeclaration,
   SchemaField,
@@ -11,6 +10,7 @@ import type {
   Union,
 } from "./schema-types.js";
 import { isPrimitiveType, resolveType } from "./type-resolver.js";
+import { getUnionMembers } from "./unions.js";
 
 /** Called from schema parser. */
 export function validateSchema(
@@ -441,11 +441,13 @@ function verifyMetaType(
     const isValid = (() => {
       switch (resolvedType.kind) {
         case "array":
-        case "interface":
+        case "interface": {
           return false;
+        }
         case "primitive":
-        case "string-literal":
+        case "string-literal": {
           return true;
+        }
         case "union": {
           switch (getUnionMembers(resolvedType, types).kind) {
             case "strings": {

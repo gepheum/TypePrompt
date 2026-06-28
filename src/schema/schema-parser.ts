@@ -12,7 +12,7 @@ import type {
   UnionMembers,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
-import { resolveType } from "./type-resolver.js";
+import { getUnionMembers } from "./unions.js";
 
 export function parseSchema(
   schemaSource: string,
@@ -609,9 +609,12 @@ class IdentifierCollector {
 
 class TypeNamer {
   private constructor(
-    readonly types: { readonly [name: string]: TypeDeclaration }) {};
+    readonly types: { readonly [name: string]: TypeDeclaration },
+  ) {}
 
-  static nameAll(types: { readonly [name: string]: TypeDeclaration }): TypeNamer {
+  static nameAll(types: {
+    readonly [name: string]: TypeDeclaration;
+  }): TypeNamer {
     const namer = new TypeNamer(types);
     for (const type of Object.values(types)) {
       namer.nameType(type, { namePieces: [type.name.text] });
@@ -642,7 +645,7 @@ class TypeNamer {
       }
       case "union": {
         this.typeToNamingHint.set(type, context);
-        const unionMembers = this.getUnionMembers(type);
+        const unionMembers = getUnionMembers(type, this.types);
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {
@@ -657,41 +660,6 @@ class TypeNamer {
             return null;
           }
         }
-      }
-    }
-  }
-
-  private getUnionMembers(type: Union): UnionMembers {
-    const { members } = type;
-    const firstMember = members[0]!;
-    switch (firstMember.kind) {
-      case "string-literal": {
-        return {
-          kind: "strings",
-          members: members as (typeof firstMember)[],
-        };
-      }
-      case "interface": {
-        return {
-          kind: "interfaces",
-          members: members.map((m) => {
-            if (m.kind !== "interface") {
-              throw new Error();
-            }
-            const firstFieldType = resolveType(m.firstField!.type, this.types)!;
-            if (firstFieldType.kind !== "string-literal") {
-              throw new Error();
-            }
-            return {
-              interface: m,
-              kind: firstFieldType.value,
-            };
-          }),
-          fieldName: firstMember.firstField!.name.text,
-        };
-      }
-      default: {
-        throw new Error();
       }
     }
   }
