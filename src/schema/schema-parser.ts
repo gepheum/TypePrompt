@@ -78,7 +78,6 @@ class SchemaParser {
     return {
       kind: "success",
       types: types,
-      fieldNameMapping: collector.fieldNameMapping,
       hasEmptyInterface: collector.hasEmptyInterface,
       identifiers: collector.identifiers,
       unionToMembers: typeNamer.unionToMembers,
@@ -576,8 +575,6 @@ class IdentifierCollector {
         const fields = Object.values(type.fields);
         for (const field of fields) {
           const fieldName = field.name.text;
-          const interfaces = (this.fieldNameMapping[fieldName] ??= []);
-          interfaces.push(type);
           this.identifiers.add(fieldName);
         }
         this.hasEmptyInterface ||= fields.every((f) => f.optional);
@@ -602,7 +599,6 @@ class IdentifierCollector {
     }
   }
 
-  readonly fieldNameMapping: { [fieldName: string]: Interface[] } = {};
   hasEmptyInterface = false;
   readonly identifiers: Set<string> = new Set();
 }

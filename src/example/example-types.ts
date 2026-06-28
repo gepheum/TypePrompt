@@ -1,15 +1,15 @@
-export type Example = 
+export type Example =
   | {
-    readonly kind: "success:json";
-    readonly json: JsonValue;
-    readonly identifier?: undefined;
-  }
+      readonly kind: "success:json";
+      readonly json: JsonValue;
+      readonly identifier?: undefined;
+    }
   | {
-    readonly kind: "success:identifier";
-    /** Unquoted identifier. */
-    readonly identifier: ExampleSourceSpan;
-    readonly json?: undefined;
-  };
+      readonly kind: "success:identifier";
+      /** Unquoted identifier. */
+      readonly identifier: ExampleSourceSpan;
+      readonly json?: undefined;
+    };
 
 export type ExampleParseErrors = {
   readonly kind: "error";

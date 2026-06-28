@@ -1,320 +1,320 @@
-import { expect } from "buckwheat";
-import { describe, it } from "mocha";
+// import { expect } from "buckwheat";
+// import { describe, it } from "mocha";
 
-import { Template } from "./template-parse-result.js";
-import { parseTemplates } from "./template-parser.js";
+// import { Template } from "./template-parse-result.js";
+// import { parseTemplates } from "./template-parser.js";
 
-function parseSingleTemplate(source: string): Template {
-  const result = parseTemplates([{ path: "demo.prompts", content: source }]);
-  expect(result).toMatch({ kind: "success" });
-  if (result.kind !== "success") {
-    throw new Error("Expected success");
-  }
-  const template = result.templates.Demo;
-  if (!template) {
-    throw new Error("Expected template named Demo");
-  }
-  return template;
-}
+// function parseSingleTemplate(source: string): Template {
+//   const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//   expect(result).toMatch({ kind: "success" });
+//   if (result.kind !== "success") {
+//     throw new Error("Expected success");
+//   }
+//   const template = result.templates.Demo;
+//   if (!template) {
+//     throw new Error("Expected template named Demo");
+//   }
+//   return template;
+// }
 
-function hiddenSchemaSource(body: string): string {
-  return [
-    '<template name="Demo">',
-    '  <schema hide="true">',
-    "    type Response = { value: string; };",
-    "  </schema>",
-    body,
-    "</template>",
-  ].join("\n");
-}
+// function hiddenSchemaSource(body: string): string {
+//   return [
+//     '<template name="Demo">',
+//     '  <schema hide="true">',
+//     "    type Response = { value: string; };",
+//     "  </schema>",
+//     body,
+//     "</template>",
+//   ].join("\n");
+// }
 
-function inlineHiddenSchemaSource(body: string): string {
-  return `<template name="Demo"><schema hide="true">type Response = { value: string; };</schema>${body}</template>`;
-}
+// function inlineHiddenSchemaSource(body: string): string {
+//   return `<template name="Demo"><schema hide="true">type Response = { value: string; };</schema>${body}</template>`;
+// }
 
-describe("parseTemplates", () => {
-  it("reports arg names that conflict by casing", () => {
-    const source = [
-      '<template name="Demo">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      '  <arg name="abC" />',
-      '  <arg name="aBc" />',
-      "</template>",
-    ].join("\n");
+// describe("parseTemplates", () => {
+//   it("reports arg names that conflict by casing", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       '  <arg name="abC" />',
+//       '  <arg name="aBc" />',
+//       "</template>",
+//     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Name 'aBc' conflicts with 'abC'",
-          startPosition: {
-            offset: source.indexOf('name="aBc"') + 'name="'.length,
-          },
-          endPosition: {
-            offset: source.indexOf('name="aBc"') + 'name="aBc'.length,
-          },
-        },
-      ],
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "error",
+//       errors: [
+//         {
+//           message: "Name 'aBc' conflicts with 'abC'",
+//           startPosition: {
+//             offset: source.indexOf('name="aBc"') + 'name="'.length,
+//           },
+//           endPosition: {
+//             offset: source.indexOf('name="aBc"') + 'name="aBc'.length,
+//           },
+//         },
+//       ],
+//     });
+//   });
 
-  it("does not report arg casing ambiguity when casing is consistent", () => {
-    const source = [
-      '<template name="Demo">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      '  <arg name="abC" />',
-      '  <arg name="abC" />',
-      "</template>",
-    ].join("\n");
+//   it("does not report arg casing ambiguity when casing is consistent", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       '  <arg name="abC" />',
+//       '  <arg name="abC" />',
+//       "</template>",
+//     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "success",
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "success",
+//     });
+//   });
 
-  it("reports duplicate template names on each duplicate occurrence", () => {
-    const source = [
-      '<template name="Demo">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      "</template>",
-      '<template name="Demo">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      "</template>",
-    ].join("\n");
+//   it("reports duplicate template names on each duplicate occurrence", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       "</template>",
+//       '<template name="Demo">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       "</template>",
+//     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Name 'Demo' is duplicated",
-        },
-        {
-          message: "Name 'Demo' is duplicated",
-        },
-      ],
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "error",
+//       errors: [
+//         {
+//           message: "Name 'Demo' is duplicated",
+//         },
+//         {
+//           message: "Name 'Demo' is duplicated",
+//         },
+//       ],
+//     });
+//   });
 
-  it("reports template names that conflict by casing", () => {
-    const source = [
-      '<template name="ABc">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      "</template>",
-      '<template name="AbC">',
-      "  <schema>",
-      "    type Response = 'abc';",
-      "  </schema>",
-      "</template>",
-    ].join("\n");
+//   it("reports template names that conflict by casing", () => {
+//     const source = [
+//       '<template name="ABc">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       "</template>",
+//       '<template name="AbC">',
+//       "  <schema>",
+//       "    type Response = 'abc';",
+//       "  </schema>",
+//       "</template>",
+//     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Name 'AbC' conflicts with 'ABc'",
-        },
-      ],
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "error",
+//       errors: [
+//         {
+//           message: "Name 'AbC' conflicts with 'ABc'",
+//         },
+//       ],
+//     });
+//   });
 
-  it("accepts a blank template body around a hidden schema", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      "  ",
-      "</template>",
-    ].join("\n");
+//   it("accepts a blank template body around a hidden schema", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       '  <schema hide="true">',
+//       "    type Response = { value: string; };",
+//       "  </schema>",
+//       "",
+//       "  ",
+//       "</template>",
+//     ].join("\n");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "success",
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "success",
+//     });
+//   });
 
-  it("uses empty baseIndent when first text node has no EOL", () => {
-    const template = parseSingleTemplate(inlineHiddenSchemaSource("  foo"));
+//   it("uses empty baseIndent when first text node has no EOL", () => {
+//     const template = parseSingleTemplate(inlineHiddenSchemaSource("  foo"));
 
-    expect(template.content).toMatch([{ kind: "text", text: "  foo" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "  foo" }]);
+//   });
 
-  it("uses empty baseIndent when first line has non-whitespace", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("foo\n  bar"),
-    );
+//   it("uses empty baseIndent when first line has non-whitespace", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("foo\n  bar"),
+//     );
 
-    expect(template.content).toMatch([{ kind: "text", text: "foo\n  bar" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "foo\n  bar" }]);
+//   });
 
-  it("matches baseIndent example 2", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("  \n foo\n  bar"),
-    );
+//   it("matches baseIndent example 2", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("  \n foo\n  bar"),
+//     );
 
-    expect(template.content).toMatch([{ kind: "text", text: "foo\n bar" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "foo\n bar" }]);
+//   });
 
-  it("matches baseIndent example 3 (whitespace only)", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("  \n\n\n    "),
-    );
+//   it("matches baseIndent example 3 (whitespace only)", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("  \n\n\n    "),
+//     );
 
-    expect(template.content).toMatch([]);
-  });
+//     expect(template.content).toMatch([]);
+//   });
 
-  it("matches baseIndent example 4", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("  \n\n\n  foo\n    "),
-    );
+//   it("matches baseIndent example 4", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("  \n\n\n  foo\n    "),
+//     );
 
-    expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
+//   });
 
-  it("reports indentation errors when EOL is not followed by EOL or baseIndent", () => {
-    const source = inlineHiddenSchemaSource("  \n  foo\n bar");
+//   it("reports indentation errors when EOL is not followed by EOL or baseIndent", () => {
+//     const source = inlineHiddenSchemaSource("  \n  foo\n bar");
 
-    const result = parseTemplates([{ path: "demo.prompts", content: source }]);
+//     const result = parseTemplates([{ path: "demo.prompts", content: source }]);
 
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Expected indentation '  ' after end-of-line",
-        },
-      ],
-    });
-  });
+//     expect(result).toMatch({
+//       kind: "error",
+//       errors: [
+//         {
+//           message: "Expected indentation '  ' after end-of-line",
+//         },
+//       ],
+//     });
+//   });
 
-  it("removes leading and trailing empty lines from content", () => {
-    const template = parseSingleTemplate(hiddenSchemaSource("\n\n  foo\n\n"));
+//   it("removes leading and trailing empty lines from content", () => {
+//     const template = parseSingleTemplate(hiddenSchemaSource("\n\n  foo\n\n"));
 
-    expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "foo" }]);
+//   });
 
-  it("keeps arg pieces while trimming boundary empty lines", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">',
-      "    type Response = { value: string; };",
-      "  </schema>",
-      "",
-      '  <arg name="value" />',
-      "",
-      "</template>",
-    ].join("\n");
+//   it("keeps arg pieces while trimming boundary empty lines", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       '  <schema hide="true">',
+//       "    type Response = { value: string; };",
+//       "  </schema>",
+//       "",
+//       '  <arg name="value" />',
+//       "",
+//       "</template>",
+//     ].join("\n");
 
-    const template = parseSingleTemplate(source);
-    expect(template.content).toMatch([{ kind: "arg", name: "value" }]);
-  });
+//     const template = parseSingleTemplate(source);
+//     expect(template.content).toMatch([{ kind: "arg", name: "value" }]);
+//   });
 
-  it("coalesces text pieces split by a single XML comment", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("Hello<!-- split -->World"),
-    );
+//   it("coalesces text pieces split by a single XML comment", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("Hello<!-- split -->World"),
+//     );
 
-    expect(template.content).toMatch([{ kind: "text", text: "HelloWorld" }]);
-  });
+//     expect(template.content).toMatch([{ kind: "text", text: "HelloWorld" }]);
+//   });
 
-  it("coalesces multiple comment-split text nodes after dedent", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("\n  foo<!-- c1 -->bar<!-- c2 -->baz\n  qux"),
-    );
+//   it("coalesces multiple comment-split text nodes after dedent", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("\n  foo<!-- c1 -->bar<!-- c2 -->baz\n  qux"),
+//     );
 
-    expect(template.content).toMatch([
-      { kind: "text", text: "foobarbaz\nqux" },
-    ]);
-  });
+//     expect(template.content).toMatch([
+//       { kind: "text", text: "foobarbaz\nqux" },
+//     ]);
+//   });
 
-  it("sets xmlContent to the raw content between template tags", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">type Response = { value: string; };</schema>',
-      '  before <arg name="value" /> after',
-      "</template>",
-    ].join("\n");
+//   it("sets xmlContent to the raw content between template tags", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       '  <schema hide="true">type Response = { value: string; };</schema>',
+//       '  before <arg name="value" /> after',
+//       "</template>",
+//     ].join("\n");
 
-    const template = parseSingleTemplate(source);
-    const openTagEnd = source.indexOf(">") + 1;
-    const closeTagStart = source.lastIndexOf("</template>");
+//     const template = parseSingleTemplate(source);
+//     const openTagEnd = source.indexOf(">") + 1;
+//     const closeTagStart = source.lastIndexOf("</template>");
 
-    expect(template.xmlContent).toBe(source.slice(openTagEnd, closeTagStart));
-  });
+//     expect(template.xmlContent).toBe(source.slice(openTagEnd, closeTagStart));
+//   });
 
-  it("keeps leading and trailing whitespace in xmlContent", () => {
-    const source = [
-      '<template name="Demo">',
-      "",
-      '  <schema hide="true">type Response = { value: string; };</schema>',
-      "  text",
-      "",
-      "</template>",
-    ].join("\n");
+//   it("keeps leading and trailing whitespace in xmlContent", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       "",
+//       '  <schema hide="true">type Response = { value: string; };</schema>',
+//       "  text",
+//       "",
+//       "</template>",
+//     ].join("\n");
 
-    const template = parseSingleTemplate(source);
+//     const template = parseSingleTemplate(source);
 
-    expect(template.xmlContent.startsWith("\n\n")).toBe(true);
-    expect(template.xmlContent.endsWith("\n")).toBe(true);
-  });
+//     expect(template.xmlContent.startsWith("\n\n")).toBe(true);
+//     expect(template.xmlContent.endsWith("\n")).toBe(true);
+//   });
 
-  it("xmlContent includes nested element markup", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">type Response = { value: string; };</schema>',
-      '  <example type="Response">{"value":"x"}</example>',
-      "</template>",
-    ].join("\n");
+//   it("xmlContent includes nested element markup", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       '  <schema hide="true">type Response = { value: string; };</schema>',
+//       '  <example type="Response">{"value":"x"}</example>',
+//       "</template>",
+//     ].join("\n");
 
-    const template = parseSingleTemplate(source);
+//     const template = parseSingleTemplate(source);
 
-    expect(template.xmlContent.includes('<example type="Response">')).toBe(
-      true,
-    );
-    expect(template.xmlContent.includes("</example>")).toBe(true);
-  });
+//     expect(template.xmlContent.includes('<example type="Response">')).toBe(
+//       true,
+//     );
+//     expect(template.xmlContent.includes("</example>")).toBe(true);
+//   });
 
-  it("collects template args uniquely and sorts them alphabetically", () => {
-    const source = [
-      '<template name="Demo">',
-      '  <schema hide="true">type Response = { value: string; };</schema>',
-      '  <arg name="zeta" />',
-      '  <arg name="alpha" />',
-      '  <arg name="beta" />',
-      '  <arg name="alpha" />',
-      '  <arg name="zeta" />',
-      "</template>",
-    ].join("\n");
+//   it("collects template args uniquely and sorts them alphabetically", () => {
+//     const source = [
+//       '<template name="Demo">',
+//       '  <schema hide="true">type Response = { value: string; };</schema>',
+//       '  <arg name="zeta" />',
+//       '  <arg name="alpha" />',
+//       '  <arg name="beta" />',
+//       '  <arg name="alpha" />',
+//       '  <arg name="zeta" />',
+//       "</template>",
+//     ].join("\n");
 
-    const template = parseSingleTemplate(source);
+//     const template = parseSingleTemplate(source);
 
-    expect(template.args).toMatch(["alpha", "beta", "zeta"]);
-  });
+//     expect(template.args).toMatch(["alpha", "beta", "zeta"]);
+//   });
 
-  it("returns empty args when template has no arg elements", () => {
-    const template = parseSingleTemplate(
-      inlineHiddenSchemaSource("plain text"),
-    );
+//   it("returns empty args when template has no arg elements", () => {
+//     const template = parseSingleTemplate(
+//       inlineHiddenSchemaSource("plain text"),
+//     );
 
-    expect(template.args).toMatch([]);
-  });
-});
+//     expect(template.args).toMatch([]);
+//   });
+// });

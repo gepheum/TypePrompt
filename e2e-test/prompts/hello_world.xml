@@ -25,24 +25,24 @@
     How are you? <arg name="bar"/>.
 
     Fields:
-    - <c>foo</c>: The name of the person to greet
-    - <c>bar</c>: Bar
+    - <e>foo</e>: The name of the person to greet
+    - <e>bar</e>: Bar
 
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
     <enclosed tag="Example">
       <enclosed tag="Input">
-        <c>{
+        <e>{
           "foo": "Alice",
           ...
-        }</c>
+        }</e>
       </enclosed>
       <enclosed tag="Output">
-        <c>{
+        <eg>{
           "bar": "Jon",
           "foos": []
-        }</c>
+        }</eg>
       </enclosed>
     </enclosed>
 

@@ -10,9 +10,6 @@ export type SchemaParseContext =
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
-  readonly fieldNameMapping: {
-    readonly [fieldName: string]: readonly Interface[];
-  };
   /** True if the schema contains an interface containing only optional fields. */
   readonly hasEmptyInterface: boolean;
   /** Field names and identifiers used in string literals. */
@@ -93,7 +90,7 @@ export type Union = {
   readonly members: NonUnionType[];
 };
 
-export type ResolvedTypeRef =
+export type ResolvedType =
   | Exclude<Type, TypeName>
   | InterfaceDeclaration
   | PrimitiveType;

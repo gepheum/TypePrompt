@@ -1,9 +1,9 @@
-import type { ResolvedTypeRef, Type, TypeDeclaration } from "./schema-types.js";
+import type { ResolvedType, Type, TypeDeclaration } from "./schema-types.js";
 
 export function resolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-): ResolvedTypeRef | null {
+): ResolvedType | null {
   return doResolveType(type, types, new Set(), null);
 }
 
@@ -12,7 +12,7 @@ function doResolveType(
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
   intAlias: "int" | null,
-): ResolvedTypeRef | null {
+): ResolvedType | null {
   if (type.kind === "type") {
     type = type.valueType;
   }
