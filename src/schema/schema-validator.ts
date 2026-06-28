@@ -296,9 +296,23 @@ function validateUnionType(
         // Cannot happen.
         throw new Error();
       }
-      const firstField = resolvedType.firstField;
-      if (!firstField || firstField.type.kind !== "string-literal") {
-        const firstToken = firstField?.name ?? getFirstToken(resolvedType);
+      const checkedFirstField = (() => {
+        const { firstField } = resolvedType;
+        if (!firstField) {
+          return null;
+        }
+        const discriminatorType = resolveType(firstField.type, types);
+        if (discriminatorType?.kind !== "string-literal") {
+          return null;
+        }
+        return {
+          firstField,
+          discriminatorType,
+        };
+      })();
+      if (!checkedFirstField) {
+        const firstToken =
+          resolvedType.firstField?.name ?? getFirstToken(resolvedType);
         errors.push({
           start: firstToken.start,
           end: firstToken.end,
@@ -308,6 +322,7 @@ function validateUnionType(
         allGood = false;
         continue;
       }
+      const { firstField, discriminatorType } = checkedFirstField;
       if (!discriminator) {
         discriminator = firstField;
       } else if (discriminator.name.text !== firstField.name.text) {
@@ -322,7 +337,7 @@ function validateUnionType(
         });
         allGood = false;
       }
-      quotedNames.push(firstField.type.quotedName);
+      quotedNames.push(discriminatorType.quotedName);
     }
     if (!allGood) {
       errors.push(
