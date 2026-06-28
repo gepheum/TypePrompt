@@ -27,6 +27,20 @@ class ExampleParser {
   constructor(private readonly text: string) {}
 
   parse(): Example | ExampleParseErrors {
+    const identifierMatch = /^\s*(\w+|"\w+")\s*$/.exec(this.text);
+    if (identifierMatch) {
+      const identifier = identifierMatch[1]!;
+      const start = identifierMatch[0]!.search(/\S/);
+      return {
+        kind: "success:identifier",
+        identifier: {
+          text: identifier,
+          start,
+          end: start + identifier.length,
+        },
+      };
+    }
+
     this.skipJsonSpaces();
 
     if (this.cursor >= this.text.length && this.errors.length > 0) {
@@ -61,8 +75,8 @@ class ExampleParser {
     }
 
     return {
-      kind: "success",
-      value,
+      kind: "success:json",
+      json: value,
     };
   }
 

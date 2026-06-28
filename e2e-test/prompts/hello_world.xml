@@ -25,8 +25,8 @@
     How are you? <arg name="bar"/>.
 
     Fields:
-    - <c>foo</c>: The name of the person to greet.
-    - <c>bar</c>: Bar.
+    - <c>foo</c>: The name of the person to greet
+    - <c>bar</c>: Bar
 
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
@@ -34,7 +34,8 @@
     <enclosed tag="Example">
       <enclosed tag="Input">
         <c>{
-          "foo": "Alice"
+          "foo": "Alice",
+          ...
         }</c>
       </enclosed>
       <enclosed tag="Output">
