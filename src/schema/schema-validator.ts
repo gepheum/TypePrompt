@@ -67,7 +67,10 @@ export function validateSchema(
 
   // Verify that all types are used.
   if (errors.length <= 0) {
-    const rootTypeNames = context.kind === "meta" ? ["Meta"] : ["Response", ...context.argTypeNames];
+    const rootTypeNames =
+      context.kind === "meta"
+        ? ["Meta"]
+        : ["Response", ...context.argTypeNames];
     errors.push(...verifyAllTypesUsed(rootTypeNames, types));
   }
 
@@ -510,7 +513,7 @@ function verifyAllTypesUsed(
     }
   }
   for (const type of Object.values(types)) {
-    const {name} = type;
+    const { name } = type;
     if (!usedTypes.has(name.text)) {
       errors.push({
         start: name.start,

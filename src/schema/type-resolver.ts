@@ -21,7 +21,11 @@ function doResolveType(
     {
       const primitive = isPrimitiveType(typeName);
       if (primitive) {
-        return { kind: "primitive", primitive: primitive };
+        if (primitive === "number" && intAlias) {
+          return { kind: "primitive", primitive: "number" };
+        } else {
+          return { kind: "primitive", primitive: primitive };
+        }
       }
     }
     if (seenNames.has(typeName)) {
@@ -32,8 +36,12 @@ function doResolveType(
     if (!resolved) {
       return null;
     }
-    const intAlias = typeName === "Int" ? "int" : null;
-    return doResolveType(resolved, types, seenNames, intAlias);
+    return doResolveType(
+      resolved,
+      types,
+      seenNames,
+      typeName === "Int" ? "int" : null,
+    );
   }
   return type;
 }
