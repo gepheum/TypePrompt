@@ -133,7 +133,7 @@ class SchemaParser {
     const maybeSemicolon = this.peekToken();
     if (maybeSemicolon.text === ";") {
       this.movePast(maybeSemicolon);
-    } else if (!maybeSemicolon.newLine) {
+    } else if (maybeSemicolon.kind !== "string-end" && !maybeSemicolon.newLine) {
       // Will always push an error.
       this.expectExactThenMove(";", maybeSemicolon);
     }
@@ -157,6 +157,9 @@ class SchemaParser {
       return null;
     }
     const fields = this.parseFields();
+    if (!this.expectExactThenMove("}")) {
+      return null;
+    }
     return {
       kind: "interface",
       name: name,
@@ -188,13 +191,18 @@ class SchemaParser {
       token = this.movePastThenPeek(token);
     }
     const name = token;
-    const nameMatch = this.expectThenMove(name, {
-      identifier: IDENTIFIER_MATCHER,
-      notIdentifier: jsdoc ? NEVER_MATCHER : ALWAYS_MATCHER,
-    });
-    if (nameMatch !== "identifier") {
+    if (name.kind !== "identifier") {
+      if (jsdoc) {
+        // jsdoc was attached to nothing — report the error.
+        this.parserErrors.push({
+          start: name.start,
+          end: name.end,
+          message: "Expected: identifier",
+        });
+      }
       return null;
     }
+    this.movePast(name);
     token = this.peekToken();
     const optional = token.text === "?";
     if (optional) {
@@ -305,36 +313,42 @@ class SchemaParser {
   }
 
   private peekToken(): Token {
+    if (this.cachedPeek !== null) {
+      return this.cachedPeek;
+    }
     // Multiline comment:            \/\*([^*]|\*[^\/])*(\*\/)?
     // Single-line comment:          \/\/[^\n\r]*
     // Word:                         \b\w+\b
     // Whitespaces:                  [ \n\r\t]+
-    // Symbol:                       [{}[\]():=;|,]
+    // Symbol:                       [{}[\]():=;|,?]
     // Double-quote string literal:  "(\\.|[^\\\"\n\r])*"?
     // Single-quote string literal:  '(\\.|[^\\\'\n\r])*'?
     //
     // To iterate on this regex, use https://regex101.com/.
     const re =
-      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,])|("(\\.|[^\\"\n\r])*"?)|('(\\.|[^\\'\n\r])*'?)|($)/g;
+      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
     // 1    2             3        4                5       6            7                8                      9                      10
     re.lastIndex = this.cursor;
     const { schemaSource } = this;
     let group: RegExpExecArray | null;
     let newLine = false;
+    // Local position tracker for gap detection; this.cursor is never modified
+    // by peekToken() — only movePast() advances it.
+    let expectedAt = this.cursor;
     while ((group = re.exec(schemaSource)) !== null) {
       const position = re.lastIndex - group[0].length;
 
       // Check that all the regex matches are consecutive.
       // If there is a gap between two matches, it means that we have an invalid
       // sequence of characters.
-      if (position !== this.cursor) {
+      if (position !== expectedAt) {
         this.tokenizerErrors.push({
-          start: this.cursor,
+          start: expectedAt,
           end: position,
           message: "Invalid sequence of characters",
         });
       }
-      this.cursor = re.lastIndex;
+      expectedAt = re.lastIndex;
 
       if (group[6] !== undefined) {
         // Skip whitespaces.
@@ -402,13 +416,16 @@ class SchemaParser {
         throw new Error("Unexpected regex match");
       }
 
-      return {
+      // peekToken() is idempotent: this.cursor is never modified here.
+      // The cursor advances only when movePast() is called explicitly.
+      this.cachedPeek = {
         kind: tokenKind,
         text: text,
         start: position,
         end: re.lastIndex,
         newLine: newLine,
       };
+      return this.cachedPeek;
     }
     // Cannot happen because the regex matches the end of the string.
     throw new Error();
@@ -416,6 +433,7 @@ class SchemaParser {
 
   private movePast(token: Token): void {
     this.cursor = token.end;
+    this.cachedPeek = null;
   }
 
   private movePastThenPeek(token: Token): Token {
@@ -458,6 +476,8 @@ class SchemaParser {
   private readonly tokenizerErrors: SchemaParseError[] = [];
   private readonly parserErrors: SchemaParseError[] = [];
   private cursor = 0;
+  /** Cache for peekToken(); invalidated whenever cursor advances via movePast(). */
+  private cachedPeek: Token | null = null;
 }
 
 type Token = {
@@ -576,8 +596,8 @@ class IdentifierCollector {
       case "interface": {
         const fields = Object.values(type.fields);
         for (const field of fields) {
-          const fieldName = field.name.text;
-          this.identifiers.add(fieldName);
+          this.identifiers.add(field.name.text);
+          this.doCollect(field.type);
         }
         this.hasEmptyInterface ||= fields.every((f) => f.optional);
         return null;

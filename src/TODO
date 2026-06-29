@@ -1,3 +1,4 @@
-- JSON schemas
+- rm "hasEmptyInterface"?
+- add resolvedTypes map
 - "Args" is reserved, "Variant" is reserved
-
+- JSON schemas
