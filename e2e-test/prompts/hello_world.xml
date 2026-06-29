@@ -47,10 +47,10 @@
         }</e>
       </enclosed>
       <enclosed tag="Output">
-        <eg>{
+        <e>{
           "bar": "Jon",
           "foos": []
-        }</eg>
+        }</e>
       </enclosed>
     </enclosed>
 

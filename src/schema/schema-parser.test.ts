@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { parseSchema } from "./schema-parser.js";
-import type { SchemaParseContext, Union } from "./schema-types.js";
+import type { Interface, SchemaParseContext, TypeDeclaration, Union } from "./schema-types.js";
 import { resolveType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
@@ -545,6 +545,43 @@ describe("parseSchema – unionToMembers", () => {
       kind: "interfaces",
       fieldName: "kind",
       members: [{ kind: "circle" }, { kind: "rect" }],
+    });
+  });
+
+  it("populates unionToMembers for a named-interface union", () => {
+    // Foo | Bar are named declarations, not inline interfaces.
+    const result = parseOk(
+      [
+        'interface Foo { shape: "circle"; r: number; }',
+        'interface Bar { shape: "rect"; w: number; }',
+        "type Response = Foo | Bar;",
+      ].join("\n"),
+    );
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const union = responseDecl.valueType as Union;
+    expect(result.unionToMembers.get(union)).toMatch({
+      kind: "interfaces",
+      fieldName: "shape",
+      members: [{ kind: "circle" }, { kind: "rect" }],
+    });
+  });
+
+  it("populates unionToMembers for a named-string-literal union", () => {
+    // Active and Inactive are type aliases for string literals.
+    const result = parseOk(
+      [
+        'type Active = "active";',
+        'type Inactive = "inactive";',
+        "type Response = Active | Inactive;",
+      ].join("\n"),
+    );
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const union = responseDecl.valueType as Union;
+    expect(result.unionToMembers.get(union)).toMatch({
+      kind: "strings",
+      members: [{ value: "active" }, { value: "inactive" }],
     });
   });
 
@@ -1225,6 +1262,117 @@ describe("getUnionMembers", () => {
     expect(getUnionMembers(union, {})).toMatch({
       kind: "interfaces",
       fieldName: "kind",
+      members: [{ kind: "circle" }, { kind: "rect" }],
+    });
+  });
+
+  it("resolves string-literal members referenced by name", () => {
+    // Members are type-name references; resolveType must follow them.
+    const activeDecl: TypeDeclaration = {
+      kind: "type",
+      name: { text: "Active", start: 0, end: 6 },
+      valueType: {
+        kind: "string-literal",
+        value: "active",
+        quotedName: { text: '"active"', start: 9, end: 17 },
+      },
+      doc: "",
+    };
+    const inactiveDecl: TypeDeclaration = {
+      kind: "type",
+      name: { text: "Inactive", start: 19, end: 27 },
+      valueType: {
+        kind: "string-literal",
+        value: "inactive",
+        quotedName: { text: '"inactive"', start: 30, end: 40 },
+      },
+      doc: "",
+    };
+    const union: Union = {
+      kind: "union",
+      members: [
+        { kind: "type-name", name: { text: "Active", start: 50, end: 56 } },
+        {
+          kind: "type-name",
+          name: { text: "Inactive", start: 59, end: 67 },
+        },
+      ],
+    };
+    const types = { Active: activeDecl, Inactive: inactiveDecl };
+    expect(getUnionMembers(union, types)).toMatch({
+      kind: "strings",
+      members: [{ value: "active" }, { value: "inactive" }],
+    });
+  });
+
+  it("resolves interface members referenced by name", () => {
+    const fooInterface: Interface = {
+      kind: "interface",
+      name: { text: "Foo", start: 10, end: 13 },
+      leftCurlyBracket: undefined,
+      fields: {
+        shape: {
+          name: { text: "shape", start: 16, end: 21 },
+          optional: false,
+          type: {
+            kind: "string-literal",
+            value: "circle",
+            quotedName: { text: '"circle"', start: 23, end: 31 },
+          },
+          doc: "",
+        },
+      },
+      firstField: {
+        name: { text: "shape", start: 16, end: 21 },
+        optional: false,
+        type: {
+          kind: "string-literal",
+          value: "circle",
+          quotedName: { text: '"circle"', start: 23, end: 31 },
+        },
+        doc: "",
+      },
+    };
+    const barInterface: Interface = {
+      kind: "interface",
+      name: { text: "Bar", start: 50, end: 53 },
+      leftCurlyBracket: undefined,
+      fields: {
+        shape: {
+          name: { text: "shape", start: 56, end: 61 },
+          optional: false,
+          type: {
+            kind: "string-literal",
+            value: "rect",
+            quotedName: { text: '"rect"', start: 63, end: 69 },
+          },
+          doc: "",
+        },
+      },
+      firstField: {
+        name: { text: "shape", start: 56, end: 61 },
+        optional: false,
+        type: {
+          kind: "string-literal",
+          value: "rect",
+          quotedName: { text: '"rect"', start: 63, end: 69 },
+        },
+        doc: "",
+      },
+    };
+    const fooDecl: TypeDeclaration = { ...fooInterface };
+    const barDecl: TypeDeclaration = { ...barInterface };
+    const union: Union = {
+      kind: "union",
+      members: [
+        { kind: "type-name", name: { text: "Foo", start: 90, end: 93 } },
+        { kind: "type-name", name: { text: "Bar", start: 96, end: 99 } },
+      ],
+    };
+    const types = { Foo: fooDecl, Bar: barDecl };
+    expect(getUnionMembers(union, types)).toMatch({
+      kind: "interfaces",
+      fieldName: "shape",
       members: [{ kind: "circle" }, { kind: "rect" }],
     });
   });

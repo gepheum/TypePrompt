@@ -278,14 +278,15 @@ function validateUnionType(
     errors.push(
       ...checkNoAmbiguity(
         members.map((m) => {
-          if (m.kind !== "string-literal") {
-            // Cannot happen.
+          const resolved = resolveType(m, types);
+          if (resolved?.kind !== "string-literal") {
+            // Cannot happen: getUnionKind already verified this.
             throw new Error();
           }
           return {
-            name: m.value,
-            start: m.quotedName.start + 1,
-            end: m.quotedName.end - 1,
+            name: resolved.value,
+            start: resolved.quotedName.start + 1,
+            end: resolved.quotedName.end - 1,
           };
         }),
         { exactMatchIsConflict: true },
