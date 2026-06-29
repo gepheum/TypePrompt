@@ -288,6 +288,7 @@ function validateUnionType(
             end: m.quotedName.end - 1,
           };
         }),
+        { exactMatchIsConflict: true },
       ),
     );
   } else {
@@ -348,14 +349,15 @@ function validateUnionType(
       }
       quotedNames.push(discriminatorType.quotedName);
     }
-    if (!allGood) {
+    if (allGood) {
       errors.push(
         ...checkNoAmbiguity(
           quotedNames.map((q) => ({
-            name: q.text,
+            name: q.text.slice(1, -1),
             start: q.start,
             end: q.end,
           })),
+          { exactMatchIsConflict: true },
         ),
       );
     }
@@ -432,8 +434,9 @@ function collectNameDependencies(
       }
     }
     case "union": {
-      // Only collect dependencies from the first member of the union.
-      collectNameDependencies(type.members[0]!, types, seenNames);
+      for (const member of type.members) {
+        collectNameDependencies(member, types, seenNames);
+      }
       return null;
     }
   }

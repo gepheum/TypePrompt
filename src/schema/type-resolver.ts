@@ -22,7 +22,7 @@ function doResolveType(
       const primitive = isPrimitiveType(typeName);
       if (primitive) {
         if (primitive === "number" && intAlias) {
-          return { kind: "primitive", primitive: "number" };
+          return { kind: "primitive", primitive: intAlias };
         } else {
           return { kind: "primitive", primitive: primitive };
         }

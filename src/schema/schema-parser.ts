@@ -34,13 +34,14 @@ class SchemaParser {
           break;
         } else {
           // Jump to the next "type" or "interface" keyword.
-          const token = this.peekToken();
+          let token = this.peekToken();
           while (
             token.kind !== "string-end" &&
             token.text !== "type" &&
             token.text !== "interface"
           ) {
             this.movePast(token);
+            token = this.peekToken();
           }
         }
       } else {
@@ -121,7 +122,7 @@ class SchemaParser {
     if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
       return null;
     }
-    if (!this.expectExactThenMove("{")) {
+    if (!this.expectExactThenMove("=")) {
       return null;
     }
     const typeRef = this.parseTypeRef();
@@ -316,6 +317,7 @@ class SchemaParser {
     const re =
       /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,])|("(\\.|[^\\"\n\r])*"?)|('(\\.|[^\\'\n\r])*'?)|($)/g;
     // 1    2             3        4                5       6            7                8                      9                      10
+    re.lastIndex = this.cursor;
     const { schemaSource } = this;
     let group: RegExpExecArray | null;
     let newLine = false;

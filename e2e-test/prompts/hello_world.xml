@@ -1,5 +1,12 @@
+<template>
+  <body>
+    Hello <arg name="name"/>.
+  </body>
+</template>
+
 <meta>
   interface Meta {
+    /** Temperature setting for the template */
     temperature?: number;
   }
 </meta>
@@ -14,6 +21,7 @@
 
   <schema>
     interface Foo {
+      /** The message to be displayed */
       message: string;
     }
 
