@@ -1314,6 +1314,7 @@ describe("getUnionMembers", () => {
         },
         doc: "",
       },
+      doc: "",
     };
     const barInterface: Interface = {
       kind: "interface",
@@ -1341,6 +1342,7 @@ describe("getUnionMembers", () => {
         },
         doc: "",
       },
+      doc: "",
     };
     const fooDecl: TypeDeclaration = { ...fooInterface };
     const barDecl: TypeDeclaration = { ...barInterface };
