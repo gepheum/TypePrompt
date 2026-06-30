@@ -28,7 +28,6 @@ export function validateExample(
       //   }
       // }
       return [];  // TODO
-      break;
     }
   }
 }

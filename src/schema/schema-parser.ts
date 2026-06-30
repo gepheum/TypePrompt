@@ -73,16 +73,14 @@ class SchemaParser {
       typeDeclarations.map((t) => [t.name.text, t]),
     );
 
-    const collector = IdentifierCollector.collect(typeDeclarations);
-    const typeNamer = TypeNamer.nameAll(types);
+    const typeTraverser = TypeTraverser.traverseAll(types);
 
     return {
       kind: "success",
       types: types,
-      hasEmptyInterface: collector.hasEmptyInterface,
-      identifiers: collector.identifiers,
-      unionToMembers: typeNamer.unionToMembers,
-      typeToNamingHint: typeNamer.typeToNamingHint,
+      identifiers: typeTraverser.identifiers,
+      unionToMembers: typeTraverser.unionToMembers,
+      typeToNamingHint: typeTraverser.typeToNamingHint,
     };
   }
 
@@ -579,27 +577,35 @@ function joinTypes(a: Type, b: Type): Union {
   }
 }
 
-class IdentifierCollector {
-  static collect(types: readonly TypeDeclaration[]): IdentifierCollector {
-    const collector = new IdentifierCollector();
-    for (const type of types) {
-      collector.doCollect(type);
+class TypeTraverser {
+  static traverseAll(
+    types: {readonly [name: string]: TypeDeclaration},
+  ): TypeTraverser {
+    const traverser = new TypeTraverser(types);
+    for (const type of Object.values(types)) {
+      traverser.traverse(type, { namePieces: [] });
     }
-    return collector;
+    return traverser;
   }
 
-  private doCollect(type: Type | TypeDeclaration): null {
+  private constructor(
+    private readonly types: {readonly [name: string]: TypeDeclaration},
+  ) {}
+
+  private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
     switch (type.kind) {
       case "array": {
-        return this.doCollect(type.elementType);
+        return this.traverse(type.elementType, context);
       }
       case "interface": {
         const fields = Object.values(type.fields);
         for (const field of fields) {
           this.identifiers.add(field.name.text);
-          this.doCollect(field.type);
+          const newContext: NamingHint = {
+            namePieces: [...context.namePieces, field.name.text],
+          };
+          this.traverse(field.type, newContext);
         }
-        this.hasEmptyInterface ||= fields.every((f) => f.optional);
         return null;
       }
       case "string-literal": {
@@ -607,59 +613,10 @@ class IdentifierCollector {
         return null;
       }
       case "type": {
-        return this.doCollect(type.valueType);
+        return this.traverse(type.valueType, context);
       }
       case "type-name": {
         return null;
-      }
-      case "union": {
-        for (const member of type.members) {
-          this.doCollect(member);
-        }
-        return null;
-      }
-    }
-  }
-
-  hasEmptyInterface = false;
-  readonly identifiers: Set<string> = new Set();
-}
-
-class TypeNamer {
-  private constructor(
-    readonly types: { readonly [name: string]: TypeDeclaration },
-  ) {}
-
-  static nameAll(types: {
-    readonly [name: string]: TypeDeclaration;
-  }): TypeNamer {
-    const namer = new TypeNamer(types);
-    for (const type of Object.values(types)) {
-      namer.nameType(type, { namePieces: [type.name.text] });
-    }
-    return namer;
-  }
-
-  private nameType(type: Type | TypeDeclaration, context: NamingHint): null {
-    switch (type.kind) {
-      case "array": {
-        return this.nameType(type.elementType, context);
-      }
-      case "string-literal":
-      case "type-name": {
-        return null;
-      }
-      case "interface": {
-        this.typeToNamingHint.set(type, context);
-        for (const field of Object.values(type.fields)) {
-          this.nameType(field.type, {
-            namePieces: [...context.namePieces, field.name.text],
-          });
-        }
-        return null;
-      }
-      case "type": {
-        return this.nameType(type.valueType, context);
       }
       case "union": {
         this.typeToNamingHint.set(type, context);
@@ -668,9 +625,10 @@ class TypeNamer {
         switch (unionMembers.kind) {
           case "interfaces": {
             for (const member of unionMembers.members) {
-              this.nameType(member.interface, {
+              const newContext: NamingHint = {
                 namePieces: [...context.namePieces, member.kind],
-              });
+              };
+              this.traverse(member.interface, newContext);
             }
             return null;
           }
@@ -682,6 +640,7 @@ class TypeNamer {
     }
   }
 
+  readonly identifiers: Set<string> = new Set();
   readonly unionToMembers = new Map<Union, UnionMembers>();
   readonly typeToNamingHint = new Map<Interface | Union, NamingHint>();
 }

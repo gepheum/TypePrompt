@@ -10,9 +10,10 @@ export type SchemaParseContext =
 export type Schema = {
   readonly kind: "success";
   readonly types: { readonly [name: string]: TypeDeclaration };
-  /** True if the schema contains an interface containing only optional fields. */
-  readonly hasEmptyInterface: boolean;
-  /** Field names and identifiers used in string literals. */
+  /**
+   * Field names and identifiers used in string literals.
+   * Does not include types names.
+   */
   readonly identifiers: ReadonlySet<string>;
   readonly unionToMembers: ReadonlyMap<Union, UnionMembers>;
   readonly typeToNamingHint: ReadonlyMap<Interface | Union, NamingHint>;
