@@ -1,7 +1,7 @@
 import { Schema } from "./schema-types.js";
 
 export function makeJsonSchema(
-  schema: Schema,
-  typeName: string,
-) {
+  _schema: Schema,
+  _typeName: string,
+): void {
 }

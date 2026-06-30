@@ -509,11 +509,6 @@ const NEVER_MATCHER: TokenMatcher = {
   descriptor: () => "",
 };
 
-const ALWAYS_MATCHER: TokenMatcher = {
-  test: () => true,
-  descriptor: () => "",
-};
-
 const EXACT_MATCHER: TokenMatcher = {
   test: (token: Token, id: string) => token.text === id,
   descriptor: (id: string) => `'${id}'`,

@@ -1,4 +1,4 @@
-import type { ResolvedType as ResolvedType, Schema, Type, TypeDeclaration } from "../schema/schema-types.js";
+import type { ResolvedType as ResolvedType, Schema, Type } from "../schema/schema-types.js";
 import { resolveMaybeInvalidType } from "../schema/type-resolver.js";
 import type {
   Example,
@@ -15,7 +15,7 @@ export function validateExample(
       if (!schema.identifiers.has(example.identifier.text)) {
         return [{
           sourceSpan: example.identifier,
-          message: `Identifier '${example.identifier.text}' is not defined in the schema`,
+          message: `Identifier '${example.identifier.text}' not found in schema`,
         }];
       } else {
         return [];
@@ -32,7 +32,7 @@ export function validateExample(
   }
 }
 
-type JsonTypeMatch =
+type _JsonTypeMatch =
   | {
     readonly kind: "match";
     readonly type: Type;
@@ -47,7 +47,7 @@ type JsonTypeMatch =
     readonly matchScore: number;
   };
 
-function jsonMatchesType(
+function _jsonMatchesType(
   value: JsonValue,
   type: ResolvedType,
   schema: Schema,
@@ -55,9 +55,10 @@ function jsonMatchesType(
   switch (type.kind) {
     case "array": {
       return value.kind === "array" && value.values.every((v) =>
-        jsonMatchesType(v, resolveMaybeInvalidType(type.elementType, schema.types)!, schema));
+        _jsonMatchesType(v, resolveMaybeInvalidType(type.elementType, schema.types)!, schema));
     }
     case "interface": {
+      return true;
     }
   }
   return true;

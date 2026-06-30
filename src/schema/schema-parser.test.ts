@@ -13,7 +13,7 @@ const META: SchemaParseContext = { kind: "meta" };
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseOk(source: string, context: SchemaParseContext = TEMPLATE) {
+function parseOk(source: string, context: SchemaParseContext = TEMPLATE): ReturnType<typeof parseSchema> & { kind: "success" } {
   const result = parseSchema(source, context);
   if (result.kind !== "success") {
     throw new Error(
@@ -795,7 +795,7 @@ describe("parseSchema – naming errors", () => {
   });
 
   it("reports error for a type name that contains a non-alphanumeric char", () => {
-    const result = parseSchema(
+    const _result = parseSchema(
       "interface Response2x { name: string; }",
       TEMPLATE,
     );

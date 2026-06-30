@@ -5,6 +5,7 @@ import type {
   SchemaParseContext,
   SchemaParseError,
   SchemaSourceSpan,
+  StringLiteral,
   Type,
   TypeDeclaration,
   Union,
@@ -307,7 +308,7 @@ function validateUnionType(
         // Cannot happen.
         throw new Error();
       }
-      const checkedFirstField = (() => {
+      const checkedFirstField = ((): { firstField: SchemaField; discriminatorType: StringLiteral } | null => {
         const { firstField } = resolvedType;
         if (!firstField) {
           return null;
@@ -466,7 +467,7 @@ function verifyMetaType(
     if (!resolvedType) {
       continue;
     }
-    const isValid = (() => {
+    const isValid = ((): boolean | undefined => {
       switch (resolvedType.kind) {
         case "array":
         case "interface": {
