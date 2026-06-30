@@ -3,7 +3,7 @@ import { describe, it } from "mocha";
 
 import { parseSchema } from "./schema-parser.js";
 import type { Interface, SchemaParseContext, TypeDeclaration, Union } from "./schema-types.js";
-import { resolveType } from "./type-resolver.js";
+import { resolveMaybeInvalidType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
 const TEMPLATE: SchemaParseContext = { kind: "template", argTypeNames: [] };
@@ -1150,7 +1150,7 @@ describe("resolveType – Int alias", () => {
       kind: "type-name" as const,
       name: { text: "Int", start: 0, end: 3 },
     };
-    const resolved = resolveType(typeRef, types);
+    const resolved = resolveMaybeInvalidType(typeRef, types);
     expect(resolved).toMatch({ kind: "primitive", primitive: "int" });
   });
 
@@ -1159,7 +1159,7 @@ describe("resolveType – Int alias", () => {
       kind: "type-name" as const,
       name: { text: "number", start: 0, end: 6 },
     };
-    const resolved = resolveType(typeRef, {});
+    const resolved = resolveMaybeInvalidType(typeRef, {});
     expect(resolved).toMatch({ kind: "primitive", primitive: "number" });
   });
 

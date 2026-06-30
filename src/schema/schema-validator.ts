@@ -9,7 +9,7 @@ import type {
   TypeDeclaration,
   Union,
 } from "./schema-types.js";
-import { isPrimitiveType, resolveType } from "./type-resolver.js";
+import { isPrimitiveType, resolveMaybeInvalidType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
 /** Called from schema parser. */
@@ -89,7 +89,7 @@ function getUnionKind(
   member: Type,
   types: { readonly [name: string]: TypeDeclaration },
 ): UnionKind {
-  const resolvedType = resolveType(member, types);
+  const resolvedType = resolveMaybeInvalidType(member, types);
   if (!resolvedType) {
     return "error";
   }
@@ -278,7 +278,7 @@ function validateUnionType(
     errors.push(
       ...checkNoAmbiguity(
         members.map((m) => {
-          const resolved = resolveType(m, types);
+          const resolved = resolveMaybeInvalidType(m, types);
           if (resolved?.kind !== "string-literal") {
             // Cannot happen: getUnionKind already verified this.
             throw new Error();
@@ -302,7 +302,7 @@ function validateUnionType(
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
-      const resolvedType = resolveType(member, types)!;
+      const resolvedType = resolveMaybeInvalidType(member, types)!;
       if (resolvedType.kind !== "interface") {
         // Cannot happen.
         throw new Error();
@@ -312,7 +312,7 @@ function validateUnionType(
         if (!firstField) {
           return null;
         }
-        const discriminatorType = resolveType(firstField.type, types);
+        const discriminatorType = resolveMaybeInvalidType(firstField.type, types);
         if (discriminatorType?.kind !== "string-literal") {
           return null;
         }
@@ -447,7 +447,7 @@ function verifyMetaType(
   metaTypeDeclaration: TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
 ): SchemaParseError[] {
-  const metaType = resolveType(metaTypeDeclaration, types);
+  const metaType = resolveMaybeInvalidType(metaTypeDeclaration, types);
   if (!metaType) {
     return [];
   }
@@ -462,7 +462,7 @@ function verifyMetaType(
   }
   const errors: SchemaParseError[] = [];
   for (const field of Object.values(metaType.fields)) {
-    const resolvedType = resolveType(field.type, types);
+    const resolvedType = resolveMaybeInvalidType(field.type, types);
     if (!resolvedType) {
       continue;
     }

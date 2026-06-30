@@ -1,5 +1,5 @@
 import type { ResolvedType as ResolvedType, Schema, Type, TypeDeclaration } from "../schema/schema-types.js";
-import { resolveType } from "../schema/type-resolver.js";
+import { resolveMaybeInvalidType } from "../schema/type-resolver.js";
 import type {
   Example,
   ExampleValidationError,
@@ -55,7 +55,7 @@ function jsonMatchesType(
   switch (type.kind) {
     case "array": {
       return value.kind === "array" && value.values.every((v) =>
-        jsonMatchesType(v, resolveType(type.elementType, schema.types)!, schema));
+        jsonMatchesType(v, resolveMaybeInvalidType(type.elementType, schema.types)!, schema));
     }
     case "interface": {
     }

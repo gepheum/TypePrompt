@@ -3,14 +3,22 @@ import type { ResolvedType, Type, TypeDeclaration } from "./schema-types.js";
 export function resolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
+): ResolvedType {
+  return doResolveType(type, types, null, null)!;
+}
+
+export function resolveMaybeInvalidType(
+  type: Type | TypeDeclaration,
+  types: { readonly [name: string]: TypeDeclaration },
 ): ResolvedType | null {
-  return doResolveType(type, types, new Set(), null);
+  const seenNames = new Set<string>();
+  return doResolveType(type, types, seenNames, null);
 }
 
 function doResolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string>,
+  seenNames: Set<string> | null,
   intAlias: "int" | null,
 ): ResolvedType | null {
   if (type.kind === "type") {
@@ -22,16 +30,18 @@ function doResolveType(
       const primitive = isPrimitiveType(typeName);
       if (primitive) {
         if (primitive === "number" && intAlias) {
-          return { kind: "primitive", primitive: intAlias };
+          return PRIMITIVES.int;
         } else {
-          return { kind: "primitive", primitive: primitive };
+          return PRIMITIVES[primitive];
         }
       }
     }
-    if (seenNames.has(typeName)) {
-      return null;
+    if (seenNames) {
+      if (seenNames.has(typeName)) {
+        return null;
+      }
+      seenNames.add(typeName);
     }
-    seenNames.add(typeName);
     const resolved = types[typeName];
     if (!resolved) {
       return null;
@@ -53,3 +63,22 @@ export function isPrimitiveType(
     ? name
     : null;
 }
+
+const PRIMITIVES = {
+  string: {
+    kind: "primitive",
+    primitive: "string",
+  },
+  number: {
+    kind: "primitive",
+    primitive: "number",
+  },
+  boolean: {
+    kind: "primitive",
+    primitive: "boolean",
+  },
+  int: {
+    kind: "primitive",
+    primitive: "int",
+  },
+} as const;
