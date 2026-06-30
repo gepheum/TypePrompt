@@ -308,12 +308,18 @@ function validateUnionType(
         // Cannot happen.
         throw new Error();
       }
-      const checkedFirstField = ((): { firstField: SchemaField; discriminatorType: StringLiteral } | null => {
+      const checkedFirstField = ((): {
+        firstField: SchemaField;
+        discriminatorType: StringLiteral;
+      } | null => {
         const { firstField } = resolvedType;
         if (!firstField) {
           return null;
         }
-        const discriminatorType = resolveMaybeInvalidType(firstField.type, types);
+        const discriminatorType = resolveMaybeInvalidType(
+          firstField.type,
+          types,
+        );
         if (discriminatorType?.kind !== "string-literal") {
           return null;
         }

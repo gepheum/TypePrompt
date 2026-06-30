@@ -2,7 +2,13 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { parseSchema } from "./schema-parser.js";
-import type { Interface, SchemaParseContext, TypeDeclaration, Union } from "./schema-types.js";
+import type {
+  Interface,
+  Schema,
+  SchemaParseContext,
+  TypeDeclaration,
+  Union,
+} from "./schema-types.js";
 import { resolveMaybeInvalidType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
@@ -13,7 +19,10 @@ const META: SchemaParseContext = { kind: "meta" };
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseOk(source: string, context: SchemaParseContext = TEMPLATE): ReturnType<typeof parseSchema> & { kind: "success" } {
+function parseOk(
+  source: string,
+  context: SchemaParseContext = TEMPLATE,
+): Schema {
   const result = parseSchema(source, context);
   if (result.kind !== "success") {
     throw new Error(
@@ -29,7 +38,10 @@ function parseOk(source: string, context: SchemaParseContext = TEMPLATE): Return
 
 describe("parseSchema – interfaces", () => {
   it("parses a simple interface declaration", () => {
-    const result = parseSchema("interface Response { name: string; }", TEMPLATE);
+    const result = parseSchema(
+      "interface Response { name: string; }",
+      TEMPLATE,
+    );
     expect(result).toMatch({
       kind: "success",
       types: {
@@ -110,8 +122,12 @@ describe("parseSchema – interfaces", () => {
                 kind: "interface",
                 name: undefined,
                 fields: {
-                  street: { type: { kind: "type-name", name: { text: "string" } } },
-                  city: { type: { kind: "type-name", name: { text: "string" } } },
+                  street: {
+                    type: { kind: "type-name", name: { text: "string" } },
+                  },
+                  city: {
+                    type: { kind: "type-name", name: { text: "string" } },
+                  },
                 },
               },
             },
@@ -131,7 +147,9 @@ describe("parseSchema – interfaces", () => {
 
   it("accepts newline as implicit field separator", () => {
     const result = parseSchema(
-      ["interface Response {", "  name: string", "  age: number", "}"].join("\n"),
+      ["interface Response {", "  name: string", "  age: number", "}"].join(
+        "\n",
+      ),
       TEMPLATE,
     );
     expect(result).toMatch({ kind: "success" });
@@ -268,7 +286,7 @@ describe("parseSchema – type aliases", () => {
 
   it("parses leading-pipe union syntax", () => {
     const result = parseSchema(
-      ['type Response =', '  | "active"', '  | "inactive";'].join("\n"),
+      ["type Response =", '  | "active"', '  | "inactive";'].join("\n"),
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -467,10 +485,10 @@ describe("parseSchema – comments and JSDoc", () => {
 });
 
 // ---------------------------------------------------------------------------
-// identifiers and hasEmptyInterface
+// identifiers
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – identifiers and hasEmptyInterface", () => {
+describe("parseSchema – identifiers", () => {
   it("collects field names as identifiers", () => {
     const result = parseSchema(
       'interface Response { name: string; role: "admin"; }',
@@ -493,26 +511,6 @@ describe("parseSchema – identifiers and hasEmptyInterface", () => {
     });
   });
 
-  it("sets hasEmptyInterface=true when all fields are optional", () => {
-    const result = parseSchema(
-      "interface Response { value?: string; extra?: number; }",
-      TEMPLATE,
-    );
-    expect(result).toMatch({ kind: "success", hasEmptyInterface: true });
-  });
-
-  it("sets hasEmptyInterface=true for a zero-field interface", () => {
-    const result = parseSchema("interface Response { }", TEMPLATE);
-    expect(result).toMatch({ kind: "success", hasEmptyInterface: true });
-  });
-
-  it("sets hasEmptyInterface=false when at least one field is required", () => {
-    const result = parseSchema(
-      "interface Response { required: string; optional?: number; }",
-      TEMPLATE,
-    );
-    expect(result).toMatch({ kind: "success", hasEmptyInterface: false });
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -588,7 +586,8 @@ describe("parseSchema – unionToMembers", () => {
   it("populates typeToNamingHint for a top-level interface", () => {
     const result = parseOk("interface Response { name: string; }");
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface") throw new Error("Expected interface");
+    if (responseDecl.kind !== "interface")
+      throw new Error("Expected interface");
     expect(result.typeToNamingHint.get(responseDecl)).toMatch({
       namePieces: ["Response"],
     });
@@ -729,10 +728,7 @@ describe("parseSchema – tokenizer errors", () => {
   });
 
   it("reports error for an unterminated double-quoted string literal", () => {
-    const result = parseSchema(
-      'type Response = "unterminated;',
-      TEMPLATE,
-    );
+    const result = parseSchema('type Response = "unterminated;', TEMPLATE);
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Unterminated string literal" }],
@@ -748,10 +744,7 @@ describe("parseSchema – tokenizer errors", () => {
   });
 
   it("reports error for a string literal containing an escape sequence", () => {
-    const result = parseSchema(
-      'type Response = "with\\\\escape";',
-      TEMPLATE,
-    );
+    const result = parseSchema('type Response = "with\\\\escape";', TEMPLATE);
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Must not contain escape sequences" }],
@@ -962,24 +955,19 @@ describe("parseSchema – union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            /Union members must be either all strings or all interfaces/,
+          message: /Union members must be either all strings or all interfaces/,
         },
       ],
     });
   });
 
   it("reports error for a union with an array member", () => {
-    const result = parseSchema(
-      'type Response = "a"[] | "b"[];',
-      TEMPLATE,
-    );
+    const result = parseSchema('type Response = "a"[] | "b"[];', TEMPLATE);
     expect(result).toMatch({
       kind: "error",
       errors: [
         {
-          message:
-            /Union members must be either all strings or all interfaces/,
+          message: /Union members must be either all strings or all interfaces/,
         },
       ],
     });
@@ -994,8 +982,7 @@ describe("parseSchema – union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            /Union members must be either all strings or all interfaces/,
+          message: /Union members must be either all strings or all interfaces/,
         },
       ],
     });
@@ -1010,18 +997,14 @@ describe("parseSchema – union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            /Union members must be either all strings or all interfaces/,
+          message: /Union members must be either all strings or all interfaces/,
         },
       ],
     });
   });
 
   it("reports error for a union member that is itself a union", () => {
-    const result = parseSchema(
-      'type Response = ("a" | "b") | "c";',
-      TEMPLATE,
-    );
+    const result = parseSchema('type Response = ("a" | "b") | "c";', TEMPLATE);
     // Parenthesized union collapses via joinTypes; result is a flat union of
     // three string literals, which is valid.
     // Instead test a union-of-union introduced through a type alias.
@@ -1117,7 +1100,7 @@ describe("parseSchema – union type errors", () => {
   it("allows a valid three-member interface union", () => {
     const result = parseSchema(
       [
-        'type Response =',
+        "type Response =",
         '  | { kind: "a"; x: number }',
         '  | { kind: "b"; y: string }',
         '  | { kind: "c"; z: boolean };',

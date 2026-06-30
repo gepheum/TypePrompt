@@ -131,7 +131,10 @@ class SchemaParser {
     const maybeSemicolon = this.peekToken();
     if (maybeSemicolon.text === ";") {
       this.movePast(maybeSemicolon);
-    } else if (maybeSemicolon.kind !== "string-end" && !maybeSemicolon.newLine) {
+    } else if (
+      maybeSemicolon.kind !== "string-end" &&
+      !maybeSemicolon.newLine
+    ) {
       // Will always push an error.
       this.expectExactThenMove(";", maybeSemicolon);
     }
@@ -573,9 +576,9 @@ function joinTypes(a: Type, b: Type): Union {
 }
 
 class TypeTraverser {
-  static traverseAll(
-    types: {readonly [name: string]: TypeDeclaration},
-  ): TypeTraverser {
+  static traverseAll(types: {
+    readonly [name: string]: TypeDeclaration;
+  }): TypeTraverser {
     const traverser = new TypeTraverser(types);
     for (const type of Object.values(types)) {
       traverser.traverse(type, { namePieces: [] });
@@ -584,7 +587,7 @@ class TypeTraverser {
   }
 
   private constructor(
-    private readonly types: {readonly [name: string]: TypeDeclaration},
+    private readonly types: { readonly [name: string]: TypeDeclaration },
   ) {}
 
   private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
@@ -593,6 +596,7 @@ class TypeTraverser {
         return this.traverse(type.elementType, context);
       }
       case "interface": {
+        this.typeToNamingHint.set(type, context);
         const fields = Object.values(type.fields);
         for (const field of fields) {
           this.identifiers.add(field.name.text);
@@ -628,6 +632,9 @@ class TypeTraverser {
             return null;
           }
           case "strings": {
+            for (const member of unionMembers.members) {
+              this.identifiers.add(member.value);
+            }
             return null;
           }
         }

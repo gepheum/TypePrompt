@@ -28,7 +28,10 @@ export function getUnionMembers(
           if (resolved.kind !== "interface") {
             throw new Error();
           }
-          const firstFieldType = resolveMaybeInvalidType(resolved.firstField!.type, types)!;
+          const firstFieldType = resolveMaybeInvalidType(
+            resolved.firstField!.type,
+            types,
+          )!;
           if (firstFieldType.kind !== "string-literal") {
             throw new Error();
           }
