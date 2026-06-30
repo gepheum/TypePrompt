@@ -581,7 +581,12 @@ class TypeTraverser {
   }): TypeTraverser {
     const traverser = new TypeTraverser(types);
     for (const type of Object.values(types)) {
-      traverser.traverse(type, { namePieces: [] });
+      traverser.traverse(
+        type,
+        type.kind === "interface"
+          ? { namePieces: [type.name.text] }
+          : { namePieces: [] },
+      );
     }
     return traverser;
   }

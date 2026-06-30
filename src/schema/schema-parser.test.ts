@@ -510,7 +510,6 @@ describe("parseSchema – identifiers", () => {
       identifiers: new Set(["active", "inactive"]),
     });
   });
-
 });
 
 // ---------------------------------------------------------------------------
