@@ -341,7 +341,7 @@ class ExampleParser {
       return {
         kind: "array",
         firstToken: this.exampleSlice(start, start + 1),
-        values,
+        elements: values,
       };
     }
 
@@ -359,7 +359,7 @@ class ExampleParser {
         return {
           kind: "array",
           firstToken: this.exampleSlice(start, start + 1),
-          values,
+          elements: values,
         };
       }
 
@@ -385,7 +385,7 @@ class ExampleParser {
           return {
             kind: "array",
             firstToken: this.exampleSlice(start, start + 1),
-            values,
+            elements: values,
           };
         }
       }
@@ -415,7 +415,7 @@ class ExampleParser {
         return {
           kind: "array",
           firstToken: this.exampleSlice(start, start + 1),
-          values,
+          elements: values,
         };
       }
       break;
@@ -425,7 +425,7 @@ class ExampleParser {
     return {
       kind: "array",
       firstToken: this.exampleSlice(start, start + 1),
-      values,
+      elements: values,
     };
   }
 

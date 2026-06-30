@@ -48,7 +48,7 @@ export type JsonArray = {
   readonly kind: "array";
   /// The left square bracket.
   readonly firstToken: ExampleSourceSpan;
-  readonly values: readonly JsonValue[];
+  readonly elements: readonly JsonValue[];
 };
 
 export type JsonString = {

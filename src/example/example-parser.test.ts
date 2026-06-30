@@ -9,8 +9,8 @@ describe("parseExample", () => {
     const result = parseExample(input);
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "object",
         entries: [
           {
@@ -21,7 +21,7 @@ describe("parseExample", () => {
             key: { kind: "string", value: "items" },
             value: {
               kind: "array",
-              values: [{ kind: "number", value: 1 }, { kind: "ellipsis" }],
+              elements: [{ kind: "number", value: 1 }, { kind: "ellipsis" }],
             },
           },
         ],
@@ -30,37 +30,37 @@ describe("parseExample", () => {
     });
   });
 
-  it("parses standalone primitive values", () => {
+  it("parses standalone primitive values as identifiers", () => {
     const values = [
-      ['"x"', { kind: "string", value: "x" }],
-      ["123", { kind: "number", value: 123 }],
-      ["true", { kind: "boolean", value: true }],
-      ["null", { kind: "null" }],
+      ['"x"', "x"],
+      ["123", "123"],
+      ["true", "true"],
+      ["null", "null"],
     ] as const;
 
-    for (const [input, expected] of values) {
+    for (const [input, expectedText] of values) {
       const result = parseExample(input);
       expect(result).toMatch({
-        kind: "success",
-        value: expected,
+        kind: "success:identifier",
+        identifier: { text: expectedText },
       });
     }
   });
 
   it("parses empty object and empty array", () => {
     expect(parseExample("{}")).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "object",
         entries: [],
       },
     });
 
     expect(parseExample("[]")).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "array",
-        values: [],
+        elements: [],
       },
     });
   });
@@ -69,8 +69,8 @@ describe("parseExample", () => {
     const result = parseExample('"line\\nnext"');
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "string",
         value: "line\nnext",
       },
@@ -81,8 +81,8 @@ describe("parseExample", () => {
     const result = parseExample("// before\ntrue // after");
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "boolean",
         value: true,
       },
@@ -93,10 +93,10 @@ describe("parseExample", () => {
     const result = parseExample("/* before */ [1, 2] /* after */");
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "array",
-        values: [
+        elements: [
           { kind: "number", value: 1 },
           { kind: "number", value: 2 },
         ],
@@ -110,8 +110,8 @@ describe("parseExample", () => {
     );
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "object",
         entries: [
           {
@@ -131,10 +131,10 @@ describe("parseExample", () => {
     const result = parseExample("[1, // between\n 2, /* between */ 3]");
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "array",
-        values: [
+        elements: [
           { kind: "number", value: 1 },
           { kind: "number", value: 2 },
           { kind: "number", value: 3 },
@@ -147,8 +147,8 @@ describe("parseExample", () => {
     const result = parseExample('"/* not a comment */ // still string"');
 
     expect(result).toMatch({
-      kind: "success",
-      value: {
+      kind: "success:json",
+      json: {
         kind: "string",
         value: "/* not a comment */ // still string",
       },
@@ -316,21 +316,21 @@ describe("parseExample", () => {
     });
   });
 
-  it("reports invalid boolean keyword", () => {
+  it("parses partial boolean keyword as identifier", () => {
     const result = parseExample("tru");
 
     expect(result).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected 'true' or 'false'" }],
+      kind: "success:identifier",
+      identifier: { text: "tru" },
     });
   });
 
-  it("reports invalid null keyword", () => {
+  it("parses partial null keyword as identifier", () => {
     const result = parseExample("nul");
 
     expect(result).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected 'null'" }],
+      kind: "success:identifier",
+      identifier: { text: "nul" },
     });
   });
 
