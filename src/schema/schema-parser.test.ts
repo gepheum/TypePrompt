@@ -875,6 +875,48 @@ describe("parseSchema – naming errors", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Validator error cases – reserved type names
+// ---------------------------------------------------------------------------
+
+describe("parseSchema – reserved type names", () => {
+  it("reports error when a type is named 'Args'", () => {
+    const result = parseSchema(
+      "interface Response { value: string; }\ninterface Args { x: number; }",
+      TEMPLATE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "'Args' is a reserved type name" }],
+    });
+  });
+
+  it("reports error when a type is named 'Variant'", () => {
+    const result = parseSchema(
+      "interface Response { value: string; }\ninterface Variant { x: number; }",
+      TEMPLATE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "'Variant' is a reserved type name" }],
+    });
+  });
+
+  it("reports reserved name errors for both 'Args' and 'Variant' in the same schema", () => {
+    const result = parseSchema(
+      "interface Response { value: string; }\ninterface Args { x: number; }\ninterface Variant { y: number; }",
+      TEMPLATE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        { message: "'Args' is a reserved type name" },
+        { message: "'Variant' is a reserved type name" },
+      ],
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Validator error cases – type references
 // ---------------------------------------------------------------------------
 

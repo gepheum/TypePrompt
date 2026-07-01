@@ -34,9 +34,18 @@ export function validateSchema(
     typeDeclarations.map((t) => [t.name.text, t]),
   );
 
+  const reservedTypeNames = new Set(["Args", "Variant"]);
+
   for (const typeDeclaration of typeDeclarations) {
-    validateType(typeDeclaration, types, errors);
     const { name } = typeDeclaration;
+    if (reservedTypeNames.has(name.text)) {
+      errors.push({
+        start: name.start,
+        end: name.end,
+        message: `'${name.text}' is a reserved type name`,
+      });
+    }
+    validateType(typeDeclaration, types, errors);
     const nameDependencies = new Set<string>();
     collectNameDependencies(
       typeDeclaration.kind === "type"
