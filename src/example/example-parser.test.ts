@@ -380,6 +380,21 @@ describe("parseExample", () => {
     });
   });
 
+  it("reports duplicate object keys", () => {
+    const result = parseExample('{"a": 1, "a": 2}');
+
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate object key 'a'",
+          start: 9,
+          end: 12,
+        },
+      ],
+    });
+  });
+
   it("reports non-string object keys", () => {
     const result = parseExample("{1: 2}");
 

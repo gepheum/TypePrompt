@@ -1,6 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import { parseSchema } from "../schema/schema-parser.js";
+import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
 import type {
   ExampleSourceSpan,
   JsonArray,
@@ -11,8 +13,6 @@ import type {
   JsonValue,
 } from "./example-types.js";
 import { validateExample } from "./example-validator.js";
-import { parseSchema } from "../schema/schema-parser.js";
-import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -78,25 +78,19 @@ function identifierExample(text: string) {
 
 describe("validateExample – identifier", () => {
   it("accepts an identifier that is a known field name", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; }",
-    );
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
     expect(validateExample(identifierExample("name"), schema)).toMatch([]);
   });
 
   it("rejects an unknown identifier", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; }",
-    );
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
     expect(validateExample(identifierExample("unknown"), schema)).toMatch([
       { message: "Identifier 'unknown' not found in schema" },
     ]);
   });
 
   it("accepts a string-literal union value as an identifier", () => {
-    const schema = parseSchemaOrThrow(
-      'type Response = "active" | "inactive"',
-    );
+    const schema = parseSchemaOrThrow('type Response = "active" | "inactive"');
     expect(validateExample(identifierExample("active"), schema)).toMatch([]);
   });
 });
@@ -145,7 +139,12 @@ describe("validateExample – json: exact match", () => {
     );
     expect(
       validateExample(
-        jsonExample(obj([["name", str("Alice")], ["age", num(30)]])),
+        jsonExample(
+          obj([
+            ["name", str("Alice")],
+            ["age", num(30)],
+          ]),
+        ),
         schema,
       ),
     ).toMatch([]);
@@ -161,9 +160,7 @@ describe("validateExample – json: exact match", () => {
   });
 
   it("accepts an empty object for an all-optional interface", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name?: string; }",
-    );
+    const schema = parseSchemaOrThrow("interface Response { name?: string; }");
     expect(validateExample(jsonExample(obj([])), schema)).toMatch([]);
   });
 
@@ -180,9 +177,7 @@ describe("validateExample – json: exact match", () => {
   });
 
   it("accepts an object with ellipsis against an interface", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; }",
-    );
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
     expect(validateExample(jsonExample(obj([], true)), schema)).toMatch([]);
   });
 
@@ -202,7 +197,12 @@ describe("validateExample – json: exact match", () => {
     );
     expect(
       validateExample(
-        jsonExample(obj([["kind", str("cat")], ["name", str("Whiskers")]])),
+        jsonExample(
+          obj([
+            ["kind", str("cat")],
+            ["name", str("Whiskers")],
+          ]),
+        ),
         schema,
       ),
     ).toMatch([]);
@@ -285,9 +285,7 @@ describe("validateExample – json: close match", () => {
   });
 
   it("returns 2 errors for an object with a wrong-typed field", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; }",
-    );
+    const schema = parseSchemaOrThrow("interface Response { name: string; }");
     expect(
       validateExample(jsonExample(obj([["name", num(42)]])), schema),
     ).toMatch([
@@ -337,11 +335,11 @@ describe("validateExample – json: multi-type schema", () => {
     const schema = parseSchemaOrThrow(
       "interface Response { item: Detail } interface Detail { x: string; }",
     );
-    expect(
-      validateExample(jsonExample(obj([["x", num(42)]])), schema),
-    ).toMatch([
-      { message: "Does not match type 'Detail'" },
-      { message: "Expected string but got number" },
-    ]);
+    expect(validateExample(jsonExample(obj([["x", num(42)]])), schema)).toMatch(
+      [
+        { message: "Does not match type 'Detail'" },
+        { message: "Expected string but got number" },
+      ],
+    );
   });
 });

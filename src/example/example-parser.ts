@@ -125,6 +125,7 @@ class ExampleParser {
     this.skipJsonSpaces();
 
     const entries: JsonObjectEntry[] = [];
+    const seenKeys = new Set<string>();
     let objectEllipsis: JsonEllipsis | undefined;
 
     if (this.text[this.cursor] === "}") {
@@ -196,6 +197,15 @@ class ExampleParser {
       if (!value) {
         this.syncToObjectDelimiter();
       } else {
+        if (seenKeys.has(key.value)) {
+          this.pushError(
+            key.firstToken.start,
+            key.firstToken.end,
+            `Duplicate object key '${key.value}'`,
+          );
+        } else {
+          seenKeys.add(key.value);
+        }
         entries.push({ key, value });
       }
 
