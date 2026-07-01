@@ -24,7 +24,7 @@
   <meta temperature="0.7" />
 
   <args>
-    <arg name="foo" />
+    <arg name="foo" doc="Documentation for foo" />
     <arg name="bar" />
   </args>
 

@@ -596,7 +596,7 @@ function parseBodyContent(
         });
       } else if (tag === "enclosed") {
         const encAttrs = checkXmlAttributes(child, {
-          tag: zod.string().regex(/^[A-Za-z_][\w.\-]*$/),
+          tag: zod.string().regex(/^[A-Za-z_][\w.-]*$/),
         });
         if (encAttrs.kind === "error") {
           context.pushErrors(encAttrs.errors);
@@ -895,14 +895,14 @@ class PositionImpl implements Position {
   } {
     const before = this._content.slice(0, this.offset);
     const linesBefore = before.split("\n");
-    const lineNumber = linesBefore.length - 1;
-    const lineStart = this.offset - linesBefore[lineNumber]!.length;
+    const lineNumber = linesBefore.length;
+    const lineStart = this.offset - linesBefore[linesBefore.length - 1]!.length;
     const lineEndRaw = this._content.indexOf("\n", this.offset);
     const line = this._content.slice(
       lineStart,
       lineEndRaw === -1 ? this._content.length : lineEndRaw,
     );
-    const columnNumber = [...linesBefore[lineNumber]!].length;
+    const columnNumber = [...linesBefore[linesBefore.length - 1]!].length + 1;
     return { line, lineNumber, columnNumber };
   }
 

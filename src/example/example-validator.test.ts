@@ -4,6 +4,7 @@ import { describe, it } from "mocha";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
 import type {
+  Example,
   ExampleSourceSpan,
   JsonArray,
   JsonBoolean,
@@ -64,12 +65,12 @@ function arr(elements: JsonValue[]): JsonArray {
   return { kind: "array", firstToken: span("["), elements };
 }
 
-function jsonExample(json: JsonValue) {
-  return { kind: "success:json" as const, json };
+function jsonExample(json: JsonValue): Example {
+  return { kind: "success:json", json };
 }
 
-function identifierExample(text: string) {
-  return { kind: "success:identifier" as const, identifier: span(text) };
+function identifierExample(text: string): Example {
+  return { kind: "success:identifier", identifier: span(text) };
 }
 
 // ---------------------------------------------------------------------------

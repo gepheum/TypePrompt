@@ -7,6 +7,7 @@ import {
   type TemplateParseErrors,
 } from "./template-parser.js";
 import type {
+  Template,
   TemplateFileParseResult,
   TemplatePiece,
 } from "./template-types.js";
@@ -32,7 +33,7 @@ function parseOk(content: string): TemplateFileParseResult {
 }
 
 /** Returns the single template from a parseOk result. */
-function singleTemplate(content: string) {
+function singleTemplate(content: string): Template {
   const result = parseOk(content);
   if (result.templates.length !== 1) {
     throw new Error(
@@ -440,7 +441,7 @@ describe("parseTemplateFile – <schema>", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseTemplateFile – <args>", () => {
-  function templateWithArgs(argsXml: string, bodyContent: string = "") {
+  function templateWithArgs(argsXml: string, bodyContent: string = ""): string {
     return [
       '<template name="Demo">',
       "  <schema>interface Response { value: string; }</schema>",
@@ -820,7 +821,7 @@ describe("parseTemplateFile – body <enclosed> elements", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseTemplateFile – variants", () => {
-  function multiVariantTemplate(bodyA: string, bodyB: string) {
+  function multiVariantTemplate(bodyA: string, bodyB: string): string {
     return [
       '<template name="Demo">',
       "  <schema>interface Response { value: string; }</schema>",

@@ -72,9 +72,9 @@ export type Position = {
   readonly offset: number;
   readonly position: {
     readonly line: string;
-    /** 0-based */
+    /** 1-based */
     readonly lineNumber: number;
-    /** 0-based codepoint offset (not UTF-16 offset) */
+    /** 1-based codepoint offset (not UTF-16 offset) */
     readonly columnNumber: number;
   };
 };
