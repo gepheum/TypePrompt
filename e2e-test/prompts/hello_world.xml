@@ -40,7 +40,7 @@
   </schema>
 
   <body variant="A">
-    Say hello to <arg name="foo" format="toon"/>.
+    Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
     Fields:
@@ -64,7 +64,7 @@
   </body>
 
   <body variant="B">
-    Say bonjour to <arg name="foo" format="toon"/>.
+    Say bonjour to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
     Fields:
