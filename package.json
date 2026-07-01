@@ -11,7 +11,7 @@
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
     "example:prompts": "tsx src/run-prompts-validation.ts",
-    "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\" --ignore \"src/example-validator.test.ts\"",
+    "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\"",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",

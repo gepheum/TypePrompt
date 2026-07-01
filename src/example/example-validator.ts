@@ -185,7 +185,7 @@ function jsonMatchesType(
         let firstMismatchReason: ExampleValidationError | undefined;
         const seenFieldNames = new Set<string>();
         for (const entry of value.entries) {
-          const fieldName = entry.key.firstToken.text;
+          const fieldName = entry.key.value;
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
           if (field) {
@@ -306,7 +306,7 @@ function jsonMatchesType(
             }
             const { kindFieldName } = members;
             const kindValue = value.entries.find(
-              (e) => e.key.firstToken.text === kindFieldName,
+              (e) => e.key.value === kindFieldName,
             );
             if (kindValue) {
               if (kindValue.value.kind === "string") {
