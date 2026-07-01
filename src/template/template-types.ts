@@ -17,13 +17,13 @@ export type Template = {
   readonly args: readonly TemplateArg[];
   readonly content:
     | {
-      readonly kind: "no-variants";
-      readonly body: readonly TemplatePiece[];
-    }
+        readonly kind: "no-variants";
+        readonly body: readonly TemplatePiece[];
+      }
     | {
-      readonly kind: "variants";
-      readonly bodies: {[variant: string]: readonly TemplatePiece[]};
-    };
+        readonly kind: "variants";
+        readonly bodies: { [variant: string]: readonly TemplatePiece[] };
+      };
   readonly xmlContent: string;
 };
 
@@ -51,6 +51,35 @@ export type TemplateFileParseResult = {
   readonly kind: "success";
   readonly path: string;
   readonly templates: readonly Template[];
-  readonly metas: readonly [Schema];
+  readonly metas: readonly Schema[];
 };
 
+export type TemplateParseErrors = {
+  readonly kind: "error";
+  readonly errors: readonly TemplateParseError[];
+};
+
+export type TemplateParseError = {
+  readonly path: string;
+  readonly message: string;
+  readonly startPosition: Position;
+  readonly endPosition: Position;
+};
+
+/** Position in a source file. */
+export type Position = {
+  /** UTF-16 offset */
+  readonly offset: number;
+  readonly position: {
+    readonly line: string;
+    /** 0-based */
+    readonly lineNumber: number;
+    /** 0-based codepoint offset (not UTF-16 offset) */
+    readonly columnNumber: number;
+  };
+};
+
+export type SourceFile = {
+  readonly path: string;
+  readonly content: string;
+};

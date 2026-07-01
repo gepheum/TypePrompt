@@ -616,7 +616,8 @@ describe("parseSchema – typeToNamingHint doc", () => {
       ),
     );
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface") throw new Error("Expected interface");
+    if (responseDecl.kind !== "interface")
+      throw new Error("Expected interface");
     expect(result.typeToNamingHint.get(responseDecl)).toMatch({
       namePieces: ["Response"],
       doc: "The response.",
@@ -626,7 +627,8 @@ describe("parseSchema – typeToNamingHint doc", () => {
   it("sets doc to empty string for a top-level interface without a JSDoc comment", () => {
     const result = parseOk("interface Response { name: string; }");
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface") throw new Error("Expected interface");
+    if (responseDecl.kind !== "interface")
+      throw new Error("Expected interface");
     expect(result.typeToNamingHint.get(responseDecl)).toMatch({
       namePieces: ["Response"],
       doc: "",

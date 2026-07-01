@@ -1,9 +1,3 @@
-<template>
-  <body>
-    Hello <arg name="name"/>.
-  </body>
-</template>
-
 <meta>
   interface Meta {
     /** Temperature setting for the template */
@@ -11,7 +5,22 @@
   }
 </meta>
 
-<template name="HelloWorld" variant="FooBar">
+<template name="John">
+  <schema>
+    interface Response {
+      x: Int;
+      y: Int;
+    }
+
+    type Int = number;
+  </schema>
+
+  <body>
+    Hello <arg name="name"/>.
+  </body>
+</template>
+
+<template name="HelloWorld">
   <meta temperature="0.7" />
 
   <args>
@@ -28,8 +37,38 @@
     type Response = Foo[];
   </schema>
 
-  <body>
+  <body variant="A">
     Say hello to <arg name="foo" format="toon"/>.
+    How are you? <arg name="bar"/>.
+
+    Fields:
+    - <e>foo</e>: The name of the person to greet
+    - <e>bar</e>: Bar
+
+    Say hello to <arg name="foo"/>.
+    How are you? <arg name="bar"/>.
+
+    <enclosed tag="Example">
+      <enclosed tag="Input">
+        <e>{
+          "foo": "Alice",
+          ...
+        }</e>
+      </enclosed>
+      <enclosed tag="Output">
+        <e>{
+          "bar": "Jon",
+          "foos": []
+        }</e>
+      </enclosed>
+    </enclosed>
+
+    ## Examples:
+
+  </body>
+
+  <body variant="B">
+    Say bonjour to <arg name="foo" format="toon"/>.
     How are you? <arg name="bar"/>.
 
     Fields:
