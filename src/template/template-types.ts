@@ -11,7 +11,7 @@ export type Templates = {
 
 export type Template = {
   readonly name: string;
-  readonly namespace: string;
+  readonly namespace: string | null;
   readonly metaNode: ElementNode | null;
   readonly schema: Schema;
   readonly args: readonly TemplateArg[];
@@ -29,7 +29,7 @@ export type Template = {
 
 export type TemplateArg = {
   readonly name: string;
-  readonly typeName: string;
+  readonly typeName: string | null;
   readonly doc: string;
 };
 
@@ -41,9 +41,12 @@ export type TemplatePiece =
   | {
       readonly kind: "arg";
       readonly name: string;
+      /** Can only contain whitespaces. */
+      readonly indent: string;
       readonly format: "json" | "toon" | null;
     };
 
+/** Result of parsing a single template file. */
 export type TemplateFileParseResult = {
   readonly kind: "success";
   readonly path: string;
