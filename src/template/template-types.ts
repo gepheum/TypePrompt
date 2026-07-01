@@ -12,7 +12,7 @@ export type Templates = {
 export type Template = {
   readonly name: string;
   readonly namespace: string;
-  readonly metaNode: ElementNode;
+  readonly metaNode: ElementNode | null;
   readonly schema: Schema;
   readonly args: readonly TemplateArg[];
   readonly content:
