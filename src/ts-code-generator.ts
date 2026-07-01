@@ -2,7 +2,7 @@ import type {
   Template,
   TemplatePiece,
   Templates,
-} from "./template/template-parse-result.js";
+} from "./template/template-types.js";
 import type { Template as LegacyTemplate } from "./types.js";
 
 export function generateCode(templates: Templates): string;

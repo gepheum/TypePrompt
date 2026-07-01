@@ -9,7 +9,7 @@ import type {
   Template,
   TemplatePiece,
   Templates,
-} from "./template-parse-result.js";
+} from "./template-types.js";
 import {
   joinTextNodes,
   textNodeDecodedOffsetToSourceOffset,
