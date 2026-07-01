@@ -584,8 +584,8 @@ class TypeTraverser {
       traverser.traverse(
         type,
         type.kind === "interface"
-          ? { namePieces: [type.name.text] }
-          : { namePieces: [] },
+          ? { namePieces: [type.name.text], doc: type.doc }
+          : { namePieces: [], doc: type.doc },
       );
     }
     return traverser;
@@ -607,6 +607,7 @@ class TypeTraverser {
           this.identifiers.add(field.name.text);
           const newContext: NamingHint = {
             namePieces: [...context.namePieces, field.name.text],
+            doc: context.doc,
           };
           this.traverse(field.type, newContext);
         }
@@ -631,6 +632,7 @@ class TypeTraverser {
             for (const [kind, member] of Object.entries(unionMembers.members)) {
               const newContext: NamingHint = {
                 namePieces: [...context.namePieces, kind],
+                doc: context.doc,
               };
               this.traverse(member, newContext);
             }
