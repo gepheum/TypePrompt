@@ -109,7 +109,7 @@ export type NamingHint = {
    * The remaining elements are lowercased field names.
    */
   readonly namePieces: readonly string[];
-  readonly doc: string;
+  readonly doc: string | null;
 };
 
 export type UnionMembers =

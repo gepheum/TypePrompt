@@ -607,7 +607,7 @@ class TypeTraverser {
           this.identifiers.add(field.name.text);
           const newContext: NamingHint = {
             namePieces: [...context.namePieces, field.name.text],
-            doc: context.doc,
+            doc: null,
           };
           this.traverse(field.type, newContext);
         }
@@ -632,7 +632,7 @@ class TypeTraverser {
             for (const [kind, member] of Object.entries(unionMembers.members)) {
               const newContext: NamingHint = {
                 namePieces: [...context.namePieces, kind],
-                doc: context.doc,
+                doc: null,
               };
               this.traverse(member, newContext);
             }

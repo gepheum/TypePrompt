@@ -605,6 +605,85 @@ describe("parseSchema – unionToMembers", () => {
 });
 
 // ---------------------------------------------------------------------------
+// typeToNamingHint – doc field
+// ---------------------------------------------------------------------------
+
+describe("parseSchema – typeToNamingHint doc", () => {
+  it("sets doc from JSDoc comment for a top-level interface", () => {
+    const result = parseOk(
+      ["/** The response. */", "interface Response { name: string; }"].join(
+        "\n",
+      ),
+    );
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "interface") throw new Error("Expected interface");
+    expect(result.typeToNamingHint.get(responseDecl)).toMatch({
+      namePieces: ["Response"],
+      doc: "The response.",
+    });
+  });
+
+  it("sets doc to empty string for a top-level interface without a JSDoc comment", () => {
+    const result = parseOk("interface Response { name: string; }");
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "interface") throw new Error("Expected interface");
+    expect(result.typeToNamingHint.get(responseDecl)).toMatch({
+      namePieces: ["Response"],
+      doc: "",
+    });
+  });
+
+  it("sets doc from JSDoc comment for a top-level union type alias", () => {
+    const result = parseOk(
+      [
+        "/** Active or inactive. */",
+        'type Response = "active" | "inactive";',
+      ].join("\n"),
+    );
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const union = responseDecl.valueType as Union;
+    expect(result.typeToNamingHint.get(union)).toMatch({
+      doc: "Active or inactive.",
+    });
+  });
+
+  it("sets doc to empty string for a top-level union type alias without a JSDoc comment", () => {
+    const result = parseOk('type Response = "active" | "inactive";');
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const union = responseDecl.valueType as Union;
+    expect(result.typeToNamingHint.get(union)).toMatch({ doc: "" });
+  });
+
+  it("sets doc to null for a nested inline interface (field type)", () => {
+    const result = parseOk(
+      "interface Response { address: { street: string }; }",
+    );
+    const addressField = (result.types["Response"] as any).fields["address"];
+    const inlineInterface = addressField.type as Interface;
+    expect(result.typeToNamingHint.get(inlineInterface)).toMatch({
+      namePieces: ["Response", "address"],
+      doc: null,
+    });
+  });
+
+  it("sets doc to null for union member interfaces", () => {
+    const result = parseOk(
+      [
+        "/** A shape. */",
+        'type Response = { kind: "circle"; r: number } | { kind: "rect"; w: number };',
+      ].join("\n"),
+    );
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const union = responseDecl.valueType as Union;
+    const circleInterface = union.members[0]! as Interface;
+    expect(result.typeToNamingHint.get(circleInterface)).toMatch({ doc: null });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Meta context
 // ---------------------------------------------------------------------------
 
