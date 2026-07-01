@@ -32,6 +32,8 @@
     interface Foo {
       /** The message to be displayed */
       message: string;
+      foo: number;
+      bar: number;
     }
 
     type Response = Foo[];
@@ -50,16 +52,10 @@
 
     <enclosed tag="Example">
       <enclosed tag="Input">
-        <e>{
-          "foo": "Alice",
-          ...
-        }</e>
+        <e>[{...}]</e>
       </enclosed>
       <enclosed tag="Output">
-        <e>{
-          "bar": "Jon",
-          "foos": []
-        }</e>
+        <e>[{...}]</e>
       </enclosed>
     </enclosed>
 
@@ -72,24 +68,29 @@
     How are you? <arg name="bar"/>.
 
     Fields:
-    - <v>foo</v>: The name of the person to greet
-    - <v>bar</v>: Bar
+    - <e>foo</e>: The name of the person to greet
+    - <e>bar</e>: Bar
 
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
     <enclosed tag="Example">
       <enclosed tag="Input">
-        <e>{
-          "foo": "Alice",
-          ...
-        }</e>
+        <e>[...]</e>
       </enclosed>
       <enclosed tag="Output">
-        <e>{
-          "bar": "Jon",
-          "foos": []
-        }</e>
+        <e>[
+          {
+            "message": "M",
+            "foo": 3,
+            "bar": 4
+          },
+          {
+            "message": "M",
+            "foo": -3,
+            "bar": -4
+          }
+        ]</e>
       </enclosed>
     </enclosed>
 
