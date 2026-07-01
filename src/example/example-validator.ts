@@ -120,7 +120,7 @@ function jsonMatchesType(
                   sourceSpan: value.firstToken,
                   message: `Expected int but got float`,
                 },
-                matchScore: 0,
+                matchScore: 0.5,
               },
             };
           }
@@ -288,7 +288,7 @@ function jsonMatchesType(
                       sourceSpan: value.firstToken,
                       message: "Not found in union type",
                     },
-                    matchScore: 0,
+                    matchScore: 0.5,
                   },
                 };
               }
@@ -313,6 +313,9 @@ function jsonMatchesType(
         }
         case "interfaces": {
           if (value.kind === "object") {
+            if (value.entries.length === 0 && value.ellipsis) {
+              return MATCH;
+            }
             const { kindFieldName } = members;
             const kindValue = value.entries.find(
               (e) => e.key.firstToken.text === kindFieldName,
@@ -332,9 +335,9 @@ function jsonMatchesType(
                       details: {
                         reason: {
                           sourceSpan: kindValue.value.firstToken,
-                          message: `No matching member for kind value "${kindValue.value.value}"`,
+                          message: `No matching member for value "${kindValue.value.value}"`,
                         },
-                        matchScore: 0,
+                        matchScore: 0.5,
                       },
                     };
                   }

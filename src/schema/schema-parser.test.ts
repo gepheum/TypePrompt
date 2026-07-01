@@ -541,7 +541,7 @@ describe("parseSchema – unionToMembers", () => {
     expect(result.unionToMembers.get(union)).toMatch({
       kind: "interfaces",
       kindFieldName: "kind",
-      members: [{ kind: "circle" }, { kind: "rect" }],
+      members: { circle: { kind: "interface" }, rect: { kind: "interface" } },
     });
   });
 
@@ -560,7 +560,7 @@ describe("parseSchema – unionToMembers", () => {
     expect(result.unionToMembers.get(union)).toMatch({
       kind: "interfaces",
       kindFieldName: "shape",
-      members: [{ kind: "circle" }, { kind: "rect" }],
+      members: { circle: { kind: "interface" }, rect: { kind: "interface" } },
     });
   });
 
@@ -1244,7 +1244,7 @@ describe("getUnionMembers", () => {
     expect(getUnionMembers(union, {})).toMatch({
       kind: "interfaces",
       kindFieldName: "kind",
-      members: [{ kind: "circle" }, { kind: "rect" }],
+      members: { circle: { kind: "interface" }, rect: { kind: "interface" } },
     });
   });
 
@@ -1357,7 +1357,7 @@ describe("getUnionMembers", () => {
     expect(getUnionMembers(union, types)).toMatch({
       kind: "interfaces",
       kindFieldName: "shape",
-      members: [{ kind: "circle" }, { kind: "rect" }],
+      members: { circle: { kind: "interface" }, rect: { kind: "interface" } },
     });
   });
 });
