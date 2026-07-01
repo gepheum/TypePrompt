@@ -147,7 +147,10 @@ function jsonMatchesType(
         const requiredFields = Object.values(type.fields).filter(
           (field) => !field.optional,
         );
-        if (requiredFields.length === 0 && value.entries.length === 0) {
+        if (
+          value.entries.length === 0 &&
+          (requiredFields.length === 0 || value.ellipsis)
+        ) {
           // To avoid a division by zero later.
           return MATCH;
         }
@@ -191,15 +194,17 @@ function jsonMatchesType(
         }
         // We've gone over all the entries of the JSON object, now check that all the
         // required fields are present.
-        for (const field of requiredFields) {
-          const fieldName = field.name.text;
-          if (seenFieldNames.has(fieldName)) {
-            matchScoreTotal += 1.0;
-          } else {
-            firstMismatchReason ??= {
-              sourceSpan: field.name,
-              message: `Missing required field '${fieldName}'`,
-            };
+        if (!value.ellipsis) {
+          for (const field of requiredFields) {
+            const fieldName = field.name.text;
+            if (seenFieldNames.has(fieldName)) {
+              matchScoreTotal += 1.0;
+            } else {
+              firstMismatchReason ??= {
+                sourceSpan: field.name,
+                message: `Missing required field '${fieldName}'`,
+              };
+            }
           }
         }
         if (firstMismatchReason) {
