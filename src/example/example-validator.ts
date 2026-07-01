@@ -2,6 +2,7 @@ import type { ResolvedType, Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type {
   Example,
+  ExampleSourceSpan,
   ExampleValidationError,
   JsonValue,
 } from "./example-types.js";
@@ -24,12 +25,64 @@ export function validateExample(
       }
     }
     case "success:json": {
-      // for (const [typeName, typeDeclaration] of Object.entries(schema.types)) {
-      //   if (matchesTypeNameRef(typeName, example.json, schema.types, new Map())) {
-      //     return [];
-      //   }
-      // }
-      return []; // TODO
+      if (
+        Object.values(schema.types).some(
+          (t) =>
+            jsonMatchesType(
+              example.json,
+              resolveType(t, schema.types),
+              "fast",
+              schema,
+            ).kind === "match",
+        )
+      ) {
+        return [];
+      } else {
+        const mismatches = Object.entries(schema.types).map(([name, t]) => {
+          const result = jsonMatchesType(
+            example.json,
+            resolveType(t, schema.types),
+            "thorough",
+            schema,
+          );
+          const score =
+            result.kind === "mismatch" ? (result.details?.matchScore ?? 0) : 0;
+          const reason =
+            result.kind === "mismatch" ? result.details?.reason : undefined;
+          return { name, score, reason };
+        });
+        const best = mismatches.reduce<
+          | {
+              name: string;
+              score: number;
+              reason: ExampleValidationError | undefined;
+            }
+          | undefined
+        >(
+          (acc, m) => (acc === undefined || m.score > acc.score ? m : acc),
+          undefined,
+        );
+        if (
+          best !== undefined &&
+          best.score >= 0.5 &&
+          best.reason !== undefined
+        ) {
+          return [
+            {
+              sourceSpan: example.json.firstToken,
+              message: `Does not match type '${best.name}'`,
+            },
+            best.reason,
+          ];
+        } else {
+          return [
+            {
+              sourceSpan: example.json.firstToken,
+              message: `Does not match any of the types defined in the schema`,
+            },
+          ];
+        }
+      }
     }
   }
 }
@@ -40,7 +93,7 @@ type JsonTypeMatch =
       readonly kind: "mismatch";
       readonly details?: {
         readonly reason: ExampleValidationError;
-        /** Used to infer which of two mismatches was closer to a match. */
+        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
         readonly matchScore: number;
       };
     };
@@ -87,20 +140,11 @@ function jsonMatchesType(
         }
         return MATCH;
       } else {
-        if (mode === "fast") {
-          return FAST_MISMATCH;
-        } else {
-          return {
-            kind: "mismatch",
-            details: {
-              reason: {
-                sourceSpan: value.firstToken,
-                message: `Expected array but got ${value.kind}`,
-              },
-              matchScore: 0,
-            },
-          };
-        }
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected array but got ${value.kind}`,
+        );
       }
     }
     case "primitive": {
@@ -110,36 +154,19 @@ function jsonMatchesType(
         if (/^-?\d+$/.test(value.firstToken.text)) {
           return MATCH;
         } else {
-          if (mode === "fast") {
-            return FAST_MISMATCH;
-          } else {
-            return {
-              kind: "mismatch",
-              details: {
-                reason: {
-                  sourceSpan: value.firstToken,
-                  message: `Expected int but got float`,
-                },
-                matchScore: 0.5,
-              },
-            };
-          }
+          return mismatch(
+            mode,
+            value.firstToken,
+            `Expected int but got float`,
+            0.5,
+          );
         }
       } else {
-        if (mode === "fast") {
-          return FAST_MISMATCH;
-        } else {
-          return {
-            kind: "mismatch",
-            details: {
-              reason: {
-                sourceSpan: value.firstToken,
-                message: `Expected ${type.primitive} but got ${value.kind}`,
-              },
-              matchScore: 0,
-            },
-          };
-        }
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected ${type.primitive} but got ${value.kind}`,
+        );
       }
     }
     case "interface": {
@@ -220,20 +247,11 @@ function jsonMatchesType(
           return MATCH;
         }
       } else {
-        if (mode === "fast") {
-          return FAST_MISMATCH;
-        } else {
-          return {
-            kind: "mismatch",
-            details: {
-              reason: {
-                sourceSpan: value.firstToken,
-                message: `Expected object but got ${value.kind}`,
-              },
-              matchScore: 0,
-            },
-          };
-        }
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected object but got ${value.kind}`,
+        );
       }
     }
     case "string-literal": {
@@ -242,37 +260,19 @@ function jsonMatchesType(
           return MATCH;
         } else {
           // Not the right string.
-          if (mode === "fast") {
-            return FAST_MISMATCH;
-          } else {
-            return {
-              kind: "mismatch",
-              details: {
-                reason: {
-                  sourceSpan: value.firstToken,
-                  message: `Expected "${type.value}" but got ${value.firstToken.text}`,
-                },
-                matchScore: 0,
-              },
-            };
-          }
+          return mismatch(
+            mode,
+            value.firstToken,
+            `Expected "${type.value}" but got ${value.firstToken.text}`,
+          );
         }
       } else {
         // Not a string.
-        if (mode === "fast") {
-          return FAST_MISMATCH;
-        } else {
-          return {
-            kind: "mismatch",
-            details: {
-              reason: {
-                sourceSpan: value.firstToken,
-                message: `Expected string but got ${value.kind}`,
-              },
-              matchScore: 0,
-            },
-          };
-        }
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected string but got ${value.kind}`,
+        );
       }
     }
     case "union": {
@@ -283,37 +283,20 @@ function jsonMatchesType(
             if (members.values.has(value.value)) {
               return MATCH;
             } else {
-              if (mode === "fast") {
-                return FAST_MISMATCH;
-              } else {
-                return {
-                  kind: "mismatch",
-                  details: {
-                    reason: {
-                      sourceSpan: value.firstToken,
-                      message: "Not found in union type",
-                    },
-                    matchScore: 0.5,
-                  },
-                };
-              }
+              return mismatch(
+                mode,
+                value.firstToken,
+                "Not found in union type",
+                0.5,
+              );
             }
           } else {
             // Not a string.
-            if (mode === "fast") {
-              return FAST_MISMATCH;
-            } else {
-              return {
-                kind: "mismatch",
-                details: {
-                  reason: {
-                    sourceSpan: value.firstToken,
-                    message: `Expected string but got ${value.kind}`,
-                  },
-                  matchScore: 0,
-                },
-              };
-            }
+            return mismatch(
+              mode,
+              value.firstToken,
+              `Expected string but got ${value.kind}`,
+            );
           }
         }
         case "interfaces": {
@@ -332,72 +315,36 @@ function jsonMatchesType(
                   return jsonMatchesType(value, member, mode, schema);
                 } else {
                   // No matching member for the kind value in the union.
-                  if (mode === "fast") {
-                    return FAST_MISMATCH;
-                  } else {
-                    return {
-                      kind: "mismatch",
-                      details: {
-                        reason: {
-                          sourceSpan: kindValue.value.firstToken,
-                          message: `No matching member for value "${kindValue.value.value}"`,
-                        },
-                        matchScore: 0.5,
-                      },
-                    };
-                  }
+                  return mismatch(
+                    mode,
+                    kindValue.value.firstToken,
+                    `No matching member for value "${kindValue.value.value}"`,
+                    0.5,
+                  );
                 }
               } else {
                 // Kind value is not a string.
-                if (mode === "fast") {
-                  return FAST_MISMATCH;
-                } else {
-                  return {
-                    kind: "mismatch",
-                    details: {
-                      reason: {
-                        sourceSpan: kindValue.value.firstToken,
-                        message:
-                          "Expected string but got " + kindValue.value.kind,
-                      },
-                      matchScore: 0,
-                    },
-                  };
-                }
+                return mismatch(
+                  mode,
+                  kindValue.value.firstToken,
+                  "Expected string but got " + kindValue.value.kind,
+                );
               }
             } else {
               // Kind field not found.
-              if (mode === "fast") {
-                return FAST_MISMATCH;
-              } else {
-                return {
-                  kind: "mismatch",
-                  details: {
-                    reason: {
-                      sourceSpan: value.firstToken,
-                      message: `Missing required field '${kindFieldName}'`,
-                    },
-                    matchScore: 0,
-                  },
-                };
-              }
+              return mismatch(
+                mode,
+                value.firstToken,
+                `Missing required field '${kindFieldName}'`,
+              );
             }
           } else {
             // Not an object.
-            if (mode === "fast") {
-              return FAST_MISMATCH;
-            } else {
-              return {
-                kind: "mismatch",
-                details: {
-                  reason: {
-                    sourceSpan: value.firstToken,
-                    message: `Expected object but got ${value.kind}`,
-                  },
-                  matchScore: 0,
-                },
-              };
-            }
+            return mismatch(
+              mode,
+              value.firstToken,
+              `Expected object but got ${value.kind}`,
+            );
           }
         }
       }
@@ -407,3 +354,18 @@ function jsonMatchesType(
 
 const MATCH = { kind: "match" } as const;
 const FAST_MISMATCH = { kind: "mismatch" } as const;
+
+function mismatch(
+  mode: "fast" | "thorough",
+  sourceSpan: ExampleSourceSpan,
+  message: string,
+  matchScore = 0,
+): JsonTypeMatch {
+  if (mode === "fast") {
+    return FAST_MISMATCH;
+  }
+  return {
+    kind: "mismatch",
+    details: { reason: { sourceSpan, message }, matchScore },
+  };
+}
