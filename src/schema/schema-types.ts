@@ -115,14 +115,12 @@ export type UnionMembers =
   | {
       readonly kind: "strings";
       readonly members: readonly StringLiteral[];
+      readonly values: ReadonlySet<string>;
     }
   | {
       readonly kind: "interfaces";
-      readonly members: ReadonlyArray<{
-        readonly interface: Interface;
-        readonly kind: string;
-      }>;
-      readonly fieldName: string;
+      readonly members: { [kind: string]: Interface };
+      readonly kindFieldName: string;
     };
 
 export type SchemaSourceSpan = {

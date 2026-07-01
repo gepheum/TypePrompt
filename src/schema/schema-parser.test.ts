@@ -540,7 +540,7 @@ describe("parseSchema – unionToMembers", () => {
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
       kind: "interfaces",
-      fieldName: "kind",
+      kindFieldName: "kind",
       members: [{ kind: "circle" }, { kind: "rect" }],
     });
   });
@@ -559,7 +559,7 @@ describe("parseSchema – unionToMembers", () => {
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
       kind: "interfaces",
-      fieldName: "shape",
+      kindFieldName: "shape",
       members: [{ kind: "circle" }, { kind: "rect" }],
     });
   });
@@ -1243,7 +1243,7 @@ describe("getUnionMembers", () => {
     };
     expect(getUnionMembers(union, {})).toMatch({
       kind: "interfaces",
-      fieldName: "kind",
+      kindFieldName: "kind",
       members: [{ kind: "circle" }, { kind: "rect" }],
     });
   });
@@ -1356,7 +1356,7 @@ describe("getUnionMembers", () => {
     const types = { Foo: fooDecl, Bar: barDecl };
     expect(getUnionMembers(union, types)).toMatch({
       kind: "interfaces",
-      fieldName: "shape",
+      kindFieldName: "shape",
       members: [{ kind: "circle" }, { kind: "rect" }],
     });
   });

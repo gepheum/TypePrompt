@@ -9,38 +9,40 @@ export function getUnionMembers(
   const firstMember = resolveMaybeInvalidType(members[0]!, types)!;
   switch (firstMember.kind) {
     case "string-literal": {
+      const resolvedMembers = members.map((m) => {
+        const resolved = resolveMaybeInvalidType(m, types)!;
+        if (resolved.kind !== "string-literal") {
+          throw new Error();
+        }
+        return resolved;
+      });
       return {
         kind: "strings",
-        members: members.map((m) => {
-          const resolved = resolveMaybeInvalidType(m, types)!;
-          if (resolved.kind !== "string-literal") {
-            throw new Error();
-          }
-          return resolved;
-        }),
+        members: resolvedMembers,
+        values: new Set(resolvedMembers.map((m) => m.value)),
       };
     }
     case "interface": {
       return {
         kind: "interfaces",
-        members: members.map((m) => {
-          const resolved = resolveMaybeInvalidType(m, types)!;
-          if (resolved.kind !== "interface") {
-            throw new Error();
-          }
-          const firstFieldType = resolveMaybeInvalidType(
-            resolved.firstField!.type,
-            types,
-          )!;
-          if (firstFieldType.kind !== "string-literal") {
-            throw new Error();
-          }
-          return {
-            interface: resolved,
-            kind: firstFieldType.value,
-          };
-        }),
-        fieldName: firstMember.firstField!.name.text,
+        kindFieldName: firstMember.firstField!.name.text,
+        members: Object.fromEntries(
+          members.map((m) => {
+            const resolved = resolveMaybeInvalidType(m, types)!;
+            if (resolved.kind !== "interface") {
+              throw new Error();
+            }
+            const firstFieldType = resolveMaybeInvalidType(
+              resolved.firstField!.type,
+              types,
+            )!;
+            if (firstFieldType.kind !== "string-literal") {
+              throw new Error();
+            }
+            const kind = firstFieldType.value;
+            return [kind, resolved];
+          }),
+        ),
       };
     }
     default: {

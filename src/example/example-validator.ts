@@ -1,4 +1,4 @@
-import type { ResolvedType, Schema, Type } from "../schema/schema-types.js";
+import type { ResolvedType, Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type {
   Example,
@@ -37,13 +37,13 @@ export function validateExample(
 type JsonTypeMatch =
   | { readonly kind: "match" }
   | {
-    readonly kind: "mismatch";
-    readonly details?: {
-      readonly reason: ExampleValidationError;
-      /** Used to infer which of two mismatches was closer to a match. */
-      readonly matchScore: number;
+      readonly kind: "mismatch";
+      readonly details?: {
+        readonly reason: ExampleValidationError;
+        /** Used to infer which of two mismatches was closer to a match. */
+        readonly matchScore: number;
+      };
     };
-  };
 
 function jsonMatchesType(
   value: JsonValue,
@@ -59,9 +59,14 @@ function jsonMatchesType(
       if (value.kind === "array") {
         const elementType = resolveType(type.elementType, schema.types);
         let matchScoreTotal = 0.0;
-        const {elements} = value;
+        const { elements } = value;
         for (const element of elements) {
-          const elementMatch = jsonMatchesType(element, elementType, mode, schema);
+          const elementMatch = jsonMatchesType(
+            element,
+            elementType,
+            mode,
+            schema,
+          );
           if (elementMatch.kind === "match") {
             matchScoreTotal += 1.0;
           } else if (elementMatch.kind === "mismatch") {
@@ -139,7 +144,9 @@ function jsonMatchesType(
     }
     case "interface": {
       if (value.kind === "object") {
-        const requiredFields = Object.values(type.fields).filter(field => !field.optional);
+        const requiredFields = Object.values(type.fields).filter(
+          (field) => !field.optional,
+        );
         if (requiredFields.length === 0 && value.entries.length === 0) {
           // To avoid a division by zero later.
           return MATCH;
@@ -153,7 +160,12 @@ function jsonMatchesType(
           const field = type.fields[fieldName];
           if (field) {
             const fieldType = resolveType(field.type, schema.types);
-            const fieldMatch = jsonMatchesType(entry.value, fieldType, mode, schema);
+            const fieldMatch = jsonMatchesType(
+              entry.value,
+              fieldType,
+              mode,
+              schema,
+            );
             if (fieldMatch.kind === "match") {
               matchScoreTotal += 1.0;
             } else {
@@ -263,7 +275,24 @@ function jsonMatchesType(
       switch (members.kind) {
         case "strings": {
           if (value.kind === "string") {
-            CACA
+            if (members.values.has(value.value)) {
+              return MATCH;
+            } else {
+              if (mode === "fast") {
+                return FAST_MISMATCH;
+              } else {
+                return {
+                  kind: "mismatch",
+                  details: {
+                    reason: {
+                      sourceSpan: value.firstToken,
+                      message: "Not found in union type",
+                    },
+                    matchScore: 0,
+                  },
+                };
+              }
+            }
           } else {
             // Not a string.
             if (mode === "fast") {
@@ -283,7 +312,85 @@ function jsonMatchesType(
           }
         }
         case "interfaces": {
-
+          if (value.kind === "object") {
+            const { kindFieldName } = members;
+            const kindValue = value.entries.find(
+              (e) => e.key.firstToken.text === kindFieldName,
+            );
+            if (kindValue) {
+              if (kindValue.value.kind === "string") {
+                const member = members.members[kindValue.value.value];
+                if (member) {
+                  return jsonMatchesType(value, member, mode, schema);
+                } else {
+                  // No matching member for the kind value in the union.
+                  if (mode === "fast") {
+                    return FAST_MISMATCH;
+                  } else {
+                    return {
+                      kind: "mismatch",
+                      details: {
+                        reason: {
+                          sourceSpan: kindValue.value.firstToken,
+                          message: `No matching member for kind value "${kindValue.value.value}"`,
+                        },
+                        matchScore: 0,
+                      },
+                    };
+                  }
+                }
+              } else {
+                // Kind value is not a string.
+                if (mode === "fast") {
+                  return FAST_MISMATCH;
+                } else {
+                  return {
+                    kind: "mismatch",
+                    details: {
+                      reason: {
+                        sourceSpan: kindValue.value.firstToken,
+                        message:
+                          "Expected string but got " + kindValue.value.kind,
+                      },
+                      matchScore: 0,
+                    },
+                  };
+                }
+              }
+            } else {
+              // Kind field not found.
+              if (mode === "fast") {
+                return FAST_MISMATCH;
+              } else {
+                return {
+                  kind: "mismatch",
+                  details: {
+                    reason: {
+                      sourceSpan: value.firstToken,
+                      message: `Missing required field '${kindFieldName}'`,
+                    },
+                    matchScore: 0,
+                  },
+                };
+              }
+            }
+          } else {
+            // Not an object.
+            if (mode === "fast") {
+              return FAST_MISMATCH;
+            } else {
+              return {
+                kind: "mismatch",
+                details: {
+                  reason: {
+                    sourceSpan: value.firstToken,
+                    message: `Expected object but got ${value.kind}`,
+                  },
+                  matchScore: 0,
+                },
+              };
+            }
+          }
         }
       }
     }

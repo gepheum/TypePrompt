@@ -628,11 +628,11 @@ class TypeTraverser {
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {
-            for (const member of unionMembers.members) {
+            for (const [kind, member] of Object.entries(unionMembers.members)) {
               const newContext: NamingHint = {
                 namePieces: [...context.namePieces, member.kind],
               };
-              this.traverse(member.interface, newContext);
+              this.traverse(member, newContext);
             }
             return null;
           }
