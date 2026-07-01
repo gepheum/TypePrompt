@@ -596,7 +596,7 @@ function parseBodyContent(
         });
       } else if (tag === "enclosed") {
         const encAttrs = checkXmlAttributes(child, {
-          tag: zod.string().min(1),
+          tag: zod.string().regex(/^[A-Za-z_][\w.\-]*$/),
         });
         if (encAttrs.kind === "error") {
           context.pushErrors(encAttrs.errors);
