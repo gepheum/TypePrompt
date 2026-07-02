@@ -15,7 +15,11 @@
     type Int = number;
   </schema>
 
-  <body>
+  <args>
+    <arg name="name" />
+  </args>
+
+  <body variant="Foo">
     Hello <arg name="name"/>.
   </body>
 </template>
