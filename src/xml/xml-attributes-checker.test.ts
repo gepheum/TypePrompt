@@ -37,7 +37,9 @@ describe("checkXmlAttributes", () => {
 
   it("returns the decoded attribute value in success attributes", () => {
     const el = parseElement('<foo title="a &amp; b" />');
-    const result = checkXmlAttributes(el, { title: { schema: z.string(), expected: "a string" } });
+    const result = checkXmlAttributes(el, {
+      title: { schema: z.string(), expected: "a string" },
+    });
 
     expect(result).toMatch({
       kind: "success",
@@ -69,7 +71,9 @@ describe("checkXmlAttributes", () => {
   it("positions a missing-attribute error at the tag name", () => {
     const input = "  <foo />";
     const el = parseElement(input);
-    const result = checkXmlAttributes(el, { name: { schema: z.string(), expected: "a string" } });
+    const result = checkXmlAttributes(el, {
+      name: { schema: z.string(), expected: "a string" },
+    });
 
     expect(result).toMatch({
       kind: "error",
@@ -85,7 +89,9 @@ describe("checkXmlAttributes", () => {
   it("reports an error for an unexpected attribute", () => {
     const input = '<foo name="x" extra="y" />';
     const el = parseElement(input);
-    const result = checkXmlAttributes(el, { name: { schema: z.string(), expected: "a string" } });
+    const result = checkXmlAttributes(el, {
+      name: { schema: z.string(), expected: "a string" },
+    });
 
     expect(result).toMatch({
       kind: "error",
@@ -118,7 +124,9 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /^Invalid value for attribute 'count': expected a number/ }],
+      errors: [
+        { message: /^Invalid value for attribute 'count': expected a number/ },
+      ],
     });
   });
 
@@ -167,7 +175,9 @@ describe("checkXmlAttributes", () => {
   it("reports errors for both a missing required and an unexpected attribute", () => {
     const input = '<foo unknown="x" />';
     const el = parseElement(input);
-    const result = checkXmlAttributes(el, { name: { schema: z.string(), expected: "a string" } });
+    const result = checkXmlAttributes(el, {
+      name: { schema: z.string(), expected: "a string" },
+    });
 
     expect(result).toMatch({
       kind: "error",

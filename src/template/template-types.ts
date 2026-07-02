@@ -3,10 +3,19 @@ import { ElementNode } from "../xml/xml-parser.js";
 
 export type Templates = {
   readonly kind: "success";
-  readonly templates: {
-    readonly [name: string]: Template;
-  };
   readonly meta: Schema | null;
+  readonly namespaces: readonly TemplateNamespace[];
+};
+
+export type TemplateNamespace = {
+  /** Null for default namespace. */
+  readonly namespace: string | null;
+  readonly templates: readonly ResolvedTemplate[];
+};
+
+export type ResolvedTemplate = {
+  readonly template: Template;
+  readonly meta: { [property: string]: boolean | number | string };
 };
 
 export type Template = {

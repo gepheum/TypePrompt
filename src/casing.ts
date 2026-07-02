@@ -2,12 +2,14 @@ type Name = {
   readonly name: string;
   readonly start: number;
   readonly end: number;
+  readonly path?: string;
 };
 
 type Error = {
   readonly message: string;
   readonly start: number;
   readonly end: number;
+  readonly path?: string;
 };
 
 export function checkNoAmbiguity(
@@ -37,6 +39,7 @@ export function checkNoAmbiguity(
         errors.push({
           start: first.start,
           end: first.end,
+          path: first.path,
           message: `Name '${name.name}' is duplicated`,
         });
         firstDuplicateAlreadyReported.add(lowercase);
@@ -44,6 +47,7 @@ export function checkNoAmbiguity(
       errors.push({
         start: name.start,
         end: name.end,
+        path: name.path,
         message: `Name '${name.name}' is duplicated`,
       });
       continue;
@@ -52,6 +56,7 @@ export function checkNoAmbiguity(
     errors.push({
       start: name.start,
       end: name.end,
+      path: name.path,
       message: `Name '${name.name}' conflicts with '${first.name}'`,
     });
   }

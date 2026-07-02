@@ -148,7 +148,10 @@ function parseTemplateElement(
       expected: "an UpperCamelCase identifier",
     },
     namespace: {
-      schema: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/).optional(),
+      schema: zod
+        .string()
+        .regex(/^[A-Z][A-Za-z0-9]*$/)
+        .optional(),
       expected: "an UpperCamelCase identifier",
     },
   });
@@ -434,7 +437,10 @@ function parseArgsElement(
       },
       doc: { schema: zod.string().optional(), expected: "a string" },
       type: {
-        schema: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/).optional(),
+        schema: zod
+          .string()
+          .regex(/^[A-Z][A-Za-z0-9]*$/)
+          .optional(),
         expected: "an UpperCamelCase identifier",
       },
     });
