@@ -1,4 +1,2 @@
-- rm "hasEmptyInterface"?
-- add resolvedTypes map
-- "Args" is reserved, "Variant" is reserved
-- JSON schemas
+- Make sure that every arg in <args> is actually used
+- TODO: force specify schema on each arg

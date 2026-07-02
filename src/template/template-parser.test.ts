@@ -531,7 +531,7 @@ describe("parseTemplateFile – <args>", () => {
   it("reports casing ambiguity between declared arg names", () => {
     const source = templateWithArgs(
       '<arg name="myArg"/><arg name="myarg"/>',
-      '<arg name="myArg"/>',
+      '<arg name="myArg"/><arg name="myarg"/>',
     );
     const result = parseTemplateFile(sf(source));
     expect(result).toMatch({
@@ -659,7 +659,7 @@ describe("parseTemplateFile – body <arg> elements", () => {
       '<template name="Demo">',
       "  <schema>interface Response { value: string; }</schema>",
       '  <args><arg name="x"/></args>',
-      '  <body><arg name="undeclared"/></body>',
+      '  <body><arg name="x"/><arg name="undeclared"/></body>',
       "</template>",
     ].join("\n");
     const result = parseTemplateFile(sf(source));
@@ -833,12 +833,14 @@ describe("parseTemplateFile – variants", () => {
   }
 
   it("builds a variants content for multiple bodies", () => {
-    const t = singleTemplate(multiVariantTemplate('<arg name="x"/>', "hello"));
+    const t = singleTemplate(
+      multiVariantTemplate('<arg name="x"/> hello', 'world <arg name="x"/>'),
+    );
     expect(t.content).toMatch({
       kind: "variants",
       bodies: {
-        A: [{ kind: "arg", name: "x" }],
-        B: [{ kind: "text", text: "hello" }],
+        A: [{ kind: "arg", name: "x" }, { kind: "text", text: " hello" }],
+        B: [{ kind: "text", text: "world " }, { kind: "arg", name: "x" }],
       },
     });
   });
@@ -904,6 +906,37 @@ describe("parseTemplateFile – variants", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: /variant/ }],
+    });
+  });
+
+  it("reports error for a declared arg unused in a no-variant body", () => {
+    const source = [
+      '<template name="Demo">',
+      "  <schema>interface Response { value: string; }</schema>",
+      '  <args><arg name="used"/><arg name="unused"/></args>',
+      '  <body><arg name="used"/></body>',
+      "</template>",
+    ].join("\n");
+    const result = parseTemplateFile(sf(source));
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "Arg 'unused' is not used in <body>" }],
+    });
+  });
+
+  it("reports error for a declared arg unused in one variant body", () => {
+    const source = [
+      '<template name="Demo">',
+      "  <schema>interface Response { value: string; }</schema>",
+      '  <args><arg name="x"/><arg name="y"/></args>',
+      '  <body variant="A"><arg name="x"/><arg name="y"/></body>',
+      '  <body variant="B"><arg name="x"/></body>',
+      "</template>",
+    ].join("\n");
+    const result = parseTemplateFile(sf(source));
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "Arg 'y' is not used in <body variant=\"B\">" }],
     });
   });
 });

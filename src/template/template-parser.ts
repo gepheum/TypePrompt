@@ -310,6 +310,22 @@ function parseTemplateElement(
           }
         }
       }
+    } else {
+      // Check that every declared arg is used at least once in this body.
+      const usedArgNames = new Set<string>();
+      for (const p of rawPieces) {
+        if (p.kind === "arg") usedArgNames.add(p.name);
+      }
+      const bodyDesc =
+        variant !== null ? `<body variant="${variant}">` : "<body>";
+      for (const decl of argDeclarations) {
+        if (!usedArgNames.has(decl.name)) {
+          context.pushError(
+            decl.nameSpan,
+            `Arg '${decl.name}' is not used in ${bodyDesc}`,
+          );
+        }
+      }
     }
 
     parsedBodies.push({
