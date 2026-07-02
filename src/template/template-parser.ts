@@ -786,25 +786,30 @@ function coalesceText(pieces: readonly DedentedPiece[]): DedentedPiece[] {
 
 function buildFinalPieces(pieces: readonly DedentedPiece[]): TemplatePiece[] {
   return pieces.map((p, i) => {
-    if (p.kind === "text") return { kind: "text", text: p.text };
-    return {
-      kind: "arg",
-      name: p.name,
-      indent: computeArgIndent(pieces.slice(0, i)),
-      format: p.format,
-    };
+    if (p.kind === "text") {
+      return p;
+    } else {
+      return {
+        kind: "arg",
+        name: p.name,
+        indent: computeArgIndent(pieces.slice(0, i)),
+        format: p.format,
+      };
+    }
   });
 }
 
 function computeArgIndent(preceding: readonly DedentedPiece[]): string {
-  let combined = "";
-  for (const p of preceding) {
-    combined += p.kind === "text" ? p.text : "\x01";
+  for (let i = preceding.length - 1; i >= 0; i--) {
+    const p = preceding[i]!;
+    if (p.kind !== "text") continue;
+    const nl = p.text.lastIndexOf("\n");
+    if (nl !== -1) {
+      const m = p.text.slice(nl + 1).match(/^([ \t]*)/);
+      return m ? m[1]! : "";
+    }
   }
-  const lastNl = combined.lastIndexOf("\n");
-  const afterNl = lastNl === -1 ? combined : combined.slice(lastNl + 1);
-  const m = afterNl.match(/^([ \t]*)/);
-  return m ? m[1]! : "";
+  return "";
 }
 
 // ---------------------------------------------------------------------------
