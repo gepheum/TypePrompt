@@ -698,7 +698,7 @@ describe("parseTemplateFile – body <arg> elements", () => {
     const result = parseTemplateFile(sf(source));
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "'format' is required for arg 'data'" }],
+      errors: [{ message: "'format' attribute is required for arg 'data'" }],
     });
   });
 

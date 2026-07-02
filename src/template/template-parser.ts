@@ -588,7 +588,7 @@ function parseBodyContent(
           } else if (format === null && declaredType !== null) {
             context.pushError(
               argAttrs.attributes.name,
-              `'format' is required for arg '${argName}'`,
+              `'format' attribute is required for arg '${argName}'`,
             );
           }
         }

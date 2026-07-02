@@ -27,12 +27,12 @@
 <template name="HelloWorld">
   <meta temperature="0.7" />
 
-  <args>
-    <arg name="foo" doc="Documentation for foo" />
-    <arg name="bar" />
-  </args>
-
   <schema>
+    interface Input {
+      x: Int;
+      y: Int;
+    }
+
     interface Foo {
       /** The message to be displayed */
       message: string;
@@ -41,18 +41,25 @@
     }
 
     type Response = Foo[];
+
+    type Int = number;
   </schema>
+
+  <args>
+    <arg name="foo" doc="Documentation for foo" />
+    <arg name="bar" type="Input" />
+  </args>
 
   <body variant="Aa">
     Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar"/>.
+    How are you? <arg name="bar" format="zoo"/>.
 
     Fields:
     - <e>foo</e>: The name of the person to greet
     - <e>bar</e>: Bar
 
     Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar"/>.
+    How are you? <arg name="bar" format="json"/>.
 
     <enclosed tag="Example">
       <enclosed tag="Input">
@@ -69,14 +76,14 @@
 
   <body variant="Bb">
     Say bonjour to <arg name="foo"/>.
-    How are you? <arg name="bar"/>.
+    How are you? <arg name="bar" format="json"/>.
 
     Fields:
     - <e>foo</e>: The name of the person to greet
     - <e>bar</e>: Bar
 
     Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar"/>.
+    How are you? <arg name="bar" format="json"/>.
 
     <enclosed tag="Example">
       <enclosed tag="Input">
