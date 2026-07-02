@@ -403,13 +403,12 @@ function parseArgsElement(
   }
 
   const declarations: ArgDeclaration[] = [];
-  let hasErrors = false;
+  const snap = context.snapshot();
 
   for (const child of argsNode.children) {
     if (child.kind === "text") {
       if (!child.allWhitespace) {
         context.pushError(child.sourceSpan, "Unexpected text inside <args>");
-        hasErrors = true;
       }
       continue;
     }
@@ -418,12 +417,10 @@ function parseArgsElement(
         child.tagName,
         `Unexpected element '<${child.tagName.text}>' in <args>`,
       );
-      hasErrors = true;
       continue;
     }
     if (!child.isSelfClosing) {
       context.pushError(child.tagName, "<arg> elements must be self-closing");
-      hasErrors = true;
       continue;
     }
     const argAttrs = checkXmlAttributes(child, {
@@ -436,7 +433,6 @@ function parseArgsElement(
     });
     if (argAttrs.kind === "error") {
       context.pushErrors(argAttrs.errors);
-      hasErrors = true;
       continue;
     }
     declarations.push({
@@ -447,7 +443,7 @@ function parseArgsElement(
     });
   }
 
-  return hasErrors ? null : declarations;
+  return context.hasNewErrors(snap) ? null : declarations;
 }
 
 function parseSchemaElement(
@@ -490,7 +486,7 @@ function parseBodyContent(
   }
 
   const pieces: RawBodyPiece[] = [];
-  let hasErrors = false;
+  const snap = context.snapshot();
 
   const visitChildren = (elem: ElementNode): void => {
     for (const child of elem.children) {
@@ -503,7 +499,7 @@ function parseBodyContent(
 
       if (tag === "e") {
         const textNodes: TextNodeJoin[] = [];
-        let eHasChildErrors = false;
+        const eSnap = context.snapshot();
         for (const eChild of child.children) {
           if (eChild.kind === "text") {
             textNodes.push(eChild);
@@ -512,13 +508,11 @@ function parseBodyContent(
               eChild.tagName,
               "<e> elements cannot contain child elements",
             );
-            hasErrors = true;
-            eHasChildErrors = true;
           }
         }
         const joined = joinTextNodes(textNodes, child.contentSpan.start);
 
-        if (!eHasChildErrors) {
+        if (!context.hasNewErrors(eSnap)) {
           const exResult = parseExample(joined.decoded);
           if (exResult.kind === "error") {
             if (exResult.errors.length > 0) {
@@ -535,7 +529,6 @@ function parseBodyContent(
                 "Invalid example in <e> element",
               );
             }
-            hasErrors = true;
           } else {
             const valErrors = validateExample(exResult, schema);
             if (valErrors.length > 0) {
@@ -552,13 +545,9 @@ function parseBodyContent(
                   message: e.message,
                 })),
               );
-              hasErrors = true;
             }
           }
-        } // end if (!eHasChildErrors)
-
-        // Always emit the text content (even on validation error).
-        if (!eHasChildErrors) {
+          // Always emit the text content (even on validation error).
           pieces.push({ kind: "text", text: joined });
         }
       } else if (tag === "arg") {
@@ -567,7 +556,6 @@ function parseBodyContent(
             child.tagName,
             "<arg> elements must be self-closing",
           );
-          hasErrors = true;
           continue;
         }
         const argAttrs = checkXmlAttributes(child, {
@@ -576,7 +564,6 @@ function parseBodyContent(
         });
         if (argAttrs.kind === "error") {
           context.pushErrors(argAttrs.errors);
-          hasErrors = true;
           continue;
         }
 
@@ -592,7 +579,6 @@ function parseBodyContent(
               formatAttr!,
               "format can only be specified for an arg that has a declared type",
             );
-            hasErrors = true;
           }
         }
 
@@ -602,7 +588,6 @@ function parseBodyContent(
               argAttrs.attributes.name,
               `Undeclared arg '${argName}'`,
             );
-            hasErrors = true;
           }
         }
 
@@ -618,7 +603,6 @@ function parseBodyContent(
         });
         if (encAttrs.kind === "error") {
           context.pushErrors(encAttrs.errors);
-          hasErrors = true;
           continue;
         }
         const encTagName = encAttrs.attributes.tag.value;
@@ -627,13 +611,12 @@ function parseBodyContent(
         pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
       } else {
         context.pushError(child.tagName, `Unexpected element '<${tag}>'`);
-        hasErrors = true;
       }
     }
   };
 
   visitChildren(bodyNode);
-  return hasErrors ? null : pieces;
+  return context.hasNewErrors(snap) ? null : pieces;
 }
 
 // ---------------------------------------------------------------------------
