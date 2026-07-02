@@ -39,7 +39,7 @@
     type Response = Foo[];
   </schema>
 
-  <body variant="A">
+  <body variant="Aa">
     Say hello to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
@@ -63,7 +63,7 @@
 
   </body>
 
-  <body variant="B">
+  <body variant="Bb">
     Say bonjour to <arg name="foo"/>.
     How are you? <arg name="bar"/>.
 
