@@ -429,7 +429,7 @@ describe("parseTemplateFile – <schema>", () => {
       "    interface Input { question: string; }",
       "  </schema>",
       '  <args><arg name="ctx" type="Input"/></args>',
-      '  <body><arg name="ctx"/></body>',
+      '  <body><arg name="ctx" format="json"/></body>',
       "</template>",
     ].join("\n");
     expect(parseOk(source)).toMatch({ kind: "success" });
@@ -454,7 +454,7 @@ describe("parseTemplateFile – <args>", () => {
   it("parses args with name, doc, and type", () => {
     const source = templateWithArgs(
       '<arg name="greeting" doc="A greeting" type="GreetInput"/>',
-      '<arg name="greeting"/>',
+      '<arg name="greeting" format="json"/>',
     );
     const t = singleTemplate(source);
     expect(t.args).toMatch([
@@ -687,6 +687,21 @@ describe("parseTemplateFile – body <arg> elements", () => {
     });
   });
 
+  it("reports error when format is missing for arg with declared type", () => {
+    const source = [
+      '<template name="Demo">',
+      "  <schema>interface Response { value: string; }\n  interface Data { items: string[]; }</schema>",
+      '  <args><arg name="data" type="Data"/></args>',
+      '  <body><arg name="data"/></body>',
+      "</template>",
+    ].join("\n");
+    const result = parseTemplateFile(sf(source));
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "'format' is required for arg 'data'" }],
+    });
+  });
+
   it("reports error for format on arg without declared type", () => {
     const source = [
       '<template name="Demo">',
@@ -839,8 +854,14 @@ describe("parseTemplateFile – variants", () => {
     expect(t.content).toMatch({
       kind: "variants",
       bodies: {
-        A: [{ kind: "arg", name: "x" }, { kind: "text", text: " hello" }],
-        B: [{ kind: "text", text: "world " }, { kind: "arg", name: "x" }],
+        A: [
+          { kind: "arg", name: "x" },
+          { kind: "text", text: " hello" },
+        ],
+        B: [
+          { kind: "text", text: "world " },
+          { kind: "arg", name: "x" },
+        ],
       },
     });
   });

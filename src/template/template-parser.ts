@@ -233,7 +233,8 @@ function parseTemplateElement(
     );
   }
   if (bodyElems.length > 1) {
-    const variantNames: Array<{ name: string; start: number; end: number }> = [];
+    const variantNames: Array<{ name: string; start: number; end: number }> =
+      [];
     for (const bodyElem of bodyElems) {
       if (bodyElem.attributes["variant"] === undefined) {
         context.pushError(
@@ -571,22 +572,23 @@ function parseBodyContent(
         const formatAttr = argAttrs.attributes.format;
         const format: "json" | "toon" | null = formatAttr?.value ?? null;
 
-        if (format !== null) {
-          const declaredType =
-            argDeclarations?.find((d) => d.name === argName)?.typeName ?? null;
-          if (declaredType === null) {
+        const declaration = argDeclarations?.find((d) => d.name === argName);
+        if (argDeclarations !== null && declaration === undefined) {
+          context.pushError(
+            argAttrs.attributes.name,
+            `Undeclared arg '${argName}'`,
+          );
+        } else {
+          const declaredType = declaration?.typeName ?? null;
+          if (format !== null && declaredType === null) {
             context.pushError(
               formatAttr!,
               "format can only be specified for an arg that has a declared type",
             );
-          }
-        }
-
-        if (argDeclarations !== null) {
-          if (!argDeclarations.some((d) => d.name === argName)) {
+          } else if (format === null && declaredType !== null) {
             context.pushError(
               argAttrs.attributes.name,
-              `Undeclared arg '${argName}'`,
+              `'format' is required for arg '${argName}'`,
             );
           }
         }
