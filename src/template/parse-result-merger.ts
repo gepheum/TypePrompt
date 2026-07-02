@@ -43,10 +43,7 @@ export function mergeParseResults(
   // namespace is fine. We only want to catch case-insensitive clashes.
   const uniqueNamespacesByValue = new Map<string, string>(); // value → first file path
   for (const { template, path } of allTemplates) {
-    if (
-      template.namespace !== null &&
-      !uniqueNamespacesByValue.has(template.namespace)
-    ) {
+    if (!uniqueNamespacesByValue.has(template.namespace)) {
       uniqueNamespacesByValue.set(template.namespace, path);
     }
   }
@@ -59,7 +56,7 @@ export function mergeParseResults(
 
   // (2) Template name ambiguity within each namespace.
   const templatesByNamespace = new Map<
-    string | null,
+    string,
     Array<{ name: string; start: number; end: number; path: string }>
   >();
   for (const { template, path } of allTemplates) {
@@ -130,7 +127,7 @@ export function mergeParseResults(
   }
 
   // Build the success result — group templates by namespace.
-  const namespaceMap = new Map<string | null, ResolvedTemplate[]>();
+  const namespaceMap = new Map<string, ResolvedTemplate[]>();
   for (const { template } of allTemplates) {
     const ns = template.namespace;
     if (!namespaceMap.has(ns)) {

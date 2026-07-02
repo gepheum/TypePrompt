@@ -161,8 +161,8 @@ function parseTemplateElement(
   const name = attrs.kind === "success" ? attrs.attributes.name.value : "";
   const namespace =
     attrs.kind === "success"
-      ? (attrs.attributes.namespace?.value ?? null)
-      : null;
+      ? (attrs.attributes.namespace?.value ?? "Default")
+      : "Default";
 
   // 2. Partition children.
   let metaElem: ElementNode | null = null;

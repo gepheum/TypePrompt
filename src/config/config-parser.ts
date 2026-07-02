@@ -2,8 +2,8 @@ import { parse as parseToml } from "smol-toml";
 import { z } from "zod";
 
 export type Config = {
-  /// Glob pattern to match .tp files to be processed.
-  /// Defaults to `prompts/*.tp`.
+  /// Glob pattern to match template files to be processed.
+  /// Defaults to `prompts/*.xml`.
   readonly input?: string;
   /// Path to the generated Python file.
   readonly generatedDotPyPath?: string;

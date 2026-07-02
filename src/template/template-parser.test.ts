@@ -190,11 +190,11 @@ describe("parseTemplateFile – template attributes", () => {
     expect(result.templates[0]).toMatch({ name: "Demo", namespace: "MyNs" });
   });
 
-  it("sets namespace to null when absent", () => {
+  it("defaults namespace to 'Default' when absent", () => {
     const result = parseOk(
       `<template name="Demo">\n${BODY_SCHEMA}\n</template>`,
     );
-    expect(result.templates[0]).toMatch({ namespace: null });
+    expect(result.templates[0]).toMatch({ namespace: "Default" });
   });
 
   it("reports error for invalid namespace", () => {

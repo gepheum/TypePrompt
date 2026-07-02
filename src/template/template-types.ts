@@ -8,8 +8,7 @@ export type Templates = {
 };
 
 export type TemplateNamespace = {
-  /** Null for default namespace. */
-  readonly namespace: string | null;
+  readonly namespace: string;
   readonly templates: readonly ResolvedTemplate[];
 };
 
@@ -20,7 +19,7 @@ export type ResolvedTemplate = {
 
 export type Template = {
   readonly name: string;
-  readonly namespace: string | null;
+  readonly namespace: string;
   readonly metaNode: ElementNode | null;
   readonly schema: Schema;
   readonly args: readonly TemplateArg[];
