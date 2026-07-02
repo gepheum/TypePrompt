@@ -172,7 +172,7 @@ describe("parseTemplateFile – template attributes", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Invalid value for attribute 'name'" }],
+      errors: [{ message: /^Invalid value for attribute 'name'/ }],
     });
   });
 
@@ -205,7 +205,7 @@ describe("parseTemplateFile – template attributes", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Invalid value for attribute 'namespace'" }],
+      errors: [{ message: /^Invalid value for attribute 'namespace'/ }],
     });
   });
 
@@ -473,7 +473,7 @@ describe("parseTemplateFile – <args>", () => {
     const result = parseTemplateFile(sf(templateWithArgs('<arg name="Bad"/>')));
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Invalid value for attribute 'name'" }],
+      errors: [{ message: /^Invalid value for attribute 'name'/ }],
     });
   });
 
@@ -491,7 +491,7 @@ describe("parseTemplateFile – <args>", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Invalid value for attribute 'type'" }],
+      errors: [{ message: /^Invalid value for attribute 'type'/ }],
     });
   });
 

@@ -143,11 +143,14 @@ function parseTemplateElement(
 
   // 1. Validate <template> attributes.
   const attrs = checkXmlAttributes(templateNode, {
-    name: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-    namespace: zod
-      .string()
-      .regex(/^[A-Z][A-Za-z0-9]*$/)
-      .optional(),
+    name: {
+      schema: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+      expected: "an UpperCamelCase identifier",
+    },
+    namespace: {
+      schema: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/).optional(),
+      expected: "an UpperCamelCase identifier",
+    },
   });
   if (attrs.kind === "error") {
     context.pushErrors(attrs.errors);
@@ -425,12 +428,15 @@ function parseArgsElement(
       continue;
     }
     const argAttrs = checkXmlAttributes(child, {
-      name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
-      doc: zod.string().optional(),
-      type: zod
-        .string()
-        .regex(/^[A-Z][A-Za-z0-9]*$/)
-        .optional(),
+      name: {
+        schema: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        expected: "a lowerCamelCase identifier",
+      },
+      doc: { schema: zod.string().optional(), expected: "a string" },
+      type: {
+        schema: zod.string().regex(/^[A-Z][A-Za-z0-9]*$/).optional(),
+        expected: "an UpperCamelCase identifier",
+      },
     });
     if (argAttrs.kind === "error") {
       context.pushErrors(argAttrs.errors);
@@ -480,7 +486,7 @@ function parseBodyContent(
   context: SourceFileContext,
 ): RawBodyPiece[] | null {
   const attrs = checkXmlAttributes(bodyNode, {
-    variant: zod.string().optional(),
+    variant: { schema: zod.string().optional(), expected: "a string" },
   });
   if (attrs.kind === "error") {
     context.pushErrors(attrs.errors);
@@ -560,8 +566,14 @@ function parseBodyContent(
           continue;
         }
         const argAttrs = checkXmlAttributes(child, {
-          name: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
-          format: zod.enum(["json", "toon"]).optional(),
+          name: {
+            schema: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
+            expected: "a lowerCamelCase identifier",
+          },
+          format: {
+            schema: zod.enum(["json", "toon"]).optional(),
+            expected: "'json' or 'toon'",
+          },
         });
         if (argAttrs.kind === "error") {
           context.pushErrors(argAttrs.errors);
@@ -601,7 +613,10 @@ function parseBodyContent(
         });
       } else if (tag === "enclosed") {
         const encAttrs = checkXmlAttributes(child, {
-          tag: zod.string().regex(/^[A-Za-z_][\w.-]*$/),
+          tag: {
+            schema: zod.string().regex(/^[A-Za-z_][\w.-]*$/),
+            expected: "a valid XML tag name",
+          },
         });
         if (encAttrs.kind === "error") {
           context.pushErrors(encAttrs.errors);

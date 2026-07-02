@@ -8,10 +8,15 @@ export type XmlAttributeError = {
   readonly message: string;
 };
 
-type AttributeSchemas = Record<string, ZodType<string | undefined>>;
+type AttributeSchemaEntry = {
+  readonly schema: ZodType<string | undefined>;
+  readonly expected: string;
+};
+
+type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 
 type AttributeValues<T extends AttributeSchemas> = {
-  [K in keyof T]: T[K] extends ZodType<infer U>
+  [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
     ? undefined extends U
       ? { start: number; end: number; value: NonNullable<U> } | undefined
       : { start: number; end: number; value: U }
@@ -39,10 +44,10 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   }
 
   // Validate each expected attribute.
-  for (const [name, schema] of Object.entries(expectedAttributes)) {
+  for (const [name, entry] of Object.entries(expectedAttributes)) {
     const attr = element.attributes[name];
     const rawValue = attr?.decodedValue;
-    const parsed = schema.safeParse(rawValue);
+    const parsed = entry.schema.safeParse(rawValue);
     if (parsed.success) {
       if (attr !== undefined) {
         values[name] = {
@@ -61,7 +66,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       errors.push({
         start: attr!.value.start,
         end: attr!.value.end,
-        message: `Invalid value for attribute '${name}'`,
+        message: `Invalid value for attribute '${name}': expected ${entry.expected}`,
       });
     }
   }
