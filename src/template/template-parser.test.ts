@@ -889,7 +889,26 @@ describe("parseTemplateFile – variants", () => {
     const result = parseTemplateFile(sf(source));
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Duplicate variant 'A'" }],
+      errors: [
+        { message: "Name 'A' is duplicated" },
+        { message: "Name 'A' is duplicated" },
+      ],
+    });
+  });
+
+  it("reports error for case-conflicting variant names", () => {
+    const source = [
+      '<template name="Demo">',
+      "  <schema>interface Response { value: string; }</schema>",
+      '  <args><arg name="x"/></args>',
+      '  <body variant="A"><arg name="x"/></body>',
+      '  <body variant="a"><arg name="x"/></body>',
+      "</template>",
+    ].join("\n");
+    const result = parseTemplateFile(sf(source));
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "Name 'a' conflicts with 'A'" }],
     });
   });
 

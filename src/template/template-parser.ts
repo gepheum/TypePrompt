@@ -233,7 +233,7 @@ function parseTemplateElement(
     );
   }
   if (bodyElems.length > 1) {
-    const seenVariants = new Set<string>();
+    const variantNames: Array<{ name: string; start: number; end: number }> = [];
     for (const bodyElem of bodyElems) {
       if (bodyElem.attributes["variant"] === undefined) {
         context.pushError(
@@ -241,17 +241,17 @@ function parseTemplateElement(
           "Each <body> element must have a 'variant' attribute when using multiple bodies",
         );
       } else {
-        const v = bodyElem.attributes["variant"]!.decodedValue;
-        if (seenVariants.has(v)) {
-          context.pushError(
-            bodyElem.attributes["variant"]!.value,
-            `Duplicate variant '${v}'`,
-          );
-        } else {
-          seenVariants.add(v);
-        }
+        const attr = bodyElem.attributes["variant"]!;
+        variantNames.push({
+          name: attr.decodedValue,
+          start: attr.value.start,
+          end: attr.value.end,
+        });
       }
     }
+    context.pushErrors(
+      checkNoAmbiguity(variantNames, { exactMatchIsConflict: true }),
+    );
   }
 
   // 6. Parse <args>.
@@ -371,7 +371,9 @@ function parseTemplateElement(
   } else {
     const bodies: { [v: string]: readonly TemplatePiece[] } = {};
     for (const { variant, pieces } of parsedBodies) {
-      if (variant !== null) bodies[variant] = pieces;
+      if (variant !== null) {
+        bodies[variant] = pieces;
+      }
     }
     content = { kind: "variants", bodies };
   }
