@@ -1,31 +1,17 @@
-// @ts-nocheck
-// TODO: needs updating after Template type refactoring.
-import type {
-  Template,
-  TemplatePiece,
-  Templates,
-} from "./template/template-types.js";
-import type { Template as LegacyTemplate } from "./types.js";
+import { Config } from "../config/config-parser.js";
+import { Templates } from "../template/template-types.js";
 
-export function generateCode(templates: Templates): string;
-export function generateCode(templates: readonly LegacyTemplate[]): string;
-export function generateCode(
-  templates: Templates | readonly LegacyTemplate[],
-): string {
-  let normalizedTemplates: Templates;
-  if (
-    !Array.isArray(templates) &&
-    "kind" in templates &&
-    templates.kind === "success"
-  ) {
-    normalizedTemplates = templates;
-  } else {
-    normalizedTemplates = normalizeLegacyTemplates(
-      templates as readonly LegacyTemplate[],
-    );
+export function generateTypescriptCode(
+  templates: Templates,
+  config: Config,
+): readonly OutputFile[] {
+  const {generatedDotTsPath} = config;
+  if (!generatedDotTsPath) {
+    return [];
   }
-  return new TsCodeGenerator().write(normalizedTemplates);
+
 }
+
 
 class TsCodeGenerator {
   code = "";
@@ -215,74 +201,4 @@ class TsCodeGenerator {
       this.code += "}\n\n";
     }
   }
-}
-
-function normalizeLegacyTemplates(
-  templates: readonly LegacyTemplate[],
-): Templates {
-  const normalized: { [name: string]: Template } = {};
-
-  for (const legacyTemplate of templates) {
-    const templateName = legacyTemplate.name.text;
-    const variant = legacyTemplate.variantName?.text ?? "";
-    const key = variant
-      ? `${templateName}${capitalize(variant)}`
-      : templateName;
-
-    const content: TemplatePiece[] = [];
-    let pendingText = "";
-    const flushPendingText = (): void => {
-      if (pendingText === "") {
-        return;
-      }
-      content.push({ kind: "text", text: pendingText });
-      pendingText = "";
-    };
-
-    for (const piece of legacyTemplate.pieces) {
-      if (piece.kind === "text") {
-        pendingText += piece.text;
-        continue;
-      }
-      if (piece.kind === "expression") {
-        if (piece.hide) {
-          continue;
-        }
-        flushPendingText();
-        content.push({
-          kind: "arg",
-          name: piece.expression,
-          indent: undefined,
-        });
-        continue;
-      }
-      if (piece.kind === "schema") {
-        if (piece.text !== "") {
-          pendingText += piece.text;
-        }
-        continue;
-      }
-      pendingText += piece.text;
-    }
-
-    flushPendingText();
-    normalized[key] = {
-      name: key,
-      args: [...legacyTemplate.parameters],
-      content,
-      xmlContent: legacyTemplate.dedentedSourceCode,
-    };
-  }
-
-  return {
-    kind: "success",
-    templates: normalized,
-  };
-}
-
-function capitalize(text: string): string {
-  if (text.length === 0) {
-    return text;
-  }
-  return text[0]!.toUpperCase() + text.slice(1);
 }

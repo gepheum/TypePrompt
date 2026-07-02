@@ -1,14 +1,14 @@
 import { parse as parseToml } from "smol-toml";
 import { z } from "zod";
 
-export interface Config {
+export type Config = {
   /// Glob pattern to match .tp files to be processed.
   /// Defaults to `prompts/*.tp`.
-  input?: string;
+  readonly input?: string;
   /// Path to the generated Python file.
-  generatedDotPyPath?: string;
+  readonly generatedDotPyPath?: string;
   /// Path to the generated TypeScript file.
-  generatedDotTsPath?: string;
+  readonly generatedDotTsPath?: string;
 }
 
 export class ConfigParseError extends Error {
@@ -91,7 +91,15 @@ const RawConfigSchema = z
     }
   })
   .transform((raw): Config => {
-    const config: Config = {};
+    const config: {
+      /// Glob pattern to match .tp files to be processed.
+      /// Defaults to `prompts/*.tp`.
+      input?: string;
+      /// Path to the generated Python file.
+      generatedDotPyPath?: string;
+      /// Path to the generated TypeScript file.
+      generatedDotTsPath?: string;
+    } = {};
 
     if (raw.input !== undefined) {
       config.input = raw.input;
