@@ -1,6 +1,8 @@
 import type {
+  Interface,
   InterfaceDeclaration,
-  ResolvedType,
+  ResolvedType as SchemaResolvedType,
+  Schema,
   Type,
   TypeDeclaration,
 } from "../schema/schema-types.js";
@@ -8,7 +10,14 @@ import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import type {
+  ResolvedField,
+  ResolvedInterface,
+  ResolvedInterfaceUnion,
+  ResolvedSchema,
+  ResolvedStringUnion,
   ResolvedTemplate,
+  ResolvedType as TemplateResolvedType,
+  ResolvedTypeDeclaration,
   Template,
   TemplateFileParseResult,
   TemplateNamespace,
@@ -150,7 +159,15 @@ export function mergeParseResults(
         }
       }
     }
-    namespaceMap.get(ns)!.push({ template, meta });
+    namespaceMap.get(ns)!.push({
+      name: template.name,
+      namespace: template.namespace,
+      meta,
+      schema: resolveSchema(template.schema),
+      args: template.args,
+      content: template.content,
+      xmlContent: template.xmlContent,
+    });
   }
 
   const namespaces: TemplateNamespace[] = [];
@@ -159,6 +176,90 @@ export function mergeParseResults(
   }
 
   return { kind: "success", meta: topLevelMeta, namespaces };
+}
+
+// ---------------------------------------------------------------------------
+// Private – schema resolution
+// ---------------------------------------------------------------------------
+
+function resolveSchema(schema: Schema): ResolvedSchema {
+  const types: ResolvedTypeDeclaration[] = [];
+
+  for (const [name, decl] of Object.entries(schema.types)) {
+    if (decl.kind === "interface") {
+      types.push({
+        kind: "interface",
+        namePieces: [name],
+        doc: decl.doc,
+        fields: Object.values(decl.fields).map(
+          (field): ResolvedField => ({
+            name: field.name.text,
+            doc: field.doc,
+            type: convertFieldType(field.type, schema),
+            optional: field.optional,
+          }),
+        ),
+      } satisfies ResolvedInterface);
+    } else {
+      // Type alias — only handle union aliases; skip primitive aliases (e.g., Int = number).
+      const { valueType } = decl;
+      if (valueType.kind !== "union") continue;
+
+      const members = schema.unionToMembers.get(valueType)!;
+
+      if (members.kind === "strings") {
+        types.push({
+          kind: "string-union",
+          namePieces: [name],
+          doc: decl.doc,
+          values: [...members.values],
+        });
+      } else {
+        types.push({
+          kind: "interface-union",
+          namePieces: [name],
+          doc: decl.doc,
+          members: Object.entries(members.members).map(([kind, iface]) => ({
+            kind,
+            namePieces:
+              schema.typeToNamingHint.get(iface as Interface)!.namePieces,
+          })),
+          kindFieldName: members.kindFieldName,
+        });
+      }
+    }
+  }
+
+  return { types };
+}
+
+function convertFieldType(type: Type, schema: Schema): TemplateResolvedType {
+  switch (type.kind) {
+    case "type-name": {
+      const resolved = resolveType(type, schema.types);
+      if (resolved.kind === "primitive") {
+        return { kind: "primitive", primitive: resolved.primitive };
+      } else {
+        // Named reference — use the declared type name.
+        return { kind: "ref", namePieces: [type.name.text] };
+      }
+    }
+    case "array":
+      return {
+        kind: "array",
+        name: convertFieldType(type.elementType, schema),
+      };
+    case "interface":
+    case "union":
+      // Inline anonymous type — derive name from the traversal hint.
+      return {
+        kind: "ref",
+        namePieces: schema.typeToNamingHint.get(type)?.namePieces ?? [],
+      };
+    case "string-literal":
+      // string-literal — not a valid standalone field type.
+      return { kind: "primitive", primitive: "string" };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +320,7 @@ function validateTemplateMeta(
 
 function validateMetaValue(
   value: string,
-  resolved: ResolvedType,
+  resolved: SchemaResolvedType,
   fieldName: string,
   templateName: string,
   path: string,
@@ -252,7 +353,7 @@ function validateMetaValue(
             );
           }
           return null;
-        default: // "string"
+        case "string":
           return null;
       }
     }
@@ -275,7 +376,8 @@ function validateMetaValue(
         );
       }
       return null;
-    default:
+    case "array":
+    case "interface":
       return null;
   }
 }

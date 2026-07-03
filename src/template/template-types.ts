@@ -13,8 +13,13 @@ export type TemplateNamespace = {
 };
 
 export type ResolvedTemplate = {
-  readonly template: Template;
+  readonly name: string;
+  readonly namespace: string;
   readonly meta: { [property: string]: boolean | number | string };
+  readonly schema: ResolvedSchema;
+  readonly args: readonly TemplateArg[];
+  readonly content: TemplateContent;
+  readonly xmlContent: string;
 };
 
 export type Template = {
@@ -23,17 +28,19 @@ export type Template = {
   readonly metaNode: ElementNode | null;
   readonly schema: Schema;
   readonly args: readonly TemplateArg[];
-  readonly content:
-    | {
-        readonly kind: "no-variants";
-        readonly body: readonly TemplatePiece[];
-      }
-    | {
-        readonly kind: "variants";
-        readonly bodies: { [variant: string]: readonly TemplatePiece[] };
-      };
+  readonly content: TemplateContent;
   readonly xmlContent: string;
 };
+
+export type TemplateContent = 
+  | {
+      readonly kind: "no-variants";
+      readonly body: readonly TemplatePiece[];
+    }
+  | {
+      readonly kind: "variants";
+      readonly bodies: { [variant: string]: readonly TemplatePiece[] };
+    };
 
 export type TemplateArg = {
   readonly name: string;
@@ -91,3 +98,72 @@ export type SourceFile = {
   readonly path: string;
   readonly content: string;
 };
+
+// =============================================================================
+// RESOLVED SCHEMA
+// =============================================================================
+
+export type ResolvedSchema = {
+  readonly types: readonly ResolvedTypeDeclaration[];
+};
+
+export type ResolvedTypeDeclaration =
+  | ResolvedInterface
+  | ResolvedStringUnion
+  | ResolvedInterfaceUnion;
+
+export type ResolvedInterface = {
+  readonly kind: "interface";
+  /**
+   * Guaranteed to be non-empty.
+   * The first element is always an uppercased type name used in a type declaration.
+   * The remaining elements are lowercased field names.
+   */
+  readonly namePieces: readonly string[];
+  readonly doc: string;
+  readonly fields: readonly ResolvedField[];
+};
+
+export type ResolvedStringUnion = {
+  readonly kind: "string-union";
+  /**
+   * Guaranteed to be non-empty.
+   * The first element is always an uppercased type name used in a type declaration.
+   * The remaining elements are lowercased field names.
+   */
+  readonly namePieces: readonly string[];
+  readonly doc: string;
+  readonly values: readonly string[];
+};
+
+export type ResolvedInterfaceUnion = {
+  readonly kind: "interface-union";
+  /**
+   * Guaranteed to be non-empty.
+   * The first element is always an uppercased type name used in a type declaration.
+   * The remaining elements are lowercased field names.
+   */
+  readonly namePieces: readonly string[];
+  readonly doc: string;
+  readonly members: ReadonlyArray<{
+    readonly kind: string;
+    readonly namePieces: readonly string[];
+  }>;
+  readonly kindFieldName: string;
+};
+
+export type ResolvedField = {
+  readonly name: string;
+  readonly doc: string;
+  readonly type: ResolvedType;
+  readonly optional: boolean;
+}
+
+export type ResolvedType =
+  | { readonly kind: "ref"; readonly namePieces: readonly string[] }
+  | { readonly kind: "primitive"; readonly primitive:
+    | "string"
+  | "number"
+  | "boolean"
+  | "int" }
+  | { readonly kind: "array"; readonly name: ResolvedType };

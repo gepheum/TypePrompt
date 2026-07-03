@@ -370,13 +370,13 @@ describe("mergeParseResults – success result structure", () => {
     const result = mergeOk(a, b);
 
     const fooNs = result.namespaces.find((n) => n.namespace === "Foo");
-    expect(fooNs!.templates.map((t) => t.template.name).sort()).toMatch([
+    expect(fooNs!.templates.map((t) => t.name).sort()).toMatch([
       "Alpha",
       "Gamma",
     ]);
 
     const defaultNs = result.namespaces.find((n) => n.namespace === "Default");
-    expect(defaultNs!.templates.map((t) => t.template.name)).toMatch(["Beta"]);
+    expect(defaultNs!.templates.map((t) => t.name)).toMatch(["Beta"]);
   });
 
   it("coerces meta attribute values to their declared types", () => {
