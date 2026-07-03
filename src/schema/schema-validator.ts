@@ -1,4 +1,4 @@
-import { checkNoAmbiguity } from "../casing.js";
+import { checkNoAmbiguity } from "../util/casing.js";
 import type {
   InterfaceDeclaration,
   SchemaField,

@@ -6,16 +6,17 @@ export function generateTypescriptCode(
   templates: Templates,
   config: Config,
 ): readonly OutputFile[] {
-  const {generatedDotTsPath} = config;
+  const { generatedDotTsPath } = config;
   if (!generatedDotTsPath) {
     return [];
   }
-  return [{
-    path: generatedDotTsPath,
-    content: new TypescriptCodeGenerator().write(templates),
-  }];
+  return [
+    {
+      path: generatedDotTsPath,
+      content: new TypescriptCodeGenerator().write(templates),
+    },
+  ];
 }
-
 
 class TypescriptCodeGenerator {
   code = "";

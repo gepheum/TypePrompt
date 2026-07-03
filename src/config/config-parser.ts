@@ -9,7 +9,7 @@ export type Config = {
   readonly generatedDotPyPath?: string;
   /// Path to the generated TypeScript file.
   readonly generatedDotTsPath?: string;
-}
+};
 
 export class ConfigParseError extends Error {
   readonly messages: readonly string[];

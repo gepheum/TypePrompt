@@ -69,17 +69,30 @@ function mergeErr(
 
 describe("mergeParseResults – namespace ambiguity", () => {
   it("succeeds with distinct namespaces across files", () => {
-    const a = parseFile("a.prompts", templateSource("Alpha", { namespace: "Foo" }));
-    const b = parseFile("b.prompts", templateSource("Beta", { namespace: "Bar" }));
+    const a = parseFile(
+      "a.prompts",
+      templateSource("Alpha", { namespace: "Foo" }),
+    );
+    const b = parseFile(
+      "b.prompts",
+      templateSource("Beta", { namespace: "Bar" }),
+    );
     const result = mergeOk(a, b);
-    expect(
-      result.namespaces.map((n) => n.namespace).sort(),
-    ).toMatch(["Bar", "Foo"]);
+    expect(result.namespaces.map((n) => n.namespace).sort()).toMatch([
+      "Bar",
+      "Foo",
+    ]);
   });
 
   it("succeeds when the same namespace appears in multiple files", () => {
-    const a = parseFile("a.prompts", templateSource("Alpha", { namespace: "Foo" }));
-    const b = parseFile("b.prompts", templateSource("Beta", { namespace: "Foo" }));
+    const a = parseFile(
+      "a.prompts",
+      templateSource("Alpha", { namespace: "Foo" }),
+    );
+    const b = parseFile(
+      "b.prompts",
+      templateSource("Beta", { namespace: "Foo" }),
+    );
     const result = mergeOk(a, b);
     expect(result.namespaces).toMatch([{ namespace: "Foo" }]);
   });
@@ -92,8 +105,14 @@ describe("mergeParseResults – namespace ambiguity", () => {
   });
 
   it("reports an error for a case-insensitive namespace conflict", () => {
-    const a = parseFile("a.prompts", templateSource("Alpha", { namespace: "Foo" }));
-    const b = parseFile("b.prompts", templateSource("Beta", { namespace: "FoO" }));
+    const a = parseFile(
+      "a.prompts",
+      templateSource("Alpha", { namespace: "Foo" }),
+    );
+    const b = parseFile(
+      "b.prompts",
+      templateSource("Beta", { namespace: "FoO" }),
+    );
     const errors = mergeErr(a, b);
     expect(errors).toMatch([{ message: "Name 'FoO' conflicts with 'Foo'" }]);
   });
@@ -114,8 +133,14 @@ describe("mergeParseResults – template name ambiguity", () => {
   });
 
   it("succeeds when the same name is used in different namespaces", () => {
-    const a = parseFile("a.prompts", templateSource("Alpha", { namespace: "Foo" }));
-    const b = parseFile("b.prompts", templateSource("Alpha", { namespace: "Bar" }));
+    const a = parseFile(
+      "a.prompts",
+      templateSource("Alpha", { namespace: "Foo" }),
+    );
+    const b = parseFile(
+      "b.prompts",
+      templateSource("Alpha", { namespace: "Bar" }),
+    );
     mergeOk(a, b);
   });
 
@@ -133,7 +158,9 @@ describe("mergeParseResults – template name ambiguity", () => {
     const a = parseFile("a.prompts", templateSource("Alpha"));
     const b = parseFile("b.prompts", templateSource("ALPHA"));
     const errors = mergeErr(a, b);
-    expect(errors).toMatch([{ message: "Name 'ALPHA' conflicts with 'Alpha'" }]);
+    expect(errors).toMatch([
+      { message: "Name 'ALPHA' conflicts with 'Alpha'" },
+    ]);
   });
 });
 
@@ -302,8 +329,7 @@ describe("mergeParseResults – meta attribute validation", () => {
     const errors = mergeErr(a);
     expect(errors).toMatch([
       {
-        message:
-          "Template 'Alpha': meta attribute 'rank' must be an integer",
+        message: "Template 'Alpha': meta attribute 'rank' must be an integer",
       },
     ]);
   });
@@ -344,9 +370,10 @@ describe("mergeParseResults – success result structure", () => {
     const result = mergeOk(a, b);
 
     const fooNs = result.namespaces.find((n) => n.namespace === "Foo");
-    expect(
-      fooNs!.templates.map((t) => t.template.name).sort(),
-    ).toMatch(["Alpha", "Gamma"]);
+    expect(fooNs!.templates.map((t) => t.template.name).sort()).toMatch([
+      "Alpha",
+      "Gamma",
+    ]);
 
     const defaultNs = result.namespaces.find((n) => n.namespace === "Default");
     expect(defaultNs!.templates.map((t) => t.template.name)).toMatch(["Beta"]);

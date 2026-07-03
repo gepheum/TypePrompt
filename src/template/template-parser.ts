@@ -1,9 +1,9 @@
 import * as zod from "zod";
-import { checkNoAmbiguity } from "../casing.js";
 import { parseExample } from "../example/example-parser.js";
 import { validateExample } from "../example/example-validator.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
+import { checkNoAmbiguity } from "../util/casing.js";
 import {
   joinTextNodes,
   textNodeDecodedOffsetToSourceOffset,

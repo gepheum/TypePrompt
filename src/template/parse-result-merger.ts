@@ -1,4 +1,3 @@
-import { checkNoAmbiguity } from "../casing.js";
 import type {
   InterfaceDeclaration,
   ResolvedType,
@@ -7,6 +6,7 @@ import type {
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
+import { checkNoAmbiguity } from "../util/casing.js";
 import type {
   ResolvedTemplate,
   Template,
