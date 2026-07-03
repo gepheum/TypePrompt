@@ -294,9 +294,10 @@ function coerceMetaValue(
         return Number(value);
       case "int":
         return parseInt(value, 10);
-      default: // "string"
+      case "string":
         return value;
     }
+  } else {
+    return value; // union of string literals
   }
-  return value; // union of string literals
 }
