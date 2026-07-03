@@ -225,6 +225,10 @@ class TypescriptCodeGenerator {
         this.code += `  export namespace ${template.name} {\n`;
         this.writeTemplateVariantAndArgs(template);
         this.writeSchema(template.schema, "    ");
+        const responseAlias = template.schema.typeAliases["Response"];
+        if (responseAlias !== undefined && responseAlias.kind !== "ref") {
+          this.code += `    export type Response = ${resolvedTypeToTs(responseAlias)};\n\n`;
+        }
         this.code += `  }\n\n`;
       }
       this.code += `}\n\n`;

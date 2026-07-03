@@ -45,12 +45,26 @@ export namespace DefaultNamespace {
       readonly y: number;
     };
 
+    /** The input. */
     export type Foo = {
       /** The message to be displayed */
       readonly message: string;
       readonly foo: number;
       readonly bar: number;
     };
+
+    export type Response = Foo[];
+  }
+}
+
+export namespace TaxiNamespace {
+  export namespace Fo {
+    export type Args = {
+      /** Doc */
+      readonly input: number[];
+    };
+
+    export type Response = string[];
   }
 }
 

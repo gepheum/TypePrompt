@@ -233,9 +233,8 @@ function resolveSchema(schema: Schema): ResolvedSchema {
 
   const typeAliases: { [name: string]: TemplateResolvedType } = {};
   for (const [name, decl] of Object.entries(schema.types)) {
-    const resolved = resolveType(decl, schema.types);
-    if (resolved.kind === "primitive") {
-      typeAliases[name] = { kind: "primitive", primitive: resolved.primitive };
+    if (decl.kind === "type") {
+      typeAliases[name] = convertType(decl.valueType, schema);
     } else {
       typeAliases[name] = { kind: "ref", namePieces: [name] };
     }

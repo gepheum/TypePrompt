@@ -34,6 +34,7 @@
       y: Int;
     }
 
+    /** The input. */
     interface Foo {
       /** The message to be displayed */
       message: string;
@@ -108,5 +109,23 @@
 
     ## Examples:
 
+  </body>
+</template>
+
+<template name="Fo" namespace="Taxi">
+  <schema>
+    type Foo = Int[];
+    type Int = number;
+
+    /** The response. */
+    type Response = string[];
+  </schema>
+
+  <args>
+    <arg name="input" doc="Doc" type="Foo"/>
+  </args>
+
+  <body>
+    Hi <arg name="input" format="toon"/>.
   </body>
 </template>
