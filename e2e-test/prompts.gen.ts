@@ -1,5 +1,19 @@
 // This file is auto-generated. Do not edit it directly.
 
+export namespace Meta {
+  export type Meta = {
+    temperature?: number;
+    foobar?: Meta_Foobar;
+  };
+
+  export type Meta_Foobar = | "foo" | "bar";
+}
+
+export type PromptSpec<Args, Response> = {
+  readonly make: (args: Args) => Response;
+  readonly responseType: Response;
+};
+
 export class PromptMaker {
   private readonly jsonSpec: JsonSpec;
 

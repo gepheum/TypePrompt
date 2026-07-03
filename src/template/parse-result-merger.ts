@@ -1,5 +1,4 @@
 import type {
-  Interface,
   InterfaceDeclaration,
   Schema,
   ResolvedType as SchemaResolvedType,
@@ -188,47 +187,47 @@ function resolveSchema(schema: Schema): ResolvedSchema {
   const types: ResolvedTypeDeclaration[] = [];
 
   for (const [name, decl] of Object.entries(schema.types)) {
-    if (decl.kind === "interface") {
+    if (decl.kind !== "interface") continue;
+    types.push({
+      kind: "interface",
+      namePieces: [name],
+      doc: decl.doc,
+      fields: Object.values(decl.fields).map(
+        (field): ResolvedField => ({
+          name: field.name.text,
+          doc: field.doc,
+          type: convertType(field.type, schema),
+          optional: field.optional,
+        }),
+      ),
+    } satisfies ResolvedInterface);
+  }
+
+  // All unions — both named type aliases and anonymous inline unions — are in
+  // typeToNamingHint, so one loop covers both cases.
+  for (const [type, hint] of schema.typeToNamingHint.entries()) {
+    if (type.kind !== "union") continue;
+    const members = schema.unionToMembers.get(type);
+    if (!members) continue;
+
+    if (members.kind === "strings") {
       types.push({
-        kind: "interface",
-        namePieces: [name],
-        doc: decl.doc,
-        fields: Object.values(decl.fields).map(
-          (field): ResolvedField => ({
-            name: field.name.text,
-            doc: field.doc,
-            type: convertType(field.type, schema),
-            optional: field.optional,
-          }),
-        ),
-      } satisfies ResolvedInterface);
+        kind: "string-union",
+        namePieces: hint.namePieces,
+        doc: hint.doc ?? "",
+        values: [...members.values],
+      });
     } else {
-      // Type alias — only handle union aliases; skip primitive aliases (e.g., Int = number).
-      const { valueType } = decl;
-      if (valueType.kind !== "union") continue;
-
-      const members = schema.unionToMembers.get(valueType)!;
-
-      if (members.kind === "strings") {
-        types.push({
-          kind: "string-union",
-          namePieces: [name],
-          doc: decl.doc,
-          values: [...members.values],
-        });
-      } else {
-        types.push({
-          kind: "interface-union",
-          namePieces: [name],
-          doc: decl.doc,
-          members: Object.entries(members.members).map(([kind, iface]) => ({
-            kind,
-            namePieces: schema.typeToNamingHint.get(iface as Interface)!
-              .namePieces,
-          })),
-          kindFieldName: members.kindFieldName,
-        });
-      }
+      types.push({
+        kind: "interface-union",
+        namePieces: hint.namePieces,
+        doc: hint.doc ?? "",
+        members: Object.entries(members.members).map(([kind, iface]) => ({
+          kind,
+          namePieces: schema.typeToNamingHint.get(iface)!.namePieces,
+        })),
+        kindFieldName: members.kindFieldName,
+      });
     }
   }
 

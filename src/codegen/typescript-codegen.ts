@@ -1,5 +1,5 @@
 import { Config } from "../config/config-parser.js";
-import { Templates } from "../template/template-types.js";
+import type { ResolvedSchema, ResolvedType, Templates } from "../template/template-types.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -23,6 +23,11 @@ class TypescriptCodeGenerator {
 
   write(templates: Templates): string {
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
+    this.code += "export namespace Meta {\n";
+    if (templates.meta) {
+      this.writeSchema(templates.meta, "  ");
+    }
+    this.code += "}\n\n";
     this.writePromptMakerClass(templates);
     this.writeJsonSpecType();
     this.writeFreezeJsonSpecFunction();
@@ -170,6 +175,11 @@ class TypescriptCodeGenerator {
   }
 
   private writePromptMakerClass(templates: Templates): void {
+    this.code += "export type PromptSpec<Args, Response> = {\n";
+    this.code += "  readonly make: (args: Args) => Response;\n";
+    this.code += "  readonly responseType: Response;\n";
+    this.code += "};\n\n";
+
     this.code += "export class PromptMaker {\n";
     this.code += "  private readonly jsonSpec: JsonSpec;\n\n";
     this.code += "  // Call with no argument.\n";
@@ -205,5 +215,44 @@ class TypescriptCodeGenerator {
     //   }
     //   this.code += "}\n\n";
     // }
+  }
+
+  private writeSchema(schema: ResolvedSchema, indent: "  " | "    "): void {
+    for (const type of schema.types) {
+      const name = toTypeName(type.namePieces);
+      if (type.kind === "interface") {
+        this.code += `${indent}export type ${name} = {\n`;
+        for (const field of type.fields) {
+          const optional = field.optional ? "?" : "";
+          this.code += `${indent}  ${field.name}${optional}: ${resolvedTypeToTs(field.type)};\n`;
+        }
+        this.code += `${indent}};\n\n`;
+      } else if (type.kind === "string-union") {
+        const members = type.values.map((v) => `| ${JSON.stringify(v)}`).join(" ");
+        this.code += `${indent}export type ${name} = ${members};\n\n`;
+      } else {
+        const members = type.members
+          .map((m) => `| ${toTypeName(m.namePieces)}`)
+          .join(" ");
+        this.code += `${indent}export type ${name} = ${members};\n\n`;
+      }
+    }
+  }
+}
+
+function toTypeName(namePieces: readonly string[]): string {
+  return namePieces
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join("_");
+}
+
+function resolvedTypeToTs(type: ResolvedType): string {
+  switch (type.kind) {
+    case "primitive":
+      return type.primitive === "int" ? "number" : type.primitive;
+    case "ref":
+      return toTypeName(type.namePieces);
+    case "array":
+      return `${resolvedTypeToTs(type.elementType)}[]`;
   }
 }
