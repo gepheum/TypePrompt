@@ -166,4 +166,4 @@ export type ResolvedType =
       readonly kind: "primitive";
       readonly primitive: "string" | "number" | "boolean" | "int";
     }
-  | { readonly kind: "array"; readonly element: ResolvedType };
+  | { readonly kind: "array"; readonly elementType: ResolvedType };

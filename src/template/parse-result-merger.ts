@@ -255,7 +255,7 @@ function convertType(type: Type, schema: Schema): TemplateResolvedType {
     case "array":
       return {
         kind: "array",
-        element: convertType(type.elementType, schema),
+        elementType: convertType(type.elementType, schema),
       };
     case "interface":
     case "union":
