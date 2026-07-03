@@ -1,2 +1,0 @@
-- Verify that an arg's name cannot be "variant"
-- TODO: force specify schema on each arg

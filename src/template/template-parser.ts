@@ -448,6 +448,13 @@ function parseArgsElement(
       context.pushErrors(argAttrs.errors);
       continue;
     }
+    if (argAttrs.attributes.name.value.toLowerCase() === "variant") {
+      context.pushError(
+        argAttrs.attributes.name,
+        `Arg name 'variant' is reserved`,
+      );
+      continue;
+    }
     declarations.push({
       name: argAttrs.attributes.name.value,
       nameSpan: argAttrs.attributes.name,
