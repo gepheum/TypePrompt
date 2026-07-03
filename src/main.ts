@@ -1,4 +1,4 @@
-// #!/usr/bin/env node
+#!/usr/bin/env node
 
 import {
   existsSync,
@@ -8,14 +8,15 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
-import { ConfigParseError, parseConfigToml } from "./config-parser.js";
-import { parseTemplateFile } from "./parser.js";
+import { CODE_GENERATORS } from "./codegen/codegens.js";
+import { ConfigParseError, parseConfigToml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
-import { generateCode } from "./ts-code-generator.js";
-import type { Error as ParseError, Template } from "./types.js";
-import { validateTemplateFile } from "./validator.js";
+import { mergeParseResults } from "./template/parse-result-merger.js";
+import { parseTemplateFile } from "./template/template-parser.js";
+import type { TemplateParseError } from "./template/template-types.js";
 
 type Command =
   | { readonly kind: "help" }
@@ -23,7 +24,7 @@ type Command =
   | { readonly kind: "gen"; readonly projectPath?: string }
   | { readonly kind: "error"; readonly message: string };
 
-function main(): void {
+async function main(): Promise<void> {
   const command = parseCommandLine(process.argv.slice(2));
 
   if (command.kind === "error") {
@@ -46,7 +47,7 @@ function main(): void {
     }
 
     const _: "gen" = command.kind;
-    runGeneration(command.projectPath);
+    await runGeneration(command.projectPath);
   } catch (error: unknown) {
     if (error instanceof ConfigParseError) {
       for (const message of error.messages) {
@@ -120,7 +121,7 @@ function renderHelp(): void {
   console.log("  npx typeprompt gen [-p PATH]   Generate TypeScript code");
 }
 
-function runGeneration(projectPath?: string): void {
+async function runGeneration(projectPath?: string): Promise<void> {
   const configPath = resolveConfigPath(projectPath);
   const configDir = dirname(configPath);
 
@@ -133,54 +134,60 @@ function runGeneration(projectPath?: string): void {
     path: configPath,
   });
 
-  if (!config.generatedDotTsPath) {
-    throw new Error(
-      `${configPath}: missing required field 'generatedDotTsPath' (TypeScript is the only supported target)`,
-    );
-  }
+  const inputPattern = config.input ?? "prompts/*.xml";
+  const templateFiles = expandGlob(inputPattern, configDir);
 
-  const inputDir = resolve(configDir, config.input ?? "prompts");
-  if (!existsSync(inputDir) || !statSync(inputDir).isDirectory()) {
-    throw new Error(`Input directory does not exist: ${inputDir}`);
-  }
-
-  const templateFiles = listTemplateFiles(inputDir);
   if (templateFiles.length === 0) {
-    throw new Error(`No .tp files found in ${inputDir}`);
+    throw new Error(`No template files found matching '${inputPattern}'`);
   }
 
-  const templates: Template[] = [];
-  const parserErrors: string[] = [];
+  const parseResults = [];
+  const parseErrors: TemplateParseError[] = [];
 
-  for (const filePath of templateFiles) {
-    const parseResult = parseTemplateFile(readFileSync(filePath, "utf8"));
-    templates.push(...parseResult.value.templates);
-
-    for (const error of parseResult.errors) {
-      parserErrors.push(formatParserError(filePath, error));
+  const parsed = await Promise.all(
+    templateFiles.map(async (filePath) => ({
+      filePath,
+      result: parseTemplateFile({
+        path: filePath,
+        content: await readFile(filePath, "utf8"),
+      }),
+    })),
+  );
+  for (const { result } of parsed) {
+    if (result.kind === "error") {
+      parseErrors.push(...result.errors);
+    } else {
+      parseResults.push(result);
     }
   }
 
-  const validatorErrors = validateTemplateFile({ templates }).map(
-    (error) => `validator: ${error.message}`,
-  );
-
-  for (const error of parserErrors) {
-    console.error(error);
-  }
-  for (const error of validatorErrors) {
-    console.error(error);
-  }
-
-  if (parserErrors.length > 0 || validatorErrors.length > 0) {
+  if (parseErrors.length > 0) {
+    for (const error of parseErrors) {
+      console.error(formatError(error));
+    }
     process.exitCode = 1;
     return;
   }
 
-  const generatedPath = resolve(configDir, config.generatedDotTsPath);
-  mkdirSync(dirname(generatedPath), { recursive: true });
-  writeFileSync(generatedPath, generateCode(templates), "utf8");
-  console.log(`Generated TypeScript written to ${generatedPath}`);
+  const merged = mergeParseResults(parseResults);
+  if (merged.kind === "error") {
+    for (const error of merged.errors) {
+      console.error(formatError(error));
+    }
+    process.exitCode = 1;
+    return;
+  }
+
+  for (const generator of CODE_GENERATORS) {
+    const outputs = generator(merged, config);
+    for (const output of outputs) {
+      const outputPath = resolve(configDir, output.path);
+      mkdirSync(dirname(outputPath), { recursive: true });
+      writeFileSync(outputPath, output.content, "utf8");
+      const rel = relative(process.cwd(), outputPath) || outputPath;
+      console.log(`Generated ${rel}`);
+    }
+  }
 }
 
 function resolveConfigPath(projectPath?: string): string {
@@ -198,32 +205,92 @@ function resolveConfigPath(projectPath?: string): string {
     : join(resolved, "typeprompt.toml");
 }
 
-function listTemplateFiles(inputDir: string): string[] {
-  const files: string[] = [];
+function formatError(error: TemplateParseError): string {
+  const rel = relative(process.cwd(), error.path) || error.path;
+  const { lineNumber, columnNumber } = error.startPosition.position;
+  return `${rel}:${lineNumber}:${columnNumber}: ${error.message}`;
+}
 
-  const visit = (dirPath: string): void => {
-    for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-      const fullPath = join(dirPath, entry.name);
+/**
+ * Expands a glob pattern relative to `baseDir`.
+ * Supports `*` (any chars within a segment) and `**` (any number of directory
+ * levels). If the pattern contains no glob characters, the resolved path is
+ * returned directly; if it is a directory, all `.xml` files under it are
+ * returned recursively.
+ */
+function expandGlob(pattern: string, baseDir: string): string[] {
+  const resolved = resolve(baseDir, pattern);
+  if (!pattern.includes("*") && !pattern.includes("?")) {
+    if (existsSync(resolved) && statSync(resolved).isDirectory()) {
+      return collectXmlFiles(resolved);
+    }
+    return existsSync(resolved) ? [resolved] : [];
+  }
+
+  const segments = pattern.split("/");
+  const results: string[] = [];
+  walkGlob(baseDir, segments, 0, results);
+  results.sort((a, b) => a.localeCompare(b, "en-US"));
+  return results;
+}
+
+function walkGlob(
+  dir: string,
+  segments: readonly string[],
+  segIdx: number,
+  results: string[],
+): void {
+  if (!existsSync(dir)) return;
+  const seg = segments[segIdx]!;
+  const isLast = segIdx === segments.length - 1;
+
+  if (seg === "**") {
+    // Zero-directory match: try next segment in this directory.
+    if (!isLast) {
+      walkGlob(dir, segments, segIdx + 1, results);
+    }
+    // Recurse into every subdirectory, keeping the `**` in play.
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walkGlob(join(dir, entry.name), segments, segIdx, results);
+      }
+    }
+  } else {
+    const regex = globSegmentToRegex(seg);
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!regex.test(entry.name)) continue;
+      if (isLast && entry.isFile()) {
+        results.push(join(dir, entry.name));
+      } else if (!isLast && entry.isDirectory()) {
+        walkGlob(join(dir, entry.name), segments, segIdx + 1, results);
+      }
+    }
+  }
+}
+
+function globSegmentToRegex(segment: string): RegExp {
+  const escaped = segment
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\?/g, "[^/]");
+  return new RegExp(`^${escaped}$`);
+}
+
+function collectXmlFiles(dir: string): string[] {
+  const results: string[] = [];
+  const visit = (d: string): void => {
+    for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const fullPath = join(d, entry.name);
       if (entry.isDirectory()) {
         visit(fullPath);
-        continue;
-      }
-      if (entry.isFile() && entry.name.endsWith(".tp")) {
-        files.push(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith(".xml")) {
+        results.push(fullPath);
       }
     }
   };
-
-  visit(inputDir);
-  files.sort((a, b) => a.localeCompare(b, "en-US"));
-  return files;
-}
-
-function formatParserError(filePath: string, error: ParseError): string {
-  const line = error.codeSlice.line.lineNumber + 1;
-  const reason = error.message ?? `expected ${error.expected}`;
-  const rel = relative(process.cwd(), filePath) || filePath;
-  return `${rel}:${line}: ${reason}`;
+  visit(dir);
+  results.sort((a, b) => a.localeCompare(b, "en-US"));
+  return results;
 }
 
 main();
