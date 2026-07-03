@@ -1,8 +1,8 @@
 import type {
   Interface,
   InterfaceDeclaration,
-  ResolvedType as SchemaResolvedType,
   Schema,
+  ResolvedType as SchemaResolvedType,
   Type,
   TypeDeclaration,
 } from "../schema/schema-types.js";
@@ -12,17 +12,15 @@ import { checkNoAmbiguity } from "../util/casing.js";
 import type {
   ResolvedField,
   ResolvedInterface,
-  ResolvedInterfaceUnion,
   ResolvedSchema,
-  ResolvedStringUnion,
   ResolvedTemplate,
-  ResolvedType as TemplateResolvedType,
   ResolvedTypeDeclaration,
   Template,
   TemplateFileParseResult,
   TemplateNamespace,
   TemplateParseError,
   TemplateParseErrors,
+  ResolvedType as TemplateResolvedType,
   Templates,
 } from "./template-types.js";
 
@@ -195,7 +193,7 @@ function resolveSchema(schema: Schema): ResolvedSchema {
           (field): ResolvedField => ({
             name: field.name.text,
             doc: field.doc,
-            type: convertFieldType(field.type, schema),
+            type: convertType(field.type, schema),
             optional: field.optional,
           }),
         ),
@@ -221,8 +219,8 @@ function resolveSchema(schema: Schema): ResolvedSchema {
           doc: decl.doc,
           members: Object.entries(members.members).map(([kind, iface]) => ({
             kind,
-            namePieces:
-              schema.typeToNamingHint.get(iface as Interface)!.namePieces,
+            namePieces: schema.typeToNamingHint.get(iface as Interface)!
+              .namePieces,
           })),
           kindFieldName: members.kindFieldName,
         });
@@ -230,10 +228,20 @@ function resolveSchema(schema: Schema): ResolvedSchema {
     }
   }
 
-  return { types };
+  const typeAliases: { [name: string]: TemplateResolvedType } = {};
+  for (const [name, decl] of Object.entries(schema.types)) {
+    const resolved = resolveType(decl, schema.types);
+    if (resolved.kind === "primitive") {
+      typeAliases[name] = { kind: "primitive", primitive: resolved.primitive };
+    } else {
+      typeAliases[name] = { kind: "ref", namePieces: [name] };
+    }
+  }
+
+  return { types, typeAliases };
 }
 
-function convertFieldType(type: Type, schema: Schema): TemplateResolvedType {
+function convertType(type: Type, schema: Schema): TemplateResolvedType {
   switch (type.kind) {
     case "type-name": {
       const resolved = resolveType(type, schema.types);
@@ -247,7 +255,7 @@ function convertFieldType(type: Type, schema: Schema): TemplateResolvedType {
     case "array":
       return {
         kind: "array",
-        name: convertFieldType(type.elementType, schema),
+        element: convertType(type.elementType, schema),
       };
     case "interface":
     case "union":
@@ -328,34 +336,29 @@ function validateMetaValue(
 ): TemplateParseError | null {
   switch (resolved.kind) {
     case "primitive": {
-      switch (resolved.primitive) {
-        case "boolean":
-          if (value !== "true" && value !== "false") {
-            return makeFileError(
-              path,
-              `Template '${templateName}': meta attribute '${fieldName}' must be 'true' or 'false'`,
-            );
-          }
-          return null;
-        case "number":
-          if (value.trim() === "" || isNaN(Number(value))) {
-            return makeFileError(
-              path,
-              `Template '${templateName}': meta attribute '${fieldName}' must be a number`,
-            );
-          }
-          return null;
-        case "int":
-          if (!/^-?\d+$/.test(value.trim())) {
-            return makeFileError(
-              path,
-              `Template '${templateName}': meta attribute '${fieldName}' must be an integer`,
-            );
-          }
-          return null;
-        case "string":
-          return null;
+      if (resolved.primitive === "boolean") {
+        if (value !== "true" && value !== "false") {
+          return makeFileError(
+            path,
+            `Template '${templateName}': meta attribute '${fieldName}' must be 'true' or 'false'`,
+          );
+        }
+      } else if (resolved.primitive === "number") {
+        if (value.trim() === "" || isNaN(Number(value))) {
+          return makeFileError(
+            path,
+            `Template '${templateName}': meta attribute '${fieldName}' must be a number`,
+          );
+        }
+      } else if (resolved.primitive === "int") {
+        if (!/^-?\d+$/.test(value.trim())) {
+          return makeFileError(
+            path,
+            `Template '${templateName}': meta attribute '${fieldName}' must be an integer`,
+          );
+        }
       }
+      return null;
     }
     case "union": {
       const members = getUnionMembers(resolved, types);

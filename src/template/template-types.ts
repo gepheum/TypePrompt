@@ -32,7 +32,7 @@ export type Template = {
   readonly xmlContent: string;
 };
 
-export type TemplateContent = 
+export type TemplateContent =
   | {
       readonly kind: "no-variants";
       readonly body: readonly TemplatePiece[];
@@ -105,6 +105,7 @@ export type SourceFile = {
 
 export type ResolvedSchema = {
   readonly types: readonly ResolvedTypeDeclaration[];
+  readonly typeAliases: { readonly [name: string]: ResolvedType };
 };
 
 export type ResolvedTypeDeclaration =
@@ -157,13 +158,12 @@ export type ResolvedField = {
   readonly doc: string;
   readonly type: ResolvedType;
   readonly optional: boolean;
-}
+};
 
 export type ResolvedType =
   | { readonly kind: "ref"; readonly namePieces: readonly string[] }
-  | { readonly kind: "primitive"; readonly primitive:
-    | "string"
-  | "number"
-  | "boolean"
-  | "int" }
-  | { readonly kind: "array"; readonly name: ResolvedType };
+  | {
+      readonly kind: "primitive";
+      readonly primitive: "string" | "number" | "boolean" | "int";
+    }
+  | { readonly kind: "array"; readonly element: ResolvedType };
