@@ -52,7 +52,7 @@
 
   <body variant="Aa">
     Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar" format="zoo"/>.
+    How are you? <arg name="bar" format="json"/>.
 
     Fields:
     - <e>foo</e>: The name of the person to greet
