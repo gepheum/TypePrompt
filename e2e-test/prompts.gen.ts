@@ -70,6 +70,16 @@ export namespace TaxiNamespace {
   }
 }
 
+export type PromptMaker2 = {
+  readonly default: {
+    readonly john: PromptSpec<DefaultNamespace.John.Args, DefaultNamespace.John.Response>;
+    readonly helloWorld: PromptSpec<DefaultNamespace.HelloWorld.Args, DefaultNamespace.HelloWorld.Response>;
+  };
+  readonly taxi: {
+    readonly fo: PromptSpec<TaxiNamespace.Fo.Args, TaxiNamespace.Fo.Response>;
+  };
+};
+
 export type PromptSpec<Args, Response> = {
   readonly make: (args: Args) => Response;
   readonly responseType: ZodType<Response>;

@@ -30,6 +30,7 @@ class TypescriptCodeGenerator {
     }
     this.code += "}\n\n";
     this.writeTemplateTypes(templates);
+    this.writePromptMaker2Type(templates);
     this.writePromptMakerClass(templates);
     this.writeJsonSpecType();
     this.writeFreezeJsonSpecFunction();
@@ -237,6 +238,21 @@ class TypescriptCodeGenerator {
     }
   }
 
+  private writePromptMaker2Type(templates: Templates): void {
+    this.code += "export type PromptMaker2 = {\n";
+    for (const { namespace, templates: tmplList } of templates.namespaces) {
+      this.code += `  readonly ${uncapitalize(namespace)}: {\n`;
+      for (const template of tmplList) {
+        const nsRef = `${namespace}Namespace`;
+        const args = `${nsRef}.${template.name}.Args`;
+        const response = `${nsRef}.${template.name}.Response`;
+        this.code += `    readonly ${uncapitalize(template.name)}: PromptSpec<${args}, ${response}>;\n`;
+      }
+      this.code += `  };\n`;
+    }
+    this.code += "};\n\n";
+  }
+
   private writeTemplateVariantAndArgs(template: ResolvedTemplate): void {
     const indent = "    ";
     const hasVariants = template.content.kind === "variants";
@@ -302,6 +318,10 @@ class TypescriptCodeGenerator {
       this.code += `${indent} */\n`;
     }
   }
+}
+
+function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 function toTypeName(namePieces: readonly string[]): string {
