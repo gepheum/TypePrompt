@@ -20,8 +20,8 @@ type PromptSpec<Args, Response> = {
   readonly responseType: ZodType<Response>;
 }
 
-class Prompt {
-  readonly default: {
-    readonly wave: PromptSpec<DefaultNamespace.Wave.Args, DefaultNamespace.Wave.Response>;
-  }
+class PromptMaker {
+  // readonly default: {
+  //   readonly wave: PromptSpec<DefaultNamespace.Wave.Args, DefaultNamespace.Wave.Response>;
+  // }
 }
