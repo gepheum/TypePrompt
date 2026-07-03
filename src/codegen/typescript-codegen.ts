@@ -223,7 +223,8 @@ class TypescriptCodeGenerator {
 
   private writeTemplateTypes(templates: Templates): void {
     for (const { namespace, templates: tmplList } of templates.namespaces) {
-      this.code += `export namespace ${namespace}Namespace {\n`;
+      this.code += `/** Types defined in the ${namespace} namespace. */\n`;
+      this.code += `export namespace ${namespace}Types {\n`;
       for (const template of tmplList) {
         this.code += `  export namespace ${template.name} {\n`;
         this.writeTemplateVariantAndArgs(template);
@@ -243,7 +244,7 @@ class TypescriptCodeGenerator {
     for (const { namespace, templates: tmplList } of templates.namespaces) {
       this.code += `  readonly ${uncapitalize(namespace)}: {\n`;
       for (const template of tmplList) {
-        const nsRef = `${namespace}Namespace`;
+        const nsRef = `${namespace}Types`;
         const args = `${nsRef}.${template.name}.Args`;
         const response = `${nsRef}.${template.name}.Response`;
         this.code += `    readonly ${uncapitalize(template.name)}: PromptSpec<${args}, ${response}>;\n`;

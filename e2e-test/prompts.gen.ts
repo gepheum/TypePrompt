@@ -14,7 +14,8 @@ export namespace Meta {
     | "bar";
 }
 
-export namespace DefaultNamespace {
+/** Types defined in the Default namespace. */
+export namespace DefaultTypes {
   export namespace John {
     export type Variant =
       | "Foo";
@@ -59,7 +60,8 @@ export namespace DefaultNamespace {
   }
 }
 
-export namespace TaxiNamespace {
+/** Types defined in the Taxi namespace. */
+export namespace TaxiTypes {
   export namespace Fo {
     export type Args = {
       /** Doc */
@@ -72,11 +74,11 @@ export namespace TaxiNamespace {
 
 export type PromptMaker2 = {
   readonly default: {
-    readonly john: PromptSpec<DefaultNamespace.John.Args, DefaultNamespace.John.Response>;
-    readonly helloWorld: PromptSpec<DefaultNamespace.HelloWorld.Args, DefaultNamespace.HelloWorld.Response>;
+    readonly john: PromptSpec<DefaultTypes.John.Args, DefaultTypes.John.Response>;
+    readonly helloWorld: PromptSpec<DefaultTypes.HelloWorld.Args, DefaultTypes.HelloWorld.Response>;
   };
   readonly taxi: {
-    readonly fo: PromptSpec<TaxiNamespace.Fo.Args, TaxiNamespace.Fo.Response>;
+    readonly fo: PromptSpec<TaxiTypes.Fo.Args, TaxiTypes.Fo.Response>;
   };
 };
 
