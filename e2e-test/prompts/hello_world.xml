@@ -113,6 +113,8 @@
 </template>
 
 <template name="Fo" namespace="Taxi">
+  <meta foobar="foo" />
+
   <schema>
     type Foo = Int[];
     type Int = number;
