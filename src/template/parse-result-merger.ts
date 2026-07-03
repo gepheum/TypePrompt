@@ -173,7 +173,11 @@ export function mergeParseResults(
     namespaces.push({ namespace: ns, templates });
   }
 
-  return { kind: "success", meta: topLevelMeta, namespaces };
+  return {
+    kind: "success",
+    meta: topLevelMeta !== null ? resolveSchema(topLevelMeta) : null,
+    namespaces,
+  };
 }
 
 // ---------------------------------------------------------------------------

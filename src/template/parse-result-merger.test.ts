@@ -180,7 +180,9 @@ describe("mergeParseResults – top-level meta count", () => {
   it("succeeds with exactly one top-level meta", () => {
     const a = parseFile("a.prompts", META_SOURCE, templateSource("Alpha"));
     const result = mergeOk(a);
-    expect(result.meta).toMatch({ kind: "success" });
+    expect(result.meta).toMatch({
+      types: [{ kind: "interface", namePieces: ["Meta"] }],
+    });
   });
 
   it("reports an error when multiple files each have a top-level meta", () => {

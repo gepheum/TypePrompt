@@ -3,7 +3,7 @@ import { ElementNode } from "../xml/xml-parser.js";
 
 export type Templates = {
   readonly kind: "success";
-  readonly meta: Schema | null;
+  readonly meta: ResolvedSchema | null;
   readonly namespaces: readonly TemplateNamespace[];
 };
 
