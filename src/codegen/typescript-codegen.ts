@@ -23,6 +23,7 @@ class TypescriptCodeGenerator {
 
   write(templates: Templates): string {
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
+    this.code += 'import { ZodType } from "zod";\n\n';
     this.code += "export namespace Meta {\n";
     if (templates.meta) {
       this.writeSchema(templates.meta, "  ");
@@ -178,7 +179,8 @@ class TypescriptCodeGenerator {
   private writePromptMakerClass(templates: Templates): void {
     this.code += "export type PromptSpec<Args, Response> = {\n";
     this.code += "  readonly make: (args: Args) => Response;\n";
-    this.code += "  readonly responseType: Response;\n";
+    this.code += "  readonly responseType: ZodType<Response>;\n";
+    this.code += "  readonly meta: Meta.Meta;\n";
     this.code += "};\n\n";
 
     this.code += "export class PromptMaker {\n";

@@ -1,5 +1,7 @@
 // This file is auto-generated. Do not edit it directly.
 
+import { ZodType } from "zod";
+
 export namespace Meta {
   export type Meta = {
     /** Temperature setting for the template */
@@ -70,7 +72,8 @@ export namespace TaxiNamespace {
 
 export type PromptSpec<Args, Response> = {
   readonly make: (args: Args) => Response;
-  readonly responseType: Response;
+  readonly responseType: ZodType<Response>;
+  readonly meta: Meta.Meta;
 };
 
 export class PromptMaker {
