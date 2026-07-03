@@ -3,13 +3,36 @@
 export namespace Meta {
   export type Meta = {
     /** Temperature setting for the template */
-    temperature?: number;
-    foobar?: Meta_Foobar;
+    readonly temperature?: number;
+    readonly foobar?: Meta_Foobar;
   };
 
   export type Meta_Foobar =
     | "foo"
     | "bar";
+}
+
+export namespace DefaultNamespace {
+  export namespace John {
+    export type Response = {
+      readonly x: number;
+      readonly y: number;
+    };
+  }
+
+  export namespace HelloWorld {
+    export type Input = {
+      readonly x: number;
+      readonly y: number;
+    };
+
+    export type Foo = {
+      /** The message to be displayed */
+      readonly message: string;
+      readonly foo: number;
+      readonly bar: number;
+    };
+  }
 }
 
 export type PromptSpec<Args, Response> = {

@@ -28,6 +28,7 @@ class TypescriptCodeGenerator {
       this.writeSchema(templates.meta, "  ");
     }
     this.code += "}\n\n";
+    this.writeTemplateTypes(templates);
     this.writePromptMakerClass(templates);
     this.writeJsonSpecType();
     this.writeFreezeJsonSpecFunction();
@@ -217,6 +218,18 @@ class TypescriptCodeGenerator {
     // }
   }
 
+  private writeTemplateTypes(templates: Templates): void {
+    for (const { namespace, templates: tmplList } of templates.namespaces) {
+      this.code += `export namespace ${namespace}Namespace {\n`;
+      for (const template of tmplList) {
+        this.code += `  export namespace ${template.name} {\n`;
+        this.writeSchema(template.schema, "    ");
+        this.code += `  }\n\n`;
+      }
+      this.code += `}\n\n`;
+    }
+  }
+
   private writeSchema(schema: ResolvedSchema, indent: "  " | "    "): void {
     for (const type of schema.types) {
       const name = toTypeName(type.namePieces);
@@ -226,7 +239,7 @@ class TypescriptCodeGenerator {
         for (const field of type.fields) {
           this.writeJsdoc(field.doc, `${indent}  `);
           const optional = field.optional ? "?" : "";
-          this.code += `${indent}  ${field.name}${optional}: ${resolvedTypeToTs(field.type)};\n`;
+          this.code += `${indent}  readonly ${field.name}${optional}: ${resolvedTypeToTs(field.type)};\n`;
         }
         this.code += `${indent}};\n\n`;
       } else if (type.kind === "string-union") {
