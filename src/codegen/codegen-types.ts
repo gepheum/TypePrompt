@@ -6,4 +6,4 @@ export type OutputFile = {
   readonly content: string;
 }
 
-export type CodeGenerator = (templates: Templates, config: Config) => OutputFile[];
+export type CodeGenerator = (templates: Templates, config: Config) => readonly OutputFile[];
