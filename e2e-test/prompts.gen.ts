@@ -14,6 +14,14 @@ export namespace Meta {
 
 export namespace DefaultNamespace {
   export namespace John {
+    export type Variant =
+      | "Foo";
+
+    export type Args = {
+      readonly name: string;
+      readonly variant: Variant;
+    };
+
     export type Response = {
       readonly x: number;
       readonly y: number;
@@ -21,6 +29,17 @@ export namespace DefaultNamespace {
   }
 
   export namespace HelloWorld {
+    export type Variant =
+      | "Aa"
+      | "Bb";
+
+    export type Args = {
+      /** Documentation for foo */
+      readonly foo: string;
+      readonly bar: Input;
+      readonly variant: Variant;
+    };
+
     export type Input = {
       readonly x: number;
       readonly y: number;

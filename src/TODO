@@ -1,2 +1,2 @@
-- Make sure that every arg in <args> is actually used
+- Verify that an arg's name cannot be "variant"
 - TODO: force specify schema on each arg

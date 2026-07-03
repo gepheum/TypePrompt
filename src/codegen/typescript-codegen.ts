@@ -1,5 +1,5 @@
 import { Config } from "../config/config-parser.js";
-import type { ResolvedSchema, ResolvedType, Templates } from "../template/template-types.js";
+import type { ResolvedSchema, ResolvedTemplate, ResolvedType, Templates } from "../template/template-types.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -223,11 +223,40 @@ class TypescriptCodeGenerator {
       this.code += `export namespace ${namespace}Namespace {\n`;
       for (const template of tmplList) {
         this.code += `  export namespace ${template.name} {\n`;
+        this.writeTemplateVariantAndArgs(template);
         this.writeSchema(template.schema, "    ");
         this.code += `  }\n\n`;
       }
       this.code += `}\n\n`;
     }
+  }
+
+  private writeTemplateVariantAndArgs(template: ResolvedTemplate): void {
+    const indent = "    ";
+    const hasVariants = template.content.kind === "variants";
+
+    if (hasVariants) {
+      const variants = Object.keys(template.content.bodies);
+      const members = variants.map((v) => `\n${indent}  | ${JSON.stringify(v)}`).join("");
+      this.code += `${indent}export type Variant =${members};\n\n`;
+    }
+
+    this.code += `${indent}export type Args = {\n`;
+    for (const arg of template.args) {
+      this.writeJsdoc(arg.doc, `${indent}  `);
+      let argType: string;
+      if (arg.typeName === null) {
+        argType = "string";
+      } else {
+        const resolved = template.schema.typeAliases[arg.typeName];
+        argType = resolved !== undefined ? resolvedTypeToTs(resolved) : "string";
+      }
+      this.code += `${indent}  readonly ${arg.name}: ${argType};\n`;
+    }
+    if (hasVariants) {
+      this.code += `${indent}  readonly variant: Variant;\n`;
+    }
+    this.code += `${indent}};\n\n`;
   }
 
   private writeSchema(schema: ResolvedSchema, indent: "  " | "    "): void {
