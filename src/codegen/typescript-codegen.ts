@@ -248,7 +248,7 @@ class TypescriptCodeGenerator {
         const response = `${nsRef}.${template.name}.Response`;
         this.code += `    readonly ${uncapitalize(template.name)}: PromptSpec<${args}, ${response}>;\n`;
       }
-      this.code += `  };\n`;
+      this.code += "  };\n";
     }
     this.code += "};\n\n";
   }
