@@ -2,6 +2,7 @@
 
 export namespace Meta {
   export type Meta = {
+    /** Temperature setting for the template */
     temperature?: number;
     foobar?: Meta_Foobar;
   };

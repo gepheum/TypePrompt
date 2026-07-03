@@ -220,9 +220,11 @@ class TypescriptCodeGenerator {
   private writeSchema(schema: ResolvedSchema, indent: "  " | "    "): void {
     for (const type of schema.types) {
       const name = toTypeName(type.namePieces);
+      this.writeJsdoc(type.doc, indent);
       if (type.kind === "interface") {
         this.code += `${indent}export type ${name} = {\n`;
         for (const field of type.fields) {
+          this.writeJsdoc(field.doc, `${indent}  `);
           const optional = field.optional ? "?" : "";
           this.code += `${indent}  ${field.name}${optional}: ${resolvedTypeToTs(field.type)};\n`;
         }
@@ -236,6 +238,20 @@ class TypescriptCodeGenerator {
           .join("");
         this.code += `${indent}export type ${name} =${members};\n\n`;
       }
+    }
+  }
+
+  private writeJsdoc(doc: string, indent: string): void {
+    if (!doc) return;
+    const lines = doc.split("\n");
+    if (lines.length === 1) {
+      this.code += `${indent}/** ${doc} */\n`;
+    } else {
+      this.code += `${indent}/**\n`;
+      for (const line of lines) {
+        this.code += line ? `${indent} * ${line}\n` : `${indent} *\n`;
+      }
+      this.code += `${indent} */\n`;
     }
   }
 }
