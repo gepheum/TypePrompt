@@ -228,13 +228,13 @@ class TypescriptCodeGenerator {
         }
         this.code += `${indent}};\n\n`;
       } else if (type.kind === "string-union") {
-        const members = type.values.map((v) => `| ${JSON.stringify(v)}`).join(" ");
-        this.code += `${indent}export type ${name} = ${members};\n\n`;
+        const members = type.values.map((v) => `\n${indent}  | ${JSON.stringify(v)}`).join("");
+        this.code += `${indent}export type ${name} =${members};\n\n`;
       } else {
         const members = type.members
-          .map((m) => `| ${toTypeName(m.namePieces)}`)
-          .join(" ");
-        this.code += `${indent}export type ${name} = ${members};\n\n`;
+          .map((m) => `\n${indent}  | ${toTypeName(m.namePieces)}`)
+          .join("");
+        this.code += `${indent}export type ${name} =${members};\n\n`;
       }
     }
   }

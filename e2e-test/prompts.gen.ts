@@ -6,7 +6,9 @@ export namespace Meta {
     foobar?: Meta_Foobar;
   };
 
-  export type Meta_Foobar = | "foo" | "bar";
+  export type Meta_Foobar =
+    | "foo"
+    | "bar";
 }
 
 export type PromptSpec<Args, Response> = {
