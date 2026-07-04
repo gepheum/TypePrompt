@@ -1,0 +1,85 @@
+export type Templates = {
+  readonly kind: "success";
+  readonly meta: Schema | null;
+  readonly templates: readonly Template[];
+};
+
+export type Template = {
+  readonly name: string;
+  readonly namespace: string;
+  readonly meta: { [property: string]: boolean | number | string };
+  readonly response: Schema;
+  readonly content: TemplateContent;
+  readonly xmlContent: string;
+};
+
+export type TemplateContent =
+  | {
+      readonly kind: "no-variants";
+      readonly body: readonly TemplatePiece[];
+    }
+  | {
+      readonly kind: "variants";
+      readonly bodies: { [variant: string]: readonly TemplatePiece[] };
+    };
+
+export type TemplatePiece =
+  | {
+      readonly kind: "text";
+      readonly text: string;
+    }
+  | {
+      readonly kind: "arg";
+      readonly name: string;
+      /** Can only contain whitespaces. */
+      readonly indent: string;
+      readonly format: "json" | "toon" | null;
+    };
+
+export type Schema = {
+  readonly type: Type;
+  readonly declarations: readonly TypeDeclaration[];
+};
+
+export type TypeDeclaration =
+  | Interface
+  | StringUnion
+  | InterfaceUnion;
+
+export type Interface = {
+  readonly kind: "interface";
+  readonly name: string;
+  readonly doc: string;
+  readonly fields: readonly Field[];
+};
+
+export type StringUnion = {
+  readonly kind: "string-union";
+  readonly name: string;
+  readonly doc: string;
+  readonly values: readonly string[];
+};
+
+export type InterfaceUnion = {
+  readonly kind: "interface-union";
+  readonly name: string;
+  readonly doc: string;
+  readonly members: ReadonlyArray<{
+    readonly name: string;
+  }>;
+};
+
+export type Field = {
+  readonly name: string;
+  readonly doc: string;
+  readonly type: Type;
+  readonly optional: boolean;
+};
+
+export type Type =
+  | { readonly kind: "ref"; readonly name: string }
+  | {
+      readonly kind: "primitive";
+      readonly primitive: "number" | "string" | "boolean" | "int";
+    }
+  | { readonly kind: "array"; readonly elementType: Type };

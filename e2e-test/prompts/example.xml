@@ -1,0 +1,42 @@
+<template name="Foo" namespace="Genoa">
+  <config temperature="1.2"/>
+
+  <schema>
+    interface Foo {
+      input: string;
+      dateToday: string;
+    }
+  </schema>
+
+  <args>
+    <arg name="input" />
+    <arg name="dateToday" />
+  </args>
+
+  <content>
+    <system>
+    </system>
+
+    <user>
+      <maybe>The date today is <arg name="dateToday"/>.
+      </maybe>
+    </user>
+
+    <examples>
+      <example>
+        <args>
+          <arg name="input">
+            Hello
+          </arg>
+        </args>
+        <arg name="dateToday" value="2024-06-06" />
+        <response>
+          {
+            "input": "Hello",
+            "dateToday": "2024-06-06"
+          }
+        </response>
+      </example>
+    </examples>
+  </content>
+</template>
