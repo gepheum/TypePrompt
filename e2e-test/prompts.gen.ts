@@ -83,7 +83,7 @@ export type PromptMaker2 = {
 };
 
 export type PromptSpec<Args, Response> = {
-  readonly make: (args: Args) => string;
+  readonly make: (args: Args) => Response;
   readonly responseType: ZodType<Response>;
   readonly meta: Meta.Meta;
 };

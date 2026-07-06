@@ -1,7 +1,8 @@
 <template name="Foo" namespace="Genoa">
-  <config temperature="1.2"/>
+  <config>{ "temperature": 0.75 }</config>
 
   <schema>
+    /** Foo */
     interface Foo {
       input: string;
       dateToday: string;
@@ -25,11 +26,9 @@
     <examples>
       <example>
         <args>
-          <arg name="input">
-            Hello
-          </arg>
+          <arg name="input">Hello</arg>
+          <arg name="dateToday">2024-06-06</arg>
         </args>
-        <arg name="dateToday" value="2024-06-06" />
         <response>
           {
             "input": "Hello",
