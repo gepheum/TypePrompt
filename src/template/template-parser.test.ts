@@ -541,7 +541,9 @@ describe("parseTemplateFile – <args>", () => {
   });
 
   it("reports error for arg named 'variant' (exact case)", () => {
-    const result = parseTemplateFile(sf(templateWithArgs('<arg name="variant"/>')));
+    const result = parseTemplateFile(
+      sf(templateWithArgs('<arg name="variant"/>')),
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Arg name 'variant' is reserved" }],
@@ -549,7 +551,9 @@ describe("parseTemplateFile – <args>", () => {
   });
 
   it("reports error for arg named 'variant' (mixed case)", () => {
-    const result = parseTemplateFile(sf(templateWithArgs('<arg name="vArIaNt"/>')));
+    const result = parseTemplateFile(
+      sf(templateWithArgs('<arg name="vArIaNt"/>')),
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Arg name 'variant' is reserved" }],

@@ -407,20 +407,34 @@ describe("parseSchema – multiple types", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseSchema – comments and JSDoc", () => {
-  it("ignores single-line comments", () => {
+  it("reports error for a single-line comment", () => {
     const result = parseSchema(
       "// This is a comment\ninterface Response { name: string; }",
       TEMPLATE,
     );
-    expect(result).toMatch({ kind: "success" });
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
+        },
+      ],
+    });
   });
 
-  it("ignores multi-line comments", () => {
+  it("reports error for a non-JSDoc multi-line comment", () => {
     const result = parseSchema(
       "/* comment */\ninterface Response { name: string; }",
       TEMPLATE,
     );
-    expect(result).toMatch({ kind: "success" });
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
+        },
+      ],
+    });
   });
 
   it("extracts JSDoc from a single-line /** ... */ comment on a type", () => {
@@ -470,7 +484,7 @@ describe("parseSchema – comments and JSDoc", () => {
     });
   });
 
-  it("does not attach JSDoc to a non-JSDoc multi-line comment", () => {
+  it("reports error for a non-JSDoc multi-line comment before a type", () => {
     const result = parseSchema(
       ["/* ordinary comment */", "interface Response { name: string; }"].join(
         "\n",
@@ -478,8 +492,12 @@ describe("parseSchema – comments and JSDoc", () => {
       TEMPLATE,
     );
     expect(result).toMatch({
-      kind: "success",
-      types: { Response: { doc: "" } },
+      kind: "error",
+      errors: [
+        {
+          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
+        },
+      ],
     });
   });
 });
@@ -838,7 +856,12 @@ describe("parseSchema – tokenizer errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Unterminated multi-line comment" }],
+      errors: [
+        { message: "Unterminated multi-line comment" },
+        {
+          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
+        },
+      ],
     });
   });
 });

@@ -370,12 +370,23 @@ class SchemaParser {
         if (text.startsWith("/**")) {
           tokenKind = "jsdoc";
         } else {
-          // Skip regular multi-line comments.
+          // Terminated non-JSDoc block comment — report error and skip.
+          this.tokenizerErrors.push({
+            start: position,
+            end: position + 2,
+            message:
+              "Non-JSDoc comments are not allowed; use /** ... */ instead",
+          });
           newLine = newLine || group[0].includes("\n");
           continue;
         }
       } else if (group[4] !== undefined) {
-        // Skip single-line comments.
+        // Single-line comment — report error and skip.
+        this.tokenizerErrors.push({
+          start: position,
+          end: position + 2,
+          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
+        });
         continue;
       } else if (group[5] !== undefined) {
         // Validate identifier.

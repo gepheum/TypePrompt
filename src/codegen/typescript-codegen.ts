@@ -1,5 +1,10 @@
 import { Config } from "../config/config-parser.js";
-import type { ResolvedSchema, ResolvedTemplate, ResolvedType, Templates } from "../template/template-types.js";
+import type {
+  ResolvedSchema,
+  ResolvedTemplate,
+  ResolvedType,
+  Templates,
+} from "../template/template-types.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -260,7 +265,9 @@ class TypescriptCodeGenerator {
 
     if (hasVariants) {
       const variants = Object.keys(template.content.bodies);
-      const members = variants.map((v) => `\n${indent}  | ${JSON.stringify(v)}`).join("");
+      const members = variants
+        .map((v) => `\n${indent}  | ${JSON.stringify(v)}`)
+        .join("");
       this.code += `${indent}export type Variant =${members};\n\n`;
     }
 
@@ -272,7 +279,8 @@ class TypescriptCodeGenerator {
         argType = "string";
       } else {
         const resolved = template.schema.typeAliases[arg.typeName];
-        argType = resolved !== undefined ? resolvedTypeToTs(resolved) : "string";
+        argType =
+          resolved !== undefined ? resolvedTypeToTs(resolved) : "string";
       }
       this.code += `${indent}  readonly ${arg.name}: ${argType};\n`;
     }
@@ -295,7 +303,9 @@ class TypescriptCodeGenerator {
         }
         this.code += `${indent}};\n\n`;
       } else if (type.kind === "string-union") {
-        const members = type.values.map((v) => `\n${indent}  | ${JSON.stringify(v)}`).join("");
+        const members = type.values
+          .map((v) => `\n${indent}  | ${JSON.stringify(v)}`)
+          .join("");
         this.code += `${indent}export type ${name} =${members};\n\n`;
       } else {
         const members = type.members
