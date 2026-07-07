@@ -6,12 +6,13 @@ import type {
   JsonBoolean,
   JsonNumber,
   JsonObject,
+  JsonSourceSpan,
   JsonString,
   JsonValue,
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
-import type { Example, ExampleSourceSpan } from "./example-types.js";
+import type { Example } from "./example-types.js";
 import { validateExample } from "./example-validator.js";
 
 // ---------------------------------------------------------------------------
@@ -33,7 +34,7 @@ function parseSchemaOrThrow(
   return result;
 }
 
-function span(text: string): ExampleSourceSpan {
+function span(text: string): JsonSourceSpan {
   return { text, start: 0, end: text.length };
 }
 
@@ -49,7 +50,10 @@ function bool(value: boolean): JsonBoolean {
   return { kind: "boolean", firstToken: span(String(value)), value };
 }
 
-function obj(entries: [string, JsonValue][], ellipsis = false): JsonObject {
+function obj(
+  entries: [string, JsonValue<"loose">][],
+  ellipsis = false,
+): JsonObject<"loose"> {
   return {
     kind: "object",
     firstToken: span("{"),
@@ -60,11 +64,11 @@ function obj(entries: [string, JsonValue][], ellipsis = false): JsonObject {
   };
 }
 
-function arr(elements: JsonValue[]): JsonArray {
+function arr(elements: JsonValue<"loose">[]): JsonArray<"loose"> {
   return { kind: "array", firstToken: span("["), elements };
 }
 
-function jsonExample(json: JsonValue): Example {
+function jsonExample(json: JsonValue<"loose">): Example {
   return { kind: "success:json", json };
 }
 
