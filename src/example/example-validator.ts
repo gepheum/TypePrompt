@@ -83,6 +83,33 @@ export function validateExample(
   }
 }
 
+export function validateJson(
+  json: JsonValue<"strict">,
+  schema: Schema,
+  typeName: string,
+): ExampleValidationError[] {
+  const t = schema.types[typeName]!;
+  const result = jsonMatchesType(
+    json as JsonValue<"loose">,
+    resolveType(t, schema.types),
+    "thorough",
+    schema,
+  );
+  if (result.kind === "match") {
+    return [];
+  }
+  const errors: ExampleValidationError[] = [
+    {
+      sourceSpan: json.firstToken,
+      message: `Does not match type '${typeName}'`,
+    },
+  ];
+  if (result.details !== undefined && result.details.matchScore >= 0.5) {
+    errors.push(result.details.reason);
+  }
+  return errors;
+}
+
 type JsonTypeMatch =
   | { readonly kind: "match" }
   | {
