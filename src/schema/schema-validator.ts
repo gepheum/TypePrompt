@@ -1,10 +1,9 @@
 import { checkNoAmbiguity } from "../util/casing.js";
+import type { InternalError, SourceSpan } from "../util/error-types.js";
 import type {
   InterfaceDeclaration,
   SchemaField,
   SchemaParseContext,
-  SchemaParseError,
-  SchemaSourceSpan,
   StringLiteral,
   Type,
   TypeDeclaration,
@@ -17,8 +16,8 @@ import { getUnionMembers } from "./unions.js";
 export function validateSchema(
   typeDeclarations: TypeDeclaration[],
   context: SchemaParseContext,
-): SchemaParseError[] {
-  const errors: SchemaParseError[] = [];
+): InternalError[] {
+  const errors: InternalError[] = [];
 
   errors.push(
     ...checkNoAmbiguity(
@@ -122,7 +121,7 @@ function getUnionKind(
   }
 }
 
-function getFirstToken(type: Type | InterfaceDeclaration): SchemaSourceSpan {
+function getFirstToken(type: Type | InterfaceDeclaration): SourceSpan {
   switch (type.kind) {
     case "array":
       return getFirstToken(type.elementType);
@@ -140,7 +139,7 @@ function getFirstToken(type: Type | InterfaceDeclaration): SchemaSourceSpan {
 function validateType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-  errors: SchemaParseError[],
+  errors: InternalError[],
 ): null {
   switch (type.kind) {
     case "array": {
@@ -207,7 +206,7 @@ function validateType(
 function validateUnionType(
   type: Union,
   types: { readonly [name: string]: TypeDeclaration },
-  errors: SchemaParseError[] = [],
+  errors: InternalError[] = [],
 ): void {
   const pushErrorForBadKind = (
     kind: "bad:array" | "bad:primitive" | "bad:union",
@@ -308,7 +307,7 @@ function validateUnionType(
     //   - the first field of each interface has string literal type
     //   - all string literals are distinct
     //   - all first fields have the same name
-    const quotedNames: SchemaSourceSpan[] = [];
+    const quotedNames: SourceSpan[] = [];
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
@@ -398,10 +397,7 @@ function getDescForKind(kind: UnionKind): string {
   }
 }
 
-function validateTypeName(
-  name: SchemaSourceSpan,
-  errors: SchemaParseError[],
-): void {
+function validateTypeName(name: SourceSpan, errors: InternalError[]): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
       start: name.start,
@@ -462,7 +458,7 @@ function collectNameDependencies(
 function verifyMetaType(
   metaTypeDeclaration: TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
-): SchemaParseError[] {
+): InternalError[] {
   const metaType = resolveMaybeInvalidType(metaTypeDeclaration, types);
   if (!metaType) {
     return [];
@@ -476,7 +472,7 @@ function verifyMetaType(
       },
     ];
   }
-  const errors: SchemaParseError[] = [];
+  const errors: InternalError[] = [];
   for (const field of Object.values(metaType.fields)) {
     const resolvedType = resolveMaybeInvalidType(field.type, types);
     if (!resolvedType) {
@@ -518,8 +514,8 @@ function verifyMetaType(
 function verifyAllTypesUsed(
   rootTypeNames: string[],
   types: { readonly [name: string]: TypeDeclaration },
-): SchemaParseError[] {
-  const errors: SchemaParseError[] = [];
+): InternalError[] {
+  const errors: InternalError[] = [];
   const usedTypes = new Set<string>();
   for (const rootTypeName of rootTypeNames) {
     const rootType = types[rootTypeName];

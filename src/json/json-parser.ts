@@ -1,4 +1,9 @@
 import type {
+  InternalError,
+  InternalErrors,
+  SourceSpan,
+} from "../util/error-types.js";
+import type {
   JsonArray,
   JsonBoolean,
   JsonEllipsis,
@@ -7,9 +12,6 @@ import type {
   JsonNumber,
   JsonObject,
   JsonObjectEntry,
-  JsonParseError,
-  JsonParseErrors,
-  JsonSourceSpan,
   JsonString,
   JsonValue,
 } from "./json-types.js";
@@ -17,7 +19,7 @@ import type {
 export function parseJson<Mode extends JsonMode = "loose">(
   source: string,
   mode: Mode = "loose" as Mode,
-): JsonValue<Mode> | JsonParseErrors {
+): JsonValue<Mode> | InternalErrors {
   const parser = new JsonParser(source, mode);
   parser.skipSpaces();
 
@@ -51,7 +53,7 @@ export function parseJson<Mode extends JsonMode = "loose">(
 
 export class JsonParser<Mode extends JsonMode = "loose"> {
   cursor = 0;
-  readonly errors: JsonParseError[] = [];
+  readonly errors: InternalError[] = [];
 
   constructor(
     readonly text: string,
@@ -587,7 +589,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     this.errors.push({ start, end, message });
   }
 
-  exampleSlice(start: number, end: number): JsonSourceSpan {
+  exampleSlice(start: number, end: number): SourceSpan {
     return {
       text: this.text.slice(start, end),
       start,

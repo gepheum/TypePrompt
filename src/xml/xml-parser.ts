@@ -1,4 +1,9 @@
 import { SaxesParser } from "saxes";
+import type {
+  InternalError,
+  InternalErrors,
+  SourceSpan,
+} from "../util/error-types.js";
 import { OffsetMap, OffsetMapEntry } from "./text-node-join.js";
 
 export type XmlDocument = {
@@ -6,17 +11,6 @@ export type XmlDocument = {
   readonly root: {
     readonly children: readonly XmlNode[];
   };
-};
-
-export type XmlParseErrors = {
-  readonly kind: "error";
-  readonly errors: readonly XmlParseError[];
-};
-
-export type XmlParseError = {
-  readonly start: number;
-  readonly end: number;
-  readonly message: string;
 };
 
 export type XmlNode = TextNode | ElementNode;
@@ -53,21 +47,14 @@ export type Attribute = {
   readonly decodedValue: string;
 };
 
-export interface SourceSpan {
-  /// Escape sequences are *not* decoded.
-  readonly text: string;
-  readonly start: number;
-  readonly end: number;
-}
-
 /// Parses XML as a fragment and reconstructs precise source spans for nodes.
 ///
 /// We use saxes for XML correctness and error recovery, then keep a cursor into
 /// the original source to capture raw spans and decoded text metadata.
 export function parseXmlDocument(
   content: string,
-): XmlDocument | XmlParseErrors {
-  const errors: XmlParseError[] = [];
+): XmlDocument | InternalErrors {
+  const errors: InternalError[] = [];
   const rootNodes: XmlNode[] = [];
   const openElements: OpenElement[] = [];
   let cursor = 0;
@@ -464,7 +451,7 @@ function scanAttribute(
   readonly value: SourceSpan;
   readonly decodedValue: string;
   readonly nextCursor: number;
-  readonly error?: XmlParseError;
+  readonly error?: InternalError;
 } {
   const nameStart = content.indexOf(
     attributeName,

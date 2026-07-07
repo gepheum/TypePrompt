@@ -1,11 +1,10 @@
+import type { InternalError, InternalErrors } from "../util/error-types.js";
 import type {
   Interface,
   NamingHint,
   Schema,
   SchemaField,
   SchemaParseContext,
-  SchemaParseError,
-  SchemaParseErrors,
   Type,
   TypeDeclaration,
   Union,
@@ -17,14 +16,14 @@ import { getUnionMembers } from "./unions.js";
 export function parseSchema(
   schemaSource: string,
   context: SchemaParseContext,
-): Schema | SchemaParseErrors {
+): Schema | InternalErrors {
   return new SchemaParser(schemaSource).parse(context);
 }
 
 class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
-  parse(context: SchemaParseContext): Schema | SchemaParseErrors {
+  parse(context: SchemaParseContext): Schema | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
 
     while (true) {
@@ -485,8 +484,8 @@ class SchemaParser {
     );
   }
 
-  private readonly tokenizerErrors: SchemaParseError[] = [];
-  private readonly parserErrors: SchemaParseError[] = [];
+  private readonly tokenizerErrors: InternalError[] = [];
+  private readonly parserErrors: InternalError[] = [];
   private cursor = 0;
   /** Cache for peekToken(); invalidated whenever cursor advances via movePast(). */
   private cachedPeek: Token | null = null;

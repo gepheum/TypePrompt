@@ -1,8 +1,5 @@
-import type {
-  JsonParseError,
-  JsonSourceSpan,
-  JsonValue,
-} from "../json/json-types.js";
+import type { JsonValue } from "../json/json-types.js";
+import type { InternalError, SourceSpan } from "../util/error-types.js";
 
 export type Example =
   | {
@@ -13,16 +10,16 @@ export type Example =
   | {
       readonly kind: "success:identifier";
       /** Unquoted identifier. */
-      readonly identifier: JsonSourceSpan;
+      readonly identifier: SourceSpan;
       readonly json?: undefined;
     };
 
 export type ExampleParseErrors = {
   readonly kind: "error";
-  readonly errors: readonly JsonParseError[];
+  readonly errors: readonly InternalError[];
 };
 
 export type ExampleValidationError = {
-  sourceSpan: JsonSourceSpan;
+  sourceSpan: SourceSpan;
   message: string;
 };

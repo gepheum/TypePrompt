@@ -1,15 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type {
-  ElementNode,
-  SourceSpan,
-  XmlDocument,
-  XmlParseErrors,
-} from "./xml-parser.js";
+import type { InternalErrors, SourceSpan } from "../util/error-types.js";
+import type { ElementNode, XmlDocument } from "./xml-parser.js";
 import { parseXmlDocument } from "./xml-parser.js";
 
-function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
+function expectSuccess(result: XmlDocument | InternalErrors): XmlDocument {
   expect(result).toMatch({ kind: "success" });
   if (result.kind !== "success") {
     throw new Error(
@@ -19,7 +15,7 @@ function expectSuccess(result: XmlDocument | XmlParseErrors): XmlDocument {
   return result;
 }
 
-function expectError(result: XmlDocument | XmlParseErrors): XmlParseErrors {
+function expectError(result: XmlDocument | InternalErrors): InternalErrors {
   expect(result).toMatch({ kind: "error" });
   if (result.kind !== "error") {
     throw new Error("Expected parse errors");

@@ -1,12 +1,7 @@
 import { type ZodType } from "zod";
 
+import type { InternalError, InternalErrors } from "../util/error-types.js";
 import type { ElementNode } from "./xml-parser.js";
-
-export type XmlAttributeError = {
-  readonly start: number;
-  readonly end: number;
-  readonly message: string;
-};
 
 type AttributeSchemaEntry = {
   readonly schema: ZodType<string | undefined>;
@@ -28,8 +23,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   expectedAttributes: T,
 ):
   | { readonly kind: "success"; readonly attributes: AttributeValues<T> }
-  | { readonly kind: "error"; readonly errors: readonly XmlAttributeError[] } {
-  const errors: XmlAttributeError[] = [];
+  | InternalErrors {
+  const errors: InternalError[] = [];
   const values: Record<string, unknown> = {};
 
   // Check for unexpected attributes.

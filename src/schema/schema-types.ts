@@ -1,3 +1,5 @@
+import type { SourceSpan } from "../util/error-types.js";
+
 export type SchemaParseContext =
   | {
       readonly kind: "meta";
@@ -19,20 +21,9 @@ export type Schema = {
   readonly typeToNamingHint: ReadonlyMap<Interface | Union, NamingHint>;
 };
 
-export type SchemaParseErrors = {
-  readonly kind: "error";
-  readonly errors: readonly SchemaParseError[];
-};
-
-export type SchemaParseError = {
-  readonly start: number;
-  readonly end: number;
-  readonly message: string;
-};
-
 export type InterfaceDeclaration = {
   readonly kind: "interface";
-  readonly name: SchemaSourceSpan;
+  readonly name: SourceSpan;
   readonly leftCurlyBracket: undefined;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
@@ -43,13 +34,13 @@ export type TypeDeclaration =
   | InterfaceDeclaration
   | {
       readonly kind: "type";
-      readonly name: SchemaSourceSpan;
+      readonly name: SourceSpan;
       readonly valueType: Type;
       readonly doc: string;
     };
 
 export type SchemaField = {
-  readonly name: SchemaSourceSpan;
+  readonly name: SourceSpan;
   readonly optional: boolean;
   readonly type: Type;
   readonly doc: string;
@@ -61,19 +52,19 @@ export type NonUnionType = Exclude<Type, Union>;
 
 export type TypeName = {
   readonly kind: "type-name";
-  readonly name: SchemaSourceSpan;
+  readonly name: SourceSpan;
 };
 
 export type StringLiteral = {
   readonly kind: "string-literal";
   readonly value: string;
-  readonly quotedName: SchemaSourceSpan;
+  readonly quotedName: SourceSpan;
 };
 
 export type InlineInterface = {
   readonly kind: "interface";
   readonly name: undefined;
-  readonly leftCurlyBracket: SchemaSourceSpan;
+  readonly leftCurlyBracket: SourceSpan;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
@@ -123,9 +114,3 @@ export type UnionMembers =
       readonly members: { [kind: string]: Interface };
       readonly kindFieldName: string;
     };
-
-export type SchemaSourceSpan = {
-  readonly text: string;
-  readonly start: number;
-  readonly end: number;
-};
