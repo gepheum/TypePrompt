@@ -1,11 +1,7 @@
+import type { JsonSourceSpan, JsonValue } from "../json/json-types.js";
 import type { ResolvedType, Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type {
-  Example,
-  ExampleSourceSpan,
-  ExampleValidationError,
-  JsonValue,
-} from "./example-types.js";
+import type { Example, ExampleValidationError } from "./example-types.js";
 
 export function validateExample(
   example: Example,
@@ -99,7 +95,7 @@ type JsonTypeMatch =
     };
 
 function jsonMatchesType(
-  value: JsonValue,
+  value: JsonValue<"loose">,
   type: ResolvedType,
   mode: "fast" | "thorough",
   schema: Schema,
@@ -357,7 +353,7 @@ const FAST_MISMATCH = { kind: "mismatch" } as const;
 
 function mismatch(
   mode: "fast" | "thorough",
-  sourceSpan: ExampleSourceSpan,
+  sourceSpan: JsonSourceSpan,
   message: string,
   matchScore = 0,
 ): JsonTypeMatch {
