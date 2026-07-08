@@ -46,9 +46,9 @@
     </system>
 
     <user>
-      | <maybe>The date today is <echo val="input.dateToday"/>
-      | </maybe>
-      | The weather today is <echo val="input.weatherToday"/>.
+      <maybe>The date today is <echo val="input.dateToday"/>
+      </maybe>
+      The weather today is <echo val="input.weatherToday"/>.
     </user>
 
     <examples>
@@ -72,7 +72,7 @@
     </body>
   </snippet>
 
-  <snippet name="fooSnippet" switch="input?.foo.empty">
+  <snippet name="fooSnippet" switch="(input?.length ?? 0) >= 1">
     <body case="null,true">
     </body>
     <body case="false">
