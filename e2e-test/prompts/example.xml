@@ -1,0 +1,85 @@
+<tool name="GetWeather">
+  <description>
+    
+  </description>
+  <schema>
+    
+  </schema>
+</tool>
+
+<template name="Foo">
+  <meta>
+    {
+      "temperature": 0.75,
+      "model": "gpt4"
+    }
+  </meta>
+
+  <schema output-format="xml">
+    type Input = {
+      dateToday: string;
+      weatherToday: string;
+      name: string;
+    };
+  </schema>
+
+  <tool name="GetWeather" />
+
+  <let name="foo" val="not (input.dateToday.notEmpty or input.weatherToday.notEmpty)" />
+
+  <prompt>
+    <system>
+      Hello <insert val="input.name" format="yaml"/>.
+
+      <insert val="dateToday" wrap-unless-empty="Today is %s."/>.
+      <insert snippet="fooSnippet"/>
+      <insert snippet="barSnippet"/>
+
+      ## FOO
+
+      ### BAR
+
+      Here is a list: <span if="Foo"> \
+      * foo
+        * bar
+        * <snippet name="_foo"/>
+    </system>
+
+    <user>
+      | <maybe>The date today is <echo val="input.dateToday"/>
+      | </maybe>
+      | The weather today is <echo val="input.weatherToday"/>.
+    </user>
+
+    <examples>
+      <example>
+        {
+        }
+      </example>
+      <example>
+        {
+        }
+      </example>
+    </examples>
+  </prompt>
+
+  <snippet name="foo" switch="input.foo">
+    <body case="true">
+      This is a snippet.
+    </body>
+    <body case="*">
+      This is the false case snippet.
+    </body>
+  </snippet>
+
+  <snippet name="fooSnippet" switch="input?.foo.empty">
+    <body case="null,true">
+    </body>
+    <body case="false">
+    </body>
+  </snippet>
+
+  <snippet name="barSnippet">
+    Bonjour bar bar bar.
+  </snippet>
+</template>
