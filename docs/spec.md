@@ -1,25 +1,48 @@
-# Elements
+# The XML tree
 
-## Templates
+## File hierarchy
 
-Templates are defined at the top-level with the `<template>` tag.
+The origamic parser takes all the input .xml files and concatenates their contents. It does not matter what file an XML element is defined in. This means you can freely rename files, move elements across files, without causing any change in the generated code.
 
-### Attributes
+## Top-level
+
+Elements which can be defined at the top-level:
+- `<meta>`
+- `<template>`
+- `<namespace>`
+
+## The `<meta>` element (top-level)
+
+When defined at the top level, the `<meta>` element takes no attribute.
+It must only contain text content, and its content must define a `Meta` type in Origamic's SDL language.
+
+Example:
+
+```xml
+<meta>
+  type Meta = {
+    temperature: number;
+    num_retries?: integer;
+  };
+</meta>
+```
+
+## The `<template>` element
+
+A `<template>` defines a template for a prompt that will be sent to an LLM.
 
 Attributes of `<template>` are:
-| Attribute | Condition | Required? | Format | Description |
+| Attribute | Required? | Format | Description |
 | --- | --- | --- | --- | --- |
-| `name` | | Required | UpperCamelCase identifier | Uniquely identifies this template within the namespace |
-| `namespace` | | Optional; defaults to `Default` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
+| `name` | Required | UpperCamelCase identifier | Uniquely identifies this template within the namespace |
+| `namespace` | Optional; defaults to `Default` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
 
-### Contents
-
-A `<template>` element can have the following child elements:
-  - `<meta>`
-  - `<schema>`
-  - `<system>`
-  - `<user>`
-  - `<examples>`
+It can have the following child elements:
+  - `<meta>`: metadata for this template; a value of type `Meta`
+  - `<schema>`: input and output schema
+  - `<system>`: system instructions
+  - `<user>`: user instructions
+  - `<examples>`: few shot examples
   - `<let>`
   - `<variant>`
   - `<snippet>`
@@ -50,3 +73,6 @@ If the `<schema>` is defined inside a `<template>`, both a type named `Input` an
 TODO: define the actual format
 
 ## System and user instructions
+
+# Elements
+
