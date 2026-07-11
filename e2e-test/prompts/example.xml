@@ -2,12 +2,13 @@
   <description>
     
   </description>
+
   <schema>
     
   </schema>
 </tool>
 
-<template name="Foo">
+<template name="FooBar" namespace="FooBar">
   <meta>
     {
       "temperature": 0.75,
@@ -20,14 +21,13 @@
       dateToday: string;
       weatherToday: string;
       name: string;
+      variant: | "default" | "formal";
     };
   </schema>
 
-  <tool name="GetWeather" />
-
   <let name="foo" val="not (input.dateToday.notEmpty or input.weatherToday.notEmpty)" />
 
-  <prompt>
+  <variant name="default" >
     <system>
       Hello <insert val="input.name" format="yaml"/>.
 
@@ -46,22 +46,19 @@
     </system>
 
     <user>
-      <maybe>The date today is <echo val="input.dateToday"/>
-      </maybe>
-      The weather today is <echo val="input.weatherToday"/>.
+      The date today is <echo val="input.dateToday"/>
+      The weather today is <echo val="input.weatherToday" format="json"/>.
     </user>
 
     <examples>
-      <example>
+      [
         {
         }
-      </example>
-      <example>
         {
         }
-      </example>
+      ]
     </examples>
-  </prompt>
+  </variant>
 
   <snippet name="foo" switch="input.foo">
     <body case="true">
@@ -79,7 +76,15 @@
     </body>
   </snippet>
 
-  <snippet name="barSnippet">
+  <snippet name="mySnippet">
     Bonjour bar bar bar.
+  </snippet>
+
+  <snippet name="myOtherSnippet" switch="input.foo">
+    <case when="true">
+      Bonjour bar bar bar.
+
+    </case>
+    <case when="false"></case>
   </snippet>
 </template>
