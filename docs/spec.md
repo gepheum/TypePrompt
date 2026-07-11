@@ -70,6 +70,10 @@ Example:
 </template>
 ```
 
+## The `<schema>` element
+
+
+
 ## The `<system>` and `<user>` elements
 
 System and user instructions.
