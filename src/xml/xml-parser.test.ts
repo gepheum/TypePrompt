@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import type { InternalErrors, SourceSpan } from "../util/error-types.js";
-import type { ElementNode, XmlDocument } from "./xml-parser.js";
+import type { CommentNode, ElementNode, XmlDocument } from "./xml-parser.js";
 import { parseXmlDocument } from "./xml-parser.js";
 
 function expectSuccess(result: XmlDocument | InternalErrors): XmlDocument {
@@ -160,17 +160,12 @@ describe("parseXmlDocument", () => {
     });
   });
 
-  it("keeps CDATA text as the inner text span", () => {
+  it("skips CDATA sections (no child node emitted)", () => {
     const input = "<root><![CDATA[a<b>c]]></root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
 
-    expect(root.children).toMatch([
-      {
-        kind: "text",
-        sourceSpan: span(input, "a<b>c"),
-      },
-    ]);
+    expect(root.children).toMatch([]);
   });
 
   it("preserves raw entity text in text nodes and attribute values", () => {
@@ -336,23 +331,15 @@ describe("parseXmlDocument", () => {
     });
   });
 
-  it("provides identity decoded text and offset map for CDATA text", () => {
-    const input = "<root><![CDATA[a<b>c]]></root>";
+  it("skips CDATA sections (cursor advances past closing ]]>)", () => {
+    // Verify that content after the CDATA section is still parsed.
+    const input = "<root><![CDATA[ignored]]>after</root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
-    const cdataTextStart = input.indexOf("a<b>c");
 
-    expect(root.children[0]).toMatch({
-      kind: "text",
-      sourceSpan: span(input, "a<b>c"),
-      decoded: "a<b>c",
-      offsetMap: [
-        {
-          decodedOffset: 0,
-          sourceOffset: cdataTextStart,
-        },
-      ],
-    });
+    expect(root.children).toMatch([
+      { kind: "text", sourceSpan: span(input, "after") },
+    ]);
   });
 
   it("reports an unexpected closing tag", () => {
@@ -523,16 +510,16 @@ describe("TextNode.allWhitespace", () => {
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: false });
   });
 
-  it("is true for CDATA with whitespace-only content", () => {
-    const input = "<root><![CDATA[  \t\n  ]]></root>";
+  it("is true for whitespace-only text between elements", () => {
+    const input = "<root>  \t\n  </root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
 
     expect(root.children[0]).toMatch({ kind: "text", allWhitespace: true });
   });
 
-  it("is false for CDATA with non-whitespace content", () => {
-    const input = "<root><![CDATA[hello]]></root>";
+  it("is false for non-whitespace text between elements", () => {
+    const input = "<root>hello</root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
 
@@ -561,5 +548,95 @@ describe("TextNode.allWhitespace", () => {
       decoded: "A",
       allWhitespace: false,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// commentsPolicy
+// ---------------------------------------------------------------------------
+
+describe("parseXmlDocument – commentsPolicy", () => {
+  it("drops comments by default (no second argument)", () => {
+    const input = "<!-- hello -->text";
+    const result = expectSuccess(parseXmlDocument(input));
+
+    expect(result.root.children).toMatch([
+      { kind: "text", sourceSpan: { text: "text" } },
+    ]);
+  });
+
+  it("drops comments when commentsPolicy is 'drop-comments'", () => {
+    const input = "<root><!-- ignored --><child/></root>";
+    const result = expectSuccess(parseXmlDocument(input, "drop-comments"));
+    const root = result.root.children[0] as ElementNode;
+
+    expect(root.children).toMatch([
+      { kind: "element", tagName: { text: "child" } },
+    ]);
+  });
+
+  it("keeps comments when commentsPolicy is 'keep-comments'", () => {
+    const input = "<!-- hello -->";
+    const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
+
+    expect(result.root.children).toMatch([
+      {
+        kind: "comment",
+        sourceSpan: { text: "<!-- hello -->", start: 0, end: 14 },
+      },
+    ]);
+  });
+
+  it("keeps comment sourceSpan covering the full '<!-- ... -->' token", () => {
+    const input = "before<!-- my comment -->after";
+    const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
+
+    const commentStart = input.indexOf("<!--");
+    const commentEnd = input.indexOf("-->") + 3;
+    const comment = result.root.children[1] as CommentNode;
+
+    expect(comment).toMatch({
+      kind: "comment",
+      sourceSpan: {
+        text: "<!-- my comment -->",
+        start: commentStart,
+        end: commentEnd,
+      },
+    });
+  });
+
+  it("keeps multiple comment nodes in document order", () => {
+    const input = "<!-- a --><!-- b --><!-- c -->";
+    const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
+
+    expect(result.root.children).toMatch([
+      { kind: "comment", sourceSpan: { text: "<!-- a -->" } },
+      { kind: "comment", sourceSpan: { text: "<!-- b -->" } },
+      { kind: "comment", sourceSpan: { text: "<!-- c -->" } },
+    ]);
+  });
+
+  it("keeps comment nodes interleaved with element and text nodes", () => {
+    const input = "<root>text<!-- note --><child/></root>";
+    const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
+    const root = result.root.children[0] as ElementNode;
+
+    expect(root.children).toMatch([
+      { kind: "text", sourceSpan: { text: "text" } },
+      { kind: "comment", sourceSpan: { text: "<!-- note -->" } },
+      { kind: "element", tagName: { text: "child" } },
+    ]);
+  });
+
+  it("reports an error for an unclosed comment regardless of policy", () => {
+    const unclosed = "<!-- not closed";
+
+    for (const policy of ["drop-comments", "keep-comments"] as const) {
+      const result = parseXmlDocument(unclosed, policy);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [{ message: "Unclosed XML comment" }],
+      });
+    }
   });
 });

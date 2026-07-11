@@ -1,434 +1,601 @@
-import { SaxesParser } from "saxes";
 import type {
   InternalError,
   InternalErrors,
   SourceSpan,
 } from "../util/error-types.js";
-import { OffsetMap, OffsetMapEntry } from "./text-node-join.js";
+import type { OffsetMapEntry } from "./text-node-join.js";
+import type {
+  Attribute,
+  CommentsPolicy,
+  TextNode,
+  XmlComment,
+  XmlDocument,
+  XmlNode,
+} from "./xml-types.js";
 
-export type XmlDocument = {
-  readonly kind: "success";
-  readonly root: {
-    readonly children: readonly XmlNode[];
-  };
-};
+export type {
+  Attribute,
+  XmlComment as CommentNode,
+  CommentsPolicy,
+  ElementNode,
+  TextNode,
+  XmlDocument,
+  XmlNode,
+} from "./xml-types.js";
 
-export type XmlNode = TextNode | ElementNode;
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
-export type TextNode = {
-  readonly kind: "text";
-  readonly sourceSpan: SourceSpan;
-  /// Decoded text content (for example, "&lt;" -> "<").
-  readonly decoded: string;
-  /// Mapping segments from decoded offsets to source offsets.
-  /// The first element is always
-  //   `{ decodedOffset: 0, sourceOffset: sourceSpan.start }`
-  // even if the text is empty.
-  readonly offsetMap: OffsetMap;
-  readonly allWhitespace: boolean;
-};
-
-export type ElementNode = {
-  readonly kind: "element";
-  /// Span covering the content between the opening and closing tags.
-  /// Empty (start === end) for self-closing elements and elements with no content.
-  readonly contentSpan: SourceSpan;
-  readonly children: readonly XmlNode[];
-  readonly tagName: SourceSpan;
-  readonly attributes: { readonly [name: string]: Attribute };
-  readonly isSelfClosing: boolean;
-};
-
-export type Attribute = {
-  readonly name: SourceSpan;
-  /// Inside the quotes, not including them.
-  readonly value: SourceSpan;
-  /// Decoded attribute value (for example, "&lt;" -> "<").
-  readonly decodedValue: string;
-};
-
-/// Parses XML as a fragment and reconstructs precise source spans for nodes.
-///
-/// We use saxes for XML correctness and error recovery, then keep a cursor into
-/// the original source to capture raw spans and decoded text metadata.
 export function parseXmlDocument(
   content: string,
-): XmlDocument | InternalErrors {
-  const errors: InternalError[] = [];
-  const rootNodes: XmlNode[] = [];
-  const openElements: OpenElement[] = [];
-  let cursor = 0;
-
-  let currentOpenTag: CurrentOpenTag | undefined;
-  let skipExplicitCloseScanCount = 0;
-
-  const parser = new SaxesParser({
-    fragment: true,
-    position: true,
-    xmlns: false,
-  });
-
-  parser.on("xmldecl", () => {
-    cursor = parser.position;
-  });
-
-  parser.on("processinginstruction", () => {
-    cursor = parser.position;
-  });
-
-  parser.on("comment", () => {
-    cursor = scanCommentEnd(content, cursor);
-  });
-
-  parser.on("text", () => {
-    const nextMarkup = content.indexOf("<", cursor);
-    const end = nextMarkup === -1 ? content.length : nextMarkup;
-    const decodedText = decodeXmlTextWithOffsetMap(content, cursor, end);
-    appendNode({
-      kind: "text",
-      sourceSpan: makeSpan(content, cursor, end),
-      decoded: decodedText.decoded,
-      offsetMap: decodedText.offsetMap,
-      allWhitespace: /^\s*$/.test(decodedText.decoded),
-    });
-    cursor = end;
-  });
-
-  parser.on("cdata", () => {
-    const cdataStart = content.indexOf("<![CDATA[", cursor);
-    const tokenStart = cdataStart === -1 ? cursor : cdataStart;
-    const tokenEndMarker = content.indexOf("]]>", tokenStart);
-    const tokenEnd =
-      tokenEndMarker === -1 ? content.length : tokenEndMarker + 3;
-    const textStart = tokenStart + "<![CDATA[".length;
-    const textEnd = tokenEnd - 3;
-    const decoded = content.slice(textStart, textEnd);
-    appendNode({
-      kind: "text",
-      sourceSpan: makeSpan(content, textStart, textEnd),
-      decoded,
-      offsetMap: [{ decodedOffset: 0, sourceOffset: textStart }],
-      allWhitespace: /^\s*$/.test(decoded),
-    });
-    cursor = tokenEnd;
-  });
-
-  parser.on("opentagstart", (tag) => {
-    const tokenStart = content.indexOf(`<${tag.name}`, cursor);
-    const nameStart = tokenStart === -1 ? cursor : tokenStart + 1;
-    const nameEnd = nameStart + tag.name.length;
-    currentOpenTag = {
-      tokenStart: tokenStart === -1 ? cursor : tokenStart,
-      tagName: makeSpan(content, nameStart, nameEnd),
-      attributes: {},
-      attributeCursor: nameEnd,
-    };
-  });
-
-  parser.on("attribute", (attribute) => {
-    if (!currentOpenTag) {
-      return;
-    }
-
-    const scanned = scanAttribute(
-      content,
-      currentOpenTag.attributeCursor,
-      attribute.name,
-    );
-    currentOpenTag.attributeCursor = scanned.nextCursor;
-    currentOpenTag.attributes[attribute.name] = {
-      name: scanned.name,
-      value: scanned.value,
-      decodedValue: scanned.decodedValue,
-    };
-    if (scanned.error) {
-      errors.push(scanned.error);
-    }
-  });
-
-  parser.on("opentag", (tag) => {
-    if (!currentOpenTag) {
-      return;
-    }
-
-    const tokenEnd = scanTagEnd(content, currentOpenTag.attributeCursor);
-    openElements.push({
-      node: {
-        kind: "element",
-        children: [],
-        tagName: currentOpenTag.tagName,
-        attributes: currentOpenTag.attributes,
-        isSelfClosing: tag.isSelfClosing,
-      },
-      openingTagStart: currentOpenTag.tokenStart,
-      openingTagEnd: tokenEnd,
-    });
-    cursor = tokenEnd;
-
-    if (tag.isSelfClosing) {
-      // Wait for the matching `closetag` event to pop and append.
-    }
-
-    currentOpenTag = undefined;
-  });
-
-  parser.on("closetag", (tag) => {
-    const element = openElements.pop();
-    if (!element) {
-      return;
-    }
-
-    // contentEnd is the source position where element content ends
-    // (start of closing tag, or same as openingTagEnd for self-closing).
-    let contentEnd = element.openingTagEnd; // default for self-closing
-
-    // During recovery, saxes can emit an explicit `closetag` after reporting an
-    // unexpected close tag. This counter prevents duplicate close-tag scans.
-    if (!tag.isSelfClosing && skipExplicitCloseScanCount > 0) {
-      skipExplicitCloseScanCount -= 1;
-      contentEnd = cursor;
-    } else if (!tag.isSelfClosing) {
-      const closeTag = scanCloseTag(content, cursor);
-      if (closeTag) {
-        cursor = closeTag.tokenEnd;
-        contentEnd = closeTag.tokenStart;
-        if (closeTag.name.text !== tag.name) {
-          errors.push({
-            start: closeTag.tokenStart,
-            end: closeTag.tokenEnd,
-            message: `Mismatched closing tag '</${closeTag.name.text}>'; expected '</${tag.name}>'`,
-          });
-        }
-      } else {
-        contentEnd = cursor;
-      }
-    }
-
-    appendNode({
-      ...element.node,
-      contentSpan: makeSpan(content, element.openingTagEnd, contentEnd),
-    });
-  });
-
-  parser.on("error", (error) => {
-    const message = stripSaxesErrorPrefix(error.message);
-
-    if (
-      message === "attribute without value." ||
-      message === "unquoted attribute value."
-    ) {
-      return;
-    }
-
-    if (
-      message === "an XML declaration must be at the start of the document." &&
-      content.startsWith("<?xml")
-    ) {
-      return;
-    }
-
-    if (message === "unexpected close tag.") {
-      skipExplicitCloseScanCount += 1;
-      return;
-    }
-
-    if (message.startsWith("unmatched closing tag: ")) {
-      const closeTag = scanCloseTag(content, cursor);
-      const rawName = message
-        .slice("unmatched closing tag: ".length)
-        .replace(/\.$/, "");
-      errors.push({
-        start: closeTag?.tokenStart ?? cursor,
-        end: closeTag?.tokenEnd ?? cursor,
-        message: `Unexpected closing tag '</${closeTag?.name.text ?? rawName}>'`,
-      });
-      return;
-    }
-
-    if (message.startsWith("unclosed tag: ")) {
-      const unclosed = openElements.at(-1);
-      const rawName = message.slice("unclosed tag: ".length);
-      errors.push({
-        start: unclosed?.openingTagStart ?? Math.max(0, parser.position - 1),
-        end: unclosed?.openingTagEnd ?? parser.position,
-        message: `Unclosed tag '<${unclosed?.node.tagName.text ?? rawName}>'`,
-      });
-      return;
-    }
-
-    errors.push({
-      start: Math.max(0, parser.position - 1),
-      end: parser.position,
-      message,
-    });
-  });
-
-  parser.write(content).close();
-
-  if (errors.length > 0) {
-    return {
-      kind: "error",
-      errors,
-    };
-  }
-
-  return {
-    kind: "success",
-    root: { children: rootNodes },
-  };
-
-  function appendNode(node: XmlNode): void {
-    const parent = openElements.at(-1);
-    if (parent) {
-      parent.node.children.push(node);
-    } else {
-      rootNodes.push(node);
-    }
-  }
+): XmlDocument<"drop-comments"> | InternalErrors;
+export function parseXmlDocument<C extends CommentsPolicy>(
+  content: string,
+  commentsPolicy: C,
+): XmlDocument<C> | InternalErrors;
+export function parseXmlDocument<C extends CommentsPolicy>(
+  content: string,
+  commentsPolicy?: C,
+): XmlDocument<CommentsPolicy> | InternalErrors {
+  return new XmlParser(
+    content,
+    (commentsPolicy ?? "drop-comments") as CommentsPolicy,
+  ).parse();
 }
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
 
 interface OpenElement {
   readonly node: {
     readonly kind: "element";
-    readonly children: XmlNode[];
+    readonly children: XmlNode<CommentsPolicy>[];
     readonly tagName: SourceSpan;
-    readonly attributes: { readonly [name: string]: Attribute };
+    readonly attributes: Record<string, Attribute>;
     readonly isSelfClosing: boolean;
   };
   readonly openingTagStart: number;
   readonly openingTagEnd: number;
 }
 
-interface CurrentOpenTag {
-  readonly tokenStart: number;
-  readonly tagName: SourceSpan;
-  readonly attributes: Record<string, Attribute>;
-  attributeCursor: number;
-}
+type EntityDecodeResult =
+  | { readonly kind: "ok"; readonly value: string }
+  | { readonly kind: "undefined" }
+  | { readonly kind: "malformed" };
 
-function makeSpan(content: string, start: number, end: number): SourceSpan {
-  return {
-    text: content.slice(start, end),
-    start,
-    end,
-  };
-}
+// ---------------------------------------------------------------------------
+// Parser class
+// ---------------------------------------------------------------------------
 
-/// Decodes XML entities in text and builds a conservative segment map from
-/// decoded offsets back to source ranges.
-function decodeXmlTextWithOffsetMap(
-  content: string,
-  sourceStart: number,
-  sourceEnd: number,
-): { readonly decoded: string; readonly offsetMap: OffsetMap } {
-  const raw = content.slice(sourceStart, sourceEnd);
-  if (raw.length === 0) {
-    return {
-      decoded: "",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: sourceStart }],
-    };
+class XmlParser {
+  private cursor = 0;
+  private readonly errors: InternalError[] = [];
+  private readonly openElements: OpenElement[] = [];
+  private readonly rootNodes: XmlNode<CommentsPolicy>[] = [];
+
+  constructor(
+    private readonly content: string,
+    private readonly commentsPolicy: CommentsPolicy,
+  ) {}
+
+  parse(): XmlDocument<CommentsPolicy> | InternalErrors {
+    while (this.cursor < this.content.length) {
+      if (this.content[this.cursor] !== "<") {
+        this.parseText();
+      } else if (this.content.startsWith("<!--", this.cursor)) {
+        this.parseComment();
+      } else if (this.content.startsWith("<![CDATA[", this.cursor)) {
+        this.parseCDATA();
+      } else if (this.content.startsWith("<?", this.cursor)) {
+        this.parseProcessingInstruction();
+      } else if (this.content.startsWith("</", this.cursor)) {
+        this.parseCloseTag();
+      } else {
+        this.parseOpenTag();
+      }
+    }
+
+    // Report unclosed tags innermost-first, closing them into their parents.
+    while (this.openElements.length > 0) {
+      const el = this.openElements.pop()!;
+      this.errors.push({
+        start: el.openingTagStart,
+        end: el.openingTagEnd,
+        message: `Unclosed tag '<${el.node.tagName.text}>'`,
+      });
+      this.appendNode(
+        this.completeElement(el, el.openingTagEnd, el.openingTagEnd),
+      );
+    }
+
+    if (this.errors.length > 0) {
+      return { kind: "error", errors: this.errors };
+    }
+    return { kind: "success", root: { children: this.rootNodes } };
   }
 
-  const offsetMap: OffsetMapEntry[] = [];
-  const decodedParts: string[] = [];
-  let decodedOffset = 0;
-  let i = 0;
+  // -------------------------------------------------------------------------
+  // Token parsers
+  // -------------------------------------------------------------------------
 
-  while (i < raw.length) {
-    const char = raw[i]!;
-    if (char !== "&") {
-      const chunkStart = i;
-      while (i < raw.length && raw[i] !== "&") {
-        i += 1;
+  private parseText(): void {
+    const start = this.cursor;
+    let end = this.content.indexOf("<", start);
+    if (end === -1) {
+      end = this.content.length;
+    }
+    const decoded = this.decodeXmlText(start, end);
+    this.appendNode({
+      kind: "text",
+      sourceSpan: this.makeSpan(start, end),
+      decoded: decoded.decoded,
+      offsetMap: decoded.offsetMap,
+      allWhitespace: /^\s*$/.test(decoded.decoded),
+    } satisfies TextNode);
+    this.cursor = end;
+  }
+
+  private parseComment(): void {
+    const tokenStart = this.cursor;
+    this.cursor += 4; // skip '<!--'
+    const endMarker = this.content.indexOf("-->", this.cursor);
+    const tokenEnd = endMarker === -1 ? this.content.length : endMarker + 3;
+    if (endMarker === -1) {
+      this.errors.push({
+        start: tokenStart,
+        end: tokenEnd,
+        message: "Unclosed XML comment",
+      });
+    } else if (this.commentsPolicy === "keep-comments") {
+      this.appendNode({
+        kind: "comment",
+        sourceSpan: this.makeSpan(tokenStart, tokenEnd),
+      } satisfies XmlComment as XmlNode<CommentsPolicy>);
+    }
+    this.cursor = tokenEnd;
+  }
+
+  private parseCDATA(): void {
+    this.cursor += 9; // skip '<![CDATA['
+    const endMarker = this.content.indexOf("]]>", this.cursor);
+    this.cursor = endMarker === -1 ? this.content.length : endMarker + 3;
+  }
+
+  private parseProcessingInstruction(): void {
+    this.cursor += 2; // skip '<?'
+    const endMarker = this.content.indexOf("?>", this.cursor);
+    this.cursor = endMarker === -1 ? this.content.length : endMarker + 2;
+  }
+
+  private parseOpenTag(): void {
+    const tokenStart = this.cursor;
+    this.cursor += 1; // skip '<'
+
+    const nameStart = this.cursor;
+    if (!this.isNameStartChar(this.content[this.cursor] ?? "")) {
+      // '<' not followed by a valid name-start char – emit as literal text.
+      this.appendNode({
+        kind: "text",
+        sourceSpan: this.makeSpan(tokenStart, tokenStart + 1),
+        decoded: "<",
+        offsetMap: [{ decodedOffset: 0, sourceOffset: tokenStart }],
+        allWhitespace: false,
+      } satisfies TextNode);
+      this.cursor = tokenStart + 1;
+      return;
+    }
+    while (
+      this.cursor < this.content.length &&
+      this.isNameChar(this.content[this.cursor]!)
+    ) {
+      this.cursor += 1;
+    }
+    const nameEnd = this.cursor;
+    const tagNameSpan = this.makeSpan(nameStart, nameEnd);
+
+    const attributes: Record<string, Attribute> = {};
+    let isSelfClosing = false;
+
+    while (this.cursor < this.content.length) {
+      this.skipWhitespace();
+      const ch = this.content[this.cursor];
+      if (ch === undefined) {
+        break;
       }
-      const chunk = raw.slice(chunkStart, i);
-      decodedParts.push(chunk);
-      const lastEntry = offsetMap.at(-1);
-      if (!lastEntry || lastEntry.decodedOffset !== decodedOffset) {
+      if (ch === ">") {
+        this.cursor += 1;
+        break;
+      }
+      if (ch === "/") {
+        if (this.content[this.cursor + 1] === ">") {
+          isSelfClosing = true;
+          this.cursor += 2;
+          break;
+        }
+        this.cursor += 1;
+        continue;
+      }
+      if (!this.isNameStartChar(ch)) {
+        this.cursor += 1;
+        continue;
+      }
+      const attr = this.parseAttribute();
+      if (attr !== null && !(attr.name.text in attributes)) {
+        attributes[attr.name.text] = attr;
+      }
+    }
+
+    const openingTagEnd = this.cursor;
+
+    if (isSelfClosing) {
+      this.appendNode({
+        kind: "element",
+        children: [],
+        tagName: tagNameSpan,
+        attributes,
+        isSelfClosing: true,
+        contentSpan: this.makeSpan(openingTagEnd, openingTagEnd),
+      } as XmlNode<CommentsPolicy>);
+    } else {
+      this.openElements.push({
+        node: {
+          kind: "element",
+          children: [],
+          tagName: tagNameSpan,
+          attributes,
+          isSelfClosing: false,
+        },
+        openingTagStart: tokenStart,
+        openingTagEnd,
+      });
+    }
+  }
+
+  private parseAttribute(): Attribute | null {
+    const nameStart = this.cursor;
+    while (
+      this.cursor < this.content.length &&
+      this.isNameChar(this.content[this.cursor]!)
+    ) {
+      this.cursor += 1;
+    }
+    const nameEnd = this.cursor;
+    if (nameEnd === nameStart) {
+      return null;
+    }
+    const nameSpan = this.makeSpan(nameStart, nameEnd);
+
+    this.skipWhitespace();
+
+    if (this.content[this.cursor] !== "=") {
+      this.errors.push({
+        start: nameStart,
+        end: nameEnd,
+        message: `Attribute '${nameSpan.text}' must have a value`,
+      });
+      return {
+        name: nameSpan,
+        value: this.makeSpan(nameEnd, nameEnd),
+        decodedValue: "",
+      };
+    }
+
+    this.cursor += 1; // skip '='
+    this.skipWhitespace();
+
+    const quote = this.content[this.cursor];
+    if (quote !== '"' && quote !== "'") {
+      const valueStart = this.cursor;
+      while (this.cursor < this.content.length) {
+        const c = this.content[this.cursor]!;
+        if (/\s/.test(c) || c === ">" || c === "/" || c === "<") {
+          break;
+        }
+        this.cursor += 1;
+      }
+      const valueEnd = this.cursor;
+      const valueSpan = this.makeSpan(valueStart, valueEnd);
+      this.errors.push({
+        start: nameStart,
+        end: valueEnd,
+        message: `Attribute '${nameSpan.text}' value must be quoted`,
+      });
+      const decoded = this.decodeXmlText(valueStart, valueEnd);
+      return {
+        name: nameSpan,
+        value: valueSpan,
+        decodedValue: decoded.decoded,
+      };
+    }
+
+    this.cursor += 1; // skip opening quote
+    const valueStart = this.cursor;
+    while (this.cursor < this.content.length) {
+      const c = this.content[this.cursor]!;
+      if (c === quote || c === "<") {
+        break;
+      }
+      this.cursor += 1;
+    }
+    const valueEnd = this.cursor;
+    if (this.content[this.cursor] === quote) {
+      this.cursor += 1; // skip closing quote
+    }
+    const valueSpan = this.makeSpan(valueStart, valueEnd);
+    const decoded = this.decodeXmlText(valueStart, valueEnd);
+    return { name: nameSpan, value: valueSpan, decodedValue: decoded.decoded };
+  }
+
+  private parseCloseTag(): void {
+    const tokenStart = this.cursor;
+    this.cursor += 2; // skip '</'
+
+    this.skipWhitespace();
+    const nameStart = this.cursor;
+    while (
+      this.cursor < this.content.length &&
+      this.isNameChar(this.content[this.cursor]!)
+    ) {
+      this.cursor += 1;
+    }
+    const name = this.content.slice(nameStart, this.cursor);
+
+    this.skipWhitespace();
+    if (this.content[this.cursor] === ">") {
+      this.cursor += 1;
+    }
+    const tokenEnd = this.cursor;
+
+    if (this.openElements.length === 0) {
+      this.errors.push({
+        start: tokenStart,
+        end: tokenEnd,
+        message: `Unexpected closing tag '</${name}>'`,
+      });
+      return;
+    }
+
+    const top = this.openElements[this.openElements.length - 1]!;
+
+    if (top.node.tagName.text === name) {
+      this.openElements.pop();
+      this.appendNode(this.completeElement(top, top.openingTagEnd, tokenStart));
+      return;
+    }
+
+    // Mismatch – search for a matching ancestor.
+    let foundIndex = -1;
+    for (let i = this.openElements.length - 2; i >= 0; i--) {
+      if (this.openElements[i]!.node.tagName.text === name) {
+        foundIndex = i;
+        break;
+      }
+    }
+
+    if (foundIndex === -1) {
+      this.errors.push({
+        start: tokenStart,
+        end: tokenEnd,
+        message: `Unexpected closing tag '</${name}>'`,
+      });
+      return;
+    }
+
+    this.errors.push({
+      start: tokenStart,
+      end: tokenEnd,
+      message: `Mismatched closing tag '</${name}>'; expected '</${top.node.tagName.text}>'`,
+    });
+
+    // Implicitly close all elements above the matched ancestor.
+    while (this.openElements.length > foundIndex + 1) {
+      const el = this.openElements.pop()!;
+      this.appendNode(
+        this.completeElement(el, el.openingTagEnd, el.openingTagEnd),
+      );
+    }
+
+    // Close the matched element with the actual content span.
+    const matched = this.openElements.pop()!;
+    this.appendNode(
+      this.completeElement(matched, matched.openingTagEnd, tokenStart),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Entity decoding
+  // -------------------------------------------------------------------------
+
+  private decodeXmlText(
+    sourceStart: number,
+    sourceEnd: number,
+  ): {
+    readonly decoded: string;
+    readonly offsetMap: readonly OffsetMapEntry[];
+  } {
+    const raw = this.content.slice(sourceStart, sourceEnd);
+    if (raw.length === 0) {
+      return {
+        decoded: "",
+        offsetMap: [{ decodedOffset: 0, sourceOffset: sourceStart }],
+      };
+    }
+
+    const offsetMap: OffsetMapEntry[] = [];
+    const decodedParts: string[] = [];
+    let decodedOffset = 0;
+    let i = 0;
+
+    while (i < raw.length) {
+      if (raw[i] !== "&") {
+        const chunkStart = i;
+        while (i < raw.length && raw[i] !== "&") {
+          i += 1;
+        }
+        const chunk = raw.slice(chunkStart, i);
+        decodedParts.push(chunk);
+        // Emit a new segment only when the decoded offset differs from the
+        // last entity-end marker (avoids duplicate adjacent entries).
+        const last = offsetMap.at(-1);
+        if (last === undefined || last.decodedOffset !== decodedOffset) {
+          offsetMap.push({
+            decodedOffset,
+            sourceOffset: sourceStart + chunkStart,
+          });
+        }
+        decodedOffset += chunk.length;
+        continue;
+      }
+
+      // '&' found – look for the closing ';'.
+      const semicolon = raw.indexOf(";", i + 1);
+      if (semicolon === -1) {
+        // No ';' – treat '&' as a literal character.
+        const last = offsetMap.at(-1);
+        if (last === undefined || last.decodedOffset !== decodedOffset) {
+          offsetMap.push({ decodedOffset, sourceOffset: sourceStart + i });
+        }
+        decodedParts.push("&");
+        decodedOffset += 1;
+        i += 1;
+        continue;
+      }
+
+      const entityBody = raw.slice(i + 1, semicolon);
+      const result = decodeXmlEntityResult(entityBody);
+
+      if (result.kind === "ok") {
+        // Valid entity: bracket it with two offset map entries.
+        offsetMap.push({ decodedOffset, sourceOffset: sourceStart + i });
+        decodedParts.push(result.value);
+        decodedOffset += result.value.length;
         offsetMap.push({
           decodedOffset,
-          sourceOffset: sourceStart + chunkStart,
+          sourceOffset: sourceStart + semicolon + 1,
         });
+        i = semicolon + 1;
+      } else {
+        // Unknown or malformed entity – record an error and keep the raw text.
+        this.errors.push({
+          start: sourceStart + i,
+          end: sourceStart + semicolon + 1,
+          message:
+            result.kind === "malformed"
+              ? "malformed character entity."
+              : "undefined entity.",
+        });
+        const rawEntity = raw.slice(i, semicolon + 1);
+        const last = offsetMap.at(-1);
+        if (last === undefined || last.decodedOffset !== decodedOffset) {
+          offsetMap.push({ decodedOffset, sourceOffset: sourceStart + i });
+        }
+        decodedParts.push(rawEntity);
+        decodedOffset += rawEntity.length;
+        i = semicolon + 1;
       }
-      decodedOffset += chunk.length;
-      continue;
     }
 
-    const semicolon = raw.indexOf(";", i + 1);
-    if (semicolon === -1) {
-      const chunkStart = i;
-      i += 1;
-      const chunk = raw.slice(chunkStart, i);
-      decodedParts.push(chunk);
-      offsetMap.push({
-        decodedOffset,
-        sourceOffset: sourceStart + chunkStart,
-      });
-      decodedOffset += chunk.length;
-      continue;
-    }
-
-    const entityBody = raw.slice(i + 1, semicolon);
-    const decodedEntity = decodeXmlEntity(entityBody);
-    if (decodedEntity === undefined) {
-      const chunk = raw.slice(i, semicolon + 1);
-      decodedParts.push(chunk);
-      offsetMap.push({
-        decodedOffset,
-        sourceOffset: sourceStart + i,
-      });
-      decodedOffset += chunk.length;
-      i = semicolon + 1;
-      continue;
-    }
-
-    // Known entity: two entries to capture the source length gap.
-    decodedParts.push(decodedEntity);
-    offsetMap.push({ decodedOffset, sourceOffset: sourceStart + i });
-    decodedOffset += decodedEntity.length;
-    offsetMap.push({
-      decodedOffset,
-      sourceOffset: sourceStart + semicolon + 1,
-    });
-    i = semicolon + 1;
+    return { decoded: decodedParts.join(""), offsetMap };
   }
 
-  return {
-    decoded: decodedParts.join(""),
-    offsetMap,
-  };
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  private completeElement(
+    el: OpenElement,
+    contentStart: number,
+    contentEnd: number,
+  ): XmlNode<CommentsPolicy> {
+    return {
+      ...el.node,
+      contentSpan: this.makeSpan(contentStart, contentEnd),
+    } as XmlNode<CommentsPolicy>;
+  }
+
+  private appendNode(node: XmlNode<CommentsPolicy>): void {
+    const parent = this.openElements.at(-1);
+    if (parent !== undefined) {
+      parent.node.children.push(node);
+    } else {
+      this.rootNodes.push(node);
+    }
+  }
+
+  private makeSpan(start: number, end: number): SourceSpan {
+    return { text: this.content.slice(start, end), start, end };
+  }
+
+  private skipWhitespace(): void {
+    while (
+      this.cursor < this.content.length &&
+      /\s/.test(this.content[this.cursor]!)
+    ) {
+      this.cursor += 1;
+    }
+  }
+
+  /** True for characters that may begin an XML name. */
+  private isNameStartChar(ch: string): boolean {
+    return /[A-Za-z_:]/.test(ch) || ch.charCodeAt(0) > 0x7f;
+  }
+
+  /** True for characters that may continue an XML name. */
+  private isNameChar(ch: string): boolean {
+    return /[A-Za-z0-9_:\-.·]/.test(ch) || ch.charCodeAt(0) > 0x7f;
+  }
 }
 
-function decodeXmlEntity(entityBody: string): string | undefined {
+// ---------------------------------------------------------------------------
+// Entity decoding helpers (module-level, pure)
+// ---------------------------------------------------------------------------
+
+function decodeXmlEntityResult(entityBody: string): EntityDecodeResult {
   switch (entityBody) {
     case "lt":
-      return "<";
+      return { kind: "ok", value: "<" };
     case "gt":
-      return ">";
+      return { kind: "ok", value: ">" };
     case "amp":
-      return "&";
+      return { kind: "ok", value: "&" };
     case "quot":
-      return '"';
+      return { kind: "ok", value: '"' };
     case "apos":
-      return "'";
+      return { kind: "ok", value: "'" };
     default:
       break;
   }
 
   if (entityBody.startsWith("#x") || entityBody.startsWith("#X")) {
-    const codePoint = Number.parseInt(entityBody.slice(2), 16);
-    return codePointToString(codePoint);
+    const hex = entityBody.slice(2);
+    if (hex.length === 0 || !/^[0-9A-Fa-f]+$/.test(hex)) {
+      return { kind: "malformed" };
+    }
+    const codePoint = Number.parseInt(hex, 16);
+    const str = codePointToString(codePoint);
+    return str === undefined
+      ? { kind: "malformed" }
+      : { kind: "ok", value: str };
   }
 
   if (entityBody.startsWith("#")) {
-    const codePoint = Number.parseInt(entityBody.slice(1), 10);
-    return codePointToString(codePoint);
+    const dec = entityBody.slice(1);
+    if (dec.length === 0 || !/^[0-9]+$/.test(dec)) {
+      return { kind: "malformed" };
+    }
+    const codePoint = Number.parseInt(dec, 10);
+    const str = codePointToString(codePoint);
+    return str === undefined
+      ? { kind: "malformed" }
+      : { kind: "ok", value: str };
   }
 
-  return undefined;
+  return { kind: "undefined" };
 }
 
-/// Reject invalid XML code points to match XML character entity constraints.
+/** Reject code points forbidden by the XML character entity rules. */
 function codePointToString(codePoint: number): string | undefined {
   if (!Number.isInteger(codePoint)) {
     return undefined;
@@ -440,156 +607,4 @@ function codePointToString(codePoint: number): string | undefined {
     return undefined;
   }
   return String.fromCodePoint(codePoint);
-}
-
-function scanAttribute(
-  content: string,
-  cursor: number,
-  attributeName: string,
-): {
-  readonly name: SourceSpan;
-  readonly value: SourceSpan;
-  readonly decodedValue: string;
-  readonly nextCursor: number;
-  readonly error?: InternalError;
-} {
-  const nameStart = content.indexOf(
-    attributeName,
-    skipWhitespace(content, cursor),
-  );
-  const safeNameStart =
-    nameStart === -1 ? skipWhitespace(content, cursor) : nameStart;
-  const nameEnd = safeNameStart + attributeName.length;
-  let valueCursor = skipWhitespace(content, nameEnd);
-
-  if (content[valueCursor] !== "=") {
-    return {
-      name: makeSpan(content, safeNameStart, nameEnd),
-      value: makeSpan(content, valueCursor, valueCursor),
-      decodedValue: "",
-      nextCursor: valueCursor,
-      error: {
-        start: safeNameStart,
-        end: valueCursor,
-        message: `Attribute '${attributeName}' must have a value`,
-      },
-    };
-  }
-
-  valueCursor = skipWhitespace(content, valueCursor + 1);
-  const quote = content[valueCursor];
-
-  if (quote !== '"' && quote !== "'") {
-    const valueEnd = scanUnquotedAttributeValueEnd(content, valueCursor);
-    const value = makeSpan(content, valueCursor, valueEnd);
-    return {
-      name: makeSpan(content, safeNameStart, nameEnd),
-      value,
-      decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end)
-        .decoded,
-      nextCursor: valueEnd,
-      error: {
-        start: safeNameStart,
-        end: valueEnd,
-        message: `Attribute '${attributeName}' value must be quoted`,
-      },
-    };
-  }
-
-  const quotedValueEnd = content.indexOf(quote, valueCursor + 1);
-  const safeQuotedValueEnd =
-    quotedValueEnd === -1 ? content.length : quotedValueEnd;
-  const value = makeSpan(content, valueCursor + 1, safeQuotedValueEnd);
-  return {
-    name: makeSpan(content, safeNameStart, nameEnd),
-    value,
-    decodedValue: decodeXmlTextWithOffsetMap(content, value.start, value.end)
-      .decoded,
-    nextCursor: safeQuotedValueEnd + 1,
-  };
-}
-
-function stripSaxesErrorPrefix(message: string): string {
-  return message.replace(/^\d+:\d+:\s*/, "");
-}
-
-function scanCommentEnd(content: string, cursor: number): number {
-  const end = content.indexOf("-->", cursor);
-  return end === -1 ? content.length : end + 3;
-}
-
-function scanTagEnd(content: string, cursor: number): number {
-  let quote: '"' | "'" | undefined;
-  for (let i = cursor; i < content.length; i += 1) {
-    const char = content[i]!;
-    if (quote) {
-      if (char === quote) {
-        quote = undefined;
-      }
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (char === ">") {
-      return i + 1;
-    }
-  }
-  return content.length;
-}
-
-function scanCloseTag(
-  content: string,
-  cursor: number,
-):
-  | {
-      readonly tokenStart: number;
-      readonly name: SourceSpan;
-      readonly tokenEnd: number;
-    }
-  | undefined {
-  const tokenStart = content.indexOf("</", cursor);
-  if (tokenStart === -1) {
-    return undefined;
-  }
-
-  let nameEnd = tokenStart + 2;
-  while (nameEnd < content.length) {
-    const char = content[nameEnd]!;
-    if (char === ">" || /\s/.test(char)) {
-      break;
-    }
-    nameEnd += 1;
-  }
-
-  const closeBracket = content.indexOf(">", nameEnd);
-  return {
-    tokenStart,
-    name: makeSpan(content, tokenStart + 2, nameEnd),
-    tokenEnd: closeBracket === -1 ? content.length : closeBracket + 1,
-  };
-}
-
-function skipWhitespace(content: string, cursor: number): number {
-  let i = cursor;
-  while (i < content.length && /\s/.test(content[i]!)) {
-    i += 1;
-  }
-  return i;
-}
-
-function scanUnquotedAttributeValueEnd(
-  content: string,
-  cursor: number,
-): number {
-  let i = cursor;
-  while (i < content.length) {
-    const char = content[i]!;
-    if (/\s/.test(char) || char === ">" || char === "/") {
-      break;
-    }
-    i += 1;
-  }
-  return i;
 }
