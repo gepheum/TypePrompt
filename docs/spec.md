@@ -13,8 +13,7 @@ Elements which can be defined at the top-level:
 
 ## The `<meta>` element (top-level)
 
-When defined at the top level, the `<meta>` element takes no attribute.
-It must only contain text content, and its content must define a `Meta` type in Origamic's SDL language.
+When defined at the top level, the `<meta>` element takes no attribute. The text content must define a `Meta` type using Origamic's SDL language.
 
 Example:
 
@@ -43,9 +42,48 @@ It can have the following child elements:
   - `<system>`: system instructions
   - `<user>`: user instructions
   - `<examples>`: few shot examples
-  - `<let>`
-  - `<variant>`
-  - `<snippet>`
+  - `<let>`: alias for an expression
+  - `<variant>`: one variant of the prompt
+  - `<snippet>`: a piece of text which can be inserted into the system/user instructions
+
+## The `<meta>` element (inside `<template>...</template>`)
+
+The text content is the JSON representation of a value of type `Meta`. Must be present in each template definition if and only if there is a `<meta>` element defined at the top level.
+
+Example:
+```xml
+<meta>
+  type Meta = {
+    temperature: number;
+    num_retries?: integer;
+  };
+</meta>
+
+<template name="Wave">
+  <meta>
+    {
+      "temperature": 0.8
+    }
+  </meta>
+
+  ...
+</template>
+```
+
+## The `<system>` and `<user>` elements
+
+System and user instructions.
+
+If the template has any `<variant>` element, then `<system>` and `<user>` must be defined inside each `<variant>` as opposed to being defined directly inside `<template>`.
+
+There must be exactly one `<system>` and one `<user>` element per template/template variant.
+
+In addition to text nodes, `<system>`/`<user>` can contain the following elements:
+- `<insert>`
+- `<enclosed>`
+- `<c>`
+
+### Indentation
 
 ## Namespaces
 
