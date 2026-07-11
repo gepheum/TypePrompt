@@ -3,7 +3,7 @@ import { describe, it } from "mocha";
 import { z } from "zod";
 
 import { checkXmlAttributes } from "./xml-attributes-checker.js";
-import type { ElementNode } from "./xml-parser.js";
+import type { ElementNode } from "./xml-types.js";
 import { parseXmlDocument } from "./xml-parser.js";
 
 function parseElement(xml: string): ElementNode {

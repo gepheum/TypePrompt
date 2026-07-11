@@ -13,16 +13,6 @@ import type {
   XmlNode,
 } from "./xml-types.js";
 
-export type {
-  Attribute,
-  XmlComment as CommentNode,
-  CommentsPolicy,
-  ElementNode,
-  TextNode,
-  XmlDocument,
-  XmlNode,
-} from "./xml-types.js";
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -43,27 +33,6 @@ export function parseXmlDocument<C extends CommentsPolicy>(
     (commentsPolicy ?? "drop-comments") as CommentsPolicy,
   ).parse();
 }
-
-// ---------------------------------------------------------------------------
-// Internal types
-// ---------------------------------------------------------------------------
-
-interface OpenElement {
-  readonly node: {
-    readonly kind: "element";
-    readonly children: XmlNode<CommentsPolicy>[];
-    readonly tagName: SourceSpan;
-    readonly attributes: Record<string, Attribute>;
-    readonly isSelfClosing: boolean;
-  };
-  readonly openingTagStart: number;
-  readonly openingTagEnd: number;
-}
-
-type EntityDecodeResult =
-  | { readonly kind: "ok"; readonly value: string }
-  | { readonly kind: "undefined" }
-  | { readonly kind: "malformed" };
 
 // ---------------------------------------------------------------------------
 // Parser class
@@ -174,7 +143,9 @@ class XmlParser {
     this.cursor += 1; // skip '<'
 
     const nameStart = this.cursor;
-    if (!this.isNameStartChar(this.content[this.cursor] ?? "")) {
+    RE_XML_NAME.lastIndex = nameStart;
+    const tagNameMatch = RE_XML_NAME.exec(this.content);
+    if (tagNameMatch === null) {
       // '<' not followed by a valid name-start char – emit as literal text.
       this.appendNode({
         kind: "text",
@@ -186,12 +157,7 @@ class XmlParser {
       this.cursor = tokenStart + 1;
       return;
     }
-    while (
-      this.cursor < this.content.length &&
-      this.isNameChar(this.content[this.cursor]!)
-    ) {
-      this.cursor += 1;
-    }
+    this.cursor = RE_XML_NAME.lastIndex;
     const nameEnd = this.cursor;
     const tagNameSpan = this.makeSpan(nameStart, nameEnd);
 
@@ -217,7 +183,7 @@ class XmlParser {
         this.cursor += 1;
         continue;
       }
-      if (!this.isNameStartChar(ch)) {
+      if (!RE_NAME_START_CHAR.test(ch)) {
         this.cursor += 1;
         continue;
       }
@@ -255,16 +221,13 @@ class XmlParser {
 
   private parseAttribute(): Attribute | null {
     const nameStart = this.cursor;
-    while (
-      this.cursor < this.content.length &&
-      this.isNameChar(this.content[this.cursor]!)
-    ) {
-      this.cursor += 1;
-    }
-    const nameEnd = this.cursor;
-    if (nameEnd === nameStart) {
+    RE_XML_NAME.lastIndex = nameStart;
+    const attrNameMatch = RE_XML_NAME.exec(this.content);
+    if (attrNameMatch === null) {
       return null;
     }
+    this.cursor = RE_XML_NAME.lastIndex;
+    const nameEnd = this.cursor;
     const nameSpan = this.makeSpan(nameStart, nameEnd);
 
     this.skipWhitespace();
@@ -288,14 +251,10 @@ class XmlParser {
     const quote = this.content[this.cursor];
     if (quote !== '"' && quote !== "'") {
       const valueStart = this.cursor;
-      while (this.cursor < this.content.length) {
-        const c = this.content[this.cursor]!;
-        if (/\s/.test(c) || c === ">" || c === "/" || c === "<") {
-          break;
-        }
-        this.cursor += 1;
-      }
-      const valueEnd = this.cursor;
+      RE_UNQUOTED_ATTR_VALUE.lastIndex = valueStart;
+      RE_UNQUOTED_ATTR_VALUE.exec(this.content);
+      const valueEnd = RE_UNQUOTED_ATTR_VALUE.lastIndex;
+      this.cursor = valueEnd;
       const valueSpan = this.makeSpan(valueStart, valueEnd);
       this.errors.push({
         start: nameStart,
@@ -312,14 +271,12 @@ class XmlParser {
 
     this.cursor += 1; // skip opening quote
     const valueStart = this.cursor;
-    while (this.cursor < this.content.length) {
-      const c = this.content[this.cursor]!;
-      if (c === quote || c === "<") {
-        break;
-      }
-      this.cursor += 1;
-    }
-    const valueEnd = this.cursor;
+    const attrValueRe =
+      quote === '"' ? RE_DOUBLE_QUOTED_ATTR_VALUE : RE_SINGLE_QUOTED_ATTR_VALUE;
+    attrValueRe.lastIndex = valueStart;
+    attrValueRe.exec(this.content);
+    const valueEnd = attrValueRe.lastIndex;
+    this.cursor = valueEnd;
     if (this.content[this.cursor] === quote) {
       this.cursor += 1; // skip closing quote
     }
@@ -333,14 +290,12 @@ class XmlParser {
     this.cursor += 2; // skip '</'
 
     this.skipWhitespace();
-    const nameStart = this.cursor;
-    while (
-      this.cursor < this.content.length &&
-      this.isNameChar(this.content[this.cursor]!)
-    ) {
-      this.cursor += 1;
+    RE_XML_NAME.lastIndex = this.cursor;
+    const closeNameMatch = RE_XML_NAME.exec(this.content);
+    const name = closeNameMatch !== null ? closeNameMatch[0] : "";
+    if (closeNameMatch !== null) {
+      this.cursor = RE_XML_NAME.lastIndex;
     }
-    const name = this.content.slice(nameStart, this.cursor);
 
     this.skipWhitespace();
     if (this.content[this.cursor] === ">") {
@@ -430,11 +385,10 @@ class XmlParser {
 
     while (i < raw.length) {
       if (raw[i] !== "&") {
-        const chunkStart = i;
-        while (i < raw.length && raw[i] !== "&") {
-          i += 1;
-        }
-        const chunk = raw.slice(chunkStart, i);
+        RE_NON_AMP.lastIndex = i;
+        RE_NON_AMP.exec(raw);
+        const chunkEnd = RE_NON_AMP.lastIndex;
+        const chunk = raw.slice(i, chunkEnd);
         decodedParts.push(chunk);
         // Emit a new segment only when the decoded offset differs from the
         // last entity-end marker (avoids duplicate adjacent entries).
@@ -442,10 +396,11 @@ class XmlParser {
         if (last === undefined || last.decodedOffset !== decodedOffset) {
           offsetMap.push({
             decodedOffset,
-            sourceOffset: sourceStart + chunkStart,
+            sourceOffset: sourceStart + i,
           });
         }
         decodedOffset += chunk.length;
+        i = chunkEnd;
         continue;
       }
 
@@ -529,22 +484,9 @@ class XmlParser {
   }
 
   private skipWhitespace(): void {
-    while (
-      this.cursor < this.content.length &&
-      /\s/.test(this.content[this.cursor]!)
-    ) {
-      this.cursor += 1;
-    }
-  }
-
-  /** True for characters that may begin an XML name. */
-  private isNameStartChar(ch: string): boolean {
-    return /[A-Za-z_:]/.test(ch) || ch.charCodeAt(0) > 0x7f;
-  }
-
-  /** True for characters that may continue an XML name. */
-  private isNameChar(ch: string): boolean {
-    return /[A-Za-z0-9_:\-.·]/.test(ch) || ch.charCodeAt(0) > 0x7f;
+    RE_OPT_WHITESPACE.lastIndex = this.cursor;
+    RE_OPT_WHITESPACE.exec(this.content);
+    this.cursor = RE_OPT_WHITESPACE.lastIndex;
   }
 }
 
@@ -608,3 +550,43 @@ function codePointToString(codePoint: number): string | undefined {
   }
   return String.fromCodePoint(codePoint);
 }
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+interface OpenElement {
+  readonly node: {
+    readonly kind: "element";
+    readonly children: XmlNode<CommentsPolicy>[];
+    readonly tagName: SourceSpan;
+    readonly attributes: Record<string, Attribute>;
+    readonly isSelfClosing: boolean;
+  };
+  readonly openingTagStart: number;
+  readonly openingTagEnd: number;
+}
+
+type EntityDecodeResult =
+  | { readonly kind: "ok"; readonly value: string }
+  | { readonly kind: "undefined" }
+  | { readonly kind: "malformed" };
+
+// ---------------------------------------------------------------------------
+// Sticky regex constants (lastIndex must be set before each use)
+// ---------------------------------------------------------------------------
+
+/** Skips zero or more whitespace characters. Always matches. */
+const RE_OPT_WHITESPACE = /\s*/y;
+/** Matches a complete XML Name token. */
+const RE_XML_NAME = /[A-Za-z_:\u0080-\uFFFF][A-Za-z0-9_:\-.\u0080-\uFFFF]*/y;
+/** Matches a run of non-'&' characters (used inside entity-decode loop). */
+const RE_NON_AMP = /[^&]*/y;
+/** Matches an unquoted attribute value (stops at whitespace, >, /, <). */
+const RE_UNQUOTED_ATTR_VALUE = /[^\s>/<]*/y;
+/** Matches the body of a double-quoted attribute value. */
+const RE_DOUBLE_QUOTED_ATTR_VALUE = /[^"<]*/y;
+/** Matches the body of a single-quoted attribute value. */
+const RE_SINGLE_QUOTED_ATTR_VALUE = /[^'<]*/y;
+/** Non-sticky test for XML name-start characters. */
+const RE_NAME_START_CHAR = /[A-Za-z_:\u0080-\uFFFF]/;

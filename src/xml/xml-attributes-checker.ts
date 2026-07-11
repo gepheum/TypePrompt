@@ -1,7 +1,7 @@
 import { type ZodType } from "zod";
 
 import type { InternalError, InternalErrors } from "../util/error-types.js";
-import type { ElementNode } from "./xml-parser.js";
+import type { ElementNode } from "./xml-types.js";
 
 type AttributeSchemaEntry = {
   readonly schema: ZodType<string | undefined>;

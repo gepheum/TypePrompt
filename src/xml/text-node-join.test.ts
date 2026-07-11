@@ -6,7 +6,7 @@ import {
   joinTextNodes,
   textNodeDecodedOffsetToSourceOffset,
 } from "./text-node-join.js";
-import type { ElementNode, TextNode } from "./xml-parser.js";
+import type { ElementNode, TextNode } from "./xml-types.js";
 import { parseXmlDocument } from "./xml-parser.js";
 
 function expectSuccess(

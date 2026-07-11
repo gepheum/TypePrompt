@@ -1,5 +1,5 @@
 import type { Schema } from "../schema/schema-types.js";
-import { ElementNode } from "../xml/xml-parser.js";
+import type { ElementNode } from "../xml/xml-types.js";
 
 export type Templates = {
   readonly kind: "success";
