@@ -1,5 +1,6 @@
+- TODO: no longer allow quotes in <c>
+
 - TODO: support "integer" in schemas?
-- TODO: indentation rule: if line starts with "*", then maybe I should indent with + 2
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
 - TODO: do I really need the namespaces?
 - TODO: <snippet> <on cond="...">

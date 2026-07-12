@@ -1,6 +1,3 @@
-TODO: rename template to prompt?
-TODO: no longer allow quotes in <c>
-
 # The XML tree
 
 ## File hierarchy
@@ -220,13 +217,15 @@ Consider this template:
 <template name="AssembleName">
   <schema>
     type Input = {
-      firstName: string;
-      lastName: string;
-    }
+      nameComponents: {
+        firstName: string;
+        lastName: string;
+      };
+    };
 
     type Output = {
       fullName: string;
-    }
+    };
   </schema>
 
   <system>
@@ -234,7 +233,7 @@ Consider this template:
   </system>
 
   <user>
-    <insert val="input" format="json"/>
+    <insert val="input.nameComponents" format="json"/>
   </user>
 </template>
 ```
@@ -309,4 +308,104 @@ There can be at most one `<examples>` element per template or template variant.
 
 ## `<variant>`
 
+This element allows you to define different variants of your prompt. All variants share the same input and output type, but the instructions and few-shot examples can be different.
+
+Using `<variant>` requires the `Input` type to have a `variant` field of type union of string literals.
+When using variants, the `<system>`, `<user>` and `<examples>` elements must be defined within each `<variant>` element as opposed to being direct children of the `<template>`.
+
+```xml
+<template name="AssembleName">
+  <schema>
+    type Input = {
+      firstName: string;
+      lastName: string;
+      variant: "formal" | "informal"
+    }
+
+    type Output = {
+      fullName: string;
+    }
+  </schema>
+
+  <variant name="formal">
+    <system>
+      Assemble firstName and familyName into a full name.
+    </system>
+
+    <user>
+      <insert val="input.nameComponents" format="json"/>
+    </user>
+
+    <examples>
+      [
+        {
+          "input": {
+            "nameComponents": {
+              "firstName": "Jane",
+              "lastName": "Doe"
+            },
+            "variant": "formal"
+          },
+          "output": {
+            "fullName": "Jane Doe"
+          }
+        },
+        {
+          "input": {
+            "nameComponents": {
+              "firstName": "John",
+              "lastName": "Doe"
+            },
+            "variant": "formal"
+          },
+          "output": {
+            "fullName": "John Doe"
+          }
+        }
+      ]
+    </examples>
+  </variant>
+
+  <variant name="informal">
+    <system>
+      Returns an informal `fullName` for the given person.
+    </system>
+
+    <user>
+      <insert val="input.nameComponents" format="json"/>
+    </user>
+
+    <examples>
+      [
+        {
+          "input": {
+            "nameComponents": {
+              "firstName": "Jane",
+              "lastName": "Doe"
+            },
+            "variant": "informal"
+          },
+          "output": {
+            "fullName": "J. Do"
+          }
+        },
+        {
+          "input": {
+            "nameComponents": {
+              "firstName": "John",
+              "lastName": "Doe"
+            },
+            "variant": "informal"
+          },
+          "output": {
+            "fullName": "Johny D"
+          }
+        }
+      ]
+    </examples>
+  </variant>
+</template>
+```
+
+## `<snippet>`
 
