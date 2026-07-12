@@ -310,7 +310,7 @@ There can be at most one `<examples>` element per template or template variant.
 
 This element allows you to define different variants of your prompt. All variants share the same input and output type, but the instructions and few-shot examples can be different.
 
-Using `<variant>` requires the `Input` type to have a `variant` field of type union of string literals.
+Using `<variant>` requires the `Input` type to have a `variant` field of type union of string literals. There must be one `<variant>` per member in the union.
 When using variants, the `<system>`, `<user>` and `<examples>` elements must be defined within each `<variant>` element as opposed to being direct children of the `<template>`.
 
 ```xml
