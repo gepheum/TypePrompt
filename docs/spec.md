@@ -72,7 +72,30 @@ Example:
 
 ## The `<schema>` element
 
+The text content must define both an `Input` and an `Output` type using Origamic's SDL language.
 
+The `<schema>` tag has an optional `output-format` attribute which defaults to `json`. If the output format is not `json`, then the `Output` type must be the `string` type.
+
+Every `<template>` must have exactly one `<schema>` element.
+
+Example:
+
+```xml
+<template>
+  <schema>
+    type Input = {
+      dateToday: string;
+      ...
+    };
+
+    type Output = {
+      ...
+    }
+  </schema>
+
+  ...
+</template>
+```
 
 ## The `<system>` and `<user>` elements
 
@@ -80,7 +103,7 @@ System and user instructions.
 
 If the template has any `<variant>` element, then `<system>` and `<user>` must be defined inside each `<variant>` as opposed to being defined directly inside `<template>`.
 
-There must be exactly one `<system>` and one `<user>` element per template/template variant.
+There must be exactly one `<system>` and one `<user>` element per template or template variant.
 
 In addition to text nodes, `<system>`/`<user>` can contain the following elements:
 - `<insert>`
@@ -88,33 +111,3 @@ In addition to text nodes, `<system>`/`<user>` can contain the following element
 - `<c>`
 
 ### Indentation
-
-## Namespaces
-
-## Schema definitions
-
-Schemas are defined with the `<schema>` tag.
-
-Schemas can be defined:
-  - in a `<template>`: there must be exactly one `<schema>` element
-  - in a `<namespace>`: there can be at most one `<schema>` element
-
-### Attributes
-
-Attributes of `<schema>` are:
-| Attribute | Condition | Required? | Format | Description |
-| --- | --- | --- | --- | --- |
-| `output-format` | Inside `<template>` | Optional; defaults to `json` | lowerCamelCase identifier such as `json`, `text` | Format of the LLM response.
-
-### Contents
-
-The `<schema>` element can only contain text nodes. The text content represents a set of type definitions in a specific format which is a subset of the TypeScript language.
-
-If the `<schema>` is defined inside a `<template>`, both a type named `Input` and a type named `Output` must be defined.
-
-TODO: define the actual format
-
-## System and user instructions
-
-# Elements
-
