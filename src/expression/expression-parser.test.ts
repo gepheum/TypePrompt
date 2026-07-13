@@ -178,6 +178,81 @@ describe("parseExpression – string literals", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Single-quoted string literals
+// ---------------------------------------------------------------------------
+
+describe("parseExpression – single-quoted string literals", () => {
+  it("parses an empty single-quoted string", () => {
+    expect(parseOk("''")).toMatch({
+      kind: "literal",
+      span: { text: "''", start: 0, end: 2 },
+      value: { kind: "string", value: "" },
+    });
+  });
+
+  it("parses a simple single-quoted string", () => {
+    expect(parseOk("'hello'")).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: "hello" },
+    });
+  });
+
+  it("produces the same value as the equivalent double-quoted string", () => {
+    const single = parseOk("'hello'") as { value: unknown };
+    const double = parseOk('"hello"') as { value: unknown };
+    expect(single.value).toMatch(double.value);
+  });
+
+  it("allows an unescaped double-quote inside single quotes", () => {
+    expect(parseOk(`'say "hi"'`)).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: 'say "hi"' },
+    });
+  });
+
+  it("parses an escaped single-quote inside single quotes", () => {
+    // source: 'it\'s' → value: it's
+    expect(parseOk("'it\\'s'")).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: "it's" },
+    });
+  });
+
+  it("parses common escape sequences inside single quotes", () => {
+    expect(parseOk("'foo\\nbar'")).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: "foo\nbar" },
+    });
+  });
+
+  it("parses a unicode escape inside single quotes", () => {
+    expect(parseOk("'\\u0041'")).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: "A" },
+    });
+  });
+
+  it("parses a backslash-backslash inside single quotes", () => {
+    expect(parseOk("'a\\\\b'")).toMatch({
+      kind: "literal",
+      value: { kind: "string", value: "a\\b" },
+    });
+  });
+
+  it("records the span including the single quotes", () => {
+    expect(parseOk("'hi'")).toMatch({
+      span: { text: "'hi'", start: 0, end: 4 },
+    });
+  });
+
+  it("rejects an unterminated single-quoted string", () => {
+    expect(parseErr("'hello")).toMatch([
+      { message: "Expected closing quote for string literal" },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Input expression
 // ---------------------------------------------------------------------------
 

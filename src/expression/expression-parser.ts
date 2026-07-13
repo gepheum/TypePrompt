@@ -258,8 +258,8 @@ class ExpressionParser {
       return { kind: "wrapped", expression: inner };
     }
 
-    if (ch === '"') {
-      return this.parseStringLiteral();
+    if (ch === '"' || ch === "'") {
+      return this.parseStringLiteral(ch as '"' | "'");
     }
 
     if (ch === "-" || /[0-9]/.test(ch)) {
@@ -312,7 +312,7 @@ class ExpressionParser {
     }
   }
 
-  parseStringLiteral(): LiteralExpression | null {
+  parseStringLiteral(quote: '"' | "'"): LiteralExpression | null {
     const start = this.cursor;
     this.cursor += 1;
 
@@ -322,16 +322,17 @@ class ExpressionParser {
         this.cursor += 2;
         continue;
       }
-      if (ch === '"') {
+      if (ch === quote) {
         const end = this.cursor + 1;
         const raw = this.text.slice(start, end);
         this.cursor = end;
         let value: string;
         try {
-          value = JSON.parse(raw) as string;
+          const jsonRaw = quote === '"' ? raw : singleToDoubleQuoted(raw);
+          value = JSON.parse(jsonRaw) as string;
         } catch {
           this.pushError(start, end, "Invalid string escape sequence");
-          value = raw.slice(1, -1);
+          return null;
         }
         return {
           kind: "literal",
@@ -396,6 +397,35 @@ class ExpressionParser {
   pushError(start: number, end: number, message: string): void {
     this.errors.push({ start, end, message });
   }
+}
+
+/**
+ * Converts a single-quoted raw string (e.g. `'foo\'bar'`) into a JSON-parseable
+ * double-quoted string, handling the two differences:
+ *   - `\'`  →  `'`   (unescape: single-quote never needs escaping in double-quoted JSON)
+ *   -  `"`  →  `\"`  (must escape bare double-quotes for JSON)
+ * All other escape sequences (\\, \n, \t, \uXXXX, …) are passed through unchanged.
+ */
+function singleToDoubleQuoted(raw: string): string {
+  let result = '"';
+  for (let i = 1; i < raw.length - 1; i++) {
+    const ch = raw[i]!;
+    if (ch === "\\") {
+      const next = raw[i + 1]!;
+      if (next === "'") {
+        result += "'";
+      } else {
+        result += ch + next;
+      }
+      i++;
+    } else if (ch === '"') {
+      result += '\\"';
+    } else {
+      result += ch;
+    }
+  }
+  result += '"';
+  return result;
 }
 
 function isIdentStart(ch: string): boolean {
