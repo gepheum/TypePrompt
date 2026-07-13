@@ -409,3 +409,56 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
 
 ## `<snippet>`
 
+A snippet of text which can be inserted into system instructions, user instructions or another `<snippet>`.
+
+Example:
+
+```xml
+<snippet name="dateToday">
+  The date today is <insert val="input.dateToday"/>.
+</snippet>
+```
+
+A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
+
+### Conditional snippets
+
+You can make the content of a snippet depend on the value of an expression. For this, set the `switch` attribute. It expects an expression which resolves to a possibly-nullable boolean or union of string literals. When `switch` is set, the content of the snippet must be split between different `<case when="...">` branches. All cases must be covered, and there is no default case.
+
+Example:
+
+```xml
+<snippet name="timeOfDay" switch="input.timeOfDay.notEmpty">
+  <case when="true">
+    The time today is <insert val="input.timeOfDay"/>.
+  </case>
+  <case when="false"></case>
+</snippet>
+
+<snippet name="tellLeavesColor" switch="input.season">
+  <case when="spring,summer">Leaves are green.</case>
+  <case when="autumn">Leaves are orange.</case>
+  <case when="winter">There are no leaves.</case>
+</snippet>
+```
+
+### Expression languages
+
+Valid operators are `and`, `or`, `not`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `??`, `.`, `?.` and the ternary operator (`?:`).
+String and array values have 2 properties: `empty` and `notEmpty`.
+Union of string literal types (e.g. `| "spring" | "summer"`) have one generated property per member: `isSpring`, `isSummer`.
+
+## `<let>`
+
+Allows you to define an alias for an expression.
+
+Example:
+```xml
+<let name="hasAnyBook" val="input.books.notEmpty"/>
+<let name="hasAnyCar" val="input.cars.notEmpty"/>
+<let name="hasAnyItem" val="hasAnyBook or hasAnyCar"/>
+```
+
+## The `<namespace>` element
+
+Namespaces allows you to group templates together by topic which comes in useful once your list of templates grows significantly.
