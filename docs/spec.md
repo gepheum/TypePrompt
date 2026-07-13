@@ -468,19 +468,21 @@ The `<namespace>` element serves 2 purposes:
 Example:
 
 ```xml
-<namespace name="Weather">
+<namespace name="Events">
   type Weather = {
-    ...
+    temperatureCelcius: number;
+    raining: boolean;
   };
 </namespace>
 
-<template name="PredictWeather" namespace="Weather">
+<template name="PlanEvent" namespace="Events">
   <schema>
     type Input = {
       weather: Common.Weather;
+      ...
     };
 
-    type Output = string;
+    type Output = { ... };
   </schema>
 
   ...
