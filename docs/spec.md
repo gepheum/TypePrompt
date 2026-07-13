@@ -454,11 +454,35 @@ Allows you to define an alias for an expression.
 
 Example:
 ```xml
-<let name="hasAnyBook" val="input.books.notEmpty"/>
-<let name="hasAnyCar" val="input.cars.notEmpty"/>
-<let name="hasAnyItem" val="hasAnyBook or hasAnyCar"/>
+<let name="hasCars" val="input.cars.notEmpty"/>
+<let name="hasMotorcycles" val="input.motorcycles.notEmpty"/>
+<let name="hasVehicles" val="hasCars or hasMotorcycles"/>
 ```
 
 ## The `<namespace>` element
 
-Namespaces allows you to group templates together by topic which comes in useful once your list of templates grows significantly.
+The `<namespace>` element serves 2 purposes:
+  - organization: group together multiple templates which share common features
+  - definition of common types: `<namespace>` allows you to define types which can be shared by multiple templates.
+
+Example:
+
+```xml
+<namespace name="Weather">
+  type Weather = {
+    ...
+  };
+</namespace>
+
+<template name="PredictWeather" namespace="Weather">
+  <schema>
+    type Input = {
+      weather: Common.Weather;
+    };
+
+    type Output = string;
+  </schema>
+
+  ...
+</template>
+```
