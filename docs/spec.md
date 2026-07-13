@@ -344,7 +344,6 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
               "firstName": "Jane",
               "lastName": "Doe"
             },
-            "variant": "formal"
           },
           "output": {
             "fullName": "Jane Doe"
@@ -356,7 +355,6 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
               "firstName": "John",
               "lastName": "Doe"
             },
-            "variant": "formal"
           },
           "output": {
             "fullName": "John Doe"
@@ -383,7 +381,6 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
               "firstName": "Jane",
               "lastName": "Doe"
             },
-            "variant": "informal"
           },
           "output": {
             "fullName": "J. Do"
@@ -395,7 +392,6 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
               "firstName": "John",
               "lastName": "Doe"
             },
-            "variant": "informal"
           },
           "output": {
             "fullName": "Johny D"
@@ -420,7 +416,7 @@ Example:
 ```
 
 A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
-
+/
 ### Conditional snippets
 
 You can make the content of a snippet depend on the value of an expression. For this, set the `switch` attribute. It expects an expression which resolves to a possibly-nullable boolean or union of string literals. When `switch` is set, the content of the snippet must be split between different `<case when="...">` branches. All cases must be covered, and there is no default case.
