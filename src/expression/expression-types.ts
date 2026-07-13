@@ -6,8 +6,7 @@ export type ExpressionNode =
   | InputExpression
   | DotOperation
   | UnaryOperation
-  | BinaryOperation
-  | TernaryExpression;
+  | BinaryOperation;
 
 export type LiteralExpression = {
   readonly kind: "literal";
@@ -62,12 +61,4 @@ export type BinaryOperation = {
     | "or";
   readonly operatorSpan: SourceSpan;
   readonly right: ExpressionNode;
-};
-
-/** Condition ? Then : Else */
-export type TernaryExpression = {
-  readonly kind: "ternary";
-  readonly condition: ExpressionNode;
-  readonly then: ExpressionNode;
-  readonly else: ExpressionNode;
 };

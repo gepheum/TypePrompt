@@ -16,7 +16,7 @@ export function parseExpression(
     return { kind: "error", errors: parser.errors };
   }
 
-  const expr = parser.parseTernary();
+  const expr = parser.parseOr();
   if (!expr) {
     return { kind: "error", errors: parser.errors };
   }
@@ -42,43 +42,6 @@ class ExpressionParser {
   readonly errors: InternalError[] = [];
 
   constructor(readonly text: string) {}
-
-  parseTernary(): ExpressionNode | null {
-    const condition = this.parseOr();
-    if (!condition) return null;
-
-    this.skipSpaces();
-    if (
-      this.text[this.cursor] !== "?" ||
-      this.text[this.cursor + 1] === "?" ||
-      this.text[this.cursor + 1] === "."
-    ) {
-      return condition;
-    }
-
-    this.cursor += 1;
-    this.skipSpaces();
-
-    const thenBranch = this.parseTernary();
-    if (!thenBranch) return null;
-
-    this.skipSpaces();
-    if (this.text[this.cursor] !== ":") {
-      this.pushError(
-        this.cursor,
-        this.cursor,
-        "Expected ':' in ternary expression",
-      );
-      return null;
-    }
-    this.cursor += 1;
-    this.skipSpaces();
-
-    const elseBranch = this.parseTernary();
-    if (!elseBranch) return null;
-
-    return { kind: "ternary", condition, then: thenBranch, else: elseBranch };
-  }
 
   parseOr(): ExpressionNode | null {
     let left = this.parseAnd();
@@ -280,7 +243,7 @@ class ExpressionParser {
     if (ch === "(") {
       this.cursor += 1;
       this.skipSpaces();
-      const inner = this.parseTernary();
+      const inner = this.parseOr();
       if (!inner) return null;
       this.skipSpaces();
       if (this.text[this.cursor] !== ")") {

@@ -416,7 +416,7 @@ Example:
 ```
 
 A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
-/
+
 ### Conditional snippets
 
 You can make the content of a snippet depend on the value of an expression. For this, set the `switch` attribute. It expects an expression which resolves to a possibly-nullable boolean or union of string literals. When `switch` is set, the content of the snippet must be split between different `<case when="...">` branches. All cases must be covered, and there is no default case.
@@ -440,8 +440,9 @@ Example:
 
 ### Expression languages
 
-Valid operators are `and`, `or`, `not`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `??`, `.`, `?.` and the ternary operator (`?:`).
-String and array values have 2 properties: `empty` and `notEmpty`.
+Valid operators are `and`, `or`, `not`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `??`, `.`, `?.`.
+Strings have 2 properties: `empty` and `notEmpty`.
+Arrays have 2 properties: `empty`, `notEmpty` and `length`.
 Union of string literal types (e.g. `| "spring" | "summer"`) have one generated property per member: `isSpring`, `isSummer`.
 
 ## `<let>`
