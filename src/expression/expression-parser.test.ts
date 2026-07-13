@@ -683,6 +683,135 @@ describe("parseExpression – operator precedence", () => {
       },
     });
   });
+
+  it("'not' binds tighter than 'or': 'not true or false' => (not true) or false", () => {
+    expect(parseOk("not true or false")).toMatch({
+      kind: "binary-operation",
+      operator: "or",
+      left: {
+        kind: "unary-operation",
+        operator: "not",
+        other: { kind: "literal", value: { kind: "boolean", value: true } },
+      },
+      right: { kind: "literal", value: { kind: "boolean", value: false } },
+    });
+  });
+
+  it("'==' binds tighter than 'not': 'not 1 == 1' => not (1 == 1)", () => {
+    expect(parseOk("not 1 == 1")).toMatch({
+      kind: "unary-operation",
+      operator: "not",
+      other: {
+        kind: "binary-operation",
+        operator: "==",
+        left: { kind: "literal", value: { kind: "number", value: 1 } },
+        right: { kind: "literal", value: { kind: "number", value: 1 } },
+      },
+    });
+  });
+
+  it("'!=' binds tighter than 'not': 'not 1 != 2' => not (1 != 2)", () => {
+    expect(parseOk("not 1 != 2")).toMatch({
+      kind: "unary-operation",
+      operator: "not",
+      other: {
+        kind: "binary-operation",
+        operator: "!=",
+        left: { kind: "literal", value: { kind: "number", value: 1 } },
+        right: { kind: "literal", value: { kind: "number", value: 2 } },
+      },
+    });
+  });
+
+  it("comparison binds tighter than 'not': 'not 1 < 2' => not (1 < 2)", () => {
+    expect(parseOk("not 1 < 2")).toMatch({
+      kind: "unary-operation",
+      operator: "not",
+      other: {
+        kind: "binary-operation",
+        operator: "<",
+        left: { kind: "literal", value: { kind: "number", value: 1 } },
+        right: { kind: "literal", value: { kind: "number", value: 2 } },
+      },
+    });
+  });
+
+  it("'??' binds tighter than 'not': 'not input.x ?? null' => not (input.x ?? null)", () => {
+    expect(parseOk("not input.x ?? null")).toMatch({
+      kind: "unary-operation",
+      operator: "not",
+      other: {
+        kind: "binary-operation",
+        operator: "??",
+        left: {
+          kind: "dot-operation",
+          left: { kind: "input" },
+          right: { text: "x" },
+        },
+        right: { kind: "literal", value: { kind: "null" } },
+      },
+    });
+  });
+
+  // Full hierarchy: or < and < not < == < < < ?? < dot
+  // "true or false and not 1 < 2 == true"
+  // Parsed as: true or (false and (not ((1 < 2) == true)))
+  it("full hierarchy: 'true or false and not 1 < 2 == true'", () => {
+    expect(parseOk("true or false and not 1 < 2 == true")).toMatch({
+      kind: "binary-operation",
+      operator: "or",
+      left: { kind: "literal", value: { kind: "boolean", value: true } },
+      right: {
+        kind: "binary-operation",
+        operator: "and",
+        left: { kind: "literal", value: { kind: "boolean", value: false } },
+        right: {
+          kind: "unary-operation",
+          operator: "not",
+          other: {
+            kind: "binary-operation",
+            operator: "==",
+            left: {
+              kind: "binary-operation",
+              operator: "<",
+              left: { kind: "literal", value: { kind: "number", value: 1 } },
+              right: { kind: "literal", value: { kind: "number", value: 2 } },
+            },
+            right: {
+              kind: "literal",
+              value: { kind: "boolean", value: true },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  // Full hierarchy including ?? and dot:
+  // "input.a ?? null == null or true"
+  // Parsed as: ((input.a ?? null) == null) or true
+  it("full hierarchy with dot and '??': 'input.a ?? null == null or true'", () => {
+    expect(parseOk("input.a ?? null == null or true")).toMatch({
+      kind: "binary-operation",
+      operator: "or",
+      left: {
+        kind: "binary-operation",
+        operator: "==",
+        left: {
+          kind: "binary-operation",
+          operator: "??",
+          left: {
+            kind: "dot-operation",
+            left: { kind: "input" },
+            right: { text: "a" },
+          },
+          right: { kind: "literal", value: { kind: "null" } },
+        },
+        right: { kind: "literal", value: { kind: "null" } },
+      },
+      right: { kind: "literal", value: { kind: "boolean", value: true } },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
