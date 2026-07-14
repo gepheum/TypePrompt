@@ -174,7 +174,7 @@ function jsonMatchesType(
     case "primitive": {
       if (value.kind === type.primitive) {
         return MATCH;
-      } else if (value.kind === "number" && type.primitive === "int") {
+      } else if (value.kind === "number" && type.primitive === "integer") {
         if (/^-?\d+$/.test(value.firstToken.text)) {
           return MATCH;
         } else {

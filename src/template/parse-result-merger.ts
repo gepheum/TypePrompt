@@ -352,7 +352,7 @@ function validateMetaValue(
             `Template '${templateName}': meta attribute '${fieldName}' must be a number`,
           );
         }
-      } else if (resolved.primitive === "int") {
+      } else if (resolved.primitive === "integer") {
         if (!/^-?\d+$/.test(value.trim())) {
           return makeFileError(
             path,
@@ -399,7 +399,7 @@ function coerceMetaValue(
         return value === "true";
       case "number":
         return Number(value);
-      case "int":
+      case "integer":
         return parseInt(value, 10);
       case "string":
         return value;

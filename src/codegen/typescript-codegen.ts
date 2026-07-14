@@ -344,7 +344,7 @@ function toTypeName(namePieces: readonly string[]): string {
 function resolvedTypeToTs(type: ResolvedType): string {
   switch (type.kind) {
     case "primitive":
-      return type.primitive === "int" ? "number" : type.primitive;
+      return type.primitive === "integer" ? "number" : type.primitive;
     case "ref":
       return toTypeName(type.namePieces);
     case "array":

@@ -1262,7 +1262,7 @@ describe("parseSchema – union type errors", () => {
 
 describe("resolveType – Int alias", () => {
   it("resolves Int (defined as type Int = number) to the 'int' primitive", () => {
-    // type Int = number; the resolver should return primitive "int", not "number".
+    // type Int = number; the resolver should return primitive "integer", not "number".
     const types = {
       Int: {
         kind: "type" as const,
@@ -1279,7 +1279,7 @@ describe("resolveType – Int alias", () => {
       name: { text: "Int", start: 0, end: 3 },
     };
     const resolved = resolveMaybeInvalidType(typeRef, types);
-    expect(resolved).toMatch({ kind: "primitive", primitive: "int" });
+    expect(resolved).toMatch({ kind: "primitive", primitive: "integer" });
   });
 
   it("resolves plain 'number' to the 'number' primitive (no int alias)", () => {

@@ -19,7 +19,7 @@ function doResolveType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string> | null,
-  intAlias: "int" | null,
+  intAlias: "integer" | null,
 ): ResolvedType | null {
   if (type.kind === "type") {
     type = type.valueType;
@@ -30,7 +30,7 @@ function doResolveType(
       const primitive = isPrimitiveType(typeName);
       if (primitive) {
         if (primitive === "number" && intAlias) {
-          return PRIMITIVES.int;
+          return PRIMITIVES.integer;
         } else {
           return PRIMITIVES[primitive];
         }
@@ -50,7 +50,7 @@ function doResolveType(
       resolved,
       types,
       seenNames,
-      typeName === "Int" ? "int" : null,
+      typeName === "Int" ? "integer" : null,
     );
   }
   return type;
@@ -77,8 +77,8 @@ const PRIMITIVES = {
     kind: "primitive",
     primitive: "boolean",
   },
-  int: {
+  integer: {
     kind: "primitive",
-    primitive: "int",
+    primitive: "integer",
   },
 } as const;
