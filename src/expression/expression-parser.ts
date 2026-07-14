@@ -57,6 +57,7 @@ class ExpressionParser {
       if (!right) return null;
       left = {
         kind: "binary-operation",
+        span: this.span(left.span.start, right.span.end),
         left,
         operator: "or",
         operatorSpan,
@@ -81,6 +82,7 @@ class ExpressionParser {
       if (!right) return null;
       left = {
         kind: "binary-operation",
+        span: this.span(left.span.start, right.span.end),
         left,
         operator: "and",
         operatorSpan,
@@ -98,7 +100,13 @@ class ExpressionParser {
       this.skipSpaces();
       const other = this.parseNot();
       if (!other) return null;
-      return { kind: "unary-operation", operator: "not", operatorSpan, other };
+      return {
+        kind: "unary-operation",
+        span: this.span(opStart, other.span.end),
+        operator: "not",
+        operatorSpan,
+        other,
+      };
     }
     return this.parseEquality();
   }
@@ -124,7 +132,14 @@ class ExpressionParser {
       this.skipSpaces();
       const right = this.parseComparison();
       if (!right) return null;
-      left = { kind: "binary-operation", left, operator, operatorSpan, right };
+      left = {
+        kind: "binary-operation",
+        span: this.span(left.span.start, right.span.end),
+        left,
+        operator,
+        operatorSpan,
+        right,
+      };
     }
 
     return left;
@@ -157,7 +172,14 @@ class ExpressionParser {
       this.skipSpaces();
       const right = this.parseNullCoalesce();
       if (!right) return null;
-      left = { kind: "binary-operation", left, operator, operatorSpan, right };
+      left = {
+        kind: "binary-operation",
+        span: this.span(left.span.start, right.span.end),
+        left,
+        operator,
+        operatorSpan,
+        right,
+      };
     }
 
     return left;
@@ -178,6 +200,7 @@ class ExpressionParser {
       if (!right) return null;
       left = {
         kind: "binary-operation",
+        span: this.span(left.span.start, right.span.end),
         left,
         operator: "??",
         operatorSpan,
@@ -226,7 +249,14 @@ class ExpressionParser {
         this.cursor += 1;
       }
       const right = this.span(identStart, this.cursor);
-      left = { kind: "dot-operation", left, dot, dotSpan, right };
+      left = {
+        kind: "dot-operation",
+        span: this.span(left.span.start, this.cursor),
+        left,
+        dot,
+        dotSpan,
+        right,
+      };
     }
 
     return left;
@@ -241,6 +271,7 @@ class ExpressionParser {
     const ch = this.text[this.cursor]!;
 
     if (ch === "(") {
+      const start = this.cursor;
       this.cursor += 1;
       this.skipSpaces();
       const inner = this.parseOr();
@@ -255,7 +286,11 @@ class ExpressionParser {
         return null;
       }
       this.cursor += 1;
-      return { kind: "wrapped", expression: inner };
+      return {
+        kind: "wrapped",
+        span: this.span(start, this.cursor),
+        expression: inner,
+      };
     }
 
     if (ch === '"' || ch === "'") {

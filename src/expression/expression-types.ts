@@ -21,6 +21,8 @@ export type LiteralExpression = {
 /** Expression wrapped in parenthesises. */
 export type WrappedExpression = {
   readonly kind: "wrapped";
+  /** Spans the whole expression, including the parentheses. */
+  readonly span: SourceSpan;
   readonly expression: ExpressionNode;
 };
 
@@ -32,6 +34,8 @@ export type InputExpression = {
 
 export type DotOperation = {
   readonly kind: "dot-operation";
+  /** Spans the whole expression. */
+  readonly span: SourceSpan;
   readonly left: ExpressionNode;
   readonly dot: "." | "?.";
   readonly dotSpan: SourceSpan;
@@ -41,6 +45,8 @@ export type DotOperation = {
 
 export type UnaryOperation = {
   readonly kind: "unary-operation";
+  /** Spans the whole expression. */
+  readonly span: SourceSpan;
   readonly operator: "not";
   readonly operatorSpan: SourceSpan;
   readonly other: ExpressionNode;
@@ -48,6 +54,8 @@ export type UnaryOperation = {
 
 export type BinaryOperation = {
   readonly kind: "binary-operation";
+  /** Spans the whole expression. */
+  readonly span: SourceSpan;
   readonly left: ExpressionNode;
   readonly operator:
     | "<"
