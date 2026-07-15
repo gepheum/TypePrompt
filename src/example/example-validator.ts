@@ -257,8 +257,8 @@ function jsonMatchesType(
               matchScoreTotal += 1.0;
             } else {
               firstMismatchReason ??= {
-                start: field.name.start,
-                end: field.name.end,
+                start: value.firstToken.start,
+                end: value.firstToken.end,
                 message: `Missing required field '${fieldName}'`,
               };
             }
