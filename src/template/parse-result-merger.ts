@@ -192,14 +192,12 @@ function resolveSchema(schema: Schema): ResolvedSchema {
       kind: "interface",
       namePieces: [name],
       doc: decl.doc,
-      fields: Object.values(decl.fields).map(
-        (field): ResolvedField => ({
-          name: field.name.text,
-          doc: field.doc,
-          type: convertType(field.type, schema),
-          optional: field.optional,
-        }),
-      ),
+      fields: Object.values(decl.fields).map((field): ResolvedField => ({
+        name: field.name.text,
+        doc: field.doc,
+        type: convertType(field.type, schema),
+        optional: field.optional,
+      })),
     } satisfies ResolvedInterface);
   }
 

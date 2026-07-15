@@ -11,9 +11,7 @@ export type XmlDocument<C extends CommentsPolicy = "drop-comments"> = {
 };
 
 export type XmlNode<C extends CommentsPolicy = "drop-comments"> =
-  | TextNode
-  | ElementNode<C>
-  | (C extends "keep-comments" ? XmlComment : never);
+  TextNode | ElementNode<C> | (C extends "keep-comments" ? XmlComment : never);
 
 export type TextNode = {
   readonly kind: "text";

@@ -8,83 +8,97 @@
   </schema>
 </tool>
 
-<template name="FooBar" namespace="FooBar">
+<template name="FooBar" namespace="FooBar" with="variants">
   <meta>
     {
-      "temperature": 0.75,
-      "model": "gpt4"
+      temperature: 0.75
+      model: gpt4
+      name: FooBar
+      description: """
+        | Hello world
+        | This is a description for the FooBar template.
+        """
+      input: {
+        dateToday: "2024-06-05"
+        weatherToday: Sunny
+        name: "Alice"
+        variant: default
+      }
+      output: {
+        array: [
+          {
+            x: 10
+            y: 11
+          }
+          {
+            x: -10
+            y: -11
+          }
+        ]
+      }
     }
   </meta>
 
   <schema output-format="xml">
     type Input = {
-      dateToday: string;
-      weatherToday: string;
-      name: string;
-      variant: | "default" | "formal";
-    };
-  </schema>
+      dateToday: string
+      weatherToday: string
+      name: string
+      variant: "default" | "formal"
+    }
 
-  <let name="foo" val="not (input.dateToday.notEmpty or input.weatherToday.notEmpty)" />
+    type Foo =
+      | { x: number, y: number }
+      | { x: number, y: number }
+  </schema>
 
   <variant name="default" >
     <system>
-      Hello <insert val="input.name" format="yaml"/>.
-
-      <insert val="dateToday" wrap-unless-empty="Today is %s."/>.
+      <insert val="dateToday"/>
       <insert snippet="fooSnippet"/>
       <insert snippet="barSnippet"/>
 
       ## FOO
 
       ### BAR
-
-      Here is a list: <span if="Foo"> \
-      * foo
-        * bar
-        * <snippet name="_foo"/>
     </system>
 
     <user>
-      The date today is <echo val="input.dateToday"/>
-      The weather today is <echo val="input.weatherToday" format="json"/>.
+      The date today is <insert val="input.dateToday"/>
+      The weather today is <insert val="input.weatherToday" format="json"/>.
     </user>
 
     <examples>
-      [
-        {
-        }
-        {
-        }
-      ]
+      - input:
+          name: Bonjour tout le monde
+          firstName: ça va?
+        output:
+          array:
+            - x: 10
+              y: 11
+            - x: -10
+              y: -11
     </examples>
   </variant>
 
-  <snippet name="foo" switch="input.foo">
-    <body case="true">
-      This is a snippet.
-    </body>
-    <body case="*">
-      This is the false case snippet.
-    </body>
-  </snippet>
-
-  <snippet name="fooSnippet" switch="(input?.length ?? 0) >= 1">
-    <body case="null,true">
-    </body>
-    <body case="false">
-    </body>
+  <snippet name="fooSnippet" if="input.dateToday" is="empty">
+    <then>
+      <insert val="input.foo"/>
+    </then>
+    <else>
+      Yoohoo!
+    </else>
   </snippet>
 
   <snippet name="mySnippet">
     Bonjour bar bar bar.
   </snippet>
 
-  <snippet name="myOtherSnippet" switch="input.foo">
-    <case when="true">
+  <snippet name="myOtherSnippet" switch="input.season">
+    <case when="summer">
       Bonjour bar bar bar.
 
     </case>
-    <case when="false"></case>
+    <case when="fall"></case>
   </snippet>
 </template>

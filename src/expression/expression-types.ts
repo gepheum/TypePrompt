@@ -58,15 +58,7 @@ export type BinaryOperation = {
   readonly span: SourceSpan;
   readonly left: ExpressionNode;
   readonly operator:
-    | "<"
-    | "<="
-    | "=="
-    | "!="
-    | ">="
-    | ">"
-    | "??"
-    | "and"
-    | "or";
+    "<" | "<=" | "==" | "!=" | ">=" | ">" | "??" | "and" | "or";
   readonly operatorSpan: SourceSpan;
   readonly right: ExpressionNode;
 };

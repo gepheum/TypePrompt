@@ -83,9 +83,7 @@ export type Union = {
 };
 
 export type ResolvedType =
-  | Exclude<Type, TypeName>
-  | InterfaceDeclaration
-  | PrimitiveType;
+  Exclude<Type, TypeName> | InterfaceDeclaration | PrimitiveType;
 
 export type PrimitiveType = {
   readonly kind: "primitive";

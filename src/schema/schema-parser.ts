@@ -493,11 +493,7 @@ class SchemaParser {
 
 type Token = {
   readonly kind:
-    | "identifier"
-    | "symbol"
-    | "string-literal"
-    | "jsdoc"
-    | "string-end";
+    "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
   readonly text: string;
   readonly start: number;
   readonly end: number;

@@ -109,9 +109,7 @@ export type ResolvedSchema = {
 };
 
 export type ResolvedTypeDeclaration =
-  | ResolvedInterface
-  | ResolvedStringUnion
-  | ResolvedInterfaceUnion;
+  ResolvedInterface | ResolvedStringUnion | ResolvedInterfaceUnion;
 
 export type ResolvedInterface = {
   readonly kind: "interface";
