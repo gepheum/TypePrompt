@@ -1,19 +1,20 @@
 import type { JsonValue } from "../json/json-types.js";
 import type { ResolvedType, Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { SourceSpan } from "../util/error-types.js";
-import type { Example, ExampleValidationError } from "./example-types.js";
+import type { InternalError, SourceSpan } from "../util/error-types.js";
+import type { Example } from "./example-types.js";
 
 export function validateExample(
   example: Example,
   schema: Schema,
-): readonly ExampleValidationError[] {
+): readonly InternalError[] {
   switch (example.kind) {
     case "success:identifier": {
       if (!schema.identifiers.has(example.identifier.text)) {
         return [
           {
-            sourceSpan: example.identifier,
+            start: example.identifier.start,
+            end: example.identifier.end,
             message: `Identifier '${example.identifier.text}' not found in schema`,
           },
         ];
@@ -52,7 +53,7 @@ export function validateExample(
           | {
               name: string;
               score: number;
-              reason: ExampleValidationError | undefined;
+              reason: InternalError | undefined;
             }
           | undefined
         >(
@@ -66,7 +67,8 @@ export function validateExample(
         ) {
           return [
             {
-              sourceSpan: example.json.firstToken,
+              start: example.json.firstToken.start,
+              end: example.json.firstToken.end,
               message: `Does not match type '${best.name}'`,
             },
             best.reason,
@@ -74,7 +76,8 @@ export function validateExample(
         } else {
           return [
             {
-              sourceSpan: example.json.firstToken,
+              start: example.json.firstToken.start,
+              end: example.json.firstToken.end,
               message: `Does not match any of the types defined in the schema`,
             },
           ];
@@ -88,7 +91,7 @@ export function validateJson(
   json: JsonValue<"strict">,
   schema: Schema,
   typeName: string,
-): ExampleValidationError[] {
+): InternalError[] {
   const t = schema.types[typeName]!;
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
@@ -99,9 +102,10 @@ export function validateJson(
   if (result.kind === "match") {
     return [];
   }
-  const errors: ExampleValidationError[] = [
+  const errors: InternalError[] = [
     {
-      sourceSpan: json.firstToken,
+      start: json.firstToken.start,
+      end: json.firstToken.end,
       message: `Does not match type '${typeName}'`,
     },
   ];
@@ -116,7 +120,7 @@ type JsonTypeMatch =
   | {
       readonly kind: "mismatch";
       readonly details?: {
-        readonly reason: ExampleValidationError;
+        readonly reason: InternalError;
         /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
         readonly matchScore: number;
       };
@@ -206,7 +210,7 @@ function jsonMatchesType(
           return MATCH;
         }
         let matchScoreTotal = 0.0;
-        let firstMismatchReason: ExampleValidationError | undefined;
+        let firstMismatchReason: InternalError | undefined;
         const seenFieldNames = new Set<string>();
         for (const entry of value.entries) {
           const fieldName = entry.key.value;
@@ -237,7 +241,8 @@ function jsonMatchesType(
               return FAST_MISMATCH;
             } else {
               firstMismatchReason ??= {
-                sourceSpan: entry.key.firstToken,
+                start: entry.key.firstToken.start,
+                end: entry.key.firstToken.end,
                 message: `Unknown field '${fieldName}'`,
               };
             }
@@ -252,7 +257,8 @@ function jsonMatchesType(
               matchScoreTotal += 1.0;
             } else {
               firstMismatchReason ??= {
-                sourceSpan: field.name,
+                start: field.name.start,
+                end: field.name.end,
                 message: `Missing required field '${fieldName}'`,
               };
             }
@@ -390,6 +396,9 @@ function mismatch(
   }
   return {
     kind: "mismatch",
-    details: { reason: { sourceSpan, message }, matchScore },
+    details: {
+      reason: { start: sourceSpan.start, end: sourceSpan.end, message },
+      matchScore,
+    },
   };
 }

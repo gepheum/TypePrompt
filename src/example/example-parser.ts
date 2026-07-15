@@ -1,9 +1,8 @@
 import { JsonParser } from "../json/json-parser.js";
-import { Example, ExampleParseErrors } from "./example-types.js";
+import type { InternalErrors } from "../util/error-types.js";
+import { Example } from "./example-types.js";
 
-export function parseExample(
-  exampleSource: string,
-): Example | ExampleParseErrors {
+export function parseExample(exampleSource: string): Example | InternalErrors {
   return new ExampleParser(exampleSource).parse();
 }
 
@@ -14,7 +13,7 @@ class ExampleParser {
     this.parser = new JsonParser(text);
   }
 
-  parse(): Example | ExampleParseErrors {
+  parse(): Example | InternalErrors {
     const identifierMatch = /^\s*(\w+|"(\w+)")\s*$/.exec(this.text);
     if (identifierMatch) {
       const outerStart = identifierMatch[0]!.search(/\S/);

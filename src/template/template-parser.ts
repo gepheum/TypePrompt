@@ -557,11 +557,11 @@ function parseBodyContent(
                 valErrors.map((e) => ({
                   start: textNodeDecodedOffsetToSourceOffset(
                     joined,
-                    e.sourceSpan.start,
+                    e.start,
                   ),
                   end: textNodeDecodedOffsetToSourceOffset(
                     joined,
-                    e.sourceSpan.end,
+                    e.end,
                   ),
                   message: e.message,
                 })),
