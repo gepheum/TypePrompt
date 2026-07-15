@@ -1,5 +1,7 @@
-- TODO: support true and false
+- TODO: support true and false literals?
 - TODO: no longer allow quotes in <c>
+- TODO: think about toolcalls
+- TODO: add 'suggestions' to Error type
 
 - TODO: refine the SDL
 
@@ -10,7 +12,6 @@
 - TODO: do I really need the namespaces?
 - TODO: <snippet> <on cond="...">
 - TODO: I really think I need to insert 
-- TODO: think about toolcalls
 - TODO: think about common schemas...
 - TODO: wonder if I should specify the input using <schema>type Input = {};</schema>
 

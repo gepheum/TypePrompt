@@ -90,6 +90,22 @@ export type PrimitiveType = {
   readonly primitive: "number" | "string" | "boolean" | "integer";
 };
 
+export type SyntheticInterface = {
+  readonly name: {
+    readonly text: string;
+  };
+  readonly kind: "synthetic-interface";
+  readonly fields: { readonly [name: string]: SchemaField };
+};
+
+export type SyntheticSchemaField = {
+  readonly name: {
+    readonly text: string;
+  };
+  readonly optional: boolean;
+  readonly type: Type;
+};
+
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {
   /**

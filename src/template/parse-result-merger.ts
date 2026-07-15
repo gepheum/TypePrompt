@@ -309,7 +309,7 @@ function validateTemplateMeta(
       }
       continue;
     }
-    const resolved = resolveType(field.type, types);
+    const resolved = resolveType<never>(field.type, types);
     const valueError = validateMetaValue(
       attrValue,
       resolved,

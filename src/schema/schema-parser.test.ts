@@ -9,7 +9,6 @@ import type {
   TypeDeclaration,
   Union,
 } from "./schema-types.js";
-import { resolveMaybeInvalidType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
 const TEMPLATE: SchemaParseContext = { kind: "template", argTypeNames: [] };
@@ -1250,50 +1249,6 @@ describe("parseSchema – union type errors", () => {
         '  | { kind: "b"; y: string }',
         '  | { kind: "c"; z: boolean };',
       ].join("\n"),
-      TEMPLATE,
-    );
-    expect(result).toMatch({ kind: "success" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Int alias (type-resolver fix)
-// ---------------------------------------------------------------------------
-
-describe("resolveType – Int alias", () => {
-  it("resolves Int (defined as type Int = number) to the 'int' primitive", () => {
-    // type Int = number; the resolver should return primitive "integer", not "number".
-    const types = {
-      Int: {
-        kind: "type" as const,
-        name: { text: "Int", start: 5, end: 8 },
-        valueType: {
-          kind: "type-name" as const,
-          name: { text: "number", start: 11, end: 17 },
-        },
-        doc: "",
-      },
-    };
-    const typeRef = {
-      kind: "type-name" as const,
-      name: { text: "Int", start: 0, end: 3 },
-    };
-    const resolved = resolveMaybeInvalidType(typeRef, types);
-    expect(resolved).toMatch({ kind: "primitive", primitive: "integer" });
-  });
-
-  it("resolves plain 'number' to the 'number' primitive (no int alias)", () => {
-    const typeRef = {
-      kind: "type-name" as const,
-      name: { text: "number", start: 0, end: 6 },
-    };
-    const resolved = resolveMaybeInvalidType(typeRef, {});
-    expect(resolved).toMatch({ kind: "primitive", primitive: "number" });
-  });
-
-  it("parses a schema with an Int alias successfully", () => {
-    const result = parseSchema(
-      "type Int = number;\ninterface Response { count: Int; }",
       TEMPLATE,
     );
     expect(result).toMatch({ kind: "success" });

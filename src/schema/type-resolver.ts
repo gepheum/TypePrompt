@@ -1,10 +1,15 @@
-import type { ResolvedType, Type, TypeDeclaration } from "./schema-types.js";
+import type {
+  ResolvedType,
+  SyntheticInterface,
+  Type,
+  TypeDeclaration,
+} from "./schema-types.js";
 
-export function resolveType(
-  type: Type | TypeDeclaration,
+export function resolveType<S extends SyntheticInterface | never>(
+  type: Type | TypeDeclaration | S,
   types: { readonly [name: string]: TypeDeclaration },
-): ResolvedType {
-  return doResolveType(type, types, null, null)!;
+): ResolvedType | S {
+  return doResolveType<S>(type, types, null)!;
 }
 
 export function resolveMaybeInvalidType(
@@ -12,15 +17,14 @@ export function resolveMaybeInvalidType(
   types: { readonly [name: string]: TypeDeclaration },
 ): ResolvedType | null {
   const seenNames = new Set<string>();
-  return doResolveType(type, types, seenNames, null);
+  return doResolveType<never>(type, types, seenNames);
 }
 
-function doResolveType(
-  type: Type | TypeDeclaration,
+function doResolveType<S extends SyntheticInterface | never>(
+  type: Type | TypeDeclaration | S,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string> | null,
-  intAlias: "integer" | null,
-): ResolvedType | null {
+): ResolvedType | null | S {
   if (type.kind === "type") {
     type = type.valueType;
   }
@@ -29,11 +33,7 @@ function doResolveType(
     {
       const primitive = isPrimitiveType(typeName);
       if (primitive) {
-        if (primitive === "number" && intAlias) {
-          return PRIMITIVES.integer;
-        } else {
-          return PRIMITIVES[primitive];
-        }
+        return PRIMITIVES[primitive];
       }
     }
     if (seenNames) {
@@ -46,20 +46,18 @@ function doResolveType(
     if (!resolved) {
       return null;
     }
-    return doResolveType(
-      resolved,
-      types,
-      seenNames,
-      typeName === "Int" ? "integer" : null,
-    );
+    return doResolveType<S>(resolved, types, seenNames);
   }
   return type;
 }
 
 export function isPrimitiveType(
   name: string,
-): "string" | "number" | "boolean" | null {
-  return name === "string" || name === "number" || name === "boolean"
+): "string" | "number" | "boolean" | "integer" | null {
+  return name === "string" ||
+    name === "number" ||
+    name === "boolean" ||
+    name === "integer"
     ? name
     : null;
 }

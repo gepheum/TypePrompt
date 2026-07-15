@@ -227,13 +227,12 @@ describe("mergeParseResults – meta attribute validation", () => {
   // `Int` is the conventional alias for the integer primitive.
   const META_SOURCE = [
     "<meta>",
-    "type Int = number;",
     "interface Meta {",
     "  label: string;",
     "  note?: string;",
     "  active: boolean;",
     "  score: number;",
-    "  rank: Int;",
+    "  rank: integer;",
     '  kind: "a" | "b";',
     "}",
     "</meta>",

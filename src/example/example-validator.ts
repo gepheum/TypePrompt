@@ -1,5 +1,10 @@
 import type { JsonValue } from "../json/json-types.js";
-import type { ResolvedType, Schema } from "../schema/schema-types.js";
+import type {
+  ResolvedType,
+  Schema,
+  SyntheticInterface,
+  TypeDeclaration,
+} from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type { InternalError, SourceSpan } from "../util/error-types.js";
 import type { Example } from "./example-types.js";
@@ -90,18 +95,18 @@ export function validateExample(
 export function validateJson(
   json: JsonValue<"strict">,
   schema: Schema,
-  typeName: string,
+  type: TypeDeclaration | SyntheticInterface,
 ): InternalError[] {
-  const t = schema.types[typeName]!;
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
-    resolveType(t, schema.types),
+    resolveType(type, schema.types),
     "thorough",
     schema,
   );
   if (result.kind === "match") {
     return [];
   }
+  const typeName = type.name.text;
   const errors: InternalError[] = [
     {
       start: json.firstToken.start,
@@ -128,7 +133,7 @@ type JsonTypeMatch =
 
 function jsonMatchesType(
   value: JsonValue<"loose">,
-  type: ResolvedType,
+  type: ResolvedType | SyntheticInterface,
   mode: "fast" | "thorough",
   schema: Schema,
 ): JsonTypeMatch {
@@ -197,7 +202,8 @@ function jsonMatchesType(
         );
       }
     }
-    case "interface": {
+    case "interface":
+    case "synthetic-interface": {
       if (value.kind === "object") {
         const requiredFields = Object.values(type.fields).filter(
           (field) => !field.optional,
