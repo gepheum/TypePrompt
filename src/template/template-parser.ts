@@ -555,14 +555,8 @@ function parseBodyContent(
             if (valErrors.length > 0) {
               context.pushErrors(
                 valErrors.map((e) => ({
-                  start: textNodeDecodedOffsetToSourceOffset(
-                    joined,
-                    e.start,
-                  ),
-                  end: textNodeDecodedOffsetToSourceOffset(
-                    joined,
-                    e.end,
-                  ),
+                  start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
+                  end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
                   message: e.message,
                 })),
               );
