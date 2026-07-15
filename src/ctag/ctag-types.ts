@@ -1,7 +1,7 @@
 import type { JsonValue } from "../json/json-types.js";
 import type { SourceSpan } from "../util/error-types.js";
 
-export type Example =
+export type CTag =
   | {
       readonly kind: "success:json";
       readonly json: JsonValue<"loose">;

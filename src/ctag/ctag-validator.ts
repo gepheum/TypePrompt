@@ -7,20 +7,20 @@ import type {
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type { InternalError, SourceSpan } from "../util/error-types.js";
-import type { Example } from "./example-types.js";
+import type { CTag } from "./ctag-types.js";
 
-export function validateExample(
-  example: Example,
+export function validateCTag(
+  cTag: CTag,
   schema: Schema,
 ): readonly InternalError[] {
-  switch (example.kind) {
+  switch (cTag.kind) {
     case "success:identifier": {
-      if (!schema.identifiers.has(example.identifier.text)) {
+      if (!schema.identifiers.has(cTag.identifier.text)) {
         return [
           {
-            start: example.identifier.start,
-            end: example.identifier.end,
-            message: `Identifier '${example.identifier.text}' not found in schema`,
+            start: cTag.identifier.start,
+            end: cTag.identifier.end,
+            message: `Identifier '${cTag.identifier.text}' not found in schema`,
           },
         ];
       } else {
@@ -32,7 +32,7 @@ export function validateExample(
         Object.values(schema.types).some(
           (t) =>
             jsonMatchesType(
-              example.json,
+              cTag.json,
               resolveType(t, schema.types),
               "fast",
               schema,
@@ -43,7 +43,7 @@ export function validateExample(
       } else {
         const mismatches = Object.entries(schema.types).map(([name, t]) => {
           const result = jsonMatchesType(
-            example.json,
+            cTag.json,
             resolveType(t, schema.types),
             "thorough",
             schema,
@@ -72,8 +72,8 @@ export function validateExample(
         ) {
           return [
             {
-              start: example.json.firstToken.start,
-              end: example.json.firstToken.end,
+              start: cTag.json.firstToken.start,
+              end: cTag.json.firstToken.end,
               message: `Does not match type '${best.name}'`,
             },
             best.reason,
@@ -81,8 +81,8 @@ export function validateExample(
         } else {
           return [
             {
-              start: example.json.firstToken.start,
-              end: example.json.firstToken.end,
+              start: cTag.json.firstToken.start,
+              end: cTag.json.firstToken.end,
               message: `Does not match any of the types defined in the schema`,
             },
           ];
@@ -98,7 +98,7 @@ export function validateJson(
   type: TypeDeclaration | SyntheticInterface,
 ): InternalError[] {
   const result = jsonMatchesType(
-    json as JsonValue<"loose">,
+    json as JsonValue<"loose">,  // Safe cast
     resolveType(type, schema.types),
     "thorough",
     schema,

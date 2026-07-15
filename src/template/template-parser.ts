@@ -1,6 +1,6 @@
 import * as zod from "zod";
-import { parseExample } from "../example/example-parser.js";
-import { validateExample } from "../example/example-validator.js";
+import { parseCTag } from "../ctag/ctag-parser.js";
+import { validateCTag } from "../ctag/ctag-validator.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
 import { checkNoAmbiguity } from "../util/casing.js";
@@ -534,7 +534,7 @@ function parseBodyContent(
         const joined = joinTextNodes(textNodes, child.contentSpan.start);
 
         if (!context.hasNewErrors(eSnap)) {
-          const exResult = parseExample(joined.decoded);
+          const exResult = parseCTag(joined.decoded);
           if (exResult.kind === "error") {
             if (exResult.errors.length > 0) {
               context.pushErrors(
@@ -551,7 +551,7 @@ function parseBodyContent(
               );
             }
           } else {
-            const valErrors = validateExample(exResult, schema);
+            const valErrors = validateCTag(exResult, schema);
             if (valErrors.length > 0) {
               context.pushErrors(
                 valErrors.map((e) => ({

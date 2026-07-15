@@ -1,31 +1,29 @@
 import { JsonParser } from "../json/json-parser.js";
 import type { InternalErrors } from "../util/error-types.js";
-import { Example } from "./example-types.js";
+import { CTag } from "./ctag-types.js";
 
-export function parseExample(exampleSource: string): Example | InternalErrors {
-  return new ExampleParser(exampleSource).parse();
+export function parseCTag(source: string): CTag | InternalErrors {
+  return new CTagParser(source).parse();
 }
 
-class ExampleParser {
+class CTagParser {
   private readonly parser: JsonParser;
 
   constructor(private readonly text: string) {
     this.parser = new JsonParser(text);
   }
 
-  parse(): Example | InternalErrors {
-    const identifierMatch = /^\s*(\w+|"(\w+)")\s*$/.exec(this.text);
+  parse(): CTag | InternalErrors {
+    const identifierMatch = /^\s*(\w+)\s*$/.exec(this.text);
     if (identifierMatch) {
       const outerStart = identifierMatch[0]!.search(/\S/);
-      const isQuoted = identifierMatch[2] !== undefined;
-      const identifier = isQuoted ? identifierMatch[2]! : identifierMatch[1]!;
-      const start = isQuoted ? outerStart + 1 : outerStart;
+      const identifier = identifierMatch[1]!;
       return {
         kind: "success:identifier",
         identifier: {
           text: identifier,
-          start,
-          end: start + identifier.length,
+          start: outerStart,
+          end: outerStart + identifier.length,
         },
       };
     }
