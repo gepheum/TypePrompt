@@ -37,22 +37,22 @@ function parseOk(
 
 describe("parseSchema – interfaces", () => {
   it("parses a simple interface declaration", () => {
-    const result = parseSchema(
-      "interface Response { name: string; }",
-      TEMPLATE,
-    );
+    const result = parseSchema("type Response = { name: string; };", TEMPLATE);
     expect(result).toMatch({
       kind: "success",
       types: {
         Response: {
-          kind: "interface",
+          kind: "type",
           name: { text: "Response" },
-          fields: {
-            name: {
-              name: { text: "name" },
-              optional: false,
-              type: { kind: "type-name", name: { text: "string" } },
-              doc: "",
+          valueType: {
+            kind: "interface",
+            fields: {
+              name: {
+                name: { text: "name" },
+                optional: false,
+                type: { kind: "type-name", name: { text: "string" } },
+                doc: "",
+              },
             },
           },
           doc: "",
@@ -63,17 +63,21 @@ describe("parseSchema – interfaces", () => {
 
   it("parses an interface with multiple fields", () => {
     const result = parseSchema(
-      "interface Response { name: string; age: number; active: boolean; }",
+      "type Response = { name: string; age: number; active: boolean; };",
       TEMPLATE,
     );
     expect(result).toMatch({
       kind: "success",
       types: {
         Response: {
-          fields: {
-            name: { type: { kind: "type-name", name: { text: "string" } } },
-            age: { type: { kind: "type-name", name: { text: "number" } } },
-            active: { type: { kind: "type-name", name: { text: "boolean" } } },
+          valueType: {
+            fields: {
+              name: { type: { kind: "type-name", name: { text: "string" } } },
+              age: { type: { kind: "type-name", name: { text: "number" } } },
+              active: {
+                type: { kind: "type-name", name: { text: "boolean" } },
+              },
+            },
           },
         },
       },
@@ -82,16 +86,18 @@ describe("parseSchema – interfaces", () => {
 
   it("parses optional fields", () => {
     const result = parseSchema(
-      "interface Response { required: string; optional?: number; }",
+      "type Response = { required: string; optional?: number; };",
       TEMPLATE,
     );
     expect(result).toMatch({
       kind: "success",
       types: {
         Response: {
-          fields: {
-            required: { optional: false },
-            optional: { optional: true },
+          valueType: {
+            fields: {
+              required: { optional: false },
+              optional: { optional: true },
+            },
           },
         },
       },
@@ -99,33 +105,39 @@ describe("parseSchema – interfaces", () => {
   });
 
   it("parses an interface with no fields", () => {
-    const result = parseSchema("interface Response { }", TEMPLATE);
+    const result = parseSchema("type Response = { };", TEMPLATE);
     expect(result).toMatch({
       kind: "success",
-      types: { Response: { kind: "interface", fields: {} } },
+      types: {
+        Response: {
+          kind: "type",
+          valueType: { kind: "interface", fields: {} },
+        },
+      },
     });
   });
 
   it("parses a nested inline interface field", () => {
     const result = parseSchema(
-      "interface Response { address: { street: string; city: string }; }",
+      "type Response = { address: { street: string; city: string }; };",
       TEMPLATE,
     );
     expect(result).toMatch({
       kind: "success",
       types: {
         Response: {
-          fields: {
-            address: {
-              type: {
-                kind: "interface",
-                name: undefined,
-                fields: {
-                  street: {
-                    type: { kind: "type-name", name: { text: "string" } },
-                  },
-                  city: {
-                    type: { kind: "type-name", name: { text: "string" } },
+          valueType: {
+            fields: {
+              address: {
+                type: {
+                  kind: "interface",
+                  fields: {
+                    street: {
+                      type: { kind: "type-name", name: { text: "string" } },
+                    },
+                    city: {
+                      type: { kind: "type-name", name: { text: "string" } },
+                    },
                   },
                 },
               },
@@ -138,7 +150,7 @@ describe("parseSchema – interfaces", () => {
 
   it("accepts comma as field separator", () => {
     const result = parseSchema(
-      "interface Response { name: string, age: number }",
+      "type Response = { name: string, age: number };",
       TEMPLATE,
     );
     expect(result).toMatch({ kind: "success" });
@@ -146,22 +158,20 @@ describe("parseSchema – interfaces", () => {
 
   it("accepts newline as implicit field separator", () => {
     const result = parseSchema(
-      ["interface Response {", "  name: string", "  age: number", "}"].join(
-        "\n",
-      ),
+      ["type Response = {", "  name: string", "  age: number", "};"].join("\n"),
       TEMPLATE,
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("records correct source span for type name", () => {
-    const source = "interface Response { name: string; }";
+    const source = "type Response = { name: string; };";
     const result = parseSchema(source, TEMPLATE);
     expect(result).toMatch({
       kind: "success",
       types: {
         Response: {
-          name: { text: "Response", start: 10, end: 18 },
+          name: { text: "Response", start: 5, end: 13 },
         },
       },
     });
@@ -364,7 +374,7 @@ describe("parseSchema – multiple types", () => {
   it("parses multiple type declarations", () => {
     const result = parseSchema(
       [
-        "interface Response { value: Status; }",
+        "type Response = { value: Status; };",
         'type Status = "active" | "inactive";',
       ].join("\n"),
       TEMPLATE,
@@ -372,7 +382,7 @@ describe("parseSchema – multiple types", () => {
     expect(result).toMatch({
       kind: "success",
       types: {
-        Response: { kind: "interface" },
+        Response: { kind: "type" },
         Status: { kind: "type" },
       },
     });
@@ -381,7 +391,7 @@ describe("parseSchema – multiple types", () => {
   it("resolves a cross-type reference", () => {
     const result = parseSchema(
       [
-        "interface Response { value: Status; }",
+        "type Response = { value: Status; };",
         'type Status = "active" | "inactive";',
       ].join("\n"),
       TEMPLATE,
@@ -390,9 +400,11 @@ describe("parseSchema – multiple types", () => {
       kind: "success",
       types: {
         Response: {
-          fields: {
-            value: {
-              type: { kind: "type-name", name: { text: "Status" } },
+          valueType: {
+            fields: {
+              value: {
+                type: { kind: "type-name", name: { text: "Status" } },
+              },
             },
           },
         },
@@ -408,7 +420,7 @@ describe("parseSchema – multiple types", () => {
 describe("parseSchema – comments and JSDoc", () => {
   it("reports error for a single-line comment", () => {
     const result = parseSchema(
-      "// This is a comment\ninterface Response { name: string; }",
+      "// This is a comment\ntype Response = { name: string; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -423,7 +435,7 @@ describe("parseSchema – comments and JSDoc", () => {
 
   it("reports error for a non-JSDoc multi-line comment", () => {
     const result = parseSchema(
-      "/* comment */\ninterface Response { name: string; }",
+      "/* comment */\ntype Response = { name: string; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -438,9 +450,7 @@ describe("parseSchema – comments and JSDoc", () => {
 
   it("extracts JSDoc from a single-line /** ... */ comment on a type", () => {
     const result = parseSchema(
-      ["/** A named user. */", "interface Response { name: string; }"].join(
-        "\n",
-      ),
+      ["/** A named user. */", "type Response = { name: string; };"].join("\n"),
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -455,7 +465,7 @@ describe("parseSchema – comments and JSDoc", () => {
         "/**",
         " * A named user.",
         " */",
-        "interface Response { name: string; }",
+        "type Response = { name: string; };",
       ].join("\n"),
       TEMPLATE,
     );
@@ -468,24 +478,26 @@ describe("parseSchema – comments and JSDoc", () => {
   it("extracts JSDoc from a comment on a field", () => {
     const result = parseSchema(
       [
-        "interface Response {",
+        "type Response = {",
         "  /** The user's name. */",
         "  name: string;",
-        "}",
+        "};",
       ].join("\n"),
       TEMPLATE,
     );
     expect(result).toMatch({
       kind: "success",
       types: {
-        Response: { fields: { name: { doc: "The user's name." } } },
+        Response: {
+          valueType: { fields: { name: { doc: "The user's name." } } },
+        },
       },
     });
   });
 
   it("reports error for a non-JSDoc multi-line comment before a type", () => {
     const result = parseSchema(
-      ["/* ordinary comment */", "interface Response { name: string; }"].join(
+      ["/* ordinary comment */", "type Response = { name: string; };"].join(
         "\n",
       ),
       TEMPLATE,
@@ -508,7 +520,7 @@ describe("parseSchema – comments and JSDoc", () => {
 describe("parseSchema – identifiers", () => {
   it("collects field names as identifiers", () => {
     const result = parseSchema(
-      'interface Response { name: string; role: "admin"; }',
+      'type Response = { name: string; role: "admin"; }',
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -566,8 +578,8 @@ describe("parseSchema – unionToMembers", () => {
     // Foo | Bar are named declarations, not inline interfaces.
     const result = parseOk(
       [
-        'interface Foo { shape: "circle"; r: number; }',
-        'interface Bar { shape: "rect"; w: number; }',
+        'type Foo = { shape: "circle"; r: number; }',
+        'type Bar = { shape: "rect"; w: number; }',
         "type Response = Foo | Bar;",
       ].join("\n"),
     );
@@ -600,21 +612,21 @@ describe("parseSchema – unionToMembers", () => {
   });
 
   it("populates typeToNamingHint for a top-level interface", () => {
-    const result = parseOk("interface Response { name: string; }");
+    const result = parseOk("type Response = { name: string; };");
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface")
-      throw new Error("Expected interface");
-    expect(result.typeToNamingHint.get(responseDecl)).toMatch({
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const iface = responseDecl.valueType as Interface;
+    expect(result.typeToNamingHint.get(iface)).toMatch({
       namePieces: ["Response"],
     });
   });
 
   it("populates typeToNamingHint for a nested inline interface", () => {
-    const result = parseOk(
-      "interface Response { address: { street: string }; }",
-    );
-    const addressField = (result.types["Response"] as any).fields["address"];
-    const inlineInterface = addressField.type;
+    const result = parseOk("type Response = { address: { street: string }; };");
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const iface = responseDecl.valueType as Interface;
+    const inlineInterface = iface.fields["address"]!.type;
     expect(result.typeToNamingHint.get(inlineInterface)).toMatch({
       namePieces: ["Response", "address"],
     });
@@ -628,25 +640,23 @@ describe("parseSchema – unionToMembers", () => {
 describe("parseSchema – typeToNamingHint doc", () => {
   it("sets doc from JSDoc comment for a top-level interface", () => {
     const result = parseOk(
-      ["/** The response. */", "interface Response { name: string; }"].join(
-        "\n",
-      ),
+      ["/** The response. */", "type Response = { name: string; };"].join("\n"),
     );
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface")
-      throw new Error("Expected interface");
-    expect(result.typeToNamingHint.get(responseDecl)).toMatch({
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const iface = responseDecl.valueType as Interface;
+    expect(result.typeToNamingHint.get(iface)).toMatch({
       namePieces: ["Response"],
       doc: "The response.",
     });
   });
 
   it("sets doc to empty string for a top-level interface without a JSDoc comment", () => {
-    const result = parseOk("interface Response { name: string; }");
+    const result = parseOk("type Response = { name: string; };");
     const responseDecl = result.types["Response"]!;
-    if (responseDecl.kind !== "interface")
-      throw new Error("Expected interface");
-    expect(result.typeToNamingHint.get(responseDecl)).toMatch({
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const iface = responseDecl.valueType as Interface;
+    expect(result.typeToNamingHint.get(iface)).toMatch({
       namePieces: ["Response"],
       doc: "",
     });
@@ -676,11 +686,11 @@ describe("parseSchema – typeToNamingHint doc", () => {
   });
 
   it("sets doc to null for a nested inline interface (field type)", () => {
-    const result = parseOk(
-      "interface Response { address: { street: string }; }",
-    );
-    const addressField = (result.types["Response"] as any).fields["address"];
-    const inlineInterface = addressField.type as Interface;
+    const result = parseOk("type Response = { address: { street: string }; };");
+    const responseDecl = result.types["Response"]!;
+    if (responseDecl.kind !== "type") throw new Error("Expected type");
+    const iface = responseDecl.valueType as Interface;
+    const inlineInterface = iface.fields["address"]!.type as Interface;
     expect(result.typeToNamingHint.get(inlineInterface)).toMatch({
       namePieces: ["Response", "address"],
       doc: null,
@@ -709,20 +719,17 @@ describe("parseSchema – typeToNamingHint doc", () => {
 describe("parseSchema – meta context", () => {
   it("accepts a valid Meta interface", () => {
     const result = parseSchema(
-      "interface Meta { model: string; temperature: number; }",
+      "type Meta = { model: string; temperature: number; };",
       META,
     );
     expect(result).toMatch({
       kind: "success",
-      types: { Meta: { kind: "interface" } },
+      types: { Meta: { kind: "type" } },
     });
   });
 
   it("accepts a Meta field with a string literal union type", () => {
-    const result = parseSchema(
-      'interface Meta { role: "admin" | "user"; }',
-      META,
-    );
+    const result = parseSchema('type Meta = { role: "admin" | "user"; }', META);
     expect(result).toMatch({ kind: "success" });
   });
 
@@ -735,7 +742,7 @@ describe("parseSchema – meta context", () => {
   });
 
   it("reports error when a Meta field has array type", () => {
-    const result = parseSchema("interface Meta { tags: string[]; }", META);
+    const result = parseSchema("type Meta = { tags: string[]; };", META);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -748,7 +755,7 @@ describe("parseSchema – meta context", () => {
 
   it("reports error when a Meta field has interface type", () => {
     const result = parseSchema(
-      "interface Meta { nested: { value: string }; }",
+      "type Meta = { nested: { value: string }; };",
       META,
     );
     expect(result).toMatch({
@@ -777,7 +784,7 @@ describe("parseSchema – template context", () => {
 
   it("accepts argTypeNames as additional root types", () => {
     const result = parseSchema(
-      "interface Response { value: string; }\ninterface Input { query: string; }",
+      "type Response = { value: string; };\ntype Input = { query: string; };",
       { kind: "template", argTypeNames: ["Input"] },
     );
     expect(result).toMatch({ kind: "success" });
@@ -787,9 +794,9 @@ describe("parseSchema – template context", () => {
     // Helper is only referenced from Input, not from Response.
     const result = parseSchema(
       [
-        "interface Response { value: string; }",
-        "interface Input { items: Helper[]; }",
-        "interface Helper { id: string; }",
+        "type Response = { value: string; };",
+        "type Input = { items: Helper[]; };",
+        "type Helper = { id: string; };",
       ].join("\n"),
       { kind: "template", argTypeNames: ["Input"] },
     );
@@ -803,10 +810,7 @@ describe("parseSchema – template context", () => {
 
 describe("parseSchema – tokenizer errors", () => {
   it("reports error for an identifier starting with a digit", () => {
-    const result = parseSchema(
-      "interface Response { 1name: string; }",
-      TEMPLATE,
-    );
+    const result = parseSchema("type Response = { 1name: string; };", TEMPLATE);
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Invalid identifier" }],
@@ -815,7 +819,7 @@ describe("parseSchema – tokenizer errors", () => {
 
   it("reports error for an identifier containing an underscore", () => {
     const result = parseSchema(
-      "interface Response { my_field: string; }",
+      "type Response = { my_field: string; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -850,7 +854,7 @@ describe("parseSchema – tokenizer errors", () => {
 
   it("reports error for an unterminated multi-line comment", () => {
     const result = parseSchema(
-      "/* unterminated\ninterface Response { name: string; }",
+      "/* unterminated\ntype Response = { name: string; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -871,10 +875,7 @@ describe("parseSchema – tokenizer errors", () => {
 
 describe("parseSchema – naming errors", () => {
   it("reports error for a type name that starts with lowercase", () => {
-    const result = parseSchema(
-      "interface response { name: string; }",
-      TEMPLATE,
-    );
+    const result = parseSchema("type response = { name: string; };", TEMPLATE);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -891,17 +892,14 @@ describe("parseSchema – naming errors", () => {
 
   it("reports error for a type name that contains a non-alphanumeric char", () => {
     const _result = parseSchema(
-      "interface Response2x { name: string; }",
+      "type Response2x = { name: string; };",
       TEMPLATE,
     );
     // Digit in name is fine; symbol is not.  Use 'Response_bad' to trigger.
     // '2Response' starts with digit → tokenizer catches it.
     // Here we use a case that passes the tokenizer but fails naming:
     // field name starting with uppercase.
-    const result2 = parseSchema(
-      "interface Response { Name: string; }",
-      TEMPLATE,
-    );
+    const result2 = parseSchema("type Response = { Name: string; };", TEMPLATE);
     expect(result2).toMatch({
       kind: "error",
       errors: [
@@ -915,7 +913,7 @@ describe("parseSchema – naming errors", () => {
 
   it("reports error for a field name that starts with uppercase", () => {
     const result = parseSchema(
-      "interface Response { Status: string; }",
+      "type Response = { Status: string; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -948,8 +946,8 @@ describe("parseSchema – naming errors", () => {
   it("reports error for type names that conflict by case", () => {
     const result = parseSchema(
       [
-        "interface Response { value: string; }",
-        "interface response { other: string; }",
+        "type Response = { value: string; };",
+        "type response = { other: string; };",
       ].join("\n"),
       TEMPLATE,
     );
@@ -967,7 +965,7 @@ describe("parseSchema – naming errors", () => {
 
   it("reports error for field names that conflict by case", () => {
     const result = parseSchema(
-      "interface Response { myField: string; myfield: number; }",
+      "type Response = { myField: string; myfield: number; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -984,7 +982,7 @@ describe("parseSchema – naming errors", () => {
 describe("parseSchema – reserved type names", () => {
   it("reports error when a type is named 'Args'", () => {
     const result = parseSchema(
-      "interface Response { value: string; }\ninterface Args { x: number; }",
+      "type Response = { value: string; };\ntype Args = { x: number; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -995,7 +993,7 @@ describe("parseSchema – reserved type names", () => {
 
   it("reports error when a type is named 'Variant'", () => {
     const result = parseSchema(
-      "interface Response { value: string; }\ninterface Variant { x: number; }",
+      "type Response = { value: string; };\ntype Variant = { x: number; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -1006,7 +1004,7 @@ describe("parseSchema – reserved type names", () => {
 
   it("reports reserved name errors for both 'Args' and 'Variant' in the same schema", () => {
     const result = parseSchema(
-      "interface Response { value: string; }\ninterface Args { x: number; }\ninterface Variant { y: number; }",
+      "type Response = { value: string; };\ntype Args = { x: number; };\ntype Variant = { y: number; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -1026,7 +1024,7 @@ describe("parseSchema – reserved type names", () => {
 describe("parseSchema – type reference errors", () => {
   it("reports error for an unknown type reference", () => {
     const result = parseSchema(
-      "interface Response { value: Unknown; }",
+      "type Response = { value: Unknown; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -1037,7 +1035,7 @@ describe("parseSchema – type reference errors", () => {
 
   it("reports error for a direct circular reference", () => {
     const result = parseSchema(
-      "interface Response { child: Response; }",
+      "type Response = { child: Response; };",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -1049,8 +1047,8 @@ describe("parseSchema – type reference errors", () => {
   it("reports error for an indirect circular reference", () => {
     const result = parseSchema(
       [
-        "interface Response { next: Other; }",
-        "interface Other { back: Response; }",
+        "type Response = { next: Other; };",
+        "type Other = { back: Response; };",
       ].join("\n"),
       TEMPLATE,
     );
@@ -1065,7 +1063,7 @@ describe("parseSchema – type reference errors", () => {
 
   it("reports error for an unused type", () => {
     const result = parseSchema(
-      "interface Response { name: string; }\ntype Unused = string;",
+      "type Response = { name: string; };\ntype Unused = string;",
       TEMPLATE,
     );
     expect(result).toMatch({
@@ -1080,7 +1078,7 @@ describe("parseSchema – type reference errors", () => {
     const result = parseSchema(
       [
         'type Response = { kind: "a"; x: Helper } | { kind: "b"; y: Helper };',
-        "interface Helper { id: string; }",
+        "type Helper = { id: string; };",
       ].join("\n"),
       TEMPLATE,
     );

@@ -37,7 +37,7 @@ function span(text: string): SourceSpan {
 }
 
 function str(value: string): JsonString {
-  return { kind: "string", firstToken: span(`"${value}"`), value };
+  return { kind: "string", firstToken: span(`"${value};"`), value };
 }
 
 function num(value: number): JsonNumber {
@@ -87,7 +87,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts an integer for an int type", () => {
     const schema = parseSchemaOrThrow(
-      "type Int = number\ninterface Response { count: Int; }",
+      "type Int = number\ntype Response = { count: Int; };",
     );
     const type = schema.types["Response"]!;
     expect(validateJson(objStrict([["count", num(42)]]), schema, type)).toMatch(
@@ -97,7 +97,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts a float for an integer type", () => {
     const schema = parseSchemaOrThrow(
-      "type Int = number\ninterface Response { count: Int; }",
+      "type Int = number\ntype Response = { count: Int; };",
     );
     const type = schema.types["Response"]!;
     expect(
@@ -107,7 +107,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts an object matching an interface", () => {
     const schema = parseSchemaOrThrow(
-      "interface Response { name: string; age: number; }",
+      "type Response = { name: string; age: number; };",
     );
     const type = schema.types["Response"]!;
     expect(
@@ -124,7 +124,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts an object when an optional field is absent", () => {
     const schema = parseSchemaOrThrow(
-      "interface Response { name: string; nickname?: string; }",
+      "type Response = { name: string; nickname?: string; };",
     );
     const type = schema.types["Response"]!;
     expect(
@@ -154,7 +154,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts a matching member of an interface union", () => {
     const schema = parseSchemaOrThrow(
-      'interface Cat { kind: "cat"; name: string; } interface Dog { kind: "dog"; breed: string; } type Response = Cat | Dog',
+      'type Cat = { kind: "cat"; name: string; }; type Dog = { kind: "dog"; breed: string; }; type Response = Cat | Dog',
     );
     const type = schema.types["Response"]!;
     expect(
@@ -171,7 +171,7 @@ describe("validateJson – exact match", () => {
 
   it("validates against a non-root named type", () => {
     const schema = parseSchemaOrThrow(
-      "interface Response { item: Detail } interface Detail { x: string; }",
+      "type Response = { item: Detail }; type Detail = { x: string; };",
     );
     const type = schema.types["Detail"]!;
     expect(validateJson(objStrict([["x", str("hi")]]), schema, type)).toMatch(
@@ -211,7 +211,7 @@ describe("validateJson – mismatch: no close match", () => {
 
   it("returns a single error when the kind field is missing for an interface union", () => {
     const schema = parseSchemaOrThrow(
-      'interface Cat { kind: "cat"; } interface Dog { kind: "dog"; } type Response = Cat | Dog',
+      'type Cat = { kind: "cat"; }; type Dog = { kind: "dog"; }; type Response = Cat | Dog',
     );
     const type = schema.types["Response"]!;
     expect(
@@ -226,7 +226,7 @@ describe("validateJson – mismatch: no close match", () => {
 
 describe("validateJson – mismatch: close match", () => {
   it("returns 2 errors for an object with a wrong-typed field", () => {
-    const schema = parseSchemaOrThrow("interface Response { name: string; }");
+    const schema = parseSchemaOrThrow("type Response = { name: string; };");
     const type = schema.types["Response"]!;
     expect(validateJson(objStrict([["name", num(42)]]), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
@@ -258,7 +258,7 @@ describe("validateJson – mismatch: close match", () => {
 
   it("returns 2 errors for a missing required field", () => {
     const schema = parseSchemaOrThrow(
-      "interface Response { name: string; age: number; }",
+      "type Response = { name: string; age: number; };",
     );
     const type = schema.types["Response"]!;
     expect(

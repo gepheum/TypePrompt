@@ -1,7 +1,6 @@
 import { checkNoAmbiguity } from "../util/casing.js";
 import type { InternalError, SourceSpan } from "../util/error-types.js";
 import type {
-  InterfaceDeclaration,
   SchemaField,
   SchemaParseContext,
   StringLiteral,
@@ -46,13 +45,7 @@ export function validateSchema(
     }
     validateType(typeDeclaration, types, errors);
     const nameDependencies = new Set<string>();
-    collectNameDependencies(
-      typeDeclaration.kind === "type"
-        ? typeDeclaration.valueType
-        : typeDeclaration,
-      types,
-      nameDependencies,
-    );
+    collectNameDependencies(typeDeclaration.valueType, types, nameDependencies);
     if (nameDependencies.has(name.text)) {
       errors.push({
         start: name.start,
@@ -121,12 +114,12 @@ function getUnionKind(
   }
 }
 
-function getFirstToken(type: Type | InterfaceDeclaration): SourceSpan {
+function getFirstToken(type: Type): SourceSpan {
   switch (type.kind) {
     case "array":
       return getFirstToken(type.elementType);
     case "interface":
-      return type.leftCurlyBracket ?? type.name;
+      return type.leftCurlyBracket;
     case "string-literal":
       return type.quotedName;
     case "type-name":
@@ -146,9 +139,6 @@ function validateType(
       return validateType(type.elementType, types, errors);
     }
     case "interface": {
-      if (type.name) {
-        validateTypeName(type.name, errors);
-      }
       errors.push(
         ...checkNoAmbiguity(
           Object.values(type.fields).map((f) => ({
@@ -413,7 +403,7 @@ const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
 
 function collectNameDependencies(
-  type: Type | InterfaceDeclaration,
+  type: Type,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
 ): null {
@@ -440,11 +430,7 @@ function collectNameDependencies(
       if (!resolved) {
         return null;
       }
-      if (resolved.kind === "type") {
-        return collectNameDependencies(resolved.valueType, types, seenNames);
-      } else {
-        return collectNameDependencies(resolved, types, seenNames);
-      }
+      return collectNameDependencies(resolved.valueType, types, seenNames);
     }
     case "union": {
       for (const member of type.members) {
@@ -520,11 +506,7 @@ function verifyAllTypesUsed(
   for (const rootTypeName of rootTypeNames) {
     const rootType = types[rootTypeName];
     if (rootType) {
-      if (rootType.kind === "interface") {
-        collectNameDependencies(rootType, types, usedTypes);
-      } else {
-        collectNameDependencies(rootType.valueType, types, usedTypes);
-      }
+      collectNameDependencies(rootType.valueType, types, usedTypes);
       usedTypes.add(rootTypeName);
     }
   }

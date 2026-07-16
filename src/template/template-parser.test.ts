@@ -45,7 +45,7 @@ function singleTemplate(content: string): Template {
 
 /** Wraps a body string in a minimal valid template. Base indent inside body is 4 spaces. */
 function wrapBody(bodyContent: string, schemaSource?: string): string {
-  const schema = schemaSource ?? "interface Response { value: string; }";
+  const schema = schemaSource ?? "type Response = { value: string; };";
   return [
     '<template name="Demo">',
     "  <schema>",
@@ -104,17 +104,17 @@ describe("parseTemplateFile – top-level structure", () => {
 describe("parseTemplateFile – top-level <meta>", () => {
   it("parses a valid meta schema", () => {
     const result = parseOk(
-      "<meta>\n  interface Meta { temperature: number; }\n</meta>",
+      "<meta>\n  type Meta = { temperature: number; };\n</meta>",
     );
     expect(result).toMatch({
       kind: "success",
-      metas: [{ kind: "success", types: { Meta: { kind: "interface" } } }],
+      metas: [{ kind: "success", types: { Meta: { kind: "type" } } }],
     });
   });
 
   it("collects multiple meta schemas", () => {
     const result = parseOk(
-      "<meta>\n  interface Meta { a: number; }\n</meta>\n<meta>\n  interface Meta { b: string; }\n</meta>",
+      "<meta>\n  type Meta = { a: number; };\n</meta>\n<meta>\n  type Meta = { b: string; };\n</meta>",
     );
     expect(result).toMatch({
       kind: "success",
@@ -135,7 +135,7 @@ describe("parseTemplateFile – top-level <meta>", () => {
 
   it("reports error for unexpected attribute on top-level <meta>", () => {
     const result = parseTemplateFile(
-      sf('<meta foo="bar">\n  interface Meta { x: string; }\n</meta>'),
+      sf('<meta foo="bar">\n  type Meta = { x: string; };\n</meta>'),
     );
     expect(result).toMatch({
       kind: "error",
@@ -151,7 +151,7 @@ describe("parseTemplateFile – top-level <meta>", () => {
 describe("parseTemplateFile – template attributes", () => {
   const BODY_SCHEMA = [
     "  <schema>",
-    "    interface Response { value: string; }",
+    "    type Response = { value: string; };",
     "  </schema>",
     "  <body>text</body>",
   ].join("\n");
@@ -238,7 +238,7 @@ describe("parseTemplateFile – required elements", () => {
     const source = [
       '<template name="Demo">',
       "  <schema>",
-      "    interface Response { value: string; }",
+      "    type Response = { value: string; };",
       "  </schema>",
       "</template>",
     ].join("\n");
@@ -252,8 +252,8 @@ describe("parseTemplateFile – required elements", () => {
   it("reports error for multiple <schema> elements", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "</template>",
     ].join("\n");
@@ -267,7 +267,7 @@ describe("parseTemplateFile – required elements", () => {
   it("reports error for multiple <args> elements", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <args><arg name="y"/></args>',
       '  <body><arg name="x"/></body>',
@@ -283,7 +283,7 @@ describe("parseTemplateFile – required elements", () => {
   it("reports error for unexpected child element", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "  <unknown/>",
       "</template>",
@@ -305,7 +305,7 @@ describe("parseTemplateFile – template <meta>", () => {
     const source = [
       '<template name="Demo">',
       '  <meta temperature="12.0"/>',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "</template>",
     ].join("\n");
@@ -323,7 +323,7 @@ describe("parseTemplateFile – template <meta>", () => {
     const source = [
       '<template name="Demo">',
       "  <meta></meta>",
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "</template>",
     ].join("\n");
@@ -339,7 +339,7 @@ describe("parseTemplateFile – template <meta>", () => {
       '<template name="Demo">',
       '  <meta a="1"/>',
       '  <meta b="2"/>',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "</template>",
     ].join("\n");
@@ -361,7 +361,7 @@ describe("parseTemplateFile – <schema>", () => {
       [
         '<template name="Demo">',
         "  <schema>",
-        "    interface Response { value: string; }",
+        "    type Response = { value: string; };",
         "  </schema>",
         "  <body>text</body>",
         "</template>",
@@ -369,7 +369,7 @@ describe("parseTemplateFile – <schema>", () => {
     );
     expect(t.schema).toMatch({
       kind: "success",
-      types: { Response: { kind: "interface" } },
+      types: { Response: { kind: "type" } },
     });
   });
 
@@ -395,7 +395,7 @@ describe("parseTemplateFile – <schema>", () => {
   it("reports error for unexpected attribute on <schema>", () => {
     const source = [
       '<template name="Demo">',
-      '  <schema hide="true">interface Response { value: string; }</schema>',
+      '  <schema hide="true">type Response = { value: string; };</schema>',
       "  <body>text</body>",
       "</template>",
     ].join("\n");
@@ -425,8 +425,8 @@ describe("parseTemplateFile – <schema>", () => {
     const source = [
       '<template name="Demo">',
       "  <schema>",
-      "    interface Response { answer: string; }",
-      "    interface Input { question: string; }",
+      "    type Response = { answer: string; };",
+      "    type Input = { question: string; };",
       "  </schema>",
       '  <args><arg name="ctx" type="Input"/></args>',
       '  <body><arg name="ctx" format="json"/></body>',
@@ -444,7 +444,7 @@ describe("parseTemplateFile – <args>", () => {
   function templateWithArgs(argsXml: string, bodyContent: string = ""): string {
     return [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       `  <args>${argsXml}</args>`,
       `  <body>${bodyContent}</body>`,
       "</template>",
@@ -516,7 +516,7 @@ describe("parseTemplateFile – <args>", () => {
   it("reports error for unexpected attribute on <args>", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args foo="bar"><arg name="x"/></args>',
       '  <body><arg name="x"/></body>',
       "</template>",
@@ -598,7 +598,7 @@ describe("parseTemplateFile – body text dedent", () => {
   it("reports indentation error when a line has less indent than the base", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>",
       "    line one",
       "  too little indent",
@@ -614,7 +614,7 @@ describe("parseTemplateFile – body text dedent", () => {
 
   it("stores xmlContent as the raw content between template tags", () => {
     const inner =
-      "\n  <schema>interface Response { value: string; }</schema>\n  <body>hi</body>\n";
+      "\n  <schema>type Response = { value: string; };</schema>\n  <body>hi</body>\n";
     const source = `<template name="Demo">${inner}</template>`;
     const t = singleTemplate(source);
     expect(t.xmlContent).toBe(inner);
@@ -677,7 +677,7 @@ describe("parseTemplateFile – body <arg> elements", () => {
   it("reports error for undeclared arg when <args> is present", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body><arg name="x"/><arg name="undeclared"/></body>',
       "</template>",
@@ -693,8 +693,8 @@ describe("parseTemplateFile – body <arg> elements", () => {
     const source = [
       '<template name="Demo">',
       "  <schema>",
-      "    interface Response { value: string; }",
-      "    interface Data { items: string[]; }",
+      "    type Response = { value: string; };",
+      "    type Data = { items: string[]; };",
       "  </schema>",
       '  <args><arg name="data" type="Data"/></args>',
       '  <body><arg name="data" format="json"/></body>',
@@ -710,7 +710,7 @@ describe("parseTemplateFile – body <arg> elements", () => {
   it("reports error when format is missing for arg with declared type", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }\n  interface Data { items: string[]; }</schema>",
+      "  <schema>type Response = { value: string; };\n  type Data = { items: string[]; };</schema>",
       '  <args><arg name="data" type="Data"/></args>',
       '  <body><arg name="data"/></body>',
       "</template>",
@@ -725,7 +725,7 @@ describe("parseTemplateFile – body <arg> elements", () => {
   it("reports error for format on arg without declared type", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body><arg name="x" format="json"/></body>',
       "</template>",
@@ -859,7 +859,7 @@ describe("parseTemplateFile – variants", () => {
   function multiVariantTemplate(bodyA: string, bodyB: string): string {
     return [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       `  <body variant="A">${bodyA}</body>`,
       `  <body variant="B">${bodyB}</body>`,
@@ -894,7 +894,7 @@ describe("parseTemplateFile – variants", () => {
   it("builds variants content for a single body with variant attr", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body variant="A"><arg name="x"/></body>',
       "</template>",
@@ -906,7 +906,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error for variant bodies without <args>", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <body variant="A">text A</body>',
       '  <body variant="B">text B</body>',
       "</template>",
@@ -921,7 +921,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error for duplicate variant names", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body variant="A"><arg name="x"/></body>',
       '  <body variant="A"><arg name="x"/></body>',
@@ -940,7 +940,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error for case-conflicting variant names", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body variant="A"><arg name="x"/></body>',
       '  <body variant="a"><arg name="x"/></body>',
@@ -956,7 +956,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error when one of multiple bodies lacks a variant attribute", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/></args>',
       '  <body variant="A"><arg name="x"/></body>',
       '  <body><arg name="x"/></body>',
@@ -972,7 +972,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error for a declared arg unused in a no-variant body", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="used"/><arg name="unused"/></args>',
       '  <body><arg name="used"/></body>',
       "</template>",
@@ -987,7 +987,7 @@ describe("parseTemplateFile – variants", () => {
   it("reports error for a declared arg unused in one variant body", () => {
     const source = [
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       '  <args><arg name="x"/><arg name="y"/></args>',
       '  <body variant="A"><arg name="x"/><arg name="y"/></body>',
       '  <body variant="B"><arg name="x"/></body>',
@@ -1009,11 +1009,11 @@ describe("parseTemplateFile – multiple templates", () => {
   it("parses multiple templates from one file", () => {
     const source = [
       '<template name="Foo">',
-      "  <schema>interface Response { a: string; }</schema>",
+      "  <schema>type Response = { a: string; };</schema>",
       "  <body>foo</body>",
       "</template>",
       '<template name="Bar">',
-      "  <schema>interface Response { b: string; }</schema>",
+      "  <schema>type Response = { b: string; };</schema>",
       "  <body>bar</body>",
       "</template>",
     ].join("\n");
@@ -1030,7 +1030,7 @@ describe("parseTemplateFile – multiple templates", () => {
       "  <body>foo</body>",
       "</template>",
       '<template name="Bar">',
-      "  <schema>interface Response { b: string; }</schema>",
+      "  <schema>type Response = { b: string; };</schema>",
       "  <body>bar</body>",
       "</template>",
     ].join("\n");
@@ -1050,10 +1050,10 @@ describe("parseTemplateFile – meta + template", () => {
   it("parses a file with both a top-level meta and a template", () => {
     const source = [
       "<meta>",
-      "  interface Meta { temperature: number; }",
+      "  type Meta = { temperature: number; };",
       "</meta>",
       '<template name="Demo">',
-      "  <schema>interface Response { value: string; }</schema>",
+      "  <schema>type Response = { value: string; };</schema>",
       "  <body>text</body>",
       "</template>",
     ].join("\n");

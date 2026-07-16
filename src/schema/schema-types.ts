@@ -21,23 +21,12 @@ export type Schema = {
   readonly typeToNamingHint: ReadonlyMap<Interface | Union, NamingHint>;
 };
 
-export type InterfaceDeclaration = {
-  readonly kind: "interface";
+export type TypeDeclaration = {
+  readonly kind: "type";
   readonly name: SourceSpan;
-  readonly leftCurlyBracket: undefined;
-  readonly fields: { readonly [name: string]: SchemaField };
-  readonly firstField?: SchemaField;
+  readonly valueType: Type;
   readonly doc: string;
 };
-
-export type TypeDeclaration =
-  | InterfaceDeclaration
-  | {
-      readonly kind: "type";
-      readonly name: SourceSpan;
-      readonly valueType: Type;
-      readonly doc: string;
-    };
 
 export type SchemaField = {
   readonly name: SourceSpan;
@@ -46,7 +35,7 @@ export type SchemaField = {
   readonly doc: string;
 };
 
-export type Type = TypeName | StringLiteral | InlineInterface | Array | Union;
+export type Type = TypeName | StringLiteral | Interface | Array | Union;
 
 export type NonUnionType = Exclude<Type, Union>;
 
@@ -61,15 +50,12 @@ export type StringLiteral = {
   readonly quotedName: SourceSpan;
 };
 
-export type InlineInterface = {
+export type Interface = {
   readonly kind: "interface";
-  readonly name: undefined;
   readonly leftCurlyBracket: SourceSpan;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
-
-export type Interface = InterfaceDeclaration | InlineInterface;
 
 export type Array = {
   readonly kind: "array";
@@ -82,8 +68,7 @@ export type Union = {
   readonly members: NonUnionType[];
 };
 
-export type ResolvedType =
-  Exclude<Type, TypeName> | InterfaceDeclaration | PrimitiveType;
+export type ResolvedType = Exclude<Type, TypeName> | PrimitiveType;
 
 export type PrimitiveType = {
   readonly kind: "primitive";

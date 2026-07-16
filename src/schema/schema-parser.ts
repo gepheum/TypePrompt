@@ -32,15 +32,19 @@ class SchemaParser {
         if (this.peekToken().kind === "string-end") {
           break;
         } else {
-          // Jump to the next "type" or "interface" keyword.
+          // Jump to the next "type" keyword.
           let token = this.peekToken();
+          let nestingLevel = 0;
           while (
             token.kind !== "string-end" &&
-            token.text !== "type" &&
-            token.text !== "interface"
+            !(token.text === "type" && nestingLevel === 0)
           ) {
-            this.movePast(token);
-            token = this.peekToken();
+            if (token.text === "{") {
+              ++nestingLevel;
+            } else if (token.text === "}") {
+              --nestingLevel;
+            }
+            token = this.movePastThenPeek(token);
           }
         }
       } else {
@@ -97,14 +101,10 @@ class SchemaParser {
 
     const match = this.expectThenMove(token, {
       type: EXACT_MATCHER,
-      interface: EXACT_MATCHER,
     });
     switch (match) {
       case "type": {
         return this.parseTypeAliasDeclaration(jsdoc);
-      }
-      case "interface": {
-        return this.parseInterfaceDeclaration(jsdoc);
       }
       case "noMatch": {
         return null;
@@ -142,30 +142,6 @@ class SchemaParser {
       kind: "type",
       name: name,
       valueType: typeRef,
-      doc: getDocText(jsdoc),
-    };
-  }
-
-  private parseInterfaceDeclaration(
-    jsdoc: Token | undefined,
-  ): TypeDeclaration | null {
-    const name = this.peekToken();
-    if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
-      return null;
-    }
-    if (!this.expectExactThenMove("{")) {
-      return null;
-    }
-    const fields = this.parseFields();
-    if (!this.expectExactThenMove("}")) {
-      return null;
-    }
-    return {
-      kind: "interface",
-      name: name,
-      leftCurlyBracket: undefined,
-      fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
-      firstField: fields[0],
       doc: getDocText(jsdoc),
     };
   }
@@ -258,7 +234,6 @@ class SchemaParser {
           }
           return {
             kind: "interface",
-            name: undefined,
             leftCurlyBracket: token,
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
             firstField: fields[0],
@@ -589,7 +564,7 @@ class TypeTraverser {
     for (const type of Object.values(types)) {
       traverser.traverse(
         type,
-        type.kind === "interface"
+        type.kind === "type" && type.valueType.kind === "interface"
           ? { namePieces: [type.name.text], doc: type.doc }
           : { namePieces: [], doc: type.doc },
       );
