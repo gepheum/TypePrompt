@@ -11,7 +11,7 @@ export function validateCTag(
   schema: Schema,
 ): readonly InternalError[] {
   switch (cTag.kind) {
-    case "success:identifier": {
+    case "identifier": {
       if (!schema.identifiers.has(cTag.identifier.text)) {
         return [
           {
@@ -24,7 +24,7 @@ export function validateCTag(
         return [];
       }
     }
-    case "success:json": {
+    case "json": {
       if (
         Object.values(schema.types).some(
           (t) =>

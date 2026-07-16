@@ -69,11 +69,11 @@ function arr(elements: JsonValue<"loose">[]): JsonArray<"loose"> {
 }
 
 function jsonCTag(json: JsonValue<"loose">): CTag {
-  return { kind: "success:json", json };
+  return { kind: "json", json };
 }
 
 function identifierCTag(text: string): CTag {
-  return { kind: "success:identifier", identifier: span(text) };
+  return { kind: "identifier", identifier: span(text) };
 }
 
 // ---------------------------------------------------------------------------

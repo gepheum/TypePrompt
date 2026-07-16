@@ -19,7 +19,7 @@ class CTagParser {
       const outerStart = identifierMatch[0]!.search(/\S/);
       const identifier = identifierMatch[1]!;
       return {
-        kind: "success:identifier",
+        kind: "identifier",
         identifier: {
           text: identifier,
           start: outerStart,
@@ -65,7 +65,7 @@ class CTagParser {
     }
 
     return {
-      kind: "success:json",
+      kind: "json",
       json: value,
     };
   }

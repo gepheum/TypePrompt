@@ -9,7 +9,7 @@ describe("parseCTag", () => {
     const result = parseCTag(input);
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "object",
         entries: [
@@ -40,7 +40,7 @@ describe("parseCTag", () => {
     for (const [input, expectedText] of values) {
       const result = parseCTag(input);
       expect(result).toMatch({
-        kind: "success:identifier",
+        kind: "identifier",
         identifier: { text: expectedText },
       });
     }
@@ -48,14 +48,14 @@ describe("parseCTag", () => {
 
   it("parses a quoted string as a JSON string, not an identifier", () => {
     expect(parseCTag('"x"')).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: { kind: "string", value: "x" },
     });
   });
 
   it("parses empty object and empty array", () => {
     expect(parseCTag("{}")).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "object",
         entries: [],
@@ -63,7 +63,7 @@ describe("parseCTag", () => {
     });
 
     expect(parseCTag("[]")).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "array",
         elements: [],
@@ -75,7 +75,7 @@ describe("parseCTag", () => {
     const result = parseCTag('"line\\nnext"');
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "string",
         value: "line\nnext",
@@ -87,7 +87,7 @@ describe("parseCTag", () => {
     const result = parseCTag("// before\ntrue // after");
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "boolean",
         value: true,
@@ -99,7 +99,7 @@ describe("parseCTag", () => {
     const result = parseCTag("/* before */ [1, 2] /* after */");
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "array",
         elements: [
@@ -116,7 +116,7 @@ describe("parseCTag", () => {
     );
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "object",
         entries: [
@@ -137,7 +137,7 @@ describe("parseCTag", () => {
     const result = parseCTag("[1, // between\n 2, /* between */ 3]");
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "array",
         elements: [
@@ -153,7 +153,7 @@ describe("parseCTag", () => {
     const result = parseCTag('"/* not a comment */ // still string"');
 
     expect(result).toMatch({
-      kind: "success:json",
+      kind: "json",
       json: {
         kind: "string",
         value: "/* not a comment */ // still string",
@@ -326,7 +326,7 @@ describe("parseCTag", () => {
     const result = parseCTag("tru");
 
     expect(result).toMatch({
-      kind: "success:identifier",
+      kind: "identifier",
       identifier: { text: "tru" },
     });
   });
@@ -335,7 +335,7 @@ describe("parseCTag", () => {
     const result = parseCTag("nul");
 
     expect(result).toMatch({
-      kind: "success:identifier",
+      kind: "identifier",
       identifier: { text: "nul" },
     });
   });

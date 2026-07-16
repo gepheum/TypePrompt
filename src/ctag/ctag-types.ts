@@ -3,12 +3,12 @@ import type { SourceSpan } from "../util/error-types.js";
 
 export type CTag =
   | {
-      readonly kind: "success:json";
+      readonly kind: "json";
       readonly json: JsonValue<"loose">;
       readonly identifier?: undefined;
     }
   | {
-      readonly kind: "success:identifier";
+      readonly kind: "identifier";
       /** Unquoted identifier. */
       readonly identifier: SourceSpan;
       readonly json?: undefined;
