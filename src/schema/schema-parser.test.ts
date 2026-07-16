@@ -626,8 +626,9 @@ describe("parseSchema – unionToMembers", () => {
     const responseDecl = result.types["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
-    const inlineInterface = iface.fields["address"]!.type;
-    expect(result.typeToNamingHint.get(inlineInterface)).toMatch({
+    const addressType = iface.fields["address"]!.type;
+    if (addressType.kind !== "interface") throw new Error("Expected interface");
+    expect(result.typeToNamingHint.get(addressType)).toMatch({
       namePieces: ["Response", "address"],
     });
   });
@@ -1286,7 +1287,6 @@ describe("getUnionMembers", () => {
       members: [
         {
           kind: "interface",
-          name: undefined,
           leftCurlyBracket: { text: "{", start: 0, end: 1 },
           fields: {
             kind: {
@@ -1313,7 +1313,6 @@ describe("getUnionMembers", () => {
         },
         {
           kind: "interface",
-          name: undefined,
           leftCurlyBracket: { text: "{", start: 20, end: 21 },
           fields: {
             kind: {
@@ -1387,69 +1386,75 @@ describe("getUnionMembers", () => {
   });
 
   it("resolves interface members referenced by name", () => {
-    const fooInterface: Interface = {
-      kind: "interface",
-      name: { text: "Foo", start: 10, end: 13 },
-      leftCurlyBracket: undefined,
-      fields: {
-        shape: {
-          name: { text: "shape", start: 16, end: 21 },
+    const fooInterface: TypeDeclaration = {
+      kind: "type",
+      name: { text: "Foo", start: -1, end: -1 },
+      doc: "",
+      valueType: {
+        kind: "interface",
+        leftCurlyBracket: { text: "{", start: -1, end: -1 },
+        fields: {
+          shape: {
+            name: { text: "shape", start: -1, end: -1 },
+            optional: false,
+            type: {
+              kind: "string-literal",
+              value: "circle",
+              quotedName: { text: '"circle"', start: -1, end: -1 },
+            },
+            doc: "",
+          },
+        },
+        firstField: {
+          name: { text: "shape", start: -1, end: -1 },
           optional: false,
           type: {
             kind: "string-literal",
             value: "circle",
-            quotedName: { text: '"circle"', start: 23, end: 31 },
+            quotedName: { text: '"circle"', start: -1, end: -1 },
           },
           doc: "",
         },
       },
-      firstField: {
-        name: { text: "shape", start: 16, end: 21 },
-        optional: false,
-        type: {
-          kind: "string-literal",
-          value: "circle",
-          quotedName: { text: '"circle"', start: 23, end: 31 },
-        },
-        doc: "",
-      },
-      doc: "",
     };
-    const barInterface: Interface = {
-      kind: "interface",
-      name: { text: "Bar", start: 50, end: 53 },
-      leftCurlyBracket: undefined,
-      fields: {
-        shape: {
-          name: { text: "shape", start: 56, end: 61 },
+    const barInterface: TypeDeclaration = {
+      kind: "type",
+      name: { text: "Bar", start: -1, end: -1 },
+      doc: "",
+      valueType: {
+        kind: "interface",
+        leftCurlyBracket: { text: "{", start: -1, end: -1 },
+        fields: {
+          shape: {
+            name: { text: "shape", start: -1, end: -1 },
+            optional: false,
+            type: {
+              kind: "string-literal",
+              value: "rect",
+              quotedName: { text: '"rect"', start: -1, end: -1 },
+            },
+            doc: "",
+          },
+        },
+        firstField: {
+          name: { text: "shape", start: -1, end: -1 },
           optional: false,
           type: {
             kind: "string-literal",
             value: "rect",
-            quotedName: { text: '"rect"', start: 63, end: 69 },
+            quotedName: { text: '"rect"', start: -1, end: -1 },
           },
           doc: "",
         },
       },
-      firstField: {
-        name: { text: "shape", start: 56, end: 61 },
-        optional: false,
-        type: {
-          kind: "string-literal",
-          value: "rect",
-          quotedName: { text: '"rect"', start: 63, end: 69 },
-        },
-        doc: "",
-      },
-      doc: "",
     };
     const fooDecl: TypeDeclaration = { ...fooInterface };
     const barDecl: TypeDeclaration = { ...barInterface };
     const union: Union = {
       kind: "union",
       members: [
-        { kind: "type-name", name: { text: "Foo", start: 90, end: 93 } },
-        { kind: "type-name", name: { text: "Bar", start: 96, end: 99 } },
+        { kind: "type-name", name: { text: "Foo", start: -1, end: -1 } },
+        { kind: "type-name", name: { text: "Bar", start: -1, end: -1 } },
       ],
     };
     const types = { Foo: fooDecl, Bar: barDecl };
