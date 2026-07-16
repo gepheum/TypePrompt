@@ -13,7 +13,7 @@ import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
 import type { SourceSpan } from "../util/error-types.js";
 import type { CTag } from "./ctag-types.js";
-import { validateCTag, validateJson } from "./ctag-validator.js";
+import { validateCTag } from "./ctag-validator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,27 +123,27 @@ describe("validateExample – json: exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Int = number\ninterface Response { count: Int; }",
     );
-    expect(
-      validateCTag(jsonCTag(obj([["count", num(42)]])), schema),
-    ).toMatch([]);
+    expect(validateCTag(jsonCTag(obj([["count", num(42)]])), schema)).toMatch(
+      [],
+    );
   });
 
   it("accepts a negative integer for an int type", () => {
     const schema = parseSchemaOrThrow(
       "type Int = number\ninterface Response { count: Int; }",
     );
-    expect(
-      validateCTag(jsonCTag(obj([["count", num(-7)]])), schema),
-    ).toMatch([]);
+    expect(validateCTag(jsonCTag(obj([["count", num(-7)]])), schema)).toMatch(
+      [],
+    );
   });
 
   it("accepts a float for an integer type", () => {
     const schema = parseSchemaOrThrow(
       "type Int = number\ninterface Response { count: Int; }",
     );
-    expect(
-      validateCTag(jsonCTag(obj([["count", num(3.14)]])), schema),
-    ).toMatch([]);
+    expect(validateCTag(jsonCTag(obj([["count", num(3.14)]])), schema)).toMatch(
+      [],
+    );
   });
 
   it("accepts an object matching an interface", () => {
@@ -179,9 +179,9 @@ describe("validateExample – json: exact match", () => {
 
   it("accepts an array of strings for a string array type", () => {
     const schema = parseSchemaOrThrow("type Response = string[]");
-    expect(
-      validateCTag(jsonCTag(arr([str("a"), str("b")])), schema),
-    ).toMatch([]);
+    expect(validateCTag(jsonCTag(arr([str("a"), str("b")])), schema)).toMatch(
+      [],
+    );
   });
 
   it("accepts an empty array for an array type", () => {
@@ -272,9 +272,7 @@ describe("validateExample – json: no close match", () => {
     const schema = parseSchemaOrThrow(
       'type Response = { kind: "cat" } | { kind: "dog" }',
     );
-    expect(
-      validateCTag(jsonCTag(obj([["kind", num(42)]])), schema),
-    ).toMatch([
+    expect(validateCTag(jsonCTag(obj([["kind", num(42)]])), schema)).toMatch([
       { message: "Does not match any of the types defined in the schema" },
     ]);
   });
@@ -287,9 +285,7 @@ describe("validateExample – json: no close match", () => {
 describe("validateExample – json: close match", () => {
   it("returns 2 errors for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("interface Response { name: string; }");
-    expect(
-      validateCTag(jsonCTag(obj([["name", num(42)]])), schema),
-    ).toMatch([
+    expect(validateCTag(jsonCTag(obj([["name", num(42)]])), schema)).toMatch([
       { message: "Does not match type 'Response'" },
       { message: "Expected string but got number" },
     ]);
@@ -326,9 +322,9 @@ describe("validateExample – json: multi-type schema", () => {
     const schema = parseSchemaOrThrow(
       "interface Response { item: Detail } interface Detail { x: string; }",
     );
-    expect(
-      validateCTag(jsonCTag(obj([["x", str("hello")]])), schema),
-    ).toMatch([]);
+    expect(validateCTag(jsonCTag(obj([["x", str("hello")]])), schema)).toMatch(
+      [],
+    );
   });
 
   it("picks the best-matching type when reporting errors", () => {
@@ -336,237 +332,9 @@ describe("validateExample – json: multi-type schema", () => {
     const schema = parseSchemaOrThrow(
       "interface Response { item: Detail } interface Detail { x: string; }",
     );
-    expect(validateCTag(jsonCTag(obj([["x", num(42)]])), schema)).toMatch(
-      [
-        { message: "Does not match type 'Detail'" },
-        { message: "Expected string but got number" },
-      ],
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Helpers for strict-mode JSON values
-// ---------------------------------------------------------------------------
-
-function objStrict(
-  entries: [string, JsonValue<"strict">][],
-): JsonObject<"strict"> {
-  return {
-    kind: "object",
-    firstToken: span("{"),
-    entries: entries.map(([key, value]) => ({ key: str(key), value })),
-  };
-}
-
-function arrStrict(elements: JsonValue<"strict">[]): JsonArray<"strict"> {
-  return { kind: "array", firstToken: span("["), elements };
-}
-
-// ---------------------------------------------------------------------------
-// validateJson – exact match
-// ---------------------------------------------------------------------------
-
-describe("validateJson – exact match", () => {
-  it("accepts a string for a string type", () => {
-    const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
-    expect(validateJson(str("hello"), schema, type)).toMatch([]);
-  });
-
-  it("accepts a number for a number type", () => {
-    const schema = parseSchemaOrThrow("type Response = number");
-    const type = schema.types["Response"]!;
-    expect(validateJson(num(3.14), schema, type)).toMatch([]);
-  });
-
-  it("accepts a boolean for a boolean type", () => {
-    const schema = parseSchemaOrThrow("type Response = boolean");
-    const type = schema.types["Response"]!;
-    expect(validateJson(bool(true), schema, type)).toMatch([]);
-  });
-
-  it("accepts an integer for an int type", () => {
-    const schema = parseSchemaOrThrow(
-      "type Int = number\ninterface Response { count: Int; }",
-    );
-    const type = schema.types["Response"]!;
-    expect(validateJson(objStrict([["count", num(42)]]), schema, type)).toMatch(
-      [],
-    );
-  });
-
-  it("accepts a float for an integer type", () => {
-    const schema = parseSchemaOrThrow(
-      "type Int = number\ninterface Response { count: Int; }",
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(objStrict([["count", num(3.14)]]), schema, type),
-    ).toMatch([]);
-  });
-
-  it("accepts an object matching an interface", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; age: number; }",
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(
-        objStrict([
-          ["name", str("Alice")],
-          ["age", num(30)],
-        ]),
-        schema,
-        type,
-      ),
-    ).toMatch([]);
-  });
-
-  it("accepts an object when an optional field is absent", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; nickname?: string; }",
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(objStrict([["name", str("Alice")]]), schema, type),
-    ).toMatch([]);
-  });
-
-  it("accepts an array of strings for a string array type", () => {
-    const schema = parseSchemaOrThrow("type Response = string[]");
-    const type = schema.types["Response"]!;
-    expect(validateJson(arrStrict([str("a"), str("b")]), schema, type)).toMatch(
-      [],
-    );
-  });
-
-  it("accepts the exact string for a string-literal type", () => {
-    const schema = parseSchemaOrThrow('type Response = "ok"');
-    const type = schema.types["Response"]!;
-    expect(validateJson(str("ok"), schema, type)).toMatch([]);
-  });
-
-  it("accepts a matching value from a string union", () => {
-    const schema = parseSchemaOrThrow('type Response = "pending" | "done"');
-    const type = schema.types["Response"]!;
-    expect(validateJson(str("done"), schema, type)).toMatch([]);
-  });
-
-  it("accepts a matching member of an interface union", () => {
-    const schema = parseSchemaOrThrow(
-      'interface Cat { kind: "cat"; name: string; } interface Dog { kind: "dog"; breed: string; } type Response = Cat | Dog',
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(
-        objStrict([
-          ["kind", str("cat")],
-          ["name", str("Whiskers")],
-        ]),
-        schema,
-        type,
-      ),
-    ).toMatch([]);
-  });
-
-  it("validates against a non-root named type", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { item: Detail } interface Detail { x: string; }",
-    );
-    const type = schema.types["Detail"]!;
-    expect(validateJson(objStrict([["x", str("hi")]]), schema, type)).toMatch(
-      [],
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// validateJson – mismatch: no close match → single error
-// ---------------------------------------------------------------------------
-
-describe("validateJson – mismatch: no close match", () => {
-  it("returns a single error when a number is given for a string type", () => {
-    const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
-    expect(validateJson(num(42), schema, type)).toMatch([
-      { message: "Does not match type 'Response'" },
-    ]);
-  });
-
-  it("returns a single error when an object is given for a string type", () => {
-    const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
-    expect(validateJson(objStrict([]), schema, type)).toMatch([
-      { message: "Does not match type 'Response'" },
-    ]);
-  });
-
-  it("returns a single error when a number is given for a string union", () => {
-    const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.types["Response"]!;
-    expect(validateJson(num(1), schema, type)).toMatch([
-      { message: "Does not match type 'Response'" },
-    ]);
-  });
-
-  it("returns a single error when the kind field is missing for an interface union", () => {
-    const schema = parseSchemaOrThrow(
-      'interface Cat { kind: "cat"; } interface Dog { kind: "dog"; } type Response = Cat | Dog',
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(objStrict([["name", str("Felix")]]), schema, type),
-    ).toMatch([{ message: "Does not match type 'Response'" }]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// validateJson – mismatch: close match → two errors
-// ---------------------------------------------------------------------------
-
-describe("validateJson – mismatch: close match", () => {
-  it("returns 2 errors for an object with a wrong-typed field", () => {
-    const schema = parseSchemaOrThrow("interface Response { name: string; }");
-    const type = schema.types["Response"]!;
-    expect(validateJson(objStrict([["name", num(42)]]), schema, type)).toMatch([
-      { message: "Does not match type 'Response'" },
+    expect(validateCTag(jsonCTag(obj([["x", num(42)]])), schema)).toMatch([
+      { message: "Does not match type 'Detail'" },
       { message: "Expected string but got number" },
-    ]);
-  });
-
-  it("returns 2 errors for a string not in a string union", () => {
-    const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.types["Response"]!;
-    expect(validateJson(str("c"), schema, type)).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Not found in union type" },
-    ]);
-  });
-
-  it("returns 2 errors for an unknown kind value in an interface union", () => {
-    const schema = parseSchemaOrThrow(
-      'type Response = { kind: "cat" } | { kind: "dog" }',
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(objStrict([["kind", str("fish")]]), schema, type),
-    ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: 'No matching member for value "fish"' },
-    ]);
-  });
-
-  it("returns 2 errors for a missing required field", () => {
-    const schema = parseSchemaOrThrow(
-      "interface Response { name: string; age: number; }",
-    );
-    const type = schema.types["Response"]!;
-    expect(
-      validateJson(objStrict([["name", str("Alice")]]), schema, type),
-    ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Missing required field 'age'" },
     ]);
   });
 });

@@ -1,4 +1,4 @@
-import type { SourceSpan } from "../util/error-types.js";
+import type { InternalError, SourceSpan } from "../util/error-types.js";
 
 /**
  * In "loose" mode, the JSON source may contain ellipses ("..."") and Javascript
@@ -63,3 +63,14 @@ export type JsonEllipsis = {
   readonly kind: "ellipsis";
   readonly firstToken: SourceSpan;
 };
+
+export type JsonTypeMatch =
+  | { readonly kind: "match" }
+  | {
+      readonly kind: "mismatch";
+      readonly details?: {
+        readonly reason: InternalError;
+        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+        readonly matchScore: number;
+      };
+    };
