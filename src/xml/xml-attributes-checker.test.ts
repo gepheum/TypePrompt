@@ -156,7 +156,7 @@ describe("checkXmlAttributes", () => {
 
     expect(result).toMatch({
       kind: "success",
-      attributes: { title: { value: "hi" } },
+      attributes: { title: { value: "hi", span: { start: 12, end: 14 } } },
     });
   });
 

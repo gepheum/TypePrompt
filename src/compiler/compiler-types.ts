@@ -1,12 +1,19 @@
+import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { Schema } from "../schema/schema-types.js";
-import { InternalError, InternalErrors } from "../util/error-types.js";
+import {
+  InternalError,
+  InternalErrors,
+  SourceSpan,
+} from "../util/error-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {
   readonly pathToErrors: { readonly [path: string]: readonly InternalError[] };
   readonly sourceFiles: { readonly [path: string]: SourceFile };
-  readonly xmlSourceToTemplate: { readonly [xmlSource: string]: Template };
+  readonly xmlSourceToTemplate: {
+    readonly [xmlSource: string]: TemplateResult;
+  };
 };
 
 export type SourceFile = {
@@ -15,33 +22,55 @@ export type SourceFile = {
   readonly xmlDocument: XmlDocument | InternalErrors;
 };
 
+export type TemplateResult =
+  | {
+      readonly kind: "success";
+      readonly template: Template;
+      /**
+       * When we reuse a cached template, the `positionOffset` is used to adjust the
+       * positions of the template's SourceSpans to match their positions in the new
+       * source file.
+       */
+      readonly positionOffset: number;
+    }
+  | InternalErrors;
+
 export type Template = {
   readonly kind: "success";
-  /** Includes the <template>...</template> tags. */
-  readonly xmlSource: string;
 
-  readonly name: string;
-  readonly namespace: string;
+  /** Includes the <template>...</template> tags. */
+  readonly xmlSource: SourceSpan;
+
+  readonly name: SourceSpan;
+  readonly namespace: SourceSpan | null;
 
   readonly meta: JsonValue<"strict"> | null;
 
   readonly schema: Schema;
-  readonly outputFormat: string;
+  readonly outputFormat: OutputFormat;
 
   readonly contents:
-    | { readonly kind: "no-variant"; readonly content: TemplateContent }
+    | { readonly kind: "no-variant"; readonly content: PromptContent }
     | {
         readonly kind: "variants";
-        readonly variants: { readonly [variant: string]: TemplateContent };
+        readonly variants: readonly PromptVariant[];
       };
 
   readonly snippets: { readonly [snippet: string]: Snippet };
 };
 
-export type OutputFormat =
-  { kind: "json" } | { kind: "text" } | { kind: "custom"; format: string };
+export type OutputFormat = {
+  readonly kind: "json" | "text" | "custom";
+  readonly format: SourceSpan;
+};
 
-export type TemplateContent = {
+export type PromptVariant = {
+  /** Variant name. */
+  readonly variant: SourceSpan;
+  readonly content: PromptContent;
+};
+
+export type PromptContent = {
   readonly system: Body;
   readonly user: Body;
   readonly examples: JsonValue<"strict"> | null;
@@ -51,7 +80,7 @@ export type Body = readonly BodyPiece[];
 
 export type BodyPiece =
   | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "c-tag"; readonly text: string }
+  | { readonly kind: "c-tag"; readonly cTag: CTag }
   | {
       readonly kind: "insert-val";
       readonly val: Expression;
@@ -67,12 +96,14 @@ export type BodyPiece =
     };
 
 export type Expression =
-  | { readonly kind: "input" }
+  | { readonly kind: "input"; span: SourceSpan }
+  | { readonly kind: "it"; span: SourceSpan }
   | {
       readonly kind: "property";
       readonly left: Expression;
       readonly operator: "." | "?.";
-      readonly property: string;
+      readonly operatorSpan: SourceSpan;
+      readonly property: SourceSpan;
     };
 
 export type InsertFormat =

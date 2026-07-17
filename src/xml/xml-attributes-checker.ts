@@ -1,6 +1,10 @@
 import { type ZodType } from "zod";
 
-import type { InternalError, InternalErrors } from "../util/error-types.js";
+import type {
+  InternalError,
+  InternalErrors,
+  SourceSpan,
+} from "../util/error-types.js";
 import type { ElementNode } from "./xml-types.js";
 
 type AttributeSchemaEntry = {
@@ -13,8 +17,8 @@ type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 type AttributeValues<T extends AttributeSchemas> = {
   [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
     ? undefined extends U
-      ? { start: number; end: number; value: NonNullable<U> } | undefined
-      : { start: number; end: number; value: U }
+      ? { span: SourceSpan; value: NonNullable<U> } | undefined
+      : { span: SourceSpan; value: U }
     : never;
 };
 
@@ -46,8 +50,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
     if (parsed.success) {
       if (attr !== undefined) {
         values[name] = {
-          start: attr.value.start,
-          end: attr.value.end,
+          span: attr.value,
           value: parsed.data,
         };
       }
