@@ -1,6 +1,10 @@
 import { InternalError } from "../util/error-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
-import type { CompilationResult, SourceFile } from "./compiler-types.js";
+import type {
+  CompilationResult,
+  SourceFile,
+  Template,
+} from "./compiler-types.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
@@ -30,11 +34,13 @@ export function compile(
 class CompilationResultBuilder {
   readonly pathToErrors: { [path: string]: InternalError[] } = {};
   readonly sourceFiles: { [path: string]: SourceFile } = {};
+  readonly xmlSourceToTemplate: { [xmlSource: string]: Template } = {};
 
   build(): CompilationResult {
     return {
       pathToErrors: this.pathToErrors,
       sourceFiles: this.sourceFiles,
+      xmlSourceToTemplate: this.xmlSourceToTemplate,
     };
   }
 }
