@@ -3,7 +3,7 @@ import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { CompilationResult, SourceFile } from "./compiler-types.js";
 
 export function compile(
-  pathToContent: {readonly [path: string]: string},
+  pathToContent: { readonly [path: string]: string },
   cache: CompilationResult | null,
 ): CompilationResult {
   const builder = new CompilationResultBuilder();
@@ -15,7 +15,7 @@ export function compile(
       outSourceFile = cachedFile;
     } else {
       const xmlDocument = parseXmlDocument(content);
-      outSourceFile = {path, content, xmlDocument};
+      outSourceFile = { path, content, xmlDocument };
     }
     builder.sourceFiles[path] = outSourceFile;
     if (outSourceFile.xmlDocument.kind === "error") {
@@ -28,8 +28,8 @@ export function compile(
 }
 
 class CompilationResultBuilder {
-  readonly pathToErrors: {[path: string]: InternalError[]} = {};
-  readonly sourceFiles: {[path: string]: SourceFile} = {};
+  readonly pathToErrors: { [path: string]: InternalError[] } = {};
+  readonly sourceFiles: { [path: string]: SourceFile } = {};
 
   build(): CompilationResult {
     return {

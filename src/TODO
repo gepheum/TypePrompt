@@ -1,4 +1,5 @@
 - TODO: support true and false literals?
+- TODO: support /* */ and //
 - TODO: no longer allow quotes in <c>
 - TODO: think about toolcalls
 - TODO: add 'suggestions' to Error type

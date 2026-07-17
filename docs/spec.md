@@ -445,17 +445,6 @@ Strings have 2 properties: `empty` and `notEmpty`.
 Arrays have 2 properties: `empty`, `notEmpty` and `length`.
 Union of string literal types (e.g. `| "spring" | "summer"`) have one generated property per member: `isSpring`, `isSummer`.
 
-## `<let>`
-
-Allows you to define an alias for an expression.
-
-Example:
-```xml
-<let name="hasCars" val="input.cars.notEmpty"/>
-<let name="hasMotorcycles" val="input.motorcycles.notEmpty"/>
-<let name="hasVehicles" val="hasCars or hasMotorcycles"/>
-```
-
 ## The `<namespace>` element
 
 The `<namespace>` element serves 2 purposes:
