@@ -21,12 +21,17 @@ export function parseTemplate(
         .optional(),
       expected: "an UpperCamelCase identifier",
     },
+    with: {
+      schema: z.enum(["variants"]).optional(),
+      expected: "'variants'",
+    },
   });
   if (attrs.kind === "error") {
     return attrs;
   }
 
   const { name, namespace } = attrs.attributes;
+  const hasVariants = attrs.attributes.with?.value === "variants";
 
   return {
     kind: "success",
