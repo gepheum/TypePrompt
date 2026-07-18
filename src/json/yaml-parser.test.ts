@@ -2,14 +2,19 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import type { JsonValue } from "./json-types.js";
+import type { TextNodeJoin } from "../xml/text-node-join.js";
 import { parseYaml } from "./yaml-parser.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
+function textNode(source: string): TextNodeJoin {
+  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+}
+
 function parseOk(source: string): JsonValue<"strict"> {
-  const result = parseYaml(source);
+  const result = parseYaml(textNode(source));
   if (result.kind === "error") {
     throw new Error(
       `Expected success but got errors: ${result.errors.map((e) => e.message).join(", ")}`,
@@ -19,7 +24,7 @@ function parseOk(source: string): JsonValue<"strict"> {
 }
 
 function parseErr(source: string) {
-  const result = parseYaml(source);
+  const result = parseYaml(textNode(source));
   if (result.kind !== "error") {
     throw new Error(`Expected error but got: ${JSON.stringify(result)}`);
   }
@@ -475,8 +480,34 @@ describe("parseYaml – flow sequence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Span preservation across a multi-node document
+// Source offset remapping
 // ---------------------------------------------------------------------------
+
+describe("parseYaml – source offset remapping", () => {
+  it("remaps firstToken offsets via the offsetMap", () => {
+    const content: TextNodeJoin = {
+      decoded: "null",
+      offsetMap: [{ decodedOffset: 0, sourceOffset: 20 }],
+    };
+    const result = parseYaml(content);
+    expect(result).toMatch({
+      kind: "null",
+      firstToken: { start: 20, end: 24 },
+    });
+  });
+
+  it("remaps error offsets via the offsetMap", () => {
+    const content: TextNodeJoin = {
+      decoded: "",
+      offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
+    };
+    const result = parseYaml(content);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ start: 10, end: 10, message: "Empty YAML document" }],
+    });
+  });
+});
 
 describe("parseYaml – span preservation", () => {
   it("preserves offsets across a full block map document", () => {

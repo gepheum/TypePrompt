@@ -10,7 +10,7 @@ import {
 } from "../xml/text-node-join.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import { OutputFormat, Snippet, Template } from "./compiler-types.js";
+import { Body, BodyPiece, OutputFormat, Snippet, Template } from "./compiler-types.js";
 
 import * as z from "zod";
 
@@ -191,6 +191,144 @@ class TemplateParser {
     // TODO
   }
 
+  private parseBody(parentNode: ElementNode): Body | InternalErrors {
+    const pieces: BodyPiece[] = [];
+
+    const visitChildren = (elem: ElementNode): void => {
+      for (const child of elem.children) {
+        if (child.kind === "text") {
+          pieces.push({ kind: "text", text: child });
+          continue;
+        }
+
+        const tag = child.tagName.text;
+
+        if (tag === "e") {
+          const textNodes: TextNodeJoin[] = [];
+          const eSnap = context.snapshot();
+          for (const eChild of child.children) {
+            if (eChild.kind === "text") {
+              textNodes.push(eChild);
+            } else {
+              context.pushError(
+                eChild.tagName,
+                "<e> elements cannot contain child elements",
+              );
+            }
+          }
+          const joined = joinTextNodes(textNodes, child.contentSpan.start);
+
+          if (!context.hasNewErrors(eSnap)) {
+            const exResult = parseCTag(joined.decoded);
+            if (exResult.kind === "error") {
+              if (exResult.errors.length > 0) {
+                context.pushErrors(
+                  exResult.errors.map((e) => ({
+                    start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
+                    end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
+                    message: e.message,
+                  })),
+                );
+              } else {
+                context.pushError(
+                  child.tagName,
+                  "Invalid example in <e> element",
+                );
+              }
+            } else {
+              const valErrors = validateCTag(exResult, schema);
+              if (valErrors.length > 0) {
+                context.pushErrors(
+                  valErrors.map((e) => ({
+                    start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
+                    end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
+                    message: e.message,
+                  })),
+                );
+              }
+            }
+            // Always emit the text content (even on validation error).
+            pieces.push({ kind: "text", text: joined });
+          }
+        } else if (tag === "arg") {
+          if (!child.isSelfClosing) {
+            context.pushError(
+              child.tagName,
+              "<arg> elements must be self-closing",
+            );
+            continue;
+          }
+          const argAttrs = checkXmlAttributes(child, {
+            name: {
+              schema: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
+              expected: "a lowerCamelCase identifier",
+            },
+            format: {
+              schema: zod.enum(["json", "toon"]).optional(),
+              expected: "'json' or 'toon'",
+            },
+          });
+          if (argAttrs.kind === "error") {
+            context.pushErrors(argAttrs.errors);
+            continue;
+          }
+
+          const argName = argAttrs.attributes.name.value;
+          const formatAttr = argAttrs.attributes.format;
+          const format: "json" | "toon" | null = formatAttr?.value ?? null;
+
+          const declaration = argDeclarations?.find((d) => d.name === argName);
+          if (argDeclarations !== null && declaration === undefined) {
+            context.pushError(
+              argAttrs.attributes.name,
+              `Undeclared arg '${argName}'`,
+            );
+          } else {
+            const declaredType = declaration?.typeName ?? null;
+            if (format !== null && declaredType === null) {
+              context.pushError(
+                formatAttr!,
+                "format can only be specified for an arg that has a declared type",
+              );
+            } else if (format === null && declaredType !== null) {
+              context.pushError(
+                argAttrs.attributes.name,
+                `'format' attribute is required for arg '${argName}'`,
+              );
+            }
+          }
+
+          pieces.push({
+            kind: "arg",
+            name: argName,
+            nameSpan: argAttrs.attributes.name,
+            format,
+          });
+        } else if (tag === "enclosed") {
+          const encAttrs = checkXmlAttributes(child, {
+            tag: {
+              schema: zod.string().regex(/^[A-Za-z_][\w.-]*$/),
+              expected: "a valid XML tag name",
+            },
+          });
+          if (encAttrs.kind === "error") {
+            context.pushErrors(encAttrs.errors);
+            continue;
+          }
+          const encTagName = encAttrs.attributes.tag.value;
+          pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+          visitChildren(child);
+          pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+        } else {
+          context.pushError(child.tagName, `Unexpected element '<${tag}>'`);
+        }
+      }
+    };
+
+    visitChildren(bodyNode);
+    return context.hasNewErrors(snap) ? null : pieces;
+  }
+
   private extractTextContent(node: ElementNode): TextNodeJoin {
     const textNodes: TextNodeJoin[] = [];
     for (const child of node.children) {
@@ -213,3 +351,18 @@ class TemplateParser {
   private outputFormat: OutputFormat | null = null;
   private snippets: Snippet[] = [];
 }
+
+class PromptContentBuilder {
+  system: Body | undefined;
+  user: Body | undefined;
+  examples: JsonValue<"strict"> | undefined;
+}
+
+/** A piece collected from a raw XML body walk, before trim/dedent. */
+type RawBodyPiece =
+  | { readonly kind: "text"; readonly text: TextNodeJoin }
+  | { readonly kind: "synthetic-text"; readonly text: string }
+  | {
+      readonly kind: "insert";
+    }
+  | { readonly kind: "c-tag"; readonly text: TextNodeJoin };

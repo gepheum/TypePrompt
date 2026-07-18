@@ -2,18 +2,23 @@ import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import type { InternalErrors } from "../util/error-types.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
+import {
+  decodedOffsetToSourceOffset,
+  type TextNodeJoin,
+} from "../xml/text-node-join.js";
 
 export function parseYaml(
-  source: string,
+  content: TextNodeJoin,
 ): JsonValue<"strict"> | InternalErrors {
-  const doc = parseDocument(source, { logLevel: "silent" });
+  const decoded = content.decoded;
+  const doc = parseDocument(decoded, { logLevel: "silent" });
 
   if (doc.errors.length > 0) {
     return {
       kind: "error",
       errors: doc.errors.map((err) => ({
-        start: err.pos[0],
-        end: err.pos[1],
+        start: mapOffset(content, err.pos[0]),
+        end: mapOffset(content, err.pos[1]),
         message: err.message,
       })),
     };
@@ -22,16 +27,26 @@ export function parseYaml(
   if (doc.contents === null || doc.contents === undefined) {
     return {
       kind: "error",
-      errors: [{ start: 0, end: 0, message: "Empty YAML document" }],
+      errors: [
+        {
+          start: decodedOffsetToSourceOffset(content, 0),
+          end: decodedOffsetToSourceOffset(content, 0),
+          message: "Empty YAML document",
+        },
+      ],
     };
   }
 
-  const result = convertNode(doc.contents, source);
+  const result = convertNode(doc.contents, content);
   if (result === null) {
     return {
       kind: "error",
       errors: [
-        { start: 0, end: source.length, message: "Unsupported YAML node type" },
+        {
+          start: decodedOffsetToSourceOffset(content, 0),
+          end: decodedOffsetToSourceOffset(content, decoded.length),
+          message: "Unsupported YAML node type",
+        },
       ],
     };
   }
@@ -39,45 +54,56 @@ export function parseYaml(
   return result;
 }
 
-function span(source: string, start: number, end: number) {
-  return { text: source.slice(start, end), start, end };
+/// Maps a decoded YAML offset to a source offset, safely extrapolating for
+/// positions that the YAML library may report one past the end of the input.
+function mapOffset(content: TextNodeJoin, offset: number): number {
+  const clamped = Math.min(offset, content.decoded.length);
+  return decodedOffsetToSourceOffset(content, clamped) + (offset - clamped);
+}
+
+function span(content: TextNodeJoin, start: number, end: number) {
+  return {
+    text: content.decoded.slice(start, end),
+    start: decodedOffsetToSourceOffset(content, start),
+    end: decodedOffsetToSourceOffset(content, end),
+  };
 }
 
 function convertNode(
   node: unknown,
-  source: string,
+  content: TextNodeJoin,
 ): JsonValue<"strict"> | null {
   if (isMap(node)) {
-    return convertMap(node, source);
+    return convertMap(node, content);
   } else if (isSeq(node)) {
-    return convertSeq(node, source);
+    return convertSeq(node, content);
   } else if (isScalar(node)) {
-    return convertScalar(node, source);
+    return convertScalar(node, content);
   } else {
     return null;
   }
 }
 
-function convertMap(node: YAMLMap, source: string): JsonValue<"strict"> {
+function convertMap(node: YAMLMap, content: TextNodeJoin): JsonValue<"strict"> {
   const [start] = node.range ?? [0, 0, 0];
   const entries: JsonObjectEntry<"strict">[] = [];
 
   for (const pair of node.items) {
     if (!isScalar(pair.key)) continue;
 
-    const key = scalarToJsonString(pair.key, source);
+    const key = scalarToJsonString(pair.key, content);
 
     let value: JsonValue<"strict">;
     if (isScalar(pair.value)) {
-      value = convertScalar(pair.value, source);
+      value = convertScalar(pair.value, content);
     } else if (isMap(pair.value)) {
-      value = convertMap(pair.value, source);
+      value = convertMap(pair.value, content);
     } else if (isSeq(pair.value)) {
-      value = convertSeq(pair.value, source);
+      value = convertSeq(pair.value, content);
     } else {
       // null / missing value: use a zero-width span right after the key token
       const keyEnd = pair.key.range?.[1] ?? start;
-      value = { kind: "null", firstToken: span(source, keyEnd, keyEnd) };
+      value = { kind: "null", firstToken: span(content, keyEnd, keyEnd) };
     }
 
     entries.push({ key, value });
@@ -85,30 +111,30 @@ function convertMap(node: YAMLMap, source: string): JsonValue<"strict"> {
 
   return {
     kind: "object",
-    firstToken: span(source, start, start + 1),
+    firstToken: span(content, start, start + 1),
     entries,
   };
 }
 
-function convertSeq(node: YAMLSeq, source: string): JsonValue<"strict"> {
+function convertSeq(node: YAMLSeq, content: TextNodeJoin): JsonValue<"strict"> {
   const [start] = node.range ?? [0, 0, 0];
   const elements: JsonValue<"strict">[] = [];
 
   for (const item of node.items) {
-    const converted = convertNode(item, source);
+    const converted = convertNode(item, content);
     if (converted !== null) elements.push(converted);
   }
 
   return {
     kind: "array",
-    firstToken: span(source, start, start + 1),
+    firstToken: span(content, start, start + 1),
     elements,
   };
 }
 
-function convertScalar(node: Scalar, source: string): JsonValue<"strict"> {
+function convertScalar(node: Scalar, content: TextNodeJoin): JsonValue<"strict"> {
   const [start, end] = node.range ?? [0, 0, 0];
-  const firstToken = span(source, start, end);
+  const firstToken = span(content, start, end);
   const value = node.value;
 
   if (value === null || value === undefined) {
@@ -126,11 +152,11 @@ function convertScalar(node: Scalar, source: string): JsonValue<"strict"> {
   }
 }
 
-function scalarToJsonString(node: Scalar, source: string): JsonString {
+function scalarToJsonString(node: Scalar, content: TextNodeJoin): JsonString {
   const [start, end] = node.range ?? [0, 0, 0];
   return {
     kind: "string",
-    firstToken: span(source, start, end),
+    firstToken: span(content, start, end),
     value: String(node.value ?? ""),
   };
 }

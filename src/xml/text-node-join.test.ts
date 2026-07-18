@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import type { TextNodeJoin } from "./text-node-join.js";
 import {
   joinTextNodes,
-  textNodeDecodedOffsetToSourceOffset,
+  decodedOffsetToSourceOffset,
 } from "./text-node-join.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode, TextNode } from "./xml-types.js";
@@ -27,16 +27,16 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 0)).toBe(
       input.indexOf("abc"),
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 1)).toBe(
       input.indexOf("abc") + 1,
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 2)).toBe(
       input.indexOf("abc") + 2,
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 3)).toBe(
       input.indexOf("abc") + 3,
     );
   });
@@ -48,22 +48,22 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 0)).toBe(
       input.indexOf("x &amp; y"),
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 1)).toBe(
       input.indexOf("x &amp; y") + 1,
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 2)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 2)).toBe(
       input.indexOf("&amp;"),
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 3)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 3)).toBe(
       input.indexOf("&amp;") + "&amp;".length,
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 4)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 4)).toBe(
       input.indexOf("&amp;") + "&amp;".length + 1,
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 5)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 5)).toBe(
       input.indexOf("x &amp; y") + "x &amp; y".length,
     );
   });
@@ -75,10 +75,10 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.decoded).toBe("<");
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 0)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 0)).toBe(
       input.indexOf("&lt;"),
     );
-    expect(textNodeDecodedOffsetToSourceOffset(textNode, 1)).toBe(
+    expect(decodedOffsetToSourceOffset(textNode, 1)).toBe(
       input.indexOf("&lt;") + "&lt;".length,
     );
   });
@@ -91,7 +91,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
 
     let threw = false;
     try {
-      textNodeDecodedOffsetToSourceOffset(textNode, -1);
+      decodedOffsetToSourceOffset(textNode, -1);
     } catch {
       threw = true;
     }
@@ -99,7 +99,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
 
     threw = false;
     try {
-      textNodeDecodedOffsetToSourceOffset(textNode, 4);
+      decodedOffsetToSourceOffset(textNode, 4);
     } catch {
       threw = true;
     }
@@ -112,7 +112,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
       offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
     };
 
-    expect(textNodeDecodedOffsetToSourceOffset(emptyNode, 0)).toBe(42);
+    expect(decodedOffsetToSourceOffset(emptyNode, 0)).toBe(42);
   });
 });
 
@@ -204,14 +204,14 @@ describe("joinTextNodes", () => {
 
     expect(joined.decoded).toBe("hi world");
     // "hi" maps to source 5..6
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 0)).toBe(5);
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 1)).toBe(6);
+    expect(decodedOffsetToSourceOffset(joined, 0)).toBe(5);
+    expect(decodedOffsetToSourceOffset(joined, 1)).toBe(6);
     // " " maps to source 50
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 2)).toBe(50);
+    expect(decodedOffsetToSourceOffset(joined, 2)).toBe(50);
     // "world" maps to source 100..104
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 3)).toBe(100);
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 7)).toBe(104);
+    expect(decodedOffsetToSourceOffset(joined, 3)).toBe(100);
+    expect(decodedOffsetToSourceOffset(joined, 7)).toBe(104);
     // end boundary
-    expect(textNodeDecodedOffsetToSourceOffset(joined, 8)).toBe(105);
+    expect(decodedOffsetToSourceOffset(joined, 8)).toBe(105);
   });
 });

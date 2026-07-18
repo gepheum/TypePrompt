@@ -54,7 +54,7 @@ export function joinTextNodes(
 ///
 /// The offset is a boundary offset into `textNode.decoded`, in the range
 /// `[0, textNode.decoded.length]`.
-export function textNodeDecodedOffsetToSourceOffset(
+export function decodedOffsetToSourceOffset(
   textNode: TextNodeJoin,
   decodedOffset: number,
 ): number {
@@ -84,8 +84,8 @@ export function decodedOffsetsToSourceOffsets(
   textNode: TextNodeJoin,
 ): (e: InternalError) => InternalError {
   return (e: InternalError) => ({
-    start: textNodeDecodedOffsetToSourceOffset(textNode, e.start),
-    end: textNodeDecodedOffsetToSourceOffset(textNode, e.end),
+    start: decodedOffsetToSourceOffset(textNode, e.start),
+    end: decodedOffsetToSourceOffset(textNode, e.end),
     message: e.message,
   });
 }

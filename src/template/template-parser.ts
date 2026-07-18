@@ -6,7 +6,7 @@ import type { Schema } from "../schema/schema-types.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import {
   joinTextNodes,
-  textNodeDecodedOffsetToSourceOffset,
+  decodedOffsetToSourceOffset,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
@@ -125,8 +125,8 @@ function parseTopLevelMetaElement(
   if (schema.kind === "error") {
     context.pushErrors(
       schema.errors.map((e) => ({
-        start: textNodeDecodedOffsetToSourceOffset(text, e.start),
-        end: textNodeDecodedOffsetToSourceOffset(text, e.end),
+        start: decodedOffsetToSourceOffset(text, e.start),
+        end: decodedOffsetToSourceOffset(text, e.end),
         message: e.message,
       })),
     );
@@ -483,8 +483,8 @@ function parseSchemaElement(
   if (result.kind === "error") {
     context.pushErrors(
       result.errors.map((e) => ({
-        start: textNodeDecodedOffsetToSourceOffset(text, e.start),
-        end: textNodeDecodedOffsetToSourceOffset(text, e.end),
+        start: decodedOffsetToSourceOffset(text, e.start),
+        end: decodedOffsetToSourceOffset(text, e.end),
         message: e.message,
       })),
     );
@@ -539,8 +539,8 @@ function parseBodyContent(
             if (exResult.errors.length > 0) {
               context.pushErrors(
                 exResult.errors.map((e) => ({
-                  start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
-                  end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
+                  start: decodedOffsetToSourceOffset(joined, e.start),
+                  end: decodedOffsetToSourceOffset(joined, e.end),
                   message: e.message,
                 })),
               );
@@ -555,8 +555,8 @@ function parseBodyContent(
             if (valErrors.length > 0) {
               context.pushErrors(
                 valErrors.map((e) => ({
-                  start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
-                  end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
+                  start: decodedOffsetToSourceOffset(joined, e.start),
+                  end: decodedOffsetToSourceOffset(joined, e.end),
                   message: e.message,
                 })),
               );
@@ -731,7 +731,7 @@ function removeIndentAfterEol(
     if (src.startsWith(baseIndent, next)) {
       cursor = next + baseIndent.length;
     } else {
-      const so = textNodeDecodedOffsetToSourceOffset(textNode, next);
+      const so = decodedOffsetToSourceOffset(textNode, next);
       context.pushError(
         { start: so, end: so },
         `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,

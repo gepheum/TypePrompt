@@ -15,15 +15,19 @@ import type {
   JsonString,
   JsonValue,
 } from "./json-types.js";
+import {
+  decodedOffsetToSourceOffset,
+  type TextNodeJoin,
+} from "../xml/text-node-join.js";
 
 export function parseJson<Mode extends JsonMode = "loose">(
-  source: string,
+  content: TextNodeJoin,
   mode: Mode = "loose" as Mode,
 ): JsonValue<Mode> | InternalErrors {
-  const parser = new JsonParser(source, mode);
+  const parser = new JsonParser(content, mode);
   parser.skipSpaces();
 
-  if (parser.cursor >= source.length) {
+  if (parser.cursor >= content.decoded.length) {
     if (parser.errors.length === 0) {
       parser.pushError(parser.cursor, parser.cursor, "Expected JSON value");
     }
@@ -36,10 +40,10 @@ export function parseJson<Mode extends JsonMode = "loose">(
   }
 
   parser.skipSpaces();
-  if (parser.cursor < source.length) {
+  if (parser.cursor < content.decoded.length) {
     parser.pushError(
       parser.cursor,
-      source.length,
+      content.decoded.length,
       "Unexpected trailing content after JSON value",
     );
   }
@@ -52,13 +56,12 @@ export function parseJson<Mode extends JsonMode = "loose">(
 }
 
 export class JsonParser<Mode extends JsonMode = "loose"> {
-  cursor = 0;
-  readonly errors: InternalError[] = [];
-
   constructor(
-    readonly text: string,
-    readonly mode: Mode = "loose" as Mode,
-  ) {}
+    private readonly content: TextNodeJoin,
+    private readonly mode: Mode = "loose" as Mode,
+  ) {
+    this.text = content.decoded;
+  }
 
   parseValue(): JsonValue<Mode> | null {
     if (this.cursor >= this.text.length) {
@@ -97,7 +100,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  parseObject(): JsonObject<Mode> {
+  private parseObject(): JsonObject<Mode> {
     const start = this.cursor;
     this.cursor += 1;
     this.skipSpaces();
@@ -268,7 +271,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  parseObjectKeyWithRecovery(): JsonString | null {
+  private parseObjectKeyWithRecovery(): JsonString | null {
     const key = this.parseString();
     if (key) {
       return key;
@@ -304,7 +307,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  parseEllipsis(): JsonEllipsis | null {
+  private parseEllipsis(): JsonEllipsis | null {
     if (!this.text.startsWith("...", this.cursor)) {
       return null;
     }
@@ -327,7 +330,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  parseArray(): JsonArray<Mode> {
+  private parseArray(): JsonArray<Mode> {
     const start = this.cursor;
     this.cursor += 1;
     this.skipSpaces();
@@ -427,7 +430,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  parseString(): JsonString | null {
+  private parseString(): JsonString | null {
     if (this.text[this.cursor] !== '"') {
       this.pushError(
         this.cursor,
@@ -482,7 +485,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  parseNumber(): JsonNumber | null {
+  private parseNumber(): JsonNumber | null {
     const rest = this.text.slice(this.cursor);
     const match = rest.match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
     if (!match) {
@@ -503,7 +506,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  parseBoolean(): JsonBoolean | null {
+  private parseBoolean(): JsonBoolean | null {
     const start = this.cursor;
     if (this.text.startsWith("true", this.cursor)) {
       this.cursor += 4;
@@ -530,7 +533,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  parseNull(): JsonNull | null {
+  private parseNull(): JsonNull | null {
     if (!this.text.startsWith("null", this.cursor)) {
       this.pushError(
         this.cursor,
@@ -548,7 +551,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  skipSpaces(): void {
+  private skipSpaces(): void {
     while (true) {
       this.cursor = skipWithRegex(this.text, this.cursor, WHITESPACE_RUN_RE);
 
@@ -585,19 +588,23 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     }
   }
 
-  pushError(start: number, end: number, message: string): void {
-    this.errors.push({ start, end, message });
+  private pushError(start: number, end: number, message: string): void {
+    this.errors.push({
+      start: decodedOffsetToSourceOffset(this.content, start),
+      end: decodedOffsetToSourceOffset(this.content, end),
+      message,
+    });
   }
 
-  exampleSlice(start: number, end: number): SourceSpan {
+  private exampleSlice(start: number, end: number): SourceSpan {
     return {
       text: this.text.slice(start, end),
-      start,
-      end,
+      start: decodedOffsetToSourceOffset(this.content, start),
+      end: decodedOffsetToSourceOffset(this.content, end),
     };
   }
 
-  nextNonWhitespaceChar(): string | undefined {
+  private nextNonWhitespaceChar(): string | undefined {
     let i = this.cursor + 1;
     while (i < this.text.length && /\s/.test(this.text[i]!)) {
       i += 1;
@@ -605,7 +612,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return this.text[i];
   }
 
-  isValueStart(): boolean {
+  private isValueStart(): boolean {
     if (this.cursor >= this.text.length) {
       return false;
     }
@@ -623,7 +630,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     );
   }
 
-  isObjectEntryStart(): boolean {
+  private isObjectEntryStart(): boolean {
     if (this.cursor >= this.text.length) {
       return false;
     }
@@ -631,7 +638,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return ch === '"' || /[A-Za-z0-9_$]/.test(ch);
   }
 
-  syncToObjectDelimiter(): void {
+  private syncToObjectDelimiter(): void {
     while (this.cursor < this.text.length) {
       this.skipSpaces();
       if (this.cursor >= this.text.length) {
@@ -646,7 +653,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     }
   }
 
-  syncToArrayDelimiter(): void {
+  private syncToArrayDelimiter(): void {
     while (this.cursor < this.text.length) {
       this.skipSpaces();
       if (this.cursor >= this.text.length) {
@@ -660,6 +667,10 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
       this.cursor += 1;
     }
   }
+
+  private cursor = 0;
+  private readonly errors: InternalError[] = [];
+  private readonly text: string;
 }
 
 function decodeJsonString(raw: string): string | null {

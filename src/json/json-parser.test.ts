@@ -1,53 +1,58 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type { TextNodeJoin } from "../xml/text-node-join.js";
 import { parseJson } from "./json-parser.js";
+
+function textNode(source: string): TextNodeJoin {
+  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+}
 
 describe("parseJson – primitives", () => {
   it("parses a string", () => {
-    expect(parseJson('"hello"')).toMatch({
+    expect(parseJson(textNode('"hello"'))).toMatch({
       kind: "string",
       value: "hello",
     });
   });
 
   it("parses a string with escape sequences", () => {
-    expect(parseJson('"line\\nnext"')).toMatch({
+    expect(parseJson(textNode('"line\\nnext"'))).toMatch({
       kind: "string",
       value: "line\nnext",
     });
   });
 
   it("parses an integer number", () => {
-    expect(parseJson("42")).toMatch({
+    expect(parseJson(textNode("42"))).toMatch({
       kind: "number",
       value: 42,
     });
   });
 
   it("parses a negative number", () => {
-    expect(parseJson("-3.14")).toMatch({
+    expect(parseJson(textNode("-3.14"))).toMatch({
       kind: "number",
       value: -3.14,
     });
   });
 
   it("parses true", () => {
-    expect(parseJson("true")).toMatch({
+    expect(parseJson(textNode("true"))).toMatch({
       kind: "boolean",
       value: true,
     });
   });
 
   it("parses false", () => {
-    expect(parseJson("false")).toMatch({
+    expect(parseJson(textNode("false"))).toMatch({
       kind: "boolean",
       value: false,
     });
   });
 
   it("parses null", () => {
-    expect(parseJson("null")).toMatch({
+    expect(parseJson(textNode("null"))).toMatch({
       kind: "null",
     });
   });
@@ -55,14 +60,14 @@ describe("parseJson – primitives", () => {
 
 describe("parseJson – object", () => {
   it("parses an empty object", () => {
-    expect(parseJson("{}")).toMatch({
+    expect(parseJson(textNode("{}"))).toMatch({
       kind: "object",
       entries: [],
     });
   });
 
   it("parses an object with entries", () => {
-    expect(parseJson('{"a": 1, "b": true}')).toMatch({
+    expect(parseJson(textNode('{"a": 1, "b": true}'))).toMatch({
       kind: "object",
       entries: [
         { key: { value: "a" }, value: { kind: "number", value: 1 } },
@@ -72,7 +77,7 @@ describe("parseJson – object", () => {
   });
 
   it("parses an object with ellipsis", () => {
-    expect(parseJson('{"x": 1, ...}')).toMatch({
+    expect(parseJson(textNode('{"x": 1, ...}'))).toMatch({
       kind: "object",
       entries: [{ key: { value: "x" } }],
       ellipsis: { kind: "ellipsis" },
@@ -80,7 +85,7 @@ describe("parseJson – object", () => {
   });
 
   it("parses nested objects", () => {
-    expect(parseJson('{"a": {"b": "c"}}')).toMatch({
+    expect(parseJson(textNode('{"a": {"b": "c"}}'))).toMatch({
       kind: "object",
       entries: [
         {
@@ -99,14 +104,14 @@ describe("parseJson – object", () => {
 
 describe("parseJson – array", () => {
   it("parses an empty array", () => {
-    expect(parseJson("[]")).toMatch({
+    expect(parseJson(textNode("[]"))).toMatch({
       kind: "array",
       elements: [],
     });
   });
 
   it("parses an array with elements", () => {
-    expect(parseJson("[1, 2, 3]")).toMatch({
+    expect(parseJson(textNode("[1, 2, 3]"))).toMatch({
       kind: "array",
       elements: [
         { kind: "number", value: 1 },
@@ -117,7 +122,7 @@ describe("parseJson – array", () => {
   });
 
   it("parses an array with ellipsis", () => {
-    expect(parseJson("[1, ...]")).toMatch({
+    expect(parseJson(textNode("[1, ...]"))).toMatch({
       kind: "array",
       elements: [{ kind: "number", value: 1 }, { kind: "ellipsis" }],
     });
@@ -126,21 +131,21 @@ describe("parseJson – array", () => {
 
 describe("parseJson – comments", () => {
   it("skips line comments", () => {
-    expect(parseJson("// before\ntrue // after")).toMatch({
+    expect(parseJson(textNode("// before\ntrue // after"))).toMatch({
       kind: "boolean",
       value: true,
     });
   });
 
   it("skips block comments", () => {
-    expect(parseJson("/* before */ 42 /* after */")).toMatch({
+    expect(parseJson(textNode("/* before */ 42 /* after */"))).toMatch({
       kind: "number",
       value: 42,
     });
   });
 
   it("skips comments between object tokens", () => {
-    expect(parseJson('{"a" /* sep */ : /* val */ 1}')).toMatch({
+    expect(parseJson(textNode('{"a" /* sep */ : /* val */ 1}'))).toMatch({
       kind: "object",
       entries: [{ key: { value: "a" }, value: { kind: "number", value: 1 } }],
     });
@@ -149,14 +154,14 @@ describe("parseJson – comments", () => {
 
 describe("parseJson – source spans", () => {
   it("records the span of a string token", () => {
-    expect(parseJson(' "hi" ')).toMatch({
+    expect(parseJson(textNode(' "hi" '))).toMatch({
       kind: "string",
       firstToken: { text: '"hi"', start: 1, end: 5 },
     });
   });
 
   it("records the span of an object's opening brace", () => {
-    expect(parseJson(" {}")).toMatch({
+    expect(parseJson(textNode(" {}"))).toMatch({
       kind: "object",
       firstToken: { text: "{", start: 1, end: 2 },
     });
@@ -165,14 +170,14 @@ describe("parseJson – source spans", () => {
 
 describe("parseJson – errors", () => {
   it("reports error for empty input", () => {
-    expect(parseJson("   ")).toMatch({
+    expect(parseJson(textNode("   "))).toMatch({
       kind: "error",
       errors: [{ message: "Expected JSON value", start: 3, end: 3 }],
     });
   });
 
   it("reports error for trailing content", () => {
-    expect(parseJson("true false")).toMatch({
+    expect(parseJson(textNode("true false"))).toMatch({
       kind: "error",
       errors: [
         {
@@ -185,51 +190,75 @@ describe("parseJson – errors", () => {
   });
 
   it("reports error for unterminated string", () => {
-    expect(parseJson('"hello')).toMatch({
+    expect(parseJson(textNode('"hello'))).toMatch({
       kind: "error",
       errors: [{ message: "Expected closing quote for JSON string" }],
     });
   });
 
   it("reports error for duplicate object key", () => {
-    expect(parseJson('{"a": 1, "a": 2}')).toMatch({
+    expect(parseJson(textNode('{"a": 1, "a": 2}'))).toMatch({
       kind: "error",
       errors: [{ message: "Duplicate object key 'a'" }],
     });
   });
 
   it("reports error for missing colon in object entry", () => {
-    expect(parseJson('{"a" 1}')).toMatch({
+    expect(parseJson(textNode('{"a" 1}'))).toMatch({
       kind: "error",
       errors: [{ message: "Expected ':'" }],
     });
   });
 
   it("reports error for unterminated block comment", () => {
-    expect(parseJson("/* not closed")).toMatch({
+    expect(parseJson(textNode("/* not closed"))).toMatch({
       kind: "error",
       errors: [{ message: "Expected closing '*/' for block comment" }],
     });
   });
 
   it("reports error for invalid JSON value", () => {
-    expect(parseJson("@")).toMatch({
+    expect(parseJson(textNode("@"))).toMatch({
       kind: "error",
       errors: [{ message: "Invalid JSON value" }],
     });
   });
 
   it("reports error for missing closing bracket in array", () => {
-    expect(parseJson("[1, 2")).toMatch({
+    expect(parseJson(textNode("[1, 2"))).toMatch({
       kind: "error",
       errors: [{ message: "Expected ']'" }],
     });
   });
 
   it("reports error for missing closing brace in object", () => {
-    expect(parseJson('{"a": 1')).toMatch({
+    expect(parseJson(textNode('{"a": 1'))).toMatch({
       kind: "error",
       errors: [{ message: "Expected '}'" }],
+    });
+  });
+});
+
+describe("parseJson – source offset remapping", () => {
+  it("remaps firstToken offsets via the offsetMap", () => {
+    const content: TextNodeJoin = {
+      decoded: '"hello"',
+      offsetMap: [{ decodedOffset: 0, sourceOffset: 5 }],
+    };
+    expect(parseJson(content)).toMatch({
+      kind: "string",
+      firstToken: { text: '"hello"', start: 5, end: 12 },
+    });
+  });
+
+  it("remaps error offsets via the offsetMap", () => {
+    const content: TextNodeJoin = {
+      decoded: "   ",
+      offsetMap: [{ decodedOffset: 0, sourceOffset: 7 }],
+    };
+    expect(parseJson(content)).toMatch({
+      kind: "error",
+      errors: [{ start: 10, end: 10, message: "Expected JSON value" }],
     });
   });
 });
