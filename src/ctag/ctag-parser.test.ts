@@ -171,7 +171,7 @@ describe("parseCTag", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON value", start: 3, end: 3 }],
+      errors: [{ message: "Expected JSON value", span: {start: 3, end: 3 }}],
     });
   });
 
@@ -183,8 +183,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Unexpected trailing content after JSON value",
+          span: {
           start: 5,
           end: 10,
+          },
         },
       ],
     });
@@ -207,8 +209,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected ',' or '}'",
+          span: {
           start: 8,
           end: 9,
+          },
         },
       ],
     });
@@ -222,8 +226,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected ',' or ']'",
+          span: {
           start: 3,
           end: 4,
+          },
         },
       ],
     });
@@ -235,8 +241,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected '}'",
+          span: {
           start: 7,
           end: 7,
+          },
         },
       ],
     });
@@ -246,8 +254,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected ']'",
+          span: {
           start: 5,
           end: 5,
+          },
         },
       ],
     });
@@ -270,8 +280,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Invalid JSON string escape sequence",
+          span: {
           start: 0,
           end: 7,
+          },
         },
       ],
     });
@@ -285,8 +297,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Invalid JSON string escape sequence",
+          span: {
           start: 0,
           end: 6,
+          },
         },
       ],
     });
@@ -300,8 +314,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Invalid JSON string escape sequence",
+          span: {
           start: 1,
           end: 5,
+          },
         },
       ],
     });
@@ -315,13 +331,17 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Invalid JSON string escape sequence",
+          span: {
           start: 1,
           end: 5,
+          },
         },
         {
           message: "Invalid JSON string escape sequence",
+          span: {
           start: 7,
           end: 11,
+          },
         },
       ],
     });
@@ -350,7 +370,7 @@ describe("parseCTag", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON number", start: 0, end: 1 }],
+      errors: [{ message: "Expected JSON number", span: { start: 0, end: 1 }}],
     });
   });
 
@@ -360,8 +380,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected closing '*/' for block comment",
+          span: {
           start: 0,
           end: 7,
+          },
         },
       ],
     });
@@ -371,8 +393,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Expected closing '*/' for block comment",
+          span: {
           start: 2,
           end: 9,
+          },
         },
       ],
     });
@@ -399,8 +423,10 @@ describe("parseCTag", () => {
       errors: [
         {
           message: "Duplicate object key 'a'",
+          span: {
           start: 9,
           end: 12,
+          },
         },
       ],
     });

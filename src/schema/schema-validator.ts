@@ -36,8 +36,7 @@ export function validateSchema(
     );
     if (nameDependencies.has(name.text)) {
       errors.push({
-        start: name.start,
-        end: name.end,
+        span: name,
         message: `Type '${name.text}' circularly references itself`,
       });
     }
@@ -47,8 +46,10 @@ export function validateSchema(
   const requiredType = typeDeclarations[requiredTypeName];
   if (!requiredType) {
     errors.push({
-      start: 0,
-      end: 0,
+      span: {
+        start: 0,
+        end: 0,
+      },
       message: `Missing required type '${requiredTypeName}'`,
     });
   } else if (context.kind === "meta") {
@@ -154,8 +155,7 @@ function validateType(
       for (const field of Object.values(type.fields)) {
         if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
           errors.push({
-            start: field.name.start,
-            end: field.name.end,
+            span: field.name,
             message: WORD_MUST_START_WITH_LOWERCASE,
           });
         }
@@ -166,8 +166,10 @@ function validateType(
     case "string-literal": {
       if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
         errors.push({
-          start: type.quotedName.start + 1,
-          end: type.quotedName.end - 1,
+          span: {
+            start: type.quotedName.start + 1,
+            end: type.quotedName.end - 1,
+          },
           message: WORD_MUST_START_WITH_LOWERCASE,
         });
       }
@@ -182,8 +184,7 @@ function validateType(
       const isPrimitive = !!isPrimitiveType(typeName);
       if (!isPrimitive && !types[typeName]) {
         errors.push({
-          start: type.name.start,
-          end: type.name.end,
+          span: type.name,
           message: `Unknown type '${typeName}'`,
         });
       }
@@ -208,8 +209,7 @@ function validateUnionType(
     const found = getDescForKind(kind);
     const firstToken = getFirstToken(type);
     errors.push({
-      start: firstToken.start,
-      end: firstToken.end,
+      span: firstToken,
       message: `Union members must be either all strings or all interfaces; found: ${found}`,
     });
   };
@@ -248,8 +248,7 @@ function validateUnionType(
           const expected = getDescForKind(unionKind);
           const found = getDescForKind(memberKind);
           errors.push({
-            start: firstToken.start,
-            end: firstToken.end,
+            span: firstToken,
             message: [
               "Union members must be either all strings or all interfaces; ",
               ` expected: ${expected}, found: ${found}`,
@@ -333,8 +332,7 @@ function validateUnionType(
         const firstToken =
           resolvedType.firstField?.name ?? getFirstToken(resolvedType);
         errors.push({
-          start: firstToken.start,
-          end: firstToken.end,
+          span: firstToken,
           message:
             "The first field of an interface in a union must be a string literal",
         });
@@ -346,8 +344,7 @@ function validateUnionType(
         discriminator = firstField;
       } else if (discriminator.name.text !== firstField.name.text) {
         errors.push({
-          start: firstField.name.start,
-          end: firstField.name.end,
+          span: firstField.name,
           message: [
             "The first field of an interface in a union must have the same name as ",
             "the other members; ",
@@ -393,8 +390,7 @@ function getDescForKind(kind: UnionKind): string {
 function validateTypeName(name: SourceSpan, errors: InternalError[]): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
-      start: name.start,
-      end: name.end,
+      span: name,
       message: WORD_MUST_START_WITH_UPPERCASE,
     });
   }
@@ -463,8 +459,7 @@ function verifyMetaType(
   if (metaType.kind !== "interface") {
     return [
       {
-        start: metaTypeDeclaration.name.start,
-        end: metaTypeDeclaration.name.end,
+        span: metaTypeDeclaration.name,
         message: "Type 'Meta' must be an interface",
       },
     ];
@@ -499,8 +494,7 @@ function verifyMetaType(
     })();
     if (!isValid) {
       errors.push({
-        start: field.name.start,
-        end: field.name.end,
+        span: field.name,
         message: "Fields of 'Meta' must be strings, numbers, booleans",
       });
     }
@@ -525,8 +519,7 @@ function verifyAllTypesUsed(
     const { name } = type;
     if (!usedTypes.has(name.text)) {
       errors.push({
-        start: name.start,
-        end: name.end,
+        span: name,
         message: `Type '${name.text}' is not used`,
       });
     }
