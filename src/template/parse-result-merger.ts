@@ -102,7 +102,7 @@ export function mergeParseResults(
     }
   } else {
     // (5) Validate each template's <meta/> element against the meta schema.
-    const metaDecl = topLevelMeta.types["Meta"];
+    const metaDecl = topLevelMeta.typeDeclarations["Meta"];
     if (metaDecl !== undefined) {
       // TODO
     }
@@ -121,7 +121,7 @@ export function mergeParseResults(
     }
     const meta: { [property: string]: boolean | number | string } = {};
     if (template.metaNode !== null && topLevelMeta !== null) {
-      const metaDecl = topLevelMeta.types["Meta"];
+      const metaDecl = topLevelMeta.typeDeclarations["Meta"];
       // TODO
     }
     namespaceMap.get(ns)!.push({
@@ -183,7 +183,7 @@ function resolveSchema(schema: Schema): ResolvedSchema {
   }
 
   const typeAliases: { [name: string]: TemplateResolvedType } = {};
-  for (const [name, decl] of Object.entries(schema.types)) {
+  for (const [name, decl] of Object.entries(schema.typeDeclarations)) {
     if (decl.kind === "type") {
       typeAliases[name] = convertType(decl.valueType, schema);
     } else {
@@ -197,7 +197,7 @@ function resolveSchema(schema: Schema): ResolvedSchema {
 function convertType(type: Type, schema: Schema): TemplateResolvedType {
   switch (type.kind) {
     case "type-name": {
-      const resolved = resolveType(type, schema.types);
+      const resolved = resolveType(type, schema.typeDeclarations);
       if (resolved.kind === "primitive") {
         return { kind: "primitive", primitive: resolved.primitive };
       } else {

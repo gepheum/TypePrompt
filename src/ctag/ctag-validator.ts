@@ -26,11 +26,11 @@ export function validateCTag(
     }
     case "json": {
       if (
-        Object.values(schema.types).some(
+        Object.values(schema.typeDeclarations).some(
           (t) =>
             jsonMatchesType(
               cTag.json,
-              resolveType(t, schema.types),
+              resolveType(t, schema.typeDeclarations),
               "fast",
               schema,
             ).kind === "match",
@@ -38,19 +38,23 @@ export function validateCTag(
       ) {
         return [];
       } else {
-        const mismatches = Object.entries(schema.types).map(([name, t]) => {
-          const result = jsonMatchesType(
-            cTag.json,
-            resolveType(t, schema.types),
-            "thorough",
-            schema,
-          );
-          const score =
-            result.kind === "mismatch" ? (result.details?.matchScore ?? 0) : 0;
-          const reason =
-            result.kind === "mismatch" ? result.details?.reason : undefined;
-          return { name, score, reason };
-        });
+        const mismatches = Object.entries(schema.typeDeclarations).map(
+          ([name, t]) => {
+            const result = jsonMatchesType(
+              cTag.json,
+              resolveType(t, schema.typeDeclarations),
+              "thorough",
+              schema,
+            );
+            const score =
+              result.kind === "mismatch"
+                ? (result.details?.matchScore ?? 0)
+                : 0;
+            const reason =
+              result.kind === "mismatch" ? result.details?.reason : undefined;
+            return { name, score, reason };
+          },
+        );
         const best = mismatches.reduce<
           | {
               name: string;

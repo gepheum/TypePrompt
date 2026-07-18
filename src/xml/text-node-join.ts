@@ -1,3 +1,5 @@
+import { InternalError } from "../util/error-types.js";
+
 export type TextNodeJoin = {
   readonly decoded: string;
   /// Always non-empty. The first element always has `decodedOffset: 0`.
@@ -76,4 +78,14 @@ export function textNodeDecodedOffsetToSourceOffset(
 
   const segment = segments[selected]!;
   return segment.sourceOffset + (decodedOffset - segment.decodedOffset);
+}
+
+export function decodedOffsetsToSourceOffsets(
+  textNode: TextNodeJoin,
+): (e: InternalError) => InternalError {
+  return (e: InternalError) => ({
+    start: textNodeDecodedOffsetToSourceOffset(textNode, e.start),
+    end: textNodeDecodedOffsetToSourceOffset(textNode, e.end),
+    message: e.message,
+  });
 }

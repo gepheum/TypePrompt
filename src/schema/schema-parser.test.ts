@@ -548,7 +548,7 @@ describe("parseSchema – identifiers", () => {
 describe("parseSchema – unionToMembers", () => {
   it("populates unionToMembers for a string literal union", () => {
     const result = parseOk('type Response = "active" | "inactive";');
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
@@ -564,7 +564,7 @@ describe("parseSchema – unionToMembers", () => {
     const result = parseOk(
       'type Response = { kind: "circle"; r: number } | { kind: "rect"; w: number };',
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
@@ -583,7 +583,7 @@ describe("parseSchema – unionToMembers", () => {
         "type Response = Foo | Bar;",
       ].join("\n"),
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
@@ -602,7 +602,7 @@ describe("parseSchema – unionToMembers", () => {
         "type Response = Active | Inactive;",
       ].join("\n"),
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.unionToMembers.get(union)).toMatch({
@@ -613,7 +613,7 @@ describe("parseSchema – unionToMembers", () => {
 
   it("populates typeToNamingHint for a top-level interface", () => {
     const result = parseOk("type Response = { name: string; };");
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
     expect(result.typeToNamingHint.get(iface)).toMatch({
@@ -623,7 +623,7 @@ describe("parseSchema – unionToMembers", () => {
 
   it("populates typeToNamingHint for a nested inline interface", () => {
     const result = parseOk("type Response = { address: { street: string }; };");
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
     const addressType = iface.fields["address"]!.type;
@@ -643,7 +643,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
     const result = parseOk(
       ["/** The response. */", "type Response = { name: string; };"].join("\n"),
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
     expect(result.typeToNamingHint.get(iface)).toMatch({
@@ -654,7 +654,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
 
   it("sets doc to empty string for a top-level interface without a JSDoc comment", () => {
     const result = parseOk("type Response = { name: string; };");
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
     expect(result.typeToNamingHint.get(iface)).toMatch({
@@ -670,7 +670,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
         'type Response = "active" | "inactive";',
       ].join("\n"),
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.typeToNamingHint.get(union)).toMatch({
@@ -680,7 +680,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
 
   it("sets doc to empty string for a top-level union type alias without a JSDoc comment", () => {
     const result = parseOk('type Response = "active" | "inactive";');
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     expect(result.typeToNamingHint.get(union)).toMatch({ doc: "" });
@@ -688,7 +688,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
 
   it("sets doc to null for a nested inline interface (field type)", () => {
     const result = parseOk("type Response = { address: { street: string }; };");
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const iface = responseDecl.valueType as Interface;
     const inlineInterface = iface.fields["address"]!.type as Interface;
@@ -705,7 +705,7 @@ describe("parseSchema – typeToNamingHint doc", () => {
         'type Response = { kind: "circle"; r: number } | { kind: "rect"; w: number };',
       ].join("\n"),
     );
-    const responseDecl = result.types["Response"]!;
+    const responseDecl = result.typeDeclarations["Response"]!;
     if (responseDecl.kind !== "type") throw new Error("Expected type");
     const union = responseDecl.valueType as Union;
     const circleInterface = union.members[0]! as Interface;

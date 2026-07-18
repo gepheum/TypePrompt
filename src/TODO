@@ -1,4 +1,5 @@
 - TODO: support true and false literals?
+- TODO: separate schema parsing from schema validation. Only traverse the types once validation has been done.
 - TODO: support /* */ and //
 - TODO: no longer allow quotes in <c>
 - TODO: think about toolcalls

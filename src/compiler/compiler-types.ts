@@ -1,6 +1,6 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
-import { Schema } from "../schema/schema-types.js";
+import { SchemaParseResult } from "../schema/schema-types.js";
 import {
   InternalError,
   InternalErrors,
@@ -46,8 +46,8 @@ export type Template = {
 
   readonly meta: JsonValue<"strict"> | null;
 
-  readonly schema: Schema;
-  readonly outputFormat: OutputFormat;
+  readonly schema: SchemaParseResult;
+  readonly outputFormat: OutputFormat | null;
 
   readonly contents:
     | { readonly kind: "no-variant"; readonly content: PromptContent }
@@ -56,7 +56,7 @@ export type Template = {
         readonly variants: readonly PromptVariant[];
       };
 
-  readonly snippets: { readonly [snippet: string]: Snippet };
+  readonly snippets: readonly Snippet[];
 };
 
 export type OutputFormat = {

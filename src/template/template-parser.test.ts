@@ -108,7 +108,9 @@ describe("parseTemplateFile – top-level <meta>", () => {
     );
     expect(result).toMatch({
       kind: "success",
-      metas: [{ kind: "success", types: { Meta: { kind: "type" } } }],
+      metas: [
+        { kind: "success", typeDeclarations: { Meta: { kind: "type" } } },
+      ],
     });
   });
 
@@ -369,7 +371,7 @@ describe("parseTemplateFile – <schema>", () => {
     );
     expect(t.schema).toMatch({
       kind: "success",
-      types: { Response: { kind: "type" } },
+      typeDeclarations: { Response: { kind: "type" } },
     });
   });
 

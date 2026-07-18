@@ -1,6 +1,11 @@
 import type { SourceSpan } from "../util/error-types.js";
 
-export type SchemaParseContext =
+export type SchemaParseResult = {
+  readonly kind: "success";
+  readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
+};
+
+export type SchemaValidationContext =
   | {
       readonly kind: "meta";
     }
@@ -11,7 +16,7 @@ export type SchemaParseContext =
 
 export type Schema = {
   readonly kind: "success";
-  readonly types: { readonly [name: string]: TypeDeclaration };
+  readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
   /**
    * Field names and identifiers used in string literals.
    * Does not include types names.

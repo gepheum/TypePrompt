@@ -1,29 +1,23 @@
+import { checkNoAmbiguity } from "../util/casing.js";
 import type { InternalError, InternalErrors } from "../util/error-types.js";
 import type {
-  Interface,
-  NamingHint,
-  Schema,
   SchemaField,
-  SchemaParseContext,
+  SchemaParseResult,
   Type,
   TypeDeclaration,
   Union,
-  UnionMembers,
 } from "./schema-types.js";
-import { validateSchema } from "./schema-validator.js";
-import { getUnionMembers } from "./unions.js";
 
 export function parseSchema(
   schemaSource: string,
-  context: SchemaParseContext,
-): Schema | InternalErrors {
-  return new SchemaParser(schemaSource).parse(context);
+): SchemaParseResult | InternalErrors {
+  return new SchemaParser(schemaSource).parse();
 }
 
 class SchemaParser {
   constructor(private readonly schemaSource: string) {}
 
-  parse(context: SchemaParseContext): Schema | InternalErrors {
+  parse(): SchemaParseResult | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
 
     while (true) {
@@ -52,6 +46,16 @@ class SchemaParser {
       }
     }
 
+    this.parserErrors.push(
+      ...checkNoAmbiguity(
+        typeDeclarations.map((t) => ({
+          name: t.name.text,
+          start: t.name.start,
+          end: t.name.end,
+        })),
+      ),
+    );
+
     if (this.tokenizerErrors.length) {
       return {
         kind: "error",
@@ -64,26 +68,11 @@ class SchemaParser {
       };
     }
 
-    const validationErrors = validateSchema(typeDeclarations, context);
-    if (validationErrors.length) {
-      return {
-        kind: "error",
-        errors: validationErrors,
-      };
-    }
-
-    const types = Object.fromEntries(
-      typeDeclarations.map((t) => [t.name.text, t]),
-    );
-
-    const typeTraverser = TypeTraverser.traverseAll(types);
-
     return {
       kind: "success",
-      types: types,
-      identifiers: typeTraverser.identifiers,
-      unionToMembers: typeTraverser.unionToMembers,
-      typeToNamingHint: typeTraverser.typeToNamingHint,
+      typeDeclarations: Object.fromEntries(
+        typeDeclarations.map((t) => [t.name.text, t]),
+      ),
     };
   }
 
@@ -554,83 +543,4 @@ function joinTypes(a: Type, b: Type): Union {
       members: [a, b],
     };
   }
-}
-
-class TypeTraverser {
-  static traverseAll(types: {
-    readonly [name: string]: TypeDeclaration;
-  }): TypeTraverser {
-    const traverser = new TypeTraverser(types);
-    for (const type of Object.values(types)) {
-      traverser.traverse(
-        type,
-        type.kind === "type" && type.valueType.kind === "interface"
-          ? { namePieces: [type.name.text], doc: type.doc }
-          : { namePieces: [], doc: type.doc },
-      );
-    }
-    return traverser;
-  }
-
-  private constructor(
-    private readonly types: { readonly [name: string]: TypeDeclaration },
-  ) {}
-
-  private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
-    switch (type.kind) {
-      case "array": {
-        return this.traverse(type.elementType, context);
-      }
-      case "interface": {
-        this.typeToNamingHint.set(type, context);
-        const fields = Object.values(type.fields);
-        for (const field of fields) {
-          this.identifiers.add(field.name.text);
-          const newContext: NamingHint = {
-            namePieces: [...context.namePieces, field.name.text],
-            doc: null,
-          };
-          this.traverse(field.type, newContext);
-        }
-        return null;
-      }
-      case "string-literal": {
-        this.identifiers.add(type.value);
-        return null;
-      }
-      case "type": {
-        return this.traverse(type.valueType, context);
-      }
-      case "type-name": {
-        return null;
-      }
-      case "union": {
-        this.typeToNamingHint.set(type, context);
-        const unionMembers = getUnionMembers(type, this.types);
-        this.unionToMembers.set(type, unionMembers);
-        switch (unionMembers.kind) {
-          case "interfaces": {
-            for (const [kind, member] of Object.entries(unionMembers.members)) {
-              const newContext: NamingHint = {
-                namePieces: [...context.namePieces, kind],
-                doc: null,
-              };
-              this.traverse(member, newContext);
-            }
-            return null;
-          }
-          case "strings": {
-            for (const member of unionMembers.members) {
-              this.identifiers.add(member.value);
-            }
-            return null;
-          }
-        }
-      }
-    }
-  }
-
-  readonly identifiers: Set<string> = new Set();
-  readonly unionToMembers = new Map<Union, UnionMembers>();
-  readonly typeToNamingHint = new Map<Interface | Union, NamingHint>();
 }

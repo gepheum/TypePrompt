@@ -69,19 +69,19 @@ function arrStrict(elements: JsonValue<"strict">[]): JsonArray<"strict"> {
 describe("validateJson – exact match", () => {
   it("accepts a string for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("hello"), schema, type)).toMatch([]);
   });
 
   it("accepts a number for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = number");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(3.14), schema, type)).toMatch([]);
   });
 
   it("accepts a boolean for a boolean type", () => {
     const schema = parseSchemaOrThrow("type Response = boolean");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(bool(true), schema, type)).toMatch([]);
   });
 
@@ -89,7 +89,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Int = number\ntype Response = { count: Int; };",
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["count", num(42)]]), schema, type)).toMatch(
       [],
     );
@@ -99,7 +99,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Int = number\ntype Response = { count: Int; };",
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["count", num(3.14)]]), schema, type),
     ).toMatch([]);
@@ -109,7 +109,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(
         objStrict([
@@ -126,7 +126,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; nickname?: string; };",
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), schema, type),
     ).toMatch([]);
@@ -134,7 +134,7 @@ describe("validateJson – exact match", () => {
 
   it("accepts an array of strings for a string array type", () => {
     const schema = parseSchemaOrThrow("type Response = string[]");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(arrStrict([str("a"), str("b")]), schema, type)).toMatch(
       [],
     );
@@ -142,13 +142,13 @@ describe("validateJson – exact match", () => {
 
   it("accepts the exact string for a string-literal type", () => {
     const schema = parseSchemaOrThrow('type Response = "ok"');
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("ok"), schema, type)).toMatch([]);
   });
 
   it("accepts a matching value from a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "pending" | "done"');
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("done"), schema, type)).toMatch([]);
   });
 
@@ -156,7 +156,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; name: string; }; type Dog = { kind: "dog"; breed: string; }; type Response = Cat | Dog',
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(
         objStrict([
@@ -173,7 +173,7 @@ describe("validateJson – exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { item: Detail }; type Detail = { x: string; };",
     );
-    const type = schema.types["Detail"]!;
+    const type = schema.typeDeclarations["Detail"]!;
     expect(validateJson(objStrict([["x", str("hi")]]), schema, type)).toMatch(
       [],
     );
@@ -187,7 +187,7 @@ describe("validateJson – exact match", () => {
 describe("validateJson – mismatch: no close match", () => {
   it("returns a single error when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(42), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
     ]);
@@ -195,7 +195,7 @@ describe("validateJson – mismatch: no close match", () => {
 
   it("returns a single error when an object is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([]), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
     ]);
@@ -203,7 +203,7 @@ describe("validateJson – mismatch: no close match", () => {
 
   it("returns a single error when a number is given for a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(1), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
     ]);
@@ -213,7 +213,7 @@ describe("validateJson – mismatch: no close match", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; }; type Dog = { kind: "dog"; }; type Response = Cat | Dog',
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Felix")]]), schema, type),
     ).toMatch([{ message: "Does not match type 'Response'" }]);
@@ -227,7 +227,7 @@ describe("validateJson – mismatch: no close match", () => {
 describe("validateJson – mismatch: close match", () => {
   it("returns 2 errors for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["name", num(42)]]), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
       { message: "Expected string but got number" },
@@ -236,7 +236,7 @@ describe("validateJson – mismatch: close match", () => {
 
   it("returns 2 errors for a string not in a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("c"), schema, type)).toMatch([
       { message: "Does not match type 'Response'" },
       { message: "Not found in union type" },
@@ -247,7 +247,7 @@ describe("validateJson – mismatch: close match", () => {
     const schema = parseSchemaOrThrow(
       'type Response = { kind: "cat" } | { kind: "dog" }',
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["kind", str("fish")]]), schema, type),
     ).toMatch([
@@ -260,7 +260,7 @@ describe("validateJson – mismatch: close match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
-    const type = schema.types["Response"]!;
+    const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), schema, type),
     ).toMatch([

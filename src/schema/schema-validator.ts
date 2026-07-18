@@ -1,51 +1,39 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, SourceSpan } from "../util/error-types.js";
 import type {
+  InternalError,
+  InternalErrors,
+  SourceSpan,
+} from "../util/error-types.js";
+import type {
+  Interface,
+  NamingHint,
+  Schema,
   SchemaField,
-  SchemaParseContext,
+  SchemaValidationContext,
   StringLiteral,
   Type,
   TypeDeclaration,
   Union,
+  UnionMembers,
 } from "./schema-types.js";
 import { isPrimitiveType, resolveMaybeInvalidType } from "./type-resolver.js";
 import { getUnionMembers } from "./unions.js";
 
-/** Called from schema parser. */
 export function validateSchema(
-  typeDeclarations: TypeDeclaration[],
-  context: SchemaParseContext,
-): InternalError[] {
+  typeDeclarations: { readonly [name: string]: TypeDeclaration },
+  context: SchemaValidationContext,
+): Schema | InternalErrors {
   const errors: InternalError[] = [];
 
-  errors.push(
-    ...checkNoAmbiguity(
-      typeDeclarations.map((t) => ({
-        name: t.name.text,
-        start: t.name.start,
-        end: t.name.end,
-      })),
-    ),
-  );
-
-  const types = Object.fromEntries(
-    typeDeclarations.map((t) => [t.name.text, t]),
-  );
-
-  const reservedTypeNames = new Set(["Args", "Variant"]);
-
-  for (const typeDeclaration of typeDeclarations) {
+  for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
-    if (reservedTypeNames.has(name.text)) {
-      errors.push({
-        start: name.start,
-        end: name.end,
-        message: `'${name.text}' is a reserved type name`,
-      });
-    }
-    validateType(typeDeclaration, types, errors);
+    validateType(typeDeclaration, typeDeclarations, errors);
     const nameDependencies = new Set<string>();
-    collectNameDependencies(typeDeclaration.valueType, types, nameDependencies);
+    collectNameDependencies(
+      typeDeclaration.valueType,
+      typeDeclarations,
+      nameDependencies,
+    );
     if (nameDependencies.has(name.text)) {
       errors.push({
         start: name.start,
@@ -56,7 +44,7 @@ export function validateSchema(
   }
 
   const requiredTypeName = context.kind === "meta" ? "Meta" : "Response";
-  const requiredType = types[requiredTypeName];
+  const requiredType = typeDeclarations[requiredTypeName];
   if (!requiredType) {
     errors.push({
       start: 0,
@@ -64,7 +52,7 @@ export function validateSchema(
       message: `Missing required type '${requiredTypeName}'`,
     });
   } else if (context.kind === "meta") {
-    errors.push(...verifyMetaType(requiredType, types));
+    errors.push(...verifyMetaType(requiredType, typeDeclarations));
   }
 
   // Verify that all types are used.
@@ -73,10 +61,25 @@ export function validateSchema(
       context.kind === "meta"
         ? ["Meta"]
         : ["Response", ...context.argTypeNames];
-    errors.push(...verifyAllTypesUsed(rootTypeNames, types));
+    errors.push(...verifyAllTypesUsed(rootTypeNames, typeDeclarations));
   }
 
-  return errors;
+  if (errors.length > 0) {
+    return {
+      kind: "error",
+      errors: errors,
+    };
+  }
+
+  const typeTraverser = TypeTraverser.traverseAll(typeDeclarations);
+
+  return {
+    kind: "success",
+    typeDeclarations: typeDeclarations,
+    identifiers: typeTraverser.identifiers,
+    unionToMembers: typeTraverser.unionToMembers,
+    typeToNamingHint: typeTraverser.typeToNamingHint,
+  };
 }
 
 type UnionKind =
@@ -404,16 +407,20 @@ const WORD_MUST_START_WITH_LOWERCASE =
 
 function collectNameDependencies(
   type: Type,
-  types: { readonly [name: string]: TypeDeclaration },
+  typeDeclarations: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
 ): null {
   switch (type.kind) {
     case "array": {
-      return collectNameDependencies(type.elementType, types, seenNames);
+      return collectNameDependencies(
+        type.elementType,
+        typeDeclarations,
+        seenNames,
+      );
     }
     case "interface": {
       for (const field of Object.values(type.fields)) {
-        collectNameDependencies(field.type, types, seenNames);
+        collectNameDependencies(field.type, typeDeclarations, seenNames);
       }
       return null;
     }
@@ -426,15 +433,19 @@ function collectNameDependencies(
         return null;
       }
       seenNames.add(typeName);
-      const resolved = types[typeName];
+      const resolved = typeDeclarations[typeName];
       if (!resolved) {
         return null;
       }
-      return collectNameDependencies(resolved.valueType, types, seenNames);
+      return collectNameDependencies(
+        resolved.valueType,
+        typeDeclarations,
+        seenNames,
+      );
     }
     case "union": {
       for (const member of type.members) {
-        collectNameDependencies(member, types, seenNames);
+        collectNameDependencies(member, typeDeclarations, seenNames);
       }
       return null;
     }
@@ -521,4 +532,83 @@ function verifyAllTypesUsed(
     }
   }
   return errors;
+}
+
+class TypeTraverser {
+  static traverseAll(types: {
+    readonly [name: string]: TypeDeclaration;
+  }): TypeTraverser {
+    const traverser = new TypeTraverser(types);
+    for (const type of Object.values(types)) {
+      traverser.traverse(
+        type,
+        type.kind === "type" && type.valueType.kind === "interface"
+          ? { namePieces: [type.name.text], doc: type.doc }
+          : { namePieces: [], doc: type.doc },
+      );
+    }
+    return traverser;
+  }
+
+  private constructor(
+    private readonly types: { readonly [name: string]: TypeDeclaration },
+  ) {}
+
+  private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
+    switch (type.kind) {
+      case "array": {
+        return this.traverse(type.elementType, context);
+      }
+      case "interface": {
+        this.typeToNamingHint.set(type, context);
+        const fields = Object.values(type.fields);
+        for (const field of fields) {
+          this.identifiers.add(field.name.text);
+          const newContext: NamingHint = {
+            namePieces: [...context.namePieces, field.name.text],
+            doc: null,
+          };
+          this.traverse(field.type, newContext);
+        }
+        return null;
+      }
+      case "string-literal": {
+        this.identifiers.add(type.value);
+        return null;
+      }
+      case "type": {
+        return this.traverse(type.valueType, context);
+      }
+      case "type-name": {
+        return null;
+      }
+      case "union": {
+        this.typeToNamingHint.set(type, context);
+        const unionMembers = getUnionMembers(type, this.types);
+        this.unionToMembers.set(type, unionMembers);
+        switch (unionMembers.kind) {
+          case "interfaces": {
+            for (const [kind, member] of Object.entries(unionMembers.members)) {
+              const newContext: NamingHint = {
+                namePieces: [...context.namePieces, kind],
+                doc: null,
+              };
+              this.traverse(member, newContext);
+            }
+            return null;
+          }
+          case "strings": {
+            for (const member of unionMembers.members) {
+              this.identifiers.add(member.value);
+            }
+            return null;
+          }
+        }
+      }
+    }
+  }
+
+  readonly identifiers: Set<string> = new Set();
+  readonly unionToMembers = new Map<Union, UnionMembers>();
+  readonly typeToNamingHint = new Map<Interface | Union, NamingHint>();
 }
