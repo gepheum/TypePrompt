@@ -130,11 +130,9 @@ class TemplateParser {
       this.errors.push(...attrs.errors);
     }
     const textContent = this.extractTextContent(metaNode);
-    const meta = parseYaml(textContent.decoded);
+    const meta = parseYaml(textContent);
     if (meta.kind === "error") {
-      this.errors.push(
-        ...meta.errors.map(decodedOffsetsToSourceOffsets(textContent)),
-      );
+      this.errors.push(...meta.errors);
     } else {
       this.meta = meta;
     }
@@ -177,11 +175,9 @@ class TemplateParser {
       }
     }
     const textContent = this.extractTextContent(schemaNode);
-    const schema = parseSchema(textContent.decoded);
+    const schema = parseSchema(textContent);
     if (schema.kind === "error") {
-      this.errors.push(
-        ...schema.errors.map(decodedOffsetsToSourceOffsets(textContent)),
-      );
+      this.errors.push(...schema.errors);
     } else {
       this.schema = schema;
     }
@@ -192,7 +188,7 @@ class TemplateParser {
   }
 
   private parseBody(parentNode: ElementNode): Body | InternalErrors {
-    const pieces: BodyPiece[] = [];
+    const pieces: RawBodyPiece[] = [];
 
     const visitChildren = (elem: ElementNode): void => {
       for (const child of elem.children) {
@@ -203,53 +199,13 @@ class TemplateParser {
 
         const tag = child.tagName.text;
 
-        if (tag === "e") {
-          const textNodes: TextNodeJoin[] = [];
-          const eSnap = context.snapshot();
-          for (const eChild of child.children) {
-            if (eChild.kind === "text") {
-              textNodes.push(eChild);
-            } else {
-              context.pushError(
-                eChild.tagName,
-                "<e> elements cannot contain child elements",
-              );
-            }
+        if (tag === "c") {
+          const attributes = checkXmlAttributes(child, {});
+          if (attributes.kind === "error") {
+            this.errors.push(...attributes.errors);
           }
-          const joined = joinTextNodes(textNodes, child.contentSpan.start);
-
-          if (!context.hasNewErrors(eSnap)) {
-            const exResult = parseCTag(joined.decoded);
-            if (exResult.kind === "error") {
-              if (exResult.errors.length > 0) {
-                context.pushErrors(
-                  exResult.errors.map((e) => ({
-                    start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
-                    end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
-                    message: e.message,
-                  })),
-                );
-              } else {
-                context.pushError(
-                  child.tagName,
-                  "Invalid example in <e> element",
-                );
-              }
-            } else {
-              const valErrors = validateCTag(exResult, schema);
-              if (valErrors.length > 0) {
-                context.pushErrors(
-                  valErrors.map((e) => ({
-                    start: textNodeDecodedOffsetToSourceOffset(joined, e.start),
-                    end: textNodeDecodedOffsetToSourceOffset(joined, e.end),
-                    message: e.message,
-                  })),
-                );
-              }
-            }
-            // Always emit the text content (even on validation error).
-            pieces.push({ kind: "text", text: joined });
-          }
+          const textContent = this.extractTextContent(child);
+          CACA
         } else if (tag === "arg") {
           if (!child.isSelfClosing) {
             context.pushError(
@@ -325,8 +281,9 @@ class TemplateParser {
       }
     };
 
-    visitChildren(bodyNode);
-    return context.hasNewErrors(snap) ? null : pieces;
+    visitChildren(parentNode);
+
+    // TODO: convert
   }
 
   private extractTextContent(node: ElementNode): TextNodeJoin {

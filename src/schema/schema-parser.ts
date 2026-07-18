@@ -1,6 +1,12 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, InternalErrors } from "../util/error-types.js";
+import type { InternalError, InternalErrors, SourceSpan } from "../util/error-types.js";
+import {
+  decodedOffsetsToSourceOffsets,
+  decodedOffsetToSourceOffset,
+  type TextNodeJoin,
+} from "../xml/text-node-join.js";
 import type {
+  NonUnionType,
   SchemaField,
   SchemaParseResult,
   Type,
@@ -9,13 +15,15 @@ import type {
 } from "./schema-types.js";
 
 export function parseSchema(
-  schemaSource: string,
+  content: TextNodeJoin,
 ): SchemaParseResult | InternalErrors {
-  return new SchemaParser(schemaSource).parse();
+  return new SchemaParser(content).parse();
 }
 
 class SchemaParser {
-  constructor(private readonly schemaSource: string) {}
+  constructor(private readonly content: TextNodeJoin) {}
+
+  private readonly schemaSource = this.content.decoded;
 
   parse(): SchemaParseResult | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
@@ -59,21 +67,88 @@ class SchemaParser {
     if (this.tokenizerErrors.length) {
       return {
         kind: "error",
-        errors: this.tokenizerErrors,
+        errors: this.remapErrors(this.tokenizerErrors),
       };
     } else if (this.parserErrors.length) {
       return {
         kind: "error",
-        errors: this.parserErrors,
+        errors: this.remapErrors(this.parserErrors),
       };
     }
 
     return {
       kind: "success",
       typeDeclarations: Object.fromEntries(
-        typeDeclarations.map((t) => [t.name.text, t]),
+        typeDeclarations.map((t) => [t.name.text, this.remapTypeDeclaration(t)]),
       ),
     };
+  }
+
+  private remapSpan(span: SourceSpan): SourceSpan {
+    return {
+      text: span.text,
+      start: decodedOffsetToSourceOffset(this.content, span.start),
+      end: decodedOffsetToSourceOffset(this.content, span.end),
+    };
+  }
+
+  private remapTypeDeclaration(t: TypeDeclaration): TypeDeclaration {
+    return {
+      kind: t.kind,
+      name: this.remapSpan(t.name),
+      valueType: this.remapType(t.valueType),
+      doc: t.doc,
+    };
+  }
+
+  private remapType(type: Type): Type {
+    switch (type.kind) {
+      case "type-name":
+        return { kind: "type-name", name: this.remapSpan(type.name) };
+      case "string-literal":
+        return {
+          kind: "string-literal",
+          value: type.value,
+          quotedName: this.remapSpan(type.quotedName),
+        };
+      case "interface": {
+        return {
+          kind: "interface",
+          leftCurlyBracket: this.remapSpan(type.leftCurlyBracket),
+          fields: Object.fromEntries(
+            Object.entries(type.fields).map(([k, v]) => [
+              k,
+              this.remapField(v),
+            ]),
+          ),
+          firstField: type.firstField
+            ? this.remapField(type.firstField)
+            : undefined,
+        };
+      }
+      case "array":
+        return { kind: "array", elementType: this.remapType(type.elementType) };
+      case "union":
+        return {
+          kind: "union",
+          members: type.members.map(
+            (m) => this.remapType(m) as NonUnionType,
+          ),
+        };
+    }
+  }
+
+  private remapField(field: SchemaField): SchemaField {
+    return {
+      name: this.remapSpan(field.name),
+      optional: field.optional,
+      type: this.remapType(field.type),
+      doc: field.doc,
+    };
+  }
+
+  private remapErrors(errors: readonly InternalError[]): readonly InternalError[] {
+    return errors.map(decodedOffsetsToSourceOffsets(this.content));
   }
 
   private parseTypeDeclaration(): TypeDeclaration | null {
