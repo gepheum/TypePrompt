@@ -55,7 +55,7 @@ export function parseJson<Mode extends JsonMode = "loose">(
   return value;
 }
 
-export class JsonParser<Mode extends JsonMode = "loose"> {
+class JsonParser<Mode extends JsonMode = "loose"> {
   constructor(
     private readonly content: TextNodeJoin,
     private readonly mode: Mode = "loose" as Mode,
@@ -100,7 +100,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  private parseObject(): JsonObject<Mode> {
+  parseObject(): JsonObject<Mode> {
     const start = this.cursor;
     this.cursor += 1;
     this.skipSpaces();
@@ -271,7 +271,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private parseObjectKeyWithRecovery(): JsonString | null {
+  parseObjectKeyWithRecovery(): JsonString | null {
     const key = this.parseString();
     if (key) {
       return key;
@@ -307,7 +307,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private parseEllipsis(): JsonEllipsis | null {
+  parseEllipsis(): JsonEllipsis | null {
     if (!this.text.startsWith("...", this.cursor)) {
       return null;
     }
@@ -330,7 +330,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private parseArray(): JsonArray<Mode> {
+  parseArray(): JsonArray<Mode> {
     const start = this.cursor;
     this.cursor += 1;
     this.skipSpaces();
@@ -430,7 +430,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private parseString(): JsonString | null {
+  parseString(): JsonString | null {
     if (this.text[this.cursor] !== '"') {
       this.pushError(
         this.cursor,
@@ -485,7 +485,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  private parseNumber(): JsonNumber | null {
+  parseNumber(): JsonNumber | null {
     const rest = this.text.slice(this.cursor);
     const match = rest.match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
     if (!match) {
@@ -506,7 +506,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private parseBoolean(): JsonBoolean | null {
+  parseBoolean(): JsonBoolean | null {
     const start = this.cursor;
     if (this.text.startsWith("true", this.cursor)) {
       this.cursor += 4;
@@ -533,7 +533,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return null;
   }
 
-  private parseNull(): JsonNull | null {
+  parseNull(): JsonNull | null {
     if (!this.text.startsWith("null", this.cursor)) {
       this.pushError(
         this.cursor,
@@ -551,7 +551,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private skipSpaces(): void {
+  skipSpaces(): void {
     while (true) {
       this.cursor = skipWithRegex(this.text, this.cursor, WHITESPACE_RUN_RE);
 
@@ -588,7 +588,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     }
   }
 
-  private pushError(start: number, end: number, message: string): void {
+  pushError(start: number, end: number, message: string): void {
     this.errors.push({
       start: decodedOffsetToSourceOffset(this.content, start),
       end: decodedOffsetToSourceOffset(this.content, end),
@@ -596,7 +596,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     });
   }
 
-  private exampleSlice(start: number, end: number): SourceSpan {
+  exampleSlice(start: number, end: number): SourceSpan {
     return {
       text: this.text.slice(start, end),
       start: decodedOffsetToSourceOffset(this.content, start),
@@ -604,7 +604,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     };
   }
 
-  private nextNonWhitespaceChar(): string | undefined {
+  nextNonWhitespaceChar(): string | undefined {
     let i = this.cursor + 1;
     while (i < this.text.length && /\s/.test(this.text[i]!)) {
       i += 1;
@@ -612,7 +612,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return this.text[i];
   }
 
-  private isValueStart(): boolean {
+  isValueStart(): boolean {
     if (this.cursor >= this.text.length) {
       return false;
     }
@@ -630,7 +630,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     );
   }
 
-  private isObjectEntryStart(): boolean {
+  isObjectEntryStart(): boolean {
     if (this.cursor >= this.text.length) {
       return false;
     }
@@ -638,7 +638,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     return ch === '"' || /[A-Za-z0-9_$]/.test(ch);
   }
 
-  private syncToObjectDelimiter(): void {
+  syncToObjectDelimiter(): void {
     while (this.cursor < this.text.length) {
       this.skipSpaces();
       if (this.cursor >= this.text.length) {
@@ -653,7 +653,7 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     }
   }
 
-  private syncToArrayDelimiter(): void {
+  syncToArrayDelimiter(): void {
     while (this.cursor < this.text.length) {
       this.skipSpaces();
       if (this.cursor >= this.text.length) {
@@ -668,9 +668,9 @@ export class JsonParser<Mode extends JsonMode = "loose"> {
     }
   }
 
-  private cursor = 0;
-  private readonly errors: InternalError[] = [];
-  private readonly text: string;
+  cursor = 0;
+  readonly errors: InternalError[] = [];
+  readonly text: string;
 }
 
 function decodeJsonString(raw: string): string | null {
