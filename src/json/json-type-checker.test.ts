@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { parseSchema } from "../schema/schema-parser.js";
-import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
+import type { Schema, SchemaValidationContext } from "../schema/schema-types.js";
 import type { SourceSpan } from "../util/error-types.js";
 import { validateJson } from "./json-type-checker.js";
 import type {
@@ -12,24 +12,31 @@ import type {
   JsonString,
   JsonValue,
 } from "./json-types.js";
+import { joinTextNodes, TextNodeJoin } from "../xml/text-node-join.js";
+import { validateSchema } from "../schema/schema-validator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TEMPLATE: SchemaParseContext = { kind: "template", argTypeNames: [] };
-
 function parseSchemaOrThrow(
   source: string,
-  context: SchemaParseContext = TEMPLATE,
 ): Schema {
-  const result = parseSchema(source, context);
-  if (result.kind !== "success") {
-    throw new Error(
-      `Schema parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
-    );
+  const textNode: TextNodeJoin = joinTextNodes([{ decoded: source, offsetMap: [] }], 0);
+  const schemaParseResult = parseSchema(textNode);
+  if (schemaParseResult.kind !== "success") {
+    const errors = schemaParseResult.errors.map((e) => e.message).join(", ");
+    throw new Error(`Schema parse failed: ${errors}`);
   }
-  return result;
+  const schema = validateSchema(
+    schemaParseResult.typeDeclarations,
+    { kind: "template", argTypeNames: [] },
+  );
+  if (schema.kind !== "success") {
+    const errors = schema.errors.map((e) => e.message).join(", ");
+    throw new Error(`Schema validation failed: ${errors}`);
+  }
+  return schema;
 }
 
 function span(text: string): SourceSpan {

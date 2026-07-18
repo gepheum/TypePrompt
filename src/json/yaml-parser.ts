@@ -17,8 +17,10 @@ export function parseYaml(
     return {
       kind: "error",
       errors: doc.errors.map((err) => ({
-        start: mapOffset(content, err.pos[0]),
-        end: mapOffset(content, err.pos[1]),
+        span: {
+          start: mapOffset(content, err.pos[0]),
+          end: mapOffset(content, err.pos[1]),
+        },
         message: err.message,
       })),
     };
@@ -29,8 +31,10 @@ export function parseYaml(
       kind: "error",
       errors: [
         {
-          start: decodedToSourceOffset(content, 0),
-          end: decodedToSourceOffset(content, 0),
+          span: {
+            start: decodedToSourceOffset(content, 0),
+            end: decodedToSourceOffset(content, 0),
+          },
           message: "Empty YAML document",
         },
       ],
@@ -43,8 +47,10 @@ export function parseYaml(
       kind: "error",
       errors: [
         {
-          start: decodedToSourceOffset(content, 0),
-          end: decodedToSourceOffset(content, decoded.length),
+          span: {
+            start: decodedToSourceOffset(content, 0),
+            end: decodedToSourceOffset(content, decoded.length),
+          },
           message: "Unsupported YAML node type",
         },
       ],

@@ -172,7 +172,7 @@ describe("parseJson – errors", () => {
   it("reports error for empty input", () => {
     expect(parseJson(textNode("   "))).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON value", start: 3, end: 3 }],
+      errors: [{ message: "Expected JSON value", span: { start: 3, end: 3 }}],
     });
   });
 
@@ -182,8 +182,10 @@ describe("parseJson – errors", () => {
       errors: [
         {
           message: "Unexpected trailing content after JSON value",
+          span: {
           start: 5,
           end: 10,
+          },
         },
       ],
     });
@@ -258,7 +260,7 @@ describe("parseJson – source offset remapping", () => {
     };
     expect(parseJson(content)).toMatch({
       kind: "error",
-      errors: [{ start: 10, end: 10, message: "Expected JSON value" }],
+      errors: [{ span: {start: 10, end: 10}, message: "Expected JSON value" }],
     });
   });
 });

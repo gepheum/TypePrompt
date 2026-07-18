@@ -25,8 +25,10 @@ export function validateJson(
   const typeName = type.name.text;
   const errors: InternalError[] = [
     {
-      start: json.firstToken.start,
-      end: json.firstToken.end,
+      span: {
+        start: json.firstToken.start,
+        end: json.firstToken.end,
+      },
       message: `Does not match type '${typeName}'`,
     },
   ];
@@ -155,8 +157,10 @@ export function jsonMatchesType(
               return FAST_MISMATCH;
             } else {
               firstMismatchReason ??= {
-                start: entry.key.firstToken.start,
-                end: entry.key.firstToken.end,
+                span: {
+                  start: entry.key.firstToken.start,
+                  end: entry.key.firstToken.end,
+                },
                 message: `Unknown field '${fieldName}'`,
               };
             }
@@ -171,8 +175,10 @@ export function jsonMatchesType(
               matchScoreTotal += 1.0;
             } else {
               firstMismatchReason ??= {
-                start: value.firstToken.start,
-                end: value.firstToken.end,
+                span: {
+                  start: value.firstToken.start,
+                  end: value.firstToken.end,
+                },
                 message: `Missing required field '${fieldName}'`,
               };
             }
@@ -311,7 +317,7 @@ function mismatch(
   return {
     kind: "mismatch",
     details: {
-      reason: { start: sourceSpan.start, end: sourceSpan.end, message },
+      reason: { span: {start: sourceSpan.start, end: sourceSpan.end}, message },
       matchScore,
     },
   };

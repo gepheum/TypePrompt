@@ -4,6 +4,7 @@ import { describe, it } from "mocha";
 import type { JsonValue } from "./json-types.js";
 import type { TextNodeJoin } from "../xml/text-node-join.js";
 import { parseYaml } from "./yaml-parser.js";
+import { InternalError, InternalErrors } from "../util/error-types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,12 +24,12 @@ function parseOk(source: string): JsonValue<"strict"> {
   return result;
 }
 
-function parseErr(source: string) {
+function parseErr(source: string): readonly InternalError[] {
   const result = parseYaml(textNode(source));
   if (result.kind !== "error") {
     throw new Error(`Expected error but got: ${JSON.stringify(result)}`);
   }
-  return result.errors as { message: string; start: number; end: number }[];
+  return result.errors;
 }
 
 // ---------------------------------------------------------------------------
@@ -48,8 +49,8 @@ describe("parseYaml – errors", () => {
     // "key: {unclosed" — the flow map is never closed
     const errs = parseErr("key: {unclosed");
     expect(errs.length).toMatch(1);
-    expect(errs[0]!.start).toMatch(14);
-    expect(errs[0]!.end).toMatch(15);
+    expect(errs[0]!.span.start).toMatch(14);
+    expect(errs[0]!.span.end).toMatch(15);
   });
 
   it("preserves the yaml error message", () => {
@@ -504,7 +505,7 @@ describe("parseYaml – source offset remapping", () => {
     const result = parseYaml(content);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ start: 10, end: 10, message: "Empty YAML document" }],
+      errors: [{ span: {start: 10, end: 10}, message: "Empty YAML document" }],
     });
   });
 });
