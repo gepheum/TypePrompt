@@ -16,7 +16,7 @@ import type {
   JsonValue,
 } from "./json-types.js";
 import {
-  decodedOffsetToSourceOffset,
+  decodedToSourceOffset,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
 
@@ -590,8 +590,10 @@ class JsonParser<Mode extends JsonMode = "loose"> {
 
   pushError(start: number, end: number, message: string): void {
     this.errors.push({
-      start: decodedOffsetToSourceOffset(this.content, start),
-      end: decodedOffsetToSourceOffset(this.content, end),
+      span: {
+        start: decodedToSourceOffset(this.content, start),
+        end: decodedToSourceOffset(this.content, end),
+      },
       message,
     });
   }
@@ -599,8 +601,8 @@ class JsonParser<Mode extends JsonMode = "loose"> {
   exampleSlice(start: number, end: number): SourceSpan {
     return {
       text: this.text.slice(start, end),
-      start: decodedOffsetToSourceOffset(this.content, start),
-      end: decodedOffsetToSourceOffset(this.content, end),
+      start: decodedToSourceOffset(this.content, start),
+      end: decodedToSourceOffset(this.content, end),
     };
   }
 

@@ -1,10 +1,11 @@
+import { parseCTag } from "../ctag/ctag-parser.js";
 import { JsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
 import { InternalError, InternalErrors } from "../util/error-types.js";
 import {
-  decodedOffsetsToSourceOffsets,
+  decodedToSourceOffsets,
   joinTextNodes,
   TextNodeJoin,
 } from "../xml/text-node-join.js";
@@ -200,83 +201,38 @@ class TemplateParser {
         const tag = child.tagName.text;
 
         if (tag === "c") {
-          const attributes = checkXmlAttributes(child, {});
-          if (attributes.kind === "error") {
-            this.errors.push(...attributes.errors);
+          const attrs = checkXmlAttributes(child, {});
+          if (attrs.kind === "error") {
+            this.errors.push(...attrs.errors);
           }
           const textContent = this.extractTextContent(child);
-          CACA
-        } else if (tag === "arg") {
-          if (!child.isSelfClosing) {
-            context.pushError(
-              child.tagName,
-              "<arg> elements must be self-closing",
-            );
-            continue;
-          }
-          const argAttrs = checkXmlAttributes(child, {
-            name: {
-              schema: zod.string().regex(/^[a-z][A-Za-z0-9]*$/),
-              expected: "a lowerCamelCase identifier",
-            },
-            format: {
-              schema: zod.enum(["json", "toon"]).optional(),
-              expected: "'json' or 'toon'",
-            },
-          });
-          if (argAttrs.kind === "error") {
-            context.pushErrors(argAttrs.errors);
-            continue;
-          }
-
-          const argName = argAttrs.attributes.name.value;
-          const formatAttr = argAttrs.attributes.format;
-          const format: "json" | "toon" | null = formatAttr?.value ?? null;
-
-          const declaration = argDeclarations?.find((d) => d.name === argName);
-          if (argDeclarations !== null && declaration === undefined) {
-            context.pushError(
-              argAttrs.attributes.name,
-              `Undeclared arg '${argName}'`,
-            );
+          const cTag = parseCTag(textContent);
+          if (cTag.kind === "error") {
+            this.errors.push(...cTag.errors);
           } else {
-            const declaredType = declaration?.typeName ?? null;
-            if (format !== null && declaredType === null) {
-              context.pushError(
-                formatAttr!,
-                "format can only be specified for an arg that has a declared type",
-              );
-            } else if (format === null && declaredType !== null) {
-              context.pushError(
-                argAttrs.attributes.name,
-                `'format' attribute is required for arg '${argName}'`,
-              );
-            }
+            pieces.push({
+              kind: "c-tag",
+              text: textContent,
+            });
           }
-
-          pieces.push({
-            kind: "arg",
-            name: argName,
-            nameSpan: argAttrs.attributes.name,
-            format,
-          });
         } else if (tag === "enclosed") {
           const encAttrs = checkXmlAttributes(child, {
             tag: {
-              schema: zod.string().regex(/^[A-Za-z_][\w.-]*$/),
+              schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
               expected: "a valid XML tag name",
             },
           });
           if (encAttrs.kind === "error") {
-            context.pushErrors(encAttrs.errors);
-            continue;
+            this.errors.push(...encAttrs.errors);
+          } else {
+            const encTagName = encAttrs.attributes.tag.value;
+            pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+            visitChildren(child);
+            pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
           }
-          const encTagName = encAttrs.attributes.tag.value;
-          pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
-          visitChildren(child);
-          pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+        } else if (tag === "insert") {
         } else {
-          context.pushError(child.tagName, `Unexpected element '<${tag}>'`);
+          this.errors.push(child.tagName, `Unexpected element '<${tag}>'`);
         }
       }
     };

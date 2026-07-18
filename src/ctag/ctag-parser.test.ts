@@ -2,11 +2,16 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { parseCTag } from "./ctag-parser.js";
+import type { TextNodeJoin } from "../xml/text-node-join.js";
+
+function textNode(source: string): TextNodeJoin {
+  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+}
 
 describe("parseCTag", () => {
   it("parses JSON object, array, and ellipsis values", () => {
     const input = '{"foo": true, "items": [1, ...], ...}';
-    const result = parseCTag(input);
+    const result = parseCTag(textNode(input));
 
     expect(result).toMatch({
       kind: "json",
@@ -38,7 +43,7 @@ describe("parseCTag", () => {
     ] as const;
 
     for (const [input, expectedText] of values) {
-      const result = parseCTag(input);
+      const result = parseCTag(textNode(input));
       expect(result).toMatch({
         kind: "identifier",
         identifier: { text: expectedText },
@@ -47,14 +52,14 @@ describe("parseCTag", () => {
   });
 
   it("parses a quoted string as a JSON string, not an identifier", () => {
-    expect(parseCTag('"x"')).toMatch({
+    expect(parseCTag(textNode('"x"'))).toMatch({
       kind: "json",
       json: { kind: "string", value: "x" },
     });
   });
 
   it("parses empty object and empty array", () => {
-    expect(parseCTag("{}")).toMatch({
+    expect(parseCTag(textNode("{}"))).toMatch({
       kind: "json",
       json: {
         kind: "object",
@@ -62,7 +67,7 @@ describe("parseCTag", () => {
       },
     });
 
-    expect(parseCTag("[]")).toMatch({
+    expect(parseCTag(textNode("[]"))).toMatch({
       kind: "json",
       json: {
         kind: "array",
@@ -72,7 +77,7 @@ describe("parseCTag", () => {
   });
 
   it("decodes escaped JSON string values", () => {
-    const result = parseCTag('"line\\nnext"');
+    const result = parseCTag(textNode('"line\\nnext"'));
 
     expect(result).toMatch({
       kind: "json",
@@ -84,7 +89,7 @@ describe("parseCTag", () => {
   });
 
   it("parses JSON values with leading and trailing line comments", () => {
-    const result = parseCTag("// before\ntrue // after");
+    const result = parseCTag(textNode("// before\ntrue // after"));
 
     expect(result).toMatch({
       kind: "json",
@@ -96,7 +101,7 @@ describe("parseCTag", () => {
   });
 
   it("parses JSON values with leading and trailing block comments", () => {
-    const result = parseCTag("/* before */ [1, 2] /* after */");
+    const result = parseCTag(textNode("/* before */ [1, 2] /* after */"));
 
     expect(result).toMatch({
       kind: "json",
@@ -112,7 +117,7 @@ describe("parseCTag", () => {
 
   it("parses comments between object tokens", () => {
     const result = parseCTag(
-      '{"a"/*key-value*/:/*value*/1,/*sep*/"b":/*value*/2}',
+      textNode('{"a"/*key-value*/:/*value*/1,/*sep*/"b":/*value*/2}'),
     );
 
     expect(result).toMatch({
@@ -134,7 +139,7 @@ describe("parseCTag", () => {
   });
 
   it("parses comments between array values", () => {
-    const result = parseCTag("[1, // between\n 2, /* between */ 3]");
+    const result = parseCTag(textNode("[1, // between\n 2, /* between */ 3]"));
 
     expect(result).toMatch({
       kind: "json",
@@ -150,7 +155,7 @@ describe("parseCTag", () => {
   });
 
   it("does not treat comment markers inside strings as comments", () => {
-    const result = parseCTag('"/* not a comment */ // still string"');
+    const result = parseCTag(textNode('"/* not a comment */ // still string"'));
 
     expect(result).toMatch({
       kind: "json",
@@ -162,7 +167,7 @@ describe("parseCTag", () => {
   });
 
   it("reports expected JSON value for empty input", () => {
-    const result = parseCTag("   ");
+    const result = parseCTag(textNode("   "));
 
     expect(result).toMatch({
       kind: "error",
@@ -171,7 +176,7 @@ describe("parseCTag", () => {
   });
 
   it("reports trailing content after a JSON value", () => {
-    const result = parseCTag("true false");
+    const result = parseCTag(textNode("true false"));
 
     expect(result).toMatch({
       kind: "error",
@@ -186,7 +191,7 @@ describe("parseCTag", () => {
   });
 
   it("reports missing colon in an object entry", () => {
-    const result = parseCTag('{"a" 1}');
+    const result = parseCTag(textNode('{"a" 1}'));
 
     expect(result).toMatch({
       kind: "error",
@@ -195,7 +200,7 @@ describe("parseCTag", () => {
   });
 
   it("reports missing comma in an object", () => {
-    const result = parseCTag('{"a": 1 "b": 2}');
+    const result = parseCTag(textNode('{"a": 1 "b": 2}'));
 
     expect(result).toMatch({
       kind: "error",
@@ -210,7 +215,7 @@ describe("parseCTag", () => {
   });
 
   it("reports missing comma in an array", () => {
-    const result = parseCTag("[1 2]");
+    const result = parseCTag(textNode("[1 2]"));
 
     expect(result).toMatch({
       kind: "error",
@@ -225,7 +230,7 @@ describe("parseCTag", () => {
   });
 
   it("reports EOF while parsing object and array", () => {
-    expect(parseCTag('{"a": 1')).toMatch({
+    expect(parseCTag(textNode('{"a": 1'))).toMatch({
       kind: "error",
       errors: [
         {
@@ -236,7 +241,7 @@ describe("parseCTag", () => {
       ],
     });
 
-    expect(parseCTag("[1, 2")).toMatch({
+    expect(parseCTag(textNode("[1, 2"))).toMatch({
       kind: "error",
       errors: [
         {
@@ -249,7 +254,7 @@ describe("parseCTag", () => {
   });
 
   it("reports unterminated JSON string", () => {
-    const result = parseCTag('"abc');
+    const result = parseCTag(textNode('"abc'));
 
     expect(result).toMatch({
       kind: "error",
@@ -258,7 +263,7 @@ describe("parseCTag", () => {
   });
 
   it("reports invalid JSON string escape sequences", () => {
-    const result = parseCTag('"bad\\q"');
+    const result = parseCTag(textNode('"bad\\q"'));
 
     expect(result).toMatch({
       kind: "error",
@@ -273,7 +278,7 @@ describe("parseCTag", () => {
   });
 
   it("reports invalid JSON string unicode escapes", () => {
-    const result = parseCTag('"\\u12"');
+    const result = parseCTag(textNode('"\\u12"'));
 
     expect(result).toMatch({
       kind: "error",
@@ -288,7 +293,7 @@ describe("parseCTag", () => {
   });
 
   it("reports invalid decode for object key strings", () => {
-    const result = parseCTag('{"\\q": 1}');
+    const result = parseCTag(textNode('{"\\q": 1}'));
 
     expect(result).toMatch({
       kind: "error",
@@ -303,7 +308,7 @@ describe("parseCTag", () => {
   });
 
   it("reports each invalid JSON string decode in the same input", () => {
-    const result = parseCTag('["\\q", "\\x"]');
+    const result = parseCTag(textNode('["\\q", "\\x"]'));
 
     expect(result).toMatch({
       kind: "error",
@@ -323,7 +328,7 @@ describe("parseCTag", () => {
   });
 
   it("parses partial boolean keyword as identifier", () => {
-    const result = parseCTag("tru");
+    const result = parseCTag(textNode("tru"));
 
     expect(result).toMatch({
       kind: "identifier",
@@ -332,7 +337,7 @@ describe("parseCTag", () => {
   });
 
   it("parses partial null keyword as identifier", () => {
-    const result = parseCTag("nul");
+    const result = parseCTag(textNode("nul"));
 
     expect(result).toMatch({
       kind: "identifier",
@@ -341,7 +346,7 @@ describe("parseCTag", () => {
   });
 
   it("reports invalid number token", () => {
-    const result = parseCTag("-");
+    const result = parseCTag(textNode("-"));
 
     expect(result).toMatch({
       kind: "error",
@@ -350,7 +355,7 @@ describe("parseCTag", () => {
   });
 
   it("reports unterminated block comments at start and after a value", () => {
-    expect(parseCTag("/* open")).toMatch({
+    expect(parseCTag(textNode("/* open"))).toMatch({
       kind: "error",
       errors: [
         {
@@ -361,7 +366,7 @@ describe("parseCTag", () => {
       ],
     });
 
-    expect(parseCTag("1 /* open")).toMatch({
+    expect(parseCTag(textNode("1 /* open"))).toMatch({
       kind: "error",
       errors: [
         {
@@ -374,7 +379,7 @@ describe("parseCTag", () => {
   });
 
   it("still reports structural errors with comments in between tokens", () => {
-    const result = parseCTag("[1 /* gap */ 2]");
+    const result = parseCTag(textNode("[1 /* gap */ 2]"));
 
     expect(result).toMatch({
       kind: "error",
@@ -387,7 +392,7 @@ describe("parseCTag", () => {
   });
 
   it("reports duplicate object keys", () => {
-    const result = parseCTag('{"a": 1, "a": 2}');
+    const result = parseCTag(textNode('{"a": 1, "a": 2}'));
 
     expect(result).toMatch({
       kind: "error",
@@ -402,7 +407,7 @@ describe("parseCTag", () => {
   });
 
   it("reports non-string object keys", () => {
-    const result = parseCTag("{1: 2}");
+    const result = parseCTag(textNode("{1: 2}"));
 
     expect(result).toMatch({
       kind: "error",
@@ -411,7 +416,7 @@ describe("parseCTag", () => {
   });
 
   it("recovers and reports multiple errors for inputs with multiple issues", () => {
-    const result = parseCTag('{"a": 1 "b": 2, c: 3}');
+    const result = parseCTag(textNode('{"a": 1 "b": 2, c: 3}'));
 
     expect(result).toMatch({
       kind: "error",
@@ -432,7 +437,7 @@ describe("parseCTag", () => {
   });
 
   it("recovers from repeated missing commas and reports each issue", () => {
-    const result = parseCTag("[1 2 3]");
+    const result = parseCTag(textNode("[1 2 3]"));
 
     expect(result).toMatch({
       kind: "error",
@@ -453,7 +458,7 @@ describe("parseCTag", () => {
   });
 
   it("recovers from unquoted keys and missing colons in object entries", () => {
-    const result = parseCTag("{a 1 b 2}");
+    const result = parseCTag(textNode("{a 1 b 2}"));
 
     if (result.kind !== "error") {
       throw new Error("Expected parse errors");
@@ -467,7 +472,7 @@ describe("parseCTag", () => {
   });
 
   it("recovers from extraneous colons before object/array closers", () => {
-    expect(parseCTag('{"a": 1:}')).toMatch({
+    expect(parseCTag(textNode('{"a": 1:}'))).toMatch({
       kind: "error",
       errors: [
         {
@@ -476,7 +481,7 @@ describe("parseCTag", () => {
       ],
     });
 
-    expect(parseCTag("[1:]")).toMatch({
+    expect(parseCTag(textNode("[1:]"))).toMatch({
       kind: "error",
       errors: [
         {

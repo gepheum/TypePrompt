@@ -4,8 +4,7 @@ export type InternalErrors = {
 };
 
 export type InternalError = {
-  readonly start: number;
-  readonly end: number;
+  readonly span: Omit<SourceSpan, "text">;
   readonly message: string;
 };
 

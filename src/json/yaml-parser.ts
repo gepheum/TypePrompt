@@ -3,7 +3,7 @@ import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import type { InternalErrors } from "../util/error-types.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 import {
-  decodedOffsetToSourceOffset,
+  decodedToSourceOffset,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
 
@@ -29,8 +29,8 @@ export function parseYaml(
       kind: "error",
       errors: [
         {
-          start: decodedOffsetToSourceOffset(content, 0),
-          end: decodedOffsetToSourceOffset(content, 0),
+          start: decodedToSourceOffset(content, 0),
+          end: decodedToSourceOffset(content, 0),
           message: "Empty YAML document",
         },
       ],
@@ -43,8 +43,8 @@ export function parseYaml(
       kind: "error",
       errors: [
         {
-          start: decodedOffsetToSourceOffset(content, 0),
-          end: decodedOffsetToSourceOffset(content, decoded.length),
+          start: decodedToSourceOffset(content, 0),
+          end: decodedToSourceOffset(content, decoded.length),
           message: "Unsupported YAML node type",
         },
       ],
@@ -58,14 +58,14 @@ export function parseYaml(
 /// positions that the YAML library may report one past the end of the input.
 function mapOffset(content: TextNodeJoin, offset: number): number {
   const clamped = Math.min(offset, content.decoded.length);
-  return decodedOffsetToSourceOffset(content, clamped) + (offset - clamped);
+  return decodedToSourceOffset(content, clamped) + (offset - clamped);
 }
 
 function span(content: TextNodeJoin, start: number, end: number) {
   return {
     text: content.decoded.slice(start, end),
-    start: decodedOffsetToSourceOffset(content, start),
-    end: decodedOffsetToSourceOffset(content, end),
+    start: decodedToSourceOffset(content, start),
+    end: decodedToSourceOffset(content, end),
   };
 }
 

@@ -1,8 +1,8 @@
 import { checkNoAmbiguity } from "../util/casing.js";
 import type { InternalError, InternalErrors, SourceSpan } from "../util/error-types.js";
 import {
-  decodedOffsetsToSourceOffsets,
-  decodedOffsetToSourceOffset,
+  decodedToSourceOffsets,
+  decodedToSourceOffset,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
 import type {
@@ -87,8 +87,8 @@ class SchemaParser {
   private remapSpan(span: SourceSpan): SourceSpan {
     return {
       text: span.text,
-      start: decodedOffsetToSourceOffset(this.content, span.start),
-      end: decodedOffsetToSourceOffset(this.content, span.end),
+      start: decodedToSourceOffset(this.content, span.start),
+      end: decodedToSourceOffset(this.content, span.end),
     };
   }
 
@@ -148,7 +148,7 @@ class SchemaParser {
   }
 
   private remapErrors(errors: readonly InternalError[]): readonly InternalError[] {
-    return errors.map(decodedOffsetsToSourceOffsets(this.content));
+    return errors.map(decodedToSourceOffsets(this.content));
   }
 
   private parseTypeDeclaration(): TypeDeclaration | null {
@@ -235,8 +235,7 @@ class SchemaParser {
       if (jsdoc) {
         // jsdoc was attached to nothing — report the error.
         this.parserErrors.push({
-          start: name.start,
-          end: name.end,
+          span: name,
           message: "Expected: identifier",
         });
       }
@@ -382,8 +381,10 @@ class SchemaParser {
       // sequence of characters.
       if (position !== expectedAt) {
         this.tokenizerErrors.push({
-          start: expectedAt,
-          end: position,
+          span: {
+            start: expectedAt,
+            end: position,
+          },
           message: "Invalid sequence of characters",
         });
       }
@@ -400,8 +401,10 @@ class SchemaParser {
       if (group[1] !== undefined) {
         if (!text.endsWith("*/")) {
           this.tokenizerErrors.push({
-            start: position,
-            end: position + 2,
+            span: {
+              start: position,
+              end: position + 2,
+            },
             message: "Unterminated multi-line comment",
           });
         }
@@ -410,8 +413,10 @@ class SchemaParser {
         } else {
           // Terminated non-JSDoc block comment — report error and skip.
           this.tokenizerErrors.push({
+            span: {
             start: position,
             end: position + 2,
+            },
             message:
               "Non-JSDoc comments are not allowed; use /** ... */ instead",
           });
@@ -421,8 +426,10 @@ class SchemaParser {
       } else if (group[4] !== undefined) {
         // Single-line comment — report error and skip.
         this.tokenizerErrors.push({
-          start: position,
-          end: position + 2,
+          span: {
+            start: position,
+            end: position + 2,
+          },
           message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
         });
         continue;
@@ -430,14 +437,18 @@ class SchemaParser {
         // Validate identifier.
         if (/^[0-9]/.test(text)) {
           this.tokenizerErrors.push({
-            start: position,
-            end: re.lastIndex,
+            span: {
+              start: position,
+              end: re.lastIndex,
+            },
             message: "Invalid identifier",
           });
         } else if (text.includes("_")) {
           this.tokenizerErrors.push({
-            start: position,
-            end: re.lastIndex,
+            span: {
+              start: position,
+              end: re.lastIndex,
+            },
             message: "Must not contain underscores",
           });
         }
@@ -448,14 +459,18 @@ class SchemaParser {
         // Validate string literal.
         if (text.at(-1) !== text[0]) {
           this.tokenizerErrors.push({
+            span: {
             start: position,
             end: re.lastIndex,
+            },
             message: "Unterminated string literal",
           });
         } else if (text.includes("\\")) {
           this.tokenizerErrors.push({
+            span: {
             start: position,
             end: re.lastIndex,
+            },
             message: "Must not contain escape sequences",
           });
         }
@@ -509,8 +524,10 @@ class SchemaParser {
       .filter((d) => d)
       .join(" or ");
     this.parserErrors.push({
+      span: {
       start: token.start,
       end: token.end,
+      },
       message: `Expected: ${descriptors}`,
     });
     return "noMatch";

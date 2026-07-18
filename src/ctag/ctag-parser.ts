@@ -1,6 +1,6 @@
 import { parseJson } from "../json/json-parser.js";
 import type { InternalErrors } from "../util/error-types.js";
-import { decodedOffsetToSourceOffset, TextNodeJoin } from "../xml/text-node-join.js";
+import { decodedToSourceOffset, TextNodeJoin } from "../xml/text-node-join.js";
 import { CTag } from "./ctag-types.js";
 
 export function parseCTag(content: TextNodeJoin): CTag | InternalErrors {
@@ -10,8 +10,8 @@ export function parseCTag(content: TextNodeJoin): CTag | InternalErrors {
       kind: "identifier",
       identifier: {
         text: identifier,
-        start: decodedOffsetToSourceOffset(content, 0),
-        end: decodedOffsetToSourceOffset(content, identifier.length),
+        start: decodedToSourceOffset(content, 0),
+        end: decodedToSourceOffset(content, identifier.length),
       },
     };
   } else {
