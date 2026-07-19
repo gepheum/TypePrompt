@@ -5,7 +5,7 @@ import {
   InternalError,
   InternalErrors,
   SourceSpan,
-} from "../util/error-types.js";
+} from "../util/common-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {

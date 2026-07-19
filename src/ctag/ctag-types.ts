@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json/json-types.js";
-import type { SourceSpan } from "../util/error-types.js";
+import type { SourceSpan } from "../util/common-types.js";
 
 export type CTag =
   | {

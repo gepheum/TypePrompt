@@ -1,6 +1,6 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import type { InternalErrors } from "../util/error-types.js";
+import type { InternalErrors } from "../util/common-types.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 import {
   decodedToSourceOffset,

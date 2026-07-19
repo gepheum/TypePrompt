@@ -11,7 +11,7 @@ import type {
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
-import type { SourceSpan } from "../util/error-types.js";
+import type { SourceSpan } from "../util/common-types.js";
 import type { Example } from "./example-types.js";
 import { validateExample, validateJson } from "./example-validator.js";
 

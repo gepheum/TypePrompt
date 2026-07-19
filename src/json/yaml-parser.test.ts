@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import type { JsonValue } from "./json-types.js";
 import type { TextNodeJoin } from "../xml/text-node-join.js";
 import { parseYaml } from "./yaml-parser.js";
-import { InternalError, InternalErrors } from "../util/error-types.js";
+import { InternalError, InternalErrors } from "../util/common-types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

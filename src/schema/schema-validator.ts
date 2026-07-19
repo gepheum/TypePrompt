@@ -3,7 +3,7 @@ import type {
   InternalError,
   InternalErrors,
   SourceSpan,
-} from "../util/error-types.js";
+} from "../util/common-types.js";
 import type {
   Interface,
   NamingHint,

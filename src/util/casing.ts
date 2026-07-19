@@ -1,63 +1,50 @@
-type Name = {
-  readonly name: string;
-  readonly start: number;
-  readonly end: number;
-  readonly path?: string;
-};
+import { DecodedSpan, SourceSpan } from "./common-types.js";
 
-type Error = {
+type Error<S> = {
+  readonly span: SourceSpan;
   readonly message: string;
-  readonly start: number;
-  readonly end: number;
-  readonly path?: string;
 };
 
-export function checkNoAmbiguity(
-  names: ReadonlyArray<Name>,
+export function checkNoAmbiguity<S extends DecodedSpan>(
+  names: ReadonlyArray<S>,
   options?: {
     readonly exactMatchIsConflict?: boolean;
   },
-): ReadonlyArray<Error> {
-  const firstByLowercase = new Map<string, Name>();
+): ReadonlyArray<Error<S>> {
+  const firstByLowercase = new Map<string, S>();
   const firstDuplicateAlreadyReported = new Set<string>();
-  const errors: Error[] = [];
+  const errors: Error<S>[] = [];
   const exactMatchIsConflict = options?.exactMatchIsConflict ?? false;
 
   for (const name of names) {
-    const lowercase = name.name.toLowerCase();
+    const lowercase = name.text.toLowerCase();
     const first = firstByLowercase.get(lowercase);
     if (first === undefined) {
       firstByLowercase.set(lowercase, name);
       continue;
     }
 
-    if (name.name === first.name) {
+    if (name.text === first.text) {
       if (!exactMatchIsConflict) {
         continue;
       }
       if (!firstDuplicateAlreadyReported.has(lowercase)) {
         errors.push({
-          start: first.start,
-          end: first.end,
-          path: first.path,
-          message: `Name '${name.name}' is duplicated`,
+          span: first,
+          message: `Name '${name.text}' is duplicated`,
         });
         firstDuplicateAlreadyReported.add(lowercase);
       }
       errors.push({
-        start: name.start,
-        end: name.end,
-        path: name.path,
-        message: `Name '${name.name}' is duplicated`,
+        span: name,
+        message: `Name '${name.text}' is duplicated`,
       });
       continue;
     }
 
     errors.push({
-      start: name.start,
-      end: name.end,
-      path: name.path,
-      message: `Name '${name.name}' conflicts with '${first.name}'`,
+      span: name,
+      message: `Name '${name.text}' conflicts with '${first.text}'`,
     });
   }
 

@@ -1,4 +1,4 @@
-import type { SourceSpan } from "../util/error-types.js";
+import type { SourceSpan } from "../util/common-types.js";
 import type { OffsetMap } from "./text-node-join.js";
 
 export type CommentsPolicy = "drop-comments" | "keep-comments";
@@ -32,7 +32,8 @@ export type ElementNode<C extends CommentsPolicy = "drop-comments"> = {
   /// Empty (start === end) for self-closing elements and elements with no content.
   readonly contentSpan: SourceSpan;
   readonly children: readonly XmlNode<C>[];
-  readonly tagName: SourceSpan;
+  readonly tagName: string;
+  readonly tagSpan: SourceSpan;
   readonly attributes: { readonly [name: string]: Attribute };
   readonly isSelfClosing: boolean;
 };

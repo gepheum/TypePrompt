@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { InternalErrors, SourceSpan } from "../util/error-types.js";
+import type { InternalErrors, SourceSpan } from "../util/common-types.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type {
   XmlComment as CommentNode,

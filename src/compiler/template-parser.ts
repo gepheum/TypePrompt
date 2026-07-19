@@ -3,7 +3,7 @@ import { JsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
-import { InternalError, InternalErrors } from "../util/error-types.js";
+import { InternalError, InternalErrors } from "../util/common-types.js";
 import {
   decodedToSourceOffsets,
   joinTextNodes,

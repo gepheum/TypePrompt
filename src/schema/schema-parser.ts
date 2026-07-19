@@ -1,5 +1,5 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, InternalErrors, SourceSpan } from "../util/error-types.js";
+import type { InternalError, InternalErrors, SourceSpan } from "../util/common-types.js";
 import {
   decodedToSourceOffsets,
   decodedToSourceOffset,

@@ -6,9 +6,9 @@ import { checkNoAmbiguity } from "./casing.js";
 describe("checkNoAmbiguity", () => {
   it("returns no errors when all casings are consistent", () => {
     const result = checkNoAmbiguity([
-      { name: "Response", start: 0, end: 8 },
-      { name: "Response", start: 20, end: 28 },
-      { name: "Error", start: 40, end: 45 },
+      { text: "Response", start: 0, end: 8 },
+      { text: "Response", start: 20, end: 28 },
+      { text: "Error", start: 40, end: 45 },
     ]);
 
     expect(result).toMatch([]);
@@ -16,44 +16,52 @@ describe("checkNoAmbiguity", () => {
 
   it("reports an error for each name that conflicts with first casing", () => {
     const result = checkNoAmbiguity([
-      { name: "Response", start: 0, end: 8 },
-      { name: "response", start: 10, end: 18 },
-      { name: "RESPONSE", start: 20, end: 28 },
-      { name: "Error", start: 30, end: 35 },
-      { name: "error", start: 36, end: 41 },
+      { text: "Response", start: 0, end: 8 },
+      { text: "response", start: 10, end: 18 },
+      { text: "RESPONSE", start: 20, end: 28 },
+      { text: "Error", start: 30, end: 35 },
+      { text: "error", start: 36, end: 41 },
     ]);
 
     expect(result).toMatch([
       {
         message: "Name 'response' conflicts with 'Response'",
+        span: {
         start: 10,
         end: 18,
+        },
       },
       {
         message: "Name 'RESPONSE' conflicts with 'Response'",
+        span: {
         start: 20,
         end: 28,
+        },
       },
       {
         message: "Name 'error' conflicts with 'Error'",
+        span: {
         start: 36,
         end: 41,
+        },
       },
     ]);
   });
 
   it("uses the first seen casing as the canonical one", () => {
     const result = checkNoAmbiguity([
-      { name: "response", start: 0, end: 8 },
-      { name: "Response", start: 10, end: 18 },
-      { name: "response", start: 20, end: 28 },
+      { text: "response", start: 0, end: 8 },
+      { text: "Response", start: 10, end: 18 },
+      { text: "response", start: 20, end: 28 },
     ]);
 
     expect(result).toMatch([
       {
         message: "Name 'Response' conflicts with 'response'",
+        span: {
         start: 10,
         end: 18,
+        },
       },
     ]);
   });
@@ -61,8 +69,8 @@ describe("checkNoAmbiguity", () => {
   it("can treat exact matches as conflicts when requested", () => {
     const result = checkNoAmbiguity(
       [
-        { name: "foo", start: 0, end: 3 },
-        { name: "foo", start: 10, end: 13 },
+        { text: "foo", start: 0, end: 3 },
+        { text: "foo", start: 10, end: 13 },
       ],
       { exactMatchIsConflict: true },
     );
@@ -70,13 +78,17 @@ describe("checkNoAmbiguity", () => {
     expect(result).toMatch([
       {
         message: "Name 'foo' is duplicated",
+        span: {
         start: 0,
         end: 3,
+        }
       },
       {
         message: "Name 'foo' is duplicated",
+        span: {
         start: 10,
         end: 13,
+        },
       },
     ]);
   });

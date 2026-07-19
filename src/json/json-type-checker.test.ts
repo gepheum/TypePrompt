@@ -3,7 +3,7 @@ import { describe, it } from "mocha";
 
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaValidationContext } from "../schema/schema-types.js";
-import type { SourceSpan } from "../util/error-types.js";
+import type { SourceSpan } from "../util/common-types.js";
 import { validateJson } from "./json-type-checker.js";
 import type {
   JsonArray,

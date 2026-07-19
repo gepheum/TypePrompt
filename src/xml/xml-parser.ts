@@ -2,7 +2,7 @@ import type {
   InternalError,
   InternalErrors,
   SourceSpan,
-} from "../util/error-types.js";
+} from "../util/common-types.js";
 import type { OffsetMapEntry } from "./text-node-join.js";
 import type {
   Attribute,
@@ -98,7 +98,7 @@ class XmlParser {
     const decoded = this.decodeXmlText(start, end);
     this.appendNode({
       kind: "text",
-      sourceSpan: this.makeSpan(start, end),
+      sourceSpan: {start: start, end: end},
       decoded: decoded.decoded,
       offsetMap: decoded.offsetMap,
       allWhitespace: /^\s*$/.test(decoded.decoded),
@@ -113,14 +113,16 @@ class XmlParser {
     const tokenEnd = endMarker === -1 ? this.content.length : endMarker + 3;
     if (endMarker === -1) {
       this.errors.push({
-        start: tokenStart,
-        end: tokenEnd,
+        span: {
+          start: tokenStart,
+          end: tokenEnd,
+        },
         message: "Unclosed XML comment",
       });
     } else if (this.commentsPolicy === "keep-comments") {
       this.appendNode({
         kind: "comment",
-        sourceSpan: this.makeSpan(tokenStart, tokenEnd),
+        sourceSpan: {start: tokenStart, end: tokenEnd},
       } satisfies XmlComment as XmlNode<CommentsPolicy>);
     }
     this.cursor = tokenEnd;
@@ -228,14 +230,16 @@ class XmlParser {
     }
     this.cursor = RE_XML_NAME.lastIndex;
     const nameEnd = this.cursor;
-    const nameSpan = this.makeSpan(nameStart, nameEnd);
+    const nameSpan = {
+      start: nameStart,
+      end: nameEnd,
+    };
 
     this.skipWhitespace();
 
     if (this.content[this.cursor] !== "=") {
       this.errors.push({
-        start: nameStart,
-        end: nameEnd,
+        span: nameSpan,
         message: `Attribute '${nameSpan.text}' must have a value`,
       });
       return {
@@ -331,16 +335,20 @@ class XmlParser {
 
     if (foundIndex === -1) {
       this.errors.push({
-        start: tokenStart,
-        end: tokenEnd,
+        span: {
+          start: tokenStart,
+          end: tokenEnd,
+        },
         message: `Unexpected closing tag '</${name}>'`,
       });
       return;
     }
 
     this.errors.push({
-      start: tokenStart,
-      end: tokenEnd,
+      span: {
+        start: tokenStart,
+        end: tokenEnd,
+      },
       message: `Mismatched closing tag '</${name}>'; expected '</${top.node.tagName.text}>'`,
     });
 
@@ -434,8 +442,10 @@ class XmlParser {
       } else {
         // Unknown or malformed entity – record an error and keep the raw text.
         this.errors.push({
-          start: sourceStart + i,
-          end: sourceStart + semicolon + 1,
+          span: {
+            start: sourceStart + i,
+            end: sourceStart + semicolon + 1,
+          },
           message:
             result.kind === "malformed"
               ? "malformed character entity."
@@ -466,7 +476,7 @@ class XmlParser {
   ): XmlNode<CommentsPolicy> {
     return {
       ...el.node,
-      contentSpan: this.makeSpan(contentStart, contentEnd),
+      contentSpan: {start: contentStart, end: contentEnd},
     } as XmlNode<CommentsPolicy>;
   }
 
@@ -479,8 +489,8 @@ class XmlParser {
     }
   }
 
-  private makeSpan(start: number, end: number): SourceSpan {
-    return { text: this.content.slice(start, end), start, end };
+  private sliceContent(span: SourceSpan): string {
+    return this.content.slice(span.start, span.end);
   }
 
   private skipWhitespace(): void {

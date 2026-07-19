@@ -1,4 +1,4 @@
-import { InternalError } from "../util/error-types.js";
+import { InternalError } from "../util/common-types.js";
 
 export type TextNodeJoin = {
   readonly decoded: string;

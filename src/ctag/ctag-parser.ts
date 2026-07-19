@@ -1,5 +1,5 @@
 import { parseJson } from "../json/json-parser.js";
-import type { InternalErrors } from "../util/error-types.js";
+import type { InternalErrors } from "../util/common-types.js";
 import { decodedToSourceOffset, TextNodeJoin } from "../xml/text-node-join.js";
 import { CTag } from "./ctag-types.js";
 

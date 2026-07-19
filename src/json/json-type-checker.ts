@@ -5,7 +5,7 @@ import type {
   TypeDeclaration,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { InternalError, SourceSpan } from "../util/error-types.js";
+import type { InternalError, SourceSpan } from "../util/common-types.js";
 import type { JsonTypeMatch, JsonValue } from "./json-types.js";
 
 export function validateJson(

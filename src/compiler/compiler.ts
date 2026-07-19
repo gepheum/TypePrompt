@@ -1,4 +1,4 @@
-import { InternalError } from "../util/error-types.js";
+import { InternalError } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,
