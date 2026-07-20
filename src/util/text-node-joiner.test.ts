@@ -1,11 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { MappedText } from "./common-types.js";
-import { joinTextNodes } from "./text-node-joiner.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode, TextNode } from "../xml/xml-types.js";
+import { MappedText } from "./common-types.js";
 import { textToSourcePosition } from "./position-mapper.js";
+import { joinTextNodes } from "./text-node-joiner.js";
 
 function expectSuccess(
   result: ReturnType<typeof parseXmlDocument>,

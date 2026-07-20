@@ -1,13 +1,13 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { TextNodeJoin } from "../util/text-node-joiner.js";
 import { parseSchema } from "./schema-parser.js";
+import { MappedText } from "../util/common-types.js";
 
-function textNode(source: string): TextNodeJoin {
+function textNode(source: string): MappedText {
   return {
-    decoded: source,
-    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+    text: source,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
 }
 

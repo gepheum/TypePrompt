@@ -5,7 +5,7 @@ import type {
   MappedText,
   TextSpan,
 } from "../util/common-types.js";
-import { textToSourcePosition } from "../util/text-node-joiner.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   SchemaField,
   SchemaParseResult,
@@ -59,12 +59,12 @@ class SchemaParser {
     if (this.tokenizerErrors.length) {
       return {
         kind: "error",
-        errors: this.remapErrors(this.tokenizerErrors),
+        errors: this.tokenizerErrors,
       };
     } else if (this.parserErrors.length) {
       return {
         kind: "error",
-        errors: this.remapErrors(this.parserErrors),
+        errors: this.parserErrors,
       };
     }
 
@@ -304,11 +304,9 @@ class SchemaParser {
       // If there is a gap between two matches, it means that we have an invalid
       // sequence of characters.
       if (position !== expectedAt) {
-        this.tokenizerErrors.push({
-          span: {
-            start: expectedAt,
-            end: position,
-          },
+        this.pushTokenizerError({
+          start: expectedAt,
+          end: position,
           message: "Invalid sequence of characters",
         });
       }
@@ -324,11 +322,9 @@ class SchemaParser {
       let tokenKind: Token["kind"];
       if (group[1] !== undefined) {
         if (!text.endsWith("*/")) {
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: position + 2,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: position + 2,
             message: "Unterminated multi-line comment",
           });
         }
@@ -336,11 +332,9 @@ class SchemaParser {
           tokenKind = "jsdoc";
         } else {
           // Terminated non-JSDoc block comment — report error and skip.
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: position + 2,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: position + 2,
             message:
               "Non-JSDoc comments are not allowed; use /** ... */ instead",
           });
@@ -349,30 +343,24 @@ class SchemaParser {
         }
       } else if (group[4] !== undefined) {
         // Single-line comment — report error and skip.
-        this.tokenizerErrors.push({
-          span: {
-            start: position,
-            end: position + 2,
-          },
+        this.pushTokenizerError({
+          start: position,
+          end: position + 2,
           message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
         });
         continue;
       } else if (group[5] !== undefined) {
         // Validate identifier.
         if (/^[0-9]/.test(text)) {
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: re.lastIndex,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: re.lastIndex,
             message: "Invalid identifier",
           });
         } else if (text.includes("_")) {
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: re.lastIndex,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: re.lastIndex,
             message: "Must not contain underscores",
           });
         }
@@ -382,19 +370,15 @@ class SchemaParser {
       } else if (group[8] !== undefined || group[9] !== undefined) {
         // Validate string literal.
         if (text.at(-1) !== text[0]) {
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: re.lastIndex,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: re.lastIndex,
             message: "Unterminated string literal",
           });
         } else if (text.includes("\\")) {
-          this.tokenizerErrors.push({
-            span: {
-              start: position,
-              end: re.lastIndex,
-            },
+          this.pushTokenizerError({
+            start: position,
+            end: re.lastIndex,
             message: "Must not contain escape sequences",
           });
         }
@@ -471,6 +455,20 @@ class SchemaParser {
       start: textToSourcePosition(content, token.textStart),
       end: textToSourcePosition(content, token.textEnd),
     };
+  }
+
+  private pushTokenizerError(args: {
+    start: number;
+    end: number;
+    message: string;
+  }): void {
+    this.tokenizerErrors.push({
+      span: {
+        start: args.start,
+        end: args.end,
+      },
+      message: args.message,
+    });
   }
 
   private readonly tokenizerErrors: InternalError[] = [];
