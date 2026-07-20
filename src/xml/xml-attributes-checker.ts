@@ -3,7 +3,7 @@ import { type ZodType } from "zod";
 import type {
   InternalError,
   InternalErrors,
-  SourceSpan,
+  Span,
 } from "../util/common-types.js";
 import type { ElementNode } from "./xml-types.js";
 
@@ -17,8 +17,8 @@ type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 type AttributeValues<T extends AttributeSchemas> = {
   [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
     ? undefined extends U
-      ? { span: SourceSpan; value: NonNullable<U> } | undefined
-      : { span: SourceSpan; value: U }
+      ? { span: Span; value: NonNullable<U> } | undefined
+      : { span: Span; value: U }
     : never;
 };
 

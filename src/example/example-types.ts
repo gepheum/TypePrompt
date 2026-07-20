@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json/json-types.js";
-import type { SourceSpan } from "../util/common-types.js";
+import type { Span } from "../util/common-types.js";
 
 export type Example =
   | {
@@ -10,6 +10,6 @@ export type Example =
   | {
       readonly kind: "success:identifier";
       /** Unquoted identifier. */
-      readonly identifier: SourceSpan;
+      readonly identifier: Span;
       readonly json?: undefined;
     };

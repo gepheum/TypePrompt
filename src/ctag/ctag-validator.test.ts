@@ -11,7 +11,7 @@ import type {
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
-import type { SourceSpan } from "../util/common-types.js";
+import type { Span } from "../util/common-types.js";
 import type { CTag } from "./ctag-types.js";
 import { validateCTag } from "./ctag-validator.js";
 
@@ -34,7 +34,7 @@ function parseSchemaOrThrow(
   return result;
 }
 
-function span(text: string): SourceSpan {
+function span(text: string): Span {
   return { text, start: 0, end: text.length };
 }
 

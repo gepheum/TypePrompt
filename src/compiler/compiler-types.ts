@@ -4,7 +4,7 @@ import { SchemaParseResult } from "../schema/schema-types.js";
 import {
   InternalError,
   InternalErrors,
-  SourceSpan,
+  Span,
 } from "../util/common-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
@@ -39,10 +39,10 @@ export type Template = {
   readonly kind: "success";
 
   /** Includes the <template>...</template> tags. */
-  readonly xmlSource: SourceSpan;
+  readonly xmlSource: Span;
 
-  readonly name: SourceSpan;
-  readonly namespace: SourceSpan | null;
+  readonly name: Span;
+  readonly namespace: Span | null;
 
   readonly meta: JsonValue<"strict"> | null;
 
@@ -61,12 +61,12 @@ export type Template = {
 
 export type OutputFormat = {
   readonly kind: "json" | "text" | "custom";
-  readonly format: SourceSpan;
+  readonly format: Span;
 };
 
 export type PromptVariant = {
   /** Variant name. */
-  readonly variant: SourceSpan;
+  readonly variant: Span;
   readonly content: PromptContent;
 };
 
@@ -96,14 +96,14 @@ export type BodyPiece =
     };
 
 export type Expression =
-  | { readonly kind: "input"; span: SourceSpan }
-  | { readonly kind: "it"; span: SourceSpan }
+  | { readonly kind: "input"; span: Span }
+  | { readonly kind: "it"; span: Span }
   | {
       readonly kind: "property";
       readonly left: Expression;
       readonly operator: "." | "?.";
-      readonly operatorSpan: SourceSpan;
-      readonly property: SourceSpan;
+      readonly operatorSpan: Span;
+      readonly property: Span;
     };
 
 export type InsertFormat =

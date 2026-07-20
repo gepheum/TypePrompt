@@ -1,7 +1,7 @@
 import type {
   InternalError,
   InternalErrors,
-  SourceSpan,
+  Span,
 } from "../util/common-types.js";
 import type {
   JsonArray,
@@ -598,7 +598,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
     });
   }
 
-  exampleSlice(start: number, end: number): SourceSpan {
+  exampleSlice(start: number, end: number): Span {
     return {
       text: this.text.slice(start, end),
       start: decodedToSourceOffset(this.content, start),

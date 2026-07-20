@@ -1,4 +1,4 @@
-import type { InternalError, SourceSpan } from "../util/common-types.js";
+import type { InternalError, Span } from "../util/common-types.js";
 
 /**
  * In "loose" mode, the JSON source may contain ellipses ("..."") and Javascript
@@ -18,7 +18,7 @@ export type JsonValue<Mode extends JsonMode> =
 export type JsonObject<Mode extends JsonMode> = {
   readonly kind: "object";
   /// The left curly bracket.
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
   readonly entries: readonly JsonObjectEntry<Mode>[];
   readonly ellipsis?: JsonEllipsis;
 };
@@ -31,37 +31,37 @@ export type JsonObjectEntry<Mode extends JsonMode> = {
 export type JsonArray<Mode extends JsonMode> = {
   readonly kind: "array";
   /// The left square bracket.
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
   readonly elements: readonly JsonValue<Mode>[];
 };
 
 export type JsonString = {
   readonly kind: "string";
   /// The quoted string.
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
   readonly value: string;
 };
 
 export type JsonNumber = {
   readonly kind: "number";
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
   readonly value: number;
 };
 
 export type JsonBoolean = {
   readonly kind: "boolean";
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
   readonly value: boolean;
 };
 
 export type JsonNull = {
   readonly kind: "null";
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
 };
 
 export type JsonEllipsis = {
   readonly kind: "ellipsis";
-  readonly firstToken: SourceSpan;
+  readonly firstToken: Span;
 };
 
 export type JsonTypeMatch =

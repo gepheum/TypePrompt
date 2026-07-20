@@ -5,7 +5,7 @@ import type {
   TypeDeclaration,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { InternalError, SourceSpan } from "../util/common-types.js";
+import type { InternalError, Span } from "../util/common-types.js";
 import type { JsonTypeMatch, JsonValue } from "./json-types.js";
 
 export function validateJson(
@@ -307,7 +307,7 @@ const FAST_MISMATCH = { kind: "mismatch" } as const;
 
 function mismatch(
   mode: "fast" | "thorough",
-  sourceSpan: SourceSpan,
+  sourceSpan: Span,
   message: string,
   matchScore = 0,
 ): JsonTypeMatch {

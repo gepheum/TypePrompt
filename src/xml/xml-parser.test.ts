@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { InternalErrors, SourceSpan } from "../util/common-types.js";
+import type { InternalErrors, Span } from "../util/common-types.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type {
   XmlComment as CommentNode,
@@ -27,7 +27,7 @@ function expectError(result: XmlDocument | InternalErrors): InternalErrors {
   return result;
 }
 
-function span(content: string, text: string, fromIndex = 0): SourceSpan {
+function span(content: string, text: string, fromIndex = 0): Span {
   const start = content.indexOf(text, fromIndex);
   if (start < 0) {
     throw new Error(`Could not find '${text}' in input`);
@@ -601,7 +601,7 @@ describe("parseXmlDocument – commentsPolicy", () => {
 
     expect(comment).toMatch({
       kind: "comment",
-      sourceSpan: {
+      span: {
         text: "<!-- my comment -->",
         start: commentStart,
         end: commentEnd,

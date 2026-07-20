@@ -1,7 +1,7 @@
-import { DecodedSpan, SourceSpan } from "./common-types.js";
+import { DecodedSpan, Span } from "./common-types.js";
 
 type Error<S> = {
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly message: string;
 };
 

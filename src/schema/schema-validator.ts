@@ -2,7 +2,7 @@ import { checkNoAmbiguity } from "../util/casing.js";
 import type {
   InternalError,
   InternalErrors,
-  SourceSpan,
+  Span,
 } from "../util/common-types.js";
 import type {
   Interface,
@@ -118,7 +118,7 @@ function getUnionKind(
   }
 }
 
-function getFirstToken(type: Type): SourceSpan {
+function getFirstToken(type: Type): Span {
   switch (type.kind) {
     case "array":
       return getFirstToken(type.elementType);
@@ -299,7 +299,7 @@ function validateUnionType(
     //   - the first field of each interface has string literal type
     //   - all string literals are distinct
     //   - all first fields have the same name
-    const quotedNames: SourceSpan[] = [];
+    const quotedNames: Span[] = [];
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
@@ -387,7 +387,7 @@ function getDescForKind(kind: UnionKind): string {
   }
 }
 
-function validateTypeName(name: SourceSpan, errors: InternalError[]): void {
+function validateTypeName(name: Span, errors: InternalError[]): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
       span: name,

@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json/json-types.js";
-import type { SourceSpan } from "../util/common-types.js";
+import type { Span } from "../util/common-types.js";
 
 export type CTag =
   | {
@@ -9,5 +9,5 @@ export type CTag =
   | {
       readonly kind: "identifier";
       /** Unquoted identifier. */
-      readonly identifier: SourceSpan;
+      readonly identifier: Span;
     };

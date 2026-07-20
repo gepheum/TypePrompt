@@ -1,5 +1,5 @@
-import type { SourceSpan } from "../util/common-types.js";
-import type { OffsetMap } from "./text-node-join.js";
+import { DecodedSpan } from "../util/common-types.js";
+import type { MappedSpan, OffsetMap, Span } from "../util/common-types.js";
 
 export type CommentsPolicy = "drop-comments" | "keep-comments";
 
@@ -11,42 +11,39 @@ export type XmlDocument<C extends CommentsPolicy = "drop-comments"> = {
 };
 
 export type XmlNode<C extends CommentsPolicy = "drop-comments"> =
-  TextNode | ElementNode<C> | (C extends "keep-comments" ? XmlComment : never);
+  | TextNode | ElementNode<C> | (C extends "keep-comments" ? XmlComment : never);
 
 export type TextNode = {
   readonly kind: "text";
-  readonly sourceSpan: SourceSpan;
-  /// Decoded text content (for example, "&lt;" -> "<").
-  readonly decoded: string;
-  /// Mapping segments from decoded offsets to source offsets.
-  /// The first element is always
-  //   `{ decodedOffset: 0, sourceOffset: sourceSpan.start }`
-  // even if the text is empty.
+  /** XML escape sequences are decoded. */
+  readonly text: string;
+  /** UTF-16 position in the XML file. */
+  readonly start: number;
+  /** UTF-16 position in the XML file. */
+  readonly end: number;
+  /**
+   * For mapping UTF-16 positions in `text` to UTF-16 positions in the XML file.
+   * The first element is always: `{ decodedOffset: 0, sourceOffset: start }`
+   */
   readonly offsetMap: OffsetMap;
   readonly allWhitespace: boolean;
 };
 
 export type ElementNode<C extends CommentsPolicy = "drop-comments"> = {
   readonly kind: "element";
-  /// Span covering the content between the opening and closing tags.
-  /// Empty (start === end) for self-closing elements and elements with no content.
-  readonly contentSpan: SourceSpan;
-  readonly children: readonly XmlNode<C>[];
-  readonly tagName: string;
-  readonly tagSpan: SourceSpan;
+  readonly tag: DecodedSpan;
   readonly attributes: { readonly [name: string]: Attribute };
+  readonly children: readonly XmlNode<C>[];
   readonly isSelfClosing: boolean;
 };
 
 export type Attribute = {
-  readonly name: SourceSpan;
-  /// Inside the quotes, not including them.
-  readonly value: SourceSpan;
-  /// Decoded attribute value (for example, "&lt;" -> "<").
-  readonly decodedValue: string;
+  readonly name: DecodedSpan;
+  /** Inside the quotes, not including them. */
+  readonly value: MappedSpan;
 };
 
 export type XmlComment = {
   readonly kind: "comment";
-  readonly sourceSpan: SourceSpan;
+  readonly span: Span;
 };

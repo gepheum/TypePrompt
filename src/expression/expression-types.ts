@@ -1,4 +1,4 @@
-import { SourceSpan } from "../util/common-types.js";
+import { Span } from "../util/common-types.js";
 
 export type ExpressionNode =
   | LiteralExpression
@@ -10,7 +10,7 @@ export type ExpressionNode =
 
 export type LiteralExpression = {
   readonly kind: "literal";
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly value:
     | { readonly kind: "null" }
     | { readonly kind: "boolean"; readonly value: boolean }
@@ -22,43 +22,43 @@ export type LiteralExpression = {
 export type WrappedExpression = {
   readonly kind: "wrapped";
   /** Spans the whole expression, including the parentheses. */
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly expression: ExpressionNode;
 };
 
 /** The 'input' variable. */
 export type InputExpression = {
   readonly kind: "input";
-  readonly span: SourceSpan;
+  readonly span: Span;
 };
 
 export type DotOperation = {
   readonly kind: "dot-operation";
   /** Spans the whole expression. */
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly left: ExpressionNode;
   readonly dot: "." | "?.";
-  readonly dotSpan: SourceSpan;
+  readonly dotSpan: Span;
   /** The identifier after the dot. */
-  readonly right: SourceSpan;
+  readonly right: Span;
 };
 
 export type UnaryOperation = {
   readonly kind: "unary-operation";
   /** Spans the whole expression. */
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly operator: "not";
-  readonly operatorSpan: SourceSpan;
+  readonly operatorSpan: Span;
   readonly other: ExpressionNode;
 };
 
 export type BinaryOperation = {
   readonly kind: "binary-operation";
   /** Spans the whole expression. */
-  readonly span: SourceSpan;
+  readonly span: Span;
   readonly left: ExpressionNode;
   readonly operator:
     "<" | "<=" | "==" | "!=" | ">=" | ">" | "??" | "and" | "or";
-  readonly operatorSpan: SourceSpan;
+  readonly operatorSpan: Span;
   readonly right: ExpressionNode;
 };

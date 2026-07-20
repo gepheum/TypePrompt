@@ -1,5 +1,5 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, InternalErrors, SourceSpan } from "../util/common-types.js";
+import type { InternalError, InternalErrors, Span } from "../util/common-types.js";
 import {
   decodedToSourceOffsets,
   decodedToSourceOffset,
@@ -84,7 +84,7 @@ class SchemaParser {
     };
   }
 
-  private remapSpan(span: SourceSpan): SourceSpan {
+  private remapSpan(span: Span): Span {
     return {
       text: span.text,
       start: decodedToSourceOffset(this.content, span.start),

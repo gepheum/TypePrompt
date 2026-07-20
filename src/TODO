@@ -1,3 +1,4 @@
+- TODO: move TextNodeJoin to 'common'
 - TODO: support true and false literals?
 - TODO: separate schema parsing from schema validation. Only traverse the types once validation has been done.
 - TODO: support /* */ and //

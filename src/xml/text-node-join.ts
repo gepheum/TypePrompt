@@ -1,34 +1,13 @@
-import { InternalError } from "../util/common-types.js";
-
-export type TextNodeJoin = {
-  readonly decoded: string;
-  /// Always non-empty. The first element always has `decodedOffset: 0`.
-  readonly offsetMap: OffsetMap;
-};
-
-/// Segment-based mapping from decoded offsets back to source offsets.
-///
-/// Entries are sorted by `decodedOffset`. Each entry defines a decoded segment that
-/// starts at `decodedOffset` and ends at the next entry's `decodedOffset` (or at
-/// `decoded.length` for the last entry).
-///
-/// The decoded segment maps to the source range
-/// `[sourceOffsetStart, sourceOffsetEnd)`.
-export type OffsetMap = readonly OffsetMapEntry[];
-
-export type OffsetMapEntry = {
-  readonly decodedOffset: number;
-  readonly sourceOffset: number;
-};
+import { InternalError, MappedSpan, OffsetMapEntry } from "../util/common-types.js";
 
 /// Joins multiple non-overlapping text nodes into a single text node with a combined decoded string and offset map.
 /// The resulting offsetMap entries have decoded offsets relative to the start of the joined string.
 ///
 /// `sourceOffset` is used as the `sourceOffset` of the first entry when `textNodes` is empty.
 export function joinTextNodes(
-  textNodes: readonly TextNodeJoin[],
+  textNodes: readonly MappedSpan[],
   sourceOffset: number,
-): TextNodeJoin {
+): MappedSpan {
   if (textNodes.length === 0) {
     return { decoded: "", offsetMap: [{ decodedOffset: 0, sourceOffset }] };
   }
@@ -55,7 +34,7 @@ export function joinTextNodes(
 /// The offset is a boundary offset into `textNode.decoded`, in the range
 /// `[0, textNode.decoded.length]`.
 export function decodedToSourceOffset(
-  textNode: TextNodeJoin,
+  textNode: MappedSpan,
   decodedOffset: number,
 ): number {
   if (!Number.isInteger(decodedOffset)) {

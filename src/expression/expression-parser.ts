@@ -1,7 +1,7 @@
 import type {
   InternalError,
   InternalErrors,
-  SourceSpan,
+  Span,
 } from "../util/common-types.js";
 import type { ExpressionNode, LiteralExpression } from "./expression-types.js";
 
@@ -425,7 +425,7 @@ class ExpressionParser {
     }
   }
 
-  span(start: number, end: number): SourceSpan {
+  span(start: number, end: number): Span {
     return { text: this.text.slice(start, end), start, end };
   }
 

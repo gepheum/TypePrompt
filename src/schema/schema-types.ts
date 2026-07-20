@@ -1,4 +1,4 @@
-import type { SourceSpan } from "../util/common-types.js";
+import type { Span } from "../util/common-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";
@@ -28,13 +28,13 @@ export type Schema = {
 
 export type TypeDeclaration = {
   readonly kind: "type";
-  readonly name: SourceSpan;
+  readonly name: Span;
   readonly valueType: Type;
   readonly doc: string;
 };
 
 export type SchemaField = {
-  readonly name: SourceSpan;
+  readonly name: Span;
   readonly optional: boolean;
   readonly type: Type;
   readonly doc: string;
@@ -46,18 +46,18 @@ export type NonUnionType = Exclude<Type, Union>;
 
 export type TypeName = {
   readonly kind: "type-name";
-  readonly name: SourceSpan;
+  readonly name: Span;
 };
 
 export type StringLiteral = {
   readonly kind: "string-literal";
   readonly value: string;
-  readonly quotedName: SourceSpan;
+  readonly quotedName: Span;
 };
 
 export type Interface = {
   readonly kind: "interface";
-  readonly leftCurlyBracket: SourceSpan;
+  readonly leftCurlyBracket: Span;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };
