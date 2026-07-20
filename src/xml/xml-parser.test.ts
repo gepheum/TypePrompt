@@ -6,6 +6,7 @@ import { parseXmlDocument } from "./xml-parser.js";
 import type {
   XmlComment as CommentNode,
   ElementNode,
+  TextNode,
   XmlDocument,
 } from "./xml-types.js";
 
@@ -27,18 +28,6 @@ function expectError(result: XmlDocument | InternalErrors): InternalErrors {
   return result;
 }
 
-function span(content: string, text: string, fromIndex = 0): Span {
-  const start = content.indexOf(text, fromIndex);
-  if (start < 0) {
-    throw new Error(`Could not find '${text}' in input`);
-  }
-  return {
-    text,
-    start,
-    end: start + text.length,
-  };
-}
-
 describe("parseXmlDocument", () => {
   it("parses an empty document", () => {
     expect(parseXmlDocument("")).toMatch({
@@ -54,7 +43,7 @@ describe("parseXmlDocument", () => {
 
     expect(root).toMatch({
       kind: "element",
-      tagName: {
+      tag: {
         text: "foo",
         start: 2,
         end: 5,
@@ -74,50 +63,42 @@ describe("parseXmlDocument", () => {
       root: {
         children: [
           {
-            kind: "text",
-            sourceSpan: span(input, "before"),
+            text: "before",
           },
           {
             kind: "element",
-            tagName: span(input, "root"),
+            tag: {
+              text: "root",
+            },
             isSelfClosing: false,
             attributes: {
               a: {
-                name: span(input, "a", input.indexOf('a="1"')),
-                value: span(input, "1", input.indexOf('a="1"')),
+                name: {text: "a"},
+                value: {text: "1"},
               },
               b: {
-                name: span(input, "b", input.indexOf("b='two'")),
-                value: span(input, "two", input.indexOf("b='two'")),
+                name: {text: "b"},
+                value: {text: "two"},
               },
             },
             children: [
-              {
-                kind: "text",
-                sourceSpan: span(input, "mid"),
-              },
+              {text: "mid"},
               {
                 kind: "element",
-                tagName: span(input, "child"),
+                tag: {text: "child"},
                 isSelfClosing: true,
                 attributes: {
                   x: {
-                    name: span(input, "x", input.indexOf('x="y"')),
-                    value: span(input, "y", input.indexOf('x="y"')),
+                    name: {text: "x"},
+                    value: {text: "y"},
                   },
                 },
                 children: [],
               },
-              {
-                kind: "text",
-                sourceSpan: span(input, "after"),
-              },
+              {text: "after"},
             ],
           },
-          {
-            kind: "text",
-            sourceSpan: span(input, "tail"),
-          },
+          {text: "tail"},
         ],
       },
     });
@@ -131,13 +112,10 @@ describe("parseXmlDocument", () => {
 
     expect(root).toMatch({
       kind: "element",
-      tagName: span(input, "root"),
+      tag: {text: "root"},
       isSelfClosing: false,
       children: [
-        {
-          kind: "text",
-          sourceSpan: span(input, "ok"),
-        },
+         {text: "ok"},
       ],
     });
   });
@@ -149,17 +127,11 @@ describe("parseXmlDocument", () => {
 
     expect(root).toMatch({
       kind: "element",
-      tagName: span(input, "foo"),
+      tag: {text: "foo"},
       isSelfClosing: false,
       children: [
-        {
-          kind: "text",
-          sourceSpan: span(input, "abc"),
-        },
-        {
-          kind: "text",
-          sourceSpan: span(input, "bcd", input.indexOf("-->") + 3),
-        },
+        {text: "abc"},
+        {text: "bcd"},
       ],
     });
   });
@@ -180,15 +152,18 @@ describe("parseXmlDocument", () => {
     expect(root).toMatch({
       attributes: {
         a: {
-          value: span(input, "1 &amp; 2"),
-          decodedValue: "1 & 2",
+          name: {
+            text: "a",
+          },
+          value: {
+            text: "1 & 2",
+          },
         },
       },
       children: [
         {
           kind: "text",
-          sourceSpan: span(input, "x &amp; y"),
-          decoded: "x & y",
+          text: "x & y",
           offsetMap: [
             {
               decodedOffset: 0,
@@ -218,12 +193,10 @@ describe("parseXmlDocument", () => {
     expect(root).toMatch({
       attributes: {
         a: {
-          value: span(input, "x &lt; y"),
-          decodedValue: "x < y",
+          value: {text: "x < y"},
         },
         b: {
-          value: span(input, "&#65;&#x42;"),
-          decodedValue: "AB",
+          value: {text: "AB"},
         },
       },
       isSelfClosing: true,
@@ -237,13 +210,13 @@ describe("parseXmlDocument", () => {
     expect(result.root.children).toMatch([
       {
         kind: "element",
-        tagName: span(input, "a"),
+        tag: {text: "a"},
         isSelfClosing: true,
         children: [],
       },
       {
         kind: "element",
-        tagName: span(input, "b", input.indexOf("<b")),
+        tag: {text: "b"},
         isSelfClosing: false,
         children: [],
       },
@@ -256,17 +229,17 @@ describe("parseXmlDocument", () => {
     const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
-      tagName: span(input, "root"),
+      tag: {text: "root"},
       isSelfClosing: false,
       attributes: {
         a: {
-          value: span(input, "x > y"),
+          value: {text: "x > y"},
         },
       },
       children: [
         {
           kind: "element",
-          tagName: span(input, "child"),
+          tag: {text: "child"},
           isSelfClosing: true,
           children: [],
         },
@@ -286,8 +259,7 @@ describe("parseXmlDocument", () => {
 
     expect(root.children[0]).toMatch({
       kind: "text",
-      sourceSpan: span(input, "&#65; &#x42;"),
-      decoded: "A B",
+      text: "A B",
       offsetMap: [
         {
           decodedOffset: 0,
@@ -342,7 +314,7 @@ describe("parseXmlDocument", () => {
     const root = result.root.children[0] as ElementNode;
 
     expect(root.children).toMatch([
-      { kind: "text", sourceSpan: span(input, "after") },
+      { kind: "text", text: "after" },
     ]);
   });
 
@@ -353,8 +325,9 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          start: 0,
+          span: {start: 0,
           end: 7,
+          },
           message: "Unexpected closing tag '</root>'",
         },
       ],
@@ -368,8 +341,8 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          start: 6,
-          end: 10,
+          span: {start: 6,
+          end: 10,},
           message: "Mismatched closing tag '</a>'; expected '</b>'",
         },
       ],
@@ -383,8 +356,10 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
+          span: {
           start: 0,
           end: 3,
+          },
           message: "Unclosed tag '<a>'",
         },
       ],
@@ -434,58 +409,6 @@ describe("parseXmlDocument", () => {
         },
       ],
     });
-  });
-});
-
-describe("ElementNode.contentSpan", () => {
-  it("is empty for a self-closing element", () => {
-    const input = "<root/>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
-
-    expect(root.contentSpan).toMatch({ text: "", start: 7, end: 7 });
-  });
-
-  it("is empty for an element with no content", () => {
-    const input = "<root></root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
-
-    // <root> ends at 6, </root> starts at 6
-    expect(root.contentSpan).toMatch({ text: "", start: 6, end: 6 });
-  });
-
-  it("covers text content between opening and closing tags", () => {
-    const input = "<root>hello</root>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
-
-    expect(root.contentSpan).toMatch({ text: "hello", start: 6, end: 11 });
-  });
-
-  it("covers child elements and surrounding whitespace", () => {
-    const input = "<outer>  <inner/>  </outer>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const outer = result.root.children[0] as ElementNode;
-    const inner = outer.children[1] as ElementNode;
-
-    // <outer> ends at 7, </outer> starts at 19
-    expect(outer.contentSpan).toMatch({
-      text: "  <inner/>  ",
-      start: 7,
-      end: 19,
-    });
-    // <inner/> ends at 17 — self-closing, empty contentSpan
-    expect(inner.contentSpan).toMatch({ text: "", start: 17, end: 17 });
-  });
-
-  it("starts right after the opening tag when preceded by text sibling", () => {
-    const input = "text<elem>content</elem>";
-    const result = expectSuccess(parseXmlDocument(input));
-    const elem = result.root.children[1] as ElementNode;
-
-    // <elem> starts at 4, ends at 10; </elem> starts at 17
-    expect(elem.contentSpan).toMatch({ text: "content", start: 10, end: 17 });
   });
 });
 
@@ -565,7 +488,7 @@ describe("parseXmlDocument – commentsPolicy", () => {
     const result = expectSuccess(parseXmlDocument(input));
 
     expect(result.root.children).toMatch([
-      { kind: "text", sourceSpan: { text: "text" } },
+      { kind: "text", text: "text" },
     ]);
   });
 
@@ -586,7 +509,7 @@ describe("parseXmlDocument – commentsPolicy", () => {
     expect(result.root.children).toMatch([
       {
         kind: "comment",
-        sourceSpan: { text: "<!-- hello -->", start: 0, end: 14 },
+        span: { start: 0, end: 14 },
       },
     ]);
   });

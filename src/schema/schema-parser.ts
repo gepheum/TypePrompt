@@ -1,9 +1,8 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, InternalErrors, Span } from "../util/common-types.js";
+import type { InternalError, InternalErrors, MappedSpan, MappedText, Span } from "../util/common-types.js";
 import {
   decodedToSourceOffsets,
   decodedToSourceOffset,
-  type TextNodeJoin,
 } from "../xml/text-node-join.js";
 import type {
   NonUnionType,
@@ -15,15 +14,15 @@ import type {
 } from "./schema-types.js";
 
 export function parseSchema(
-  content: TextNodeJoin,
+  content: MappedText,
 ): SchemaParseResult | InternalErrors {
   return new SchemaParser(content).parse();
 }
 
 class SchemaParser {
-  constructor(private readonly content: TextNodeJoin) {}
+  constructor(private readonly content: MappedText) {}
 
-  private readonly schemaSource = this.content.decoded;
+  private readonly schemaSource = this.content.text;
 
   parse(): SchemaParseResult | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
