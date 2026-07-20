@@ -1,8 +1,4 @@
-import {
-  InternalError,
-  MappedText,
-  OffsetMapEntry,
-} from "../util/common-types.js";
+import { MappedText, OffsetMapEntry } from "../util/common-types.js";
 
 /**
  * Joins multiple non-overlapping text nodes into a single text node with a combined
@@ -21,8 +17,8 @@ export function joinTextNodes(
       text: "",
       offsetMap: [
         {
-          decodedOffset: 0,
-          sourceOffset: startPosition,
+          textPosition: 0,
+          sourcePosition: startPosition,
         },
       ],
     };
@@ -34,8 +30,8 @@ export function joinTextNodes(
   for (const textNode of textNodes) {
     for (const entry of textNode.offsetMap) {
       offsetMap.push({
-        decodedOffset: currentOffset + entry.decodedOffset,
-        sourceOffset: entry.sourceOffset,
+        textPosition: currentOffset + entry.textPosition,
+        sourcePosition: entry.sourcePosition,
       });
     }
     currentOffset += textNode.text.length;
@@ -48,7 +44,7 @@ export function joinTextNodes(
 /**
  * Maps a position in a decoded text node to a position in the original XML file.
  */
-export function decodedToSourceOffset(
+export function textToSourcePosition(
   textNode: MappedText,
   decodedOffset: number,
 ): number {
@@ -64,24 +60,12 @@ export function decodedToSourceOffset(
   const segments = textNode.offsetMap;
   let selected = 0;
   for (let i = 1; i < segments.length; i += 1) {
-    if (segments[i]!.decodedOffset > decodedOffset) {
+    if (segments[i]!.textPosition > decodedOffset) {
       break;
     }
     selected = i;
   }
 
   const segment = segments[selected]!;
-  return segment.sourceOffset + (decodedOffset - segment.decodedOffset);
-}
-
-export function decodedToSourceOffsets(
-  textNode: MappedText,
-): (e: InternalError) => InternalError {
-  return (e: InternalError) => ({
-    span: {
-      start: decodedToSourceOffset(textNode, e.span.start),
-      end: decodedToSourceOffset(textNode, e.span.end),
-    },
-    message: e.message,
-  });
+  return segment.sourcePosition + (decodedOffset - segment.textPosition);
 }

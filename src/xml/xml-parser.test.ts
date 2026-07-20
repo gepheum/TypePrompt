@@ -150,19 +150,19 @@ describe("parseXmlDocument", () => {
                 text: "x & y",
                 offsetMap: [
                   {
-                    decodedOffset: 0,
-                    sourceOffset: input.indexOf("x &amp; y"),
+                    textPosition: 0,
+                    sourcePosition: input.indexOf("x &amp; y"),
                   },
                   {
-                    decodedOffset: 2,
-                    sourceOffset: input.indexOf(
+                    textPosition: 2,
+                    sourcePosition: input.indexOf(
                       "&amp;",
                       input.indexOf("x &amp; y"),
                     ),
                   },
                   {
-                    decodedOffset: 3,
-                    sourceOffset:
+                    textPosition: 3,
+                    sourcePosition:
                       input.indexOf("&amp;", input.indexOf("x &amp; y")) +
                       "&amp;".length,
                   },
@@ -255,10 +255,10 @@ describe("parseXmlDocument", () => {
                 kind: "text",
                 text: "A B",
                 offsetMap: [
-                  { decodedOffset: 0, sourceOffset: firstEntityStart },
-                  { decodedOffset: 1, sourceOffset: firstEntityEnd },
-                  { decodedOffset: 2, sourceOffset: secondEntityStart },
-                  { decodedOffset: 3, sourceOffset: secondEntityEnd },
+                  { textPosition: 0, sourcePosition: firstEntityStart },
+                  { textPosition: 1, sourcePosition: firstEntityEnd },
+                  { textPosition: 2, sourcePosition: secondEntityStart },
+                  { textPosition: 3, sourcePosition: secondEntityEnd },
                 ],
               },
             ],

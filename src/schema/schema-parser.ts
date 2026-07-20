@@ -6,8 +6,8 @@ import type {
   Span,
 } from "../util/common-types.js";
 import {
-  decodedToSourceOffset,
   decodedToSourceOffsets,
+  textToSourcePosition,
 } from "../xml/text-node-joiner.js";
 import type {
   NonUnionType,
@@ -94,8 +94,8 @@ class SchemaParser {
   private remapSpan(span: Span): Span {
     return {
       text: span.text,
-      start: decodedToSourceOffset(this.content, span.start),
-      end: decodedToSourceOffset(this.content, span.end),
+      start: textToSourcePosition(this.content, span.start),
+      end: textToSourcePosition(this.content, span.end),
     };
   }
 

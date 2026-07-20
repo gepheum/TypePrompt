@@ -356,7 +356,7 @@ class XmlParser {
         text: "",
         start: start,
         end: end,
-        offsetMap: [{ decodedOffset: 0, sourceOffset: start }],
+        offsetMap: [{ textPosition: 0, sourcePosition: start }],
       };
     }
 
@@ -375,10 +375,10 @@ class XmlParser {
         // Emit a new segment only when the decoded offset differs from the
         // last entity-end marker (avoids duplicate adjacent entries).
         const last = offsetMap.at(-1);
-        if (last === undefined || last.decodedOffset !== decodedOffset) {
+        if (last === undefined || last.textPosition !== decodedOffset) {
           offsetMap.push({
-            decodedOffset,
-            sourceOffset: start + i,
+            textPosition: decodedOffset,
+            sourcePosition: start + i,
           });
         }
         decodedOffset += chunk.length;
@@ -391,8 +391,11 @@ class XmlParser {
       if (semicolon === -1) {
         // No ';' – treat '&' as a literal character.
         const last = offsetMap.at(-1);
-        if (last === undefined || last.decodedOffset !== decodedOffset) {
-          offsetMap.push({ decodedOffset, sourceOffset: start + i });
+        if (last === undefined || last.textPosition !== decodedOffset) {
+          offsetMap.push({
+            textPosition: decodedOffset,
+            sourcePosition: start + i,
+          });
         }
         decodedParts.push("&");
         decodedOffset += 1;
@@ -405,12 +408,15 @@ class XmlParser {
 
       if (result.kind === "ok") {
         // Valid entity: bracket it with two offset map entries.
-        offsetMap.push({ decodedOffset, sourceOffset: start + i });
+        offsetMap.push({
+          textPosition: decodedOffset,
+          sourcePosition: start + i,
+        });
         decodedParts.push(result.value);
         decodedOffset += result.value.length;
         offsetMap.push({
-          decodedOffset,
-          sourceOffset: start + semicolon + 1,
+          textPosition: decodedOffset,
+          sourcePosition: start + semicolon + 1,
         });
         i = semicolon + 1;
       } else {
@@ -427,8 +433,11 @@ class XmlParser {
         });
         const rawEntity = raw.slice(i, semicolon + 1);
         const last = offsetMap.at(-1);
-        if (last === undefined || last.decodedOffset !== decodedOffset) {
-          offsetMap.push({ decodedOffset, sourceOffset: start + i });
+        if (last === undefined || last.textPosition !== decodedOffset) {
+          offsetMap.push({
+            textPosition: decodedOffset,
+            sourcePosition: start + i,
+          });
         }
         decodedParts.push(rawEntity);
         decodedOffset += rawEntity.length;

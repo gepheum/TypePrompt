@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { MappedText } from "../util/common-types.js";
-import { decodedToSourceOffset, joinTextNodes } from "./text-node-joiner.js";
+import { joinTextNodes, textToSourcePosition } from "./text-node-joiner.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode, TextNode } from "./xml-types.js";
 
@@ -17,38 +17,38 @@ function expectSuccess(
   return result;
 }
 
-describe("textNodeDecodedOffsetToSourceOffset", () => {
-  it("maps decoded offsets to source offsets for plain text", () => {
+describe("textToSourcePosition", () => {
+  it("maps text positions to source positions for plain text", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
-    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("abc"));
-    expect(decodedToSourceOffset(textNode, 1)).toBe(input.indexOf("abc") + 1);
-    expect(decodedToSourceOffset(textNode, 2)).toBe(input.indexOf("abc") + 2);
-    expect(decodedToSourceOffset(textNode, 3)).toBe(input.indexOf("abc") + 3);
+    expect(textToSourcePosition(textNode, 0)).toBe(input.indexOf("abc"));
+    expect(textToSourcePosition(textNode, 1)).toBe(input.indexOf("abc") + 1);
+    expect(textToSourcePosition(textNode, 2)).toBe(input.indexOf("abc") + 2);
+    expect(textToSourcePosition(textNode, 3)).toBe(input.indexOf("abc") + 3);
   });
 
-  it("maps decoded offsets to source offsets across entity and raw segments", () => {
+  it("maps text offsets to source positions across entity and raw segments", () => {
     const input = "<root>x &amp; y</root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
-    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("x &amp; y"));
-    expect(decodedToSourceOffset(textNode, 1)).toBe(
+    expect(textToSourcePosition(textNode, 0)).toBe(input.indexOf("x &amp; y"));
+    expect(textToSourcePosition(textNode, 1)).toBe(
       input.indexOf("x &amp; y") + 1,
     );
-    expect(decodedToSourceOffset(textNode, 2)).toBe(input.indexOf("&amp;"));
-    expect(decodedToSourceOffset(textNode, 3)).toBe(
+    expect(textToSourcePosition(textNode, 2)).toBe(input.indexOf("&amp;"));
+    expect(textToSourcePosition(textNode, 3)).toBe(
       input.indexOf("&amp;") + "&amp;".length,
     );
-    expect(decodedToSourceOffset(textNode, 4)).toBe(
+    expect(textToSourcePosition(textNode, 4)).toBe(
       input.indexOf("&amp;") + "&amp;".length + 1,
     );
-    expect(decodedToSourceOffset(textNode, 5)).toBe(
+    expect(textToSourcePosition(textNode, 5)).toBe(
       input.indexOf("x &amp; y") + "x &amp; y".length,
     );
   });
@@ -60,13 +60,13 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.text).toBe("<");
-    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("&lt;"));
-    expect(decodedToSourceOffset(textNode, 1)).toBe(
+    expect(textToSourcePosition(textNode, 0)).toBe(input.indexOf("&lt;"));
+    expect(textToSourcePosition(textNode, 1)).toBe(
       input.indexOf("&lt;") + "&lt;".length,
     );
   });
 
-  it("throws for decoded offsets outside valid range", () => {
+  it("throws for text positions outside valid range", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
@@ -74,7 +74,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
 
     let threw = false;
     try {
-      decodedToSourceOffset(textNode, -1);
+      textToSourcePosition(textNode, -1);
     } catch {
       threw = true;
     }
@@ -82,7 +82,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
 
     threw = false;
     try {
-      decodedToSourceOffset(textNode, 4);
+      textToSourcePosition(textNode, 4);
     } catch {
       threw = true;
     }
@@ -92,53 +92,53 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   it("returns text start for empty decoded text nodes", () => {
     const emptyNode: MappedText = {
       text: "",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 42 }],
     };
 
-    expect(decodedToSourceOffset(emptyNode, 0)).toBe(42);
+    expect(textToSourcePosition(emptyNode, 0)).toBe(42);
   });
 });
 
 describe("joinTextNodes", () => {
-  it("returns an empty decoded string with a single offset entry for an empty list", () => {
+  it("returns an empty text with a single offset entry for an empty list", () => {
     const result = joinTextNodes([], 42);
 
     expect(result).toMatch({
       text: "",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 42 }],
     });
   });
 
   it("returns the single node unchanged for a one-element list", () => {
     const node: MappedText = {
       text: "abc",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
 
     const result = joinTextNodes([node], 0);
 
     expect(result).toMatch({
       text: "abc",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     });
   });
 
   it("concatenates decoded strings of two plain-text nodes", () => {
     const node1: MappedText = {
       text: "foo",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 100 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
     };
     const node2: MappedText = {
       text: "bar",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 200 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 200 }],
     };
 
     const result = joinTextNodes([node1, node2], 0);
 
     expect(result.text).toBe("foobar");
     expect(result.offsetMap).toMatch([
-      { decodedOffset: 0, sourceOffset: 100 },
-      { decodedOffset: 3, sourceOffset: 200 },
+      { textPosition: 0, sourcePosition: 100 },
+      { textPosition: 3, sourcePosition: 200 },
     ]);
   });
 
@@ -147,54 +147,54 @@ describe("joinTextNodes", () => {
     const node1: MappedText = {
       text: "a<b",
       offsetMap: [
-        { decodedOffset: 0, sourceOffset: 10 },
-        { decodedOffset: 1, sourceOffset: 11 },
-        { decodedOffset: 2, sourceOffset: 15 },
+        { textPosition: 0, sourcePosition: 10 },
+        { textPosition: 1, sourcePosition: 11 },
+        { textPosition: 2, sourcePosition: 15 },
       ],
     };
     // node2: plain "cd"
     const node2: MappedText = {
       text: "cd",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 20 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 20 }],
     };
 
     const result = joinTextNodes([node1, node2], 0);
 
     expect(result.text).toBe("a<bcd");
     expect(result.offsetMap).toMatch([
-      { decodedOffset: 0, sourceOffset: 10 },
-      { decodedOffset: 1, sourceOffset: 11 },
-      { decodedOffset: 2, sourceOffset: 15 },
-      { decodedOffset: 3, sourceOffset: 20 },
+      { textPosition: 0, sourcePosition: 10 },
+      { textPosition: 1, sourcePosition: 11 },
+      { textPosition: 2, sourcePosition: 15 },
+      { textPosition: 3, sourcePosition: 20 },
     ]);
   });
 
-  it("concatenates three nodes and maps offsets correctly via textNodeDecodedOffsetToSourceOffset", () => {
+  it("concatenates three nodes and maps offsets correctly via textToSourcePosition", () => {
     const node1: MappedText = {
       text: "hi",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 5 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };
     const node2: MappedText = {
       text: " ",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 50 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 50 }],
     };
     const node3: MappedText = {
       text: "world",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 100 }],
+      offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
     };
 
     const joined = joinTextNodes([node1, node2, node3], 0);
 
     expect(joined.text).toBe("hi world");
     // "hi" maps to source 5..6
-    expect(decodedToSourceOffset(joined, 0)).toBe(5);
-    expect(decodedToSourceOffset(joined, 1)).toBe(6);
+    expect(textToSourcePosition(joined, 0)).toBe(5);
+    expect(textToSourcePosition(joined, 1)).toBe(6);
     // " " maps to source 50
-    expect(decodedToSourceOffset(joined, 2)).toBe(50);
+    expect(textToSourcePosition(joined, 2)).toBe(50);
     // "world" maps to source 100..104
-    expect(decodedToSourceOffset(joined, 3)).toBe(100);
-    expect(decodedToSourceOffset(joined, 7)).toBe(104);
+    expect(textToSourcePosition(joined, 3)).toBe(100);
+    expect(textToSourcePosition(joined, 7)).toBe(104);
     // end boundary
-    expect(decodedToSourceOffset(joined, 8)).toBe(105);
+    expect(textToSourcePosition(joined, 8)).toBe(105);
   });
 });

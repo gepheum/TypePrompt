@@ -4,7 +4,7 @@ import type {
   Span,
 } from "../util/common-types.js";
 import {
-  decodedToSourceOffset,
+  textToSourcePosition,
   type TextNodeJoin,
 } from "../xml/text-node-joiner.js";
 import type {
@@ -591,8 +591,8 @@ class JsonParser<Mode extends JsonMode = "loose"> {
   pushError(start: number, end: number, message: string): void {
     this.errors.push({
       span: {
-        start: decodedToSourceOffset(this.content, start),
-        end: decodedToSourceOffset(this.content, end),
+        start: textToSourcePosition(this.content, start),
+        end: textToSourcePosition(this.content, end),
       },
       message,
     });
@@ -601,8 +601,8 @@ class JsonParser<Mode extends JsonMode = "loose"> {
   exampleSlice(start: number, end: number): Span {
     return {
       text: this.text.slice(start, end),
-      start: decodedToSourceOffset(this.content, start),
-      end: decodedToSourceOffset(this.content, end),
+      start: textToSourcePosition(this.content, start),
+      end: textToSourcePosition(this.content, end),
     };
   }
 

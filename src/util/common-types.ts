@@ -10,9 +10,9 @@ export type InternalError = {
 
 /** Span in a source XML file. */
 export interface Span {
-  /** As a UTF-16 position in the XML file. */
+  /** Start of the range as a UTF-16 position in the XML file. */
   readonly start: number;
-  /** As a UTF-16 position in the XML file. */
+  /** End of the range as a UTF-16 position in the XML file. */
   readonly end: number;
 }
 
@@ -50,14 +50,16 @@ export interface MappedText {
   readonly offsetMap: OffsetMap;
 }
 
-/// Segment-based mapping from decoded offsets back to source offsets.
-///
-/// Entries are sorted by `decodedOffset`. Each entry defines a decoded segment that
-/// starts at `decodedOffset` and ends at the next entry's `decodedOffset` (or at
-/// `decoded.length` for the last entry).
+/**
+ * Segment-based mapping from decoded offsets back to source offsets.
+ *
+ * Entries are sorted by `textPosition`. Each entry defines a decoded segment that
+ * starts at `textPosition` and ends at the next entry's `textPosition` (or at
+ * `text.length` for the last entry).
+ */
 export type OffsetMap = readonly OffsetMapEntry[];
 
 export type OffsetMapEntry = {
-  readonly decodedOffset: number;
-  readonly sourceOffset: number;
+  readonly textPosition: number;
+  readonly sourcePosition: number;
 };
