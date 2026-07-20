@@ -284,9 +284,8 @@ class XmlParser {
     if (this.content[this.cursor] === quote) {
       this.cursor += 1; // skip closing quote
     }
-    const valueSpan = this.makeSpan(valueStart, valueEnd);
-    const decoded = this.decodeXmlText(valueStart, valueEnd);
-    return { name: nameSpan, value: valueSpan, decodedValue: decoded.text };
+    const valueSpan = this.decodeXmlText(valueStart, valueEnd);
+    return { name: nameSpan, value: valueSpan };
   }
 
   private parseCloseTag(): void {
