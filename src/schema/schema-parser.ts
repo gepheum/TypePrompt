@@ -3,14 +3,10 @@ import type {
   InternalError,
   InternalErrors,
   MappedText,
-  Span,
+  TextSpan,
 } from "../util/common-types.js";
-import {
-  decodedToSourceOffsets,
-  textToSourcePosition,
-} from "../xml/text-node-joiner.js";
+import { textToSourcePosition } from "../util/text-node-joiner.js";
 import type {
-  NonUnionType,
   SchemaField,
   SchemaParseResult,
   Type,
@@ -26,8 +22,6 @@ export function parseSchema(
 
 class SchemaParser {
   constructor(private readonly content: MappedText) {}
-
-  private readonly schemaSource = this.content.text;
 
   parse(): SchemaParseResult | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
@@ -59,13 +53,7 @@ class SchemaParser {
     }
 
     this.parserErrors.push(
-      ...checkNoAmbiguity(
-        typeDeclarations.map((t) => ({
-          name: t.name.text,
-          start: t.name.start,
-          end: t.name.end,
-        })),
-      ),
+      ...checkNoAmbiguity(typeDeclarations.map((t) => t.name)),
     );
 
     if (this.tokenizerErrors.length) {
@@ -83,79 +71,9 @@ class SchemaParser {
     return {
       kind: "success",
       typeDeclarations: Object.fromEntries(
-        typeDeclarations.map((t) => [
-          t.name.text,
-          this.remapTypeDeclaration(t),
-        ]),
+        typeDeclarations.map((t) => [t.name.text, t]),
       ),
     };
-  }
-
-  private remapSpan(span: Span): Span {
-    return {
-      text: span.text,
-      start: textToSourcePosition(this.content, span.start),
-      end: textToSourcePosition(this.content, span.end),
-    };
-  }
-
-  private remapTypeDeclaration(t: TypeDeclaration): TypeDeclaration {
-    return {
-      kind: t.kind,
-      name: this.remapSpan(t.name),
-      valueType: this.remapType(t.valueType),
-      doc: t.doc,
-    };
-  }
-
-  private remapType(type: Type): Type {
-    switch (type.kind) {
-      case "type-name":
-        return { kind: "type-name", name: this.remapSpan(type.name) };
-      case "string-literal":
-        return {
-          kind: "string-literal",
-          value: type.value,
-          quotedName: this.remapSpan(type.quotedName),
-        };
-      case "interface": {
-        return {
-          kind: "interface",
-          leftCurlyBracket: this.remapSpan(type.leftCurlyBracket),
-          fields: Object.fromEntries(
-            Object.entries(type.fields).map(([k, v]) => [
-              k,
-              this.remapField(v),
-            ]),
-          ),
-          firstField: type.firstField
-            ? this.remapField(type.firstField)
-            : undefined,
-        };
-      }
-      case "array":
-        return { kind: "array", elementType: this.remapType(type.elementType) };
-      case "union":
-        return {
-          kind: "union",
-          members: type.members.map((m) => this.remapType(m) as NonUnionType),
-        };
-    }
-  }
-
-  private remapField(field: SchemaField): SchemaField {
-    return {
-      name: this.remapSpan(field.name),
-      optional: field.optional,
-      type: this.remapType(field.type),
-      doc: field.doc,
-    };
-  }
-
-  private remapErrors(
-    errors: readonly InternalError[],
-  ): readonly InternalError[] {
-    return errors.map(decodedToSourceOffsets(this.content));
   }
 
   private parseTypeDeclaration(): TypeDeclaration | null {
@@ -211,7 +129,7 @@ class SchemaParser {
 
     return {
       kind: "type",
-      name: name,
+      name: this.tokenToSpan(name),
       valueType: typeRef,
       doc: getDocText(jsdoc),
     };
@@ -242,7 +160,7 @@ class SchemaParser {
       if (jsdoc) {
         // jsdoc was attached to nothing — report the error.
         this.parserErrors.push({
-          span: name,
+          span: this.tokenToSpan(name),
           message: "Expected: identifier",
         });
       }
@@ -269,7 +187,7 @@ class SchemaParser {
       this.expectExactThenMove(";", token);
     }
     return {
-      name: name,
+      name: this.tokenToSpan(name),
       optional: optional,
       type: typeRef,
       doc: getDocText(jsdoc),
@@ -304,7 +222,7 @@ class SchemaParser {
           }
           return {
             kind: "interface",
-            leftCurlyBracket: token,
+            leftCurlyBracket: this.tokenToSpan(token),
             fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
             firstField: fields[0],
           };
@@ -316,13 +234,13 @@ class SchemaParser {
           return {
             kind: "string-literal",
             value: token.text.slice(1, -1),
-            quotedName: token,
+            quotedName: this.tokenToSpan(token),
           };
         }
         case "identifier": {
           return {
             kind: "type-name",
-            name: token,
+            name: this.tokenToSpan(token),
           };
         }
         case "noMatch": {
@@ -374,13 +292,12 @@ class SchemaParser {
       /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
     // 1    2             3        4                5       6            7                8                      9                      10
     re.lastIndex = this.cursor;
-    const { schemaSource } = this;
     let group: RegExpExecArray | null;
     let newLine = false;
     // Local position tracker for gap detection; this.cursor is never modified
     // by peekToken() — only movePast() advances it.
     let expectedAt = this.cursor;
-    while ((group = re.exec(schemaSource)) !== null) {
+    while ((group = re.exec(this.content.text)) !== null) {
       const position = re.lastIndex - group[0].length;
 
       // Check that all the regex matches are consecutive.
@@ -493,8 +410,8 @@ class SchemaParser {
       this.cachedPeek = {
         kind: tokenKind,
         text: text,
-        start: position,
-        end: re.lastIndex,
+        textStart: position,
+        textEnd: re.lastIndex,
         newLine: newLine,
       };
       return this.cachedPeek;
@@ -504,7 +421,7 @@ class SchemaParser {
   }
 
   private movePast(token: Token): void {
-    this.cursor = token.end;
+    this.cursor = token.textEnd;
     this.cachedPeek = null;
   }
 
@@ -532,8 +449,8 @@ class SchemaParser {
       .join(" or ");
     this.parserErrors.push({
       span: {
-        start: token.start,
-        end: token.end,
+        start: token.textStart,
+        end: token.textEnd,
       },
       message: `Expected: ${descriptors}`,
     });
@@ -547,6 +464,15 @@ class SchemaParser {
     );
   }
 
+  private tokenToSpan(token: Token): TextSpan {
+    const { content } = this;
+    return {
+      text: token.text,
+      start: textToSourcePosition(content, token.textStart),
+      end: textToSourcePosition(content, token.textEnd),
+    };
+  }
+
   private readonly tokenizerErrors: InternalError[] = [];
   private readonly parserErrors: InternalError[] = [];
   private cursor = 0;
@@ -558,8 +484,10 @@ type Token = {
   readonly kind:
     "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
   readonly text: string;
-  readonly start: number;
-  readonly end: number;
+  /** Position of the start of the token in `content.text`. */
+  readonly textStart: number;
+  /** Position of the end of the token in `content.text`. */
+  readonly textEnd: number;
   /**
    * True if the start of this token is not on the same line as the end of the
    * previous token.

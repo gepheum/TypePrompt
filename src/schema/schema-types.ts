@@ -1,4 +1,4 @@
-import type { TextSpan } from "../util/common-types.js";
+import type { Span, TextSpan } from "../util/common-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";
@@ -57,7 +57,7 @@ export type StringLiteral = {
 
 export type Interface = {
   readonly kind: "interface";
-  readonly leftCurlyBracket: TextSpan;
+  readonly leftCurlyBracket: Span;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };

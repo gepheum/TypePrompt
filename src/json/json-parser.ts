@@ -6,7 +6,7 @@ import type {
 import {
   textToSourcePosition,
   type TextNodeJoin,
-} from "../xml/text-node-joiner.js";
+} from "../util/text-node-joiner.js";
 import type {
   JsonArray,
   JsonBoolean,

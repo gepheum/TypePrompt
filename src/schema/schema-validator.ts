@@ -3,6 +3,7 @@ import type {
   InternalError,
   InternalErrors,
   Span,
+  TextSpan,
 } from "../util/common-types.js";
 import type {
   Interface,
@@ -144,13 +145,7 @@ function validateType(
     }
     case "interface": {
       errors.push(
-        ...checkNoAmbiguity(
-          Object.values(type.fields).map((f) => ({
-            name: f.name.text,
-            start: f.name.start,
-            end: f.name.end,
-          })),
-        ),
+        ...checkNoAmbiguity(Object.values(type.fields).map((f) => f.name)),
       );
       for (const field of Object.values(type.fields)) {
         if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
@@ -285,7 +280,7 @@ function validateUnionType(
             throw new Error();
           }
           return {
-            name: resolved.value,
+            text: resolved.value,
             start: resolved.quotedName.start + 1,
             end: resolved.quotedName.end - 1,
           };
@@ -299,7 +294,7 @@ function validateUnionType(
     //   - the first field of each interface has string literal type
     //   - all string literals are distinct
     //   - all first fields have the same name
-    const quotedNames: Span[] = [];
+    const quotedNames: TextSpan[] = [];
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
@@ -359,7 +354,7 @@ function validateUnionType(
       errors.push(
         ...checkNoAmbiguity(
           quotedNames.map((q) => ({
-            name: q.text.slice(1, -1),
+            text: q.text.slice(1, -1),
             start: q.start,
             end: q.end,
           })),
@@ -387,7 +382,7 @@ function getDescForKind(kind: UnionKind): string {
   }
 }
 
-function validateTypeName(name: Span, errors: InternalError[]): void {
+function validateTypeName(name: TextSpan, errors: InternalError[]): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
       span: name,

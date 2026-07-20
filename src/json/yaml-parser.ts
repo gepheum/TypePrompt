@@ -4,7 +4,7 @@ import type { InternalErrors } from "../util/common-types.js";
 import {
   textToSourcePosition,
   type TextNodeJoin,
-} from "../xml/text-node-joiner.js";
+} from "../util/text-node-joiner.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 
 export function parseYaml(
