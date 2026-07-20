@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { TextNodeJoin } from "./text-node-joiner.js";
+import { MappedText } from "../util/common-types.js";
 import { decodedToSourceOffset, joinTextNodes } from "./text-node-joiner.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode, TextNode } from "./xml-types.js";
@@ -90,8 +90,8 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
   });
 
   it("returns text start for empty decoded text nodes", () => {
-    const emptyNode: TextNodeJoin = {
-      decoded: "",
+    const emptyNode: MappedText = {
+      text: "",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
     };
 
@@ -110,8 +110,8 @@ describe("joinTextNodes", () => {
   });
 
   it("returns the single node unchanged for a one-element list", () => {
-    const node: TextNodeJoin = {
-      decoded: "abc",
+    const node: MappedText = {
+      text: "abc",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
     };
 
@@ -124,12 +124,12 @@ describe("joinTextNodes", () => {
   });
 
   it("concatenates decoded strings of two plain-text nodes", () => {
-    const node1: TextNodeJoin = {
-      decoded: "foo",
+    const node1: MappedText = {
+      text: "foo",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 100 }],
     };
-    const node2: TextNodeJoin = {
-      decoded: "bar",
+    const node2: MappedText = {
+      text: "bar",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 200 }],
     };
 
@@ -144,8 +144,8 @@ describe("joinTextNodes", () => {
 
   it("preserves all offsetMap entries from each node and shifts decoded offsets", () => {
     // node1: decoded "a<b" with an entity for "<" at decoded offset 1
-    const node1: TextNodeJoin = {
-      decoded: "a<b",
+    const node1: MappedText = {
+      text: "a<b",
       offsetMap: [
         { decodedOffset: 0, sourceOffset: 10 },
         { decodedOffset: 1, sourceOffset: 11 },
@@ -153,8 +153,8 @@ describe("joinTextNodes", () => {
       ],
     };
     // node2: plain "cd"
-    const node2: TextNodeJoin = {
-      decoded: "cd",
+    const node2: MappedText = {
+      text: "cd",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 20 }],
     };
 
@@ -170,16 +170,16 @@ describe("joinTextNodes", () => {
   });
 
   it("concatenates three nodes and maps offsets correctly via textNodeDecodedOffsetToSourceOffset", () => {
-    const node1: TextNodeJoin = {
-      decoded: "hi",
+    const node1: MappedText = {
+      text: "hi",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 5 }],
     };
-    const node2: TextNodeJoin = {
-      decoded: " ",
+    const node2: MappedText = {
+      text: " ",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 50 }],
     };
-    const node3: TextNodeJoin = {
-      decoded: "world",
+    const node3: MappedText = {
+      text: "world",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 100 }],
     };
 
