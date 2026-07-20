@@ -27,6 +27,7 @@ describe("parseXmlDocument", () => {
               end: 5,
             },
             isSelfClosing: true,
+            contentStart: 7,
             children: [],
           },
         ],
@@ -52,6 +53,7 @@ describe("parseXmlDocument", () => {
               text: "root",
             },
             isSelfClosing: false,
+            contentStart: 26,
             attributes: {
               a: {
                 name: { text: "a" },
