@@ -1,17 +1,21 @@
-import { InternalError, MappedSpan, OffsetMapEntry } from "../util/common-types.js";
+import { InternalError, MappedSpan, MappedText, OffsetMapEntry } from "../util/common-types.js";
 
-/// Joins multiple non-overlapping text nodes into a single text node with a combined decoded string and offset map.
-/// The resulting offsetMap entries have decoded offsets relative to the start of the joined string.
-///
-/// `sourceOffset` is used as the `sourceOffset` of the first entry when `textNodes` is empty.
+/**
+ * Joins multiple non-overlapping text nodes into a single text node with a combined
+ * decoded string and offset map. The resulting offsetMap entries have decoded offsets
+ * relative to the start of the joined string.
+ * 
+ * `sourceOffset` is used as the `sourceOffset` of the first entry when `textNodes` is
+ * empty.
+ */
 export function joinTextNodes(
-  textNodes: readonly MappedSpan[],
+  textNodes: readonly MappedText[],
   sourceOffset: number,
-): MappedSpan {
+): MappedText {
   if (textNodes.length === 0) {
-    return { decoded: "", offsetMap: [{ decodedOffset: 0, sourceOffset }] };
+    return { text: "", offsetMap: [{ decodedOffset: 0, sourceOffset }] };
   }
-  let decoded = "";
+  let text = "";
   const offsetMap: OffsetMapEntry[] = [];
   let currentOffset = 0;
 
@@ -22,27 +26,30 @@ export function joinTextNodes(
         sourceOffset: entry.sourceOffset,
       });
     }
-    currentOffset += textNode.decoded.length;
-    decoded += textNode.decoded;
+    currentOffset += textNode.text.length;
+    text += textNode.text;
   }
 
-  return { decoded, offsetMap };
+  return { text: text, offsetMap: offsetMap };
 }
 
-/// Maps a decoded offset in a text node back to a source offset in the original source.
-///
-/// The offset is a boundary offset into `textNode.decoded`, in the range
-/// `[0, textNode.decoded.length]`.
+/**
+ * Maps a decoded offset in a text node back to a source offset in the original
+ * source.
+ * 
+ * The offset is a boundary offset into `textNode.decoded`, in the range
+ * `[0, textNode.decoded.length]`.
+ */
 export function decodedToSourceOffset(
-  textNode: MappedSpan,
+  textNode: MappedText,
   decodedOffset: number,
 ): number {
   if (!Number.isInteger(decodedOffset)) {
     throw new RangeError("decodedOffset must be an integer");
   }
-  if (decodedOffset < 0 || decodedOffset > textNode.decoded.length) {
+  if (decodedOffset < 0 || decodedOffset > textNode.text.length) {
     throw new RangeError(
-      `decodedOffset out of range: ${decodedOffset} (expected 0..${textNode.decoded.length})`,
+      `decodedOffset out of range: ${decodedOffset} (expected 0..${textNode.text.length})`,
     );
   }
 
@@ -60,7 +67,7 @@ export function decodedToSourceOffset(
 }
 
 export function decodedToSourceOffsets(
-  textNode: TextNodeJoin,
+  textNode: MappedText,
 ): (e: InternalError) => InternalError {
   return (e: InternalError) => ({
     span: {
