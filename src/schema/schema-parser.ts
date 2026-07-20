@@ -8,7 +8,7 @@ import type {
 import {
   decodedToSourceOffset,
   decodedToSourceOffsets,
-} from "../xml/text-node-join.js";
+} from "../xml/text-node-joiner.js";
 import type {
   NonUnionType,
   SchemaField,

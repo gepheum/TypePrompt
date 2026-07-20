@@ -79,8 +79,10 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          start: input.indexOf("foo"),
-          end: input.indexOf("foo") + "foo".length,
+          span: {
+            start: input.indexOf("foo"),
+            end: input.indexOf("foo") + "foo".length,
+          },
         },
       ],
     });
@@ -108,8 +110,10 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          start: input.indexOf("y"),
-          end: input.indexOf("y") + "y".length,
+          span: {
+            start: input.indexOf("y"),
+            end: input.indexOf("y") + "y".length,
+          },
         },
       ],
     });
@@ -141,8 +145,10 @@ describe("checkXmlAttributes", () => {
       kind: "error",
       errors: [
         {
-          start: input.indexOf("abc"),
-          end: input.indexOf("abc") + "abc".length,
+          span: {
+            start: input.indexOf("abc"),
+            end: input.indexOf("abc") + "abc".length,
+          },
         },
       ],
     });

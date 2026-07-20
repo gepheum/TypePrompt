@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { TextNodeJoin } from "../xml/text-node-join.js";
+import type { TextNodeJoin } from "../xml/text-node-joiner.js";
 import { parseCTag } from "./ctag-parser.js";
 
 function textNode(source: string): TextNodeJoin {

@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { InternalError } from "../util/common-types.js";
-import type { TextNodeJoin } from "../xml/text-node-join.js";
+import type { TextNodeJoin } from "../xml/text-node-joiner.js";
 import type { JsonValue } from "./json-types.js";
 import { parseYaml } from "./yaml-parser.js";
 

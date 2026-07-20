@@ -7,8 +7,8 @@ import type {
 } from "../util/common-types.js";
 import type {
   Attribute,
-  CommentsPolicy,
   ElementNode,
+  XmlComment,
   XmlDocument,
   XmlNode,
 } from "./xml-types.js";
@@ -19,19 +19,8 @@ import type {
 
 export function parseXmlDocument(
   content: string,
-): XmlDocument<"drop-comments"> | InternalErrors;
-export function parseXmlDocument<C extends CommentsPolicy>(
-  content: string,
-  commentsPolicy: C,
-): XmlDocument<C> | InternalErrors;
-export function parseXmlDocument<C extends CommentsPolicy>(
-  content: string,
-  commentsPolicy?: C,
-): XmlDocument<C> | InternalErrors {
-  return new XmlParser(
-    content,
-    (commentsPolicy ?? "drop-comments") as CommentsPolicy,
-  ).parse() as XmlDocument<C> | InternalErrors;
+): XmlDocument | InternalErrors {
+  return new XmlParser(content).parse();
 }
 
 // ---------------------------------------------------------------------------
@@ -41,15 +30,12 @@ export function parseXmlDocument<C extends CommentsPolicy>(
 class XmlParser {
   private cursor = 0;
   private readonly errors: InternalError[] = [];
-  private readonly openElements: OpenElement<"keep-comments">[] = [];
-  private readonly rootNodes: XmlNode<"keep-comments">[] = [];
+  private readonly openElements: OpenElement[] = [];
+  private readonly rootNodes: XmlNode[] = [];
 
-  constructor(
-    private readonly content: string,
-    private readonly commentsPolicy: CommentsPolicy,
-  ) {}
+  constructor(private readonly content: string) {}
 
-  parse(): XmlDocument<"keep-comments"> | InternalErrors {
+  parse(): XmlDocument | InternalErrors {
     while (this.cursor < this.content.length) {
       if (this.content[this.cursor] !== "<") {
         this.parseText();
@@ -71,14 +57,12 @@ class XmlParser {
       const el = this.openElements.pop()!;
       this.errors.push({
         span: {
-          start: el.openingTagStart,
-          end: el.openingTagEnd,
+          start: el.tag.start,
+          end: el.tag.end,
         },
-        message: `Unclosed tag '<${el.node.tag.text}>'`,
+        message: `Unclosed tag '<${el.tag.text}>'`,
       });
-      this.appendNode(
-        this.completeElement(el, el.openingTagEnd, el.openingTagEnd),
-      );
+      this.appendNode(el);
     }
 
     if (this.errors.length > 0) {
@@ -122,9 +106,8 @@ class XmlParser {
         },
         message: "Unclosed XML comment",
       });
-    } else if (this.commentsPolicy === "keep-comments") {
-      this.appendNode({
-        kind: "comment",
+    } else {
+      this.appendComment({
         span: { start: tokenStart, end: tokenEnd },
       });
     }
@@ -205,19 +188,19 @@ class XmlParser {
         tag: tag,
         attributes: attributes,
         children: [],
+        comments: [],
+        contentStart: openingTagEnd,
         isSelfClosing: true,
       });
     } else {
       this.openElements.push({
-        node: {
-          kind: "element",
-          tag: tag,
-          attributes: attributes,
-          children: [],
-          isSelfClosing: false,
-        },
-        openingTagStart: tokenStart,
-        openingTagEnd,
+        kind: "element",
+        tag: tag,
+        attributes: attributes,
+        children: [],
+        comments: [],
+        contentStart: openingTagEnd,
+        isSelfClosing: false,
       });
     }
   }
@@ -316,16 +299,16 @@ class XmlParser {
 
     const top = this.openElements[this.openElements.length - 1]!;
 
-    if (top.node.tag.text === name) {
+    if (top.tag.text === name) {
       this.openElements.pop();
-      this.appendNode(this.completeElement(top, top.openingTagEnd, tokenStart));
+      this.appendNode(top);
       return;
     }
 
     // Mismatch – search for a matching ancestor.
     let foundIndex = -1;
     for (let i = this.openElements.length - 2; i >= 0; i--) {
-      if (this.openElements[i]!.node.tag.text === name) {
+      if (this.openElements[i]!.tag.text === name) {
         foundIndex = i;
         break;
       }
@@ -342,7 +325,7 @@ class XmlParser {
       return;
     }
 
-    const topTag = top.node.tag.text;
+    const topTag = top.tag.text;
     this.errors.push({
       span: {
         start: tokenStart,
@@ -354,16 +337,12 @@ class XmlParser {
     // Implicitly close all elements above the matched ancestor.
     while (this.openElements.length > foundIndex + 1) {
       const el = this.openElements.pop()!;
-      this.appendNode(
-        this.completeElement(el, el.openingTagEnd, el.openingTagEnd),
-      );
+      this.appendNode(el);
     }
 
     // Close the matched element with the actual content span.
     const matched = this.openElements.pop()!;
-    this.appendNode(
-      this.completeElement(matched, matched.openingTagEnd, tokenStart),
-    );
+    this.appendNode(matched);
   }
 
   // -------------------------------------------------------------------------
@@ -469,23 +448,19 @@ class XmlParser {
   // Helpers
   // -------------------------------------------------------------------------
 
-  private completeElement<C extends CommentsPolicy>(
-    el: OpenElement<C>,
-    contentStart: number,
-    contentEnd: number,
-  ): XmlNode<C> {
-    return {
-      ...el.node,
-      contentSpan: { start: contentStart, end: contentEnd },
-    } as XmlNode<C>;
-  }
-
-  private appendNode(node: XmlNode<"keep-comments">): void {
+  private appendNode(node: XmlNode): void {
     const parent = this.openElements.at(-1);
     if (parent !== undefined) {
-      parent.node.children.push(node);
+      parent.children.push(node);
     } else {
       this.rootNodes.push(node);
+    }
+  }
+
+  private appendComment(comment: XmlComment): void {
+    const parent = this.openElements.at(-1);
+    if (parent !== undefined) {
+      parent.comments.push(comment);
     }
   }
 
@@ -561,13 +536,10 @@ function codePointToString(codePoint: number): string | undefined {
 // Internal types
 // ---------------------------------------------------------------------------
 
-interface OpenElement<C extends CommentsPolicy> {
-  readonly node: Omit<ElementNode<C>, "children"> & {
-    readonly children: XmlNode<C>[];
-  };
-  readonly openingTagStart: number;
-  readonly openingTagEnd: number;
-}
+type OpenElement = ElementNode & {
+  readonly children: XmlNode[];
+  readonly comments: XmlComment[];
+};
 
 type EntityDecodeResult =
   | { readonly kind: "ok"; readonly value: string }

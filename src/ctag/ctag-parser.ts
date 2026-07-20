@@ -1,6 +1,9 @@
 import { parseJson } from "../json/json-parser.js";
 import type { InternalErrors } from "../util/common-types.js";
-import { decodedToSourceOffset, TextNodeJoin } from "../xml/text-node-join.js";
+import {
+  decodedToSourceOffset,
+  TextNodeJoin,
+} from "../xml/text-node-joiner.js";
 import { CTag } from "./ctag-types.js";
 
 export function parseCTag(content: TextNodeJoin): CTag | InternalErrors {

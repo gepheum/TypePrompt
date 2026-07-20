@@ -5,7 +5,7 @@ import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type { Span } from "../util/common-types.js";
-import { joinTextNodes, TextNodeJoin } from "../xml/text-node-join.js";
+import { joinTextNodes, TextNodeJoin } from "../xml/text-node-joiner.js";
 import { validateJson } from "./json-type-checker.js";
 import type {
   JsonArray,

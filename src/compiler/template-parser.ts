@@ -4,7 +4,7 @@ import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
 import { InternalError, InternalErrors } from "../util/common-types.js";
-import { joinTextNodes, TextNodeJoin } from "../xml/text-node-join.js";
+import { joinTextNodes, TextNodeJoin } from "../xml/text-node-joiner.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { Body, OutputFormat, Snippet, Template } from "./compiler-types.js";

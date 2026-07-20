@@ -1,8 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { TextNodeJoin } from "./text-node-join.js";
-import { decodedToSourceOffset, joinTextNodes } from "./text-node-join.js";
+import type { TextNodeJoin } from "./text-node-joiner.js";
+import { decodedToSourceOffset, joinTextNodes } from "./text-node-joiner.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode, TextNode } from "./xml-types.js";
 
@@ -59,7 +59,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
-    expect(textNode.decoded).toBe("<");
+    expect(textNode.text).toBe("<");
     expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("&lt;"));
     expect(decodedToSourceOffset(textNode, 1)).toBe(
       input.indexOf("&lt;") + "&lt;".length,
@@ -104,7 +104,7 @@ describe("joinTextNodes", () => {
     const result = joinTextNodes([], 42);
 
     expect(result).toMatch({
-      decoded: "",
+      text: "",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 42 }],
     });
   });
@@ -118,7 +118,7 @@ describe("joinTextNodes", () => {
     const result = joinTextNodes([node], 0);
 
     expect(result).toMatch({
-      decoded: "abc",
+      text: "abc",
       offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
     });
   });
@@ -135,7 +135,7 @@ describe("joinTextNodes", () => {
 
     const result = joinTextNodes([node1, node2], 0);
 
-    expect(result.decoded).toBe("foobar");
+    expect(result.text).toBe("foobar");
     expect(result.offsetMap).toMatch([
       { decodedOffset: 0, sourceOffset: 100 },
       { decodedOffset: 3, sourceOffset: 200 },
@@ -160,7 +160,7 @@ describe("joinTextNodes", () => {
 
     const result = joinTextNodes([node1, node2], 0);
 
-    expect(result.decoded).toBe("a<bcd");
+    expect(result.text).toBe("a<bcd");
     expect(result.offsetMap).toMatch([
       { decodedOffset: 0, sourceOffset: 10 },
       { decodedOffset: 1, sourceOffset: 11 },
@@ -185,7 +185,7 @@ describe("joinTextNodes", () => {
 
     const joined = joinTextNodes([node1, node2, node3], 0);
 
-    expect(joined.decoded).toBe("hi world");
+    expect(joined.text).toBe("hi world");
     // "hi" maps to source 5..6
     expect(decodedToSourceOffset(joined, 0)).toBe(5);
     expect(decodedToSourceOffset(joined, 1)).toBe(6);

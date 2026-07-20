@@ -8,7 +8,7 @@ import {
   decodedToSourceOffset,
   joinTextNodes,
   type TextNodeJoin,
-} from "../xml/text-node-join.js";
+} from "../xml/text-node-joiner.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";

@@ -9,7 +9,7 @@ import {
  * decoded string and offset map. The resulting offsetMap entries have decoded offsets
  * relative to the start of the joined string.
  *
- * `sourceOffset` is used as the `sourceOffset` of the first entry when `textNodes` is
+ * `startPosition` is used as the `sourceOffset` of the first entry when `textNodes` is
  * empty.
  */
 export function joinTextNodes(
@@ -46,11 +46,7 @@ export function joinTextNodes(
 }
 
 /**
- * Maps a decoded offset in a text node back to a source offset in the original
- * source.
- *
- * The offset is a boundary offset into `textNode.decoded`, in the range
- * `[0, textNode.decoded.length]`.
+ * Maps a position in a decoded text node to a position in the original XML file.
  */
 export function decodedToSourceOffset(
   textNode: MappedText,
