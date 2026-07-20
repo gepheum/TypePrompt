@@ -1,14 +1,11 @@
 import { parseJson } from "../json/json-parser.js";
-import type { InternalErrors } from "../util/common-types.js";
-import {
-  TextNodeJoin,
-  textToSourcePosition,
-} from "../util/text-node-joiner.js";
+import type { InternalErrors, MappedText } from "../util/common-types.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import { CTag } from "./ctag-types.js";
 
-export function parseCTag(content: TextNodeJoin): CTag | InternalErrors {
-  if (/^(\w+)$/.test(content.decoded)) {
-    const identifier = content.decoded;
+export function parseCTag(content: MappedText): CTag | InternalErrors {
+  if (/^(\w+)$/.test(content.text)) {
+    const identifier = content.text;
     return {
       kind: "identifier",
       identifier: {

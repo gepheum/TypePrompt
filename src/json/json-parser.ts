@@ -1,12 +1,10 @@
 import type {
   InternalError,
   InternalErrors,
+  MappedText,
   Span,
 } from "../util/common-types.js";
-import {
-  textToSourcePosition,
-  type TextNodeJoin,
-} from "../util/text-node-joiner.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   JsonArray,
   JsonBoolean,
@@ -21,13 +19,13 @@ import type {
 } from "./json-types.js";
 
 export function parseJson<Mode extends JsonMode = "loose">(
-  content: TextNodeJoin,
+  content: MappedText,
   mode: Mode = "loose" as Mode,
 ): JsonValue<Mode> | InternalErrors {
   const parser = new JsonParser(content, mode);
   parser.skipSpaces();
 
-  if (parser.cursor >= content.decoded.length) {
+  if (parser.cursor >= content.text.length) {
     if (parser.errors.length === 0) {
       parser.pushError(parser.cursor, parser.cursor, "Expected JSON value");
     }
@@ -40,10 +38,10 @@ export function parseJson<Mode extends JsonMode = "loose">(
   }
 
   parser.skipSpaces();
-  if (parser.cursor < content.decoded.length) {
+  if (parser.cursor < content.text.length) {
     parser.pushError(
       parser.cursor,
-      content.decoded.length,
+      content.text.length,
       "Unexpected trailing content after JSON value",
     );
   }
@@ -57,10 +55,10 @@ export function parseJson<Mode extends JsonMode = "loose">(
 
 class JsonParser<Mode extends JsonMode = "loose"> {
   constructor(
-    private readonly content: TextNodeJoin,
+    private readonly content: MappedText,
     private readonly mode: Mode = "loose" as Mode,
   ) {
-    this.text = content.decoded;
+    this.text = content.text;
   }
 
   parseValue(): JsonValue<Mode> | null {
@@ -600,7 +598,6 @@ class JsonParser<Mode extends JsonMode = "loose"> {
 
   exampleSlice(start: number, end: number): Span {
     return {
-      text: this.text.slice(start, end),
       start: textToSourcePosition(this.content, start),
       end: textToSourcePosition(this.content, end),
     };

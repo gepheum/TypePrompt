@@ -10,8 +10,12 @@ import type {
   JsonValue,
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
-import type { Schema, SchemaParseContext } from "../schema/schema-types.js";
-import type { Span } from "../util/common-types.js";
+import type {
+  Schema,
+  SchemaValidationContext,
+} from "../schema/schema-types.js";
+import { validateSchema } from "../schema/schema-validator.js";
+import type { TextSpan } from "../util/common-types.js";
 import type { CTag } from "./ctag-types.js";
 import { validateCTag } from "./ctag-validator.js";
 
@@ -19,23 +23,38 @@ import { validateCTag } from "./ctag-validator.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TEMPLATE: SchemaParseContext = { kind: "template", argTypeNames: [] };
-
-function parseSchemaOrThrow(
-  source: string,
-  context: SchemaParseContext = TEMPLATE,
-): Schema {
-  const result = parseSchema(source, context);
-  if (result.kind !== "success") {
+function parseSchemaOrThrow(source: string): Schema {
+  const sourceSpan = {
+    text: source,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
+  const parseResult = parseSchema(sourceSpan);
+  if (parseResult.kind !== "success") {
+    const { errors } = parseResult;
     throw new Error(
-      `Schema parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
+      `Schema parse failed: ${errors.map((e) => e.message).join(", ")}`,
     );
   }
-  return result;
+  const template: SchemaValidationContext = {
+    kind: "template",
+    argTypeNames: [],
+  };
+  const schema = validateSchema(parseResult.typeDeclarations, template);
+  if (schema.kind === "error") {
+    const { errors } = schema;
+    throw new Error(
+      `Schema validation failed: ${errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+  return schema;
 }
 
-function span(text: string): Span {
-  return { text, start: 0, end: text.length };
+function span(text: string): TextSpan {
+  return {
+    text: text,
+    start: 0,
+    end: text.length,
+  };
 }
 
 function str(value: string): JsonString {

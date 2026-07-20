@@ -15,8 +15,10 @@ export function validateCTag(
       if (!schema.identifiers.has(cTag.identifier.text)) {
         return [
           {
-            start: cTag.identifier.start,
-            end: cTag.identifier.end,
+            span: {
+              start: cTag.identifier.start,
+              end: cTag.identifier.end,
+            },
             message: `Identifier '${cTag.identifier.text}' not found in schema`,
           },
         ];
@@ -73,8 +75,10 @@ export function validateCTag(
         ) {
           return [
             {
-              start: cTag.json.firstToken.start,
-              end: cTag.json.firstToken.end,
+              span: {
+                start: cTag.json.firstToken.start,
+                end: cTag.json.firstToken.end,
+              },
               message: `Does not match type '${best.name}'`,
             },
             best.reason,
@@ -82,8 +86,10 @@ export function validateCTag(
         } else {
           return [
             {
-              start: cTag.json.firstToken.start,
-              end: cTag.json.firstToken.end,
+              span: {
+                start: cTag.json.firstToken.start,
+                end: cTag.json.firstToken.end,
+              },
               message: `Does not match any of the types defined in the schema`,
             },
           ];
