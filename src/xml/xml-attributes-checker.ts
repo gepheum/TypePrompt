@@ -4,7 +4,6 @@ import type {
   InternalError,
   InternalErrors,
   MappedSpan,
-  Span,
 } from "../util/common-types.js";
 import type { ElementNode } from "./xml-types.js";
 

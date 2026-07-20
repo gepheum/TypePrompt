@@ -1,16 +1,18 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { InternalErrors, Span } from "../util/common-types.js";
+import type { InternalErrors } from "../util/common-types.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type {
   XmlComment as CommentNode,
+  CommentsPolicy,
   ElementNode,
-  TextNode,
   XmlDocument,
 } from "./xml-types.js";
 
-function expectSuccess(result: XmlDocument | InternalErrors): XmlDocument {
+function expectSuccess<C extends CommentsPolicy>(
+  result: XmlDocument<C> | InternalErrors,
+): XmlDocument<C> {
   expect(result).toMatch({ kind: "success" });
   if (result.kind !== "success") {
     throw new Error(
@@ -20,7 +22,9 @@ function expectSuccess(result: XmlDocument | InternalErrors): XmlDocument {
   return result;
 }
 
-function expectError(result: XmlDocument | InternalErrors): InternalErrors {
+function expectError<C extends CommentsPolicy>(
+  result: XmlDocument<C> | InternalErrors,
+): InternalErrors {
   expect(result).toMatch({ kind: "error" });
   if (result.kind !== "error") {
     throw new Error("Expected parse errors");
@@ -73,32 +77,32 @@ describe("parseXmlDocument", () => {
             isSelfClosing: false,
             attributes: {
               a: {
-                name: {text: "a"},
-                value: {text: "1"},
+                name: { text: "a" },
+                value: { text: "1" },
               },
               b: {
-                name: {text: "b"},
-                value: {text: "two"},
+                name: { text: "b" },
+                value: { text: "two" },
               },
             },
             children: [
-              {text: "mid"},
+              { text: "mid" },
               {
                 kind: "element",
-                tag: {text: "child"},
+                tag: { text: "child" },
                 isSelfClosing: true,
                 attributes: {
                   x: {
-                    name: {text: "x"},
-                    value: {text: "y"},
+                    name: { text: "x" },
+                    value: { text: "y" },
                   },
                 },
                 children: [],
               },
-              {text: "after"},
+              { text: "after" },
             ],
           },
-          {text: "tail"},
+          { text: "tail" },
         ],
       },
     });
@@ -112,11 +116,9 @@ describe("parseXmlDocument", () => {
 
     expect(root).toMatch({
       kind: "element",
-      tag: {text: "root"},
+      tag: { text: "root" },
       isSelfClosing: false,
-      children: [
-         {text: "ok"},
-      ],
+      children: [{ text: "ok" }],
     });
   });
 
@@ -127,12 +129,9 @@ describe("parseXmlDocument", () => {
 
     expect(root).toMatch({
       kind: "element",
-      tag: {text: "foo"},
+      tag: { text: "foo" },
       isSelfClosing: false,
-      children: [
-        {text: "abc"},
-        {text: "bcd"},
-      ],
+      children: [{ text: "abc" }, { text: "bcd" }],
     });
   });
 
@@ -193,10 +192,10 @@ describe("parseXmlDocument", () => {
     expect(root).toMatch({
       attributes: {
         a: {
-          value: {text: "x < y"},
+          value: { text: "x < y" },
         },
         b: {
-          value: {text: "AB"},
+          value: { text: "AB" },
         },
       },
       isSelfClosing: true,
@@ -210,13 +209,13 @@ describe("parseXmlDocument", () => {
     expect(result.root.children).toMatch([
       {
         kind: "element",
-        tag: {text: "a"},
+        tag: { text: "a" },
         isSelfClosing: true,
         children: [],
       },
       {
         kind: "element",
-        tag: {text: "b"},
+        tag: { text: "b" },
         isSelfClosing: false,
         children: [],
       },
@@ -229,17 +228,17 @@ describe("parseXmlDocument", () => {
     const root = result.root.children[0] as ElementNode;
 
     expect(root).toMatch({
-      tag: {text: "root"},
+      tag: { text: "root" },
       isSelfClosing: false,
       attributes: {
         a: {
-          value: {text: "x > y"},
+          value: { text: "x > y" },
         },
       },
       children: [
         {
           kind: "element",
-          tag: {text: "child"},
+          tag: { text: "child" },
           isSelfClosing: true,
           children: [],
         },
@@ -313,9 +312,7 @@ describe("parseXmlDocument", () => {
     const result = expectSuccess(parseXmlDocument(input));
     const root = result.root.children[0] as ElementNode;
 
-    expect(root.children).toMatch([
-      { kind: "text", text: "after" },
-    ]);
+    expect(root.children).toMatch([{ kind: "text", text: "after" }]);
   });
 
   it("reports an unexpected closing tag", () => {
@@ -325,9 +322,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          span: {start: 0,
-          end: 7,
-          },
+          span: { start: 0, end: 7 },
           message: "Unexpected closing tag '</root>'",
         },
       ],
@@ -341,8 +336,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          span: {start: 6,
-          end: 10,},
+          span: { start: 6, end: 10 },
           message: "Mismatched closing tag '</a>'; expected '</b>'",
         },
       ],
@@ -357,8 +351,8 @@ describe("parseXmlDocument", () => {
       errors: [
         {
           span: {
-          start: 0,
-          end: 3,
+            start: 0,
+            end: 3,
           },
           message: "Unclosed tag '<a>'",
         },
@@ -460,7 +454,7 @@ describe("TextNode.allWhitespace", () => {
 
     expect(root.children[0]).toMatch({
       kind: "text",
-      decoded: "\t ",
+      text: "\t ",
       allWhitespace: true,
     });
   });
@@ -472,7 +466,7 @@ describe("TextNode.allWhitespace", () => {
 
     expect(root.children[0]).toMatch({
       kind: "text",
-      decoded: "A",
+      text: "A",
       allWhitespace: false,
     });
   });
@@ -487,9 +481,7 @@ describe("parseXmlDocument – commentsPolicy", () => {
     const input = "<!-- hello -->text";
     const result = expectSuccess(parseXmlDocument(input));
 
-    expect(result.root.children).toMatch([
-      { kind: "text", text: "text" },
-    ]);
+    expect(result.root.children).toMatch([{ kind: "text", text: "text" }]);
   });
 
   it("drops comments when commentsPolicy is 'drop-comments'", () => {
@@ -498,7 +490,7 @@ describe("parseXmlDocument – commentsPolicy", () => {
     const root = result.root.children[0] as ElementNode;
 
     expect(root.children).toMatch([
-      { kind: "element", tagName: { text: "child" } },
+      { kind: "element", tag: { text: "child" } },
     ]);
   });
 
@@ -525,7 +517,6 @@ describe("parseXmlDocument – commentsPolicy", () => {
     expect(comment).toMatch({
       kind: "comment",
       span: {
-        text: "<!-- my comment -->",
         start: commentStart,
         end: commentEnd,
       },
@@ -537,21 +528,21 @@ describe("parseXmlDocument – commentsPolicy", () => {
     const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
 
     expect(result.root.children).toMatch([
-      { kind: "comment", sourceSpan: { text: "<!-- a -->" } },
-      { kind: "comment", sourceSpan: { text: "<!-- b -->" } },
-      { kind: "comment", sourceSpan: { text: "<!-- c -->" } },
+      { kind: "comment" },
+      { kind: "comment" },
+      { kind: "comment" },
     ]);
   });
 
   it("keeps comment nodes interleaved with element and text nodes", () => {
     const input = "<root>text<!-- note --><child/></root>";
     const result = expectSuccess(parseXmlDocument(input, "keep-comments"));
-    const root = result.root.children[0] as ElementNode;
+    const root = result.root.children[0] as ElementNode<"keep-comments">;
 
     expect(root.children).toMatch([
-      { kind: "text", sourceSpan: { text: "text" } },
-      { kind: "comment", sourceSpan: { text: "<!-- note -->" } },
-      { kind: "element", tagName: { text: "child" } },
+      { kind: "text", text: "text" },
+      { kind: "comment" },
+      { kind: "element", tag: { text: "child" } },
     ]);
   });
 

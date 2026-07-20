@@ -317,7 +317,10 @@ function mismatch(
   return {
     kind: "mismatch",
     details: {
-      reason: { span: {start: sourceSpan.start, end: sourceSpan.end}, message },
+      reason: {
+        span: { start: sourceSpan.start, end: sourceSpan.end },
+        message,
+      },
       matchScore,
     },
   };

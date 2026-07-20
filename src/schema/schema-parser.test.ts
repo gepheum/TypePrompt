@@ -1,11 +1,14 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseSchema } from "./schema-parser.js";
 import type { TextNodeJoin } from "../xml/text-node-join.js";
+import { parseSchema } from "./schema-parser.js";
 
 function textNode(source: string): TextNodeJoin {
-  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+  return {
+    decoded: source,
+    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +43,9 @@ describe("parseSchema – interfaces", () => {
 
   it("parses an interface with multiple fields", () => {
     const result = parseSchema(
-      textNode("type Response = { name: string; age: number; active: boolean; };"),
+      textNode(
+        "type Response = { name: string; age: number; active: boolean; };",
+      ),
     );
     expect(result).toMatch({
       kind: "success",
@@ -94,7 +99,9 @@ describe("parseSchema – interfaces", () => {
 
   it("parses a nested inline interface field", () => {
     const result = parseSchema(
-      textNode("type Response = { address: { street: string; city: string }; };"),
+      textNode(
+        "type Response = { address: { street: string; city: string }; };",
+      ),
     );
     expect(result).toMatch({
       kind: "success",
@@ -131,7 +138,11 @@ describe("parseSchema – interfaces", () => {
 
   it("accepts newline as implicit field separator", () => {
     const result = parseSchema(
-      textNode(["type Response = {", "  name: string", "  age: number", "};"].join("\n")),
+      textNode(
+        ["type Response = {", "  name: string", "  age: number", "};"].join(
+          "\n",
+        ),
+      ),
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -226,7 +237,9 @@ describe("parseSchema – type aliases", () => {
 
   it("parses a type alias to a union of inline interfaces", () => {
     const result = parseSchema(
-      textNode('type Response = { kind: "circle"; radius: number } | { kind: "rect"; width: number; height: number };'),
+      textNode(
+        'type Response = { kind: "circle"; radius: number } | { kind: "rect"; width: number; height: number };',
+      ),
     );
     expect(result).toMatch({
       kind: "success",
@@ -265,7 +278,9 @@ describe("parseSchema – type aliases", () => {
 
   it("parses leading-pipe union syntax", () => {
     const result = parseSchema(
-      textNode(["type Response =", '  | "active"', '  | "inactive";'].join("\n")),
+      textNode(
+        ["type Response =", '  | "active"', '  | "inactive";'].join("\n"),
+      ),
     );
     expect(result).toMatch({
       kind: "success",
@@ -416,7 +431,11 @@ describe("parseSchema – comments and JSDoc", () => {
 
   it("extracts JSDoc from a single-line /** ... */ comment on a type", () => {
     const result = parseSchema(
-      textNode(["/** A named user. */", "type Response = { name: string; };"].join("\n")),
+      textNode(
+        ["/** A named user. */", "type Response = { name: string; };"].join(
+          "\n",
+        ),
+      ),
     );
     expect(result).toMatch({
       kind: "success",
@@ -564,4 +583,3 @@ describe("parseSchema – naming errors", () => {
     });
   });
 });
-

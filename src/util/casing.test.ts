@@ -27,22 +27,22 @@ describe("checkNoAmbiguity", () => {
       {
         message: "Name 'response' conflicts with 'Response'",
         span: {
-        start: 10,
-        end: 18,
+          start: 10,
+          end: 18,
         },
       },
       {
         message: "Name 'RESPONSE' conflicts with 'Response'",
         span: {
-        start: 20,
-        end: 28,
+          start: 20,
+          end: 28,
         },
       },
       {
         message: "Name 'error' conflicts with 'Error'",
         span: {
-        start: 36,
-        end: 41,
+          start: 36,
+          end: 41,
         },
       },
     ]);
@@ -59,8 +59,8 @@ describe("checkNoAmbiguity", () => {
       {
         message: "Name 'Response' conflicts with 'response'",
         span: {
-        start: 10,
-        end: 18,
+          start: 10,
+          end: 18,
         },
       },
     ]);
@@ -79,15 +79,15 @@ describe("checkNoAmbiguity", () => {
       {
         message: "Name 'foo' is duplicated",
         span: {
-        start: 0,
-        end: 3,
-        }
+          start: 0,
+          end: 3,
+        },
       },
       {
         message: "Name 'foo' is duplicated",
         span: {
-        start: 10,
-        end: 13,
+          start: 10,
+          end: 13,
         },
       },
     ]);

@@ -1,17 +1,20 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { JsonValue } from "./json-types.js";
+import { InternalError } from "../util/common-types.js";
 import type { TextNodeJoin } from "../xml/text-node-join.js";
+import type { JsonValue } from "./json-types.js";
 import { parseYaml } from "./yaml-parser.js";
-import { InternalError, InternalErrors } from "../util/common-types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function textNode(source: string): TextNodeJoin {
-  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+  return {
+    decoded: source,
+    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+  };
 }
 
 function parseOk(source: string): JsonValue<"strict"> {
@@ -505,7 +508,9 @@ describe("parseYaml – source offset remapping", () => {
     const result = parseYaml(content);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ span: {start: 10, end: 10}, message: "Empty YAML document" }],
+      errors: [
+        { span: { start: 10, end: 10 }, message: "Empty YAML document" },
+      ],
     });
   });
 });

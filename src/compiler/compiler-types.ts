@@ -1,11 +1,7 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
-import {
-  InternalError,
-  InternalErrors,
-  Span,
-} from "../util/common-types.js";
+import { InternalError, InternalErrors, Span } from "../util/common-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {

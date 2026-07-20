@@ -5,7 +5,10 @@ import type { TextNodeJoin } from "../xml/text-node-join.js";
 import { parseJson } from "./json-parser.js";
 
 function textNode(source: string): TextNodeJoin {
-  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+  return {
+    decoded: source,
+    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+  };
 }
 
 describe("parseJson – primitives", () => {
@@ -172,7 +175,7 @@ describe("parseJson – errors", () => {
   it("reports error for empty input", () => {
     expect(parseJson(textNode("   "))).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON value", span: { start: 3, end: 3 }}],
+      errors: [{ message: "Expected JSON value", span: { start: 3, end: 3 } }],
     });
   });
 
@@ -183,8 +186,8 @@ describe("parseJson – errors", () => {
         {
           message: "Unexpected trailing content after JSON value",
           span: {
-          start: 5,
-          end: 10,
+            start: 5,
+            end: 10,
           },
         },
       ],
@@ -260,7 +263,9 @@ describe("parseJson – source offset remapping", () => {
     };
     expect(parseJson(content)).toMatch({
       kind: "error",
-      errors: [{ span: {start: 10, end: 10}, message: "Expected JSON value" }],
+      errors: [
+        { span: { start: 10, end: 10 }, message: "Expected JSON value" },
+      ],
     });
   });
 });

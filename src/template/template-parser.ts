@@ -5,8 +5,8 @@ import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import {
-  joinTextNodes,
   decodedToSourceOffset,
+  joinTextNodes,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";

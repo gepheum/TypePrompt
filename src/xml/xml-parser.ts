@@ -125,7 +125,7 @@ class XmlParser {
     } else if (this.commentsPolicy === "keep-comments") {
       this.appendNode({
         kind: "comment",
-        span: {start: tokenStart, end: tokenEnd},
+        span: { start: tokenStart, end: tokenEnd },
       });
     }
     this.cursor = tokenEnd;
@@ -163,7 +163,7 @@ class XmlParser {
     this.cursor = RE_XML_NAME.lastIndex;
     const nameEnd = this.cursor;
     const tagName = this.content.slice(nameStart, nameEnd);
-    const tag: DecodedSpan = {text: tagName, start: nameStart, end: nameEnd};
+    const tag: DecodedSpan = { text: tagName, start: nameStart, end: nameEnd };
 
     const attributes: Record<string, Attribute> = {};
     let isSelfClosing = false;
@@ -308,7 +308,7 @@ class XmlParser {
 
     if (this.openElements.length === 0) {
       this.errors.push({
-        span: {start: tokenStart, end: tokenEnd},
+        span: { start: tokenStart, end: tokenEnd },
         message: `Unexpected closing tag '</${name}>'`,
       });
       return;
@@ -476,7 +476,7 @@ class XmlParser {
   ): XmlNode<C> {
     return {
       ...el.node,
-      contentSpan: {start: contentStart, end: contentEnd},
+      contentSpan: { start: contentStart, end: contentEnd },
     } as XmlNode<C>;
   }
 

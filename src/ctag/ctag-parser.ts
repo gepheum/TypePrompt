@@ -22,6 +22,6 @@ export function parseCTag(content: TextNodeJoin): CTag | InternalErrors {
     return {
       kind: "json",
       json: json,
-    }
+    };
   }
 }

@@ -2,10 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import type { TextNodeJoin } from "./text-node-join.js";
-import {
-  joinTextNodes,
-  decodedToSourceOffset,
-} from "./text-node-join.js";
+import { decodedToSourceOffset, joinTextNodes } from "./text-node-join.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode, TextNode } from "./xml-types.js";
 
@@ -27,18 +24,10 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const root = result.root.children[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
-    expect(decodedToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("abc"),
-    );
-    expect(decodedToSourceOffset(textNode, 1)).toBe(
-      input.indexOf("abc") + 1,
-    );
-    expect(decodedToSourceOffset(textNode, 2)).toBe(
-      input.indexOf("abc") + 2,
-    );
-    expect(decodedToSourceOffset(textNode, 3)).toBe(
-      input.indexOf("abc") + 3,
-    );
+    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("abc"));
+    expect(decodedToSourceOffset(textNode, 1)).toBe(input.indexOf("abc") + 1);
+    expect(decodedToSourceOffset(textNode, 2)).toBe(input.indexOf("abc") + 2);
+    expect(decodedToSourceOffset(textNode, 3)).toBe(input.indexOf("abc") + 3);
   });
 
   it("maps decoded offsets to source offsets across entity and raw segments", () => {
@@ -48,15 +37,11 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
-    expect(decodedToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("x &amp; y"),
-    );
+    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("x &amp; y"));
     expect(decodedToSourceOffset(textNode, 1)).toBe(
       input.indexOf("x &amp; y") + 1,
     );
-    expect(decodedToSourceOffset(textNode, 2)).toBe(
-      input.indexOf("&amp;"),
-    );
+    expect(decodedToSourceOffset(textNode, 2)).toBe(input.indexOf("&amp;"));
     expect(decodedToSourceOffset(textNode, 3)).toBe(
       input.indexOf("&amp;") + "&amp;".length,
     );
@@ -75,9 +60,7 @@ describe("textNodeDecodedOffsetToSourceOffset", () => {
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.decoded).toBe("<");
-    expect(decodedToSourceOffset(textNode, 0)).toBe(
-      input.indexOf("&lt;"),
-    );
+    expect(decodedToSourceOffset(textNode, 0)).toBe(input.indexOf("&lt;"));
     expect(decodedToSourceOffset(textNode, 1)).toBe(
       input.indexOf("&lt;") + "&lt;".length,
     );

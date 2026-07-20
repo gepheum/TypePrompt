@@ -1,4 +1,4 @@
-import type { DecodedSpan, Span } from "../util/common-types.js";
+import type { DecodedSpan } from "../util/common-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";

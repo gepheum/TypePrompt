@@ -3,6 +3,10 @@ import type {
   InternalErrors,
   Span,
 } from "../util/common-types.js";
+import {
+  decodedToSourceOffset,
+  type TextNodeJoin,
+} from "../xml/text-node-join.js";
 import type {
   JsonArray,
   JsonBoolean,
@@ -15,10 +19,6 @@ import type {
   JsonString,
   JsonValue,
 } from "./json-types.js";
-import {
-  decodedToSourceOffset,
-  type TextNodeJoin,
-} from "../xml/text-node-join.js";
 
 export function parseJson<Mode extends JsonMode = "loose">(
   content: TextNodeJoin,

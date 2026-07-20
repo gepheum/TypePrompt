@@ -1,11 +1,11 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import type { InternalErrors } from "../util/common-types.js";
-import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 import {
   decodedToSourceOffset,
   type TextNodeJoin,
 } from "../xml/text-node-join.js";
+import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 
 export function parseYaml(
   content: TextNodeJoin,
@@ -138,7 +138,10 @@ function convertSeq(node: YAMLSeq, content: TextNodeJoin): JsonValue<"strict"> {
   };
 }
 
-function convertScalar(node: Scalar, content: TextNodeJoin): JsonValue<"strict"> {
+function convertScalar(
+  node: Scalar,
+  content: TextNodeJoin,
+): JsonValue<"strict"> {
   const [start, end] = node.range ?? [0, 0, 0];
   const firstToken = span(content, start, end);
   const value = node.value;

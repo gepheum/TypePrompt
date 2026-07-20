@@ -1,8 +1,13 @@
 import { checkNoAmbiguity } from "../util/casing.js";
-import type { InternalError, InternalErrors, MappedSpan, MappedText, Span } from "../util/common-types.js";
+import type {
+  InternalError,
+  InternalErrors,
+  MappedText,
+  Span,
+} from "../util/common-types.js";
 import {
-  decodedToSourceOffsets,
   decodedToSourceOffset,
+  decodedToSourceOffsets,
 } from "../xml/text-node-join.js";
 import type {
   NonUnionType,
@@ -78,7 +83,10 @@ class SchemaParser {
     return {
       kind: "success",
       typeDeclarations: Object.fromEntries(
-        typeDeclarations.map((t) => [t.name.text, this.remapTypeDeclaration(t)]),
+        typeDeclarations.map((t) => [
+          t.name.text,
+          this.remapTypeDeclaration(t),
+        ]),
       ),
     };
   }
@@ -130,9 +138,7 @@ class SchemaParser {
       case "union":
         return {
           kind: "union",
-          members: type.members.map(
-            (m) => this.remapType(m) as NonUnionType,
-          ),
+          members: type.members.map((m) => this.remapType(m) as NonUnionType),
         };
     }
   }
@@ -146,7 +152,9 @@ class SchemaParser {
     };
   }
 
-  private remapErrors(errors: readonly InternalError[]): readonly InternalError[] {
+  private remapErrors(
+    errors: readonly InternalError[],
+  ): readonly InternalError[] {
     return errors.map(decodedToSourceOffsets(this.content));
   }
 
@@ -413,8 +421,8 @@ class SchemaParser {
           // Terminated non-JSDoc block comment — report error and skip.
           this.tokenizerErrors.push({
             span: {
-            start: position,
-            end: position + 2,
+              start: position,
+              end: position + 2,
             },
             message:
               "Non-JSDoc comments are not allowed; use /** ... */ instead",
@@ -459,16 +467,16 @@ class SchemaParser {
         if (text.at(-1) !== text[0]) {
           this.tokenizerErrors.push({
             span: {
-            start: position,
-            end: re.lastIndex,
+              start: position,
+              end: re.lastIndex,
             },
             message: "Unterminated string literal",
           });
         } else if (text.includes("\\")) {
           this.tokenizerErrors.push({
             span: {
-            start: position,
-            end: re.lastIndex,
+              start: position,
+              end: re.lastIndex,
             },
             message: "Must not contain escape sequences",
           });
@@ -524,8 +532,8 @@ class SchemaParser {
       .join(" or ");
     this.parserErrors.push({
       span: {
-      start: token.start,
-      end: token.end,
+        start: token.start,
+        end: token.end,
       },
       message: `Expected: ${descriptors}`,
     });

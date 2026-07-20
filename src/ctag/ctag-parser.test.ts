@@ -1,11 +1,14 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseCTag } from "./ctag-parser.js";
 import type { TextNodeJoin } from "../xml/text-node-join.js";
+import { parseCTag } from "./ctag-parser.js";
 
 function textNode(source: string): TextNodeJoin {
-  return { decoded: source, offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }] };
+  return {
+    decoded: source,
+    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+  };
 }
 
 describe("parseCTag", () => {
@@ -171,7 +174,7 @@ describe("parseCTag", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON value", span: {start: 3, end: 3 }}],
+      errors: [{ message: "Expected JSON value", span: { start: 3, end: 3 } }],
     });
   });
 
@@ -184,8 +187,8 @@ describe("parseCTag", () => {
         {
           message: "Unexpected trailing content after JSON value",
           span: {
-          start: 5,
-          end: 10,
+            start: 5,
+            end: 10,
           },
         },
       ],
@@ -210,8 +213,8 @@ describe("parseCTag", () => {
         {
           message: "Expected ',' or '}'",
           span: {
-          start: 8,
-          end: 9,
+            start: 8,
+            end: 9,
           },
         },
       ],
@@ -227,8 +230,8 @@ describe("parseCTag", () => {
         {
           message: "Expected ',' or ']'",
           span: {
-          start: 3,
-          end: 4,
+            start: 3,
+            end: 4,
           },
         },
       ],
@@ -242,8 +245,8 @@ describe("parseCTag", () => {
         {
           message: "Expected '}'",
           span: {
-          start: 7,
-          end: 7,
+            start: 7,
+            end: 7,
           },
         },
       ],
@@ -255,8 +258,8 @@ describe("parseCTag", () => {
         {
           message: "Expected ']'",
           span: {
-          start: 5,
-          end: 5,
+            start: 5,
+            end: 5,
           },
         },
       ],
@@ -281,8 +284,8 @@ describe("parseCTag", () => {
         {
           message: "Invalid JSON string escape sequence",
           span: {
-          start: 0,
-          end: 7,
+            start: 0,
+            end: 7,
           },
         },
       ],
@@ -298,8 +301,8 @@ describe("parseCTag", () => {
         {
           message: "Invalid JSON string escape sequence",
           span: {
-          start: 0,
-          end: 6,
+            start: 0,
+            end: 6,
           },
         },
       ],
@@ -315,8 +318,8 @@ describe("parseCTag", () => {
         {
           message: "Invalid JSON string escape sequence",
           span: {
-          start: 1,
-          end: 5,
+            start: 1,
+            end: 5,
           },
         },
       ],
@@ -332,15 +335,15 @@ describe("parseCTag", () => {
         {
           message: "Invalid JSON string escape sequence",
           span: {
-          start: 1,
-          end: 5,
+            start: 1,
+            end: 5,
           },
         },
         {
           message: "Invalid JSON string escape sequence",
           span: {
-          start: 7,
-          end: 11,
+            start: 7,
+            end: 11,
           },
         },
       ],
@@ -370,7 +373,7 @@ describe("parseCTag", () => {
 
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Expected JSON number", span: { start: 0, end: 1 }}],
+      errors: [{ message: "Expected JSON number", span: { start: 0, end: 1 } }],
     });
   });
 
@@ -381,8 +384,8 @@ describe("parseCTag", () => {
         {
           message: "Expected closing '*/' for block comment",
           span: {
-          start: 0,
-          end: 7,
+            start: 0,
+            end: 7,
           },
         },
       ],
@@ -394,8 +397,8 @@ describe("parseCTag", () => {
         {
           message: "Expected closing '*/' for block comment",
           span: {
-          start: 2,
-          end: 9,
+            start: 2,
+            end: 9,
           },
         },
       ],
@@ -424,8 +427,8 @@ describe("parseCTag", () => {
         {
           message: "Duplicate object key 'a'",
           span: {
-          start: 9,
-          end: 12,
+            start: 9,
+            end: 12,
           },
         },
       ],
