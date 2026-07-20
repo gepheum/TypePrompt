@@ -243,7 +243,7 @@ class XmlParser {
     if (this.content[this.cursor] !== "=") {
       this.errors.push({
         span: nameSpan,
-        message: `Attribute '${name}' must have a value`,
+        message: "Attribute must have a value",
       });
       const value = this.decodeXmlText(nameEnd, nameEnd);
       return {
@@ -265,7 +265,7 @@ class XmlParser {
       const valueSpan = this.decodeXmlText(valueStart, valueEnd);
       this.errors.push({
         span: nameSpan,
-        message: `Attribute value must be quoted`,
+        message: "Attribute value must be quoted",
       });
       return {
         name: nameSpan,

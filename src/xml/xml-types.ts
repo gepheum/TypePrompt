@@ -15,19 +15,8 @@ export type XmlNode<C extends CommentsPolicy = "drop-comments"> =
 
 export type TextNode = {
   readonly kind: "text";
-  /** XML escape sequences are decoded. */
-  readonly text: string;
-  /** UTF-16 position in the XML file. */
-  readonly start: number;
-  /** UTF-16 position in the XML file. */
-  readonly end: number;
-  /**
-   * For mapping UTF-16 positions in `text` to UTF-16 positions in the XML file.
-   * The first element is always: `{ decodedOffset: 0, sourceOffset: start }`
-   */
-  readonly offsetMap: OffsetMap;
   readonly allWhitespace: boolean;
-};
+} & MappedSpan;
 
 export type ElementNode<C extends CommentsPolicy = "drop-comments"> = {
   readonly kind: "element";

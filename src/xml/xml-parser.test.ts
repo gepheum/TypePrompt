@@ -367,7 +367,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          message: "Attribute 'x' must have a value",
+          message: "Attribute must have a value",
         },
       ],
     });
@@ -380,7 +380,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          message: "Attribute 'x' value must be quoted",
+          message: "Attribute value must be quoted",
         },
       ],
     });
@@ -393,7 +393,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         {
-          message: "Attribute 'x' value must be quoted",
+          message: "Attribute value must be quoted",
         },
         {
           message: "Mismatched closing tag '</a>'; expected '</b>'",
