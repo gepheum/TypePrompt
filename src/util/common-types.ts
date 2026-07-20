@@ -8,6 +8,7 @@ export type InternalError = {
   readonly message: string;
 };
 
+/** Span in a source XML file. */
 export interface Span {
   /** As a UTF-16 position in the XML file. */
   readonly start: number;
@@ -15,6 +16,7 @@ export interface Span {
   readonly end: number;
 }
 
+/** Extends `Span` with the decoded text. */
 export interface DecodedSpan {
   /** XML escape sequences are decoded. */
   readonly text: string;
@@ -24,6 +26,10 @@ export interface DecodedSpan {
   readonly end: number;
 }
 
+/**
+ * Extends `DecodedSpan` with an offset map for mapping positions in `text` to
+ * positions in the XML file.
+ */
 export interface MappedSpan {
   /** XML escape sequences are decoded. */
   readonly text: string;
