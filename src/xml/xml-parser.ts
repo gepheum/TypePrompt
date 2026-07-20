@@ -4,14 +4,11 @@ import type {
   InternalErrors,
   MappedSpan,
   OffsetMapEntry,
-  Span,
 } from "../util/common-types.js";
 import type {
   Attribute,
   CommentsPolicy,
   ElementNode,
-  TextNode,
-  XmlComment,
   XmlDocument,
   XmlNode,
 } from "./xml-types.js";
@@ -34,7 +31,7 @@ export function parseXmlDocument<C extends CommentsPolicy>(
   return new XmlParser(
     content,
     (commentsPolicy ?? "drop-comments") as CommentsPolicy,
-  ).parse();
+  ).parse() as XmlDocument<C> | InternalErrors;
 }
 
 // ---------------------------------------------------------------------------
@@ -265,17 +262,14 @@ class XmlParser {
       RE_UNQUOTED_ATTR_VALUE.exec(this.content);
       const valueEnd = RE_UNQUOTED_ATTR_VALUE.lastIndex;
       this.cursor = valueEnd;
-      const valueSpan = this.makeSpan(valueStart, valueEnd);
+      const valueSpan = this.decodeXmlText(valueStart, valueEnd);
       this.errors.push({
-        start: nameStart,
-        end: valueEnd,
-        message: `Attribute '${nameSpan.text}' value must be quoted`,
+        span: nameSpan,
+        message: `Attribute value must be quoted`,
       });
-      const decoded = this.decodeXmlText(valueStart, valueEnd);
       return {
         name: nameSpan,
         value: valueSpan,
-        decodedValue: decoded.text,
       };
     }
 
