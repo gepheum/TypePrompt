@@ -1,5 +1,5 @@
 import type { MappedSpan, Span } from "../util/common-types.js";
-import { DecodedSpan } from "../util/common-types.js";
+import { TextSpan } from "../util/common-types.js";
 
 export type XmlDocument = {
   readonly kind: "success";
@@ -17,7 +17,7 @@ export type TextNode = {
 
 export type ElementNode = {
   readonly kind: "element";
-  readonly tag: DecodedSpan;
+  readonly tag: TextSpan;
   readonly attributes: { readonly [name: string]: Attribute };
   readonly contentStart: number;
   readonly children: readonly XmlNode[];
@@ -26,7 +26,7 @@ export type ElementNode = {
 };
 
 export type Attribute = {
-  readonly name: DecodedSpan;
+  readonly name: TextSpan;
   /** Inside the quotes, not including them. */
   readonly value: MappedSpan;
 };

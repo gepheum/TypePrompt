@@ -1,11 +1,11 @@
-import { DecodedSpan, Span } from "./common-types.js";
+import { Span, TextSpan } from "./common-types.js";
 
 type Error<S> = {
   readonly span: Span;
   readonly message: string;
 };
 
-export function checkNoAmbiguity<S extends DecodedSpan>(
+export function checkNoAmbiguity<S extends TextSpan>(
   names: ReadonlyArray<S>,
   options?: {
     readonly exactMatchIsConflict?: boolean;

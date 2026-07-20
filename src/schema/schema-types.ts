@@ -1,4 +1,4 @@
-import type { DecodedSpan } from "../util/common-types.js";
+import type { TextSpan } from "../util/common-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";
@@ -28,13 +28,13 @@ export type Schema = {
 
 export type TypeDeclaration = {
   readonly kind: "type";
-  readonly name: DecodedSpan;
+  readonly name: TextSpan;
   readonly valueType: Type;
   readonly doc: string;
 };
 
 export type SchemaField = {
-  readonly name: DecodedSpan;
+  readonly name: TextSpan;
   readonly optional: boolean;
   readonly type: Type;
   readonly doc: string;
@@ -46,18 +46,18 @@ export type NonUnionType = Exclude<Type, Union>;
 
 export type TypeName = {
   readonly kind: "type-name";
-  readonly name: DecodedSpan;
+  readonly name: TextSpan;
 };
 
 export type StringLiteral = {
   readonly kind: "string-literal";
   readonly value: string;
-  readonly quotedName: DecodedSpan;
+  readonly quotedName: TextSpan;
 };
 
 export type Interface = {
   readonly kind: "interface";
-  readonly leftCurlyBracket: DecodedSpan;
+  readonly leftCurlyBracket: TextSpan;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
 };

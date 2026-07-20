@@ -1,9 +1,9 @@
 import type {
-  DecodedSpan,
   InternalError,
   InternalErrors,
   MappedSpan,
   OffsetMapEntry,
+  TextSpan,
 } from "../util/common-types.js";
 import type {
   Attribute,
@@ -146,7 +146,7 @@ class XmlParser {
     this.cursor = RE_XML_NAME.lastIndex;
     const nameEnd = this.cursor;
     const tagName = this.content.slice(nameStart, nameEnd);
-    const tag: DecodedSpan = { text: tagName, start: nameStart, end: nameEnd };
+    const tag: TextSpan = { text: tagName, start: nameStart, end: nameEnd };
 
     const attributes: Record<string, Attribute> = {};
     let isSelfClosing = false;
