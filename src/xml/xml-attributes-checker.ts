@@ -44,7 +44,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   // Validate each expected attribute.
   for (const [name, entry] of Object.entries(expectedAttributes)) {
     const attr = element.attributes[name];
-    const rawValue = attr?.value;
+    const rawValue = attr?.value.text;
     const parsed = entry.schema.safeParse(rawValue);
     if (parsed.success) {
       if (attr !== undefined) {
