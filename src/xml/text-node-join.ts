@@ -10,10 +10,18 @@ import { InternalError, MappedSpan, MappedText, OffsetMapEntry } from "../util/c
  */
 export function joinTextNodes(
   textNodes: readonly MappedText[],
-  sourceOffset: number,
+  startPosition: number,
 ): MappedText {
   if (textNodes.length === 0) {
-    return { text: "", offsetMap: [{ decodedOffset: 0, sourceOffset }] };
+    return {
+      text: "",
+      offsetMap: [
+        {
+          decodedOffset: 0,
+          sourceOffset: startPosition,
+        }
+      ]
+    };
   }
   let text = "";
   const offsetMap: OffsetMapEntry[] = [];
