@@ -3,6 +3,7 @@ import { type ZodType } from "zod";
 import type {
   InternalError,
   InternalErrors,
+  MappedSpan,
   Span,
 } from "../util/common-types.js";
 import type { ElementNode } from "./xml-types.js";
@@ -17,8 +18,8 @@ type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 type AttributeValues<T extends AttributeSchemas> = {
   [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
     ? undefined extends U
-      ? { span: Span; value: NonNullable<U> } | undefined
-      : { span: Span; value: U }
+      ? { span: MappedSpan; value: NonNullable<U> } | undefined
+      : { span: MappedSpan; value: U }
     : never;
 };
 
@@ -35,8 +36,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   for (const [name, attr] of Object.entries(element.attributes)) {
     if (!(name in expectedAttributes)) {
       errors.push({
-        start: attr.value.start,
-        end: attr.value.end,
+        span: attr.value,
         message: `Unexpected attribute '${name}'`,
       });
     }
@@ -45,7 +45,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   // Validate each expected attribute.
   for (const [name, entry] of Object.entries(expectedAttributes)) {
     const attr = element.attributes[name];
-    const rawValue = attr?.decodedValue;
+    const rawValue = attr?.value;
     const parsed = entry.schema.safeParse(rawValue);
     if (parsed.success) {
       if (attr !== undefined) {
@@ -56,14 +56,12 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       }
     } else if (rawValue === undefined) {
       errors.push({
-        start: element.tagName.start,
-        end: element.tagName.end,
+        span: element.tag,
         message: `Missing required attribute '${name}'`,
       });
     } else {
       errors.push({
-        start: attr!.value.start,
-        end: attr!.value.end,
+        span: attr!.value,
         message: `Invalid value for attribute '${name}': expected ${entry.expected}`,
       });
     }
