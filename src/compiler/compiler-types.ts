@@ -82,7 +82,7 @@ export type BodyPiece =
   | {
       readonly kind: "insert-val";
       readonly val: Expression;
-      readonly insertFormat: InsertFormat | null;
+      readonly format: InsertFormat | null;
       /** Only contains whitespace characters. */
       readonly indent: string;
     }

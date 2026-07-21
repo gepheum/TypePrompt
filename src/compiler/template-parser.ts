@@ -219,11 +219,11 @@ class TemplateParser {
         this.errors.push(...attrs.errors);
         return;
       }
-      const expression = parseExpression(attrs.attributes.val.span, {
+      const val = parseExpression(attrs.attributes.val.span, {
         acceptIt: true,
       });
-      if (expression.kind === "error") {
-        this.errors.push(...expression.errors);
+      if (val.kind === "error") {
+        this.errors.push(...val.errors);
         return;
       }
       const format = attrs.attributes.format
@@ -231,7 +231,7 @@ class TemplateParser {
         : null;
       pieces.push({
         kind: "insert-val",
-        expression: expression.expression,
+        val: val.expression,
         format: format,
       });
     };
@@ -294,7 +294,7 @@ class TemplateParser {
 
     visitChildren(parentNode);
 
-    // TODO: convert
+    return processBodyPieces(pieces, this.errors);
   }
 
   private extractTextContent(node: ElementNode): MappedText {
@@ -364,7 +364,7 @@ type RawBodyPiece<Text = MappedText> =
   | { readonly kind: "synthetic-text"; readonly text: string }
   | {
       readonly kind: "insert-val";
-      readonly expression: Expression;
+      readonly val: Expression;
       readonly format: InsertFormat | null;
     }
   | {
@@ -543,20 +543,30 @@ function coalesceText(
 
 function buildFinalPieces(pieces: readonly DedentedBodyPiece[]): BodyPiece[] {
   return pieces.map((p, i) => {
-    if (p.kind === "text") {
-      return p;
-    } else {
-      return {
-        kind: "insert",
-        name: p.name,
-        indent: computeArgIndent(pieces.slice(0, i)),
-        format: p.format,
-      };
+    switch (p.kind) {
+      case "text": {
+        return p;
+      }
+      case "synthetic-text":
+      case "c-tag": {
+        return {
+          kind: "text",
+          text: p.text,
+        };
+      }
+      case "insert-val":
+      case "insert-snippet": {
+        const indent = computeArgIndent(pieces.slice(0, i));
+        return {
+          ...p,
+          indent: indent,
+        };
+      }
     }
   });
 }
 
-function computeArgIndent(preceding: readonly DedentedPiece[]): string {
+function computeArgIndent(preceding: readonly DedentedBodyPiece[]): string {
   for (let i = preceding.length - 1; i >= 0; i--) {
     const p = preceding[i]!;
     if (p.kind !== "text") continue;
