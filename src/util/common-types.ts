@@ -8,6 +8,10 @@ export type InternalError = {
   readonly message: string;
 };
 
+export type ErrorSink = {
+  push: (...errors: readonly InternalError[]) => void;
+};
+
 /** Span in a source XML file. */
 export type Span = {
   /** Start of the range as a UTF-16 position in the XML file. */
