@@ -101,7 +101,7 @@ export type Expression =
       readonly left: Expression;
       readonly operator: "." | "?.";
       readonly operatorSpan: Span;
-      readonly property: Span;
+      readonly property: TextSpan;
     };
 
 export type InsertFormat = {
