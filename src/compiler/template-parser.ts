@@ -3,16 +3,19 @@ import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
 import {
+  ErrorSink,
   InternalError,
   InternalErrors,
+  Span,
   TextSpan,
 } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import { Body, OutputFormat, Snippet, Template } from "./compiler-types.js";
+import { Body, OutputFormat, PromptContent, PromptContents, PromptVariant, Snippet, Template } from "./compiler-types.js";
 
 import * as z from "zod";
 import { extractTextContent } from "./text-extractor.js";
+import { parseBody } from "./body-parser.js";
 
 export function parseTemplate(
   templateNode: ElementNode,
@@ -55,6 +58,7 @@ class TemplateParser {
     const hasVariants = attrs.attributes.with?.value === "variants";
 
     this.parseChildren({ hasVariants });
+    const contents = this.buildPromptContents({ hasVariants });
 
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
@@ -67,11 +71,12 @@ class TemplateParser {
       meta: this.meta,
       schema: this.schema!,
       outputFormat: this.outputFormat,
+      contents: contents!,
       snippets: this.snippets,
     };
   }
 
-  private parseChildren(args: { hasVariants: boolean }): void {
+  private parseChildren(args: {hasVariants: boolean }): void {
     for (const child of this.templateNode.children) {
       switch (child.kind) {
         case "text": {
@@ -95,6 +100,31 @@ class TemplateParser {
             }
             case "snippet": {
               this.parseSnippet(child);
+              break;
+            }
+            case "system":
+            case "user":
+            case "examples": {
+              if (args.hasVariants) {
+                this.errors.push({
+                  span: child.tag,
+                  message: `Unexpected <${child.tag.text}> element in <template with="variants">'`,
+                  hint: "Move into a <variant> element",
+                });
+              } else {
+                this.noVariantsPrompt.parse(child, this.errors);
+              }
+              break;
+            }
+            case "variant": {
+              if (args.hasVariants) {
+                this.parseVariant(child);
+              } else {
+                this.errors.push({
+                  span: child.tag,
+                  message: "<template> is missing with=\"variants\" attribute",
+                });
+              }
               break;
             }
             default: {
@@ -187,15 +217,132 @@ class TemplateParser {
     };
   }
 
+  private parseVariant(variantNode: ElementNode): void {
+    const attrs = checkXmlAttributes(variantNode, {
+      name: {
+        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        expected: "a lowerCamelCase identifier",
+      },
+    });
+    if (attrs.kind === "error") {
+      this.errors.push(...attrs.errors);
+      return;
+    }
+    const variant = attrs.attributes.name.span;
+    const promptBuilder = new PromptBuilder();
+    for (const child of variantNode.children) {
+      if (child.kind === "element") {
+        promptBuilder.parse(child, this.errors);
+      } else if (!child.allWhitespace) {
+        this.errors.push({
+          span: child,
+          message: "Unexpected text content in <variant>",
+        });
+      }
+    }
+    const prompt = promptBuilder.build(variantNode.tag, this.errors);
+    if (prompt !== null) {
+      this.promptVariants.push({
+        variant: variant,
+        content: prompt,
+      });
+    }
+  }
+
+  private buildPromptContents(args: { hasVariants: boolean }): PromptContents | null {
+    if (args.hasVariants) {
+      // TODO: check no empty
+      return {
+        kind: "variants",
+        variants: this.promptVariants,
+      };
+    } else {
+      const templateTag = this.templateNode.tag;
+      const content = this.noVariantsPrompt.build(templateTag, this.errors);
+      if (content === null) {
+        return null;
+      }
+      return {
+        kind: "no-variants",
+        content: content,
+      };
+    }
+  }
+
   private readonly errors: InternalError[] = [];
   private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
   private outputFormat: OutputFormat | null = null;
-  private snippets: Snippet[] = [];
+  private readonly noVariantsPrompt = new PromptBuilder();
+  private readonly promptVariants: PromptVariant[] = [];
+  private readonly snippets: Snippet[] = [];
 }
 
-class PromptContentBuilder {
+class PromptBuilder {
   system: Body | undefined;
   user: Body | undefined;
   examples: JsonValue<"strict"> | undefined;
+
+  parse(e: ElementNode, errors: ErrorSink): void {
+    const tag = e.tag.text;
+    switch (tag) {
+      case "system":
+      case "user": {
+        if (this[tag] !== undefined) {
+          errors.push({
+            span: e.tag,
+            message: `Multiple <${tag}> elements`,
+          });
+        }
+        this[tag] = parseBody(e, errors);
+        break;
+      }
+      case "examples": {
+        if (this.examples !== undefined) {
+          errors.push({
+            span: e.tag,
+            message: "Multiple <examples> elements",
+          });
+        }
+        const textContent = extractTextContent(e, errors);
+        const examples = parseYaml(textContent);
+        if (examples.kind === "error") {
+          errors.push(...examples.errors);
+        } else {
+          this.examples = examples;
+        }
+        break;
+      }
+      default: {
+        errors.push({
+          span: e.tag,
+          message: `Unexpected element <${tag}>`,
+        });
+        break;
+      }
+    }
+  }
+
+  build(parentTag: Span, errors: ErrorSink): PromptContent | null {
+    const { system, user, examples } = this;
+    if (system === undefined) {
+      errors.push({
+        span: parentTag,
+        message: "Missing <system> element",
+      });
+      return null;
+    }
+    if (user === undefined) {
+      errors.push({
+        span: parentTag,
+        message: "Missing <user> element",
+      });
+      return null;
+    }
+    return {
+      system: system,
+      user: user,
+      examples: examples ?? null,
+    };
+  }
 }

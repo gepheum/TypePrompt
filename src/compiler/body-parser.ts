@@ -15,12 +15,8 @@ import { textToSourcePosition } from "../util/position-mapper.js";
 import { parseExpression } from "./expression-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
-export type BodyParseResult =
-  { readonly kind: "success"; readonly body: Body } | InternalErrors;
-
-export function parseBody(parentNode: ElementNode): BodyParseResult {
+export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
   const pieces: RawBodyPiece[] = [];
-  const errors: InternalError[] = [];
 
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkXmlAttributes(insertNode, {
@@ -128,15 +124,7 @@ export function parseBody(parentNode: ElementNode): BodyParseResult {
 
   visitChildren(parentNode);
 
-  const body = processBodyPieces(pieces, errors);
-  if (errors.length > 0) {
-    return { kind: "error", errors };
-  }
-
-  return {
-    kind: "success",
-    body: body,
-  };
+  return processBodyPieces(pieces, errors);
 }
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */
@@ -186,6 +174,7 @@ function processBodyPieces(
   trimLeadingEmptyLines(dedented);
   trimTrailingEmptyLines(dedented);
 
+TODO: rewrite buildFinalPieces!!!!
   const coalesced = coalesceText(dedented);
   return buildFinalPieces(coalesced);
 }

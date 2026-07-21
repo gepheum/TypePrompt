@@ -38,22 +38,12 @@ export type TemplateResult =
 
 export type Template = {
   readonly kind: "success";
-
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
-
   readonly meta: JsonValue<"strict"> | null;
-
   readonly schema: SchemaParseResult;
   readonly outputFormat: OutputFormat | null;
-
-  readonly contents:
-    | { readonly kind: "no-variant"; readonly content: PromptContent }
-    | {
-        readonly kind: "variants";
-        readonly variants: readonly PromptVariant[];
-      };
-
+  readonly contents: PromptContents;
   readonly snippets: readonly Snippet[];
 };
 
@@ -61,6 +51,13 @@ export type OutputFormat = {
   readonly kind: "json" | "text" | "custom";
   readonly format: TextSpan;
 };
+
+export type PromptContents =
+  | { readonly kind: "no-variants"; readonly content: PromptContent }
+  | {
+      readonly kind: "variants";
+      readonly variants: readonly PromptVariant[];
+    };
 
 export type PromptVariant = {
   /** Variant name. */
