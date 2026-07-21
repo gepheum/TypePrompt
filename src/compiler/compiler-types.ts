@@ -75,7 +75,7 @@ export type Body = readonly BodyPiece[];
 
 export type BodyPiece =
   | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "c-tag"; readonly cTag: CTag }
+  | { readonly kind: "c-tag"; readonly text: string; readonly cTag: CTag }
   | {
       readonly kind: "insert-val";
       readonly val: Expression;
@@ -101,8 +101,7 @@ export type Expression =
       readonly property: TextSpan;
     };
 
-export type InsertFormat =
-  | "text" | "json" | "toon" | "csv" | "tsv";
+export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";
 
 export type Snippet =
   | {

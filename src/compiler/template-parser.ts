@@ -11,11 +11,19 @@ import {
 } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import { Body, OutputFormat, PromptContent, PromptContents, PromptVariant, Snippet, Template } from "./compiler-types.js";
+import {
+  Body,
+  OutputFormat,
+  PromptContent,
+  PromptContents,
+  PromptVariant,
+  Snippet,
+  Template,
+} from "./compiler-types.js";
 
 import * as z from "zod";
-import { extractTextContent } from "./text-extractor.js";
 import { parseBody } from "./body-parser.js";
+import { extractTextContent } from "./text-extractor.js";
 
 export function parseTemplate(
   templateNode: ElementNode,
@@ -76,7 +84,7 @@ class TemplateParser {
     };
   }
 
-  private parseChildren(args: {hasVariants: boolean }): void {
+  private parseChildren(args: { hasVariants: boolean }): void {
     for (const child of this.templateNode.children) {
       switch (child.kind) {
         case "text": {
@@ -122,7 +130,7 @@ class TemplateParser {
               } else {
                 this.errors.push({
                   span: child.tag,
-                  message: "<template> is missing with=\"variants\" attribute",
+                  message: '<template> is missing with="variants" attribute',
                 });
               }
               break;
@@ -249,7 +257,9 @@ class TemplateParser {
     }
   }
 
-  private buildPromptContents(args: { hasVariants: boolean }): PromptContents | null {
+  private buildPromptContents(args: {
+    hasVariants: boolean;
+  }): PromptContents | null {
     if (args.hasVariants) {
       // TODO: check no empty
       return {

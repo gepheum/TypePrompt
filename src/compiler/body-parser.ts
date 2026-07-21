@@ -1,22 +1,17 @@
-import {
-  ErrorSink,
-  InternalError,
-  InternalErrors,
-  MappedText,
-  TextSpan,
-} from "../util/common-types.js";
+import { ErrorSink, MappedText, TextSpan } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode, XmlNode } from "../xml/xml-types.js";
 import { Body, BodyPiece, Expression, InsertFormat } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseCTag } from "../ctag/ctag-parser.js";
+import { CTag } from "../ctag/ctag-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { parseExpression } from "./expression-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
-  const pieces: RawBodyPiece[] = [];
+  const rawPieces: RawBodyPiece[] = [];
 
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkXmlAttributes(insertNode, {
@@ -29,7 +24,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       errors.push(...attrs.errors);
       return;
     }
-    pieces.push({
+    rawPieces.push({
       kind: "insert-snippet",
       snippet: attrs.attributes.snippet.span,
     });
@@ -59,7 +54,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       return;
     }
     const format = attrs.attributes.format?.value ?? null;
-    pieces.push({
+    rawPieces.push({
       kind: "insert-val",
       val: val.expression,
       format: format,
@@ -68,7 +63,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
 
   const visit = (child: XmlNode): void => {
     if (child.kind === "text") {
-      pieces.push({ kind: "text", text: child });
+      rawPieces.push({ kind: "text", text: child });
       return;
     }
     const tag = child.tag.text;
@@ -82,9 +77,10 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       if (cTag.kind === "error") {
         errors.push(...cTag.errors);
       } else {
-        pieces.push({
+        rawPieces.push({
           kind: "c-tag",
           text: textContent,
+          cTag: cTag,
         });
       }
     } else if (tag === "enclosed") {
@@ -98,9 +94,9 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
         errors.push(...encAttrs.errors);
       } else {
         const encTagName = encAttrs.attributes.tag.value;
-        pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+        rawPieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
         visitChildren(child);
-        pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+        rawPieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
       }
     } else if (tag === "insert") {
       if (child.attributes["snippet"]) {
@@ -124,13 +120,14 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
 
   visitChildren(parentNode);
 
-  return processBodyPieces(pieces, errors);
+  const dedented = dedentRawPieces(rawPieces, errors);
+  return toBodyPieces(dedented);
 }
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */
 type RawBodyPiece<Text = MappedText> =
   | { readonly kind: "text"; readonly text: Text }
-  | { readonly kind: "c-tag"; readonly text: Text }
+  | { readonly kind: "c-tag"; readonly text: Text; readonly cTag: CTag }
   | { readonly kind: "synthetic-text"; readonly text: string }
   | {
       readonly kind: "insert-val";
@@ -143,26 +140,27 @@ type RawBodyPiece<Text = MappedText> =
     };
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */
-type DedentedBodyPiece = RawBodyPiece<string>;
+type DedentedPiece = RawBodyPiece<string>;
 
-// ---------------------------------------------------------------------------
-// Private – body trim/dedent pipeline
-// ---------------------------------------------------------------------------
-
-function processBodyPieces(
+function dedentRawPieces(
   rawPieces: readonly RawBodyPiece[],
   errors: ErrorSink,
-): BodyPiece[] {
+): DedentedPiece[] {
   const firstRaw = rawPieces[0];
   const baseIndent =
     firstRaw?.kind === "text" ? computeBaseIndent(firstRaw.text) : "";
 
-  const dedented: DedentedBodyPiece[] = [];
+  const dedented: DedentedPiece[] = [];
   for (const p of rawPieces) {
     if (p.kind === "text" || p.kind === "c-tag") {
+      let text = removeIndentAfterEol(p.text, baseIndent, errors);
+      if (p.kind === "text" && text.startsWith("\n") && dedented.length <= 0) {
+        // Remove the first newline if it's the first piece.
+        text = text.slice(1);
+      }
       dedented.push({
         ...p,
-        text: removeIndentAfterEol(p.text, baseIndent, errors),
+        text: text,
       });
     } else if (p.kind === "synthetic-text") {
       dedented.push({ kind: "text", text: p.text });
@@ -171,20 +169,19 @@ function processBodyPieces(
     }
   }
 
-  trimLeadingEmptyLines(dedented);
-  trimTrailingEmptyLines(dedented);
-
-TODO: rewrite buildFinalPieces!!!!
-  const coalesced = coalesceText(dedented);
-  return buildFinalPieces(coalesced);
+  return dedented;
 }
 
 function computeBaseIndent(firstTextNode: MappedText): string {
   const { text } = firstTextNode;
   const firstNl = text.indexOf("\n");
-  if (firstNl === -1) return "";
+  if (firstNl === -1) {
+    return "";
+  }
   const firstLine = text.slice(0, firstNl);
-  if (/[^ \t]/.test(firstLine)) return "";
+  if (/[^ \t]/.test(firstLine)) {
+    return "";
+  }
   const lines = text.split("\n");
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i]!;
@@ -207,145 +204,111 @@ function removeIndentAfterEol(
   if (text.length === 0 || baseIndent.length === 0) return text;
   let out = "";
   let cursor = 0;
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] !== "\n") continue;
-    out += text.slice(cursor, i + 1);
-    const next = i + 1;
-    if (next >= text.length) {
-      cursor = next;
+  while (true) {
+    const eolIndex = text.indexOf("\n", cursor);
+    if (eolIndex < 0) {
+      break;
+    }
+    out += text.slice(cursor, eolIndex).trimEnd().concat("\n");
+    cursor = eolIndex + 1; // Move after the newline
+    if (cursor >= text.length) {
+      break;
+    }
+    const whiteLineMatch = /^[ \t]*\n/.exec(text.slice(cursor));
+    if (whiteLineMatch) {
+      // A line with only whitespaces. Skip them.
+      cursor += whiteLineMatch[0].length - 1;
       continue;
     }
-    if (text[next] === "\n") {
-      cursor = next;
-      continue;
-    }
-    // If the rest of the string is only whitespace (e.g. indentation before a
-    // child element tag), strip the base indent from it but do not error.
-    if (/^[ \t]*$/.test(text.slice(next))) {
-      if (text.startsWith(baseIndent, next)) {
-        cursor = next + baseIndent.length;
-      } else {
-        // Less indent than base — but it's trailing whitespace, just pass through.
-        cursor = next;
-      }
-      continue;
-    }
-    if (text.startsWith(baseIndent, next)) {
-      cursor = next + baseIndent.length;
+    if (text.startsWith(baseIndent, cursor)) {
+      cursor += baseIndent.length;
     } else {
-      const pos = textToSourcePosition(textNode, next);
+      const pos = textToSourcePosition(textNode, cursor);
       const formattedIndent = baseIndent.replace(/\t/g, "\\t");
       errors.push({
         span: { start: pos, end: pos },
-        message: `Expected indentation '${formattedIndent}' after end-of-line`,
+        message: `Indentation error; expected: '${formattedIndent}'`,
       });
-      cursor = next;
     }
   }
   out += text.slice(cursor);
   return out;
 }
 
-function trimLeadingEmptyLines(pieces: DedentedBodyPiece[]): void {
-  while (pieces.length > 0 && pieces[0]!.kind === "text") {
-    const trimmed = trimLeadingEmpty(pieces[0]!.text);
-    if (trimmed === pieces[0]!.text) return;
-    if (trimmed.length === 0) {
-      pieces.shift();
-      continue;
-    }
-    pieces[0] = { kind: "text", text: trimmed };
-    return;
-  }
-}
-
-function trimTrailingEmptyLines(pieces: DedentedBodyPiece[]): void {
-  while (pieces.length > 0) {
-    const idx = pieces.length - 1;
-    const p = pieces[idx]!;
-    if (p.kind !== "text") return;
-    const trimmed = trimTrailingEmpty(p.text);
-    if (trimmed === p.text) return;
-    if (trimmed.length === 0) {
-      pieces.pop();
-      continue;
-    }
-    pieces[idx] = { kind: "text", text: trimmed };
-    return;
-  }
-}
-
-function trimLeadingEmpty(text: string): string {
-  let cur = text;
-  while (true) {
-    const nl = cur.indexOf("\n");
-    if (nl === -1) return /^[ \t]*$/.test(cur) ? "" : cur;
-    if (/[^ \t]/.test(cur.slice(0, nl))) return cur;
-    cur = cur.slice(nl + 1);
-  }
-}
-
-function trimTrailingEmpty(text: string): string {
-  let cur = text;
-  while (true) {
-    const nl = cur.lastIndexOf("\n");
-    if (nl === -1) return /^[ \t]*$/.test(cur) ? "" : cur;
-    if (/[^ \t]/.test(cur.slice(nl + 1))) return cur;
-    cur = cur.slice(0, nl);
-  }
-}
-
-function coalesceText(
-  pieces: readonly DedentedBodyPiece[],
-): DedentedBodyPiece[] {
-  const result: DedentedBodyPiece[] = [];
-  for (const p of pieces) {
-    if (p.kind === "text") {
-      const prev = result.at(-1);
-      if (prev?.kind === "text") {
-        result[result.length - 1] = { kind: "text", text: prev.text + p.text };
-        continue;
+function toBodyPieces(dedentedPieces: readonly DedentedPiece[]): BodyPiece[] {
+  let lastLineState: { allWhitespace: boolean; indent: string } | undefined;
+  const updateLastLineState = (text: string): void => {
+    const lastEol = text.lastIndexOf("\n");
+    if (lastEol < 0) {
+      // Single line
+      const indent = /^[ \t]*/.exec(text)![0];
+      const allWhitespace = indent.length === text.length;
+      if (lastLineState === undefined) {
+        lastLineState = { allWhitespace, indent };
+      } else if (lastLineState?.allWhitespace) {
+        const newIndent = lastLineState.indent + indent;
+        lastLineState = { allWhitespace, indent: newIndent };
       }
+    } else {
+      // Multiple lines
+      const lastLine = text.slice(lastEol + 1);
+      const indent = /^[ \t]*/.exec(lastLine)![0];
+      const allWhitespace = indent.length === lastLine.length;
+      lastLineState = { allWhitespace, indent };
     }
-    result.push(p);
-  }
-  return result;
-}
+  };
 
-function buildFinalPieces(pieces: readonly DedentedBodyPiece[]): BodyPiece[] {
-  return pieces.map((p, i) => {
-    switch (p.kind) {
+  const result: BodyPiece[] = [];
+
+  for (const dedentedPiece of dedentedPieces) {
+    switch (dedentedPiece.kind) {
       case "text": {
-        return p;
+        let { text } = dedentedPiece;
+        if (result.length <= 0 && text.startsWith("\n")) {
+          // Trim leading newline.
+          text = text.slice(1);
+        }
+        if (text.length) {
+          result.push({ kind: "text", text });
+          updateLastLineState(text);
+        }
+        break;
       }
-      case "synthetic-text":
       case "c-tag": {
-        return {
-          kind: "text",
-          text: p.text,
-        };
+        result.push(dedentedPiece);
+        updateLastLineState(dedentedPiece.text);
+        break;
       }
-      case "insert-val":
-      case "insert-snippet": {
-        const indent = computeInsertIndent(pieces.slice(0, i));
-        return {
-          ...p,
-          indent: indent,
-        };
+      case "synthetic-text": {
+        const { text } = dedentedPiece;
+        result.push({ kind: "text", text });
+        updateLastLineState(text);
+        break;
       }
-    }
-  });
-}
-
-function computeInsertIndent(preceding: readonly DedentedBodyPiece[]): string {
-  for (let i = preceding.length - 1; i >= 0; i--) {
-    const p = preceding[i]!;
-    if (p.kind !== "text" && p.kind !== "c-tag") continue;
-    const nl = p.text.lastIndexOf("\n");
-    if (nl !== -1) {
-      const m = p.text.slice(nl + 1).match(/^([ \t]*)/);
-      return m ? m[1]! : "";
+      case "insert-snippet":
+      case "insert-val": {
+        if (lastLineState?.allWhitespace) {
+          lastLineState = { ...lastLineState, allWhitespace: false };
+        }
+        const indent = lastLineState?.indent ?? "";
+        result.push({ ...dedentedPiece, indent });
+        break;
+      }
     }
   }
-  return "";
+
+  // Trim trailing newline.
+  const lastPiece = result.at(-1);
+  if (lastPiece?.kind === "text") {
+    let { text } = lastPiece;
+    if (text.endsWith("\n")) {
+      text = text.slice(0, -1);
+      result.pop();
+      if (text.length) {
+        result.push({ kind: "text", text });
+      }
+    }
+  }
+
+  return result;
 }
