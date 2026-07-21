@@ -17,7 +17,7 @@ export function parseExpression(
 
   const mappedSpan = (start: number, end: number): TextSpan => {
     return {
-      text: text.substring(start, end),
+      text: text.slice(start, end),
       start: textToSourcePosition(content, start),
       end: textToSourcePosition(content, end),
     };
