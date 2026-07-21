@@ -104,10 +104,8 @@ export type Expression =
       readonly property: TextSpan;
     };
 
-export type InsertFormat = {
-  readonly kind: "text" | "json" | "toon" | "csv" | "tsv" | "custom";
-  readonly format: TextSpan;
-};
+export type InsertFormat =
+  | "text" | "json" | "toon" | "csv" | "tsv";
 
 export type Snippet =
   | {

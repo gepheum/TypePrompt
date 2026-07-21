@@ -47,7 +47,7 @@ export function parseBody(parentNode: ElementNode): BodyParseResult {
         expected: "a valid expression",
       },
       format: {
-        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        schema: z.enum(["text", "json", "toon", "csv", "tsv"]).optional(),
         expected: "a lowerCamelCase identifier",
       },
     });
@@ -62,9 +62,7 @@ export function parseBody(parentNode: ElementNode): BodyParseResult {
       errors.push(...val.errors);
       return;
     }
-    const format = attrs.attributes.format
-      ? parseInsertFormat(attrs.attributes.format.span)
-      : null;
+    const format = attrs.attributes.format?.value ?? null;
     pieces.push({
       kind: "insert-val",
       val: val.expression,
@@ -138,22 +136,6 @@ export function parseBody(parentNode: ElementNode): BodyParseResult {
   return {
     kind: "success",
     body: body,
-  };
-}
-
-function parseInsertFormat(format: TextSpan): InsertFormat {
-  const { text } = format;
-  const kind =
-    text === "text" ||
-    text === "json" ||
-    text === "toon" ||
-    text === "csv" ||
-    text === "tsv"
-      ? text
-      : "custom";
-  return {
-    kind: kind,
-    format: format,
   };
 }
 
