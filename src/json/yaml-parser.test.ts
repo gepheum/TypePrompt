@@ -1,38 +1,18 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { InternalError } from "../util/common-types.js";
-import type { TextNodeJoin } from "../util/text-node-joiner.js";
-import type { JsonValue } from "./json-types.js";
+import { MappedText } from "../util/common-types.js";
 import { parseYaml } from "./yaml-parser.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textNode(source: string): TextNodeJoin {
+function textNode(source: string): MappedText {
   return {
-    decoded: source,
-    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+    text: source,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-}
-
-function parseOk(source: string): JsonValue<"strict"> {
-  const result = parseYaml(textNode(source));
-  if (result.kind === "error") {
-    throw new Error(
-      `Expected success but got errors: ${result.errors.map((e) => e.message).join(", ")}`,
-    );
-  }
-  return result;
-}
-
-function parseErr(source: string): readonly InternalError[] {
-  const result = parseYaml(textNode(source));
-  if (result.kind !== "error") {
-    throw new Error(`Expected error but got: ${JSON.stringify(result)}`);
-  }
-  return result.errors;
 }
 
 // ---------------------------------------------------------------------------
@@ -41,24 +21,32 @@ function parseErr(source: string): readonly InternalError[] {
 
 describe("parseYaml – errors", () => {
   it("rejects an empty string", () => {
-    expect(parseErr("")).toMatch([{ message: "Empty YAML document" }]);
+    expect(parseYaml(textNode(""))).toMatch({
+      kind: "error",
+      errors: [{ message: "Empty YAML document" }],
+    });
   });
 
   it("rejects a whitespace-only document", () => {
-    expect(parseErr("   \n  ")).toMatch([{ message: "Empty YAML document" }]);
+    expect(parseYaml(textNode("   \n  "))).toMatch({
+      kind: "error",
+      errors: [{ message: "Empty YAML document" }],
+    });
   });
 
   it("converts a YAML parse error to InternalErrors with source positions", () => {
     // "key: {unclosed" — the flow map is never closed
-    const errs = parseErr("key: {unclosed");
-    expect(errs.length).toMatch(1);
-    expect(errs[0]!.span.start).toMatch(14);
-    expect(errs[0]!.span.end).toMatch(15);
+    expect(parseYaml(textNode("key: {unclosed"))).toMatch({
+      kind: "error",
+      errors: [{ span: { start: 14, end: 15 } }],
+    });
   });
 
   it("preserves the yaml error message", () => {
-    const errs = parseErr("key: {unclosed");
-    expect(errs[0]!.message.length > 0).toMatch(true);
+    expect(parseYaml(textNode("key: {unclosed"))).toMatch({
+      kind: "error",
+      errors: [{ message: /.+/ }],
+    });
   });
 });
 
@@ -68,24 +56,24 @@ describe("parseYaml – errors", () => {
 
 describe("parseYaml – null scalar", () => {
   it("parses the 'null' keyword", () => {
-    expect(parseOk("null")).toMatch({ kind: "null" });
+    expect(parseYaml(textNode("null"))).toMatch({ kind: "null" });
   });
 
   it("parses '~' as null", () => {
-    expect(parseOk("~")).toMatch({ kind: "null" });
+    expect(parseYaml(textNode("~"))).toMatch({ kind: "null" });
   });
 
   it("records the firstToken span for 'null'", () => {
-    expect(parseOk("null")).toMatch({
+    expect(parseYaml(textNode("null"))).toMatch({
       kind: "null",
-      firstToken: { text: "null", start: 0, end: 4 },
+      firstToken: { start: 0, end: 4 },
     });
   });
 
   it("records the firstToken span for '~'", () => {
-    expect(parseOk("~")).toMatch({
+    expect(parseYaml(textNode("~"))).toMatch({
       kind: "null",
-      firstToken: { text: "~", start: 0, end: 1 },
+      firstToken: { start: 0, end: 1 },
     });
   });
 });
@@ -96,18 +84,18 @@ describe("parseYaml – null scalar", () => {
 
 describe("parseYaml – boolean scalar", () => {
   it("parses 'true'", () => {
-    expect(parseOk("true")).toMatch({
+    expect(parseYaml(textNode("true"))).toMatch({
       kind: "boolean",
       value: true,
-      firstToken: { text: "true", start: 0, end: 4 },
+      firstToken: { start: 0, end: 4 },
     });
   });
 
   it("parses 'false'", () => {
-    expect(parseOk("false")).toMatch({
+    expect(parseYaml(textNode("false"))).toMatch({
       kind: "boolean",
       value: false,
-      firstToken: { text: "false", start: 0, end: 5 },
+      firstToken: { start: 0, end: 5 },
     });
   });
 });
@@ -118,26 +106,26 @@ describe("parseYaml – boolean scalar", () => {
 
 describe("parseYaml – number scalar", () => {
   it("parses an integer", () => {
-    expect(parseOk("42")).toMatch({
+    expect(parseYaml(textNode("42"))).toMatch({
       kind: "number",
       value: 42,
-      firstToken: { text: "42", start: 0, end: 2 },
+      firstToken: { start: 0, end: 2 },
     });
   });
 
   it("parses a negative integer", () => {
-    expect(parseOk("-7")).toMatch({
+    expect(parseYaml(textNode("-7"))).toMatch({
       kind: "number",
       value: -7,
-      firstToken: { text: "-7", start: 0, end: 2 },
+      firstToken: { start: 0, end: 2 },
     });
   });
 
   it("parses a float", () => {
-    expect(parseOk("3.14")).toMatch({
+    expect(parseYaml(textNode("3.14"))).toMatch({
       kind: "number",
       value: 3.14,
-      firstToken: { text: "3.14", start: 0, end: 4 },
+      firstToken: { start: 0, end: 4 },
     });
   });
 });
@@ -148,33 +136,33 @@ describe("parseYaml – number scalar", () => {
 
 describe("parseYaml – string scalar", () => {
   it("parses an unquoted string", () => {
-    expect(parseOk("hello")).toMatch({
+    expect(parseYaml(textNode("hello"))).toMatch({
       kind: "string",
       value: "hello",
-      firstToken: { text: "hello", start: 0, end: 5 },
+      firstToken: { start: 0, end: 5 },
     });
   });
 
   it("parses a double-quoted string", () => {
-    expect(parseOk('"world"')).toMatch({
+    expect(parseYaml(textNode('"world"'))).toMatch({
       kind: "string",
       value: "world",
       // firstToken includes the surrounding quotes
-      firstToken: { text: '"world"', start: 0, end: 7 },
+      firstToken: { start: 0, end: 7 },
     });
   });
 
   it("parses a single-quoted string", () => {
-    expect(parseOk("'hello'")).toMatch({
+    expect(parseYaml(textNode("'hello'"))).toMatch({
       kind: "string",
       value: "hello",
-      firstToken: { text: "'hello'", start: 0, end: 7 },
+      firstToken: { start: 0, end: 7 },
     });
   });
 
   it("parses a block literal scalar (pipe)", () => {
     const src = "|\n  line1\n  line2\n";
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "string",
       value: "line1\nline2\n",
     });
@@ -182,14 +170,14 @@ describe("parseYaml – string scalar", () => {
 
   it("parses a block folded scalar (>)", () => {
     const src = ">\n  line1\n  line2\n";
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "string",
       value: "line1 line2\n",
     });
   });
 
   it("decodes escape sequences in double-quoted strings", () => {
-    expect(parseOk('"tab:\\there"')).toMatch({
+    expect(parseYaml(textNode('"tab:\\there"'))).toMatch({
       kind: "string",
       value: "tab:\there",
     });
@@ -202,7 +190,7 @@ describe("parseYaml – string scalar", () => {
 
 describe("parseYaml – block map", () => {
   it("parses a single-entry block map", () => {
-    expect(parseOk("x: 1")).toMatch({
+    expect(parseYaml(textNode("x: 1"))).toMatch({
       kind: "object",
       entries: [
         {
@@ -214,7 +202,7 @@ describe("parseYaml – block map", () => {
   });
 
   it("preserves entry order", () => {
-    expect(parseOk("a: 1\nb: 2\nc: 3")).toMatch({
+    expect(parseYaml(textNode("a: 1\nb: 2\nc: 3"))).toMatch({
       kind: "object",
       entries: [
         { key: { value: "a" } },
@@ -226,15 +214,15 @@ describe("parseYaml – block map", () => {
 
   it("firstToken is a single char at the start of the first key", () => {
     const src = "point: 1";
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      firstToken: { text: "p", start: 0, end: 1 },
+      firstToken: { start: 0, end: 1 },
     });
   });
 
   it("key firstToken spans the key text in source", () => {
     const src = "mykey: 1";
-    const result = parseOk(src);
+    const result = parseYaml(textNode(src));
     expect(result).toMatch({
       kind: "object",
       entries: [
@@ -242,7 +230,7 @@ describe("parseYaml – block map", () => {
           key: {
             kind: "string",
             value: "mykey",
-            firstToken: { text: "mykey", start: 0, end: 5 },
+            firstToken: { start: 0, end: 5 },
           },
         },
       ],
@@ -252,14 +240,14 @@ describe("parseYaml – block map", () => {
   it("value firstToken is offset correctly in source", () => {
     const src = "x: 42";
     // "x: " is 3 chars, "42" starts at offset 3
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
       entries: [
         {
           value: {
             kind: "number",
             value: 42,
-            firstToken: { text: "42", start: 3, end: 5 },
+            firstToken: { start: 3, end: 5 },
           },
         },
       ],
@@ -268,7 +256,7 @@ describe("parseYaml – block map", () => {
 
   it("handles an implicit null value (empty after colon)", () => {
     const src = "key:\n";
-    const result = parseOk(src);
+    const result = parseYaml(textNode(src));
     expect(result).toMatch({
       kind: "object",
       entries: [
@@ -284,21 +272,21 @@ describe("parseYaml – block map", () => {
   });
 
   it("handles an explicit null value", () => {
-    expect(parseOk("key: null")).toMatch({
+    expect(parseYaml(textNode("key: null"))).toMatch({
       kind: "object",
       entries: [{ key: { value: "key" }, value: { kind: "null" } }],
     });
   });
 
   it("handles boolean values", () => {
-    expect(parseOk("active: true")).toMatch({
+    expect(parseYaml(textNode("active: true"))).toMatch({
       kind: "object",
       entries: [{ value: { kind: "boolean", value: true } }],
     });
   });
 
   it("handles string values", () => {
-    expect(parseOk('name: "Alice"')).toMatch({
+    expect(parseYaml(textNode('name: "Alice"'))).toMatch({
       kind: "object",
       entries: [{ value: { kind: "string", value: "Alice" } }],
     });
@@ -306,7 +294,7 @@ describe("parseYaml – block map", () => {
 
   it("handles a nested block map value", () => {
     const src = "outer:\n  inner: 1";
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
       entries: [
         {
@@ -326,7 +314,7 @@ describe("parseYaml – block map", () => {
   });
 
   it("handles a sequence value", () => {
-    expect(parseOk("tags:\n  - a\n  - b")).toMatch({
+    expect(parseYaml(textNode("tags:\n  - a\n  - b"))).toMatch({
       kind: "object",
       entries: [
         {
@@ -350,7 +338,7 @@ describe("parseYaml – block map", () => {
 
 describe("parseYaml – flow map", () => {
   it("parses a flow map", () => {
-    expect(parseOk("{x: 1, y: 2}")).toMatch({
+    expect(parseYaml(textNode("{x: 1, y: 2}"))).toMatch({
       kind: "object",
       entries: [
         { key: { value: "x" }, value: { kind: "number", value: 1 } },
@@ -360,20 +348,20 @@ describe("parseYaml – flow map", () => {
   });
 
   it("firstToken is '{'", () => {
-    expect(parseOk("{x: 1}")).toMatch({
+    expect(parseYaml(textNode("{x: 1}"))).toMatch({
       kind: "object",
-      firstToken: { text: "{", start: 0, end: 1 },
+      firstToken: { start: 0, end: 1 },
     });
   });
 
   it("parses an empty flow map", () => {
-    expect(parseOk("{}")).toMatch({ kind: "object", entries: [] });
+    expect(parseYaml(textNode("{}"))).toMatch({ kind: "object", entries: [] });
   });
 
   it("key firstToken is correct inside a flow map", () => {
     // "{x: 1}" — key "x" starts at offset 1
-    expect(parseOk("{x: 1}")).toMatch({
-      entries: [{ key: { firstToken: { text: "x", start: 1, end: 2 } } }],
+    expect(parseYaml(textNode("{x: 1}"))).toMatch({
+      entries: [{ key: { firstToken: { start: 1, end: 2 } } }],
     });
   });
 });
@@ -384,7 +372,7 @@ describe("parseYaml – flow map", () => {
 
 describe("parseYaml – block sequence", () => {
   it("parses a block sequence of scalars", () => {
-    expect(parseOk("- 1\n- 2\n- 3")).toMatch({
+    expect(parseYaml(textNode("- 1\n- 2\n- 3"))).toMatch({
       kind: "array",
       elements: [
         { kind: "number", value: 1 },
@@ -395,14 +383,14 @@ describe("parseYaml – block sequence", () => {
   });
 
   it("firstToken is '-' (the block sequence indicator)", () => {
-    expect(parseOk("- 1")).toMatch({
+    expect(parseYaml(textNode("- 1"))).toMatch({
       kind: "array",
-      firstToken: { text: "-", start: 0, end: 1 },
+      firstToken: { start: 0, end: 1 },
     });
   });
 
   it("parses a block sequence of objects", () => {
-    expect(parseOk("- x: 1\n- x: 2")).toMatch({
+    expect(parseYaml(textNode("- x: 1\n- x: 2"))).toMatch({
       kind: "array",
       elements: [
         {
@@ -422,7 +410,7 @@ describe("parseYaml – block sequence", () => {
   });
 
   it("parses mixed-type elements", () => {
-    expect(parseOk("- 1\n- hello\n- true")).toMatch({
+    expect(parseYaml(textNode("- 1\n- hello\n- true"))).toMatch({
       kind: "array",
       elements: [
         { kind: "number", value: 1 },
@@ -439,7 +427,7 @@ describe("parseYaml – block sequence", () => {
 
 describe("parseYaml – flow sequence", () => {
   it("parses a flow sequence of numbers", () => {
-    expect(parseOk("[10, 20, 30]")).toMatch({
+    expect(parseYaml(textNode("[10, 20, 30]"))).toMatch({
       kind: "array",
       elements: [
         { kind: "number", value: 10 },
@@ -450,28 +438,28 @@ describe("parseYaml – flow sequence", () => {
   });
 
   it("firstToken is '['", () => {
-    expect(parseOk("[1, 2]")).toMatch({
+    expect(parseYaml(textNode("[1, 2]"))).toMatch({
       kind: "array",
-      firstToken: { text: "[", start: 0, end: 1 },
+      firstToken: { start: 0, end: 1 },
     });
   });
 
   it("parses an empty flow sequence", () => {
-    expect(parseOk("[]")).toMatch({ kind: "array", elements: [] });
+    expect(parseYaml(textNode("[]"))).toMatch({ kind: "array", elements: [] });
   });
 
   it("element firstToken is correct inside a flow sequence", () => {
     // "[10, 20]" — first element "10" at offset 1..3, second "20" at 5..7
-    expect(parseOk("[10, 20]")).toMatch({
+    expect(parseYaml(textNode("[10, 20]"))).toMatch({
       elements: [
-        { firstToken: { text: "10", start: 1, end: 3 } },
-        { firstToken: { text: "20", start: 5, end: 7 } },
+        { firstToken: { start: 1, end: 3 } },
+        { firstToken: { start: 5, end: 7 } },
       ],
     });
   });
 
   it("parses mixed-type elements", () => {
-    expect(parseOk('[1, true, null, "hi"]')).toMatch({
+    expect(parseYaml(textNode('[1, true, null, "hi"]'))).toMatch({
       kind: "array",
       elements: [
         { kind: "number", value: 1 },
@@ -489,9 +477,9 @@ describe("parseYaml – flow sequence", () => {
 
 describe("parseYaml – source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
-    const content: TextNodeJoin = {
-      decoded: "null",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 20 }],
+    const content: MappedText = {
+      text: "null",
+      offsetMap: [{ textPosition: 0, sourcePosition: 20 }],
     };
     const result = parseYaml(content);
     expect(result).toMatch({
@@ -501,9 +489,9 @@ describe("parseYaml – source offset remapping", () => {
   });
 
   it("remaps error offsets via the offsetMap", () => {
-    const content: TextNodeJoin = {
-      decoded: "",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 10 }],
+    const content: MappedText = {
+      text: "",
+      offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
     const result = parseYaml(content);
     expect(result).toMatch({
@@ -520,16 +508,16 @@ describe("parseYaml – span preservation", () => {
     const src = "name: Alice\nage: 30\n";
     // "name" at 0..4, value "Alice" at 6..11
     // "age" at 12..15, value "30" at 17..19
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
       entries: [
         {
-          key: { firstToken: { text: "name", start: 0, end: 4 } },
-          value: { firstToken: { text: "Alice", start: 6, end: 11 } },
+          key: { firstToken: { start: 0, end: 4 } },
+          value: { firstToken: { start: 6, end: 11 } },
         },
         {
-          key: { firstToken: { text: "age", start: 12, end: 15 } },
-          value: { firstToken: { text: "30", start: 17, end: 19 } },
+          key: { firstToken: { start: 12, end: 15 } },
+          value: { firstToken: { start: 17, end: 19 } },
         },
       ],
     });
@@ -539,21 +527,21 @@ describe("parseYaml – span preservation", () => {
     const src = "point: {x: 1, y: 2}\n";
     // "point" at 0..5, flow map "{" at 7
     // "x" at 8..9, "1" at 11..12, "y" at 14..15, "2" at 17..18
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
       entries: [
         {
-          key: { firstToken: { text: "point", start: 0, end: 5 } },
+          key: { firstToken: { start: 0, end: 5 } },
           value: {
             kind: "object",
-            firstToken: { text: "{", start: 7, end: 8 },
+            firstToken: { start: 7, end: 8 },
             entries: [
               {
-                key: { firstToken: { text: "x", start: 8, end: 9 } },
+                key: { firstToken: { start: 8, end: 9 } },
                 value: { firstToken: { start: 11, end: 12 } },
               },
               {
-                key: { firstToken: { text: "y", start: 14, end: 15 } },
+                key: { firstToken: { start: 14, end: 15 } },
                 value: { firstToken: { start: 17, end: 18 } },
               },
             ],
@@ -566,16 +554,16 @@ describe("parseYaml – span preservation", () => {
   it("preserves offsets inside a flow sequence nested in a block map", () => {
     const src = "nums: [10, 20]\n";
     // "nums" at 0..4, "[" at 6, "10" at 7..9, "20" at 11..13
-    expect(parseOk(src)).toMatch({
+    expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
       entries: [
         {
           value: {
             kind: "array",
-            firstToken: { text: "[", start: 6, end: 7 },
+            firstToken: { start: 6, end: 7 },
             elements: [
-              { firstToken: { text: "10", start: 7, end: 9 } },
-              { firstToken: { text: "20", start: 11, end: 13 } },
+              { firstToken: { start: 7, end: 9 } },
+              { firstToken: { start: 11, end: 13 } },
             ],
           },
         },

@@ -1,13 +1,13 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { TextNodeJoin } from "../util/text-node-joiner.js";
 import { parseJson } from "./json-parser.js";
+import { MappedText } from "../util/common-types.js";
 
-function textNode(source: string): TextNodeJoin {
+function textNode(source: string): MappedText {
   return {
-    decoded: source,
-    offsetMap: [{ decodedOffset: 0, sourceOffset: 0 }],
+    text: source,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
 }
 
@@ -159,14 +159,14 @@ describe("parseJson – source spans", () => {
   it("records the span of a string token", () => {
     expect(parseJson(textNode(' "hi" '))).toMatch({
       kind: "string",
-      firstToken: { text: '"hi"', start: 1, end: 5 },
+      firstToken: { start: 1, end: 5 },
     });
   });
 
   it("records the span of an object's opening brace", () => {
     expect(parseJson(textNode(" {}"))).toMatch({
       kind: "object",
-      firstToken: { text: "{", start: 1, end: 2 },
+      firstToken: { start: 1, end: 2 },
     });
   });
 });
@@ -246,20 +246,20 @@ describe("parseJson – errors", () => {
 
 describe("parseJson – source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
-    const content: TextNodeJoin = {
-      decoded: '"hello"',
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 5 }],
+    const content: MappedText = {
+      text: '"hello"',
+      offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };
     expect(parseJson(content)).toMatch({
       kind: "string",
-      firstToken: { text: '"hello"', start: 5, end: 12 },
+      firstToken: { start: 5, end: 12 },
     });
   });
 
   it("remaps error offsets via the offsetMap", () => {
-    const content: TextNodeJoin = {
-      decoded: "   ",
-      offsetMap: [{ decodedOffset: 0, sourceOffset: 7 }],
+    const content: MappedText = {
+      text: "   ",
+      offsetMap: [{ textPosition: 0, sourcePosition: 7 }],
     };
     expect(parseJson(content)).toMatch({
       kind: "error",

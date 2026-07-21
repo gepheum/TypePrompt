@@ -1,17 +1,13 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import type { InternalErrors } from "../util/common-types.js";
-import {
-  textToSourcePosition,
-  type TextNodeJoin,
-} from "../util/text-node-joiner.js";
+import type { InternalErrors, MappedSpan, MappedText, TextSpan } from "../util/common-types.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 
 export function parseYaml(
-  content: TextNodeJoin,
+  content: MappedText,
 ): JsonValue<"strict"> | InternalErrors {
-  const decoded = content.decoded;
-  const doc = parseDocument(decoded, { logLevel: "silent" });
+  const doc = parseDocument(content.text, { logLevel: "silent" });
 
   if (doc.errors.length > 0) {
     return {
@@ -49,7 +45,7 @@ export function parseYaml(
         {
           span: {
             start: textToSourcePosition(content, 0),
-            end: textToSourcePosition(content, decoded.length),
+            end: textToSourcePosition(content, content.text.length),
           },
           message: "Unsupported YAML node type",
         },
@@ -62,14 +58,14 @@ export function parseYaml(
 
 /// Maps a decoded YAML offset to a source offset, safely extrapolating for
 /// positions that the YAML library may report one past the end of the input.
-function mapOffset(content: TextNodeJoin, offset: number): number {
-  const clamped = Math.min(offset, content.decoded.length);
+function mapOffset(content: MappedText, offset: number): number {
+  const clamped = Math.min(offset, content.text.length);
   return textToSourcePosition(content, clamped) + (offset - clamped);
 }
 
-function span(content: TextNodeJoin, start: number, end: number) {
+function span(content: MappedText, start: number, end: number): TextSpan {
   return {
-    text: content.decoded.slice(start, end),
+    text: content.text.slice(start, end),
     start: textToSourcePosition(content, start),
     end: textToSourcePosition(content, end),
   };
@@ -77,7 +73,7 @@ function span(content: TextNodeJoin, start: number, end: number) {
 
 function convertNode(
   node: unknown,
-  content: TextNodeJoin,
+  content: MappedText,
 ): JsonValue<"strict"> | null {
   if (isMap(node)) {
     return convertMap(node, content);
@@ -90,7 +86,7 @@ function convertNode(
   }
 }
 
-function convertMap(node: YAMLMap, content: TextNodeJoin): JsonValue<"strict"> {
+function convertMap(node: YAMLMap, content: MappedText): JsonValue<"strict"> {
   const [start] = node.range ?? [0, 0, 0];
   const entries: JsonObjectEntry<"strict">[] = [];
 
@@ -122,7 +118,7 @@ function convertMap(node: YAMLMap, content: TextNodeJoin): JsonValue<"strict"> {
   };
 }
 
-function convertSeq(node: YAMLSeq, content: TextNodeJoin): JsonValue<"strict"> {
+function convertSeq(node: YAMLSeq, content: MappedText): JsonValue<"strict"> {
   const [start] = node.range ?? [0, 0, 0];
   const elements: JsonValue<"strict">[] = [];
 
@@ -140,7 +136,7 @@ function convertSeq(node: YAMLSeq, content: TextNodeJoin): JsonValue<"strict"> {
 
 function convertScalar(
   node: Scalar,
-  content: TextNodeJoin,
+  content: MappedText,
 ): JsonValue<"strict"> {
   const [start, end] = node.range ?? [0, 0, 0];
   const firstToken = span(content, start, end);
@@ -161,7 +157,7 @@ function convertScalar(
   }
 }
 
-function scalarToJsonString(node: Scalar, content: TextNodeJoin): JsonString {
+function scalarToJsonString(node: Scalar, content: MappedText): JsonString {
   const [start, end] = node.range ?? [0, 0, 0];
   return {
     kind: "string",
