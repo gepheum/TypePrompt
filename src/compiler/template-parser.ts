@@ -12,17 +12,19 @@ import {
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
-import type { ElementNode } from "../xml/xml-types.js";
+import type { ElementNode, XmlNode } from "../xml/xml-types.js";
 import {
   Body,
   BodyPiece,
   Expression,
+  InsertFormat,
   OutputFormat,
   Snippet,
   Template,
 } from "./compiler-types.js";
 
 import * as z from "zod";
+import { parseExpression } from "./expression-parser.js";
 
 export function parseTemplate(
   templateNode: ElementNode,
@@ -195,84 +197,109 @@ class TemplateParser {
   private parseBody(parentNode: ElementNode): Body | InternalErrors {
     const pieces: RawBodyPiece[] = [];
 
+    const visitInsertSnippet = (insertNode: ElementNode): void => {
+      const attrs = checkXmlAttributes(insertNode, {
+        snippet: {
+          schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+          expected: "an UpperCamelCase identifier",
+        },
+      });
+      if (attrs.kind === "error") {
+        this.errors.push(...attrs.errors);
+        return;
+      }
+      pieces.push({
+        kind: "insert-snippet",
+        snippet: attrs.attributes.snippet.span,
+      });
+    };
+
+    const visitInsertValue = (insertNode: ElementNode): void => {
+      // Insert a formatted value.
+      const attrs = checkXmlAttributes(insertNode, {
+        val: {
+          schema: z.string(),
+          expected: "a valid expression",
+        },
+        format: {
+          schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+          expected: "a lowerCamelCase identifier",
+        },
+      });
+      if (attrs.kind === "error") {
+        this.errors.push(...attrs.errors);
+        return;
+      }
+      const expression = parseExpression(attrs.attributes.val.span, {
+        acceptIt: true,
+      });
+      if (expression.kind === "error") {
+        this.errors.push(...expression.errors);
+        return;
+      }
+      const format = attrs.attributes.format
+        ? this.parseInsertFormat(attrs.attributes.format.span)
+        : null;
+      pieces.push({
+        kind: "insert-val",
+        expression: expression.expression,
+        format: format,
+      });
+    };
+
+    const visit = (child: XmlNode): void => {
+      if (child.kind === "text") {
+        pieces.push({ kind: "text", text: child });
+        return;
+      }
+      const tag = child.tag.text;
+      if (tag === "c") {
+        const attrs = checkXmlAttributes(child, {});
+        if (attrs.kind === "error") {
+          this.errors.push(...attrs.errors);
+        }
+        const textContent = this.extractTextContent(child);
+        const cTag = parseCTag(textContent);
+        if (cTag.kind === "error") {
+          this.errors.push(...cTag.errors);
+        } else {
+          pieces.push({
+            kind: "c-tag",
+            text: textContent,
+          });
+        }
+      } else if (tag === "enclosed") {
+        const encAttrs = checkXmlAttributes(child, {
+          tag: {
+            schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
+            expected: "a valid XML tag name",
+          },
+        });
+        if (encAttrs.kind === "error") {
+          this.errors.push(...encAttrs.errors);
+        } else {
+          const encTagName = encAttrs.attributes.tag.value;
+          pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+          visitChildren(child);
+          pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+        }
+      } else if (tag === "insert") {
+        if (child.attributes["snippet"]) {
+          visitInsertSnippet(child);
+        } else {
+          visitInsertValue(child);
+        }
+      } else {
+        this.errors.push({
+          span: child.tag,
+          message: `Unexpected element '<${tag}>'`,
+        });
+      }
+    };
+
     const visitChildren = (elem: ElementNode): void => {
       for (const child of elem.children) {
-        if (child.kind === "text") {
-          pieces.push({ kind: "text", text: child });
-          continue;
-        }
-
-        const tag = child.tag.text;
-
-        if (tag === "c") {
-          const attrs = checkXmlAttributes(child, {});
-          if (attrs.kind === "error") {
-            this.errors.push(...attrs.errors);
-          }
-          const textContent = this.extractTextContent(child);
-          const cTag = parseCTag(textContent);
-          if (cTag.kind === "error") {
-            this.errors.push(...cTag.errors);
-          } else {
-            pieces.push({
-              kind: "c-tag",
-              text: textContent,
-            });
-          }
-        } else if (tag === "enclosed") {
-          const encAttrs = checkXmlAttributes(child, {
-            tag: {
-              schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
-              expected: "a valid XML tag name",
-            },
-          });
-          if (encAttrs.kind === "error") {
-            this.errors.push(...encAttrs.errors);
-          } else {
-            const encTagName = encAttrs.attributes.tag.value;
-            pieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
-            visitChildren(child);
-            pieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
-          }
-        } else if (tag === "insert") {
-          if (child.attributes["snippet"]) {
-            const attrs = checkXmlAttributes(child, {
-              snippet: {
-                schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-                expected: "an UpperCamelCase identifier",
-              },
-            });
-            if (attrs.kind === "success") {
-              pieces.push({
-                kind: "insert-snippet",
-                snippet: attrs.attributes.snippet.span,
-              });
-            } else {
-              this.errors.push(...attrs.errors);
-            }
-          } else {
-            const attrs = checkXmlAttributes(child, {
-              val: {
-                schema: z.string(),
-                expected: "a valid expression",
-              },
-              format: {
-                schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-                expected: "a lowerCamelCase identifier",
-              },
-            });
-            if (attrs.kind === "success") {
-              CACA;
-            } else {
-              this.errors.push(...attrs.errors);
-            }
-          }
-        } else {
-          this.errors.push({
-            span: child.tag,
-            message: `Unexpected element '<${tag}>'`,
-          });
-        }
+        visit(child);
       }
     };
 
@@ -296,6 +323,38 @@ class TemplateParser {
     return joinTextNodes(textNodes, node.contentStart);
   }
 
+  private parseOutputFormat(format: TextSpan): OutputFormat | null {
+    const { text } = format;
+    if (!/^[a-z][A-Za-z0-9]*$/.test(text)) {
+      this.errors.push({
+        span: format,
+        message: "Expected: lowerCamelCase identifier",
+      });
+      return null;
+    }
+    const kind = text === "json" || text === "text" ? text : "custom";
+    return {
+      kind: kind,
+      format: format,
+    };
+  }
+
+  private parseInsertFormat(format: TextSpan): InsertFormat | null {
+    const { text } = format;
+    const kind =
+      text === "text" ||
+      text === "json" ||
+      text === "toon" ||
+      text === "csv" ||
+      text === "tsv"
+        ? text
+        : "custom";
+    return {
+      kind: kind,
+      format: format,
+    };
+  }
+
   private readonly errors: InternalError[] = [];
   private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
@@ -317,6 +376,7 @@ type RawBodyPiece<Text = MappedText> =
   | {
       readonly kind: "insert-val";
       readonly expression: Expression;
+      readonly format: InsertFormat | null;
     }
   | {
       readonly kind: "insert-snippet";
@@ -383,7 +443,7 @@ function removeIndentAfterEol(
   baseIndent: string,
   errorSink: InternalError[],
 ): string {
-  const {text} = textNode;
+  const { text } = textNode;
   if (text.length === 0 || baseIndent.length === 0) return text;
   let out = "";
   let cursor = 0;
@@ -475,7 +535,9 @@ function trimTrailingEmpty(text: string): string {
   }
 }
 
-function coalesceText(pieces: readonly DedentedBodyPiece[]): DedentedBodyPiece[] {
+function coalesceText(
+  pieces: readonly DedentedBodyPiece[],
+): DedentedBodyPiece[] {
   const result: DedentedBodyPiece[] = [];
   for (const p of pieces) {
     if (p.kind === "text") {
