@@ -413,11 +413,12 @@ function removeIndentAfterEol(
     if (text.startsWith(baseIndent, next)) {
       cursor = next + baseIndent.length;
     } else {
-      const so = textToSourcePosition(textNode, next);
-      errorSink.pushError(
-        { start: so, end: so },
-        `Expected indentation '${baseIndent.replace(/\t/g, "\\t")}' after end-of-line`,
-      );
+      const pos = textToSourcePosition(textNode, next);
+      const formattedIndent = baseIndent.replace(/\t/g, "\\t");
+      errorSink.push({
+        span: { start: pos, end: pos },
+        message: `Expected indentation '${formattedIndent}' after end-of-line`,
+      });
       cursor = next;
     }
   }
