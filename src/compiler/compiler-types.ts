@@ -1,7 +1,12 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
-import { InternalError, InternalErrors, Span } from "../util/common-types.js";
+import {
+  InternalError,
+  InternalErrors,
+  Span,
+  TextSpan,
+} from "../util/common-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {
@@ -34,11 +39,8 @@ export type TemplateResult =
 export type Template = {
   readonly kind: "success";
 
-  /** Includes the <template>...</template> tags. */
-  readonly xmlSource: Span;
-
-  readonly name: Span;
-  readonly namespace: Span | null;
+  readonly name: TextSpan;
+  readonly namespace: TextSpan | null;
 
   readonly meta: JsonValue<"strict"> | null;
 
@@ -57,7 +59,7 @@ export type Template = {
 
 export type OutputFormat = {
   readonly kind: "json" | "text" | "custom";
-  readonly format: Span;
+  readonly format: TextSpan;
 };
 
 export type PromptVariant = {
@@ -80,13 +82,13 @@ export type BodyPiece =
   | {
       readonly kind: "insert-val";
       readonly val: Expression;
-      readonly insertFormat: InsertFormat;
+      readonly insertFormat: InsertFormat | null;
       /** Only contains whitespace characters. */
       readonly indent: string;
     }
   | {
       readonly kind: "insert-snippet";
-      readonly snippet: string;
+      readonly snippet: TextSpan;
       /** Only contains whitespace characters. */
       readonly indent: string;
     };
@@ -102,13 +104,10 @@ export type Expression =
       readonly property: Span;
     };
 
-export type InsertFormat =
-  | { readonly kind: "text" }
-  | { readonly kind: "json" }
-  | { readonly kind: "toon" }
-  | { readonly kind: "csv" }
-  | { readonly kind: "tsv" }
-  | { readonly kind: "custom"; format: string };
+export type InsertFormat = {
+  readonly kind: "text" | "json" | "toon" | "csv" | "tsv" | "custom";
+  readonly format: TextSpan;
+};
 
 export type Snippet =
   | {
