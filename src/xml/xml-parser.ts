@@ -107,9 +107,7 @@ class XmlParser {
         message: "Unclosed XML comment",
       });
     } else {
-      this.appendComment({
-        span: { start: tokenStart, end: tokenEnd },
-      });
+      this.appendComment({ start: tokenStart, end: tokenEnd });
     }
     this.cursor = tokenEnd;
   }
@@ -182,26 +180,21 @@ class XmlParser {
 
     const openingTagEnd = this.cursor;
 
+    const element: OpenElement = {
+      kind: "element",
+      tag: tag,
+      start: tokenStart,
+      end: openingTagEnd,
+      attributes: attributes,
+      children: [],
+      comments: [],
+      contentStart: openingTagEnd,
+      isSelfClosing: isSelfClosing,
+    };
     if (isSelfClosing) {
-      this.appendNode({
-        kind: "element",
-        tag: tag,
-        attributes: attributes,
-        children: [],
-        comments: [],
-        contentStart: openingTagEnd,
-        isSelfClosing: true,
-      });
+      this.appendNode(element);
     } else {
-      this.openElements.push({
-        kind: "element",
-        tag: tag,
-        attributes: attributes,
-        children: [],
-        comments: [],
-        contentStart: openingTagEnd,
-        isSelfClosing: false,
-      });
+      this.openElements.push(element);
     }
   }
 
@@ -289,7 +282,7 @@ class XmlParser {
     }
     const tokenEnd = this.cursor;
 
-    if (this.openElements.length === 0) {
+    if (this.openElements.length <= 0) {
       this.errors.push({
         span: { start: tokenStart, end: tokenEnd },
         message: `Unexpected closing tag '</${name}>'`,
@@ -297,10 +290,11 @@ class XmlParser {
       return;
     }
 
-    const top = this.openElements[this.openElements.length - 1]!;
+    const top = this.openElements.at(-1)!;
 
     if (top.tag.text === name) {
       this.openElements.pop();
+      top.end = tokenEnd;
       this.appendNode(top);
       return;
     }
@@ -546,6 +540,7 @@ function codePointToString(codePoint: number): string | undefined {
 // ---------------------------------------------------------------------------
 
 type OpenElement = ElementNode & {
+  end: number;
   readonly children: XmlNode[];
   readonly comments: XmlComment[];
 };

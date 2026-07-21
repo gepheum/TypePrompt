@@ -23,7 +23,7 @@ export type ElementNode = {
   readonly children: readonly XmlNode[];
   readonly comments: readonly XmlComment[];
   readonly isSelfClosing: boolean;
-};
+} & Span;
 
 export type Attribute = {
   readonly name: TextSpan;
@@ -31,6 +31,4 @@ export type Attribute = {
   readonly value: MappedSpan;
 };
 
-export type XmlComment = {
-  readonly span: Span;
-};
+export type XmlComment = Span & {};

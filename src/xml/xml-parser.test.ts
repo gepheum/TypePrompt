@@ -26,6 +26,8 @@ describe("parseXmlDocument", () => {
               start: 2,
               end: 5,
             },
+            start: 1,
+            end: 7,
             isSelfClosing: true,
             contentStart: 7,
             children: [],
@@ -52,6 +54,8 @@ describe("parseXmlDocument", () => {
             tag: {
               text: "root",
             },
+            start: 6,
+            end: 55,
             isSelfClosing: false,
             contentStart: 26,
             attributes: {
@@ -445,10 +449,8 @@ describe("parseXmlDocument – comments", () => {
             ],
             comments: [
               {
-                span: {
-                  start: 23,
-                  end: 39,
-                },
+                start: 23,
+                end: 39,
               },
             ],
           },
