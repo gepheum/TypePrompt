@@ -167,18 +167,7 @@ class TemplateParser {
     } else {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
-        const formatSpan = outputFormat.span;
-        const formatText = formatSpan.text;
-        const formatKind =
-          formatText === "json"
-            ? "json"
-            : formatText === "text"
-              ? "text"
-              : "custom";
-        this.outputFormat = {
-          kind: formatKind,
-          format: formatSpan,
-        };
+        this.outputFormat = this.parseOutputFormat(outputFormat.span);
       }
     }
     const textContent = this.extractTextContent(schemaNode);
