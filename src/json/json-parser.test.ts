@@ -1,8 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseJson } from "./json-parser.js";
 import { MappedText } from "../util/common-types.js";
+import { parseJson } from "./json-parser.js";
 
 function textNode(source: string): MappedText {
   return {

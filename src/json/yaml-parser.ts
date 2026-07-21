@@ -1,8 +1,12 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import type { InternalErrors, MappedSpan, MappedText, TextSpan } from "../util/common-types.js";
-import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
+import type {
+  InternalErrors,
+  MappedText,
+  TextSpan,
+} from "../util/common-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
+import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 
 export function parseYaml(
   content: MappedText,
@@ -134,10 +138,7 @@ function convertSeq(node: YAMLSeq, content: MappedText): JsonValue<"strict"> {
   };
 }
 
-function convertScalar(
-  node: Scalar,
-  content: MappedText,
-): JsonValue<"strict"> {
+function convertScalar(node: Scalar, content: MappedText): JsonValue<"strict"> {
   const [start, end] = node.range ?? [0, 0, 0];
   const firstToken = span(content, start, end);
   const value = node.value;

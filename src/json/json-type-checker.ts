@@ -94,7 +94,11 @@ export function jsonMatchesType(
       if (value.kind === type.primitive) {
         return MATCH;
       } else if (value.kind === "number" && type.primitive === "integer") {
-        if (/^-?\d+$/.test(value.firstToken.text)) {
+        if (
+          Number.isInteger(value.value) &&
+          -2147483648 <= value.value &&
+          value.value <= 2147483647
+        ) {
           return MATCH;
         } else {
           return mismatch(
@@ -210,11 +214,7 @@ export function jsonMatchesType(
           return MATCH;
         } else {
           // Not the right string.
-          return mismatch(
-            mode,
-            value.firstToken,
-            `Expected "${type.value}" but got ${value.firstToken.text}`,
-          );
+          return mismatch(mode, value.firstToken, `Expected "${type.value}"`);
         }
       } else {
         // Not a string.

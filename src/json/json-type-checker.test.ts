@@ -4,8 +4,8 @@ import { describe, it } from "mocha";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { Span } from "../util/common-types.js";
-import { joinTextNodes, TextNodeJoin } from "../util/text-node-joiner.js";
+import type { MappedText, Span } from "../util/common-types.js";
+import { joinTextNodes } from "../util/text-node-joiner.js";
 import { validateJson } from "./json-type-checker.js";
 import type {
   JsonArray,
@@ -20,8 +20,18 @@ import type {
 // ---------------------------------------------------------------------------
 
 function parseSchemaOrThrow(source: string): Schema {
-  const textNode: TextNodeJoin = joinTextNodes(
-    [{ decoded: source, offsetMap: [] }],
+  const textNode: MappedText = joinTextNodes(
+    [
+      {
+        text: source,
+        offsetMap: [
+          {
+            textPosition: 0,
+            sourcePosition: 0,
+          },
+        ],
+      },
+    ],
     0,
   );
   const schemaParseResult = parseSchema(textNode);
@@ -41,7 +51,7 @@ function parseSchemaOrThrow(source: string): Schema {
 }
 
 function span(text: string): Span {
-  return { text, start: 0, end: text.length };
+  return { start: 0, end: text.length };
 }
 
 function str(value: string): JsonString {
