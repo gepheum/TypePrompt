@@ -4,7 +4,8 @@ import { TextSpan } from "../util/common-types.js";
 export type XmlDocument = {
   readonly kind: "success";
   readonly root: {
-    readonly children: readonly XmlNode[];
+    readonly topLevelNodes: readonly XmlNode[];
+    readonly topLevelComments: readonly XmlComment[];
   };
 };
 

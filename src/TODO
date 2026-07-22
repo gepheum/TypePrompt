@@ -1,10 +1,13 @@
-- TODO: move TextNodeJoin to 'common'
-- TODO: support true and false literals?
-- TODO: separate schema parsing from schema validation. Only traverse the types once validation has been done.
-- TODO: support /* */ and //
-- TODO: no longer allow quotes in <c>
+SCHEMA:
+  - TODO: support true and false literals?
+  - support shared
+  - TODO: support /* */ and //
+
 - TODO: think about toolcalls
-- TODO: add 'suggestions' to Error type
+
+ERRORS:
+  - TODO: add 'suggestions' to Error type
+  - TODO: add warning
 
 - TODO: refine the SDL
 

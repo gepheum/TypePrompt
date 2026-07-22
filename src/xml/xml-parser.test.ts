@@ -7,7 +7,7 @@ describe("parseXmlDocument", () => {
   it("parses an empty document", () => {
     expect(parseXmlDocument("")).toMatch({
       kind: "success",
-      root: { children: [] },
+      root: { topLevelNodes: [] },
     });
   });
 
@@ -17,7 +17,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument(input)).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {},
           {
             kind: "element",
@@ -46,7 +46,7 @@ describe("parseXmlDocument", () => {
     ).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             text: "before",
             xmlSlice: "before",
@@ -102,7 +102,7 @@ describe("parseXmlDocument", () => {
     ).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             kind: "element",
             tag: { text: "root" },
@@ -118,7 +118,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument("<foo>abc<!--\n    -->bcd</foo>")).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             kind: "element",
             tag: { text: "foo" },
@@ -133,7 +133,7 @@ describe("parseXmlDocument", () => {
   it("skips CDATA sections (no child node emitted)", () => {
     expect(parseXmlDocument("<root><![CDATA[a<b>c]]></root>")).toMatch({
       kind: "success",
-      root: { children: [{ children: [] }] },
+      root: { topLevelNodes: [{ children: [] }] },
     });
   });
 
@@ -143,7 +143,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument(input)).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             attributes: {
               a: {
@@ -186,7 +186,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument('<root a="x &lt; y" b="&#65;&#x42;" />')).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             attributes: {
               a: { value: { text: "x < y" } },
@@ -203,7 +203,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument("<a/><b></b>")).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             kind: "element",
             tag: { text: "a" },
@@ -225,7 +225,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument('<root a="x > y"><child/></root>')).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             tag: { text: "root" },
             isSelfClosing: false,
@@ -255,7 +255,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument(input)).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             children: [
               {
@@ -294,7 +294,7 @@ describe("parseXmlDocument", () => {
     expect(parseXmlDocument("<root><![CDATA[ignored]]>after</root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", text: "after" }] }],
+        topLevelNodes: [{ children: [{ kind: "text", text: "after" }] }],
       },
     });
   });
@@ -361,7 +361,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>  \t\n  </root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", allWhitespace: true }] }],
+        topLevelNodes: [{ children: [{ kind: "text", allWhitespace: true }] }],
       },
     });
   });
@@ -370,7 +370,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>hello</root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", allWhitespace: false }] }],
+        topLevelNodes: [{ children: [{ kind: "text", allWhitespace: false }] }],
       },
     });
   });
@@ -379,7 +379,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>  hello  </root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", allWhitespace: false }] }],
+        topLevelNodes: [{ children: [{ kind: "text", allWhitespace: false }] }],
       },
     });
   });
@@ -388,7 +388,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>  \t\n  </root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", allWhitespace: true }] }],
+        topLevelNodes: [{ children: [{ kind: "text", allWhitespace: true }] }],
       },
     });
   });
@@ -397,7 +397,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>hello</root>")).toMatch({
       kind: "success",
       root: {
-        children: [{ children: [{ kind: "text", allWhitespace: false }] }],
+        topLevelNodes: [{ children: [{ kind: "text", allWhitespace: false }] }],
       },
     });
   });
@@ -406,7 +406,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>&#9;&#32;</root>")).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           { children: [{ kind: "text", text: "\t ", allWhitespace: true }] },
         ],
       },
@@ -417,7 +417,7 @@ describe("TextNode.allWhitespace", () => {
     expect(parseXmlDocument("<root>&#65;</root>")).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           { children: [{ kind: "text", text: "A", allWhitespace: false }] },
         ],
       },
@@ -435,7 +435,7 @@ describe("parseXmlDocument – comments", () => {
     expect(parseXmlDocument(input)).toMatch({
       kind: "success",
       root: {
-        children: [
+        topLevelNodes: [
           {
             kind: "text",
           },

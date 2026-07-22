@@ -31,7 +31,8 @@ class XmlParser {
   private cursor = 0;
   private readonly errors: InternalError[] = [];
   private readonly openElements: OpenElement[] = [];
-  private readonly rootNodes: XmlNode[] = [];
+  private readonly topLevelNodes: XmlNode[] = [];
+  private readonly topLevelComments: XmlComment[] = [];
 
   constructor(private readonly content: string) {}
 
@@ -68,7 +69,9 @@ class XmlParser {
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
     }
-    return { kind: "success", root: { children: this.rootNodes } };
+    return { kind: "success", root:
+      { topLevelNodes: this.topLevelNodes, topLevelComments: this.topLevelComments }
+       };
   }
 
   // -------------------------------------------------------------------------
@@ -192,7 +195,9 @@ class XmlParser {
       comments: [],
       contentStart: openingTagEnd,
       isSelfClosing: isSelfClosing,
-      xmlSlice: isSelfClosing ? this.content.slice(tokenStart, openingTagEnd) : "",
+      xmlSlice: isSelfClosing
+        ? this.content.slice(tokenStart, openingTagEnd)
+        : "",
     };
     if (isSelfClosing) {
       this.appendNode(element);
@@ -460,7 +465,7 @@ class XmlParser {
     if (parent !== undefined) {
       parent.children.push(node);
     } else {
-      this.rootNodes.push(node);
+      this.topLevelNodes.push(node);
     }
   }
 
@@ -468,6 +473,8 @@ class XmlParser {
     const parent = this.openElements.at(-1);
     if (parent !== undefined) {
       parent.comments.push(comment);
+    } else {
+      this.topLevelComments.push(comment);
     }
   }
 

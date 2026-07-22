@@ -1,10 +1,30 @@
+import { SchemaParseResult } from "../schema/schema-types.js";
 import { InternalError } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,
+  Meta,
+  Namespace,
   SourceFile,
+  Template,
   TemplateResult,
 } from "./compiler-types.js";
+
+function parseSourceFile(
+  path: string,
+  content: string,
+): SourceFileParseResult {
+  const result = new SourceFileParseResultImpl(path, content);
+
+  const xmlDocument = parseXmlDocument(content);
+  if (xmlDocument.kind === "error") {
+    return result;
+  }
+
+  for (const topLevelNode of xmlDocument.root.topLevelNodes) {
+
+  }
+}
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
@@ -31,16 +51,16 @@ export function compile(
   return builder.build();
 }
 
-class CompilationResultBuilder {
-  readonly pathToErrors: { [path: string]: InternalError[] } = {};
-  readonly sourceFiles: { [path: string]: SourceFile } = {};
-  readonly xmlSourceToTemplate: { [xmlSource: string]: TemplateResult } = {};
+class SourceFileParseResultImpl {
+  constructor(
+    readonly path: string,
+    readonly content: string,
+  ) {}
 
-  build(): CompilationResult {
-    return {
-      pathToErrors: this.pathToErrors,
-      sourceFiles: this.sourceFiles,
-      xmlSourceToTemplate: this.xmlSourceToTemplate,
-    };
-  }
+  readonly templates: Template[] = [];
+  readonly namespaces: Namespace[] = [];
+  readonly schemas: readonly SchemaParseResult[] = [];
+  readonly metas: readonly Meta[] = [];
+
+  readonly parseErrors: readonly InternalError[] = [];
 }

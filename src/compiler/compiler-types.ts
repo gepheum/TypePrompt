@@ -11,30 +11,20 @@ import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {
   readonly pathToErrors: { readonly [path: string]: readonly InternalError[] };
-  readonly sourceFiles: { readonly [path: string]: SourceFile };
-  readonly xmlSourceToTemplate: {
-    readonly [xmlSource: string]: TemplateResult;
-  };
+  readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
 };
 
-export type SourceFile = {
+export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
-  readonly xmlDocument: XmlDocument | InternalErrors;
-};
 
-export type TemplateResult =
-  | {
-      readonly kind: "success";
-      readonly template: Template;
-      /**
-       * When we reuse a cached template, the `positionOffset` is used to adjust the
-       * positions of the template's SourceSpans to match their positions in the new
-       * source file.
-       */
-      readonly positionOffset: number;
-    }
-  | InternalErrors;
+  readonly templates: readonly Template[];
+  readonly namespaces: readonly Namespace[];
+  readonly schemas: readonly SchemaParseResult[];
+  readonly metas: readonly Meta[];
+
+  readonly parseErrors: readonly InternalError[];
+};
 
 export type Template = {
   readonly kind: "success";
@@ -125,3 +115,14 @@ export type Snippet =
         readonly body: Body;
       }>;
     };
+
+export type Namespace = {
+  readonly kind: "success";
+  readonly name: TextSpan;
+  readonly schema: SchemaParseResult;
+};
+
+export type Meta = {
+  readonly kind: "success";
+  readonly schema: SchemaParseResult;
+};

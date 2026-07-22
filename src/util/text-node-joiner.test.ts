@@ -22,7 +22,7 @@ describe("textToSourcePosition", () => {
   it("maps text positions to source positions for plain text", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
+    const root = result.root.topLevelNodes[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     expect(textToSourcePosition(textNode, 0)).toBe(input.indexOf("abc"));
@@ -34,7 +34,7 @@ describe("textToSourcePosition", () => {
   it("maps text offsets to source positions across entity and raw segments", () => {
     const input = "<root>x &amp; y</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
+    const root = result.root.topLevelNodes[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     // decoded: "x & y", source: "x &amp; y"
@@ -57,7 +57,7 @@ describe("textToSourcePosition", () => {
   it("maps end boundary of a single-entity text node", () => {
     const input = "<root>&lt;</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
+    const root = result.root.topLevelNodes[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     expect(textNode.text).toBe("<");
@@ -70,7 +70,7 @@ describe("textToSourcePosition", () => {
   it("throws for text positions outside valid range", () => {
     const input = "<root>abc</root>";
     const result = expectSuccess(parseXmlDocument(input));
-    const root = result.root.children[0] as ElementNode;
+    const root = result.root.topLevelNodes[0] as ElementNode;
     const textNode = root.children[0] as TextNode;
 
     let threw = false;
