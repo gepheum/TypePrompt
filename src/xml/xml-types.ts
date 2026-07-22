@@ -13,6 +13,7 @@ export type XmlNode = TextNode | ElementNode;
 export type TextNode = {
   readonly kind: "text";
   readonly allWhitespace: boolean;
+  readonly xmlSlice: string;
 } & MappedSpan;
 
 export type ElementNode = {
@@ -23,6 +24,7 @@ export type ElementNode = {
   readonly children: readonly XmlNode[];
   readonly comments: readonly XmlComment[];
   readonly isSelfClosing: boolean;
+  readonly xmlSlice: string;
 } & Span;
 
 export type Attribute = {

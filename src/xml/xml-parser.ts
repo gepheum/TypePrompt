@@ -89,6 +89,7 @@ class XmlParser {
       text: decoded.text,
       offsetMap: decoded.offsetMap,
       allWhitespace: /^\s*$/.test(decoded.text),
+      xmlSlice: this.content.slice(start, end),
     });
     this.cursor = end;
   }
@@ -137,6 +138,7 @@ class XmlParser {
         ...this.decodeXmlText(tokenStart, tokenStart + 1),
         kind: "text",
         allWhitespace: false,
+        xmlSlice: "<",
       });
       this.cursor = tokenStart + 1;
       return;
@@ -190,6 +192,7 @@ class XmlParser {
       comments: [],
       contentStart: openingTagEnd,
       isSelfClosing: isSelfClosing,
+      xmlSlice: isSelfClosing ? this.content.slice(tokenStart, openingTagEnd) : "",
     };
     if (isSelfClosing) {
       this.appendNode(element);
@@ -295,6 +298,7 @@ class XmlParser {
     if (top.tag.text === name) {
       this.openElements.pop();
       top.end = tokenEnd;
+      top.xmlSlice = this.content.slice(top.start, tokenEnd);
       this.appendNode(top);
       return;
     }
@@ -543,6 +547,7 @@ type OpenElement = ElementNode & {
   end: number;
   readonly children: XmlNode[];
   readonly comments: XmlComment[];
+  xmlSlice: string;
 };
 
 type EntityDecodeResult =

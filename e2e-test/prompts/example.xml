@@ -45,11 +45,15 @@
       weatherToday: string
       name: string
       variant: "default" | "formal"
-    }
+    };
 
     type Foo =
       | { x: number, y: number }
-      | { x: number, y: number }
+      | { x: number, y: number };
+
+    type Output = {
+      array: common.Foo[];
+    };
   </schema>
 
   <variant name="default" >

@@ -31,6 +31,7 @@ describe("parseXmlDocument", () => {
             isSelfClosing: true,
             contentStart: 7,
             children: [],
+            xmlSlice: "<foo/>",
           },
         ],
       },
@@ -48,6 +49,7 @@ describe("parseXmlDocument", () => {
         children: [
           {
             text: "before",
+            xmlSlice: "before",
           },
           {
             kind: "element",
@@ -84,6 +86,7 @@ describe("parseXmlDocument", () => {
               },
               { text: "after" },
             ],
+            xmlSlice: '<root a="1" b=\'two\'>mid<child x="y"/>after</root>',
           },
           { text: "tail" },
         ],
