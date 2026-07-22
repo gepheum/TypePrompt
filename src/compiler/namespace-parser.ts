@@ -1,11 +1,11 @@
-import { InternalError, InternalErrors } from "../util/common-types.js";
+import { InternalErrors } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
 import { Namespace } from "./compiler-types.js";
 
 import * as z from "zod";
-import { extractTextContent } from "./text-extractor.js";
 import { parseSchema } from "../schema/schema-parser.js";
+import { extractTextContent } from "./text-extractor.js";
 
 export function parseNamespace(
   namespaceNode: ElementNode,

@@ -120,6 +120,6 @@ export type Namespace = {
 };
 
 export type Meta = {
-  readonly kind: "namespace";
+  readonly kind: "meta";
   readonly schema: SchemaParseResult;
 };
