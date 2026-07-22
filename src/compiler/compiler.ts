@@ -5,15 +5,13 @@ import type {
   CompilationResult,
   Meta,
   Namespace,
-  SourceFile,
+  SourceFileParseResult,
   Template,
-  TemplateResult,
 } from "./compiler-types.js";
+import { parseNamespace } from "./namespace-parser.js";
+import { parseTemplate } from "./template-parser.js";
 
-function parseSourceFile(
-  path: string,
-  content: string,
-): SourceFileParseResult {
+function parseSourceFile(path: string, content: string): SourceFileParseResult {
   const result = new SourceFileParseResultImpl(path, content);
 
   const xmlDocument = parseXmlDocument(content);
@@ -22,8 +20,52 @@ function parseSourceFile(
   }
 
   for (const topLevelNode of xmlDocument.root.topLevelNodes) {
-
+    switch (topLevelNode.kind) {
+      case "element": {
+        switch (topLevelNode.tag.text) {
+          case "template": {
+            const template = parseTemplate(topLevelNode);
+            if (template.kind === "error") {
+              result.parseErrors.push(...template.errors);
+            } else {
+              result.templates.push(template);
+            }
+            break;
+          }
+          case "namespace": {
+            const namespace = parseNamespace(topLevelNode);
+            if (namespace.kind === "error") {
+              result.parseErrors.push(...namespace.errors);
+            } else {
+              result.namespaces.push(namespace);
+            }
+            break;
+          }
+          case "meta": {
+            const meta = parseMeta(topLevelNode);
+            if (meta.kind === "error") {
+              result.parseErrors.push(...meta.errors);
+            } else {
+              result.metas.push(meta);
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case "text": {
+        if (!topLevelNode.allWhitespace) {
+          result.parseErrors.push({
+            span: topLevelNode,
+            message: "Unexpected text at the top level",
+          });
+        }
+        break;
+      }
+    }
   }
+
+  return result;
 }
 
 export function compile(
@@ -59,8 +101,8 @@ class SourceFileParseResultImpl {
 
   readonly templates: Template[] = [];
   readonly namespaces: Namespace[] = [];
-  readonly schemas: readonly SchemaParseResult[] = [];
-  readonly metas: readonly Meta[] = [];
+  readonly schemas: SchemaParseResult[] = [];
+  readonly metas: Meta[] = [];
 
-  readonly parseErrors: readonly InternalError[] = [];
+  readonly parseErrors: InternalError[] = [];
 }

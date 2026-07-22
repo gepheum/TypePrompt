@@ -1,17 +1,14 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
-import {
-  InternalError,
-  InternalErrors,
-  Span,
-  TextSpan,
-} from "../util/common-types.js";
-import { XmlDocument } from "../xml/xml-types.js";
+import { InternalError, Span, TextSpan } from "../util/common-types.js";
 
 export type CompilationResult = {
-  readonly pathToErrors: { readonly [path: string]: readonly InternalError[] };
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
+  readonly validationMap: ReadonlyMap<
+    Template | Namespace | Meta,
+    SchemaParseResult
+  >;
 };
 
 export type SourceFileParseResult = {
@@ -117,12 +114,12 @@ export type Snippet =
     };
 
 export type Namespace = {
-  readonly kind: "success";
+  readonly kind: "namespace";
   readonly name: TextSpan;
   readonly schema: SchemaParseResult;
 };
 
 export type Meta = {
-  readonly kind: "success";
+  readonly kind: "namespace";
   readonly schema: SchemaParseResult;
 };

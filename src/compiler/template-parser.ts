@@ -163,8 +163,12 @@ class TemplateParser {
     if (attrs.kind === "error") {
       this.errors.push(...attrs.errors);
     }
-    const textContent = extractTextContent(metaNode, this.errors);
-    const meta = parseYaml(textContent);
+    const textContent = extractTextContent(metaNode);
+    if (textContent.kind === "error") {
+      this.errors.push(...textContent.errors);
+      return;
+    }
+    const meta = parseYaml(textContent.text);
     if (meta.kind === "error") {
       this.errors.push(...meta.errors);
     } else {
@@ -196,8 +200,12 @@ class TemplateParser {
         this.outputFormat = this.parseOutputFormat(outputFormat.span);
       }
     }
-    const textContent = extractTextContent(schemaNode, this.errors);
-    const schema = parseSchema(textContent);
+    const textContent = extractTextContent(schemaNode);
+    if (textContent.kind === "error") {
+      this.errors.push(...textContent.errors);
+      return;
+    }
+    const schema = parseSchema(textContent.text);
     if (schema.kind === "error") {
       this.errors.push(...schema.errors);
     } else {
@@ -314,12 +322,16 @@ class PromptBuilder {
             message: "Multiple <examples> elements",
           });
         }
-        const textContent = extractTextContent(e, errors);
-        const examples = parseYaml(textContent);
-        if (examples.kind === "error") {
-          errors.push(...examples.errors);
+        const textContent = extractTextContent(e);
+        if (textContent.kind === "error") {
+          errors.push(...textContent.errors);
         } else {
-          this.examples = examples;
+          const examples = parseYaml(textContent.text);
+          if (examples.kind === "error") {
+            errors.push(...examples.errors);
+          } else {
+            this.examples = examples;
+          }
         }
         break;
       }

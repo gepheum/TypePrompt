@@ -3,6 +3,9 @@ SCHEMA:
   - support shared
   - TODO: support /* */ and //
 
+TEMPLATE PARSER:
+  - Parse the snippets
+
 - TODO: think about toolcalls
 
 ERRORS:
@@ -15,7 +18,6 @@ ERRORS:
 
 - TODO: support "integer" in schemas?
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
-- TODO: do I really need the namespaces?
 - TODO: <snippet> <on cond="...">
 - TODO: I really think I need to insert 
 - TODO: think about common schemas...

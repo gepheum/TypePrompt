@@ -1,12 +1,19 @@
-import { ErrorSink, MappedText } from "../util/common-types.js";
+import {
+  InternalError,
+  InternalErrors,
+  MappedText,
+} from "../util/common-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
 import { ElementNode } from "../xml/xml-types.js";
 
-export function extractTextContent(
-  node: ElementNode,
-  errors: ErrorSink,
-): MappedText {
+export function extractTextContent(node: ElementNode):
+  | {
+      readonly kind: "success";
+      readonly text: MappedText;
+    }
+  | InternalErrors {
   const textNodes: MappedText[] = [];
+  const errors: InternalError[] = [];
   for (const child of node.children) {
     if (child.kind === "text") {
       textNodes.push(child);
@@ -17,5 +24,15 @@ export function extractTextContent(
       });
     }
   }
-  return joinTextNodes(textNodes, node.contentStart);
+  if (errors.length <= 0) {
+    return {
+      kind: "success",
+      text: joinTextNodes(textNodes, node.contentStart),
+    };
+  } else {
+    return {
+      kind: "error",
+      errors: errors,
+    };
+  }
 }

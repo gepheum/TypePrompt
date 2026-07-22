@@ -69,9 +69,13 @@ class XmlParser {
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
     }
-    return { kind: "success", root:
-      { topLevelNodes: this.topLevelNodes, topLevelComments: this.topLevelComments }
-       };
+    return {
+      kind: "success",
+      root: {
+        topLevelNodes: this.topLevelNodes,
+        topLevelComments: this.topLevelComments,
+      },
+    };
   }
 
   // -------------------------------------------------------------------------
