@@ -1,6 +1,6 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
-import { SchemaParseResult } from "../schema/schema-types.js";
+import { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import {
   InternalError,
   InternalErrors,
@@ -10,9 +10,10 @@ import {
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
-  readonly meta: InternalErrors | Meta | { kind: "meta"; schema: null };
-  readonly namespaces: { readonly [name: string]: InternalErrors | Namespace };
-  readonly templates: { readonly [id: string]: InternalErrors | Template };
+  readonly meta: SchemaOrError;
+  readonly namespaces: { readonly [name: string]: SchemaOrError };
+  readonly templates: { readonly [id: string]: SchemaOrError };
+  readonly validationErrors: { readonly [path: string]: InternalError[] };
 };
 
 export type SourceFileParseResult = {
@@ -125,5 +126,9 @@ export type Namespace = {
 
 export type Meta = {
   readonly kind: "meta";
+  readonly tag: Span;
   readonly schema: SchemaParseResult;
 };
+
+export type SchemaOrError =
+  Schema | InternalErrors | { readonly kind: "other-error" };

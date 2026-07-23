@@ -24,6 +24,7 @@ export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
 
   return {
     kind: "meta",
+    tag: metaNode.tag,
     schema: schema,
   };
 }
