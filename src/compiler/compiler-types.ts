@@ -1,14 +1,18 @@
 import { CTag } from "../ctag/ctag-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
-import { InternalError, Span, TextSpan } from "../util/common-types.js";
+import {
+  InternalError,
+  InternalErrors,
+  Span,
+  TextSpan,
+} from "../util/common-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
-  readonly validationMap: ReadonlyMap<
-    Template | Namespace | Meta,
-    SchemaParseResult
-  >;
+  readonly meta: InternalErrors | Meta | { kind: "meta"; schema: null };
+  readonly namespaces: { readonly [name: string]: InternalErrors | Namespace };
+  readonly templates: { readonly [id: string]: InternalErrors | Template };
 };
 
 export type SourceFileParseResult = {

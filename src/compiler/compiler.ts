@@ -1,5 +1,5 @@
 import { SchemaParseResult } from "../schema/schema-types.js";
-import { InternalError } from "../util/common-types.js";
+import { InternalError, InternalErrors } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,
@@ -8,8 +8,29 @@ import type {
   SourceFileParseResult,
   Template,
 } from "./compiler-types.js";
+import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
 import { parseTemplate } from "./template-parser.js";
+
+export function compile(
+  pathToContent: { readonly [path: string]: string },
+  cache: CompilationResult | null,
+): CompilationResult {
+  const impl = new CompilationResultImpl();
+
+  for (const [path, content] of Object.entries(pathToContent)) {
+    const cachedFile = cache?.sourceFiles[path];
+    let outSourceFile: SourceFileParseResult;
+    if (cachedFile && cachedFile.content === content) {
+      outSourceFile = cachedFile;
+    } else {
+      outSourceFile = parseSourceFile(path, content);
+    }
+    impl.sourceFiles[path] = outSourceFile;
+  }
+
+  return impl;
+}
 
 function parseSourceFile(path: string, content: string): SourceFileParseResult {
   const result = new SourceFileParseResultImpl(path, content);
@@ -68,31 +89,6 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
   return result;
 }
 
-export function compile(
-  pathToContent: { readonly [path: string]: string },
-  cache: CompilationResult | null,
-): CompilationResult {
-  const builder = new CompilationResultBuilder();
-
-  for (const [path, content] of Object.entries(pathToContent)) {
-    const cachedFile = cache?.sourceFiles[path];
-    let outSourceFile: SourceFile;
-    if (cachedFile && cachedFile.content === content) {
-      outSourceFile = cachedFile;
-    } else {
-      const xmlDocument = parseXmlDocument(content);
-      outSourceFile = { path, content, xmlDocument };
-    }
-    builder.sourceFiles[path] = outSourceFile;
-    if (outSourceFile.xmlDocument.kind === "error") {
-      const errors = (builder.pathToErrors[path] ??= []);
-      errors.push(...outSourceFile.xmlDocument.errors);
-    }
-  }
-
-  return builder.build();
-}
-
 class SourceFileParseResultImpl {
   constructor(
     readonly path: string,
@@ -105,4 +101,14 @@ class SourceFileParseResultImpl {
   readonly metas: Meta[] = [];
 
   readonly parseErrors: InternalError[] = [];
+}
+
+export class CompilationResultImpl {
+  readonly sourceFiles: { [path: string]: SourceFileParseResult } = {};
+  readonly meta: InternalErrors | Meta | { kind: "meta"; schema: null } = {
+    kind: "meta",
+    schema: null,
+  };
+  readonly namespaces: { [name: string]: InternalErrors | Namespace } = {};
+  readonly templates: { [id: string]: InternalErrors | Template } = {};
 }
