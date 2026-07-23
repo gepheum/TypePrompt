@@ -6,13 +6,9 @@ export type SchemaParseResult = {
 };
 
 export type SchemaValidationContext =
-  | {
-      readonly kind: "meta";
-    }
-  | {
-      readonly kind: "template";
-      readonly argTypeNames: readonly string[];
-    };
+  | { readonly kind: "meta" }
+  | { readonly kind: "namespace" }
+  | { readonly kind: "template" };
 
 export type Schema = {
   readonly kind: "success";

@@ -43,27 +43,34 @@ export function validateSchema(
     }
   }
 
-  const requiredTypeName = context.kind === "meta" ? "Meta" : "Response";
-  const requiredType = typeDeclarations[requiredTypeName];
-  if (!requiredType) {
-    errors.push({
-      span: {
-        start: 0,
-        end: 0,
-      },
-      message: `Missing required type '${requiredTypeName}'`,
-    });
-  } else if (context.kind === "meta") {
-    errors.push(...verifyMetaType(requiredType, typeDeclarations));
+  const requiredTypeNames = ((): readonly string[] => {
+    switch (context.kind) {
+      case "meta":
+        return ["Meta"];
+      case "namespace":
+        return [];
+      case "template":
+        return ["Input", "Output"];
+    }
+  })();
+  for (const requiredTypeName of requiredTypeNames) {
+    const requiredType = typeDeclarations[requiredTypeName];
+    if (!requiredType) {
+      errors.push({
+        span: {
+          start: 0,
+          end: 0,
+        },
+        message: `Missing required type '${requiredTypeName}'`,
+      });
+    } else if (context.kind === "meta") {
+      errors.push(...verifyMetaType(requiredType, typeDeclarations));
+    }
   }
 
   // Verify that all types are used.
-  if (errors.length <= 0) {
-    const rootTypeNames =
-      context.kind === "meta"
-        ? ["Meta"]
-        : ["Response", ...context.argTypeNames];
-    errors.push(...verifyAllTypesUsed(rootTypeNames, typeDeclarations));
+  if (errors.length <= 0 && context.kind !== "namespace") {
+    errors.push(...verifyAllTypesUsed(requiredTypeNames, typeDeclarations));
   }
 
   if (errors.length > 0) {
@@ -498,7 +505,7 @@ function verifyMetaType(
 }
 
 function verifyAllTypesUsed(
-  rootTypeNames: string[],
+  rootTypeNames: readonly string[],
   types: { readonly [name: string]: TypeDeclaration },
 ): InternalError[] {
   const errors: InternalError[] = [];

@@ -1,5 +1,6 @@
 import { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
+import { checkNoAmbiguity } from "../util/casing.js";
 import { InternalError } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
@@ -18,7 +19,7 @@ export function compile(
   pathToContent: { readonly [path: string]: string },
   cache: CompilationResult | null,
 ): CompilationResult {
-  const impl = new CompilationResultImpl();
+  const result = new CompilationResultImpl();
 
   for (const [path, content] of Object.entries(pathToContent)) {
     const cachedFile = cache?.sourceFiles[path];
@@ -28,12 +29,12 @@ export function compile(
     } else {
       outSourceFile = parseSourceFile(path, content);
     }
-    impl.sourceFiles[path] = outSourceFile;
+    result.sourceFiles[path] = outSourceFile;
   }
 
-  impl.validate(cache);
+  result.validate(cache);
 
-  return impl;
+  return result;
 }
 
 function parseSourceFile(path: string, content: string): SourceFileParseResult {
@@ -137,7 +138,14 @@ class CompilationResultImpl {
       templates.push(...sourceFile.templates.map(source));
     }
 
-    // Resolve workspace's meta.
+    this.resolveMeta(metas, cache);
+    this.resolveNamespaces(namespaces, cache);
+  }
+
+  private resolveMeta(
+    metas: ReadonlyArray<Sourced<Meta>>,
+    cache: CompilationResult | null,
+  ): void {
     switch (metas.length) {
       case 0: {
         // No <meta> elements found. Not an error.
@@ -170,6 +178,61 @@ class CompilationResultImpl {
         }
         this.meta = { kind: "other-error" };
       }
+    }
+  }
+
+  private resolveNamespaces(
+    namespaces: ReadonlyArray<Sourced<Namespace>>,
+    cache: CompilationResult | null,
+  ): void {
+    // Organize namespaces by name.
+    const namespacesByName: { [name: string]: Sourced<Namespace>[] } = {};
+    for (const namespace of namespaces) {
+      const name = namespace.element.name.text;
+      (namespacesByName[name] ??= []).push(namespace);
+    }
+
+    const resolveNamespace = (namespace: Sourced<Namespace>): void => {
+      const name = namespace.element.name.text;
+      let schema: SchemaOrError | undefined;
+      if (namespace.cached && cache) {
+        const cachedSchema = cache.namespaces[namespace.element.name.text]!;
+        if (cachedSchema && cachedSchema.kind !== "other-error") {
+          schema = cachedSchema;
+        }
+      }
+      if (!schema) {
+        schema = validateSchema(namespace.element.schema.typeDeclarations, {
+          kind: "namespace",
+        });
+      }
+      this.namespaces[name] = schema;
+      if (schema.kind === "error") {
+        const { path } = namespace.sourceFile;
+        this.getValidationErrors(path).push(...schema.errors);
+      }
+    };
+
+    for (const [name, namespaces] of Object.entries(namespacesByName)) {
+      if (namespaces.length === 1) {
+        resolveNamespace(namespaces[0]!);
+      } else {
+        // Multiple namespaces with the same name found. This is an error.
+        this.namespaces[name] = { kind: "other-error" };
+        // Errors will be pused to the validationErrors map below.
+      }
+    }
+
+    this.namespaces["Default"] ??= EMPTY_SCHEMA;
+
+    const ambiguityErrors = checkNoAmbiguity(
+      Object.values(namespaces).map((n) => ({
+        ...n.element.name,
+        path: n.sourceFile.path,
+      })),
+    );
+    for (const error of ambiguityErrors) {
+      this.getValidationErrors(error.span.path).push(error);
     }
   }
 
