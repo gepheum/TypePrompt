@@ -12,7 +12,7 @@ export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
   readonly meta: SchemaOrError;
   readonly namespaces: { readonly [name: string]: SchemaOrError };
-  readonly templates: { readonly [id: string]: SchemaOrError };
+  readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly validationErrors: { readonly [path: string]: InternalError[] };
 };
 
@@ -133,3 +133,11 @@ export type Meta = {
 
 export type SchemaOrError =
   Schema | InternalErrors | { readonly kind: "other-error" };
+
+export type TemplateValidationResult =
+  | {
+      kind: "success";
+      readonly template: Template;
+      readonly schema: Schema;
+    }
+  | InternalErrors;

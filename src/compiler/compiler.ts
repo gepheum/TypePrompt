@@ -10,6 +10,7 @@ import type {
   SchemaOrError,
   SourceFileParseResult,
   Template,
+  TemplateValidationResult,
 } from "./compiler-types.js";
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
@@ -95,7 +96,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
   return result;
 }
 
-class SourceFileParseResultImpl {
+class SourceFileParseResultImpl implements SourceFileParseResult {
   constructor(
     readonly path: string,
     readonly content: string,
@@ -116,11 +117,11 @@ type Sourced<T> = {
   readonly cached: boolean;
 };
 
-class CompilationResultImpl {
+class CompilationResultImpl implements CompilationResult {
   readonly sourceFiles: { [path: string]: SourceFileParseResult } = {};
   meta: SchemaOrError = EMPTY_SCHEMA;
   readonly namespaces: { [name: string]: SchemaOrError } = {};
-  readonly templates: { [id: string]: SchemaOrError } = {};
+  readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly validationErrors: { [path: string]: InternalError[] } = {};
 
   validate(cache: CompilationResult | null): void {
@@ -293,7 +294,7 @@ class CompilationResultImpl {
         continue;
       }
 
-      let validationResult: SchemaOrError;
+      let validationResult: TemplateValidationResult;
       if (
         template.cached &&
         this.meta === cache?.meta &&

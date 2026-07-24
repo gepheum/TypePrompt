@@ -1,6 +1,6 @@
 SCHEMA:
+  - support 'shared'
   - TODO: support true and false literals?
-  - support shared
   - TODO: support /* */ and //
 
 TEMPLATE PARSER:

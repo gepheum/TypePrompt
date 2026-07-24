@@ -10,13 +10,17 @@ import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
 import { InternalError } from "../util/common-types.js";
-import { PromptContent, SchemaOrError, Template } from "./compiler-types.js";
+import {
+  PromptContent,
+  Template,
+  TemplateValidationResult,
+} from "./compiler-types.js";
 
 export function validateTemplate(args: {
   template: Template;
   metaSchema: Schema;
   namespaceSchema: Schema;
-}): SchemaOrError {
+}): TemplateValidationResult {
   const { template, metaSchema, namespaceSchema } = args;
 
   const errors: InternalError[] = [];
@@ -94,7 +98,11 @@ export function validateTemplate(args: {
     };
   }
 
-  return templateSchema;
+  return {
+    kind: "success",
+    template,
+    schema: templateSchema,
+  };
 }
 
 function validateVariants(
