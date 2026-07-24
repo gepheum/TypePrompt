@@ -1,11 +1,11 @@
 import type {
   ResolvedType,
-  SyntheticInterface,
+  SyntheticType,
   Type,
   TypeDeclaration,
 } from "./schema-types.js";
 
-export function resolveType<S extends SyntheticInterface | never>(
+export function resolveType<S extends SyntheticType | never>(
   type: Type | TypeDeclaration | S,
   types: { readonly [name: string]: TypeDeclaration },
 ): ResolvedType | S {
@@ -20,7 +20,7 @@ export function resolveMaybeInvalidType(
   return doResolveType<never>(type, types, seenNames);
 }
 
-function doResolveType<S extends SyntheticInterface | never>(
+function doResolveType<S extends SyntheticType | never>(
   type: Type | TypeDeclaration | S,
   types: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string> | null,

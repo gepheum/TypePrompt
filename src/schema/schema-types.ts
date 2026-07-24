@@ -81,7 +81,7 @@ export type SyntheticInterface = {
   readonly name: {
     readonly text: string;
   };
-  readonly fields: { readonly [name: string]: SchemaField };
+  readonly fields: { readonly [name: string]: SyntheticSchemaField };
 };
 
 export type SyntheticSchemaField = {
@@ -89,8 +89,15 @@ export type SyntheticSchemaField = {
     readonly text: string;
   };
   readonly optional: boolean;
-  readonly type: Type;
+  readonly type: Type | SyntheticType;
 };
+
+export type SyntheticArray = {
+  readonly kind: "synthetic-array";
+  readonly elementType: SyntheticType;
+};
+
+export type SyntheticType = SyntheticInterface | SyntheticArray;
 
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {

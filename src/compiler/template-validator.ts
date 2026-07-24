@@ -1,6 +1,11 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
 import { validateJson } from "../json/json-type-checker.js";
-import { Schema, SyntheticInterface } from "../schema/schema-types.js";
+import {
+  Schema,
+  SyntheticArray,
+  SyntheticInterface,
+  Type,
+} from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
@@ -46,6 +51,8 @@ export function validateTemplate(args: {
 
   errors.push(...validateVariants(template, templateSchema));
 
+  const examplesInterface = makeExamplesType(template, templateSchema);
+
   const promptContents: PromptContent[] = [];
   switch (template.contents.kind) {
     case "no-variants": {
@@ -68,6 +75,15 @@ export function validateTemplate(args: {
         const cTagErrors = validateCTag(piece.cTag, templateSchema);
         errors.push(...cTagErrors);
       }
+    }
+    if (promptContent.examples) {
+      errors.push(
+        ...validateJson(
+          promptContent.examples,
+          templateSchema,
+          examplesInterface,
+        ),
+      );
     }
   }
 
@@ -153,9 +169,61 @@ function validateVariants(
   return errors;
 }
 
-function makeExampleInterface(
+function makeExamplesType(
   template: Template,
   templateSchema: Schema,
-): SyntheticInterface {
-  let outputType = templateSchema.typeDeclarations["Output"];
+): SyntheticArray {
+  const { typeDeclarations } = templateSchema;
+
+  const inputType = typeDeclarations["Input"]!.valueType;
+
+  let outputType: Type | SyntheticInterface =
+    typeDeclarations["Output"]!.valueType;
+  if (template.contents.kind === "variants") {
+    const resolvedOutputType = resolveType(outputType!, typeDeclarations);
+    if (
+      resolvedOutputType.kind === "interface" &&
+      resolvedOutputType.fields["variant"]
+    ) {
+      outputType = {
+        kind: "synthetic-interface",
+        name: {
+          text: "Output",
+        },
+        fields: Object.fromEntries(
+          Object.entries(resolvedOutputType.fields).filter(
+            ([name, _]) => name !== "variant",
+          ),
+        ),
+      };
+    }
+  }
+
+  const exampleType: SyntheticInterface = {
+    kind: "synthetic-interface",
+    name: {
+      text: "Example",
+    },
+    fields: {
+      input: {
+        name: {
+          text: "input",
+        },
+        optional: false,
+        type: inputType,
+      },
+      output: {
+        name: {
+          text: "output",
+        },
+        optional: false,
+        type: outputType,
+      },
+    },
+  };
+
+  return {
+    kind: "synthetic-array",
+    elementType: exampleType,
+  };
 }

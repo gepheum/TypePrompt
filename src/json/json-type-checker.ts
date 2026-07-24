@@ -1,7 +1,7 @@
 import type {
   ResolvedType,
   Schema,
-  SyntheticInterface,
+  SyntheticType,
   TypeDeclaration,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
@@ -11,7 +11,7 @@ import type { JsonTypeMatch, JsonValue } from "./json-types.js";
 export function validateJson(
   json: JsonValue<"strict">,
   schema: Schema,
-  type: TypeDeclaration | SyntheticInterface,
+  type: TypeDeclaration | SyntheticType,
 ): InternalError[] {
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
@@ -22,7 +22,12 @@ export function validateJson(
   if (result.kind === "match") {
     return [];
   }
-  const typeName = type.name.text;
+  const getTypeName = (t: TypeDeclaration | SyntheticType): string => {
+    return t.kind === "synthetic-array"
+      ? getTypeName(t.elementType).concat("[]")
+      : t.name.text;
+  };
+  const typeName = getTypeName(type);
   const errors: InternalError[] = [
     {
       span: {
@@ -40,7 +45,7 @@ export function validateJson(
 
 export function jsonMatchesType(
   value: JsonValue<"loose">,
-  type: ResolvedType | SyntheticInterface,
+  type: ResolvedType | SyntheticType,
   mode: "fast" | "thorough",
   schema: Schema,
 ): JsonTypeMatch {
@@ -48,7 +53,8 @@ export function jsonMatchesType(
     return MATCH;
   }
   switch (type.kind) {
-    case "array": {
+    case "array":
+    case "synthetic-array": {
       if (value.kind === "array") {
         const elementType = resolveType(
           type.elementType,
