@@ -1,4 +1,4 @@
-import { Schema, SchemaParseResult } from "../schema/schema-types.js";
+import { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import { InternalError } from "../util/common-types.js";
@@ -104,7 +104,6 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
 
   readonly templates: Template[] = [];
   readonly namespaces: Namespace[] = [];
-  readonly schemas: SchemaParseResult[] = [];
   readonly metas: Meta[] = [];
 
   readonly parseErrors: InternalError[] = [];

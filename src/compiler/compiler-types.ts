@@ -22,7 +22,6 @@ export type SourceFileParseResult = {
 
   readonly templates: readonly Template[];
   readonly namespaces: readonly Namespace[];
-  readonly schemas: readonly SchemaParseResult[];
   readonly metas: readonly Meta[];
 
   readonly parseErrors: readonly InternalError[];
