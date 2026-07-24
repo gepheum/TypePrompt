@@ -30,12 +30,8 @@ export function validateCTag(
       if (
         Object.values(schema.typeDeclarations).some(
           (t) =>
-            jsonMatchesType(
-              cTag.json,
-              resolveType(t, schema),
-              "fast",
-              schema,
-            ).kind === "match",
+            jsonMatchesType(cTag.json, resolveType(t, schema), "fast", schema)
+              .kind === "match",
         )
       ) {
         return [];

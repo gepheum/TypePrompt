@@ -1,6 +1,6 @@
 import { CodeGenerator } from "./codegen-types.js";
-import { generateTypescriptCode } from "./typescript-codegen.js";
+// import { generateTypescriptCode } from "./typescript-codegen.js";
 
 export const CODE_GENERATORS: ReadonlyArray<CodeGenerator> = [
-  generateTypescriptCode,
+  // generateTypescriptCode,
 ];
