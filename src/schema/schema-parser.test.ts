@@ -401,32 +401,18 @@ describe("parseSchema – multiple types", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseSchema – comments and JSDoc", () => {
-  it("reports error for a single-line comment", () => {
+  it("accepts a single-line comment", () => {
     const result = parseSchema(
       textNode("// This is a comment\ntype Response = { name: string; };"),
     );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
-        },
-      ],
-    });
+    expect(result).toMatch({ kind: "success" });
   });
 
-  it("reports error for a non-JSDoc multi-line comment", () => {
+  it("accepts a non-JSDoc block comment", () => {
     const result = parseSchema(
       textNode("/* comment */\ntype Response = { name: string; };"),
     );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
-        },
-      ],
-    });
+    expect(result).toMatch({ kind: "success" });
   });
 
   it("extracts JSDoc from a single-line /** ... */ comment on a type", () => {
@@ -481,7 +467,7 @@ describe("parseSchema – comments and JSDoc", () => {
     });
   });
 
-  it("reports error for a non-JSDoc multi-line comment before a type", () => {
+  it("accepts a non-JSDoc block comment before a type", () => {
     const result = parseSchema(
       textNode(
         ["/* ordinary comment */", "type Response = { name: string; };"].join(
@@ -489,13 +475,72 @@ describe("parseSchema – comments and JSDoc", () => {
         ),
       ),
     );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts a single-line comment inside an interface body", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = {",
+          "  // a comment",
+          "  name: string;",
+          "};",
+        ].join("\n"),
+      ),
+    );
     expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
-        },
-      ],
+      kind: "success",
+      typeDeclarations: { Response: { valueType: { fields: { name: {} } } } },
+    });
+  });
+
+  it("accepts a non-JSDoc block comment inside an interface body", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = {",
+          "  /* a comment */",
+          "  name: string;",
+          "};",
+        ].join("\n"),
+      ),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: { Response: { valueType: { fields: { name: {} } } } },
+    });
+  });
+
+  it("accepts single-line comments between two type declarations", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = { value: string; };",
+          "// separator",
+          "type Other = { id: number; };",
+        ].join("\n"),
+      ),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: { Response: {}, Other: {} },
+    });
+  });
+
+  it("accepts a non-JSDoc block comment between two type declarations", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = { value: string; };",
+          "/* separator */",
+          "type Other = { id: number; };",
+        ].join("\n"),
+      ),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: { Response: {}, Other: {} },
     });
   });
 });
@@ -553,12 +598,7 @@ describe("parseSchema – tokenizer errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [
-        { message: "Unterminated multi-line comment" },
-        {
-          message: "Non-JSDoc comments are not allowed; use /** ... */ instead",
-        },
-      ],
+      errors: [{ message: "Unterminated multi-line comment" }],
     });
   });
 });
