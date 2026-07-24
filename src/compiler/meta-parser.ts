@@ -4,6 +4,7 @@ import { ElementNode } from "../xml/xml-types.js";
 import { Meta } from "./compiler-types.js";
 
 import { parseSchema } from "../schema/schema-parser.js";
+import { validateSchema } from "../schema/schema-validator.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
@@ -17,7 +18,14 @@ export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
     return textContent;
   }
 
-  const schema = parseSchema(textContent.text);
+  const schemaParseResult = parseSchema(textContent.text);
+  if (schemaParseResult.kind === "error") {
+    return schemaParseResult;
+  }
+
+  const schema = validateSchema(schemaParseResult.typeDeclarations, {
+    kind: "meta",
+  });
   if (schema.kind === "error") {
     return schema;
   }

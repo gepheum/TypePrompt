@@ -1,5 +1,4 @@
 import { Schema } from "../schema/schema-types.js";
-import { validateSchema } from "../schema/schema-validator.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import { InternalError } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
@@ -118,8 +117,8 @@ type Sourced<T> = {
 
 class CompilationResultImpl implements CompilationResult {
   readonly sourceFiles: { [path: string]: SourceFileParseResult } = {};
-  meta: SchemaOrError = EMPTY_SCHEMA;
-  readonly namespaces: { [name: string]: SchemaOrError } = {};
+  metaSchema: SchemaOrError = EMPTY_SCHEMA;
+  readonly namespaceSchemas: { [name: string]: SchemaOrError } = {};
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly validationErrors: { [path: string]: InternalError[] } = {};
 
@@ -139,53 +138,28 @@ class CompilationResultImpl implements CompilationResult {
       templates.push(...sourceFile.templates.map(source));
     }
 
-    this.resolveMeta(metas, cache);
-    this.resolveNamespaces(namespaces, cache);
+    this.resolveMeta(metas);
+    this.resolveNamespaces(namespaces);
     this.resolveTemplates(templates, cache);
   }
 
-  private resolveMeta(
-    metas: ReadonlyArray<Sourced<Meta>>,
-    cache: CompilationResult | null,
-  ): void {
-    switch (metas.length) {
-      case 0: {
-        // No <meta> elements found. Not an error.
-        this.meta = EMPTY_SCHEMA;
-        break;
+  private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
+    if (metas.length <= 1) {
+      this.metaSchema = metas[0]?.element.schema ?? EMPTY_SCHEMA;
+    } else {
+      // Multiple <meta> elements found. This is an error.
+      for (const meta of metas) {
+        this.getValidationErrors(meta.sourceFile.path).push({
+          span: meta.element.tag,
+          message: "Multiple <meta> elements found",
+        });
       }
-      case 1: {
-        // Validate the single <meta> element.
-        const meta = metas[0]!;
-        if (meta.cached && cache && cache.meta.kind !== "other-error") {
-          // Reuse the cached schema validation result.
-          this.meta = cache.meta;
-        } else {
-          const { typeDeclarations } = meta.element.schema;
-          this.meta = validateSchema(typeDeclarations, { kind: "meta" });
-        }
-        if (this.meta.kind === "error") {
-          const { path } = meta.sourceFile;
-          this.getValidationErrors(path).push(...this.meta.errors);
-        }
-        break;
-      }
-      default: {
-        // Multiple <meta> elements found. This is an error.
-        for (const meta of metas) {
-          this.getValidationErrors(meta.sourceFile.path).push({
-            span: meta.element.tag,
-            message: "Multiple <meta> elements found",
-          });
-        }
-        this.meta = { kind: "other-error" };
-      }
+      this.metaSchema = { kind: "other-error" };
     }
   }
 
   private resolveNamespaces(
     namespaces: ReadonlyArray<Sourced<Namespace>>,
-    cache: CompilationResult | null,
   ): void {
     // Organize namespaces by name.
     const namespacesByName: { [name: string]: Sourced<Namespace>[] } = {};
@@ -194,38 +168,18 @@ class CompilationResultImpl implements CompilationResult {
       (namespacesByName[name] ??= []).push(namespace);
     }
 
-    const resolveNamespace = (namespace: Sourced<Namespace>): void => {
-      const name = namespace.element.name.text;
-      let schema: SchemaOrError | undefined;
-      if (namespace.cached && cache) {
-        const cachedSchema = cache.namespaces[namespace.element.name.text]!;
-        if (cachedSchema && cachedSchema.kind !== "other-error") {
-          schema = cachedSchema;
-        }
-      }
-      if (!schema) {
-        schema = validateSchema(namespace.element.schema.typeDeclarations, {
-          kind: "namespace",
-        });
-      }
-      this.namespaces[name] = schema;
-      if (schema.kind === "error") {
-        const { path } = namespace.sourceFile;
-        this.getValidationErrors(path).push(...schema.errors);
-      }
-    };
-
     for (const [name, namespaces] of Object.entries(namespacesByName)) {
       if (namespaces.length === 1) {
-        resolveNamespace(namespaces[0]!);
+        const namespace = namespaces[0]!;
+        this.namespaceSchemas[name] = namespace.element.schema;
       } else {
         // Multiple namespaces with the same name found. This is an error.
-        this.namespaces[name] = { kind: "other-error" };
+        this.namespaceSchemas[name] = { kind: "other-error" };
         // Errors will be pused to the validationErrors map below.
       }
     }
 
-    this.namespaces["Default"] ??= EMPTY_SCHEMA;
+    this.namespaceSchemas["Default"] ??= EMPTY_SCHEMA;
 
     const ambiguityErrors = checkNoAmbiguity(
       Object.values(namespaces).map((n) => ({
@@ -270,7 +224,7 @@ class CompilationResultImpl implements CompilationResult {
       }
     }
 
-    if (this.meta.kind !== "success") {
+    if (this.metaSchema.kind !== "success") {
       return;
     }
 
@@ -282,7 +236,7 @@ class CompilationResultImpl implements CompilationResult {
       const template = templates[0]!;
 
       const namespaceName = template.element.namespace?.text ?? "Default";
-      const namespace = this.namespaces[namespaceName];
+      const namespace = this.namespaceSchemas[namespaceName];
       if (!namespace) {
         this.getValidationErrors(template.sourceFile.path).push({
           span: template.element.name,
@@ -296,15 +250,15 @@ class CompilationResultImpl implements CompilationResult {
       let validationResult: TemplateValidationResult;
       if (
         template.cached &&
-        this.meta === cache?.meta &&
-        namespace === cache?.namespaces[namespaceName]
+        this.metaSchema === cache?.metaSchema &&
+        namespace === cache?.namespaceSchemas[namespaceName]
       ) {
         // Reuse the cached schema validation result.
         validationResult = cache!.templates[id]!;
       } else {
         validationResult = validateTemplate({
           template: template.element,
-          metaSchema: this.meta,
+          metaSchema: this.metaSchema,
           namespaceSchema: namespace,
         });
       }

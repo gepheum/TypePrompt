@@ -10,8 +10,8 @@ import {
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
-  readonly meta: SchemaOrError;
-  readonly namespaces: { readonly [name: string]: SchemaOrError };
+  readonly metaSchema: SchemaOrError;
+  readonly namespaceSchemas: { readonly [name: string]: SchemaOrError };
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly validationErrors: { readonly [path: string]: InternalError[] };
 };
@@ -118,16 +118,18 @@ export type Snippet =
       }>;
     };
 
+/** Top-level <namespace> element. */
 export type Namespace = {
   readonly kind: "namespace";
   readonly name: TextSpan;
-  readonly schema: SchemaParseResult;
+  readonly schema: Schema;
 };
 
+/** Top-level <meta> element. */
 export type Meta = {
   readonly kind: "meta";
   readonly tag: Span;
-  readonly schema: SchemaParseResult;
+  readonly schema: Schema;
 };
 
 export type SchemaOrError =

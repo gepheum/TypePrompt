@@ -5,6 +5,7 @@ import { Namespace } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseSchema } from "../schema/schema-parser.js";
+import { validateSchema } from "../schema/schema-validator.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseNamespace(
@@ -25,7 +26,14 @@ export function parseNamespace(
     return textContent;
   }
 
-  const schema = parseSchema(textContent.text);
+  const schemaParseResult = parseSchema(textContent.text);
+  if (schemaParseResult.kind === "error") {
+    return schemaParseResult;
+  }
+
+  const schema = validateSchema(schemaParseResult.typeDeclarations, {
+    kind: "namespace",
+  });
   if (schema.kind === "error") {
     return schema;
   }
