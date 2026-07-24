@@ -1,4 +1,4 @@
-import { Schema } from "../schema/schema-types.js";
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import { InternalError } from "../util/common-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
@@ -277,12 +277,3 @@ class CompilationResultImpl implements CompilationResult {
     return (this.validationErrors[path] ??= []);
   }
 }
-
-const EMPTY_SCHEMA: Schema = {
-  kind: "success",
-  typeDeclarations: {},
-  sharedDeclarations: null,
-  identifiers: new Set(),
-  unionToMembers: new Map(),
-  typeToNamingHint: new Map(),
-} as const;

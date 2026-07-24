@@ -2,15 +2,10 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { MappedText } from "../util/common-types.js";
+import { EMPTY_SCHEMA } from "./empty-schema.js";
 import { parseSchema } from "./schema-parser.js";
 import type { SchemaValidationContext } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
-
-const TEMPLATE: SchemaValidationContext = {
-  kind: "template",
-  argTypeNames: [],
-};
-const META: SchemaValidationContext = { kind: "meta" };
 
 function textNode(source: string): MappedText {
   return {
@@ -36,16 +31,16 @@ function parseDeclarations(source: string) {
 describe("validateSchema – success", () => {
   it("validates a simple interface", () => {
     const result = validateSchema(
-      parseDeclarations("type Response = { name: string; };"),
-      TEMPLATE,
+      parseDeclarations("type Output = { name: string; };"),
+      NAMESPACE,
     );
-    expect(result).toMatch({ kind: "success" });
+    expect([result]).toMatch([{ kind: "success" }]);
   });
 
   it("validates a string literal union", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = "active" | "inactive";'),
-      TEMPLATE,
+      parseDeclarations('type Output = "active" | "inactive";'),
+      NAMESPACE,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -54,24 +49,11 @@ describe("validateSchema – success", () => {
     const result = validateSchema(
       parseDeclarations(
         [
-          "type Response = { status: Status; };",
+          "type Output = { status: Status; };",
           'type Status = "active" | "inactive";',
         ].join("\n"),
       ),
-      TEMPLATE,
-    );
-    expect(result).toMatch({ kind: "success" });
-  });
-
-  it("validates with argTypeNames", () => {
-    const result = validateSchema(
-      parseDeclarations(
-        [
-          "type Response = { value: string; };",
-          "type Input = { query: string; };",
-        ].join("\n"),
-      ),
-      { kind: "template", argTypeNames: ["Input"] },
+      NAMESPACE,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -98,11 +80,14 @@ describe("validateSchema – success", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateSchema – required type", () => {
-  it("reports missing Response in template context", () => {
+  it("reports missing Input/Output in template context", () => {
     const result = validateSchema(parseDeclarations(""), TEMPLATE);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Missing required type 'Response'" }],
+      errors: [
+        { message: "Missing required type 'Input'" },
+        { message: "Missing required type 'Output'" },
+      ],
     });
   });
 
@@ -123,7 +108,7 @@ describe("validateSchema – naming errors", () => {
   it("reports a type name starting with lowercase", () => {
     const result = validateSchema(
       parseDeclarations("type response = { name: string; };"),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -132,17 +117,14 @@ describe("validateSchema – naming errors", () => {
           message:
             "Must start with uppercase letter and contain only alphanumeric characters",
         },
-        {
-          message: "Missing required type 'Response'",
-        },
       ],
     });
   });
 
   it("reports a field name starting with uppercase", () => {
     const result = validateSchema(
-      parseDeclarations("type Response = { Name: string; };"),
-      TEMPLATE,
+      parseDeclarations("type Output = { Name: string; };"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -157,8 +139,8 @@ describe("validateSchema – naming errors", () => {
 
   it("reports a string literal value starting with uppercase", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = "Active" | "inactive";'),
-      TEMPLATE,
+      parseDeclarations('type Output = "Active" | "inactive";'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -173,10 +155,8 @@ describe("validateSchema – naming errors", () => {
 
   it("reports field names that conflict by case", () => {
     const result = validateSchema(
-      parseDeclarations(
-        "type Response = { myField: string; myfield: number; };",
-      ),
-      TEMPLATE,
+      parseDeclarations("type Output = { myField: string; myfield: number; };"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -192,8 +172,8 @@ describe("validateSchema – naming errors", () => {
 describe("validateSchema - type references", () => {
   it("reports an unknown type reference", () => {
     const result = validateSchema(
-      parseDeclarations("type Response = { value: Unknown; };"),
-      TEMPLATE,
+      parseDeclarations("type Output = { value: Unknown; };"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -203,12 +183,12 @@ describe("validateSchema - type references", () => {
 
   it("reports a direct circular reference", () => {
     const result = validateSchema(
-      parseDeclarations("type Response = { child: Response; };"),
-      TEMPLATE,
+      parseDeclarations("type Output = { child: Output; };"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Type 'Response' circularly references itself" }],
+      errors: [{ message: "Type 'Output' circularly references itself" }],
     });
   });
 
@@ -216,16 +196,16 @@ describe("validateSchema - type references", () => {
     const result = validateSchema(
       parseDeclarations(
         [
-          "type Response = { next: Other; };",
-          "type Other = { back: Response; };",
+          "type Output = { next: Other; };",
+          "type Other = { back: Output; };",
         ].join("\n"),
       ),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
       errors: [
-        { message: "Type 'Response' circularly references itself" },
+        { message: "Type 'Output' circularly references itself" },
         { message: "Type 'Other' circularly references itself" },
       ],
     });
@@ -234,7 +214,11 @@ describe("validateSchema - type references", () => {
   it("reports an unused type", () => {
     const result = validateSchema(
       parseDeclarations(
-        "type Response = { name: string; };\ntype Unused = string;",
+        [
+          "type Output = { name: string; };",
+          "type Unused = string;",
+          "type Input = integer;",
+        ].join("\n"),
       ),
       TEMPLATE,
     );
@@ -242,20 +226,6 @@ describe("validateSchema - type references", () => {
       kind: "error",
       errors: [{ message: "Type 'Unused' is not used" }],
     });
-  });
-
-  it("does not flag a type used only via an argTypeName as unused", () => {
-    const result = validateSchema(
-      parseDeclarations(
-        [
-          "type Response = { value: string; };",
-          "type Input = { items: Helper[]; };",
-          "type Helper = { id: string; };",
-        ].join("\n"),
-      ),
-      { kind: "template", argTypeNames: ["Input"] },
-    );
-    expect(result).toMatch({ kind: "success" });
   });
 });
 
@@ -266,8 +236,8 @@ describe("validateSchema - type references", () => {
 describe("validateSchema - union type errors", () => {
   it("reports a union with a primitive member", () => {
     const result = validateSchema(
-      parseDeclarations("type Response = string | number;"),
-      TEMPLATE,
+      parseDeclarations("type Output = string | number;"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -281,8 +251,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports a union with an array member", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = "a"[] | "b"[];'),
-      TEMPLATE,
+      parseDeclarations('type Output = "a"[] | "b"[];'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -297,9 +267,9 @@ describe("validateSchema - union type errors", () => {
   it("reports a union mixing strings and interfaces", () => {
     const result = validateSchema(
       parseDeclarations(
-        'type Response = "active" | { kind: "inactive"; value: string };',
+        'type Output = "active" | { kind: "inactive"; value: string };',
       ),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -313,10 +283,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an interface union member without a string literal discriminator", () => {
     const result = validateSchema(
-      parseDeclarations(
-        "type Response = { kind: string; } | { kind: string; };",
-      ),
-      TEMPLATE,
+      parseDeclarations("type Output = { kind: string; } | { kind: string; };"),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -335,8 +303,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an interface union member with no first field", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = {} | { kind: "b"; };'),
-      TEMPLATE,
+      parseDeclarations('type Output = {} | { kind: "b"; };'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -352,9 +320,9 @@ describe("validateSchema - union type errors", () => {
   it("reports interface union members with mismatched discriminator field names", () => {
     const result = validateSchema(
       parseDeclarations(
-        'type Response = { kind: "a"; value: string } | { type: "b"; value: string };',
+        'type Output = { kind: "a"; value: string } | { type: "b"; value: string };',
       ),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -370,9 +338,9 @@ describe("validateSchema - union type errors", () => {
   it("reports duplicate discriminator values in an interface union", () => {
     const result = validateSchema(
       parseDeclarations(
-        'type Response = { kind: "same"; x: number } | { kind: "same"; y: number };',
+        'type Output = { kind: "same"; x: number } | { kind: "same"; y: number };',
       ),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -382,8 +350,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports duplicate string literals in a string union", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = "active" | "active";'),
-      TEMPLATE,
+      parseDeclarations('type Output = "active" | "active";'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "error",
@@ -395,58 +363,15 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         [
-          "type Response =",
+          "type Output =",
           '  | { kind: "a"; x: number }',
           '  | { kind: "b"; y: string }',
           '  | { kind: "c"; z: boolean };',
         ].join("\n"),
       ),
-      TEMPLATE,
+      NAMESPACE,
     );
     expect(result).toMatch({ kind: "success" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Meta context errors
-// ---------------------------------------------------------------------------
-
-describe("validateSchema – meta context", () => {
-  it("reports Meta type not being an interface", () => {
-    const result = validateSchema(
-      parseDeclarations("type Meta = string;"),
-      META,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [{ message: "Type 'Meta' must be an interface" }],
-    });
-  });
-
-  it("reports a Meta field with array type", () => {
-    const result = validateSchema(
-      parseDeclarations("type Meta = { tags: string[]; };"),
-      META,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        { message: "Fields of 'Meta' must be strings, numbers, booleans" },
-      ],
-    });
-  });
-
-  it("reports a Meta field with interface type", () => {
-    const result = validateSchema(
-      parseDeclarations("type Meta = { nested: { value: string }; };"),
-      META,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        { message: "Fields of 'Meta' must be strings, numbers, booleans" },
-      ],
-    });
   });
 });
 
@@ -457,8 +382,8 @@ describe("validateSchema – meta context", () => {
 describe("validateSchema - Schema fields", () => {
   it("collects field names and string literal values as identifiers", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = { name: string; role: "admin"; }'),
-      TEMPLATE,
+      parseDeclarations('type Output = { name: string; role: "admin"; }'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "success",
@@ -468,8 +393,8 @@ describe("validateSchema - Schema fields", () => {
 
   it("collects string literal values from unions as identifiers", () => {
     const result = validateSchema(
-      parseDeclarations('type Response = "active" | "inactive";'),
-      TEMPLATE,
+      parseDeclarations('type Output = "active" | "inactive";'),
+      NAMESPACE,
     );
     expect(result).toMatch({
       kind: "success",
@@ -477,3 +402,14 @@ describe("validateSchema - Schema fields", () => {
     });
   });
 });
+
+const NAMESPACE: SchemaValidationContext = {
+  kind: "namespace",
+};
+
+const META: SchemaValidationContext = { kind: "meta" };
+
+const TEMPLATE: SchemaValidationContext = {
+  kind: "template",
+  namespaceSchema: EMPTY_SCHEMA,
+};
