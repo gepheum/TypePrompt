@@ -69,9 +69,7 @@ export function validateSchema(
 
   // Verify that all types are used.
   if (errors.length <= 0 && context.kind !== "namespace") {
-    errors.push(
-      ...verifyAllTypesUsed(requiredTypeNames, typeDeclarations, context),
-    );
+    errors.push(...verifyAllTypesUsed(requiredTypeNames, typeDeclarations));
   }
 
   if (errors.length > 0) {
@@ -490,7 +488,6 @@ function collectTypeNameDependencies(
 function verifyAllTypesUsed(
   rootTypeNames: readonly string[],
   types: { readonly [name: string]: TypeDeclaration },
-  context: SchemaValidationContext,
 ): InternalError[] {
   const errors: InternalError[] = [];
   const usedTypes = new Set<string>();

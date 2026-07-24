@@ -114,7 +114,7 @@ export function validateTemplate(args: {
 function validateVariants(
   template: Template,
   templateSchema: Schema,
-): InternalError[] {
+): readonly InternalError[] {
   if (template.contents.kind !== "variants") {
     return [];
   }
@@ -137,7 +137,7 @@ function validateVariants(
       },
     ];
   }
-  const makeVariantFieldTypeError = () => [
+  const makeVariantFieldTypeError = (): readonly InternalError[] => [
     {
       span: variantField.name,
       message: [

@@ -4,7 +4,10 @@ import { describe, it } from "mocha";
 import { MappedText } from "../util/common-types.js";
 import { EMPTY_SCHEMA } from "./empty-schema.js";
 import { parseSchema } from "./schema-parser.js";
-import type { SchemaValidationContext } from "./schema-types.js";
+import type {
+  SchemaValidationContext,
+  TypeDeclaration,
+} from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
 function textNode(source: string): MappedText {
@@ -14,7 +17,9 @@ function textNode(source: string): MappedText {
   };
 }
 
-function parseDeclarations(source: string) {
+function parseDeclarations(source: string): {
+  readonly [name: string]: TypeDeclaration;
+} {
   const result = parseSchema(textNode(source));
   if (result.kind !== "success") {
     throw new Error(

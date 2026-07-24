@@ -9,6 +9,7 @@ import { joinTextNodes } from "../util/text-node-joiner.js";
 import { validateJson } from "./json-type-checker.js";
 import type {
   JsonArray,
+  JsonBoolean,
   JsonNumber,
   JsonObject,
   JsonString,
@@ -61,8 +62,8 @@ function num(value: number): JsonNumber {
   return { kind: "number", firstToken: span(String(value)), value };
 }
 
-function bool(value: boolean) {
-  return { kind: "boolean" as const, firstToken: span(String(value)), value };
+function bool(value: boolean): JsonBoolean {
+  return { kind: "boolean", firstToken: span(String(value)), value };
 }
 
 function objStrict(
