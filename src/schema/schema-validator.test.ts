@@ -381,6 +381,79 @@ describe("validateSchema - union type errors", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Shared type names
+// ---------------------------------------------------------------------------
+
+describe("validateSchema – shared type names", () => {
+  function makeTemplateContext(
+    namespaceSource: string,
+  ): SchemaValidationContext {
+    const ns = validateSchema(parseDeclarations(namespaceSource), NAMESPACE);
+    if (ns.kind !== "success") {
+      throw new Error(
+        `Namespace schema failed: ${ns.errors.map((e) => e.message).join(", ")}`,
+      );
+    }
+    return { kind: "template", namespaceSchema: ns };
+  }
+
+  it("accepts shared.X in template context when X exists in namespace schema", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Profile;",
+      ),
+      makeTemplateContext("type Profile = { name: string; };"),
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts shared.X as a field type in template context", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = string;\ntype Output = { user: shared.Profile; };",
+      ),
+      makeTemplateContext("type Profile = { name: string; };"),
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("reports error for shared.X in namespace context", () => {
+    const result = validateSchema(
+      parseDeclarations("type Output = shared.Profile;"),
+      NAMESPACE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        { message: "'shared' not allowed inside <namespace> elements" },
+      ],
+    });
+  });
+
+  it("reports error for shared.X in meta context", () => {
+    const result = validateSchema(
+      parseDeclarations("type Meta = { field: shared.Profile; };"),
+      META,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "'shared' not allowed inside <meta> elements" }],
+    });
+  });
+
+  it("reports error when the referenced type does not exist in namespace schema", () => {
+    const result = validateSchema(
+      parseDeclarations("type Input = string;\ntype Output = shared.Missing;"),
+      { kind: "template", namespaceSchema: EMPTY_SCHEMA },
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "Unknown type 'Missing'" }],
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Schema output fields
 // ---------------------------------------------------------------------------
 
