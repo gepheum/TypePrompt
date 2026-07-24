@@ -72,14 +72,18 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       if (attrs.kind === "error") {
         errors.push(...attrs.errors);
       }
-      const textContent = extractTextContent(child, errors);
-      const cTag = parseCTag(textContent);
+      const textContent = extractTextContent(child);
+      if (textContent.kind === "error") {
+        errors.push(...textContent.errors);
+        return;
+      }
+      const cTag = parseCTag(textContent.text);
       if (cTag.kind === "error") {
         errors.push(...cTag.errors);
       } else {
         rawPieces.push({
           kind: "c-tag",
-          text: textContent,
+          text: textContent.text,
           cTag: cTag,
         });
       }
