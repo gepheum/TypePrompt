@@ -14,6 +14,7 @@ import type {
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
 import { parseTemplate } from "./template-parser.js";
+import { validateTemplate } from "./template-validator.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
@@ -301,7 +302,11 @@ class CompilationResultImpl {
         // Reuse the cached schema validation result.
         validationResult = cache!.templates[id]!;
       } else {
-        CACA;
+        validationResult = validateTemplate({
+          template: template.element,
+          metaSchema: this.meta,
+          namespaceSchema: namespace,
+        });
       }
 
       this.templates[id] = validationResult;
