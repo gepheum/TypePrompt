@@ -304,14 +304,14 @@ class SchemaParser {
     // Single-line comment:          \/\/[^\n\r]*
     // Word:                         \b\w+\b
     // Whitespaces:                  [ \n\r\t]+
-    // Symbol:                       [{}[\]():=;|,?]
+    // Symbol:                       [{}[\]():=;|,?.]
     // Double-quote string literal:  "(\\.|[^\\\"\n\r])*"?
     // Single-quote string literal:  '(\\.|[^\\\'\n\r])*'?
     //
     // To iterate on this regex, use https://regex101.com/.
     const re =
-      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
-    // 1    2             3        4                5       6            7                8                      9                      10
+      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?.])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
+    // 1    2             3        4                5       6            7                  8                        9                        10
     re.lastIndex = this.cursor;
     let group: RegExpExecArray | null;
     let newLine = false;

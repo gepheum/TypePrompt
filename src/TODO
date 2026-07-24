@@ -2,11 +2,10 @@ SCHEMA:
   - support 'shared'
     - add unit tests...
   - make naming hint be: field_name+enum...
-  - TODO: support /* */ and //
 
 TEMPLATE PARSER:
   - Parse the snippets
-
+  - Support warnings, for XML comments where other comments would be accepted
 - TODO: think about toolcalls
 
 ERRORS:

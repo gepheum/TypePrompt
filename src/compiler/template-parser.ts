@@ -270,7 +270,6 @@ class TemplateParser {
     hasVariants: boolean;
   }): PromptContents | null {
     if (args.hasVariants) {
-      // TODO: check no empty
       return {
         kind: "variants",
         variants: this.promptVariants,

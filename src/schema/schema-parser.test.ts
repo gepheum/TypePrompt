@@ -397,6 +397,101 @@ describe("parseSchema – multiple types", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Shared type names
+// ---------------------------------------------------------------------------
+
+describe("parseSchema – shared type names", () => {
+  it("parses a shared type name as a type alias", () => {
+    const result = parseSchema(textNode("type Response = shared.Profile;"));
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: {
+        Response: {
+          valueType: { kind: "shared-type-name", name: { text: "Profile" } },
+        },
+      },
+    });
+  });
+
+  it("parses a shared type name as a field type", () => {
+    const result = parseSchema(
+      textNode("type Response = { user: shared.Profile; };"),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: {
+        Response: {
+          valueType: {
+            fields: {
+              user: {
+                type: { kind: "shared-type-name", name: { text: "Profile" } },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("parses an array of a shared type", () => {
+    const result = parseSchema(textNode("type Response = shared.Profile[];"));
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: {
+        Response: {
+          valueType: {
+            kind: "array",
+            elementType: {
+              kind: "shared-type-name",
+              name: { text: "Profile" },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("parses a union containing a shared type name", () => {
+    const result = parseSchema(
+      textNode('type Response = shared.Profile | "guest";'),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: {
+        Response: {
+          valueType: {
+            kind: "union",
+            members: [
+              { kind: "shared-type-name", name: { text: "Profile" } },
+              { kind: "string-literal", value: "guest" },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  it("records correct spans for the shared keyword and the name", () => {
+    // "type Response = shared.Profile;"
+    //  0123456789012345678901234567890
+    //                  ^     ^
+    //                  16    23
+    const result = parseSchema(textNode("type Response = shared.Profile;"));
+    expect(result).toMatch({
+      kind: "success",
+      typeDeclarations: {
+        Response: {
+          valueType: {
+            shared: { start: 16, end: 22 },
+            name: { text: "Profile", start: 23, end: 30 },
+          },
+        },
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Comments and JSDoc
 // ---------------------------------------------------------------------------
 
