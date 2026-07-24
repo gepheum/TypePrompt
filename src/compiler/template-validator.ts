@@ -176,7 +176,7 @@ function validateVariants(
     if (unionMembers.values.has(variantName)) continue;
     errors.push({
       span: variant.variant,
-      message: `'${variantName}' is not an option of 'Output.variant'`,
+      message: `'${variantName}' is not a member of the 'Output.variant' union`,
     });
   }
   return errors;
