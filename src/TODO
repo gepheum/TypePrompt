@@ -1,5 +1,6 @@
 SCHEMA:
   - support 'shared'
+    - add unit tests...
   - TODO: support true and false literals?
   - TODO: support /* */ and //
 
@@ -16,7 +17,6 @@ ERRORS:
 
 - TODO: expression evaluation and expression guards
 
-- TODO: support "integer" in schemas?
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
 - TODO: <snippet> <on cond="...">
 - TODO: I really think I need to insert 

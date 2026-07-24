@@ -5,23 +5,29 @@ import { checkNoAmbiguity } from "./casing.js";
 
 describe("checkNoAmbiguity", () => {
   it("returns no errors when all casings are consistent", () => {
-    const result = checkNoAmbiguity([
-      { text: "Response", start: 0, end: 8 },
-      { text: "Response", start: 20, end: 28 },
-      { text: "Error", start: 40, end: 45 },
-    ]);
+    const result = checkNoAmbiguity(
+      [
+        { text: "Response", start: 0, end: 8 },
+        { text: "Response", start: 20, end: 28 },
+        { text: "Error", start: 40, end: 45 },
+      ],
+      { exactMatchIsConflict: false },
+    );
 
     expect(result).toMatch([]);
   });
 
   it("reports an error for each name that conflicts with first casing", () => {
-    const result = checkNoAmbiguity([
-      { text: "Response", start: 0, end: 8 },
-      { text: "response", start: 10, end: 18 },
-      { text: "RESPONSE", start: 20, end: 28 },
-      { text: "Error", start: 30, end: 35 },
-      { text: "error", start: 36, end: 41 },
-    ]);
+    const result = checkNoAmbiguity(
+      [
+        { text: "Response", start: 0, end: 8 },
+        { text: "response", start: 10, end: 18 },
+        { text: "RESPONSE", start: 20, end: 28 },
+        { text: "Error", start: 30, end: 35 },
+        { text: "error", start: 36, end: 41 },
+      ],
+      { exactMatchIsConflict: false },
+    );
 
     expect(result).toMatch([
       {
@@ -49,11 +55,14 @@ describe("checkNoAmbiguity", () => {
   });
 
   it("uses the first seen casing as the canonical one", () => {
-    const result = checkNoAmbiguity([
-      { text: "response", start: 0, end: 8 },
-      { text: "Response", start: 10, end: 18 },
-      { text: "response", start: 20, end: 28 },
-    ]);
+    const result = checkNoAmbiguity(
+      [
+        { text: "response", start: 0, end: 8 },
+        { text: "Response", start: 10, end: 18 },
+        { text: "response", start: 20, end: 28 },
+      ],
+      { exactMatchIsConflict: false },
+    );
 
     expect(result).toMatch([
       {
