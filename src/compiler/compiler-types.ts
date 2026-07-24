@@ -30,6 +30,7 @@ export type SourceFileParseResult = {
 
 export type Template = {
   readonly kind: "success";
+  readonly tag: Span;
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly meta: JsonValue<"strict"> | null;
@@ -53,7 +54,7 @@ export type PromptContents =
 
 export type PromptVariant = {
   /** Variant name. */
-  readonly variant: Span;
+  readonly variant: TextSpan;
   readonly content: PromptContent;
 };
 

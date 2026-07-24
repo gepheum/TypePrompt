@@ -53,7 +53,10 @@ class SchemaParser {
     }
 
     this.parserErrors.push(
-      ...checkNoAmbiguity(typeDeclarations.map((t) => t.name)),
+      ...checkNoAmbiguity(
+        typeDeclarations.map((t) => t.name),
+        { exactMatchIsConflict: true },
+      ),
     );
 
     if (this.tokenizerErrors.length) {

@@ -7,14 +7,14 @@ type Error<S> = {
 
 export function checkNoAmbiguity<S extends TextSpan>(
   names: ReadonlyArray<S>,
-  options?: {
-    readonly exactMatchIsConflict?: boolean;
+  options: {
+    readonly exactMatchIsConflict: boolean;
   },
 ): ReadonlyArray<Error<S>> {
   const firstByLowercase = new Map<string, S>();
   const firstDuplicateAlreadyReported = new Set<string>();
   const errors: Error<S>[] = [];
-  const exactMatchIsConflict = options?.exactMatchIsConflict ?? false;
+  const { exactMatchIsConflict } = options;
 
   for (const name of names) {
     const lowercase = name.text.toLowerCase();

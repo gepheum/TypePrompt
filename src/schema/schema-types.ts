@@ -77,10 +77,10 @@ export type PrimitiveType = {
 };
 
 export type SyntheticInterface = {
+  readonly kind: "synthetic-interface";
   readonly name: {
     readonly text: string;
   };
-  readonly kind: "synthetic-interface";
   readonly fields: { readonly [name: string]: SchemaField };
 };
 

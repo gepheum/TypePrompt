@@ -140,6 +140,7 @@ class CompilationResultImpl {
 
     this.resolveMeta(metas, cache);
     this.resolveNamespaces(namespaces, cache);
+    this.resolveTemplates(templates, cache);
   }
 
   private resolveMeta(
@@ -230,9 +231,86 @@ class CompilationResultImpl {
         ...n.element.name,
         path: n.sourceFile.path,
       })),
+      {
+        exactMatchIsConflict: false,
+      },
     );
     for (const error of ambiguityErrors) {
       this.getValidationErrors(error.span.path).push(error);
+    }
+  }
+
+  private resolveTemplates(
+    templates: ReadonlyArray<Sourced<Template>>,
+    cache: CompilationResult | null,
+  ): void {
+    const namespaceToTemplates: { [namespace: string]: Sourced<Template>[] } =
+      {};
+    const idToTemplates: { [namespace: string]: Sourced<Template>[] } = {};
+    for (const template of templates) {
+      const namespace = template.element.namespace?.text ?? "Default";
+      (namespaceToTemplates[namespace] ??= []).push(template);
+      const id = `${namespace}.${template.element.name.text}`;
+      (idToTemplates[id] ??= []).push(template);
+    }
+
+    for (const templates of Object.values(namespaceToTemplates)) {
+      const ambiguityErrors = checkNoAmbiguity(
+        Object.values(templates).map((t) => ({
+          ...t.element.name,
+          path: t.sourceFile.path,
+        })),
+        {
+          exactMatchIsConflict: false,
+        },
+      );
+      for (const error of ambiguityErrors) {
+        this.getValidationErrors(error.span.path).push(error);
+      }
+    }
+
+    if (this.meta.kind !== "success") {
+      return;
+    }
+
+    for (const [id, templates] of Object.entries(idToTemplates)) {
+      if (templates.length !== 1) {
+        // The error was already reported in the ambiguity check above.
+        continue;
+      }
+      const template = templates[0]!;
+
+      const namespaceName = template.element.namespace?.text ?? "Default";
+      const namespace = this.namespaces[namespaceName];
+      if (!namespace) {
+        this.getValidationErrors(template.sourceFile.path).push({
+          span: template.element.name,
+          message: `Namespace '${namespaceName}' not found`,
+        });
+        continue;
+      } else if (namespace.kind !== "success") {
+        continue;
+      }
+
+      let validationResult: SchemaOrError;
+      if (
+        template.cached &&
+        this.meta === cache?.meta &&
+        namespace === cache?.namespaces[namespaceName]
+      ) {
+        // Reuse the cached schema validation result.
+        validationResult = cache!.templates[id]!;
+      } else {
+        CACA;
+      }
+
+      this.templates[id] = validationResult;
+
+      if (validationResult.kind === "error") {
+        this.getValidationErrors(template.sourceFile.path).push(
+          ...validationResult.errors,
+        );
+      }
     }
   }
 

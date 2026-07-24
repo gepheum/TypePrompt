@@ -152,7 +152,10 @@ function validateType(
     }
     case "interface": {
       errors.push(
-        ...checkNoAmbiguity(Object.values(type.fields).map((f) => f.name)),
+        ...checkNoAmbiguity(
+          Object.values(type.fields).map((f) => f.name),
+          { exactMatchIsConflict: true },
+        ),
       );
       for (const field of Object.values(type.fields)) {
         if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {

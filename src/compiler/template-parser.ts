@@ -74,6 +74,7 @@ class TemplateParser {
 
     return {
       kind: "success",
+      tag: this.templateNode.tag,
       name: name.span,
       namespace: namespace?.span ?? null,
       meta: this.meta,
