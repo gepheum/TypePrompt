@@ -63,8 +63,6 @@ export function validateSchema(
         },
         message: `Missing required type '${requiredTypeName}'`,
       });
-    } else if (context.kind === "meta") {
-      errors.push(...verifyMetaType(requiredType, typeDeclarations));
     }
   }
 
@@ -451,60 +449,6 @@ function collectNameDependencies(
       return null;
     }
   }
-}
-
-function verifyMetaType(
-  metaTypeDeclaration: TypeDeclaration,
-  types: { readonly [name: string]: TypeDeclaration },
-): InternalError[] {
-  const metaType = resolveMaybeInvalidType(metaTypeDeclaration, types);
-  if (!metaType) {
-    return [];
-  }
-  if (metaType.kind !== "interface") {
-    return [
-      {
-        span: metaTypeDeclaration.name,
-        message: "Type 'Meta' must be an interface",
-      },
-    ];
-  }
-  const errors: InternalError[] = [];
-  for (const field of Object.values(metaType.fields)) {
-    const resolvedType = resolveMaybeInvalidType(field.type, types);
-    if (!resolvedType) {
-      continue;
-    }
-    const isValid = ((): boolean | undefined => {
-      switch (resolvedType.kind) {
-        case "array":
-        case "interface": {
-          return false;
-        }
-        case "primitive":
-        case "string-literal": {
-          return true;
-        }
-        case "union": {
-          switch (getUnionMembers(resolvedType, types).kind) {
-            case "strings": {
-              return true;
-            }
-            case "interfaces": {
-              return false;
-            }
-          }
-        }
-      }
-    })();
-    if (!isValid) {
-      errors.push({
-        span: field.name,
-        message: "Fields of 'Meta' must be strings, numbers, booleans",
-      });
-    }
-  }
-  return errors;
 }
 
 function verifyAllTypesUsed(
