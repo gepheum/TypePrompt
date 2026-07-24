@@ -36,8 +36,7 @@ function parseSchemaOrThrow(source: string): Schema {
     );
   }
   const template: SchemaValidationContext = {
-    kind: "template",
-    argTypeNames: [],
+    kind: "namespace",
   };
   const schema = validateSchema(parseResult.typeDeclarations, template);
   if (schema.kind === "error") {
