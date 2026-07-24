@@ -54,7 +54,7 @@ export function parseExpression(
       ? { kind: "input", span: mappedSpan(pos, pos + baseText.length) }
       : { kind: "it", span: mappedSpan(pos, pos + baseText.length) };
   if (baseText === "it" && !options.acceptIt) {
-    return fail(pos, pos + baseText.length, '"it" not permitted here');
+    return fail(pos, pos + baseText.length, '"it" not allowed here');
   }
   pos += baseText.length;
 

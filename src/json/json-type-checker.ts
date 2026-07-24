@@ -15,7 +15,7 @@ export function validateJson(
 ): InternalError[] {
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
-    resolveType(type, schema.typeDeclarations),
+    resolveType(type, schema),
     "thorough",
     schema,
   );
@@ -56,10 +56,7 @@ export function jsonMatchesType(
     case "array":
     case "synthetic-array": {
       if (value.kind === "array") {
-        const elementType = resolveType(
-          type.elementType,
-          schema.typeDeclarations,
-        );
+        const elementType = resolveType(type.elementType, schema);
         let matchScoreTotal = 0.0;
         const { elements } = value;
         for (const element of elements) {
@@ -143,7 +140,7 @@ export function jsonMatchesType(
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
           if (field) {
-            const fieldType = resolveType(field.type, schema.typeDeclarations);
+            const fieldType = resolveType(field.type, schema);
             const fieldMatch = jsonMatchesType(
               entry.value,
               fieldType,

@@ -11,6 +11,7 @@ import type {
   Schema,
   SchemaField,
   SchemaValidationContext,
+  SchemaView,
   StringLiteral,
   Type,
   TypeDeclaration,
@@ -28,9 +29,9 @@ export function validateSchema(
 
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
-    validateType(typeDeclaration, typeDeclarations, errors);
+    validateType(typeDeclaration, typeDeclarations, context, errors);
     const nameDependencies = new Set<string>();
-    collectNameDependencies(
+    collectTypeNameDependencies(
       typeDeclaration.valueType,
       typeDeclarations,
       nameDependencies,
@@ -68,7 +69,9 @@ export function validateSchema(
 
   // Verify that all types are used.
   if (errors.length <= 0 && context.kind !== "namespace") {
-    errors.push(...verifyAllTypesUsed(requiredTypeNames, typeDeclarations));
+    errors.push(
+      ...verifyAllTypesUsed(requiredTypeNames, typeDeclarations, context),
+    );
   }
 
   if (errors.length > 0) {
@@ -78,11 +81,18 @@ export function validateSchema(
     };
   }
 
-  const typeTraverser = TypeTraverser.traverseAll(typeDeclarations);
+  const schemaView: SchemaView = {
+    typeDeclarations: typeDeclarations,
+    sharedDeclarations:
+      context.kind === "template"
+        ? context.namespaceSchema.typeDeclarations
+        : null,
+  };
+  const typeTraverser = TypeTraverser.traverseAll(schemaView);
 
   return {
+    ...schemaView,
     kind: "success",
-    typeDeclarations: typeDeclarations,
     identifiers: typeTraverser.identifiers,
     unionToMembers: typeTraverser.unionToMembers,
     typeToNamingHint: typeTraverser.typeToNamingHint,
@@ -97,11 +107,8 @@ type UnionKind =
   | "bad:union"
   | "error";
 
-function getUnionKind(
-  member: Type,
-  types: { readonly [name: string]: TypeDeclaration },
-): UnionKind {
-  const resolvedType = resolveMaybeInvalidType(member, types);
+function getUnionKind(member: Type, schema: SchemaView): UnionKind {
+  const resolvedType = resolveMaybeInvalidType(member, schema);
   if (!resolvedType) {
     return "error";
   }
@@ -134,6 +141,8 @@ function getFirstToken(type: Type): Span {
       return type.quotedName;
     case "type-name":
       return type.name;
+    case "shared-type-name":
+      return type.shared;
     case "union":
       return getFirstToken(type.members[0]!);
   }
@@ -142,11 +151,12 @@ function getFirstToken(type: Type): Span {
 function validateType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
+  context: SchemaValidationContext,
   errors: InternalError[],
 ): null {
   switch (type.kind) {
     case "array": {
-      return validateType(type.elementType, types, errors);
+      return validateType(type.elementType, types, context, errors);
     }
     case "interface": {
       errors.push(
@@ -162,7 +172,7 @@ function validateType(
             message: WORD_MUST_START_WITH_LOWERCASE,
           });
         }
-        validateType(field.type, types, errors);
+        validateType(field.type, types, context, errors);
       }
       return null;
     }
@@ -180,7 +190,7 @@ function validateType(
     }
     case "type": {
       validateTypeName(type.name, errors);
-      return validateType(type.valueType, types, errors);
+      return validateType(type.valueType, types, context, errors);
     }
     case "type-name": {
       const typeName = type.name.text;
@@ -193,8 +203,25 @@ function validateType(
       }
       return null;
     }
+    case "shared-type-name": {
+      if (context.kind !== "template") {
+        errors.push({
+          span: type.shared,
+          message: `'shared' not allowed inside <${context.kind}> elements`,
+        });
+        return null;
+      }
+      const typeName = type.name.text;
+      if (!context.namespaceSchema.typeDeclarations[typeName]) {
+        errors.push({
+          span: type.name,
+          message: `Unknown type '${typeName}'`,
+        });
+      }
+      return null;
+    }
     case "union": {
-      validateUnionType(type, types, errors);
+      validateUnionType(type, types, context, errors);
       return null;
     }
   }
@@ -203,6 +230,7 @@ function validateType(
 function validateUnionType(
   type: Union,
   types: { readonly [name: string]: TypeDeclaration },
+  context: SchemaValidationContext,
   errors: InternalError[] = [],
 ): void {
   const pushErrorForBadKind = (
@@ -219,11 +247,18 @@ function validateUnionType(
 
   const { members } = type;
   for (const member of members) {
-    validateType(member, types, errors);
+    validateType(member, types, context, errors);
   }
   // Make sure 'members' are either all string literals or all interfaces.
   const first = members[0]!;
-  const unionKind = getUnionKind(first, types);
+  const schema: SchemaView = {
+    typeDeclarations: types,
+    sharedDeclarations:
+      context.kind === "template"
+        ? context.namespaceSchema.typeDeclarations
+        : null,
+  };
+  const unionKind = getUnionKind(first, schema);
   switch (unionKind) {
     case "good:strings":
     case "good:interfaces": {
@@ -242,7 +277,7 @@ function validateUnionType(
 
   let allGood = true;
   for (const member of members.slice(1)) {
-    const memberKind = getUnionKind(member, types);
+    const memberKind = getUnionKind(member, schema);
     switch (memberKind) {
       case "good:strings":
       case "good:interfaces": {
@@ -282,7 +317,7 @@ function validateUnionType(
     errors.push(
       ...checkNoAmbiguity(
         members.map((m) => {
-          const resolved = resolveMaybeInvalidType(m, types);
+          const resolved = resolveMaybeInvalidType(m, schema);
           if (resolved?.kind !== "string-literal") {
             // Cannot happen: getUnionKind already verified this.
             throw new Error();
@@ -306,7 +341,7 @@ function validateUnionType(
     let discriminator: SchemaField | undefined;
     let allGood = true;
     for (const member of members) {
-      const resolvedType = resolveMaybeInvalidType(member, types)!;
+      const resolvedType = resolveMaybeInvalidType(member, schema)!;
       if (resolvedType.kind !== "interface") {
         // Cannot happen.
         throw new Error();
@@ -321,7 +356,7 @@ function validateUnionType(
         }
         const discriminatorType = resolveMaybeInvalidType(
           firstField.type,
-          types,
+          schema,
         );
         if (discriminatorType?.kind !== "string-literal") {
           return null;
@@ -404,14 +439,14 @@ const WORD_MUST_START_WITH_UPPERCASE =
 const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
 
-function collectNameDependencies(
+function collectTypeNameDependencies(
   type: Type,
   typeDeclarations: { readonly [name: string]: TypeDeclaration },
   seenNames: Set<string>,
 ): null {
   switch (type.kind) {
     case "array": {
-      return collectNameDependencies(
+      return collectTypeNameDependencies(
         type.elementType,
         typeDeclarations,
         seenNames,
@@ -419,11 +454,12 @@ function collectNameDependencies(
     }
     case "interface": {
       for (const field of Object.values(type.fields)) {
-        collectNameDependencies(field.type, typeDeclarations, seenNames);
+        collectTypeNameDependencies(field.type, typeDeclarations, seenNames);
       }
       return null;
     }
-    case "string-literal": {
+    case "string-literal":
+    case "shared-type-name": {
       return null;
     }
     case "type-name": {
@@ -436,7 +472,7 @@ function collectNameDependencies(
       if (!resolved) {
         return null;
       }
-      return collectNameDependencies(
+      return collectTypeNameDependencies(
         resolved.valueType,
         typeDeclarations,
         seenNames,
@@ -444,7 +480,7 @@ function collectNameDependencies(
     }
     case "union": {
       for (const member of type.members) {
-        collectNameDependencies(member, typeDeclarations, seenNames);
+        collectTypeNameDependencies(member, typeDeclarations, seenNames);
       }
       return null;
     }
@@ -454,13 +490,14 @@ function collectNameDependencies(
 function verifyAllTypesUsed(
   rootTypeNames: readonly string[],
   types: { readonly [name: string]: TypeDeclaration },
+  context: SchemaValidationContext,
 ): InternalError[] {
   const errors: InternalError[] = [];
   const usedTypes = new Set<string>();
   for (const rootTypeName of rootTypeNames) {
     const rootType = types[rootTypeName];
     if (rootType) {
-      collectNameDependencies(rootType.valueType, types, usedTypes);
+      collectTypeNameDependencies(rootType.valueType, types, usedTypes);
       usedTypes.add(rootTypeName);
     }
   }
@@ -477,11 +514,9 @@ function verifyAllTypesUsed(
 }
 
 class TypeTraverser {
-  static traverseAll(types: {
-    readonly [name: string]: TypeDeclaration;
-  }): TypeTraverser {
-    const traverser = new TypeTraverser(types);
-    for (const type of Object.values(types)) {
+  static traverseAll(schema: SchemaView): TypeTraverser {
+    const traverser = new TypeTraverser(schema);
+    for (const type of Object.values(schema.typeDeclarations)) {
       traverser.traverse(
         type,
         type.kind === "type" && type.valueType.kind === "interface"
@@ -492,9 +527,7 @@ class TypeTraverser {
     return traverser;
   }
 
-  private constructor(
-    private readonly types: { readonly [name: string]: TypeDeclaration },
-  ) {}
+  private constructor(private readonly schema: SchemaView) {}
 
   private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
     switch (type.kind) {
@@ -521,12 +554,13 @@ class TypeTraverser {
       case "type": {
         return this.traverse(type.valueType, context);
       }
-      case "type-name": {
+      case "type-name":
+      case "shared-type-name": {
         return null;
       }
       case "union": {
         this.typeToNamingHint.set(type, context);
-        const unionMembers = getUnionMembers(type, this.types);
+        const unionMembers = getUnionMembers(type, this.schema);
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {

@@ -281,6 +281,7 @@ class CompilationResultImpl implements CompilationResult {
 const EMPTY_SCHEMA: Schema = {
   kind: "success",
   typeDeclarations: {},
+  sharedDeclarations: null,
   identifiers: new Set(),
   unionToMembers: new Map(),
   typeToNamingHint: new Map(),

@@ -205,6 +205,7 @@ class SchemaParser {
         "{": EXACT_MATCHER,
         "|": context?.lastTokenWasPipe ? NEVER_MATCHER : EXACT_MATCHER,
         stringLiteral: STRING_LITERAL_MATCHER,
+        shared: EXACT_MATCHER,
         identifier: IDENTIFIER_MATCHER,
       });
       switch (match) {
@@ -238,6 +239,23 @@ class SchemaParser {
             kind: "string-literal",
             value: token.text.slice(1, -1),
             quotedName: this.tokenToSpan(token),
+          };
+        }
+        case "shared": {
+          if (!this.expectExactThenMove(".")) {
+            return null;
+          }
+          const nameToken = this.peekToken();
+          const nameMatch = this.expectThenMove(nameToken, {
+            identifier: IDENTIFIER_MATCHER,
+          });
+          if (nameMatch === "noMatch") {
+            return null;
+          }
+          return {
+            kind: "shared-type-name",
+            shared: this.tokenToSpan(token),
+            name: this.tokenToSpan(nameToken),
           };
         }
         case "identifier": {

@@ -2,6 +2,7 @@ import { validateCTag } from "../ctag/ctag-validator.js";
 import { validateJson } from "../json/json-type-checker.js";
 import {
   Schema,
+  SchemaValidationContext,
   SyntheticArray,
   SyntheticInterface,
   Type,
@@ -42,9 +43,14 @@ export function validateTemplate(args: {
     });
   }
 
-  const templateSchema = validateSchema(template.schema.typeDeclarations, {
+  const validationContext: SchemaValidationContext = {
     kind: "template",
-  });
+    namespaceSchema,
+  };
+  const templateSchema = validateSchema(
+    template.schema.typeDeclarations,
+    validationContext,
+  );
   if (templateSchema.kind === "error") {
     errors.push(...templateSchema.errors);
     return {
@@ -112,9 +118,8 @@ function validateVariants(
   if (template.contents.kind !== "variants") {
     return [];
   }
-  const { typeDeclarations } = templateSchema;
-  const outputTypeDeclaration = typeDeclarations["Output"]!;
-  const outputType = resolveType(outputTypeDeclaration, typeDeclarations);
+  const outputTypeDeclaration = templateSchema.typeDeclarations["Output"]!;
+  const outputType = resolveType(outputTypeDeclaration, templateSchema);
   if (outputType.kind !== "interface") {
     return [
       {
@@ -141,7 +146,7 @@ function validateVariants(
       ].join(""),
     },
   ];
-  let variantFieldType = resolveType(variantField.type, typeDeclarations);
+  let variantFieldType = resolveType(variantField.type, templateSchema);
   if (variantFieldType.kind === "string-literal") {
     variantFieldType = {
       kind: "union",
@@ -151,7 +156,7 @@ function validateVariants(
   if (variantFieldType.kind !== "union") {
     return makeVariantFieldTypeError();
   }
-  const unionMembers = getUnionMembers(variantFieldType, typeDeclarations);
+  const unionMembers = getUnionMembers(variantFieldType, templateSchema);
   if (unionMembers.kind !== "strings") {
     return makeVariantFieldTypeError();
   }
@@ -188,7 +193,7 @@ function makeExamplesType(
   let outputType: Type | SyntheticInterface =
     typeDeclarations["Output"]!.valueType;
   if (template.contents.kind === "variants") {
-    const resolvedOutputType = resolveType(outputType!, typeDeclarations);
+    const resolvedOutputType = resolveType(outputType!, templateSchema);
     if (
       resolvedOutputType.kind === "interface" &&
       resolvedOutputType.fields["variant"]

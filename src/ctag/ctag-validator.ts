@@ -32,7 +32,7 @@ export function validateCTag(
           (t) =>
             jsonMatchesType(
               cTag.json,
-              resolveType(t, schema.typeDeclarations),
+              resolveType(t, schema),
               "fast",
               schema,
             ).kind === "match",
@@ -44,7 +44,7 @@ export function validateCTag(
           ([name, t]) => {
             const result = jsonMatchesType(
               cTag.json,
-              resolveType(t, schema.typeDeclarations),
+              resolveType(t, schema),
               "thorough",
               schema,
             );

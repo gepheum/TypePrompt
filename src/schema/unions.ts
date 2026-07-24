@@ -1,16 +1,13 @@
-import type { TypeDeclaration, Union, UnionMembers } from "./schema-types.js";
+import type { SchemaView, Union, UnionMembers } from "./schema-types.js";
 import { resolveMaybeInvalidType } from "./type-resolver.js";
 
-export function getUnionMembers(
-  type: Union,
-  types: { readonly [name: string]: TypeDeclaration },
-): UnionMembers {
+export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
   const { members } = type;
-  const firstMember = resolveMaybeInvalidType(members[0]!, types)!;
+  const firstMember = resolveMaybeInvalidType(members[0]!, schema)!;
   switch (firstMember.kind) {
     case "string-literal": {
       const resolvedMembers = members.map((m) => {
-        const resolved = resolveMaybeInvalidType(m, types)!;
+        const resolved = resolveMaybeInvalidType(m, schema)!;
         if (resolved.kind !== "string-literal") {
           throw new Error();
         }
@@ -28,13 +25,13 @@ export function getUnionMembers(
         kindFieldName: firstMember.firstField!.name.text,
         members: Object.fromEntries(
           members.map((m) => {
-            const resolved = resolveMaybeInvalidType(m, types)!;
+            const resolved = resolveMaybeInvalidType(m, schema)!;
             if (resolved.kind !== "interface") {
               throw new Error();
             }
             const firstFieldType = resolveMaybeInvalidType(
               resolved.firstField!.type,
-              types,
+              schema,
             )!;
             if (firstFieldType.kind !== "string-literal") {
               throw new Error();

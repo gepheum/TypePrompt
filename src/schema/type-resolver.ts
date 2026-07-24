@@ -1,5 +1,7 @@
 import type {
   ResolvedType,
+  Schema,
+  SchemaView,
   SyntheticType,
   Type,
   TypeDeclaration,
@@ -7,48 +9,64 @@ import type {
 
 export function resolveType<S extends SyntheticType | never>(
   type: Type | TypeDeclaration | S,
-  types: { readonly [name: string]: TypeDeclaration },
+  schema: Schema,
 ): ResolvedType | S {
-  return doResolveType<S>(type, types, null)!;
+  return doResolveType<S>(type, schema, null)!;
 }
 
 export function resolveMaybeInvalidType(
   type: Type | TypeDeclaration,
-  types: { readonly [name: string]: TypeDeclaration },
+  schema: SchemaView,
 ): ResolvedType | null {
   const seenNames = new Set<string>();
-  return doResolveType<never>(type, types, seenNames);
+  return doResolveType<never>(type, schema, seenNames);
 }
 
 function doResolveType<S extends SyntheticType | never>(
   type: Type | TypeDeclaration | S,
-  types: { readonly [name: string]: TypeDeclaration },
+  schema: SchemaView,
   seenNames: Set<string> | null,
 ): ResolvedType | null | S {
   if (type.kind === "type") {
     type = type.valueType;
   }
-  if (type.kind === "type-name") {
-    const typeName = type.name.text;
-    {
-      const primitive = isPrimitiveType(typeName);
-      if (primitive) {
-        return PRIMITIVES[primitive];
+  switch (type.kind) {
+    case "type-name": {
+      const typeName = type.name.text;
+      {
+        const primitive = isPrimitiveType(typeName);
+        if (primitive) {
+          return PRIMITIVES[primitive];
+        }
       }
-    }
-    if (seenNames) {
-      if (seenNames.has(typeName)) {
+      if (seenNames) {
+        if (seenNames.has(typeName)) {
+          return null;
+        }
+        seenNames.add(typeName);
+      }
+      const resolved = schema.typeDeclarations[typeName];
+      if (!resolved) {
         return null;
       }
-      seenNames.add(typeName);
+      return doResolveType<S>(resolved, schema, seenNames);
     }
-    const resolved = types[typeName];
-    if (!resolved) {
-      return null;
+    case "shared-type-name": {
+      const typeName = type.name.text;
+      const { sharedDeclarations: sharedTypeDeclarations } = schema;
+      if (!sharedTypeDeclarations) {
+        return null;
+      }
+      const resolved = sharedTypeDeclarations[typeName];
+      if (!resolved) {
+        return null;
+      }
+      return doResolveType<S>(resolved, schema, seenNames);
     }
-    return doResolveType<S>(resolved, types, seenNames);
+    default: {
+      return type;
+    }
   }
-  return type;
 }
 
 export function isPrimitiveType(

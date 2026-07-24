@@ -8,11 +8,17 @@ export type SchemaParseResult = {
 export type SchemaValidationContext =
   | { readonly kind: "meta" }
   | { readonly kind: "namespace" }
-  | { readonly kind: "template" };
+  | { readonly kind: "template"; readonly namespaceSchema: Schema };
 
-export type Schema = {
-  readonly kind: "success";
+export type SchemaView = {
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
+  readonly sharedDeclarations: {
+    readonly [name: string]: TypeDeclaration;
+  } | null;
+};
+
+export type Schema = SchemaView & {
+  readonly kind: "success";
   /**
    * Field names and identifiers used in string literals.
    * Does not include types names.
@@ -36,12 +42,19 @@ export type SchemaField = {
   readonly doc: string;
 };
 
-export type Type = TypeName | StringLiteral | Interface | Array | Union;
+export type Type =
+  TypeName | SharedTypeName | StringLiteral | Interface | Array | Union;
 
 export type NonUnionType = Exclude<Type, Union>;
 
 export type TypeName = {
   readonly kind: "type-name";
+  readonly name: TextSpan;
+};
+
+export type SharedTypeName = {
+  readonly kind: "shared-type-name";
+  readonly shared: Span;
   readonly name: TextSpan;
 };
 
@@ -69,7 +82,8 @@ export type Union = {
   readonly members: NonUnionType[];
 };
 
-export type ResolvedType = Exclude<Type, TypeName> | PrimitiveType;
+export type ResolvedType =
+  StringLiteral | Interface | Array | Union | PrimitiveType;
 
 export type PrimitiveType = {
   readonly kind: "primitive";
