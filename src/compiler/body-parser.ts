@@ -1,21 +1,22 @@
 import { ErrorSink, MappedText, TextSpan } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode, XmlNode } from "../xml/xml-types.js";
-import { Body, BodyPiece, Expression, InsertFormat } from "./compiler-types.js";
+import { Body, BodyPiece, InsertFormat } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseCTag } from "../ctag/ctag-parser.js";
 import { CTag } from "../ctag/ctag-types.js";
+import { parseExpression } from "../expression/expression-parser.js";
+import { Expression } from "../expression/expression-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
-import { parseExpression } from "./expression-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseBody<HasValContext extends boolean>(
   parentNode: ElementNode,
   errors: ErrorSink,
   options: {
-    readonly hasValContext: HasValContext,
-  }
+    readonly hasValContext: HasValContext;
+  },
 ): Body<HasValContext> {
   const rawPieces: Array<RawBodyPiece<HasValContext>> = [];
 

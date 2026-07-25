@@ -1,4 +1,8 @@
 import { CTag } from "../ctag/ctag-types.js";
+import {
+  Expression,
+  ExpressionInContext,
+} from "../expression/expression-types.js";
 import { JsonValue } from "../json/json-types.js";
 import { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import {
@@ -82,26 +86,6 @@ export type BodyPiece<HasValContext extends boolean = false> =
       /** Only contains whitespace characters. */
       readonly indent: string;
     };
-
-export type Expression<HasValContext extends boolean = false> =
-  | {
-      readonly kind: "input";
-      readonly fullPath: TextSpan;
-    }
-  | {
-      readonly kind: "property";
-      readonly left: Expression<HasValContext>;
-      readonly property: TextSpan;
-      readonly fullPath: TextSpan;
-    }
-  | (HasValContext extends true
-      ? {
-          readonly kind: "it";
-          readonly fullPath: TextSpan;
-        }
-      : never);
-
-export type ExpressionInContext = Expression<true>;
 
 export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";
 

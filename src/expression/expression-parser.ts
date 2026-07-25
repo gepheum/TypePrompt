@@ -1,6 +1,6 @@
 import { InternalErrors, MappedText, TextSpan } from "../util/common-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
-import { Expression } from "./compiler-types.js";
+import { Expression, ExpressionInContext } from "./expression-types.js";
 
 export type ExpressionParseResult<HasValContext extends boolean> =
   | { readonly kind: "success"; readonly expression: Expression<HasValContext> }
@@ -9,7 +9,7 @@ export type ExpressionParseResult<HasValContext extends boolean> =
 export function parseExpression<HasValContext extends boolean>(
   content: MappedText,
   options: {
-    readonly hasValContext: HasValContext,
+    readonly hasValContext: HasValContext;
   },
 ): ExpressionParseResult<HasValContext> {
   const { text } = content;
@@ -36,14 +36,15 @@ export function parseExpression<HasValContext extends boolean>(
 
   // Parse base: "input" | "it"
   let pos = 0;
-  let expr: Expression<true>;
+  let expr: ExpressionInContext;
 
   BASE_PATTERN.lastIndex = pos;
   const baseMatch = BASE_PATTERN.exec(text);
 
   if (!baseMatch) {
-    const message =
-      options.hasValContext ? "Expected 'input' or 'it'" : "Expected 'input'";
+    const message = options.hasValContext
+      ? "Expected 'input' or 'it'"
+      : "Expected 'input'";
     return fail(pos, length, message);
   }
 
