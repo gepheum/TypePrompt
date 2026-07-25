@@ -1,5 +1,6 @@
-import { ResolvedType, Schema } from "../schema/schema-types.js";
+import { ResolvedType, SchemaView } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
+import { getUnionMembers } from "../schema/unions.js";
 import { InternalErrors } from "../util/common-types.js";
 import {
   Expression,
@@ -15,7 +16,7 @@ export type ResolvedExpressionType<HasValContext extends boolean> =
 
 export function resolveExpressionType<HasValContext extends boolean>(
   expression: Expression<HasValContext>,
-  schema: Schema,
+  schema: SchemaView,
   context: HasValContext extends true ? ExpressionContext : null,
 ): ResolvedExpressionType<HasValContext> {
   return doResolveExpressionType(
@@ -27,7 +28,7 @@ export function resolveExpressionType<HasValContext extends boolean>(
 
 function doResolveExpressionType<HasValContext extends boolean>(
   expression: Expression<HasValContext>,
-  schema: Schema,
+  schema: SchemaView,
   context: HasValContext extends true ? ExpressionContext : null,
 ): ResolvedType | NullableType | NullType | InternalErrors {
   if (context) {
@@ -53,6 +54,18 @@ function doResolveExpressionType<HasValContext extends boolean>(
       const left = resolveExpressionType(expression.left, schema, context);
       if (left.kind === "error") {
         return left;
+      }
+      if (left.kind === "union") {
+        const members = getUnionMembers(left, schema);
+        if (
+          members.kind === "interfaces" &&
+          members.kindFieldName === expression.property.text
+        ) {
+          return {
+            kind: "union",
+            members: members.kinds,
+          };
+        }
       }
       if (left.kind !== "interface") {
         return {
@@ -82,10 +95,3 @@ function doResolveExpressionType<HasValContext extends boolean>(
     }
   }
 }
-
-export type SwitchExpressionResult =
-  | {
-      readonly kind: "success";
-      readonly cases: { readonly [caseVal: string]: ExpressionContext };
-    }
-  | InternalErrors;

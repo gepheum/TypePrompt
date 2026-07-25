@@ -1,11 +1,11 @@
 import { CTag } from "../ctag/ctag-types.js";
-import {
+import type {
   Expression,
   ExpressionInContext,
 } from "../expression/expression-types.js";
-import { JsonValue } from "../json/json-types.js";
-import { Schema, SchemaParseResult } from "../schema/schema-types.js";
-import {
+import type { JsonValue } from "../json/json-types.js";
+import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
+import type {
   InternalError,
   InternalErrors,
   Span,

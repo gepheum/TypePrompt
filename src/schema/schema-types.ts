@@ -79,7 +79,7 @@ export type Array = {
 export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
-  readonly members: NonUnionType[];
+  readonly members: readonly NonUnionType[];
 };
 
 export type ResolvedType =
@@ -134,4 +134,5 @@ export type UnionMembers =
       readonly kind: "interfaces";
       readonly members: { [kind: string]: Interface };
       readonly kindFieldName: string;
+      readonly kinds: readonly StringLiteral[];
     };

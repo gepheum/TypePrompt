@@ -1,6 +1,5 @@
 import type {
   ResolvedType,
-  Schema,
   SchemaView,
   SyntheticType,
   Type,
@@ -9,7 +8,7 @@ import type {
 
 export function resolveType<S extends SyntheticType | never>(
   type: Type | TypeDeclaration | S,
-  schema: Schema,
+  schema: SchemaView,
 ): ResolvedType | S {
   return doResolveType<S>(type, schema, null)!;
 }

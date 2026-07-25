@@ -1,13 +1,13 @@
-import { ErrorSink, MappedText, TextSpan } from "../util/common-types.js";
+import type { ErrorSink, MappedText, TextSpan } from "../util/common-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
-import { ElementNode, XmlNode } from "../xml/xml-types.js";
-import { Body, BodyPiece, InsertFormat } from "./compiler-types.js";
+import type { ElementNode, XmlNode } from "../xml/xml-types.js";
+import type { Body, BodyPiece, InsertFormat } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseCTag } from "../ctag/ctag-parser.js";
-import { CTag } from "../ctag/ctag-types.js";
+import type { CTag } from "../ctag/ctag-types.js";
 import { parseExpression } from "../expression/expression-parser.js";
-import { Expression } from "../expression/expression-types.js";
+import type { Expression } from "../expression/expression-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { extractTextContent } from "./text-extractor.js";
 

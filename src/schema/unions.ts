@@ -1,5 +1,5 @@
 import type { SchemaView, Union, UnionMembers } from "./schema-types.js";
-import { resolveMaybeInvalidType } from "./type-resolver.js";
+import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
   const { members } = type;
@@ -7,7 +7,7 @@ export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
   switch (firstMember.kind) {
     case "string-literal": {
       const resolvedMembers = members.map((m) => {
-        const resolved = resolveMaybeInvalidType(m, schema)!;
+        const resolved = resolveType(m, schema)!;
         if (resolved.kind !== "string-literal") {
           throw new Error();
         }
@@ -25,11 +25,11 @@ export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
         kindFieldName: firstMember.firstField!.name.text,
         members: Object.fromEntries(
           members.map((m) => {
-            const resolved = resolveMaybeInvalidType(m, schema)!;
+            const resolved = resolveType(m, schema)!;
             if (resolved.kind !== "interface") {
               throw new Error();
             }
-            const firstFieldType = resolveMaybeInvalidType(
+            const firstFieldType = resolveType(
               resolved.firstField!.type,
               schema,
             )!;
@@ -40,6 +40,20 @@ export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
             return [kind, resolved];
           }),
         ),
+        kinds: members.map((m) => {
+          const resolved = resolveType(m, schema)!;
+          if (resolved.kind !== "interface") {
+            throw new Error();
+          }
+          const firstFieldType = resolveType(
+            resolved.firstField!.type,
+            schema,
+          )!;
+          if (firstFieldType.kind !== "string-literal") {
+            throw new Error();
+          }
+          return firstFieldType;
+        }),
       };
     }
     default: {
