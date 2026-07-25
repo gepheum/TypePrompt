@@ -12,8 +12,8 @@ export function parseExpression(
     acceptIt: boolean;
   },
 ): ExpressionParseResult {
-  const text = content.text;
-  const length = text.length;
+  const { text } = content;
+  const { length } = text;
 
   const mappedSpan = (start: number, end: number): TextSpan => {
     return {
@@ -51,35 +51,26 @@ export function parseExpression(
   const baseText = baseMatch[0];
   expr =
     baseText === "input"
-      ? { kind: "input", span: mappedSpan(pos, pos + baseText.length) }
-      : { kind: "it", span: mappedSpan(pos, pos + baseText.length) };
+      ? { kind: "input", fullPath: mappedSpan(pos, pos + baseText.length) }
+      : { kind: "it", fullPath: mappedSpan(pos, pos + baseText.length) };
   if (baseText === "it" && !options.acceptIt) {
     return fail(pos, pos + baseText.length, '"it" not allowed here');
   }
   pos += baseText.length;
 
-  // Parse chain of ("." | "?.") identifier
+  // Parse chain of ("." identifier)
   while (true) {
     if (pos >= length) {
       break;
     }
 
-    const opStart = pos;
-    let operator: "." | "?.";
-
-    if (text.startsWith("?.", pos)) {
-      operator = "?.";
-      pos += 2;
-    } else if (text[pos] === ".") {
-      operator = ".";
+    if (text[pos] === ".") {
       pos += 1;
     } else {
-      return fail(pos, pos + 1, 'Expected "." or "?."');
+      return fail(pos, pos, "Expected '.'");
     }
 
-    const operatorSpan = mappedSpan(opStart, pos);
-
-    // parse identifier
+    // Parse identifier
     const identStart = pos;
     IDENTIFIER_PATTERN.lastIndex = pos;
     const identMatch = IDENTIFIER_PATTERN.exec(text);
@@ -103,9 +94,8 @@ export function parseExpression(
     expr = {
       kind: "property",
       left: expr,
-      operator,
-      operatorSpan,
       property: propertySpan,
+      fullPath: mappedSpan(0, pos),
     };
   }
 

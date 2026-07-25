@@ -4,21 +4,33 @@ import type {
   InternalError,
   InternalErrors,
   MappedSpan,
+  Span,
 } from "../util/common-types.js";
 import type { ElementNode } from "./xml-types.js";
 
-type AttributeSchemaEntry = {
+export type AttributeSchemaEntry = {
   readonly schema: ZodType<string | undefined>;
   readonly expected: string;
 };
 
-type AttributeSchemas = Record<string, AttributeSchemaEntry>;
+export type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 
-type AttributeValues<T extends AttributeSchemas> = {
+export type AttributeValue<T> = undefined extends T
+  ? | {
+        readonly nameSpan: Span;
+        readonly valueSpan: MappedSpan;
+        readonly value: NonNullable<T>;
+      }
+    | undefined
+  : {
+      readonly nameSpan: Span;
+      readonly valueSpan: MappedSpan;
+      readonly value: T;
+    };
+
+export type AttributeValues<T extends AttributeSchemas> = {
   [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
-    ? undefined extends U
-      ? { span: MappedSpan; value: NonNullable<U> } | undefined
-      : { span: MappedSpan; value: U }
+    ? AttributeValue<U>
     : never;
 };
 
@@ -29,7 +41,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   | { readonly kind: "success"; readonly attributes: AttributeValues<T> }
   | InternalErrors {
   const errors: InternalError[] = [];
-  const values: Record<string, unknown> = {};
+  const values: Record<string, AttributeValue<unknown>> = {};
 
   // Check for unexpected attributes.
   for (const [name, attr] of Object.entries(element.attributes)) {
@@ -49,9 +61,10 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
     if (parsed.success) {
       if (attr !== undefined) {
         values[name] = {
-          span: attr.value,
-          value: parsed.data,
-        };
+          nameSpan: attr.name,
+          valueSpan: attr.value,
+          value: parsed.data!,
+        } satisfies AttributeValue<string>;
       }
     } else if (rawValue === undefined) {
       errors.push({

@@ -399,9 +399,7 @@ describe("validateSchema – shared type names", () => {
 
   it("accepts shared.X in template context when X exists in namespace schema", () => {
     const result = validateSchema(
-      parseDeclarations(
-        "type Input = string;\ntype Output = shared.Profile;",
-      ),
+      parseDeclarations("type Input = string;\ntype Output = shared.Profile;"),
       makeTemplateContext("type Profile = { name: string; };"),
     );
     expect(result).toMatch({ kind: "success" });
@@ -424,9 +422,7 @@ describe("validateSchema – shared type names", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [
-        { message: "'shared' not allowed inside <namespace> elements" },
-      ],
+      errors: [{ message: "'shared' not allowed inside <namespace> elements" }],
     });
   });
 

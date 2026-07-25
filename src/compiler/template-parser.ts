@@ -75,8 +75,8 @@ class TemplateParser {
     return {
       kind: "success",
       tag: this.templateNode.tag,
-      name: name.span,
-      namespace: namespace?.span ?? null,
+      name: name.valueSpan,
+      namespace: namespace?.valueSpan ?? null,
       meta: this.meta,
       schema: this.schema!,
       outputFormat: this.outputFormat,
@@ -198,7 +198,7 @@ class TemplateParser {
     } else {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
-        this.outputFormat = this.parseOutputFormat(outputFormat.span);
+        this.outputFormat = this.parseOutputFormat(outputFormat.valueSpan);
       }
     }
     const textContent = extractTextContent(schemaNode);
@@ -245,7 +245,7 @@ class TemplateParser {
       this.errors.push(...attrs.errors);
       return;
     }
-    const variant = attrs.attributes.name.span;
+    const variant = attrs.attributes.name.valueSpan;
     const promptBuilder = new PromptBuilder();
     for (const child of variantNode.children) {
       if (child.kind === "element") {

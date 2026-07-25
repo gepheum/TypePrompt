@@ -1,21 +1,21 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import { EMPTY_SCHEMA } from "./empty-schema.js";
 import type {
   Array,
   Interface,
   Schema,
   SchemaView,
+  SharedTypeName,
   StringLiteral,
-  SyntheticInterface,
   SyntheticArray,
+  SyntheticInterface,
   Type,
   TypeDeclaration,
   TypeName,
-  SharedTypeName,
   Union,
 } from "./schema-types.js";
-import { EMPTY_SCHEMA } from "./empty-schema.js";
 import {
   isPrimitiveType,
   resolveMaybeInvalidType,
@@ -39,7 +39,12 @@ function sharedTypeName(text: string): SharedTypeName {
 }
 
 function typeDecl(name: string, valueType: Type): TypeDeclaration {
-  return { kind: "type", name: { text: name, start: 0, end: 0 }, valueType, doc: "" };
+  return {
+    kind: "type",
+    name: { text: name, start: 0, end: 0 },
+    valueType,
+    doc: "",
+  };
 }
 
 const INTERFACE: Interface = {

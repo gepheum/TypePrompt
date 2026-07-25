@@ -26,7 +26,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
     }
     rawPieces.push({
       kind: "insert-snippet",
-      snippet: attrs.attributes.snippet.span,
+      snippet: attrs.attributes.snippet.valueSpan,
     });
   };
 
@@ -46,7 +46,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       errors.push(...attrs.errors);
       return;
     }
-    const val = parseExpression(attrs.attributes.val.span, {
+    const val = parseExpression(attrs.attributes.val.valueSpan, {
       acceptIt: true,
     });
     if (val.kind === "error") {

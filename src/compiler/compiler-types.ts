@@ -83,14 +83,19 @@ export type BodyPiece =
     };
 
 export type Expression =
-  | { readonly kind: "input"; span: Span }
-  | { readonly kind: "it"; span: Span }
+  | {
+      readonly kind: "input";
+      readonly fullPath: TextSpan;
+    }
+  | {
+      readonly kind: "it";
+      readonly fullPath: TextSpan;
+    }
   | {
       readonly kind: "property";
       readonly left: Expression;
-      readonly operator: "." | "?.";
-      readonly operatorSpan: Span;
       readonly property: TextSpan;
+      readonly fullPath: TextSpan;
     };
 
 export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";

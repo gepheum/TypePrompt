@@ -577,10 +577,11 @@ describe("parseSchema – comments and JSDoc", () => {
     const result = parseSchema(
       textNode(
         [
-          "type Response = {",
-          "  // a comment",
+          //
+          "type Response = {", //
+          "  // a comment", //
           "  name: string;",
-          "};",
+          "};", //
         ].join("\n"),
       ),
     );

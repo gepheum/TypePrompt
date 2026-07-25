@@ -40,7 +40,7 @@ export function parseNamespace(
 
   return {
     kind: "namespace",
-    name: attrs.attributes.name.span,
+    name: attrs.attributes.name.valueSpan,
     schema: schema,
   };
 }

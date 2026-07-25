@@ -1,6 +1,4 @@
 SCHEMA:
-  - support 'shared'
-    - add unit tests...
   - make naming hint be: field_name+enum...
 
 TEMPLATE PARSER:
@@ -12,18 +10,13 @@ ERRORS:
   - TODO: add 'suggestions' to Error type
   - TODO: add warning
 
-- TODO: refine the SDL
-
 - TODO: expression evaluation and expression guards
 
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
 - TODO: <snippet> <on cond="...">
 - TODO: I really think I need to insert 
 - TODO: think about common schemas...
-- TODO: wonder if I should specify the input using <schema>type Input = {};</schema>
 
-- rename 'example' to 'checked'
-- add <if>? E.g. I may want to add some instructions specifically if some fields are set...
 - https://gemini.google.com/app/daee89170e18267f
 
 
