@@ -63,14 +63,15 @@ export type PromptContent = {
   readonly examples: JsonValue<"strict"> | null;
 };
 
-export type Body = readonly BodyPiece[];
+export type Body<HasValContext extends boolean = false> =
+  readonly BodyPiece<HasValContext>[];
 
-export type BodyPiece =
+export type BodyPiece<HasValContext extends boolean = false> =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "c-tag"; readonly text: string; readonly cTag: CTag }
   | {
       readonly kind: "insert-val";
-      readonly val: Expression;
+      readonly val: Expression<HasValContext>;
       readonly format: InsertFormat | null;
       /** Only contains whitespace characters. */
       readonly indent: string;
@@ -82,21 +83,25 @@ export type BodyPiece =
       readonly indent: string;
     };
 
-export type Expression =
+export type Expression<HasValContext extends boolean = false> =
   | {
       readonly kind: "input";
       readonly fullPath: TextSpan;
     }
   | {
-      readonly kind: "it";
-      readonly fullPath: TextSpan;
-    }
-  | {
       readonly kind: "property";
-      readonly left: Expression;
+      readonly left: Expression<HasValContext>;
       readonly property: TextSpan;
       readonly fullPath: TextSpan;
-    };
+    }
+  | (HasValContext extends true
+      ? {
+          readonly kind: "it";
+          readonly fullPath: TextSpan;
+        }
+      : never);
+
+export type ExpressionInContext = Expression<true>;
 
 export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";
 
@@ -109,14 +114,14 @@ export type Snippet =
   | {
       readonly kind: "snippet-if";
       readonly name: string;
-      readonly condition: Expression;
+      readonly condition: ExpressionInContext;
       readonly thenBody: Body;
       readonly elseBody: Body;
     }
   | {
       readonly kind: "snippet-switch";
       readonly name: string;
-      readonly val: Expression;
+      readonly val: ExpressionInContext;
       readonly cases: ReadonlyArray<{
         readonly when: string;
         readonly body: Body;

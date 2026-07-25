@@ -2,16 +2,16 @@ import { InternalErrors, MappedText, TextSpan } from "../util/common-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { Expression } from "./compiler-types.js";
 
-export type ExpressionParseResult =
-  | { readonly kind: "success"; readonly expression: Expression }
+export type ExpressionParseResult<HasValContext extends boolean> =
+  | { readonly kind: "success"; readonly expression: Expression<HasValContext> }
   | InternalErrors;
 
-export function parseExpression(
+export function parseExpression<HasValContext extends boolean>(
   content: MappedText,
   options: {
-    acceptIt: boolean;
+    readonly hasValContext: HasValContext,
   },
-): ExpressionParseResult {
+): ExpressionParseResult<HasValContext> {
   const { text } = content;
   const { length } = text;
 
@@ -27,7 +27,7 @@ export function parseExpression(
     start: number,
     end: number,
     message: string,
-  ): ExpressionParseResult => {
+  ): ExpressionParseResult<HasValContext> => {
     return {
       kind: "error",
       errors: [{ span: mappedSpan(start, end), message }],
@@ -36,15 +36,14 @@ export function parseExpression(
 
   // Parse base: "input" | "it"
   let pos = 0;
-  let expr: Expression;
+  let expr: Expression<true>;
 
   BASE_PATTERN.lastIndex = pos;
   const baseMatch = BASE_PATTERN.exec(text);
 
   if (!baseMatch) {
-    const message = options.acceptIt
-      ? 'Expected "input" or "it"'
-      : 'Expected "input"';
+    const message =
+      options.hasValContext ? "Expected 'input' or 'it'" : "Expected 'input'";
     return fail(pos, length, message);
   }
 
@@ -53,7 +52,7 @@ export function parseExpression(
     baseText === "input"
       ? { kind: "input", fullPath: mappedSpan(pos, pos + baseText.length) }
       : { kind: "it", fullPath: mappedSpan(pos, pos + baseText.length) };
-  if (baseText === "it" && !options.acceptIt) {
+  if (baseText === "it" && !options.hasValContext) {
     return fail(pos, pos + baseText.length, '"it" not allowed here');
   }
   pos += baseText.length;
@@ -99,7 +98,7 @@ export function parseExpression(
     };
   }
 
-  return { kind: "success", expression: expr };
+  return { kind: "success", expression: expr as Expression<HasValContext> };
 }
 
 const BASE_PATTERN = /(input|it)(?![a-zA-Z0-9])/y;

@@ -312,7 +312,7 @@ class PromptBuilder {
             message: `Multiple <${tag}> elements`,
           });
         }
-        this[tag] = parseBody(e, errors);
+        this[tag] = parseBody(e, errors, { hasValContext: false });
         break;
       }
       case "examples": {

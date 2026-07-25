@@ -10,8 +10,14 @@ import { textToSourcePosition } from "../util/position-mapper.js";
 import { parseExpression } from "./expression-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
-export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
-  const rawPieces: RawBodyPiece[] = [];
+export function parseBody<HasValContext extends boolean>(
+  parentNode: ElementNode,
+  errors: ErrorSink,
+  options: {
+    readonly hasValContext: HasValContext,
+  }
+): Body<HasValContext> {
+  const rawPieces: Array<RawBodyPiece<HasValContext>> = [];
 
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkXmlAttributes(insertNode, {
@@ -46,9 +52,7 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
       errors.push(...attrs.errors);
       return;
     }
-    const val = parseExpression(attrs.attributes.val.valueSpan, {
-      acceptIt: true,
-    });
+    const val = parseExpression(attrs.attributes.val.valueSpan, options);
     if (val.kind === "error") {
       errors.push(...val.errors);
       return;
@@ -129,13 +133,13 @@ export function parseBody(parentNode: ElementNode, errors: ErrorSink): Body {
 }
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */
-type RawBodyPiece<Text = MappedText> =
+type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
   | { readonly kind: "text"; readonly text: Text }
   | { readonly kind: "c-tag"; readonly text: Text; readonly cTag: CTag }
   | { readonly kind: "synthetic-text"; readonly text: string }
   | {
       readonly kind: "insert-val";
-      readonly val: Expression;
+      readonly val: Expression<HasValContext>;
       readonly format: InsertFormat | null;
     }
   | {
@@ -144,17 +148,20 @@ type RawBodyPiece<Text = MappedText> =
     };
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */
-type DedentedPiece = RawBodyPiece<string>;
+type DedentedPiece<HasValContext extends boolean> = RawBodyPiece<
+  HasValContext,
+  string
+>;
 
-function dedentRawPieces(
-  rawPieces: readonly RawBodyPiece[],
+function dedentRawPieces<HasValContext extends boolean>(
+  rawPieces: readonly RawBodyPiece<HasValContext>[],
   errors: ErrorSink,
-): DedentedPiece[] {
+): DedentedPiece<HasValContext>[] {
   const firstRaw = rawPieces[0];
   const baseIndent =
     firstRaw?.kind === "text" ? computeBaseIndent(firstRaw.text) : "";
 
-  const dedented: DedentedPiece[] = [];
+  const dedented: Array<DedentedPiece<HasValContext>> = [];
   for (const p of rawPieces) {
     if (p.kind === "text" || p.kind === "c-tag") {
       let text = removeIndentAfterEol(p.text, baseIndent, errors);
@@ -239,7 +246,9 @@ function removeIndentAfterEol(
   return out;
 }
 
-function toBodyPieces(dedentedPieces: readonly DedentedPiece[]): BodyPiece[] {
+function toBodyPieces<HasValContext extends boolean>(
+  dedentedPieces: ReadonlyArray<DedentedPiece<HasValContext>>,
+): ReadonlyArray<BodyPiece<HasValContext>> {
   let lastLineState: { allWhitespace: boolean; indent: string } | undefined;
   const updateLastLineState = (text: string): void => {
     const lastEol = text.lastIndexOf("\n");
@@ -262,7 +271,7 @@ function toBodyPieces(dedentedPieces: readonly DedentedPiece[]): BodyPiece[] {
     }
   };
 
-  const result: BodyPiece[] = [];
+  const result: Array<BodyPiece<HasValContext>> = [];
 
   for (const dedentedPiece of dedentedPieces) {
     switch (dedentedPiece.kind) {
