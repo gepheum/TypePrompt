@@ -1,0 +1,126 @@
+import { ResolvedType } from "../schema/schema-types";
+import { InternalErrors } from "../util/common-types";
+import { AttributeValue } from "../xml/xml-attributes-checker";
+import { Expression, ExpressionContext, NullableType } from "./expression-types";
+
+export type IfExpressionResult =
+  | {
+      readonly kind: "success";
+      readonly then: ExpressionContext;
+      readonly else: ExpressionContext;
+    }
+  | InternalErrors;
+
+export function resolveIfExpression(
+  expression: Expression,
+  type: ResolvedType | NullableType,
+  is: AttributeValue<"notNull" | "notEmpty" | undefined>,
+): IfExpressionResult {
+  const it: ExpressionContext["it"] = { expression, type };
+
+  if (type.kind === "primitive" && type.primitive === "boolean") {
+    if (is) {
+      return {
+        kind: "error",
+        errors: [
+          {
+            span: is.valueSpan,
+            message: `Cannot use 'is' attribute with boolean type`,
+            hint: "Remove the 'is' attribute",
+          },
+        ],
+      };
+    } else {
+      return {
+        kind: "success",
+        then: { it, typeOverrides: {} },
+        else: { it, typeOverrides: {} },
+      };
+    }
+  } else if (type.kind === "nullable") {
+    if (is?.value === "notNull") {
+      return {
+        kind: "success",
+        then: {
+          it,
+          typeOverrides: {
+            [expression.fullPath.text]: type.type,
+          },
+        },
+        else: {
+          it,
+          typeOverrides: {
+            [expression.fullPath.text]: { kind: "null" },
+          },
+        },
+      };
+    } else {
+      return {
+        kind: "error",
+        errors: [
+          {
+            span: is?.valueSpan ?? expression.fullPath,
+            message: `must use 'is="notNull"' with nullable type`,
+          },
+        ],
+      };
+    }
+  } else if (
+    type.kind === "array" ||
+    (type.kind === "primitive" && type.primitive === "string")
+  ) {
+    if (is?.value === "notEmpty") {
+      return {
+        kind: "success",
+        then: { it, typeOverrides: {} },
+        else: { it, typeOverrides: {} },
+      };
+    } else {
+      return {
+        kind: "error",
+        errors: [
+          {
+            span: is?.valueSpan ?? expression.fullPath,
+            message: `must use 'is="notEmpty"' with array or string type`,
+          },
+        ],
+      };
+    }
+  } else {
+    switch (is?.value) {
+      case "notNull": {
+        return {
+          kind: "error",
+          errors: [
+            {
+              span: expression.fullPath,
+              message: "Expected: nullable value",
+            },
+          ],
+        };
+      }
+      case "notEmpty": {
+        return {
+          kind: "error",
+          errors: [
+            {
+              span: expression.fullPath,
+              message: "Expected: array or string",
+            },
+          ],
+        };
+      }
+      case undefined: {
+        return {
+          kind: "error",
+          errors: [
+            {
+              span: expression.fullPath,
+              message: "Expected: boolean",
+            },
+          ],
+        };
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { ResolvedType } from "../schema/schema-types.js";
 import { TextSpan } from "../util/common-types.js";
 
 export type Expression<HasValContext extends boolean = false> =
@@ -19,3 +20,19 @@ export type Expression<HasValContext extends boolean = false> =
       : never);
 
 export type ExpressionInContext = Expression<true>;
+
+export type NullType = { readonly kind: "null" };
+export type NullableType = {
+  readonly kind: "nullable";
+  readonly type: ResolvedType;
+};
+
+export type ExpressionContext = {
+  readonly it: {
+    readonly expression: Expression;
+    readonly type: ResolvedType | NullableType;
+  };
+  readonly typeOverrides: {
+    readonly [fullPath: string]: ResolvedType | NullType;
+  };
+};
