@@ -406,7 +406,13 @@ class TemplateParser {
                 hasValContext: true,
               });
               for (const option of options) {
-                CACA;
+                if (seenOptions.has(option)) {
+                  this.errors.push({
+                    span: attrs.attributes.when.valueSpan,
+                    message: `Duplicate option '${option}'`,
+                  });
+                }
+                seenOptions.add(option);
                 cases.push({ option, body });
               }
               break;
