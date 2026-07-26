@@ -1,6 +1,7 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNoAmbiguity } from "../util/casing.js";
 import { InternalError } from "../util/shared-types.js";
+import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,
@@ -46,46 +47,38 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
     return result;
   }
 
-  for (const topLevelNode of xmlDocument.root.topLevelNodes) {
-    switch (topLevelNode.kind) {
-      case "element": {
-        switch (topLevelNode.tag.text) {
-          case "template": {
-            const template = parseTemplate(topLevelNode);
-            if (template.kind === "error") {
-              result.parseErrors.push(...template.errors);
-            } else {
-              result.templates.push(template);
-            }
-            break;
-          }
-          case "namespace": {
-            const namespace = parseNamespace(topLevelNode);
-            if (namespace.kind === "error") {
-              result.parseErrors.push(...namespace.errors);
-            } else {
-              result.namespaces.push(namespace);
-            }
-            break;
-          }
-          case "meta": {
-            const meta = parseMeta(topLevelNode);
-            if (meta.kind === "error") {
-              result.parseErrors.push(...meta.errors);
-            } else {
-              result.metas.push(meta);
-            }
-            break;
-          }
+  const topLevelNodes = checkAllAreElements(
+    xmlDocument.root.topLevelNodes,
+    ["template", "namespace", "meta"],
+    result.parseErrors,
+    " at the top level",
+  );
+  for (const [tag, topLevelNode] of topLevelNodes) {
+    switch (tag) {
+      case "template": {
+        const template = parseTemplate(topLevelNode);
+        if (template.kind === "error") {
+          result.parseErrors.push(...template.errors);
+        } else {
+          result.templates.push(template);
         }
         break;
       }
-      case "text": {
-        if (!topLevelNode.allWhitespace) {
-          result.parseErrors.push({
-            span: topLevelNode,
-            message: "Unexpected text at the top level",
-          });
+      case "namespace": {
+        const namespace = parseNamespace(topLevelNode);
+        if (namespace.kind === "error") {
+          result.parseErrors.push(...namespace.errors);
+        } else {
+          result.namespaces.push(namespace);
+        }
+        break;
+      }
+      case "meta": {
+        const meta = parseMeta(topLevelNode);
+        if (meta.kind === "error") {
+          result.parseErrors.push(...meta.errors);
+        } else {
+          result.metas.push(meta);
         }
         break;
       }
