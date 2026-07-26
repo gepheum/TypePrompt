@@ -128,15 +128,7 @@ class TemplateParser {
         case "system":
         case "user":
         case "examples": {
-          if (args.hasVariants) {
-            this.errors.push({
-              span: child.tag,
-              message: `Unexpected <${child.tag.text}> element in <template with="variants">'`,
-              hint: "Move into a <variant> element",
-            });
-          } else {
-            this.noVariantsPrompt.parse(child, this.errors);
-          }
+          this.topLevelPrompt.parse(child, this.errors);
           break;
         }
         case "variant": {
@@ -263,26 +255,32 @@ class TemplateParser {
         }
       }
     }
-    const prompt = promptBuilder.build(variantNode.tag, this.errors);
-    if (prompt !== null) {
-      this.promptVariants.push({
-        variant: variant,
-        content: prompt,
-      });
-    }
+    this.variants.push({
+      tag: variantNode.tag,
+      variant: variant,
+      content: promptBuilder,
+    });
   }
 
   private buildPromptContents(args: {
     hasVariants: boolean;
   }): PromptContents | null {
     if (args.hasVariants) {
+      const topLevelPrompt = this.topLevelPrompt.buildPartial();
+      const variants: PromptVariant[] = [];
+      for (const v of this.variants) {
+        const content = v.content.build(v.tag, topLevelPrompt, this.errors);
+        if (content === null) continue;
+        const { variant } = v;
+        variants.push({ variant, content });
+      }
       return {
         kind: "variants",
-        variants: this.promptVariants,
+        variants: variants,
       };
     } else {
       const templateTag = this.templateNode.tag;
-      const content = this.noVariantsPrompt.build(templateTag, this.errors);
+      const content = this.topLevelPrompt.build(templateTag, null, this.errors);
       if (content === null) {
         return null;
       }
@@ -568,15 +566,33 @@ class TemplateParser {
   private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
   private outputFormat: OutputFormat | null = null;
-  private readonly noVariantsPrompt = new PromptBuilder();
-  private readonly promptVariants: PromptVariant[] = [];
+  private readonly topLevelPrompt = new PromptBuilder();
+  private readonly variants: VariantBuilder[] = [];
   private readonly snippets: Snippet[] = [];
 }
 
+type VariantBuilder = {
+  readonly tag: Span;
+  /** Variant name. */
+  readonly variant: TextSpan;
+  readonly content: PromptBuilder;
+};
+
+type PartialPromptContent = {
+  readonly system?: Body;
+  readonly user?: Body;
+  readonly examples?: JsonValue<"strict">;
+};
+
+type WithSpan<T> = {
+  readonly value: T;
+  readonly span: Span;
+};
+
 class PromptBuilder {
-  system: Body | undefined;
-  user: Body | undefined;
-  examples: JsonValue<"strict"> | undefined;
+  system: WithSpan<Body> | undefined;
+  user: WithSpan<Body> | undefined;
+  examples: WithSpan<JsonValue<"strict">> | undefined;
 
   parse(e: ElementNode, errors: ErrorSink): void {
     const tag = e.tag.text;
@@ -589,7 +605,8 @@ class PromptBuilder {
             message: `Multiple <${tag}> elements`,
           });
         }
-        this[tag] = parseBody(e, errors, { hasValContext: false });
+        const body = parseBody(e, errors, { hasValContext: false });
+        this[tag] = { value: body, span: e.tag };
         break;
       }
       case "examples": {
@@ -607,7 +624,7 @@ class PromptBuilder {
           if (examples.kind === "error") {
             errors.push(...examples.errors);
           } else {
-            this.examples = examples;
+            this.examples = { value: examples, span: e.tag };
           }
         }
         break;
@@ -623,26 +640,40 @@ class PromptBuilder {
     }
   }
 
-  build(parentTag: Span, errors: ErrorSink): PromptContent | null {
-    const { system, user, examples } = this;
-    if (system === undefined) {
-      errors.push({
-        span: parentTag,
-        message: "Missing <system> element",
-      });
-      return null;
+  build(
+    parentTag: Span,
+    defaultPrompt: PartialPromptContent | null,
+    errors: ErrorSink,
+  ): PromptContent | null {
+    for (const tag of ["system", "user", "examples"] as const) {
+      if (this[tag] && defaultPrompt?.[tag]) {
+        errors.push({
+          span: this[tag].span,
+          message: `<${tag}> is already specified at the <template> level`,
+          hint: `Remove the <${tag}> element from the <template> level or from the <variant> level`,
+        });
+      }
+
+      if (tag !== "examples" && !this[tag] && !defaultPrompt?.[tag]) {
+        errors.push({
+          span: parentTag,
+          message: `Missing <${tag}> element`,
+        });
+      }
     }
-    if (user === undefined) {
-      errors.push({
-        span: parentTag,
-        message: "Missing <user> element",
-      });
-      return null;
-    }
+
     return {
-      system: system,
-      user: user,
-      examples: examples ?? null,
+      system: (this.system?.value ?? defaultPrompt?.system)!,
+      user: (this.user?.value ?? defaultPrompt?.user)!,
+      examples: this.examples?.value ?? defaultPrompt?.examples ?? null,
+    };
+  }
+
+  buildPartial(): PartialPromptContent {
+    return {
+      system: this.system?.value,
+      user: this.user?.value,
+      examples: this.examples?.value,
     };
   }
 }

@@ -1,10 +1,8 @@
 SCHEMA:
   - make naming hint be: field_name+enum...
 
-CODE QUALITY:
-  - Utility function for filtering a list of children by what element they contain... Return error if a child is either a non-whitespace textnode or an element with a tag name different from the tag names expected... Set the 'suggestions' field of error. 
-
 TEMPLATE PARSER:
+  - what about <variant when='...'> instead of <variant name='...'>
   - verify the types of all the insert expressions and all the 'format'
   - Verify that output formats across templates don't intersect
   - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
@@ -14,7 +12,6 @@ ERRORS:
   - TODO: add warning
   - Verify consistency in quoting in error messages... I think I want to use single quote, and not quote <element>
 
-
 CODE GENERATION:
   - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"
 
@@ -23,7 +20,6 @@ IDÉE BUSINESS:
 
 LATER?
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
-
 
 MISC:
 - https://gemini.google.com/app/daee89170e18267f
