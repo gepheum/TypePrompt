@@ -5,11 +5,9 @@ CODE QUALITY:
   - Utility function for filtering a list of children by what element they contain... Return error if a child is either a non-whitespace textnode or an element with a tag name different from the tag names expected... Set the 'suggestions' field of error. 
 
 TEMPLATE PARSER:
-  - Parse the snippets
-  - Verify that all snippets are used and all snippet references are correct
-  - verify the types of all the snippet expressions and all the 'format'
+  - verify the types of all the insert expressions and all the 'format'
   - Verify that output formats across templates don't intersect
-  - Support warnings, for XML comments where other comments would be accepted
+  - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
 - TODO: think about toolcalls
 
 ERRORS:

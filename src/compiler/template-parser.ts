@@ -29,6 +29,7 @@ import {
 import * as z from "zod";
 import { parseExpression } from "../expression/expression-parser.js";
 import { checkNoAmbiguity } from "../util/casing.js";
+import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
@@ -96,59 +97,48 @@ class TemplateParser {
   }
 
   private parseChildren(args: { hasVariants: boolean }): void {
-    for (const child of this.templateNode.children) {
-      switch (child.kind) {
-        case "text": {
-          if (!child.allWhitespace) {
+    const children = checkAllAreElements(
+      this.templateNode.children,
+      ["meta", "schema", "snippet", "system", "user", "examples", "variant"],
+      this.errors,
+      " in <template>",
+    );
+    for (const [tag, child] of children) {
+      switch (tag) {
+        case "meta": {
+          this.parseMeta(child);
+          break;
+        }
+        case "schema": {
+          this.parseSchema(child);
+          break;
+        }
+        case "snippet": {
+          this.parseSnippet(child);
+          break;
+        }
+        case "system":
+        case "user":
+        case "examples": {
+          if (args.hasVariants) {
             this.errors.push({
-              span: child,
-              message: "Unexpected text content in <template>",
+              span: child.tag,
+              message: `Unexpected <${child.tag.text}> element in <template with="variants">'`,
+              hint: "Move into a <variant> element",
             });
+          } else {
+            this.noVariantsPrompt.parse(child, this.errors);
           }
           break;
         }
-        case "element": {
-          switch (child.tag.text) {
-            case "meta": {
-              this.parseMeta(child);
-              break;
-            }
-            case "schema": {
-              this.parseSchema(child);
-              break;
-            }
-            case "snippet": {
-              this.parseSnippet(child);
-              break;
-            }
-            case "system":
-            case "user":
-            case "examples": {
-              if (args.hasVariants) {
-                this.errors.push({
-                  span: child.tag,
-                  message: `Unexpected <${child.tag.text}> element in <template with="variants">'`,
-                  hint: "Move into a <variant> element",
-                });
-              } else {
-                this.noVariantsPrompt.parse(child, this.errors);
-              }
-              break;
-            }
-            case "variant": {
-              if (args.hasVariants) {
-                this.parseVariant(child);
-              } else {
-                this.errors.push({
-                  span: child.tag,
-                  message: '<template> is missing with="variants" attribute',
-                });
-              }
-              break;
-            }
-            default: {
-              break;
-            }
+        case "variant": {
+          if (args.hasVariants) {
+            this.parseVariant(child);
+          } else {
+            this.errors.push({
+              span: child.tag,
+              message: '<template> is missing with="variants" attribute',
+            });
           }
           break;
         }
@@ -250,14 +240,19 @@ class TemplateParser {
     }
     const variant = attrs.attributes.name.valueSpan;
     const promptBuilder = new PromptBuilder();
-    for (const child of variantNode.children) {
-      if (child.kind === "element") {
-        promptBuilder.parse(child, this.errors);
-      } else if (!child.allWhitespace) {
-        this.errors.push({
-          span: child,
-          message: "Unexpected text content in <variant>",
-        });
+    const children = checkAllAreElements(
+      variantNode.children,
+      ["system", "user", "examples"],
+      this.errors,
+      " in <variant>",
+    );
+    for (const [tag, child] of children) {
+      switch (tag) {
+        case "system":
+        case "user":
+        case "examples": {
+          promptBuilder.parse(child, this.errors);
+        }
       }
     }
     const prompt = promptBuilder.build(variantNode.tag, this.errors);
@@ -364,43 +359,27 @@ class TemplateParser {
       then?: BodyInContext;
       else?: BodyInContext;
     } = {};
-    for (const child of snippetNode.children) {
-      switch (child.kind) {
-        case "text": {
-          if (!child.allWhitespace) {
+    const children = checkAllAreElements(
+      snippetNode.children,
+      ["then", "else"],
+      this.errors,
+      " in <snippet if='...'>",
+    );
+    for (const [tag, child] of children) {
+      switch (tag) {
+        case "then":
+        case "else": {
+          this.errors.push(...checkNoXmlAttributes(child));
+          if (branches[tag] !== undefined) {
             this.errors.push({
-              span: child,
-              message: "Unexpected text content in <snippet if='...'>",
+              span: child.tag,
+              message: `Multiple <${tag}> elements in <snippet if='...'>`,
             });
           }
+          branches[tag] = parseBody(child, this.errors, {
+            hasValContext: true,
+          });
           break;
-        }
-        case "element": {
-          const tag = child.tag.text;
-          switch (tag) {
-            case "then":
-            case "else": {
-              this.errors.push(...checkNoXmlAttributes(child));
-              if (branches[tag] !== undefined) {
-                this.errors.push({
-                  span: child.tag,
-                  message: `Multiple <${tag}> elements in <snippet if='...'>`,
-                });
-              }
-              branches[tag] = parseBody(child, this.errors, {
-                hasValContext: true,
-              });
-              break;
-            }
-            default: {
-              this.errors.push({
-                span: child.tag,
-                message: `Unexpected element <${tag}> in <snippet if='...'>`,
-                suggestions: ["then", "else"],
-              });
-              break;
-            }
-          }
         }
       }
     }
@@ -439,56 +418,40 @@ class TemplateParser {
       readonly body: BodyInContext;
     }> = [];
     const seenOptions = new Set<string>();
-    for (const child of snippetNode.children) {
-      switch (child.kind) {
-        case "text": {
-          if (!child.allWhitespace) {
-            this.errors.push({
-              span: child,
-              message: "Unexpected text content in <snippet switch='...'>",
-            });
+    const children = checkAllAreElements(
+      snippetNode.children,
+      ["case"],
+      this.errors,
+      " in <snippet switch='...'>",
+    );
+    for (const [tag, child] of children) {
+      switch (tag) {
+        case "case": {
+          const attrs = checkXmlAttributes(child, {
+            when: {
+              schema: z.string().regex(/^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$/),
+              expected: "comma-separated identifiers",
+            },
+          });
+          if (attrs.kind === "error") {
+            this.errors.push(...attrs.errors);
+            break;
+          }
+          const options = attrs.attributes.when.valueSpan.text.split(",");
+          const body = parseBody(child, this.errors, {
+            hasValContext: true,
+          });
+          for (const option of options) {
+            if (seenOptions.has(option)) {
+              this.errors.push({
+                span: attrs.attributes.when.valueSpan,
+                message: `Duplicate option '${option}'`,
+              });
+            }
+            seenOptions.add(option);
+            cases.push({ option, body });
           }
           break;
-        }
-        case "element": {
-          const tag = child.tag.text;
-          switch (tag) {
-            case "case": {
-              const attrs = checkXmlAttributes(child, {
-                when: {
-                  schema: z.string().regex(/^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$/),
-                  expected: "comma-separated identifiers",
-                },
-              });
-              if (attrs.kind === "error") {
-                this.errors.push(...attrs.errors);
-                break;
-              }
-              const options = attrs.attributes.when.valueSpan.text.split(",");
-              const body = parseBody(child, this.errors, {
-                hasValContext: true,
-              });
-              for (const option of options) {
-                if (seenOptions.has(option)) {
-                  this.errors.push({
-                    span: attrs.attributes.when.valueSpan,
-                    message: `Duplicate option '${option}'`,
-                  });
-                }
-                seenOptions.add(option);
-                cases.push({ option, body });
-              }
-              break;
-            }
-            default: {
-              this.errors.push({
-                span: child.tag,
-                message: `Unexpected element <${tag}> in <snippet switch='...'>`,
-                suggestions: ["case"],
-              });
-              break;
-            }
-          }
         }
       }
     }

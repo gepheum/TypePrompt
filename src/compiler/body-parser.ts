@@ -49,7 +49,7 @@ export function parseBody<HasValContext extends boolean>(
       },
       format: {
         schema: z.enum(["text", "json", "toon", "csv", "tsv"]).optional(),
-        expected: "a lowerCamelCase identifier",
+        expected: "one of: 'text', 'json', 'toon', 'csv', 'tsv'",
       },
     });
     if (attrs.kind === "error") {
