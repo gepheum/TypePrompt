@@ -335,7 +335,7 @@ class TemplateParser {
               this.errors.push({
                 span: child.tag,
                 message: `Unexpected element <${child.tag.text}> in <snippet if='...'>`,
-                hint: "Use <then> or <else> instead",
+                suggestions: ["then", "else"],
               });
               break;
             }
@@ -483,6 +483,7 @@ class PromptBuilder {
         errors.push({
           span: e.tag,
           message: `Unexpected element <${tag}>`,
+          suggestions: ["system", "user", "examples"],
         });
         break;
       }
