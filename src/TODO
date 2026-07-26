@@ -1,5 +1,6 @@
 SCHEMA:
   - make naming hint be: field_name+enum...
+  - populate shared fields on interface union?
 
 TEMPLATE PARSER:
   - what about <variant when='...'> instead of <variant name='...'>

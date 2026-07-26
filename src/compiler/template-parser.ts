@@ -137,7 +137,7 @@ class TemplateParser {
           } else {
             this.errors.push({
               span: child.tag,
-              message: '<template> is missing with="variants" attribute',
+              message: `<template> is missing 'with="variants"' attribute`,
             });
           }
           break;
