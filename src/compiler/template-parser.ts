@@ -11,6 +11,7 @@ import {
 } from "../util/shared-types.js";
 import {
   AttributeValue,
+  checkNoXmlAttributes,
   checkXmlAttributes,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
@@ -164,8 +165,7 @@ class TemplateParser {
       ),
     );
     if (this.errors.length <= 0) {
-      CACA
-      // TODO: verify all snippets are indeed referencable and used
+      this.verifySnippets();
     }
   }
 
@@ -176,10 +176,7 @@ class TemplateParser {
         message: "Multiple <meta> elements found in <template>",
       });
     }
-    const attrs = checkXmlAttributes(metaNode, {});
-    if (attrs.kind === "error") {
-      this.errors.push(...attrs.errors);
-    }
+    this.errors.push(...checkNoXmlAttributes(metaNode));
     const textContent = extractTextContent(metaNode);
     if (textContent.kind === "error") {
       this.errors.push(...textContent.errors);
@@ -320,6 +317,7 @@ class TemplateParser {
           switch (tag) {
             case "then":
             case "else": {
+              this.errors.push(...checkNoXmlAttributes(child));
               if (branches[tag] !== undefined) {
                 this.errors.push({
                   span: child.tag,
@@ -373,9 +371,11 @@ class TemplateParser {
       this.errors.push(...expression.errors);
       return;
     }
-    const branches: {
-      readonly [option: string]: BodyInContext;
-    } = {};
+    const cases: Array<{
+      readonly option: string;
+      readonly body: BodyInContext;
+    }> = [];
+    const seenOptions = new Set<string>();
     for (const child of snippetNode.children) {
       switch (child.kind) {
         case "text": {
@@ -391,10 +391,24 @@ class TemplateParser {
           const tag = child.tag.text;
           switch (tag) {
             case "case": {
-              CACA
-              branches[tag] = parseBody(child, this.errors, {
+              const attrs = checkXmlAttributes(child, {
+                when: {
+                  schema: z.string().regex(/^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$/),
+                  expected: "comma-separated identifiers",
+                },
+              });
+              if (attrs.kind === "error") {
+                this.errors.push(...attrs.errors);
+                break;
+              }
+              const options = attrs.attributes.when.valueSpan.text.split(",");
+              const body = parseBody(child, this.errors, {
                 hasValContext: true,
               });
+              for (const option of options) {
+                CACA;
+                cases.push({ option, body });
+              }
               break;
             }
             default: {
@@ -413,7 +427,7 @@ class TemplateParser {
       kind: "snippet-switch",
       name: snippetNode.tag,
       expression: expression.expression,
-      cases: {},
+      cases: cases,
     });
   }
 

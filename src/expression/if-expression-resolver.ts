@@ -1,7 +1,11 @@
 import { ResolvedType } from "../schema/schema-types.js";
 import { InternalErrors } from "../util/shared-types.js";
 import { AttributeValue } from "../xml/xml-attributes-checker.js";
-import { Expression, ExpressionContext, NullableType } from "./expression-types.js";
+import {
+  Expression,
+  ExpressionContext,
+  NullableType,
+} from "./expression-types.js";
 
 export type IfExpressionResult =
   | {

@@ -3,8 +3,8 @@ import { describe, it } from "mocha";
 
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode, TextNode } from "../xml/xml-types.js";
-import { MappedText } from "./shared-types.js";
 import { textToSourcePosition } from "./position-mapper.js";
+import { MappedText } from "./shared-types.js";
 import { joinTextNodes } from "./text-node-joiner.js";
 
 function expectSuccess(

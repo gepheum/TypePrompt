@@ -1,5 +1,5 @@
-import { InternalErrors, MappedText, TextSpan } from "../util/shared-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
+import { InternalErrors, MappedText, TextSpan } from "../util/shared-types.js";
 import { Expression, ExpressionInContext } from "./expression-types.js";
 
 export type ExpressionParseResult<HasValContext extends boolean> =

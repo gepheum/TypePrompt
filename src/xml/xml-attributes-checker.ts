@@ -84,3 +84,14 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   }
   return { kind: "success", attributes: values as AttributeValues<T> };
 }
+
+export function checkNoXmlAttributes(
+  element: ElementNode,
+): readonly InternalError[] {
+  const attrs = checkXmlAttributes(element, {});
+  if (attrs.kind === "error") {
+    return attrs.errors;
+  } else {
+    return [];
+  }
+}

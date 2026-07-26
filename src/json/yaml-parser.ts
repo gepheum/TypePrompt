@@ -1,11 +1,11 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   InternalErrors,
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
-import { textToSourcePosition } from "../util/position-mapper.js";
 import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
 
 export function parseYaml(

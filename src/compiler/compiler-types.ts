@@ -107,7 +107,7 @@ export type Snippet =
       readonly name: TextSpan;
       readonly expression: Expression;
       readonly cases: ReadonlyArray<{
-        readonly when: string;
+        readonly option: string;
         readonly body: BodyInContext;
       }>;
     };

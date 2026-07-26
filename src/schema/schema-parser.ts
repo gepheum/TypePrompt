@@ -1,11 +1,11 @@
 import { checkNoAmbiguity } from "../util/casing.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   InternalError,
   InternalErrors,
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
-import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   SchemaField,
   SchemaParseResult,

@@ -1,10 +1,10 @@
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   InternalError,
   InternalErrors,
   MappedText,
   Span,
 } from "../util/shared-types.js";
-import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   JsonArray,
   JsonBoolean,

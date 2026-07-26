@@ -1,5 +1,8 @@
 import type { ErrorSink, MappedText, TextSpan } from "../util/shared-types.js";
-import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
+import {
+  checkNoXmlAttributes,
+  checkXmlAttributes,
+} from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
 import type { Body, BodyPiece, InsertFormat } from "./compiler-types.js";
 
@@ -73,10 +76,7 @@ export function parseBody<HasValContext extends boolean>(
     }
     const tag = child.tag.text;
     if (tag === "c") {
-      const attrs = checkXmlAttributes(child, {});
-      if (attrs.kind === "error") {
-        errors.push(...attrs.errors);
-      }
+      errors.push(...checkNoXmlAttributes(child));
       const textContent = extractTextContent(child);
       if (textContent.kind === "error") {
         errors.push(...textContent.errors);
