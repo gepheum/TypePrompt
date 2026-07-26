@@ -21,6 +21,9 @@ export function resolveSwitchExpression(
   schema: SchemaView,
 ): SwitchExpressionResult {
   const it: ExpressionContext["it"] = { expression, type };
+  if (type.kind === "string-literal") {
+    type = { kind: "union", members: [type] };
+  }
   if (type.kind !== "union") {
     return {
       kind: "error",
