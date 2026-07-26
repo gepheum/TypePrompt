@@ -1,7 +1,7 @@
 import { jsonMatchesType, validateJson } from "../json/json-type-checker.js";
 import type { Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { InternalError } from "../util/common-types.js";
+import type { InternalError } from "../util/shared-types.js";
 import type { CTag } from "./ctag-types.js";
 
 export { validateJson };

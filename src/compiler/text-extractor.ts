@@ -2,7 +2,7 @@ import {
   InternalError,
   InternalErrors,
   MappedText,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
 import { ElementNode } from "../xml/xml-types.js";
 

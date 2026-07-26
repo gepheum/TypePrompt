@@ -1,4 +1,4 @@
-import type { Span, TextSpan } from "../util/common-types.js";
+import type { Span, TextSpan } from "../util/shared-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";

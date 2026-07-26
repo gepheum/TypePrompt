@@ -1,7 +1,7 @@
 import { ResolvedType, SchemaView } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
-import { InternalErrors } from "../util/common-types.js";
+import { InternalErrors } from "../util/shared-types.js";
 import {
   Expression,
   ExpressionContext,

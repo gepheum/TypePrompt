@@ -1,5 +1,5 @@
 import { parseJson } from "../json/json-parser.js";
-import type { InternalErrors, MappedText } from "../util/common-types.js";
+import type { InternalErrors, MappedText } from "../util/shared-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { CTag } from "./ctag-types.js";
 

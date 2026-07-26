@@ -1,4 +1,4 @@
-import { InternalErrors, MappedText, TextSpan } from "../util/common-types.js";
+import { InternalErrors, MappedText, TextSpan } from "../util/shared-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import { Expression, ExpressionInContext } from "./expression-types.js";
 

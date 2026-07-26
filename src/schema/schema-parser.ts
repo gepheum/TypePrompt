@@ -4,7 +4,7 @@ import type {
   InternalErrors,
   MappedText,
   TextSpan,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   SchemaField,

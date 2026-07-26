@@ -1,4 +1,4 @@
-import { TextSpan } from "./common-types.js";
+import { TextSpan } from "./shared-types.js";
 
 type Error<S> = {
   readonly span: S;

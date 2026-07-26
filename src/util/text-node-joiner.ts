@@ -1,4 +1,4 @@
-import { MappedText, OffsetMapEntry } from "./common-types.js";
+import { MappedText, OffsetMapEntry } from "./shared-types.js";
 
 /**
  * Joins multiple non-overlapping text nodes into a single text node with a combined

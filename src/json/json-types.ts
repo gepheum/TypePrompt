@@ -1,4 +1,4 @@
-import type { InternalError, Span } from "../util/common-types.js";
+import type { InternalError, Span } from "../util/shared-types.js";
 
 /**
  * In "loose" mode, the JSON source may contain ellipses ("..."") and Javascript

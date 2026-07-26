@@ -1,14 +1,25 @@
 SCHEMA:
   - make naming hint be: field_name+enum...
 
+IDÉE BUSINESS:
+  - The compiler generates an HTML file for quickly trying out the prompts
+
 TEMPLATE PARSER:
   - Parse the snippets
+  - Verify that all snippets are used
+  - verify the types of all the snippet expressions and all the 'format'
+  - Verify that output formats across templates don't intersect
   - Support warnings, for XML comments where other comments would be accepted
 - TODO: think about toolcalls
 
 ERRORS:
   - TODO: add 'suggestions' to Error type
   - TODO: add warning
+  - Verify consistency in quoting in error messages
+
+
+CODE GENERATION:
+  - Handle shared types in union
 
 - TODO: expression evaluation and expression guards
 

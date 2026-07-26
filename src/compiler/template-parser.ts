@@ -8,11 +8,15 @@ import {
   InternalErrors,
   Span,
   TextSpan,
-} from "../util/common-types.js";
-import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
+} from "../util/shared-types.js";
+import {
+  AttributeValue,
+  checkXmlAttributes,
+} from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import {
   Body,
+  BodyInContext,
   OutputFormat,
   PromptContent,
   PromptContents,
@@ -22,6 +26,8 @@ import {
 } from "./compiler-types.js";
 
 import * as z from "zod";
+import { parseExpression } from "../expression/expression-parser.js";
+import { checkNoAmbiguity } from "../util/casing.js";
 import { parseBody } from "./body-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
@@ -151,6 +157,16 @@ class TemplateParser {
         message: "Missing <schema> element",
       });
     }
+    this.errors.push(
+      ...checkNoAmbiguity(
+        this.snippets.map((s) => s.name),
+        { exactMatchIsConflict: true },
+      ),
+    );
+    if (this.errors.length <= 0) {
+      CACA
+      // TODO: verify all snippets are indeed referencable and used
+    }
   }
 
   private parseMeta(metaNode: ElementNode): void {
@@ -215,7 +231,135 @@ class TemplateParser {
   }
 
   private parseSnippet(snippetNode: ElementNode): void {
-    // TODO
+    const attrs = checkXmlAttributes(snippetNode, {
+      name: {
+        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        expected: "a lowerCamelCase identifier",
+      },
+      if: {
+        schema: z.string().optional(),
+        expected: "a string",
+      },
+      is: {
+        schema: z.enum(["notNull", "notEmpty"]).optional(),
+        expected: "'notNull' or 'notEmpty'",
+      },
+      switch: {
+        schema: z.string().optional(),
+        expected: "a string",
+      },
+    });
+    if (attrs.kind === "error") {
+      this.errors.push(...attrs.errors);
+      return;
+    }
+    if (attrs.attributes.is && !attrs.attributes.if) {
+      this.errors.push({
+        span: attrs.attributes.is.nameSpan,
+        message: "'is' can only be used with an accompanying 'if' attribute",
+      });
+      return;
+    }
+    if (attrs.attributes.if && attrs.attributes.switch) {
+      for (const span of [
+        attrs.attributes.if.nameSpan,
+        attrs.attributes.switch.nameSpan,
+      ]) {
+        const message = "Cannot have both 'if' and 'switch' attributes";
+        this.errors.push({ span, message });
+      }
+      return;
+    }
+    if (attrs.attributes.if) {
+      this.parseSnippetWithIf(
+        snippetNode,
+        attrs.attributes.if,
+        attrs.attributes.is,
+      );
+    } else if (attrs.attributes.switch) {
+      this.parseSnippetWithSwitch(snippetNode, attrs.attributes.switch);
+    } else {
+      const body = parseBody(snippetNode, this.errors, { hasValContext: true });
+      this.snippets.push({
+        kind: "snippet",
+        name: attrs.attributes.name.valueSpan,
+        body: body,
+      });
+    }
+  }
+
+  private parseSnippetWithIf(
+    snippetNode: ElementNode,
+    ifAttr: AttributeValue<string>,
+    isAttr: AttributeValue<"notNull" | "notEmpty"> | undefined,
+  ): void {
+    const expression = parseExpression(ifAttr.valueSpan, {
+      hasValContext: false,
+    });
+    if (expression.kind === "error") {
+      this.errors.push(...expression.errors);
+      return;
+    }
+    const branches: {
+      then?: BodyInContext;
+      else?: BodyInContext;
+    } = {};
+    for (const child of snippetNode.children) {
+      switch (child.kind) {
+        case "text": {
+          if (!child.allWhitespace) {
+            this.errors.push({
+              span: child,
+              message: "Unexpected text content in <snippet if='...'>",
+            });
+          }
+          break;
+        }
+        case "element": {
+          const tag = child.tag.text;
+          switch (tag) {
+            case "then":
+            case "else": {
+              if (branches[tag] !== undefined) {
+                this.errors.push({
+                  span: child.tag,
+                  message: `Multiple <${tag}> elements in <snippet if='...'>`,
+                });
+              }
+              branches[tag] = parseBody(child, this.errors, {
+                hasValContext: true,
+              });
+              break;
+            }
+            default: {
+              this.errors.push({
+                span: child.tag,
+                message: `Unexpected element <${child.tag.text}> in <snippet if='...'>`,
+                hint: "Use <then> or <else> instead",
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
+    for (const tag of ["then", "else"] as const) {
+      if (!branches[tag]) {
+        this.errors.push({
+          span: snippetNode.tag,
+          message: `Missing <${tag}> element in <snippet if='...'>`,
+        });
+        return;
+      }
+    }
+    this.snippets.push({
+      kind: "snippet-if",
+      name: snippetNode.tag,
+      expression: expression.expression,
+      is: isAttr?.value ?? null,
+      then: branches.then!,
+      else: branches.else!,
+    });
   }
 
   private parseOutputFormat(format: TextSpan): OutputFormat | null {

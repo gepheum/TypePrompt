@@ -1,6 +1,6 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNoAmbiguity } from "../util/casing.js";
-import { InternalError } from "../util/common-types.js";
+import { InternalError } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,

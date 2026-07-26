@@ -10,7 +10,7 @@ import {
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
-import { InternalError } from "../util/common-types.js";
+import { InternalError } from "../util/shared-types.js";
 import {
   PromptContent,
   Template,

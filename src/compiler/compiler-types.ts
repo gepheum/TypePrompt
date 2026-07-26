@@ -1,8 +1,5 @@
 import { CTag } from "../ctag/ctag-types.js";
-import type {
-  Expression,
-  ExpressionInContext,
-} from "../expression/expression-types.js";
+import type { Expression } from "../expression/expression-types.js";
 import type { JsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import type {
@@ -10,7 +7,7 @@ import type {
   InternalErrors,
   Span,
   TextSpan,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
@@ -70,6 +67,8 @@ export type PromptContent = {
 export type Body<HasValContext extends boolean = false> =
   readonly BodyPiece<HasValContext>[];
 
+export type BodyInContext = Body<true>;
+
 export type BodyPiece<HasValContext extends boolean = false> =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "c-tag"; readonly text: string; readonly cTag: CTag }
@@ -92,23 +91,24 @@ export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";
 export type Snippet =
   | {
       readonly kind: "snippet";
-      readonly name: string;
-      readonly body: Body;
+      readonly name: TextSpan;
+      readonly body: BodyInContext;
     }
   | {
       readonly kind: "snippet-if";
-      readonly name: string;
-      readonly condition: ExpressionInContext;
-      readonly thenBody: Body;
-      readonly elseBody: Body;
+      readonly name: TextSpan;
+      readonly expression: Expression;
+      readonly is: "notNull" | "notEmpty" | null;
+      readonly then: BodyInContext;
+      readonly else: BodyInContext;
     }
   | {
       readonly kind: "snippet-switch";
-      readonly name: string;
-      readonly val: ExpressionInContext;
+      readonly name: TextSpan;
+      readonly val: Expression;
       readonly cases: ReadonlyArray<{
         readonly when: string;
-        readonly body: Body;
+        readonly body: BodyInContext;
       }>;
     };
 

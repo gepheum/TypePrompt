@@ -15,7 +15,7 @@ import type {
   SchemaValidationContext,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { TextSpan } from "../util/common-types.js";
+import type { TextSpan } from "../util/shared-types.js";
 import type { CTag } from "./ctag-types.js";
 import { validateCTag } from "./ctag-validator.js";
 

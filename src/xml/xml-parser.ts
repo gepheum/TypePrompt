@@ -4,7 +4,7 @@ import type {
   MappedSpan,
   OffsetMapEntry,
   TextSpan,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 import type {
   Attribute,
   ElementNode,

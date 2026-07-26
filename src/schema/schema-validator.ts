@@ -4,7 +4,7 @@ import type {
   InternalErrors,
   Span,
   TextSpan,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 import type {
   Interface,
   NamingHint,

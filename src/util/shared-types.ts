@@ -7,6 +7,7 @@ export type InternalError = {
   readonly span: Span;
   readonly message: string;
   readonly hint?: string;
+  readonly suggestions?: readonly string[];
 };
 
 export type ErrorSink = {

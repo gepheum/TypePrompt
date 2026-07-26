@@ -1,4 +1,4 @@
-import type { ErrorSink, MappedText, TextSpan } from "../util/common-types.js";
+import type { ErrorSink, MappedText, TextSpan } from "../util/shared-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
 import type { Body, BodyPiece, InsertFormat } from "./compiler-types.js";

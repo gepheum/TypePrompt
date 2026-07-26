@@ -5,7 +5,7 @@ import type {
   InternalErrors,
   MappedSpan,
   Span,
-} from "../util/common-types.js";
+} from "../util/shared-types.js";
 import type { ElementNode } from "./xml-types.js";
 
 export type AttributeSchemaEntry = {
