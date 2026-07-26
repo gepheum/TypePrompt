@@ -105,7 +105,7 @@ export type Snippet =
   | {
       readonly kind: "snippet-switch";
       readonly name: TextSpan;
-      readonly val: Expression;
+      readonly expression: Expression;
       readonly cases: ReadonlyArray<{
         readonly when: string;
         readonly body: BodyInContext;

@@ -334,7 +334,7 @@ class TemplateParser {
             default: {
               this.errors.push({
                 span: child.tag,
-                message: `Unexpected element <${child.tag.text}> in <snippet if='...'>`,
+                message: `Unexpected element <${tag}> in <snippet if='...'>`,
                 suggestions: ["then", "else"],
               });
               break;
@@ -359,6 +359,61 @@ class TemplateParser {
       is: isAttr?.value ?? null,
       then: branches.then!,
       else: branches.else!,
+    });
+  }
+
+  private parseSnippetWithSwitch(
+    snippetNode: ElementNode,
+    switchAttr: AttributeValue<string>,
+  ): void {
+    const expression = parseExpression(switchAttr.valueSpan, {
+      hasValContext: false,
+    });
+    if (expression.kind === "error") {
+      this.errors.push(...expression.errors);
+      return;
+    }
+    const branches: {
+      readonly [option: string]: BodyInContext;
+    } = {};
+    for (const child of snippetNode.children) {
+      switch (child.kind) {
+        case "text": {
+          if (!child.allWhitespace) {
+            this.errors.push({
+              span: child,
+              message: "Unexpected text content in <snippet switch='...'>",
+            });
+          }
+          break;
+        }
+        case "element": {
+          const tag = child.tag.text;
+          switch (tag) {
+            case "case": {
+              CACA
+              branches[tag] = parseBody(child, this.errors, {
+                hasValContext: true,
+              });
+              break;
+            }
+            default: {
+              this.errors.push({
+                span: child.tag,
+                message: `Unexpected element <${tag}> in <snippet switch='...'>`,
+                suggestions: ["case"],
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
+    this.snippets.push({
+      kind: "snippet-switch",
+      name: snippetNode.tag,
+      expression: expression.expression,
+      cases: {},
     });
   }
 
