@@ -99,9 +99,17 @@ class TemplateParser {
   private parseChildren(args: { hasVariants: boolean }): void {
     const children = checkAllAreElements(
       this.templateNode.children,
-      ["meta", "schema", "snippet", "system", "user", "examples", "variant"],
-      this.errors,
+      [
+        "meta",
+        "schema",
+        "snippet",
+        "system",
+        "user",
+        "examples",
+        "variant",
+      ] as const,
       " in <template>",
+      this.errors,
     );
     for (const [tag, child] of children) {
       switch (tag) {
@@ -242,9 +250,9 @@ class TemplateParser {
     const promptBuilder = new PromptBuilder();
     const children = checkAllAreElements(
       variantNode.children,
-      ["system", "user", "examples"],
-      this.errors,
+      ["system", "user", "examples"] as const,
       " in <variant>",
+      this.errors,
     );
     for (const [tag, child] of children) {
       switch (tag) {
@@ -361,9 +369,9 @@ class TemplateParser {
     } = {};
     const children = checkAllAreElements(
       snippetNode.children,
-      ["then", "else"],
-      this.errors,
+      ["then", "else"] as const,
       " in <snippet if='...'>",
+      this.errors,
     );
     for (const [tag, child] of children) {
       switch (tag) {
@@ -420,9 +428,9 @@ class TemplateParser {
     const seenOptions = new Set<string>();
     const children = checkAllAreElements(
       snippetNode.children,
-      ["case"],
-      this.errors,
+      ["case"] as const,
       " in <snippet switch='...'>",
+      this.errors,
     );
     for (const [tag, child] of children) {
       switch (tag) {

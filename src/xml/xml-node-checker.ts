@@ -4,8 +4,8 @@ import { ElementNode, XmlNode } from "./xml-types.js";
 export function checkAllAreElements<Tags extends readonly string[]>(
   nodes: readonly XmlNode[],
   tags: Tags,
-  errors: ErrorSink,
   messageSuffix: string,
+  errors: ErrorSink,
 ): ReadonlyArray<[Tags[number], ElementNode]> {
   if (!messageSuffix.startsWith(" ")) {
     throw new Error("messageSuffix must start with a space");
@@ -35,4 +35,26 @@ export function checkAllAreElements<Tags extends readonly string[]>(
     }
   }
   return result;
+}
+
+export function checkTag<Tags extends readonly string[]>(
+  node: ElementNode,
+  tags: Tags,
+  messageSuffix: string,
+  errors: ErrorSink,
+): Tags[number] | null {
+  if (!messageSuffix.startsWith(" ")) {
+    throw new Error("messageSuffix must start with a space");
+  }
+  const tag = node.tag.text;
+  if (tags.includes(tag)) {
+    return tag as Tags[number];
+  } else {
+    errors.push({
+      span: node.tag,
+      message: `Unexpected element <${tag}>${messageSuffix}`,
+      suggestions: tags,
+    });
+    return null;
+  }
 }

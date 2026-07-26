@@ -49,9 +49,9 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
 
   const topLevelNodes = checkAllAreElements(
     xmlDocument.root.topLevelNodes,
-    ["template", "namespace", "meta"],
-    result.parseErrors,
+    ["template", "namespace", "meta"] as const,
     " at the top level",
+    result.parseErrors,
   );
   for (const [tag, topLevelNode] of topLevelNodes) {
     switch (tag) {

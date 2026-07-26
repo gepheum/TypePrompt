@@ -12,6 +12,7 @@ import type { CTag } from "../ctag/ctag-types.js";
 import { parseExpression } from "../expression/expression-parser.js";
 import type { Expression } from "../expression/expression-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
+import { checkTag } from "../xml/xml-node-checker.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseBody<HasValContext extends boolean>(
@@ -69,55 +70,65 @@ export function parseBody<HasValContext extends boolean>(
     });
   };
 
-  const visit = (child: XmlNode): void => {
+  const visit = (child: XmlNode): null => {
     if (child.kind === "text") {
       rawPieces.push({ kind: "text", text: child });
-      return;
+      return null;
     }
-    const tag = child.tag.text;
-    if (tag === "c") {
-      errors.push(...checkNoXmlAttributes(child));
-      const textContent = extractTextContent(child);
-      if (textContent.kind === "error") {
-        errors.push(...textContent.errors);
-        return;
+    const tag = checkTag(
+      child,
+      ["c", "enclosed", "insert"] as const,
+      "",
+      errors,
+    );
+    switch (tag) {
+      case "c": {
+        errors.push(...checkNoXmlAttributes(child));
+        const textContent = extractTextContent(child);
+        if (textContent.kind === "error") {
+          errors.push(...textContent.errors);
+          return null;
+        }
+        const cTag = parseCTag(textContent.text);
+        if (cTag.kind === "error") {
+          errors.push(...cTag.errors);
+        } else {
+          rawPieces.push({
+            kind: "c-tag",
+            text: textContent.text,
+            cTag: cTag,
+          });
+        }
+        return null;
       }
-      const cTag = parseCTag(textContent.text);
-      if (cTag.kind === "error") {
-        errors.push(...cTag.errors);
-      } else {
-        rawPieces.push({
-          kind: "c-tag",
-          text: textContent.text,
-          cTag: cTag,
+      case "enclosed": {
+        const encAttrs = checkXmlAttributes(child, {
+          tag: {
+            schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
+            expected: "a valid XML tag name",
+          },
         });
+        if (encAttrs.kind === "error") {
+          errors.push(...encAttrs.errors);
+        } else {
+          const encTagName = encAttrs.attributes.tag.value;
+          rawPieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+          visitChildren(child);
+          rawPieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+        }
+        return null;
       }
-    } else if (tag === "enclosed") {
-      const encAttrs = checkXmlAttributes(child, {
-        tag: {
-          schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
-          expected: "a valid XML tag name",
-        },
-      });
-      if (encAttrs.kind === "error") {
-        errors.push(...encAttrs.errors);
-      } else {
-        const encTagName = encAttrs.attributes.tag.value;
-        rawPieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
-        visitChildren(child);
-        rawPieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+      case "insert": {
+        if (child.attributes["snippet"]) {
+          visitInsertSnippet(child);
+        } else {
+          visitInsertValue(child);
+        }
+        return null;
       }
-    } else if (tag === "insert") {
-      if (child.attributes["snippet"]) {
-        visitInsertSnippet(child);
-      } else {
-        visitInsertValue(child);
+      case null: {
+        return null;
       }
-    } else {
-      errors.push({
-        span: child.tag,
-        message: `Unexpected element '<${tag}>'`,
-      });
     }
   };
 
