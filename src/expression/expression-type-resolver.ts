@@ -55,6 +55,17 @@ function doResolveExpressionType<HasValContext extends boolean>(
       if (left.kind === "error") {
         return left;
       }
+      if (left.kind === "nullable" || left.kind === "null") {
+        return {
+          kind: "error",
+          errors: [
+            {
+              span: expression.left.fullPath,
+              message: "May be null",
+            },
+          ],
+        };
+      }
       if (left.kind === "union") {
         const members = getUnionMembers(left, schema);
         if (
