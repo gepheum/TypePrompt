@@ -74,6 +74,9 @@ class TemplateParser {
 
     this.parseChildren({ hasVariants });
     const contents = this.buildPromptContents({ hasVariants });
+    if (contents) {
+      this.verifySnippets(contents);
+    }
 
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
@@ -158,15 +161,6 @@ class TemplateParser {
         message: "Missing <schema> element",
       });
     }
-    this.errors.push(
-      ...checkNoAmbiguity(
-        this.snippets.map((s) => s.name),
-        { exactMatchIsConflict: true },
-      ),
-    );
-    if (this.errors.length <= 0) {
-      this.verifySnippets();
-    }
   }
 
   private parseMeta(metaNode: ElementNode): void {
@@ -224,6 +218,75 @@ class TemplateParser {
       this.errors.push(...schema.errors);
     } else {
       this.schema = schema;
+    }
+  }
+
+  private parseOutputFormat(format: TextSpan): OutputFormat | null {
+    const { text } = format;
+    if (!/^[a-z][A-Za-z0-9]*$/.test(text)) {
+      this.errors.push({
+        span: format,
+        message: "Expected: lowerCamelCase identifier",
+      });
+      return null;
+    }
+    const kind = text === "json" || text === "text" ? text : "custom";
+    return {
+      kind: kind,
+      format: format,
+    };
+  }
+
+  private parseVariant(variantNode: ElementNode): void {
+    const attrs = checkXmlAttributes(variantNode, {
+      name: {
+        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        expected: "a lowerCamelCase identifier",
+      },
+    });
+    if (attrs.kind === "error") {
+      this.errors.push(...attrs.errors);
+      return;
+    }
+    const variant = attrs.attributes.name.valueSpan;
+    const promptBuilder = new PromptBuilder();
+    for (const child of variantNode.children) {
+      if (child.kind === "element") {
+        promptBuilder.parse(child, this.errors);
+      } else if (!child.allWhitespace) {
+        this.errors.push({
+          span: child,
+          message: "Unexpected text content in <variant>",
+        });
+      }
+    }
+    const prompt = promptBuilder.build(variantNode.tag, this.errors);
+    if (prompt !== null) {
+      this.promptVariants.push({
+        variant: variant,
+        content: prompt,
+      });
+    }
+  }
+
+  private buildPromptContents(args: {
+    hasVariants: boolean;
+  }): PromptContents | null {
+    if (args.hasVariants) {
+      return {
+        kind: "variants",
+        variants: this.promptVariants,
+      };
+    } else {
+      const templateTag = this.templateNode.tag;
+      const content = this.noVariantsPrompt.build(templateTag, this.errors);
+      if (content === null) {
+        return null;
+      }
+      return {
+        kind: "no-variants",
+        content: content,
+      };
     }
   }
 
@@ -437,73 +500,97 @@ class TemplateParser {
     });
   }
 
-  private parseOutputFormat(format: TextSpan): OutputFormat | null {
-    const { text } = format;
-    if (!/^[a-z][A-Za-z0-9]*$/.test(text)) {
-      this.errors.push({
-        span: format,
-        message: "Expected: lowerCamelCase identifier",
-      });
-      return null;
-    }
-    const kind = text === "json" || text === "text" ? text : "custom";
-    return {
-      kind: kind,
-      format: format,
-    };
-  }
+  private verifySnippets(contents: PromptContents): void {
+    // Verify that:
+    // 1. All snippet names are unique.
+    // 2. All <insert snippet='...'> references point to a valid snippet.
+    // 3. Every snippet does not circularly references itself.
+    // 4. All snippets are used.
 
-  private parseVariant(variantNode: ElementNode): void {
-    const attrs = checkXmlAttributes(variantNode, {
-      name: {
-        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-        expected: "a lowerCamelCase identifier",
-      },
-    });
-    if (attrs.kind === "error") {
-      this.errors.push(...attrs.errors);
+    // Verify that all snippet names are unique.
+    this.errors.push(
+      ...checkNoAmbiguity(
+        this.snippets.map((s) => s.name),
+        { exactMatchIsConflict: true },
+      ),
+    );
+    if (this.errors.length !== 0) {
       return;
     }
-    const variant = attrs.attributes.name.valueSpan;
-    const promptBuilder = new PromptBuilder();
-    for (const child of variantNode.children) {
-      if (child.kind === "element") {
-        promptBuilder.parse(child, this.errors);
-      } else if (!child.allWhitespace) {
+    const snippets = this.indexSnippets();
+    const seenSnippets = new Set<string>();
+    const spanToError = new Map<Span, string>();
+
+    const traverse = (
+      body: Body | BodyInContext,
+      inProgress: Set<Snippet>,
+    ): void => {
+      for (const piece of body) {
+        if (piece.kind !== "insert-snippet") continue;
+        const snippetName = piece.snippet.text;
+        const snippet = snippets[snippetName];
+        if (!snippet) {
+          spanToError.set(piece.snippet, `Unknown snippet '${snippetName}'`);
+          continue;
+        }
+        if (inProgress.has(snippet)) {
+          spanToError.set(
+            piece.snippet,
+            `Snippet '${snippetName}' circularly references itself`,
+          );
+          continue;
+        }
+        inProgress.add(snippet);
+        switch (snippet.kind) {
+          case "snippet":
+            traverse(snippet.body, inProgress);
+            break;
+          case "snippet-if":
+            traverse(snippet.then, inProgress);
+            traverse(snippet.else, inProgress);
+            break;
+          case "snippet-switch":
+            for (const c of snippet.cases) {
+              traverse(c.body, inProgress);
+            }
+            break;
+        }
+        inProgress.delete(snippet);
+        seenSnippets.add(snippetName);
+      }
+    };
+
+    switch (contents.kind) {
+      case "no-variants": {
+        traverse(contents.content.system, new Set());
+        traverse(contents.content.user, new Set());
+        break;
+      }
+      case "variants": {
+        for (const variant of contents.variants) {
+          traverse(variant.content.system, new Set());
+          traverse(variant.content.user, new Set());
+        }
+        break;
+      }
+    }
+
+    for (const [span, error] of spanToError.entries()) {
+      this.errors.push({ span, message: error });
+    }
+
+    for (const snippet of this.snippets) {
+      if (!seenSnippets.has(snippet.name.text)) {
         this.errors.push({
-          span: child,
-          message: "Unexpected text content in <variant>",
+          span: snippet.name,
+          message: `Snippet '${snippet.name.text}' is never used`,
         });
       }
     }
-    const prompt = promptBuilder.build(variantNode.tag, this.errors);
-    if (prompt !== null) {
-      this.promptVariants.push({
-        variant: variant,
-        content: prompt,
-      });
-    }
   }
 
-  private buildPromptContents(args: {
-    hasVariants: boolean;
-  }): PromptContents | null {
-    if (args.hasVariants) {
-      return {
-        kind: "variants",
-        variants: this.promptVariants,
-      };
-    } else {
-      const templateTag = this.templateNode.tag;
-      const content = this.noVariantsPrompt.build(templateTag, this.errors);
-      if (content === null) {
-        return null;
-      }
-      return {
-        kind: "no-variants",
-        content: content,
-      };
-    }
+  private indexSnippets(): { readonly [name: string]: Snippet } {
+    return Object.fromEntries(this.snippets.map((s) => [s.name.text, s]));
   }
 
   private readonly errors: InternalError[] = [];
