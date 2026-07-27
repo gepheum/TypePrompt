@@ -48,13 +48,14 @@ export function validateTemplate(args: {
 
   const examplesInterface = makeExamplesType(template, templateSchema);
 
-  const templateContents: TemplateContent[] = [];
+  const templateContents: Array<Partial<TemplateContent>> = [];
   switch (template.contents.kind) {
     case "no-variants": {
       templateContents.push(template.contents.content);
       break;
     }
     case "variants": {
+      templateContents.push(template.contents.defaultContent);
       for (const variant of template.contents.variants) {
         templateContents.push(variant.content);
       }
@@ -63,12 +64,10 @@ export function validateTemplate(args: {
   }
   for (const templateContent of templateContents) {
     for (const body of [templateContent.system, templateContent.user]) {
+      if (!body) continue;
       for (const piece of body) {
-        if (piece.kind !== "c-tag") {
-          continue;
-        }
-        const cTagErrors = validateCTag(piece.cTag, templateSchema);
-        errors.push(...cTagErrors);
+        if (piece.kind !== "c-tag") continue;
+        errors.push(...validateCTag(piece.cTag, templateSchema));
       }
     }
     if (templateContent.examples) {
@@ -102,7 +101,7 @@ function validateMeta(
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
 
-  const {contents} = template;
+  const { contents } = template;
   const metaType = metaSchema.typeDeclarations["Meta"];
 
   const pushMissingMetaError = (tag: Span): void => {
@@ -121,7 +120,7 @@ function validateMeta(
 
   switch (contents.kind) {
     case "no-variants": {
-      const {meta} = contents.content;
+      const { meta } = contents.content;
       if (metaType) {
         if (meta) {
           errors.push(...validateJson(meta.value, metaSchema, metaType));
@@ -134,18 +133,22 @@ function validateMeta(
       break;
     }
     case "variants": {
-      const {defaultContent} = contents;
-      const {variants} = contents;
+      const { defaultContent } = contents;
+      const { variants } = contents;
       if (metaType) {
         if (defaultContent.meta) {
-          errors.push(...validateJson(defaultContent.meta.value, metaSchema, metaType));
+          errors.push(
+            ...validateJson(defaultContent.meta.value, metaSchema, metaType),
+          );
         } else if (variants.every((v) => !v.content.meta)) {
           pushMissingMetaError(template.tag);
         } else {
           for (const variant of variants) {
-            const {content} = variant;
+            const { content } = variant;
             if (content.meta) {
-              errors.push(...validateJson(content.meta.value, metaSchema, metaType));
+              errors.push(
+                ...validateJson(content.meta.value, metaSchema, metaType),
+              );
             } else {
               pushMissingMetaError(variant.tag);
             }
@@ -155,7 +158,7 @@ function validateMeta(
         pushExtraneousMetaError(template.tag);
       } else {
         for (const variant of variants) {
-          const {content} = variant;
+          const { content } = variant;
           if (content.meta) {
             pushExtraneousMetaError(variant.tag);
           }
@@ -189,7 +192,8 @@ function validateVariants(
     return [
       {
         span: outputTypeDeclaration.name,
-        message: "Output must have a 'variant' field when using <variant> elements",
+        message:
+          "Output must have a 'variant' field when using <variant> elements",
       },
     ];
   }
