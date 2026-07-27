@@ -140,10 +140,7 @@ function validateVariants(
   const makeVariantFieldTypeError = (): readonly InternalError[] => [
     {
       span: variantField.name,
-      message: [
-        "The 'Output.variant' field type must be a union of string literals when ",
-        "when using variants",
-      ].join(""),
+      message: "'Output.variant' must be a union of string literals",
     },
   ];
   let variantFieldType = resolveType(variantField.type, templateSchema);
@@ -161,21 +158,19 @@ function validateVariants(
     return makeVariantFieldTypeError();
   }
   const errors: InternalError[] = [];
-  const variants = new Set(
-    template.contents.variants.map((v) => v.variant.text),
-  );
+  const variants = new Set(template.contents.variants.map((v) => v.case.text));
   for (const member of unionMembers.members) {
     if (variants.has(member.value)) continue;
     errors.push({
       span: member.quotedName,
-      message: `Missing '<variant name="${member.value}">' in the template`,
+      message: `Missing <variant case='${member.value}'> in the template`,
     });
   }
   for (const variant of template.contents.variants) {
-    const variantName = variant.variant.text;
+    const variantName = variant.case.text;
     if (unionMembers.values.has(variantName)) continue;
     errors.push({
-      span: variant.variant,
+      span: variant.case,
       message: `'${variantName}' is not a member of the 'Output.variant' union`,
     });
   }

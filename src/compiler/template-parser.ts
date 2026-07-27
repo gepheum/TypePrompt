@@ -145,7 +145,7 @@ class TemplateParser {
     if (this.meta !== null) {
       this.errors.push({
         span: metaNode.tag,
-        message: "Multiple <meta> elements found in <template>",
+        message: "Multiple <meta> elements in <template>",
       });
     }
     this.errors.push(...checkNoXmlAttributes(metaNode));
@@ -166,7 +166,7 @@ class TemplateParser {
     if (this.meta !== null) {
       this.errors.push({
         span: schemaNode.tag,
-        message: "Multiple <schema> elements found in <template>",
+        message: "Multiple <schema> elements in <template>",
       });
     }
     const attrs = checkXmlAttributes(schemaNode, {
@@ -217,7 +217,7 @@ class TemplateParser {
 
   private parseVariant(variantNode: ElementNode): void {
     const attrs = checkXmlAttributes(variantNode, {
-      name: {
+      case: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
         expected: "a lowerCamelCase identifier",
       },
@@ -226,7 +226,7 @@ class TemplateParser {
       this.errors.push(...attrs.errors);
       return;
     }
-    const variant = attrs.attributes.name.valueSpan;
+    const caseVal = attrs.attributes.case.valueSpan;
     const promptBuilder = new PromptBuilder();
     const children = checkAllAreElements(
       variantNode.children,
@@ -245,7 +245,7 @@ class TemplateParser {
     }
     this.variants.push({
       tag: variantNode.tag,
-      variant: variant,
+      case: caseVal,
       content: promptBuilder,
     });
   }
@@ -257,23 +257,16 @@ class TemplateParser {
       if (content === null) {
         return null;
       }
-      return {
-        kind: "no-variants",
-        content: content,
-      };
+      return { kind: "no-variants", content };
     } else {
       const topLevelPrompt = this.topLevelPrompt.buildPartial();
       const variants: PromptVariant[] = [];
       for (const v of this.variants) {
         const content = v.content.build(v.tag, topLevelPrompt, this.errors);
         if (content === null) continue;
-        const { variant } = v;
-        variants.push({ variant, content });
+        variants.push({ case: v.case, content });
       }
-      return {
-        kind: "variants",
-        variants: variants,
-      };
+      return { kind: "variants", variants };
     }
   }
 
@@ -405,44 +398,42 @@ class TemplateParser {
       this.errors.push(...expression.errors);
       return;
     }
-    const cases: Array<{
-      readonly option: string;
+    const branches: Array<{
+      readonly case: string;
       readonly body: BodyInContext;
     }> = [];
     const seenOptions = new Set<string>();
     const children = checkAllAreElements(
       snippetNode.children,
-      ["case"] as const,
+      ["on"] as const,
       " in <snippet switch='...'>",
       this.errors,
     );
     for (const [tag, child] of children) {
       switch (tag) {
-        case "case": {
+        case "on": {
           const attrs = checkXmlAttributes(child, {
-            when: {
-              schema: z.string().regex(/^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$/),
-              expected: "comma-separated identifiers",
+            case: {
+              schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+              expected: "a lowerCamelCase identifier",
             },
           });
           if (attrs.kind === "error") {
             this.errors.push(...attrs.errors);
             break;
           }
-          const options = attrs.attributes.when.valueSpan.text.split(",");
+          const caseVal = attrs.attributes.case.valueSpan.text;
           const body = parseBody(child, this.errors, {
             hasValContext: true,
           });
-          for (const option of options) {
-            if (seenOptions.has(option)) {
-              this.errors.push({
-                span: attrs.attributes.when.valueSpan,
-                message: `Duplicate option '${option}'`,
-              });
-            }
-            seenOptions.add(option);
-            cases.push({ option, body });
+          if (seenOptions.has(caseVal)) {
+            this.errors.push({
+              span: attrs.attributes.case.valueSpan,
+              message: `Duplicate case '${caseVal}'`,
+            });
           }
+          seenOptions.add(caseVal);
+          branches.push({ case: caseVal, body });
           break;
         }
       }
@@ -451,7 +442,7 @@ class TemplateParser {
       kind: "snippet-switch",
       name: snippetNode.tag,
       expression: expression.expression,
-      cases: cases,
+      branches: branches,
     });
   }
 
@@ -497,18 +488,21 @@ class TemplateParser {
         }
         inProgress.add(snippet);
         switch (snippet.kind) {
-          case "snippet":
+          case "snippet": {
             traverse(snippet.body, inProgress);
             break;
-          case "snippet-if":
+          }
+          case "snippet-if": {
             traverse(snippet.then, inProgress);
             traverse(snippet.else, inProgress);
             break;
-          case "snippet-switch":
-            for (const c of snippet.cases) {
-              traverse(c.body, inProgress);
+          }
+          case "snippet-switch": {
+            for (const branch of snippet.branches) {
+              traverse(branch.body, inProgress);
             }
             break;
+          }
         }
         inProgress.delete(snippet);
         seenSnippets.add(snippetName);
@@ -560,7 +554,7 @@ class TemplateParser {
 type VariantBuilder = {
   readonly tag: Span;
   /** Variant name. */
-  readonly variant: TextSpan;
+  readonly case: TextSpan;
   readonly content: PromptBuilder;
 };
 

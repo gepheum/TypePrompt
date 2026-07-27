@@ -54,7 +54,7 @@ export type PromptContents =
 
 export type PromptVariant = {
   /** Variant name. */
-  readonly variant: TextSpan;
+  readonly case: TextSpan;
   readonly content: PromptContent;
 };
 
@@ -106,8 +106,8 @@ export type Snippet =
       readonly kind: "snippet-switch";
       readonly name: TextSpan;
       readonly expression: Expression;
-      readonly cases: ReadonlyArray<{
-        readonly option: string;
+      readonly branches: ReadonlyArray<{
+        readonly case: string;
         readonly body: BodyInContext;
       }>;
     };
