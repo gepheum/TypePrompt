@@ -14,7 +14,6 @@ TEMPLATE PARSER:
 
 ERRORS:
   - TODO: add warning
-  - Verify consistency in quoting in error messages... I think I want to use single quote, and not quote <element>
 
 CODE GENERATION:
   - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"

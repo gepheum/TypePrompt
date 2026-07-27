@@ -12,8 +12,8 @@ import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
 import { InternalError } from "../util/shared-types.js";
 import {
-  PromptContent,
   Template,
+  TemplateContent,
   TemplateValidationResult,
 } from "./compiler-types.js";
 
@@ -63,7 +63,7 @@ export function validateTemplate(args: {
 
   const examplesInterface = makeExamplesType(template, templateSchema);
 
-  const promptContents: PromptContent[] = [];
+  const promptContents: TemplateContent[] = [];
   switch (template.contents.kind) {
     case "no-variants": {
       promptContents.push(template.contents.content);
@@ -124,7 +124,7 @@ function validateVariants(
     return [
       {
         span: outputTypeDeclaration.name,
-        message: "Output type must be an interface when using variants",
+        message: "Output must be an interface when using <variant> elements",
       },
     ];
   }
@@ -133,7 +133,7 @@ function validateVariants(
     return [
       {
         span: outputTypeDeclaration.name,
-        message: "Output type must have a 'variant' field when using variants",
+        message: "Output must have a 'variant' field when using <variant> elements",
       },
     ];
   }
@@ -171,7 +171,7 @@ function validateVariants(
     if (unionMembers.values.has(variantName)) continue;
     errors.push({
       span: variant.case,
-      message: `'${variantName}' is not a member of the 'Output.variant' union`,
+      message: `'Output.variant' can never be '${variantName}'`,
     });
   }
   return errors;

@@ -33,10 +33,9 @@ export type Template = {
   readonly tag: Span;
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
-  readonly meta: JsonValue<"strict"> | null;
   readonly schema: SchemaParseResult;
   readonly outputFormat: OutputFormat | null;
-  readonly contents: PromptContents;
+  readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
 };
 
@@ -45,23 +44,25 @@ export type OutputFormat = {
   readonly format: TextSpan;
 };
 
-export type PromptContents =
-  | { readonly kind: "no-variants"; readonly content: PromptContent }
+export type TemplateContents =
+  | { readonly kind: "no-variants"; readonly content: TemplateContent }
   | {
       readonly kind: "variants";
-      readonly variants: readonly PromptVariant[];
+      readonly variants: readonly TemplateVariant[];
+      readonly defaultContent: Partial<TemplateContent>;
     };
 
-export type PromptVariant = {
+export type TemplateVariant = {
   /** Variant name. */
   readonly case: TextSpan;
-  readonly content: PromptContent;
+  readonly content: Partial<TemplateContent>;
 };
 
-export type PromptContent = {
+export type TemplateContent = {
+  readonly meta: JsonValue<"strict"> | undefined;
   readonly system: Body;
   readonly user: Body;
-  readonly examples: JsonValue<"strict"> | null;
+  readonly examples: JsonValue<"strict"> | undefined;
 };
 
 export type Body<HasValContext extends boolean = false> =

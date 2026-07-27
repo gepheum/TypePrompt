@@ -19,11 +19,11 @@ import {
   Body,
   BodyInContext,
   OutputFormat,
-  PromptContent,
-  PromptContents,
-  PromptVariant,
   Snippet,
   Template,
+  TemplateContent,
+  TemplateContents,
+  TemplateVariant,
 } from "./compiler-types.js";
 
 import * as z from "zod";
@@ -69,7 +69,7 @@ class TemplateParser {
     const { name, namespace } = attrs.attributes;
 
     this.parseChildren();
-    const contents = this.buildPromptContents();
+    const contents = this.buildContents();
     if (contents) {
       this.verifySnippets(contents);
     }
@@ -83,7 +83,6 @@ class TemplateParser {
       tag: this.templateNode.tag,
       name: name.valueSpan,
       namespace: namespace?.valueSpan ?? null,
-      meta: this.meta,
       schema: this.schema!,
       outputFormat: this.outputFormat,
       contents: contents!,
@@ -108,10 +107,6 @@ class TemplateParser {
     );
     for (const [tag, child] of children) {
       switch (tag) {
-        case "meta": {
-          this.parseMeta(child);
-          break;
-        }
         case "schema": {
           this.parseSchema(child);
           break;
@@ -122,8 +117,9 @@ class TemplateParser {
         }
         case "system":
         case "user":
-        case "examples": {
-          this.topLevelPrompt.parse(child, this.errors);
+        case "examples":
+        case "meta": {
+          this.topLevelContent.parse(tag, child, this.errors);
           break;
         }
         case "variant": {
@@ -138,27 +134,6 @@ class TemplateParser {
         span: this.templateNode.tag,
         message: "Missing <schema> element",
       });
-    }
-  }
-
-  private parseMeta(metaNode: ElementNode): void {
-    if (this.meta !== null) {
-      this.errors.push({
-        span: metaNode.tag,
-        message: "Multiple <meta> elements in <template>",
-      });
-    }
-    this.errors.push(...checkNoXmlAttributes(metaNode));
-    const textContent = extractTextContent(metaNode);
-    if (textContent.kind === "error") {
-      this.errors.push(...textContent.errors);
-      return;
-    }
-    const meta = parseYaml(textContent.text);
-    if (meta.kind === "error") {
-      this.errors.push(...meta.errors);
-    } else {
-      this.meta = meta;
     }
   }
 
@@ -227,10 +202,10 @@ class TemplateParser {
       return;
     }
     const caseVal = attrs.attributes.case.valueSpan;
-    const promptBuilder = new PromptBuilder();
+    const contentBuilder = new ContentBuilder();
     const children = checkAllAreElements(
       variantNode.children,
-      ["system", "user", "examples"] as const,
+      ["meta", "system", "user", "examples"] as const,
       " in <variant>",
       this.errors,
     );
@@ -239,34 +214,49 @@ class TemplateParser {
         case "system":
         case "user":
         case "examples": {
-          promptBuilder.parse(child, this.errors);
+          contentBuilder.parse(tag, child, this.errors);
         }
       }
     }
     this.variants.push({
       tag: variantNode.tag,
       case: caseVal,
-      content: promptBuilder,
+      content: contentBuilder,
     });
   }
 
-  private buildPromptContents(): PromptContents | null {
+  private buildContents(): TemplateContents | null {
     if (this.variants.length <= 0) {
       const templateTag = this.templateNode.tag;
-      const content = this.topLevelPrompt.build(templateTag, null, this.errors);
+      const content = this.topLevelContent.buildTopLevel(
+        templateTag,
+        this.errors,
+      );
       if (content === null) {
         return null;
       }
       return { kind: "no-variants", content };
     } else {
-      const topLevelPrompt = this.topLevelPrompt.buildPartial();
-      const variants: PromptVariant[] = [];
+      const defaultContent = this.topLevelContent.buildDefault();
+      const defaultContentMask: {
+        readonly [k in keyof TemplateContent]: boolean;
+      } = {
+        meta: !!defaultContent.meta,
+        system: !!defaultContent.system,
+        user: !!defaultContent.user,
+        examples: !!defaultContent.examples,
+      };
+      const variants: TemplateVariant[] = [];
       for (const v of this.variants) {
-        const content = v.content.build(v.tag, topLevelPrompt, this.errors);
+        const content = v.content.buildVariant(
+          v.tag,
+          defaultContentMask,
+          this.errors,
+        );
         if (content === null) continue;
         variants.push({ case: v.case, content });
       }
-      return { kind: "variants", variants };
+      return { kind: "variants", variants, defaultContent };
     }
   }
 
@@ -446,7 +436,7 @@ class TemplateParser {
     });
   }
 
-  private verifySnippets(contents: PromptContents): void {
+  private verifySnippets(contents: TemplateContents): void {
     // Verify that:
     // 1. All snippet names are unique.
     // 2. All <insert snippet='...'> references point to a valid snippet.
@@ -468,9 +458,10 @@ class TemplateParser {
     const spanToError = new Map<Span, string>();
 
     const traverse = (
-      body: Body | BodyInContext,
+      body: Body | BodyInContext | undefined,
       inProgress: Set<Snippet>,
     ): void => {
+      if (!body) return;
       for (const piece of body) {
         if (piece.kind !== "insert-snippet") continue;
         const snippetName = piece.snippet.text;
@@ -516,6 +507,8 @@ class TemplateParser {
         break;
       }
       case "variants": {
+        traverse(contents.defaultContent.system, new Set());
+        traverse(contents.defaultContent.user, new Set());
         for (const variant of contents.variants) {
           traverse(variant.content.system, new Set());
           traverse(variant.content.user, new Set());
@@ -546,7 +539,7 @@ class TemplateParser {
   private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
   private outputFormat: OutputFormat | null = null;
-  private readonly topLevelPrompt = new PromptBuilder();
+  private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
   private readonly snippets: Snippet[] = [];
 }
@@ -555,47 +548,55 @@ type VariantBuilder = {
   readonly tag: Span;
   /** Variant name. */
   readonly case: TextSpan;
-  readonly content: PromptBuilder;
+  readonly content: ContentBuilder;
 };
 
-type PartialPromptContent = {
-  readonly system?: Body;
-  readonly user?: Body;
-  readonly examples?: JsonValue<"strict">;
-};
-
-type WithSpan<T> = {
+type WithTag<T> = {
   readonly value: T;
-  readonly span: Span;
+  readonly tag: Span;
 };
 
-class PromptBuilder {
-  system: WithSpan<Body> | undefined;
-  user: WithSpan<Body> | undefined;
-  examples: WithSpan<JsonValue<"strict">> | undefined;
+class ContentBuilder {
+  meta: WithTag<JsonValue<"strict">> | undefined;
+  system: WithTag<Body> | undefined;
+  user: WithTag<Body> | undefined;
+  examples: WithTag<JsonValue<"strict">> | undefined;
 
-  parse(e: ElementNode, errors: ErrorSink): void {
-    const tag = e.tag.text;
+  parse(
+    tag: "meta" | "system" | "user" | "examples",
+    e: ElementNode,
+    errors: ErrorSink,
+  ): void {
+    if (this[tag] !== undefined) {
+      errors.push({
+        span: e.tag,
+        message: `Multiple <${tag}> elements`,
+      });
+      return;
+    }
     switch (tag) {
+      case "meta": {
+        errors.push(...checkNoXmlAttributes(e));
+        const textContent = extractTextContent(e);
+        if (textContent.kind === "error") {
+          errors.push(...textContent.errors);
+          return;
+        }
+        const meta = parseYaml(textContent.text);
+        if (meta.kind === "error") {
+          errors.push(...meta.errors);
+        } else {
+          this.meta = { value: meta, tag: e.tag };
+        }
+        break;
+      }
       case "system":
       case "user": {
-        if (this[tag] !== undefined) {
-          errors.push({
-            span: e.tag,
-            message: `Multiple <${tag}> elements`,
-          });
-        }
         const body = parseBody(e, errors, { hasValContext: false });
-        this[tag] = { value: body, span: e.tag };
+        this[tag] = { value: body, tag: e.tag };
         break;
       }
       case "examples": {
-        if (this.examples !== undefined) {
-          errors.push({
-            span: e.tag,
-            message: "Multiple <examples> elements",
-          });
-        }
         const textContent = extractTextContent(e);
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
@@ -604,53 +605,84 @@ class PromptBuilder {
           if (examples.kind === "error") {
             errors.push(...examples.errors);
           } else {
-            this.examples = { value: examples, span: e.tag };
+            this.examples = { value: examples, tag: e.tag };
           }
         }
-        break;
-      }
-      default: {
-        errors.push({
-          span: e.tag,
-          message: `Unexpected element <${tag}>`,
-          suggestions: ["system", "user", "examples"],
-        });
         break;
       }
     }
   }
 
-  build(
-    parentTag: Span,
-    defaultPrompt: PartialPromptContent | null,
-    errors: ErrorSink,
-  ): PromptContent | null {
-    for (const tag of ["system", "user", "examples"] as const) {
-      if (this[tag] && defaultPrompt?.[tag]) {
+  /** Builds the top-level template content when there are no variants. */
+  buildTopLevel(templateTag: Span, errors: ErrorSink): TemplateContent | null {
+    for (const tag of ["system", "user"] as const) {
+      if (!this[tag]) {
         errors.push({
-          span: this[tag].span,
-          message: `<${tag}> is already specified at the <template> level`,
-          hint: `Remove the <${tag}> element from the <template> level or from the <variant> level`,
-        });
-      }
-
-      if (tag !== "examples" && !this[tag] && !defaultPrompt?.[tag]) {
-        errors.push({
-          span: parentTag,
+          span: templateTag,
           message: `Missing <${tag}> element`,
         });
       }
     }
 
+    if (!this.system || !this.user) {
+      return null;
+    }
+
     return {
-      system: (this.system?.value ?? defaultPrompt?.system)!,
-      user: (this.user?.value ?? defaultPrompt?.user)!,
-      examples: this.examples?.value ?? defaultPrompt?.examples ?? null,
+      meta: this.meta?.value,
+      system: this.system!.value,
+      user: this.user!.value,
+      examples: this.examples?.value,
     };
   }
 
-  buildPartial(): PartialPromptContent {
+  /**
+   * Builds the default template content when there are variants.
+   * The default content is used to fill in missing fields in each variant.
+   */
+  buildDefault(): Partial<TemplateContent> {
     return {
+      meta: this.meta?.value,
+      system: this.system?.value,
+      user: this.user?.value,
+      examples: this.examples?.value,
+    };
+  }
+
+  /**
+   * Builds the template content for a variant.
+   * Missing fields can be found in the default content returned by
+   * {@link buildDefault}.
+   */
+  buildVariant(
+    variantTag: Span,
+    defaultContentMask: { readonly [k in keyof TemplateContent]: boolean },
+    errors: ErrorSink,
+  ): Partial<TemplateContent> {
+    for (const tag of ["meta", "system", "user", "examples"] as const) {
+      if (this[tag] && defaultContentMask[tag]) {
+        errors.push({
+          span: this[tag].tag,
+          message: `<${tag}> is already specified at the <template> level`,
+          hint: `Remove the <${tag}> element from the <template> level or from the <variant> level`,
+        });
+      }
+
+      switch (tag) {
+        case "system":
+        case "user": {
+          if (!this[tag]) {
+            errors.push({
+              span: variantTag,
+              message: `Missing <${tag}> element`,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      meta: this.meta?.value,
       system: this.system?.value,
       user: this.user?.value,
       examples: this.examples?.value,
