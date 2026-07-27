@@ -23,6 +23,7 @@ import {
   Template,
   TemplateContent,
   TemplateContents,
+  TemplateMeta,
   TemplateVariant,
 } from "./compiler-types.js";
 
@@ -254,7 +255,7 @@ class TemplateParser {
           this.errors,
         );
         if (content === null) continue;
-        variants.push({ case: v.case, content });
+        variants.push({ tag: v.tag, case: v.case, content });
       }
       return { kind: "variants", variants, defaultContent };
     }
@@ -557,7 +558,7 @@ type WithTag<T> = {
 };
 
 class ContentBuilder {
-  meta: WithTag<JsonValue<"strict">> | undefined;
+  meta: TemplateMeta | undefined;
   system: WithTag<Body> | undefined;
   user: WithTag<Body> | undefined;
   examples: WithTag<JsonValue<"strict">> | undefined;
@@ -629,7 +630,7 @@ class ContentBuilder {
     }
 
     return {
-      meta: this.meta?.value,
+      meta: this.meta,
       system: this.system!.value,
       user: this.user!.value,
       examples: this.examples?.value,
@@ -642,7 +643,7 @@ class ContentBuilder {
    */
   buildDefault(): Partial<TemplateContent> {
     return {
-      meta: this.meta?.value,
+      meta: this.meta,
       system: this.system?.value,
       user: this.user?.value,
       examples: this.examples?.value,
@@ -682,7 +683,7 @@ class ContentBuilder {
     }
 
     return {
-      meta: this.meta?.value,
+      meta: this.meta,
       system: this.system?.value,
       user: this.user?.value,
       examples: this.examples?.value,

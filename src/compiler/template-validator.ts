@@ -10,7 +10,7 @@ import {
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { getUnionMembers } from "../schema/unions.js";
-import { InternalError } from "../util/shared-types.js";
+import { InternalError, Span } from "../util/shared-types.js";
 import {
   Template,
   TemplateContent,
@@ -26,22 +26,7 @@ export function validateTemplate(args: {
 
   const errors: InternalError[] = [];
 
-  const metaType = metaSchema.typeDeclarations["Meta"];
-  if (template.meta) {
-    if (metaType) {
-      errors.push(...validateJson(template.meta, metaSchema, metaType));
-    } else {
-      errors.push({
-        span: template.tag,
-        message: "Missing <meta> element",
-      });
-    }
-  } else if (metaType) {
-    errors.push({
-      span: metaType.name,
-      message: "Missing <meta> element at the top level",
-    });
-  }
+  errors.push(...validateMeta(metaSchema, template));
 
   const validationContext: SchemaValidationContext = {
     kind: "template",
@@ -63,21 +48,21 @@ export function validateTemplate(args: {
 
   const examplesInterface = makeExamplesType(template, templateSchema);
 
-  const promptContents: TemplateContent[] = [];
+  const templateContents: TemplateContent[] = [];
   switch (template.contents.kind) {
     case "no-variants": {
-      promptContents.push(template.contents.content);
+      templateContents.push(template.contents.content);
       break;
     }
     case "variants": {
       for (const variant of template.contents.variants) {
-        promptContents.push(variant.content);
+        templateContents.push(variant.content);
       }
       break;
     }
   }
-  for (const promptContent of promptContents) {
-    for (const body of [promptContent.system, promptContent.user]) {
+  for (const templateContent of templateContents) {
+    for (const body of [templateContent.system, templateContent.user]) {
       for (const piece of body) {
         if (piece.kind !== "c-tag") {
           continue;
@@ -86,10 +71,10 @@ export function validateTemplate(args: {
         errors.push(...cTagErrors);
       }
     }
-    if (promptContent.examples) {
+    if (templateContent.examples) {
       errors.push(
         ...validateJson(
-          promptContent.examples,
+          templateContent.examples,
           templateSchema,
           examplesInterface,
         ),
@@ -109,6 +94,77 @@ export function validateTemplate(args: {
     template,
     schema: templateSchema,
   };
+}
+
+function validateMeta(
+  metaSchema: Schema,
+  template: Template,
+): readonly InternalError[] {
+  const errors: InternalError[] = [];
+
+  const {contents} = template;
+  const metaType = metaSchema.typeDeclarations["Meta"];
+
+  const pushMissingMetaError = (tag: Span): void => {
+    errors.push({
+      span: tag,
+      message: "Missing <meta> element",
+    });
+  };
+  const pushExtraneousMetaError = (tag: Span): void => {
+    errors.push({
+      span: tag,
+      message: "Extraneous <meta> element",
+      hint: "Remove this <meta> element or add a <meta> element at the top level",
+    });
+  };
+
+  switch (contents.kind) {
+    case "no-variants": {
+      const {meta} = contents.content;
+      if (metaType) {
+        if (meta) {
+          errors.push(...validateJson(meta.value, metaSchema, metaType));
+        } else {
+          pushMissingMetaError(template.tag);
+        }
+      } else if (meta) {
+        pushExtraneousMetaError(template.tag);
+      }
+      break;
+    }
+    case "variants": {
+      const {defaultContent} = contents;
+      const {variants} = contents;
+      if (metaType) {
+        if (defaultContent.meta) {
+          errors.push(...validateJson(defaultContent.meta.value, metaSchema, metaType));
+        } else if (variants.every((v) => !v.content.meta)) {
+          pushMissingMetaError(template.tag);
+        } else {
+          for (const variant of variants) {
+            const {content} = variant;
+            if (content.meta) {
+              errors.push(...validateJson(content.meta.value, metaSchema, metaType));
+            } else {
+              pushMissingMetaError(variant.tag);
+            }
+          }
+        }
+      } else if (defaultContent.meta) {
+        pushExtraneousMetaError(template.tag);
+      } else {
+        for (const variant of variants) {
+          const {content} = variant;
+          if (content.meta) {
+            pushExtraneousMetaError(variant.tag);
+          }
+        }
+      }
+    }
+  }
+
+  return errors;
 }
 
 function validateVariants(

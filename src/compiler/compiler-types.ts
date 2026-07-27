@@ -53,16 +53,22 @@ export type TemplateContents =
     };
 
 export type TemplateVariant = {
+  readonly tag: Span;
   /** Variant name. */
   readonly case: TextSpan;
   readonly content: Partial<TemplateContent>;
 };
 
 export type TemplateContent = {
-  readonly meta: JsonValue<"strict"> | undefined;
+  readonly meta: TemplateMeta | undefined;
   readonly system: Body;
   readonly user: Body;
   readonly examples: JsonValue<"strict"> | undefined;
+};
+
+export type TemplateMeta = {
+  readonly tag: Span;
+  readonly value: JsonValue<"strict">;
 };
 
 export type Body<HasValContext extends boolean = false> =
