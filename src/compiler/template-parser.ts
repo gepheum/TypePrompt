@@ -61,20 +61,15 @@ class TemplateParser {
           .optional(),
         expected: "an UpperCamelCase identifier",
       },
-      with: {
-        schema: z.enum(["variants"]).optional(),
-        expected: "'variants'",
-      },
     });
     if (attrs.kind === "error") {
       return attrs;
     }
 
     const { name, namespace } = attrs.attributes;
-    const hasVariants = attrs.attributes.with?.value === "variants";
 
-    this.parseChildren({ hasVariants });
-    const contents = this.buildPromptContents({ hasVariants });
+    this.parseChildren();
+    const contents = this.buildPromptContents();
     if (contents) {
       this.verifySnippets(contents);
     }
@@ -96,7 +91,7 @@ class TemplateParser {
     };
   }
 
-  private parseChildren(args: { hasVariants: boolean }): void {
+  private parseChildren(): void {
     const children = checkAllAreElements(
       this.templateNode.children,
       [
@@ -132,14 +127,7 @@ class TemplateParser {
           break;
         }
         case "variant": {
-          if (args.hasVariants) {
-            this.parseVariant(child);
-          } else {
-            this.errors.push({
-              span: child.tag,
-              message: `<template> is missing 'with="variants"' attribute`,
-            });
-          }
+          this.parseVariant(child);
           break;
         }
       }
@@ -262,10 +250,18 @@ class TemplateParser {
     });
   }
 
-  private buildPromptContents(args: {
-    hasVariants: boolean;
-  }): PromptContents | null {
-    if (args.hasVariants) {
+  private buildPromptContents(): PromptContents | null {
+    if (this.variants.length <= 0) {
+      const templateTag = this.templateNode.tag;
+      const content = this.topLevelPrompt.build(templateTag, null, this.errors);
+      if (content === null) {
+        return null;
+      }
+      return {
+        kind: "no-variants",
+        content: content,
+      };
+    } else {
       const topLevelPrompt = this.topLevelPrompt.buildPartial();
       const variants: PromptVariant[] = [];
       for (const v of this.variants) {
@@ -277,16 +273,6 @@ class TemplateParser {
       return {
         kind: "variants",
         variants: variants,
-      };
-    } else {
-      const templateTag = this.templateNode.tag;
-      const content = this.topLevelPrompt.build(templateTag, null, this.errors);
-      if (content === null) {
-        return null;
-      }
-      return {
-        kind: "no-variants",
-        content: content,
       };
     }
   }

@@ -3,7 +3,9 @@ SCHEMA:
   - populate shared fields on interface union?
 
 TEMPLATE PARSER:
-  - what about <variant when='...'> instead of <variant name='...'>
+  - template syntax:
+    - what about <variant when='...'> instead of <variant name='...'>
+    - problem: think about specifying the variant in the example in the case where examples can be at any level... Maybe I want to un-remove the field, and check at validation
   - verify the types of all the insert expressions and all the 'format'
   - Verify that output formats across templates don't intersect
   - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
