@@ -32,7 +32,7 @@ export type TextSpan<T = string> = Span & {
  * Extends `TextSpan` with an offset map for mapping positions in `text` to positions
  * in the XML file.
  */
-export type MappedSpan = TextSpan & {
+export type MappedSpan<T = string> = TextSpan<T> & {
   /**
    * For mapping UTF-16 positions in `text` to UTF-16 positions in the XML file.
    * The first element is always: `{ textPosition: 0, sourcePosition: start }`

@@ -8,6 +8,7 @@ import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { extractTextContent } from "./text-extractor.js";
 
+/** Parses a top-level <namespace> element. The result is already validated. */
 export function parseNamespace(
   namespaceNode: ElementNode,
 ): Namespace | InternalErrors {

@@ -15,21 +15,15 @@ export type AttributeSchemaEntry = {
 
 export type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 
-export type AttributeValue<T> = undefined extends T
-  ? | {
-        readonly nameSpan: Span;
-        readonly valueSpan: MappedSpan;
-        readonly value: NonNullable<T>;
-      }
-    | undefined
-  : {
+export type AttributeValue<T> =
+  | {
       readonly nameSpan: Span;
-      readonly valueSpan: MappedSpan;
-      readonly value: T;
-    };
+      readonly value: MappedSpan<NonNullable<T>>;
+    }
+  | (undefined extends T ? undefined : never);
 
 export type AttributeValues<T extends AttributeSchemas> = {
-  [K in keyof T]: T[K] extends { schema: ZodType<infer U> }
+  [K in keyof T]: T[K] extends { schema: ZodType<infer U, string | undefined> }
     ? AttributeValue<U>
     : never;
 };
@@ -62,9 +56,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       if (attr !== undefined) {
         values[name] = {
           nameSpan: attr.name,
-          valueSpan: attr.value,
-          value: parsed.data!,
-        } satisfies AttributeValue<string>;
+          value: { ...attr.value, text: parsed.data! },
+        };
       }
     } else if (rawValue === undefined) {
       errors.push({

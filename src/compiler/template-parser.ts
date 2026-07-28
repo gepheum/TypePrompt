@@ -34,6 +34,7 @@ import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 
+/** Parses a <template> element. The result has yet to be validated. */
 export function parseTemplate(
   templateNode: ElementNode,
 ): Template | InternalErrors {
@@ -82,8 +83,8 @@ class TemplateParser {
     return {
       kind: "success",
       tag: this.templateNode.tag,
-      name: name.valueSpan,
-      namespace: namespace?.valueSpan ?? null,
+      name: name.value,
+      namespace: namespace?.value ?? null,
       schema: this.schema!,
       outputFormat: this.outputFormat,
       contents: contents!,
@@ -159,7 +160,7 @@ class TemplateParser {
     } else {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
-        this.outputFormat = this.parseOutputFormat(outputFormat.valueSpan);
+        this.outputFormat = this.parseOutputFormat(outputFormat.value);
       }
     }
     const textContent = extractTextContent(schemaNode);
@@ -202,7 +203,7 @@ class TemplateParser {
       this.errors.push(...attrs.errors);
       return;
     }
-    const caseVal = attrs.attributes.case.valueSpan;
+    const caseVal = attrs.attributes.case.value;
     const contentBuilder = new ContentBuilder();
     const children = checkAllAreElements(
       variantNode.children,
@@ -310,10 +311,10 @@ class TemplateParser {
     } else if (attrs.attributes.switch) {
       this.parseSnippetWithSwitch(snippetNode, attrs.attributes.switch);
     } else {
-      const body = parseBody(snippetNode, this.errors, { hasValContext: true });
+      const body = parseBody(snippetNode, this.errors, { hasValContext: false });
       this.snippets.push({
         kind: "snippet",
-        name: attrs.attributes.name.valueSpan,
+        name: attrs.attributes.name.value,
         body: body,
       });
     }
@@ -324,7 +325,7 @@ class TemplateParser {
     ifAttr: AttributeValue<string>,
     isAttr: AttributeValue<"notNull" | "notEmpty"> | undefined,
   ): void {
-    const expression = parseExpression(ifAttr.valueSpan, {
+    const expression = parseExpression(ifAttr.value, {
       hasValContext: false,
     });
     if (expression.kind === "error") {
@@ -382,7 +383,7 @@ class TemplateParser {
     snippetNode: ElementNode,
     switchAttr: AttributeValue<string>,
   ): void {
-    const expression = parseExpression(switchAttr.valueSpan, {
+    const expression = parseExpression(switchAttr.value, {
       hasValContext: false,
     });
     if (expression.kind === "error") {
@@ -413,13 +414,13 @@ class TemplateParser {
             this.errors.push(...attrs.errors);
             break;
           }
-          const caseVal = attrs.attributes.case.valueSpan.text;
+          const caseVal = attrs.attributes.case.value.text;
           const body = parseBody(child, this.errors, {
             hasValContext: true,
           });
           if (seenOptions.has(caseVal)) {
             this.errors.push({
-              span: attrs.attributes.case.valueSpan,
+              span: attrs.attributes.case.value,
               message: `Duplicate case '${caseVal}'`,
             });
           }

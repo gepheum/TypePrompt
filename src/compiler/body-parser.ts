@@ -37,7 +37,7 @@ export function parseBody<HasValContext extends boolean>(
     }
     rawPieces.push({
       kind: "insert-snippet",
-      snippet: attrs.attributes.snippet.valueSpan,
+      snippet: attrs.attributes.snippet.value,
     });
   };
 
@@ -57,15 +57,12 @@ export function parseBody<HasValContext extends boolean>(
       errors.push(...attrs.errors);
       return;
     }
-    const val = parseExpression(attrs.attributes.val.valueSpan, options);
+    const val = parseExpression(attrs.attributes.val.value, options);
     if (val.kind === "error") {
       errors.push(...val.errors);
       return;
     }
-    const formatAttr = attrs.attributes.format;
-    const format = formatAttr
-      ? { ...formatAttr.valueSpan, text: formatAttr.value }
-      : null;
+    const format = attrs.attributes.format?.value ?? null;
     rawPieces.push({
       kind: "insert-val",
       val: val.expression,

@@ -1,7 +1,8 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
-import { ExpressionContext, NullType } from "../expression/expression-types.js";
+import { ExpressionContext } from "../expression/expression-types.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
+import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import { validateJson } from "../json/json-type-checker.js";
 import {
   ResolvedType,
@@ -312,7 +313,7 @@ function validateExpressions(
   templateContents: ReadonlyArray<Partial<TemplateContent>>,
   snippets: readonly Snippet[],
   templateSchema: Schema,
-): readonly InternalErrors[] {
+): readonly InternalError[] {
   const errors: InternalError[] = [];
 
   const validateBody = <HasValContext extends boolean>(
@@ -406,11 +407,34 @@ function validateExpressions(
           errors.push(...expressionType.errors);
           break;
         }
-        resolveIfExpression(snippet.expression, expressionType, snippet.is);
+        const ifContext = resolveIfExpression(snippet.expression, expressionType, snippet.is);
+        if (ifContext.kind === "error") {
+          errors.push(...ifContext.errors);
+          break;
+        }
+        validateBody(snippet.then, ifContext.then);
+        validateBody(snippet.else, ifContext.else);
         break;
       }
       case "snippet-switch": {
-        // TODO
+        const expressionType = resolveExpressionType(
+          snippet.expression,
+          templateSchema,
+          null,
+        );
+        if (expressionType.kind === "error") {
+          errors.push(...expressionType.errors);
+          break;
+        }
+        const switchContext = resolveSwitchExpression(snippet.expression, expressionType, snippet.is);
+        if (switchContext.kind === "error") {
+          errors.push(...switchContext.errors);
+          break;
+        }
+        TODO:ensure exhaustive;
+        for (const branch of snippet.branches) {
+          validateBody(branch.body, switchContext.cases[branch.case]);
+        }
         break;
       }
     }
@@ -419,7 +443,10 @@ function validateExpressions(
   return errors;
 }
 
-function isStringType(type: ResolvedType | SyntheticType, schema: Schema): boolean {
+function isStringType(
+  type: ResolvedType | SyntheticType,
+  schema: Schema,
+): boolean {
   switch (type.kind) {
     case "primitive":
       return type.primitive === "string";
@@ -445,6 +472,9 @@ function isTabularType(type: ResolvedType, schema: Schema): boolean {
       return false;
     }
     const fieldType = resolveType(field.type, schema);
-    return isStringType(fieldType, schema) || (fieldType.kind === "primitive" && fieldType.primitive === "integer");
+    return (
+      isStringType(fieldType, schema) ||
+      (fieldType.kind === "primitive" && fieldType.primitive === "integer")
+    );
   });
 }

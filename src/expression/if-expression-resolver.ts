@@ -1,5 +1,5 @@
 import { ResolvedType } from "../schema/schema-types.js";
-import { InternalErrors } from "../util/shared-types.js";
+import { InternalErrors, TextSpan } from "../util/shared-types.js";
 import { AttributeValue } from "../xml/xml-attributes-checker.js";
 import {
   Expression,
@@ -18,7 +18,7 @@ export type IfExpressionResult =
 export function resolveIfExpression(
   expression: Expression,
   type: ResolvedType | NullableType,
-  is: AttributeValue<"notNull" | "notEmpty" | undefined>,
+  is: TextSpan<"notNull" | "notEmpty"> | null,
 ): IfExpressionResult {
   const it: ExpressionContext["it"] = { expression, type };
 
@@ -28,7 +28,7 @@ export function resolveIfExpression(
         kind: "error",
         errors: [
           {
-            span: is.valueSpan,
+            span: is,
             message: `Cannot use 'is' attribute with boolean type`,
             hint: "Remove the 'is' attribute",
           },
@@ -42,7 +42,7 @@ export function resolveIfExpression(
       };
     }
   } else if (type.kind === "nullable") {
-    if (is?.value === "notNull") {
+    if (is?.text === "notNull") {
       return {
         kind: "success",
         then: {
@@ -63,7 +63,7 @@ export function resolveIfExpression(
         kind: "error",
         errors: [
           {
-            span: is?.valueSpan ?? expression.fullPath,
+            span: is ?? expression.fullPath,
             message: `must use 'is="notNull"' with nullable type`,
           },
         ],
@@ -73,7 +73,7 @@ export function resolveIfExpression(
     type.kind === "array" ||
     (type.kind === "primitive" && type.primitive === "string")
   ) {
-    if (is?.value === "notEmpty") {
+    if (is?.text === "notEmpty") {
       return {
         kind: "success",
         then: { it, typeOverrides: {} },
@@ -84,14 +84,14 @@ export function resolveIfExpression(
         kind: "error",
         errors: [
           {
-            span: is?.valueSpan ?? expression.fullPath,
+            span: is ?? expression.fullPath,
             message: `must use 'is="notEmpty"' with array or string type`,
           },
         ],
       };
     }
   } else {
-    switch (is?.value) {
+    switch (is?.text) {
       case "notNull": {
         return {
           kind: "error",

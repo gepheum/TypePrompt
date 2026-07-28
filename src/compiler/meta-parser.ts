@@ -7,6 +7,7 @@ import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { extractTextContent } from "./text-extractor.js";
 
+/** Parses a top-level <meta> element. The result is already validated. */
 export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
   const attrs = checkXmlAttributes(metaNode, {});
   if (attrs.kind === "error") {
