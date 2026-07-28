@@ -23,9 +23,9 @@ export type Span = {
 };
 
 /** Extends `Span` with the decoded text. */
-export type TextSpan = Span & {
+export type TextSpan<T = string> = Span & {
   /** XML escape sequences are decoded. */
-  readonly text: string;
+  readonly text: T;
 };
 
 /**

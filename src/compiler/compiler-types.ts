@@ -82,7 +82,7 @@ export type BodyPiece<HasValContext extends boolean = false> =
   | {
       readonly kind: "insert-val";
       readonly val: Expression<HasValContext>;
-      readonly format: InsertFormat | null;
+      readonly format: TextSpan<InsertFormat> | null;
       /** Only contains whitespace characters. */
       readonly indent: string;
     }
@@ -99,13 +99,13 @@ export type Snippet =
   | {
       readonly kind: "snippet";
       readonly name: TextSpan;
-      readonly body: BodyInContext;
+      readonly body: Body;
     }
   | {
       readonly kind: "snippet-if";
       readonly name: TextSpan;
       readonly expression: Expression;
-      readonly is: "notNull" | "notEmpty" | null;
+      readonly is: TextSpan<"notNull" | "notEmpty"> | null;
       readonly then: BodyInContext;
       readonly else: BodyInContext;
     }

@@ -3,9 +3,7 @@ SCHEMA:
   - populate shared fields on interface union?
 
 TEMPLATE PARSER:
-  - should <meta> be movable to <variant>? I think so
   - template syntax:
-    - what about <variant case='...'> instead of <variant case='...'>
     - problem: think about specifying the variant in the example in the case where examples can be at any level... Maybe I want to un-remove the field, and check at validation
   - verify the types of all the insert expressions and all the 'format'
   - Verify that output formats across templates don't intersect

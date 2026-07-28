@@ -62,7 +62,10 @@ export function parseBody<HasValContext extends boolean>(
       errors.push(...val.errors);
       return;
     }
-    const format = attrs.attributes.format?.value ?? null;
+    const formatAttr = attrs.attributes.format;
+    const format = formatAttr
+      ? { ...formatAttr.valueSpan, text: formatAttr.value }
+      : null;
     rawPieces.push({
       kind: "insert-val",
       val: val.expression,
@@ -152,7 +155,7 @@ type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
   | {
       readonly kind: "insert-val";
       readonly val: Expression<HasValContext>;
-      readonly format: InsertFormat | null;
+      readonly format: TextSpan<InsertFormat> | null;
     }
   | {
       readonly kind: "insert-snippet";
