@@ -1,6 +1,5 @@
 import { ResolvedType } from "../schema/schema-types.js";
 import { InternalErrors, TextSpan } from "../util/shared-types.js";
-import { AttributeValue } from "../xml/xml-attributes-checker.js";
 import {
   Expression,
   ExpressionContext,

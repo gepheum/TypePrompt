@@ -311,7 +311,9 @@ class TemplateParser {
     } else if (attrs.attributes.switch) {
       this.parseSnippetWithSwitch(snippetNode, attrs.attributes.switch);
     } else {
-      const body = parseBody(snippetNode, this.errors, { hasValContext: false });
+      const body = parseBody(snippetNode, this.errors, {
+        hasValContext: false,
+      });
       this.snippets.push({
         kind: "snippet",
         name: attrs.attributes.name.value,
@@ -391,7 +393,7 @@ class TemplateParser {
       return;
     }
     const branches: Array<{
-      readonly case: string;
+      readonly case: TextSpan;
       readonly body: BodyInContext;
     }> = [];
     const seenOptions = new Set<string>();
@@ -414,18 +416,18 @@ class TemplateParser {
             this.errors.push(...attrs.errors);
             break;
           }
-          const caseVal = attrs.attributes.case.value.text;
+          const caseSpan = attrs.attributes.case.value;
           const body = parseBody(child, this.errors, {
             hasValContext: true,
           });
-          if (seenOptions.has(caseVal)) {
+          if (seenOptions.has(caseSpan.text)) {
             this.errors.push({
               span: attrs.attributes.case.value,
-              message: `Duplicate case '${caseVal}'`,
+              message: `Duplicate case '${caseSpan}'`,
             });
           }
-          seenOptions.add(caseVal);
-          branches.push({ case: caseVal, body });
+          seenOptions.add(caseSpan.text);
+          branches.push({ case: caseSpan, body });
           break;
         }
       }
@@ -433,6 +435,7 @@ class TemplateParser {
     this.snippets.push({
       kind: "snippet-switch",
       name: snippetNode.tag,
+      switchTag: switchAttr.nameSpan,
       expression: expression.expression,
       branches: branches,
     });

@@ -373,6 +373,7 @@ function validateExpressions(
           break;
         }
         case "json":
+        case "yaml":
         case "toon": {
           break;
         }
@@ -407,7 +408,11 @@ function validateExpressions(
           errors.push(...expressionType.errors);
           break;
         }
-        const ifContext = resolveIfExpression(snippet.expression, expressionType, snippet.is);
+        const ifContext = resolveIfExpression(
+          snippet.expression,
+          expressionType,
+          snippet.is,
+        );
         if (ifContext.kind === "error") {
           errors.push(...ifContext.errors);
           break;
@@ -426,14 +431,39 @@ function validateExpressions(
           errors.push(...expressionType.errors);
           break;
         }
-        const switchContext = resolveSwitchExpression(snippet.expression, expressionType, snippet.is);
+        const switchContext = resolveSwitchExpression(
+          snippet.expression,
+          expressionType,
+          templateSchema,
+        );
         if (switchContext.kind === "error") {
           errors.push(...switchContext.errors);
           break;
         }
-        TODO:ensure exhaustive;
+        const handledCases = new Set(snippet.branches.map((b) => b.case.text));
+        const missingCases = Object.keys(switchContext.cases).filter(
+          (c) => !handledCases.has(c),
+        );
         for (const branch of snippet.branches) {
-          validateBody(branch.body, switchContext.cases[branch.case]);
+          const context = switchContext.cases[branch.case.text];
+          if (!context) {
+            errors.push({
+              span: branch.case,
+              message: `Expression can never be '${branch.case.text}'`,
+              suggestions: missingCases,
+            });
+            continue;
+          }
+          validateBody(branch.body, context);
+        }
+        if (missingCases.length > 0) {
+          const missingTags = missingCases
+            .map((c) => `<on case='${c}'>`)
+            .join(", ");
+          errors.push({
+            span: snippet.switchTag,
+            message: `Missing ${missingTags}`,
+          });
         }
         break;
       }

@@ -93,7 +93,7 @@ export type BodyPiece<HasValContext extends boolean = false> =
       readonly indent: string;
     };
 
-export type InsertFormat = "text" | "json" | "toon" | "csv" | "tsv";
+export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";
 
 export type Snippet =
   | {
@@ -112,9 +112,10 @@ export type Snippet =
   | {
       readonly kind: "snippet-switch";
       readonly name: TextSpan;
+      readonly switchTag: Span;
       readonly expression: Expression;
       readonly branches: ReadonlyArray<{
-        readonly case: string;
+        readonly case: TextSpan;
         readonly body: BodyInContext;
       }>;
     };
