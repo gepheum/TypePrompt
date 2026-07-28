@@ -20,7 +20,6 @@ export function resolveSwitchExpression(
   type: ResolvedType | NullableType,
   schema: SchemaView,
 ): SwitchExpressionResult {
-  const it: ExpressionContext["it"] = { expression, type };
   if (type.kind === "string-literal") {
     type = { kind: "union", members: [type] };
   }
