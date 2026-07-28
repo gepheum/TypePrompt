@@ -113,7 +113,7 @@ class CompilationResultImpl implements CompilationResult {
   metaSchema: SchemaOrError = EMPTY_SCHEMA;
   readonly namespaceSchemas: { [name: string]: SchemaOrError } = {};
   readonly templates: { [id: string]: TemplateValidationResult } = {};
-  readonly validationErrors: { [path: string]: InternalError[] } = {};
+  readonly finalErrors: { [path: string]: InternalError[] } = {};
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];
@@ -142,7 +142,7 @@ class CompilationResultImpl implements CompilationResult {
     } else {
       // Multiple <meta> elements found. This is an error.
       for (const meta of metas) {
-        this.getValidationErrors(meta.sourceFile.path).push({
+        this.getFinalErrors(meta.sourceFile.path).push({
           span: meta.element.tag,
           message: "Multiple <meta> elements found",
         });
@@ -168,7 +168,7 @@ class CompilationResultImpl implements CompilationResult {
       } else {
         // Multiple namespaces with the same name found. This is an error.
         this.namespaceSchemas[name] = { kind: "other-error" };
-        // Errors will be pused to the validationErrors map below.
+        // Errors will be pused to the finalErrors map below.
       }
     }
 
@@ -184,7 +184,7 @@ class CompilationResultImpl implements CompilationResult {
       },
     );
     for (const error of ambiguityErrors) {
-      this.getValidationErrors(error.span.path).push(error);
+      this.getFinalErrors(error.span.path).push(error);
     }
   }
 
@@ -213,7 +213,7 @@ class CompilationResultImpl implements CompilationResult {
         },
       );
       for (const error of ambiguityErrors) {
-        this.getValidationErrors(error.span.path).push(error);
+        this.getFinalErrors(error.span.path).push(error);
       }
     }
 
@@ -231,7 +231,7 @@ class CompilationResultImpl implements CompilationResult {
       const namespaceName = template.element.namespace?.text ?? "Default";
       const namespace = this.namespaceSchemas[namespaceName];
       if (!namespace) {
-        this.getValidationErrors(template.sourceFile.path).push({
+        this.getFinalErrors(template.sourceFile.path).push({
           span: template.element.name,
           message: `Namespace '${namespaceName}' not found`,
         });
@@ -259,14 +259,24 @@ class CompilationResultImpl implements CompilationResult {
       this.templates[id] = validationResult;
 
       if (validationResult.kind === "error") {
-        this.getValidationErrors(template.sourceFile.path).push(
+        this.getFinalErrors(template.sourceFile.path).push(
           ...validationResult.errors,
         );
       }
     }
   }
 
-  private getValidationErrors(path: string): InternalError[] {
-    return (this.validationErrors[path] ??= []);
+  private getFinalErrors(path: string): InternalError[] {
+    let result = this.finalErrors[path];
+    if (!result) {
+      const sourceFile = this.sourceFiles[path];
+      if (sourceFile) {
+        result = [...sourceFile.parseErrors];
+      } else {
+        result = [];
+      }
+      this.finalErrors[path] = result;
+    }
+    return result;
   }
 }

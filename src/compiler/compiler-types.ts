@@ -14,7 +14,8 @@ export type CompilationResult = {
   readonly metaSchema: SchemaOrError;
   readonly namespaceSchemas: { readonly [name: string]: SchemaOrError };
   readonly templates: { readonly [id: string]: TemplateValidationResult };
-  readonly validationErrors: { readonly [path: string]: InternalError[] };
+  /** Includes errors from `sourceFiles`. */
+  readonly finalErrors: { readonly [path: string]: InternalError[] };
 };
 
 export type SourceFileParseResult = {

@@ -1,6 +1,3 @@
-COMPILER:
-  - have a single source of truth for errors...
-
 TYPE SYSTEM:
   - do I want to allow a union type to contain other union types, and to just unfold the members? That's an interesting idea.
   - rename kindFieldName to discriminantName
