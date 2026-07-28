@@ -118,9 +118,26 @@ export type NamingHint = {
   /**
    * Guaranteed to be non-empty.
    * The first element is always an uppercased type name used in a type declaration.
-   * The remaining elements are lowercased field names.
    */
-  readonly namePieces: readonly string[];
+  readonly namePieces: ReadonlyArray<
+    | {
+        readonly kind: "type";
+        /** Uppercased type name. */
+        readonly name: string;
+      }
+    | {
+        readonly kind: "field";
+        /** Lowercased field name. */
+        readonly name: string;
+      }
+    | {
+        readonly kind: "member";
+        /** Name of the field used to discriminate union members. Always lowercased. */
+        readonly discriminantName: string;
+        /** Value of the discriminant field. Always lowercased. */
+        readonly value: string;
+      }
+  >;
   readonly doc: string | null;
 };
 

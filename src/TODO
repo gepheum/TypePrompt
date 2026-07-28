@@ -1,10 +1,14 @@
 COMPILER:
   - have a single source of truth for errors...
 
+TYPE SYSTEM:
+  - do I want to allow a union type to contain other union types, and to just unfold the members? That's an interesting idea.
+  - rename kindFieldName to discriminantName
+
 SCHEMA:
-  - make naming hint be: field_name+enum...
   - populate shared fields on interface union?
     - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"
+    - cache result of getUnionMembers...?
 
 TEMPLATE PARSER:
   - template syntax:
@@ -14,12 +18,14 @@ TEMPLATE PARSER:
 - TODO: think about toolcalls
 
 ERRORS:
+  - add suggestions to errors in xml-attributes-checker
   - TODO: add warning
 
 IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
 
 LATER?
+- TODO: 
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
 
 MISC:
