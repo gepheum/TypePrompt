@@ -1,5 +1,6 @@
 import { checkNoAmbiguity } from "../util/casing.js";
 import type {
+  ErrorSink,
   InternalError,
   InternalErrors,
   Span,
@@ -150,7 +151,7 @@ function validateType(
   type: Type | TypeDeclaration,
   types: { readonly [name: string]: TypeDeclaration },
   context: SchemaValidationContext,
-  errors: InternalError[],
+  errors: ErrorSink,
 ): null {
   switch (type.kind) {
     case "array": {
@@ -229,7 +230,7 @@ function validateUnionType(
   type: Union,
   types: { readonly [name: string]: TypeDeclaration },
   context: SchemaValidationContext,
-  errors: InternalError[] = [],
+  errors: ErrorSink,
 ): void {
   const pushErrorForBadKind = (
     kind: "bad:array" | "bad:primitive" | "bad:union",
@@ -423,7 +424,7 @@ function getDescForKind(kind: UnionKind): string {
   }
 }
 
-function validateTypeName(name: TextSpan, errors: InternalError[]): void {
+function validateTypeName(name: TextSpan, errors: ErrorSink): void {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
     errors.push({
       span: name,

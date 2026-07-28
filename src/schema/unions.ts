@@ -3,7 +3,7 @@ import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 export function getUnionMembers(type: Union, schema: SchemaView): UnionMembers {
   const { members } = type;
-  const firstMember = resolveMaybeInvalidType(members[0]!, schema)!;
+  const firstMember = resolveType(members[0]!, schema);
   switch (firstMember.kind) {
     case "string-literal": {
       const resolvedMembers = members.map((m) => {
