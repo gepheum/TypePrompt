@@ -1,20 +1,20 @@
+COMPILER:
+  - have a single source of truth for errors...
+
 SCHEMA:
   - make naming hint be: field_name+enum...
   - populate shared fields on interface union?
+    - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"
 
 TEMPLATE PARSER:
   - template syntax:
     - problem: think about specifying the variant in the example in the case where examples can be at any level... Maybe I want to un-remove the field, and check at validation
-  - verify the types of all the insert expressions and all the 'format'
   - Verify that output formats across templates don't intersect
   - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
 - TODO: think about toolcalls
 
 ERRORS:
   - TODO: add warning
-
-CODE GENERATION:
-  - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"
 
 IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
