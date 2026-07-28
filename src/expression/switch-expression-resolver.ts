@@ -55,7 +55,7 @@ export function resolveSwitchExpression(
       const members = getUnionMembers(resolvedType, schema);
       if (
         members.kind === "interfaces" &&
-        members.kindFieldName === expression.property.text
+        members.discriminator === expression.property.text
       ) {
         return {
           kind: "success",

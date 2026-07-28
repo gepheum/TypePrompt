@@ -70,11 +70,11 @@ function doResolveExpressionType<HasValContext extends boolean>(
         const members = getUnionMembers(left, schema);
         if (
           members.kind === "interfaces" &&
-          members.kindFieldName === expression.property.text
+          members.discriminator === expression.property.text
         ) {
           return {
             kind: "union",
-            members: members.kinds,
+            members: members.discriminants,
           };
         }
       }

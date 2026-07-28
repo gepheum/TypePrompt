@@ -3,9 +3,9 @@ import type {
   ErrorSink,
   InternalError,
   InternalErrors,
-  Span,
   TextSpan,
 } from "../util/shared-types.js";
+import { getFirstToken } from "./get-first-token.js";
 import type {
   Interface,
   NamingHint,
@@ -127,23 +127,6 @@ function getUnionKind(member: Type, schema: SchemaView): UnionKind {
     case "union": {
       return "bad:union";
     }
-  }
-}
-
-function getFirstToken(type: Type): Span {
-  switch (type.kind) {
-    case "array":
-      return getFirstToken(type.elementType);
-    case "interface":
-      return type.leftCurlyBracket;
-    case "string-literal":
-      return type.quotedName;
-    case "type-name":
-      return type.name;
-    case "shared-type-name":
-      return type.shared;
-    case "union":
-      return getFirstToken(type.members[0]!);
   }
 }
 
@@ -574,8 +557,8 @@ class TypeTraverser {
                   ...context.namePieces,
                   {
                     kind: "member",
-                    discriminantName: unionMembers.kindFieldName,
-                    value: kind,
+                    discriminantName: unionMembers.discriminator,
+                    discriminantVal: kind,
                   },
                 ],
                 doc: null,

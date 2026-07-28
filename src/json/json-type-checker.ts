@@ -257,7 +257,7 @@ export function jsonMatchesType(
             if (value.entries.length <= 0 && value.ellipsis) {
               return MATCH;
             }
-            const { kindFieldName } = members;
+            const { discriminator: kindFieldName } = members;
             const kindValue = value.entries.find(
               (e) => e.key.value === kindFieldName,
             );

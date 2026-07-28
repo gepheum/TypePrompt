@@ -135,7 +135,7 @@ export type NamingHint = {
         /** Name of the field used to discriminate union members. Always lowercased. */
         readonly discriminantName: string;
         /** Value of the discriminant field. Always lowercased. */
-        readonly value: string;
+        readonly discriminantVal: string;
       }
   >;
   readonly doc: string | null;
@@ -146,10 +146,14 @@ export type UnionMembers =
       readonly kind: "strings";
       readonly members: readonly StringLiteral[];
       readonly values: ReadonlySet<string>;
+      /** Other unions included in this union. */
+      readonly includes: readonly Union[];
     }
   | {
       readonly kind: "interfaces";
       readonly members: { [kind: string]: Interface };
-      readonly kindFieldName: string;
-      readonly kinds: readonly StringLiteral[];
+      readonly discriminator: string;
+      readonly discriminants: readonly StringLiteral[];
+      /** Other unions included in this union. */
+      readonly includes: readonly Union[];
     };
