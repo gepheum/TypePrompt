@@ -1,4 +1,4 @@
-import { InternalErrors, Span } from "../util/shared-types.js";
+import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   Interface,
@@ -48,15 +48,10 @@ function doGetUnionMembers(
         if (rawMember.kind === "type-name") {
           const typeName = rawMember.name.text;
           if (inProgress.has(typeName)) {
-            return {
-              kind: "error",
-              errors: [
-                {
-                  span: rawMember.name,
-                  message: `'${typeName}' circularly references itself`,
-                },
-              ],
-            };
+            return makeSingletonErrors({
+              span: rawMember.name,
+              message: `'${typeName}' circularly references itself`,
+            });
           }
           inProgress.add(typeName);
         }
@@ -88,16 +83,10 @@ function doGetUnionMembers(
       }
       case "array":
       case "primitive": {
-        return {
-          kind: "error",
-          errors: [
-            {
-              span: errorToken,
-              message:
-                "Members of a union must be string literals or interfaces",
-            },
-          ],
-        };
+        return makeSingletonErrors({
+          span: errorToken,
+          message: "Members of a union must be string literals or interfaces",
+        });
       }
       default: {
         const _: never = resolvedMember;
@@ -139,16 +128,10 @@ function makeStringLiteralUnionMembers(
       }
       lowercaseToNameToken.set(lowercase, [name, member.errorToken]);
     } else {
-      return {
-        kind: "error",
-        errors: [
-          {
-            span: member.errorToken,
-            message:
-              "All members of a string-literal union must be string literals",
-          },
-        ],
-      };
+      return makeSingletonErrors({
+        span: member.errorToken,
+        message: "All members of a string-literal union must be string literals",
+      });
     }
   }
   const stringLiterals = members.map((m) => m.member as StringLiteral);
@@ -196,16 +179,11 @@ function makeInterfaceUnionMembers(
           })),
         };
       } else {
-        return {
-          kind: "error",
-          errors: [
-            {
-              span: memberInfo.errorToken,
-              message: `'${discriminant}' and '${otherDiscriminant}' differ only by casing`,
-              rule: "Discriminants must be case-insensitively unique",
-            },
-          ],
-        };
+        return makeSingletonErrors({
+          span: memberInfo.errorToken,
+          message: `'${discriminant}' and '${otherDiscriminant}' differ only by casing`,
+          rule: "Discriminants must be case-insensitively unique",
+        });
       }
     }
     lowercaseToInfo.set(lowercase, memberInfo);
@@ -246,6 +224,10 @@ type Member = {
 
 const EMPTY_ERROR: InternalErrors = { kind: "error", errors: [] } as const;
 
+function makeSingletonErrors(error: InternalError): InternalErrors {
+  return { kind: "error", errors: [error] };
+}
+
 type InterfaceMemberInfo = {
   readonly kind: "success";
   readonly member: Interface;
@@ -261,15 +243,10 @@ function getMemberInfos(
   other: InterfaceMemberInfo | null,
 ): InterfaceMemberInfo | InternalErrors {
   if (member.member.kind !== "interface") {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: member.errorToken,
-          message: "All members of an interface union must be interfaces",
-        },
-      ],
-    };
+    return makeSingletonErrors({
+      span: member.errorToken,
+      message: "All members of an interface union must be interfaces",
+    });
   }
   let discriminatorType: ResolvedType | undefined;
   const { firstField } = member.member;
@@ -278,28 +255,18 @@ function getMemberInfos(
   }
   const discriminator = firstField!.name.text;
   if (discriminatorType?.kind !== "string-literal") {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: member.errorToken,
-          message: `Field '${discriminator}' is not a string literal`,
-          rule: "All interfaces in a union type must have a string literal as the type of their first field",
-        },
-      ],
-    };
+    return makeSingletonErrors({
+      span: member.errorToken,
+      message: `Field '${discriminator}' is not a string literal`,
+      rule: "All interfaces in a union type must have a string literal as the type of their first field",
+    });
   }
   if (other && discriminator !== other.discriminator) {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: member.errorToken,
-          message: `Discriminator field name '${discriminator}' does not match '${other.discriminator}'`,
-          rule: "All interfaces in a union type must have the same discriminator field name",
-        },
-      ],
-    };
+    return makeSingletonErrors({
+      span: member.errorToken,
+      message: `Discriminator field name '${discriminator}' does not match '${other.discriminator}'`,
+      rule: "All interfaces in a union type must have the same discriminator field name",
+    });
   }
   return {
     kind: "success",
