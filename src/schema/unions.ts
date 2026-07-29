@@ -23,7 +23,7 @@ function doGetUnionMembers(
   inProgress: Set<string>,
 ): UnionMembers | InternalErrors {
   const members: Member[] = [];
-  const includes = new Set<Union>();
+  const includes: Union[] = [];
   for (const rawMember of union.members) {
     // Take the first token of the raw member and not the resolved type.
     // This way, we report the error on the actual type alias used next to a
@@ -82,8 +82,8 @@ function doGetUnionMembers(
             errorToken,
           })),
         );
-        includes.add(resolvedMember);
-        otherMembers.includes.forEach((u) => includes.add(u));
+        includes.push(resolvedMember);
+        includes.push(...otherMembers.includes);
         break;
       }
       case "array":
@@ -114,7 +114,7 @@ function doGetUnionMembers(
 
 function makeStringLiteralUnionMembers(
   members: readonly Member[],
-  includes: Set<Union>,
+  includes: readonly Union[],
 ): UnionMembers | InternalErrors {
   // "abc" -> ["Abc", ...]
   const lowercaseToNameToken = new Map<string, [string, Span]>();
@@ -156,13 +156,13 @@ function makeStringLiteralUnionMembers(
     kind: "strings",
     members: stringLiterals,
     values: new Set(stringLiterals.map((m) => m.value)),
-    includes: [...includes],
+    includes: includes,
   };
 }
 
 function makeInterfaceUnionMembers(
   members: Member[],
-  includes: Set<Union>,
+  includes: readonly Union[],
   schema: SchemaView,
 ): UnionMembers | InternalErrors {
   const first = getDiscriminatorInfo(members[0]!, schema, null);
@@ -177,6 +177,7 @@ function makeInterfaceUnionMembers(
     }
     discriminatorInfos.push(info);
   }
+  CACA,
   return {
     kind: "interfaces",
     members: Object.fromEntries(
@@ -187,7 +188,7 @@ function makeInterfaceUnionMembers(
     ),
     discriminator: first.discriminator,
     discriminants: discriminatorInfos.map((info) => info.discriminant),
-    includes: [...includes],
+    includes: includes,
   };
 }
 
