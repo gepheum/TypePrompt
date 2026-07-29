@@ -46,7 +46,7 @@ function doGetUnionMembers(
       case "union": {
         let typeName: string | undefined;
         if (rawMember.kind === "type-name") {
-          const typeName = rawMember.name.text;
+          typeName = rawMember.name.text;
           if (inProgress.has(typeName)) {
             return makeSingletonErrors({
               span: rawMember.name,
