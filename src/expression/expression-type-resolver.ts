@@ -1,6 +1,5 @@
-import { ResolvedType, SchemaView } from "../schema/schema-types.js";
+import { ResolvedType, Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { getUnionMembers } from "../schema/unions.js";
 import { InternalErrors } from "../util/shared-types.js";
 import {
   Expression,
@@ -16,7 +15,7 @@ export type ResolvedExpressionType<HasValContext extends boolean> =
 
 export function resolveExpressionType<HasValContext extends boolean>(
   expression: Expression<HasValContext>,
-  schema: SchemaView,
+  schema: Schema,
   context: HasValContext extends true ? ExpressionContext : null,
 ): ResolvedExpressionType<HasValContext> {
   return doResolveExpressionType(
@@ -28,7 +27,7 @@ export function resolveExpressionType<HasValContext extends boolean>(
 
 function doResolveExpressionType<HasValContext extends boolean>(
   expression: Expression<HasValContext>,
-  schema: SchemaView,
+  schema: Schema,
   context: HasValContext extends true ? ExpressionContext : null,
 ): ResolvedType | NullableType | NullType | InternalErrors {
   if (context) {
@@ -67,7 +66,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
         };
       }
       if (left.kind === "union") {
-        const members = getUnionMembers(left, schema);
+        const members = schema.unionToMembers.get(left)!;
         if (
           members.kind === "interfaces" &&
           members.discriminator === expression.property.text

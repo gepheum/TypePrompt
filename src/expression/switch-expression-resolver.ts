@@ -1,5 +1,4 @@
-import { ResolvedType, SchemaView } from "../schema/schema-types.js";
-import { getUnionMembers } from "../schema/unions.js";
+import { ResolvedType, Schema } from "../schema/schema-types.js";
 import { InternalErrors } from "../util/shared-types.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type {
@@ -18,7 +17,7 @@ export type SwitchExpressionResult =
 export function resolveSwitchExpression(
   expression: Expression,
   type: ResolvedType | NullableType,
-  schema: SchemaView,
+  schema: Schema,
 ): SwitchExpressionResult {
   if (type.kind === "string-literal") {
     type = { kind: "union", members: [type] };
@@ -34,7 +33,7 @@ export function resolveSwitchExpression(
       ],
     };
   }
-  const members = getUnionMembers(type, schema);
+  const members = schema.unionToMembers.get(type)!;
   if (members.kind !== "strings") {
     return {
       kind: "error",
@@ -52,7 +51,7 @@ export function resolveSwitchExpression(
     const { left } = expression;
     const resolvedType = resolveExpressionType(left, schema, null);
     if (resolvedType.kind === "union") {
-      const members = getUnionMembers(resolvedType, schema);
+      const members = schema.unionToMembers.get(resolvedType)!;
       if (
         members.kind === "interfaces" &&
         members.discriminator === expression.property.text

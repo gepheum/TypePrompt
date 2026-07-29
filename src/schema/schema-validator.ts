@@ -20,7 +20,7 @@ import type {
   UnionMembers,
 } from "./schema-types.js";
 import { isPrimitiveType, resolveMaybeInvalidType } from "./type-resolver.js";
-import { getUnionMembers } from "./unions.js";
+import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
   typeDeclarations: { readonly [name: string]: TypeDeclaration },
@@ -542,7 +542,7 @@ class TypeTraverser {
       }
       case "union": {
         this.typeToNamingHint.set(type, context);
-        const unionMembers = getUnionMembers(type, this.schema);
+        const unionMembers = computeUnionMembers(type, this.schema);
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {

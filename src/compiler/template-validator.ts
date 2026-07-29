@@ -15,7 +15,6 @@ import {
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { getUnionMembers } from "../schema/unions.js";
 import { InternalError, Span } from "../util/shared-types.js";
 import {
   Body,
@@ -226,7 +225,7 @@ function validateVariants(
   if (variantFieldType.kind !== "union") {
     return makeVariantFieldTypeError();
   }
-  const unionMembers = getUnionMembers(variantFieldType, templateSchema);
+  const unionMembers = templateSchema.unionToMembers.get(variantFieldType)!;
   if (unionMembers.kind !== "strings") {
     return makeVariantFieldTypeError();
   }
@@ -483,7 +482,7 @@ function isStringType(
     case "string-literal":
       return true;
     case "union":
-      return getUnionMembers(type, schema).kind === "strings";
+      return schema.unionToMembers.get(type)!.kind === "strings";
     default:
       return false;
   }

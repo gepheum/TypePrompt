@@ -10,7 +10,7 @@ import {
 } from "./schema-types.js";
 import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
-export function getUnionMembers(
+export function computeUnionMembers(
   type: Union,
   schema: SchemaView,
 ): UnionMembers | InternalErrors {
@@ -130,7 +130,8 @@ function makeStringLiteralUnionMembers(
     } else {
       return makeSingletonErrors({
         span: member.errorToken,
-        message: "All members of a string-literal union must be string literals",
+        message:
+          "All members of a string-literal union must be string literals",
       });
     }
   }
