@@ -257,9 +257,9 @@ export function jsonMatchesType(
             if (value.entries.length <= 0 && value.ellipsis) {
               return MATCH;
             }
-            const { discriminator: kindFieldName } = members;
+            const { discriminator } = members;
             const kindValue = value.entries.find(
-              (e) => e.key.value === kindFieldName,
+              (e) => e.key.value === discriminator,
             );
             if (kindValue) {
               if (kindValue.value.kind === "string") {
@@ -288,7 +288,7 @@ export function jsonMatchesType(
               return mismatch(
                 mode,
                 value.firstToken,
-                `Missing required field '${kindFieldName}'`,
+                `Missing required field '${discriminator}'`,
               );
             }
           } else {

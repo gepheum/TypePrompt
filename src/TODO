@@ -20,8 +20,8 @@ IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
 
 LATER?
-- TODO: 
 - TODO: what if 'format' could be any string, and then the actual function needs to be provided
+- TODO: support 'case="summer,fall"'
 
 MISC:
 - https://gemini.google.com/app/daee89170e18267f
