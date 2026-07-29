@@ -291,6 +291,7 @@ function makeExamplesType(
         },
         optional: false,
         type: inputType,
+        doc: "",
       },
       output: {
         name: {
@@ -298,6 +299,7 @@ function makeExamplesType(
         },
         optional: false,
         type: outputType,
+        doc: "",
       },
     },
   };

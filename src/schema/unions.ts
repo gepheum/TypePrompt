@@ -2,8 +2,11 @@ import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   Interface,
+  ResolvedType,
   SchemaView,
   StringLiteral,
+  SyntheticSchemaField,
+  Type,
   Union,
   UnionMembers,
 } from "./schema-types.js";
@@ -160,6 +163,7 @@ function makeInterfaceUnionMembers(
     }
     memberInfos.push(info);
   }
+
   // Ensure all members have distinct discriminants.
   const lowercaseToInfo = new Map<string, InterfaceMemberInfo>();
   for (const memberInfo of memberInfos) {
@@ -188,6 +192,9 @@ function makeInterfaceUnionMembers(
     }
     lowercaseToInfo.set(lowercase, memberInfo);
   }
+
+  const sharedFields = collectSharedFields(memberInfos, schema);
+
   return {
     kind: "interfaces",
     members: Object.fromEntries(
@@ -196,6 +203,7 @@ function makeInterfaceUnionMembers(
     discriminator: first.discriminator,
     discriminants: memberInfos.map((info) => info.discriminant),
     includes: includes,
+    sharedFields: sharedFields,
   };
 }
 
@@ -278,4 +286,77 @@ function getMemberInfos(
     discriminator: discriminator,
     discriminant: discriminatorType,
   };
+}
+
+function collectSharedFields(
+  members: readonly InterfaceMemberInfo[],
+  schema: SchemaView,
+): { readonly [name: string]: SyntheticSchemaField } {
+  const first = members[0]!;
+  const result: SyntheticSchemaField[] = [];
+  for (const [name, field] of Object.entries(first.member.fields)) {
+    const fieldType = resolveType<never>(field.type, schema);
+    if (fieldType.kind === "string-literal") {
+      continue;
+    }
+    const isShared = members.every((m) => {
+      const otherField = m.member.fields[name];
+      if (!otherField) {
+        return false;
+      }
+      const otherFieldType = resolveType<never>(otherField.type, schema);
+      return (
+        field.optional === otherField.optional &&
+        areResolvedTypesEqual(fieldType, otherFieldType, schema)
+      );
+    });
+    if (isShared) {
+      const docs = new Set(
+        members
+          .map((m) => m.member.fields[name]!.doc)
+          .filter((doc) => doc !== ""),
+      );
+      const doc = docs.size === 1 ? [...docs][0]! : "";
+      result.push({
+        name: { text: name },
+        optional: field.optional,
+        type: field.type,
+        doc: doc,
+      });
+    }
+  }
+  return Object.fromEntries(result.map((field) => [field.name.text, field]));
+}
+
+function areResolvedTypesEqual(
+  a: ResolvedType,
+  b: ResolvedType,
+  schema: SchemaView,
+): boolean {
+  switch (a.kind) {
+    case "array": {
+      return (
+        b.kind === "array" &&
+        areTypesEqual(a.elementType, b.elementType, schema)
+      );
+    }
+    case "interface":
+    case "union": {
+      return a === b;
+    }
+    case "primitive": {
+      return b.kind === "primitive" && a.primitive === b.primitive;
+    }
+    case "string-literal": {
+      return b.kind === "string-literal" && a.value === b.value;
+    }
+  }
+}
+
+function areTypesEqual(a: Type, b: Type, schema: SchemaView): boolean {
+  return areResolvedTypesEqual(
+    resolveType<never>(a, schema),
+    resolveType<never>(b, schema),
+    schema,
+  );
 }

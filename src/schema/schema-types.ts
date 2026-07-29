@@ -104,6 +104,7 @@ export type SyntheticSchemaField = {
   };
   readonly optional: boolean;
   readonly type: Type | SyntheticType;
+  readonly doc: string;
 };
 
 export type SyntheticArray = {
@@ -157,4 +158,9 @@ export type UnionMembers =
       readonly discriminants: readonly StringLiteral[];
       /** Other unions included in this union. */
       readonly includes: readonly Union[];
+      /**
+       * Fields shared across all members of the union.
+       * These fields are present in every member of the union with the same type.
+       */
+      readonly sharedFields: { readonly [name: string]: SyntheticSchemaField };
     };
