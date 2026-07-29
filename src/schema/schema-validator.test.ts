@@ -142,22 +142,6 @@ describe("validateSchema – naming errors", () => {
     });
   });
 
-  it("reports a string literal value starting with uppercase", () => {
-    const result = validateSchema(
-      parseDeclarations('type Output = "Active" | "inactive";'),
-      NAMESPACE,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message:
-            "Must start with lowercase letter and contain only alphanumeric characters",
-        },
-      ],
-    });
-  });
-
   it("reports field names that conflict by case", () => {
     const result = validateSchema(
       parseDeclarations("type Output = { myField: string; myfield: number; };"),
@@ -165,7 +149,7 @@ describe("validateSchema – naming errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /conflicts with/ }],
+      errors: [{ message: "'myfield' and 'myField' differ only by casing" }],
     });
   });
 });
@@ -248,7 +232,7 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message: /Union members must be either all strings or all interfaces/,
+          message: "Members of a union must be string literals or interfaces",
         },
       ],
     });
@@ -263,7 +247,7 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message: /Union members must be either all strings or all interfaces/,
+          message: "Members of a union must be string literals or interfaces",
         },
       ],
     });
@@ -280,7 +264,7 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message: /Union members must be either all strings or all interfaces/,
+          message: "All members of a string-literal union must be string literals",
         },
       ],
     });
@@ -294,10 +278,6 @@ describe("validateSchema - union type errors", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [
-        {
-          message:
-            "The first field of an interface in a union must be a string literal",
-        },
         {
           message:
             "The first field of an interface in a union must be a string literal",

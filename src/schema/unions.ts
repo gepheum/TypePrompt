@@ -258,7 +258,7 @@ function getMemberInfos(
   if (discriminatorType?.kind !== "string-literal") {
     return makeSingletonErrors({
       span: member.errorToken,
-      message: `Field '${discriminator}' is not a string literal`,
+      message: `Type of '${discriminator}' field is not a string literal`,
       rule: "All interfaces in a union type must have a string literal as the type of their first field",
     });
   }

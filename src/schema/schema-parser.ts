@@ -232,6 +232,13 @@ class SchemaParser {
           return this.parseTypeRef({ lastTokenWasPipe: true });
         }
         case "stringLiteral": {
+          const value = token.text.slice(1, -1);
+          if (!/^[a-z][A-Za-z0-9]*$/.test(value)) {
+            this.parserErrors.push({
+              span: this.tokenToSpan(token),
+              message: "Quoted text must be a lowerCamelCase identifier",
+            });
+          }
           return {
             kind: "string-literal",
             value: token.text.slice(1, -1),

@@ -73,14 +73,14 @@ describe("checkNameConflicts", () => {
 
     expect(result).toMatch([
       {
-        message: "Name 'foo' is duplicated",
+        message: "Duplicate identifier 'foo'",
         span: {
           start: 0,
           end: 3,
         },
       },
       {
-        message: "Name 'foo' is duplicated",
+        message: "Duplicate identifier 'foo'",
         span: {
           start: 10,
           end: 13,

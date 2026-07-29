@@ -235,6 +235,30 @@ describe("parseSchema – type aliases", () => {
     });
   });
 
+  it("parses a string literal with invalid casing", () => {
+    const result = parseSchema(
+      textNode('type Response = "Active" | "Inactive";'),
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          span: {
+            start: 16,
+            end: 24,
+          },
+          message: "Quoted text must be a lowerCamelCase identifier",
+        },
+        {
+          span: {
+            start: 27,
+          },
+          message: "Quoted text must be a lowerCamelCase identifier",
+        },
+      ],
+    });
+  });
+
   it("parses a type alias to a union of inline interfaces", () => {
     const result = parseSchema(
       textNode(
@@ -715,7 +739,7 @@ describe("parseSchema – naming errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /conflicts with/ }],
+      errors: [{ message: "'response' and 'Response' differ only by casing" }],
     });
   });
 });
