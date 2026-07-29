@@ -142,10 +142,7 @@ function validateType(
     }
     case "interface": {
       errors.push(
-        ...checkNameConflicts(
-          Object.values(type.fields).map((f) => f.name),
-          { exactMatchIsConflict: true },
-        ),
+        ...checkNameConflicts(Object.values(type.fields).map((f) => f.name)),
       );
       for (const field of Object.values(type.fields)) {
         if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
@@ -310,7 +307,6 @@ function validateUnionType(
             end: resolved.quotedName.end - 1,
           };
         }),
-        { exactMatchIsConflict: true },
       ),
     );
   } else {
@@ -383,7 +379,6 @@ function validateUnionType(
             start: q.start,
             end: q.end,
           })),
-          { exactMatchIsConflict: true },
         ),
       );
     }

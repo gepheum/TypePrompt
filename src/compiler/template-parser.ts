@@ -449,12 +449,7 @@ class TemplateParser {
     // 4. All snippets are used.
 
     // Verify that all snippet names are unique.
-    this.errors.push(
-      ...checkNameConflicts(
-        this.snippets.map((s) => s.name),
-        { exactMatchIsConflict: true },
-      ),
-    );
+    this.errors.push(...checkNameConflicts(this.snippets.map((s) => s.name)));
     if (this.errors.length !== 0) {
       return;
     }

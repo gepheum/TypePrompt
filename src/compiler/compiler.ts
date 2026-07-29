@@ -179,9 +179,6 @@ class CompilationResultImpl implements CompilationResult {
         ...n.element.name,
         path: n.sourceFile.path,
       })),
-      {
-        exactMatchIsConflict: false,
-      },
     );
     for (const error of nameConflicts) {
       this.getFinalErrors(error.span.path).push(error);
@@ -208,9 +205,6 @@ class CompilationResultImpl implements CompilationResult {
           ...t.element.name,
           path: t.sourceFile.path,
         })),
-        {
-          exactMatchIsConflict: false,
-        },
       );
       for (const error of nameConflicts) {
         this.getFinalErrors(error.span.path).push(error);

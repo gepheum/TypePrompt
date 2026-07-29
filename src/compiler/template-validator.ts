@@ -367,7 +367,7 @@ function validateExpressions(
             errors.push({
               span: piece.format,
               message: `'${insertFormat}' can only be used with tabular types`,
-              hint: "A tabular type is an array of objects with only string or integer fields",
+              rule: "A tabular type is an array of objects with only string or integer fields",
             });
           }
           break;

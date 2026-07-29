@@ -1,8 +1,6 @@
 TYPE SYSTEM:
   - do I want to allow a union type to contain other union types, and to just unfold the members? That's an interesting idea.
   - rename kindFieldName to discriminantName
-
-SCHEMA:
   - populate shared fields on interface union?
     - Handle shared fields in union; an that means also support that in expression evaluation or case when="summer|fall"
     - cache result of getUnionMembers...?

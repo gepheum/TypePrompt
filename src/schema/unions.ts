@@ -2,12 +2,13 @@ import { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   Interface,
+  ResolvedType,
   SchemaView,
   StringLiteral,
   Union,
   UnionMembers,
 } from "./schema-types.js";
-import { resolveMaybeInvalidType } from "./type-resolver.js";
+import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 export function getUnionMembers(
   type: Union,
@@ -108,13 +109,14 @@ function doGetUnionMembers(
   const firstMember = members[0]!;
   return firstMember.member.kind === "string-literal"
     ? makeStringLiteralUnionMembers(members, includes)
-    : makeInterfaceUnionMembers(members, includes);
+    : makeInterfaceUnionMembers(members, includes, schema);
 }
 
 function makeStringLiteralUnionMembers(
   members: readonly Member[],
   includes: Set<Union>,
 ): UnionMembers | InternalErrors {
+  // "abc" -> ["Abc", ...]
   const lowercaseToNameToken = new Map<string, [string, Span]>();
   for (const member of members) {
     if (member.member.kind === "string-literal") {
@@ -159,9 +161,35 @@ function makeStringLiteralUnionMembers(
 }
 
 function makeInterfaceUnionMembers(
-  members: readonly Member[],
+  members: Member[],
   includes: Set<Union>,
-): UnionMembers | InternalErrors {}
+  schema: SchemaView,
+): UnionMembers | InternalErrors {
+  const first = getDiscriminatorInfo(members[0]!, schema, null);
+  if (first.kind === "error") {
+    return first;
+  }
+  const discriminatorInfos: DiscriminatorInfo[] = [first];
+  for (const member of members.slice(1)) {
+    const info = getDiscriminatorInfo(member, schema, first);
+    if (info.kind === "error") {
+      return info;
+    }
+    discriminatorInfos.push(info);
+  }
+  return {
+    kind: "interfaces",
+    members: Object.fromEntries(
+      discriminatorInfos.map((info) => [
+        info.discriminant.value,
+        info.member.member as Interface,
+      ]),
+    ),
+    discriminator: first.discriminator,
+    discriminants: discriminatorInfos.map((info) => info.discriminant),
+    includes: [...includes],
+  };
+}
 
 type Member = {
   readonly member: StringLiteral | Interface;
@@ -187,3 +215,65 @@ type Member = {
 };
 
 const EMPTY_ERROR: InternalErrors = { kind: "error", errors: [] } as const;
+
+type DiscriminatorInfo = {
+  readonly kind: "success";
+  readonly member: Member;
+  /** Name of the discriminator field, e.g. 'kind'. */
+  readonly discriminator: string;
+  readonly discriminant: StringLiteral;
+};
+
+function getDiscriminatorInfo(
+  member: Member,
+  schema: SchemaView,
+  other: DiscriminatorInfo | null,
+): DiscriminatorInfo | InternalErrors {
+  if (member.member.kind !== "interface") {
+    return {
+      kind: "error",
+      errors: [
+        {
+          span: member.errorToken,
+          message: "All members of an interface union must be interfaces",
+        },
+      ],
+    };
+  }
+  let discriminatorType: ResolvedType | undefined;
+  const {firstField} = member.member;
+  if (firstField) {
+    discriminatorType = resolveType<never>(firstField.type, schema);
+  }
+  const discriminator = firstField!.name.text;
+  if (discriminatorType?.kind !== "string-literal") {
+    return {
+      kind: "error",
+      errors: [
+        {
+          span: member.errorToken,
+          message: `Field '${discriminator}' is not a string literal`,
+          rule: "All interfaces in a union type must have a string literal as the type of their first field",
+        },
+      ],
+    };
+  }
+  if (other && discriminator !== other.discriminator) {
+    return {
+      kind: "error",
+      errors: [
+        {
+          span: member.errorToken,
+          message: `Discriminator field name '${discriminator}' does not match '${other.discriminator}'`,
+          rule: "All interfaces in a union type must have the same discriminator field name",
+        },
+      ],
+    };
+  }
+  return {
+    kind: "success",
+    member: member,
+    discriminator: discriminator,
+    discriminant: discriminatorType,
+  };
+}

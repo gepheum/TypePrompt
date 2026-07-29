@@ -152,6 +152,7 @@ export type UnionMembers =
   | {
       readonly kind: "interfaces";
       readonly members: { [kind: string]: Interface };
+      /** Name of the discriminator field, e.g. 'kind'. */
       readonly discriminator: string;
       readonly discriminants: readonly StringLiteral[];
       /** Other unions included in this union. */

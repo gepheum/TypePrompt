@@ -6,14 +6,10 @@ type Error<S extends TextSpan> = {
 
 export function checkNameConflicts<S extends TextSpan>(
   names: ReadonlyArray<S>,
-  options: {
-    readonly exactMatchIsConflict: boolean;
-  },
 ): ReadonlyArray<Error<S>> {
   const firstByLowercase = new Map<string, S>();
   const firstDuplicateAlreadyReported = new Set<string>();
   const errors: Error<S>[] = [];
-  const { exactMatchIsConflict } = options;
 
   for (const name of names) {
     const lowercase = name.text.toLowerCase();
@@ -24,9 +20,6 @@ export function checkNameConflicts<S extends TextSpan>(
     }
 
     if (name.text === first.text) {
-      if (!exactMatchIsConflict) {
-        continue;
-      }
       if (!firstDuplicateAlreadyReported.has(lowercase)) {
         errors.push({
           span: first,
@@ -44,7 +37,7 @@ export function checkNameConflicts<S extends TextSpan>(
     errors.push({
       span: name,
       message: `'${name.text}' and '${first.text}' differ only by casing`,
-      hint: "Identifiers must be case-insensitively unique",
+      rule: "Identifiers must be case-insensitively unique",
     });
   }
 

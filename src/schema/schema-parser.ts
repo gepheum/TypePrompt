@@ -53,10 +53,7 @@ class SchemaParser {
     }
 
     this.parserErrors.push(
-      ...checkNameConflicts(
-        typeDeclarations.map((t) => t.name),
-        { exactMatchIsConflict: true },
-      ),
+      ...checkNameConflicts(typeDeclarations.map((t) => t.name)),
     );
 
     if (this.tokenizerErrors.length) {
