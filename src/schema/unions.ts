@@ -2,7 +2,6 @@ import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   Interface,
-  ResolvedType,
   SchemaView,
   StringLiteral,
   Union,
@@ -249,11 +248,14 @@ function getMemberInfos(
       message: "All members of an interface union must be interfaces",
     });
   }
-  let discriminatorType: ResolvedType | undefined;
   const { firstField } = member.member;
-  if (firstField) {
-    discriminatorType = resolveType<never>(firstField.type, schema);
+  if (!firstField) {
+    return makeSingletonErrors({
+      span: member.errorToken,
+      message: "Can't have an empty interface in a union type",
+    });
   }
+  const discriminatorType = resolveType<never>(firstField.type, schema);
   const discriminator = firstField!.name.text;
   if (discriminatorType?.kind !== "string-literal") {
     return makeSingletonErrors({

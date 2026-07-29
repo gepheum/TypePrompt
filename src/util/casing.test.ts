@@ -24,21 +24,21 @@ describe("checkNameConflicts", () => {
 
     expect(result).toMatch([
       {
-        message: "Name 'response' conflicts with 'Response'",
+        message: "'response' and 'Response' differ only by casing",
         span: {
           start: 10,
           end: 18,
         },
       },
       {
-        message: "Name 'RESPONSE' conflicts with 'Response'",
+        message: "'RESPONSE' and 'Response' differ only by casing",
         span: {
           start: 20,
           end: 28,
         },
       },
       {
-        message: "Name 'error' conflicts with 'Error'",
+        message: "'error' and 'Error' differ only by casing",
         span: {
           start: 36,
           end: 41,
@@ -56,11 +56,27 @@ describe("checkNameConflicts", () => {
 
     expect(result).toMatch([
       {
-        message: "Name 'Response' conflicts with 'response'",
+        message: "'Response' and 'response' differ only by casing",
         span: {
           start: 10,
           end: 18,
         },
+      },
+      {
+        span: {
+          text: "response",
+          start: 0,
+          end: 8,
+        },
+        message: "Duplicate identifier 'response'",
+      },
+      {
+        span: {
+          text: "response",
+          start: 20,
+          end: 28,
+        },
+        message: "Duplicate identifier 'response'",
       },
     ]);
   });

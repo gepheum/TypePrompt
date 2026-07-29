@@ -264,7 +264,8 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message: "All members of a string-literal union must be string literals",
+          message:
+            "All members of a string-literal union must be string literals",
         },
       ],
     });
@@ -279,8 +280,7 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            "The first field of an interface in a union must be a string literal",
+          message: "Type of 'kind' field is not a string literal",
         },
       ],
     });
@@ -295,8 +295,7 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            "The first field of an interface in a union must be a string literal",
+          message: "Can't have an empty interface in a union type",
         },
       ],
     });
@@ -313,14 +312,16 @@ describe("validateSchema - union type errors", () => {
       kind: "error",
       errors: [
         {
-          message:
-            /The first field of an interface in a union must have the same name as/,
+          span: {
+            start: 45,
+          },
+          message: "Discriminator field name 'type' does not match 'kind'",
         },
       ],
     });
   });
 
-  it("reports duplicate discriminator values in an interface union", () => {
+  it("reports duplicate discriminant in an interface union", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: "same"; x: number } | { kind: "same"; y: number };',
@@ -329,7 +330,10 @@ describe("validateSchema - union type errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /duplicated/ }, { message: /duplicated/ }],
+      errors: [
+        { message: "Multiple members have the same discriminant: 'same'" },
+        { message: "Multiple members have the same discriminant: 'same'" },
+      ],
     });
   });
 
@@ -340,7 +344,10 @@ describe("validateSchema - union type errors", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /duplicated/ }, { message: /duplicated/ }],
+      errors: [
+        { message: "Duplicate member 'active'" },
+        { message: "Duplicate member 'active'" },
+      ],
     });
   });
 
