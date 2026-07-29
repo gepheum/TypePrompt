@@ -5,21 +5,18 @@ import type {
   InternalErrors,
   TextSpan,
 } from "../util/shared-types.js";
-import { getFirstToken } from "./get-first-token.js";
 import type {
   Interface,
   NamingHint,
   Schema,
-  SchemaField,
   SchemaValidationContext,
   SchemaView,
-  StringLiteral,
   Type,
   TypeDeclaration,
   Union,
   UnionMembers,
 } from "./schema-types.js";
-import { isPrimitiveType, resolveMaybeInvalidType } from "./type-resolver.js";
+import { isPrimitiveType } from "./type-resolver.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
@@ -28,9 +25,17 @@ export function validateSchema(
 ): Schema | InternalErrors {
   const errors: InternalError[] = [];
 
+  const schemaView: SchemaView = {
+    typeDeclarations: typeDeclarations,
+    sharedDeclarations:
+      context.kind === "template"
+        ? context.namespaceSchema.typeDeclarations
+        : null,
+  };
+
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
-    validateType(typeDeclaration, typeDeclarations, context, errors);
+    validateType(typeDeclaration, schemaView, context, errors);
     const nameDependencies = new Set<string>();
     collectTypeNameDependencies(
       typeDeclaration.valueType,
@@ -80,13 +85,6 @@ export function validateSchema(
     };
   }
 
-  const schemaView: SchemaView = {
-    typeDeclarations: typeDeclarations,
-    sharedDeclarations:
-      context.kind === "template"
-        ? context.namespaceSchema.typeDeclarations
-        : null,
-  };
   const typeTraverser = TypeTraverser.traverseAll(schemaView);
 
   return {
@@ -98,47 +96,15 @@ export function validateSchema(
   };
 }
 
-type UnionKind =
-  | "good:strings"
-  | "good:interfaces"
-  | "bad:array"
-  | "bad:primitive"
-  | "bad:union"
-  | "error";
-
-function getUnionKind(member: Type, schema: SchemaView): UnionKind {
-  const resolvedType = resolveMaybeInvalidType(member, schema);
-  if (!resolvedType) {
-    return "error";
-  }
-  switch (resolvedType.kind) {
-    case "array": {
-      return "bad:array";
-    }
-    case "interface": {
-      return "good:interfaces";
-    }
-    case "primitive": {
-      return "bad:primitive";
-    }
-    case "string-literal": {
-      return "good:strings";
-    }
-    case "union": {
-      return "bad:union";
-    }
-  }
-}
-
 function validateType(
   type: Type | TypeDeclaration,
-  types: { readonly [name: string]: TypeDeclaration },
+  schema: SchemaView,
   context: SchemaValidationContext,
   errors: ErrorSink,
 ): null {
   switch (type.kind) {
     case "array": {
-      return validateType(type.elementType, types, context, errors);
+      return validateType(type.elementType, schema, context, errors);
     }
     case "interface": {
       errors.push(
@@ -151,7 +117,7 @@ function validateType(
             message: WORD_MUST_START_WITH_LOWERCASE,
           });
         }
-        validateType(field.type, types, context, errors);
+        validateType(field.type, schema, context, errors);
       }
       return null;
     }
@@ -169,12 +135,12 @@ function validateType(
     }
     case "type": {
       validateTypeName(type.name, errors);
-      return validateType(type.valueType, types, context, errors);
+      return validateType(type.valueType, schema, context, errors);
     }
     case "type-name": {
       const typeName = type.name.text;
       const isPrimitive = !!isPrimitiveType(typeName);
-      if (!isPrimitive && !types[typeName]) {
+      if (!isPrimitive && !schema.typeDeclarations[typeName]) {
         errors.push({
           span: type.name,
           message: `Unknown type '${typeName}'`,
@@ -200,205 +166,12 @@ function validateType(
       return null;
     }
     case "union": {
-      validateUnionType(type, types, context, errors);
+      const members = computeUnionMembers(type, schema);
+      if (members.kind === "error") {
+        errors.push(...members.errors);
+      }
       return null;
     }
-  }
-}
-
-function validateUnionType(
-  type: Union,
-  types: { readonly [name: string]: TypeDeclaration },
-  context: SchemaValidationContext,
-  errors: ErrorSink,
-): void {
-  const pushErrorForBadKind = (
-    kind: "bad:array" | "bad:primitive" | "bad:union",
-    type: Type,
-  ): void => {
-    const found = getDescForKind(kind);
-    const firstToken = getFirstToken(type);
-    errors.push({
-      span: firstToken,
-      message: `Union members must be either all strings or all interfaces; found: ${found}`,
-    });
-  };
-
-  const { members } = type;
-  for (const member of members) {
-    validateType(member, types, context, errors);
-  }
-  // Make sure 'members' are either all string literals or all interfaces.
-  const first = members[0]!;
-  const schema: SchemaView = {
-    typeDeclarations: types,
-    sharedDeclarations:
-      context.kind === "template"
-        ? context.namespaceSchema.typeDeclarations
-        : null,
-  };
-  const unionKind = getUnionKind(first, schema);
-  switch (unionKind) {
-    case "good:strings":
-    case "good:interfaces": {
-      break;
-    }
-    case "bad:array":
-    case "bad:primitive":
-    case "bad:union": {
-      pushErrorForBadKind(unionKind, first);
-      return;
-    }
-    case "error": {
-      return;
-    }
-  }
-
-  let allGood = true;
-  for (const member of members.slice(1)) {
-    const memberKind = getUnionKind(member, schema);
-    switch (memberKind) {
-      case "good:strings":
-      case "good:interfaces": {
-        if (memberKind !== unionKind) {
-          const firstToken = getFirstToken(type);
-          const expected = getDescForKind(unionKind);
-          const found = getDescForKind(memberKind);
-          errors.push({
-            span: firstToken,
-            message: [
-              "Union members must be either all strings or all interfaces; ",
-              ` expected: ${expected}, found: ${found}`,
-            ].join(""),
-          });
-          allGood = false;
-        }
-        break;
-      }
-      case "bad:array":
-      case "bad:primitive":
-      case "bad:union": {
-        pushErrorForBadKind(memberKind, first);
-        allGood = false;
-        break;
-      }
-      case "error": {
-        break;
-      }
-    }
-  }
-  if (!allGood) {
-    return;
-  }
-
-  // At this stage: members are either all string literals or all interfaces.
-  if (unionKind === "good:strings") {
-    errors.push(
-      ...checkNameConflicts(
-        members.map((m) => {
-          const resolved = resolveMaybeInvalidType(m, schema);
-          if (resolved?.kind !== "string-literal") {
-            // Cannot happen: getUnionKind already verified this.
-            throw new Error();
-          }
-          return {
-            text: resolved.value,
-            start: resolved.quotedName.start + 1,
-            end: resolved.quotedName.end - 1,
-          };
-        }),
-      ),
-    );
-  } else {
-    const _: "good:interfaces" = unionKind;
-    // Verify that all these conditions are satisfied:
-    //   - the first field of each interface has string literal type
-    //   - all string literals are distinct
-    //   - all first fields have the same name
-    const quotedNames: TextSpan[] = [];
-    let discriminator: SchemaField | undefined;
-    let allGood = true;
-    for (const member of members) {
-      const resolvedType = resolveMaybeInvalidType(member, schema)!;
-      if (resolvedType.kind !== "interface") {
-        // Cannot happen.
-        throw new Error();
-      }
-      const checkedFirstField = ((): {
-        firstField: SchemaField;
-        discriminatorType: StringLiteral;
-      } | null => {
-        const { firstField } = resolvedType;
-        if (!firstField) {
-          return null;
-        }
-        const discriminatorType = resolveMaybeInvalidType(
-          firstField.type,
-          schema,
-        );
-        if (discriminatorType?.kind !== "string-literal") {
-          return null;
-        }
-        return {
-          firstField,
-          discriminatorType,
-        };
-      })();
-      if (!checkedFirstField) {
-        const firstToken =
-          resolvedType.firstField?.name ?? getFirstToken(resolvedType);
-        errors.push({
-          span: firstToken,
-          message:
-            "The first field of an interface in a union must be a string literal",
-        });
-        allGood = false;
-        continue;
-      }
-      const { firstField, discriminatorType } = checkedFirstField;
-      if (!discriminator) {
-        discriminator = firstField;
-      } else if (discriminator.name.text !== firstField.name.text) {
-        errors.push({
-          span: firstField.name,
-          message: [
-            "The first field of an interface in a union must have the same name as ",
-            "the other members; ",
-            `expected: ${discriminator.name.text}, found: ${firstField.name.text}`,
-          ].join(""),
-        });
-        allGood = false;
-      }
-      quotedNames.push(discriminatorType.quotedName);
-    }
-    if (allGood) {
-      errors.push(
-        ...checkNameConflicts(
-          quotedNames.map((q) => ({
-            text: q.text.slice(1, -1),
-            start: q.start,
-            end: q.end,
-          })),
-        ),
-      );
-    }
-  }
-}
-
-function getDescForKind(kind: UnionKind): string {
-  switch (kind) {
-    case "good:strings":
-      return "string";
-    case "good:interfaces":
-      return "interface";
-    case "bad:array":
-      return "array";
-    case "bad:primitive":
-      return "primitive";
-    case "bad:union":
-      return "union";
-    case "error":
-      return "error";
   }
 }
 
@@ -543,6 +316,9 @@ class TypeTraverser {
       case "union": {
         this.typeToNamingHint.set(type, context);
         const unionMembers = computeUnionMembers(type, this.schema);
+        if (unionMembers.kind === "error") {
+          throw new Error(JSON.stringify(unionMembers));
+        }
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {
