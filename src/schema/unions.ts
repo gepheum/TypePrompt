@@ -165,29 +165,58 @@ function makeInterfaceUnionMembers(
   includes: readonly Union[],
   schema: SchemaView,
 ): UnionMembers | InternalErrors {
-  const first = getDiscriminatorInfo(members[0]!, schema, null);
+  const first = getMemberInfos(members[0]!, schema, null);
   if (first.kind === "error") {
     return first;
   }
-  const discriminatorInfos: DiscriminatorInfo[] = [first];
+  const memberInfos: InterfaceMemberInfo[] = [first];
   for (const member of members.slice(1)) {
-    const info = getDiscriminatorInfo(member, schema, first);
+    const info = getMemberInfos(member, schema, first);
     if (info.kind === "error") {
       return info;
     }
-    discriminatorInfos.push(info);
+    memberInfos.push(info);
   }
-  CACA,
+  // Ensure all members have distinct discriminants.
+  const lowercaseToInfo = new Map<string, InterfaceMemberInfo>();
+  for (const memberInfo of memberInfos) {
+    const discriminant = memberInfo.discriminant.value;
+    const lowercase = memberInfo.discriminant.value.toLowerCase();
+    const otherInfo = lowercaseToInfo.get(lowercase);
+    if (otherInfo) {
+      const otherDiscriminant = otherInfo.discriminant.value;
+      const exact = discriminant === otherDiscriminant;
+      if (exact) {
+        const spans = [otherInfo.errorToken, memberInfo.errorToken];
+        return {
+          kind: "error",
+          errors: spans.map((s) => ({
+            span: s,
+            message: `Multiple members have the same discriminant: '${discriminant}'`,
+          })),
+        };
+      } else {
+        return {
+          kind: "error",
+          errors: [
+            {
+              span: memberInfo.errorToken,
+              message: `'${discriminant}' and '${otherDiscriminant}' differ only by casing`,
+              rule: "Discriminants must be case-insensitively unique",
+            },
+          ],
+        };
+      }
+    }
+    lowercaseToInfo.set(lowercase, memberInfo);
+  }
   return {
     kind: "interfaces",
     members: Object.fromEntries(
-      discriminatorInfos.map((info) => [
-        info.discriminant.value,
-        info.member.member as Interface,
-      ]),
+      memberInfos.map((info) => [info.discriminant.value, info.member]),
     ),
     discriminator: first.discriminator,
-    discriminants: discriminatorInfos.map((info) => info.discriminant),
+    discriminants: memberInfos.map((info) => info.discriminant),
     includes: includes,
   };
 }
@@ -217,19 +246,20 @@ type Member = {
 
 const EMPTY_ERROR: InternalErrors = { kind: "error", errors: [] } as const;
 
-type DiscriminatorInfo = {
+type InterfaceMemberInfo = {
   readonly kind: "success";
-  readonly member: Member;
+  readonly member: Interface;
+  readonly errorToken: Span;
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
   readonly discriminant: StringLiteral;
 };
 
-function getDiscriminatorInfo(
+function getMemberInfos(
   member: Member,
   schema: SchemaView,
-  other: DiscriminatorInfo | null,
-): DiscriminatorInfo | InternalErrors {
+  other: InterfaceMemberInfo | null,
+): InterfaceMemberInfo | InternalErrors {
   if (member.member.kind !== "interface") {
     return {
       kind: "error",
@@ -242,7 +272,7 @@ function getDiscriminatorInfo(
     };
   }
   let discriminatorType: ResolvedType | undefined;
-  const {firstField} = member.member;
+  const { firstField } = member.member;
   if (firstField) {
     discriminatorType = resolveType<never>(firstField.type, schema);
   }
@@ -273,7 +303,8 @@ function getDiscriminatorInfo(
   }
   return {
     kind: "success",
-    member: member,
+    member: member.member,
+    errorToken: member.errorToken,
     discriminator: discriminator,
     discriminant: discriminatorType,
   };
