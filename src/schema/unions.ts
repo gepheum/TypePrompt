@@ -127,8 +127,8 @@ function makeStringLiteralUnionMembers(
           const errorTokens = [otherErrorToken, member.errorToken];
           const exactMatch = otherName === name;
           const message = exactMatch
-            ? `Duplicate string literal '${name}'`
-            : `String literal '${name}' conflicts with '${otherName}'`;
+            ? `Duplicate member '${name}'`
+            : `'${name}' and '${otherName}' differ only by casing`;
           return {
             kind: "error",
             errors: errorTokens.map((span) => ({ span, message })),

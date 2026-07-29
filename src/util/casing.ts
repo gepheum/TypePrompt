@@ -1,11 +1,10 @@
-import { TextSpan } from "./shared-types.js";
+import { InternalError, TextSpan } from "./shared-types.js";
 
-type Error<S> = {
+type Error<S extends TextSpan> = {
   readonly span: S;
-  readonly message: string;
-};
+} & InternalError;
 
-export function checkNoAmbiguity<S extends TextSpan>(
+export function checkNameConflicts<S extends TextSpan>(
   names: ReadonlyArray<S>,
   options: {
     readonly exactMatchIsConflict: boolean;
@@ -31,20 +30,21 @@ export function checkNoAmbiguity<S extends TextSpan>(
       if (!firstDuplicateAlreadyReported.has(lowercase)) {
         errors.push({
           span: first,
-          message: `Name '${name.text}' is duplicated`,
+          message: `Duplicate identifier '${name.text}'`,
         });
         firstDuplicateAlreadyReported.add(lowercase);
       }
       errors.push({
         span: name,
-        message: `Name '${name.text}' is duplicated`,
+        message: `Duplicate identifier '${name.text}'`,
       });
       continue;
     }
 
     errors.push({
       span: name,
-      message: `Name '${name.text}' conflicts with '${first.text}'`,
+      message: `'${name.text}' and '${first.text}' differ only by casing`,
+      hint: "Identifiers must be case-insensitively unique",
     });
   }
 

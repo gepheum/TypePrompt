@@ -1,11 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { checkNoAmbiguity } from "./casing.js";
+import { checkNameConflicts } from "./casing.js";
 
-describe("checkNoAmbiguity", () => {
+describe("checkNameConflicts", () => {
   it("returns no errors when all casings are consistent", () => {
-    const result = checkNoAmbiguity(
+    const result = checkNameConflicts(
       [
         { text: "Response", start: 0, end: 8 },
         { text: "Response", start: 20, end: 28 },
@@ -18,7 +18,7 @@ describe("checkNoAmbiguity", () => {
   });
 
   it("reports an error for each name that conflicts with first casing", () => {
-    const result = checkNoAmbiguity(
+    const result = checkNameConflicts(
       [
         { text: "Response", start: 0, end: 8 },
         { text: "response", start: 10, end: 18 },
@@ -55,7 +55,7 @@ describe("checkNoAmbiguity", () => {
   });
 
   it("uses the first seen casing as the canonical one", () => {
-    const result = checkNoAmbiguity(
+    const result = checkNameConflicts(
       [
         { text: "response", start: 0, end: 8 },
         { text: "Response", start: 10, end: 18 },
@@ -76,7 +76,7 @@ describe("checkNoAmbiguity", () => {
   });
 
   it("can treat exact matches as conflicts when requested", () => {
-    const result = checkNoAmbiguity(
+    const result = checkNameConflicts(
       [
         { text: "foo", start: 0, end: 3 },
         { text: "foo", start: 10, end: 13 },

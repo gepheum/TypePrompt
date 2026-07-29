@@ -1,4 +1,4 @@
-import { checkNoAmbiguity } from "../util/casing.js";
+import { checkNameConflicts } from "../util/casing.js";
 import type {
   ErrorSink,
   InternalError,
@@ -142,7 +142,7 @@ function validateType(
     }
     case "interface": {
       errors.push(
-        ...checkNoAmbiguity(
+        ...checkNameConflicts(
           Object.values(type.fields).map((f) => f.name),
           { exactMatchIsConflict: true },
         ),
@@ -297,7 +297,7 @@ function validateUnionType(
   // At this stage: members are either all string literals or all interfaces.
   if (unionKind === "good:strings") {
     errors.push(
-      ...checkNoAmbiguity(
+      ...checkNameConflicts(
         members.map((m) => {
           const resolved = resolveMaybeInvalidType(m, schema);
           if (resolved?.kind !== "string-literal") {
@@ -377,7 +377,7 @@ function validateUnionType(
     }
     if (allGood) {
       errors.push(
-        ...checkNoAmbiguity(
+        ...checkNameConflicts(
           quotedNames.map((q) => ({
             text: q.text.slice(1, -1),
             start: q.start,

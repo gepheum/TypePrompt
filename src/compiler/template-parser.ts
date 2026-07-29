@@ -29,7 +29,7 @@ import {
 
 import * as z from "zod";
 import { parseExpression } from "../expression/expression-parser.js";
-import { checkNoAmbiguity } from "../util/casing.js";
+import { checkNameConflicts } from "../util/casing.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
 import { extractTextContent } from "./text-extractor.js";
@@ -450,7 +450,7 @@ class TemplateParser {
 
     // Verify that all snippet names are unique.
     this.errors.push(
-      ...checkNoAmbiguity(
+      ...checkNameConflicts(
         this.snippets.map((s) => s.name),
         { exactMatchIsConflict: true },
       ),

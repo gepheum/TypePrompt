@@ -1,5 +1,5 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
-import { checkNoAmbiguity } from "../util/casing.js";
+import { checkNameConflicts } from "../util/casing.js";
 import { InternalError } from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
@@ -174,7 +174,7 @@ class CompilationResultImpl implements CompilationResult {
 
     this.namespaceSchemas["Default"] ??= EMPTY_SCHEMA;
 
-    const ambiguityErrors = checkNoAmbiguity(
+    const nameConflicts = checkNameConflicts(
       Object.values(namespaces).map((n) => ({
         ...n.element.name,
         path: n.sourceFile.path,
@@ -183,7 +183,7 @@ class CompilationResultImpl implements CompilationResult {
         exactMatchIsConflict: false,
       },
     );
-    for (const error of ambiguityErrors) {
+    for (const error of nameConflicts) {
       this.getFinalErrors(error.span.path).push(error);
     }
   }
@@ -203,7 +203,7 @@ class CompilationResultImpl implements CompilationResult {
     }
 
     for (const templates of Object.values(namespaceToTemplates)) {
-      const ambiguityErrors = checkNoAmbiguity(
+      const nameConflicts = checkNameConflicts(
         Object.values(templates).map((t) => ({
           ...t.element.name,
           path: t.sourceFile.path,
@@ -212,7 +212,7 @@ class CompilationResultImpl implements CompilationResult {
           exactMatchIsConflict: false,
         },
       );
-      for (const error of ambiguityErrors) {
+      for (const error of nameConflicts) {
         this.getFinalErrors(error.span.path).push(error);
       }
     }
@@ -223,7 +223,7 @@ class CompilationResultImpl implements CompilationResult {
 
     for (const [id, templates] of Object.entries(idToTemplates)) {
       if (templates.length !== 1) {
-        // The error was already reported in the ambiguity check above.
+        // The error was already reported in the name conflicts check above.
         continue;
       }
       const template = templates[0]!;

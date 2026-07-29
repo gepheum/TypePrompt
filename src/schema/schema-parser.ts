@@ -1,4 +1,4 @@
-import { checkNoAmbiguity } from "../util/casing.js";
+import { checkNameConflicts } from "../util/casing.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   InternalError,
@@ -53,7 +53,7 @@ class SchemaParser {
     }
 
     this.parserErrors.push(
-      ...checkNoAmbiguity(
+      ...checkNameConflicts(
         typeDeclarations.map((t) => t.name),
         { exactMatchIsConflict: true },
       ),
