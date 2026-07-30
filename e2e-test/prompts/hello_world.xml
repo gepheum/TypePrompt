@@ -9,6 +9,7 @@
 <template name="MyTemplate">
   <meta>
     temperature: 0.7
+    foobar: bar
   </meta>
 
   <schema>
@@ -29,8 +30,24 @@
   </system>
 
   <user>
-    Your full name is: <insert val="input.firstName"/> <insert val="input.lastName"/>.
+    Your <c>firstName</c> is: <insert val="input.firstName"/>
+    Your <c>lastName</c> is: <insert val="input.lastName"/>
+
+    For example <c>{"firstName": "Bo", "lastName": "Zo"}</c>
   </user>
+
+  <examples>
+    - input:
+        firstName: "John"
+        lastName: "Doe"
+      output:
+        x: 8
+    - input:
+        firstName: "Jane"
+        lastName: "Smith"
+      output:
+        x: 9
+  </examples>
 
   <snippet name="greet">
     Hello,

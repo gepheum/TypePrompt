@@ -2,9 +2,12 @@ COMPILER:
   - Asyncify
   - Format errors
 
+IDEA:
+  - Add a <playground> element, templates defined inside override other templates...
+  - TODO: think about toolcalls
+
 TEMPLATE PARSER:
   - Verify that output formats across templates don't intersect
-- TODO: think about toolcalls
 
 ERRORS:
   - add suggestions to:
