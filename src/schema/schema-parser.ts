@@ -446,10 +446,7 @@ class SchemaParser {
       .filter((d) => d)
       .join(" or ");
     this.parserErrors.push({
-      span: {
-        start: token.textStart,
-        end: token.textEnd,
-      },
+      span: this.tokenToSpan(token),
       message: `Expected: ${descriptors}`,
     });
     return "noMatch";
@@ -476,10 +473,11 @@ class SchemaParser {
     end: number;
     message: string;
   }): void {
-    this.tokenizerErrors.push({
+    const { content, tokenizerErrors } = this;
+    tokenizerErrors.push({
       span: {
-        start: args.start,
-        end: args.end,
+        start: textToSourcePosition(content, args.start),
+        end: textToSourcePosition(content, args.end),
       },
       message: args.message,
     });
