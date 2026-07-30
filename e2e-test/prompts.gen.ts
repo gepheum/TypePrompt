@@ -3,7 +3,14 @@
 import { ZodType } from "zod";
 
 export namespace Meta {
-  export type Meta = }
+  export type Meta =  {
+    /** Temperature setting for the template */
+    readonly temperature: number;
+    readonly foobar:
+      | "foo"
+      | "bar";
+  };
+}
 
 export type PromptSpec<Args, Response> = {
   readonly make: (args: Args) => Response;

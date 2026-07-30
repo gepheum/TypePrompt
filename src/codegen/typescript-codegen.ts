@@ -1,6 +1,7 @@
 import { CompilationResult } from "../compiler/compiler-types.js";
 import { Config } from "../config/config-parser.js";
-import { ResolvedType, Schema } from "../schema/schema-types.js";
+import { ResolvedType, Schema, Type } from "../schema/schema-types.js";
+import { resolveType } from "../schema/type-resolver.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -289,22 +290,11 @@ class TypescriptCodeGenerator {
   private writeSchema(schema: Schema, indent: "  " | "    "): void {
     for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
       const name = typeDeclaration.name.text;
-      this.writeJsdoc(typeDeclaration.doc, indent);
+      this.code += wrapJsdoc(typeDeclaration.doc, indent);
       this.code += `${indent}export type ${name} = `;
-    }
-  }
-
-  private writeJsdoc(doc: string, indent: string): void {
-    if (!doc) return;
-    const lines = doc.split("\n");
-    if (lines.length === 1) {
-      this.code += `${indent}/** ${doc} */\n`;
-    } else {
-      this.code += `${indent}/**\n`;
-      for (const line of lines) {
-        this.code += line ? `${indent} * ${line}\n` : `${indent} *\n`;
-      }
-      this.code += `${indent} */\n`;
+      const spelledType = spellType(typeDeclaration.valueType, indent);
+      const maybeSpace = spelledType.startsWith("\n") ? "" : " ";
+      this.code += `${maybeSpace}${spelledType};\n`;
     }
   }
 }
@@ -317,4 +307,72 @@ function toTypeName(namePieces: readonly string[]): string {
   return namePieces
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join("_");
+}
+
+function spellType(type: Type, indent: string): string {
+  switch (type.kind) {
+    case "array": {
+      const {elementType} = type;
+      const indented = indent + "  ";
+      const spelledElement = spellType(elementType, indented);
+      if (elementType.kind === "union") {
+        return `(${spelledElement}\n${indent})[]`;
+      } else {
+        return `${spelledElement}[]`;
+      }
+    }
+    case "interface": {
+      const fields = Object.entries(type.fields);
+      if (fields.length <= 0) {
+        return "{}";
+      }
+      let result = "{\n";
+      const indented = indent + "  ";
+      for (const [fieldName, field] of fields) {
+        const jsdoc = wrapJsdoc(field.doc, indented);
+        const spelledField = spellType(field.type, indented);
+        const maybeSpace = spelledField.startsWith("\n") ? "" : " ";
+        result += [
+          jsdoc,
+          indented,
+          "readonly ",
+          fieldName,
+          ":",
+          maybeSpace,
+          spelledField,
+          ";\n"
+        ].join("");
+      }
+      result += `${indent}}`;
+      return result;
+    }
+    case "union": {
+      const indented = indent.concat("  ");
+      return type.members.map((m) => `\n${indent}  | `.concat(spellType(m, indented))).join("");
+    }
+    case "type-name": {
+      return type.name.text;
+    }
+    case "shared-type-name": {
+      return "shared.".concat(type.name.text);
+    }
+    case "string-literal": {
+      return type.quotedName.text;
+    }
+  }
+}
+
+function wrapJsdoc(doc: string, indent: string): string {
+  if (!doc) return "";
+  const lines = doc.split("\n");
+  if (lines.length === 1 && doc.length - indent.length <= 73) {
+    return `${indent}/** ${doc} */\n`;
+  } else {
+    let result = `${indent}/**\n`;
+    for (const line of lines) {
+      result += line ? `${indent} * ${line}\n` : `${indent} *\n`;
+    }
+    result += `${indent} */\n`;
+    return result;
+  }
 }
