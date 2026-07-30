@@ -24,7 +24,7 @@ export type Prompt<Output, Input=unknown> = {
   readonly meta: Meta.Meta;
   readonly systemInstructions: string;
   readonly userInstructions: string;
-  readonly examples: readonly FewShotExample[];
+  readonly examples: FewShotExample[];
   readonly outputType: ZodType<Output>;
 
   readonly templateId: TemplateId;
