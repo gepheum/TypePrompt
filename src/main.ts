@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// TODO: async!
+
 import {
   existsSync,
   mkdirSync,
@@ -183,8 +185,10 @@ function resolveConfigPath(projectPath?: string): string {
 }
 
 function formatError(path: string, error: InternalError): string {
-  const { lineNumber, columnNumber } = error.startPosition.position;
-  return `${rel}:${lineNumber}:${columnNumber}: ${error.message}`;
+  return JSON.stringify({
+    path,
+    message: error.message,
+  }, null, 2);
 }
 
 /**
