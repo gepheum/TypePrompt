@@ -3,87 +3,10 @@
 import { ZodType } from "zod";
 
 export namespace Meta {
-  export type Meta = {
-    /** Temperature setting for the template */
-    readonly temperature?: number;
-    readonly foobar?: Meta_Foobar;
-  };
-
-  export type Meta_Foobar =
-    | "foo"
-    | "bar";
-}
-
-/** Types defined in the Default namespace. */
-export namespace DefaultTypes {
-  export namespace John {
-    export type Variant =
-      | "Foo";
-
-    export type Args = {
-      readonly name: string;
-      readonly variant: Variant;
-    };
-
-    export type Response = {
-      readonly x: number;
-      readonly y: number;
-    };
-  }
-
-  export namespace HelloWorld {
-    export type Variant =
-      | "Aa"
-      | "Bb";
-
-    export type Args = {
-      /** Documentation for foo */
-      readonly foo: string;
-      readonly bar: Input;
-      readonly variant: Variant;
-    };
-
-    export type Input = {
-      readonly x: number;
-      readonly y: number;
-    };
-
-    /** The input. */
-    export type Foo = {
-      /** The message to be displayed */
-      readonly message: string;
-      readonly foo: number;
-      readonly bar: number;
-    };
-
-    export type Response = Foo[];
-  }
-}
-
-/** Types defined in the Taxi namespace. */
-export namespace TaxiTypes {
-  export namespace Fo {
-    export type Args = {
-      /** Doc */
-      readonly input: number[];
-    };
-
-    export type Response = string[];
-  }
-}
-
-export type PromptMaker2 = {
-  readonly default: {
-    readonly john: PromptSpec<DefaultTypes.John.Args, DefaultTypes.John.Response>;
-    readonly helloWorld: PromptSpec<DefaultTypes.HelloWorld.Args, DefaultTypes.HelloWorld.Response>;
-  };
-  readonly taxi: {
-    readonly fo: PromptSpec<TaxiTypes.Fo.Args, TaxiTypes.Fo.Response>;
-  };
-};
+  export type Meta = }
 
 export type PromptSpec<Args, Response> = {
-  readonly make: (args: Args) => string;
+  readonly make: (args: Args) => Response;
   readonly responseType: ZodType<Response>;
   readonly meta: Meta.Meta;
 };

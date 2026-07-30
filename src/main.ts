@@ -152,11 +152,17 @@ async function runGeneration(projectPath?: string): Promise<void> {
 
   const compilationResult = compile(pathToContent, { cache: null });
 
+  let anyErrors = false;
   for (const [path, errors] of Object.entries(compilationResult.finalErrors)) {
     const {lineFinder} = compilationResult.sourceFiles[path]!;
     for (const error of errors) {
       console.error(formatError(error, path, lineFinder));
+      anyErrors = anyErrors && (errors.length > 0);
     }
+  }
+
+  if (anyErrors) {
+    return;
   }
 
   for (const generator of CODE_GENERATORS) {
