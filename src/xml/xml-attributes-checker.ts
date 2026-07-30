@@ -37,17 +37,8 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   const errors: InternalError[] = [];
   const values: Record<string, AttributeValue<unknown>> = {};
 
-  // Check for unexpected attributes.
-  for (const [name, attr] of Object.entries(element.attributes)) {
-    if (!(name in expectedAttributes)) {
-      errors.push({
-        span: attr.value,
-        message: `Unexpected attribute '${name}'`,
-      });
-    }
-  }
-
   // Validate each expected attribute.
+  const missingAttributes: string[] = [];
   for (const [name, entry] of Object.entries(expectedAttributes)) {
     const attr = element.attributes[name];
     const rawValue = attr?.value.text;
@@ -60,6 +51,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
         };
       }
     } else if (rawValue === undefined) {
+      missingAttributes.push(name);
       errors.push({
         span: element.tag,
         message: `Missing required attribute '${name}'`,
@@ -68,6 +60,17 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
       errors.push({
         span: attr!.value,
         message: `Invalid value for attribute '${name}': expected ${entry.expected}`,
+      });
+    }
+  }
+
+  // Check for unexpected attributes.
+  for (const [name, attr] of Object.entries(element.attributes)) {
+    if (!(name in expectedAttributes)) {
+      errors.push({
+        span: attr.value,
+        message: `Unexpected attribute '${name}'`,
+        suggestions: missingAttributes,
       });
     }
   }

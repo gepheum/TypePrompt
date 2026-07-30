@@ -1,13 +1,15 @@
 TEMPLATE PARSER:
-  - template syntax:
-    - problem: think about specifying the variant in the example in the case where examples can be at any level... Maybe I want to un-remove the field, and check at validation
   - Verify that output formats across templates don't intersect
-  - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
 - TODO: think about toolcalls
 
 ERRORS:
-  - add suggestions to errors in xml-attributes-checker
+  - add suggestions to:
+    - errors in xml-attributes-checker
+    - 'namespace' attribute
+    - 'case' attribute
+    - expression after a dot
   - TODO: add warning
+  - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
 
 IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
