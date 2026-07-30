@@ -228,6 +228,7 @@ class CompilationResultImpl implements CompilationResult {
         this.getFinalErrors(template.sourceFile.path).push({
           span: template.element.name,
           message: `Namespace '${namespaceName}' not found`,
+          suggestions: Object.keys(this.namespaceSchemas),
         });
         continue;
       } else if (namespace.kind !== "success") {
