@@ -12,6 +12,30 @@ export namespace Meta {
   };
 }
 
+export type TemplateId =
+  | "Default:Foo"
+  | "Default:Bar";
+
+export type Template<Input, Output> = {
+  readonly make: (input: Input) => Prompt<Output, Input>;
+};
+
+export type Prompt<Output, Input=unknown> = {
+  readonly meta: Meta.Meta;
+  readonly systemInstructions: string;
+  readonly userInstructions: string;
+  readonly examples: readonly FewShotExample[];
+  readonly outputType: ZodType<Output>;
+
+  readonly templateId: TemplateId;
+  readonly templateInput: Input;
+};
+
+export type FewShotExample = {
+  readonly input: string;
+  readonly output: string;
+};
+
 export type PromptSpec<Args, Response> = {
   readonly make: (args: Args) => Response;
   readonly responseType: ZodType<Response>;

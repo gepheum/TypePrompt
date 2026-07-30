@@ -316,9 +316,9 @@ function spellType(type: Type, indent: string): string {
       const indented = indent + "  ";
       const spelledElement = spellType(elementType, indented);
       if (elementType.kind === "union") {
-        return `(${spelledElement}\n${indent})[]`;
+        return `readonly (${spelledElement}\n${indent})[]`;
       } else {
-        return `${spelledElement}[]`;
+        return `readonly ${spelledElement}[]`;
       }
     }
     case "interface": {
