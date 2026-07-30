@@ -27,8 +27,8 @@ export function parseBody<HasValContext extends boolean>(
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkXmlAttributes(insertNode, {
       snippet: {
-        schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-        expected: "an UpperCamelCase identifier",
+        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        expected: "a lowerCamelCase identifier",
       },
     });
     if (attrs.kind === "error") {
@@ -237,10 +237,10 @@ function removeIndentAfterEol(
     if (cursor >= text.length) {
       break;
     }
-    const whiteLineMatch = /^[ \t]*\n/.exec(text.slice(cursor));
+    const whiteLineMatch = /^([ \t]*)(\n|$)/.exec(text.slice(cursor));
     if (whiteLineMatch) {
       // A line with only whitespaces. Skip them.
-      cursor += whiteLineMatch[0].length - 1;
+      cursor += whiteLineMatch[1]!.length;
       continue;
     }
     if (text.startsWith(baseIndent, cursor)) {
