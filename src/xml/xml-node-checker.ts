@@ -7,7 +7,7 @@ export function checkAllAreElements<Tags extends readonly string[]>(
   messageSuffix: string,
   errors: ErrorSink,
 ): ReadonlyArray<[Tags[number], ElementNode]> {
-  if (!messageSuffix.startsWith(" ")) {
+  if (messageSuffix !== "" && !messageSuffix.startsWith(" ")) {
     throw new Error("messageSuffix must start with a space");
   }
   const tagSet = new Set(tags);
@@ -43,7 +43,7 @@ export function checkTag<Tags extends readonly string[]>(
   messageSuffix: string,
   errors: ErrorSink,
 ): Tags[number] | null {
-  if (!messageSuffix.startsWith(" ")) {
+  if (messageSuffix !== "" && !messageSuffix.startsWith(" ")) {
     throw new Error("messageSuffix must start with a space");
   }
   const tag = node.tag.text;

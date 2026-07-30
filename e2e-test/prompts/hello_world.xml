@@ -1,134 +1,39 @@
 <meta>
   interface Meta {
     /** Temperature setting for the template */
-    temperature?: number;
+    temperature: number;
     foobar?: "foo" | "bar";
   }
 </meta>
 
-<template name="John">
-  <schema>
-    interface Response {
-      x: Int;
-      y: Int;
-    }
-
-    type Int = number;
-  </schema>
-
-  <args>
-    <arg name="name" />
-  </args>
-
-  <body variant="Foo">
-    Hello <arg name="name"/>.
-  </body>
-</template>
-
-<template name="HelloWorld">
-  <meta temperature="0.7" />
+<template name="MyTemplate">
+  <meta>
+    temperature: 0.7
+  </meta>
 
   <schema>
-    interface Input {
-      x: Int;
-      y: Int;
-      variant: "default" | "formal";
-    }
+    type Input = {
+      firstName: string;
+      lastName: string;
+    };
 
-    /** The input. */
-    interface Foo {
-      /** The message to be displayed */
-      message: string;
-      foo: number;
-      bar: number;
-    }
-
-    type Response = Foo[];
-
-    type Int = number;
+    type Output = {
+      x: integer;
+    };
   </schema>
 
-  <args>
-    <arg name="foo" doc="Documentation for foo" />
-    <arg name="bar" type="Input" />
-  </args>
+  <system>
+    <insert snippet="greet"/>
 
-  <body variant="Aa">
-    Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar" format="json"/>.
+    How many characters are in your full name?
+  </system>
 
-    Fields:
-    - <e>foo</e>: The name of the person to greet
-    - <e>bar</e>: Bar
+  <user>
+    Your full name is: <insert val="input.firstName"/> <insert val="input.lastName"/>.
+  </user>
 
-    Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar" format="json"/>.
+  <snippet name="greet">
+    Hello,
 
-    <enclosed tag="Example">
-      <enclosed tag="Input">
-        <e>[{...}]</e>
-      </enclosed>
-      <enclosed tag="Output">
-        <e>[{...}]</e>
-      </enclosed>
-    </enclosed>
-
-    ## Examples:
-
-  </body>
-
-  <body variant="Bb">
-    Say bonjour to <arg name="foo"/>.
-    How are you? <arg name="bar" format="json"/>.
-
-    Fields:
-    - <e>foo</e>: The name of the person to greet
-    - <e>bar</e>: Bar
-
-    Say hello to <arg name="foo"/>.
-    How are you? <arg name="bar" format="json"/>.
-
-    <enclosed tag="Example">
-      <enclosed tag="Input">
-        <e>[...]</e>
-      </enclosed>
-      <enclosed tag="Output">
-        <e>[
-          {
-            "message": "M",
-            "foo": 3,
-            "bar": 4
-          },
-          {
-            "message": "M",
-            "foo": -3,
-            "bar": -4
-          }
-        ]</e>
-      </enclosed>
-    </enclosed>
-
-    ## Examples:
-
-  </body>
-</template>
-
-<template name="Fo" namespace="Taxi">
-  <meta foobar="foo" />
-
-  <schema>
-    type Foo = Int[];
-    type Int = number;
-
-    /** The response. */
-    type Response = string[];
-  </schema>
-
-  <args>
-    <arg name="input" doc="Doc" type="Foo"/>
-  </args>
-
-  <body>
-    Hi <arg name="input" format="toon"/>.
-  </body>
+  </snippet>
 </template>

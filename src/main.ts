@@ -187,7 +187,7 @@ function resolveConfigPath(projectPath?: string): string {
 function formatError(path: string, error: InternalError): string {
   return JSON.stringify({
     path,
-    message: error.message,
+    message: error,
   }, null, 2);
 }
 

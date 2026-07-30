@@ -1,3 +1,7 @@
+COMPILER:
+  - Asyncify
+  - Format errors
+
 TEMPLATE PARSER:
   - Verify that output formats across templates don't intersect
 - TODO: think about toolcalls
