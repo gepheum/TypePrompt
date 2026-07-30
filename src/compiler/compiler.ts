@@ -1,5 +1,6 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
+import { createLineFinder, LineFinderData } from "../util/line-finder.js";
 import { InternalError } from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
@@ -92,8 +93,11 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
   constructor(
     readonly path: string,
     readonly content: string,
-  ) {}
+  ) {
+    this.lineFinder = createLineFinder(content);
+  }
 
+  readonly lineFinder: LineFinderData;
   readonly templates: Template[] = [];
   readonly namespaces: Namespace[] = [];
   readonly metas: Meta[] = [];

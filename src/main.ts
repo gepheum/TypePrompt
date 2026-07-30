@@ -18,6 +18,7 @@ import { ConfigParseError, parseConfigToml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
 import { compile } from "./compiler/compiler.js";
 import { InternalError } from "./util/shared-types.js";
+import { findLine, LineFinderData } from "./util/line-finder.js";
 
 type Command =
   | { readonly kind: "help" }
@@ -152,8 +153,9 @@ async function runGeneration(projectPath?: string): Promise<void> {
   const compilationResult = compile(pathToContent, { cache: null });
 
   for (const [path, errors] of Object.entries(compilationResult.finalErrors)) {
+    const {lineFinder} = compilationResult.sourceFiles[path]!;
     for (const error of errors) {
-      console.error(formatError(path, error));
+      console.error(formatError(error, path, lineFinder));
     }
   }
 
@@ -184,10 +186,12 @@ function resolveConfigPath(projectPath?: string): string {
     : join(resolved, "typeprompt.toml");
 }
 
-function formatError(path: string, error: InternalError): string {
+function formatError(error: InternalError, path: string, lineFinder: LineFinderData): string {
   return JSON.stringify({
     path,
     message: error,
+    start: findLine(error.span.start, lineFinder),
+    end: findLine(error.span.end, lineFinder),
   }, null, 2);
 }
 

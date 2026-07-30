@@ -1,5 +1,5 @@
 <meta>
-  interface Meta {
+  type Meta = {
     /** Temperature setting for the template */
     temperature: number;
     foobar?: "foo" | "bar";

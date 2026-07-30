@@ -2,6 +2,7 @@ import { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
 import type { JsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
+import { LineFinderData } from "../util/line-finder.js";
 import type {
   InternalError,
   InternalErrors,
@@ -21,6 +22,7 @@ export type CompilationResult = {
 export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
+  readonly lineFinder: LineFinderData;
 
   readonly templates: readonly Template[];
   readonly namespaces: readonly Namespace[];
