@@ -4,6 +4,7 @@ import { ExpressionContext } from "../expression/expression-types.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import { validateJson } from "../json/json-type-checker.js";
+import { JsonValue } from "../json/json-types.js";
 import {
   ResolvedType,
   Schema,
@@ -54,44 +55,32 @@ export function validateTemplate(args: {
 
   errors.push(...validateVariants(template, templateSchema));
 
-  const examplesInterface = makeExamplesType(template, templateSchema);
-
-  const templateContents: Array<Partial<TemplateContent>> = [];
-  switch (template.contents.kind) {
-    case "no-variants": {
-      templateContents.push(template.contents.content);
-      break;
-    }
-    case "variants": {
-      templateContents.push(template.contents.defaultContent);
-      for (const variant of template.contents.variants) {
-        templateContents.push(variant.content);
-      }
-      break;
-    }
-  }
-  for (const templateContent of templateContents) {
-    for (const body of [templateContent.system, templateContent.user]) {
-      if (!body) continue;
-      for (const piece of body) {
-        if (piece.kind !== "c-tag") continue;
-        errors.push(...validateCTag(piece.cTag, templateSchema));
-      }
-    }
-    if (templateContent.examples) {
+  if (template.contents.kind === "no-variants") {
+    errors.push(
+      ...validateTemplateContent(template.contents.content, templateSchema, {
+        isVariantSpecialization: false,
+      }),
+    );
+  } else {
+    errors.push(
+      ...validateTemplateContent(
+        template.contents.defaultContent,
+        templateSchema,
+        { isVariantSpecialization: false },
+      ),
+    );
+    for (const variant of template.contents.variants) {
       errors.push(
-        ...validateJson(
-          templateContent.examples,
-          templateSchema,
-          examplesInterface,
-        ),
+        ...validateTemplateContent(variant.content, templateSchema, {
+          isVariantSpecialization: true,
+        }),
       );
     }
   }
 
-  errors.push(
-    ...validateExpressions(templateContents, template.snippets, templateSchema),
-  );
+  for (const snippet of template.snippets) {
+    errors.push(...validateSnippet(snippet, templateSchema));
+  }
 
   if (errors.length > 0) {
     return {
@@ -195,7 +184,7 @@ function validateVariants(
     return [
       {
         span: outputTypeDeclaration.name,
-        message: "Output must be an interface when using <variant> elements",
+        message: "'Output' must be an interface when using <variant> elements",
       },
     ];
   }
@@ -205,16 +194,19 @@ function validateVariants(
       {
         span: outputTypeDeclaration.name,
         message:
-          "Output must have a 'variant' field when using <variant> elements",
+          "'Output' must have a 'variant' field when using <variant> elements",
       },
     ];
   }
   const makeVariantFieldTypeError = (): readonly InternalError[] => [
     {
       span: variantField.name,
-      message: "'Output.variant' must be a union of string literals",
+      message: "Type of 'variant' field must be a union of string literals",
     },
   ];
+  if (variantField.optional) {
+    return makeVariantFieldTypeError();
+  }
   let variantFieldType = resolveType(variantField.type, templateSchema);
   if (variantFieldType.kind === "string-literal") {
     variantFieldType = {
@@ -249,9 +241,40 @@ function validateVariants(
   return errors;
 }
 
-function makeExamplesType(
-  template: Template,
+function validateTemplateContent(
+  content: Partial<TemplateContent>,
   templateSchema: Schema,
+  options: {
+    readonly isVariantSpecialization: boolean;
+  },
+): readonly InternalError[] {
+  const errors: InternalError[] = [];
+  for (const body of [content.system, content.user]) {
+    if (!body) continue;
+    errors.push(...validateBody(body, templateSchema, null));
+  }
+
+  const examplesInterface = makeExamplesType(templateSchema, options);
+  if (content.examples) {
+    const exampleErrors = validateJson(
+      content.examples,
+      templateSchema,
+      examplesInterface,
+    );
+    errors.push(...exampleErrors);
+    if (exampleErrors.length <= 0 && options.isVariantSpecialization) {
+      errors.push(...verifyVariantFieldNotSet(content.examples));
+    }
+  }
+
+  return errors;
+}
+
+function makeExamplesType(
+  templateSchema: Schema,
+  options: {
+    readonly isVariantSpecialization: boolean;
+  },
 ): SyntheticArray {
   const { typeDeclarations } = templateSchema;
 
@@ -259,7 +282,7 @@ function makeExamplesType(
 
   let outputType: Type | SyntheticInterface =
     typeDeclarations["Output"]!.valueType;
-  if (template.contents.kind === "variants") {
+  if (options.isVariantSpecialization) {
     const resolvedOutputType = resolveType(outputType!, templateSchema);
     if (
       resolvedOutputType.kind === "interface" &&
@@ -271,8 +294,10 @@ function makeExamplesType(
           text: "Output",
         },
         fields: Object.fromEntries(
-          Object.entries(resolvedOutputType.fields).filter(
-            ([name, _]) => name !== "variant",
+          Object.entries(resolvedOutputType.fields).map(([name, field]) =>
+            name === "variant"
+              ? [name, { ...field, optional: true }]
+              : [name, field],
           ),
         ),
       };
@@ -310,167 +335,192 @@ function makeExamplesType(
   };
 }
 
-function validateExpressions(
-  templateContents: ReadonlyArray<Partial<TemplateContent>>,
-  snippets: readonly Snippet[],
+function verifyVariantFieldNotSet(
+  examples: JsonValue<"strict">,
+): readonly InternalError[] {
+  const errors: InternalError[] = [];
+  if (examples.kind !== "array") {
+    throw new Error();
+  }
+  for (const example of examples.elements) {
+    if (example.kind !== "object") {
+      throw new Error();
+    }
+    for (const entry of example.entries) {
+      if (entry.key.value === "variant") {
+        errors.push({
+          span: entry.key.firstToken,
+          message:
+            "Examples must not specify 'variant' when within a <variant> element",
+        });
+      }
+    }
+  }
+  return errors;
+}
+
+function validateSnippet(
+  snippet: Snippet,
   templateSchema: Schema,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
-
-  const validateBody = <HasValContext extends boolean>(
-    body: Body<HasValContext>,
-    context: HasValContext extends true ? ExpressionContext : null,
-  ): void => {
-    for (const piece of body) {
-      if (piece.kind !== "insert-val") continue;
-      const expression = piece.val;
-      const type = resolveExpressionType(expression, templateSchema, context);
-      if (type.kind === "error") {
-        errors.push(...type.errors);
-        continue;
-      } else if (type.kind === "null") {
-        errors.push({
-          span: expression.fullPath,
-          message: "Always null",
-        });
-        continue;
-      } else if (type.kind === "nullable") {
-        errors.push({
-          span: expression.fullPath,
-          message: "May be null",
-        });
-        continue;
+  switch (snippet.kind) {
+    case "snippet": {
+      errors.push(...validateBody(snippet.body, templateSchema, null));
+      break;
+    }
+    case "snippet-if": {
+      const expressionType = resolveExpressionType(
+        snippet.expression,
+        templateSchema,
+        null,
+      );
+      if (expressionType.kind === "error") {
+        errors.push(...expressionType.errors);
+        break;
       }
-      if (!piece.format) {
+      const ifContext = resolveIfExpression(
+        snippet.expression,
+        expressionType,
+        snippet.is,
+      );
+      if (ifContext.kind === "error") {
+        errors.push(...ifContext.errors);
+        break;
+      }
+      errors.push(
+        ...validateBody(snippet.then, templateSchema, ifContext.then),
+      );
+      errors.push(
+        ...validateBody(snippet.else, templateSchema, ifContext.else),
+      );
+      break;
+    }
+    case "snippet-switch": {
+      const expressionType = resolveExpressionType(
+        snippet.expression,
+        templateSchema,
+        null,
+      );
+      if (expressionType.kind === "error") {
+        errors.push(...expressionType.errors);
+        break;
+      }
+      const switchContext = resolveSwitchExpression(
+        snippet.expression,
+        expressionType,
+        templateSchema,
+      );
+      if (switchContext.kind === "error") {
+        errors.push(...switchContext.errors);
+        break;
+      }
+      const handledCases = new Set(snippet.branches.map((b) => b.case.text));
+      const missingCases = Object.keys(switchContext.cases).filter(
+        (c) => !handledCases.has(c),
+      );
+      for (const branch of snippet.branches) {
+        const context = switchContext.cases[branch.case.text];
+        if (!context) {
+          errors.push({
+            span: branch.case,
+            message: `Expression can never be '${branch.case.text}'`,
+            suggestions: missingCases,
+          });
+          continue;
+        }
+        errors.push(...validateBody(branch.body, templateSchema, context));
+      }
+      if (missingCases.length > 0) {
+        const missingTags = missingCases
+          .map((c) => `<on case='${c}'>`)
+          .join(", ");
+        errors.push({
+          span: snippet.switchTag,
+          message: `Missing ${missingTags}`,
+        });
+      }
+      break;
+    }
+  }
+
+  return errors;
+}
+
+function validateBody<HasValContext extends boolean>(
+  body: Body<HasValContext>,
+  templateSchema: Schema,
+  context: HasValContext extends true ? ExpressionContext : null,
+): readonly InternalError[] {
+  const errors: InternalError[] = [];
+  for (const piece of body) {
+    if (piece.kind === "c-tag") {
+      errors.push(...validateCTag(piece.cTag, templateSchema));
+      continue;
+    } else if (piece.kind !== "insert-val") {
+      continue;
+    }
+    const expression = piece.val;
+    const type = resolveExpressionType(expression, templateSchema, context);
+    if (type.kind === "error") {
+      errors.push(...type.errors);
+      continue;
+    } else if (type.kind === "null") {
+      errors.push({
+        span: expression.fullPath,
+        message: "Always null",
+      });
+      continue;
+    } else if (type.kind === "nullable") {
+      errors.push({
+        span: expression.fullPath,
+        message: "May be null",
+      });
+      continue;
+    }
+    if (!piece.format) {
+      if (!isStringType(type, templateSchema)) {
+        errors.push({
+          span: expression.fullPath,
+          message: "Not a string type and no format specified",
+          hint: "Add a format attribute, for example format='json'",
+        });
+      }
+      continue;
+    }
+    const insertFormat: InsertFormat = piece.format.text;
+    switch (insertFormat) {
+      case "text": {
         if (!isStringType(type, templateSchema)) {
           errors.push({
-            span: expression.fullPath,
-            message: "Not a string type and no format specified",
-            hint: "Add a format attribute, for example format='json'",
+            span: piece.format,
+            message: "'text' can only be used with string types",
           });
         }
-        continue;
-      }
-      const insertFormat: InsertFormat = piece.format.text;
-      switch (insertFormat) {
-        case "text": {
-          if (!isStringType(type, templateSchema)) {
-            errors.push({
-              span: piece.format,
-              message: "'text' can only be used with string types",
-            });
-          }
-          break;
-        }
-        case "csv":
-        case "tsv": {
-          if (!isTabularType(type, templateSchema)) {
-            errors.push({
-              span: piece.format,
-              message: `'${insertFormat}' can only be used with tabular types`,
-              rule: "A tabular type is an array of objects with only string or integer fields",
-            });
-          }
-          break;
-        }
-        case "json":
-        case "yaml":
-        case "toon": {
-          break;
-        }
-        default: {
-          const _: never = insertFormat;
-          throw _;
-        }
-      }
-    }
-  };
-
-  for (const content of templateContents) {
-    for (const body of [content.system, content.user]) {
-      if (!body) continue;
-      validateBody(body, null);
-    }
-  }
-
-  for (const snippet of snippets) {
-    switch (snippet.kind) {
-      case "snippet": {
-        validateBody(snippet.body, null);
         break;
       }
-      case "snippet-if": {
-        const expressionType = resolveExpressionType(
-          snippet.expression,
-          templateSchema,
-          null,
-        );
-        if (expressionType.kind === "error") {
-          errors.push(...expressionType.errors);
-          break;
-        }
-        const ifContext = resolveIfExpression(
-          snippet.expression,
-          expressionType,
-          snippet.is,
-        );
-        if (ifContext.kind === "error") {
-          errors.push(...ifContext.errors);
-          break;
-        }
-        validateBody(snippet.then, ifContext.then);
-        validateBody(snippet.else, ifContext.else);
-        break;
-      }
-      case "snippet-switch": {
-        const expressionType = resolveExpressionType(
-          snippet.expression,
-          templateSchema,
-          null,
-        );
-        if (expressionType.kind === "error") {
-          errors.push(...expressionType.errors);
-          break;
-        }
-        const switchContext = resolveSwitchExpression(
-          snippet.expression,
-          expressionType,
-          templateSchema,
-        );
-        if (switchContext.kind === "error") {
-          errors.push(...switchContext.errors);
-          break;
-        }
-        const handledCases = new Set(snippet.branches.map((b) => b.case.text));
-        const missingCases = Object.keys(switchContext.cases).filter(
-          (c) => !handledCases.has(c),
-        );
-        for (const branch of snippet.branches) {
-          const context = switchContext.cases[branch.case.text];
-          if (!context) {
-            errors.push({
-              span: branch.case,
-              message: `Expression can never be '${branch.case.text}'`,
-              suggestions: missingCases,
-            });
-            continue;
-          }
-          validateBody(branch.body, context);
-        }
-        if (missingCases.length > 0) {
-          const missingTags = missingCases
-            .map((c) => `<on case='${c}'>`)
-            .join(", ");
+      case "csv":
+      case "tsv": {
+        if (!isTabularType(type, templateSchema)) {
           errors.push({
-            span: snippet.switchTag,
-            message: `Missing ${missingTags}`,
+            span: piece.format,
+            message: `'${insertFormat}' can only be used with tabular types`,
+            rule: "A tabular type is an array of objects with only string or integer fields",
           });
         }
         break;
       }
+      case "json":
+      case "yaml":
+      case "toon": {
+        break;
+      }
+      default: {
+        const _: never = insertFormat;
+        throw _;
+      }
     }
   }
-
   return errors;
 }
 
