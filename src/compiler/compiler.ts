@@ -19,12 +19,12 @@ import { validateTemplate } from "./template-validator.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
-  cache: CompilationResult | null,
+  options: { readonly cache: CompilationResult | null },
 ): CompilationResult {
   const result = new CompilationResultImpl();
 
   for (const [path, content] of Object.entries(pathToContent)) {
-    const cachedFile = cache?.sourceFiles[path];
+    const cachedFile = options.cache?.sourceFiles[path];
     let outSourceFile: SourceFileParseResult;
     if (cachedFile && cachedFile.content === content) {
       outSourceFile = cachedFile;
@@ -34,7 +34,7 @@ export function compile(
     result.sourceFiles[path] = outSourceFile;
   }
 
-  result.validate(cache);
+  result.validate(options.cache);
 
   return result;
 }
@@ -129,6 +129,7 @@ class CompilationResultImpl implements CompilationResult {
       metas.push(...sourceFile.metas.map(source));
       namespaces.push(...sourceFile.namespaces.map(source));
       templates.push(...sourceFile.templates.map(source));
+      this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
     }
 
     this.resolveMeta(metas);
@@ -142,7 +143,7 @@ class CompilationResultImpl implements CompilationResult {
     } else {
       // Multiple <meta> elements found. This is an error.
       for (const meta of metas) {
-        this.getFinalErrors(meta.sourceFile.path).push({
+        this.finalErrors[meta.sourceFile.path]!.push({
           span: meta.element.tag,
           message: "Multiple <meta> elements found",
         });
@@ -181,7 +182,7 @@ class CompilationResultImpl implements CompilationResult {
       })),
     );
     for (const error of nameConflicts) {
-      this.getFinalErrors(error.span.path).push(error);
+      this.finalErrors[error.span.path]!.push(error);
     }
   }
 
@@ -207,7 +208,7 @@ class CompilationResultImpl implements CompilationResult {
         })),
       );
       for (const error of nameConflicts) {
-        this.getFinalErrors(error.span.path).push(error);
+        this.finalErrors[error.span.path]!.push(error);
       }
     }
 
@@ -225,7 +226,7 @@ class CompilationResultImpl implements CompilationResult {
       const namespaceName = template.element.namespace?.text ?? "Default";
       const namespace = this.namespaceSchemas[namespaceName];
       if (!namespace) {
-        this.getFinalErrors(template.sourceFile.path).push({
+        this.finalErrors[template.sourceFile.path]!.push({
           span: template.element.name,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaceSchemas),
@@ -254,24 +255,10 @@ class CompilationResultImpl implements CompilationResult {
       this.templates[id] = validationResult;
 
       if (validationResult.kind === "error") {
-        this.getFinalErrors(template.sourceFile.path).push(
+        this.finalErrors[template.sourceFile.path]!.push(
           ...validationResult.errors,
         );
       }
     }
-  }
-
-  private getFinalErrors(path: string): InternalError[] {
-    let result = this.finalErrors[path];
-    if (!result) {
-      const sourceFile = this.sourceFiles[path];
-      if (sourceFile) {
-        result = [...sourceFile.parseErrors];
-      } else {
-        result = [];
-      }
-      this.finalErrors[path] = result;
-    }
-    return result;
   }
 }
