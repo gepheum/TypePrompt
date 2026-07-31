@@ -216,7 +216,11 @@ class SchemaParser {
           if (this.peekToken().text === "[") {
             this.movePast(this.peekToken());
             const keyName = this.peekToken().text;
-            if (this.expectThenMove(this.peekToken(), { identifier: IDENTIFIER_MATCHER }) === "noMatch") {
+            if (
+              this.expectThenMove(this.peekToken(), {
+                identifier: IDENTIFIER_MATCHER,
+              }) === "noMatch"
+            ) {
               return null;
             }
             if (!this.expectExactThenMove(":")) return null;
@@ -278,10 +282,15 @@ class SchemaParser {
         }
         case "identifier": {
           const span = this.tokenToSpan(token);
-          if (span.text === "string" || span.text === "number" || span.text === "boolean" || span.text === "integer") {
+          if (
+            span.text === "string" ||
+            span.text === "number" ||
+            span.text === "boolean" ||
+            span.text === "integer"
+          ) {
             return {
               kind: "primitive",
-              primitive: {...span, text: span.text},
+              primitive: { ...span, text: span.text },
             };
           } else {
             return {

@@ -49,16 +49,11 @@ export type BodyPiece =
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";
 
 export type JsonValue =
-  | JsonObject
-  | JsonArray
-  | JsonString
-  | JsonNumber
-  | JsonBoolean
-  | JsonNull;
+  JsonObject | JsonArray | JsonString | JsonNumber | JsonBoolean | JsonNull;
 
 export type JsonObject = {
   readonly kind: "object";
-  readonly entries: {readonly [name: string]: JsonValue};
+  readonly entries: { readonly [name: string]: JsonValue };
 };
 
 export type JsonArray = {

@@ -14,11 +14,11 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { CODE_GENERATORS } from "./codegen/codegens.js";
+import { compile } from "./compiler/compiler.js";
 import { ConfigParseError, parseConfigToml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
-import { compile } from "./compiler/compiler.js";
-import { InternalError } from "./util/shared-types.js";
 import { findLine, LineFinderData } from "./util/line-finder.js";
+import { InternalError } from "./util/shared-types.js";
 
 type Command =
   | { readonly kind: "help" }
@@ -143,21 +143,23 @@ async function runGeneration(projectPath?: string): Promise<void> {
     throw new Error(`No template files found matching '${inputPattern}'`);
   }
 
-  const pathToContent = Object.fromEntries(await Promise.all(
-    templateFiles.map(async (filePath) => ([
-      filePath,
-      await readFile(filePath, "utf8"),
-    ])),
-  ));
+  const pathToContent = Object.fromEntries(
+    await Promise.all(
+      templateFiles.map(async (filePath) => [
+        filePath,
+        await readFile(filePath, "utf8"),
+      ]),
+    ),
+  );
 
   const compilationResult = compile(pathToContent, { cache: null });
 
   let anyErrors = false;
   for (const [path, errors] of Object.entries(compilationResult.finalErrors)) {
-    const {lineFinder} = compilationResult.sourceFiles[path]!;
+    const { lineFinder } = compilationResult.sourceFiles[path]!;
     for (const error of errors) {
       console.error(formatError(error, path, lineFinder));
-      anyErrors = anyErrors && (errors.length > 0);
+      anyErrors = anyErrors && errors.length > 0;
     }
   }
 
@@ -192,13 +194,21 @@ function resolveConfigPath(projectPath?: string): string {
     : join(resolved, "typeprompt.toml");
 }
 
-function formatError(error: InternalError, path: string, lineFinder: LineFinderData): string {
-  return JSON.stringify({
-    path,
-    message: error,
-    start: findLine(error.span.start, lineFinder),
-    end: findLine(error.span.end, lineFinder),
-  }, null, 2);
+function formatError(
+  error: InternalError,
+  path: string,
+  lineFinder: LineFinderData,
+): string {
+  return JSON.stringify(
+    {
+      path,
+      message: error,
+      start: findLine(error.span.start, lineFinder),
+      end: findLine(error.span.end, lineFinder),
+    },
+    null,
+    2,
+  );
 }
 
 /**

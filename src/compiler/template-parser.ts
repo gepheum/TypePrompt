@@ -148,11 +148,8 @@ class TemplateParser {
     }
     const attrs = checkXmlAttributes(schemaNode, {
       "output-format": {
-        schema: z
-          .string()
-          .regex(/^[a-z][A-Za-z0-9]*$/)
-          .optional(),
-        expected: "a lowerCamelCase identifier",
+        schema: z.enum(["json", "text"]).optional(),
+        expected: "'json' or 'text'",
       },
     });
     if (attrs.kind === "error") {
@@ -160,8 +157,8 @@ class TemplateParser {
     } else {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
-        this.outputFormat = this.parseOutputFormat(outputFormat.value);
-      }
+        this.outputFormat = outputFormat.value;
+      } 
     }
     const textContent = extractTextContent(schemaNode);
     if (textContent.kind === "error") {
@@ -174,22 +171,6 @@ class TemplateParser {
     } else {
       this.schema = schema;
     }
-  }
-
-  private parseOutputFormat(format: TextSpan): OutputFormat | null {
-    const { text } = format;
-    if (!/^[a-z][A-Za-z0-9]*$/.test(text)) {
-      this.errors.push({
-        span: format,
-        message: "Expected: lowerCamelCase identifier",
-      });
-      return null;
-    }
-    const kind = text === "json" || text === "text" ? text : "custom";
-    return {
-      kind: kind,
-      format: format,
-    };
   }
 
   private parseVariant(variantNode: ElementNode): void {
@@ -538,7 +519,7 @@ class TemplateParser {
   private readonly errors: InternalError[] = [];
   private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
-  private outputFormat: OutputFormat | null = null;
+  private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
   private readonly snippets: Snippet[] = [];

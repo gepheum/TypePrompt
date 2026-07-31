@@ -167,14 +167,21 @@ describe("parseSchema – interfaces", () => {
 
 describe("parseSchema – records", () => {
   it("parses a record type", () => {
-    const result = parseSchema(textNode("type Response = {[foo: string]: integer};"));
+    const result = parseSchema(
+      textNode("type Response = {[foo: string]: integer};"),
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
         Response: {
           kind: "type",
           name: { text: "Response" },
-          valueType: { kind: "record", keyName: "foo", leftCurlyBracket: { start: 17, end: 18 }, valueType: { kind: "type-name", name: { text: "integer" } } },
+          valueType: {
+            kind: "record",
+            keyName: "foo",
+            leftCurlyBracket: { start: 17, end: 18 },
+            valueType: { kind: "type-name", name: { text: "integer" } },
+          },
           doc: "",
         },
       },

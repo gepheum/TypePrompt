@@ -37,15 +37,12 @@ export type Template = {
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly schema: SchemaParseResult;
-  readonly outputFormat: OutputFormat | null;
+  readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
 };
 
-export type OutputFormat = {
-  readonly kind: "json" | "text" | "custom";
-  readonly format: TextSpan;
-};
+export type OutputFormat = "json" | "text";
 
 export type TemplateContents =
   | { readonly kind: "no-variants"; readonly content: TemplateContent }

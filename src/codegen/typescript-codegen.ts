@@ -1,7 +1,6 @@
 import { CompilationResult } from "../compiler/compiler-types.js";
 import { Config } from "../config/config-parser.js";
-import { ResolvedType, Schema, Type } from "../schema/schema-types.js";
-import { resolveType } from "../schema/type-resolver.js";
+import { Schema, Type } from "../schema/schema-types.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -256,10 +255,11 @@ class TypescriptCodeGenerator {
     // this.code += "};\n\n";
   }
 
-  private writeTemplateVariantAndArgs(compilationResult: CompilationResult): void {
+  private writeTemplateVariantAndArgs(
+    compilationResult: CompilationResult,
+  ): void {
     // const indent = "    ";
     // const hasVariants = template.content.kind === "variants";
-
     // if (hasVariants) {
     //   const variants = Object.keys(template.content.bodies);
     //   const members = variants
@@ -267,7 +267,6 @@ class TypescriptCodeGenerator {
     //     .join("");
     //   this.code += `${indent}export type Variant =${members};\n\n`;
     // }
-
     // this.code += `${indent}export type Args = {\n`;
     // for (const arg of template.args) {
     //   this.writeJsdoc(arg.doc, `${indent}  `);
@@ -312,7 +311,7 @@ function toTypeName(namePieces: readonly string[]): string {
 function spellType(type: Type, indent: string): string {
   switch (type.kind) {
     case "array": {
-      const {elementType} = type;
+      const { elementType } = type;
       const indented = indent + "  ";
       const spelledElement = spellType(elementType, indented);
       if (elementType.kind === "union") {
@@ -340,7 +339,7 @@ function spellType(type: Type, indent: string): string {
           ":",
           maybeSpace,
           spelledField,
-          ";\n"
+          ";\n",
         ].join("");
       }
       result += `${indent}}`;
@@ -372,7 +371,9 @@ function spellType(type: Type, indent: string): string {
     }
     case "union": {
       const indented = indent.concat("  ");
-      return type.members.map((m) => `\n${indent}  | `.concat(spellType(m, indented))).join("");
+      return type.members
+        .map((m) => `\n${indent}  | `.concat(spellType(m, indented)))
+        .join("");
     }
     case "type-name": {
       return type.name.text;

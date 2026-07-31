@@ -180,7 +180,10 @@ class CompilationResultImpl implements CompilationResult {
         };
       } else {
         // Multiple namespaces with the same name found. This is an error.
-        this.namespaces[name] = { schema: { kind: "other-error" }, templates: [] };
+        this.namespaces[name] = {
+          schema: { kind: "other-error" },
+          templates: [],
+        };
         // Errors will be pused to the finalErrors map below.
       }
     }

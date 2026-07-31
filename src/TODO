@@ -6,10 +6,6 @@ COMPILER:
   - Asyncify
   - Format errors
 
-SCHEMA:
-  - make primitive a Type and not just ResolvedType
-  - allow things like "gemini-2.5" and remove non-letter characters?
-
 IDEA:
   - Add a <playground> element, templates defined inside override other templates...
   - TODO: think about toolcalls

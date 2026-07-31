@@ -343,9 +343,8 @@ function areResolvedTypesEqual(
     }
     case "record": {
       return (
-        b.kind === "record" &&
-        areTypesEqual(a.valueType, b.valueType, schema)
-      )
+        b.kind === "record" && areTypesEqual(a.valueType, b.valueType, schema)
+      );
     }
     case "interface":
     case "union": {

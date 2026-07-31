@@ -43,7 +43,13 @@ export type SchemaField = {
 };
 
 export type ResolvedType =
-  PrimitiveType | StringLiteral | Interface | RecordType | Array | Union | PrimitiveType;
+  | PrimitiveType
+  | StringLiteral
+  | Interface
+  | RecordType
+  | Array
+  | Union
+  | PrimitiveType;
 
 export type Type = ResolvedType | TypeName | SharedTypeName;
 
