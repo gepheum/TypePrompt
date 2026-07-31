@@ -1,7 +1,7 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
-import { InternalError } from "../util/shared-types.js";
+import type { InternalError } from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
