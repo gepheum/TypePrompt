@@ -43,7 +43,7 @@ export type SchemaField = {
 };
 
 export type Type =
-  TypeName | SharedTypeName | StringLiteral | Interface | Array | Union;
+  TypeName | SharedTypeName | StringLiteral | Interface | RecordType | Array | Union;
 
 export type NonUnionType = Exclude<Type, Union>;
 
@@ -71,6 +71,13 @@ export type Interface = {
   readonly firstField?: SchemaField;
 };
 
+export type RecordType = {
+  readonly kind: "record";
+  readonly leftCurlyBracket: Span;
+  readonly keyName: string;
+  readonly valueType: Type;
+};
+
 export type Array = {
   readonly kind: "array";
   readonly elementType: Type;
@@ -83,7 +90,7 @@ export type Union = {
 };
 
 export type ResolvedType =
-  StringLiteral | Interface | Array | Union | PrimitiveType;
+  StringLiteral | Interface | RecordType | Array | Union | PrimitiveType;
 
 export type PrimitiveType = {
   readonly kind: "primitive";

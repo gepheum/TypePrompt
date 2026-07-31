@@ -121,6 +121,9 @@ function validateType(
       }
       return null;
     }
+    case "record": {
+      return validateType(type.valueType, schema, context, errors);
+    }
     case "string-literal": {
       if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
         errors.push({
@@ -207,6 +210,13 @@ function collectTypeNameDependencies(
         collectTypeNameDependencies(field.type, typeDeclarations, seenNames);
       }
       return null;
+    }
+    case "record": {
+      return collectTypeNameDependencies(
+        type.valueType,
+        typeDeclarations,
+        seenNames,
+      );
     }
     case "string-literal":
     case "shared-type-name": {
@@ -301,6 +311,9 @@ class TypeTraverser {
           this.traverse(field.type, newContext);
         }
         return null;
+      }
+      case "record": {
+        return this.traverse(type.valueType, context);
       }
       case "string-literal": {
         this.identifiers.add(type.value);

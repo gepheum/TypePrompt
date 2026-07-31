@@ -208,25 +208,41 @@ class SchemaParser {
       switch (match) {
         case "(": {
           const type = this.parseTypeRef();
-          if (type === null) {
-            return null;
-          }
-          if (!this.expectExactThenMove(")")) {
-            return null;
-          }
+          if (type === null) return null;
+          if (!this.expectExactThenMove(")")) return null;
           return type;
         }
         case "{": {
-          const fields = this.parseFields();
-          if (!this.expectExactThenMove("}")) {
-            return null;
+          if (this.peekToken().text === "[") {
+            this.movePast(this.peekToken());
+            const keyName = this.peekToken().text;
+            if (this.expectThenMove(this.peekToken(), { identifier: IDENTIFIER_MATCHER }) === "noMatch") {
+              return null;
+            }
+            if (!this.expectExactThenMove(":")) return null;
+            if (!this.expectExactThenMove("string")) return null;
+            if (!this.expectExactThenMove("]")) return null;
+            if (!this.expectExactThenMove(":")) return null;
+            const valueType = this.parseTypeRef();
+            if (valueType === null) return null;
+            if (!this.expectExactThenMove("}")) return null;
+            return {
+              kind: "record",
+              keyName: keyName,
+              leftCurlyBracket: this.tokenToSpan(token),
+              valueType: valueType,
+            };
+          } else {
+            // Inline interface
+            const fields = this.parseFields();
+            if (!this.expectExactThenMove("}")) return null;
+            return {
+              kind: "interface",
+              leftCurlyBracket: this.tokenToSpan(token),
+              fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
+              firstField: fields[0],
+            };
           }
-          return {
-            kind: "interface",
-            leftCurlyBracket: this.tokenToSpan(token),
-            fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
-            firstField: fields[0],
-          };
         }
         case "|": {
           return this.parseTypeRef({ lastTokenWasPipe: true });
@@ -253,9 +269,7 @@ class SchemaParser {
           const nameMatch = this.expectThenMove(nameToken, {
             identifier: IDENTIFIER_MATCHER,
           });
-          if (nameMatch === "noMatch") {
-            return null;
-          }
+          if (nameMatch === "noMatch") return null;
           return {
             kind: "shared-type-name",
             shared: this.tokenToSpan(token),

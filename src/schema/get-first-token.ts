@@ -6,6 +6,7 @@ export function getFirstToken(type: Type): Span {
     case "array":
       return getFirstToken(type.elementType);
     case "interface":
+    case "record":
       return type.leftCurlyBracket;
     case "string-literal":
       return type.quotedName;

@@ -346,6 +346,23 @@ function spellType(type: Type, indent: string): string {
       result += `${indent}}`;
       return result;
     }
+    case "record": {
+      const indented = indent + "  ";
+      const spelledValue = spellType(type.valueType, indented);
+      const maybeSpace = spelledValue.startsWith("\n") ? "" : " ";
+      return [
+        "{\n",
+        indented,
+        "[",
+        type.keyName,
+        ": string]:",
+        maybeSpace,
+        spelledValue,
+        "\n",
+        indented,
+        "}",
+      ].join("");
+    }
     case "union": {
       const indented = indent.concat("  ");
       return type.members.map((m) => `\n${indent}  | `.concat(spellType(m, indented))).join("");

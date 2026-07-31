@@ -84,7 +84,8 @@ function doGetUnionMembers(
         break;
       }
       case "array":
-      case "primitive": {
+      case "primitive":
+      case "record": {
         return makeSingletonErrors({
           span: errorToken,
           message: "Members of a union must be string literals or interfaces",
@@ -339,6 +340,12 @@ function areResolvedTypesEqual(
         b.kind === "array" &&
         areTypesEqual(a.elementType, b.elementType, schema)
       );
+    }
+    case "record": {
+      return (
+        b.kind === "record" &&
+        areTypesEqual(a.valueType, b.valueType, schema)
+      )
     }
     case "interface":
     case "union": {

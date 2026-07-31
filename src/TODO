@@ -1,9 +1,11 @@
+SCHEMA:
+  - support map? {[name: string]: Foo}
+  - make PrimitiveType a Type...
+  - clarify output_format?
+
 COMPILER:
   - Asyncify
   - Format errors
-
-COMPILER:
-  - group templates by namespace
 
 SCHEMA:
   - make primitive a Type and not just ResolvedType

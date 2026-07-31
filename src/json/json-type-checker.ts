@@ -211,6 +211,44 @@ export function jsonMatchesType(
         );
       }
     }
+    case "record": {
+      if (value.kind === "object") {
+        const valueType = resolveType(type.valueType, schema);
+        let matchScoreTotal = 0.0;
+        for (const entry of value.entries) {
+          const valueMatch = jsonMatchesType(
+            entry.value,
+            valueType,
+            mode,
+            schema,
+          );
+          if (valueMatch.kind === "match") {
+            matchScoreTotal += 1.0;
+          } else if (valueMatch.kind === "mismatch") {
+            if (mode === "fast") {
+              return FAST_MISMATCH;
+            } else {
+              const details = valueMatch.details!;
+              matchScoreTotal += details.matchScore;
+              return {
+                kind: "mismatch",
+                details: {
+                  reason: details.reason,
+                  matchScore: matchScoreTotal / value.entries.length,
+                },
+              };
+            }
+          }
+        }
+        return MATCH;
+      } else {
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected object but got ${value.kind}`,
+        );
+      }
+    }
     case "string-literal": {
       if (value.kind === "string") {
         if (value.value === type.value) {
