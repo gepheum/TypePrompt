@@ -55,18 +55,18 @@ export type TemplateContents =
       readonly defaultContent: Partial<TemplateContent>;
     };
 
-export type TemplateVariant = {
-  readonly tag: Span;
-  /** Variant name. */
-  readonly case: TextSpan;
-  readonly content: Partial<TemplateContent>;
-};
-
 export type TemplateContent = {
   readonly meta: TemplateMeta | undefined;
   readonly system: Body;
   readonly user: Body;
   readonly examples: JsonValue<"strict"> | undefined;
+};
+
+export type TemplateVariant = {
+  readonly tag: Span;
+  /** Variant name. */
+  readonly case: TextSpan;
+  readonly content: Partial<TemplateContent>;
 };
 
 export type TemplateMeta = {
@@ -147,7 +147,7 @@ export type SchemaOrError =
 
 export type TemplateValidationResult =
   | {
-      kind: "success";
+      readonly kind: "success";
       readonly template: Template;
       readonly schema: Schema;
     }
