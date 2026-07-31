@@ -32,12 +32,6 @@ function doResolveType<S extends SyntheticType | never>(
   switch (type.kind) {
     case "type-name": {
       const typeName = type.name.text;
-      {
-        const primitive = isPrimitiveType(typeName);
-        if (primitive) {
-          return PRIMITIVES[primitive];
-        }
-      }
       if (seenNames) {
         if (seenNames.has(typeName)) {
           return null;
@@ -67,33 +61,3 @@ function doResolveType<S extends SyntheticType | never>(
     }
   }
 }
-
-export function isPrimitiveType(
-  name: string,
-): "string" | "number" | "boolean" | "integer" | null {
-  return name === "string" ||
-    name === "number" ||
-    name === "boolean" ||
-    name === "integer"
-    ? name
-    : null;
-}
-
-const PRIMITIVES = {
-  string: {
-    kind: "primitive",
-    primitive: "string",
-  },
-  number: {
-    kind: "primitive",
-    primitive: "number",
-  },
-  boolean: {
-    kind: "primitive",
-    primitive: "boolean",
-  },
-  integer: {
-    kind: "primitive",
-    primitive: "integer",
-  },
-} as const;

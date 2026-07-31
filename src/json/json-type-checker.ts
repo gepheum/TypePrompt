@@ -94,9 +94,9 @@ export function jsonMatchesType(
       }
     }
     case "primitive": {
-      if (value.kind === type.primitive) {
+      if (value.kind === type.primitive.text) {
         return MATCH;
-      } else if (value.kind === "number" && type.primitive === "integer") {
+      } else if (value.kind === "number" && type.primitive.text === "integer") {
         if (
           Number.isInteger(value.value) &&
           -2147483648 <= value.value &&

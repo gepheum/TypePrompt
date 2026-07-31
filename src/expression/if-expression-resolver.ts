@@ -21,7 +21,7 @@ export function resolveIfExpression(
 ): IfExpressionResult {
   const it: ExpressionContext["it"] = { expression, type };
 
-  if (type.kind === "primitive" && type.primitive === "boolean") {
+  if (type.kind === "primitive" && type.primitive.text === "boolean") {
     if (is) {
       return {
         kind: "error",
@@ -70,7 +70,7 @@ export function resolveIfExpression(
     }
   } else if (
     type.kind === "array" ||
-    (type.kind === "primitive" && type.primitive === "string")
+    (type.kind === "primitive" && type.primitive.text === "string")
   ) {
     if (is?.text === "notEmpty") {
       return {

@@ -277,10 +277,18 @@ class SchemaParser {
           };
         }
         case "identifier": {
-          return {
-            kind: "type-name",
-            name: this.tokenToSpan(token),
-          };
+          const span = this.tokenToSpan(token);
+          if (span.text === "string" || span.text === "number" || span.text === "boolean" || span.text === "integer") {
+            return {
+              kind: "primitive",
+              primitive: {...span, text: span.text},
+            };
+          } else {
+            return {
+              kind: "type-name",
+              name: this.tokenToSpan(token),
+            };
+          }
         }
         case "noMatch": {
           return null;

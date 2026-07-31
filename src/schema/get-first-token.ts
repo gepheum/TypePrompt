@@ -8,6 +8,8 @@ export function getFirstToken(type: Type): Span {
     case "interface":
     case "record":
       return type.leftCurlyBracket;
+    case "primitive":
+      return type.primitive;
     case "string-literal":
       return type.quotedName;
     case "type-name":

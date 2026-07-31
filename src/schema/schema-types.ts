@@ -42,8 +42,10 @@ export type SchemaField = {
   readonly doc: string;
 };
 
-export type Type =
-  TypeName | SharedTypeName | StringLiteral | Interface | RecordType | Array | Union;
+export type ResolvedType =
+  PrimitiveType | StringLiteral | Interface | RecordType | Array | Union | PrimitiveType;
+
+export type Type = ResolvedType | TypeName | SharedTypeName;
 
 export type NonUnionType = Exclude<Type, Union>;
 
@@ -89,12 +91,9 @@ export type Union = {
   readonly members: readonly NonUnionType[];
 };
 
-export type ResolvedType =
-  StringLiteral | Interface | RecordType | Array | Union | PrimitiveType;
-
 export type PrimitiveType = {
   readonly kind: "primitive";
-  readonly primitive: "number" | "string" | "boolean" | "integer";
+  readonly primitive: TextSpan<"number" | "string" | "boolean" | "integer">;
 };
 
 export type SyntheticInterface = {

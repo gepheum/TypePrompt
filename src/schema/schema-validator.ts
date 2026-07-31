@@ -16,7 +16,6 @@ import type {
   Union,
   UnionMembers,
 } from "./schema-types.js";
-import { isPrimitiveType } from "./type-resolver.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
@@ -121,6 +120,9 @@ function validateType(
       }
       return null;
     }
+    case "primitive": {
+      return null;
+    }
     case "record": {
       return validateType(type.valueType, schema, context, errors);
     }
@@ -142,8 +144,7 @@ function validateType(
     }
     case "type-name": {
       const typeName = type.name.text;
-      const isPrimitive = !!isPrimitiveType(typeName);
-      if (!isPrimitive && !schema.typeDeclarations[typeName]) {
+      if (!schema.typeDeclarations[typeName]) {
         errors.push({
           span: type.name,
           message: `Unknown type '${typeName}'`,
@@ -209,6 +210,9 @@ function collectTypeNameDependencies(
       for (const field of Object.values(type.fields)) {
         collectTypeNameDependencies(field.type, typeDeclarations, seenNames);
       }
+      return null;
+    }
+    case "primitive": {
       return null;
     }
     case "record": {
@@ -310,6 +314,9 @@ class TypeTraverser {
           };
           this.traverse(field.type, newContext);
         }
+        return null;
+      }
+      case "primitive": {
         return null;
       }
       case "record": {

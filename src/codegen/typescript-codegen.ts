@@ -346,6 +346,13 @@ function spellType(type: Type, indent: string): string {
       result += `${indent}}`;
       return result;
     }
+    case "primitive": {
+      if (type.primitive.text === "integer") {
+        return "number";
+      } else {
+        return type.primitive.text;
+      }
+    }
     case "record": {
       const indented = indent + "  ";
       const spelledValue = spellType(type.valueType, indented);

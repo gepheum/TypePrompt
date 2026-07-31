@@ -1,7 +1,6 @@
 SCHEMA:
-  - support map? {[name: string]: Foo}
-  - make PrimitiveType a Type...
   - clarify output_format?
+  - finish runtime-type
 
 COMPILER:
   - Asyncify
