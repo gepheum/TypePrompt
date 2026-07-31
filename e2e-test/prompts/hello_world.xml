@@ -16,6 +16,7 @@
     type Input = {
       firstName: string;
       lastName: string;
+      fooToBar?: {[name: string]: integer};
     };
 
     type Output = {
