@@ -1,8 +1,16 @@
+export type Templates = {
+  readonly templates: {readonly [id: string]: Template};
+};
+
 export type Template = {
   readonly name: string;
   readonly namespace: string;
+  readonly outputFormat: OutputFormat;
   readonly contents: TemplateContents;
+  readonly snippets: {readonly [name: string]: Snippet};
 };
+
+export type OutputFormat = "json" | "text";
 
 export type TemplateContents =
   | { readonly kind: "no-variants"; readonly content: TemplateContent }
@@ -88,4 +96,22 @@ export type Expression =
       readonly kind: "property";
       readonly left: Expression;
       readonly property: string;
+    };
+
+export type Snippet =
+  | {
+      readonly kind: "snippet";
+      readonly body: Body;
+    }
+  | {
+      readonly kind: "snippet-if";
+      readonly expression: Expression;
+      readonly is: "notNull" | "notEmpty" | "true";
+      readonly then: Body;
+      readonly else: Body;
+    }
+  | {
+      readonly kind: "snippet-switch";
+      readonly expression: Expression;
+      readonly branches: {readonly [c: string]: Body};
     };

@@ -1,5 +1,4 @@
 SCHEMA:
-  - clarify output_format?
   - finish runtime-type
 
 COMPILER:
