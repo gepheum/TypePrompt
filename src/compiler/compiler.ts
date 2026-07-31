@@ -8,6 +8,7 @@ import type {
   CompilationResult,
   Meta,
   Namespace,
+  NamespaceResult,
   SchemaOrError,
   SourceFileParseResult,
   Template,
@@ -112,10 +113,14 @@ type Sourced<T> = {
   readonly cached: boolean;
 };
 
+type NamespaceResultImpl = NamespaceResult & {
+  readonly templates: TemplateValidationResult[];
+};
+
 class CompilationResultImpl implements CompilationResult {
   readonly sourceFiles: { [path: string]: SourceFileParseResult } = {};
   metaSchema: SchemaOrError = EMPTY_SCHEMA;
-  readonly namespaceSchemas: { [name: string]: SchemaOrError } = {};
+  readonly namespaces: { [name: string]: NamespaceResultImpl } = {};
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly finalErrors: { [path: string]: InternalError[] } = {};
 
@@ -169,15 +174,18 @@ class CompilationResultImpl implements CompilationResult {
     for (const [name, namespaces] of Object.entries(namespacesByName)) {
       if (namespaces.length === 1) {
         const namespace = namespaces[0]!;
-        this.namespaceSchemas[name] = namespace.element.schema;
+        this.namespaces[name] = {
+          schema: namespace.element.schema,
+          templates: [],
+        };
       } else {
         // Multiple namespaces with the same name found. This is an error.
-        this.namespaceSchemas[name] = { kind: "other-error" };
+        this.namespaces[name] = { schema: { kind: "other-error" }, templates: [] };
         // Errors will be pused to the finalErrors map below.
       }
     }
 
-    this.namespaceSchemas["Default"] ??= EMPTY_SCHEMA;
+    this.namespaces["Default"] ??= { schema: EMPTY_SCHEMA, templates: [] };
 
     const nameConflicts = checkNameConflicts(
       Object.values(namespaces).map((n) => ({
@@ -228,15 +236,15 @@ class CompilationResultImpl implements CompilationResult {
       const template = templates[0]!;
 
       const namespaceName = template.element.namespace?.text ?? "Default";
-      const namespace = this.namespaceSchemas[namespaceName];
+      const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[template.sourceFile.path]!.push({
           span: template.element.name,
           message: `Namespace '${namespaceName}' not found`,
-          suggestions: Object.keys(this.namespaceSchemas),
+          suggestions: Object.keys(this.namespaces),
         });
         continue;
-      } else if (namespace.kind !== "success") {
+      } else if (namespace.schema.kind !== "success") {
         continue;
       }
 
@@ -244,7 +252,7 @@ class CompilationResultImpl implements CompilationResult {
       if (
         template.cached &&
         this.metaSchema === cache?.metaSchema &&
-        namespace === cache?.namespaceSchemas[namespaceName]
+        namespace === cache?.namespaces[namespaceName]
       ) {
         // Reuse the cached schema validation result.
         validationResult = cache!.templates[id]!;
@@ -252,13 +260,15 @@ class CompilationResultImpl implements CompilationResult {
         validationResult = validateTemplate({
           template: template.element,
           metaSchema: this.metaSchema,
-          namespaceSchema: namespace,
+          namespaceSchema: namespace.schema,
         });
       }
 
       this.templates[id] = validationResult;
 
-      if (validationResult.kind === "error") {
+      if (validationResult.kind === "success") {
+        namespace.templates.push(validationResult);
+      } else if (validationResult.kind === "error") {
         this.finalErrors[template.sourceFile.path]!.push(
           ...validationResult.errors,
         );

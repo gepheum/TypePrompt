@@ -13,7 +13,7 @@ import type {
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
   readonly metaSchema: SchemaOrError;
-  readonly namespaceSchemas: { readonly [name: string]: SchemaOrError };
+  readonly namespaces: { readonly [name: string]: NamespaceResult };
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: InternalError[] };
@@ -135,6 +135,11 @@ export type Meta = {
   readonly kind: "meta";
   readonly tag: Span;
   readonly schema: Schema;
+};
+
+export type NamespaceResult = {
+  readonly schema: SchemaOrError;
+  readonly templates: readonly TemplateValidationResult[];
 };
 
 export type SchemaOrError =
