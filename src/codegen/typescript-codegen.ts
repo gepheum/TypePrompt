@@ -1,4 +1,4 @@
-import type { CompilationResult } from "../compiler/compiler-types.js";
+import type { CompilationResult, NamespaceResult } from "../compiler/compiler-types.js";
 import type { Config } from "../config/config-parser.js";
 import type { Schema, Type } from "../schema/schema-types.js";
 import {
@@ -28,9 +28,12 @@ class TypescriptCodeGenerator {
   code = "";
 
   write(compilationResult: CompilationResult): string {
+    const {metaSchema, namespaces} = compilationResult;
+    if (metaSchema.kind !== "success") throw new Error();
+
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
     this.code += 'import * as z from "zod";\n\n';
-    this.writeDatatypes(compilationResult);
+    this.writeDatatypes(metaSchema, Object.values(namespaces));
     // this.writeTemplateTypes(compilationResult);
     this.writePromptMaker2Type(compilationResult);
     this.writePromptMakerClass(compilationResult);
@@ -43,17 +46,19 @@ class TypescriptCodeGenerator {
     return this.code;
   }
 
-  private writeDatatypes(compilationResult: CompilationResult): void {
+  private writeDatatypes(
+    metaSchema: Schema,
+    namespaces: readonly NamespaceResult[],
+  ): void {
     const anyTypes = (schema: Schema): boolean => Object.keys(schema.typeDeclarations).length > 0;
     this.code += "export declare namespace $ {\n";
-    const {metaSchema, namespaces} = compilationResult;
     if (metaSchema.kind !== "success") throw new Error();
     if (anyTypes(metaSchema)) {
       this.code += "  export declare namespace Meta {\n";
       this.writeSchema(metaSchema, "Meta", "    ");
       this.code += "  }\n\n";
     }
-    for (const namespace of Object.values(compilationResult.namespaces)) {
+    for (const namespace of namespaces) {
       this.code += `  export declare namespace ${namespace.name} {\n`;
       if (namespace.schema.kind !== "success") throw new Error();
       if (anyTypes(namespace.schema)) {
