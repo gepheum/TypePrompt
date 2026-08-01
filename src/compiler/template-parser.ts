@@ -158,7 +158,7 @@ class TemplateParser {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
         this.outputFormat = outputFormat.value;
-      } 
+      }
     }
     const textContent = extractTextContent(schemaNode);
     if (textContent.kind === "error") {

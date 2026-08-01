@@ -1,5 +1,5 @@
 export type Templates = {
-  readonly templates: {readonly [id: string]: Template};
+  readonly templates: { readonly [id: string]: Template };
 };
 
 export type Template = {
@@ -7,7 +7,7 @@ export type Template = {
   readonly namespace: string;
   readonly outputFormat: OutputFormat;
   readonly contents: TemplateContents;
-  readonly snippets: {readonly [name: string]: Snippet};
+  readonly snippets: { readonly [name: string]: Snippet };
 };
 
 export type OutputFormat = "json" | "text";
@@ -113,5 +113,5 @@ export type Snippet =
   | {
       readonly kind: "snippet-switch";
       readonly expression: Expression;
-      readonly branches: {readonly [c: string]: Body};
+      readonly branches: { readonly [c: string]: Body };
     };

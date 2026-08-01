@@ -10,8 +10,7 @@ export type Prompt<Output, Input = unknown> = {
   readonly templateInput: Input;
 };
 
-export type Meta = {
-};
+export type Meta = {};
 
 export type TemplateId = string;
 

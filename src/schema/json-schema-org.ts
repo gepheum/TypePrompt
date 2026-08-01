@@ -1,4 +1,10 @@
-import { Interface, SchemaView, Type, Union, UnionMembers } from "./schema-types.js";
+import {
+  Interface,
+  SchemaView,
+  Type,
+  Union,
+  UnionMembers,
+} from "./schema-types.js";
 
 export function toJsonSchema(
   typeName: string,
@@ -112,4 +118,3 @@ class Generator {
     };
   }
 }
-

@@ -1,6 +1,11 @@
-import { CompilationResult } from "../compiler/compiler-types.js";
-import { Config } from "../config/config-parser.js";
-import { Schema, Type } from "../schema/schema-types.js";
+import type { CompilationResult } from "../compiler/compiler-types.js";
+import type { Config } from "../config/config-parser.js";
+import type { Schema, Type } from "../schema/schema-types.js";
+import {
+  getNameDependencies,
+  NAME_SCOPES,
+  NameScope,
+} from "../schema/schema-utils.js";
 import type { OutputFile } from "./codegen-types.js";
 
 export function generateTypescriptCode(
@@ -295,6 +300,148 @@ class TypescriptCodeGenerator {
       const maybeSpace = spelledType.startsWith("\n") ? "" : " ";
       this.code += `${maybeSpace}${spelledType};\n`;
     }
+  }
+
+  private writeOutputZodType(args: {
+    readonly schema: Schema;
+    readonly namespace: string;
+    readonly promptName: string;
+    readonly indent: string;
+  }): void {
+    const { schema, namespace, promptName, indent } = args;
+    this.code += `((): z.ZodType<$.${namespace}.${promptName}.Output> => {`;
+
+    const makeTypeId = (name: string, scope: NameScope): string =>
+      scope === "defaultScope" ? name : "_".concat(name);
+
+    const typeIdToStatus: { [id: string]: "pending" | "done" } = {};
+
+    const writeLocalVar = (
+      typeName: string,
+      scope: NameScope,
+      indent: string,
+    ): void => {
+      const typeId = makeTypeId(typeName, scope);
+      if (typeIdToStatus[typeId]) {
+        return;
+      }
+      typeIdToStatus[typeId] = "pending";
+      const declarations =
+        scope === "defaultScope"
+          ? schema.typeDeclarations
+          : schema.sharedDeclarations!;
+      const declaration = declarations[typeName]!;
+      const { valueType } = declaration;
+      const directDeps = getNameDependencies(
+        valueType,
+        scope,
+        schema,
+        "direct",
+      );
+      for (const s of NAME_SCOPES) {
+        for (const dep of directDeps[s]) {
+          writeLocalVar(dep, s, indent);
+        }
+      }
+      this.code += [
+        indent,
+        "const ",
+        uncapitalize(typeName),
+        "Type: ",
+        "z.ZodType<$.",
+        namespace,
+        ".",
+        promptName,
+        ".",
+        typeName,
+        "> = ",
+      ].join("");
+      write(valueType, scope, indent);
+      typeIdToStatus[typeName] = "done";
+    };
+
+    const write = (type: Type, scope: NameScope, indent: string): null => {
+      switch (type.kind) {
+        case "array": {
+          write(type.elementType, scope, indent);
+          this.code += ".array()";
+          return null;
+        }
+        case "interface": {
+          this.code += "z.object({\n";
+          const indented = indent + "  ";
+          for (const field of Object.values(type.fields)) {
+            const deps = getNameDependencies(
+              field.type,
+              scope,
+              schema,
+              "direct",
+            );
+            const useLazy = NAME_SCOPES.every((s) =>
+              [...deps[s]].some(
+                (d) => typeIdToStatus[makeTypeId(d, s)] !== "done",
+              ),
+            );
+            this.code += [indented, field.name.text, ": "].join("");
+            if (useLazy) {
+              this.code += "z.lazy(() => ";
+            }
+            write(field.type, scope, indented);
+            if (useLazy) {
+              this.code += ")";
+            }
+            if (field.optional) {
+              this.code += ".optional()";
+            }
+            this.code += ",\n";
+          }
+          this.code += `${indent}})`;
+          return null;
+        }
+        case "primitive": {
+          if (type.primitive.text === "integer") {
+            this.code += "z.int64()";
+          } else {
+            this.code += `z.${type.primitive.text}()`;
+          }
+          return null;
+        }
+        case "record": {
+          const indented = indent + "  ";
+          this.code += `z.record(\n${indented}z.string(),\n${indented}`;
+          write(type.valueType, scope, indented);
+          this.code += `\n${indent})`;
+          return null;
+        }
+        case "shared-type-name": {
+          this.code += "_".concat(uncapitalize(type.name.text));
+          return null;
+        }
+        case "string-literal": {
+          this.code += `z.literal(${type.quotedName.text})`;
+          return null;
+        }
+        case "type-name": {
+          this.code += uncapitalize(type.name.text);
+          return null;
+        }
+        case "union": {
+          this.code += "z.enum({\n";
+          const indented = indent + "  ";
+          for (const member of Object.values(type.members)) {
+            this.code += indented;
+            write(member, scope, indented);
+            this.code += ",\n";
+          }
+          this.code += `${indent}})`;
+          return null;
+        }
+      }
+    };
+
+    writeLocalVar("Output", "defaultScope", indent);
+
+    this.code += ")()";
   }
 }
 

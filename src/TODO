@@ -1,5 +1,8 @@
 SCHEMA:
   - finish runtime-type
+  - test:
+      - type Foo = Foo[]
+      - type Foo = {[name: string]: Foo};
 
 COMPILER:
   - Asyncify
