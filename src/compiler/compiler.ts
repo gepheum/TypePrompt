@@ -175,12 +175,14 @@ class CompilationResultImpl implements CompilationResult {
       if (namespaces.length === 1) {
         const namespace = namespaces[0]!;
         this.namespaces[name] = {
+          name: name,
           schema: namespace.element.schema,
           templates: [],
         };
       } else {
         // Multiple namespaces with the same name found. This is an error.
         this.namespaces[name] = {
+          name: name,
           schema: { kind: "other-error" },
           templates: [],
         };
@@ -188,7 +190,11 @@ class CompilationResultImpl implements CompilationResult {
       }
     }
 
-    this.namespaces["Default"] ??= { schema: EMPTY_SCHEMA, templates: [] };
+    this.namespaces["Default"] ??= {
+      name: "Default",
+      schema: EMPTY_SCHEMA,
+      templates: [],
+    };
 
     const nameConflicts = checkNameConflicts(
       Object.values(namespaces).map((n) => ({

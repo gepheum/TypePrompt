@@ -1,24 +1,42 @@
 // This file is auto-generated. Do not edit it directly.
 
-import { ZodType } from "zod";
+import * as z from "zod";
 
-export namespace Meta {
-  export type Meta =  {
-    /** Temperature setting for the template */
-    readonly temperature: number;
-    readonly foobar:
-      | "foo"
-      | "bar";
-  };
+export declare namespace $ {
+  export declare namespace Meta {
+    export type Meta = {
+      /** Temperature setting for the template */
+      readonly temperature: number;
+      readonly foobar:
+        | "foo"
+        | "bar";
+    };
+  }
+
+  export declare namespace Default {
+    export declare namespace MyTemplate {
+      export type Input = {
+        readonly firstName: string;
+        readonly lastName: string;
+        readonly fooToBar: {
+          [name: string]: number
+        };
+      };
+
+      export type Output = {
+        readonly x: number;
+      };
+    }
+  }
 }
 
-export type PromptSpec<Args, Response> = {
-  readonly make: (args: Args) => Response;
-  readonly responseType: ZodType<Response>;
-  readonly meta: Meta.Meta;
-};
+((): z.ZodType<$.Default.MyTemplate.Output> => {
+    const outputType: z.ZodType<$.Default.MyTemplate.Output> = z.object({
+      x: z.int32(),
+    });
 
-export class PromptMaker {
+    return outputType;
+  })()export class PromptMaker {
   private readonly jsonSpec: JsonSpec;
 
   // Call with no argument.

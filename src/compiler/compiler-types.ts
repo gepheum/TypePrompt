@@ -135,17 +135,19 @@ export type Meta = {
 };
 
 export type NamespaceResult = {
+  /** Name of the namespace. */
+  readonly name: string;
   readonly schema: SchemaOrError;
-  readonly templates: readonly TemplateValidationResult[];
+  readonly templates: readonly ValidatedTemplate[];
 };
 
 export type SchemaOrError =
   Schema | InternalErrors | { readonly kind: "other-error" };
 
-export type TemplateValidationResult =
-  | {
-      readonly kind: "success";
-      readonly template: Template;
-      readonly schema: Schema;
-    }
-  | InternalErrors;
+export type ValidatedTemplate = {
+  readonly kind: "success";
+  readonly template: Template;
+  readonly schema: Schema;
+};
+
+export type TemplateValidationResult = ValidatedTemplate | InternalErrors;

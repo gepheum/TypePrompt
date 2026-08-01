@@ -1,3 +1,10 @@
+CODEGEN:
+  - Put the jsdoc in the schema and the Zod types
+
+NAME CONFLICT:
+  - No namespace named Meta
+  - No template named Shared
+
 SCHEMA:
   - finish runtime-type
   - test:
