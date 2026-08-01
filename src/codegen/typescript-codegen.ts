@@ -44,10 +44,11 @@ class TypescriptCodeGenerator {
   }
 
   private writeDatatypes(compilationResult: CompilationResult): void {
+    const anyTypes = (schema: Schema): boolean => Object.keys(schema.typeDeclarations).length > 0;
     this.code += "export declare namespace $ {\n";
     const {metaSchema, namespaces} = compilationResult;
     if (metaSchema.kind !== "success") throw new Error();
-    if (Object.keys(metaSchema.typeDeclarations)) {
+    if (anyTypes(metaSchema)) {
       this.code += "  export declare namespace Meta {\n";
       this.writeSchema(metaSchema, "Meta", "    ");
       this.code += "  }\n\n";
@@ -55,7 +56,7 @@ class TypescriptCodeGenerator {
     for (const namespace of Object.values(compilationResult.namespaces)) {
       this.code += `  export declare namespace ${namespace.name} {\n`;
       if (namespace.schema.kind !== "success") throw new Error();
-      if (Object.keys(namespace.schema.typeDeclarations).length > 0) {
+      if (anyTypes(namespace.schema)) {
         this.code += `    export declare namespace Shared {\n`;
         this.writeSchema(namespace.schema, namespace.name, "      ");
         this.code += "    }\n\n";
