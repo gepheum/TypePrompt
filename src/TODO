@@ -3,6 +3,7 @@ BUG:
   - reuse the name dependency collector?
 
 CODEGEN:
+  - only one space and then change?
   - Put the jsdoc in the schema and the Zod types
 
 NAME CONFLICT:
