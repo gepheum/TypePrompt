@@ -4,7 +4,7 @@ import type {
   SyntheticType,
   TypeDeclaration,
 } from "../schema/schema-types.js";
-import { resolveType } from "../schema/type-resolver.js";
+import { resolveSyntheticType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
 import type { JsonTypeMatch, JsonValue } from "./json-types.js";
 
@@ -15,7 +15,7 @@ export function validateJson(
 ): InternalError[] {
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
-    resolveType(type, schema),
+    resolveSyntheticType(type, schema),
     "thorough",
     schema,
   );
@@ -59,7 +59,7 @@ export function jsonMatchesType(
     case "array":
     case "synthetic-array": {
       if (value.kind === "array") {
-        const elementType = resolveType(type.elementType, schema);
+        const elementType = resolveSyntheticType(type.elementType, schema);
         let matchScoreTotal = 0.0;
         const { elements } = value;
         for (const element of elements) {
@@ -143,7 +143,7 @@ export function jsonMatchesType(
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
           if (field) {
-            const fieldType = resolveType(field.type, schema);
+            const fieldType = resolveSyntheticType(field.type, schema);
             const fieldMatch = jsonMatchesType(
               entry.value,
               fieldType,
@@ -216,7 +216,7 @@ export function jsonMatchesType(
     }
     case "record": {
       if (value.kind === "object") {
-        const valueType = resolveType(type.valueType, schema);
+        const valueType = resolveSyntheticType(type.valueType, schema);
         let matchScoreTotal = 0.0;
         for (const entry of value.entries) {
           const valueMatch = jsonMatchesType(

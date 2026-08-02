@@ -1,3 +1,7 @@
+BUG:
+  - I think in typetraverser i don't traverse the shared types which are used
+  - reuse the name dependency collector?
+
 CODEGEN:
   - Put the jsdoc in the schema and the Zod types
 

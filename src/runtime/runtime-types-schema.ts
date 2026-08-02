@@ -95,7 +95,7 @@ export const runtimeTypesSchema = ((): Schema => {
     throw new Error(JSON.stringify(parseResult, undefined, 2));
   }
   const schema = validateSchema(parseResult.typeDeclarations, {
-    kind: "namespace"
+    kind: "namespace",
   });
   if (schema.kind === "error") {
     throw new Error(JSON.stringify(schema, undefined, 2));

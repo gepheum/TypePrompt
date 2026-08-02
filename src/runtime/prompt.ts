@@ -22,9 +22,9 @@ export type Prompt<Output, Input = unknown> = {
   readonly examples: readonly FewShotExample[];
   readonly outputFormat:
     | {
-      readonly kind: "json";
-      readonly schema: z.ZodType<Output>;
-    }
+        readonly kind: "json";
+        readonly schema: z.ZodType<Output>;
+      }
     | (Output extends string ? { readonly kind: "text" } : never);
   readonly templateId: TemplateId;
   readonly templateInput: Input;
@@ -60,7 +60,9 @@ function newPromptMaker(templates: Templates): PromptMaker {
       [name: string]: Template<unknown, unknown>;
     };
   } = {};
-  for (const [templateId, templateSpec] of Object.entries(templates.templates)) {
+  for (const [templateId, templateSpec] of Object.entries(
+    templates.templates,
+  )) {
     const namespace = uncapitalize(templateSpec.namespace);
     const name = uncapitalize(templateSpec.name);
     (result[namespace] ??= {})[name] = {

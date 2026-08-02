@@ -265,7 +265,7 @@ function getMemberInfos(
       message: "Can't have an empty interface in a union type",
     });
   }
-  const discriminatorType = resolveType<never>(firstField.type, schema);
+  const discriminatorType = resolveType(firstField.type, schema);
   const discriminator = firstField!.name.text;
   if (discriminatorType?.kind !== "string-literal") {
     return makeSingletonErrors({
@@ -297,7 +297,7 @@ function collectSharedFields(
   const first = members[0]!;
   const result: SyntheticSchemaField[] = [];
   for (const [name, field] of Object.entries(first.member.fields)) {
-    const fieldType = resolveType<never>(field.type, schema);
+    const fieldType = resolveType(field.type, schema);
     if (fieldType.kind === "string-literal") {
       continue;
     }
@@ -306,7 +306,7 @@ function collectSharedFields(
       if (!otherField) {
         return false;
       }
-      const otherFieldType = resolveType<never>(otherField.type, schema);
+      const otherFieldType = resolveType(otherField.type, schema);
       return (
         field.optional === otherField.optional &&
         areResolvedTypesEqual(fieldType, otherFieldType, schema)
@@ -363,8 +363,8 @@ function areResolvedTypesEqual(
 
 function areTypesEqual(a: Type, b: Type, schema: SchemaView): boolean {
   return areResolvedTypesEqual(
-    resolveType<never>(a, schema),
-    resolveType<never>(b, schema),
+    resolveType(a, schema),
+    resolveType(b, schema),
     schema,
   );
 }

@@ -44,7 +44,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
   switch (expression.kind) {
     case "input": {
       const input = schema.typeDeclarations["Input"]!;
-      return resolveType<never>(input, schema);
+      return resolveType(input, schema);
     }
     case "it": {
       return context!.it.type;
@@ -100,7 +100,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
           ],
         };
       }
-      const fieldType = resolveType<never>(field.type, schema);
+      const fieldType = resolveType(field.type, schema);
       return field.optional ? { kind: "nullable", type: fieldType } : fieldType;
     }
   }

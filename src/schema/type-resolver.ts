@@ -6,11 +6,18 @@ import type {
   TypeDeclaration,
 } from "./schema-types.js";
 
-export function resolveType<S extends SyntheticType | never>(
-  type: Type | TypeDeclaration | S,
+export function resolveType(
+  type: Type | TypeDeclaration,
   schema: SchemaView,
-): ResolvedType | S {
-  return doResolveType<S>(type, schema, null)!;
+): ResolvedType {
+  return doResolveType<never>(type, schema, null)!;
+}
+
+export function resolveSyntheticType(
+  type: Type | TypeDeclaration | SyntheticType,
+  schema: SchemaView,
+): ResolvedType | SyntheticType {
+  return doResolveType<SyntheticType>(type, schema, null)!;
 }
 
 export function resolveMaybeInvalidType(
