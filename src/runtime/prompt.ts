@@ -26,6 +26,11 @@ export type Meta = {};
 
 export type TemplateId = string;
 
+function getOutputType(templateId: TemplateId): z.ZodType<unknown> {
+  // TODO
+  return z.any();
+}
+
 // </generated>
 
 function resolveTemplate<Input, Output>(
@@ -60,11 +65,13 @@ function resolveTemplate<Input, Output>(
     userInstructions = resolveBody(user, input, snippets);
     examples = resolveExamples((variantContent.examples ?? defaultContent.examples)!, user, template);
   }
+  const outputType = getOutputType(templateId) as z.ZodType<Output>;
   return {
     meta,
     systemInstructions,
     userInstructions,
     examples,
+    outputType,
     templateId,
     templateInput: input,
   };
