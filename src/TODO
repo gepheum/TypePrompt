@@ -50,3 +50,10 @@ MISC:
 - DOC:
   - https://share.gemini.google/jk1DBITItg9W
   - https://github.com/brexhq/prompt-engineering
+
+
+
+
+export const promptOverrider = {
+  internalJsonSpec: jsonSpec,
+  internalApplyOverrides(overrides: JsonSpec): PromptMaker {

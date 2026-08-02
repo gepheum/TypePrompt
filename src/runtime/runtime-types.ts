@@ -1,8 +1,9 @@
 export type Templates = {
-  readonly templates: { readonly [id: string]: TemplateSpec };
+  readonly hash: string;
+  readonly templates: { readonly [id: string]: Template };
 };
 
-export type TemplateSpec = {
+export type Template = {
   readonly name: string;
   readonly namespace: string;
   readonly outputFormat: OutputFormat;

@@ -4,6 +4,7 @@ import { validateSchema } from "../schema/schema-validator.js";
 
 const SCHEMA = `
 type Templates = {
+  hash: string;
   templates: { [id: string]: TemplateSpec };
 };
 

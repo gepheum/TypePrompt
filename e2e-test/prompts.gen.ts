@@ -8,27 +8,28 @@ export type PromptMaker = {
   };
 };
 
-export declare namespace $ {
-  export declare namespace Meta {
+export type Meta = $.Meta.Meta;
+
+export namespace $ {
+  export namespace Meta {
     export type Meta = {
       /** Temperature setting for the template */
       readonly temperature: number;
-      readonly foobar:
+      readonly foobar: (
         | "foo"
-        | "bar";
+        | "bar"
+      );
     };
   }
-
-  export declare namespace Default {
-    export declare namespace MyTemplate {
+  
+  export namespace Default {
+    export namespace MyTemplate {
       export type Input = {
         readonly firstName: string;
         readonly lastName: string;
-        readonly fooToBar: {
-          [name: string]: number
-        };
+        readonly fooToBar: { [name: string]: number };
       };
-
+      
       export type Output = {
         readonly x: number;
       };
@@ -36,111 +37,260 @@ export declare namespace $ {
   }
 }
 
-export type TemplateId =
-  | "Default:MyTemplate";
+export type TemplateId = (
+  | "Default:MyTemplate"
+);
 
-((): z.ZodType<$.Default.MyTemplate.Output> => {
-    const outputType: z.ZodType<$.Default.MyTemplate.Output> = z.object({
-      x: z.int32().describe(""),
-    });
 
-    return outputType;
-  })()export class PromptMaker {
-  private readonly jsonSpec: JsonSpec;
+export type Template<Input, Output> = {
+  readonly make: (input: Input) => Prompt<Output, Input>;
+};
 
-  // Call with no argument.
-  constructor(args?: {internalJsonSpec: unknown}) {
-    this.jsonSpec = args === undefined
-      ? jsonSpec
-      : (args.internalJsonSpec as JsonSpec);
+export type Prompt<Output, Input = unknown> = {
+  readonly meta: Meta;
+  readonly systemInstructions: string;
+  readonly userInstructions: string;
+  readonly examples: readonly FewShotExample[];
+  readonly outputFormat: (
+    | {
+      readonly kind: "json";
+      readonly schema: z.ZodType<Output>;
+    }
+    | (Output extends string ? { readonly kind: "text" } : never)
+  );
+  readonly templateId: TemplateId;
+  readonly templateInput: Input;
+};
+
+export type FewShotExample = {
+  readonly userInstructions: string;
+  readonly assistantResponse: string;
+};
+
+function newPromptMaker(templates: Templates): PromptMaker {
+  const result: {
+    [namespace: string]: {
+      [name: string]: Template<unknown, unknown>;
+    };
+  } = {};
+  for (const [templateId, templateSpec] of Object.entries(
+    templates.templates,
+  )) {
+    const namespace = uncapitalize(templateSpec.namespace);
+    const name = uncapitalize(templateSpec.name);
+    (result[namespace] ??= {})[name] = {
+      make: (input: unknown) => resolveTemplate(templateId, templates, input),
+    };
+  }
+  return result;
+}
+
+function resolveTemplate<Input, Output>(
+  templateId: string,
+  templates: Templates,
+  input: Input,
+): Prompt<Output, Input> {
+  const template = templates.templates[templateId];
+  if (!template) {
+    throw new Error("Template not found: ".concat(templateId));
+  }
+  const { contents, snippets } = template;
+  let meta: Meta;
+  let systemInstructions: string;
+  let userInstructions: string;
+  let examples: readonly FewShotExample[];
+  if (contents.kind === "no-variants") {
+    const { content } = contents;
+    meta = content.meta as Meta;
+    systemInstructions = resolveBody(content.system!, input, snippets);
+    userInstructions = resolveBody(content.user!, input, snippets);
+    examples = resolveExamples(content.examples!, content.user!, template);
+  } else {
+    const { defaultContent, variants } = contents;
+    const { variant } = input as { readonly variant: string };
+    const variantContent = variants[variant]!;
+    meta = (variantContent.meta ?? defaultContent.meta) as Meta;
+    const system = (variantContent.system ?? defaultContent.system)!;
+    const user = (variantContent.user ?? defaultContent.user)!;
+    systemInstructions = resolveBody(system, input, snippets);
+    userInstructions = resolveBody(user, input, snippets);
+    examples = resolveExamples(
+      (variantContent.examples ?? defaultContent.examples)!,
+      user,
+      template,
+    );
+  }
+  const outputType = getOutputType(templateId) as z.ZodType<Output>;
+  return {
+    meta,
+    systemInstructions,
+    userInstructions,
+    examples,
+    outputType,
+    templateId,
+    templateInput: input,
+  };
+}
+
+function resolveBody<Input>(
+  body: Body,
+  input: Input,
+  snippets: { readonly [c: string]: Snippet },
+): string {
+  const resolvePiece = (piece: BodyPiece): string => {
+    switch (piece.kind) {
+      case "text": {
+        return piece.text;
+      }
+      case "insert-snippet": {
+        const snippet = snippets[piece.snippet];
+        if (!snippet) {
+          throw new Error("Snippet not found: ".concat(piece.snippet));
+        }
+        return indent(resolveSnippet(snippet, input, snippets), piece.indent);
+      }
+      case "insert-val": {
+        const val = evaluate(input, piece.val);
+        return indent(format(val, piece.format), piece.indent);
+      }
+    }
+  };
+  return body.map(resolvePiece).join("");
+}
+
+function resolveSnippet<Input>(
+  snippet: Snippet,
+  input: Input,
+  snippets: { readonly [c: string]: Snippet },
+): string {
+  switch (snippet.kind) {
+    case "snippet": {
+      return resolveBody(snippet.body, input, snippets);
+    }
+    case "snippet-if": {
+      const { expression, then: thenBody, else: elseBody } = snippet;
+      const evalResult = evaluate(input, expression);
+      const condition = ((): boolean => {
+        switch (snippet.is) {
+          case "notEmpty": {
+            return (evalResult as { readonly length: number }).length > 0;
+          }
+          case "notNull": {
+            return evalResult === undefined || evalResult === null;
+          }
+          case "true": {
+            return !!evalResult;
+          }
+        }
+      })();
+      const body = condition ? thenBody : elseBody;
+      return resolveBody(body, input, snippets);
+    }
+    case "snippet-switch": {
+      const { expression, branches } = snippet;
+      const evalResult = evaluate(input, expression);
+      const branch = branches[evalResult as string];
+      if (!branch) {
+        throw new Error("Branch not found: ".concat(evalResult as string));
+      }
+      return resolveBody(branch, input, snippets);
+    }
   }
 }
 
-type JsonSpec = {readonly [templateKey: string]: {
-  readonly name: string;
-  readonly allArgs: readonly string[];
-  readonly pieces: readonly (
-    | {kind: "text"; text: string}
-    | {kind: "arg"; name: string; indent: string | undefined}
-  )[];
-}};
-
-function freezeJsonSpec(jsonSpec: JsonSpec): JsonSpec {
-  const freezeValue = (value: unknown): void => {
-    if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
-      return;
-    }
-    Object.freeze(value);
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        freezeValue(item);
-      }
-      return;
-    }
-    for (const child of Object.values(value as Record<string, unknown>)) {
-      freezeValue(child);
-    }
-  };
-  freezeValue(jsonSpec);
-  return jsonSpec;
+function indent(text: string, spaces: string): string {
+  if (spaces.length <= 0) {
+    return text;
+  } else {
+    return text.replace(/
+    /g, "
+    ".concat(spaces));
+  }
 }
 
-const jsonSpec: JsonSpec = freezeJsonSpec({
-});
-
-export const promptOverrider = {
-  internalJsonSpec: jsonSpec,
-  internalApplyOverrides(overrides: JsonSpec): PromptMaker {
-    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {
-      const constantTemplate = jsonSpec[templateKey];
-      if (constantTemplate === undefined) {
-        throw new Error(`Unknown template key '${templateKey}' in overrides`);
-      }
-      if (overrideTemplate.allArgs.length !== constantTemplate.allArgs.length) {
-        throw new Error(`Override args mismatch for template '${templateKey}'`);
-      }
-      for (let i = 0; i < overrideTemplate.allArgs.length; i += 1) {
-        if (overrideTemplate.allArgs[i] !== constantTemplate.allArgs[i]) {
-          throw new Error(`Override args mismatch for template '${templateKey}'`);
-        }
-      }
+function evaluate<Input>(input: Input, expression: Expression): unknown {
+  switch (expression.kind) {
+    case "input": {
+      return input;
     }
-    const copiedOverrides: Record<string, JsonSpec[string]> = {};
-    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {
-      copiedOverrides[templateKey] = {
-        name: overrideTemplate.name,
-        allArgs: [...overrideTemplate.allArgs],
-        pieces: overrideTemplate.pieces.map((piece) => piece.kind === "text"
-          ? {kind: "text", text: piece.text}
-          : {kind: "arg", name: piece.name, indent: piece.indent}),
-      };
+    case "property": {
+      const { property } = expression;
+      return (input as Record<string, unknown>)[property];
     }
-    const mergedJsonSpec = freezeJsonSpec({
-      ...jsonSpec,
-      ...copiedOverrides,
-    });
-    return new PromptMaker({internalJsonSpec: mergedJsonSpec});
-  },
-};
-
-function makePromptImpl(
-  templateKey: string,
-  args: {readonly [argName: string]: string},
-  jsonSpec: JsonSpec,
-): string {
-  const templateSpec = jsonSpec[templateKey]!;
-  return templateSpec.pieces.map((p) => {
-    if (p.kind === "text") {
-      return p.text;
-    }
-    const arg = args[p.name];
-    if (arg === undefined) {
-      throw new Error(`Missing arg '${p.name}'`);
-    }
-    if (p.indent === undefined || p.indent === "") {
-      return arg;
-    }
-    return arg.split("\n").join(`\n${p.indent}`);
-  }).join("");
+  }
 }
 
+function resolveExamples(
+  inputs: ReadonlyArray<{
+    readonly input: unknown;
+    readonly output: unknown;
+  }>,
+  body: Body,
+  template: TemplateSpec,
+): readonly FewShotExample[] {
+  return inputs.map(({ input, output }) => ({
+    userInstructions: resolveBody(body, input, template.snippets),
+    assistantResponse: format(output, template.outputFormat),
+  }));
+}
+
+function format(input: unknown, format?: InsertFormat): string {
+  switch (format) {
+    case undefined:
+    case "text": {
+      return String(input);
+    }
+    case "json": {
+      return JSON.stringify(input, undefined, 2);
+    }
+    case "yaml": {
+      return YAML.stringify(input);
+    }
+    case "toon": {
+      return encodeToon(input);
+    }
+    case "csv":
+    case "tsv": {
+      const separator = format === "csv" ? "," : "	";
+      const array = input as ReadonlyArray<{ [k: string]: string | number }>;
+      if (array.length <= 0) {
+        return "";
+      }
+      const firstElement = array[0]!;
+      const headerRow = Object.keys(firstElement).join(separator);
+      const rows: string[] = [
+      headerRow,
+      ...array.map((e) => {
+        return Object.values(e)
+        .map((cell) => {
+          const str = String(cell);
+          if (separator === ",") {
+            // CSV per RFC 4180: wrap in double quotes if the cell contains a
+            // double quote, a comma, a newline, or a carriage return.
+            return /[",
+            ]/.test(str)
+            ? '"'.concat(str.replace(/"/g, '""')).concat('"')
+            : str;
+          } else {
+            // TSV: no standard quoting; escape special characters with
+            // backslash so the value remains a single field.
+            return str
+            .replace(/\/g, "\\")
+            .replace(/	/g, "\t")
+            .replace(/
+            /g, "\n")
+            .replace(//g, "\r");
+          }
+        })
+        .join(separator);
+      }),
+      ];
+      return rows.join("
+      ");
+    }
+  }
+}
+
+function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}

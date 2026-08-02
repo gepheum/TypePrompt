@@ -40,34 +40,24 @@ class TypescriptCodeGenerator {
     this.writePromptMaker(Object.values(namespaces));
     this.writeDatatypes(metaSchema, Object.values(namespaces));
     this.writeTemplateIdTypeAlias(Object.values(templates));
-    // this.writeTemplateTypes(compilationResult);
-    this.writePromptMaker2Type(compilationResult);
-    this.writePromptMakerClass(compilationResult);
-    this.writeJsonSpecType();
-    this.writeFreezeJsonSpecFunction();
-    this.writeJsonSpecValue(compilationResult);
-    this.writePromptOverriderConst();
-    this.writeMakePromptImplFunction();
-    this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
-    return this.code;
+    this.code += STATIC_CODE;
+    return reformat(this.code);
   }
 
-  private writePromptMaker(
-    namespaces: readonly NamespaceResult[],
-  ): void {
-    this.code += "export type PromptMaker = {\n"
+  private writePromptMaker(namespaces: readonly NamespaceResult[]): void {
+    this.code += "export type PromptMaker = {\n";
     for (const namespace of namespaces) {
       const namespaceProperty = uncapitalize(namespace.name);
-      this.code += `  readonly ${namespaceProperty}: {\n`
+      this.code += `readonly ${namespaceProperty}: {\n`;
       for (const template of namespace.templates) {
         const templateName = template.template.name.text;
         const templateProperty = uncapitalize(templateName);
         const typePrefix = `$.${namespace.name}.${templateName}`;
         const inputType = typePrefix.concat(".Input");
         const outputType = typePrefix.concat(".Output");
-        this.code += `    readonly ${templateProperty}: Template<${inputType}, ${outputType}>;\n`;
+        this.code += `readonly ${templateProperty}: Template<${inputType}, ${outputType}>;\n`;
       }
-      this.code += "  };\n";
+      this.code += "};\n";
     }
     this.code += "};\n\n";
   }
@@ -76,30 +66,33 @@ class TypescriptCodeGenerator {
     metaSchema: Schema,
     namespaces: readonly NamespaceResult[],
   ): void {
+    if (metaSchema.kind !== "success") throw new Error();
     const anyTypes = (schema: Schema): boolean =>
       Object.keys(schema.typeDeclarations).length > 0;
-    this.code += "export declare namespace $ {\n";
-    if (metaSchema.kind !== "success") throw new Error();
     if (anyTypes(metaSchema)) {
-      this.code += "  export declare namespace Meta {\n";
-      this.writeSchema(metaSchema, "Meta", "    ");
-      this.code += "  }\n\n";
+      this.code += "export type Meta = $.Meta.Meta;\n\n";
+    }
+    this.code += "export namespace $ {\n";
+    if (anyTypes(metaSchema)) {
+      this.code += "export namespace Meta {\n";
+      this.writeSchema(metaSchema, "Meta");
+      this.code += "}\n\n";
     }
     for (const namespace of namespaces) {
-      this.code += `  export declare namespace ${namespace.name} {\n`;
+      this.code += `export namespace ${namespace.name} {\n`;
       if (namespace.schema.kind !== "success") throw new Error();
       if (anyTypes(namespace.schema)) {
-        this.code += `    export declare namespace Shared {\n`;
-        this.writeSchema(namespace.schema, namespace.name, "      ");
-        this.code += "    }\n\n";
+        this.code += "export namespace Shared {\n";
+        this.writeSchema(namespace.schema, namespace.name);
+        this.code += "}\n\n";
       }
       for (const template of namespace.templates) {
         const templateName = template.template.name.text;
-        this.code += `    export declare namespace ${templateName} {\n`;
-        this.writeSchema(template.schema, namespace.name, "      ");
-        this.code += "    }\n\n";
+        this.code += `export namespace ${templateName} {\n`;
+        this.writeSchema(template.schema, namespace.name);
+        this.code += "}\n\n";
       }
-      this.code += "  }\n\n";
+      this.code += "}\n\n";
     }
     this.code += "}\n\n";
   }
@@ -107,176 +100,37 @@ class TypescriptCodeGenerator {
   private writeTemplateIdTypeAlias(
     templates: readonly TemplateValidationResult[],
   ): void {
-    this.code += "export type TemplateId =";
+    this.code += "export type TemplateId = (\n";
     if (templates.length <= 0) {
-      this.code += " never";
+      this.code += " never\n";
     } else {
       for (const template of templates) {
         if (template.kind !== "success") throw new Error();
         const namespace = template.template.namespace?.text ?? "Default";
         const templateName = template.template.name.text;
-        this.code += `\n  | "${namespace}:${templateName}"`;
+        this.code += `| "${namespace}:${templateName}"\n`;
       }
     }
-    this.code += ";\n\n";
+    this.code += ");\n\n";
   }
 
-  private writePromptOverriderConst(): void {
-    this.code += "export const promptOverrider = {\n";
-    this.code += "  internalJsonSpec: jsonSpec,\n";
-    this.code +=
-      "  internalApplyOverrides(overrides: JsonSpec): PromptMaker {\n";
-    this.code +=
-      "    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {\n";
-    this.code += "      const constantTemplate = jsonSpec[templateKey];\n";
-    this.code += "      if (constantTemplate === undefined) {\n";
-    this.code +=
-      "        throw new Error(`Unknown template key '${templateKey}' in overrides`);\n";
-    this.code += "      }\n";
-    this.code +=
-      "      if (overrideTemplate.allArgs.length !== constantTemplate.allArgs.length) {\n";
-    this.code +=
-      "        throw new Error(`Override args mismatch for template '${templateKey}'`);\n";
-    this.code += "      }\n";
-    this.code +=
-      "      for (let i = 0; i < overrideTemplate.allArgs.length; i += 1) {\n";
-    this.code +=
-      "        if (overrideTemplate.allArgs[i] !== constantTemplate.allArgs[i]) {\n";
-    this.code +=
-      "          throw new Error(`Override args mismatch for template '${templateKey}'`);\n";
-    this.code += "        }\n";
-    this.code += "      }\n";
-    this.code += "    }\n";
-    this.code +=
-      "    const copiedOverrides: Record<string, JsonSpec[string]> = {};\n";
-    this.code +=
-      "    for (const [templateKey, overrideTemplate] of Object.entries(overrides)) {\n";
-    this.code += "      copiedOverrides[templateKey] = {\n";
-    this.code += "        name: overrideTemplate.name,\n";
-    this.code += "        allArgs: [...overrideTemplate.allArgs],\n";
-    this.code +=
-      '        pieces: overrideTemplate.pieces.map((piece) => piece.kind === "text"\n';
-    this.code += '          ? {kind: "text", text: piece.text}\n';
-    this.code +=
-      '          : {kind: "arg", name: piece.name, indent: piece.indent}),\n';
-    this.code += "      };\n";
-    this.code += "    }\n";
-    this.code += "    const mergedJsonSpec = freezeJsonSpec({\n";
-    this.code += "      ...jsonSpec,\n";
-    this.code += "      ...copiedOverrides,\n";
-    this.code += "    });\n";
-    this.code +=
-      "    return new PromptMaker({internalJsonSpec: mergedJsonSpec});\n";
-    this.code += "  },\n";
-    this.code += "};\n\n";
-  }
-
-  private writeJsonSpecType(): void {
-    this.code += "type JsonSpec = {readonly [templateKey: string]: {\n";
-    this.code += "  readonly name: string;\n";
-    this.code += "  readonly allArgs: readonly string[];\n";
-    this.code += "  readonly pieces: readonly (\n";
-    this.code += '    | {kind: "text"; text: string}\n';
-    this.code +=
-      '    | {kind: "arg"; name: string; indent: string | undefined}\n';
-    this.code += "  )[];\n";
-    this.code += "}};\n\n";
-  }
-
-  private writeFreezeJsonSpecFunction(): void {
-    this.code += "function freezeJsonSpec(jsonSpec: JsonSpec): JsonSpec {\n";
-    this.code += "  const freezeValue = (value: unknown): void => {\n";
-    this.code +=
-      '    if (value === null || typeof value !== "object" || Object.isFrozen(value)) {\n';
-    this.code += "      return;\n";
-    this.code += "    }\n";
-    this.code += "    Object.freeze(value);\n";
-    this.code += "    if (Array.isArray(value)) {\n";
-    this.code += "      for (const item of value) {\n";
-    this.code += "        freezeValue(item);\n";
-    this.code += "      }\n";
-    this.code += "      return;\n";
-    this.code += "    }\n";
-    this.code +=
-      "    for (const child of Object.values(value as Record<string, unknown>)) {\n";
-    this.code += "      freezeValue(child);\n";
-    this.code += "    }\n";
-    this.code += "  };\n";
-    this.code += "  freezeValue(jsonSpec);\n";
-    this.code += "  return jsonSpec;\n";
-    this.code += "}\n\n";
-  }
-
-  private writeJsonSpecValue(compilationResult: CompilationResult): void {
-    this.code += "const jsonSpec: JsonSpec = freezeJsonSpec({\n";
-    this.code += "});\n\n";
-  }
-
-  private writeMakePromptImplFunction(): void {
-    this.code += "function makePromptImpl(\n";
-    this.code += "  templateKey: string,\n";
-    this.code += "  args: {readonly [argName: string]: string},\n";
-    this.code += "  jsonSpec: JsonSpec,\n";
-    this.code += "): string {\n";
-    this.code += "  const templateSpec = jsonSpec[templateKey]!;\n";
-    this.code += "  return templateSpec.pieces.map((p) => {\n";
-    this.code += '    if (p.kind === "text") {\n';
-    this.code += "      return p.text;\n";
-    this.code += "    }\n";
-    this.code += "    const arg = args[p.name];\n";
-    this.code += "    if (arg === undefined) {\n";
-    this.code += "      throw new Error(`Missing arg '${p.name}'`);\n";
-    this.code += "    }\n";
-    this.code += '    if (p.indent === undefined || p.indent === "") {\n';
-    this.code += "      return arg;\n";
-    this.code += "    }\n";
-    this.code += '    return arg.split("\\n").join(`\\n${p.indent}`);\n';
-    this.code += '  }).join("");\n';
-    this.code += "}\n\n";
-  }
-
-  private writePromptMakerClass(compilationResult: CompilationResult): void {
-    this.code += "export class PromptMaker {\n";
-    this.code += "  private readonly jsonSpec: JsonSpec;\n\n";
-    this.code += "  // Call with no argument.\n";
-    this.code += "  constructor(args?: {internalJsonSpec: unknown}) {\n";
-    this.code += "    this.jsonSpec = args === undefined\n";
-    this.code += "      ? jsonSpec\n";
-    this.code += "      : (args.internalJsonSpec as JsonSpec);\n";
-    this.code += "  }\n\n";
-
-    this.code += "}\n\n";
-  }
-
-  private writePromptMaker2Type(compilationResult: CompilationResult): void {
+  private writeZodTypes(compilationResult: CompilationResult): void {
     for (const namespace of Object.values(compilationResult.namespaces)) {
       for (const template of Object.values(namespace.templates)) {
-        this.writeOutputZodType({
-          schema: template.schema,
-          namespace: namespace.name,
-          templateName: template.template.name.text,
-          indent: "  ",
-        });
+        // this.writeOutputZodType({
+        //   schema: template.schema,
+        //   namespace: namespace.name,
+        //   templateName: template.template.name.text,
+        // });
       }
     }
   }
 
-  private writeSchema(
-    schema: Schema,
-    namespace: string,
-    indent: "    " | "      ",
-  ): void {
+  private writeSchema(schema: Schema, namespace: string): void {
     for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
       const name = typeDeclaration.name.text;
-      this.code += wrapJsdoc(typeDeclaration.doc, indent);
-      this.code += `${indent}export type ${name} =`;
-      const spelledType = spellType(
-        typeDeclaration.valueType,
-        namespace,
-        indent,
-      );
-      const maybeSpace = spelledType.startsWith("\n") ? "" : " ";
-      this.code += `${maybeSpace}${spelledType};\n\n`;
+      this.code += wrapJsdoc(typeDeclaration.doc);
+      this.code += `export type ${name} = ${spellType(typeDeclaration.valueType, namespace)};\n\n`;
     }
   }
 
@@ -284,9 +138,8 @@ class TypescriptCodeGenerator {
     readonly schema: Schema;
     readonly namespace: string;
     readonly templateName: string;
-    readonly indent: string;
   }): void {
-    const { schema, namespace, templateName: promptName, indent } = args;
+    const { schema, namespace, templateName: promptName } = args;
     this.code += `((): z.ZodType<$.${namespace}.${promptName}.Output> => {\n`;
 
     const makeTypeId = (name: string, scope: NameScope): string =>
@@ -294,11 +147,7 @@ class TypescriptCodeGenerator {
 
     const typeIdToStatus: { [id: string]: "pending" | "done" } = {};
 
-    const writeLocalVar = (
-      typeName: string,
-      scope: NameScope,
-      indent: string,
-    ): void => {
+    const writeLocalVar = (typeName: string, scope: NameScope): void => {
       const typeId = makeTypeId(typeName, scope);
       if (typeIdToStatus[typeId]) {
         return;
@@ -318,11 +167,10 @@ class TypescriptCodeGenerator {
       );
       for (const s of NAME_SCOPES) {
         for (const dep of directDeps[s]) {
-          writeLocalVar(dep, s, indent);
+          writeLocalVar(dep, s);
         }
       }
       this.code += [
-        indent,
         "const ",
         uncapitalize(typeName),
         "Type: ",
@@ -334,7 +182,7 @@ class TypescriptCodeGenerator {
         typeName,
         "> = ",
       ].join("");
-      write(valueType, scope, indent);
+      write(valueType, scope);
       if (declaration.doc) {
         const quotedDoc = JSON.stringify(declaration.doc satisfies string);
         this.code += `.describe(${quotedDoc})`;
@@ -343,20 +191,19 @@ class TypescriptCodeGenerator {
       typeIdToStatus[typeName] = "done";
     };
 
-    const write = (type: Type, scope: NameScope, indent: string): null => {
+    const write = (type: Type, scope: NameScope): null => {
       switch (type.kind) {
         case "any": {
           this.code += "z.any()";
           return null;
         }
         case "array": {
-          write(type.elementType, scope, indent);
+          write(type.elementType, scope);
           this.code += ".array()";
           return null;
         }
         case "interface": {
           this.code += "z.object({\n";
-          const indented = indent + "  ";
           for (const field of Object.values(type.fields)) {
             const deps = getNameDependencies(
               field.type,
@@ -369,11 +216,11 @@ class TypescriptCodeGenerator {
                 (d) => typeIdToStatus[makeTypeId(d, s)] !== "done",
               ),
             );
-            this.code += [indented, field.name.text, ": "].join("");
+            this.code += `${field.name.text}: `;
             if (useLazy) {
               this.code += "z.lazy(() => ";
             }
-            write(field.type, scope, indented);
+            write(field.type, scope);
             if (useLazy) {
               this.code += ")";
             }
@@ -383,7 +230,7 @@ class TypescriptCodeGenerator {
             const quotedDoc = JSON.stringify(field.doc satisfies string);
             this.code += `.describe(${quotedDoc}),\n`;
           }
-          this.code += `${indent}})`;
+          this.code += "})";
           return null;
         }
         case "primitive": {
@@ -395,10 +242,9 @@ class TypescriptCodeGenerator {
           return null;
         }
         case "record": {
-          const indented = indent + "  ";
-          this.code += `z.record(\n${indented}z.string(),\n${indented}`;
-          write(type.valueType, scope, indented);
-          this.code += `\n${indent})`;
+          this.code += "z.record(\nz.string(),\n";
+          write(type.valueType, scope);
+          this.code += "\n)";
           return null;
         }
         case "shared-type-name": {
@@ -415,22 +261,18 @@ class TypescriptCodeGenerator {
         }
         case "union": {
           this.code += "z.enum({\n";
-          const indented = indent + "  ";
           for (const member of Object.values(type.members)) {
-            this.code += indented;
-            write(member, scope, indented);
+            write(member, scope);
             this.code += ",\n";
           }
-          this.code += `${indent}})`;
+          this.code += "})";
           return null;
         }
       }
     };
 
-    const indented = indent + "  ";
-    writeLocalVar("Output", "defaultScope", indented);
-
-    this.code += `${indented}return outputType;\n${indent}})()`;
+    writeLocalVar("Output", "defaultScope");
+    this.code += "return outputType;\n})()";
   }
 }
 
@@ -438,17 +280,16 @@ function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
-function spellType(type: Type, namespace: string, indent: string): string {
+function spellType(type: Type, namespace: string): string {
   switch (type.kind) {
     case "any": {
       return "unknown";
     }
     case "array": {
       const { elementType } = type;
-      const indented = indent + "  ";
-      const spelledElement = spellType(elementType, namespace, indented);
+      const spelledElement = spellType(elementType, namespace);
       if (elementType.kind === "union") {
-        return `readonly (${spelledElement}\n${indent})[]`;
+        return `readonly (${spelledElement})[]`;
       } else {
         return `readonly ${spelledElement}[]`;
       }
@@ -459,23 +300,11 @@ function spellType(type: Type, namespace: string, indent: string): string {
         return "{}";
       }
       let result = "{\n";
-      const indented = indent + "  ";
       for (const [fieldName, field] of fields) {
-        const jsdoc = wrapJsdoc(field.doc, indented);
-        const spelledField = spellType(field.type, namespace, indented);
-        const maybeSpace = spelledField.startsWith("\n") ? "" : " ";
-        result += [
-          jsdoc,
-          indented,
-          "readonly ",
-          fieldName,
-          ":",
-          maybeSpace,
-          spelledField,
-          ";\n",
-        ].join("");
+        result += wrapJsdoc(field.doc);
+        result += `readonly ${fieldName}: ${spellType(field.type, namespace)};\n`;
       }
-      result += `${indent}}`;
+      result += "}";
       return result;
     }
     case "primitive": {
@@ -486,27 +315,14 @@ function spellType(type: Type, namespace: string, indent: string): string {
       }
     }
     case "record": {
-      const indented = indent + "  ";
-      const spelledValue = spellType(type.valueType, namespace, indented);
-      const maybeSpace = spelledValue.startsWith("\n") ? "" : " ";
-      return [
-        "{\n",
-        indented,
-        "[",
-        type.keyName,
-        ": string]:",
-        maybeSpace,
-        spelledValue,
-        "\n",
-        indent,
-        "}",
-      ].join("");
+      return `{ [${type.keyName}: string]: ${spellType(type.valueType, namespace)} }`;
     }
     case "union": {
-      const indented = indent.concat("  ");
-      return type.members
-        .map((m) => `\n${indent}  | `.concat(spellType(m, namespace, indented)))
-        .join("");
+      return "(\n".concat(
+        type.members
+          .map((m) => `| ${spellType(m, namespace)}\n`)
+          .join("")
+      ).concat(")");
     }
     case "type-name": {
       return type.name.text;
@@ -520,17 +336,285 @@ function spellType(type: Type, namespace: string, indent: string): string {
   }
 }
 
-function wrapJsdoc(doc: string, indent: string): string {
+function wrapJsdoc(doc: string): string {
   if (!doc) return "";
   const lines = doc.split("\n");
-  if (lines.length === 1 && doc.length - indent.length <= 73) {
-    return `${indent}/** ${doc} */\n`;
+  if (lines.length === 1) {
+    return `/** ${doc} */\n`;
   } else {
-    let result = `${indent}/**\n`;
+    let result = `/**\n`;
     for (const line of lines) {
-      result += line ? `${indent} * ${line}\n` : `${indent} *\n`;
+      result += line ? ` * ${line}\n` : ` *\n`;
     }
-    result += `${indent} */\n`;
+    result += ` */\n`;
     return result;
   }
 }
+
+function reformat(code: string): string {
+  code = code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
+  const inputLines: readonly string[] = code.split("\n");
+  const outputLines: string[] = [];
+  let indent = "";
+  for (const inputLine of inputLines) {
+    const line = inputLine.trim();
+    if (line.startsWith("}") || line.startsWith(")")) {
+      indent = indent.slice(0, -2);
+    }
+    outputLines.push(indent + line);
+    if (line.endsWith("{") || line.endsWith("(")) {
+      indent = indent + "  ";
+    }
+  }
+  return outputLines.join("\n");
+}
+
+const STATIC_CODE = `
+export type Template<Input, Output> = {
+  readonly make: (input: Input) => Prompt<Output, Input>;
+};
+
+export type Prompt<Output, Input = unknown> = {
+  readonly meta: Meta;
+  readonly systemInstructions: string;
+  readonly userInstructions: string;
+  readonly examples: readonly FewShotExample[];
+  readonly outputFormat: (
+    | {
+        readonly kind: "json";
+        readonly schema: z.ZodType<Output>;
+      }
+    | (Output extends string ? { readonly kind: "text" } : never)
+  );
+  readonly templateId: TemplateId;
+  readonly templateInput: Input;
+};
+
+export type FewShotExample = {
+  readonly userInstructions: string;
+  readonly assistantResponse: string;
+};
+
+function newPromptMaker(templates: Templates): PromptMaker {
+  const result: {
+    [namespace: string]: {
+      [name: string]: Template<unknown, unknown>;
+    };
+  } = {};
+  for (const [templateId, templateSpec] of Object.entries(
+    templates.templates,
+  )) {
+    const namespace = uncapitalize(templateSpec.namespace);
+    const name = uncapitalize(templateSpec.name);
+    (result[namespace] ??= {})[name] = {
+      make: (input: unknown) => resolveTemplate(templateId, templates, input),
+    };
+  }
+  return result;
+}
+
+function resolveTemplate<Input, Output>(
+  templateId: string,
+  templates: Templates,
+  input: Input,
+): Prompt<Output, Input> {
+  const template = templates.templates[templateId];
+  if (!template) {
+    throw new Error("Template not found: ".concat(templateId));
+  }
+  const { contents, snippets } = template;
+  let meta: Meta;
+  let systemInstructions: string;
+  let userInstructions: string;
+  let examples: readonly FewShotExample[];
+  if (contents.kind === "no-variants") {
+    const { content } = contents;
+    meta = content.meta as Meta;
+    systemInstructions = resolveBody(content.system!, input, snippets);
+    userInstructions = resolveBody(content.user!, input, snippets);
+    examples = resolveExamples(content.examples!, content.user!, template);
+  } else {
+    const { defaultContent, variants } = contents;
+    const { variant } = input as { readonly variant: string };
+    const variantContent = variants[variant]!;
+    meta = (variantContent.meta ?? defaultContent.meta) as Meta;
+    const system = (variantContent.system ?? defaultContent.system)!;
+    const user = (variantContent.user ?? defaultContent.user)!;
+    systemInstructions = resolveBody(system, input, snippets);
+    userInstructions = resolveBody(user, input, snippets);
+    examples = resolveExamples(
+      (variantContent.examples ?? defaultContent.examples)!,
+      user,
+      template,
+    );
+  }
+  const outputType = getOutputType(templateId) as z.ZodType<Output>;
+  return {
+    meta,
+    systemInstructions,
+    userInstructions,
+    examples,
+    outputType,
+    templateId,
+    templateInput: input,
+  };
+}
+
+function resolveBody<Input>(
+  body: Body,
+  input: Input,
+  snippets: { readonly [c: string]: Snippet },
+): string {
+  const resolvePiece = (piece: BodyPiece): string => {
+    switch (piece.kind) {
+      case "text": {
+        return piece.text;
+      }
+      case "insert-snippet": {
+        const snippet = snippets[piece.snippet];
+        if (!snippet) {
+          throw new Error("Snippet not found: ".concat(piece.snippet));
+        }
+        return indent(resolveSnippet(snippet, input, snippets), piece.indent);
+      }
+      case "insert-val": {
+        const val = evaluate(input, piece.val);
+        return indent(format(val, piece.format), piece.indent);
+      }
+    }
+  };
+  return body.map(resolvePiece).join("");
+}
+
+function resolveSnippet<Input>(
+  snippet: Snippet,
+  input: Input,
+  snippets: { readonly [c: string]: Snippet },
+): string {
+  switch (snippet.kind) {
+    case "snippet": {
+      return resolveBody(snippet.body, input, snippets);
+    }
+    case "snippet-if": {
+      const { expression, then: thenBody, else: elseBody } = snippet;
+      const evalResult = evaluate(input, expression);
+      const condition = ((): boolean => {
+        switch (snippet.is) {
+          case "notEmpty": {
+            return (evalResult as { readonly length: number }).length > 0;
+          }
+          case "notNull": {
+            return evalResult === undefined || evalResult === null;
+          }
+          case "true": {
+            return !!evalResult;
+          }
+        }
+      })();
+      const body = condition ? thenBody : elseBody;
+      return resolveBody(body, input, snippets);
+    }
+    case "snippet-switch": {
+      const { expression, branches } = snippet;
+      const evalResult = evaluate(input, expression);
+      const branch = branches[evalResult as string];
+      if (!branch) {
+        throw new Error("Branch not found: ".concat(evalResult as string));
+      }
+      return resolveBody(branch, input, snippets);
+    }
+  }
+}
+
+function indent(text: string, spaces: string): string {
+  if (spaces.length <= 0) {
+    return text;
+  } else {
+    return text.replace(/\n/g, "\n".concat(spaces));
+  }
+}
+
+function evaluate<Input>(input: Input, expression: Expression): unknown {
+  switch (expression.kind) {
+    case "input": {
+      return input;
+    }
+    case "property": {
+      const { property } = expression;
+      return (input as Record<string, unknown>)[property];
+    }
+  }
+}
+
+function resolveExamples(
+  inputs: ReadonlyArray<{
+    readonly input: unknown;
+    readonly output: unknown;
+  }>,
+  body: Body,
+  template: TemplateSpec,
+): readonly FewShotExample[] {
+  return inputs.map(({ input, output }) => ({
+    userInstructions: resolveBody(body, input, template.snippets),
+    assistantResponse: format(output, template.outputFormat),
+  }));
+}
+
+function format(input: unknown, format?: InsertFormat): string {
+  switch (format) {
+    case undefined:
+    case "text": {
+      return String(input);
+    }
+    case "json": {
+      return JSON.stringify(input, undefined, 2);
+    }
+    case "yaml": {
+      return YAML.stringify(input);
+    }
+    case "toon": {
+      return encodeToon(input);
+    }
+    case "csv":
+    case "tsv": {
+      const separator = format === "csv" ? "," : "\t";
+      const array = input as ReadonlyArray<{ [k: string]: string | number }>;
+      if (array.length <= 0) {
+        return "";
+      }
+      const firstElement = array[0]!;
+      const headerRow = Object.keys(firstElement).join(separator);
+      const rows: string[] = [
+        headerRow,
+        ...array.map((e) => {
+          return Object.values(e)
+            .map((cell) => {
+              const str = String(cell);
+              if (separator === ",") {
+                // CSV per RFC 4180: wrap in double quotes if the cell contains a
+                // double quote, a comma, a newline, or a carriage return.
+                return /[",\n\r]/.test(str)
+                  ? '"'.concat(str.replace(/"/g, '""')).concat('"')
+                  : str;
+              } else {
+                // TSV: no standard quoting; escape special characters with
+                // backslash so the value remains a single field.
+                return str
+                  .replace(/\\/g, "\\\\")
+                  .replace(/\t/g, "\\t")
+                  .replace(/\n/g, "\\n")
+                  .replace(/\r/g, "\\r");
+              }
+            })
+            .join(separator);
+        }),
+      ];
+      return rows.join("\n");
+    }
+  }
+}
+
+function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+`;
