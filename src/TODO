@@ -1,6 +1,7 @@
 BUG:
   - I think in typetraverser i don't traverse the shared types which are used
   - reuse the name dependency collector?
+  - see why the errors are duplicated
 
 LANGUAGE:
   - "Default" namespace -> "Main" namespace

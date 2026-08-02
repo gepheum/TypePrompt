@@ -1,5 +1,5 @@
 export type Templates = {
-  readonly hash: string;
+  readonly signature: string;
   readonly templates: { readonly [id: string]: Template };
 };
 
@@ -14,12 +14,10 @@ export type Template = {
 export type OutputFormat = "json" | "text";
 
 export type TemplateContents =
-  | { readonly kind: "no-variants"; readonly content: TemplateContent }
+  | { readonly kind: "noVariants"; readonly content: TemplateContent }
   | {
       readonly kind: "variants";
-      readonly variants: {
-        readonly [c: string]: TemplateContent;
-      };
+      readonly variants: { readonly [c: string]: TemplateContent };
       readonly defaultContent: TemplateContent;
     };
 
@@ -38,13 +36,13 @@ export type Body = readonly BodyPiece[];
 export type BodyPiece =
   | { readonly kind: "text"; readonly text: string }
   | {
-      readonly kind: "insert-val";
+      readonly kind: "insertVal";
       readonly val: Expression;
       readonly format: InsertFormat;
       readonly indent: string;
     }
   | {
-      readonly kind: "insert-snippet";
+      readonly kind: "insertSnippet";
       /** Snippet name. */
       readonly snippet: string;
       /** Only contains whitespace characters. */
@@ -69,14 +67,14 @@ export type Snippet =
       readonly body: Body;
     }
   | {
-      readonly kind: "snippet-if";
+      readonly kind: "snippetIf";
       readonly expression: Expression;
       readonly is: "notNull" | "notEmpty" | "true";
       readonly then: Body;
       readonly else: Body;
     }
   | {
-      readonly kind: "snippet-switch";
+      readonly kind: "snippetSwitch";
       readonly expression: Expression;
       readonly branches: { readonly [c: string]: Body };
     };

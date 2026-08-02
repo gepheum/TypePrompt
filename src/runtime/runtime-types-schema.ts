@@ -4,7 +4,7 @@ import { validateSchema } from "../schema/schema-validator.js";
 
 const SCHEMA = `
 type Templates = {
-  hash: string;
+  signature: string;
   templates: { [id: string]: TemplateSpec };
 };
 
@@ -19,23 +19,21 @@ type TemplateSpec = {
 type OutputFormat = "json" | "text";
 
 type TemplateContents =
-  | { kind: "no-variants"; content: TemplateContent }
+  | { kind: "noVariants"; content: TemplateContent }
   | {
       kind: "variants";
-      variants: {
-        [c: string]: TemplateContent;
-      };
+      variants: { [c: string]: TemplateContent };
       defaultContent: TemplateContent;
     };
 
 type TemplateContent = {
-  meta?: unknown;
+  meta?: any;
   system?: Body;
   user?: Body;
-  examples?: ReadonlyArray<{
-    input: unknown;
-    output: unknown;
-  }>;
+  examples?: ({
+    input: any;
+    output: any;
+  })[];
 };
 
 type Body = BodyPiece[];
@@ -43,13 +41,13 @@ type Body = BodyPiece[];
 type BodyPiece =
   | { kind: "text"; text: string }
   | {
-      kind: "insert-val";
+      kind: "insertVal";
       val: Expression;
       format: InsertFormat;
       indent: string;
     }
   | {
-      kind: "insert-snippet";
+      kind: "insertSnippet";
       /** Snippet name. */
       snippet: string;
       /** Only contains whitespace characters. */
@@ -74,14 +72,14 @@ type Snippet =
       body: Body;
     }
   | {
-      kind: "snippet-if";
+      kind: "snippetIf";
       expression: Expression;
       is: "notNull" | "notEmpty" | "true";
       then: Body;
       else: Body;
     }
   | {
-      kind: "snippet-switch";
+      kind: "snippetSwitch";
       expression: Expression;
       branches: { [c: string]: Body };
     };
