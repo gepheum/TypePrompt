@@ -1,5 +1,7 @@
 import * as z from "zod";
 import { Body, BodyPiece, Expression, InsertFormat, OutputFormat, Snippet, TemplateSpec, Templates } from "./runtime-types.js";
+import YAML from 'yaml';
+import { encode as encodeToon } from '@toon-format/toon'
 
 export type Template<Input, Output> = {
   readonly make: (input: Input) => Prompt<Output, Input>;
@@ -179,6 +181,7 @@ function resolveExamples(
 
 function format(input: unknown, format?: InsertFormat): string {
   switch (format) {
+    case undefined:
     case "text": {
       if (typeof(input) === "string") {
         return input;
@@ -188,6 +191,12 @@ function format(input: unknown, format?: InsertFormat): string {
     }
     case "json": {
       return JSON.stringify(input, undefined, 2);
+    }
+    case "yaml": {
+      return YAML.stringify(input);
+    }
+    case "toon": {
+      return encodeToon(input);
     }
     case "csv":
     case "tsv": {
