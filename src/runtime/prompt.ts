@@ -61,7 +61,8 @@ function newPromptMaker(templates: Templates): PromptMaker {
     };
   } = {};
   for (const [templateId, templateSpec] of Object.entries(templates.templates)) {
-    const {namespace, name} = templateSpec;
+    const namespace = uncapitalize(templateSpec.namespace);
+    const name = uncapitalize(templateSpec.name);
     (result[namespace] ??= {})[name] = {
       make: (input: unknown) => resolveTemplate(templateId, templates, input),
     };
@@ -269,4 +270,8 @@ function format(input: unknown, format?: InsertFormat): string {
       return rows.join("\n");
     }
   }
+}
+
+function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
