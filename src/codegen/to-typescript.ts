@@ -209,28 +209,6 @@ class TypescriptCodeGenerator {
 
   private writeJsonSpecValue(compilationResult: CompilationResult): void {
     this.code += "const jsonSpec: JsonSpec = freezeJsonSpec({\n";
-    // for (const template of Object.entries(templates.templates)) {
-    //   this.code += `  ${JSON.stringify(templateKey)}: {\n`;
-    //   this.code += `    name: ${JSON.stringify(template.name)},\n`;
-    //   this.code += "    allArgs: [";
-    //   for (let i = 0; i < template.args.length; i += 1) {
-    //     if (i > 0) {
-    //       this.code += ", ";
-    //     }
-    //     this.code += JSON.stringify(template.args[i]);
-    //   }
-    //   this.code += "],\n";
-    //   this.code += "    pieces: [\n";
-    //   for (const piece of template.content) {
-    //     if (piece.kind === "text") {
-    //       this.code += `      {kind: "text", text: ${JSON.stringify(piece.text)}},\n`;
-    //     } else {
-    //       this.code += `      {kind: "arg", name: ${JSON.stringify(piece.name)}, indent: ${JSON.stringify(piece.indent)}},\n`;
-    //     }
-    //   }
-    //   this.code += "    ],\n";
-    //   this.code += "  },\n";
-    // }
     this.code += "});\n\n";
   }
 
@@ -267,32 +245,7 @@ class TypescriptCodeGenerator {
     this.code += "      : (args.internalJsonSpec as JsonSpec);\n";
     this.code += "  }\n\n";
 
-    // for (const [templateKey, template] of Object.entries(templates.templates)) {
-    //   const templateName = template.name;
-    //   const hasArgs = template.args.length > 0;
-    //   const argsSignature = hasArgs ? `args: ${templateName}Args` : "";
-    //   this.code += `  make${templateName}(${argsSignature}): string {\n`;
-    //   const argsExpression = hasArgs ? "argsRecord" : "{}";
-    //   if (hasArgs) {
-    //     this.code +=
-    //       "    const argsRecord = args as unknown as {readonly [argName: string]: string};\n";
-    //   }
-    //   this.code += `    return makePromptImpl(${JSON.stringify(templateKey)}, ${argsExpression}, this.jsonSpec);\n`;
-    //   this.code += "  }\n\n";
-    // }
-
     this.code += "}\n\n";
-
-    // for (const template of Object.values(templates.templates)) {
-    //   if (template.args.length === 0) {
-    //     continue;
-    //   }
-    //   this.code += `export interface ${template.name}Args {\n`;
-    //   for (const arg of template.args) {
-    //     this.code += `  readonly ${arg}: string;\n`;
-    //   }
-    //   this.code += "}\n\n";
-    // }
   }
 
   private writePromptMaker2Type(compilationResult: CompilationResult): void {
@@ -306,18 +259,6 @@ class TypescriptCodeGenerator {
         });
       }
     }
-    // this.code += "export type PromptMaker2 = {\n";
-    // for (const { namespace, templates: tmplList } of templates.namespaces) {
-    //   this.code += `  readonly ${uncapitalize(namespace)}: {\n`;
-    //   for (const template of tmplList) {
-    //     const nsRef = `${namespace}Types`;
-    //     const args = `${nsRef}.${template.name}.Args`;
-    //     const response = `${nsRef}.${template.name}.Response`;
-    //     this.code += `    readonly ${uncapitalize(template.name)}: PromptSpec<${args}, ${response}>;\n`;
-    //   }
-    //   this.code += "  };\n";
-    // }
-    // this.code += "};\n\n";
   }
 
   private writeSchema(
