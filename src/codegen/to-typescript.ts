@@ -37,6 +37,7 @@ class TypescriptCodeGenerator {
 
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
     this.code += 'import * as z from "zod";\n\n';
+    this.writePromptMaker(Object.values(namespaces));
     this.writeDatatypes(metaSchema, Object.values(namespaces));
     this.writeTemplateIdTypeAlias(Object.values(templates));
     // this.writeTemplateTypes(compilationResult);
@@ -49,6 +50,26 @@ class TypescriptCodeGenerator {
     this.writeMakePromptImplFunction();
     this.code = this.code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
     return this.code;
+  }
+
+  private writePromptMaker(
+    namespaces: readonly NamespaceResult[],
+  ): void {
+    this.code += "export type PromptMaker = {\n"
+    for (const namespace of namespaces) {
+      const namespaceProperty = uncapitalize(namespace.name);
+      this.code += `  readonly ${namespaceProperty}: {\n`
+      for (const template of namespace.templates) {
+        const templateName = template.template.name.text;
+        const templateProperty = uncapitalize(templateName);
+        const typePrefix = `$.${namespace.name}.${templateName}`;
+        const inputType = typePrefix.concat(".Input");
+        const outputType = typePrefix.concat(".Output");
+        this.code += `    readonly ${templateProperty}: Template<${inputType}, ${outputType}>;\n`;
+      }
+      this.code += "  };\n";
+    }
+    this.code += "};\n\n";
   }
 
   private writeDatatypes(
@@ -474,12 +495,6 @@ class TypescriptCodeGenerator {
 
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
-}
-
-function toTypeName(namePieces: readonly string[]): string {
-  return namePieces
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join("_");
 }
 
 function spellType(type: Type, namespace: string, indent: string): string {

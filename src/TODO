@@ -2,6 +2,9 @@ BUG:
   - I think in typetraverser i don't traverse the shared types which are used
   - reuse the name dependency collector?
 
+LANGUAGE:
+  - "Default" namespace -> "Main" namespace
+
 CODEGEN:
   - only one space and then change?
   - Put the jsdoc in the schema and the Zod types

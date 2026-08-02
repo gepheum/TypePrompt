@@ -2,6 +2,12 @@
 
 import * as z from "zod";
 
+export type PromptMaker = {
+  readonly default: {
+    readonly myTemplate: Template<$.Default.MyTemplate.Input, $.Default.MyTemplate.Output>;
+  };
+};
+
 export declare namespace $ {
   export declare namespace Meta {
     export type Meta = {
