@@ -1,7 +1,15 @@
+import { encode as encodeToon } from "@toon-format/toon";
+import YAML from "yaml";
 import * as z from "zod";
-import { Body, BodyPiece, Expression, InsertFormat, OutputFormat, Snippet, TemplateSpec, Templates } from "./runtime-types.js";
-import YAML from 'yaml';
-import { encode as encodeToon } from '@toon-format/toon'
+import {
+  Body,
+  BodyPiece,
+  Expression,
+  InsertFormat,
+  Snippet,
+  TemplateSpec,
+  Templates,
+} from "./runtime-types.js";
 
 export type Template<Input, Output> = {
   readonly make: (input: Input) => Prompt<Output, Input>;
@@ -35,6 +43,25 @@ function getOutputType(templateId: TemplateId): z.ZodType<unknown> {
 
 // </generated>
 
+function newPromptMaker(templates: Templates): {
+  readonly [namespace: string]: {
+    readonly [name: string]: Template<unknown, unknown>;
+  };
+} {
+  const result: {
+    [namespace: string]: {
+      [name: string]: Template<unknown, unknown>;
+    };
+  } = {};
+  for (const [templateId, templateSpec] of Object.entries(templates.templates)) {
+    const {namespace, name} = templateSpec;
+    (result[namespace] ??= {})[name] = {
+      make: (input: unknown) => resolveTemplate(templateId, templates, input),
+    };
+  }
+  return result;
+}
+
 function resolveTemplate<Input, Output>(
   templateId: string,
   templates: Templates,
@@ -44,28 +71,32 @@ function resolveTemplate<Input, Output>(
   if (!template) {
     throw new Error(`Template '${templateId}' not found`);
   }
-  const {contents, snippets} = template;
+  const { contents, snippets } = template;
 
   let meta: Meta;
   let systemInstructions: string;
   let userInstructions: string;
   let examples: readonly FewShotExample[];
   if (contents.kind === "no-variants") {
-    const {content} = contents;
+    const { content } = contents;
     meta = content.meta as Meta;
     systemInstructions = resolveBody(content.system!, input, snippets);
     userInstructions = resolveBody(content.user!, input, snippets);
     examples = resolveExamples(content.examples!, content.user!, template);
   } else {
-    const {defaultContent, variants} = contents;
-    const {variant} = input as {readonly variant: string};
+    const { defaultContent, variants } = contents;
+    const { variant } = input as { readonly variant: string };
     const variantContent = variants[variant]!;
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
     const user = (variantContent.user ?? defaultContent.user)!;
     systemInstructions = resolveBody(system, input, snippets);
     userInstructions = resolveBody(user, input, snippets);
-    examples = resolveExamples((variantContent.examples ?? defaultContent.examples)!, user, template);
+    examples = resolveExamples(
+      (variantContent.examples ?? defaultContent.examples)!,
+      user,
+      template,
+    );
   }
   const outputType = getOutputType(templateId) as z.ZodType<Output>;
   return {
@@ -82,7 +113,7 @@ function resolveTemplate<Input, Output>(
 function resolveBody<Input>(
   body: Body,
   input: Input,
-  snippets: {readonly [c: string]: Snippet},
+  snippets: { readonly [c: string]: Snippet },
 ): string {
   const resolvePiece = (piece: BodyPiece): string => {
     switch (piece.kind) {
@@ -108,19 +139,19 @@ function resolveBody<Input>(
 function resolveSnippet<Input>(
   snippet: Snippet,
   input: Input,
-  snippets: {readonly [c: string]: Snippet},
+  snippets: { readonly [c: string]: Snippet },
 ): string {
   switch (snippet.kind) {
     case "snippet": {
       return resolveBody(snippet.body, input, snippets);
     }
     case "snippet-if": {
-      const {expression, then: thenBody, else: elseBody} = snippet;
+      const { expression, then: thenBody, else: elseBody } = snippet;
       const evalResult = evaluate(input, expression);
       const condition = ((): boolean => {
         switch (snippet.is) {
           case "notEmpty": {
-            return (evalResult as {readonly length: number}).length > 0;
+            return (evalResult as { readonly length: number }).length > 0;
           }
           case "notNull": {
             return evalResult === undefined || evalResult === null;
@@ -134,7 +165,7 @@ function resolveSnippet<Input>(
       return resolveBody(body, input, snippets);
     }
     case "snippet-switch": {
-      const {expression, branches} = snippet;
+      const { expression, branches } = snippet;
       const evalResult = evaluate(input, expression);
       const branch = branches[evalResult as string];
       if (!branch) {
@@ -159,7 +190,7 @@ function evaluate<Input>(input: Input, expression: Expression): unknown {
       return input;
     }
     case "property": {
-      const {property} = expression;
+      const { property } = expression;
       return (input as Record<string, unknown>)[property];
     }
   }
@@ -173,7 +204,7 @@ function resolveExamples(
   body: Body,
   template: TemplateSpec,
 ): readonly FewShotExample[] {
-  return inputs.map(({input, output}) => ({
+  return inputs.map(({ input, output }) => ({
     userInstructions: resolveBody(body, input, template.snippets),
     assistantResponse: format(output, template.outputFormat),
   }));
@@ -183,7 +214,7 @@ function format(input: unknown, format?: InsertFormat): string {
   switch (format) {
     case undefined:
     case "text": {
-      if (typeof(input) === "string") {
+      if (typeof input === "string") {
         return input;
       } else {
         return String(input);
@@ -201,7 +232,7 @@ function format(input: unknown, format?: InsertFormat): string {
     case "csv":
     case "tsv": {
       const separator = format === "csv" ? "," : "\t";
-      const array = input as ReadonlyArray<{[k: string]: string | number}>;
+      const array = input as ReadonlyArray<{ [k: string]: string | number }>;
       if (array.length <= 0) {
         return "";
       }
@@ -210,25 +241,27 @@ function format(input: unknown, format?: InsertFormat): string {
       const rows: string[] = [
         headerRow,
         ...array.map((e) => {
-          return Object.values(e).map((cell) => {
-            const str = String(cell);
-            if (separator === ",") {
-              // CSV per RFC 4180: wrap in double quotes if the cell contains a
-              // double quote, a comma, a newline, or a carriage return.
-              return (/[",\n\r]/.test(str))
-                ? `"${str.replace(/"/g, '""')}"`
-                : str;
-            } else {
-              // TSV: no standard quoting; escape special characters with
-              // backslash so the value remains a single field.
-              return str
-                .replace(/\\/g, "\\\\")
-                .replace(/\t/g, "\\t")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\r");
-            }
-          }).join(separator);
-        })
+          return Object.values(e)
+            .map((cell) => {
+              const str = String(cell);
+              if (separator === ",") {
+                // CSV per RFC 4180: wrap in double quotes if the cell contains a
+                // double quote, a comma, a newline, or a carriage return.
+                return /[",\n\r]/.test(str)
+                  ? `"${str.replace(/"/g, '""')}"`
+                  : str;
+              } else {
+                // TSV: no standard quoting; escape special characters with
+                // backslash so the value remains a single field.
+                return str
+                  .replace(/\\/g, "\\\\")
+                  .replace(/\t/g, "\\t")
+                  .replace(/\n/g, "\\n")
+                  .replace(/\r/g, "\\r");
+              }
+            })
+            .join(separator);
+        }),
       ];
       return rows.join("\n");
     }
