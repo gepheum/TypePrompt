@@ -83,6 +83,7 @@ function doGetUnionMembers(
         includes.push(...otherMembers.includes);
         break;
       }
+      case "any":
       case "array":
       case "primitive":
       case "record": {
@@ -335,6 +336,11 @@ function areResolvedTypesEqual(
   schema: SchemaView,
 ): boolean {
   switch (a.kind) {
+    case "any":
+    case "interface":
+    case "union": {
+      return a === b;
+    }
     case "array": {
       return (
         b.kind === "array" &&
@@ -345,10 +351,6 @@ function areResolvedTypesEqual(
       return (
         b.kind === "record" && areTypesEqual(a.valueType, b.valueType, schema)
       );
-    }
-    case "interface":
-    case "union": {
-      return a === b;
     }
     case "primitive": {
       return b.kind === "primitive" && a.primitive === b.primitive;

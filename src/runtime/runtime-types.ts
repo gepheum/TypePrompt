@@ -17,7 +17,7 @@ export type TemplateContents =
   | {
       readonly kind: "variants";
       readonly variants: {
-        readonly [c: string]: Partial<TemplateContent>
+        readonly [c: string]: Partial<TemplateContent>;
       };
       readonly defaultContent: Partial<TemplateContent>;
     };

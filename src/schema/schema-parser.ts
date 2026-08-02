@@ -292,6 +292,11 @@ class SchemaParser {
               kind: "primitive",
               primitive: { ...span, text: span.text },
             };
+          } else if (span.text === "any") {
+            return {
+              kind: "any",
+              span: span,
+            };
           } else {
             return {
               kind: "type-name",

@@ -3,6 +3,8 @@ import { Type } from "./schema-types.js";
 
 export function getFirstToken(type: Type): Span {
   switch (type.kind) {
+    case "any":
+      return type.span;
     case "array":
       return getFirstToken(type.elementType);
     case "interface":

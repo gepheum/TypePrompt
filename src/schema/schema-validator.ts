@@ -102,6 +102,10 @@ function validateType(
   errors: ErrorSink,
 ): null {
   switch (type.kind) {
+    case "any":
+    case "primitive": {
+      return null;
+    }
     case "array": {
       return validateType(type.elementType, schema, context, errors);
     }
@@ -118,9 +122,6 @@ function validateType(
         }
         validateType(field.type, schema, context, errors);
       }
-      return null;
-    }
-    case "primitive": {
       return null;
     }
     case "record": {
@@ -297,6 +298,10 @@ class TypeTraverser {
 
   private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
     switch (type.kind) {
+      case "any":
+      case "primitive": {
+        return null;
+      }
       case "array": {
         return this.traverse(type.elementType, context);
       }
@@ -314,9 +319,6 @@ class TypeTraverser {
           };
           this.traverse(field.type, newContext);
         }
-        return null;
-      }
-      case "primitive": {
         return null;
       }
       case "record": {

@@ -53,6 +53,9 @@ export function jsonMatchesType(
     return MATCH;
   }
   switch (type.kind) {
+    case "any": {
+      return MATCH;
+    }
     case "array":
     case "synthetic-array": {
       if (value.kind === "array") {

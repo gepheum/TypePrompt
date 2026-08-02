@@ -43,13 +43,13 @@ export type SchemaField = {
 };
 
 export type ResolvedType =
-  | PrimitiveType
-  | StringLiteral
-  | Interface
-  | RecordType
+  | AnyType
   | Array
-  | Union
-  | PrimitiveType;
+  | Interface
+  | PrimitiveType
+  | RecordType
+  | StringLiteral
+  | Union;
 
 export type Type = ResolvedType | TypeName | SharedTypeName;
 
@@ -84,6 +84,11 @@ export type RecordType = {
   readonly leftCurlyBracket: Span;
   readonly keyName: string;
   readonly valueType: Type;
+};
+
+export type AnyType = {
+  readonly kind: "any";
+  readonly span: Span;
 };
 
 export type Array = {

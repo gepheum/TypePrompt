@@ -19,6 +19,11 @@ export function getNameDependencies(
   };
   const collect = (type: Type, scope: NameScope): null => {
     switch (type.kind) {
+      case "any":
+      case "primitive":
+      case "string-literal": {
+        return null;
+      }
       case "array": {
         return collect(type.elementType, scope);
       }
@@ -30,10 +35,6 @@ export function getNameDependencies(
       }
       case "record": {
         return collect(type.valueType, scope);
-      }
-      case "primitive":
-      case "string-literal": {
-        return null;
       }
       case "shared-type-name": {
         scope = "shared";

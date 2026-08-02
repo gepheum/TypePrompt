@@ -1,5 +1,8 @@
-import * as z from "zod";
-import type { CompilationResult, NamespaceResult, Template, TemplateValidationResult } from "../compiler/compiler-types.js";
+import type {
+  CompilationResult,
+  NamespaceResult,
+  TemplateValidationResult,
+} from "../compiler/compiler-types.js";
 import type { Config } from "../config/config-parser.js";
 import type { Schema, Type } from "../schema/schema-types.js";
 import {
@@ -29,7 +32,7 @@ class TypescriptCodeGenerator {
   code = "";
 
   write(compilationResult: CompilationResult): string {
-    const {metaSchema, namespaces, templates} = compilationResult;
+    const { metaSchema, namespaces, templates } = compilationResult;
     if (metaSchema.kind !== "success") throw new Error();
 
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
@@ -52,7 +55,8 @@ class TypescriptCodeGenerator {
     metaSchema: Schema,
     namespaces: readonly NamespaceResult[],
   ): void {
-    const anyTypes = (schema: Schema): boolean => Object.keys(schema.typeDeclarations).length > 0;
+    const anyTypes = (schema: Schema): boolean =>
+      Object.keys(schema.typeDeclarations).length > 0;
     this.code += "export declare namespace $ {\n";
     if (metaSchema.kind !== "success") throw new Error();
     if (anyTypes(metaSchema)) {
@@ -79,7 +83,9 @@ class TypescriptCodeGenerator {
     this.code += "}\n\n";
   }
 
-  private writeTemplateIdTypeAlias(templates: readonly TemplateValidationResult[]): void {
+  private writeTemplateIdTypeAlias(
+    templates: readonly TemplateValidationResult[],
+  ): void {
     this.code += "export type TemplateId =";
     if (templates.length <= 0) {
       this.code += " never";
@@ -293,12 +299,20 @@ class TypescriptCodeGenerator {
     // this.code += "};\n\n";
   }
 
-  private writeSchema(schema: Schema, namespace: string, indent: "    " | "      ",): void {
+  private writeSchema(
+    schema: Schema,
+    namespace: string,
+    indent: "    " | "      ",
+  ): void {
     for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
       const name = typeDeclaration.name.text;
       this.code += wrapJsdoc(typeDeclaration.doc, indent);
       this.code += `${indent}export type ${name} =`;
-      const spelledType = spellType(typeDeclaration.valueType, namespace, indent);
+      const spelledType = spellType(
+        typeDeclaration.valueType,
+        namespace,
+        indent,
+      );
       const maybeSpace = spelledType.startsWith("\n") ? "" : " ";
       this.code += `${maybeSpace}${spelledType};\n\n`;
     }
@@ -361,7 +375,7 @@ class TypescriptCodeGenerator {
       write(valueType, scope, indent);
       if (declaration.doc) {
         const quotedDoc = JSON.stringify(declaration.doc satisfies string);
-        this.code += `.describe(${quotedDoc})`
+        this.code += `.describe(${quotedDoc})`;
       }
       this.code += ";\n\n";
       typeIdToStatus[typeName] = "done";
@@ -369,6 +383,10 @@ class TypescriptCodeGenerator {
 
     const write = (type: Type, scope: NameScope, indent: string): null => {
       switch (type.kind) {
+        case "any": {
+          this.code += "z.any()";
+          return null;
+        }
         case "array": {
           write(type.elementType, scope, indent);
           this.code += ".array()";
@@ -466,6 +484,9 @@ function toTypeName(namePieces: readonly string[]): string {
 
 function spellType(type: Type, namespace: string, indent: string): string {
   switch (type.kind) {
+    case "any": {
+      return "unknown";
+    }
     case "array": {
       const { elementType } = type;
       const indented = indent + "  ";
