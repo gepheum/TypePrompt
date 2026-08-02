@@ -189,5 +189,39 @@ function format(input: unknown, format?: InsertFormat): string {
     case "json": {
       return JSON.stringify(input, undefined, 2);
     }
+    case "csv":
+    case "tsv": {
+      const separator = format === "csv" ? "," : "\t";
+      const array = input as ReadonlyArray<{[k: string]: string | number}>;
+      if (array.length <= 0) {
+        return "";
+      }
+      const firstElement = array[0]!;
+      const headerRow = Object.keys(firstElement).join(separator);
+      const rows: string[] = [
+        headerRow,
+        ...array.map((e) => {
+          return Object.values(e).map((cell) => {
+            const str = String(cell);
+            if (separator === ",") {
+              // CSV per RFC 4180: wrap in double quotes if the cell contains a
+              // double quote, a comma, a newline, or a carriage return.
+              return (/[",\n\r]/.test(str))
+                ? `"${str.replace(/"/g, '""')}"`
+                : str;
+            } else {
+              // TSV: no standard quoting; escape special characters with
+              // backslash so the value remains a single field.
+              return str
+                .replace(/\\/g, "\\\\")
+                .replace(/\t/g, "\\t")
+                .replace(/\n/g, "\\n")
+                .replace(/\r/g, "\\r");
+            }
+          }).join(separator);
+        })
+      ];
+      return rows.join("\n");
+    }
   }
 }
