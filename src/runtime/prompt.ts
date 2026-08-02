@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { Body, BodyPiece, Expression, InsertFormat, OutputFormat, Snippet, Templates } from "./runtime-types.js";
+import { Body, BodyPiece, Expression, InsertFormat, OutputFormat, Snippet, TemplateSpec, Templates } from "./runtime-types.js";
 
 export type Template<Input, Output> = {
   readonly make: (input: Input) => Prompt<Output, Input>;
@@ -48,20 +48,23 @@ function resolveTemplate<Input, Output>(
     meta = content.meta as Meta;
     systemInstructions = resolveBody(content.system!, input, snippets);
     userInstructions = resolveBody(content.user!, input, snippets);
+    examples = resolveExamples(content.examples!, content.user!, template);
   } else {
     const {defaultContent, variants} = contents;
     const {variant} = input as {readonly variant: string};
     const variantContent = variants[variant]!;
-    meta = variantContent.meta as Meta;
+    meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
     const user = (variantContent.user ?? defaultContent.user)!;
     systemInstructions = resolveBody(system, input, snippets);
     userInstructions = resolveBody(user, input, snippets);
+    examples = resolveExamples((variantContent.examples ?? defaultContent.examples)!, user, template);
   }
   return {
     meta,
     systemInstructions,
     userInstructions,
+    examples,
     templateId,
     templateInput: input,
   };
@@ -151,6 +154,20 @@ function evaluate<Input>(input: Input, expression: Expression): unknown {
       return (input as Record<string, unknown>)[property];
     }
   }
+}
+
+function resolveExamples(
+  inputs: ReadonlyArray<{
+    readonly input: unknown;
+    readonly output: unknown;
+  }>,
+  body: Body,
+  template: TemplateSpec,
+): readonly FewShotExample[] {
+  return inputs.map(({input, output}) => ({
+    userInstructions: resolveBody(body, input, template.snippets),
+    assistantResponse: format(output, template.outputFormat),
+  }));
 }
 
 function format(input: unknown, format?: InsertFormat): string {
