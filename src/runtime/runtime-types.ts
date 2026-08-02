@@ -17,18 +17,18 @@ export type TemplateContents =
   | {
       readonly kind: "variants";
       readonly variants: {
-        readonly [c: string]: Partial<TemplateContent>;
+        readonly [c: string]: TemplateContent;
       };
-      readonly defaultContent: Partial<TemplateContent>;
+      readonly defaultContent: TemplateContent;
     };
 
 export type TemplateContent = {
-  readonly meta: JsonValue | undefined;
-  readonly system: Body;
-  readonly user: Body;
-  readonly examples: ReadonlyArray<{
-    readonly input: JsonValue;
-    readonly output: JsonValue;
+  readonly meta?: unknown;
+  readonly system?: Body;
+  readonly user?: Body;
+  readonly examples?: ReadonlyArray<{
+    readonly input: unknown;
+    readonly output: unknown;
   }>;
 };
 
@@ -51,38 +51,6 @@ export type BodyPiece =
     };
 
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";
-
-export type JsonValue =
-  JsonObject | JsonArray | JsonString | JsonNumber | JsonBoolean | JsonNull;
-
-export type JsonObject = {
-  readonly kind: "object";
-  readonly entries: { readonly [name: string]: JsonValue };
-};
-
-export type JsonArray = {
-  readonly kind: "array";
-  readonly elements: readonly JsonValue[];
-};
-
-export type JsonString = {
-  readonly kind: "string";
-  readonly value: string;
-};
-
-export type JsonNumber = {
-  readonly kind: "number";
-  readonly value: number;
-};
-
-export type JsonBoolean = {
-  readonly kind: "boolean";
-  readonly value: boolean;
-};
-
-export type JsonNull = {
-  readonly kind: "null";
-};
 
 export type Expression =
   | {
