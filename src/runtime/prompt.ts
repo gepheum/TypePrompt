@@ -20,7 +20,12 @@ export type Prompt<Output, Input = unknown> = {
   readonly systemInstructions: string;
   readonly userInstructions: string;
   readonly examples: readonly FewShotExample[];
-  readonly outputType: z.ZodType<Output>;
+  readonly outputFormat:
+    | {
+      readonly kind: "json";
+      readonly schema: z.ZodType<Output>;
+    }
+    | (Output extends string ? { readonly kind: "text" } : never);
   readonly templateId: TemplateId;
   readonly templateInput: Input;
 };
@@ -41,13 +46,15 @@ function getOutputType(templateId: TemplateId): z.ZodType<unknown> {
   return z.any();
 }
 
-// </generated>
-
-function newPromptMaker(templates: Templates): {
+export type PromptMaker = {
   readonly [namespace: string]: {
     readonly [name: string]: Template<unknown, unknown>;
   };
-} {
+};
+
+// </generated>
+
+function newPromptMaker(templates: Templates): PromptMaker {
   const result: {
     [namespace: string]: {
       [name: string]: Template<unknown, unknown>;
@@ -214,11 +221,7 @@ function format(input: unknown, format?: InsertFormat): string {
   switch (format) {
     case undefined:
     case "text": {
-      if (typeof input === "string") {
-        return input;
-      } else {
-        return String(input);
-      }
+      return String(input);
     }
     case "json": {
       return JSON.stringify(input, undefined, 2);
