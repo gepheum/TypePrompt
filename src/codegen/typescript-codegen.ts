@@ -1,4 +1,5 @@
-import type { CompilationResult, NamespaceResult } from "../compiler/compiler-types.js";
+import * as z from "zod";
+import type { CompilationResult, NamespaceResult, Template, TemplateValidationResult } from "../compiler/compiler-types.js";
 import type { Config } from "../config/config-parser.js";
 import type { Schema, Type } from "../schema/schema-types.js";
 import {
@@ -28,12 +29,13 @@ class TypescriptCodeGenerator {
   code = "";
 
   write(compilationResult: CompilationResult): string {
-    const {metaSchema, namespaces} = compilationResult;
+    const {metaSchema, namespaces, templates} = compilationResult;
     if (metaSchema.kind !== "success") throw new Error();
 
     this.code = `// This file is auto-generated. Do not edit it directly.\n\n`;
     this.code += 'import * as z from "zod";\n\n';
     this.writeDatatypes(metaSchema, Object.values(namespaces));
+    this.writeTemplateIdTypeAlias(Object.values(templates));
     // this.writeTemplateTypes(compilationResult);
     this.writePromptMaker2Type(compilationResult);
     this.writePromptMakerClass(compilationResult);
@@ -75,6 +77,21 @@ class TypescriptCodeGenerator {
       this.code += "  }\n\n";
     }
     this.code += "}\n\n";
+  }
+
+  private writeTemplateIdTypeAlias(templates: readonly TemplateValidationResult[]): void {
+    this.code += "export type TemplateId =";
+    if (templates.length <= 0) {
+      this.code += " never";
+    } else {
+      for (const template of templates) {
+        if (template.kind !== "success") throw new Error();
+        const namespace = template.template.namespace?.text ?? "Default";
+        const templateName = template.template.name.text;
+        this.code += `\n  | "${namespace}:${templateName}"`;
+      }
+    }
+    this.code += ";\n\n";
   }
 
   private writePromptOverriderConst(): void {
@@ -342,6 +359,10 @@ class TypescriptCodeGenerator {
         "> = ",
       ].join("");
       write(valueType, scope, indent);
+      if (declaration.doc) {
+        const quotedDoc = JSON.stringify(declaration.doc satisfies string);
+        this.code += `.describe(${quotedDoc})`
+      }
       this.code += ";\n\n";
       typeIdToStatus[typeName] = "done";
     };
@@ -379,7 +400,8 @@ class TypescriptCodeGenerator {
             if (field.optional) {
               this.code += ".optional()";
             }
-            this.code += ",\n";
+            const quotedDoc = JSON.stringify(field.doc satisfies string);
+            this.code += `.describe(${quotedDoc}),\n`;
           }
           this.code += `${indent}})`;
           return null;

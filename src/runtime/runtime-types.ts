@@ -16,15 +16,11 @@ export type TemplateContents =
   | { readonly kind: "no-variants"; readonly content: TemplateContent }
   | {
       readonly kind: "variants";
-      readonly variants: readonly TemplateVariant[];
+      readonly variants: {
+        readonly [c: string]: Partial<TemplateContent>
+      };
       readonly defaultContent: Partial<TemplateContent>;
     };
-
-export type TemplateVariant = {
-  /** Variant name. */
-  readonly case: string;
-  readonly content: Partial<TemplateContent>;
-};
 
 export type TemplateContent = {
   readonly meta: JsonValue | undefined;

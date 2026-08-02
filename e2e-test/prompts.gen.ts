@@ -30,9 +30,12 @@ export declare namespace $ {
   }
 }
 
+export type TemplateId =
+  | "Default:MyTemplate";
+
 ((): z.ZodType<$.Default.MyTemplate.Output> => {
     const outputType: z.ZodType<$.Default.MyTemplate.Output> = z.object({
-      x: z.int32(),
+      x: z.int32().describe(""),
     });
 
     return outputType;
