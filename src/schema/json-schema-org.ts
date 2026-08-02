@@ -31,6 +31,9 @@ class Generator {
 
   typeToSchema(type: Type): Record<string, unknown> {
     switch (type.kind) {
+      case "any": {
+        return {};
+      }
       case "primitive": {
         return { type: type.primitive.text };
       }

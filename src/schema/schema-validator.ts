@@ -200,6 +200,10 @@ function collectTypeNameDependencies(
   seenNames: Set<string>,
 ): null {
   switch (type.kind) {
+    case "any":
+    case "primitive": {
+      return null;
+    }
     case "array": {
       return collectTypeNameDependencies(
         type.elementType,
@@ -211,9 +215,6 @@ function collectTypeNameDependencies(
       for (const field of Object.values(type.fields)) {
         collectTypeNameDependencies(field.type, typeDeclarations, seenNames);
       }
-      return null;
-    }
-    case "primitive": {
       return null;
     }
     case "record": {
