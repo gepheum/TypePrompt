@@ -23,7 +23,7 @@ export namespace $ {
       );
     };
   }
-  
+
   export namespace Default {
     export namespace MyTemplate {
       export type Input = {
@@ -31,7 +31,7 @@ export namespace $ {
         readonly lastName: string;
         readonly fooToBar: { [name: string]: number };
       };
-      
+
       export type Output = {
         readonly x: number;
       };
@@ -48,7 +48,7 @@ namespace Spec {
     readonly signature: string;
     readonly templates: { [id: string]: TemplateSpec };
   };
-  
+
   export type TemplateSpec = {
     readonly name: string;
     readonly namespace: string;
@@ -56,12 +56,12 @@ namespace Spec {
     readonly contents: TemplateContents;
     readonly snippets: { [name: string]: Snippet };
   };
-  
+
   export type OutputFormat = (
     | "json"
     | "text"
   );
-  
+
   export type TemplateContents = (
     | {
       readonly kind: "noVariants";
@@ -73,7 +73,7 @@ namespace Spec {
       readonly defaultContent: TemplateContent;
     }
   );
-  
+
   export type TemplateContent = {
     readonly meta: unknown;
     readonly system: Body;
@@ -83,9 +83,9 @@ namespace Spec {
       readonly output: unknown;
     }[];
   };
-  
+
   export type Body = readonly BodyPiece[];
-  
+
   export type BodyPiece = (
     | {
       readonly kind: "text";
@@ -105,7 +105,7 @@ namespace Spec {
       readonly indent: string;
     }
   );
-  
+
   export type InsertFormat = (
     | "text"
     | "json"
@@ -114,7 +114,7 @@ namespace Spec {
     | "csv"
     | "tsv"
   );
-  
+
   export type Expression = (
     | {
       readonly kind: "input";
@@ -125,7 +125,7 @@ namespace Spec {
       readonly property: string;
     }
   );
-  
+
   export type Snippet = (
     | {
       readonly kind: "snippet";

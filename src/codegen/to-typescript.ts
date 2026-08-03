@@ -371,7 +371,7 @@ function reformat(code: string): string {
     if (line.startsWith("}") || line.startsWith(")")) {
       indent = indent.slice(0, -2);
     }
-    outputLines.push(indent + line);
+    outputLines.push(line.length <= 0 ? line : indent + line);
     if (line.endsWith("{") || line.endsWith("(")) {
       indent = indent + "  ";
     }

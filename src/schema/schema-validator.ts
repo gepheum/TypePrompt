@@ -182,6 +182,9 @@ function validateType(
         return null;
       }
       case "union": {
+        for (const member of type.members) {
+          validate(member);
+        }
         const members = computeUnionMembers(type, schema);
         if (members.kind === "error") {
           errors.push(...members.errors);
@@ -302,10 +305,7 @@ function collectNamingHints(
 ): ReadonlyMap<Interface | Union, NamingHint> {
   const typeToNamingHint = new Map<Interface | Union, NamingHint>();
 
-  const collect = (
-    type: Type,
-    context: NamingHint,
-  ): null => {
+  const collect = (type: Type, context: NamingHint): null => {
     switch (type.kind) {
       case "any":
       case "primitive":
