@@ -311,8 +311,14 @@ function spellType(type: Type, namespace?: string): string {
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
-        result += wrapJsdoc(field.doc);
-        result += `readonly ${fieldName}: ${spellType(field.type, namespace)};\n`;
+        result += [
+          wrapJsdoc(field.doc),
+          "readonly ",
+          fieldName,
+          (field.optional ? "?:" : ":"),
+          spellType(field.type, namespace),
+          ")};\n",
+        ].join("");
       }
       result += "}";
       return result;

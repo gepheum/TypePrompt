@@ -29,10 +29,10 @@ export type TemplateContents = (
 );
 
 export type TemplateContent = {
-  readonly meta: unknown;
-  readonly system: Body;
-  readonly user: Body;
-  readonly examples: readonly {
+  readonly meta?: unknown;
+  readonly system?: Body;
+  readonly user?: Body;
+  readonly examples?: readonly {
     readonly input: unknown;
     readonly output: unknown;
   }[];
