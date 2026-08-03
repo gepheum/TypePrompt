@@ -1,5 +1,4 @@
 BUG:
-  - I think I need to make sure fields in "input" are always in the same order...
   - see why the errors are duplicated in token detection
 
 SCHEMA:
@@ -11,8 +10,12 @@ SCHEMA:
       - type Foo = {[name: string]: Foo};
 
 CODEGEN:
+  - I need to make sure fields in "input" are always in the same order...
   - Actually write the runtime-types
   - toolcalls...
+
+TOOLS:
+  - https://share.gemini.google/0FSezpOXrkQI
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace

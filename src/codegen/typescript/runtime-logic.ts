@@ -18,9 +18,14 @@ export type PromptMaker = {
     readonly [name: string]: Template<unknown, unknown>;
   };
 };
+
+const TEMPLATES_SPEC: Spec.Templates = {
+  signature: "",
+  templates: {},
+} as const;
 // </generated>
 
-// <static>
+// <static:types>
 export type Template<Input, Output> = {
   readonly make: (input: Input) => Prompt<Output, Input>;
 };
@@ -46,6 +51,31 @@ export type OutputFormat<Output> =
       readonly schema: z.ZodType<Output>;
     }
   | (Output extends string ? { readonly kind: "text" } : never);
+// </static:types>
+
+// <static:logic>
+export function newPromptMaker(): PromptMaker {
+  return newPromptMakerImpl(TEMPLATES_SPEC);
+}
+
+function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
+  const result: {
+    [namespace: string]: {
+      [name: string]: Template<unknown, unknown>;
+    };
+  } = {};
+  for (const [templateId, templateSpec] of Object.entries(
+    templates.templates,
+  )) {
+    const namespace = uncapitalize(templateSpec.namespace);
+    const name = uncapitalize(templateSpec.name);
+    (result[namespace] ??= {})[name] = {
+      make: (input: unknown) =>
+        resolveTemplate(templateId as TemplateId, templates, input),
+    };
+  }
+  return result as PromptMaker;
+}
 
 export function parseResponse<Output>(
   response: string,
@@ -63,25 +93,6 @@ export function parseResponse<Output>(
       return response as Output;
     }
   }
-}
-
-function newPromptMaker(templates: Spec.Templates): PromptMaker {
-  const result: {
-    [namespace: string]: {
-      [name: string]: Template<unknown, unknown>;
-    };
-  } = {};
-  for (const [templateId, templateSpec] of Object.entries(
-    templates.templates,
-  )) {
-    const namespace = uncapitalize(templateSpec.namespace);
-    const name = uncapitalize(templateSpec.name);
-    (result[namespace] ??= {})[name] = {
-      make: (input: unknown) =>
-        resolveTemplate(templateId as TemplateId, templates, input),
-    };
-  }
-  return result as PromptMaker;
 }
 
 function resolveTemplate<Input, Output>(
@@ -293,4 +304,4 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
-// </static>
+// </static:logic>

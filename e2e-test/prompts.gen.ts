@@ -4,6 +4,32 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
+export type Template<Input, Output> = {
+  readonly make: (input: Input) => Prompt<Output, Input>;
+};
+
+export type Prompt<Output, Input = unknown> = {
+  readonly meta: Meta;
+  readonly systemInstructions: string;
+  readonly userInstructions: string;
+  readonly examples: readonly FewShotExample[];
+  readonly outputFormat: OutputFormat<Output>;
+  readonly templateId: TemplateId;
+  readonly templateInput: Input;
+};
+
+export type FewShotExample = {
+  readonly userInstructions: string;
+  readonly assistantResponse: string;
+};
+
+export type OutputFormat<Output> =
+  | {
+      readonly kind: "json";
+      readonly schema: z.ZodType<Output>;
+    }
+  | (Output extends string ? { readonly kind: "text" } : never);
+
 export type PromptMaker = {
   readonly default: {
     readonly myTemplate: Template<$.Default.MyTemplate.Input, $.Default.MyTemplate.Output>;
@@ -150,32 +176,29 @@ namespace Spec {
   );
 }
 
-// <static>
-export type Template<Input, Output> = {
-  readonly make: (input: Input) => Prompt<Output, Input>;
-};
 
-export type Prompt<Output, Input = unknown> = {
-  readonly meta: Meta;
-  readonly systemInstructions: string;
-  readonly userInstructions: string;
-  readonly examples: readonly FewShotExample[];
-  readonly outputFormat: OutputFormat<Output>;
-  readonly templateId: TemplateId;
-  readonly templateInput: Input;
-};
+export function newPromptMaker(): PromptMaker {
+  return newPromptMakerImpl(TEMPLATES_SPEC);
+}
 
-export type FewShotExample = {
-  readonly userInstructions: string;
-  readonly assistantResponse: string;
-};
-
-export type OutputFormat<Output> =
-  | {
-      readonly kind: "json";
-      readonly schema: z.ZodType<Output>;
-    }
-  | (Output extends string ? { readonly kind: "text" } : never);
+function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
+  const result: {
+    [namespace: string]: {
+      [name: string]: Template<unknown, unknown>;
+    };
+  } = {};
+  for (const [templateId, templateSpec] of Object.entries(
+    templates.templates,
+  )) {
+    const namespace = uncapitalize(templateSpec.namespace);
+    const name = uncapitalize(templateSpec.name);
+    (result[namespace] ??= {})[name] = {
+      make: (input: unknown) =>
+        resolveTemplate(templateId as TemplateId, templates, input),
+    };
+  }
+  return result as PromptMaker;
+}
 
 export function parseResponse<Output>(
   response: string,
@@ -193,25 +216,6 @@ export function parseResponse<Output>(
       return response as Output;
     }
   }
-}
-
-function newPromptMaker(templates: Spec.Templates): PromptMaker {
-  const result: {
-    [namespace: string]: {
-      [name: string]: Template<unknown, unknown>;
-    };
-  } = {};
-  for (const [templateId, templateSpec] of Object.entries(
-    templates.templates,
-  )) {
-    const namespace = uncapitalize(templateSpec.namespace);
-    const name = uncapitalize(templateSpec.name);
-    (result[namespace] ??= {})[name] = {
-      make: (input: unknown) =>
-        resolveTemplate(templateId as TemplateId, templates, input),
-    };
-  }
-  return result as PromptMaker;
 }
 
 function resolveTemplate<Input, Output>(
@@ -423,4 +427,3 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
-// </static>
