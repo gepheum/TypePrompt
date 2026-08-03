@@ -229,6 +229,9 @@ class SchemaParser {
             if (!this.expectExactThenMove(":")) return null;
             const valueType = this.parseTypeRef();
             if (valueType === null) return null;
+            if (this.peekToken().text === ";") {
+              this.movePast(this.peekToken());
+            }
             if (!this.expectExactThenMove("}")) return null;
             return {
               kind: "record",

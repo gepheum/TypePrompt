@@ -4,7 +4,8 @@ BUG:
 
 SCHEMA:
   - support 'integer' as key in Record
-    - syntax: allow ";" in record type after value type before "}"
+    - Ah ben en fait c'est pas vraiment du JSON valide
+  - syntax: allow ";" in record type after value type before "}"
   - test:
       - type Foo = Foo[]
       - type Foo = {[name: string]: Foo};

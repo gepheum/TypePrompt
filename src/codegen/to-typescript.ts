@@ -315,9 +315,9 @@ function spellType(type: Type, namespace?: string): string {
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
-          (field.optional ? "?:" : ":"),
+          (field.optional ? "?: " : ": "),
           spellType(field.type, namespace),
-          ")};\n",
+          ";\n",
         ].join("");
       }
       result += "}";
