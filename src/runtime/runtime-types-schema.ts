@@ -5,10 +5,10 @@ import { validateSchema } from "../schema/schema-validator.js";
 const SCHEMA = `
 type Templates = {
   signature: string;
-  templates: { [id: string]: TemplateSpec };
+  templates: { [id: string]: Template };
 };
 
-type TemplateSpec = {
+type Template = {
   name: string;
   namespace: string;
   outputFormat: OutputFormat;

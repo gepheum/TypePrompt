@@ -46,10 +46,10 @@ export type TemplateId = (
 namespace Spec {
   export type Templates = {
     readonly signature: string;
-    readonly templates: { [id: string]: TemplateSpec };
+    readonly templates: { [id: string]: Template };
   };
 
-  export type TemplateSpec = {
+  export type Template = {
     readonly name: string;
     readonly namespace: string;
     readonly outputFormat: OutputFormat;

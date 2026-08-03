@@ -5,6 +5,9 @@ BUG:
 SCHEMA:
   - support 'integer' as key in Record
     - syntax: allow ";" in record type after value type before "}"
+  - test:
+      - type Foo = Foo[]
+      - type Foo = {[name: string]: Foo};
 
 CODEGEN:
   - Actually write the runtime-types
@@ -15,11 +18,8 @@ NAME CONFLICT:
   - No namespace named Meta
   - No template named Shared
 
-SCHEMA:
-  - finish runtime-type
-  - test:
-      - type Foo = Foo[]
-      - type Foo = {[name: string]: Foo};
+SYNTAX:
+  - add <doc> to <template>
 
 COMPILER:
   - Asyncify
