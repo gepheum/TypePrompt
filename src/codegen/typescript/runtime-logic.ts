@@ -8,10 +8,7 @@ export type Meta = {};
 
 export type TemplateId = string;
 
-function getOutputType(templateId: TemplateId): z.ZodType<unknown> {
-  // TODO
-  return z.any();
-}
+const templateOutputSchemas: { [id: TemplateId]: z.ZodType<any> } = {} as const;
 
 export type PromptMaker = {
   readonly [namespace: string]: {
@@ -130,10 +127,10 @@ function resolveTemplate<Input, Output>(
       template,
     );
   }
-  const outputType = getOutputType(templateId) as z.ZodType<Output>;
+  const outputSchema = templateOutputSchemas[templateId];
   const outputFormat = (
     template.outputFormat === "json"
-      ? { kind: "json", schema: outputType }
+      ? { kind: "json", schema: outputSchema }
       : { kind: "text" }
   ) as OutputFormat<Output>;
   return {

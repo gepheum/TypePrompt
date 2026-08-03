@@ -66,8 +66,17 @@ export namespace $ {
 }
 
 export type TemplateId = (
-  | "Default:MyTemplate"
+  | "Default/MyTemplate"
 );
+
+const templateOutputSchemas = {
+  "Default/MyTemplate": ((): z.ZodType<$.Default.MyTemplate.Output> => {
+    const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
+      x: z.int32(),
+    });
+    return outputSchema;
+  })(),
+} as const;
 
 namespace Spec {
   export type Templates = {
@@ -176,6 +185,114 @@ namespace Spec {
   );
 }
 
+const templatesSchema = ((): z.ZodType<Spec.Templates> => {
+  const outputFormatSchema: z.ZodType<Spec.OutputFormat> = z.union([
+    z.literal("json"),
+    z.literal("text"),
+  ]);
+  const expressionSchema: z.ZodType<Spec.Expression> = z.union([
+    z.object({
+      kind: z.literal("input"),
+    }),
+    z.object({
+      kind: z.literal("property"),
+      left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
+      property: z.string(),
+    }),
+  ]);
+  const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.union([
+    z.literal("text"),
+    z.literal("json"),
+    z.literal("yaml"),
+    z.literal("toon"),
+    z.literal("csv"),
+    z.literal("tsv"),
+  ]);
+  const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.union([
+    z.object({
+      kind: z.literal("text"),
+      text: z.string(),
+    }),
+    z.object({
+      kind: z.literal("insertVal"),
+      val: expressionSchema,
+      format: insertFormatSchema,
+      indent: z.string(),
+    }),
+    z.object({
+      kind: z.literal("insertSnippet"),
+      snippet: z.string().describe("Snippet name."),
+      indent: z.string().describe("Only contains whitespace characters."),
+    }),
+  ]);
+  const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
+  const templateContentSchema: z.ZodType<Spec.TemplateContent> = z.object({
+    meta: z.any().optional(),
+    system: bodySchema.optional(),
+    user: bodySchema.optional(),
+    examples: z.object({
+      input: z.any(),
+      output: z.any(),
+    }).array().optional(),
+  });
+  const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.union([
+    z.object({
+      kind: z.literal("noVariants"),
+      content: templateContentSchema,
+    }),
+    z.object({
+      kind: z.literal("variants"),
+      variants: z.record(
+        z.string(),
+        templateContentSchema,
+      ),
+      defaultContent: templateContentSchema,
+    }),
+  ]);
+  const snippetSchema: z.ZodType<Spec.Snippet> = z.union([
+    z.object({
+      kind: z.literal("snippet"),
+      body: bodySchema,
+    }),
+    z.object({
+      kind: z.literal("snippetIf"),
+      expression: expressionSchema,
+      is: z.union([
+        z.literal("notNull"),
+        z.literal("notEmpty"),
+        z.literal("true"),
+      ]),
+      then: bodySchema,
+      else: bodySchema,
+    }),
+    z.object({
+      kind: z.literal("snippetSwitch"),
+      expression: expressionSchema,
+      branches: z.record(
+        z.string(),
+        bodySchema,
+      ),
+    }),
+  ]);
+  const templateSchema: z.ZodType<Spec.Template> = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    outputFormat: outputFormatSchema,
+    contents: templateContentsSchema,
+    snippets: z.record(
+      z.string(),
+      snippetSchema,
+    ),
+  });
+  const templatesSchema: z.ZodType<Spec.Templates> = z.object({
+    signature: z.string(),
+    templates: z.record(
+      z.string(),
+      templateSchema,
+    ),
+  });
+  return templatesSchema;
+})();
 
 export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_SPEC);
@@ -253,10 +370,10 @@ function resolveTemplate<Input, Output>(
       template,
     );
   }
-  const outputType = getOutputType(templateId) as z.ZodType<Output>;
+  const outputSchema = templateOutputSchemas[templateId];
   const outputFormat = (
     template.outputFormat === "json"
-      ? { kind: "json", schema: outputType }
+      ? { kind: "json", schema: outputSchema }
       : { kind: "text" }
   ) as OutputFormat<Output>;
   return {
