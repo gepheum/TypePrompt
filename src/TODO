@@ -2,8 +2,6 @@ BUG:
   - I think I need to make sure fields in "input" are always in the same order...
   - I think in typetraverser i don't traverse the shared types which are used
     - which means i may be missing the union types... and the 'identifiers'...
-  - reuse the name dependency collector?
-  - I think I need to figure out the recursivity thing; type Foo = Foo[] doesnt make sense
   - see why the errors are duplicated in token detection
 
 SCHEMA:

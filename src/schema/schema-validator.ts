@@ -293,14 +293,14 @@ class TypeTraverser {
         this.unionToMembers.set(type, unionMembers);
         switch (unionMembers.kind) {
           case "interfaces": {
-            for (const [kind, member] of Object.entries(unionMembers.members)) {
+            for (const [discriminant, member] of Object.entries(unionMembers.members)) {
               const newContext: NamingHint = {
                 namePieces: [
                   ...context.namePieces,
                   {
                     kind: "member",
-                    discriminantName: unionMembers.discriminator,
-                    discriminantVal: kind,
+                    discriminator: unionMembers.discriminator,
+                    discriminant: discriminant,
                   },
                 ],
                 doc: null,

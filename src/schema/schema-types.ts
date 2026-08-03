@@ -151,9 +151,9 @@ export type NamingHint = {
     | {
         readonly kind: "member";
         /** Name of the field used to discriminate union members. Always lowercased. */
-        readonly discriminantName: string;
+        readonly discriminator: string;
         /** Value of the discriminant field. Always lowercased. */
-        readonly discriminantVal: string;
+        readonly discriminant: string;
       }
   >;
   readonly doc: string | null;
