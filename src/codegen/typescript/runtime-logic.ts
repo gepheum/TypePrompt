@@ -1,10 +1,9 @@
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
-import * as Spec from "./runtime-types.js";
+import * as Spec from "../../runtime/runtime-types.js";
 
 // <generated>
-
 export type Meta = {};
 
 export type TemplateId = string;
@@ -19,9 +18,9 @@ export type PromptMaker = {
     readonly [name: string]: Template<unknown, unknown>;
   };
 };
-
 // </generated>
 
+// <static>
 export type Template<Input, Output> = {
   readonly make: (input: Input) => Prompt<Output, Input>;
 };
@@ -43,10 +42,10 @@ export type FewShotExample = {
 
 export type OutputFormat<Output> =
   | {
-    readonly kind: "json";
-    readonly schema: z.ZodType<Output>;
-  }
-  | (Output extends string ? { readonly kind: "text" } : never)
+      readonly kind: "json";
+      readonly schema: z.ZodType<Output>;
+    }
+  | (Output extends string ? { readonly kind: "text" } : never);
 
 export function parseResponse<Output>(
   response: string,
@@ -78,14 +77,15 @@ function newPromptMaker(templates: Spec.Templates): PromptMaker {
     const namespace = uncapitalize(templateSpec.namespace);
     const name = uncapitalize(templateSpec.name);
     (result[namespace] ??= {})[name] = {
-      make: (input: unknown) => resolveTemplate(templateId, templates, input),
+      make: (input: unknown) =>
+        resolveTemplate(templateId as TemplateId, templates, input),
     };
   }
-  return result;
+  return result as PromptMaker;
 }
 
 function resolveTemplate<Input, Output>(
-  templateId: string,
+  templateId: TemplateId,
   templates: Spec.Templates,
   input: Input,
 ): Prompt<Output, Input> {
@@ -120,10 +120,11 @@ function resolveTemplate<Input, Output>(
     );
   }
   const outputType = getOutputType(templateId) as z.ZodType<Output>;
-  const outputFormat =
-    (template.outputFormat === "json"
+  const outputFormat = (
+    template.outputFormat === "json"
       ? { kind: "json", schema: outputType }
-      : { kind: "text" }) as OutputFormat<Output>;
+      : { kind: "text" }
+  ) as OutputFormat<Output>;
   return {
     meta,
     systemInstructions,
@@ -292,3 +293,4 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
+// </static>

@@ -2,12 +2,12 @@ import { SchemaView, Type } from "./schema-types.js";
 
 export type NameScope = "defaultScope" | "shared";
 
-export type NameDependencies = { readonly [scope in NameScope]: ReadonlySet<string> };
+export type NameDependencies = {
+  readonly [scope in NameScope]: ReadonlySet<string>;
+};
 
 export function getNameDependencies(
-  type:
-    | Type
-    | { readonly kind: "types"; types: readonly Type[] },
+  type: Type | { readonly kind: "types"; types: readonly Type[] },
   scope: NameScope,
   schema: SchemaView,
   mode: "direct" | "recursive" | "cycle-detection",

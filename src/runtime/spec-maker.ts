@@ -132,9 +132,9 @@ function makeExpression(input: Expression<boolean>): Spec.Expression {
   }
 }
 
-function makeSnippets(
-  input: readonly Snippet[],
-): { [name: string]: Spec.Snippet } {
+function makeSnippets(input: readonly Snippet[]): {
+  [name: string]: Spec.Snippet;
+} {
   const result: { [name: string]: Spec.Snippet } = {};
   for (const snippet of input) {
     result[snippet.name.text] = makeSnippet(snippet);
@@ -169,4 +169,3 @@ function makeSnippet(input: Snippet): Spec.Snippet {
     }
   }
 }
-

@@ -8,4 +8,3 @@ export const EMPTY_SCHEMA: Schema = {
   unionToMembers: new Map(),
   typeToNamingHint: new Map(),
 } as const;
-

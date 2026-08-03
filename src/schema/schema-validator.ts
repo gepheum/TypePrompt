@@ -30,12 +30,13 @@ export function validateSchema(
     sharedDeclarations:
       context.kind === "template"
         ? context.namespaceSchema.typeDeclarations
-        : {} as const,
+        : ({} as const),
   };
 
-  const unionToMembers = context.kind === "template"
-    ? new Map(context.namespaceSchema.unionToMembers)
-    : new Map<Union, UnionMembers>();
+  const unionToMembers =
+    context.kind === "template"
+      ? new Map(context.namespaceSchema.unionToMembers)
+      : new Map<Union, UnionMembers>();
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
     validateType(typeDeclaration, schemaView, context, unionToMembers, errors);
@@ -83,7 +84,10 @@ export function validateSchema(
   // Verify that all types are used.
   let sharedNames: ReadonlySet<string> = new Set();
   if (context.kind !== "namespace") {
-    const allTypesUsedResult = verifyAllTypesUsed(requiredTypeNames, schemaView);
+    const allTypesUsedResult = verifyAllTypesUsed(
+      requiredTypeNames,
+      schemaView,
+    );
     errors.push(...allTypesUsedResult.errors);
     sharedNames = allTypesUsedResult.nameDependencies.shared;
   }
@@ -234,7 +238,7 @@ function verifyAllTypesUsed(
     "recursive",
   );
   for (const type of Object.values(schema.typeDeclarations)) {
-    const {name} = type;
+    const { name } = type;
     if (rootTypeNames.includes(name.text)) continue;
     if (!nameDependencies.defaultScope.has(name.text)) {
       errors.push({
@@ -342,7 +346,9 @@ function collectNamingHints(
         const unionMembers = unionToMembers.get(type)!;
         switch (unionMembers.kind) {
           case "interfaces": {
-            for (const [discriminant, member] of Object.entries(unionMembers.members)) {
+            for (const [discriminant, member] of Object.entries(
+              unionMembers.members,
+            )) {
               const newContext: NamingHint = {
                 namePieces: [
                   ...context.namePieces,
@@ -364,10 +370,10 @@ function collectNamingHints(
         }
       }
     }
-  }
+  };
 
   for (const type of Object.values(schema.typeDeclarations)) {
-    collect(type.valueType, {namePieces: [], doc: null});
+    collect(type.valueType, { namePieces: [], doc: null });
   }
 
   return typeToNamingHint;
