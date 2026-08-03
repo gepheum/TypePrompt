@@ -16,6 +16,7 @@ import type {
   Union,
   UnionMembers,
 } from "./schema-types.js";
+import { getNameDependencies } from "./schema-utils.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
@@ -35,13 +36,13 @@ export function validateSchema(
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
     validateType(typeDeclaration, schemaView, context, errors);
-    const nameDependencies = new Set<string>();
-    collectTypeNameDependencies(
+    const nameDependencies = getNameDependencies(
       typeDeclaration.valueType,
-      typeDeclarations,
-      nameDependencies,
+      "defaultScope",
+      schemaView,
+      "cycle-detection",
     );
-    if (nameDependencies.has(name.text)) {
+    if (nameDependencies.defaultScope.has(name.text)) {
       errors.push({
         span: name,
         message: `Type '${name.text}' circularly references itself`,
@@ -74,7 +75,7 @@ export function validateSchema(
 
   // Verify that all types are used.
   if (errors.length <= 0 && context.kind !== "namespace") {
-    errors.push(...verifyAllTypesUsed(requiredTypeNames, typeDeclarations));
+    errors.push(...verifyAllTypesUsed(requiredTypeNames, schemaView));
   }
 
   if (errors.length > 0) {
@@ -194,79 +195,26 @@ const WORD_MUST_START_WITH_UPPERCASE =
 const WORD_MUST_START_WITH_LOWERCASE =
   "Must start with lowercase letter and contain only alphanumeric characters";
 
-function collectTypeNameDependencies(
-  type: Type,
-  typeDeclarations: { readonly [name: string]: TypeDeclaration },
-  seenNames: Set<string>,
-): null {
-  switch (type.kind) {
-    case "any":
-    case "primitive": {
-      return null;
-    }
-    case "array": {
-      return collectTypeNameDependencies(
-        type.elementType,
-        typeDeclarations,
-        seenNames,
-      );
-    }
-    case "interface": {
-      for (const field of Object.values(type.fields)) {
-        collectTypeNameDependencies(field.type, typeDeclarations, seenNames);
-      }
-      return null;
-    }
-    case "record": {
-      return collectTypeNameDependencies(
-        type.valueType,
-        typeDeclarations,
-        seenNames,
-      );
-    }
-    case "string-literal":
-    case "shared-type-name": {
-      return null;
-    }
-    case "type-name": {
-      const typeName = type.name.text;
-      if (seenNames.has(typeName)) {
-        return null;
-      }
-      seenNames.add(typeName);
-      const resolved = typeDeclarations[typeName];
-      if (!resolved) {
-        return null;
-      }
-      return collectTypeNameDependencies(
-        resolved.valueType,
-        typeDeclarations,
-        seenNames,
-      );
-    }
-    case "union": {
-      for (const member of type.members) {
-        collectTypeNameDependencies(member, typeDeclarations, seenNames);
-      }
-      return null;
-    }
-  }
-}
-
 function verifyAllTypesUsed(
   rootTypeNames: readonly string[],
-  types: { readonly [name: string]: TypeDeclaration },
+  schema: SchemaView,
 ): InternalError[] {
   const errors: InternalError[] = [];
   const usedTypes = new Set<string>();
   for (const rootTypeName of rootTypeNames) {
-    const rootType = types[rootTypeName];
+    const rootType = schema.typeDeclarations[rootTypeName];
     if (rootType) {
-      collectTypeNameDependencies(rootType.valueType, types, usedTypes);
       usedTypes.add(rootTypeName);
+      const nameDependencies = getNameDependencies(
+        rootType.valueType,
+        "defaultScope",
+        schema,
+        "recursive",
+      );
+      nameDependencies.defaultScope.forEach((n) => usedTypes.add(n));
     }
   }
-  for (const type of Object.values(types)) {
+  for (const type of Object.values(schema.typeDeclarations)) {
     const { name } = type;
     if (!usedTypes.has(name.text)) {
       errors.push({

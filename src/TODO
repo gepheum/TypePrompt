@@ -1,16 +1,20 @@
 BUG:
+  - I think I need to make sure fields in "input" are always in the same order...
   - I think in typetraverser i don't traverse the shared types which are used
+    - which means i may be missing the union types... and the 'identifiers'...
   - reuse the name dependency collector?
-  - see why the errors are duplicated
+  - I think I need to figure out the recursivity thing; type Foo = Foo[] doesnt make sense
+  - see why the errors are duplicated in token detection
 
-LANGUAGE:
-  - "Default" namespace -> "Main" namespace
+SCHEMA:
+  - support 'integer' as key in Record
 
 CODEGEN:
-  - only one space and then change?
-  - Put the jsdoc in the schema and the Zod types
+  - Ability to 
+  - toolcalls...
 
 NAME CONFLICT:
+  - "Default" namespace -> "Main" namespace
   - No namespace named Meta
   - No template named Shared
 

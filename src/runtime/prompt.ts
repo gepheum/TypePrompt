@@ -98,7 +98,7 @@ function resolveTemplate<Input, Output>(
   let systemInstructions: string;
   let userInstructions: string;
   let examples: readonly FewShotExample[];
-  if (contents.kind === "no-variants") {
+  if (contents.kind === "noVariants") {
     const { content } = contents;
     meta = content.meta as Meta;
     systemInstructions = resolveBody(content.system!, input, snippets);
@@ -145,14 +145,14 @@ function resolveBody<Input>(
       case "text": {
         return piece.text;
       }
-      case "insert-snippet": {
+      case "insertSnippet": {
         const snippet = snippets[piece.snippet];
         if (!snippet) {
           throw new Error("Snippet not found: ".concat(piece.snippet));
         }
         return indent(resolveSnippet(snippet, input, snippets), piece.indent);
       }
-      case "insert-val": {
+      case "insertVal": {
         const val = evaluate(input, piece.val);
         return indent(format(val, piece.format), piece.indent);
       }
@@ -170,7 +170,7 @@ function resolveSnippet<Input>(
     case "snippet": {
       return resolveBody(snippet.body, input, snippets);
     }
-    case "snippet-if": {
+    case "snippetIf": {
       const { expression, then: thenBody, else: elseBody } = snippet;
       const evalResult = evaluate(input, expression);
       const condition = ((): boolean => {
@@ -189,7 +189,7 @@ function resolveSnippet<Input>(
       const body = condition ? thenBody : elseBody;
       return resolveBody(body, input, snippets);
     }
-    case "snippet-switch": {
+    case "snippetSwitch": {
       const { expression, branches } = snippet;
       const evalResult = evaluate(input, expression);
       const branch = branches[evalResult as string];

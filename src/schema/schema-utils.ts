@@ -11,7 +11,7 @@ export function getNameDependencies(
   type: Type,
   scope: NameScope,
   schema: SchemaView,
-  mode: "direct" | "recursive",
+  mode: "direct" | "recursive" | "cycle-detection",
 ): { readonly [scope in NameScope]: ReadonlySet<string> } {
   const deps = {
     defaultScope: new Set<string>(),
@@ -38,13 +38,18 @@ export function getNameDependencies(
       }
       case "shared-type-name": {
         scope = "shared";
+        if (mode === "cycle-detection") {
+          return null;
+        }
         // fallthrough
       }
       case "type-name": {
         const typeName = type.name.text;
-        const hadDep = deps[scope].has(typeName);
+        if (deps[scope].has(typeName)) {
+          return null;
+        }
         deps[scope].add(typeName);
-        if (mode === "recursive" && !hadDep) {
+        if (mode === "recursive" || mode === "cycle-detection") {
           const declarations =
             scope === "defaultScope"
               ? schema.typeDeclarations
@@ -56,6 +61,10 @@ export function getNameDependencies(
         }
       }
       case "union": {
+        if (mode === "cycle-detection") {
+          // Only look at the first member.
+          return collect(type.members[0]!, scope);
+        }
         for (const member of Object.values(type.members)) {
           collect(member, scope);
         }
