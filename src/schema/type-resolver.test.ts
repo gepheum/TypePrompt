@@ -75,11 +75,6 @@ const UNION: Union = {
   members: [STRING_LITERAL, INACTIVE_LITERAL],
 };
 
-const EMPTY_VIEW: SchemaView = {
-  typeDeclarations: {},
-  sharedDeclarations: null,
-};
-
 // ---------------------------------------------------------------------------
 // isPrimitiveType
 // ---------------------------------------------------------------------------
@@ -269,7 +264,7 @@ describe("resolveType – shared-type-name resolution", () => {
 
 describe("resolveMaybeInvalidType – null cases", () => {
   it("returns null for an unknown type-name", () => {
-    expect(resolveMaybeInvalidType(typeName("Unknown"), EMPTY_VIEW)).toMatch(
+    expect(resolveMaybeInvalidType(typeName("Unknown"), EMPTY_SCHEMA)).toMatch(
       null,
     );
   });
@@ -277,7 +272,7 @@ describe("resolveMaybeInvalidType – null cases", () => {
   it("returns null for a direct circular reference", () => {
     const view: SchemaView = {
       typeDeclarations: { Loop: typeDecl("Loop", typeName("Loop")) },
-      sharedDeclarations: null,
+      sharedDeclarations: {},
     };
     expect(resolveMaybeInvalidType(typeName("Loop"), view)).toMatch(null);
   });
@@ -288,14 +283,14 @@ describe("resolveMaybeInvalidType – null cases", () => {
         A: typeDecl("A", typeName("B")),
         B: typeDecl("B", typeName("A")),
       },
-      sharedDeclarations: null,
+      sharedDeclarations: {},
     };
     expect(resolveMaybeInvalidType(typeName("A"), view)).toMatch(null);
   });
 
   it("returns null for a shared-type-name when sharedDeclarations is null", () => {
     expect(
-      resolveMaybeInvalidType(sharedTypeName("Profile"), EMPTY_VIEW),
+      resolveMaybeInvalidType(sharedTypeName("Profile"), EMPTY_SCHEMA),
     ).toMatch(null);
   });
 
@@ -316,7 +311,7 @@ describe("resolveMaybeInvalidType – null cases", () => {
 
 describe("resolveMaybeInvalidType – valid resolution", () => {
   it("resolves a primitive type-name", () => {
-    expect(resolveMaybeInvalidType(typeName("string"), EMPTY_VIEW)).toMatch({
+    expect(resolveMaybeInvalidType(typeName("string"), EMPTY_SCHEMA)).toMatch({
       kind: "primitive",
       primitive: "string",
     });
@@ -325,7 +320,7 @@ describe("resolveMaybeInvalidType – valid resolution", () => {
   it("resolves a type-name to its local declaration", () => {
     const view: SchemaView = {
       typeDeclarations: { Profile: typeDecl("Profile", INTERFACE) },
-      sharedDeclarations: null,
+      sharedDeclarations: {},
     };
     expect(resolveMaybeInvalidType(typeName("Profile"), view)).toMatch({
       kind: "interface",
@@ -343,20 +338,20 @@ describe("resolveMaybeInvalidType – valid resolution", () => {
   });
 
   it("passes a string-literal through unchanged", () => {
-    expect(resolveMaybeInvalidType(STRING_LITERAL, EMPTY_VIEW)).toMatch({
+    expect(resolveMaybeInvalidType(STRING_LITERAL, EMPTY_SCHEMA)).toMatch({
       kind: "string-literal",
       value: "active",
     });
   });
 
   it("passes an interface through unchanged", () => {
-    expect(resolveMaybeInvalidType(INTERFACE, EMPTY_VIEW)).toMatch({
+    expect(resolveMaybeInvalidType(INTERFACE, EMPTY_SCHEMA)).toMatch({
       kind: "interface",
     });
   });
 
   it("passes an array through unchanged", () => {
-    expect(resolveMaybeInvalidType(ARRAY, EMPTY_VIEW)).toMatch({
+    expect(resolveMaybeInvalidType(ARRAY, EMPTY_SCHEMA)).toMatch({
       kind: "array",
     });
   });
@@ -370,7 +365,7 @@ describe("resolveMaybeInvalidType – valid resolution", () => {
         A: typeDecl("A", typeName("B")),
         B: typeDecl("B", INTERFACE),
       },
-      sharedDeclarations: null,
+      sharedDeclarations: {},
     };
     expect(resolveMaybeInvalidType(typeName("A"), view)).toMatch({
       kind: "interface",

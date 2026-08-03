@@ -166,7 +166,7 @@ class TypescriptCodeGenerator {
       const declarations =
         scope === "defaultScope"
           ? schema.typeDeclarations
-          : schema.sharedDeclarations!;
+          : schema.sharedDeclarations;
       const declaration = declarations[typeName]!;
       const { valueType } = declaration;
       const directDeps = getNameDependencies(

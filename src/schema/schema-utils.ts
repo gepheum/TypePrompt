@@ -52,7 +52,7 @@ export function getNameDependencies(
           const declarations =
             scope === "defaultScope"
               ? schema.typeDeclarations
-              : schema.sharedDeclarations!;
+              : schema.sharedDeclarations;
           const { valueType } = declarations[typeName]!;
           return collect(valueType, scope);
         } else {
