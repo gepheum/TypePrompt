@@ -2,17 +2,16 @@ import { SchemaView, Type } from "./schema-types.js";
 
 export type NameScope = "defaultScope" | "shared";
 
-export const NAME_SCOPES: readonly NameScope[] = [
-  "shared",
-  "defaultScope",
-] as const;
+export type NameDependencies = { readonly [scope in NameScope]: ReadonlySet<string> };
 
 export function getNameDependencies(
-  type: Type,
+  type:
+    | Type
+    | { readonly kind: "types"; types: readonly Type[] },
   scope: NameScope,
   schema: SchemaView,
   mode: "direct" | "recursive" | "cycle-detection",
-): { readonly [scope in NameScope]: ReadonlySet<string> } {
+): NameDependencies {
   const deps = {
     defaultScope: new Set<string>(),
     shared: new Set<string>(),
@@ -72,6 +71,17 @@ export function getNameDependencies(
       }
     }
   };
-  collect(type, scope);
+  if (type.kind === "types") {
+    for (const t of type.types) {
+      collect(t, scope);
+    }
+  } else {
+    collect(type, scope);
+  }
   return deps;
 }
+
+export const NAME_SCOPES: readonly NameScope[] = [
+  "shared",
+  "defaultScope",
+] as const;

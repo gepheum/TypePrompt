@@ -3,9 +3,11 @@ BUG:
   - I think in typetraverser i don't traverse the shared types which are used
     - which means i may be missing the union types... and the 'identifiers'...
   - see why the errors are duplicated in token detection
+  - make SchemaView.sharedDeclarations not null
 
 SCHEMA:
   - support 'integer' as key in Record
+    - syntax: allow ";" in record type after value type before "}"
 
 CODEGEN:
   - Ability to 

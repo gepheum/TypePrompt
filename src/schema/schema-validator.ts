@@ -16,7 +16,7 @@ import type {
   Union,
   UnionMembers,
 } from "./schema-types.js";
-import { getNameDependencies } from "./schema-utils.js";
+import { getNameDependencies, NameDependencies } from "./schema-utils.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
@@ -30,12 +30,15 @@ export function validateSchema(
     sharedDeclarations:
       context.kind === "template"
         ? context.namespaceSchema.typeDeclarations
-        : null,
+        : {} as const,
   };
 
+  const unionToMembers = context.kind === "template"
+    ? new Map(context.namespaceSchema.unionToMembers)
+    : new Map<Union, UnionMembers>();
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
-    validateType(typeDeclaration, schemaView, context, errors);
+    validateType(typeDeclaration, schemaView, context, unionToMembers, errors);
     const nameDependencies = getNameDependencies(
       typeDeclaration.valueType,
       "defaultScope",
@@ -73,26 +76,31 @@ export function validateSchema(
     }
   }
 
+  if (errors.length > 0) {
+    return { kind: "error", errors };
+  }
+
   // Verify that all types are used.
-  if (errors.length <= 0 && context.kind !== "namespace") {
-    errors.push(...verifyAllTypesUsed(requiredTypeNames, schemaView));
+  let sharedNames: ReadonlySet<string> = new Set();
+  if (context.kind !== "namespace") {
+    const allTypesUsedResult = verifyAllTypesUsed(requiredTypeNames, schemaView);
+    errors.push(...allTypesUsedResult.errors);
+    sharedNames = allTypesUsedResult.nameDependencies.shared;
   }
 
   if (errors.length > 0) {
-    return {
-      kind: "error",
-      errors: errors,
-    };
+    return { kind: "error", errors };
   }
 
-  const typeTraverser = TypeTraverser.traverseAll(schemaView);
+  const identifiers = collectIdentifiers(schemaView, sharedNames);
+  const typeToNamingHint = collectNamingHints(schemaView, unionToMembers);
 
   return {
     ...schemaView,
     kind: "success",
-    identifiers: typeTraverser.identifiers,
-    unionToMembers: typeTraverser.unionToMembers,
-    typeToNamingHint: typeTraverser.typeToNamingHint,
+    identifiers,
+    unionToMembers,
+    typeToNamingHint,
   };
 }
 
@@ -100,85 +108,91 @@ function validateType(
   type: Type | TypeDeclaration,
   schema: SchemaView,
   context: SchemaValidationContext,
+  unionToMembers: Map<Union, UnionMembers>,
   errors: ErrorSink,
-): null {
-  switch (type.kind) {
-    case "any":
-    case "primitive": {
-      return null;
-    }
-    case "array": {
-      return validateType(type.elementType, schema, context, errors);
-    }
-    case "interface": {
-      errors.push(
-        ...checkNameConflicts(Object.values(type.fields).map((f) => f.name)),
-      );
-      for (const field of Object.values(type.fields)) {
-        if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
+): void {
+  function validate(type: Type | TypeDeclaration): null {
+    switch (type.kind) {
+      case "any":
+      case "primitive": {
+        return null;
+      }
+      case "array": {
+        return validate(type.elementType);
+      }
+      case "interface": {
+        errors.push(
+          ...checkNameConflicts(Object.values(type.fields).map((f) => f.name)),
+        );
+        for (const field of Object.values(type.fields)) {
+          if (!/^[a-z][A-Za-z0-9]*$/.test(field.name.text)) {
+            errors.push({
+              span: field.name,
+              message: WORD_MUST_START_WITH_LOWERCASE,
+            });
+          }
+          validate(field.type);
+        }
+        return null;
+      }
+      case "record": {
+        return validate(type.valueType);
+      }
+      case "string-literal": {
+        if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
           errors.push({
-            span: field.name,
+            span: {
+              start: type.quotedName.start + 1,
+              end: type.quotedName.end - 1,
+            },
             message: WORD_MUST_START_WITH_LOWERCASE,
           });
         }
-        validateType(field.type, schema, context, errors);
-      }
-      return null;
-    }
-    case "record": {
-      return validateType(type.valueType, schema, context, errors);
-    }
-    case "string-literal": {
-      if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
-        errors.push({
-          span: {
-            start: type.quotedName.start + 1,
-            end: type.quotedName.end - 1,
-          },
-          message: WORD_MUST_START_WITH_LOWERCASE,
-        });
-      }
-      return null;
-    }
-    case "type": {
-      validateTypeName(type.name, errors);
-      return validateType(type.valueType, schema, context, errors);
-    }
-    case "type-name": {
-      const typeName = type.name.text;
-      if (!schema.typeDeclarations[typeName]) {
-        errors.push({
-          span: type.name,
-          message: `Unknown type '${typeName}'`,
-        });
-      }
-      return null;
-    }
-    case "shared-type-name": {
-      if (context.kind !== "template") {
-        errors.push({
-          span: type.shared,
-          message: `'shared' not allowed inside <${context.kind}> elements`,
-        });
         return null;
       }
-      const typeName = type.name.text;
-      if (!context.namespaceSchema.typeDeclarations[typeName]) {
-        errors.push({
-          span: type.name,
-          message: `Unknown type '${typeName}'`,
-        });
+      case "type": {
+        validateTypeName(type.name, errors);
+        return validate(type.valueType);
       }
-      return null;
-    }
-    case "union": {
-      const members = computeUnionMembers(type, schema);
-      if (members.kind === "error") {
-        errors.push(...members.errors);
+      case "type-name": {
+        const typeName = type.name.text;
+        if (!schema.typeDeclarations[typeName]) {
+          errors.push({
+            span: type.name,
+            message: `Unknown type '${typeName}'`,
+          });
+        }
+        return null;
       }
-      return null;
+      case "shared-type-name": {
+        if (context.kind !== "template") {
+          errors.push({
+            span: type.shared,
+            message: `'shared' not allowed inside <${context.kind}> elements`,
+          });
+          return null;
+        }
+        const typeName = type.name.text;
+        if (!context.namespaceSchema.typeDeclarations[typeName]) {
+          errors.push({
+            span: type.name,
+            message: `Unknown type '${typeName}'`,
+          });
+        }
+        return null;
+      }
+      case "union": {
+        const members = computeUnionMembers(type, schema);
+        if (members.kind === "error") {
+          errors.push(...members.errors);
+        } else {
+          unionToMembers.set(type, members);
+        }
+        return null;
+      }
     }
   }
+  validate(type);
 }
 
 function validateTypeName(name: TextSpan, errors: ErrorSink): void {
@@ -198,67 +212,113 @@ const WORD_MUST_START_WITH_LOWERCASE =
 function verifyAllTypesUsed(
   rootTypeNames: readonly string[],
   schema: SchemaView,
-): InternalError[] {
+): {
+  readonly errors: InternalError[];
+  readonly nameDependencies: NameDependencies;
+} {
   const errors: InternalError[] = [];
-  const usedTypes = new Set<string>();
+  const rootTypes: Type[] = [];
   for (const rootTypeName of rootTypeNames) {
     const rootType = schema.typeDeclarations[rootTypeName];
     if (rootType) {
-      usedTypes.add(rootTypeName);
-      const nameDependencies = getNameDependencies(
-        rootType.valueType,
-        "defaultScope",
-        schema,
-        "recursive",
-      );
-      nameDependencies.defaultScope.forEach((n) => usedTypes.add(n));
+      rootTypes.push(rootType.valueType);
     }
   }
+  const nameDependencies = getNameDependencies(
+    { kind: "types", types: rootTypes },
+    "defaultScope",
+    schema,
+    "recursive",
+  );
   for (const type of Object.values(schema.typeDeclarations)) {
-    const { name } = type;
-    if (!usedTypes.has(name.text)) {
+    const {name} = type;
+    if (rootTypeNames.includes(name.text)) continue;
+    if (!nameDependencies.defaultScope.has(name.text)) {
       errors.push({
         span: name,
         message: `Type '${name.text}' is not used`,
       });
     }
   }
-  return errors;
+  return { errors, nameDependencies };
 }
 
-class TypeTraverser {
-  static traverseAll(schema: SchemaView): TypeTraverser {
-    const traverser = new TypeTraverser(schema);
-    for (const type of Object.values(schema.typeDeclarations)) {
-      traverser.traverse(
-        type,
-        type.kind === "type" && type.valueType.kind === "interface"
-          ? {
-              namePieces: [{ kind: "type", name: type.name.text }],
-              doc: type.doc,
-            }
-          : { namePieces: [], doc: type.doc },
-      );
-    }
-    return traverser;
-  }
+function collectIdentifiers(
+  schema: SchemaView,
+  sharedNames: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const identifiers = new Set<string>();
 
-  private constructor(private readonly schema: SchemaView) {}
-
-  private traverse(type: Type | TypeDeclaration, context: NamingHint): null {
+  const collect = (type: Type | TypeDeclaration): null => {
     switch (type.kind) {
       case "any":
-      case "primitive": {
+      case "primitive":
+      case "string-literal": {
         return null;
       }
       case "array": {
-        return this.traverse(type.elementType, context);
+        return collect(type.elementType);
       }
       case "interface": {
-        this.typeToNamingHint.set(type, context);
+        for (const field of Object.values(type.fields)) {
+          identifiers.add(field.name.text);
+          collect(field.type);
+        }
+        return null;
+      }
+      case "record": {
+        return collect(type.valueType);
+      }
+      case "shared-type-name":
+      case "type-name": {
+        return null;
+      }
+      case "type": {
+        return collect(type.valueType);
+      }
+      case "union": {
+        for (const member of type.members) {
+          collect(member);
+        }
+        return null;
+      }
+    }
+  };
+
+  for (const type of Object.values(schema.typeDeclarations)) {
+    collect(type.valueType);
+  }
+  for (const sharedName of sharedNames) {
+    const sharedType = schema.sharedDeclarations[sharedName]!;
+    collect(sharedType.valueType);
+  }
+
+  return identifiers;
+}
+
+function collectNamingHints(
+  schema: SchemaView,
+  unionToMembers: ReadonlyMap<Union, UnionMembers>,
+): ReadonlyMap<Interface | Union, NamingHint> {
+  const typeToNamingHint = new Map<Interface | Union, NamingHint>();
+
+  const collect = (
+    type: Type,
+    context: NamingHint,
+  ): null => {
+    switch (type.kind) {
+      case "any":
+      case "primitive":
+      case "string-literal": {
+        return null;
+      }
+      case "array": {
+        return collect(type.elementType, context);
+      }
+      case "interface": {
+        typeToNamingHint.set(type, context);
         const fields = Object.values(type.fields);
         for (const field of fields) {
-          this.identifiers.add(field.name.text);
           const newContext: NamingHint = {
             namePieces: [
               ...context.namePieces,
@@ -266,31 +326,20 @@ class TypeTraverser {
             ],
             doc: null,
           };
-          this.traverse(field.type, newContext);
+          collect(field.type, newContext);
         }
         return null;
       }
       case "record": {
-        return this.traverse(type.valueType, context);
-      }
-      case "string-literal": {
-        this.identifiers.add(type.value);
-        return null;
-      }
-      case "type": {
-        return this.traverse(type.valueType, context);
+        return collect(type.valueType, context);
       }
       case "type-name":
       case "shared-type-name": {
         return null;
       }
       case "union": {
-        this.typeToNamingHint.set(type, context);
-        const unionMembers = computeUnionMembers(type, this.schema);
-        if (unionMembers.kind === "error") {
-          throw new Error(JSON.stringify(unionMembers));
-        }
-        this.unionToMembers.set(type, unionMembers);
+        typeToNamingHint.set(type, context);
+        const unionMembers = unionToMembers.get(type)!;
         switch (unionMembers.kind) {
           case "interfaces": {
             for (const [discriminant, member] of Object.entries(unionMembers.members)) {
@@ -305,14 +354,11 @@ class TypeTraverser {
                 ],
                 doc: null,
               };
-              this.traverse(member, newContext);
+              collect(member, newContext);
             }
             return null;
           }
           case "strings": {
-            for (const member of unionMembers.members) {
-              this.identifiers.add(member.value);
-            }
             return null;
           }
         }
@@ -320,7 +366,9 @@ class TypeTraverser {
     }
   }
 
-  readonly identifiers: Set<string> = new Set();
-  readonly unionToMembers = new Map<Union, UnionMembers>();
-  readonly typeToNamingHint = new Map<Interface | Union, NamingHint>();
+  for (const type of Object.values(schema.typeDeclarations)) {
+    collect(type.valueType, {namePieces: [], doc: null});
+  }
+
+  return typeToNamingHint;
 }

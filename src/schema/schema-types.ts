@@ -12,9 +12,7 @@ export type SchemaValidationContext =
 
 export type SchemaView = {
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
-  readonly sharedDeclarations: {
-    readonly [name: string]: TypeDeclaration;
-  } | null;
+  readonly sharedDeclarations: { readonly [name: string]: TypeDeclaration };
 };
 
 export type Schema = SchemaView & {
