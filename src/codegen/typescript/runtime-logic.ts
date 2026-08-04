@@ -114,13 +114,16 @@ function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
 }
 
 export const promptMakerFactory: {
-  readonly templatesData: unknown,
+  readonly templatesData: unknown;
   readonly newWithOverrides: (overrides: unknown) => PromptMaker;
 } = {
   templatesData: TEMPLATES_DATA,
   newWithOverrides: (overrides: unknown) => {
     const templatesData = templatesSchema.parse(
-      typeof(overrides) === "object" ? {...TEMPLATES_DATA, ...overrides} : overrides);
+      typeof overrides === "object"
+        ? { ...TEMPLATES_DATA, ...overrides }
+        : overrides,
+    );
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }

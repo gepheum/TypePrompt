@@ -167,3 +167,11 @@ export type ValidatedTemplate = {
 };
 
 export type TemplateValidationResult = ValidatedTemplate | InternalErrors;
+
+export type ValidatedTool = {
+  readonly kind: "success";
+  readonly tool: Tool;
+  readonly schema: Schema;
+};
+
+export type ToolValidationResult = ValidatedTool | InternalErrors;

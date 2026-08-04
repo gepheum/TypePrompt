@@ -46,7 +46,6 @@ type OutputFormatType<Output> =
 
 export type PromptMaker = {
   readonly default: {
-    readonly myTemplate: Template<"Default:MyTemplate">;
   };
 };
 
@@ -65,54 +64,22 @@ export namespace $ {
   }
 
   export namespace Default {
-    export namespace MyTemplate {
-      export type Input = {
-        readonly firstName: string;
-        readonly lastName: string;
-        readonly fooToBar?: { [name: string]: number };
-      };
-
-      export type Output = {
-        readonly x: number;
-      };
-    }
   }
 }
 
 export type TemplateId = (
-  | "Default:MyTemplate"
+  never
 );
 
 export type Input<Id extends TemplateId> = InputType[Id];
 export type InputType = {
-  "Default:MyTemplate": $.Default.MyTemplate.Input;
 };
 
 export type Output<Id extends TemplateId> = OutputType[Id];
 export type OutputType = {
-  "Default:MyTemplate": $.Default.MyTemplate.Output;
 };
 
 const templateSchemas = {
-  "Default:MyTemplate": {
-    input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
-      const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
-        firstName: z.string(),
-        lastName: z.string(),
-        fooToBar: z.record(
-          z.string(),
-          z.int32(),
-        ).optional(),
-      });
-      return inputSchema;
-    })(),
-    output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
-      const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
-        x: z.int32(),
-      });
-      return outputSchema;
-    })(),
-  },
 } as const;
 
 namespace Spec {
@@ -333,110 +300,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
 
 const TEMPLATES_DATA: Spec.Templates = {
   "signature": "",
-  "templates": {
-    "Default.MyTemplate": {
-      "name": "MyTemplate",
-      "namespace": "Default",
-      "outputFormat": "text",
-      "contents": {
-        "kind": "noVariants",
-        "content": {
-          "meta": {
-            "temperature": 0.7,
-            "foobar": "bar"
-          },
-          "system": [
-            {
-              "kind": "insertSnippet",
-              "snippet": "greet",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\n\nHow many characters are in your full name?"
-            }
-          ],
-          "user": [
-            {
-              "kind": "text",
-              "text": "Your "
-            },
-            {
-              "kind": "text",
-              "text": " is: "
-            },
-            {
-              "kind": "insertVal",
-              "val": {
-                "kind": "property",
-                "left": {
-                  "kind": "input"
-                },
-                "property": "firstName"
-              },
-              "format": "text",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\nYour "
-            },
-            {
-              "kind": "text",
-              "text": " is: "
-            },
-            {
-              "kind": "insertVal",
-              "val": {
-                "kind": "property",
-                "left": {
-                  "kind": "input"
-                },
-                "property": "lastName"
-              },
-              "format": "text",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\n\nFor example "
-            }
-          ],
-          "examples": [
-            {
-              "input": {
-                "firstName": "John",
-                "lastName": "Doe"
-              },
-              "output": {
-                "x": 8
-              }
-            },
-            {
-              "input": {
-                "firstName": "Jane",
-                "lastName": "Smith"
-              },
-              "output": {
-                "x": 9
-              }
-            }
-          ]
-        }
-      },
-      "snippets": {
-        "greet": {
-          "kind": "snippet",
-          "body": [
-            {
-              "kind": "text",
-              "text": "Hello,\n"
-            }
-          ]
-        }
-      }
-    }
-  }
+  "templates": {}
 } as const;
 
 

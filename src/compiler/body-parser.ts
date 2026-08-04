@@ -4,7 +4,12 @@ import {
   checkXmlAttributes,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
-import type { Body, BodyPiece, InsertFormat, ToolDescription } from "./compiler-types.js";
+import type {
+  Body,
+  BodyPiece,
+  InsertFormat,
+  ToolDescription,
+} from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseCTag } from "../ctag/ctag-parser.js";
@@ -102,8 +107,8 @@ function parseBodyImpl<HasValContext extends boolean>(
     const tag = checkTag(
       child,
       options.isToolDescription
-        ? ["c", "enclosed", "insert"] as const
-        : ["c"] as const,
+        ? (["c", "enclosed", "insert"] as const)
+        : (["c"] as const),
       "",
       errors,
     );

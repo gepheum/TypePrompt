@@ -61,6 +61,7 @@ export function validateSchema(
       case "namespace":
         return [];
       case "template":
+      case "tool":
         return ["Input", "Output"];
     }
   })();

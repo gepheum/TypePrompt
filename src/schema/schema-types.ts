@@ -8,7 +8,8 @@ export type SchemaParseResult = {
 export type SchemaValidationContext =
   | { readonly kind: "meta" }
   | { readonly kind: "namespace" }
-  | { readonly kind: "template"; readonly namespaceSchema: Schema };
+  | { readonly kind: "template"; readonly namespaceSchema: Schema }
+  | { readonly kind: "tool"; readonly namespaceSchema: Schema };
 
 export type SchemaView = {
   readonly typeDeclarations: TypeDeclarations;

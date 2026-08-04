@@ -24,6 +24,7 @@ import {
   Template,
   TemplateContent,
   TemplateValidationResult,
+  ToolDescription,
 } from "./compiler-types.js";
 
 export function validateTemplate(args: {
@@ -94,6 +95,13 @@ export function validateTemplate(args: {
     template,
     schema: templateSchema,
   };
+}
+
+export function validateToolDescription(args: {
+  description: ToolDescription;
+  toolSchema: Schema;
+}): readonly InternalError[] {
+  return validateBody(args.description, args.toolSchema, null);
 }
 
 function validateMeta(
