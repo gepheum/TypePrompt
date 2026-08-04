@@ -2,9 +2,7 @@ BUG:
   - see why the errors are duplicated in token detection
 
 CODEGEN:
-  - rename "Instruction" to "Prompt" or "message" (https://developers.openai.com/api/docs/guides/prompting)
-  - Make the 2nd type parameter of Prompt: TemplateId
-  - Handle the prompt overrides
+  - Make the 2nd type (or 1st type?) parameter of Prompt: TemplateId
   - toolcalls...
 
 TOOLS:
@@ -33,10 +31,6 @@ COMPILER:
 
 IDEA:
   - Add a <playground> element, templates defined inside override other templates...
-  - TODO: think about toolcalls
-
-TEMPLATE PARSER:
-  - Verify that output formats across templates don't intersect
 
 ERRORS:
   - add suggestions to:
