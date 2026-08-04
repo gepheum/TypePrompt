@@ -12,6 +12,7 @@
 
     <c>x</c> and <c>y</c>
   </description>
+
   <schema>
     type Input = {x: integer};
     type Output = {y: integer};

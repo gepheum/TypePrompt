@@ -96,12 +96,13 @@ class TemplateParser {
     const children = checkAllAreElements(
       this.templateNode.children,
       [
-        "meta",
         "schema",
+        "tools",
         "snippet",
         "system",
         "user",
         "examples",
+        "meta",
         "variant",
       ] as const,
       " in <template>",
@@ -111,6 +112,10 @@ class TemplateParser {
       switch (tag) {
         case "schema": {
           this.parseSchema(child);
+          break;
+        }
+        case "tools": {
+          this.parseTools(child);
           break;
         }
         case "snippet": {
@@ -171,6 +176,28 @@ class TemplateParser {
     } else {
       this.schema = schema;
     }
+  }
+
+  private parseTools(toolsNode: ElementNode): void {
+    if (this.tools) {
+      this.errors.push({
+        span: toolsNode.tag,
+        message: "Multiple <tools> elements in <template>",
+      });
+      return;
+    }
+    this.errors.push(...checkNoXmlAttributes(toolsNode));
+    const textContent = extractTextContent(toolsNode);
+    if (textContent.kind === "error") {
+      this.errors.push(...textContent.errors);
+      return;
+    }
+    const tools = parseYaml(textContent.text);
+    if (tools.kind === "error") {
+      this.errors.push(...tools.errors);
+      return;
+    }
+    this.tools = tools;
   }
 
   private parseVariant(variantNode: ElementNode): void {
@@ -517,8 +544,8 @@ class TemplateParser {
   }
 
   private readonly errors: InternalError[] = [];
-  private meta: JsonValue<"strict"> | null = null;
   private schema: SchemaParseResult | null = null;
+  private tools: JsonValue<"strict"> | null = null;
   private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
