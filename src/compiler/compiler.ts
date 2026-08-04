@@ -19,6 +19,7 @@ import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
 import { parseTemplate } from "./template-parser.js";
 import { validateTemplate } from "./template-validator.js";
+import { parseTool } from "./tool-parser.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
@@ -52,7 +53,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
 
   const topLevelNodes = checkAllAreElements(
     xmlDocument.root.topLevelNodes,
-    ["template", "namespace", "meta"] as const,
+    ["template", "tool", "namespace", "meta"] as const,
     " at the top level",
     result.parseErrors,
   );
@@ -64,6 +65,15 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
           result.parseErrors.push(...template.errors);
         } else {
           result.templates.push(template);
+        }
+        break;
+      }
+      case "tool": {
+        const tool = parseTool(topLevelNode);
+        if (tool.kind === "error") {
+          result.parseErrors.push(...tool.errors);
+        } else {
+          result.tools.push(tool);
         }
         break;
       }
