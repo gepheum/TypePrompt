@@ -2,7 +2,7 @@ import * as z from "zod";
 import { InternalError, InternalErrors, TextSpan } from "../util/shared-types.js";
 import { checkNoXmlAttributes, checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
-import { Tool } from "./compiler-types.js";
+import { Tool, ToolDescription } from "./compiler-types.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { extractTextContent } from "./text-extractor.js";
@@ -24,7 +24,6 @@ class ToolParser {
   private constructor(readonly toolNode: ElementNode) {}
 
   parse(): Tool | InternalErrors {
-    // 1. Validate <tool> attributes.
     const attrs = checkXmlAttributes(this.toolNode, {
       name: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
@@ -45,7 +44,6 @@ class ToolParser {
     const { name, namespace } = attrs.attributes;
 
     this.parseChildren();
-
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
     }
@@ -114,17 +112,17 @@ class ToolParser {
 
   private parseDescription(descriptionNode: ElementNode): void {
     this.errors.push(...checkNoXmlAttributes(descriptionNode));
-      const body = parseBody(descriptionNode, this.errors, {
-        hasValContext: false,
-      });
-      this.snippets.push({
-        kind: "snippet",
-        name: attrs.attributes.name.value,
-        body: body,
-      });
+    const body = parseBody(descriptionNode, this.errors, {
+      hasValContext: false,
+    });
+    this.snippets.push({
+      kind: "snippet",
+      name: attrs.attributes.name.value,
+      body: body,
+    });
   }
 
   private readonly errors: InternalError[] = [];
   private schema: SchemaParseResult | null = null;
-  private description: TextSpan | null = null;
+  private description: ToolDescription | null = null;
 }

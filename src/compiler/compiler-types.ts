@@ -126,9 +126,15 @@ export type Tool = {
   readonly kind: "success";
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
-  readonly description: TextSpan;
+  readonly description: ToolDescription;
   readonly schema: SchemaParseResult;
 };
+
+export type ToolDescription = readonly ToolDescriptionPiece[];
+
+export type ToolDescriptionPiece =
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "c-tag"; readonly text: string; readonly cTag: CTag };
 
 /** Top-level <namespace> element. */
 export type Namespace = {
