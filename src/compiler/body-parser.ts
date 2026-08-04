@@ -107,8 +107,8 @@ function parseBodyImpl<HasValContext extends boolean>(
     const tag = checkTag(
       child,
       options.isToolDescription
-        ? (["c", "enclosed", "insert"] as const)
-        : (["c"] as const),
+        ? (["c"] as const)
+        : (["c", "enclosed", "insert"] as const),
       "",
       errors,
     );

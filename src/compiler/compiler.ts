@@ -14,12 +14,14 @@ import type {
   Template,
   TemplateValidationResult,
   Tool,
+  ToolValidationResult,
 } from "./compiler-types.js";
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
 import { parseTemplate } from "./template-parser.js";
 import { validateTemplate } from "./template-validator.js";
 import { parseTool } from "./tool-parser.js";
+import { validateTool } from "./tool-validator.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
@@ -127,6 +129,7 @@ type Sourced<T> = {
 
 type NamespaceResultImpl = NamespaceResult & {
   readonly templates: TemplateValidationResult[];
+  readonly tools: ToolValidationResult[];
 };
 
 class CompilationResultImpl implements CompilationResult {
@@ -134,12 +137,14 @@ class CompilationResultImpl implements CompilationResult {
   metaSchema: SchemaOrError = EMPTY_SCHEMA;
   readonly namespaces: { [name: string]: NamespaceResultImpl } = {};
   readonly templates: { [id: string]: TemplateValidationResult } = {};
+  readonly tools: { [id: string]: ToolValidationResult } = {};
   readonly finalErrors: { [path: string]: InternalError[] } = {};
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];
     const namespaces: Array<Sourced<Namespace>> = [];
     const templates: Array<Sourced<Template>> = [];
+    const tools: Array<Sourced<Tool>> = [];
     for (const sourceFile of Object.values(this.sourceFiles)) {
       const cached = cache?.sourceFiles[sourceFile.path] === sourceFile;
       const source = <T>(element: T): Sourced<T> => ({
@@ -150,12 +155,14 @@ class CompilationResultImpl implements CompilationResult {
       metas.push(...sourceFile.metas.map(source));
       namespaces.push(...sourceFile.namespaces.map(source));
       templates.push(...sourceFile.templates.map(source));
+      tools.push(...sourceFile.tools.map(source));
       this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
     }
 
     this.resolveMeta(metas);
     this.resolveNamespaces(namespaces);
     this.resolveTemplates(templates, cache);
+    this.resolveTools(tools, cache);
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
@@ -190,6 +197,7 @@ class CompilationResultImpl implements CompilationResult {
           name: name,
           schema: namespace.element.schema,
           templates: [],
+          tools: [],
         };
       } else {
         // Multiple namespaces with the same name found. This is an error.
@@ -197,6 +205,7 @@ class CompilationResultImpl implements CompilationResult {
           name: name,
           schema: { kind: "other-error" },
           templates: [],
+          tools: [],
         };
         // Errors will be pused to the finalErrors map below.
       }
@@ -206,6 +215,7 @@ class CompilationResultImpl implements CompilationResult {
       name: "Default",
       schema: EMPTY_SCHEMA,
       templates: [],
+      tools: [],
     };
 
     const nameConflicts = checkNameConflicts(
@@ -229,7 +239,7 @@ class CompilationResultImpl implements CompilationResult {
     for (const template of templates) {
       const namespace = template.element.namespace?.text ?? "Default";
       (namespaceToTemplates[namespace] ??= []).push(template);
-      const id = `${namespace}.${template.element.name.text}`;
+      const id = `${namespace}:${template.element.name.text}`;
       (idToTemplates[id] ??= []).push(template);
     }
 
@@ -291,6 +301,78 @@ class CompilationResultImpl implements CompilationResult {
         namespace.templates.push(validationResult);
       } else if (validationResult.kind === "error") {
         this.finalErrors[template.sourceFile.path]!.push(
+          ...validationResult.errors,
+        );
+      }
+    }
+  }
+
+  private resolveTools(
+    tools: ReadonlyArray<Sourced<Tool>>,
+    cache: CompilationResult | null,
+  ): void {
+    const namespaceToTools: { [namespace: string]: Sourced<Tool>[] } = {};
+    const idToTools: { [namespace: string]: Sourced<Tool>[] } = {};
+    for (const tool of tools) {
+      const namespace = tool.element.namespace?.text ?? "Default";
+      (namespaceToTools[namespace] ??= []).push(tool);
+      const id = `${namespace}:${tool.element.name.text}`;
+      (idToTools[id] ??= []).push(tool);
+    }
+
+    for (const tool of Object.values(namespaceToTools)) {
+      const nameConflicts = checkNameConflicts(
+        Object.values(tool).map((t) => ({
+          ...t.element.name,
+          path: t.sourceFile.path,
+        })),
+      );
+      for (const error of nameConflicts) {
+        this.finalErrors[error.span.path]!.push(error);
+      }
+    }
+
+    if (this.metaSchema.kind !== "success") {
+      return;
+    }
+
+    for (const [id, tools] of Object.entries(idToTools)) {
+      if (tools.length !== 1) {
+        // The error was already reported in the name conflicts check above.
+        continue;
+      }
+      const tool = tools[0]!;
+
+      const namespaceName = tool.element.namespace?.text ?? "Default";
+      const namespace = this.namespaces[namespaceName];
+      if (!namespace) {
+        this.finalErrors[tool.sourceFile.path]!.push({
+          span: tool.element.name,
+          message: `Namespace '${namespaceName}' not found`,
+          suggestions: Object.keys(this.namespaces),
+        });
+        continue;
+      } else if (namespace.schema.kind !== "success") {
+        continue;
+      }
+
+      let validationResult: ToolValidationResult;
+      if (tool.cached && namespace === cache?.namespaces[namespaceName]) {
+        // Reuse the cached schema validation result.
+        validationResult = cache!.tools[id]!;
+      } else {
+        validationResult = validateTool({
+          tool: tool.element,
+          namespaceSchema: namespace.schema,
+        });
+      }
+
+      this.tools[id] = validationResult;
+
+      if (validationResult.kind === "success") {
+        namespace.tools.push(validationResult);
+      } else if (validationResult.kind === "error") {
+        this.finalErrors[tool.sourceFile.path]!.push(
           ...validationResult.errors,
         );
       }

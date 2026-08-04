@@ -15,6 +15,7 @@ export type CompilationResult = {
   readonly metaSchema: SchemaOrError;
   readonly namespaces: { readonly [name: string]: NamespaceResult };
   readonly templates: { readonly [id: string]: TemplateValidationResult };
+  readonly tools: { readonly [id: string]: ToolValidationResult };
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: InternalError[] };
 };
@@ -155,6 +156,7 @@ export type NamespaceResult = {
   readonly name: string;
   readonly schema: SchemaOrError;
   readonly templates: readonly ValidatedTemplate[];
+  readonly tools: readonly ValidatedTool[];
 };
 
 export type SchemaOrError =

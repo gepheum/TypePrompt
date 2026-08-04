@@ -6,6 +6,18 @@
   };
 </meta>
 
+<tool name="getX">
+  <description>
+    Hello!
+
+    <c>x</c> and <c>y</c>
+  </description>
+  <schema>
+    type Input = {x: integer};
+    type Output = {y: integer};
+  </schema>
+</tool>
+
 <template name="MyTemplate">
   <meta>
     temperature: 0.7
