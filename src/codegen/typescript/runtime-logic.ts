@@ -65,7 +65,21 @@ export type Prompt<Id extends TemplateId> = {
 
 export type FewShotExample = {
   readonly userMessage: string;
-  readonly assistantResponse: string;
+  readonly toolCallTurns: readonly ToolCallTurn[];
+  readonly assistant: string;
+};
+
+export type ToolCallTurn = {
+  readonly toolCalls: readonly ToolCall[];
+};
+
+export type ToolCall = {
+  readonly callId: string;
+  readonly toolName: string;
+  readonly rawInput: unknown;
+  readonly rawOutput: unknown;
+  readonly stringifiedInput: string;
+  readonly stringifiedOutput: string;
 };
 
 export type OutputFormat<Id extends TemplateId> = OutputFormatType<Output<Id>>;

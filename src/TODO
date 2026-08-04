@@ -2,9 +2,9 @@ BUG:
   - see why the errors are duplicated in token detection
 
 CODEGEN:
+  - make sure that the JSON schema I generate in 'schema/' actually supports record types
   - Make the 2nd type (or 1st type?) parameter of Prompt: TemplateId
   - Refactor the codegen to use functions
-  - newPromptMakerWithOverrides
   - Put the typescript source along the exposed schema if users want to inject it in promp
 
 TOOLS:
