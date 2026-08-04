@@ -16,6 +16,7 @@ EXTENSION TO THE LANGUAGE:
 
 TEST & PARSER QUALITY:
   - when there is an error in <meta>, do not raise other errors when parsing templates metas
+  - set up the "Error.suggestions" when validating JSON
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace

@@ -1,4 +1,4 @@
-import { jsonMatchesType, validateJson } from "../json/json-type-checker.js";
+import { jsonMatchesType, validateJson } from "../json/json-validator.js";
 import type { Schema } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type { InternalError } from "../util/shared-types.js";
