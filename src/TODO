@@ -1,17 +1,11 @@
 BUG:
   - see why the errors are duplicated in token detection
 
-SCHEMA:
-  - support 'integer' as key in Record
-    - Ah ben en fait c'est pas vraiment du JSON valide
-  - syntax: allow ";" in record type after value type before "}"
-  - test:
-      - type Foo = Foo[]
-      - type Foo = {[name: string]: Foo};
-
 CODEGEN:
+  - rename "Instruction" to "Prompt"
   - I need to make sure fields in "input" are always in the same order...
-  - Actually write the runtime-types
+  - validate the inputs with the input schemas
+  - Handle the prompt overrides
   - toolcalls...
 
 TOOLS:
@@ -24,6 +18,11 @@ NAME CONFLICT:
 
 SYNTAX:
   - add <doc> to <template>
+
+SCHEMA:
+  - test:
+      - type Foo = Foo[]
+      - type Foo = {[name: string]: Foo};
 
 COMPILER:
   - Asyncify

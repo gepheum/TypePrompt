@@ -66,11 +66,11 @@ export namespace $ {
 }
 
 export type TemplateId = (
-  | "Default/MyTemplate"
+  | "Default:MyTemplate"
 );
 
 const templateOutputSchemas = {
-  "Default/MyTemplate": ((): z.ZodType<$.Default.MyTemplate.Output> => {
+  "Default:MyTemplate": ((): z.ZodType<$.Default.MyTemplate.Output> => {
     const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
       x: z.int32(),
     });
@@ -294,8 +294,117 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
   return templatesSchema;
 })();
 
+const TEMPLATES_DATA: Spec.Templates = {
+  "signature": "",
+  "templates": {
+    "Default.MyTemplate": {
+      "name": "MyTemplate",
+      "namespace": "Default",
+      "outputFormat": "text",
+      "contents": {
+        "kind": "noVariants",
+        "content": {
+          "meta": {
+            "temperature": 0.7,
+            "foobar": "bar"
+          },
+          "system": [
+            {
+              "kind": "insertSnippet",
+              "snippet": "greet",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nHow many characters are in your full name?"
+            }
+          ],
+          "user": [
+            {
+              "kind": "text",
+              "text": "Your "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "firstName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\nYour "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "lastName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nFor example "
+            }
+          ],
+          "examples": [
+            {
+              "input": {
+                "firstName": "John",
+                "lastName": "Doe"
+              },
+              "output": {
+                "x": 8
+              }
+            },
+            {
+              "input": {
+                "firstName": "Jane",
+                "lastName": "Smith"
+              },
+              "output": {
+                "x": 9
+              }
+            }
+          ]
+        }
+      },
+      "snippets": {
+        "greet": {
+          "kind": "snippet",
+          "body": [
+            {
+              "kind": "text",
+              "text": "Hello,\n"
+            }
+          ]
+        }
+      }
+    }
+  }
+} as const;
+
+
 export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_SPEC);
+  return newPromptMakerImpl(TEMPLATES_DATA);
 }
 
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {

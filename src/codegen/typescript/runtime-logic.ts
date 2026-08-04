@@ -16,10 +16,12 @@ export type PromptMaker = {
   };
 };
 
-const TEMPLATES_SPEC: Spec.Templates = {
+const TEMPLATES_DATA: Spec.Templates = {
   signature: "",
   templates: {},
 } as const;
+
+const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
 // <static:types>
@@ -52,7 +54,7 @@ export type OutputFormat<Output> =
 
 // <static:logic>
 export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_SPEC);
+  return newPromptMakerImpl(TEMPLATES_DATA);
 }
 
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
