@@ -78,8 +78,6 @@ export type ToolCall = {
   readonly toolName: string;
   readonly rawInput: unknown;
   readonly rawOutput: unknown;
-  readonly stringifiedInput: string;
-  readonly stringifiedOutput: string;
 };
 
 export type OutputFormat<Id extends TemplateId> = OutputFormatType<Output<Id>>;
