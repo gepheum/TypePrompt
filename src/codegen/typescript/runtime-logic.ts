@@ -106,7 +106,7 @@ function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
     const namespace = uncapitalize(templateSpec.namespace);
     const name = uncapitalize(templateSpec.name);
     (result[namespace] ??= {})[name] = {
-      make: (input: unknown) =>
+      make: (input: Input<TemplateId>) =>
         resolveTemplate(templateId as TemplateId, templates, input),
     };
   }
@@ -153,7 +153,7 @@ function resolveTemplate<Id extends TemplateId>(
     examples = resolveExamples(content.examples!, content.user!, template);
   } else {
     const { defaultContent, variants } = contents;
-    const { variant } = input as { readonly variant: string };
+    const { variant } = input as unknown as { readonly variant: string };
     const variantContent = variants[variant]!;
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;

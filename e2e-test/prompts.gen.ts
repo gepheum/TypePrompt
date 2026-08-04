@@ -4,26 +4,40 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
-export type Template<Input, Output> = {
-  readonly make: (input: Input) => Prompt<Output, Input>;
+export type Template<Id extends TemplateId> = {
+  readonly make: (input: Input<Id>) => Prompt<Id>;
 };
 
-export type Prompt<Output, Input = unknown> = {
+export type Prompt<Id extends TemplateId> = {
   readonly meta: Meta;
   readonly systemMessage: string;
   readonly userMessage: string;
   readonly examples: readonly FewShotExample[];
-  readonly outputFormat: OutputFormat<Output>;
+  readonly outputFormat: OutputFormat<Id>;
+  readonly parseResponse: (content: string) => Output<Id>;
   readonly templateId: TemplateId;
-  readonly templateInput: Input;
+  readonly templateInput: Input<Id>;
 };
 
 export type FewShotExample = {
   readonly userMessage: string;
-  readonly assistantResponse: string;
+  readonly toolCallTurns: readonly ToolCallTurn[];
+  readonly response: string;
 };
 
-export type OutputFormat<Output> =
+export type ToolCallTurn = {
+  readonly toolCalls: readonly ToolCall[];
+};
+
+export type ToolCall = {
+  readonly callId: string;
+  readonly toolName: string;
+  readonly rawInput: unknown;
+  readonly rawOutput: unknown;
+};
+
+export type OutputFormat<Id extends TemplateId> = OutputFormatType<Output<Id>>;
+type OutputFormatType<Output> =
   | {
       readonly kind: "json";
       readonly schema: z.ZodType<Output>;
@@ -32,7 +46,7 @@ export type OutputFormat<Output> =
 
 export type PromptMaker = {
   readonly default: {
-    readonly myTemplate: Template<$.Default.MyTemplate.Input, $.Default.MyTemplate.Output>;
+    readonly myTemplate: Template<"Default:MyTemplate">;
   };
 };
 
@@ -68,6 +82,16 @@ export namespace $ {
 export type TemplateId = (
   | "Default:MyTemplate"
 );
+
+export type Input<Id extends TemplateId> = InputType[Id];
+export type InputType = {
+  "Default:MyTemplate": $.Default.MyTemplate.Input;
+};
+
+export type Output<Id extends TemplateId> = OutputType[Id];
+export type OutputType = {
+  "Default:MyTemplate": $.Default.MyTemplate.Output;
+};
 
 const templateSchemas = {
   "Default:MyTemplate": {
@@ -423,7 +447,7 @@ export function newPromptMaker(): PromptMaker {
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
   const result: {
     [namespace: string]: {
-      [name: string]: Template<unknown, unknown>;
+      [name: string]: Template<TemplateId>;
     };
   } = {};
   for (const [templateId, templateSpec] of Object.entries(
@@ -432,38 +456,21 @@ function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
     const namespace = uncapitalize(templateSpec.namespace);
     const name = uncapitalize(templateSpec.name);
     (result[namespace] ??= {})[name] = {
-      make: (input: unknown) =>
+      make: (input: Input<TemplateId>) =>
         resolveTemplate(templateId as TemplateId, templates, input),
     };
   }
   return result as PromptMaker;
 }
 
-export function parseResponse<Output>(
-  response: string,
-  outputFormat: OutputFormat<Output>,
-): Output {
-  switch (outputFormat.kind) {
-    case "json": {
-      response = response.trim();
-      response = response.startsWith("```")
-        ? response.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1").trim()
-        : response;
-      return outputFormat.schema.parse(JSON.parse(response));
-    }
-    case "text": {
-      return response as Output;
-    }
-  }
-}
-
 export const promptMakerFactory: {
-  readonly defaultPromptMakerData: unknown,
-  readonly newPromptMakerFromData: (data: unknown) => PromptMaker;
+  readonly templatesData: unknown,
+  readonly newWithOverrides: (overrides: unknown) => PromptMaker;
 } = {
-  defaultPromptMakerData: TEMPLATES_DATA,
-  newPromptMakerFromData: (data: unknown) => {
-    const templatesData = templatesSchema.parse(data);
+  templatesData: TEMPLATES_DATA,
+  newWithOverrides: (overrides: unknown) => {
+    const templatesData = templatesSchema.parse(
+      typeof(overrides) === "object" ? {...TEMPLATES_DATA, ...overrides} : overrides);
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }
@@ -471,18 +478,18 @@ export const promptMakerFactory: {
   },
 } as const;
 
-function resolveTemplate<Input, Output>(
+function resolveTemplate<Id extends TemplateId>(
   templateId: TemplateId,
   templates: Spec.Templates,
-  input: Input,
-): Prompt<Output, Input> {
+  input: Input<Id>,
+): Prompt<Id> {
   const template = templates.templates[templateId];
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
   const { input: inputSchema, output: outputSchema } =
     templateSchemas[templateId]!;
-  input = inputSchema.parse(input) as Input;
+  input = inputSchema.parse(input) as Input<Id>;
   const { contents, snippets } = template;
   let meta: Meta;
   let systemMessage: string;
@@ -496,7 +503,7 @@ function resolveTemplate<Input, Output>(
     examples = resolveExamples(content.examples!, content.user!, template);
   } else {
     const { defaultContent, variants } = contents;
-    const { variant } = input as { readonly variant: string };
+    const { variant } = input as unknown as { readonly variant: string };
     const variantContent = variants[variant]!;
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
@@ -513,13 +520,15 @@ function resolveTemplate<Input, Output>(
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
       : { kind: "text" }
-  ) as OutputFormat<Output>;
+  ) as OutputFormat<Id>;
+  const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
   return {
     meta,
     systemMessage: systemMessage,
     userMessage: userMessage,
     examples,
     outputFormat,
+    parseResponse,
     templateId,
     templateInput: input,
   };
@@ -621,7 +630,8 @@ function resolveExamples(
 ): readonly FewShotExample[] {
   return inputs.map(({ input, output }) => ({
     userMessage: resolveBody(body, input, template.snippets),
-    assistantResponse: format(output, template.outputFormat),
+    toolCallTurns: [],
+    response: format(output, template.outputFormat),
   }));
 }
 
@@ -675,6 +685,24 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
         }),
       ];
       return rows.join("\n");
+    }
+  }
+}
+
+function parseResponseImpl<Output>(
+  response: string,
+  outputFormat: OutputFormatType<Output>,
+): Output {
+  switch (outputFormat.kind) {
+    case "json": {
+      response = response.trim();
+      response = response.startsWith("```")
+        ? response.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1").trim()
+        : response;
+      return outputFormat.schema.parse(JSON.parse(response));
+    }
+    case "text": {
+      return response as Output;
     }
   }
 }
