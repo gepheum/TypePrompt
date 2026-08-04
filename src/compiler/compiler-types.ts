@@ -25,6 +25,7 @@ export type SourceFileParseResult = {
   readonly lineFinder: LineFinderData;
 
   readonly templates: readonly Template[];
+  readonly tools: readonly Tool[];
   readonly namespaces: readonly Namespace[];
   readonly metas: readonly Meta[];
 
@@ -119,6 +120,15 @@ export type Snippet =
         readonly body: BodyInContext;
       }>;
     };
+
+/** Top-level <tool> element. */
+export type Tool = {
+  readonly kind: "success";
+  readonly name: TextSpan;
+  readonly namespace: TextSpan | null;
+  readonly description: TextSpan;
+  readonly schema: SchemaParseResult;
+};
 
 /** Top-level <namespace> element. */
 export type Namespace = {

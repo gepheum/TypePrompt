@@ -140,7 +140,7 @@ class TemplateParser {
   }
 
   private parseSchema(schemaNode: ElementNode): void {
-    if (this.meta !== null) {
+    if (this.schema !== null) {
       this.errors.push({
         span: schemaNode.tag,
         message: "Multiple <schema> elements in <template>",

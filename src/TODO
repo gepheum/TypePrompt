@@ -1,15 +1,10 @@
-BUG:
-  - see why the errors are duplicated in token detection
+TOOLS:
+  - https://share.gemini.google/0FSezpOXrkQI
 
 CODEGEN:
-  - make sure that the JSON schema I generate in 'schema/' actually supports record types
   - reorder sections
   - document everything
   - Refactor the codegen to use functions
-  - Put the typescript source along the exposed schema if users want to inject it in promp
-
-TOOLS:
-  - https://share.gemini.google/0FSezpOXrkQI
 
 EXTENSION TO THE LANGUAGE:
   - See:
@@ -19,6 +14,8 @@ EXTENSION TO THE LANGUAGE:
   - add <doc> to <template>
   - some APIs allow users to add <thinking> to example
 
+TEST & PARSER QUALITY:
+  - when there is an error in <meta>, do not raise other errors when parsing templates metas
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace
@@ -43,6 +40,7 @@ IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
 
 LATER?
+  - Put the typescript source along the exposed schema if users want to inject it in promp
   - TODO: allow discriminator field to be union of string literal
   - TODO: what if 'format' could be any string, and then the actual function needs to be provided
   - TODO: support 'case="summer,fall"'
