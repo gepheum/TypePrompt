@@ -2,13 +2,17 @@ BUG:
   - see why the errors are duplicated in token detection
 
 CODEGEN:
-  - rename "Instruction" to "Prompt"
+  - rename "Instruction" to "Prompt" or "message" (https://developers.openai.com/api/docs/guides/prompting)
   - Make the 2nd type parameter of Prompt: TemplateId
   - Handle the prompt overrides
   - toolcalls...
 
 TOOLS:
   - https://share.gemini.google/0FSezpOXrkQI
+
+EXTENSION TO THE LANGUAGE:
+  - See https://developers.openai.com/api/docs/guides/prompting
+  - See https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace

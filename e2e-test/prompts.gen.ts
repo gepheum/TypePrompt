@@ -457,6 +457,20 @@ export function parseResponse<Output>(
   }
 }
 
+export const promptMakerFactory: {
+  readonly defaultPromptMakerData: unknown,
+  readonly newPromptMakerFromData: (data: unknown) => PromptMaker;
+} = {
+  defaultPromptMakerData: TEMPLATES_DATA,
+  newPromptMakerFromData: (data: unknown) => {
+    const templatesData = templatesSchema.parse(data);
+    if (templatesData.signature !== TEMPLATES_DATA.signature) {
+      throw new Error("Signature mismatch");
+    }
+    return newPromptMakerImpl(templatesData);
+  },
+} as const;
+
 function resolveTemplate<Input, Output>(
   templateId: TemplateId,
   templates: Spec.Templates,
