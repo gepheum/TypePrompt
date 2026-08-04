@@ -67,14 +67,18 @@ export type SharedTypeName = {
   readonly name: TextSpan;
 };
 
-export type StringLiteral = {
+export type StringLiteralView = {
   readonly kind: "string-literal";
   readonly value: string;
+};
+
+export type StringLiteral = StringLiteralView & {
   readonly quotedName: TextSpan;
 };
 
 export type Interface = {
   readonly kind: "interface";
+  readonly name?: undefined;
   readonly leftCurlyBracket: Span;
   readonly fields: { readonly [name: string]: SchemaField };
   readonly firstField?: SchemaField;
@@ -108,8 +112,16 @@ export type PrimitiveType = {
   readonly primitive: TextSpan<"number" | "string" | "boolean" | "integer">;
 };
 
+export type SyntheticArray = {
+  readonly kind: "array";
+  readonly name: {
+    readonly text: string;
+  };
+  readonly elementType: Type | SyntheticType;
+};
+
 export type SyntheticInterface = {
-  readonly kind: "synthetic-interface";
+  readonly kind: "interface";
   readonly name: {
     readonly text: string;
   };
@@ -125,12 +137,16 @@ export type SyntheticSchemaField = {
   readonly doc: string;
 };
 
-export type SyntheticArray = {
-  readonly kind: "synthetic-array";
-  readonly elementType: SyntheticType;
+export type SyntheticUnion = {
+  readonly kind: "synthetic-union";
+  readonly name: {
+    readonly text: string;
+  };
+  readonly members: SyntheticUnionMembers;
 };
 
-export type SyntheticType = SyntheticInterface | SyntheticArray;
+export type SyntheticType =
+  SyntheticArray | SyntheticInterface | SyntheticUnion;
 
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {
@@ -181,4 +197,17 @@ export type UnionMembers =
        * These fields are present in every member of the union with the same type.
        */
       readonly sharedFields: { readonly [name: string]: SyntheticSchemaField };
+    };
+
+export type SyntheticUnionMembers =
+  | {
+      readonly kind: "strings";
+      readonly values: ReadonlySet<string>;
+    }
+  | {
+      readonly kind: "interfaces";
+      readonly members: { [kind: string]: Interface | SyntheticInterface };
+      /** Name of the discriminator field, e.g. 'kind'. */
+      readonly discriminator: string;
+      readonly discriminants: readonly StringLiteralView[];
     };

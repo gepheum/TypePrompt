@@ -6,7 +6,6 @@ import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type { MappedText, Span } from "../util/shared-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
-import { validateJson } from "./json-validator.js";
 import type {
   JsonArray,
   JsonBoolean,
@@ -15,6 +14,7 @@ import type {
   JsonString,
   JsonValue,
 } from "./json-types.js";
+import { validateJson } from "./json-validator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

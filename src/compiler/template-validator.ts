@@ -1,8 +1,8 @@
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
-import { validateJson } from "../json/json-validator.js";
 import { JsonValue } from "../json/json-types.js";
+import { validateJson } from "../json/json-validator.js";
 import {
   Schema,
   SchemaValidationContext,

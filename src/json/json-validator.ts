@@ -22,12 +22,7 @@ export function validateJson(
   if (result.kind === "match") {
     return [];
   }
-  const getTypeName = (t: TypeDeclaration | SyntheticType): string => {
-    return t.kind === "synthetic-array"
-      ? getTypeName(t.elementType).concat("[]")
-      : t.name.text;
-  };
-  const typeName = getTypeName(type);
+  const typeName = type.name.text;
   const errors: InternalError[] = [
     {
       span: {
@@ -56,8 +51,7 @@ export function jsonMatchesType(
     case "any": {
       return MATCH;
     }
-    case "array":
-    case "synthetic-array": {
+    case "array": {
       if (value.kind === "array") {
         const elementType = resolveSyntheticType(type.elementType, schema);
         let matchScoreTotal = 0.0;
@@ -122,8 +116,7 @@ export function jsonMatchesType(
         );
       }
     }
-    case "interface":
-    case "synthetic-interface": {
+    case "interface": {
       if (value.kind === "object") {
         const requiredFields = Object.values(type.fields).filter(
           (field) => !field.optional,
@@ -269,8 +262,10 @@ export function jsonMatchesType(
         );
       }
     }
-    case "union": {
-      const members = schema.unionToMembers.get(type)!;
+    case "union":
+    case "synthetic-union": {
+      const members =
+        type.kind === "union" ? schema.unionToMembers.get(type)! : type.members;
       switch (members.kind) {
         case "strings": {
           if (value.kind === "string") {
