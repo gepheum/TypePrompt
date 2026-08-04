@@ -10,8 +10,8 @@ export type Template<Input, Output> = {
 
 export type Prompt<Output, Input = unknown> = {
   readonly meta: Meta;
-  readonly systemInstructions: string;
-  readonly userInstructions: string;
+  readonly systemMessage: string;
+  readonly userMessage: string;
   readonly examples: readonly FewShotExample[];
   readonly outputFormat: OutputFormat<Output>;
   readonly templateId: TemplateId;
@@ -19,7 +19,7 @@ export type Prompt<Output, Input = unknown> = {
 };
 
 export type FewShotExample = {
-  readonly userInstructions: string;
+  readonly userMessage: string;
   readonly assistantResponse: string;
 };
 
@@ -485,14 +485,14 @@ function resolveTemplate<Input, Output>(
   input = inputSchema.parse(input) as Input;
   const { contents, snippets } = template;
   let meta: Meta;
-  let systemInstructions: string;
-  let userInstructions: string;
+  let systemMessage: string;
+  let userMessage: string;
   let examples: readonly FewShotExample[];
   if (contents.kind === "noVariants") {
     const { content } = contents;
     meta = content.meta as Meta;
-    systemInstructions = resolveBody(content.system!, input, snippets);
-    userInstructions = resolveBody(content.user!, input, snippets);
+    systemMessage = resolveBody(content.system!, input, snippets);
+    userMessage = resolveBody(content.user!, input, snippets);
     examples = resolveExamples(content.examples!, content.user!, template);
   } else {
     const { defaultContent, variants } = contents;
@@ -501,8 +501,8 @@ function resolveTemplate<Input, Output>(
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
     const user = (variantContent.user ?? defaultContent.user)!;
-    systemInstructions = resolveBody(system, input, snippets);
-    userInstructions = resolveBody(user, input, snippets);
+    systemMessage = resolveBody(system, input, snippets);
+    userMessage = resolveBody(user, input, snippets);
     examples = resolveExamples(
       (variantContent.examples ?? defaultContent.examples)!,
       user,
@@ -516,8 +516,8 @@ function resolveTemplate<Input, Output>(
   ) as OutputFormat<Output>;
   return {
     meta,
-    systemInstructions,
-    userInstructions,
+    systemMessage: systemMessage,
+    userMessage: userMessage,
     examples,
     outputFormat,
     templateId,
@@ -620,7 +620,7 @@ function resolveExamples(
   template: Spec.Template,
 ): readonly FewShotExample[] {
   return inputs.map(({ input, output }) => ({
-    userInstructions: resolveBody(body, input, template.snippets),
+    userMessage: resolveBody(body, input, template.snippets),
     assistantResponse: format(output, template.outputFormat),
   }));
 }
