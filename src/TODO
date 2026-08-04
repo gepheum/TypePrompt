@@ -3,7 +3,6 @@ BUG:
 
 CODEGEN:
   - make sure that the JSON schema I generate in 'schema/' actually supports record types
-  - Bug: comment lines starting with "*" are de-indented
   - reorder sections
   - document everything
   - Refactor the codegen to use functions

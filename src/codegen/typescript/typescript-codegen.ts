@@ -466,7 +466,8 @@ function reformat(code: string): string {
     if (line.startsWith("}") || line.startsWith(")") || line.startsWith("]")) {
       indent = indent.slice(0, -2);
     }
-    outputLines.push(line.length <= 0 ? line : indent + line);
+    const starPrefix = line.startsWith("*") ? " " : "";
+    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
     if (line.endsWith("{") || line.endsWith("(") || line.endsWith("[")) {
       indent = indent + "  ";
     }
