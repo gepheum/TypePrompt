@@ -66,7 +66,7 @@ export type Prompt<Id extends TemplateId> = {
 export type FewShotExample = {
   readonly userMessage: string;
   readonly toolCallTurns: readonly ToolCallTurn[];
-  readonly assistant: string;
+  readonly response: string;
 };
 
 export type ToolCallTurn = {
@@ -282,7 +282,8 @@ function resolveExamples(
 ): readonly FewShotExample[] {
   return inputs.map(({ input, output }) => ({
     userMessage: resolveBody(body, input, template.snippets),
-    assistantResponse: format(output, template.outputFormat),
+    toolCallTurns: [],
+    response: format(output, template.outputFormat),
   }));
 }
 
