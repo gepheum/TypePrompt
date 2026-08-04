@@ -39,6 +39,7 @@ export type Template = {
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly schema: SchemaParseResult;
+  readonly tools: JsonValue<"strict"> | null;
   readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
@@ -166,6 +167,9 @@ export type ValidatedTemplate = {
   readonly kind: "success";
   readonly template: Template;
   readonly schema: Schema;
+  readonly tools: ReadonlyArray<{
+    readonly tool: string;
+  }>;
 };
 
 export type TemplateValidationResult = ValidatedTemplate | InternalErrors;

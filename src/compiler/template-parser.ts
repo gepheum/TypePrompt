@@ -86,6 +86,7 @@ class TemplateParser {
       name: name.value,
       namespace: namespace?.value ?? null,
       schema: this.schema!,
+      tools: this.tools,
       outputFormat: this.outputFormat,
       contents: contents!,
       snippets: this.snippets,
