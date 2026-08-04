@@ -325,10 +325,10 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
   }
 }
 
-function parseResponseImpl<Id extends TemplateId>(
+function parseResponseImpl<Output>(
   response: string,
-  outputFormat: OutputFormat<Id>,
-): Output<Id> {
+  outputFormat: OutputFormatType<Output>,
+): Output {
   switch (outputFormat.kind) {
     case "json": {
       response = response.trim();
@@ -338,7 +338,7 @@ function parseResponseImpl<Id extends TemplateId>(
       return outputFormat.schema.parse(JSON.parse(response));
     }
     case "text": {
-      return response as Output<Id>;
+      return response as Output;
     }
   }
 }

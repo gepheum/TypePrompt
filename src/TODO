@@ -4,7 +4,8 @@ BUG:
 CODEGEN:
   - Make the 2nd type (or 1st type?) parameter of Prompt: TemplateId
   - Refactor the codegen to use functions
-  - Put the output type format as typescript code...
+  - newPromptMakerWithOverrides
+  - Put the typescript source along the exposed schema if users want to inject it in promp
 
 TOOLS:
   - https://share.gemini.google/0FSezpOXrkQI
