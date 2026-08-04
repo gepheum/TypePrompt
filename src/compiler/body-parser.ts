@@ -4,7 +4,7 @@ import {
   checkXmlAttributes,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
-import type { Body, BodyPiece, InsertFormat } from "./compiler-types.js";
+import type { Body, BodyPiece, InsertFormat, ToolDescription } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseCTag } from "../ctag/ctag-parser.js";
@@ -19,6 +19,30 @@ export function parseBody<HasValContext extends boolean>(
   parentNode: ElementNode,
   errors: ErrorSink,
   options: {
+    readonly hasValContext: HasValContext;
+  },
+): Body<HasValContext> {
+  return parseBodyImpl(parentNode, errors, {
+    ...options,
+    isToolDescription: false,
+  });
+}
+
+export function parseToolDescription(
+  descriptionNode: ElementNode,
+  errors: ErrorSink,
+): ToolDescription {
+  return parseBodyImpl(descriptionNode, errors, {
+    isToolDescription: true,
+    hasValContext: false,
+  }) as ToolDescription satisfies Body;
+}
+
+function parseBodyImpl<HasValContext extends boolean>(
+  parentNode: ElementNode,
+  errors: ErrorSink,
+  options: {
+    readonly isToolDescription: boolean;
     readonly hasValContext: HasValContext;
   },
 ): Body<HasValContext> {
@@ -77,7 +101,9 @@ export function parseBody<HasValContext extends boolean>(
     }
     const tag = checkTag(
       child,
-      ["c", "enclosed", "insert"] as const,
+      options.isToolDescription
+        ? ["c", "enclosed", "insert"] as const
+        : ["c"] as const,
       "",
       errors,
     );

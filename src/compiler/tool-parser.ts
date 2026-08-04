@@ -7,6 +7,7 @@ import { SchemaParseResult } from "../schema/schema-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { extractTextContent } from "./text-extractor.js";
 import { parseSchema } from "../schema/schema-parser.js";
+import { parseToolDescription } from "./body-parser.js";
 
 /** Parses a <tool> element. The result has yet to be validated. */
 export function parseTool(
@@ -112,14 +113,8 @@ class ToolParser {
 
   private parseDescription(descriptionNode: ElementNode): void {
     this.errors.push(...checkNoXmlAttributes(descriptionNode));
-    const body = parseBody(descriptionNode, this.errors, {
-      hasValContext: false,
-    });
-    this.snippets.push({
-      kind: "snippet",
-      name: attrs.attributes.name.value,
-      body: body,
-    });
+    const description = parseToolDescription(descriptionNode, this.errors);
+    this.description = description;
   }
 
   private readonly errors: InternalError[] = [];
