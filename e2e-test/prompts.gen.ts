@@ -69,13 +69,26 @@ export type TemplateId = (
   | "Default:MyTemplate"
 );
 
-const templateOutputSchemas = {
-  "Default:MyTemplate": ((): z.ZodType<$.Default.MyTemplate.Output> => {
-    const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
-      x: z.int32(),
-    });
-    return outputSchema;
-  })(),
+const templateSchemas = {
+  "Default:MyTemplate": {
+    input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
+      const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        fooToBar: z.record(
+          z.string(),
+          z.int32(),
+        ).optional(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
+      const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
+        x: z.int32(),
+      });
+      return outputSchema;
+    })(),
+  },
 } as const;
 
 namespace Spec {
@@ -453,6 +466,9 @@ function resolveTemplate<Input, Output>(
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
+  const { input: inputSchema, output: outputSchema } =
+    templateSchemas[templateId]!;
+  input = inputSchema.parse(input) as Input;
   const { contents, snippets } = template;
   let meta: Meta;
   let systemInstructions: string;
@@ -479,7 +495,6 @@ function resolveTemplate<Input, Output>(
       template,
     );
   }
-  const outputSchema = templateOutputSchemas[templateId];
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }

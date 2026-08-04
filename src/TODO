@@ -3,8 +3,7 @@ BUG:
 
 CODEGEN:
   - rename "Instruction" to "Prompt"
-  - I need to make sure fields in "input" are always in the same order...
-  - validate the inputs with the input schemas
+  - Make the 2nd type parameter of Prompt: TemplateId
   - Handle the prompt overrides
   - toolcalls...
 

@@ -8,7 +8,12 @@ export type Meta = {};
 
 export type TemplateId = string;
 
-const templateOutputSchemas: { [id: TemplateId]: z.ZodType<any> } = {} as const;
+const templateSchemas: {
+  readonly [id: TemplateId]: {
+    readonly input: z.ZodType<any>;
+    readonly output: z.ZodType<any>;
+  };
+} = {} as const;
 
 export type PromptMaker = {
   readonly [namespace: string]: {
@@ -103,6 +108,9 @@ function resolveTemplate<Input, Output>(
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
+  const { input: inputSchema, output: outputSchema } =
+    templateSchemas[templateId]!;
+  input = inputSchema.parse(input) as Input;
   const { contents, snippets } = template;
   let meta: Meta;
   let systemInstructions: string;
@@ -129,7 +137,6 @@ function resolveTemplate<Input, Output>(
       template,
     );
   }
-  const outputSchema = templateOutputSchemas[templateId];
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
