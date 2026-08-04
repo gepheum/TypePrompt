@@ -6,18 +6,36 @@ import * as Spec from "../../runtime/runtime-types.js";
 // <generated>
 export type Meta = {};
 
-export type TemplateId = string;
+export type TemplateId = "foo" | "bar";
 
-const templateSchemas: {
-  readonly [id: TemplateId]: {
-    readonly input: z.ZodType<any>;
-    readonly output: z.ZodType<any>;
-  };
-} = {} as const;
+/** Input type for a given template ID. */
+export type Input<Id extends TemplateId> = InputType[Id];
+type InputType = {
+  foo: unknown;
+  bar: string;
+};
+
+/** Type of the expected LLM response for a given template ID. */
+export type Output<Id extends TemplateId> = OutputType[Id];
+type OutputType = {
+  foo: unknown;
+  bar: string;
+};
+
+const templateSchemas = {
+  foo: {
+    input: z.any(),
+    output: z.any(),
+  },
+  bar: {
+    input: z.string(),
+    output: z.string(),
+  },
+} as const;
 
 export type PromptMaker = {
   readonly [namespace: string]: {
-    readonly [name: string]: Template<unknown, unknown>;
+    readonly [name: string]: Template<TemplateId>;
   };
 };
 
@@ -30,18 +48,19 @@ const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
 // <static:types>
-export type Template<Input, Output> = {
-  readonly make: (input: Input) => Prompt<Output, Input>;
+export type Template<Id extends TemplateId> = {
+  readonly make: (input: Input<Id>) => Prompt<Id>;
 };
 
-export type Prompt<Output, Input = unknown> = {
+export type Prompt<Id extends TemplateId> = {
   readonly meta: Meta;
   readonly systemMessage: string;
   readonly userMessage: string;
   readonly examples: readonly FewShotExample[];
-  readonly outputFormat: OutputFormat<Output>;
+  readonly outputFormat: OutputFormat<Id>;
+  readonly parseResponse: (content: string) => Output<Id>;
   readonly templateId: TemplateId;
-  readonly templateInput: Input;
+  readonly templateInput: Input<Id>;
 };
 
 export type FewShotExample = {
@@ -49,7 +68,8 @@ export type FewShotExample = {
   readonly assistantResponse: string;
 };
 
-export type OutputFormat<Output> =
+export type OutputFormat<Id extends TemplateId> = OutputFormatType<Output<Id>>;
+type OutputFormatType<Output> =
   | {
       readonly kind: "json";
       readonly schema: z.ZodType<Output>;
@@ -65,7 +85,7 @@ export function newPromptMaker(): PromptMaker {
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
   const result: {
     [namespace: string]: {
-      [name: string]: Template<unknown, unknown>;
+      [name: string]: Template<TemplateId>;
     };
   } = {};
   for (const [templateId, templateSpec] of Object.entries(
@@ -79,24 +99,6 @@ function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
     };
   }
   return result as PromptMaker;
-}
-
-export function parseResponse<Output>(
-  response: string,
-  outputFormat: OutputFormat<Output>,
-): Output {
-  switch (outputFormat.kind) {
-    case "json": {
-      response = response.trim();
-      response = response.startsWith("```")
-        ? response.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1").trim()
-        : response;
-      return outputFormat.schema.parse(JSON.parse(response));
-    }
-    case "text": {
-      return response as Output;
-    }
-  }
 }
 
 export const promptMakerFactory: {
@@ -113,18 +115,18 @@ export const promptMakerFactory: {
   },
 } as const;
 
-function resolveTemplate<Input, Output>(
+function resolveTemplate<Id extends TemplateId>(
   templateId: TemplateId,
   templates: Spec.Templates,
-  input: Input,
-): Prompt<Output, Input> {
+  input: Input<Id>,
+): Prompt<Id> {
   const template = templates.templates[templateId];
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
   const { input: inputSchema, output: outputSchema } =
     templateSchemas[templateId]!;
-  input = inputSchema.parse(input) as Input;
+  input = inputSchema.parse(input) as Input<Id>;
   const { contents, snippets } = template;
   let meta: Meta;
   let systemMessage: string;
@@ -155,13 +157,15 @@ function resolveTemplate<Input, Output>(
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
       : { kind: "text" }
-  ) as OutputFormat<Output>;
+  ) as OutputFormat<Id>;
+  const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
   return {
     meta,
     systemMessage: systemMessage,
     userMessage: userMessage,
     examples,
     outputFormat,
+    parseResponse,
     templateId,
     templateInput: input,
   };
@@ -317,6 +321,24 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
         }),
       ];
       return rows.join("\n");
+    }
+  }
+}
+
+function parseResponseImpl<Id extends TemplateId>(
+  response: string,
+  outputFormat: OutputFormat<Id>,
+): Output<Id> {
+  switch (outputFormat.kind) {
+    case "json": {
+      response = response.trim();
+      response = response.startsWith("```")
+        ? response.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1").trim()
+        : response;
+      return outputFormat.schema.parse(JSON.parse(response));
+    }
+    case "text": {
+      return response as Output<Id>;
     }
   }
 }

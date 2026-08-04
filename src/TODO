@@ -3,27 +3,25 @@ BUG:
 
 CODEGEN:
   - Make the 2nd type (or 1st type?) parameter of Prompt: TemplateId
-  - toolcalls...
+  - Refactor the codegen to use functions
+  - Put the output type format as typescript code...
 
 TOOLS:
   - https://share.gemini.google/0FSezpOXrkQI
 
 EXTENSION TO THE LANGUAGE:
-  - See https://developers.openai.com/api/docs/guides/prompting
-  - See https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+  - See:
+    - https://developers.openai.com/api/docs/guides/prompting
+    - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+  - toolcalls...
+  - add <doc> to <template>
+  - some APIs allow users to add <thinking> to example
+
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace
   - No namespace named Meta
   - No template named Shared
-
-SYNTAX:
-  - add <doc> to <template>
-
-SCHEMA:
-  - test:
-      - type Foo = Foo[]
-      - type Foo = {[name: string]: Foo};
 
 COMPILER:
   - Asyncify
