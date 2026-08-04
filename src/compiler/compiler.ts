@@ -13,6 +13,7 @@ import type {
   SourceFileParseResult,
   Template,
   TemplateValidationResult,
+  Tool,
 } from "./compiler-types.js";
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
@@ -100,6 +101,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
 
   readonly lineFinder: LineFinderData;
   readonly templates: Template[] = [];
+  readonly tools: Tool[] = [];
   readonly namespaces: Namespace[] = [];
   readonly metas: Meta[] = [];
 
