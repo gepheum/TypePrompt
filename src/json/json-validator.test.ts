@@ -13,6 +13,7 @@ import type {
   JsonObject,
   JsonString,
   JsonValue,
+  StrictJsonValue,
 } from "./json-types.js";
 import { validateJson } from "./json-validator.js";
 
@@ -67,7 +68,7 @@ function bool(value: boolean): JsonBoolean {
 }
 
 function objStrict(
-  entries: [string, JsonValue<"strict">][],
+  entries: [string, StrictJsonValue][],
 ): JsonObject<"strict"> {
   return {
     kind: "object",
@@ -76,7 +77,7 @@ function objStrict(
   };
 }
 
-function arrStrict(elements: JsonValue<"strict">[]): JsonArray<"strict"> {
+function arrStrict(elements: StrictJsonValue[]): JsonArray<"strict"> {
   return { kind: "array", firstToken: span("["), elements };
 }
 

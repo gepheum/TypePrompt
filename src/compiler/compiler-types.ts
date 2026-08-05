@@ -1,6 +1,6 @@
 import { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { JsonValue } from "../json/json-types.js";
+import type { JsonValue, StrictJsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import { LineFinderData } from "../util/line-finder.js";
 import type {
@@ -39,7 +39,7 @@ export type Template = {
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly schema: SchemaParseResult;
-  readonly tools: JsonValue<"strict"> | null;
+  readonly tools: StrictJsonValue | null;
   readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
@@ -59,7 +59,7 @@ export type TemplateContent = {
   readonly meta: TemplateMeta | undefined;
   readonly system: Body;
   readonly user: Body;
-  readonly examples: JsonValue<"strict"> | undefined;
+  readonly examples: StrictJsonValue | undefined;
 };
 
 export type TemplateVariant = {
@@ -71,7 +71,7 @@ export type TemplateVariant = {
 
 export type TemplateMeta = {
   readonly tag: Span;
-  readonly value: JsonValue<"strict">;
+  readonly value: StrictJsonValue;
 };
 
 export type Body<HasValContext extends boolean = false> =

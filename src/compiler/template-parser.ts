@@ -1,4 +1,4 @@
-import { JsonValue } from "../json/json-types.js";
+import { JsonValue, StrictJsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
@@ -546,7 +546,7 @@ class TemplateParser {
 
   private readonly errors: InternalError[] = [];
   private schema: SchemaParseResult | null = null;
-  private tools: JsonValue<"strict"> | null = null;
+  private tools: StrictJsonValue | null = null;
   private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
@@ -569,7 +569,7 @@ class ContentBuilder {
   meta: TemplateMeta | undefined;
   system: WithTag<Body> | undefined;
   user: WithTag<Body> | undefined;
-  examples: WithTag<JsonValue<"strict">> | undefined;
+  examples: WithTag<StrictJsonValue> | undefined;
 
   parse(
     tag: "meta" | "system" | "user" | "examples",

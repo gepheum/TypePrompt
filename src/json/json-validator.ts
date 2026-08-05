@@ -7,7 +7,7 @@ import type {
 } from "../schema/schema-types.js";
 import { resolveSyntheticType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
-import type { JsonTypeMatch, JsonValue } from "./json-types.js";
+import type { JsonTypeMatch, JsonValue, LooseJsonValue, StrictJsonValue } from "./json-types.js";
 
 type SchemaView = {
   readonly typeDeclarations: Schema["typeDeclarations"];
@@ -16,12 +16,12 @@ type SchemaView = {
 };
 
 export function validateJson(
-  json: JsonValue<"strict">,
+  json: StrictJsonValue,
   schema: SchemaView,
   type: TypeDeclaration | (SyntheticType & HasName),
 ): InternalError[] {
   const result = jsonMatchesType(
-    json as JsonValue<"loose">,
+    json as LooseJsonValue,
     resolveSyntheticType(type, schema),
     "thorough",
     schema,
@@ -46,7 +46,7 @@ export function validateJson(
 }
 
 export function jsonMatchesType(
-  value: JsonValue<"loose">,
+  value: LooseJsonValue,
   type: ResolvedType | SyntheticType,
   mode: "fast" | "thorough",
   schema: SchemaView,

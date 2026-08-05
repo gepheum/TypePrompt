@@ -7,16 +7,15 @@ CODEGEN:
   - Refactor the codegen to use functions
 
 CODE QUALITY:
-  - JsonValue<"strict"> renamed to StrictJsonValue
-  - JsonValue<"loose"> renamed to LooseJsonValue
   - maybe remove some `as const`
   - JsonObject.entries should probably be a dict
 
 EXTENSION TO THE LANGUAGE:
+  - toolcalls...
+    - make <c> from template also accept tool names and symbols defined in the tool?
   - See:
     - https://developers.openai.com/api/docs/guides/prompting
     - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
-  - toolcalls...
   - add <doc> to <template>
   - some APIs allow users to add <thinking> to example
 

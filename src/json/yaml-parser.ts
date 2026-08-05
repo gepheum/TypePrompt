@@ -6,11 +6,11 @@ import type {
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
-import type { JsonObjectEntry, JsonString, JsonValue } from "./json-types.js";
+import type { JsonObjectEntry, JsonString, JsonValue, StrictJsonValue } from "./json-types.js";
 
 export function parseYaml(
   content: MappedText,
-): JsonValue<"strict"> | InternalErrors {
+): StrictJsonValue | InternalErrors {
   const doc = parseDocument(content.text, { logLevel: "silent" });
 
   if (doc.errors.length > 0) {
@@ -78,7 +78,7 @@ function span(content: MappedText, start: number, end: number): TextSpan {
 function convertNode(
   node: unknown,
   content: MappedText,
-): JsonValue<"strict"> | null {
+): StrictJsonValue | null {
   if (isMap(node)) {
     return convertMap(node, content);
   } else if (isSeq(node)) {
@@ -90,7 +90,7 @@ function convertNode(
   }
 }
 
-function convertMap(node: YAMLMap, content: MappedText): JsonValue<"strict"> {
+function convertMap(node: YAMLMap, content: MappedText): StrictJsonValue {
   const [start] = node.range ?? [0, 0, 0];
   const entries: JsonObjectEntry<"strict">[] = [];
 
@@ -99,7 +99,7 @@ function convertMap(node: YAMLMap, content: MappedText): JsonValue<"strict"> {
 
     const key = scalarToJsonString(pair.key, content);
 
-    let value: JsonValue<"strict">;
+    let value: StrictJsonValue;
     if (isScalar(pair.value)) {
       value = convertScalar(pair.value, content);
     } else if (isMap(pair.value)) {
@@ -122,9 +122,9 @@ function convertMap(node: YAMLMap, content: MappedText): JsonValue<"strict"> {
   };
 }
 
-function convertSeq(node: YAMLSeq, content: MappedText): JsonValue<"strict"> {
+function convertSeq(node: YAMLSeq, content: MappedText): StrictJsonValue {
   const [start] = node.range ?? [0, 0, 0];
-  const elements: JsonValue<"strict">[] = [];
+  const elements: StrictJsonValue[] = [];
 
   for (const item of node.items) {
     const converted = convertNode(item, content);
@@ -138,7 +138,7 @@ function convertSeq(node: YAMLSeq, content: MappedText): JsonValue<"strict"> {
   };
 }
 
-function convertScalar(node: Scalar, content: MappedText): JsonValue<"strict"> {
+function convertScalar(node: Scalar, content: MappedText): StrictJsonValue {
   const [start, end] = node.range ?? [0, 0, 0];
   const firstToken = span(content, start, end);
   const value = node.value;

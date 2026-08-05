@@ -15,6 +15,9 @@ export type JsonValue<Mode extends JsonMode> =
   | JsonNull
   | (Mode extends "loose" ? JsonEllipsis : never);
 
+export type StrictJsonValue = JsonValue<"strict">;
+export type LooseJsonValue = JsonValue<"loose">;
+
 export type JsonObject<Mode extends JsonMode> = {
   readonly kind: "object";
   /// The left curly bracket.

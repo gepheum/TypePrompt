@@ -8,7 +8,7 @@ import type {
   TemplateContents,
 } from "../compiler/compiler-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { JsonValue } from "../json/json-types.js";
+import type { JsonValue, StrictJsonValue } from "../json/json-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {
@@ -61,7 +61,7 @@ function makeContent(input: Partial<TemplateContent>): Spec.TemplateContent {
   };
 }
 
-function makeValue(input: JsonValue<"strict">): unknown {
+function makeValue(input: StrictJsonValue): unknown {
   switch (input.kind) {
     case "string":
       return input.value;

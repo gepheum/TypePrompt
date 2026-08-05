@@ -8,6 +8,7 @@ import type {
   JsonObject,
   JsonString,
   JsonValue,
+  LooseJsonValue,
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type {
@@ -69,7 +70,7 @@ function bool(value: boolean): JsonBoolean {
 }
 
 function obj(
-  entries: [string, JsonValue<"loose">][],
+  entries: [string, LooseJsonValue][],
   ellipsis = false,
 ): JsonObject<"loose"> {
   return {
@@ -82,11 +83,11 @@ function obj(
   };
 }
 
-function arr(elements: JsonValue<"loose">[]): JsonArray<"loose"> {
+function arr(elements: LooseJsonValue[]): JsonArray<"loose"> {
   return { kind: "array", firstToken: span("["), elements };
 }
 
-function jsonCTag(json: JsonValue<"loose">): CTag {
+function jsonCTag(json: LooseJsonValue): CTag {
   return { kind: "json", json };
 }
 

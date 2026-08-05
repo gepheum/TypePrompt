@@ -161,8 +161,8 @@ class CompilationResultImpl implements CompilationResult {
 
     this.resolveMeta(metas);
     this.resolveNamespaces(namespaces);
-    this.resolveTemplates(templates, cache);
-    this.resolveTools(tools, cache);
+    const namespaceToToolNames = this.resolveTools(tools, cache);
+    this.resolveTemplates(templates, namespaceToToolNames, cache);
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
@@ -229,6 +229,83 @@ class CompilationResultImpl implements CompilationResult {
     }
   }
 
+  private resolveTools(
+    tools: ReadonlyArray<Sourced<Tool>>,
+    cache: CompilationResult | null,
+  ): void {
+    const namespaceToTools: { [namespace: string]: Sourced<Tool>[] } = {};
+    const idToTools: { [namespace: string]: Sourced<Tool>[] } = {};
+    for (const tool of tools) {
+      const namespace = tool.element.namespace?.text ?? "Default";
+      (namespaceToTools[namespace] ??= []).push(tool);
+      const id = `${namespace}:${tool.element.name.text}`;
+      (idToTools[id] ??= []).push(tool);
+    }
+
+    const namespaceToToolNames = Object.fromEntries(
+      Object.entries(namespaceToTools).map(([namespace, tools]) => [
+        namespace,
+        new Set(tools.map((t) => t.element.name.text)),
+      ]),
+    );
+
+    for (const tool of Object.values(namespaceToTools)) {
+      const nameConflicts = checkNameConflicts(
+        Object.values(tool).map((t) => ({
+          ...t.element.name,
+          path: t.sourceFile.path,
+        })),
+      );
+      for (const error of nameConflicts) {
+        this.finalErrors[error.span.path]!.push(error);
+      }
+    }
+
+    if (this.metaSchema.kind !== "success") return;
+
+    for (const [id, tools] of Object.entries(idToTools)) {
+      if (tools.length !== 1) {
+        // The error was already reported in the name conflicts check above.
+        continue;
+      }
+      const tool = tools[0]!;
+
+      const namespaceName = tool.element.namespace?.text ?? "Default";
+      const namespace = this.namespaces[namespaceName];
+      if (!namespace) {
+        this.finalErrors[tool.sourceFile.path]!.push({
+          span: tool.element.name,
+          message: `Namespace '${namespaceName}' not found`,
+          suggestions: Object.keys(this.namespaces),
+        });
+        continue;
+      } else if (namespace.schema.kind !== "success") {
+        continue;
+      }
+
+      let validationResult: ToolValidationResult;
+      if (tool.cached && namespace === cache?.namespaces[namespaceName]) {
+        // Reuse the cached schema validation result.
+        validationResult = cache!.tools[id]!;
+      } else {
+        validationResult = validateTool({
+          tool: tool.element,
+          namespaceSchema: namespace.schema,
+        });
+      }
+
+      this.tools[id] = validationResult;
+
+      if (validationResult.kind === "success") {
+        namespace.tools.push(validationResult);
+      } else if (validationResult.kind === "error") {
+        this.finalErrors[tool.sourceFile.path]!.push(
+          ...validationResult.errors,
+        );
+      }
+    }
+  }
+
   private resolveTemplates(
     templates: ReadonlyArray<Sourced<Template>>,
     cache: CompilationResult | null,
@@ -283,7 +360,9 @@ class CompilationResultImpl implements CompilationResult {
       if (
         template.cached &&
         this.metaSchema === cache?.metaSchema &&
-        namespace === cache?.namespaces[namespaceName]
+        namespace === cache?.namespaces[namespaceName] &&
+        TODO
+        // ^ TODO: verify that each tool is unchanged
       ) {
         // Reuse the cached schema validation result.
         validationResult = cache!.templates[id]!;
@@ -301,78 +380,6 @@ class CompilationResultImpl implements CompilationResult {
         namespace.templates.push(validationResult);
       } else if (validationResult.kind === "error") {
         this.finalErrors[template.sourceFile.path]!.push(
-          ...validationResult.errors,
-        );
-      }
-    }
-  }
-
-  private resolveTools(
-    tools: ReadonlyArray<Sourced<Tool>>,
-    cache: CompilationResult | null,
-  ): void {
-    const namespaceToTools: { [namespace: string]: Sourced<Tool>[] } = {};
-    const idToTools: { [namespace: string]: Sourced<Tool>[] } = {};
-    for (const tool of tools) {
-      const namespace = tool.element.namespace?.text ?? "Default";
-      (namespaceToTools[namespace] ??= []).push(tool);
-      const id = `${namespace}:${tool.element.name.text}`;
-      (idToTools[id] ??= []).push(tool);
-    }
-
-    for (const tool of Object.values(namespaceToTools)) {
-      const nameConflicts = checkNameConflicts(
-        Object.values(tool).map((t) => ({
-          ...t.element.name,
-          path: t.sourceFile.path,
-        })),
-      );
-      for (const error of nameConflicts) {
-        this.finalErrors[error.span.path]!.push(error);
-      }
-    }
-
-    if (this.metaSchema.kind !== "success") {
-      return;
-    }
-
-    for (const [id, tools] of Object.entries(idToTools)) {
-      if (tools.length !== 1) {
-        // The error was already reported in the name conflicts check above.
-        continue;
-      }
-      const tool = tools[0]!;
-
-      const namespaceName = tool.element.namespace?.text ?? "Default";
-      const namespace = this.namespaces[namespaceName];
-      if (!namespace) {
-        this.finalErrors[tool.sourceFile.path]!.push({
-          span: tool.element.name,
-          message: `Namespace '${namespaceName}' not found`,
-          suggestions: Object.keys(this.namespaces),
-        });
-        continue;
-      } else if (namespace.schema.kind !== "success") {
-        continue;
-      }
-
-      let validationResult: ToolValidationResult;
-      if (tool.cached && namespace === cache?.namespaces[namespaceName]) {
-        // Reuse the cached schema validation result.
-        validationResult = cache!.tools[id]!;
-      } else {
-        validationResult = validateTool({
-          tool: tool.element,
-          namespaceSchema: namespace.schema,
-        });
-      }
-
-      this.tools[id] = validationResult;
-
-      if (validationResult.kind === "success") {
-        namespace.tools.push(validationResult);
-      } else if (validationResult.kind === "error") {
-        this.finalErrors[tool.sourceFile.path]!.push(
           ...validationResult.errors,
         );
       }

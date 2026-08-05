@@ -1,7 +1,7 @@
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
-import { JsonValue } from "../json/json-types.js";
+import { JsonValue, StrictJsonValue } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import {
   HasName,
@@ -345,7 +345,7 @@ function makeExamplesType(
 }
 
 function verifyVariantFieldNotSet(
-  examples: JsonValue<"strict">,
+  examples: StrictJsonValue,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   if (examples.kind !== "array") {
@@ -457,7 +457,7 @@ function validateSnippet(
 }
 
 function validateTools(
-  tools: JsonValue<"strict"> | null,
+  tools: StrictJsonValue | null,
   namespaceToolNames: ReadonlySet<string>,
 ):
   | InternalErrors
