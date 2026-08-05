@@ -457,7 +457,7 @@ function validateSnippet(
 }
 
 function validateTools(
-  tools: StrictJsonValue | null,
+  toolsValue: StrictJsonValue | null,
   namespaceTools: { readonly [name: string]: ToolValidationResult },
 ):
   | InternalErrors
@@ -465,7 +465,7 @@ function validateTools(
       kind: "success";
       tools: { readonly [name: string]: TemplateTool };
     } {
-  if (tools === null) {
+  if (toolsValue === null) {
     return {
       kind: "success",
       tools: {},
@@ -473,7 +473,7 @@ function validateTools(
   }
   const toolsType = makeToolsType(namespaceTools);
   const validationErrors = validateJson(
-    tools,
+    toolsValue,
     {
       typeDeclarations: {},
       sharedDeclarations: {},
@@ -487,21 +487,30 @@ function validateTools(
       errors: validationErrors,
     };
   }
-  if (tools.kind !== "array") throw new Error();
-  const toolMatches = Object.fromEntries(
-    tools.elements.map((e): [string, TemplateTool] => {
-      if (e.kind !== "object") throw new Error();
-      const toolEntry = e.entries.find((e) => e.key.value === "tool")!;
-      if (toolEntry?.value.kind !== "string") throw new Error();
-      const toolName = toolEntry.value.value;
-      const tool = namespaceTools[toolName]!;
-      return [toolName, { tool }];
-    }),
-  );
-  return {
-    kind: "success",
-    tools: toolMatches,
-  };
+  if (toolsValue.kind !== "array") throw new Error();
+
+  const tools: {[name: string]: TemplateTool} = {};
+  for (const e of toolsValue.elements) {
+    if (e.kind !== "object") throw new Error();
+    const toolEntry = e.entries.find((e) => e.key.value === "tool")!;
+    if (toolEntry?.value.kind !== "string") throw new Error();
+    const nameValue = toolEntry.value;
+    const name = nameValue.value;
+    const tool = { tool: namespaceTools[name]! };
+    if ((tools[name] ??= tool) != tool) {
+      return {
+        kind: "error",
+        errors: [
+          {
+            span: nameValue.firstToken,
+            message: `Duplicate tool '${name}'`,
+          },
+        ],
+      };
+    }
+  }
+
+  return { kind: "success", tools };
 }
 
 function makeToolsType(namespaceTools: {

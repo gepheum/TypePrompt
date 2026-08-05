@@ -29,184 +29,189 @@ export function generateTypescriptCode(
   return [
     {
       path: generatedDotTsPath,
-      content: new TypescriptCodeGenerator().write(compilationResult),
+      content: writeAll(compilationResult),
     },
   ];
 }
 
-class TypescriptCodeGenerator {
-  code = "";
+function writeAll(compilationResult: CompilationResult): string {
+  const { metaSchema, namespaces, templates } = compilationResult;
+  if (metaSchema.kind !== "success") throw new Error();
 
-  write(compilationResult: CompilationResult): string {
-    const { metaSchema, namespaces, templates } = compilationResult;
-    if (metaSchema.kind !== "success") throw new Error();
+  const generated = [
+    writePromptMaker(Object.values(namespaces)),
+    writeDatatypes(metaSchema, Object.values(namespaces)),
+    writeTemplateIdEnum(Object.values(templates)),
+    writeTemplateZodTypes(Object.values(templates)),
+    writeSpecDatatypes(),
+    writeSpec(compilationResult),
+  ].join("");
 
-    this.writePromptMaker(Object.values(namespaces));
-    this.writeDatatypes(metaSchema, Object.values(namespaces));
-    this.writeTemplateIdEnum(Object.values(templates));
-    this.writeTemplateZodTypes(Object.values(templates));
-    this.writeSpecDatatypes();
-    this.writeSpec(compilationResult);
-    return [
-      "// This file is auto-generated. Do not edit it directly.",
-      "",
-      'import { encode as encodeToon } from "@toon-format/toon";',
-      'import YAML from "yaml";',
-      'import * as z from "zod";\n',
-      STATIC_TYPES,
-      reformat(this.code),
-      STATIC_LOGIC,
-    ].join("\n");
+  return [
+    "// This file is auto-generated. Do not edit it directly.",
+    "",
+    'import { encode as encodeToon } from "@toon-format/toon";',
+    'import YAML from "yaml";',
+    'import * as z from "zod";\n',
+    STATIC_TYPES,
+    reformat(generated),
+    STATIC_LOGIC,
+  ].join("\n");
+}
+
+function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
+  let code = "export type PromptMaker = {\n";
+  for (const namespace of namespaces) {
+    const namespaceProperty = uncapitalize(namespace.name);
+    code += `readonly ${namespaceProperty}: {\n`;
+    for (const template of namespace.templates) {
+      const templateName = template.template.name.text;
+      const templateProperty = uncapitalize(templateName);
+      const templateId = `${namespace.name}:${templateName}`;
+      code += `readonly ${templateProperty}: Template<"${templateId}">;\n`;
+    }
+    code += "};\n";
   }
+  code += "};\n\n";
+  return code;
+}
 
-  private writePromptMaker(namespaces: readonly NamespaceResult[]): void {
-    this.code += "export type PromptMaker = {\n";
-    for (const namespace of namespaces) {
-      const namespaceProperty = uncapitalize(namespace.name);
-      this.code += `readonly ${namespaceProperty}: {\n`;
-      for (const template of namespace.templates) {
-        const templateName = template.template.name.text;
-        const templateProperty = uncapitalize(templateName);
-        const templateId = `${namespace.name}:${templateName}`;
-        this.code += `readonly ${templateProperty}: Template<"${templateId}">;\n`;
-      }
-      this.code += "};\n";
-    }
-    this.code += "};\n\n";
+function writeDatatypes(
+  metaSchema: Schema,
+  namespaces: readonly NamespaceResult[],
+): string {
+  if (metaSchema.kind !== "success") throw new Error();
+  const anyTypes = (schema: Schema): boolean =>
+    Object.keys(schema.typeDeclarations).length > 0;
+  let code = "";
+  if (anyTypes(metaSchema)) {
+    code += "export type Meta = $.Meta.Meta;\n\n";
   }
-
-  private writeDatatypes(
-    metaSchema: Schema,
-    namespaces: readonly NamespaceResult[],
-  ): void {
-    if (metaSchema.kind !== "success") throw new Error();
-    const anyTypes = (schema: Schema): boolean =>
-      Object.keys(schema.typeDeclarations).length > 0;
-    if (anyTypes(metaSchema)) {
-      this.code += "export type Meta = $.Meta.Meta;\n\n";
-    }
-    this.code += "export namespace $ {\n";
-    if (anyTypes(metaSchema)) {
-      this.code += "export namespace Meta {\n";
-      this.writeSchema(metaSchema, { sharedTypePrefix: "Never." });
-      this.code += "}\n\n";
-    }
-    for (const namespace of namespaces) {
-      this.code += `export namespace ${namespace.name} {\n`;
-      if (namespace.schema.kind !== "success") throw new Error();
-      if (anyTypes(namespace.schema)) {
-        this.code += "export namespace Shared {\n";
-        this.writeSchema(namespace.schema, {
-          sharedTypePrefix: "Never.",
-        });
-        this.code += "}\n\n";
-      }
-      for (const template of namespace.templates) {
-        const templateName = template.template.name.text;
-        this.code += `export namespace ${templateName} {\n`;
-        this.writeSchema(template.schema, {
-          sharedTypePrefix: `$.${namespace.name}.Shared.`,
-        });
-        this.code += "}\n\n";
-      }
-      this.code += "}\n\n";
-    }
-    this.code += "}\n\n";
+  code += "export namespace $ {\n";
+  if (anyTypes(metaSchema)) {
+    code += "export namespace Meta {\n";
+    code += writeSchema(metaSchema, { sharedTypePrefix: "Never." });
+    code += "}\n\n";
   }
+  for (const namespace of namespaces) {
+    code += `export namespace ${namespace.name} {\n`;
+    if (namespace.schema.kind !== "success") throw new Error();
+    if (anyTypes(namespace.schema)) {
+      code += "export namespace Shared {\n";
+      code += writeSchema(namespace.schema, { sharedTypePrefix: "Never." });
+      code += "}\n\n";
+    }
+    for (const template of namespace.templates) {
+      const templateName = template.template.name.text;
+      code += `export namespace ${templateName} {\n`;
+      code += writeSchema(template.schema, {
+        sharedTypePrefix: `$.${namespace.name}.Shared.`,
+      });
+      code += "}\n\n";
+    }
+    code += "}\n\n";
+  }
+  code += "}\n\n";
+  return code;
+}
 
-  private writeTemplateZodTypes(
-    templates: readonly TemplateValidationResult[],
-  ): void {
-    this.code += "const templateSchemas = {\n";
+function writeTemplateZodTypes(
+  templates: readonly TemplateValidationResult[],
+): string {
+  let code = "const templateSchemas = {\n";
+  for (const template of templates) {
+    if (template.kind !== "success") throw new Error();
+    const namespace = template.template.namespace?.text ?? "Default";
+    const templateName = template.template.name.text;
+    const zodInputType = writeZodType(template.schema, "Input", {
+      defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
+      sharedTypePrefix: `$.${namespace}.Shared.`,
+    });
+    const zodOutputType = writeZodType(template.schema, "Output", {
+      defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
+      sharedTypePrefix: `$.${namespace}.Shared.`,
+    });
+    code += `"${namespace}:${templateName}": {\n`;
+    code += `input: ${zodInputType},\n`;
+    code += `output: ${zodOutputType},\n`;
+    code += "},\n";
+  }
+  code += "} as const;\n\n";
+  return code;
+}
+
+function writeTemplateIdEnum(
+  templates: readonly TemplateValidationResult[],
+): string {
+  let code = "export type TemplateId = (\n";
+  if (templates.length <= 0) {
+    code += " never\n";
+  } else {
     for (const template of templates) {
       if (template.kind !== "success") throw new Error();
       const namespace = template.template.namespace?.text ?? "Default";
       const templateName = template.template.name.text;
-      const zodInputType = spellZodType(template.schema, "Input", {
-        defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
-        sharedTypePrefix: `$.${namespace}.Shared.`,
-      });
-      const zodOutputType = spellZodType(template.schema, "Output", {
-        defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
-        sharedTypePrefix: `$.${namespace}.Shared.`,
-      });
-      this.code += `"${namespace}:${templateName}": {\n`;
-      this.code += `input: ${zodInputType},\n`;
-      this.code += `output: ${zodOutputType},\n`;
-      this.code += "},\n";
-    }
-    this.code += "} as const;\n\n";
-  }
-
-  private writeTemplateIdEnum(
-    templates: readonly TemplateValidationResult[],
-  ): void {
-    this.code += "export type TemplateId = (\n";
-    if (templates.length <= 0) {
-      this.code += " never\n";
-    } else {
-      for (const template of templates) {
-        if (template.kind !== "success") throw new Error();
-        const namespace = template.template.namespace?.text ?? "Default";
-        const templateName = template.template.name.text;
-        this.code += `| "${namespace}:${templateName}"\n`;
-      }
-    }
-    this.code += ");\n\n";
-
-    for (const what of ["Input", "Output"]) {
-      this.code += `export type ${what}<Id extends TemplateId> = ${what}Type[Id];\n`;
-      this.code += `export type ${what}Type = {\n`;
-      for (const template of templates) {
-        if (template.kind !== "success") throw new Error();
-        const namespace = template.template.namespace?.text ?? "Default";
-        const templateName = template.template.name.text;
-        const templateId = `${namespace}:${templateName}`;
-        this.code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
-      }
-      this.code += "};\n\n";
+      code += `| "${namespace}:${templateName}"\n`;
     }
   }
+  code += ");\n\n";
 
-  private writeSpecDatatypes(): void {
-    const options = {
-      defaultScopeTypePrefix: "Spec.",
-      sharedTypePrefix: "Never.",
-    } as const;
-    this.code += "namespace Spec {\n";
-    this.writeSchema(runtimeTypesSchema, options);
-    this.code += "}\n\n";
-    this.code += "const templatesSchema = ";
-    this.code += spellZodType(runtimeTypesSchema, "Templates", options);
-    this.code += ";\n\n";
-  }
-
-  private writeSpec(compilationResult: CompilationResult): void {
-    this.code += "const TEMPLATES_DATA: Spec.Templates = ";
-    this.code += JSON.stringify(makeTemplates(compilationResult), undefined, 2);
-    this.code += " as const;\n\n";
-  }
-
-  private writeSchema(
-    schema: Schema,
-    options: {
-      readonly sharedTypePrefix: string;
-    },
-  ): void {
-    for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
-      const name = typeDeclaration.name.text;
-      this.code += wrapJsdoc(typeDeclaration.doc);
-      const type = spellType(typeDeclaration.valueType, options);
-      this.code += `export type ${name} = ${type};\n\n`;
+  for (const what of ["Input", "Output"]) {
+    code += `export type ${what}<Id extends TemplateId> = ${what}Type[Id];\n`;
+    code += `export type ${what}Type = {\n`;
+    for (const template of templates) {
+      if (template.kind !== "success") throw new Error();
+      const namespace = template.template.namespace?.text ?? "Default";
+      const templateName = template.template.name.text;
+      const templateId = `${namespace}:${templateName}`;
+      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
     }
+    code += "};\n\n";
   }
+  return code;
 }
+
+function writeSpecDatatypes(): string {
+  const options = {
+    defaultScopeTypePrefix: "Spec.",
+    sharedTypePrefix: "Never.",
+  } as const;
+  let code = "namespace Spec {\n";
+  code += writeSchema(runtimeTypesSchema, options);
+  code += "}\n\n";
+  code += "const templatesSchema = ";
+  code += writeZodType(runtimeTypesSchema, "Templates", options);
+  code += ";\n\n";
+  return code;
+}
+
+function writeSpec(compilationResult: CompilationResult): string {
+  return (
+    "const TEMPLATES_DATA: Spec.Templates = " +
+    JSON.stringify(makeTemplates(compilationResult), undefined, 2) +
+    " as const;\n\n"
+  );
+}
+
+function writeSchema(
+  schema: Schema,
+  options: { readonly sharedTypePrefix: string },
+): string {
+  let code = "";
+  for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
+    const name = typeDeclaration.name.text;
+    code += wrapJsdoc(typeDeclaration.doc);
+    code += `export type ${name} = ${writeType(typeDeclaration.valueType, options)};\n\n`;
+  }
+  return code;
+}
+
 
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
-function spellType(
+function writeType(
   type: Type,
   options: {
     readonly sharedTypePrefix: string;
@@ -218,11 +223,11 @@ function spellType(
     }
     case "array": {
       const { elementType } = type;
-      const spelledElement = spellType(elementType, options);
+      const writtenElement = writeType(elementType, options);
       if (elementType.kind === "union") {
-        return `readonly (${spelledElement})[]`;
+        return `readonly (${writtenElement})[]`;
       } else {
-        return `readonly ${spelledElement}[]`;
+        return `readonly ${writtenElement}[]`;
       }
     }
     case "interface": {
@@ -237,7 +242,7 @@ function spellType(
           "readonly ",
           fieldName,
           field.optional ? "?: " : ": ",
-          spellType(field.type, options),
+          writeType(field.type, options),
           ";\n",
         ].join("");
       }
@@ -252,12 +257,12 @@ function spellType(
       }
     }
     case "record": {
-      return `{ [${type.keyName}: string]: ${spellType(type.valueType, options)} }`;
+      return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
     }
     case "union": {
       return "(\n"
         .concat(
-          type.members.map((m) => `| ${spellType(m, options)}\n`).join(""),
+          type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
         )
         .concat(")");
     }
@@ -273,7 +278,7 @@ function spellType(
   }
 }
 
-function spellZodType(
+function writeZodType(
   schema: Schema,
   typeName: string,
   options: {
@@ -353,7 +358,7 @@ function spellZodType(
       ": z.ZodType<",
       getQualifiedTypeName(typeName, scope),
       "> = ",
-      spell(valueType, scope),
+      write(valueType, scope),
       doc ? `.describe(${JSON.stringify(doc)})` : "",
       ";",
     ].join("");
@@ -361,13 +366,13 @@ function spellZodType(
     defs.push(def);
   };
 
-  const spell = (type: Type, scope: NameScope): string => {
+  const write = (type: Type, scope: NameScope): string => {
     switch (type.kind) {
       case "any": {
         return "z.any()";
       }
       case "array": {
-        return spell(type.elementType, scope).concat(".array()");
+        return write(type.elementType, scope).concat(".array()");
       }
       case "interface": {
         const fieldDefs: string[] = [];
@@ -377,7 +382,7 @@ function spellZodType(
             [
               field.name.text,
               ": ",
-              spell(field.type, scope),
+              write(field.type, scope),
               field.optional ? ".optional()" : "",
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",
@@ -397,7 +402,7 @@ function spellZodType(
         return [
           "z.record(\n",
           "z.string(),\n",
-          spell(type.valueType, scope),
+          write(type.valueType, scope),
           ",\n)",
         ].join("");
       }
@@ -423,7 +428,7 @@ function spellZodType(
         return [
           "z.union([",
           ...Object.values(type.members).map((m) =>
-            spell(m, scope).concat(","),
+            write(m, scope).concat(","),
           ),
           "])",
         ].join("\n");

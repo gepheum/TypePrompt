@@ -1,7 +1,7 @@
 TOOLS:
   - add to generated code
-  - error on duplicate tool
   - https://share.gemini.google/0FSezpOXrkQI
+  - support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?
 
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
