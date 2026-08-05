@@ -199,7 +199,8 @@ export function jsonMatchesType(
           }
         }
         if (firstMismatchReason) {
-          const divisor = requiredFields.length + Object.keys(value.entries).length;
+          const divisor =
+            requiredFields.length + Object.keys(value.entries).length;
           return {
             kind: "mismatch",
             details: {
@@ -241,7 +242,8 @@ export function jsonMatchesType(
                 kind: "mismatch",
                 details: {
                   reason: details.reason,
-                  matchScore: matchScoreTotal / Object.keys(value.entries).length,
+                  matchScore:
+                    matchScoreTotal / Object.keys(value.entries).length,
                 },
               };
             }

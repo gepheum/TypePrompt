@@ -98,8 +98,8 @@ function makeValue(input: StrictJsonValue): unknown {
       return null;
     case "object": {
       const result: { [key: string]: unknown } = {};
-      for (const entry of input.entries) {
-        result[entry.key.value] = makeValue(entry.value);
+      for (const [key, entry] of Object.entries(input.entries)) {
+        result[key] = makeValue(entry.value);
       }
       return result;
     }

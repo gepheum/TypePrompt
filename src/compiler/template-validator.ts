@@ -281,7 +281,9 @@ function validateTemplateContent(
       if (options.isVariantSpecialization) {
         errors.push(...verifyVariantFieldNotSet(content.examples));
       }
-      errors.push(...validateToolCallExamples(content.examples, options.namespaceTools));
+      errors.push(
+        ...validateToolCallExamples(content.examples, options.namespaceTools),
+      );
     }
   }
 
@@ -413,13 +415,13 @@ function verifyVariantFieldNotSet(
   const errors: InternalError[] = [];
   for (const example of (examples as StrictJsonArray).elements) {
     const variantEntry = (example as StrictJsonObject).entries["variant"];
-      if (variantEntry) {
-        errors.push({
-          span: variantEntry.key.firstToken,
-          message:
-            "Examples must not specify 'variant' when within a <variant> element",
-        });
-      }
+    if (variantEntry) {
+      errors.push({
+        span: variantEntry.key.firstToken,
+        message:
+          "Examples must not specify 'variant' when within a <variant> element",
+      });
+    }
   }
   return errors;
 }
@@ -433,10 +435,12 @@ function validateToolCallExamples(
     const exampleObject = example as StrictJsonObject;
     const intermediateStepsEntry = exampleObject.entries["intermediateSteps"];
     if (!intermediateStepsEntry) continue;
-    for (const step of (intermediateStepsEntry.value as StrictJsonArray).elements) {
+    for (const step of (intermediateStepsEntry.value as StrictJsonArray)
+      .elements) {
       const toolCallsEntry = (step as StrictJsonObject).entries["toolCalls"]!;
-      for (const toolCall of (toolCallsEntry.value as StrictJsonArray).elements) {
-        const {entries} = toolCall as StrictJsonObject;
+      for (const toolCall of (toolCallsEntry.value as StrictJsonArray)
+        .elements) {
+        const { entries } = toolCall as StrictJsonObject;
         const toolValue = entries["tool"]!.value as JsonString;
         const inputValue = entries["input"]!.value;
         const outputValue = entries["output"]!.value;
@@ -445,7 +449,7 @@ function validateToolCallExamples(
         const tool = namespaceTools[toolName]!;
         if (tool.kind === "error") continue;
 
-        const {schema} = tool;
+        const { schema } = tool;
         const inputType = schema.typeDeclarations["Input"]!;
         const outputType = schema.typeDeclarations["Output"]!;
         errors.push(...validateJson(inputValue, schema, inputType));
@@ -578,7 +582,8 @@ function validateTools(
 
   const tools: { [name: string]: TemplateTool } = {};
   for (const e of (toolsValue as StrictJsonArray).elements) {
-    const nameValue = (e as StrictJsonObject).entries["tool"]!.value as JsonString;
+    const nameValue = (e as StrictJsonObject).entries["tool"]!
+      .value as JsonString;
     const name = nameValue.value;
     const tool = { tool: namespaceTools[name]! };
     if ((tools[name] ??= tool) != tool) {
