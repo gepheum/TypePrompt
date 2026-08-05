@@ -59,25 +59,29 @@ export function validateTemplate(args: {
 
   errors.push(...validateVariants(template, templateSchema));
 
+  const options = {
+    isVariantSpecialization: false,
+    namespaceTools: args.namespaceTools,
+  } as const;
   if (template.contents.kind === "no-variants") {
     errors.push(
-      ...validateTemplateContent(template.contents.content, templateSchema, {
-        isVariantSpecialization: false,
-      }),
+      ...validateTemplateContent(
+        template.contents.content,
+        templateSchema,
+        options,
+      ),
     );
   } else {
     errors.push(
       ...validateTemplateContent(
         template.contents.defaultContent,
         templateSchema,
-        { isVariantSpecialization: false },
+        options,
       ),
     );
     for (const variant of template.contents.variants) {
       errors.push(
-        ...validateTemplateContent(variant.content, templateSchema, {
-          isVariantSpecialization: true,
-        }),
+        ...validateTemplateContent(variant.content, templateSchema, options),
       );
     }
   }
@@ -256,6 +260,7 @@ function validateTemplateContent(
   templateSchema: Schema,
   options: {
     readonly isVariantSpecialization: boolean;
+    readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
   },
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
@@ -284,6 +289,7 @@ function makeExamplesType(
   templateSchema: Schema,
   options: {
     readonly isVariantSpecialization: boolean;
+    readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
   },
 ): SyntheticArray & HasName {
   const { typeDeclarations } = templateSchema;
@@ -329,7 +335,7 @@ function makeExamplesType(
         },
         type: outputType,
       },
-      "intermediateSteps": {
+      intermediateSteps: {
         name: {
           text: "intermediateSteps",
         },
@@ -337,7 +343,7 @@ function makeExamplesType(
         type: {
           kind: "interface",
           fields: {
-            "toolCalls": {
+            toolCalls: {
               name: {
                 text: "toolCalls",
               },
@@ -346,34 +352,43 @@ function makeExamplesType(
                 elementType: {
                   kind: "interface",
                   fields: {
-                    "tool": {
+                    tool: {
                       name: {
                         text: "tool",
                       },
-                      type: {kind: "primitive"},
+                      type: {
+                        kind: "synthetic-union",
+                        members: {
+                          kind: "strings",
+                          values: new Set(Object.keys(options.namespaceTools)),
+                        },
+                      },
                     },
-                    "callId": {
+                    callId: {
                       name: {
                         text: "callId",
                       },
-                      type: {kind: "primitive", primitive: { text: "string" }},
+                      type: {
+                        kind: "primitive",
+                        primitive: { text: "string" },
+                      },
                     },
-                    "input": {
+                    input: {
                       name: {
                         text: "input",
                       },
-                      type: {kind: "any"},
+                      type: { kind: "any" },
                     },
-                    "output": {
+                    output: {
                       name: {
                         text: "output",
                       },
-                      type: {kind: "any"},
+                      type: { kind: "any" },
                     },
                   },
                 },
               },
-            }
+            },
           },
         },
       },

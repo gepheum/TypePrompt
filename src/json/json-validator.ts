@@ -283,12 +283,17 @@ export function jsonMatchesType(
             if (members.values.has(value.value)) {
               return MATCH;
             } else {
-              return mismatch(
-                mode,
-                value.firstToken,
-                "Not found in union type",
-                0.5,
-              );
+              const message =
+                members.values.size <= 0
+                  ? "Expected: never"
+                  : members.values.size <= 1
+                    ? `Expected: '${[...members.values][0]}'`
+                    : "Expected: one of ".concat(
+                        [...members.values]
+                          .map((v: string) => `'${v}'`)
+                          .join(", "),
+                      );
+              return mismatch(mode, value.firstToken, message, 0.5);
             }
           } else {
             // Not a string.
@@ -315,10 +320,22 @@ export function jsonMatchesType(
                   return jsonMatchesType(value, member, mode, schema);
                 } else {
                   // No matching member for the kind value in the union.
+                  const { discriminants } = members;
+                  const message =
+                    discriminants.length <= 0
+                      ? "Expected: never"
+                      : discriminants.length <= 1
+                        ? `Expected: '${discriminants[0]}'`
+                        : "Expected: one of ".concat(
+                            discriminants
+                              .map((v) => `'${v.value satisfies string}'`)
+                              .join(", "),
+                          );
+
                   return mismatch(
                     mode,
                     kindValue.value.firstToken,
-                    `No matching member for value "${kindValue.value.value}"`,
+                    message,
                     0.5,
                   );
                 }
