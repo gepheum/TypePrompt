@@ -4,7 +4,6 @@ TOOLS:
   - support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?
 
 BUG:
-  - I need to worry about the fact that creating a synthetic union of an empty set is not great...
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 CODEGEN:

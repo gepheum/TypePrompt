@@ -290,7 +290,7 @@ export function jsonMatchesType(
                     ? `Expected: '${[...members.values][0]}'`
                     : "Expected: one of ".concat(
                         [...members.values]
-                          .map((v: string) => `'${v}'`)
+                          .map((v: string) => `"${v}"`)
                           .join(", "),
                       );
               return mismatch(mode, value.firstToken, message, 0.5);
@@ -328,7 +328,7 @@ export function jsonMatchesType(
                         ? `Expected: '${discriminants[0]}'`
                         : "Expected: one of ".concat(
                             discriminants
-                              .map((v) => `'${v.value satisfies string}'`)
+                              .map((v) => `"${v.value satisfies string}"`)
                               .join(", "),
                           );
 
