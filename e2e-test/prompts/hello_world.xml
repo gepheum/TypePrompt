@@ -37,6 +37,10 @@
     };
   </schema>
 
+  <tools>
+    - tool: getX
+  </tools>
+
   <system>
     <insert snippet="greet"/>
 

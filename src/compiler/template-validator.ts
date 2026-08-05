@@ -516,7 +516,7 @@ function makeToolsType(namespaceTools: {
     elementType: {
       kind: "interface",
       fields: {
-        name: {
+        tool: {
           name: {
             text: "tool",
           },
