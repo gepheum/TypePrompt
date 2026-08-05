@@ -70,7 +70,7 @@ function objStrict(entries: [string, StrictJsonValue][]): JsonObject<"strict"> {
   return {
     kind: "object",
     firstToken: span("{"),
-    entries: entries.map(([key, value]) => ({ key: str(key), value })),
+    entries: Object.fromEntries(entries.map(([key, value]) => [key, { key: str(key), value }])),
   };
 }
 

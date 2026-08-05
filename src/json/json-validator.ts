@@ -133,7 +133,7 @@ export function jsonMatchesType(
           (field) => !field.optional,
         );
         if (
-          value.entries.length === 0 &&
+          Object.keys(value.entries).length === 0 &&
           (requiredFields.length === 0 || value.ellipsis)
         ) {
           // To avoid a division by zero later.
@@ -142,7 +142,7 @@ export function jsonMatchesType(
         let matchScoreTotal = 0.0;
         let firstMismatchReason: InternalError | undefined;
         const seenFieldNames = new Set<string>();
-        for (const entry of value.entries) {
+        for (const entry of Object.values(value.entries)) {
           const fieldName = entry.key.value;
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
@@ -199,7 +199,7 @@ export function jsonMatchesType(
           }
         }
         if (firstMismatchReason) {
-          const divisor = requiredFields.length + value.entries.length;
+          const divisor = requiredFields.length + Object.keys(value.entries).length;
           return {
             kind: "mismatch",
             details: {
@@ -222,7 +222,7 @@ export function jsonMatchesType(
       if (value.kind === "object") {
         const valueType = resolveSyntheticType(type.valueType, schema);
         let matchScoreTotal = 0.0;
-        for (const entry of value.entries) {
+        for (const entry of Object.values(value.entries)) {
           const valueMatch = jsonMatchesType(
             entry.value,
             valueType,
@@ -241,7 +241,7 @@ export function jsonMatchesType(
                 kind: "mismatch",
                 details: {
                   reason: details.reason,
-                  matchScore: matchScoreTotal / value.entries.length,
+                  matchScore: matchScoreTotal / Object.keys(value.entries).length,
                 },
               };
             }
@@ -297,13 +297,11 @@ export function jsonMatchesType(
         }
         case "interfaces": {
           if (value.kind === "object") {
-            if (value.entries.length <= 0 && value.ellipsis) {
+            if (Object.keys(value.entries).length <= 0 && value.ellipsis) {
               return MATCH;
             }
             const { discriminator } = members;
-            const kindValue = value.entries.find(
-              (e) => e.key.value === discriminator,
-            );
+            const kindValue = value.entries[discriminator];
             if (kindValue) {
               if (kindValue.value.kind === "string") {
                 const member = members.members[kindValue.value.value];

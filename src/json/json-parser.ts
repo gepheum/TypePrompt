@@ -103,8 +103,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
     this.cursor += 1;
     this.skipSpaces();
 
-    const entries: JsonObjectEntry<Mode>[] = [];
-    const seenKeys = new Set<string>();
+    const entries: { [key: string]: JsonObjectEntry<Mode> } = {};
     let objectEllipsis: JsonEllipsis | undefined;
 
     if (this.text[this.cursor] === "}") {
@@ -176,16 +175,15 @@ class JsonParser<Mode extends JsonMode = "loose"> {
       if (!value) {
         this.syncToObjectDelimiter();
       } else {
-        if (seenKeys.has(key.value)) {
+        if (key.value in entries) {
           this.pushError(
             key.firstToken.start,
             key.firstToken.end,
             `Duplicate object key '${key.value}'`,
           );
         } else {
-          seenKeys.add(key.value);
+          entries[key.value] = { key, value };
         }
-        entries.push({ key, value });
       }
 
       this.skipSpaces();

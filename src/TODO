@@ -14,7 +14,6 @@ CODEGEN:
 
 CODE QUALITY:
   - maybe remove some `as const`
-  - JsonObject.entries should probably be a dict
 
 EXTENSION TO THE LANGUAGE:
   - toolcalls...

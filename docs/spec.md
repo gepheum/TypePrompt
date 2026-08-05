@@ -177,7 +177,8 @@ A placeholder which will be replaced with either a formatted value or a snippet 
 To insert a value, use the `val` attribute, e.g. `<insert val="input.dateToday"/>`. The value is an expression of `input`.
 The `format` attribute defaults to `text`, and `text` can only be used if the expression type is string. It means that if the expression has a complex type, you must set `format`. Pre-defined values are:
 - `json`: pretty-printed JSON
-- `toon`: 
+- `toon`:
+- `yaml`:
 - `csv`: ...
 - `tsv`: ...
 

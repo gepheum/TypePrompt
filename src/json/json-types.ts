@@ -22,7 +22,7 @@ export type JsonObject<Mode extends JsonMode> = {
   readonly kind: "object";
   /// The left curly bracket.
   readonly firstToken: Span;
-  readonly entries: readonly JsonObjectEntry<Mode>[];
+  readonly entries: { readonly [key: string]: JsonObjectEntry<Mode> };
   readonly ellipsis?: JsonEllipsis;
 };
 

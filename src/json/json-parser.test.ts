@@ -65,24 +65,24 @@ describe("parseJson – object", () => {
   it("parses an empty object", () => {
     expect(parseJson(textNode("{}"))).toMatch({
       kind: "object",
-      entries: [],
+      entries: {},
     });
   });
 
   it("parses an object with entries", () => {
     expect(parseJson(textNode('{"a": 1, "b": true}'))).toMatch({
       kind: "object",
-      entries: [
-        { key: { value: "a" }, value: { kind: "number", value: 1 } },
-        { key: { value: "b" }, value: { kind: "boolean", value: true } },
-      ],
+      entries: {
+        a: { key: { value: "a" }, value: { kind: "number", value: 1 } },
+        b: { key: { value: "b" }, value: { kind: "boolean", value: true } },
+      },
     });
   });
 
   it("parses an object with ellipsis", () => {
     expect(parseJson(textNode('{"x": 1, ...}'))).toMatch({
       kind: "object",
-      entries: [{ key: { value: "x" } }],
+      entries: { x: { key: { value: "x" } } },
       ellipsis: { kind: "ellipsis" },
     });
   });
@@ -90,17 +90,17 @@ describe("parseJson – object", () => {
   it("parses nested objects", () => {
     expect(parseJson(textNode('{"a": {"b": "c"}}'))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        a: {
           key: { value: "a" },
           value: {
             kind: "object",
-            entries: [
-              { key: { value: "b" }, value: { kind: "string", value: "c" } },
-            ],
+            entries: {
+              b: { key: { value: "b" }, value: { kind: "string", value: "c" } },
+            },
           },
         },
-      ],
+      },
     });
   });
 });

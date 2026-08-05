@@ -96,7 +96,7 @@ function convertNode(
 
 function convertMap(node: YAMLMap, content: MappedText): StrictJsonValue {
   const [start] = node.range ?? [0, 0, 0];
-  const entries: JsonObjectEntry<"strict">[] = [];
+  const entries: { [key: string]: JsonObjectEntry<"strict"> } = {};
 
   for (const pair of node.items) {
     if (!isScalar(pair.key)) continue;
@@ -116,7 +116,7 @@ function convertMap(node: YAMLMap, content: MappedText): StrictJsonValue {
       value = { kind: "null", firstToken: span(content, keyEnd, keyEnd) };
     }
 
-    entries.push({ key, value });
+    entries[key.value] = { key, value };
   }
 
   return {

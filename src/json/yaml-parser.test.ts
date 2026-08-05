@@ -192,23 +192,23 @@ describe("parseYaml – block map", () => {
   it("parses a single-entry block map", () => {
     expect(parseYaml(textNode("x: 1"))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        x: {
           key: { kind: "string", value: "x" },
           value: { kind: "number", value: 1 },
         },
-      ],
+      },
     });
   });
 
-  it("preserves entry order", () => {
+  it("all entries are present in the dict", () => {
     expect(parseYaml(textNode("a: 1\nb: 2\nc: 3"))).toMatch({
       kind: "object",
-      entries: [
-        { key: { value: "a" } },
-        { key: { value: "b" } },
-        { key: { value: "c" } },
-      ],
+      entries: {
+        a: { key: { value: "a" } },
+        b: { key: { value: "b" } },
+        c: { key: { value: "c" } },
+      },
     });
   });
 
@@ -225,15 +225,15 @@ describe("parseYaml – block map", () => {
     const result = parseYaml(textNode(src));
     expect(result).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        mykey: {
           key: {
             kind: "string",
             value: "mykey",
             firstToken: { start: 0, end: 5 },
           },
         },
-      ],
+      },
     });
   });
 
@@ -242,15 +242,15 @@ describe("parseYaml – block map", () => {
     // "x: " is 3 chars, "42" starts at offset 3
     expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        x: {
           value: {
             kind: "number",
             value: 42,
             firstToken: { start: 3, end: 5 },
           },
         },
-      ],
+      },
     });
   });
 
@@ -259,36 +259,36 @@ describe("parseYaml – block map", () => {
     const result = parseYaml(textNode(src));
     expect(result).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        key: {
           key: { value: "key" },
           value: { kind: "null" },
         },
-      ],
+      },
     });
     // The implicit null must have a zero-width firstToken
-    const val = (result as any).entries[0].value;
+    const val = (result as any).entries["key"].value;
     expect(val.firstToken.start).toMatch(val.firstToken.end);
   });
 
   it("handles an explicit null value", () => {
     expect(parseYaml(textNode("key: null"))).toMatch({
       kind: "object",
-      entries: [{ key: { value: "key" }, value: { kind: "null" } }],
+      entries: { key: { key: { value: "key" }, value: { kind: "null" } } },
     });
   });
 
   it("handles boolean values", () => {
     expect(parseYaml(textNode("active: true"))).toMatch({
       kind: "object",
-      entries: [{ value: { kind: "boolean", value: true } }],
+      entries: { active: { value: { kind: "boolean", value: true } } },
     });
   });
 
   it("handles string values", () => {
     expect(parseYaml(textNode('name: "Alice"'))).toMatch({
       kind: "object",
-      entries: [{ value: { kind: "string", value: "Alice" } }],
+      entries: { name: { value: { kind: "string", value: "Alice" } } },
     });
   });
 
@@ -296,28 +296,28 @@ describe("parseYaml – block map", () => {
     const src = "outer:\n  inner: 1";
     expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        outer: {
           key: { value: "outer" },
           value: {
             kind: "object",
-            entries: [
-              {
+            entries: {
+              inner: {
                 key: { value: "inner" },
                 value: { kind: "number", value: 1 },
               },
-            ],
+            },
           },
         },
-      ],
+      },
     });
   });
 
   it("handles a sequence value", () => {
     expect(parseYaml(textNode("tags:\n  - a\n  - b"))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        tags: {
           key: { value: "tags" },
           value: {
             kind: "array",
@@ -327,7 +327,7 @@ describe("parseYaml – block map", () => {
             ],
           },
         },
-      ],
+      },
     });
   });
 });
@@ -340,10 +340,10 @@ describe("parseYaml – flow map", () => {
   it("parses a flow map", () => {
     expect(parseYaml(textNode("{x: 1, y: 2}"))).toMatch({
       kind: "object",
-      entries: [
-        { key: { value: "x" }, value: { kind: "number", value: 1 } },
-        { key: { value: "y" }, value: { kind: "number", value: 2 } },
-      ],
+      entries: {
+        x: { key: { value: "x" }, value: { kind: "number", value: 1 } },
+        y: { key: { value: "y" }, value: { kind: "number", value: 2 } },
+      },
     });
   });
 
@@ -355,13 +355,13 @@ describe("parseYaml – flow map", () => {
   });
 
   it("parses an empty flow map", () => {
-    expect(parseYaml(textNode("{}"))).toMatch({ kind: "object", entries: [] });
+    expect(parseYaml(textNode("{}"))).toMatch({ kind: "object", entries: {} });
   });
 
   it("key firstToken is correct inside a flow map", () => {
     // "{x: 1}" — key "x" starts at offset 1
     expect(parseYaml(textNode("{x: 1}"))).toMatch({
-      entries: [{ key: { firstToken: { start: 1, end: 2 } } }],
+      entries: { x: { key: { firstToken: { start: 1, end: 2 } } } },
     });
   });
 });
@@ -395,15 +395,15 @@ describe("parseYaml – block sequence", () => {
       elements: [
         {
           kind: "object",
-          entries: [
-            { key: { value: "x" }, value: { kind: "number", value: 1 } },
-          ],
+          entries: {
+            x: { key: { value: "x" }, value: { kind: "number", value: 1 } },
+          },
         },
         {
           kind: "object",
-          entries: [
-            { key: { value: "x" }, value: { kind: "number", value: 2 } },
-          ],
+          entries: {
+            x: { key: { value: "x" }, value: { kind: "number", value: 2 } },
+          },
         },
       ],
     });
@@ -510,16 +510,16 @@ describe("parseYaml – span preservation", () => {
     // "age" at 12..15, value "30" at 17..19
     expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        name: {
           key: { firstToken: { start: 0, end: 4 } },
           value: { firstToken: { start: 6, end: 11 } },
         },
-        {
+        age: {
           key: { firstToken: { start: 12, end: 15 } },
           value: { firstToken: { start: 17, end: 19 } },
         },
-      ],
+      },
     });
   });
 
@@ -529,25 +529,25 @@ describe("parseYaml – span preservation", () => {
     // "x" at 8..9, "1" at 11..12, "y" at 14..15, "2" at 17..18
     expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        point: {
           key: { firstToken: { start: 0, end: 5 } },
           value: {
             kind: "object",
             firstToken: { start: 7, end: 8 },
-            entries: [
-              {
+            entries: {
+              x: {
                 key: { firstToken: { start: 8, end: 9 } },
                 value: { firstToken: { start: 11, end: 12 } },
               },
-              {
+              y: {
                 key: { firstToken: { start: 14, end: 15 } },
                 value: { firstToken: { start: 17, end: 18 } },
               },
-            ],
+            },
           },
         },
-      ],
+      },
     });
   });
 
@@ -556,8 +556,8 @@ describe("parseYaml – span preservation", () => {
     // "nums" at 0..4, "[" at 6, "10" at 7..9, "20" at 11..13
     expect(parseYaml(textNode(src))).toMatch({
       kind: "object",
-      entries: [
-        {
+      entries: {
+        nums: {
           value: {
             kind: "array",
             firstToken: { start: 6, end: 7 },
@@ -567,7 +567,7 @@ describe("parseYaml – span preservation", () => {
             ],
           },
         },
-      ],
+      },
     });
   });
 });
