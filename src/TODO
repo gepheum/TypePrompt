@@ -1,4 +1,5 @@
 TOOLS:
+  - validate the examples
   - add to generated code
   - https://share.gemini.google/0FSezpOXrkQI
   - support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?

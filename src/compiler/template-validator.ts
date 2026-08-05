@@ -277,8 +277,11 @@ function validateTemplateContent(
       examplesInterface,
     );
     errors.push(...exampleErrors);
-    if (exampleErrors.length <= 0 && options.isVariantSpecialization) {
-      errors.push(...verifyVariantFieldNotSet(content.examples));
+    if (exampleErrors.length <= 0) {
+      if (options.isVariantSpecialization) {
+        errors.push(...verifyVariantFieldNotSet(content.examples));
+      }
+      errors.push(validateToolCallExamples(content.examples, options));
     }
   }
 
@@ -409,10 +412,7 @@ function verifyVariantFieldNotSet(
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   for (const example of (examples as StrictJsonArray).elements) {
-    if (example.kind !== "object") {
-      throw new Error();
-    }
-    for (const entry of example.entries) {
+    for (const entry of (example as StrictJsonObject).entries) {
       if (entry.key.value === "variant") {
         errors.push({
           span: entry.key.firstToken,
@@ -423,6 +423,13 @@ function verifyVariantFieldNotSet(
     }
   }
   return errors;
+}
+
+function validateToolCallExamples(
+  examples: StrictJsonValue,
+  namespaceTools: { readonly [name: string]: ToolValidationResult },
+): readonly InternalError[] {
+  const errors: InternalError[] = [];
 }
 
 function validateSnippet(
