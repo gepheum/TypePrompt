@@ -491,9 +491,9 @@ function validateTools(
 
   const tools: { [name: string]: TemplateTool } = {};
   for (const e of (toolsValue as StrictJsonArray).elements) {
-    const nameValue = (e as StrictJsonObject).entries.find(
-      (e) => e.key.value === "tool",
-    )!.value as JsonString;
+    const { entries } = e as StrictJsonObject;
+    const nameValue = entries.find((e) => e.key.value === "tool")!
+      .value as JsonString;
     const name = nameValue.value;
     const tool = { tool: namespaceTools[name]! };
     if ((tools[name] ??= tool) != tool) {
