@@ -12,7 +12,7 @@ import {
   Type,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import { resolveType } from "../schema/type-resolver.js";
+import { resolveSyntheticType, resolveType } from "../schema/type-resolver.js";
 import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { validateBody } from "./body-validator.js";
 import {
@@ -286,19 +286,16 @@ function makeExamplesType(
 
   const inputType = typeDeclarations["Input"]!.valueType;
 
-  let outputType: Type | (SyntheticInterface & HasName) =
+  let outputType: Type | SyntheticInterface =
     typeDeclarations["Output"]!.valueType;
   if (options.isVariantSpecialization) {
-    const resolvedOutputType = resolveType(outputType!, templateSchema);
+    const resolvedOutputType = resolveSyntheticType(outputType!, templateSchema);
     if (
       resolvedOutputType.kind === "interface" &&
       resolvedOutputType.fields["variant"]
     ) {
       outputType = {
         kind: "interface",
-        name: {
-          text: "Output",
-        },
         fields: Object.fromEntries(
           Object.entries(resolvedOutputType.fields).map(([name, field]) =>
             name === "variant"
