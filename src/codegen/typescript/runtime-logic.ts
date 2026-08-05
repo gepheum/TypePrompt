@@ -127,6 +127,12 @@ export type Tools<Id extends TemplateId> = {
     ? Tool<ToolsHelper<Id>[Name]>
     : never;
 };
+
+export type ToolImpls<Id extends TemplateId> = {
+  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
+    ? (input: Input<ToolsHelper<Id>[Name]>) => Promise<Output<ToolsHelper<Id>[Name]>>
+    : never;
+};
 // </static:types>
 
 // <static:logic>
