@@ -9,7 +9,6 @@ BUG:
 CODEGEN:
   - reorder sections
   - document everything
-  - Refactor the codegen to use functions
   - do not output namespace if namespace is empty
 
 CODE QUALITY:

@@ -283,16 +283,7 @@ export function jsonMatchesType(
             if (members.values.has(value.value)) {
               return MATCH;
             } else {
-              const message =
-                members.values.size <= 0
-                  ? "Expected: never"
-                  : members.values.size <= 1
-                    ? `Expected: '${[...members.values][0]}'`
-                    : "Expected: one of ".concat(
-                        [...members.values]
-                          .map((v: string) => `"${v}"`)
-                          .join(", "),
-                      );
+              const message = makeExpectedOneOfMessage([...members.values]);
               return mismatch(mode, value.firstToken, message, 0.5);
             }
           } else {
@@ -321,16 +312,9 @@ export function jsonMatchesType(
                 } else {
                   // No matching member for the kind value in the union.
                   const { discriminants } = members;
-                  const message =
-                    discriminants.length <= 0
-                      ? "Expected: never"
-                      : discriminants.length <= 1
-                        ? `Expected: '${discriminants[0]}'`
-                        : "Expected: one of ".concat(
-                            discriminants
-                              .map((v) => `"${v.value satisfies string}"`)
-                              .join(", "),
-                          );
+                  const message = makeExpectedOneOfMessage(
+                    discriminants.map((d) => d.value),
+                  );
 
                   return mismatch(
                     mode,
@@ -371,6 +355,14 @@ export function jsonMatchesType(
 
 const MATCH = { kind: "match" } as const;
 const FAST_MISMATCH = { kind: "mismatch" } as const;
+
+function makeExpectedOneOfMessage(values: readonly string[]): string {
+  return values.length <= 0
+    ? "Expected: never"
+    : values.length <= 1
+      ? `Expected: '${values[0]}'`
+      : "Expected: one of ".concat(values.map((v) => `"${v}"`).join(", "));
+}
 
 function mismatch(
   mode: "fast" | "thorough",
