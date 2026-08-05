@@ -6,28 +6,54 @@ import type {
   Template,
   TemplateContent,
   TemplateContents,
+  Tool,
+  ValidatedTemplate,
 } from "../compiler/compiler-types.js";
 import type { Expression } from "../expression/expression-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {
+  const tools: { [id: string]: Spec.Tool } = {};
+  for (const [id, result] of Object.entries(input.tools)) {
+    if (result.kind !== "success") continue;
+    tools[id] = makeTool(id, result.tool);
+  }
   const templates: { [id: string]: Spec.Template } = {};
   for (const [id, result] of Object.entries(input.templates)) {
     if (result.kind !== "success") continue;
-    templates[id] = makeTemplate(result.template);
+    templates[id] = makeTemplate(result);
   }
   // TODO: set signature
-  return { signature: "", templates };
+  return { signature: "", tools, templates };
 }
 
-function makeTemplate(input: Template): Spec.Template {
+function makeTool(id: string, input: Tool): Spec.Tool {
   return {
+    id,
     name: input.name.text,
-    namespace: input.namespace?.text ?? "Default",
-    outputFormat: input.outputFormat?.text ?? "text",
-    contents: makeContents(input.contents),
-    snippets: makeSnippets(input.snippets),
+    description: input.description
+      .filter((p) => p.kind === "text")
+      .map((p) => p.text)
+      .join(""),
+  };
+}
+
+function makeTemplate(result: ValidatedTemplate): Spec.Template {
+  const { template } = result;
+  return {
+    name: template.name.text,
+    namespace: template.namespace?.text ?? "Default",
+    outputFormat: template.outputFormat?.text ?? "text",
+    tools: Object.entries(result.tools).map(([name, { tool }]) => ({
+      id:
+        tool.kind === "success"
+          ? `${tool.tool.namespace?.text ?? "Default"}:${tool.tool.name.text}`
+          : name,
+      name,
+    })),
+    contents: makeContents(template.contents),
+    snippets: makeSnippets(template.snippets),
   };
 }
 

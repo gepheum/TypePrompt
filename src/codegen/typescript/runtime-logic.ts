@@ -42,6 +42,7 @@ export type PromptMaker = {
 const TEMPLATES_DATA: Spec.Templates = {
   signature: "",
   templates: {},
+  tools: {},
 } as const;
 
 const templatesSchema: z.ZodType<Spec.Templates> = z.any();

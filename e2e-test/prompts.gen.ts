@@ -360,11 +360,24 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
 
 const TEMPLATES_DATA: Spec.Templates = {
   "signature": "",
+  "tools": {
+    "Default:getX": {
+      "id": "Default:getX",
+      "name": "getX",
+      "description": "Hello!\n\n and "
+    }
+  },
   "templates": {
     "Default:MyTemplate": {
       "name": "MyTemplate",
       "namespace": "Default",
       "outputFormat": "text",
+      "tools": [
+        {
+          "id": "Default:getX",
+          "name": "getX"
+        }
+      ],
       "contents": {
         "kind": "noVariants",
         "content": {
