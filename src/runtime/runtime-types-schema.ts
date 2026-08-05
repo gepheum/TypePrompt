@@ -37,10 +37,23 @@ type TemplateContent = {
   meta?: any;
   system?: Body;
   user?: Body;
-  examples?: ({
-    input: any;
-    output: any;
-  })[];
+  examples?: FewShotExample[];
+};
+
+type FewShotExample = {
+  input: any;
+  output: any;
+  intermediateSteps: {
+    toolCalls: ToolCallExample[];
+  }[];
+};
+
+type ToolCallExample = {
+  toolId: string;
+  toolName: string;
+  description: string;
+  input: any;
+  output: any;
 };
 
 type Body = BodyPiece[];
