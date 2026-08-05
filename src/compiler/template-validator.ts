@@ -314,27 +314,68 @@ function makeExamplesType(
     }
   }
 
-  const exampleType: SyntheticInterface & HasName = {
+  const exampleType: SyntheticInterface = {
     kind: "interface",
-    name: {
-      text: "Example",
-    },
     fields: {
       input: {
         name: {
           text: "input",
         },
-        optional: false,
         type: inputType,
-        doc: "",
       },
       output: {
         name: {
           text: "output",
         },
-        optional: false,
         type: outputType,
-        doc: "",
+      },
+      "intermediateSteps": {
+        name: {
+          text: "intermediateSteps",
+        },
+        optional: true,
+        type: {
+          kind: "interface",
+          fields: {
+            "toolCalls": {
+              name: {
+                text: "toolCalls",
+              },
+              type: {
+                kind: "array",
+                elementType: {
+                  kind: "interface",
+                  fields: {
+                    "tool": {
+                      name: {
+                        text: "tool",
+                      },
+                      type: {kind: "primitive"},
+                    },
+                    "callId": {
+                      name: {
+                        text: "callId",
+                      },
+                      type: {kind: "primitive", primitive: { text: "string" }},
+                    },
+                    "input": {
+                      name: {
+                        text: "input",
+                      },
+                      type: {kind: "any"},
+                    },
+                    "output": {
+                      name: {
+                        text: "output",
+                      },
+                      type: {kind: "any"},
+                    },
+                  },
+                },
+              },
+            }
+          },
+        },
       },
     },
   };
@@ -528,7 +569,6 @@ function makeToolsType(namespaceTools: {
           name: {
             text: "tool",
           },
-          optional: false,
           type: {
             kind: "synthetic-union",
             members: {
@@ -536,7 +576,6 @@ function makeToolsType(namespaceTools: {
               values: toolNames,
             },
           },
-          doc: "",
         },
       },
     },

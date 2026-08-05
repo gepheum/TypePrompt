@@ -360,6 +360,7 @@ function mismatch(
   sourceSpan: Span,
   message: string,
   matchScore = 0,
+  suggestions?: readonly string[],
 ): JsonTypeMatch {
   if (mode === "fast") {
     return FAST_MISMATCH;
@@ -370,6 +371,7 @@ function mismatch(
       reason: {
         span: { start: sourceSpan.start, end: sourceSpan.end },
         message,
+        suggestions,
       },
       matchScore,
     },

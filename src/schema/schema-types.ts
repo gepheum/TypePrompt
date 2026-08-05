@@ -137,9 +137,8 @@ export type SyntheticSchemaField = {
   readonly name: {
     readonly text: string;
   };
-  readonly optional: boolean;
+  readonly optional?: true;
   readonly type: Type | SyntheticType;
-  readonly doc: string;
 };
 
 export type SyntheticUnion = {
@@ -214,6 +213,7 @@ export type UnionMembers =
 export type SyntheticUnionMembers =
   | {
       readonly kind: "strings";
+      /** Can be empty. */
       readonly values: ReadonlySet<string>;
     }
   | {
