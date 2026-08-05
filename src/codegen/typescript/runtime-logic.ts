@@ -51,6 +51,10 @@ const zodSchemas = {
     input: z.number(),
     output: z.number(),
   },
+  "Ns:otherTool": {
+    input: z.boolean(),
+    output: z.number(),
+  },
 } as const;
 
 export type PromptMaker = {
@@ -210,6 +214,18 @@ function resolveTemplate<Id extends TemplateId>(
       : { kind: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
+  const tools = Object.fromEntries(template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
+    const toolData = templates.tools[id]!;
+    const toolSchemas = zodSchemas[id as ToolId]!;
+    const tool: Tool<ToolId> = {
+      id: id as ToolId,
+      name: name as ToolName<ToolId>,
+      description: toolData.description,
+      inputSchema: toolSchemas.input,
+      outputSchema: toolSchemas.output,
+    };
+    return [name, tool];
+  })) as Tools<Id>;
   return {
     meta,
     systemMessage: systemMessage,
@@ -217,6 +233,7 @@ function resolveTemplate<Id extends TemplateId>(
     examples,
     outputFormat,
     parseResponse,
+    tools,
     templateId,
     templateInput: input,
   };
