@@ -8,7 +8,7 @@ import type {
   TemplateContents,
 } from "../compiler/compiler-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { JsonValue, StrictJsonValue } from "../json/json-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {

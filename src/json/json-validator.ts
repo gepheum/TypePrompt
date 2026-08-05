@@ -7,7 +7,11 @@ import type {
 } from "../schema/schema-types.js";
 import { resolveSyntheticType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
-import type { JsonTypeMatch, JsonValue, LooseJsonValue, StrictJsonValue } from "./json-types.js";
+import type {
+  JsonTypeMatch,
+  LooseJsonValue,
+  StrictJsonValue,
+} from "./json-types.js";
 
 type SchemaView = {
   readonly typeDeclarations: Schema["typeDeclarations"];

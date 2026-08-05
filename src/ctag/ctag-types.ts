@@ -1,4 +1,4 @@
-import type { JsonValue, LooseJsonValue } from "../json/json-types.js";
+import type { LooseJsonValue } from "../json/json-types.js";
 import type { TextSpan } from "../util/shared-types.js";
 
 export type CTag =

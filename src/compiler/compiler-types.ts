@@ -1,6 +1,6 @@
 import { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { JsonValue, StrictJsonValue } from "../json/json-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import { LineFinderData } from "../util/line-finder.js";
 import type {
@@ -156,26 +156,12 @@ export type NamespaceResult = {
   /** Name of the namespace. */
   readonly name: string;
   readonly schema: SchemaOrError;
+  readonly tools: { readonly [name: string]: ToolValidationResult };
   readonly templates: readonly ValidatedTemplate[];
-  readonly tools: readonly ValidatedTool[];
 };
 
 export type SchemaOrError =
   Schema | InternalErrors | { readonly kind: "other-error" };
-
-export type ValidatedTemplate = {
-  readonly kind: "success";
-  readonly template: Template;
-  readonly schema: Schema;
-  readonly tools: readonly TemplateTool[];
-};
-
-/** Tool called from a template. */
-export type TemplateTool = {
-  readonly tool: string;
-};
-
-export type TemplateValidationResult = ValidatedTemplate | InternalErrors;
 
 export type ValidatedTool = {
   readonly kind: "success";
@@ -184,3 +170,17 @@ export type ValidatedTool = {
 };
 
 export type ToolValidationResult = ValidatedTool | InternalErrors;
+
+export type ValidatedTemplate = {
+  readonly kind: "success";
+  readonly template: Template;
+  readonly schema: Schema;
+  readonly tools: { readonly [name: string]: TemplateTool };
+};
+
+/** Tool called from a template. */
+export type TemplateTool = {
+  readonly tool: ToolValidationResult;
+};
+
+export type TemplateValidationResult = ValidatedTemplate | InternalErrors;

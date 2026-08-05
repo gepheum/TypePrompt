@@ -128,8 +128,8 @@ type Sourced<T> = {
 };
 
 type NamespaceResultImpl = NamespaceResult & {
+  readonly tools: { [name: string]: ToolValidationResult };
   readonly templates: TemplateValidationResult[];
-  readonly tools: ToolValidationResult[];
 };
 
 class CompilationResultImpl implements CompilationResult {
@@ -161,8 +161,8 @@ class CompilationResultImpl implements CompilationResult {
 
     this.resolveMeta(metas);
     this.resolveNamespaces(namespaces);
-    const namespaceToToolNames = this.resolveTools(tools, cache);
-    this.resolveTemplates(templates, namespaceToToolNames, cache);
+    this.resolveTools(tools, cache);
+    this.resolveTemplates(templates, cache);
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
@@ -196,16 +196,16 @@ class CompilationResultImpl implements CompilationResult {
         this.namespaces[name] = {
           name: name,
           schema: namespace.element.schema,
+          tools: {},
           templates: [],
-          tools: [],
         };
       } else {
         // Multiple namespaces with the same name found. This is an error.
         this.namespaces[name] = {
           name: name,
           schema: { kind: "other-error" },
+          tools: {},
           templates: [],
-          tools: [],
         };
         // Errors will be pused to the finalErrors map below.
       }
@@ -214,8 +214,8 @@ class CompilationResultImpl implements CompilationResult {
     this.namespaces["Default"] ??= {
       name: "Default",
       schema: EMPTY_SCHEMA,
+      tools: {},
       templates: [],
-      tools: [],
     };
 
     const nameConflicts = checkNameConflicts(
@@ -242,13 +242,6 @@ class CompilationResultImpl implements CompilationResult {
       (idToTools[id] ??= []).push(tool);
     }
 
-    const namespaceToToolNames = Object.fromEntries(
-      Object.entries(namespaceToTools).map(([namespace, tools]) => [
-        namespace,
-        new Set(tools.map((t) => t.element.name.text)),
-      ]),
-    );
-
     for (const tool of Object.values(namespaceToTools)) {
       const nameConflicts = checkNameConflicts(
         Object.values(tool).map((t) => ({
@@ -269,12 +262,13 @@ class CompilationResultImpl implements CompilationResult {
         continue;
       }
       const tool = tools[0]!;
+      const { name } = tool.element;
 
       const namespaceName = tool.element.namespace?.text ?? "Default";
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[tool.sourceFile.path]!.push({
-          span: tool.element.name,
+          span: name,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaces),
         });
@@ -295,10 +289,9 @@ class CompilationResultImpl implements CompilationResult {
       }
 
       this.tools[id] = validationResult;
+      namespace.tools[name.text] = validationResult;
 
-      if (validationResult.kind === "success") {
-        namespace.tools.push(validationResult);
-      } else if (validationResult.kind === "error") {
+      if (validationResult.kind === "error") {
         this.finalErrors[tool.sourceFile.path]!.push(
           ...validationResult.errors,
         );
@@ -356,23 +349,30 @@ class CompilationResultImpl implements CompilationResult {
         continue;
       }
 
-      let validationResult: TemplateValidationResult;
-      if (
-        template.cached &&
-        this.metaSchema === cache?.metaSchema &&
-        namespace === cache?.namespaces[namespaceName] &&
-        TODO
-        // ^ TODO: verify that each tool is unchanged
-      ) {
-        // Reuse the cached schema validation result.
-        validationResult = cache!.templates[id]!;
-      } else {
-        validationResult = validateTemplate({
+      const tryGetFromCache = (): TemplateValidationResult | null => {
+        if (!template.cached) return null;
+        if (this.metaSchema !== cache?.metaSchema) return null;
+        if (namespace !== cache?.namespaces[namespaceName]) return null;
+        const cached = cache!.templates[id]!;
+        if (
+          cached.kind === "success" &&
+          !Object.entries(cached.tools).every(
+            ([name, templateTool]) =>
+              templateTool.tool === namespace.tools[name],
+          )
+        ) {
+          return null;
+        }
+        return cached;
+      };
+      const validationResult =
+        tryGetFromCache() ??
+        validateTemplate({
           template: template.element,
           metaSchema: this.metaSchema,
           namespaceSchema: namespace.schema,
+          namespaceTools: namespace.tools,
         });
-      }
 
       this.templates[id] = validationResult;
 

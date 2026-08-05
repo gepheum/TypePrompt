@@ -6,7 +6,11 @@ import type {
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
-import type { JsonObjectEntry, JsonString, JsonValue, StrictJsonValue } from "./json-types.js";
+import type {
+  JsonObjectEntry,
+  JsonString,
+  StrictJsonValue,
+} from "./json-types.js";
 
 export function parseYaml(
   content: MappedText,

@@ -142,7 +142,8 @@ export type HasName = {
   };
 };
 
-export type SyntheticType = SyntheticArray | SyntheticInterface | SyntheticUnion;
+export type SyntheticType =
+  SyntheticArray | SyntheticInterface | SyntheticUnion;
 
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {

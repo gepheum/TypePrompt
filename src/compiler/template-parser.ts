@@ -1,4 +1,4 @@
-import { JsonValue, StrictJsonValue } from "../json/json-types.js";
+import { StrictJsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";

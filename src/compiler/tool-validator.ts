@@ -1,7 +1,7 @@
 import { Schema, SchemaValidationContext } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import { Tool, ToolValidationResult } from "./compiler-types.js";
 import { validateToolDescription } from "./body-validator.js";
+import { Tool, ToolValidationResult } from "./compiler-types.js";
 
 export function validateTool(args: {
   readonly tool: Tool;

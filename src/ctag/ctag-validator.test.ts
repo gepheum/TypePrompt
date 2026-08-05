@@ -7,7 +7,6 @@ import type {
   JsonNumber,
   JsonObject,
   JsonString,
-  JsonValue,
   LooseJsonValue,
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";

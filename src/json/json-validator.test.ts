@@ -12,7 +12,6 @@ import type {
   JsonNumber,
   JsonObject,
   JsonString,
-  JsonValue,
   StrictJsonValue,
 } from "./json-types.js";
 import { validateJson } from "./json-validator.js";
@@ -67,9 +66,7 @@ function bool(value: boolean): JsonBoolean {
   return { kind: "boolean", firstToken: span(String(value)), value };
 }
 
-function objStrict(
-  entries: [string, StrictJsonValue][],
-): JsonObject<"strict"> {
+function objStrict(entries: [string, StrictJsonValue][]): JsonObject<"strict"> {
   return {
     kind: "object",
     firstToken: span("{"),

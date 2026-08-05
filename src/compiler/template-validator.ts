@@ -1,7 +1,7 @@
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
-import { JsonValue, StrictJsonValue } from "../json/json-types.js";
+import { StrictJsonValue } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import {
   HasName,
@@ -28,7 +28,7 @@ export function validateTemplate(args: {
   readonly template: Template;
   readonly metaSchema: Schema;
   readonly namespaceSchema: Schema;
-  readonly namespaceToolNames: ReadonlySet<string>;
+  readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
 }): TemplateValidationResult {
   validateTools;
   const { template, metaSchema, namespaceSchema } = args;
@@ -82,7 +82,7 @@ export function validateTemplate(args: {
     errors.push(...validateSnippet(snippet, templateSchema));
   }
 
-  const tools = validateTools(template.tools, args.namespaceToolNames);
+  const tools = validateTools(template.tools, args.namespaceTools);
   if (tools.kind === "error") {
     errors.push(...tools.errors);
   }
@@ -98,7 +98,7 @@ export function validateTemplate(args: {
     kind: "success",
     template,
     schema: templateSchema,
-    tools: tools.kind === "success" ? tools.tools : [],
+    tools: tools.kind === "success" ? tools.tools : {},
   };
 }
 
@@ -458,20 +458,20 @@ function validateSnippet(
 
 function validateTools(
   tools: StrictJsonValue | null,
-  namespaceToolNames: ReadonlySet<string>,
+  namespaceTools: { readonly [name: string]: ToolValidationResult },
 ):
   | InternalErrors
   | {
       kind: "success";
-      tools: readonly TemplateTool[];
+      tools: { readonly [name: string]: TemplateTool };
     } {
   if (tools === null) {
     return {
       kind: "success",
-      tools: [],
+      tools: {},
     } as const;
   }
-  const toolsType = makeToolsType(namespaceToolNames);
+  const toolsType = makeToolsType(namespaceTools);
   const validationErrors = validateJson(
     tools,
     {
@@ -479,7 +479,8 @@ function validateTools(
       sharedDeclarations: {},
       unionToMembers: new Map(),
     },
-    toolsType);
+    toolsType,
+  );
   if (validationErrors.length > 0) {
     return {
       kind: "error",
@@ -487,19 +488,26 @@ function validateTools(
     };
   }
   if (tools.kind !== "array") throw new Error();
-  return {
-    kind: "success",
-    tools: tools.elements.map((e): TemplateTool => {
+  const toolMatches = Object.fromEntries(
+    tools.elements.map((e): [string, TemplateTool] => {
       if (e.kind !== "object") throw new Error();
       const toolEntry = e.entries.find((e) => e.key.value === "tool")!;
       if (toolEntry?.value.kind !== "string") throw new Error();
-      const tool = toolEntry.value.value;
-      return { tool };
+      const toolName = toolEntry.value.value;
+      const tool = namespaceTools[toolName]!;
+      return [toolName, { tool }];
     }),
+  );
+  return {
+    kind: "success",
+    tools: toolMatches,
   };
 }
 
-function makeToolsType(namespaceToolNames: ReadonlySet<string>): SyntheticArray & HasName {
+function makeToolsType(namespaceTools: {
+  readonly [name: string]: ToolValidationResult;
+}): SyntheticArray & HasName {
+  const toolNames = new Set(Object.keys(namespaceTools));
   return {
     kind: "array",
     name: {
@@ -517,7 +525,7 @@ function makeToolsType(namespaceToolNames: ReadonlySet<string>): SyntheticArray 
             kind: "synthetic-union",
             members: {
               kind: "strings",
-              values: namespaceToolNames,
+              values: toolNames,
             },
           },
           doc: "",
