@@ -119,12 +119,14 @@ namespace Spec {
   export type Templates = {
     readonly signature: string;
     readonly templates: { [id: string]: Template };
+    readonly tools: { [id: string]: Tool };
   };
 
   export type Template = {
     readonly name: string;
     readonly namespace: string;
     readonly outputFormat: OutputFormat;
+    readonly tools: readonly TemplateTool[];
     readonly contents: TemplateContents;
     readonly snippets: { [name: string]: Snippet };
   };
@@ -133,6 +135,11 @@ namespace Spec {
     | "json"
     | "text"
   );
+
+  export type TemplateTool = {
+    readonly id: string;
+    readonly name: string;
+  };
 
   export type TemplateContents = (
     | {
@@ -220,6 +227,12 @@ namespace Spec {
       readonly branches: { [c: string]: Body };
     }
   );
+
+  export type Tool = {
+    readonly id: string;
+    readonly name: string;
+    readonly description: string;
+  };
 }
 
 const templatesSchema = ((): z.ZodType<Spec.Templates> => {
@@ -227,6 +240,10 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     z.literal("json"),
     z.literal("text"),
   ]);
+  const templateToolSchema: z.ZodType<Spec.TemplateTool> = z.object({
+    id: z.string(),
+    name: z.string(),
+  });
   const expressionSchema: z.ZodType<Spec.Expression> = z.union([
     z.object({
       kind: z.literal("input"),
@@ -315,17 +332,27 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     name: z.string(),
     namespace: z.string(),
     outputFormat: outputFormatSchema,
+    tools: templateToolSchema.array(),
     contents: templateContentsSchema,
     snippets: z.record(
       z.string(),
       snippetSchema,
     ),
   });
+  const toolSchema: z.ZodType<Spec.Tool> = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+  });
   const templatesSchema: z.ZodType<Spec.Templates> = z.object({
     signature: z.string(),
     templates: z.record(
       z.string(),
       templateSchema,
+    ),
+    tools: z.record(
+      z.string(),
+      toolSchema,
     ),
   });
   return templatesSchema;

@@ -6,17 +6,24 @@ const SCHEMA = `
 type Templates = {
   signature: string;
   templates: { [id: string]: Template };
+  tools: { [id: string]: Tool };
 };
 
 type Template = {
   name: string;
   namespace: string;
   outputFormat: OutputFormat;
+  tools: TemplateTool[];
   contents: TemplateContents;
   snippets: { [name: string]: Snippet };
 };
 
 type OutputFormat = "json" | "text";
+
+type TemplateTool = {
+  id: string;
+  name: string;
+};
 
 type TemplateContents =
   | { kind: "noVariants"; content: TemplateContent }
@@ -83,6 +90,12 @@ type Snippet =
       expression: Expression;
       branches: { [c: string]: Body };
     };
+
+type Tool = {
+  id: string;
+  name: string;
+  description: string;
+};
 `;
 
 export const runtimeTypesSchema = ((): Schema => {

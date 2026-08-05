@@ -1,4 +1,6 @@
 TOOLS:
+  - add to generated code
+  - error on duplicate tool
   - https://share.gemini.google/0FSezpOXrkQI
 
 CODEGEN:
