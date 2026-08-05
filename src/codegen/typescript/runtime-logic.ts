@@ -91,15 +91,15 @@ export type Prompt<Id extends TemplateId> = {
 
 export type FewShotExample = {
   readonly userMessage: string;
-  readonly toolCallTurns: readonly ToolCallTurn[];
+  readonly intermediateSteps: readonly IntermediateStepExample[];
   readonly response: string;
 };
 
-export type ToolCallTurn = {
-  readonly toolCalls: readonly ToolCall[];
+export type IntermediateStepExample = {
+  readonly toolCalls: readonly ToolCallExample[];
 };
 
-export type ToolCall = {
+export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
   readonly rawInput: unknown;
@@ -345,7 +345,7 @@ function resolveExamples(
 ): readonly FewShotExample[] {
   return inputs.map(({ input, output }) => ({
     userMessage: resolveBody(body, input, template.snippets),
-    toolCallTurns: [],
+    intermediateSteps: [],
     response: format(output, template.outputFormat),
   }));
 }
