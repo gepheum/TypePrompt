@@ -82,9 +82,9 @@ export type Prompt<Id extends TemplateId> = {
   readonly systemMessage: string;
   readonly userMessage: string;
   readonly examples: readonly FewShotExample[];
+  readonly tools: Tools<Id>;
   readonly outputFormat: OutputFormat<Id>;
   readonly parseResponse: (content: string) => Output<Id>;
-  readonly tools: Tools<Id>;
   readonly templateId: TemplateId;
   readonly templateInput: Input<Id>;
 };
@@ -208,12 +208,6 @@ function resolveTemplate<Id extends TemplateId>(
       template,
     );
   }
-  const outputFormat = (
-    template.outputFormat === "json"
-      ? { kind: "json", schema: outputSchema }
-      : { kind: "text" }
-  ) as OutputFormat<Id>;
-  const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
   const tools = Object.fromEntries(template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
     const toolData = templates.tools[id]!;
     const toolSchemas = zodSchemas[id as ToolId]!;
@@ -226,14 +220,20 @@ function resolveTemplate<Id extends TemplateId>(
     };
     return [name, tool];
   })) as Tools<Id>;
+  const outputFormat = (
+    template.outputFormat === "json"
+      ? { kind: "json", schema: outputSchema }
+      : { kind: "text" }
+  ) as OutputFormat<Id>;
+  const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
   return {
     meta,
     systemMessage: systemMessage,
     userMessage: userMessage,
     examples,
+    tools,
     outputFormat,
     parseResponse,
-    tools,
     templateId,
     templateInput: input,
   };
