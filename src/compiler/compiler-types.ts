@@ -167,9 +167,12 @@ export type ValidatedTemplate = {
   readonly kind: "success";
   readonly template: Template;
   readonly schema: Schema;
-  readonly tools: ReadonlyArray<{
-    readonly tool: string;
-  }>;
+  readonly tools: readonly TemplateTool[];
+};
+
+/** Tool called from a template. */
+export type TemplateTool = {
+  readonly tool: string;
 };
 
 export type TemplateValidationResult = ValidatedTemplate | InternalErrors;

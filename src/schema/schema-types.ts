@@ -114,17 +114,11 @@ export type PrimitiveType = {
 
 export type SyntheticArray = {
   readonly kind: "array";
-  readonly name: {
-    readonly text: string;
-  };
   readonly elementType: Type | SyntheticType;
 };
 
 export type SyntheticInterface = {
   readonly kind: "interface";
-  readonly name: {
-    readonly text: string;
-  };
   readonly fields: { readonly [name: string]: SyntheticSchemaField };
 };
 
@@ -139,14 +133,16 @@ export type SyntheticSchemaField = {
 
 export type SyntheticUnion = {
   readonly kind: "synthetic-union";
-  readonly name: {
-    readonly text: string;
-  };
   readonly members: SyntheticUnionMembers;
 };
 
-export type SyntheticType =
-  SyntheticArray | SyntheticInterface | SyntheticUnion;
+export type HasName = {
+  readonly name: {
+    readonly text: string;
+  };
+};
+
+export type SyntheticType = SyntheticArray | SyntheticInterface | SyntheticUnion;
 
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {

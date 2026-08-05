@@ -1,4 +1,5 @@
 import type {
+  HasName,
   ResolvedType,
   Schema,
   SyntheticType,
@@ -8,10 +9,16 @@ import { resolveSyntheticType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
 import type { JsonTypeMatch, JsonValue } from "./json-types.js";
 
+type SchemaView = {
+  readonly typeDeclarations: Schema["typeDeclarations"];
+  readonly sharedDeclarations: Schema["sharedDeclarations"];
+  readonly unionToMembers: Schema["unionToMembers"];
+};
+
 export function validateJson(
   json: JsonValue<"strict">,
-  schema: Schema,
-  type: TypeDeclaration | SyntheticType,
+  schema: SchemaView,
+  type: TypeDeclaration | (SyntheticType & HasName),
 ): InternalError[] {
   const result = jsonMatchesType(
     json as JsonValue<"loose">,
@@ -42,7 +49,7 @@ export function jsonMatchesType(
   value: JsonValue<"loose">,
   type: ResolvedType | SyntheticType,
   mode: "fast" | "thorough",
-  schema: Schema,
+  schema: SchemaView,
 ): JsonTypeMatch {
   if (value.kind === "ellipsis") {
     return MATCH;

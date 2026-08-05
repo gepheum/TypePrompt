@@ -4,6 +4,7 @@ import { resolveSwitchExpression } from "../expression/switch-expression-resolve
 import { JsonValue } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import {
+  HasName,
   Schema,
   SchemaValidationContext,
   SyntheticArray,
@@ -18,6 +19,7 @@ import {
   Snippet,
   Template,
   TemplateContent,
+  TemplateTool,
   TemplateValidationResult,
   ToolValidationResult,
 } from "./compiler-types.js";
@@ -26,7 +28,7 @@ export function validateTemplate(args: {
   readonly template: Template;
   readonly metaSchema: Schema;
   readonly namespaceSchema: Schema;
-  readonly availableTools: { readonly [id: string]: ToolValidationResult };
+  readonly namespaceToolNames: ReadonlySet<string>;
 }): TemplateValidationResult {
   validateTools;
   const { template, metaSchema, namespaceSchema } = args;
@@ -80,7 +82,7 @@ export function validateTemplate(args: {
     errors.push(...validateSnippet(snippet, templateSchema));
   }
 
-  const tools = validateTools(template.tools, tools);
+  const tools = validateTools(template.tools, args.namespaceToolNames);
   if (tools.kind === "error") {
     errors.push(...tools.errors);
   }
@@ -279,12 +281,12 @@ function makeExamplesType(
   options: {
     readonly isVariantSpecialization: boolean;
   },
-): SyntheticArray {
+): SyntheticArray & HasName {
   const { typeDeclarations } = templateSchema;
 
   const inputType = typeDeclarations["Input"]!.valueType;
 
-  let outputType: Type | SyntheticInterface =
+  let outputType: Type | (SyntheticInterface & HasName) =
     typeDeclarations["Output"]!.valueType;
   if (options.isVariantSpecialization) {
     const resolvedOutputType = resolveType(outputType!, templateSchema);
@@ -293,7 +295,7 @@ function makeExamplesType(
       resolvedOutputType.fields["variant"]
     ) {
       outputType = {
-        kind: "synthetic-interface",
+        kind: "interface",
         name: {
           text: "Output",
         },
@@ -308,8 +310,8 @@ function makeExamplesType(
     }
   }
 
-  const exampleType: SyntheticInterface = {
-    kind: "synthetic-interface",
+  const exampleType: SyntheticInterface & HasName = {
+    kind: "interface",
     name: {
       text: "Example",
     },
@@ -334,7 +336,10 @@ function makeExamplesType(
   };
 
   return {
-    kind: "synthetic-array",
+    kind: "array",
+    name: {
+      text: "Example[]",
+    },
     elementType: exampleType,
   };
 }
@@ -453,12 +458,12 @@ function validateSnippet(
 
 function validateTools(
   tools: JsonValue<"strict"> | null,
-  availableTools: { readonly [id: string]: ToolValidationResult },
+  namespaceToolNames: ReadonlySet<string>,
 ):
   | InternalErrors
   | {
       kind: "success";
-      tools: ReadonlyArray<{ readonly tool: string }>;
+      tools: readonly TemplateTool[];
     } {
   if (tools === null) {
     return {
@@ -466,4 +471,58 @@ function validateTools(
       tools: [],
     } as const;
   }
+  const toolsType = makeToolsType(namespaceToolNames);
+  const validationErrors = validateJson(
+    tools,
+    {
+      typeDeclarations: {},
+      sharedDeclarations: {},
+      unionToMembers: new Map(),
+    },
+    toolsType);
+  if (validationErrors.length > 0) {
+    return {
+      kind: "error",
+      errors: validationErrors,
+    };
+  }
+  if (tools.kind !== "array") throw new Error();
+  return {
+    kind: "success",
+    tools: tools.elements.map((e): TemplateTool => {
+      if (e.kind !== "object") throw new Error();
+      const toolEntry = e.entries.find((e) => e.key.value === "tool")!;
+      if (toolEntry?.value.kind !== "string") throw new Error();
+      const tool = toolEntry.value.value;
+      return { tool };
+    }),
+  };
+}
+
+function makeToolsType(namespaceToolNames: ReadonlySet<string>): SyntheticArray & HasName {
+  return {
+    kind: "array",
+    name: {
+      text: "Tool[]",
+    },
+    elementType: {
+      kind: "interface",
+      fields: {
+        name: {
+          name: {
+            text: "tool",
+          },
+          optional: false,
+          type: {
+            kind: "synthetic-union",
+            members: {
+              kind: "strings",
+              values: namespaceToolNames,
+            },
+          },
+          doc: "",
+        },
+      },
+    },
+  };
 }
