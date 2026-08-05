@@ -138,7 +138,7 @@ function validateMeta(
       const { meta } = contents.content;
       if (metaType) {
         if (meta) {
-          errors.push(...validateJson(meta.value, metaSchema, metaType));
+          errors.push(...validateJson(meta.value, metaType, metaSchema));
         } else {
           pushMissingMetaError(template.tag);
         }
@@ -153,7 +153,7 @@ function validateMeta(
       if (metaType) {
         if (defaultContent.meta) {
           errors.push(
-            ...validateJson(defaultContent.meta.value, metaSchema, metaType),
+            ...validateJson(defaultContent.meta.value, metaType, metaSchema),
           );
         } else if (variants.every((v) => !v.content.meta)) {
           pushMissingMetaError(template.tag);
@@ -162,7 +162,7 @@ function validateMeta(
             const { content } = variant;
             if (content.meta) {
               errors.push(
-                ...validateJson(content.meta.value, metaSchema, metaType),
+                ...validateJson(content.meta.value, metaType, metaSchema),
               );
             } else {
               pushMissingMetaError(variant.tag);
@@ -273,8 +273,8 @@ function validateTemplateContent(
   if (content.examples) {
     const exampleErrors = validateJson(
       content.examples,
-      templateSchema,
       examplesInterface,
+      templateSchema,
     );
     errors.push(...exampleErrors);
     if (exampleErrors.length <= 0) {
@@ -452,8 +452,8 @@ function validateToolCallExamples(
         const { schema } = tool;
         const inputType = schema.typeDeclarations["Input"]!;
         const outputType = schema.typeDeclarations["Output"]!;
-        errors.push(...validateJson(inputValue, schema, inputType));
-        errors.push(...validateJson(outputValue, schema, outputType));
+        errors.push(...validateJson(inputValue, inputType, schema));
+        errors.push(...validateJson(outputValue, outputType, schema));
       }
     }
   }
@@ -566,12 +566,12 @@ function validateTools(
   const toolsType = makeToolsType(namespaceTools);
   const validationErrors = validateJson(
     toolsValue,
+    toolsType,
     {
       typeDeclarations: {},
       sharedDeclarations: {},
       unionToMembers: new Map(),
     },
-    toolsType,
   );
   if (validationErrors.length > 0) {
     return {

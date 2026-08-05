@@ -13,7 +13,6 @@ CODEGEN:
   - do not output namespace if namespace is empty
 
 CODE QUALITY:
-  - in validateJson, 'type' param should come before 'schema' param
   - maybe remove some `as const`
 
 EXTENSION TO THE LANGUAGE:

@@ -21,8 +21,8 @@ type SchemaView = {
 
 export function validateJson(
   json: StrictJsonValue,
-  schema: SchemaView,
   type: TypeDeclaration | (SyntheticType & HasName),
+  schema: SchemaView,
 ): InternalError[] {
   const result = jsonMatchesType(
     json as LooseJsonValue,
