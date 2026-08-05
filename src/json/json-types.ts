@@ -26,6 +26,9 @@ export type JsonObject<Mode extends JsonMode> = {
   readonly ellipsis?: JsonEllipsis;
 };
 
+export type StrictJsonObject = JsonObject<"strict">;
+export type LooseJsonObject = JsonObject<"loose">;
+
 export type JsonObjectEntry<Mode extends JsonMode> = {
   readonly key: JsonString;
   readonly value: JsonValue<Mode>;
@@ -37,6 +40,9 @@ export type JsonArray<Mode extends JsonMode> = {
   readonly firstToken: Span;
   readonly elements: readonly JsonValue<Mode>[];
 };
+
+export type StrictJsonArray = JsonArray<"strict">;
+export type LooseJsonArray = JsonArray<"loose">;
 
 export type JsonString = {
   readonly kind: "string";

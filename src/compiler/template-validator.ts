@@ -1,7 +1,12 @@
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
-import { StrictJsonValue } from "../json/json-types.js";
+import {
+  JsonString,
+  StrictJsonArray,
+  StrictJsonObject,
+  StrictJsonValue,
+} from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import {
   HasName,
@@ -347,10 +352,7 @@ function verifyVariantFieldNotSet(
   examples: StrictJsonValue,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
-  if (examples.kind !== "array") {
-    throw new Error();
-  }
-  for (const example of examples.elements) {
+  for (const example of (examples as StrictJsonArray).elements) {
     if (example.kind !== "object") {
       throw new Error();
     }
@@ -486,14 +488,12 @@ function validateTools(
       errors: validationErrors,
     };
   }
-  if (toolsValue.kind !== "array") throw new Error();
 
   const tools: { [name: string]: TemplateTool } = {};
-  for (const e of toolsValue.elements) {
-    if (e.kind !== "object") throw new Error();
-    const toolEntry = e.entries.find((e) => e.key.value === "tool")!;
-    if (toolEntry?.value.kind !== "string") throw new Error();
-    const nameValue = toolEntry.value;
+  for (const e of (toolsValue as StrictJsonArray).elements) {
+    const nameValue = (e as StrictJsonObject).entries.find(
+      (e) => e.key.value === "tool",
+    )!.value as JsonString;
     const name = nameValue.value;
     const tool = { tool: namespaceTools[name]! };
     if ((tools[name] ??= tool) != tool) {
