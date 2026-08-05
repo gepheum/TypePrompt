@@ -6,30 +6,50 @@ import * as Spec from "../../runtime/runtime-types.js";
 // <generated>
 export type Meta = {};
 
-export type TemplateId = "foo" | "bar";
+export type TemplateId = "Ns:Foo" | "Ns:Bar";
 
-/** Input type for a given template ID. */
-export type Input<Id extends TemplateId> = InputType[Id];
-type InputType = {
-  foo: unknown;
-  bar: string;
-};
+export type ToolId = "Ns:myTool" | "Ns:otherTool";
 
-/** Type of the expected LLM response for a given template ID. */
-export type Output<Id extends TemplateId> = OutputType[Id];
-type OutputType = {
-  foo: unknown;
-  bar: string;
-};
+/** Input type for a given template ID or tool ID. */
+export type Input<Id extends TemplateId | ToolId> = {
+  "Ns:Foo": unknown;
+  "Ns:Bar": string;
+  "Ns:myTool": number;
+  "Ns:otherTool": boolean;
+}[Id];
 
-const templateSchemas = {
-  foo: {
+/** Output type for a given template ID or tool ID. */
+export type Output<Id extends TemplateId | ToolId> = {
+  "Ns:Foo": unknown;
+  "Ns:Bar": string;
+  "Ns:myTool": number;
+  "Ns:otherTool": number;
+}[Id];
+
+export type ToolName<Id extends ToolId> = {
+  "Ns:myTool": "myTool";
+  "Ns:otherTool": "otherTool";
+}[Id];
+
+export type ToolsHelper<Id extends TemplateId> = {
+  "Ns:Foo": {
+    myTool: "Ns:myTool";
+  };
+  "Ns:Bar": {};
+}[Id];
+
+const zodSchemas = {
+  "Ns:Foo": {
     input: z.any(),
     output: z.any(),
   },
-  bar: {
+  "Ns:Bar": {
     input: z.string(),
     output: z.string(),
+  },
+  "Ns:myTool": {
+    input: z.number(),
+    output: z.number(),
   },
 } as const;
 
@@ -60,6 +80,7 @@ export type Prompt<Id extends TemplateId> = {
   readonly examples: readonly FewShotExample[];
   readonly outputFormat: OutputFormat<Id>;
   readonly parseResponse: (content: string) => Output<Id>;
+  readonly tools: Tools<Id>;
   readonly templateId: TemplateId;
   readonly templateInput: Input<Id>;
 };
@@ -88,6 +109,20 @@ type OutputFormatType<Output> =
       readonly schema: z.ZodType<Output>;
     }
   | (Output extends string ? { readonly kind: "text" } : never);
+
+export type Tool<Id extends ToolId> = {
+  readonly id: Id;
+  readonly name: ToolName<Id>;
+  readonly description: string;
+  readonly inputSchema: z.ZodType<Input<Id>>;
+  readonly outputSchema: z.ZodType<Output<Id>>;
+};
+
+export type Tools<Id extends TemplateId> = {
+  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
+    ? Tool<ToolsHelper<Id>[Name]>
+    : never;
+};
 // </static:types>
 
 // <static:logic>
@@ -141,8 +176,7 @@ function resolveTemplate<Id extends TemplateId>(
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
-  const { input: inputSchema, output: outputSchema } =
-    templateSchemas[templateId]!;
+  const { input: inputSchema, output: outputSchema } = zodSchemas[templateId]!;
   input = inputSchema.parse(input) as Input<Id>;
   const { contents, snippets } = template;
   let meta: Meta;

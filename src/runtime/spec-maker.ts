@@ -3,7 +3,6 @@ import type {
   BodyInContext,
   CompilationResult,
   Snippet,
-  Template,
   TemplateContent,
   TemplateContents,
   Tool,
