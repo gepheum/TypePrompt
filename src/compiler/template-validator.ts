@@ -30,7 +30,6 @@ export function validateTemplate(args: {
   readonly namespaceSchema: Schema;
   readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
 }): TemplateValidationResult {
-  validateTools;
   const { template, metaSchema, namespaceSchema } = args;
 
   const errors: InternalError[] = [];
@@ -289,7 +288,10 @@ function makeExamplesType(
   let outputType: Type | SyntheticInterface =
     typeDeclarations["Output"]!.valueType;
   if (options.isVariantSpecialization) {
-    const resolvedOutputType = resolveSyntheticType(outputType!, templateSchema);
+    const resolvedOutputType = resolveSyntheticType(
+      outputType!,
+      templateSchema,
+    );
     if (
       resolvedOutputType.kind === "interface" &&
       resolvedOutputType.fields["variant"]
@@ -486,7 +488,7 @@ function validateTools(
   }
   if (toolsValue.kind !== "array") throw new Error();
 
-  const tools: {[name: string]: TemplateTool} = {};
+  const tools: { [name: string]: TemplateTool } = {};
   for (const e of toolsValue.elements) {
     if (e.kind !== "object") throw new Error();
     const toolEntry = e.entries.find((e) => e.key.value === "tool")!;

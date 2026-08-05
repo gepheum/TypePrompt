@@ -130,7 +130,9 @@ export type Tools<Id extends TemplateId> = {
 
 export type ToolImpls<Id extends TemplateId> = {
   [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
-    ? (input: Input<ToolsHelper<Id>[Name]>) => Promise<Output<ToolsHelper<Id>[Name]>>
+    ? (
+        input: Input<ToolsHelper<Id>[Name]>,
+      ) => Promise<Output<ToolsHelper<Id>[Name]>>
     : never;
 };
 // </static:types>
@@ -214,18 +216,20 @@ function resolveTemplate<Id extends TemplateId>(
       template,
     );
   }
-  const tools = Object.fromEntries(template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
-    const toolData = templates.tools[id]!;
-    const toolSchemas = zodSchemas[id as ToolId]!;
-    const tool: Tool<ToolId> = {
-      id: id as ToolId,
-      name: name as ToolName<ToolId>,
-      description: toolData.description,
-      inputSchema: toolSchemas.input,
-      outputSchema: toolSchemas.output,
-    };
-    return [name, tool];
-  })) as Tools<Id>;
+  const tools = Object.fromEntries(
+    template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
+      const toolData = templates.tools[id]!;
+      const toolSchemas = zodSchemas[id as ToolId]!;
+      const tool: Tool<ToolId> = {
+        id: id as ToolId,
+        name: name as ToolName<ToolId>,
+        description: toolData.description,
+        inputSchema: toolSchemas.input,
+        outputSchema: toolSchemas.output,
+      };
+      return [name, tool];
+    }),
+  ) as Tools<Id>;
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }

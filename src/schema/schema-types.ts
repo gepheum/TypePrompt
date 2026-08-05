@@ -91,6 +91,10 @@ export type RecordType = {
   readonly valueType: Type;
 };
 
+export type AnyTypeView = {
+  readonly kind: "any";
+};
+
 export type AnyType = {
   readonly kind: "any";
   readonly span: Span;
@@ -105,6 +109,13 @@ export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
   readonly members: readonly NonUnionType[];
+};
+
+export type PrimitiveTypeView = {
+  readonly kind: "primitive";
+  readonly primitive: {
+    readonly text: "number" | "string" | "boolean" | "integer";
+  };
 };
 
 export type PrimitiveType = {
@@ -143,7 +154,11 @@ export type HasName = {
 };
 
 export type SyntheticType =
-  SyntheticArray | SyntheticInterface | SyntheticUnion;
+  | AnyTypeView
+  | PrimitiveTypeView
+  | SyntheticArray
+  | SyntheticInterface
+  | SyntheticUnion;
 
 /** Hint for generating a name for an anonymous type in a targeted language. */
 export type NamingHint = {
