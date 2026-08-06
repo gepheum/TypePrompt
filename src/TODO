@@ -8,6 +8,7 @@ BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 CODEGEN:
+  - make coalesce work when next token is "}" or ")"
   - use less "code +=", join...
   - use uppercase for 'tool' name in the $ namespace, make sure no conflict
   - reorder sections
