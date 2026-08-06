@@ -102,6 +102,7 @@ export type IntermediateStepExample = {
 export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
+  readonly description: string;
   readonly rawInput: unknown;
   readonly rawOutput: unknown;
 };
@@ -336,10 +337,7 @@ function evaluate<Input>(input: Input, expression: Spec.Expression): unknown {
 }
 
 function resolveExamples(
-  inputs: ReadonlyArray<{
-    readonly input: unknown;
-    readonly output: unknown;
-  }>,
+  inputs: readonly Spec.FewShotExample[],
   body: Spec.Body,
   template: Spec.Template,
 ): readonly FewShotExample[] {
