@@ -53,10 +53,10 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       reformat(
         [
           writeEnums(Object.values(templates), Object.values(tools)),
-          writeDatatypes(metaSchema, Object.values(namespaces)),
-          writeDataZodTypes(Object.values(templates), Object.values(tools)),
+          writeUserDefinedDatatypes(metaSchema, Object.values(namespaces)),
+          writeZodSchemas(Object.values(templates), Object.values(tools)),
           writeSpecDatatypes(),
-          writeSpec(compilationResult),
+          writeTemplatesData(compilationResult),
         ].join(""),
       ),
       STATIC_SNIPPETS["typescript-logic"],
@@ -83,7 +83,7 @@ function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
   return code;
 }
 
-function writeDatatypes(
+function writeUserDefinedDatatypes(
   metaSchema: Schema,
   namespaces: readonly ValidNamespaceResult[],
 ): string {
@@ -128,7 +128,7 @@ function writeDatatypes(
   return code;
 }
 
-function writeDataZodTypes(
+function writeZodSchemas(
   templates: readonly ValidatedTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
@@ -254,7 +254,7 @@ function writeSpecDatatypes(): string {
   return code;
 }
 
-function writeSpec(compilationResult: CompilationResult): string {
+function writeTemplatesData(compilationResult: CompilationResult): string {
   return (
     "const TEMPLATES_DATA: Spec.Templates = " +
     JSON.stringify(makeTemplates(compilationResult), undefined, 2) +
