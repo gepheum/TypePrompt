@@ -140,13 +140,13 @@ function writeDataZodTypes(
     named: Template | Tool,
   ): void => {
     const namespace = named.namespace?.text ?? "Default";
-    const name = capitalize(named.name.text);
+    const name = named.name.text;
     const zodInputType = writeZodType(input.schema, "Input", {
-      defaultScopeTypePrefix: `$.${namespace}.${name}.`,
+      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
     const zodOutputType = writeZodType(input.schema, "Output", {
-      defaultScopeTypePrefix: `$.${namespace}.${name}.`,
+      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
     code += `"${namespace}:${name}": {\n`;

@@ -161,7 +161,7 @@ const zodSchemas = {
       return outputSchema;
     })(),
   },
-  "Default:GetX": {
+  "Default:getX": {
     input: ((): z.ZodType<$.Default.GetX.Input> => {
       const inputSchema: z.ZodType<$.Default.GetX.Input> = z.object({
         x: z.int32(),
