@@ -24,7 +24,7 @@ export type CompilationResult = {
 export type ValidCompilationResult = CompilationResult & {
   readonly metaSchema: Schema;
   readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
-  readonly templates: { readonly [id: string]: ValidatedTemplate };
+  readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
 };
 
@@ -173,6 +173,7 @@ export type ValidNamespaceResult = NamespaceResult & {
   /** Name of the namespace. */
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: ValidatedTool };
+  readonly templates: readonly Template[];
 };
 
 export type SchemaOrError =
@@ -193,9 +194,28 @@ export type ValidatedTemplate = {
   readonly tools: { readonly [name: string]: TemplateTool };
 };
 
+/** A {@link ValidatedTemplate} known not to have any errors. */
+export type ValidTemplate = ValidatedTemplate & {
+  readonly tools: { readonly [name: string]: ValidTemplateTool };
+};
+
 /** Tool called from a template. */
 export type TemplateTool = {
   readonly tool: ToolValidationResult;
 };
 
+export type ValidTemplateTool = TemplateTool & {
+  readonly tool: ValidatedTool;
+}
+
 export type TemplateValidationResult = ValidatedTemplate | InternalErrors;
+
+// =============================================================================
+// Static assertion
+// =============================================================================
+
+type Expect<T extends true> = T;
+type IsAssignable<A, B> = [A] extends [B] ? true : false;
+
+// Usage:
+type _Check = Expect<IsAssignable<ValidCompilationResult, CompilationResult>>;

@@ -209,12 +209,26 @@ function writeEnums(
     }
     for (const tool of tools) {
       const namespace = tool.tool.namespace?.text ?? "Default";
-      const templateName = tool.tool.name.text;
-      const templateId = `${namespace}:${templateName}`;
-      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
+      const toolName = tool.tool.name.text;
+      const toolId = `${namespace}:${toolName}`;
+      code += `"${toolId}": $.${namespace}.${toolName}.${what};\n`;
     }
     code += "}[Id];\n\n";
   }
+
+  code += "export type ToolsHelper<Id extends TemplateId> = {\n";
+  for (const template of templates) {
+      const namespace = template.template.namespace?.text ?? "Default";
+      const templateName = template.template.name.text;
+      const templateId = `${namespace}:${templateName}`;
+    code += `"${templateId}": {\n`;
+    for (const tool of Object.values(template.tools)) {
+      const toolName = tool.tool.kind;
+    }
+    code += "},\n";
+  }
+  code += "};\n\n";
+
   return code;
 }
 

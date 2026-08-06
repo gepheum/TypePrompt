@@ -108,7 +108,6 @@ export namespace $ {
         | "bar"
       );
     };
-
   }
 
   export namespace Default {
@@ -122,11 +121,8 @@ export namespace $ {
       export type Output = {
         readonly x: number;
       };
-
     }
-
   }
-
 }
 
 const zodSchemas = {
@@ -296,7 +292,6 @@ namespace Spec {
     readonly name: string;
     readonly description: string;
   };
-
 }
 
 const templatesSchema = ((): z.ZodType<Spec.Templates> => {
