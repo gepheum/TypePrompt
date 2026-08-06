@@ -169,9 +169,9 @@ namespace Spec {
   };
 
   export type ToolCallExample = {
+    readonly callId: string;
     readonly toolId: string;
     readonly toolName: string;
-    readonly description: string;
     readonly input: unknown;
     readonly output: unknown;
   };
@@ -294,9 +294,9 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
   ]);
   const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
   const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
+    callId: z.string(),
     toolId: z.string(),
     toolName: z.string(),
-    description: z.string(),
     input: z.any(),
     output: z.any(),
   });
@@ -474,7 +474,8 @@ const TEMPLATES_DATA: Spec.Templates = {
               },
               "output": {
                 "x": 8
-              }
+              },
+              "intermediateSteps": []
             },
             {
               "input": {
@@ -483,7 +484,8 @@ const TEMPLATES_DATA: Spec.Templates = {
               },
               "output": {
                 "x": 9
-              }
+              },
+              "intermediateSteps": []
             }
           ]
         }

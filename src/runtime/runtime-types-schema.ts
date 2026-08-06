@@ -52,8 +52,8 @@ type ToolCallExample = {
   callId: string;
   toolId: string;
   toolName: string;
-  input: unknown;
-  output: unknown;
+  input: any;
+  output: any;
 };
 
 type Body = BodyPiece[];
