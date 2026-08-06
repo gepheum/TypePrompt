@@ -157,10 +157,23 @@ namespace Spec {
     readonly meta?: unknown;
     readonly system?: Body;
     readonly user?: Body;
-    readonly examples?: readonly {
-      readonly input: unknown;
-      readonly output: unknown;
+    readonly examples?: readonly FewShotExample[];
+  };
+
+  export type FewShotExample = {
+    readonly input: unknown;
+    readonly output: unknown;
+    readonly intermediateSteps: readonly {
+      readonly toolCalls: readonly ToolCallExample[];
     }[];
+  };
+
+  export type ToolCallExample = {
+    readonly toolId: string;
+    readonly toolName: string;
+    readonly description: string;
+    readonly input: unknown;
+    readonly output: unknown;
   };
 
   export type Body = readonly BodyPiece[];
@@ -280,14 +293,25 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     }),
   ]);
   const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
+  const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
+    toolId: z.string(),
+    toolName: z.string(),
+    description: z.string(),
+    input: z.any(),
+    output: z.any(),
+  });
+  const fewShotExampleSchema: z.ZodType<Spec.FewShotExample> = z.object({
+    input: z.any(),
+    output: z.any(),
+    intermediateSteps: z.object({
+      toolCalls: toolCallExampleSchema.array(),
+    }).array(),
+  });
   const templateContentSchema: z.ZodType<Spec.TemplateContent> = z.object({
     meta: z.any().optional(),
     system: bodySchema.optional(),
     user: bodySchema.optional(),
-    examples: z.object({
-      input: z.any(),
-      output: z.any(),
-    }).array().optional(),
+    examples: fewShotExampleSchema.array().optional(),
   });
   const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.union([
     z.object({

@@ -564,15 +564,11 @@ function validateTools(
     } as const;
   }
   const toolsType = makeToolsType(namespaceTools);
-  const validationErrors = validateJson(
-    toolsValue,
-    toolsType,
-    {
-      typeDeclarations: {},
-      sharedDeclarations: {},
-      unionToMembers: new Map(),
-    },
-  );
+  const validationErrors = validateJson(toolsValue, toolsType, {
+    typeDeclarations: {},
+    sharedDeclarations: {},
+    unionToMembers: new Map(),
+  });
   if (validationErrors.length > 0) {
     return {
       kind: "error",

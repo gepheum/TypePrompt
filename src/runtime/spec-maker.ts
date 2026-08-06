@@ -9,7 +9,7 @@ import type {
   ValidatedTemplate,
 } from "../compiler/compiler-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { StrictJsonValue } from "../json/json-types.js";
+import type { StrictJsonArray, StrictJsonObject, StrictJsonValue } from "../json/json-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {
@@ -77,13 +77,26 @@ function makeContent(input: Partial<TemplateContent>): Spec.TemplateContent {
     meta: input.meta ? makeValue(input.meta.value) : undefined,
     system: input.system ? makeBody(input.system) : undefined,
     user: input.user ? makeBody(input.user) : undefined,
-    examples: input.examples
-      ? (makeValue(input.examples) as readonly {
-          readonly input: unknown;
-          readonly output: unknown;
-        }[])
-      : [],
+    examples: makeExamples(input.examples),
   };
+}
+
+function makeExamples(input: StrictJsonValue | undefined): readonly Spec.FewShotExample[] {
+  if (!input) return [];
+
+  const makeExample = (input: StrictJsonValue): Spec.FewShotExample {
+    const {entries} = (input as StrictJsonObject);
+    const inputEntry = entries["input"]!;
+    const outputEntry = entries["output"]!;
+    const intermediateSteps = entries["intermediateSteps"];
+    return {
+      input: makeValue(inputEntry.value),
+      output: makeValue(outputEntry.value),
+      intermediateSteps: intermediateSteps ? FOO : [],
+    };
+  };
+
+  return (input as StrictJsonArray).elements.map(makeExample);
 }
 
 function makeValue(input: StrictJsonValue): unknown {
@@ -97,11 +110,10 @@ function makeValue(input: StrictJsonValue): unknown {
     case "null":
       return null;
     case "object": {
-      const result: { [key: string]: unknown } = {};
-      for (const [key, entry] of Object.entries(input.entries)) {
-        result[key] = makeValue(entry.value);
-      }
-      return result;
+      return Object.fromEntries(
+        Object.entries(input.entries)
+          .map(([key, entry]) => [key, makeValue(entry.value)])
+      );
     }
     case "array":
       return input.elements.map(makeValue);

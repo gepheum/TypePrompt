@@ -35,10 +35,23 @@ export type TemplateContent = {
   readonly meta?: unknown;
   readonly system?: Body;
   readonly user?: Body;
-  readonly examples?: readonly {
-    readonly input: unknown;
-    readonly output: unknown;
+  readonly examples?: readonly FewShotExample[];
+};
+
+export type FewShotExample = {
+  readonly input: unknown;
+  readonly output: unknown;
+  readonly intermediateSteps: readonly {
+    readonly toolCalls: readonly ToolCallExample[];
   }[];
+};
+
+export type ToolCallExample = {
+  readonly toolId: string;
+  readonly toolName: string;
+  readonly description: string;
+  readonly input: unknown;
+  readonly output: unknown;
 };
 
 export type Body = readonly BodyPiece[];
