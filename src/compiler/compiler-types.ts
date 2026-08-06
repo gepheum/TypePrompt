@@ -20,6 +20,14 @@ export type CompilationResult = {
   readonly finalErrors: { readonly [path: string]: InternalError[] };
 };
 
+/** A {@link CompilationResult} known not to have any errors. */
+export type ValidCompilationResult = CompilationResult & {
+  readonly metaSchema: Schema;
+  readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
+  readonly templates: { readonly [id: string]: ValidatedTemplate };
+  readonly tools: { readonly [id: string]: ValidatedTool };
+};
+
 export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
@@ -158,6 +166,13 @@ export type NamespaceResult = {
   readonly schema: SchemaOrError;
   readonly tools: { readonly [name: string]: ToolValidationResult };
   readonly templates: readonly ValidatedTemplate[];
+};
+
+/** A {@link NamespaceResult} known not to have any errors. */
+export type ValidNamespaceResult = NamespaceResult & {
+  /** Name of the namespace. */
+  readonly schema: Schema;
+  readonly tools: { readonly [name: string]: ValidatedTool };
 };
 
 export type SchemaOrError =

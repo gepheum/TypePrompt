@@ -201,7 +201,12 @@ function resolveTemplate<Id extends TemplateId>(
     meta = content.meta as Meta;
     systemMessage = resolveBody(content.system!, input, snippets);
     userMessage = resolveBody(content.user!, input, snippets);
-    examples = resolveExamples(content.examples!, content.user!, template, templates.tools);
+    examples = resolveExamples(
+      content.examples!,
+      content.user!,
+      template,
+      templates.tools,
+    );
   } else {
     const { defaultContent, variants } = contents;
     const { variant } = input as unknown as { readonly variant: string };

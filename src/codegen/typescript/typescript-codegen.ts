@@ -1,8 +1,10 @@
 import type {
   CompilationResult,
   NamespaceResult,
-  TemplateValidationResult,
-  ToolValidationResult,
+  ValidatedTemplate,
+  ValidatedTool,
+  ValidCompilationResult,
+  ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
@@ -21,7 +23,7 @@ import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateTypescriptCode(
-  compilationResult: CompilationResult,
+  compilationResult: ValidCompilationResult,
   config: Config,
 ): readonly OutputFile[] {
   const { generatedDotTsPath } = config;
@@ -36,29 +38,32 @@ export function generateTypescriptCode(
   ];
 }
 
-function writeAll(compilationResult: CompilationResult): string {
+function writeAll(compilationResult: ValidCompilationResult): string {
   const { metaSchema, namespaces, templates, tools } = compilationResult;
-  if (metaSchema.kind !== "success") throw new Error();
 
-  return coalesceEmptyLines([
-    "// This file is auto-generated. Do not edit it directly.",
-    "",
-    'import { encode as encodeToon } from "@toon-format/toon";',
-    'import YAML from "yaml";',
-    'import * as z from "zod";\n',
-    reformat(writePromptMaker(Object.values(namespaces))),
-    STATIC_SNIPPETS["typescript-public-types"],
-    "",
-    reformat([
-      writeEnums(Object.values(templates), Object.values(tools)),
-      writeDatatypes(metaSchema, Object.values(namespaces)),
-      writeTemplateZodTypes(Object.values(templates)),
-      writeSpecDatatypes(),
-      writeSpec(compilationResult),
-    ].join("")),
-    STATIC_SNIPPETS["typescript-logic"],
-    "",
-  ].join("\n"));
+  return coalesceEmptyLines(
+    [
+      "// This file is auto-generated. Do not edit it directly.",
+      "",
+      'import { encode as encodeToon } from "@toon-format/toon";',
+      'import YAML from "yaml";',
+      'import * as z from "zod";\n',
+      reformat(writePromptMaker(Object.values(namespaces))),
+      STATIC_SNIPPETS["typescript-public-types"],
+      "",
+      reformat(
+        [
+          writeEnums(Object.values(templates), Object.values(tools)),
+          writeDatatypes(metaSchema, Object.values(namespaces)),
+          writeTemplateZodTypes(Object.values(templates)),
+          writeSpecDatatypes(),
+          writeSpec(compilationResult),
+        ].join(""),
+      ),
+      STATIC_SNIPPETS["typescript-logic"],
+      "",
+    ].join("\n"),
+  );
 }
 
 function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
@@ -80,9 +85,8 @@ function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
 
 function writeDatatypes(
   metaSchema: Schema,
-  namespaces: readonly NamespaceResult[],
+  namespaces: readonly ValidNamespaceResult[],
 ): string {
-  if (metaSchema.kind !== "success") throw new Error();
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   let code = "";
@@ -97,7 +101,6 @@ function writeDatatypes(
   }
   for (const namespace of namespaces) {
     code += `export namespace ${namespace.name} {\n`;
-    if (namespace.schema.kind !== "success") throw new Error();
     if (anyTypes(namespace.schema)) {
       code += "export namespace Shared {\n";
       code += writeSchema(namespace.schema, { sharedTypePrefix: "Never." });
@@ -118,11 +121,10 @@ function writeDatatypes(
 }
 
 function writeTemplateZodTypes(
-  templates: readonly TemplateValidationResult[],
+  templates: readonly ValidatedTemplate[],
 ): string {
   let code = "const templateSchemas = {\n";
   for (const template of templates) {
-    if (template.kind !== "success") throw new Error();
     const namespace = template.template.namespace?.text ?? "Default";
     const templateName = template.template.name.text;
     const zodInputType = writeZodType(template.schema, "Input", {
@@ -143,15 +145,14 @@ function writeTemplateZodTypes(
 }
 
 function writeEnums(
-  templates: readonly TemplateValidationResult[],
-  tools: readonly ToolValidationResult[],
+  templates: readonly ValidatedTemplate[],
+  tools: readonly ValidatedTool[],
 ): string {
   let code = "export type TemplateId = (\n";
   if (templates.length <= 0) {
     code += " never\n";
   } else {
     for (const template of templates) {
-      if (template.kind !== "success") throw new Error();
       const namespace = template.template.namespace?.text ?? "Default";
       const templateName = template.template.name.text;
       code += `| "${namespace}:${templateName}"\n`;
@@ -164,7 +165,6 @@ function writeEnums(
     code += " never\n";
   } else {
     for (const tool of tools) {
-      if (tool.kind !== "success") throw new Error();
       const namespace = tool.tool.namespace?.text ?? "Default";
       const toolName = tool.tool.name.text;
       code += `| "${namespace}:${toolName}"\n`;
@@ -175,14 +175,12 @@ function writeEnums(
   for (const what of ["Input", "Output"]) {
     code += `export type ${what}<Id extends TemplateId | ToolId> = {\n`;
     for (const template of templates) {
-      if (template.kind !== "success") throw new Error();
       const namespace = template.template.namespace?.text ?? "Default";
       const templateName = template.template.name.text;
       const templateId = `${namespace}:${templateName}`;
       code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
     }
     for (const tool of tools) {
-      if (tool.kind !== "success") throw new Error();
       const namespace = tool.tool.namespace?.text ?? "Default";
       const templateName = tool.tool.name.text;
       const templateId = `${namespace}:${templateName}`;

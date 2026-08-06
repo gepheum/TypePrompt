@@ -14,6 +14,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { CODE_GENERATORS } from "./codegen/codegens.js";
+import { ValidCompilationResult } from "./compiler/compiler-types.js";
 import { compile } from "./compiler/compiler.js";
 import { ConfigParseError, parseConfigToml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
@@ -167,8 +168,9 @@ async function runGeneration(projectPath?: string): Promise<void> {
     return;
   }
 
+  const validCompilationResult = compilationResult as ValidCompilationResult;
   for (const generator of CODE_GENERATORS) {
-    const outputs = generator(compilationResult, config);
+    const outputs = generator(validCompilationResult, config);
     for (const output of outputs) {
       const outputPath = resolve(configDir, output.path);
       mkdirSync(dirname(outputPath), { recursive: true });

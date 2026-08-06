@@ -1,4 +1,4 @@
-import { CompilationResult } from "../compiler/compiler-types.js";
+import { ValidCompilationResult } from "../compiler/compiler-types.js";
 import type { Config } from "../config/config-parser.js";
 
 export type OutputFile = {
@@ -7,6 +7,6 @@ export type OutputFile = {
 };
 
 export type CodeGenerator = (
-  compilationResult: CompilationResult,
+  compilationResult: ValidCompilationResult,
   config: Config,
 ) => readonly OutputFile[];
