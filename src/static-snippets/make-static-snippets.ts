@@ -24,13 +24,13 @@ for (const relPath of SOURCE_FILES) {
   let currentLines: string[] = [];
 
   for (const line of lines) {
-    const openMatch = line.match(/\/\/ <static:([^>]+)>/);
+    const openMatch = line.match(/(?:\/\/|#) <static:([^>]+)>/);
     if (openMatch) {
       currentId = openMatch[1]!;
       currentLines = [];
       continue;
     }
-    const closeMatch = line.match(/\/\/ <\/static:([^>]+)>/);
+    const closeMatch = line.match(/(?:\/\/|#) <\/static:([^>]+)>/);
     if (closeMatch) {
       if (currentId !== null) {
         snippets[currentId] = currentLines.join("\n");
