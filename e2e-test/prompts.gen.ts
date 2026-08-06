@@ -96,6 +96,12 @@ export type Output<Id extends TemplateId | ToolId> = {
   "Default:getX": $.Default.getX.Output;
 }[Id];
 
+export type ToolsHelper<Id extends TemplateId> = {
+  "Default:MyTemplate": {
+    success: "success",
+  },
+};
+
 export type Meta = $.Meta.Meta;
 
 export namespace $ {

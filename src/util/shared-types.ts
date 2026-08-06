@@ -47,6 +47,10 @@ export interface MappedText {
   readonly offsetMap: OffsetMap;
 }
 
+export type HasPath = {
+  readonly path: string;
+};
+
 /**
  * Segment-based mapping from decoded offsets back to source offsets.
  *

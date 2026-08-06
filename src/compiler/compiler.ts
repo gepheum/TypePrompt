@@ -1,7 +1,7 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
-import type { InternalError } from "../util/shared-types.js";
+import type { HasPath, InternalError, Span, TextSpan } from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
@@ -130,6 +130,8 @@ type Sourced<T> = {
 type NamespaceResultImpl = NamespaceResult & {
   readonly tools: { [name: string]: ToolValidationResult };
   readonly templates: TemplateValidationResult[];
+  /** To find conflicts. */
+  readonly names: (TextSpan & HasPath)[];
 };
 
 class CompilationResultImpl implements CompilationResult {
@@ -163,6 +165,7 @@ class CompilationResultImpl implements CompilationResult {
     this.resolveNamespaces(namespaces);
     this.resolveTools(tools, cache);
     this.resolveTemplates(templates, cache);
+    this.checkNameConflictsWithinNamespaces();
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
@@ -198,6 +201,7 @@ class CompilationResultImpl implements CompilationResult {
           schema: namespace.element.schema,
           tools: {},
           templates: [],
+          names: [],
         };
       } else {
         // Multiple namespaces with the same name found. This is an error.
@@ -206,6 +210,7 @@ class CompilationResultImpl implements CompilationResult {
           schema: { kind: "other-error" },
           tools: {},
           templates: [],
+          names: [],
         };
         // Errors will be pused to the finalErrors map below.
       }
@@ -216,6 +221,7 @@ class CompilationResultImpl implements CompilationResult {
       schema: EMPTY_SCHEMA,
       tools: {},
       templates: [],
+      names: [],
     };
 
     const nameConflicts = checkNameConflicts(
@@ -242,23 +248,12 @@ class CompilationResultImpl implements CompilationResult {
       (idToTools[id] ??= []).push(tool);
     }
 
-    for (const tool of Object.values(namespaceToTools)) {
-      const nameConflicts = checkNameConflicts(
-        Object.values(tool).map((t) => ({
-          ...t.element.name,
-          path: t.sourceFile.path,
-        })),
-      );
-      for (const error of nameConflicts) {
-        this.finalErrors[error.span.path]!.push(error);
-      }
-    }
-
     if (this.metaSchema.kind !== "success") return;
 
     for (const [id, tools] of Object.entries(idToTools)) {
       if (tools.length !== 1) {
-        // The error was already reported in the name conflicts check above.
+        // The error will be reported when we look for name conflicts in each
+        // namespace.
         continue;
       }
       const tool = tools[0]!;
@@ -290,6 +285,7 @@ class CompilationResultImpl implements CompilationResult {
 
       this.tools[id] = validationResult;
       namespace.tools[name.text] = validationResult;
+      namespace.names.push({ ...name, path: tool.sourceFile.path });
 
       if (validationResult.kind === "error") {
         this.finalErrors[tool.sourceFile.path]!.push(
@@ -313,25 +309,14 @@ class CompilationResultImpl implements CompilationResult {
       (idToTemplates[id] ??= []).push(template);
     }
 
-    for (const templates of Object.values(namespaceToTemplates)) {
-      const nameConflicts = checkNameConflicts(
-        Object.values(templates).map((t) => ({
-          ...t.element.name,
-          path: t.sourceFile.path,
-        })),
-      );
-      for (const error of nameConflicts) {
-        this.finalErrors[error.span.path]!.push(error);
-      }
-    }
-
     if (this.metaSchema.kind !== "success") {
       return;
     }
 
     for (const [id, templates] of Object.entries(idToTemplates)) {
       if (templates.length !== 1) {
-        // The error was already reported in the name conflicts check above.
+        // The error will be reported when we look for name conflicts in each
+        // namespace.
         continue;
       }
       const template = templates[0]!;
@@ -375,6 +360,7 @@ class CompilationResultImpl implements CompilationResult {
         });
 
       this.templates[id] = validationResult;
+      namespace.names.push({ ...template.element.name, path: template.sourceFile.path });
 
       if (validationResult.kind === "success") {
         namespace.templates.push(validationResult);
@@ -382,6 +368,17 @@ class CompilationResultImpl implements CompilationResult {
         this.finalErrors[template.sourceFile.path]!.push(
           ...validationResult.errors,
         );
+      }
+    }
+  }
+
+  private checkNameConflictsWithinNamespaces(): void {
+    for (const namespace of Object.values(this.namespaces)) {
+      const nameConflicts = checkNameConflicts(
+        namespace.names.map((n) => ({ ...n, path: n.path })),
+      );
+      for (const error of nameConflicts) {
+        this.finalErrors[error.span.path]!.push(error);
       }
     }
   }
