@@ -219,7 +219,7 @@ function writeEnums(
       const namespace = tool.tool.namespace?.text ?? "Default";
       const toolName = tool.tool.name.text;
       const toolId = `${namespace}:${toolName}`;
-      code += `"${toolId}": $.${namespace}.${toolName}.${what};\n`;
+      code += `"${toolId}": $.${namespace}.${capitalize(toolName)}.${what};\n`;
     }
     code += "}[Id];\n\n";
   }

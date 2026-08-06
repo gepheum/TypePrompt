@@ -88,12 +88,12 @@ export type ToolName<Id extends ToolId> = {
 
 export type Input<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Input;
-  "Default:getX": $.Default.getX.Input;
+  "Default:getX": $.Default.GetX.Input;
 }[Id];
 
 export type Output<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Output;
-  "Default:getX": $.Default.getX.Output;
+  "Default:getX": $.Default.GetX.Output;
 }[Id];
 
 export type ToolsHelper<Id extends TemplateId> = {
