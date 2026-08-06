@@ -15,6 +15,7 @@ import type {
   StrictJsonObject,
   StrictJsonValue,
 } from "../json/json-types.js";
+import { unwrapJsonValue } from "../json/unwrapper.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {
@@ -147,29 +148,6 @@ function makeExamples(
   };
 
   return (input as StrictJsonArray).elements.map(makeExample);
-}
-
-function unwrapJsonValue(input: StrictJsonValue): unknown {
-  switch (input.kind) {
-    case "string":
-      return input.value;
-    case "number":
-      return input.value;
-    case "boolean":
-      return input.value;
-    case "null":
-      return null;
-    case "object": {
-      return Object.fromEntries(
-        Object.entries(input.entries).map(([key, entry]) => [
-          key,
-          unwrapJsonValue(entry.value),
-        ]),
-      );
-    }
-    case "array":
-      return input.elements.map(unwrapJsonValue);
-  }
 }
 
 function makeBody(input: Body | BodyInContext): Spec.Body {
