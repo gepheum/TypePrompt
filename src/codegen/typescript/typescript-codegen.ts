@@ -116,6 +116,14 @@ function writeDatatypes(
       });
       code += "}\n\n";
     }
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = tool.tool.name.text;
+      code += `export namespace ${capitalize(toolName)} {\n`;
+      code += writeSchema(tool.schema, {
+        sharedTypePrefix: `$.${namespace.name}.Shared.`,
+      });
+      code += "}\n\n";
+    }
     code += "}\n\n";
   }
   code += "}\n\n";
@@ -132,16 +140,16 @@ function writeDataZodTypes(
     named: Template | Tool,
   ): void => {
     const namespace = named.namespace?.text ?? "Default";
-    const templateName = named.name.text;
+    const name = capitalize(named.name.text);
     const zodInputType = writeZodType(input.schema, "Input", {
-      defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
+      defaultScopeTypePrefix: `$.${namespace}.${name}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
     const zodOutputType = writeZodType(input.schema, "Output", {
-      defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
+      defaultScopeTypePrefix: `$.${namespace}.${name}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
-    code += `"${namespace}:${templateName}": {\n`;
+    code += `"${namespace}:${name}": {\n`;
     code += `input: ${zodInputType},\n`;
     code += `output: ${zodOutputType},\n`;
     code += "},\n";
@@ -267,6 +275,10 @@ function writeSchema(
     code += `export type ${name} = ${writeType(typeDeclaration.valueType, options)};\n\n`;
   }
   return code;
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function uncapitalize(s: string): string {

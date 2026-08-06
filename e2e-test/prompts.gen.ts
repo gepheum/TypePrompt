@@ -128,6 +128,16 @@ export namespace $ {
         readonly x: number;
       };
     }
+
+    export namespace GetX {
+      export type Input = {
+        readonly x: number;
+      };
+
+      export type Output = {
+        readonly y: number;
+      };
+    }
   }
 }
 
@@ -151,15 +161,15 @@ const zodSchemas = {
       return outputSchema;
     })(),
   },
-  "Default:getX": {
-    input: ((): z.ZodType<$.Default.getX.Input> => {
-      const inputSchema: z.ZodType<$.Default.getX.Input> = z.object({
+  "Default:GetX": {
+    input: ((): z.ZodType<$.Default.GetX.Input> => {
+      const inputSchema: z.ZodType<$.Default.GetX.Input> = z.object({
         x: z.int32(),
       });
       return inputSchema;
     })(),
-    output: ((): z.ZodType<$.Default.getX.Output> => {
-      const outputSchema: z.ZodType<$.Default.getX.Output> = z.object({
+    output: ((): z.ZodType<$.Default.GetX.Output> => {
+      const outputSchema: z.ZodType<$.Default.GetX.Output> = z.object({
         y: z.int32(),
       });
       return outputSchema;
