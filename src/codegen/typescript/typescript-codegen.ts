@@ -2,6 +2,7 @@ import type {
   CompilationResult,
   NamespaceResult,
   TemplateValidationResult,
+  ToolValidationResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
@@ -36,7 +37,7 @@ export function generateTypescriptCode(
 }
 
 function writeAll(compilationResult: CompilationResult): string {
-  const { metaSchema, namespaces, templates } = compilationResult;
+  const { metaSchema, namespaces, templates, tools } = compilationResult;
   if (metaSchema.kind !== "success") throw new Error();
 
   return coalesceEmptyLines([
@@ -47,8 +48,10 @@ function writeAll(compilationResult: CompilationResult): string {
     'import * as z from "zod";\n',
     reformat(writePromptMaker(Object.values(namespaces))),
     STATIC_SNIPPETS["typescript-public-types"],
+    "",
     reformat([
       writeTemplateIdEnum(Object.values(templates)),
+      writeToolIdEnum(Object.values(tools)),
       writeDatatypes(metaSchema, Object.values(namespaces)),
       writeTemplateZodTypes(Object.values(templates)),
       writeSpecDatatypes(),
@@ -140,9 +143,11 @@ function writeTemplateZodTypes(
   return code;
 }
 
-function writeTemplateIdEnum(
+function writeIdEnums(
   templates: readonly TemplateValidationResult[],
+  tools: readonly ToolValidationResult[],
 ): string {
+  CACA,
   let code = "export type TemplateId = (\n";
   if (templates.length <= 0) {
     code += " never\n";
