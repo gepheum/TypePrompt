@@ -50,8 +50,7 @@ function writeAll(compilationResult: CompilationResult): string {
     STATIC_SNIPPETS["typescript-public-types"],
     "",
     reformat([
-      writeTemplateIdEnum(Object.values(templates)),
-      writeToolIdEnum(Object.values(tools)),
+      writeEnums(Object.values(templates), Object.values(tools)),
       writeDatatypes(metaSchema, Object.values(namespaces)),
       writeTemplateZodTypes(Object.values(templates)),
       writeSpecDatatypes(),
@@ -143,11 +142,10 @@ function writeTemplateZodTypes(
   return code;
 }
 
-function writeIdEnums(
+function writeEnums(
   templates: readonly TemplateValidationResult[],
   tools: readonly ToolValidationResult[],
 ): string {
-  CACA,
   let code = "export type TemplateId = (\n";
   if (templates.length <= 0) {
     code += " never\n";
@@ -161,9 +159,21 @@ function writeIdEnums(
   }
   code += ");\n\n";
 
+  code += "export type ToolId = (\n";
+  if (tools.length <= 0) {
+    code += " never\n";
+  } else {
+    for (const tool of tools) {
+      if (tool.kind !== "success") throw new Error();
+      const namespace = tool.tool.namespace?.text ?? "Default";
+      const toolName = tool.tool.name.text;
+      code += `| "${namespace}:${toolName}"\n`;
+    }
+  }
+  code += ");\n\n";
+
   for (const what of ["Input", "Output"]) {
-    code += `export type ${what}<Id extends TemplateId> = ${what}Type[Id];\n`;
-    code += `export type ${what}Type = {\n`;
+    code += `export type ${what}<Id extends TemplateId | ToolId> = {\n`;
     for (const template of templates) {
       if (template.kind !== "success") throw new Error();
       const namespace = template.template.namespace?.text ?? "Default";
@@ -171,7 +181,14 @@ function writeIdEnums(
       const templateId = `${namespace}:${templateName}`;
       code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
     }
-    code += "};\n\n";
+    for (const tool of tools) {
+      if (tool.kind !== "success") throw new Error();
+      const namespace = tool.tool.namespace?.text ?? "Default";
+      const templateName = tool.tool.name.text;
+      const templateId = `${namespace}:${templateName}`;
+      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
+    }
+    code += "}[Id];\n\n";
   }
   return code;
 }
@@ -484,5 +501,5 @@ function reformat(code: string): string {
 }
 
 function coalesceEmptyLines(code: string): string {
-  return code.replace(/\n\n(\n+)/g, "\n\n");
+  return code.replace(/\n\n\n+/g, "\n\n").replace(/\{\n+\}/g, "{}");
 }

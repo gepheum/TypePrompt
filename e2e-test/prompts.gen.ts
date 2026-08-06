@@ -73,19 +73,24 @@ export type ToolImpls<Id extends TemplateId> = {
       ) => Promise<Output<ToolsHelper<Id>[Name]>>
     : never;
 };
+
 export type TemplateId = (
   | "Default:MyTemplate"
 );
 
-export type Input<Id extends TemplateId> = InputType[Id];
-export type InputType = {
-  "Default:MyTemplate": $.Default.MyTemplate.Input;
-};
+export type ToolId = (
+  | "Default:getX"
+);
 
-export type Output<Id extends TemplateId> = OutputType[Id];
-export type OutputType = {
+export type Input<Id extends TemplateId | ToolId> = {
+  "Default:MyTemplate": $.Default.MyTemplate.Input;
+  "Default:getX": $.Default.getX.Input;
+}[Id];
+
+export type Output<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Output;
-};
+  "Default:getX": $.Default.getX.Output;
+}[Id];
 
 export type Meta = $.Meta.Meta;
 
