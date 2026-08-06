@@ -201,7 +201,7 @@ function resolveTemplate<Id extends TemplateId>(
     meta = content.meta as Meta;
     systemMessage = resolveBody(content.system!, input, snippets);
     userMessage = resolveBody(content.user!, input, snippets);
-    examples = resolveExamples(content.examples!, content.user!, template);
+    examples = resolveExamples(content.examples!, content.user!, template, templates.tools);
   } else {
     const { defaultContent, variants } = contents;
     const { variant } = input as unknown as { readonly variant: string };
@@ -215,6 +215,7 @@ function resolveTemplate<Id extends TemplateId>(
       (variantContent.examples ?? defaultContent.examples)!,
       user,
       template,
+      templates.tools,
     );
   }
   const tools = Object.fromEntries(
@@ -340,10 +341,19 @@ function resolveExamples(
   inputs: readonly Spec.FewShotExample[],
   body: Spec.Body,
   template: Spec.Template,
+  tools: { [id: string]: Spec.Tool },
 ): readonly FewShotExample[] {
-  return inputs.map(({ input, output }) => ({
+  return inputs.map(({ input, output, intermediateSteps }) => ({
     userMessage: resolveBody(body, input, template.snippets),
-    intermediateSteps: [],
+    intermediateSteps: intermediateSteps.map((step) => ({
+      toolCalls: step.toolCalls.map((tc) => ({
+        callId: tc.callId,
+        toolName: tc.toolName,
+        description: tools[tc.toolId]!.description,
+        rawInput: tc.input,
+        rawOutput: tc.output,
+      })),
+    })),
     response: format(output, template.outputFormat),
   }));
 }
