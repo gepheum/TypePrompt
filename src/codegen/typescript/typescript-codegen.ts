@@ -45,11 +45,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
   return coalesceEmptyLines(
     [
-      "// This file is auto-generated. Do not edit it directly.",
+      STATIC_SNIPPETS["typescript-top-level"],
       "",
-      'import { encode as encodeToon } from "@toon-format/toon";',
-      'import YAML from "yaml";',
-      'import * as z from "zod";\n',
       reformat(writePromptMaker(Object.values(namespaces))),
       STATIC_SNIPPETS["typescript-public-types"],
       "",

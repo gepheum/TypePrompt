@@ -1,7 +1,16 @@
+import * as Spec from "../../runtime/runtime-types.js";
+
+// <static:typescript-top-level>
+// This file is auto-generated. Do not edit it directly.
+
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
-import * as Spec from "../../runtime/runtime-types.js";
+
+export function newPromptMaker(): PromptMaker {
+  return newPromptMakerImpl(TEMPLATES_DATA);
+}
+// </static:typescript-top-level>
 
 // <generated>
 export type Meta = {};
@@ -138,10 +147,6 @@ export type ToolImpls<Id extends TemplateId> = {
 // </static:typescript-public-types>
 
 // <static:typescript-logic>
-export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_DATA);
-}
-
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
   const result: {
     [namespace: string]: {

@@ -4,6 +4,10 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
+export function newPromptMaker(): PromptMaker {
+  return newPromptMakerImpl(TEMPLATES_DATA);
+}
+
 export type PromptMaker = {
   readonly default: {
     readonly myTemplate: Template<"Default:MyTemplate">;
@@ -565,10 +569,6 @@ const TEMPLATES_DATA: Spec.Templates = {
     }
   }
 } as const;
-
-export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_DATA);
-}
 
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
   const result: {
