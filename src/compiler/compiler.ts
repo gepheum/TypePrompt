@@ -1,7 +1,7 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
-import type { HasPath, InternalError, Span, TextSpan } from "../util/shared-types.js";
+import type { HasPath, InternalError, TextSpan } from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
@@ -360,7 +360,10 @@ class CompilationResultImpl implements CompilationResult {
         });
 
       this.templates[id] = validationResult;
-      namespace.names.push({ ...template.element.name, path: template.sourceFile.path });
+      namespace.names.push({
+        ...template.element.name,
+        path: template.sourceFile.path,
+      });
 
       if (validationResult.kind === "success") {
         namespace.templates.push(validationResult);

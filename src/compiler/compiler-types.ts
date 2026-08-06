@@ -206,7 +206,7 @@ export type TemplateTool = {
 
 export type ValidTemplateTool = TemplateTool & {
   readonly tool: ValidatedTool;
-}
+};
 
 export type TemplateValidationResult = ValidatedTemplate | InternalErrors;
 

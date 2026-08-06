@@ -8,7 +8,6 @@ BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 CODEGEN:
-  - see OutputFormat
   - move newPromptMaker to top
   - use uppercase for 'tool' name in the $ namespace, make sure no conflict
   - use less "code +=", join...

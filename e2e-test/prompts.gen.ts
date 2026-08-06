@@ -44,13 +44,12 @@ export type ToolCallExample = {
   readonly rawOutput: unknown;
 };
 
-export type OutputFormat<Id extends TemplateId> = OutputFormatType<Output<Id>>;
-type OutputFormatType<Output> =
+export type OutputFormat<Id extends TemplateId> =
   | {
       readonly kind: "json";
-      readonly schema: z.ZodType<Output>;
+      readonly schema: z.ZodType<Output<Id>>;
     }
-  | (Output extends string ? { readonly kind: "text" } : never);
+  | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
 export type Tool<Id extends ToolId> = {
   readonly id: Id;
@@ -629,7 +628,12 @@ function resolveTemplate<Id extends TemplateId>(
     meta = content.meta as Meta;
     systemMessage = resolveBody(content.system!, input, snippets);
     userMessage = resolveBody(content.user!, input, snippets);
-    examples = resolveExamples(content.examples!, content.user!, template, templates.tools);
+    examples = resolveExamples(
+      content.examples!,
+      content.user!,
+      template,
+      templates.tools,
+    );
   } else {
     const { defaultContent, variants } = contents;
     const { variant } = input as unknown as { readonly variant: string };
@@ -840,10 +844,10 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
   }
 }
 
-function parseResponseImpl<Output>(
+function parseResponseImpl<Id extends TemplateId>(
   response: string,
-  outputFormat: OutputFormatType<Output>,
-): Output {
+  outputFormat: OutputFormat<Id>,
+): Output<Id> {
   switch (outputFormat.kind) {
     case "json": {
       response = response.trim();
@@ -853,7 +857,7 @@ function parseResponseImpl<Output>(
       return outputFormat.schema.parse(JSON.parse(response));
     }
     case "text": {
-      return response as Output;
+      return response as unknown as Output<Id>;
     }
   }
 }

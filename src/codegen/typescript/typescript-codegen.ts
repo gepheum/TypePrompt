@@ -226,9 +226,9 @@ function writeEnums(
 
   code += "export type ToolsHelper<Id extends TemplateId> = {\n";
   for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? "Default";
-      const templateName = template.template.name.text;
-      const templateId = `${namespace}:${templateName}`;
+    const namespace = template.template.namespace?.text ?? "Default";
+    const templateName = template.template.name.text;
+    const templateId = `${namespace}:${templateName}`;
     code += `"${templateId}": {\n`;
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.kind;
