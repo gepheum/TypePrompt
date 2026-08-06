@@ -49,10 +49,11 @@ type FewShotExample = {
 };
 
 type ToolCallExample = {
+  callId: string;
   toolId: string;
   toolName: string;
-  input: any;
-  output: any;
+  input: unknown;
+  output: unknown;
 };
 
 type Body = BodyPiece[];
