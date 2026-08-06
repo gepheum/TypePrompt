@@ -39,25 +39,24 @@ function writeAll(compilationResult: CompilationResult): string {
   const { metaSchema, namespaces, templates } = compilationResult;
   if (metaSchema.kind !== "success") throw new Error();
 
-  const generated = [
-    writePromptMaker(Object.values(namespaces)),
-    writeDatatypes(metaSchema, Object.values(namespaces)),
-    writeTemplateIdEnum(Object.values(templates)),
-    writeTemplateZodTypes(Object.values(templates)),
-    writeSpecDatatypes(),
-    writeSpec(compilationResult),
-  ].join("");
-
-  return [
+  return coalesceEmptyLines([
     "// This file is auto-generated. Do not edit it directly.",
     "",
     'import { encode as encodeToon } from "@toon-format/toon";',
     'import YAML from "yaml";',
     'import * as z from "zod";\n',
+    reformat(writePromptMaker(Object.values(namespaces))),
     STATIC_SNIPPETS["typescript-public-types"],
-    reformat(generated),
+    reformat([
+      writeTemplateIdEnum(Object.values(templates)),
+      writeDatatypes(metaSchema, Object.values(namespaces)),
+      writeTemplateZodTypes(Object.values(templates)),
+      writeSpecDatatypes(),
+      writeSpec(compilationResult),
+    ].join("")),
     STATIC_SNIPPETS["typescript-logic"],
-  ].join("\n");
+    "",
+  ].join("\n"));
 }
 
 function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
@@ -462,7 +461,6 @@ function wrapJsdoc(doc: string): string {
 }
 
 function reformat(code: string): string {
-  code = code.replace(/\n[ \t]*\n([ \t]*})/g, "\n$1");
   const inputLines: readonly string[] = code.split("\n");
   const outputLines: string[] = [];
   let indent = "";
@@ -478,4 +476,8 @@ function reformat(code: string): string {
     }
   }
   return outputLines.join("\n");
+}
+
+function coalesceEmptyLines(code: string): string {
+  return code.replace(/\n\n(\n+)/g, "\n\n");
 }

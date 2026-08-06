@@ -4,6 +4,12 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
+export type PromptMaker = {
+  readonly default: {
+    readonly myTemplate: Template<"Default:MyTemplate">;
+  };
+};
+
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
 };
@@ -67,10 +73,18 @@ export type ToolImpls<Id extends TemplateId> = {
       ) => Promise<Output<ToolsHelper<Id>[Name]>>
     : never;
 };
-export type PromptMaker = {
-  readonly default: {
-    readonly myTemplate: Template<"Default:MyTemplate">;
-  };
+export type TemplateId = (
+  | "Default:MyTemplate"
+);
+
+export type Input<Id extends TemplateId> = InputType[Id];
+export type InputType = {
+  "Default:MyTemplate": $.Default.MyTemplate.Input;
+};
+
+export type Output<Id extends TemplateId> = OutputType[Id];
+export type OutputType = {
+  "Default:MyTemplate": $.Default.MyTemplate.Output;
 };
 
 export type Meta = $.Meta.Meta;
@@ -85,6 +99,7 @@ export namespace $ {
         | "bar"
       );
     };
+
   }
 
   export namespace Default {
@@ -98,23 +113,12 @@ export namespace $ {
       export type Output = {
         readonly x: number;
       };
+
     }
+
   }
+
 }
-
-export type TemplateId = (
-  | "Default:MyTemplate"
-);
-
-export type Input<Id extends TemplateId> = InputType[Id];
-export type InputType = {
-  "Default:MyTemplate": $.Default.MyTemplate.Input;
-};
-
-export type Output<Id extends TemplateId> = OutputType[Id];
-export type OutputType = {
-  "Default:MyTemplate": $.Default.MyTemplate.Output;
-};
 
 const templateSchemas = {
   "Default:MyTemplate": {
@@ -269,6 +273,7 @@ namespace Spec {
     readonly name: string;
     readonly description: string;
   };
+
 }
 
 const templatesSchema = ((): z.ZodType<Spec.Templates> => {
@@ -527,7 +532,6 @@ const TEMPLATES_DATA: Spec.Templates = {
     }
   }
 } as const;
-
 
 export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
