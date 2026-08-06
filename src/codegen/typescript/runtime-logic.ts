@@ -3,6 +3,8 @@ import * as Spec from "../../runtime/runtime-types.js";
 // <static:typescript-top-level>
 // This file is auto-generated. Do not edit it directly.
 
+// To install dependencies:
+//   npm install @toon-format/toon yaml zod
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
