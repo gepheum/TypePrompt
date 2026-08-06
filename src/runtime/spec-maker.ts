@@ -9,7 +9,12 @@ import type {
   ValidatedTemplate,
 } from "../compiler/compiler-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { StrictJsonArray, StrictJsonObject, StrictJsonValue } from "../json/json-types.js";
+import type {
+  JsonString,
+  StrictJsonArray,
+  StrictJsonObject,
+  StrictJsonValue,
+} from "../json/json-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: CompilationResult): Spec.Templates {
@@ -40,9 +45,10 @@ function makeTool(id: string, input: Tool): Spec.Tool {
 
 function makeTemplate(result: ValidatedTemplate): Spec.Template {
   const { template } = result;
+  const namespace = template.namespace?.text ?? "Default";
   return {
     name: template.name.text,
-    namespace: template.namespace?.text ?? "Default",
+    namespace: namespace,
     outputFormat: template.outputFormat?.text ?? "text",
     tools: Object.entries(result.tools).map(([name, { tool }]) => ({
       id:
@@ -51,55 +57,99 @@ function makeTemplate(result: ValidatedTemplate): Spec.Template {
           : name,
       name,
     })),
-    contents: makeContents(template.contents),
+    contents: makeContents(template.contents, { namespace: namespace }),
     snippets: makeSnippets(template.snippets),
   };
 }
 
-function makeContents(input: TemplateContents): Spec.TemplateContents {
+function makeContents(
+  input: TemplateContents,
+  context: { readonly namespace: string },
+): Spec.TemplateContents {
   if (input.kind === "no-variants") {
-    return { kind: "noVariants", content: makeContent(input.content) };
+    return { kind: "noVariants", content: makeContent(input.content, context) };
   } else {
     const variants: { [c: string]: Spec.TemplateContent } = {};
     for (const variant of input.variants) {
-      variants[variant.case.text] = makeContent(variant.content);
+      variants[variant.case.text] = makeContent(variant.content, context);
     }
     return {
       kind: "variants",
       variants,
-      defaultContent: makeContent(input.defaultContent),
+      defaultContent: makeContent(input.defaultContent, context),
     };
   }
 }
 
-function makeContent(input: Partial<TemplateContent>): Spec.TemplateContent {
+function makeContent(
+  input: Partial<TemplateContent>,
+  context: { readonly namespace: string },
+): Spec.TemplateContent {
   return {
-    meta: input.meta ? makeValue(input.meta.value) : undefined,
+    meta: input.meta ? unwrapJsonValue(input.meta.value) : undefined,
     system: input.system ? makeBody(input.system) : undefined,
     user: input.user ? makeBody(input.user) : undefined,
-    examples: makeExamples(input.examples),
+    examples: makeExamples(input.examples, context),
   };
 }
 
-function makeExamples(input: StrictJsonValue | undefined): readonly Spec.FewShotExample[] {
+function makeExamples(
+  input: StrictJsonValue | undefined,
+  context: { readonly namespace: string },
+): readonly Spec.FewShotExample[] {
   if (!input) return [];
 
-  const makeExample = (input: StrictJsonValue): Spec.FewShotExample {
-    const {entries} = (input as StrictJsonObject);
+  const makeToolCall = (input: StrictJsonValue): Spec.ToolCallExample => {
+    const { entries } = input as StrictJsonObject;
+    const callIdEntry = entries["callId"]!;
+    const toolEntry = entries["tool"]!;
+    const inputEntry = entries["input"]!;
+    const outputEntry = entries["output"]!;
+    const toolName = (toolEntry.value as JsonString).value;
+    const toolId = context.namespace.concat(":", toolName);
+    return {
+      callId: (callIdEntry.value as JsonString).value,
+      toolId,
+      toolName,
+      input: unwrapJsonValue(inputEntry.value),
+      output: unwrapJsonValue(outputEntry.value),
+    };
+  };
+
+  const makeIntermediateStep = (
+    input: StrictJsonValue,
+  ): {
+    readonly toolCalls: readonly Spec.ToolCallExample[];
+  } => {
+    const { entries } = input as StrictJsonObject;
+    const toolCallsEntry = entries["toolCalls"];
+    return {
+      toolCalls: (toolCallsEntry?.value as StrictJsonArray).elements.map(
+        makeToolCall,
+      ),
+    };
+  };
+
+  const makeExample = (input: StrictJsonValue): Spec.FewShotExample => {
+    const { entries } = input as StrictJsonObject;
     const inputEntry = entries["input"]!;
     const outputEntry = entries["output"]!;
     const intermediateSteps = entries["intermediateSteps"];
     return {
-      input: makeValue(inputEntry.value),
-      output: makeValue(outputEntry.value),
-      intermediateSteps: intermediateSteps ? FOO : [],
+      input: unwrapJsonValue(inputEntry.value),
+      output: unwrapJsonValue(outputEntry.value),
+      intermediateSteps: intermediateSteps
+        ? (intermediateSteps.value as StrictJsonArray).elements.map(
+            makeIntermediateStep,
+          )
+        : [],
     };
   };
 
   return (input as StrictJsonArray).elements.map(makeExample);
 }
 
-function makeValue(input: StrictJsonValue): unknown {
+function unwrapJsonValue(input: StrictJsonValue): unknown {
   switch (input.kind) {
     case "string":
       return input.value;
@@ -111,12 +161,14 @@ function makeValue(input: StrictJsonValue): unknown {
       return null;
     case "object": {
       return Object.fromEntries(
-        Object.entries(input.entries)
-          .map(([key, entry]) => [key, makeValue(entry.value)])
+        Object.entries(input.entries).map(([key, entry]) => [
+          key,
+          unwrapJsonValue(entry.value),
+        ]),
       );
     }
     case "array":
-      return input.elements.map(makeValue);
+      return input.elements.map(unwrapJsonValue);
   }
 }
 

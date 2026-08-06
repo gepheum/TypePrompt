@@ -14,6 +14,7 @@ CODEGEN:
 
 CODE QUALITY:
   - maybe remove some `as const`
+  - move unwrapJsonValue to 'json/'
 
 EXTENSION TO THE LANGUAGE:
   - toolcalls...

@@ -51,7 +51,6 @@ type FewShotExample = {
 type ToolCallExample = {
   toolId: string;
   toolName: string;
-  description: string;
   input: any;
   output: any;
 };

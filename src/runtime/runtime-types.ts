@@ -47,9 +47,9 @@ export type FewShotExample = {
 };
 
 export type ToolCallExample = {
+  readonly callId: string;
   readonly toolId: string;
   readonly toolName: string;
-  readonly description: string;
   readonly input: unknown;
   readonly output: unknown;
 };
