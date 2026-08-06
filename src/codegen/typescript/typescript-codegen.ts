@@ -172,6 +172,18 @@ function writeEnums(
   }
   code += ");\n\n";
 
+  code += "export type ToolName<Id extends ToolId> = {\n";
+  if (tools.length <= 0) {
+    code += " never\n";
+  } else {
+    for (const tool of tools) {
+      const toolId = tool.tool.id;
+      const toolName = tool.tool.name.text;
+      code += `"${toolId}": "${toolName}",\n`;
+    }
+  }
+  code += "}[Id];\n\n";
+
   for (const what of ["Input", "Output"]) {
     code += `export type ${what}<Id extends TemplateId | ToolId> = {\n`;
     for (const template of templates) {
