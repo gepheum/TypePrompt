@@ -10,6 +10,7 @@ BUG:
 CODEGEN:
   - reorder sections
   - document everything
+  - nit: rename 'Spec' to 'Data'?
   - do not output namespace if namespace is empty
 
 CODE QUALITY:
