@@ -8,12 +8,14 @@ BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 CODEGEN:
+  - use uppercase for 'tool' name in the $ namespace, make sure no conflict
   - reorder sections
   - document everything
   - nit: rename 'Spec' to 'Data'?
   - do not output namespace if namespace is empty
 
 CODE QUALITY:
+  - add ValidCompilationResult
   - maybe remove some `as const`
 
 EXTENSION TO THE LANGUAGE:
