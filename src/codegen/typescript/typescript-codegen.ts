@@ -68,6 +68,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
   let code = "export type PromptMaker = {\n";
   for (const namespace of namespaces) {
+    if (namespace.templates.length <= 0) continue;
     const namespaceProperty = uncapitalize(namespace.name);
     code += `readonly ${namespaceProperty}: {\n`;
     for (const template of namespace.templates) {
