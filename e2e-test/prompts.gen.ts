@@ -13,6 +13,7 @@ export type Prompt<Id extends TemplateId> = {
   readonly systemMessage: string;
   readonly userMessage: string;
   readonly examples: readonly FewShotExample[];
+  readonly tools: Tools<Id>;
   readonly outputFormat: OutputFormat<Id>;
   readonly parseResponse: (content: string) => Output<Id>;
   readonly templateId: TemplateId;
@@ -21,17 +22,18 @@ export type Prompt<Id extends TemplateId> = {
 
 export type FewShotExample = {
   readonly userMessage: string;
-  readonly toolCallTurns: readonly ToolCallTurn[];
+  readonly intermediateSteps: readonly IntermediateStepExample[];
   readonly response: string;
 };
 
-export type ToolCallTurn = {
-  readonly toolCalls: readonly ToolCall[];
+export type IntermediateStepExample = {
+  readonly toolCalls: readonly ToolCallExample[];
 };
 
-export type ToolCall = {
+export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
+  readonly description: string;
   readonly rawInput: unknown;
   readonly rawOutput: unknown;
 };
@@ -44,6 +46,27 @@ type OutputFormatType<Output> =
     }
   | (Output extends string ? { readonly kind: "text" } : never);
 
+export type Tool<Id extends ToolId> = {
+  readonly id: Id;
+  readonly name: ToolName<Id>;
+  readonly description: string;
+  readonly inputSchema: z.ZodType<Input<Id>>;
+  readonly outputSchema: z.ZodType<Output<Id>>;
+};
+
+export type Tools<Id extends TemplateId> = {
+  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
+    ? Tool<ToolsHelper<Id>[Name]>
+    : never;
+};
+
+export type ToolImpls<Id extends TemplateId> = {
+  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
+    ? (
+        input: Input<ToolsHelper<Id>[Name]>,
+      ) => Promise<Output<ToolsHelper<Id>[Name]>>
+    : never;
+};
 export type PromptMaker = {
   readonly default: {
     readonly myTemplate: Template<"Default:MyTemplate">;
@@ -530,13 +553,16 @@ function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
 }
 
 export const promptMakerFactory: {
-  readonly templatesData: unknown,
+  readonly templatesData: unknown;
   readonly newWithOverrides: (overrides: unknown) => PromptMaker;
 } = {
   templatesData: TEMPLATES_DATA,
   newWithOverrides: (overrides: unknown) => {
     const templatesData = templatesSchema.parse(
-      typeof(overrides) === "object" ? {...TEMPLATES_DATA, ...overrides} : overrides);
+      typeof overrides === "object"
+        ? { ...TEMPLATES_DATA, ...overrides }
+        : overrides,
+    );
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }
@@ -553,8 +579,7 @@ function resolveTemplate<Id extends TemplateId>(
   if (!template) {
     throw new Error("Template not found: ".concat(templateId));
   }
-  const { input: inputSchema, output: outputSchema } =
-    templateSchemas[templateId]!;
+  const { input: inputSchema, output: outputSchema } = zodSchemas[templateId]!;
   input = inputSchema.parse(input) as Input<Id>;
   const { contents, snippets } = template;
   let meta: Meta;
@@ -566,7 +591,7 @@ function resolveTemplate<Id extends TemplateId>(
     meta = content.meta as Meta;
     systemMessage = resolveBody(content.system!, input, snippets);
     userMessage = resolveBody(content.user!, input, snippets);
-    examples = resolveExamples(content.examples!, content.user!, template);
+    examples = resolveExamples(content.examples!, content.user!, template, templates.tools);
   } else {
     const { defaultContent, variants } = contents;
     const { variant } = input as unknown as { readonly variant: string };
@@ -580,8 +605,23 @@ function resolveTemplate<Id extends TemplateId>(
       (variantContent.examples ?? defaultContent.examples)!,
       user,
       template,
+      templates.tools,
     );
   }
+  const tools = Object.fromEntries(
+    template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
+      const toolData = templates.tools[id]!;
+      const toolSchemas = zodSchemas[id as ToolId]!;
+      const tool: Tool<ToolId> = {
+        id: id as ToolId,
+        name: name as ToolName<ToolId>,
+        description: toolData.description,
+        inputSchema: toolSchemas.input,
+        outputSchema: toolSchemas.output,
+      };
+      return [name, tool];
+    }),
+  ) as Tools<Id>;
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
@@ -593,6 +633,7 @@ function resolveTemplate<Id extends TemplateId>(
     systemMessage: systemMessage,
     userMessage: userMessage,
     examples,
+    tools,
     outputFormat,
     parseResponse,
     templateId,
@@ -687,16 +728,22 @@ function evaluate<Input>(input: Input, expression: Spec.Expression): unknown {
 }
 
 function resolveExamples(
-  inputs: ReadonlyArray<{
-    readonly input: unknown;
-    readonly output: unknown;
-  }>,
+  inputs: readonly Spec.FewShotExample[],
   body: Spec.Body,
   template: Spec.Template,
+  tools: { [id: string]: Spec.Tool },
 ): readonly FewShotExample[] {
-  return inputs.map(({ input, output }) => ({
+  return inputs.map(({ input, output, intermediateSteps }) => ({
     userMessage: resolveBody(body, input, template.snippets),
-    toolCallTurns: [],
+    intermediateSteps: intermediateSteps.map((step) => ({
+      toolCalls: step.toolCalls.map((tc) => ({
+        callId: tc.callId,
+        toolName: tc.toolName,
+        description: tools[tc.toolId]!.description,
+        rawInput: tc.input,
+        rawOutput: tc.output,
+      })),
+    })),
     response: format(output, template.outputFormat),
   }));
 }
