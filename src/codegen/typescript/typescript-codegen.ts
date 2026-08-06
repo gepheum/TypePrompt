@@ -526,5 +526,20 @@ function reformat(code: string): string {
 }
 
 function coalesceEmptyLines(code: string): string {
-  return code.replace(/\n\n\n+/g, "\n\n").replace(/\{\n+\}/g, "{}");
+  return (
+    code
+      // Remove spaces enclosed within curly brackets if that's all there is.
+      .replace(/\{\s+\}/g, "{}")
+      // Remove spaces enclosed within round brackets if that's all there is.
+      .replace(/\(\s+\)/g, "()")
+      // Remove spaces enclosed within square brackets if that's all there is.
+      .replace(/\[\s+\]/g, "[]")
+      // Remove empty line following an open curly bracket.
+      .replace(/(\{\n *)\n/g, "$1")
+      // Remove empty line preceding a closed curly bracket.
+      .replace(/\n(\n *\})/g, "$1")
+      // Coalesce consecutive empty lines.
+      .replace(/\n\n\n+/g, "\n\n")
+      .replace(/\n\n$/g, "\n")
+  );
 }
