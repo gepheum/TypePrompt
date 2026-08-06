@@ -72,7 +72,7 @@ const TEMPLATES_DATA: Spec.Templates = {
 const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
-// <static:types>
+// <static:typescript-public-types>
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
 };
@@ -136,9 +136,9 @@ export type ToolImpls<Id extends TemplateId> = {
       ) => Promise<Output<ToolsHelper<Id>[Name]>>
     : never;
 };
-// </static:types>
+// </static:typescript-public-types>
 
-// <static:logic>
+// <static:typescript-logic>
 export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
 }
@@ -433,4 +433,4 @@ function parseResponseImpl<Output>(
 function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
-// </static:logic>
+// </static:typescript-logic>
