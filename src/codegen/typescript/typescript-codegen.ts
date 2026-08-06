@@ -224,11 +224,12 @@ function writeEnums(
     code += `"${templateId}": {\n`;
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.kind;
-      code += `${toolName}: "${toolName}",\n`;
+      const toolId = `${namespace}:${toolName}`;
+      code += `${toolName}: "${toolId}",\n`;
     }
     code += "},\n";
   }
-  code += "};\n\n";
+  code += "}[Id];\n\n";
 
   return code;
 }
