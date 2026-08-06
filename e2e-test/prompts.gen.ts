@@ -82,6 +82,10 @@ export type ToolId = (
   | "Default:getX"
 );
 
+export type ToolName<Id extends ToolId> = {
+  "Default:getX": "getX",
+}[Id];
+
 export type Input<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Input;
   "Default:getX": $.Default.getX.Input;
@@ -125,7 +129,7 @@ export namespace $ {
 
 }
 
-const templateSchemas = {
+const zodSchemas = {
   "Default:MyTemplate": {
     input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
       const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
@@ -141,6 +145,20 @@ const templateSchemas = {
     output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
       const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
         x: z.int32(),
+      });
+      return outputSchema;
+    })(),
+  },
+  "Default:getX": {
+    input: ((): z.ZodType<$.Default.getX.Input> => {
+      const inputSchema: z.ZodType<$.Default.getX.Input> = z.object({
+        x: z.int32(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Default.getX.Output> => {
+      const outputSchema: z.ZodType<$.Default.getX.Output> = z.object({
+        y: z.int32(),
       });
       return outputSchema;
     })(),

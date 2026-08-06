@@ -1,6 +1,8 @@
 import type {
   CompilationResult,
   NamespaceResult,
+  Template,
+  Tool,
   ValidatedTemplate,
   ValidatedTool,
   ValidCompilationResult,
@@ -55,7 +57,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         [
           writeEnums(Object.values(templates), Object.values(tools)),
           writeDatatypes(metaSchema, Object.values(namespaces)),
-          writeTemplateZodTypes(Object.values(templates)),
+          writeDataZodTypes(Object.values(templates), Object.values(tools)),
           writeSpecDatatypes(),
           writeSpec(compilationResult),
         ].join(""),
@@ -120,18 +122,22 @@ function writeDatatypes(
   return code;
 }
 
-function writeTemplateZodTypes(
+function writeDataZodTypes(
   templates: readonly ValidatedTemplate[],
+  tools: readonly ValidatedTool[],
 ): string {
-  let code = "const templateSchemas = {\n";
-  for (const template of templates) {
-    const namespace = template.template.namespace?.text ?? "Default";
-    const templateName = template.template.name.text;
-    const zodInputType = writeZodType(template.schema, "Input", {
+  let code = "const zodSchemas = {\n";
+  const writeEntry = (
+    input: ValidatedTemplate | ValidatedTool,
+    named: Template | Tool,
+  ): void => {
+    const namespace = named.namespace?.text ?? "Default";
+    const templateName = named.name.text;
+    const zodInputType = writeZodType(input.schema, "Input", {
       defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
-    const zodOutputType = writeZodType(template.schema, "Output", {
+    const zodOutputType = writeZodType(input.schema, "Output", {
       defaultScopeTypePrefix: `$.${namespace}.${templateName}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
@@ -139,6 +145,12 @@ function writeTemplateZodTypes(
     code += `input: ${zodInputType},\n`;
     code += `output: ${zodOutputType},\n`;
     code += "},\n";
+  };
+  for (const template of templates) {
+    writeEntry(template, template.template);
+  }
+  for (const tool of tools) {
+    writeEntry(tool, tool.tool);
   }
   code += "} as const;\n\n";
   return code;
@@ -177,7 +189,10 @@ function writeEnums(
     code += " never\n";
   } else {
     for (const tool of tools) {
-      const toolId = tool.tool.id;
+      const toolId = (tool.tool.namespace?.text ?? "Default").concat(
+        ":",
+        tool.tool.name.text,
+      );
       const toolName = tool.tool.name.text;
       code += `"${toolId}": "${toolName}",\n`;
     }
