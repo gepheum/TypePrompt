@@ -21,43 +21,31 @@ export type Meta = {};
 /** Uniquely identifies a prompt template. */
 export type TemplateId = "Ns:Foo" | "Ns:Bar";
 
-/** Uniquely identifies a tool. */
-export type ToolId = "Ns:myTool" | "Ns:otherTool";
-
-/**
- * For a template ID: the input required to resolve the template into a prompt.
- * For a tool ID: the tool's parameter type.
- */
-export type Input<Id extends TemplateId | ToolId> = {
+/** The input required to resolve the template into a prompt. */
+export type Input<Id extends TemplateId> = {
   "Ns:Foo": unknown;
   "Ns:Bar": string;
-  "Ns:myTool": number;
-  "Ns:otherTool": boolean;
 }[Id];
 
-/**
- * For a template ID: the parsed response type expected from the LLM.
- * For a tool ID: the tool's return type.
- */
-export type Output<Id extends TemplateId | ToolId> = {
+/** Type of the structured response expected from the LLM. */
+export type Output<Id extends TemplateId> = {
   "Ns:Foo": unknown;
   "Ns:Bar": string;
-  "Ns:myTool": number;
-  "Ns:otherTool": number;
 }[Id];
 
-/** The string literal type of the tool's name for a given tool ID. */
-export type ToolName<Id extends ToolId> = {
-  "Ns:myTool": "myTool";
-  "Ns:otherTool": "otherTool";
-}[Id];
-
-export type ToolsHelper<Id extends TemplateId> = {
-  "Ns:Foo": {
-    myTool: "Ns:myTool";
+/** The tools available from the given template. */
+export type Tools<Id extends TemplateId> = {
+  readonly "Ns:Foo": {
+    readonly myTool: Tool<string, string>;
+    readonly otherTool: Tool<string, boolean>;
   };
-  "Ns:Bar": {};
+  readonly "Ns:Bar": {
+    // readonly myTool: Tool<string, string>;
+  };
 }[Id];
+
+/** Names of the tools available from the given template. */
+export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
 
 const zodSchemas = {
   "Ns:Foo": {
@@ -109,9 +97,12 @@ export type Prompt<Id extends TemplateId> = {
   readonly examples: readonly FewShotExample[];
   /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
+  readonly isToolName: (name: string) => name is ToolNames<Id>;
   readonly outputFormat: OutputFormat<Id>;
+  /** Parses the raw LLM response string into the typed {@link Output}. */
   readonly parseResponse: (content: string) => Output<Id>;
   readonly templateId: TemplateId;
+  /** The value passed to {@link Template.make} to produce this prompt. */
   readonly templateInput: Input<Id>;
 };
 
@@ -130,6 +121,7 @@ export type FewShotExample = {
  * calls made at that step.
  */
 export type IntermediateStepExample = {
+  /** Tool calls made in parallel at this step. */
   readonly toolCalls: readonly ToolCallExample[];
 };
 
@@ -138,7 +130,9 @@ export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
   readonly description: string;
+  /** JSON value which can be passed to {@link JSON.stringify}. */
   readonly rawInput: unknown;
+  /** JSON value which can be passed to {@link JSON.stringify}. */
   readonly rawOutput: unknown;
 };
 
@@ -154,27 +148,17 @@ export type OutputFormat<Id extends TemplateId> =
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
 /** A tool that can be called during prompt execution. */
-export type Tool<Id extends ToolId> = {
-  readonly id: Id;
-  readonly name: ToolName<Id>;
+export type Tool<Input, Output> = {
+  readonly name: string;
   readonly description: string;
-  readonly inputSchema: z.ZodType<Input<Id>>;
-  readonly outputSchema: z.ZodType<Output<Id>>;
-};
-
-/** The set of tools available to template `Id`, keyed by tool name. */
-export type Tools<Id extends TemplateId> = {
-  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
-    ? Tool<ToolsHelper<Id>[Name]>
-    : never;
+  readonly inputSchema: z.ZodType<Input>;
+  readonly outputSchema: z.ZodType<Output>;
 };
 
 /** Implementation functions for all tools required by template `Id`. */
 export type ToolImpls<Id extends TemplateId> = {
-  [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
-    ? (
-        input: Input<ToolsHelper<Id>[Name]>,
-      ) => Promise<Output<ToolsHelper<Id>[Name]>>
+  [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<infer Input, infer Output>
+    ? (input: Input) => Promise<Output>
     : never;
 };
 // </static:typescript-public-types>
@@ -261,12 +245,11 @@ function resolveTemplate<Id extends TemplateId>(
     );
   }
   const tools = Object.fromEntries(
-    template.tools.map(({ id, name }): readonly [string, Tool<ToolId>] => {
+    template.tools.map(({ id, name }): readonly [string, Tool<unknown, unknown>] => {
       const toolData = templates.tools[id]!;
-      const toolSchemas = zodSchemas[id as ToolId]!;
-      const tool: Tool<ToolId> = {
-        id: id as ToolId,
-        name: name as ToolName<ToolId>,
+      const toolSchemas = zodSchemas[id as keyof typeof zodSchemas]!;
+      const tool: Tool<unknown, unknown> = {
+        name: name,
         description: toolData.description,
         inputSchema: toolSchemas["input"],
         outputSchema: toolSchemas["output"],
@@ -274,6 +257,9 @@ function resolveTemplate<Id extends TemplateId>(
       return [name, tool];
     }),
   ) as Tools<Id>;
+  const isToolName = (name: string): name is ToolNames<Id> => {
+    return name in tools;
+  };
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
@@ -286,6 +272,7 @@ function resolveTemplate<Id extends TemplateId>(
     userMessage: userMessage,
     examples,
     tools,
+    isToolName,
     outputFormat,
     parseResponse,
     templateId,

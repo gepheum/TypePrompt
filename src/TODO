@@ -4,6 +4,8 @@ CODEGEN:
     - add to the generated code...
   - e2e test
   - add example of hook functions
+  - I need to think about this: when i get the tool name back from the LLM, I want to be able to map it to a toolName for the templateId, but there is no type for it... consider making ToolName also accept a template ID and returning a union in that case?
+    - do I really need ToolId? Mayeb I do. i dunno.
 
 TOOLS:
   - add to generated code
@@ -19,8 +21,8 @@ JSON:
 SCHEMA:
   - put: back 'interface'
 
-CODE QUALITY:
-  - maybe remove some `as const`
+LANGUAGE SERVER:
+  -
 
 EXTENSION TO THE LANGUAGE:
   - toolcalls...
