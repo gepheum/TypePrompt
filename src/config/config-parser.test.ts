@@ -1,28 +1,21 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { ConfigParseError, parseConfigYaml } from "./config-parser.js";
+import { type ConfigParseResult, parseConfigYaml } from "./config-parser.js";
 
 function expectConfigParseError(
-  fn: () => unknown,
+  result: ConfigParseResult,
   messagePattern: RegExp,
 ): void {
-  try {
-    fn();
-  } catch (error: unknown) {
-    if (!(error instanceof ConfigParseError)) {
-      throw error;
-    }
-    expect(error.message).toMatch(messagePattern);
-    return;
+  if (result.ok) {
+    throw new Error("Expected parse error but got success");
   }
-
-  throw new Error("Expected ConfigParseError to be thrown");
+  expect(result.messages.join("\n")).toMatch(messagePattern);
 }
 
 describe("parseConfigYaml", () => {
   it("parses a minimal config with enabled typescript codegen", () => {
-    const config = parseConfigYaml({
+    const result = parseConfigYaml({
       content: [
         "gen:",
         "  typescript:",
@@ -32,13 +25,14 @@ describe("parseConfigYaml", () => {
       path: "config.yml",
     });
 
-    expect(config).toMatch({
+    if (!result.ok) throw new Error(result.messages.join("\n"));
+    expect(result.config).toMatch({
       gen: { typescript: { enabled: true, file: "out/prompts.ts" } },
     });
   });
 
   it("parses all fields", () => {
-    const config = parseConfigYaml({
+    const result = parseConfigYaml({
       content: [
         "input: prompts/*.tp",
         "gen:",
@@ -52,7 +46,8 @@ describe("parseConfigYaml", () => {
       path: "config.yml",
     });
 
-    expect(config).toMatch({
+    if (!result.ok) throw new Error(result.messages.join("\n"));
+    expect(result.config).toMatch({
       input: "prompts/*.tp",
       gen: {
         typescript: { enabled: true, file: "out/prompts.ts" },
@@ -62,31 +57,31 @@ describe("parseConfigYaml", () => {
   });
 
   it("accepts enabled: false without a file", () => {
-    const config = parseConfigYaml({
+    const result = parseConfigYaml({
       content: ["gen:", "  typescript:", "    enabled: false"].join("\n"),
       path: "config.yml",
     });
-    expect(config).toMatch({ gen: { typescript: { enabled: false } } });
+    if (!result.ok) throw new Error(result.messages.join("\n"));
+    expect(result.config).toMatch({ gen: { typescript: { enabled: false } } });
   });
 
   it("fails with line number on invalid YAML syntax", () => {
     expectConfigParseError(
-      () =>
-        parseConfigYaml({ content: "input: [unclosed", path: "config.yml" }),
+      parseConfigYaml({ content: "input: [unclosed", path: "config.yml" }),
       /config\.yml:\d+:\d+:/,
     );
   });
 
   it("fails with line number on unknown fields", () => {
     expectConfigParseError(
-      () => parseConfigYaml({ content: "outputPath: x", path: "config.yml" }),
+      parseConfigYaml({ content: "outputPath: x", path: "config.yml" }),
       /config\.yml:\d+:\d+:.*unknown config field\(s\): 'outputPath'/,
     );
   });
 
   it("fails with line number on wrong field type", () => {
     expectConfigParseError(
-      () => parseConfigYaml({ content: "input: 123", path: "config.yml" }),
+      parseConfigYaml({ content: "input: 123", path: "config.yml" }),
       /config\.yml:\d+:\d+:.*invalid value for 'input'/,
     );
   });

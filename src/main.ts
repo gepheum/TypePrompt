@@ -16,7 +16,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
 import { ValidCompilationResult } from "./compiler/compiler-types.js";
 import { compile } from "./compiler/compiler.js";
-import { ConfigParseError, parseConfigYaml } from "./config/config-parser.js";
+import { parseConfigYaml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
 import { findLine, LineFinderData } from "./util/line-finder.js";
 import { InternalError } from "./util/shared-types.js";
@@ -52,14 +52,6 @@ async function main(): Promise<void> {
     const _: "gen" = command.kind;
     await runGeneration(command.projectPath);
   } catch (error: unknown) {
-    if (error instanceof ConfigParseError) {
-      for (const message of error.messages) {
-        console.error(message);
-      }
-      process.exitCode = 1;
-      return;
-    }
-
     if (error instanceof Error) {
       console.error(error.message);
       process.exitCode = 1;
@@ -132,11 +124,20 @@ async function runGeneration(projectPath?: string): Promise<void> {
     throw new Error(`Cannot find ${configPath}`);
   }
 
-  const config = parseConfigYaml({
+  const parseResult = parseConfigYaml({
     content: readFileSync(configPath, "utf8"),
     path: configPath,
   });
 
+  if (!parseResult.ok) {
+    for (const message of parseResult.messages) {
+      console.error(message);
+    }
+    process.exitCode = 1;
+    return;
+  }
+
+  const config = parseResult.config;
   const inputPattern = config.input ?? "prompts/*.xml";
   const templateFiles = expandGlob(inputPattern, configDir);
 

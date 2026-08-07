@@ -28,45 +28,49 @@ export type Config = {
   };
 };
 
-export class ConfigParseError extends Error {
+export interface ConfigParseError {
+  readonly ok: false;
   readonly messages: readonly string[];
-
-  constructor(messages: readonly string[]) {
-    super(messages.join("\n"));
-    this.name = "ConfigParseError";
-    this.messages = messages;
-  }
 }
+
+export interface ConfigParseSuccess {
+  readonly ok: true;
+  readonly config: Config;
+}
+
+export type ConfigParseResult = ConfigParseSuccess | ConfigParseError;
 
 export interface ParseConfigYamlArgs {
   readonly content: string;
   readonly path: string;
 }
 
-export function parseConfigYaml(args: ParseConfigYamlArgs): Config {
+export function parseConfigYaml(args: ParseConfigYamlArgs): ConfigParseResult {
   const lineCounter = new LineCounter();
   const doc = parseDocument(args.content, { lineCounter });
 
   if (doc.errors.length > 0) {
-    throw new ConfigParseError(
-      doc.errors.map((e) => {
+    return {
+      ok: false,
+      messages: doc.errors.map((e) => {
         const pos = lineCounter.linePos(e.pos[0]);
         return `${args.path}:${pos.line}:${pos.col}: ${e.message}`;
       }),
-    );
+    };
   }
 
   const parseResult = RawConfigSchema.safeParse(doc.toJS());
 
   if (!parseResult.success) {
-    throw new ConfigParseError(
-      parseResult.error.issues.map((issue) =>
+    return {
+      ok: false,
+      messages: parseResult.error.issues.map((issue) =>
         formatSchemaIssue(args.path, issue, doc, lineCounter),
       ),
-    );
+    };
   }
 
-  return parseResult.data;
+  return { ok: true, config: parseResult.data };
 }
 
 const langSchema = (ext: string) =>

@@ -507,13 +507,27 @@ function writeZodType(
         }
       }
       case "union": {
-        return [
-          "z.union([",
-          ...Object.values(type.members).map((m) =>
-            write(m, scope).concat(","),
-          ),
-          "])",
-        ].join("\n");
+        const members = schema.unionToMembers.get(type)!;
+        if (members.kind === "interfaces") {
+          return [
+            "z.discriminatedUnion(",
+            JSON.stringify(members.discriminator),
+            "[",
+            ...Object.values(type.members).map((m) =>
+              write(m, scope).concat(","),
+            ),
+            "]",
+            ")",
+          ].join("\n");
+        } else {
+          return [
+            "z.enum([",
+            ...members.members.map((v) =>
+              JSON.stringify(v.value satisfies string).concat(","),
+            ),
+            "])",
+          ].join("\n");
+        }
       }
     }
   };
