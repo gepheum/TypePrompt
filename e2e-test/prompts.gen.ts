@@ -16,6 +16,7 @@ export function newPromptMaker(): PromptMaker {
  * and each nested property corresponds to a template within that namespace.
  */
 export type PromptMaker = {
+  /** Templates defined in the default namespace. */
   readonly main: {
     readonly myTemplate: Template<"Main:MyTemplate">;
   };

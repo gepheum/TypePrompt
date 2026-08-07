@@ -76,6 +76,9 @@ function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
   ];
   for (const namespace of namespaces) {
     if (namespace.templates.length <= 0) continue;
+    if (namespace.name === DEFAULT_NAMESPACE) {
+      lines.push("/** Templates defined in the default namespace. */");
+    }
     const namespaceProperty = uncapitalize(namespace.name);
     lines.push(`readonly ${namespaceProperty}: {`);
     for (const template of namespace.templates) {
