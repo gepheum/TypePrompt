@@ -37,7 +37,10 @@ class SchemaParser {
           let nestingLevel = 0;
           while (
             token.kind !== "string-end" &&
-            !(nestingLevel === 0 && (token.text === "type" || token.text === "interface"))
+            !(
+              nestingLevel === 0 &&
+              (token.text === "type" || token.text === "interface")
+            )
           ) {
             if (token.text === "{") {
               ++nestingLevel;

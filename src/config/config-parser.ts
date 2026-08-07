@@ -73,32 +73,37 @@ export function parseConfigYaml(args: ParseConfigYamlArgs): ConfigParseResult {
   return { ok: true, config: parseResult.data };
 }
 
-const langSchema = (ext: string) =>
-  z
-    .discriminatedUnion("enabled", [
-      z.object({ enabled: z.literal(false) }).strict(),
-      z
-        .object({
-          enabled: z.literal(true),
-          file: z
-            .string()
-            .min(1, "must be a non-empty string")
-            .refine((f) => f.endsWith(ext), `must end with '${ext}'`),
-        })
-        .strict(),
-    ])
-    .optional();
-
 const RawConfigSchema = z
   .object({
     input: z.string().min(1, "must be a non-empty string").optional(),
     gen: z
       .object({
-        typescript: langSchema(".ts"),
-        python: langSchema(".py"),
+        typescript: z
+          .discriminatedUnion("enabled", [
+            z.object({ enabled: z.literal(false) }).strict(),
+            z
+              .object({
+                enabled: z.literal(true),
+                file: z
+                  .string()
+                  .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
+              })
+              .strict(),
+          ])
+          .optional(),
+        python: z.discriminatedUnion("enabled", [
+          z.object({ enabled: z.literal(false) }).strict(),
+          z
+            .object({
+              enabled: z.literal(true),
+              file: z
+                .string()
+                .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+            })
+            .strict(),
+        ]),
       })
-      .strict()
-      .default({}),
+      .strict(),
   })
   .strict();
 
@@ -121,7 +126,7 @@ function formatSchemaIssue(
   }
 
   const locationPrefix = node?.range
-    ? (() => {
+    ? ((): string => {
         const pos = lineCounter.linePos(node.range[0]);
         return `${filePath}:${pos.line}:${pos.col}`;
       })()
