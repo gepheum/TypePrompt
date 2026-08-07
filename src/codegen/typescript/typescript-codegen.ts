@@ -67,7 +67,13 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 }
 
 function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
-  const lines = ["export type PromptMaker = {"];
+  const lines = [
+    "/**",
+    " * Entry point for building prompts. Each property corresponds to a namespace,",
+    " * and each nested property corresponds to a template within that namespace.",
+    " */",
+    "export type PromptMaker = {",
+  ];
   for (const namespace of namespaces) {
     if (namespace.templates.length <= 0) continue;
     const namespaceProperty = uncapitalize(namespace.name);

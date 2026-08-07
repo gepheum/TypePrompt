@@ -11,6 +11,10 @@ export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
 }
 
+/**
+ * Entry point for building prompts. Each property corresponds to a namespace,
+ * and each nested property corresponds to a template within that namespace.
+ */
 export type PromptMaker = {
   readonly main: {
     readonly myTemplate: Template<"Main:MyTemplate">;
