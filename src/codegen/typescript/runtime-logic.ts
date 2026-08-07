@@ -1,4 +1,5 @@
 import * as Spec from "../../runtime/runtime-types.js";
+import { AssertSatisfies } from "../../util/static-assert.js";
 
 // <static:typescript-top-level>
 // This file is auto-generated. Do not edit it directly.
@@ -8,7 +9,6 @@ import * as Spec from "../../runtime/runtime-types.js";
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
-import { AssertSatisfies } from "../../util/static-assert.js";
 
 /** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
@@ -17,6 +17,7 @@ export function newPromptMaker(): PromptMaker {
 // </static:typescript-top-level>
 
 // <generated>
+/** Metadata associated with a prompt template. */
 export type Meta = {};
 
 /** Uniquely identifies a prompt template. */

@@ -169,7 +169,8 @@ function writeTemplateIdEnum(
   templates: readonly ValidatedTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
-  let code = "export type TemplateId = (\n";
+  let code = "/** Uniquely identifies a prompt template. */\n";
+  code += "export type TemplateId = (\n";
   if (templates.length <= 0) {
     code += " never\n";
   } else {
@@ -187,7 +188,8 @@ function writeToolsType(
   templates: readonly ValidTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
-  let code = "export type Tools<Id extends TemplateId> = {\n";
+  let code = "/** Uniquely identifies a prompt template. */\n";
+  code += "export type Tools<Id extends TemplateId> = {\n";
   for (const template of templates) {
     const namespace = template.template.namespace?.text ?? "Default";
     const templateName = template.template.name.text;

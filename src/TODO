@@ -4,6 +4,7 @@ TYPESCRIPT:
     - add to the generated code...
   - e2e test
   - add example of hook functions
+  - use 'lines' variable and join("\n)
 
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
