@@ -1,14 +1,21 @@
-import { parse as parseToml } from "smol-toml";
+import { LineCounter, parseDocument, Scalar, YAMLMap } from "yaml";
 import { z } from "zod";
 
 export type Config = {
   /// Glob pattern to match template files to be processed.
   /// Defaults to `prompts/*.xml`.
   readonly input?: string;
-  /// Path to the generated Python file.
-  readonly generatedDotPyPath?: string;
-  /// Path to the generated TypeScript file.
-  readonly generatedDotTsPath?: string;
+
+  readonly gen: {
+    readonly typescript: {
+      /** Path to the generated TypeScript file. */
+      readonly dotTsPath?: string;
+    };
+    readonly python: {
+      /** Path to the generated Python file. */
+      readonly dotPyPath?: string;
+    };
+  };
 };
 
 export class ConfigParseError extends Error {
@@ -21,19 +28,30 @@ export class ConfigParseError extends Error {
   }
 }
 
-export interface ParseConfigTomlArgs {
+export interface ParseConfigYamlArgs {
   readonly content: string;
   readonly path: string;
 }
 
-export function parseConfigToml(args: ParseConfigTomlArgs): Config {
-  const parsedToml = parseTomlWithClearError(args.content, args.path);
-  const parseResult = RawConfigSchema.safeParse(parsedToml);
+export function parseConfigYaml(args: ParseConfigYamlArgs): Config {
+  const lineCounter = new LineCounter();
+  const doc = parseDocument(args.content, { lineCounter });
+
+  if (doc.errors.length > 0) {
+    throw new ConfigParseError(
+      doc.errors.map((e) => {
+        const pos = lineCounter.linePos(e.pos[0]);
+        return `${args.path}:${pos.line}:${pos.col}: ${e.message}`;
+      }),
+    );
+  }
+
+  const parseResult = RawConfigSchema.safeParse(doc.toJS());
 
   if (!parseResult.success) {
     throw new ConfigParseError(
       parseResult.error.issues.map((issue) =>
-        formatSchemaIssue(args.path, issue),
+        formatSchemaIssue(args.path, issue, doc, lineCounter),
       ),
     );
   }
@@ -44,97 +62,62 @@ export function parseConfigToml(args: ParseConfigTomlArgs): Config {
 const RawConfigSchema = z
   .object({
     input: z.string().min(1, "must be a non-empty string").optional(),
-    generatedDotPyPath: z
-      .string()
-      .min(1, "must be a non-empty string")
-      .optional(),
-    generatedDotTsPath: z
-      .string()
-      .min(1, "must be a non-empty string")
-      .optional(),
-    // Compatibility aliases with clearer names.
-    generatedPythonPath: z
-      .string()
-      .min(1, "must be a non-empty string")
-      .optional(),
-    generatedTypeScriptPath: z
-      .string()
-      .min(1, "must be a non-empty string")
-      .optional(),
+    gen: z
+      .object({
+        typescript: z
+          .object({
+            dotTsPath: z.string().min(1, "must be a non-empty string").optional(),
+          })
+          .strict()
+          .default({}),
+        python: z
+          .object({
+            dotPyPath: z.string().min(1, "must be a non-empty string").optional(),
+          })
+          .strict()
+          .default({}),
+      })
+      .strict()
+      .default({ typescript: {}, python: {} }),
   })
-  .strict()
-  .superRefine((raw, ctx) => {
+  .strict();
+
+function formatSchemaIssue(
+  filePath: string,
+  issue: z.core.$ZodIssue,
+  doc: ReturnType<typeof parseDocument>,
+  lineCounter: LineCounter,
+): string {
+  // Walk up the path until we find a node with a source range.
+  let nodePath = [...issue.path] as PropertyKey[];
+  let node: Scalar | YAMLMap | undefined;
+  while (nodePath.length > 0) {
+    const candidate = doc.getIn(nodePath, true);
     if (
-      raw.generatedDotPyPath !== undefined &&
-      raw.generatedPythonPath !== undefined &&
-      raw.generatedDotPyPath !== raw.generatedPythonPath
+      candidate instanceof Scalar ||
+      candidate instanceof YAMLMap
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["generatedPythonPath"],
-        message:
-          "conflicts with 'generatedDotPyPath' (both are set with different values)",
-      });
+      node = candidate;
+      break;
     }
-
-    if (
-      raw.generatedDotTsPath !== undefined &&
-      raw.generatedTypeScriptPath !== undefined &&
-      raw.generatedDotTsPath !== raw.generatedTypeScriptPath
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["generatedTypeScriptPath"],
-        message:
-          "conflicts with 'generatedDotTsPath' (both are set with different values)",
-      });
-    }
-  })
-  .transform((raw): Config => {
-    const config: {
-      /// Glob pattern to match .tp files to be processed.
-      /// Defaults to `prompts/*.tp`.
-      input?: string;
-      /// Path to the generated Python file.
-      generatedDotPyPath?: string;
-      /// Path to the generated TypeScript file.
-      generatedDotTsPath?: string;
-    } = {};
-
-    if (raw.input !== undefined) {
-      config.input = raw.input;
-    }
-    if (raw.generatedDotPyPath !== undefined) {
-      config.generatedDotPyPath = raw.generatedDotPyPath;
-    } else if (raw.generatedPythonPath !== undefined) {
-      config.generatedDotPyPath = raw.generatedPythonPath;
-    }
-    if (raw.generatedDotTsPath !== undefined) {
-      config.generatedDotTsPath = raw.generatedDotTsPath;
-    } else if (raw.generatedTypeScriptPath !== undefined) {
-      config.generatedDotTsPath = raw.generatedTypeScriptPath;
-    }
-
-    return config;
-  });
-
-function parseTomlWithClearError(content: string, path: string): unknown {
-  try {
-    return parseToml(content);
-  } catch (error: unknown) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new ConfigParseError([`${path}: invalid TOML syntax: ${reason}`]);
+    nodePath = nodePath.slice(0, -1);
   }
-}
 
-function formatSchemaIssue(path: string, issue: z.ZodIssue): string {
+  const locationPrefix =
+    node?.range
+      ? (() => {
+          const pos = lineCounter.linePos(node.range[0]);
+          return `${filePath}:${pos.line}:${pos.col}`;
+        })()
+      : filePath;
+
   if (issue.code === "unrecognized_keys") {
     const keys = issue.keys.map((key) => `'${key}'`).join(", ");
-    return `${path}: unknown config field(s): ${keys}`;
+    return `${locationPrefix}: unknown config field(s): ${keys}`;
   }
 
   const issuePath = formatIssuePath(issue.path);
-  return `${path}: invalid value for '${issuePath}': ${issue.message}`;
+  return `${locationPrefix}: invalid value for '${issuePath}': ${issue.message}`;
 }
 
 function formatIssuePath(path: readonly PropertyKey[]): string {

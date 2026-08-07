@@ -16,7 +16,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
 import { ValidCompilationResult } from "./compiler/compiler-types.js";
 import { compile } from "./compiler/compiler.js";
-import { ConfigParseError, parseConfigToml } from "./config/config-parser.js";
+import { ConfigParseError, parseConfigYaml } from "./config/config-parser.js";
 import { initializeProject } from "./project-initializer.js";
 import { findLine, LineFinderData } from "./util/line-finder.js";
 import { InternalError } from "./util/shared-types.js";
@@ -132,7 +132,7 @@ async function runGeneration(projectPath?: string): Promise<void> {
     throw new Error(`Cannot find ${configPath}`);
   }
 
-  const config = parseConfigToml({
+  const config = parseConfigYaml({
     content: readFileSync(configPath, "utf8"),
     path: configPath,
   });
@@ -183,17 +183,17 @@ async function runGeneration(projectPath?: string): Promise<void> {
 
 function resolveConfigPath(projectPath?: string): string {
   if (!projectPath) {
-    return resolve(process.cwd(), "typeprompt.toml");
+    return resolve(process.cwd(), "typeprompt.yml");
   }
 
   const resolved = resolve(projectPath);
   if (existsSync(resolved) && statSync(resolved).isDirectory()) {
-    return join(resolved, "typeprompt.toml");
+    return join(resolved, "typeprompt.yml");
   }
 
-  return resolved.endsWith(".toml")
+  return resolved.endsWith(".yml")
     ? resolved
-    : join(resolved, "typeprompt.toml");
+    : join(resolved, "typeprompt.yml");
 }
 
 function formatError(

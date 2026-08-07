@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export function initializeProject(rootDir: string): void {
-  const configPath = join(rootDir, "typeprompt.toml");
+  const configPath = join(rootDir, "typeprompt.yml");
   const promptsDir = join(rootDir, "prompts");
   const helloWorldPath = join(promptsDir, "hello_world.tp");
 
@@ -29,9 +29,10 @@ export function initializeProject(rootDir: string): void {
 }
 
 const DEFAULT_CONFIG_TOML = [
-  '# TypePrompt configuration. Run "npx typeprompt gen" to generate code.',
-  'input = "prompts"',
-  'generatedDotTsPath = "./prompts.gen.ts"',
+  "# TypePrompt configuration. Run \"npx typeprompt gen\" to generate code.",
+  "gen:",
+  "  typescript:",
+  "    dotTsPath: ./prompts.gen.ts",
   "",
 ].join("\n");
 

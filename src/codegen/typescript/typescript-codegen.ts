@@ -30,13 +30,13 @@ export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
   config: Config,
 ): readonly OutputFile[] {
-  const { generatedDotTsPath } = config;
-  if (!generatedDotTsPath) {
+  const dotTsPath = config.gen.typescript.dotTsPath;
+  if (!dotTsPath) {
     return [];
   }
   return [
     {
-      path: generatedDotTsPath,
+      path: dotTsPath,
       content: writeAll(compilationResult),
     },
   ];
