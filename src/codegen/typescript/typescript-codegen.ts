@@ -7,6 +7,7 @@ import type {
   ValidatedTool,
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
@@ -52,12 +53,14 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       "",
       reformat(
         [
-          writeEnums(Object.values(templates), Object.values(tools)),
+          writeTemplateIdEnum(Object.values(templates), Object.values(tools)),
+          writeToolsType(Object.values(templates), Object.values(tools)),
+          writeInputOutputTypes(Object.values(templates)),
           writeUserDefinedDatatypes(metaSchema, Object.values(namespaces)),
           writeZodSchemas(Object.values(templates), Object.values(tools)),
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
-        ].join(""),
+        ].join("\n\n"),
       ),
       STATIC_SNIPPETS["typescript-logic"],
       "",
@@ -158,11 +161,11 @@ function writeZodSchemas(
   for (const tool of tools) {
     writeEntry(tool, tool.tool);
   }
-  code += "} as const;\n\n";
+  code += "} as const;";
   return code;
 }
 
-function writeEnums(
+function writeTemplateIdEnum(
   templates: readonly ValidatedTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
@@ -176,62 +179,49 @@ function writeEnums(
       code += `| "${namespace}:${templateName}"\n`;
     }
   }
-  code += ");\n\n";
+  code += ");";
+  return code;
+}
 
-  code += "export type ToolId = (\n";
-  if (tools.length <= 0) {
-    code += " never\n";
-  } else {
-    for (const tool of tools) {
-      const namespace = tool.tool.namespace?.text ?? "Default";
-      const toolName = tool.tool.name.text;
-      code += `| "${namespace}:${toolName}"\n`;
-    }
-  }
-  code += ");\n\n";
-
-  code += "export type ToolName<Id extends ToolId> = {\n";
-  for (const tool of tools) {
-    const toolId = (tool.tool.namespace?.text ?? "Default").concat(
-      ":",
-      tool.tool.name.text,
-    );
-    const toolName = tool.tool.name.text;
-    code += `"${toolId}": "${toolName}",\n`;
-  }
-  code += "}[Id];\n\n";
-
-  for (const what of ["Input", "Output"]) {
-    code += `export type ${what}<Id extends TemplateId | ToolId> = {\n`;
-    for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? "Default";
-      const templateName = template.template.name.text;
-      const templateId = `${namespace}:${templateName}`;
-      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
-    }
-    for (const tool of tools) {
-      const namespace = tool.tool.namespace?.text ?? "Default";
-      const toolName = tool.tool.name.text;
-      const toolId = `${namespace}:${toolName}`;
-      code += `"${toolId}": $.${namespace}.${capitalize(toolName)}.${what};\n`;
-    }
-    code += "}[Id];\n\n";
-  }
-
-  code += "export type ToolsHelper<Id extends TemplateId> = {\n";
+function writeToolsType(
+  templates: readonly ValidTemplate[],
+  tools: readonly ValidatedTool[],
+): string {
+  let code = "export type Tools<Id extends TemplateId> = {\n";
   for (const template of templates) {
     const namespace = template.template.namespace?.text ?? "Default";
     const templateName = template.template.name.text;
     const templateId = `${namespace}:${templateName}`;
     code += `"${templateId}": {\n`;
     for (const tool of Object.values(template.tools)) {
-      const toolName = tool.tool.kind;
-      const toolId = `${namespace}:${toolName}`;
-      code += `${toolName}: "${toolId}",\n`;
+      const toolName = tool.tool.tool.name.text;
+      const typePrefix = `$.${namespace}.${capitalize(toolName)}.`;
+      code += `${toolName}: Tool<\n`;
+      code += `${typePrefix}Input,\n`;
+      code += `${typePrefix}Output\n`;
+      code += ">,\n";
     }
     code += "},\n";
   }
-  code += "}[Id];\n\n";
+  code += "}[Id];";
+  return code;
+}
+
+function writeInputOutputTypes(
+  templates: readonly ValidatedTemplate[],
+): string {
+  let code = "";
+
+  for (const what of ["Input", "Output"]) {
+    code += `export type ${what}<Id extends TemplateId> = {\n`;
+    for (const template of templates) {
+      const namespace = template.template.namespace?.text ?? "Default";
+      const templateName = template.template.name.text;
+      const templateId = `${namespace}:${templateName}`;
+      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
+    }
+    code += "}[Id];\n\n";
+  }
 
   return code;
 }
@@ -246,7 +236,7 @@ function writeSpecDatatypes(): string {
   code += "}\n\n";
   code += "const templatesSchema = ";
   code += writeZodType(runtimeTypesSchema, "Templates", options);
-  code += ";\n\n";
+  code += ";";
   return code;
 }
 
@@ -254,7 +244,7 @@ function writeTemplatesData(compilationResult: CompilationResult): string {
   return (
     "const TEMPLATES_DATA: Spec.Templates = " +
     JSON.stringify(makeTemplates(compilationResult), undefined, 2) +
-    " as const;\n\n"
+    " as const;"
   );
 }
 
@@ -266,7 +256,7 @@ function writeSchema(
   for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
     const name = typeDeclaration.name.text;
     code += wrapJsdoc(typeDeclaration.doc);
-    code += `export type ${name} = ${writeType(typeDeclaration.valueType, options)};\n\n`;
+    code += `export type ${name} = ${writeType(typeDeclaration.valueType, options)};`;
   }
   return code;
 }
@@ -535,12 +525,12 @@ function reformat(code: string): string {
   let indent = "";
   for (const inputLine of inputLines) {
     const line = inputLine.trim();
-    if (line.startsWith("}") || line.startsWith(")") || line.startsWith("]")) {
+    if (line.startsWith("}") || line.startsWith(")") || line.startsWith("]") || line.startsWith(">")) {
       indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
     outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
-    if (line.endsWith("{") || line.endsWith("(") || line.endsWith("[")) {
+    if (line.endsWith("{") || line.endsWith("(") || line.endsWith("[") || line.endsWith("<")) {
       indent = indent + "  ";
     }
   }

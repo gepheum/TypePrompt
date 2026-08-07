@@ -173,7 +173,7 @@ export type ValidNamespaceResult = NamespaceResult & {
   /** Name of the namespace. */
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: ValidatedTool };
-  readonly templates: readonly Template[];
+  readonly templates: readonly ValidTemplate[];
 };
 
 export type SchemaOrError =

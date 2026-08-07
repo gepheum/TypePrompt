@@ -44,9 +44,6 @@ export type Tools<Id extends TemplateId> = {
   };
 }[Id];
 
-/** Names of the tools available from the given template. */
-export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
-
 const zodSchemas = {
   "Ns:Foo": {
     input: z.any(),
@@ -155,7 +152,10 @@ export type Tool<Input, Output> = {
   readonly outputSchema: z.ZodType<Output>;
 };
 
-/** Implementation functions for all tools required by template `Id`. */
+/** Names of the tools available from the given template. */
+export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
+
+/** Implementation functions for all tools available from template `Id`. */
 export type ToolImpls<Id extends TemplateId> = {
   [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<infer Input, infer Output>
     ? (input: Input) => Promise<Output>
