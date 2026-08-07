@@ -1,10 +1,8 @@
 TYPESCRIPT:
   - document everything
     - add to the generated code...
-  - add comment to the "main" namespace
   - e2e test
   - add example of hook functions
-  - use 'lines' variable and join("\n)
   - add tool choice
 
 BUG:
