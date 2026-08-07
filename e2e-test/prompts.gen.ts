@@ -33,6 +33,7 @@ export type Prompt<Id extends TemplateId> = {
   /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
   readonly isToolName: (name: string) => name is ToolNames<Id>;
+  /** Executes the given tool calls in parallel. */
   readonly callTools: (
     calls: readonly ToolCall[],
     impls: ToolImpls<Id>,
@@ -117,14 +118,14 @@ export type ToolCallResponse = {
   readonly stringifiedOutput: string;
 };
 
-/** Executes the given tool calls in parallel. */
 async function callToolsImpl<Id extends TemplateId>(
   calls: readonly ToolCall[],
   tools: Tools<Id>,
   impls: ToolImpls<Id>,
 ): Promise<ReadonlyArray<ToolCallResponse>> {
   return Promise.all(
-    calls.map(async ({ callId, toolName, stringifiedInput }) => {
+    calls.map(async (call) => {
+      const { callId, toolName, stringifiedInput } = call;
       const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
       if (!tool) {
         throw new Error("Tool not found: ".concat(toolName));
@@ -135,9 +136,19 @@ async function callToolsImpl<Id extends TemplateId>(
       if (!impl) {
         throw new Error("Tool implementation not found: ".concat(toolName));
       }
-      const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
-      const output = tool.outputSchema.parse(await impl(input));
-      const stringifiedOutput = JSON.stringify(output);
+      let stringifiedOutput: string;
+      try {
+        const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
+        const output = tool.outputSchema.parse(await impl(input));
+        stringifiedOutput = JSON.stringify(output);
+      } catch (e) {
+        throw new Error(
+          "Tool call failed: "
+            .concat(JSON.stringify({ callId, toolName, stringifiedInput }))
+            .concat(" — ")
+            .concat(String(e)),
+        );
+      }
       return { callId, stringifiedOutput };
     }),
   );

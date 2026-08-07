@@ -188,7 +188,8 @@ async function callToolsImpl<Id extends TemplateId>(
   impls: ToolImpls<Id>,
 ): Promise<ReadonlyArray<ToolCallResponse>> {
   return Promise.all(
-    calls.map(async ({ callId, toolName, stringifiedInput }) => {
+    calls.map(async (call) => {
+      const { callId, toolName, stringifiedInput } = call;
       const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
       if (!tool) {
         throw new Error("Tool not found: ".concat(toolName));
@@ -199,10 +200,19 @@ async function callToolsImpl<Id extends TemplateId>(
       if (!impl) {
         throw new Error("Tool implementation not found: ".concat(toolName));
       }
-      const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
-      let output = await impl(input);
-      output = tool.outputSchema.parse(output);
-      const stringifiedOutput = JSON.stringify(output);
+      let stringifiedOutput: string;
+      try {
+        const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
+        const output = tool.outputSchema.parse(await impl(input));
+        stringifiedOutput = JSON.stringify(output);
+      } catch (e) {
+        throw new Error(
+          "Tool call failed: "
+            .concat(JSON.stringify({ callId, toolName, stringifiedInput }))
+            .concat(" — ")
+            .concat(String(e)),
+        );
+      }
       return { callId, stringifiedOutput };
     }),
   );
