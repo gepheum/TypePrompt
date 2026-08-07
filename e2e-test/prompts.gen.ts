@@ -6,21 +6,31 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
+/** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
 }
 
-export type PromptMaker = {};
+export type PromptMaker = {
+  readonly default: {
+    readonly myTemplate: Template<"Default:MyTemplate">;
+  };
+};
 
+/** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
 };
 
+/** A fully resolved prompt ready to be sent to an LLM. */
 export type Prompt<Id extends TemplateId> = {
+  /** Metadata for this prompt. */
   readonly meta: Meta;
   readonly systemMessage: string;
   readonly userMessage: string;
+  /** Few-shot examples. */
   readonly examples: readonly FewShotExample[];
+  /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
   readonly outputFormat: OutputFormat<Id>;
   readonly parseResponse: (content: string) => Output<Id>;
@@ -28,16 +38,25 @@ export type Prompt<Id extends TemplateId> = {
   readonly templateInput: Input<Id>;
 };
 
+/**
+ * A single few-shot example consisting of a user message, optional intermediate
+ * tool-call steps, and the expected response.
+ */
 export type FewShotExample = {
   readonly userMessage: string;
   readonly intermediateSteps: readonly IntermediateStepExample[];
   readonly response: string;
 };
 
+/**
+ * One intermediate step within a {@link FewShotExample}, containing the tool
+ * calls made at that step.
+ */
 export type IntermediateStepExample = {
   readonly toolCalls: readonly ToolCallExample[];
 };
 
+/** A single tool call recorded inside an {@link IntermediateStepExample}. */
 export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
@@ -46,6 +65,10 @@ export type ToolCallExample = {
   readonly rawOutput: unknown;
 };
 
+/**
+ * Describes how the LLM response for template `Id` should be structured and
+ * parsed.
+ */
 export type OutputFormat<Id extends TemplateId> =
   | {
       readonly kind: "json";
@@ -53,6 +76,7 @@ export type OutputFormat<Id extends TemplateId> =
     }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
+/** A tool that can be called during prompt execution. */
 export type Tool<Id extends ToolId> = {
   readonly id: Id;
   readonly name: ToolName<Id>;
@@ -61,12 +85,14 @@ export type Tool<Id extends ToolId> = {
   readonly outputSchema: z.ZodType<Output<Id>>;
 };
 
+/** The set of tools available to template `Id`, keyed by tool name. */
 export type Tools<Id extends TemplateId> = {
   [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
     ? Tool<ToolsHelper<Id>[Name]>
     : never;
 };
 
+/** Implementation functions for all tools required by template `Id`. */
 export type ToolImpls<Id extends TemplateId> = {
   [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
     ? (
@@ -76,20 +102,32 @@ export type ToolImpls<Id extends TemplateId> = {
 };
 
 export type TemplateId = (
-  never
+  | "Default:MyTemplate"
 );
 
 export type ToolId = (
-  never
+  | "Default:myTool"
 );
 
-export type ToolName<Id extends ToolId> = {}[Id];
+export type ToolName<Id extends ToolId> = {
+  "Default:myTool": "myTool",
+}[Id];
 
-export type Input<Id extends TemplateId | ToolId> = {}[Id];
+export type Input<Id extends TemplateId | ToolId> = {
+  "Default:MyTemplate": $.Default.MyTemplate.Input;
+  "Default:myTool": $.Default.MyTool.Input;
+}[Id];
 
-export type Output<Id extends TemplateId | ToolId> = {}[Id];
+export type Output<Id extends TemplateId | ToolId> = {
+  "Default:MyTemplate": $.Default.MyTemplate.Output;
+  "Default:myTool": $.Default.MyTool.Output;
+}[Id];
 
-export type ToolsHelper<Id extends TemplateId> = {}[Id];
+export type ToolsHelper<Id extends TemplateId> = {
+  "Default:MyTemplate": {
+    success: "Default:success",
+  },
+}[Id];
 
 export type Meta = $.Meta.Meta;
 
@@ -105,10 +143,66 @@ export namespace $ {
     };
   }
 
-  export namespace Default {}
+  export namespace Default {
+    export namespace MyTemplate {
+      export type Input = {
+        readonly firstName: string;
+        readonly lastName: string;
+        readonly fooToBar?: { [name: string]: number };
+      };
+
+      export type Output = {
+        readonly x: number;
+      };
+    }
+
+    export namespace MyTool {
+      export type Input = {
+        readonly foo: string;
+      };
+
+      export type Output = {
+        readonly bar: string;
+      };
+    }
+  }
 }
 
-const zodSchemas = {} as const;
+const zodSchemas = {
+  "Default:MyTemplate": {
+    input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
+      const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        fooToBar: z.record(
+          z.string(),
+          z.int32(),
+        ).optional(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
+      const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
+        x: z.int32(),
+      });
+      return outputSchema;
+    })(),
+  },
+  "Default:myTool": {
+    input: ((): z.ZodType<$.Default.MyTool.Input> => {
+      const inputSchema: z.ZodType<$.Default.MyTool.Input> = z.object({
+        foo: z.string(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Default.MyTool.Output> => {
+      const outputSchema: z.ZodType<$.Default.MyTool.Output> = z.object({
+        bar: z.string(),
+      });
+      return outputSchema;
+    })(),
+  },
+} as const;
 
 namespace Spec {
   export type Templates = {
@@ -379,8 +473,125 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
 
 const TEMPLATES_DATA: Spec.Templates = {
   "signature": "",
-  "tools": {},
-  "templates": {}
+  "tools": {
+    "Default:myTool": {
+      "id": "Default:myTool",
+      "name": "myTool",
+      "description": "description: \"A tool that does something\""
+    }
+  },
+  "templates": {
+    "Default:MyTemplate": {
+      "name": "MyTemplate",
+      "namespace": "Default",
+      "outputFormat": "text",
+      "tools": [
+        {
+          "id": "Default:myTool",
+          "name": "myTool"
+        }
+      ],
+      "contents": {
+        "kind": "noVariants",
+        "content": {
+          "meta": {
+            "temperature": 0.7,
+            "foobar": "bar"
+          },
+          "system": [
+            {
+              "kind": "insertSnippet",
+              "snippet": "greet",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nHow many characters are in your full name?"
+            }
+          ],
+          "user": [
+            {
+              "kind": "text",
+              "text": "Your "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "firstName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\nYour "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "lastName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nFor example "
+            }
+          ],
+          "examples": [
+            {
+              "input": {
+                "firstName": "John",
+                "lastName": "Doe"
+              },
+              "output": {
+                "x": 8
+              },
+              "intermediateSteps": []
+            },
+            {
+              "input": {
+                "firstName": "Jane",
+                "lastName": "Smith"
+              },
+              "output": {
+                "x": 9
+              },
+              "intermediateSteps": []
+            }
+          ]
+        }
+      },
+      "snippets": {
+        "greet": {
+          "kind": "snippet",
+          "body": [
+            {
+              "kind": "text",
+              "text": "Hello,\n"
+            }
+          ]
+        }
+      }
+    }
+  }
 } as const;
 
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
@@ -430,7 +641,7 @@ function resolveTemplate<Id extends TemplateId>(
     throw new Error("Template not found: ".concat(templateId));
   }
   const { input: inputSchema, output: outputSchema } = zodSchemas[templateId]!;
-  input = inputSchema.parse(input) as Input<Id>;
+  input = (inputSchema as z.ZodType<Input<Id>>).parse(input);
   const { contents, snippets } = template;
   let meta: Meta;
   let systemMessage: string;

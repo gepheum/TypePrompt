@@ -90,15 +90,15 @@ function writeUserDefinedDatatypes(
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   let code = "";
-  if (anyTypes(metaSchema)) {
-    code += "export type Meta = $.Meta.Meta;\n\n";
-  }
+  code += "export type Meta = $.Meta.Meta;\n\n";
   code += "export namespace $ {\n";
-  if (anyTypes(metaSchema)) {
     code += "export namespace Meta {\n";
+  if (anyTypes(metaSchema)) {
     code += writeSchema(metaSchema, { sharedTypePrefix: "Never." });
-    code += "}\n\n";
+  } else {
+    code += "export type Meta = never;\n";
   }
+    code += "}\n\n";
   for (const namespace of namespaces) {
     code += `export namespace ${namespace.name} {\n`;
     if (anyTypes(namespace.schema)) {

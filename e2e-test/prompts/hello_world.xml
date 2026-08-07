@@ -6,12 +6,31 @@
   };
 </meta>
 
-<!--
+<tool name="myTool">
+  <description>
+    description: "A tool that does something"
+  </description>
+
+  <schema>
+    type Input = {
+      foo: string;
+    };
+
+    type Output = {
+      bar: string;
+    };
+  </schema>
+</tool>
+
 <template name="MyTemplate">
   <meta>
     temperature: 0.7
     foobar: bar
   </meta>
+
+  <tools>
+    - tool: myTool
+  </tools>
 
   <schema>
     type Input = {
@@ -56,4 +75,4 @@
 
   </snippet>
 </template>
--->
+

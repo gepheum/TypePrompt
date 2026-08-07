@@ -227,7 +227,7 @@ function resolveTemplate<Id extends TemplateId>(
     throw new Error("Template not found: ".concat(templateId));
   }
   const { input: inputSchema, output: outputSchema } = zodSchemas[templateId]!;
-  input = inputSchema.parse(input) as Input<Id>;
+  input = (inputSchema as z.ZodType<Input<Id>>).parse(input);
   const { contents, snippets } = template;
   let meta: Meta;
   let systemMessage: string;
