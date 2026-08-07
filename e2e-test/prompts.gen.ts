@@ -213,6 +213,8 @@ export namespace $ {
 
       export type Input = {
         readonly foo: string;
+        readonly x?: number;
+        readonly y?: number;
       };
 
       export type Output = {
@@ -246,6 +248,8 @@ const zodSchemas = {
     input: ((): z.ZodType<$.Main.MyTool.Input> => {
       const inputSchema: z.ZodType<$.Main.MyTool.Input> = z.object({
         foo: z.string(),
+        x: z.int32().optional(),
+        y: z.int32().optional(),
       });
       return inputSchema;
     })(),
@@ -538,7 +542,7 @@ const TEMPLATES_DATA: Spec.Templates = {
     "Main:MyTemplate": {
       "name": "MyTemplate",
       "namespace": "Main",
-      "outputFormat": "text",
+      "outputFormat": "json",
       "tools": [
         {
           "id": "Main:myTool",

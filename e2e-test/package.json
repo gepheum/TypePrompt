@@ -1,0 +1,21 @@
+{
+  "name": "typeprompt-e2e-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.39",
+    "buckwheat": "^1.1.2",
+    "mocha": "^12.0.0-rc.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@toon-format/toon": "^4.1.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}

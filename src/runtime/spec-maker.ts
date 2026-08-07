@@ -51,7 +51,7 @@ function makeTemplate(result: ValidatedTemplate): Spec.Template {
   return {
     name: template.name.text,
     namespace: namespace,
-    outputFormat: template.outputFormat?.text ?? "text",
+    outputFormat: template.outputFormat?.text ?? "json",
     tools: Object.entries(result.tools).map(([name, { tool }]) => ({
       id:
         tool.kind === "success"

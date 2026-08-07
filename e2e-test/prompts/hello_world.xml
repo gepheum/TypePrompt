@@ -14,6 +14,8 @@
   <schema>
     type Input = {
       foo: string;
+      x?: integer;
+      y?: integer;
     };
 
     type Output = {
