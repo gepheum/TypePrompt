@@ -1,5 +1,9 @@
 import { StrictJsonValue } from "./json-types.js";
 
+/**
+ * Unwraps a {@link StrictJsonValue} into a regular JavaScript value which can be
+ * passed to {@link JSON.stringify}.
+ */
 export function unwrapJsonValue(input: StrictJsonValue): unknown {
   switch (input.kind) {
     case "string":

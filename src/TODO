@@ -1,6 +1,4 @@
 TYPESCRIPT:
-  - document everything
-    - add to the generated code...
   - e2e test
   - add example of hook functions
 
