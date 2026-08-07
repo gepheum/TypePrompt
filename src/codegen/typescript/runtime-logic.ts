@@ -141,7 +141,7 @@ export type ToolCallExample = {
 
 /**
  * Describes how the LLM response for template `Id` should be structured and
- * parsed.
+ * parsed. When `kind === "logic"`, contains the Zod schema for the expected output.
  */
 export type OutputFormat<Id extends TemplateId> =
   | {
