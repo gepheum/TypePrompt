@@ -1,14 +1,10 @@
-CODEGEN:
-  - add getTool(ToolId)
+TYPESCRIPT:
+  - instead of rawInput, make it stringifiedInput? same for output
+  - add callTools function to Prompt?
   - document everything
     - add to the generated code...
   - e2e test
   - add example of hook functions
-  - I need to think about this: when i get the tool name back from the LLM, I want to be able to map it to a toolName for the templateId, but there is no type for it... consider making ToolName also accept a template ID and returning a union in that case?
-    - do I really need ToolId? Mayeb I do. i dunno.
-
-TOOLS:
-  - add to generated code
 
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...

@@ -127,10 +127,10 @@ export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
   readonly description: string;
-  /** JSON value which can be passed to {@link JSON.stringify}. */
-  readonly rawInput: unknown;
-  /** JSON value which can be passed to {@link JSON.stringify}. */
-  readonly rawOutput: unknown;
+  /** Stringified JSON. */
+  readonly stringifiedInput: unknown;
+  /** Stringified JSON. */
+  readonly stringifiedOutput: unknown;
 };
 
 /**
@@ -379,8 +379,8 @@ function resolveExamples(
         callId: tc.callId,
         toolName: tc.toolName,
         description: tools[tc.toolId]!.description,
-        rawInput: tc.input,
-        rawOutput: tc.output,
+        stringifiedInput: JSON.stringify(tc.input),
+        stringifiedOutput: JSON.stringify(tc.output),
       })),
     })),
     response: format(output, template.outputFormat),
