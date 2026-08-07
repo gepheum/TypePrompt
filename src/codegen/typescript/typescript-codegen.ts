@@ -120,17 +120,21 @@ function writeUserDefinedDatatypes(
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
       lines.push(`export namespace ${templateName} {`);
-      lines.push(writeSchema(template.schema, {
-        sharedTypePrefix: `$.${namespace.name}.Shared.`,
-      }));
+      lines.push(
+        writeSchema(template.schema, {
+          sharedTypePrefix: `$.${namespace.name}.Shared.`,
+        }),
+      );
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       lines.push(`export namespace ${capitalize(toolName)} {\n`);
-      lines.push(writeSchema(tool.schema, {
-        sharedTypePrefix: `$.${namespace.name}.Shared.`,
-      }));
+      lines.push(
+        writeSchema(tool.schema, {
+          sharedTypePrefix: `$.${namespace.name}.Shared.`,
+        }),
+      );
       lines.push("}\n");
     }
     lines.push("}\n");
@@ -251,7 +255,9 @@ function writeSpecDatatypes(): string {
     writeSchema(runtimeTypesSchema, options),
     "}",
     "",
-    "const templatesSchema = " + writeZodType(runtimeTypesSchema, "Templates", options) + ";",
+    "const templatesSchema = " +
+      writeZodType(runtimeTypesSchema, "Templates", options) +
+      ";",
   ];
   return lines.join("\n");
 }
@@ -272,7 +278,9 @@ function writeSchema(
   for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
     const name = typeDeclaration.name.text;
     lines.push(wrapJsdoc(typeDeclaration.doc));
-    lines.push(`export type ${name} = ${writeType(typeDeclaration.valueType, options)};`);
+    lines.push(
+      `export type ${name} = ${writeType(typeDeclaration.valueType, options)};`,
+    );
   }
   return lines.join("\n");
 }

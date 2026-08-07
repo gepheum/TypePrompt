@@ -339,18 +339,28 @@ class CompilationResultImpl implements CompilationResult {
       const tryGetFromCache = (): TemplateValidationResult | null => {
         if (!template.cached) return null;
         if (this.metaSchema !== cache?.metaSchema) return null;
-        if (namespace !== cache?.namespaces[namespaceName]) return null;
-        const cached = cache!.templates[id]!;
-        if (
-          cached.kind === "success" &&
-          !Object.entries(cached.tools).every(
+        const cachedNamespace = cache?.namespaces[namespaceName];
+        if (namespace !== cachedNamespace) return null;
+        const cached = cache.templates[id]!;
+        const templateTools =
+          cached.kind === "success" ? cached.tools : cachedNamespace.tools;
+        let toolsOkay: boolean;
+        if (cached.kind === "success") {
+          // Check if the template's tools have changed.
+          toolsOkay = Object.entries(templateTools).every(
             ([name, templateTool]) =>
               templateTool.tool === namespace.tools[name],
-          )
-        ) {
-          return null;
+          );
+        } else {
+          // Check if the namespace tools have changed.
+          toolsOkay =
+            Object.entries(namespace.tools).every(
+              ([name, tool]) => tool === cachedNamespace.tools[name],
+            ) &&
+            Object.keys(namespace.tools).length ===
+              Object.keys(cachedNamespace.tools).length;
         }
-        return cached;
+        return toolsOkay ? cached : null;
       };
       const validationResult =
         tryGetFromCache() ??

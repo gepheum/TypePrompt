@@ -3,10 +3,6 @@ TYPESCRIPT:
     - add to the generated code...
   - e2e test
   - add example of hook functions
-  - add tool choice
-
-BUG:
-  - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 JSON:
   - add 'suggestions' when parsing JSON and a field is not found
@@ -16,14 +12,11 @@ SCHEMA:
   - put: back 'interface'
 
 LANGUAGE SERVER:
-  -
+  - ...
 
 EXTENSION TO THE LANGUAGE:
   - toolcalls...
     - make <c> from template also accept tool names and symbols defined in the tool?
-  - See:
-    - https://developers.openai.com/api/docs/guides/prompting
-    - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
   - add <doc> to <template>
 
 TEST & PARSER QUALITY:
@@ -55,6 +48,7 @@ LATER?
   - TODO: allow discriminator field to be union of string literal
   - TODO: what if 'format' could be any string, and then the actual function needs to be provided
   - TODO: support 'case="summer,fall"'
+  - add tool choice?
 
 MISC:
   - https://share.gemini.google/0FSezpOXrkQI
@@ -63,6 +57,9 @@ MISC:
   - https://share.gemini.google/jk1DBITItg9W
   - https://github.com/brexhq/prompt-engineering
   - Support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?
+  - See:
+    - https://developers.openai.com/api/docs/guides/prompting
+    - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 
 
