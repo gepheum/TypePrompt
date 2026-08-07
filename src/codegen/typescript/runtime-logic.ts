@@ -9,6 +9,7 @@ import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
 
+/** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
 }
@@ -17,11 +18,16 @@ export function newPromptMaker(): PromptMaker {
 // <generated>
 export type Meta = {};
 
+/** Uniquely identifies a prompt template. */
 export type TemplateId = "Ns:Foo" | "Ns:Bar";
 
+/** Uniquely identifies a tool. */
 export type ToolId = "Ns:myTool" | "Ns:otherTool";
 
-/** Input type for a given template ID or tool ID. */
+/**
+ * For a template ID: the input required to resolve the template into a prompt.
+ * For a tool ID: the tool's parameter type.
+ */
 export type Input<Id extends TemplateId | ToolId> = {
   "Ns:Foo": unknown;
   "Ns:Bar": string;
@@ -29,7 +35,10 @@ export type Input<Id extends TemplateId | ToolId> = {
   "Ns:otherTool": boolean;
 }[Id];
 
-/** Output type for a given template ID or tool ID. */
+/**
+ * For a template ID: the parsed response type expected from the LLM.
+ * For a tool ID: the tool's return type.
+ */
 export type Output<Id extends TemplateId | ToolId> = {
   "Ns:Foo": unknown;
   "Ns:Bar": string;
@@ -37,6 +46,7 @@ export type Output<Id extends TemplateId | ToolId> = {
   "Ns:otherTool": number;
 }[Id];
 
+/** The string literal type of the tool's name for a given tool ID. */
 export type ToolName<Id extends ToolId> = {
   "Ns:myTool": "myTool";
   "Ns:otherTool": "otherTool";
@@ -84,15 +94,20 @@ const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
 // <static:typescript-public-types>
+/** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
 };
 
+/** A fully resolved prompt ready to be sent to an LLM. */
 export type Prompt<Id extends TemplateId> = {
+  /** Metadata for this prompt. */
   readonly meta: Meta;
   readonly systemMessage: string;
   readonly userMessage: string;
+  /** Few-shot examples. */
   readonly examples: readonly FewShotExample[];
+  /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
   readonly outputFormat: OutputFormat<Id>;
   readonly parseResponse: (content: string) => Output<Id>;
@@ -100,16 +115,25 @@ export type Prompt<Id extends TemplateId> = {
   readonly templateInput: Input<Id>;
 };
 
+/**
+ * A single few-shot example consisting of a user message, optional intermediate
+ * tool-call steps, and the expected response.
+ */
 export type FewShotExample = {
   readonly userMessage: string;
   readonly intermediateSteps: readonly IntermediateStepExample[];
   readonly response: string;
 };
 
+/**
+ * One intermediate step within a {@link FewShotExample}, containing the tool
+ * calls made at that step.
+ */
 export type IntermediateStepExample = {
   readonly toolCalls: readonly ToolCallExample[];
 };
 
+/** A single tool call recorded inside an {@link IntermediateStepExample}. */
 export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
@@ -118,6 +142,10 @@ export type ToolCallExample = {
   readonly rawOutput: unknown;
 };
 
+/**
+ * Describes how the LLM response for template `Id` should be structured and
+ * parsed.
+ */
 export type OutputFormat<Id extends TemplateId> =
   | {
       readonly kind: "json";
@@ -125,6 +153,7 @@ export type OutputFormat<Id extends TemplateId> =
     }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
+/** A tool that can be called during prompt execution. */
 export type Tool<Id extends ToolId> = {
   readonly id: Id;
   readonly name: ToolName<Id>;
@@ -133,12 +162,14 @@ export type Tool<Id extends ToolId> = {
   readonly outputSchema: z.ZodType<Output<Id>>;
 };
 
+/** The set of tools available to template `Id`, keyed by tool name. */
 export type Tools<Id extends TemplateId> = {
   [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
     ? Tool<ToolsHelper<Id>[Name]>
     : never;
 };
 
+/** Implementation functions for all tools required by template `Id`. */
 export type ToolImpls<Id extends TemplateId> = {
   [Name in keyof ToolsHelper<Id>]: ToolsHelper<Id>[Name] extends ToolId
     ? (

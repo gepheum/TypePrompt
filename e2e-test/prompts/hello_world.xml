@@ -6,6 +6,7 @@
   };
 </meta>
 
+<!--
 <template name="MyTemplate">
   <meta>
     temperature: 0.7
@@ -55,3 +56,4 @@
 
   </snippet>
 </template>
+-->

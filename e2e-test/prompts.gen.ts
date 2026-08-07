@@ -10,11 +10,7 @@ export function newPromptMaker(): PromptMaker {
   return newPromptMakerImpl(TEMPLATES_DATA);
 }
 
-export type PromptMaker = {
-  readonly default: {
-    readonly myTemplate: Template<"Default:MyTemplate">;
-  };
-};
+export type PromptMaker = {};
 
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
@@ -80,7 +76,7 @@ export type ToolImpls<Id extends TemplateId> = {
 };
 
 export type TemplateId = (
-  | "Default:MyTemplate"
+  never
 );
 
 export type ToolId = (
@@ -89,17 +85,11 @@ export type ToolId = (
 
 export type ToolName<Id extends ToolId> = {}[Id];
 
-export type Input<Id extends TemplateId | ToolId> = {
-  "Default:MyTemplate": $.Default.MyTemplate.Input;
-}[Id];
+export type Input<Id extends TemplateId | ToolId> = {}[Id];
 
-export type Output<Id extends TemplateId | ToolId> = {
-  "Default:MyTemplate": $.Default.MyTemplate.Output;
-}[Id];
+export type Output<Id extends TemplateId | ToolId> = {}[Id];
 
-export type ToolsHelper<Id extends TemplateId> = {
-  "Default:MyTemplate": {},
-}[Id];
+export type ToolsHelper<Id extends TemplateId> = {}[Id];
 
 export type Meta = $.Meta.Meta;
 
@@ -115,42 +105,10 @@ export namespace $ {
     };
   }
 
-  export namespace Default {
-    export namespace MyTemplate {
-      export type Input = {
-        readonly firstName: string;
-        readonly lastName: string;
-        readonly fooToBar?: { [name: string]: number };
-      };
-
-      export type Output = {
-        readonly x: number;
-      };
-    }
-  }
+  export namespace Default {}
 }
 
-const zodSchemas = {
-  "Default:MyTemplate": {
-    input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
-      const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
-        firstName: z.string(),
-        lastName: z.string(),
-        fooToBar: z.record(
-          z.string(),
-          z.int32(),
-        ).optional(),
-      });
-      return inputSchema;
-    })(),
-    output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
-      const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
-        x: z.int32(),
-      });
-      return outputSchema;
-    })(),
-  },
-} as const;
+const zodSchemas = {} as const;
 
 namespace Spec {
   export type Templates = {
@@ -422,113 +380,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
 const TEMPLATES_DATA: Spec.Templates = {
   "signature": "",
   "tools": {},
-  "templates": {
-    "Default:MyTemplate": {
-      "name": "MyTemplate",
-      "namespace": "Default",
-      "outputFormat": "text",
-      "tools": [],
-      "contents": {
-        "kind": "noVariants",
-        "content": {
-          "meta": {
-            "temperature": 0.7,
-            "foobar": "bar"
-          },
-          "system": [
-            {
-              "kind": "insertSnippet",
-              "snippet": "greet",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\n\nHow many characters are in your full name?"
-            }
-          ],
-          "user": [
-            {
-              "kind": "text",
-              "text": "Your "
-            },
-            {
-              "kind": "text",
-              "text": " is: "
-            },
-            {
-              "kind": "insertVal",
-              "val": {
-                "kind": "property",
-                "left": {
-                  "kind": "input"
-                },
-                "property": "firstName"
-              },
-              "format": "text",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\nYour "
-            },
-            {
-              "kind": "text",
-              "text": " is: "
-            },
-            {
-              "kind": "insertVal",
-              "val": {
-                "kind": "property",
-                "left": {
-                  "kind": "input"
-                },
-                "property": "lastName"
-              },
-              "format": "text",
-              "indent": ""
-            },
-            {
-              "kind": "text",
-              "text": "\n\nFor example "
-            }
-          ],
-          "examples": [
-            {
-              "input": {
-                "firstName": "John",
-                "lastName": "Doe"
-              },
-              "output": {
-                "x": 8
-              },
-              "intermediateSteps": []
-            },
-            {
-              "input": {
-                "firstName": "Jane",
-                "lastName": "Smith"
-              },
-              "output": {
-                "x": 9
-              },
-              "intermediateSteps": []
-            }
-          ]
-        }
-      },
-      "snippets": {
-        "greet": {
-          "kind": "snippet",
-          "body": [
-            {
-              "kind": "text",
-              "text": "Hello,\n"
-            }
-          ]
-        }
-      }
-    }
-  }
+  "templates": {}
 } as const;
 
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
