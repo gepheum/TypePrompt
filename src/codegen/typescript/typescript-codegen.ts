@@ -525,12 +525,22 @@ function reformat(code: string): string {
   let indent = "";
   for (const inputLine of inputLines) {
     const line = inputLine.trim();
-    if (line.startsWith("}") || line.startsWith(")") || line.startsWith("]") || line.startsWith(">")) {
+    if (
+      line.startsWith("}") ||
+      line.startsWith(")") ||
+      line.startsWith("]") ||
+      line.startsWith(">")
+    ) {
       indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
     outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
-    if (line.endsWith("{") || line.endsWith("(") || line.endsWith("[") || line.endsWith("<")) {
+    if (
+      line.endsWith("{") ||
+      line.endsWith("(") ||
+      line.endsWith("[") ||
+      line.endsWith("<")
+    ) {
       indent = indent + "  ";
     }
   }

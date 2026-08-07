@@ -8,6 +8,7 @@ import * as Spec from "../../runtime/runtime-types.js";
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
+import { AssertSatisfies } from "../../util/static-assert.js";
 
 /** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
@@ -95,6 +96,10 @@ export type Prompt<Id extends TemplateId> = {
   /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
   readonly isToolName: (name: string) => name is ToolNames<Id>;
+  readonly callTools: (
+    calls: readonly ToolCall[],
+    impls: ToolImpls<Id>,
+  ) => Promise<ReadonlyArray<ToolCallResponse>>;
   readonly outputFormat: OutputFormat<Id>;
   /** Parses the raw LLM response string into the typed {@link Output}. */
   readonly parseResponse: (content: string) => Output<Id>;
@@ -126,11 +131,10 @@ export type IntermediateStepExample = {
 export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
-  readonly description: string;
   /** Stringified JSON. */
-  readonly stringifiedInput: unknown;
+  readonly stringifiedInput: string;
   /** Stringified JSON. */
-  readonly stringifiedOutput: unknown;
+  readonly stringifiedOutput: string;
 };
 
 /**
@@ -157,10 +161,50 @@ export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
 
 /** Implementation functions for all tools available from template `Id`. */
 export type ToolImpls<Id extends TemplateId> = {
-  [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<infer Input, infer Output>
+  [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<
+    infer Input,
+    infer Output
+  >
     ? (input: Input) => Promise<Output>
     : never;
 };
+
+export type ToolCall = {
+  readonly callId: string;
+  readonly toolName: string;
+  readonly stringifiedInput: string;
+};
+
+export type ToolCallResponse = {
+  readonly callId: string;
+  readonly stringifiedOutput: string;
+};
+
+/** Executes the given tool calls in parallel. */
+async function callToolsImpl<Id extends TemplateId>(
+  calls: readonly ToolCall[],
+  tools: Tools<Id>,
+  impls: ToolImpls<Id>,
+): Promise<ReadonlyArray<ToolCallResponse>> {
+  return Promise.all(
+    calls.map(async ({ callId, toolName, stringifiedInput }) => {
+      const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
+      if (!tool) {
+        throw new Error("Tool not found: ".concat(toolName));
+      }
+      const impl = (
+        impls as Record<string, (input: unknown) => Promise<unknown>>
+      )[toolName];
+      if (!impl) {
+        throw new Error("Tool implementation not found: ".concat(toolName));
+      }
+      const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
+      const output = tool.outputSchema.parse(await impl(input));
+      const stringifiedOutput = JSON.stringify(output);
+      return { callId, stringifiedOutput };
+    }),
+  );
+}
 // </static:typescript-public-types>
 
 // <static:typescript-logic>
@@ -245,21 +289,25 @@ function resolveTemplate<Id extends TemplateId>(
     );
   }
   const tools = Object.fromEntries(
-    template.tools.map(({ id, name }): readonly [string, Tool<unknown, unknown>] => {
-      const toolData = templates.tools[id]!;
-      const toolSchemas = zodSchemas[id as keyof typeof zodSchemas]!;
-      const tool: Tool<unknown, unknown> = {
-        name: name,
-        description: toolData.description,
-        inputSchema: toolSchemas["input"],
-        outputSchema: toolSchemas["output"],
-      };
-      return [name, tool];
-    }),
+    template.tools.map(
+      ({ id, name }): readonly [string, Tool<unknown, unknown>] => {
+        const toolData = templates.tools[id]!;
+        const toolSchemas = zodSchemas[id as keyof typeof zodSchemas]!;
+        const tool: Tool<unknown, unknown> = {
+          name: name,
+          description: toolData.description,
+          inputSchema: toolSchemas["input"],
+          outputSchema: toolSchemas["output"],
+        };
+        return [name, tool];
+      },
+    ),
   ) as Tools<Id>;
   const isToolName = (name: string): name is ToolNames<Id> => {
     return name in tools;
   };
+  const callTools = (calls: readonly ToolCall[], impls: ToolImpls<Id>) =>
+    callToolsImpl(calls, tools, impls);
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
@@ -273,6 +321,7 @@ function resolveTemplate<Id extends TemplateId>(
     examples,
     tools,
     isToolName,
+    callTools,
     outputFormat,
     parseResponse,
     templateId,
@@ -463,3 +512,6 @@ function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 // </static:typescript-logic>
+
+type _ToolCallCheck = AssertSatisfies<ToolCallExample, ToolCall> &
+  AssertSatisfies<ToolCallExample, ToolCallResponse>;

@@ -1,5 +1,4 @@
 TYPESCRIPT:
-  - instead of rawInput, make it stringifiedInput? same for output
   - add callTools function to Prompt?
   - document everything
     - add to the generated code...
