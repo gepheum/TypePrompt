@@ -4,6 +4,7 @@ TYPESCRIPT:
   - e2e test
   - add example of hook functions
   - use 'lines' variable and join("\n)
+  - add tool choice
 
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
@@ -30,7 +31,6 @@ TEST & PARSER QUALITY:
   - when there is an error in <meta>, do not raise other errors when parsing templates metas
 
 NAME CONFLICT:
-  - "Default" namespace -> "Main" namespace
   - No namespace named Meta
   - No template named Shared
 

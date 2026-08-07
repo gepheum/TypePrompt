@@ -159,7 +159,7 @@ export type TemplateId = (
   | "Main:MyTemplate"
 );
 
-/** Uniquely identifies a prompt template. */
+/** The tools available from the given template. */
 export type Tools<Id extends TemplateId> = {
   "Main:MyTemplate": {
     myTool: Tool<
@@ -188,441 +188,477 @@ export namespace $ {
         | "foo"
         | "bar"
       );
-    };}
+    };
+  }
 
-    export namespace Main {
-      export namespace MyTemplate {
-        export type Input = {
-          readonly firstName: string;
-          readonly lastName: string;
-          readonly fooToBar?: { [name: string]: number };
-        };export type Output = {
-          readonly x: number;
-        };}
+  export namespace Main {
+    export namespace MyTemplate {
+      export type Input = {
+        readonly firstName: string;
+        readonly lastName: string;
+        readonly fooToBar?: { [name: string]: number };
+      };
 
-        export namespace MyTool {
-          export type Input = {
-            readonly foo: string;
-          };export type Output = {
-            readonly bar: string;
-          };}
+      export type Output = {
+        readonly x: number;
+      };
+    }
+
+    export namespace MyTool {
+
+      export type Input = {
+        readonly foo: string;
+      };
+
+      export type Output = {
+        readonly bar: string;
+      };
+    }
+  }
+}
+
+const zodSchemas = {
+  "Main:MyTemplate": {
+    input: ((): z.ZodType<$.Main.MyTemplate.Input> => {
+      const inputSchema: z.ZodType<$.Main.MyTemplate.Input> = z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        fooToBar: z.record(
+          z.string(),
+          z.int32(),
+        ).optional(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Main.MyTemplate.Output> => {
+      const outputSchema: z.ZodType<$.Main.MyTemplate.Output> = z.object({
+        x: z.int32(),
+      });
+      return outputSchema;
+    })(),
+  },
+  "Main:myTool": {
+    input: ((): z.ZodType<$.Main.MyTool.Input> => {
+      const inputSchema: z.ZodType<$.Main.MyTool.Input> = z.object({
+        foo: z.string(),
+      });
+      return inputSchema;
+    })(),
+    output: ((): z.ZodType<$.Main.MyTool.Output> => {
+      const outputSchema: z.ZodType<$.Main.MyTool.Output> = z.object({
+        bar: z.string(),
+      });
+      return outputSchema;
+    })(),
+  },
+} as const;
+
+namespace Spec {
+  export type Templates = {
+    readonly signature: string;
+    readonly templates: { [id: string]: Template };
+    readonly tools: { [id: string]: Tool };
+  };
+
+  export type Template = {
+    readonly name: string;
+    readonly namespace: string;
+    readonly outputFormat: OutputFormat;
+    readonly tools: readonly TemplateTool[];
+    readonly contents: TemplateContents;
+    readonly snippets: { [name: string]: Snippet };
+  };
+
+  export type OutputFormat = (
+    | "json"
+    | "text"
+  );
+
+  export type TemplateTool = {
+    readonly id: string;
+    readonly name: string;
+  };
+
+  export type TemplateContents = (
+    | {
+      readonly kind: "noVariants";
+      readonly content: TemplateContent;
+    }
+    | {
+      readonly kind: "variants";
+      readonly variants: { [c: string]: TemplateContent };
+      readonly defaultContent: TemplateContent;
+    }
+  );
+
+  export type TemplateContent = {
+    readonly meta?: unknown;
+    readonly system?: Body;
+    readonly user?: Body;
+    readonly examples?: readonly FewShotExample[];
+  };
+
+  export type FewShotExample = {
+    readonly input: unknown;
+    readonly output: unknown;
+    readonly intermediateSteps: readonly {
+      readonly toolCalls: readonly ToolCallExample[];
+    }[];
+  };
+
+  export type ToolCallExample = {
+    readonly callId: string;
+    readonly toolId: string;
+    readonly toolName: string;
+    readonly input: unknown;
+    readonly output: unknown;
+  };
+
+  export type Body = readonly BodyPiece[];
+
+  export type BodyPiece = (
+    | {
+      readonly kind: "text";
+      readonly text: string;
+    }
+    | {
+      readonly kind: "insertVal";
+      readonly val: Expression;
+      readonly format: InsertFormat;
+      readonly indent: string;
+    }
+    | {
+      readonly kind: "insertSnippet";
+      /** Snippet name. */
+      readonly snippet: string;
+      /** Only contains whitespace characters. */
+      readonly indent: string;
+    }
+  );
+
+  export type InsertFormat = (
+    | "text"
+    | "json"
+    | "yaml"
+    | "toon"
+    | "csv"
+    | "tsv"
+  );
+
+  export type Expression = (
+    | {
+      readonly kind: "input";
+    }
+    | {
+      readonly kind: "property";
+      readonly left: Expression;
+      readonly property: string;
+    }
+  );
+
+  export type Snippet = (
+    | {
+      readonly kind: "snippet";
+      readonly body: Body;
+    }
+    | {
+      readonly kind: "snippetIf";
+      readonly expression: Expression;
+      readonly is: (
+        | "notNull"
+        | "notEmpty"
+        | "true"
+      );
+      readonly then: Body;
+      readonly else: Body;
+    }
+    | {
+      readonly kind: "snippetSwitch";
+      readonly expression: Expression;
+      readonly branches: { [c: string]: Body };
+    }
+  );
+
+  export type Tool = {
+    readonly id: string;
+    readonly name: string;
+    readonly description: string;
+  };
+}
+
+const templatesSchema = ((): z.ZodType<Spec.Templates> => {
+  const outputFormatSchema: z.ZodType<Spec.OutputFormat> = z.union([
+    z.literal("json"),
+    z.literal("text"),
+  ]);
+  const templateToolSchema: z.ZodType<Spec.TemplateTool> = z.object({
+    id: z.string(),
+    name: z.string(),
+  });
+  const expressionSchema: z.ZodType<Spec.Expression> = z.union([
+    z.object({
+      kind: z.literal("input"),
+    }),
+    z.object({
+      kind: z.literal("property"),
+      left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
+      property: z.string(),
+    }),
+  ]);
+  const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.union([
+    z.literal("text"),
+    z.literal("json"),
+    z.literal("yaml"),
+    z.literal("toon"),
+    z.literal("csv"),
+    z.literal("tsv"),
+  ]);
+  const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.union([
+    z.object({
+      kind: z.literal("text"),
+      text: z.string(),
+    }),
+    z.object({
+      kind: z.literal("insertVal"),
+      val: expressionSchema,
+      format: insertFormatSchema,
+      indent: z.string(),
+    }),
+    z.object({
+      kind: z.literal("insertSnippet"),
+      snippet: z.string().describe("Snippet name."),
+      indent: z.string().describe("Only contains whitespace characters."),
+    }),
+  ]);
+  const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
+  const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
+    callId: z.string(),
+    toolId: z.string(),
+    toolName: z.string(),
+    input: z.any(),
+    output: z.any(),
+  });
+  const fewShotExampleSchema: z.ZodType<Spec.FewShotExample> = z.object({
+    input: z.any(),
+    output: z.any(),
+    intermediateSteps: z.object({
+      toolCalls: toolCallExampleSchema.array(),
+    }).array(),
+  });
+  const templateContentSchema: z.ZodType<Spec.TemplateContent> = z.object({
+    meta: z.any().optional(),
+    system: bodySchema.optional(),
+    user: bodySchema.optional(),
+    examples: fewShotExampleSchema.array().optional(),
+  });
+  const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.union([
+    z.object({
+      kind: z.literal("noVariants"),
+      content: templateContentSchema,
+    }),
+    z.object({
+      kind: z.literal("variants"),
+      variants: z.record(
+        z.string(),
+        templateContentSchema,
+      ),
+      defaultContent: templateContentSchema,
+    }),
+  ]);
+  const snippetSchema: z.ZodType<Spec.Snippet> = z.union([
+    z.object({
+      kind: z.literal("snippet"),
+      body: bodySchema,
+    }),
+    z.object({
+      kind: z.literal("snippetIf"),
+      expression: expressionSchema,
+      is: z.union([
+        z.literal("notNull"),
+        z.literal("notEmpty"),
+        z.literal("true"),
+      ]),
+      then: bodySchema,
+      else: bodySchema,
+    }),
+    z.object({
+      kind: z.literal("snippetSwitch"),
+      expression: expressionSchema,
+      branches: z.record(
+        z.string(),
+        bodySchema,
+      ),
+    }),
+  ]);
+  const templateSchema: z.ZodType<Spec.Template> = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    outputFormat: outputFormatSchema,
+    tools: templateToolSchema.array(),
+    contents: templateContentsSchema,
+    snippets: z.record(
+      z.string(),
+      snippetSchema,
+    ),
+  });
+  const toolSchema: z.ZodType<Spec.Tool> = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+  });
+  const templatesSchema: z.ZodType<Spec.Templates> = z.object({
+    signature: z.string(),
+    templates: z.record(
+      z.string(),
+      templateSchema,
+    ),
+    tools: z.record(
+      z.string(),
+      toolSchema,
+    ),
+  });
+  return templatesSchema;
+})();
+
+const TEMPLATES_DATA: Spec.Templates = {
+  "signature": "",
+  "tools": {
+    "Main:myTool": {
+      "id": "Main:myTool",
+      "name": "myTool",
+      "description": "A tool that does something"
+    }
+  },
+  "templates": {
+    "Main:MyTemplate": {
+      "name": "MyTemplate",
+      "namespace": "Main",
+      "outputFormat": "text",
+      "tools": [
+        {
+          "id": "Main:myTool",
+          "name": "myTool"
+        }
+      ],
+      "contents": {
+        "kind": "noVariants",
+        "content": {
+          "meta": {
+            "temperature": 0.7,
+            "foobar": "bar"
+          },
+          "system": [
+            {
+              "kind": "insertSnippet",
+              "snippet": "greet",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nHow many characters are in your full name?"
+            }
+          ],
+          "user": [
+            {
+              "kind": "text",
+              "text": "Your "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "firstName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\nYour "
+            },
+            {
+              "kind": "text",
+              "text": " is: "
+            },
+            {
+              "kind": "insertVal",
+              "val": {
+                "kind": "property",
+                "left": {
+                  "kind": "input"
+                },
+                "property": "lastName"
+              },
+              "format": "text",
+              "indent": ""
+            },
+            {
+              "kind": "text",
+              "text": "\n\nFor example "
+            }
+          ],
+          "examples": [
+            {
+              "input": {
+                "firstName": "John",
+                "lastName": "Doe"
+              },
+              "output": {
+                "x": 8
+              },
+              "intermediateSteps": [
+                {
+                  "toolCalls": [
+                    {
+                      "callId": "myCall",
+                      "toolId": "Main:myTool",
+                      "toolName": "myTool",
+                      "input": {
+                        "foo": "hello"
+                      },
+                      "output": {
+                        "bar": "world"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "input": {
+                "firstName": "Jane",
+                "lastName": "Smith"
+              },
+              "output": {
+                "x": 9
+              },
+              "intermediateSteps": []
+            }
+          ]
+        }
+      },
+      "snippets": {
+        "greet": {
+          "kind": "snippet",
+          "body": [
+            {
+              "kind": "text",
+              "text": "Hello,\n"
+            }
+          ]
         }
       }
+    }
+  }
+} as const;
 
-      const zodSchemas = {
-        "Main:MyTemplate": {
-          input: ((): z.ZodType<$.Main.MyTemplate.Input> => {
-            const inputSchema: z.ZodType<$.Main.MyTemplate.Input> = z.object({
-              firstName: z.string(),
-              lastName: z.string(),
-              fooToBar: z.record(
-                z.string(),
-                z.int32(),
-              ).optional(),
-            });
-            return inputSchema;
-          })(),
-          output: ((): z.ZodType<$.Main.MyTemplate.Output> => {
-            const outputSchema: z.ZodType<$.Main.MyTemplate.Output> = z.object({
-              x: z.int32(),
-            });
-            return outputSchema;
-          })(),
-        },
-        "Main:myTool": {
-          input: ((): z.ZodType<$.Main.MyTool.Input> => {
-            const inputSchema: z.ZodType<$.Main.MyTool.Input> = z.object({
-              foo: z.string(),
-            });
-            return inputSchema;
-          })(),
-          output: ((): z.ZodType<$.Main.MyTool.Output> => {
-            const outputSchema: z.ZodType<$.Main.MyTool.Output> = z.object({
-              bar: z.string(),
-            });
-            return outputSchema;
-          })(),
-        },
-      } as const;
-
-      namespace Spec {
-        export type Templates = {
-          readonly signature: string;
-          readonly templates: { [id: string]: Template };
-          readonly tools: { [id: string]: Tool };
-        };export type Template = {
-          readonly name: string;
-          readonly namespace: string;
-          readonly outputFormat: OutputFormat;
-          readonly tools: readonly TemplateTool[];
-          readonly contents: TemplateContents;
-          readonly snippets: { [name: string]: Snippet };
-        };export type OutputFormat = (
-          | "json"
-          | "text"
-        );export type TemplateTool = {
-          readonly id: string;
-          readonly name: string;
-        };export type TemplateContents = (
-          | {
-            readonly kind: "noVariants";
-            readonly content: TemplateContent;
-          }
-          | {
-            readonly kind: "variants";
-            readonly variants: { [c: string]: TemplateContent };
-            readonly defaultContent: TemplateContent;
-          }
-        );export type TemplateContent = {
-          readonly meta?: unknown;
-          readonly system?: Body;
-          readonly user?: Body;
-          readonly examples?: readonly FewShotExample[];
-        };export type FewShotExample = {
-          readonly input: unknown;
-          readonly output: unknown;
-          readonly intermediateSteps: readonly {
-            readonly toolCalls: readonly ToolCallExample[];
-          }[];
-        };export type ToolCallExample = {
-          readonly callId: string;
-          readonly toolId: string;
-          readonly toolName: string;
-          readonly input: unknown;
-          readonly output: unknown;
-        };export type Body = readonly BodyPiece[];export type BodyPiece = (
-          | {
-            readonly kind: "text";
-            readonly text: string;
-          }
-          | {
-            readonly kind: "insertVal";
-            readonly val: Expression;
-            readonly format: InsertFormat;
-            readonly indent: string;
-          }
-          | {
-            readonly kind: "insertSnippet";
-            /** Snippet name. */
-            readonly snippet: string;
-            /** Only contains whitespace characters. */
-            readonly indent: string;
-          }
-        );export type InsertFormat = (
-          | "text"
-          | "json"
-          | "yaml"
-          | "toon"
-          | "csv"
-          | "tsv"
-        );export type Expression = (
-          | {
-            readonly kind: "input";
-          }
-          | {
-            readonly kind: "property";
-            readonly left: Expression;
-            readonly property: string;
-          }
-        );export type Snippet = (
-          | {
-            readonly kind: "snippet";
-            readonly body: Body;
-          }
-          | {
-            readonly kind: "snippetIf";
-            readonly expression: Expression;
-            readonly is: (
-              | "notNull"
-              | "notEmpty"
-              | "true"
-            );
-            readonly then: Body;
-            readonly else: Body;
-          }
-          | {
-            readonly kind: "snippetSwitch";
-            readonly expression: Expression;
-            readonly branches: { [c: string]: Body };
-          }
-        );export type Tool = {
-          readonly id: string;
-          readonly name: string;
-          readonly description: string;
-        };}
-
-        const templatesSchema = ((): z.ZodType<Spec.Templates> => {
-          const outputFormatSchema: z.ZodType<Spec.OutputFormat> = z.union([
-            z.literal("json"),
-            z.literal("text"),
-          ]);
-          const templateToolSchema: z.ZodType<Spec.TemplateTool> = z.object({
-            id: z.string(),
-            name: z.string(),
-          });
-          const expressionSchema: z.ZodType<Spec.Expression> = z.union([
-            z.object({
-              kind: z.literal("input"),
-            }),
-            z.object({
-              kind: z.literal("property"),
-              left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
-              property: z.string(),
-            }),
-          ]);
-          const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.union([
-            z.literal("text"),
-            z.literal("json"),
-            z.literal("yaml"),
-            z.literal("toon"),
-            z.literal("csv"),
-            z.literal("tsv"),
-          ]);
-          const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.union([
-            z.object({
-              kind: z.literal("text"),
-              text: z.string(),
-            }),
-            z.object({
-              kind: z.literal("insertVal"),
-              val: expressionSchema,
-              format: insertFormatSchema,
-              indent: z.string(),
-            }),
-            z.object({
-              kind: z.literal("insertSnippet"),
-              snippet: z.string().describe("Snippet name."),
-              indent: z.string().describe("Only contains whitespace characters."),
-            }),
-          ]);
-          const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
-          const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
-            callId: z.string(),
-            toolId: z.string(),
-            toolName: z.string(),
-            input: z.any(),
-            output: z.any(),
-          });
-          const fewShotExampleSchema: z.ZodType<Spec.FewShotExample> = z.object({
-            input: z.any(),
-            output: z.any(),
-            intermediateSteps: z.object({
-              toolCalls: toolCallExampleSchema.array(),
-            }).array(),
-          });
-          const templateContentSchema: z.ZodType<Spec.TemplateContent> = z.object({
-            meta: z.any().optional(),
-            system: bodySchema.optional(),
-            user: bodySchema.optional(),
-            examples: fewShotExampleSchema.array().optional(),
-          });
-          const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.union([
-            z.object({
-              kind: z.literal("noVariants"),
-              content: templateContentSchema,
-            }),
-            z.object({
-              kind: z.literal("variants"),
-              variants: z.record(
-                z.string(),
-                templateContentSchema,
-              ),
-              defaultContent: templateContentSchema,
-            }),
-          ]);
-          const snippetSchema: z.ZodType<Spec.Snippet> = z.union([
-            z.object({
-              kind: z.literal("snippet"),
-              body: bodySchema,
-            }),
-            z.object({
-              kind: z.literal("snippetIf"),
-              expression: expressionSchema,
-              is: z.union([
-                z.literal("notNull"),
-                z.literal("notEmpty"),
-                z.literal("true"),
-              ]),
-              then: bodySchema,
-              else: bodySchema,
-            }),
-            z.object({
-              kind: z.literal("snippetSwitch"),
-              expression: expressionSchema,
-              branches: z.record(
-                z.string(),
-                bodySchema,
-              ),
-            }),
-          ]);
-          const templateSchema: z.ZodType<Spec.Template> = z.object({
-            name: z.string(),
-            namespace: z.string(),
-            outputFormat: outputFormatSchema,
-            tools: templateToolSchema.array(),
-            contents: templateContentsSchema,
-            snippets: z.record(
-              z.string(),
-              snippetSchema,
-            ),
-          });
-          const toolSchema: z.ZodType<Spec.Tool> = z.object({
-            id: z.string(),
-            name: z.string(),
-            description: z.string(),
-          });
-          const templatesSchema: z.ZodType<Spec.Templates> = z.object({
-            signature: z.string(),
-            templates: z.record(
-              z.string(),
-              templateSchema,
-            ),
-            tools: z.record(
-              z.string(),
-              toolSchema,
-            ),
-          });
-          return templatesSchema;
-        })();
-
-        const TEMPLATES_DATA: Spec.Templates = {
-          "signature": "",
-          "tools": {
-            "Main:myTool": {
-              "id": "Main:myTool",
-              "name": "myTool",
-              "description": "A tool that does something"
-            }
-          },
-          "templates": {
-            "Main:MyTemplate": {
-              "name": "MyTemplate",
-              "namespace": "Main",
-              "outputFormat": "text",
-              "tools": [
-                {
-                  "id": "Main:myTool",
-                  "name": "myTool"
-                }
-              ],
-              "contents": {
-                "kind": "noVariants",
-                "content": {
-                  "meta": {
-                    "temperature": 0.7,
-                    "foobar": "bar"
-                  },
-                  "system": [
-                    {
-                      "kind": "insertSnippet",
-                      "snippet": "greet",
-                      "indent": ""
-                    },
-                    {
-                      "kind": "text",
-                      "text": "\n\nHow many characters are in your full name?"
-                    }
-                  ],
-                  "user": [
-                    {
-                      "kind": "text",
-                      "text": "Your "
-                    },
-                    {
-                      "kind": "text",
-                      "text": " is: "
-                    },
-                    {
-                      "kind": "insertVal",
-                      "val": {
-                        "kind": "property",
-                        "left": {
-                          "kind": "input"
-                        },
-                        "property": "firstName"
-                      },
-                      "format": "text",
-                      "indent": ""
-                    },
-                    {
-                      "kind": "text",
-                      "text": "\nYour "
-                    },
-                    {
-                      "kind": "text",
-                      "text": " is: "
-                    },
-                    {
-                      "kind": "insertVal",
-                      "val": {
-                        "kind": "property",
-                        "left": {
-                          "kind": "input"
-                        },
-                        "property": "lastName"
-                      },
-                      "format": "text",
-                      "indent": ""
-                    },
-                    {
-                      "kind": "text",
-                      "text": "\n\nFor example "
-                    }
-                  ],
-                  "examples": [
-                    {
-                      "input": {
-                        "firstName": "John",
-                        "lastName": "Doe"
-                      },
-                      "output": {
-                        "x": 8
-                      },
-                      "intermediateSteps": [
-                        {
-                          "toolCalls": [
-                            {
-                              "callId": "myCall",
-                              "toolId": "Main:myTool",
-                              "toolName": "myTool",
-                              "input": {
-                                "foo": "hello"
-                              },
-                              "output": {
-                                "bar": "world"
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "input": {
-                        "firstName": "Jane",
-                        "lastName": "Smith"
-                      },
-                      "output": {
-                        "x": 9
-                      },
-                      "intermediateSteps": []
-                    }
-                  ]
-                }
-              },
-              "snippets": {
-                "greet": {
-                  "kind": "snippet",
-                  "body": [
-                    {
-                      "kind": "text",
-                      "text": "Hello,\n"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        } as const;
 function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
   const result: {
     [namespace: string]: {

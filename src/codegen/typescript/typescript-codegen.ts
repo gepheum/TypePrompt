@@ -48,10 +48,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["typescript-top-level"],
-      "",
       reformat(writePromptMaker(Object.values(namespaces))),
       STATIC_SNIPPETS["typescript-public-types"],
-      "",
       reformat(
         [
           writeTemplateIdEnum(Object.values(templates), Object.values(tools)),
@@ -64,27 +62,26 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["typescript-logic"],
-      "",
-    ].join("\n"),
-  );
+    ].join("\n\n"),
+  ).concat("\n");
 }
 
 function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
-  let code = "export type PromptMaker = {\n";
+  const lines = ["export type PromptMaker = {"];
   for (const namespace of namespaces) {
     if (namespace.templates.length <= 0) continue;
     const namespaceProperty = uncapitalize(namespace.name);
-    code += `readonly ${namespaceProperty}: {\n`;
+    lines.push(`readonly ${namespaceProperty}: {`);
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
       const templateProperty = uncapitalize(templateName);
       const templateId = `${namespace.name}:${templateName}`;
-      code += `readonly ${templateProperty}: Template<"${templateId}">;\n`;
+      lines.push(`readonly ${templateProperty}: Template<"${templateId}">;`);
     }
-    code += "};\n";
+    lines.push("};");
   }
-  code += "};\n\n";
-  return code;
+  lines.push("};");
+  return lines.join("\n");
 }
 
 function writeUserDefinedDatatypes(
@@ -93,50 +90,51 @@ function writeUserDefinedDatatypes(
 ): string {
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
-  let code = "";
-  code += "export type Meta = $.Meta.Meta;\n\n";
-  code += "export namespace $ {\n";
-  code += "export namespace Meta {\n";
+  const lines = [
+    "export type Meta = $.Meta.Meta;\n",
+    "export namespace $ {",
+    "export namespace Meta {",
+  ];
   if (anyTypes(metaSchema)) {
-    code += writeSchema(metaSchema, { sharedTypePrefix: "Never." });
+    lines.push(writeSchema(metaSchema, { sharedTypePrefix: "Never." }));
   } else {
-    code += "export type Meta = never;\n";
+    lines.push("export type Meta = never;\n");
   }
-  code += "}\n\n";
+  lines.push("}\n");
   for (const namespace of namespaces) {
-    code += `export namespace ${namespace.name} {\n`;
+    lines.push(`export namespace ${namespace.name} {`);
     if (anyTypes(namespace.schema)) {
-      code += "export namespace Shared {\n";
-      code += writeSchema(namespace.schema, { sharedTypePrefix: "Never." });
-      code += "}\n\n";
+      lines.push("export namespace Shared {");
+      lines.push(writeSchema(namespace.schema, { sharedTypePrefix: "Never." }));
+      lines.push("}\n");
     }
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
-      code += `export namespace ${templateName} {\n`;
-      code += writeSchema(template.schema, {
+      lines.push(`export namespace ${templateName} {`);
+      lines.push(writeSchema(template.schema, {
         sharedTypePrefix: `$.${namespace.name}.Shared.`,
-      });
-      code += "}\n\n";
+      }));
+      lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      code += `export namespace ${capitalize(toolName)} {\n`;
-      code += writeSchema(tool.schema, {
+      lines.push(`export namespace ${capitalize(toolName)} {\n`);
+      lines.push(writeSchema(tool.schema, {
         sharedTypePrefix: `$.${namespace.name}.Shared.`,
-      });
-      code += "}\n\n";
+      }));
+      lines.push("}\n");
     }
-    code += "}\n\n";
+    lines.push("}\n");
   }
-  code += "}\n\n";
-  return code;
+  lines.push("}\n");
+  return lines.join("\n");
 }
 
 function writeZodSchemas(
   templates: readonly ValidatedTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
-  let code = "const zodSchemas = {\n";
+  const lines = ["const zodSchemas = {"];
   const writeEntry = (
     input: ValidatedTemplate | ValidatedTool,
     named: Template | Tool,
@@ -151,10 +149,10 @@ function writeZodSchemas(
       defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
       sharedTypePrefix: `$.${namespace}.Shared.`,
     });
-    code += `"${namespace}:${name}": {\n`;
-    code += `input: ${zodInputType},\n`;
-    code += `output: ${zodOutputType},\n`;
-    code += "},\n";
+    lines.push(`"${namespace}:${name}": {`);
+    lines.push(`input: ${zodInputType},`);
+    lines.push(`output: ${zodOutputType},`);
+    lines.push("},");
   };
   for (const template of templates) {
     writeEntry(template, template.template);
@@ -162,71 +160,76 @@ function writeZodSchemas(
   for (const tool of tools) {
     writeEntry(tool, tool.tool);
   }
-  code += "} as const;";
-  return code;
+  lines.push("} as const;");
+  return lines.join("\n");
 }
 
 function writeTemplateIdEnum(
   templates: readonly ValidatedTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
-  let code = "/** Uniquely identifies a prompt template. */\n";
-  code += "export type TemplateId = (\n";
+  const lines = [
+    "/** Uniquely identifies a prompt template. */",
+    "export type TemplateId = (",
+  ];
   if (templates.length <= 0) {
-    code += " never\n";
+    lines.push(" never");
   } else {
     for (const template of templates) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
       const templateName = template.template.name.text;
-      code += `| "${namespace}:${templateName}"\n`;
+      lines.push(`| "${namespace}:${templateName}"`);
     }
   }
-  code += ");";
-  return code;
+  lines.push(");");
+  return lines.join("\n");
 }
 
 function writeToolsType(
   templates: readonly ValidTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
-  let code = "/** Uniquely identifies a prompt template. */\n";
-  code += "export type Tools<Id extends TemplateId> = {\n";
+  const lines = [
+    "/** The tools available from the given template. */",
+    "export type Tools<Id extends TemplateId> = {",
+  ];
   for (const template of templates) {
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateName = template.template.name.text;
     const templateId = `${namespace}:${templateName}`;
-    code += `"${templateId}": {\n`;
+    lines.push(`"${templateId}": {`);
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.tool.name.text;
       const typePrefix = `$.${namespace}.${capitalize(toolName)}.`;
-      code += `${toolName}: Tool<\n`;
-      code += `${typePrefix}Input,\n`;
-      code += `${typePrefix}Output\n`;
-      code += ">,\n";
+      lines.push(`${toolName}: Tool<`);
+      lines.push(`${typePrefix}Input,`);
+      lines.push(`${typePrefix}Output`);
+      lines.push(">,");
     }
-    code += "},\n";
+    lines.push("},");
   }
-  code += "}[Id];";
-  return code;
+  lines.push("}[Id];");
+  return lines.join("\n");
 }
 
 function writeInputOutputTypes(
   templates: readonly ValidatedTemplate[],
 ): string {
-  let code = "";
+  const lines: string[] = [];
 
   for (const what of ["Input", "Output"]) {
-    code += `export type ${what}<Id extends TemplateId> = {\n`;
+    lines.push(`export type ${what}<Id extends TemplateId> = {`);
     for (const template of templates) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
       const templateName = template.template.name.text;
       const templateId = `${namespace}:${templateName}`;
-      code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;
+      lines.push(`"${templateId}": $.${namespace}.${templateName}.${what};`);
     }
-    code += "}[Id];\n\n";
+    lines.push("}[Id];");
+    lines.push("");
   }
 
-  return code;
+  return lines.join("\n");
 }
 
 function writeSpecDatatypes(): string {
@@ -234,13 +237,14 @@ function writeSpecDatatypes(): string {
     defaultScopeTypePrefix: "Spec.",
     sharedTypePrefix: "Never.",
   } as const;
-  let code = "namespace Spec {\n";
-  code += writeSchema(runtimeTypesSchema, options);
-  code += "}\n\n";
-  code += "const templatesSchema = ";
-  code += writeZodType(runtimeTypesSchema, "Templates", options);
-  code += ";";
-  return code;
+  const lines = [
+    "namespace Spec {",
+    writeSchema(runtimeTypesSchema, options),
+    "}",
+    "",
+    "const templatesSchema = " + writeZodType(runtimeTypesSchema, "Templates", options) + ";",
+  ];
+  return lines.join("\n");
 }
 
 function writeTemplatesData(compilationResult: CompilationResult): string {
@@ -255,13 +259,13 @@ function writeSchema(
   schema: Schema,
   options: { readonly sharedTypePrefix: string },
 ): string {
-  let code = "";
+  const lines: string[] = [];
   for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
     const name = typeDeclaration.name.text;
-    code += wrapJsdoc(typeDeclaration.doc);
-    code += `export type ${name} = ${writeType(typeDeclaration.valueType, options)};`;
+    lines.push(wrapJsdoc(typeDeclaration.doc));
+    lines.push(`export type ${name} = ${writeType(typeDeclaration.valueType, options)};`);
   }
-  return code;
+  return lines.join("\n");
 }
 
 function capitalize(s: string): string {
