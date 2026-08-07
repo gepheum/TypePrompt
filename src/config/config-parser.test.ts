@@ -21,18 +21,19 @@ function expectConfigParseError(
 }
 
 describe("parseConfigYaml", () => {
-  it("parses a minimal config with only gen.typescript.dotTsPath", () => {
+  it("parses a minimal config with enabled typescript codegen", () => {
     const config = parseConfigYaml({
       content: [
         "gen:",
         "  typescript:",
-        '    dotTsPath: out/prompts.ts',
+        "    enabled: true",
+        "    file: out/prompts.ts",
       ].join("\n"),
       path: "config.yml",
     });
 
     expect(config).toMatch({
-      gen: { typescript: { dotTsPath: "out/prompts.ts" } },
+      gen: { typescript: { enabled: true, file: "out/prompts.ts" } },
     });
   });
 
@@ -42,9 +43,11 @@ describe("parseConfigYaml", () => {
         "input: prompts/*.tp",
         "gen:",
         "  typescript:",
-        "    dotTsPath: out/prompts.ts",
+        "    enabled: true",
+        "    file: out/prompts.ts",
         "  python:",
-        "    dotPyPath: out/prompts.py",
+        "    enabled: true",
+        "    file: out/prompts.py",
       ].join("\n"),
       path: "config.yml",
     });
@@ -52,10 +55,18 @@ describe("parseConfigYaml", () => {
     expect(config).toMatch({
       input: "prompts/*.tp",
       gen: {
-        typescript: { dotTsPath: "out/prompts.ts" },
-        python: { dotPyPath: "out/prompts.py" },
+        typescript: { enabled: true, file: "out/prompts.ts" },
+        python: { enabled: true, file: "out/prompts.py" },
       },
     });
+  });
+
+  it("accepts enabled: false without a file", () => {
+    const config = parseConfigYaml({
+      content: ["gen:", "  typescript:", "    enabled: false"].join("\n"),
+      path: "config.yml",
+    });
+    expect(config).toMatch({ gen: { typescript: { enabled: false } } });
   });
 
   it("fails with line number on invalid YAML syntax", () => {

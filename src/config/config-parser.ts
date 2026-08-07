@@ -7,14 +7,24 @@ export type Config = {
   readonly input?: string;
 
   readonly gen: {
-    readonly typescript: {
-      /** Path to the generated TypeScript file. */
-      readonly dotTsPath?: string;
-    };
-    readonly python: {
-      /** Path to the generated Python file. */
-      readonly dotPyPath?: string;
-    };
+    readonly typescript?:
+      | {
+        readonly enabled: false;
+      }
+      | {
+        readonly enabled: true;
+        /** Path to the generated .ts file. */
+        readonly file: string;
+      };
+    readonly python?:
+      | {
+        readonly enabled: false;
+      }
+      | {
+        readonly enabled: true;
+        /** Path to the generated .py file. */
+        readonly file: string;
+      };
   };
 };
 
@@ -59,26 +69,32 @@ export function parseConfigYaml(args: ParseConfigYamlArgs): Config {
   return parseResult.data;
 }
 
+const langSchema = (ext: string) =>
+  z
+    .discriminatedUnion("enabled", [
+      z.object({ enabled: z.literal(false) }).strict(),
+      z
+        .object({
+          enabled: z.literal(true),
+          file: z
+            .string()
+            .min(1, "must be a non-empty string")
+            .refine((f) => f.endsWith(ext), `must end with '${ext}'`),
+        })
+        .strict(),
+    ])
+    .optional();
+
 const RawConfigSchema = z
   .object({
     input: z.string().min(1, "must be a non-empty string").optional(),
     gen: z
       .object({
-        typescript: z
-          .object({
-            dotTsPath: z.string().min(1, "must be a non-empty string").optional(),
-          })
-          .strict()
-          .default({}),
-        python: z
-          .object({
-            dotPyPath: z.string().min(1, "must be a non-empty string").optional(),
-          })
-          .strict()
-          .default({}),
+        typescript: langSchema(".ts"),
+        python: langSchema(".py"),
       })
       .strict()
-      .default({ typescript: {}, python: {} }),
+      .default({}),
   })
   .strict();
 

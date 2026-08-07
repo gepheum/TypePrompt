@@ -32,7 +32,8 @@ const DEFAULT_CONFIG_TOML = [
   "# TypePrompt configuration. Run \"npx typeprompt gen\" to generate code.",
   "gen:",
   "  typescript:",
-  "    dotTsPath: ./prompts.gen.ts",
+  "    enabled: true",
+  "    file: ./prompts.gen.ts",
   "",
 ].join("\n");
 

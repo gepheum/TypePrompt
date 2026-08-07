@@ -2,4 +2,5 @@
 input: prompts
 gen:
   typescript:
-    dotTsPath: ./prompts.gen.ts
+    enabled: true
+    file: ./prompts.gen.ts
