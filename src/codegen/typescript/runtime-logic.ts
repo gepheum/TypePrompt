@@ -97,6 +97,7 @@ export type Prompt<Id extends TemplateId> = {
   /** The tools which can be called by the LLM, keyed by tool name. */
   readonly tools: Tools<Id>;
   readonly isToolName: (name: string) => name is ToolNames<Id>;
+  /** Executes the given tool calls in parallel. */
   readonly callTools: (
     calls: readonly ToolCall[],
     impls: ToolImpls<Id>,
@@ -181,7 +182,6 @@ export type ToolCallResponse = {
   readonly stringifiedOutput: string;
 };
 
-/** Executes the given tool calls in parallel. */
 async function callToolsImpl<Id extends TemplateId>(
   calls: readonly ToolCall[],
   tools: Tools<Id>,
@@ -200,7 +200,8 @@ async function callToolsImpl<Id extends TemplateId>(
         throw new Error("Tool implementation not found: ".concat(toolName));
       }
       const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
-      const output = tool.outputSchema.parse(await impl(input));
+      let output = await impl(input);
+      output = tool.outputSchema.parse(output);
       const stringifiedOutput = JSON.stringify(output);
       return { callId, stringifiedOutput };
     }),
