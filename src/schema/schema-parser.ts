@@ -37,7 +37,7 @@ class SchemaParser {
           let nestingLevel = 0;
           while (
             token.kind !== "string-end" &&
-            !(token.text === "type" && nestingLevel === 0)
+            !(nestingLevel === 0 && (token.text === "type" || token.text === "interface"))
           ) {
             if (token.text === "{") {
               ++nestingLevel;
@@ -90,10 +90,14 @@ class SchemaParser {
 
     const match = this.expectThenMove(token, {
       type: EXACT_MATCHER,
+      interface: EXACT_MATCHER,
     });
     switch (match) {
       case "type": {
         return this.parseTypeAliasDeclaration(jsdoc);
+      }
+      case "interface": {
+        return this.parseInterfaceDeclaration(jsdoc);
       }
       case "noMatch": {
         return null;
@@ -125,6 +129,39 @@ class SchemaParser {
     ) {
       // Will always push an error.
       this.expectExactThenMove(";", maybeSemicolon);
+    }
+
+    return {
+      kind: "type",
+      name: this.tokenToSpan(name),
+      valueType: typeRef,
+      doc: getDocText(jsdoc),
+    };
+  }
+
+  private parseInterfaceDeclaration(
+    jsdoc: Token | undefined,
+  ): TypeDeclaration | null {
+    const name = this.peekToken();
+    if (this.expectThenMove(name, { _: IDENTIFIER_MATCHER }) === "noMatch") {
+      return null;
+    }
+    const leftCurlyBracket = this.peekToken();
+    if (!this.expectExactThenMove("{", leftCurlyBracket)) {
+      return null;
+    }
+    const fields = this.parseFields();
+    if (!this.expectExactThenMove("}")) return null;
+    const typeRef: Type = {
+      kind: "interface",
+      leftCurlyBracket: this.tokenToSpan(leftCurlyBracket),
+      fields: Object.fromEntries(fields.map((f) => [f.name.text, f])),
+      firstField: fields[0],
+    };
+
+    const maybeSemicolon = this.peekToken();
+    if (maybeSemicolon.text === ";") {
+      this.movePast(maybeSemicolon);
     }
 
     return {

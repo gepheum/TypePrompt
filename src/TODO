@@ -8,6 +8,7 @@ JSON:
 
 SCHEMA:
   - put: back 'interface'
+  - so maybe I do want to support 'true' and 'false'
 
 LANGUAGE SERVER:
   - ...
