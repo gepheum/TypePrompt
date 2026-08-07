@@ -2,21 +2,19 @@ CODEGEN:
   - add getTool(ToolId)
   - document everything
     - add to the generated code...
-  - test
+  - e2e test
   - add example of hook functions
 
 TOOLS:
-  - validate the examples
   - add to generated code
-  - https://share.gemini.google/0FSezpOXrkQI
-  - support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?
+  - Support https://www.promptfoo.dev/docs/configuration/tools/#tool-choice ?
 
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 JSON:
   - add 'suggestions' when parsing JSON and a field is not found
-    - I think right now there is not even any error message, we just get that the top message is not matching the type
+  - add tests, I feel like the computation of the score might be imperfect
 
 SCHEMA:
   - put: back 'interface'
@@ -34,7 +32,6 @@ EXTENSION TO THE LANGUAGE:
 
 TEST & PARSER QUALITY:
   - when there is an error in <meta>, do not raise other errors when parsing templates metas
-  - set up the "Error.suggestions" when validating JSON
 
 NAME CONFLICT:
   - "Default" namespace -> "Main" namespace
@@ -65,6 +62,7 @@ LATER?
   - TODO: support 'case="summer,fall"'
 
 MISC:
+  - https://share.gemini.google/0FSezpOXrkQI
 - https://gemini.google.com/app/daee89170e18267f
 - DOC:
   - https://share.gemini.google/jk1DBITItg9W
