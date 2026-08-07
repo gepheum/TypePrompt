@@ -7,10 +7,13 @@ TOOLS:
 BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
+JSON:
+  - add 'suggestions' when parsing JSON and a field is not found
+    - I think right now there is not even any error message, we just get that the top message is not matching the type
+
 CODEGEN:
-  - use less "code +=", join...
-  - reorder sections
   - document everything
+    - add to the generated code...
 
 CODE QUALITY:
   - maybe remove some `as const`
@@ -18,7 +21,6 @@ CODE QUALITY:
 EXTENSION TO THE LANGUAGE:
   - toolcalls...
     - make <c> from template also accept tool names and symbols defined in the tool?
-  - add support for tool calls in Examples...
   - See:
     - https://developers.openai.com/api/docs/guides/prompting
     - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices

@@ -564,7 +564,11 @@ const TEMPLATES_DATA: Spec.Templates = {
               "output": {
                 "x": 8
               },
-              "intermediateSteps": []
+              "intermediateSteps": [
+                {
+                  "toolCalls": []
+                }
+              ]
             },
             {
               "input": {

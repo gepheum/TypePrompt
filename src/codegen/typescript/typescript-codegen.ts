@@ -92,13 +92,13 @@ function writeUserDefinedDatatypes(
   let code = "";
   code += "export type Meta = $.Meta.Meta;\n\n";
   code += "export namespace $ {\n";
-    code += "export namespace Meta {\n";
+  code += "export namespace Meta {\n";
   if (anyTypes(metaSchema)) {
     code += writeSchema(metaSchema, { sharedTypePrefix: "Never." });
   } else {
     code += "export type Meta = never;\n";
   }
-    code += "}\n\n";
+  code += "}\n\n";
   for (const namespace of namespaces) {
     code += `export namespace ${namespace.name} {\n`;
     if (anyTypes(namespace.schema)) {

@@ -63,6 +63,13 @@
         lastName: "Doe"
       output:
         x: 8
+      intermediateSteps:
+        - toolCalls:
+          - tool: myTool
+            input:
+              foo: "hello"
+            output:
+              bar: "world"
     - input:
         firstName: "Jane"
         lastName: "Smith"
