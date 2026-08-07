@@ -237,8 +237,8 @@ function resolveTemplate<Id extends TemplateId>(
         id: id as ToolId,
         name: name as ToolName<ToolId>,
         description: toolData.description,
-        inputSchema: toolSchemas.input,
-        outputSchema: toolSchemas.output,
+        inputSchema: toolSchemas["input"],
+        outputSchema: toolSchemas["output"],
       };
       return [name, tool];
     }),

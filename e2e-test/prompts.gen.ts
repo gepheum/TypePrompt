@@ -84,27 +84,21 @@ export type TemplateId = (
 );
 
 export type ToolId = (
-  | "Default:getX"
+  never
 );
 
-export type ToolName<Id extends ToolId> = {
-  "Default:getX": "getX",
-}[Id];
+export type ToolName<Id extends ToolId> = {}[Id];
 
 export type Input<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Input;
-  "Default:getX": $.Default.GetX.Input;
 }[Id];
 
 export type Output<Id extends TemplateId | ToolId> = {
   "Default:MyTemplate": $.Default.MyTemplate.Output;
-  "Default:getX": $.Default.GetX.Output;
 }[Id];
 
 export type ToolsHelper<Id extends TemplateId> = {
-  "Default:MyTemplate": {
-    success: "Default:success",
-  },
+  "Default:MyTemplate": {},
 }[Id];
 
 export type Meta = $.Meta.Meta;
@@ -133,16 +127,6 @@ export namespace $ {
         readonly x: number;
       };
     }
-
-    export namespace GetX {
-      export type Input = {
-        readonly x: number;
-      };
-
-      export type Output = {
-        readonly y: number;
-      };
-    }
   }
 }
 
@@ -162,20 +146,6 @@ const zodSchemas = {
     output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
       const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
         x: z.int32(),
-      });
-      return outputSchema;
-    })(),
-  },
-  "Default:getX": {
-    input: ((): z.ZodType<$.Default.GetX.Input> => {
-      const inputSchema: z.ZodType<$.Default.GetX.Input> = z.object({
-        x: z.int32(),
-      });
-      return inputSchema;
-    })(),
-    output: ((): z.ZodType<$.Default.GetX.Output> => {
-      const outputSchema: z.ZodType<$.Default.GetX.Output> = z.object({
-        y: z.int32(),
       });
       return outputSchema;
     })(),
@@ -451,24 +421,13 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
 
 const TEMPLATES_DATA: Spec.Templates = {
   "signature": "",
-  "tools": {
-    "Default:getX": {
-      "id": "Default:getX",
-      "name": "getX",
-      "description": "Hello!\n\n and "
-    }
-  },
+  "tools": {},
   "templates": {
     "Default:MyTemplate": {
       "name": "MyTemplate",
       "namespace": "Default",
       "outputFormat": "text",
-      "tools": [
-        {
-          "id": "Default:getX",
-          "name": "getX"
-        }
-      ],
+      "tools": [],
       "contents": {
         "kind": "noVariants",
         "content": {
@@ -660,8 +619,8 @@ function resolveTemplate<Id extends TemplateId>(
         id: id as ToolId,
         name: name as ToolName<ToolId>,
         description: toolData.description,
-        inputSchema: toolSchemas.input,
-        outputSchema: toolSchemas.output,
+        inputSchema: toolSchemas["input"],
+        outputSchema: toolSchemas["output"],
       };
       return [name, tool];
     }),

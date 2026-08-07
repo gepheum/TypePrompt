@@ -8,15 +8,11 @@ BUG:
   - caching based on tool might be buggy: what if a tool name is absent and the tool is added later, we migth reuse it from cache which is an error...
 
 CODEGEN:
-  - do not output namespace if namespace is empty
-  - move newPromptMaker to top
   - use less "code +=", join...
   - reorder sections
   - document everything
-  - nit: rename 'Spec' to 'Data'? more generally rename things
 
 CODE QUALITY:
-  - add ValidCompilationResult
   - maybe remove some `as const`
 
 EXTENSION TO THE LANGUAGE:
