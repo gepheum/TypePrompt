@@ -9,22 +9,22 @@ export type Config = {
   readonly gen: {
     readonly typescript?:
       | {
-        readonly enabled: false;
-      }
+          readonly enabled: false;
+        }
       | {
-        readonly enabled: true;
-        /** Path to the generated .ts file. */
-        readonly file: string;
-      };
+          readonly enabled: true;
+          /** Path to the generated .ts file. */
+          readonly file: string;
+        };
     readonly python?:
       | {
-        readonly enabled: false;
-      }
+          readonly enabled: false;
+        }
       | {
-        readonly enabled: true;
-        /** Path to the generated .py file. */
-        readonly file: string;
-      };
+          readonly enabled: true;
+          /** Path to the generated .py file. */
+          readonly file: string;
+        };
   };
 };
 
@@ -109,23 +109,19 @@ function formatSchemaIssue(
   let node: Scalar | YAMLMap | undefined;
   while (nodePath.length > 0) {
     const candidate = doc.getIn(nodePath, true);
-    if (
-      candidate instanceof Scalar ||
-      candidate instanceof YAMLMap
-    ) {
+    if (candidate instanceof Scalar || candidate instanceof YAMLMap) {
       node = candidate;
       break;
     }
     nodePath = nodePath.slice(0, -1);
   }
 
-  const locationPrefix =
-    node?.range
-      ? (() => {
-          const pos = lineCounter.linePos(node.range[0]);
-          return `${filePath}:${pos.line}:${pos.col}`;
-        })()
-      : filePath;
+  const locationPrefix = node?.range
+    ? (() => {
+        const pos = lineCounter.linePos(node.range[0]);
+        return `${filePath}:${pos.line}:${pos.col}`;
+      })()
+    : filePath;
 
   if (issue.code === "unrecognized_keys") {
     const keys = issue.keys.map((key) => `'${key}'`).join(", ");

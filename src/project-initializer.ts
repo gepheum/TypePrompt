@@ -29,7 +29,7 @@ export function initializeProject(rootDir: string): void {
 }
 
 const DEFAULT_CONFIG_TOML = [
-  "# TypePrompt configuration. Run \"npx typeprompt gen\" to generate code.",
+  '# TypePrompt configuration. Run "npx typeprompt gen" to generate code.',
   "gen:",
   "  typescript:",
   "    enabled: true",

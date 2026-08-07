@@ -71,15 +71,15 @@ describe("parseConfigYaml", () => {
 
   it("fails with line number on invalid YAML syntax", () => {
     expectConfigParseError(
-      () => parseConfigYaml({ content: "input: [unclosed", path: "config.yml" }),
+      () =>
+        parseConfigYaml({ content: "input: [unclosed", path: "config.yml" }),
       /config\.yml:\d+:\d+:/,
     );
   });
 
   it("fails with line number on unknown fields", () => {
     expectConfigParseError(
-      () =>
-        parseConfigYaml({ content: "outputPath: x", path: "config.yml" }),
+      () => parseConfigYaml({ content: "outputPath: x", path: "config.yml" }),
       /config\.yml:\d+:\d+:.*unknown config field\(s\): 'outputPath'/,
     );
   });
