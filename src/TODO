@@ -1,3 +1,10 @@
+CODEGEN:
+  - add getTool(ToolId)
+  - document everything
+    - add to the generated code...
+  - test
+  - add example of hook functions
+
 TOOLS:
   - validate the examples
   - add to generated code
@@ -11,9 +18,8 @@ JSON:
   - add 'suggestions' when parsing JSON and a field is not found
     - I think right now there is not even any error message, we just get that the top message is not matching the type
 
-CODEGEN:
-  - document everything
-    - add to the generated code...
+SCHEMA:
+  - put: back 'interface'
 
 CODE QUALITY:
   - maybe remove some `as const`

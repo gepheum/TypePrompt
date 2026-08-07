@@ -43,7 +43,7 @@ export function validateJson(
       message: `Does not match type '${typeName}'`,
     },
   ];
-  if (result.details !== undefined && result.details.matchScore >= 0.5) {
+  if (result.details !== undefined) {
     errors.push(result.details.reason);
   }
   return errors;

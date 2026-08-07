@@ -477,7 +477,7 @@ const TEMPLATES_DATA: Spec.Templates = {
     "Default:myTool": {
       "id": "Default:myTool",
       "name": "myTool",
-      "description": "description: \"A tool that does something\""
+      "description": "A tool that does something"
     }
   },
   "templates": {
@@ -566,7 +566,19 @@ const TEMPLATES_DATA: Spec.Templates = {
               },
               "intermediateSteps": [
                 {
-                  "toolCalls": []
+                  "toolCalls": [
+                    {
+                      "callId": "myCall",
+                      "toolId": "Default:myTool",
+                      "toolName": "myTool",
+                      "input": {
+                        "foo": "hello"
+                      },
+                      "output": {
+                        "bar": "world"
+                      }
+                    }
+                  ]
                 }
               ]
             },
