@@ -16,6 +16,7 @@ import type {
   Tool,
   ToolValidationResult,
 } from "./compiler-types.js";
+import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
 import { parseTemplate } from "./template-parser.js";
@@ -216,8 +217,8 @@ class CompilationResultImpl implements CompilationResult {
       }
     }
 
-    this.namespaces["Default"] ??= {
-      name: "Default",
+    this.namespaces[DEFAULT_NAMESPACE] ??= {
+      name: DEFAULT_NAMESPACE,
       schema: EMPTY_SCHEMA,
       tools: {},
       templates: [],
@@ -242,7 +243,7 @@ class CompilationResultImpl implements CompilationResult {
     const namespaceToTools: { [namespace: string]: Sourced<Tool>[] } = {};
     const idToTools: { [namespace: string]: Sourced<Tool>[] } = {};
     for (const tool of tools) {
-      const namespace = tool.element.namespace?.text ?? "Default";
+      const namespace = tool.element.namespace?.text ?? DEFAULT_NAMESPACE;
       (namespaceToTools[namespace] ??= []).push(tool);
       const id = `${namespace}:${tool.element.name.text}`;
       (idToTools[id] ??= []).push(tool);
@@ -259,7 +260,7 @@ class CompilationResultImpl implements CompilationResult {
       const tool = tools[0]!;
       const { name } = tool.element;
 
-      const namespaceName = tool.element.namespace?.text ?? "Default";
+      const namespaceName = tool.element.namespace?.text ?? DEFAULT_NAMESPACE;
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[tool.sourceFile.path]!.push({
@@ -303,7 +304,7 @@ class CompilationResultImpl implements CompilationResult {
       {};
     const idToTemplates: { [namespace: string]: Sourced<Template>[] } = {};
     for (const template of templates) {
-      const namespace = template.element.namespace?.text ?? "Default";
+      const namespace = template.element.namespace?.text ?? DEFAULT_NAMESPACE;
       (namespaceToTemplates[namespace] ??= []).push(template);
       const id = `${namespace}:${template.element.name.text}`;
       (idToTemplates[id] ??= []).push(template);
@@ -321,7 +322,8 @@ class CompilationResultImpl implements CompilationResult {
       }
       const template = templates[0]!;
 
-      const namespaceName = template.element.namespace?.text ?? "Default";
+      const namespaceName =
+        template.element.namespace?.text ?? DEFAULT_NAMESPACE;
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[template.sourceFile.path]!.push({

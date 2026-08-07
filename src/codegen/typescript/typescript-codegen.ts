@@ -9,6 +9,7 @@ import type {
   ValidNamespaceResult,
   ValidTemplate,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -140,7 +141,7 @@ function writeZodSchemas(
     input: ValidatedTemplate | ValidatedTool,
     named: Template | Tool,
   ): void => {
-    const namespace = named.namespace?.text ?? "Default";
+    const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
     const name = named.name.text;
     const zodInputType = writeZodType(input.schema, "Input", {
       defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
@@ -175,7 +176,7 @@ function writeTemplateIdEnum(
     code += " never\n";
   } else {
     for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? "Default";
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
       const templateName = template.template.name.text;
       code += `| "${namespace}:${templateName}"\n`;
     }
@@ -191,7 +192,7 @@ function writeToolsType(
   let code = "/** Uniquely identifies a prompt template. */\n";
   code += "export type Tools<Id extends TemplateId> = {\n";
   for (const template of templates) {
-    const namespace = template.template.namespace?.text ?? "Default";
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateName = template.template.name.text;
     const templateId = `${namespace}:${templateName}`;
     code += `"${templateId}": {\n`;
@@ -217,7 +218,7 @@ function writeInputOutputTypes(
   for (const what of ["Input", "Output"]) {
     code += `export type ${what}<Id extends TemplateId> = {\n`;
     for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? "Default";
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
       const templateName = template.template.name.text;
       const templateId = `${namespace}:${templateName}`;
       code += `"${templateId}": $.${namespace}.${templateName}.${what};\n`;

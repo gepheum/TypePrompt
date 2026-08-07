@@ -12,8 +12,8 @@ export function newPromptMaker(): PromptMaker {
 }
 
 export type PromptMaker = {
-  readonly default: {
-    readonly myTemplate: Template<"Default:MyTemplate">;
+  readonly main: {
+    readonly myTemplate: Template<"Main:MyTemplate">;
   };
 };
 
@@ -156,25 +156,25 @@ async function callToolsImpl<Id extends TemplateId>(
 
 /** Uniquely identifies a prompt template. */
 export type TemplateId = (
-  | "Default:MyTemplate"
+  | "Main:MyTemplate"
 );
 
 /** Uniquely identifies a prompt template. */
 export type Tools<Id extends TemplateId> = {
-  "Default:MyTemplate": {
+  "Main:MyTemplate": {
     myTool: Tool<
-      $.Default.MyTool.Input,
-      $.Default.MyTool.Output
+      $.Main.MyTool.Input,
+      $.Main.MyTool.Output
     >,
   },
 }[Id];
 
 export type Input<Id extends TemplateId> = {
-  "Default:MyTemplate": $.Default.MyTemplate.Input;
+  "Main:MyTemplate": $.Main.MyTemplate.Input;
 }[Id];
 
 export type Output<Id extends TemplateId> = {
-  "Default:MyTemplate": $.Default.MyTemplate.Output;
+  "Main:MyTemplate": $.Main.MyTemplate.Output;
 }[Id];
 
 export type Meta = $.Meta.Meta;
@@ -190,7 +190,7 @@ export namespace $ {
       );
     };}
 
-    export namespace Default {
+    export namespace Main {
       export namespace MyTemplate {
         export type Input = {
           readonly firstName: string;
@@ -210,9 +210,9 @@ export namespace $ {
       }
 
       const zodSchemas = {
-        "Default:MyTemplate": {
-          input: ((): z.ZodType<$.Default.MyTemplate.Input> => {
-            const inputSchema: z.ZodType<$.Default.MyTemplate.Input> = z.object({
+        "Main:MyTemplate": {
+          input: ((): z.ZodType<$.Main.MyTemplate.Input> => {
+            const inputSchema: z.ZodType<$.Main.MyTemplate.Input> = z.object({
               firstName: z.string(),
               lastName: z.string(),
               fooToBar: z.record(
@@ -222,22 +222,22 @@ export namespace $ {
             });
             return inputSchema;
           })(),
-          output: ((): z.ZodType<$.Default.MyTemplate.Output> => {
-            const outputSchema: z.ZodType<$.Default.MyTemplate.Output> = z.object({
+          output: ((): z.ZodType<$.Main.MyTemplate.Output> => {
+            const outputSchema: z.ZodType<$.Main.MyTemplate.Output> = z.object({
               x: z.int32(),
             });
             return outputSchema;
           })(),
         },
-        "Default:myTool": {
-          input: ((): z.ZodType<$.Default.MyTool.Input> => {
-            const inputSchema: z.ZodType<$.Default.MyTool.Input> = z.object({
+        "Main:myTool": {
+          input: ((): z.ZodType<$.Main.MyTool.Input> => {
+            const inputSchema: z.ZodType<$.Main.MyTool.Input> = z.object({
               foo: z.string(),
             });
             return inputSchema;
           })(),
-          output: ((): z.ZodType<$.Default.MyTool.Output> => {
-            const outputSchema: z.ZodType<$.Default.MyTool.Output> = z.object({
+          output: ((): z.ZodType<$.Main.MyTool.Output> => {
+            const outputSchema: z.ZodType<$.Main.MyTool.Output> = z.object({
               bar: z.string(),
             });
             return outputSchema;
@@ -488,20 +488,20 @@ export namespace $ {
         const TEMPLATES_DATA: Spec.Templates = {
           "signature": "",
           "tools": {
-            "Default:myTool": {
-              "id": "Default:myTool",
+            "Main:myTool": {
+              "id": "Main:myTool",
               "name": "myTool",
               "description": "A tool that does something"
             }
           },
           "templates": {
-            "Default:MyTemplate": {
+            "Main:MyTemplate": {
               "name": "MyTemplate",
-              "namespace": "Default",
+              "namespace": "Main",
               "outputFormat": "text",
               "tools": [
                 {
-                  "id": "Default:myTool",
+                  "id": "Main:myTool",
                   "name": "myTool"
                 }
               ],
@@ -583,7 +583,7 @@ export namespace $ {
                           "toolCalls": [
                             {
                               "callId": "myCall",
-                              "toolId": "Default:myTool",
+                              "toolId": "Main:myTool",
                               "toolName": "myTool",
                               "input": {
                                 "foo": "hello"

@@ -1,5 +1,4 @@
 TYPESCRIPT:
-  - add callTools function to Prompt?
   - document everything
     - add to the generated code...
   - e2e test

@@ -8,6 +8,7 @@ import type {
   Tool,
   ValidatedTemplate,
 } from "../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
 import type { Expression } from "../expression/expression-types.js";
 import type {
   JsonString,
@@ -46,7 +47,7 @@ function makeTool(id: string, input: Tool): Spec.Tool {
 
 function makeTemplate(result: ValidatedTemplate): Spec.Template {
   const { template } = result;
-  const namespace = template.namespace?.text ?? "Default";
+  const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
   return {
     name: template.name.text,
     namespace: namespace,
@@ -54,7 +55,7 @@ function makeTemplate(result: ValidatedTemplate): Spec.Template {
     tools: Object.entries(result.tools).map(([name, { tool }]) => ({
       id:
         tool.kind === "success"
-          ? `${tool.tool.namespace?.text ?? "Default"}:${tool.tool.name.text}`
+          ? `${tool.tool.namespace?.text ?? DEFAULT_NAMESPACE}:${tool.tool.name.text}`
           : name,
       name,
     })),
