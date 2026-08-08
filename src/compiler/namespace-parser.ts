@@ -27,11 +27,11 @@ export function parseNamespace(
   const errors: InternalError[] = [];
 
   const nameText = name.value.text;
-  if (nameText.toLowerCase() === "shared") {
-    const caseNote = nameText === "Shared" ? "" : " (case-insensitive)";
+  if (nameText.toLowerCase() === "meta") {
+    const caseNote = nameText === "Meta" ? "" : " (case-insensitive)";
     errors.push({
       span: name.nameSpan,
-      message: "Namespace name cannot be 'Shared'".concat(caseNote),
+      message: "Namespace name cannot be 'Meta'".concat(caseNote),
     });
   }
   if (

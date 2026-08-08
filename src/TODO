@@ -1,8 +1,3 @@
-NAME CONFLICT:
-  - No namespace named Meta
-  - No template named Shared
-  - No namespace named "MAIN" (conflicts with Main)
-
 TEMPLATES DATA:
   - Copy the file sources?
   - Copy the JSON scemas???
@@ -17,9 +12,8 @@ JSON:
 
 LANGUAGE SERVER:
   - Support nameGroup (with definition etc.)
+  - Auto-complete
   - ...
-
-
 
 COMPILER:
   - Asyncify
