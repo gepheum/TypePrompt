@@ -1,5 +1,4 @@
 import type {
-  CompilationResult,
   NamespaceResult,
   Template,
   Tool,
@@ -262,10 +261,13 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
-function writeTemplatesData(compilationResult: CompilationResult): string {
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: false,
+  });
   return (
     "const TEMPLATES_DATA: Spec.Templates = " +
-    JSON.stringify(makeTemplates(compilationResult), undefined, 2) +
+    JSON.stringify(templatesData, undefined, 2) +
     " as const;"
   );
 }

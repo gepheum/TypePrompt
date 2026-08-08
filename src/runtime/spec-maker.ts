@@ -1,12 +1,12 @@
 import type {
   Body,
   BodyInContext,
-  CompilationResult,
   Snippet,
   TemplateContent,
   TemplateContents,
-  Tool,
-  ValidatedTemplate,
+  ValidatedTool,
+  ValidCompilationResult,
+  ValidTemplate,
 } from "../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
 import type { Expression } from "../expression/expression-types.js";
@@ -17,53 +17,70 @@ import type {
   StrictJsonValue,
 } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
+import { toJsonSchema } from "../schema/json-schema-org.js";
+import { Schema } from "../schema/schema-types.js";
 import * as Spec from "./runtime-types.js";
 
-export function makeTemplates(input: CompilationResult): Spec.Templates {
+export function makeTemplates(
+  input: ValidCompilationResult,
+  options: Options,
+): Spec.Templates {
   const tools: { [id: string]: Spec.Tool } = {};
-  for (const [id, result] of Object.entries(input.tools)) {
-    if (result.kind !== "success") continue;
-    tools[id] = makeTool(id, result.tool);
+  for (const [id, tool] of Object.entries(input.tools)) {
+    tools[id] = makeTool(tool, id, options);
   }
   const templates: { [id: string]: Spec.Template } = {};
   for (const [id, result] of Object.entries(input.templates)) {
-    if (result.kind !== "success") continue;
-    templates[id] = makeTemplate(result);
+    templates[id] = makeTemplate(result, options);
   }
   const sourceFiles = Object.fromEntries(
-    Object.entries(input.sourceFiles).map(([path, result]) => [path, result.content]),
+    Object.entries(input.sourceFiles).map(([path, result]) => [
+      path,
+      result.content,
+    ]),
   );
   // TODO: set signature
   return { signature: "", tools, templates, sourceFiles };
 }
 
-function makeTool(id: string, input: Tool): Spec.Tool {
+function makeTool(
+  input: ValidatedTool,
+  id: string,
+  options: Options,
+): Spec.Tool {
+  const { inputJsonSchema, outputJsonSchema } = makeJsonSchemas(
+    input.schema,
+    options,
+  );
+  const { tool } = input;
   return {
     id,
-    name: input.name.text,
-    description: input.description
-      .filter((p) => p.kind === "text")
-      .map((p) => p.text)
-      .join(""),
+    name: tool.name.text,
+    description: tool.description.map((p) => p.text).join(""),
+    inputJsonSchema,
+    outputJsonSchema,
   };
 }
 
-function makeTemplate(result: ValidatedTemplate): Spec.Template {
-  const { template } = result;
+function makeTemplate(input: ValidTemplate, options: Options): Spec.Template {
+  const { template } = input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const { inputJsonSchema, outputJsonSchema } = makeJsonSchemas(
+    input.schema,
+    options,
+  );
   return {
     name: template.name.text,
     namespace: namespace,
     outputFormat: template.outputFormat?.text ?? "json",
-    tools: Object.entries(result.tools).map(([name, { tool }]) => ({
-      id:
-        tool.kind === "success"
-          ? `${tool.tool.namespace?.text ?? DEFAULT_NAMESPACE}:${tool.tool.name.text}`
-          : name,
+    tools: Object.entries(input.tools).map(([name, { tool }]) => ({
+      id: namespace.concat(":", tool.tool.name.text),
       name,
     })),
     contents: makeContents(template.contents, { namespace: namespace }),
     snippets: makeSnippets(template.snippets),
+    inputJsonSchema,
+    outputJsonSchema,
   };
 }
 
@@ -158,7 +175,8 @@ function makeBody(input: Body | BodyInContext): Spec.Body {
   const pieces: Spec.BodyPiece[] = [];
   for (const piece of input) {
     switch (piece.kind) {
-      case "text": {
+      case "text":
+      case "c-tag": {
         pieces.push({ kind: "text", text: piece.text });
         break;
       }
@@ -179,7 +197,10 @@ function makeBody(input: Body | BodyInContext): Spec.Body {
         });
         break;
       }
-      // "c-tag" is a compilation artifact; not needed at runtime
+      default: {
+        const _: never = piece;
+        throw new Error(_);
+      }
     }
   }
   return pieces;
@@ -240,3 +261,29 @@ function makeSnippet(input: Snippet): Spec.Snippet {
     }
   }
 }
+
+function makeJsonSchemas(
+  schema: Schema,
+  options: {
+    readonly includeJsonSchemas: boolean;
+  },
+): {
+  readonly inputJsonSchema: unknown;
+  readonly outputJsonSchema: unknown;
+} {
+  if (options.includeJsonSchemas) {
+    return {
+      inputJsonSchema: toJsonSchema("Input", schema, schema.unionToMembers),
+      outputJsonSchema: toJsonSchema("Output", schema, schema.unionToMembers),
+    };
+  } else {
+    return {
+      inputJsonSchema: undefined,
+      outputJsonSchema: undefined,
+    };
+  }
+}
+
+type Options = {
+  readonly includeJsonSchemas: boolean;
+};

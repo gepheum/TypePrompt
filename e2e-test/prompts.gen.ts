@@ -600,6 +600,10 @@ const TEMPLATES_DATA: Spec.Templates = {
             },
             {
               "kind": "text",
+              "text": "firstName"
+            },
+            {
+              "kind": "text",
               "text": " is: "
             },
             {
@@ -620,6 +624,10 @@ const TEMPLATES_DATA: Spec.Templates = {
             },
             {
               "kind": "text",
+              "text": "lastName"
+            },
+            {
+              "kind": "text",
               "text": " is: "
             },
             {
@@ -637,6 +645,10 @@ const TEMPLATES_DATA: Spec.Templates = {
             {
               "kind": "text",
               "text": "\n\nFor example "
+            },
+            {
+              "kind": "text",
+              "text": "{\"firstName\": \"Bo\", \"lastName\": \"Zo\"}"
             }
           ],
           "examples": [

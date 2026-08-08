@@ -91,18 +91,19 @@ const RawConfigSchema = z
               .strict(),
           ])
           .optional(),
-        python: z.discriminatedUnion("enabled", [
-          z.object({ enabled: z.literal(false) }).strict(),
-          z
-            .object({
-              enabled: z.literal(true),
-              file: z
-                .string()
-                .refine((f) => f.endsWith(".py"), `must end with '.py'`),
-            })
-            .strict(),
-        ])
-        .optional(),
+        python: z
+          .discriminatedUnion("enabled", [
+            z.object({ enabled: z.literal(false) }).strict(),
+            z
+              .object({
+                enabled: z.literal(true),
+                file: z
+                  .string()
+                  .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+              })
+              .strict(),
+          ])
+          .optional(),
       })
       .strict(),
   })
