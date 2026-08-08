@@ -1,6 +1,7 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import { textToSourcePosition } from "../util/position-mapper.js";
+import { makeSingletonErrors } from "../util/errors.js";
 import type {
   InternalErrors,
   MappedText,
@@ -31,34 +32,24 @@ export function parseYaml(
   }
 
   if (doc.contents === null || doc.contents === undefined) {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: {
-            start: textToSourcePosition(content, 0),
-            end: textToSourcePosition(content, 0),
-          },
-          message: "Empty YAML document",
-        },
-      ],
-    };
+    return makeSingletonErrors({
+      span: {
+        start: textToSourcePosition(content, 0),
+        end: textToSourcePosition(content, 0),
+      },
+      message: "Empty YAML document",
+    });
   }
 
   const result = convertNode(doc.contents, content);
   if (result === null) {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: {
-            start: textToSourcePosition(content, 0),
-            end: textToSourcePosition(content, content.text.length),
-          },
-          message: "Unsupported YAML node type",
-        },
-      ],
-    };
+    return makeSingletonErrors({
+      span: {
+        start: textToSourcePosition(content, 0),
+        end: textToSourcePosition(content, content.text.length),
+      },
+      message: "Unsupported YAML node type",
+    });
   }
 
   return result;

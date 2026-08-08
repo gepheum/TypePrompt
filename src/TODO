@@ -1,6 +1,9 @@
 TOOLCALLS:
   - make <c> from template also accept tool names and symbols defined in the tool?
 
+NAME CONFLICT:
+  - No namespace named Meta
+  - No template named Shared
 
 TYPESCRIPT:
   - e2e test
@@ -13,12 +16,7 @@ JSON:
 LANGUAGE SERVER:
   - ...
 
-EXTENSION TO THE LANGUAGE:
-  - add <doc> to <template>
 
-NAME CONFLICT:
-  - No namespace named Meta
-  - No template named Shared
 
 COMPILER:
   - Asyncify

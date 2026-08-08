@@ -1,4 +1,5 @@
-import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
+import { InternalErrors, Span } from "../util/shared-types.js";
+import { makeSingletonErrors } from "../util/errors.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   Interface,
@@ -233,10 +234,6 @@ type Member = {
 };
 
 const EMPTY_ERROR: InternalErrors = { kind: "error", errors: [] } as const;
-
-function makeSingletonErrors(error: InternalError): InternalErrors {
-  return { kind: "error", errors: [error] };
-}
 
 type InterfaceMemberInfo = {
   readonly kind: "success";
