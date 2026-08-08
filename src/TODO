@@ -1,10 +1,11 @@
-TEMPLATES DATA:
-  - Copy the file sources?
-  - Copy the schemas???
-
 NAME CONFLICT:
   - No namespace named Meta
   - No template named Shared
+  - No namespace named "MAIN" (conflicts with Main)
+
+TEMPLATES DATA:
+  - Copy the file sources?
+  - Copy the JSON scemas???
 
 TYPESCRIPT:
   - e2e test
@@ -15,6 +16,7 @@ JSON:
   - add tests, I feel like the computation of the score might be imperfect
 
 LANGUAGE SERVER:
+  - Support nameGroup (with definition etc.)
   - ...
 
 
