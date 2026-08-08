@@ -101,7 +101,8 @@ const RawConfigSchema = z
                 .refine((f) => f.endsWith(".py"), `must end with '.py'`),
             })
             .strict(),
-        ]),
+        ])
+        .optional(),
       })
       .strict(),
   })

@@ -7,6 +7,8 @@ type Templates = {
   signature: string;
   templates: { [id: string]: Template };
   tools: { [id: string]: Tool };
+  /** The key is a relative path to a .xml file. The value is the file content. */
+  sourceFiles: { [path: string]: string };
 };
 
 type Template = {
@@ -16,6 +18,8 @@ type Template = {
   tools: TemplateTool[];
   contents: TemplateContents;
   snippets: { [name: string]: Snippet };
+  inputJsonSchema?: any;
+  outputJsonSchema?: any;
 };
 
 type OutputFormat = "json" | "text";
@@ -108,6 +112,8 @@ type Tool = {
   id: string;
   name: string;
   description: string;
+  inputJsonSchema?: any;
+  outputJsonSchema?: any;
 };
 `;
 
