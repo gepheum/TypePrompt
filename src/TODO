@@ -1,6 +1,3 @@
-TOOLCALLS:
-  - make <c> from template also accept tool names and symbols defined in the tool?
-
 TEMPLATES DATA:
   - Copy the file sources?
   - Copy the schemas???
