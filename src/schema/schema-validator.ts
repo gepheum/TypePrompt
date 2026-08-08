@@ -28,7 +28,7 @@ export function validateSchema(
   const schemaView: SchemaView = {
     typeDeclarations: typeDeclarations,
     sharedDeclarations:
-      context.kind === "template"
+      (context.kind === "template" || context.kind === "tool")
         ? context.namespaceSchema.typeDeclarations
         : ({} as const),
   };

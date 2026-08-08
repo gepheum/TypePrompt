@@ -1,6 +1,3 @@
-TEMPLATES DATA:
-  - Copy the JSON scemas???
-
 TYPESCRIPT:
   - e2e test
   - add example of hook functions
@@ -27,6 +24,11 @@ ERRORS:
     - expression after a dot
   - TODO: add warning
   - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
+
+SCHEMA:
+  - do support 'true' and 'false'?
+  - do support records keyed by string union {[foo: Season]: foo}
+  - do support discriminators which are string union?
 
 IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
