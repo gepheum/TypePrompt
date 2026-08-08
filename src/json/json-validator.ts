@@ -286,7 +286,14 @@ export function jsonMatchesType(
               return MATCH;
             } else {
               const message = makeExpectedOneOfMessage([...members.values]);
-              return mismatch(mode, value.firstToken, message, 0.5);
+              const suggestions = [...members.values].map((v) => `"${v}"`);
+              return mismatch(
+                mode,
+                value.firstToken,
+                message,
+                0.5,
+                suggestions,
+              );
             }
           } else {
             // Not a string.
@@ -315,12 +322,16 @@ export function jsonMatchesType(
                   const message = makeExpectedOneOfMessage(
                     discriminants.map((d) => d.value),
                   );
+                  const suggestions = Object.keys(members.members).map(
+                    (v) => `"${v}"`,
+                  );
 
                   return mismatch(
                     mode,
                     kindValue.value.firstToken,
                     message,
                     0.5,
+                    suggestions,
                   );
                 }
               } else {
