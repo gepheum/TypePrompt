@@ -19,7 +19,7 @@ import {
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveSyntheticType, resolveType } from "../schema/type-resolver.js";
 import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
-import { validateBody } from "./body-validator.js";
+import { validateTemplateBody } from "./body-validator.js";
 import {
   Snippet,
   Template,
@@ -59,10 +59,16 @@ export function validateTemplate(args: {
 
   errors.push(...validateVariants(template, templateSchema));
 
-  const options = {
+  const tools = validateTools(template.tools, args.namespaceTools);
+  if (tools.kind === "error") {
+    errors.push(...tools.errors);
+  }
+
+  const options: Options = {
     isVariantSpecialization: false,
     namespaceTools: args.namespaceTools,
-  } as const;
+    templateTools: tools.kind === "success" ? tools.tools : {},
+  };
   if (template.contents.kind === "no-variants") {
     errors.push(
       ...validateTemplateContent(
@@ -87,12 +93,7 @@ export function validateTemplate(args: {
   }
 
   for (const snippet of template.snippets) {
-    errors.push(...validateSnippet(snippet, templateSchema));
-  }
-
-  const tools = validateTools(template.tools, args.namespaceTools);
-  if (tools.kind === "error") {
-    errors.push(...tools.errors);
+    errors.push(...validateSnippet(snippet, templateSchema, options));
   }
 
   if (errors.length > 0) {
@@ -258,15 +259,19 @@ function validateVariants(
 function validateTemplateContent(
   content: Partial<TemplateContent>,
   templateSchema: Schema,
-  options: {
-    readonly isVariantSpecialization: boolean;
-    readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
-  },
+  options: Options,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   for (const body of [content.system, content.user]) {
     if (!body) continue;
-    errors.push(...validateBody(body, templateSchema, null));
+    errors.push(
+      ...validateTemplateBody(
+        body,
+        templateSchema,
+        options.templateTools,
+        null,
+      ),
+    );
   }
 
   const examplesInterface = makeExamplesType(templateSchema, options);
@@ -468,11 +473,19 @@ function validateToolCallExamples(
 function validateSnippet(
   snippet: Snippet,
   templateSchema: Schema,
+  options: Options,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   switch (snippet.kind) {
     case "snippet": {
-      errors.push(...validateBody(snippet.body, templateSchema, null));
+      errors.push(
+        ...validateTemplateBody(
+          snippet.body,
+          templateSchema,
+          options.templateTools,
+          null,
+        ),
+      );
       break;
     }
     case "snippet-if": {
@@ -495,10 +508,20 @@ function validateSnippet(
         break;
       }
       errors.push(
-        ...validateBody(snippet.then, templateSchema, ifContext.then),
+        ...validateTemplateBody(
+          snippet.then,
+          templateSchema,
+          options.templateTools,
+          ifContext.then,
+        ),
       );
       errors.push(
-        ...validateBody(snippet.else, templateSchema, ifContext.else),
+        ...validateTemplateBody(
+          snippet.else,
+          templateSchema,
+          options.templateTools,
+          ifContext.else,
+        ),
       );
       break;
     }
@@ -535,7 +558,14 @@ function validateSnippet(
           });
           continue;
         }
-        errors.push(...validateBody(branch.body, templateSchema, context));
+        errors.push(
+          ...validateTemplateBody(
+            branch.body,
+            templateSchema,
+            options.templateTools,
+            context,
+          ),
+        );
       }
       if (missingCases.length > 0) {
         const missingTags = missingCases
@@ -631,3 +661,9 @@ function makeToolsType(namespaceTools: {
     },
   };
 }
+
+type Options = {
+  readonly isVariantSpecialization: boolean;
+  readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
+  readonly templateTools: { readonly [name: string]: TemplateTool };
+};

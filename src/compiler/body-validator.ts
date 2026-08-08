@@ -4,17 +4,63 @@ import { ExpressionContext } from "../expression/expression-types.js";
 import { ResolvedType, Schema, SyntheticType } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { InternalError } from "../util/shared-types.js";
-import { Body, InsertFormat, ToolDescription } from "./compiler-types.js";
+import {
+  Body,
+  InsertFormat,
+  TemplateTool,
+  ToolDescription,
+} from "./compiler-types.js";
 
-export function validateBody<HasValContext extends boolean>(
+export function validateTemplateBody<HasValContext extends boolean>(
   body: Body<HasValContext>,
   templateSchema: Schema,
+  tools: { readonly [name: string]: TemplateTool },
+  context: HasValContext extends true ? ExpressionContext : null,
+): readonly InternalError[] {
+  const toolNames = new Set<string>(Object.keys(tools));
+  const schemasForBodyValidation = [
+    templateSchema,
+    ...Object.values(tools)
+      .map((tool) => tool.tool)
+      .filter((tool) => tool.kind === "success")
+      .map((tool) => tool.schema),
+  ];
+  return validateBodyImpl(
+    body,
+    templateSchema,
+    schemasForBodyValidation,
+    toolNames,
+    context,
+  );
+}
+
+export function validateToolDescription(args: {
+  description: ToolDescription;
+  toolSchema: Schema;
+}): readonly InternalError[] {
+  const toolNames = new Set<string>();
+  return validateBodyImpl(
+    args.description,
+    args.toolSchema,
+    [args.toolSchema],
+    toolNames,
+    null,
+  );
+}
+
+function validateBodyImpl<HasValContext extends boolean>(
+  body: Body<HasValContext>,
+  templateSchema: Schema,
+  schemasForBodyValidation: readonly Schema[],
+  toolNames: ReadonlySet<string>,
   context: HasValContext extends true ? ExpressionContext : null,
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   for (const piece of body) {
     if (piece.kind === "c-tag") {
-      errors.push(...validateCTag(piece.cTag, templateSchema));
+      errors.push(
+        ...validateCTag(piece.cTag, schemasForBodyValidation, toolNames),
+      );
       continue;
     } else if (piece.kind !== "insert-val") {
       continue;
@@ -81,13 +127,6 @@ export function validateBody<HasValContext extends boolean>(
     }
   }
   return errors;
-}
-
-export function validateToolDescription(args: {
-  description: ToolDescription;
-  toolSchema: Schema;
-}): readonly InternalError[] {
-  return validateBody(args.description, args.toolSchema, null);
 }
 
 function isStringType(
