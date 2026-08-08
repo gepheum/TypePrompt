@@ -6,10 +6,6 @@ JSON:
   - add 'suggestions' when parsing JSON and a field is not found
   - add tests, I feel like the computation of the score might be imperfect
 
-SCHEMA:
-  - put: back 'interface'
-  - so maybe I do want to support 'true' and 'false'
-
 LANGUAGE SERVER:
   - ...
 
@@ -45,6 +41,7 @@ LATER?
   - TODO: what if 'format' could be any string, and then the actual function needs to be provided
   - TODO: support 'case="summer,fall"'
   - add tool choice?
+  - Schema: maybe I do want to support 'true' and 'false'
 
 MISC:
   - https://share.gemini.google/0FSezpOXrkQI
