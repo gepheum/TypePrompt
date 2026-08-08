@@ -44,7 +44,7 @@ function validateJsonCTag(
   schemas: readonly Schema[],
 ): readonly InternalError[] {
   if (
-    schemas.every((schema) =>
+    schemas.some((schema) =>
       Object.values(schema.typeDeclarations).some(
         (t) =>
           jsonMatchesType(cTag.json, resolveType(t, schema), "fast", schema)

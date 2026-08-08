@@ -267,6 +267,8 @@ namespace Spec {
     readonly signature: string;
     readonly templates: { [id: string]: Template };
     readonly tools: { [id: string]: Tool };
+    /** The key is a relative path to a .xml file. The value is the file content. */
+    readonly sourceFiles: { [path: string]: string };
   };
 
   export type Template = {
@@ -276,6 +278,8 @@ namespace Spec {
     readonly tools: readonly TemplateTool[];
     readonly contents: TemplateContents;
     readonly snippets: { [name: string]: Snippet };
+    readonly inputJsonSchema?: unknown;
+    readonly outputJsonSchema?: unknown;
   };
 
   export type OutputFormat = (
@@ -392,53 +396,61 @@ namespace Spec {
     readonly id: string;
     readonly name: string;
     readonly description: string;
+    readonly inputJsonSchema?: unknown;
+    readonly outputJsonSchema?: unknown;
   };
 }
 
 const templatesSchema = ((): z.ZodType<Spec.Templates> => {
-  const outputFormatSchema: z.ZodType<Spec.OutputFormat> = z.union([
-    z.literal("json"),
-    z.literal("text"),
+  const outputFormatSchema: z.ZodType<Spec.OutputFormat> = z.enum([
+    "json",
+    "text",
   ]);
   const templateToolSchema: z.ZodType<Spec.TemplateTool> = z.object({
     id: z.string(),
     name: z.string(),
   });
-  const expressionSchema: z.ZodType<Spec.Expression> = z.union([
-    z.object({
-      kind: z.literal("input"),
-    }),
-    z.object({
-      kind: z.literal("property"),
-      left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
-      property: z.string(),
-    }),
+  const expressionSchema: z.ZodType<Spec.Expression> = z.discriminatedUnion(
+    "kind"
+    [
+      z.object({
+        kind: z.literal("input"),
+      }),
+      z.object({
+        kind: z.literal("property"),
+        left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
+        property: z.string(),
+      }),
+    ]
+  );
+  const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.enum([
+    "text",
+    "json",
+    "yaml",
+    "toon",
+    "csv",
+    "tsv",
   ]);
-  const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.union([
-    z.literal("text"),
-    z.literal("json"),
-    z.literal("yaml"),
-    z.literal("toon"),
-    z.literal("csv"),
-    z.literal("tsv"),
-  ]);
-  const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.union([
-    z.object({
-      kind: z.literal("text"),
-      text: z.string(),
-    }),
-    z.object({
-      kind: z.literal("insertVal"),
-      val: expressionSchema,
-      format: insertFormatSchema,
-      indent: z.string(),
-    }),
-    z.object({
-      kind: z.literal("insertSnippet"),
-      snippet: z.string().describe("Snippet name."),
-      indent: z.string().describe("Only contains whitespace characters."),
-    }),
-  ]);
+  const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.discriminatedUnion(
+    "kind"
+    [
+      z.object({
+        kind: z.literal("text"),
+        text: z.string(),
+      }),
+      z.object({
+        kind: z.literal("insertVal"),
+        val: expressionSchema,
+        format: insertFormatSchema,
+        indent: z.string(),
+      }),
+      z.object({
+        kind: z.literal("insertSnippet"),
+        snippet: z.string().describe("Snippet name."),
+        indent: z.string().describe("Only contains whitespace characters."),
+      }),
+    ]
+  );
   const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
   const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
     callId: z.string(),
@@ -460,45 +472,51 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     user: bodySchema.optional(),
     examples: fewShotExampleSchema.array().optional(),
   });
-  const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.union([
-    z.object({
-      kind: z.literal("noVariants"),
-      content: templateContentSchema,
-    }),
-    z.object({
-      kind: z.literal("variants"),
-      variants: z.record(
-        z.string(),
-        templateContentSchema,
-      ),
-      defaultContent: templateContentSchema,
-    }),
-  ]);
-  const snippetSchema: z.ZodType<Spec.Snippet> = z.union([
-    z.object({
-      kind: z.literal("snippet"),
-      body: bodySchema,
-    }),
-    z.object({
-      kind: z.literal("snippetIf"),
-      expression: expressionSchema,
-      is: z.union([
-        z.literal("notNull"),
-        z.literal("notEmpty"),
-        z.literal("true"),
-      ]),
-      then: bodySchema,
-      else: bodySchema,
-    }),
-    z.object({
-      kind: z.literal("snippetSwitch"),
-      expression: expressionSchema,
-      branches: z.record(
-        z.string(),
-        bodySchema,
-      ),
-    }),
-  ]);
+  const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.discriminatedUnion(
+    "kind"
+    [
+      z.object({
+        kind: z.literal("noVariants"),
+        content: templateContentSchema,
+      }),
+      z.object({
+        kind: z.literal("variants"),
+        variants: z.record(
+          z.string(),
+          templateContentSchema,
+        ),
+        defaultContent: templateContentSchema,
+      }),
+    ]
+  );
+  const snippetSchema: z.ZodType<Spec.Snippet> = z.discriminatedUnion(
+    "kind"
+    [
+      z.object({
+        kind: z.literal("snippet"),
+        body: bodySchema,
+      }),
+      z.object({
+        kind: z.literal("snippetIf"),
+        expression: expressionSchema,
+        is: z.enum([
+          "notNull",
+          "notEmpty",
+          "true",
+        ]),
+        then: bodySchema,
+        else: bodySchema,
+      }),
+      z.object({
+        kind: z.literal("snippetSwitch"),
+        expression: expressionSchema,
+        branches: z.record(
+          z.string(),
+          bodySchema,
+        ),
+      }),
+    ]
+  );
   const templateSchema: z.ZodType<Spec.Template> = z.object({
     name: z.string(),
     namespace: z.string(),
@@ -509,11 +527,15 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
       z.string(),
       snippetSchema,
     ),
+    inputJsonSchema: z.any().optional(),
+    outputJsonSchema: z.any().optional(),
   });
   const toolSchema: z.ZodType<Spec.Tool> = z.object({
     id: z.string(),
     name: z.string(),
     description: z.string(),
+    inputJsonSchema: z.any().optional(),
+    outputJsonSchema: z.any().optional(),
   });
   const templatesSchema: z.ZodType<Spec.Templates> = z.object({
     signature: z.string(),
@@ -525,6 +547,10 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
       z.string(),
       toolSchema,
     ),
+    sourceFiles: z.record(
+      z.string(),
+      z.string(),
+    ).describe("The key is a relative path to a .xml file. The value is the file content."),
   });
   return templatesSchema;
 })();
