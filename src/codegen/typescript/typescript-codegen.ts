@@ -511,12 +511,12 @@ function writeZodType(
         if (members.kind === "interfaces") {
           return [
             "z.discriminatedUnion(",
-            JSON.stringify(members.discriminator),
+            JSON.stringify(members.discriminator).concat(","),
             "[",
             ...Object.values(type.members).map((m) =>
               write(m, scope).concat(","),
             ),
-            "]",
+            "],",
             ")",
           ].join("\n");
         } else {

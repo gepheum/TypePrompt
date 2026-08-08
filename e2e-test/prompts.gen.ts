@@ -411,7 +411,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     name: z.string(),
   });
   const expressionSchema: z.ZodType<Spec.Expression> = z.discriminatedUnion(
-    "kind"
+    "kind",
     [
       z.object({
         kind: z.literal("input"),
@@ -421,7 +421,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
         left: z.lazy((): z.ZodType<Spec.Expression> => expressionSchema),
         property: z.string(),
       }),
-    ]
+    ],
   );
   const insertFormatSchema: z.ZodType<Spec.InsertFormat> = z.enum([
     "text",
@@ -432,7 +432,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     "tsv",
   ]);
   const bodyPieceSchema: z.ZodType<Spec.BodyPiece> = z.discriminatedUnion(
-    "kind"
+    "kind",
     [
       z.object({
         kind: z.literal("text"),
@@ -449,7 +449,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
         snippet: z.string().describe("Snippet name."),
         indent: z.string().describe("Only contains whitespace characters."),
       }),
-    ]
+    ],
   );
   const bodySchema: z.ZodType<Spec.Body> = bodyPieceSchema.array();
   const toolCallExampleSchema: z.ZodType<Spec.ToolCallExample> = z.object({
@@ -473,7 +473,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
     examples: fewShotExampleSchema.array().optional(),
   });
   const templateContentsSchema: z.ZodType<Spec.TemplateContents> = z.discriminatedUnion(
-    "kind"
+    "kind",
     [
       z.object({
         kind: z.literal("noVariants"),
@@ -487,10 +487,10 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
         ),
         defaultContent: templateContentSchema,
       }),
-    ]
+    ],
   );
   const snippetSchema: z.ZodType<Spec.Snippet> = z.discriminatedUnion(
-    "kind"
+    "kind",
     [
       z.object({
         kind: z.literal("snippet"),
@@ -515,7 +515,7 @@ const templatesSchema = ((): z.ZodType<Spec.Templates> => {
           bodySchema,
         ),
       }),
-    ]
+    ],
   );
   const templateSchema: z.ZodType<Spec.Template> = z.object({
     name: z.string(),
