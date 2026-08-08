@@ -1,5 +1,5 @@
-import { textToSourcePosition } from "../util/position-mapper.js";
 import { makeSingletonErrors } from "../util/errors.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import { InternalErrors, MappedText, TextSpan } from "../util/shared-types.js";
 import { Expression, ExpressionInContext } from "./expression-types.js";
 

@@ -8,21 +8,26 @@ export { validateJson };
 
 export function validateCTag(
   cTag: CTag,
-  schema: Schema,
+  schemas: readonly Schema[],
+  toolNames: ReadonlySet<string>,
 ): readonly InternalError[] {
   switch (cTag.kind) {
     case "identifier":
-      return validateIdentifierCTag(cTag, schema);
+      return validateIdentifierCTag(cTag, schemas, toolNames);
     case "json":
-      return validateJsonCTag(cTag, schema);
+      return validateJsonCTag(cTag, schemas);
   }
 }
 
 function validateIdentifierCTag(
   cTag: Extract<CTag, { kind: "identifier" }>,
-  schema: Schema,
+  schemas: readonly Schema[],
+  toolNames: ReadonlySet<string>,
 ): readonly InternalError[] {
-  if (!schema.identifiers.has(cTag.identifier.text)) {
+  if (
+    !schemas.some((schema) => schema.identifiers.has(cTag.identifier.text)) &&
+    !toolNames.has(cTag.identifier.text)
+  ) {
     return [
       {
         span: cTag.identifier,
@@ -36,19 +41,21 @@ function validateIdentifierCTag(
 
 function validateJsonCTag(
   cTag: Extract<CTag, { kind: "json" }>,
-  schema: Schema,
+  schemas: readonly Schema[],
 ): readonly InternalError[] {
   if (
-    Object.values(schema.typeDeclarations).some(
-      (t) =>
-        jsonMatchesType(cTag.json, resolveType(t, schema), "fast", schema)
-          .kind === "match",
+    schemas.every((schema) =>
+      Object.values(schema.typeDeclarations).some(
+        (t) =>
+          jsonMatchesType(cTag.json, resolveType(t, schema), "fast", schema)
+            .kind === "match",
+      ),
     )
   ) {
     return [];
   } else {
-    const mismatches = Object.entries(schema.typeDeclarations).map(
-      ([name, t]) => {
+    const mismatches = schemas.flatMap((schema) =>
+      Object.entries(schema.typeDeclarations).map(([name, t]) => {
         const result = jsonMatchesType(
           cTag.json,
           resolveType(t, schema),
@@ -60,7 +67,7 @@ function validateJsonCTag(
         const reason =
           result.kind === "mismatch" ? result.details?.reason : undefined;
         return { name, score, reason };
-      },
+      }),
     );
     const best = mismatches.reduce<
       | {
@@ -69,7 +76,10 @@ function validateJsonCTag(
           reason: InternalError | undefined;
         }
       | undefined
-    >((acc, m) => (acc === undefined || m.score > acc.score ? m : acc), undefined);
+    >(
+      (acc, m) => (acc === undefined || m.score > acc.score ? m : acc),
+      undefined,
+    );
     if (best !== undefined && best.score >= 0.5 && best.reason !== undefined) {
       return [
         {

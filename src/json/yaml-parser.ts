@@ -1,7 +1,7 @@
 import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import { textToSourcePosition } from "../util/position-mapper.js";
 import { makeSingletonErrors } from "../util/errors.js";
+import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
   InternalErrors,
   MappedText,
