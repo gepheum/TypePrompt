@@ -30,8 +30,11 @@ export function makeTemplates(input: CompilationResult): Spec.Templates {
     if (result.kind !== "success") continue;
     templates[id] = makeTemplate(result);
   }
+  const sourceFiles = Object.fromEntries(
+    Object.entries(input.sourceFiles).map(([path, result]) => [path, result.content]),
+  );
   // TODO: set signature
-  return { signature: "", tools, templates };
+  return { signature: "", tools, templates, sourceFiles };
 }
 
 function makeTool(id: string, input: Tool): Spec.Tool {

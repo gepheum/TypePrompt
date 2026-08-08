@@ -75,6 +75,7 @@ const TEMPLATES_DATA: Spec.Templates = {
   signature: "",
   templates: {},
   tools: {},
+  sourceFiles: {},
 } as const;
 
 const templatesSchema: z.ZodType<Spec.Templates> = z.any();
