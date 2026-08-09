@@ -262,8 +262,11 @@ function collectIdentifiers(
     switch (type.kind) {
       case "any":
       case "boolean-literal":
-      case "primitive":
+      case "primitive": {
+        return null;
+      }
       case "string-literal": {
+        identifiers.add(type.value);
         return null;
       }
       case "array": {
