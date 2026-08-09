@@ -2,7 +2,16 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { parseSchema } from "../schema/schema-parser.js";
-import type { Schema } from "../schema/schema-types.js";
+import type {
+  Array,
+  BooleanLiteral,
+  Interface,
+  PrimitiveType,
+  RecordType,
+  Schema,
+  StringLiteral,
+  SyntheticType,
+} from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type { MappedText, Span } from "../util/shared-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
@@ -80,6 +89,10 @@ function objStrict(entries: [string, StrictJsonValue][]): JsonObject<"strict"> {
 
 function arrStrict(elements: StrictJsonValue[]): JsonArray<"strict"> {
   return { kind: "array", firstToken: span("["), elements };
+}
+
+function safeCast(strictValue: StrictJsonValue): LooseJsonValue {
+  return strictValue as LooseJsonValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -519,25 +532,27 @@ const ELLIPSIS: LooseJsonValue = {
   firstToken: { start: 0, end: 3 },
 };
 
-function primType(text: "string" | "number" | "boolean" | "integer") {
+function primType(
+  text: "string" | "number" | "boolean" | "integer",
+): PrimitiveType {
   return {
-    kind: "primitive" as const,
+    kind: "primitive",
     primitive: { text, start: 0, end: text.length },
   };
 }
 
-function litType(value: string) {
+function litType(value: string): StringLiteral {
   return {
-    kind: "string-literal" as const,
+    kind: "string-literal",
     value,
     quotedName: { text: `"${value}"`, start: 0, end: value.length + 2 },
   };
 }
 
-function boolLitType(value: boolean) {
+function boolLitType(value: boolean): BooleanLiteral {
   const text = String(value) as "true" | "false";
   return {
-    kind: "boolean-literal" as const,
+    kind: "boolean-literal",
     span: { text, start: 0, end: text.length },
     value,
   };
@@ -548,9 +563,9 @@ function ifaceType(
     string,
     { optional?: boolean; text: "string" | "number" | "boolean" | "integer" }
   >,
-) {
+): Interface {
   return {
-    kind: "interface" as const,
+    kind: "interface",
     leftCurlyBracket: { start: 0, end: 1 },
     fields: Object.fromEntries(
       Object.entries(fields).map(([name, { optional = false, text }]) => [
@@ -566,9 +581,11 @@ function ifaceType(
   };
 }
 
-function recordType(valueText: "string" | "number" | "boolean" | "integer") {
+function recordType(
+  valueText: "string" | "number" | "boolean" | "integer",
+): RecordType {
   return {
-    kind: "record" as const,
+    kind: "record",
     leftCurlyBracket: { start: 0, end: 1 },
     keyName: "key",
     valueType: primType(valueText),
@@ -688,7 +705,9 @@ describe("jsonMatchesType – matchScore", () => {
   it("string union: non-matching string → matchScore 0.5", () => {
     const schema = parseSchemaOrThrow('type S = "a" | "b"');
     const unionType = schema.typeDeclarations["S"]!.valueType;
-    expect(jsonMatchesType(str("c"), unionType, "thorough", schema)).toMatch({
+    expect(
+      jsonMatchesType(str("c"), unionType as SyntheticType, "thorough", schema),
+    ).toMatch({
       kind: "mismatch",
       details: { matchScore: 0.5 },
     });
@@ -696,10 +715,10 @@ describe("jsonMatchesType – matchScore", () => {
 
   it("array: first element matches, second fails → matchScore 0.5", () => {
     // matchScoreTotal = 1 after first, += mismatch score 0 → 1 / 2 = 0.5
-    const arrT = { kind: "array" as const, elementType: primType("number") };
+    const arrT: Array = { kind: "array", elementType: primType("number") };
     expect(
       jsonMatchesType(
-        arrStrict([num(1), str("bad")]),
+        arrStrict([num(1), str("bad")]) as LooseJsonValue,
         arrT,
         "thorough",
         EMPTY_VIEW,
@@ -708,10 +727,10 @@ describe("jsonMatchesType – matchScore", () => {
   });
 
   it("array: first element fails → matchScore 0", () => {
-    const arrT = { kind: "array" as const, elementType: primType("number") };
+    const arrT: Array = { kind: "array", elementType: primType("number") };
     expect(
       jsonMatchesType(
-        arrStrict([str("bad"), num(1)]),
+        arrStrict([str("bad"), num(1)]) as LooseJsonValue,
         arrT,
         "thorough",
         EMPTY_VIEW,
@@ -726,9 +745,9 @@ describe("jsonMatchesType – matchScore", () => {
 
 describe("jsonMatchesType – fast mode short-circuit", () => {
   it("array: stops at first element mismatch", () => {
-    const arrT = { kind: "array" as const, elementType: primType("number") };
+    const arrT: Array = { kind: "array", elementType: primType("number") };
     const result = jsonMatchesType(
-      arrStrict([num(1), str("bad"), num(2)]),
+      arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
       arrT,
       "fast",
       EMPTY_VIEW,
@@ -739,10 +758,12 @@ describe("jsonMatchesType – fast mode short-circuit", () => {
 
   it("interface: stops at first field type mismatch", () => {
     const result = jsonMatchesType(
-      objStrict([
-        ["name", num(42)],
-        ["age", num(30)],
-      ]),
+      safeCast(
+        objStrict([
+          ["name", num(42)],
+          ["age", num(30)],
+        ]),
+      ),
       ifaceType({ name: { text: "string" }, age: { text: "number" } }),
       "fast",
       EMPTY_VIEW,
@@ -753,7 +774,7 @@ describe("jsonMatchesType – fast mode short-circuit", () => {
 
   it("interface: stops on unknown field", () => {
     const result = jsonMatchesType(
-      objStrict([["extra", str("x")]]),
+      safeCast(objStrict([["extra", str("x")]])),
       ifaceType({ name: { text: "string" } }),
       "fast",
       EMPTY_VIEW,
@@ -764,7 +785,7 @@ describe("jsonMatchesType – fast mode short-circuit", () => {
 
   it("record: stops at first value type mismatch", () => {
     const result = jsonMatchesType(
-      objStrict([["x", str("bad")]]),
+      safeCast(objStrict([["x", str("bad")]])),
       recordType("number"),
       "fast",
       EMPTY_VIEW,
