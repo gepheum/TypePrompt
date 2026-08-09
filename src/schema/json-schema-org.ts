@@ -10,14 +10,14 @@ export function toJsonSchema(
   typeName: string,
   schema: SchemaView,
   unionToMembers: ReadonlyMap<Union, UnionMembers>,
-): string {
+): Record<string, unknown> {
   const gen = new Generator(schema, unionToMembers);
   const root = gen.typeToSchema(schema.typeDeclarations[typeName]!.valueType);
   const defs = gen.defs;
   if (Object.keys(defs).length > 0) {
     root.$defs = defs;
   }
-  return JSON.stringify(root, null, 2);
+  return root;
 }
 
 class Generator {
