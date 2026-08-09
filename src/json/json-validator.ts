@@ -229,7 +229,7 @@ export function jsonMatchesType(
         return mismatch(
           mode,
           value.firstToken,
-          `Expected ${type.primitive} but got ${value.kind}`,
+          `Expected ${type.primitive.text} but got ${value.kind}`,
         );
       }
     }
