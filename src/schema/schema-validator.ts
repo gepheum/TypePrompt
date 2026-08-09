@@ -350,6 +350,7 @@ function collectNamingHints(
         const unionMembers = unionToMembers.get(type)!;
         switch (unionMembers.kind) {
           case "interfaces": {
+            const discriminantType = unionMembers.discriminants.type;
             for (const [discriminant, member] of Object.entries(
               unionMembers.members,
             )) {
@@ -359,7 +360,16 @@ function collectNamingHints(
                   {
                     kind: "member",
                     discriminator: unionMembers.discriminator,
-                    discriminant: discriminant,
+                    discriminant:
+                      discriminantType === "string"
+                        ? {
+                            type: discriminantType,
+                            value: discriminant,
+                          }
+                        : {
+                            type: discriminantType,
+                            value: discriminant === "true",
+                          },
                   },
                 ],
                 doc: null,

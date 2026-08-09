@@ -186,10 +186,23 @@ export type NamingHint = {
       }
     | {
         readonly kind: "member";
-        /** Name of the field used to discriminate union members. Always lowercased. */
+        /**
+         * Name of the discriminator field.
+         * Common to all members in the discriminated union.
+         * In lowerCamelCase.
+         */
         readonly discriminator: string;
-        /** Value of the discriminant field. Always lowercased. */
-        readonly discriminant: string;
+        /** Value of the discriminator field. Specific to this member. */
+        readonly discriminant:
+          | {
+              readonly type: "string";
+              /** In lowerCamelCase. */
+              readonly value: string;
+            }
+          | {
+              readonly type: "boolean";
+              readonly value: boolean;
+            };
       }
   >;
   readonly doc: string | null;
