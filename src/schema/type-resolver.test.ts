@@ -3,8 +3,11 @@ import { describe, it } from "mocha";
 
 import { EMPTY_SCHEMA } from "./empty-schema.js";
 import type {
+  AnyType,
   Array,
+  BooleanLiteral,
   Interface,
+  PrimitiveType,
   Schema,
   SchemaView,
   SharedTypeName,
@@ -16,11 +19,7 @@ import type {
   TypeName,
   Union,
 } from "./schema-types.js";
-import {
-  isPrimitiveType,
-  resolveMaybeInvalidType,
-  resolveType,
-} from "./type-resolver.js";
+import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +64,22 @@ const INACTIVE_LITERAL: StringLiteral = {
   quotedName: { text: '"inactive"', start: 10, end: 20 },
 };
 
+const PRIMITIVE_STRING: PrimitiveType = {
+  kind: "primitive",
+  primitive: { text: "string", start: 0, end: 0 },
+};
+
+const BOOLEAN_LITERAL_TRUE: BooleanLiteral = {
+  kind: "boolean-literal",
+  span: { text: "true", start: 0, end: 4 },
+  value: true,
+};
+
+const ANY: AnyType = {
+  kind: "any",
+  span: { start: 0, end: 3 },
+};
+
 const ARRAY: Array = {
   kind: "array",
   elementType: typeName("string"),
@@ -74,40 +89,6 @@ const UNION: Union = {
   kind: "union",
   members: [STRING_LITERAL, INACTIVE_LITERAL],
 };
-
-// ---------------------------------------------------------------------------
-// isPrimitiveType
-// ---------------------------------------------------------------------------
-
-describe("isPrimitiveType", () => {
-  it("returns 'string' for 'string'", () => {
-    expect(isPrimitiveType("string")).toMatch("string");
-  });
-
-  it("returns 'number' for 'number'", () => {
-    expect(isPrimitiveType("number")).toMatch("number");
-  });
-
-  it("returns 'boolean' for 'boolean'", () => {
-    expect(isPrimitiveType("boolean")).toMatch("boolean");
-  });
-
-  it("returns 'integer' for 'integer'", () => {
-    expect(isPrimitiveType("integer")).toMatch("integer");
-  });
-
-  it("returns null for an unknown name", () => {
-    expect(isPrimitiveType("unknown")).toMatch(null);
-  });
-
-  it("returns null for an empty string", () => {
-    expect(isPrimitiveType("")).toMatch(null);
-  });
-
-  it("returns null for a name that partially matches a primitive", () => {
-    expect(isPrimitiveType("strings")).toMatch(null);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // resolveType – pass-through types
@@ -158,6 +139,24 @@ describe("resolveType – pass-through types", () => {
       kind: "synthetic-array",
     });
   });
+
+  it("passes a primitive type through unchanged", () => {
+    expect(resolveType(PRIMITIVE_STRING, EMPTY_SCHEMA)).toMatch({
+      kind: "primitive",
+      primitive: { text: "string" },
+    });
+  });
+
+  it("passes a boolean-literal type through unchanged", () => {
+    expect(resolveType(BOOLEAN_LITERAL_TRUE, EMPTY_SCHEMA)).toMatch({
+      kind: "boolean-literal",
+      value: true,
+    });
+  });
+
+  it("passes an any type through unchanged", () => {
+    expect(resolveType(ANY, EMPTY_SCHEMA)).toMatch({ kind: "any" });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -165,34 +164,6 @@ describe("resolveType – pass-through types", () => {
 // ---------------------------------------------------------------------------
 
 describe("resolveType – type-name resolution", () => {
-  it("resolves 'string' to a primitive", () => {
-    expect(resolveType(typeName("string"), EMPTY_SCHEMA)).toMatch({
-      kind: "primitive",
-      primitive: "string",
-    });
-  });
-
-  it("resolves 'number' to a primitive", () => {
-    expect(resolveType(typeName("number"), EMPTY_SCHEMA)).toMatch({
-      kind: "primitive",
-      primitive: "number",
-    });
-  });
-
-  it("resolves 'boolean' to a primitive", () => {
-    expect(resolveType(typeName("boolean"), EMPTY_SCHEMA)).toMatch({
-      kind: "primitive",
-      primitive: "boolean",
-    });
-  });
-
-  it("resolves 'integer' to a primitive", () => {
-    expect(resolveType(typeName("integer"), EMPTY_SCHEMA)).toMatch({
-      kind: "primitive",
-      primitive: "integer",
-    });
-  });
-
   it("resolves a type-name to its local declaration", () => {
     const schema: Schema = {
       ...EMPTY_SCHEMA,
@@ -207,12 +178,12 @@ describe("resolveType – type-name resolution", () => {
     const schema: Schema = {
       ...EMPTY_SCHEMA,
       typeDeclarations: {
-        Alias: typeDecl("Alias", typeName("string")),
+        Alias: typeDecl("Alias", PRIMITIVE_STRING),
       },
     };
     expect(resolveType(typeName("Alias"), schema)).toMatch({
       kind: "primitive",
-      primitive: "string",
+      primitive: { text: "string" },
     });
   });
 
@@ -222,10 +193,10 @@ describe("resolveType – type-name resolution", () => {
     });
   });
 
-  it("unwraps a TypeDeclaration whose valueType is a primitive type-name", () => {
+  it("unwraps a TypeDeclaration whose valueType is a primitive", () => {
     expect(
-      resolveType(typeDecl("MyString", typeName("string")), EMPTY_SCHEMA),
-    ).toMatch({ kind: "primitive", primitive: "string" });
+      resolveType(typeDecl("MyString", PRIMITIVE_STRING), EMPTY_SCHEMA),
+    ).toMatch({ kind: "primitive", primitive: { text: "string" } });
   });
 });
 
@@ -248,12 +219,12 @@ describe("resolveType – shared-type-name resolution", () => {
     const schema: Schema = {
       ...EMPTY_SCHEMA,
       sharedDeclarations: {
-        Id: typeDecl("Id", typeName("string")),
+        Id: typeDecl("Id", PRIMITIVE_STRING),
       },
     };
     expect(resolveType(sharedTypeName("Id"), schema)).toMatch({
       kind: "primitive",
-      primitive: "string",
+      primitive: { text: "string" },
     });
   });
 });
@@ -310,10 +281,10 @@ describe("resolveMaybeInvalidType – null cases", () => {
 // ---------------------------------------------------------------------------
 
 describe("resolveMaybeInvalidType – valid resolution", () => {
-  it("resolves a primitive type-name", () => {
-    expect(resolveMaybeInvalidType(typeName("string"), EMPTY_SCHEMA)).toMatch({
+  it("passes a primitive type through unchanged", () => {
+    expect(resolveMaybeInvalidType(PRIMITIVE_STRING, EMPTY_SCHEMA)).toMatch({
       kind: "primitive",
-      primitive: "string",
+      primitive: { text: "string" },
     });
   });
 

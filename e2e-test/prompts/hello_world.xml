@@ -67,8 +67,8 @@
         x: 8
       intermediateSteps:
         - toolCalls:
-          - tool: myTool
-            callId: myCall
+          - callId: myCall
+            tool: myTool
             input:
               foo: "hello"
             output:
