@@ -14,6 +14,16 @@ export function parseCTag(content: MappedText): CTag | InternalErrors {
         end: textToSourcePosition(content, identifier.length),
       },
     };
+  } else if (/^"(\w+)"$/.test(content.text)) {
+    const identifier = content.text.slice(1, -1);
+    return {
+      kind: "identifier",
+      identifier: {
+        text: identifier,
+        start: textToSourcePosition(content, 1),
+        end: textToSourcePosition(content, content.text.length - 1),
+      },
+    };
   } else {
     const json = parseJson(content, "loose");
     if (json.kind === "error") {
