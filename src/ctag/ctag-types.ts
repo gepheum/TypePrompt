@@ -8,6 +8,5 @@ export type CTag =
     }
   | {
       readonly kind: "identifier";
-      /** Unquoted identifier. */
       readonly identifier: TextSpan;
     };

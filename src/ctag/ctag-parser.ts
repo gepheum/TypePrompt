@@ -15,6 +15,7 @@ export function parseCTag(content: MappedText): CTag | InternalErrors {
       },
     };
   } else if (/^"(\w+)"$/.test(content.text)) {
+    // Quoted identifier.
     const identifier = content.text.slice(1, -1);
     return {
       kind: "identifier",
