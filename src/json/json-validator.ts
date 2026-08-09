@@ -330,7 +330,7 @@ export function jsonMatchesType(
                   return jsonMatchesType(value, member, mode, schema);
                 } else {
                   // No matching member for the discriminant in the union.
-                  const { discriminants } = members.discriminants;
+                  const discriminants = members.discriminants.values;
                   const message = makeExpectedOneOfMessage(
                     discriminants.map((d) =>
                       String(d.value satisfies string | boolean),
@@ -353,7 +353,7 @@ export function jsonMatchesType(
                 const { discriminants } = members;
                 const expected: "string" | "boolean" = discriminants.type;
                 const got = discriminant.kind;
-                const suggestions = discriminants.discriminants.map((d) =>
+                const suggestions = discriminants.values.map((d) =>
                   JSON.stringify(d.value satisfies string | boolean),
                 );
                 return mismatch(

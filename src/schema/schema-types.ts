@@ -242,11 +242,11 @@ export type DiscriminatedUnionMembers = {
 export type Discriminants =
   | {
       readonly type: "string";
-      readonly discriminants: readonly StringLiteral[];
+      readonly values: readonly StringLiteral[];
     }
   | {
       readonly type: "boolean";
-      readonly discriminants: readonly BooleanLiteral[];
+      readonly values: readonly BooleanLiteral[];
     };
 
 export type SyntheticUnionMembers =

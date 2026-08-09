@@ -207,15 +207,13 @@ function makeInterfaceUnionMembers(
       case "string-literal": {
         return {
           type: "string",
-          discriminants: memberInfos.map(
-            (info) => info.discriminant as StringLiteral,
-          ),
+          values: memberInfos.map((info) => info.discriminant as StringLiteral),
         };
       }
       case "boolean-literal": {
         return {
           type: "boolean",
-          discriminants: memberInfos.map(
+          values: memberInfos.map(
             (info) => info.discriminant as BooleanLiteral,
           ),
         };
