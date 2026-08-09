@@ -19,7 +19,11 @@ import type {
   TypeName,
   Union,
 } from "./schema-types.js";
-import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
+import {
+  resolveMaybeInvalidType,
+  resolveSyntheticType,
+  resolveType,
+} from "./type-resolver.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -119,7 +123,7 @@ describe("resolveType – pass-through types", () => {
       kind: "interface",
       fields: {},
     };
-    expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
+    expect(resolveSyntheticType(synthetic, EMPTY_SCHEMA)).toMatch({
       kind: "interface",
       fields: {},
     });
@@ -133,7 +137,7 @@ describe("resolveType – pass-through types", () => {
         fields: {},
       },
     };
-    expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
+    expect(resolveSyntheticType(synthetic, EMPTY_SCHEMA)).toMatch({
       kind: "array",
     });
   });
