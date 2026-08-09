@@ -124,13 +124,17 @@ type Color = "red" | "green" | "blue";
 type Shape =
   | { kind: "circle"; radius: number }
   | { kind: "rectangle"; width: number; height: number };
+
+type Result =
+  | { success: true; value: string }
+  | { success: false; error: string };
 ```
 
 Rules:
 - Every member interface must be non-empty.
-- The **first field** of every member is the *discriminator field* and its type must be a string literal.
+- The **first field** of every member is the *discriminator field* and its type must be a string literal or a boolean literal (`true` / `false`).
 - All members must share the **same discriminator field name** (e.g., all use `kind`).
-- The discriminant values (the string literal types) must be case-insensitively unique across members.
+- All members must use the **same discriminant type**: either all string literals or all boolean literals — mixing the two is an error.
 
 ### Flattening
 

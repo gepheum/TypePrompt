@@ -6,11 +6,6 @@ JSON:
   - add 'suggestions' when parsing JSON and a field is not found
   - add tests, I feel like the computation of the score might be imperfect
 
-SCHEMA:
-  - do support 'true' and 'false'?
-    - TODO: TYPE HINT
-  - maybe all these 3 tasks ^ later!
-
 LANGUAGE SERVER:
   - Support nameGroup (with definition etc.)
   - Auto-complete
