@@ -2,6 +2,9 @@ import { makeSingletonErrors } from "../util/errors.js";
 import { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
+  BooleanLiteral,
+  Discriminants,
+  DiscriminatedUnionMembers,
   Interface,
   ResolvedType,
   SchemaView,
@@ -86,11 +89,13 @@ function doGetUnionMembers(
       }
       case "any":
       case "array":
+      case "boolean-literal":
       case "primitive":
       case "record": {
         return makeSingletonErrors({
           span: errorToken,
-          message: "Members of a union must be string literals or interfaces",
+          message: "Expected: string literal or interface",
+          rule: "Members of a union must all be string literals or interfaces",
         });
       }
       default: {
@@ -135,8 +140,8 @@ function makeStringLiteralUnionMembers(
     } else {
       return makeSingletonErrors({
         span: member.errorToken,
-        message:
-          "All members of a string-literal union must be string literals",
+        message: "Expected: string literal",
+        rule: "All members of a string-literal union must be string literals",
       });
     }
   }
@@ -153,14 +158,14 @@ function makeInterfaceUnionMembers(
   members: Member[],
   includes: readonly Union[],
   schema: SchemaView,
-): UnionMembers | InternalErrors {
-  const first = getMemberInfos(members[0]!, schema, null);
+): DiscriminatedUnionMembers | InternalErrors {
+  const first = getMemberInfo(members[0]!, schema, null);
   if (first.kind === "error") {
     return first;
   }
   const memberInfos: InterfaceMemberInfo[] = [first];
   for (const member of members.slice(1)) {
-    const info = getMemberInfos(member, schema, first);
+    const info = getMemberInfo(member, schema, first);
     if (info.kind === "error") {
       return info;
     }
@@ -170,19 +175,20 @@ function makeInterfaceUnionMembers(
   // Ensure all members have distinct discriminants.
   const lowercaseToInfo = new Map<string, InterfaceMemberInfo>();
   for (const memberInfo of memberInfos) {
-    const discriminant = memberInfo.discriminant.value;
-    const lowercase = memberInfo.discriminant.value.toLowerCase();
+    const discriminant: string | boolean = memberInfo.discriminant.value;
+    const lowercase = String(discriminant).toLowerCase();
     const otherInfo = lowercaseToInfo.get(lowercase);
     if (otherInfo) {
-      const otherDiscriminant = otherInfo.discriminant.value;
-      const exact = discriminant === otherDiscriminant;
+      const otherDiscriminant: string | boolean = otherInfo.discriminant.value;
+      const exact = discriminant === String(otherDiscriminant);
       if (exact) {
         const spans = [otherInfo.errorToken, memberInfo.errorToken];
         return {
           kind: "error",
           errors: spans.map((s) => ({
             span: s,
-            message: `Multiple members have the same discriminant: '${discriminant}'`,
+            message: `Duplicate discriminant '${discriminant}'`,
+            rule: "All interfaces in a discriminated union must have distinct discriminants",
           })),
         };
       } else {
@@ -196,6 +202,27 @@ function makeInterfaceUnionMembers(
     lowercaseToInfo.set(lowercase, memberInfo);
   }
 
+  const discriminants = ((): Discriminants => {
+    switch (first.discriminant.kind) {
+      case "string-literal": {
+        return {
+          type: "string",
+          discriminants: memberInfos.map(
+            (info) => info.discriminant as StringLiteral,
+          ),
+        };
+      }
+      case "boolean-literal": {
+        return {
+          type: "boolean",
+          discriminants: memberInfos.map(
+            (info) => info.discriminant as BooleanLiteral,
+          ),
+        };
+      }
+    }
+  })();
+
   const sharedFields = collectSharedFields(memberInfos, schema);
 
   return {
@@ -204,14 +231,14 @@ function makeInterfaceUnionMembers(
       memberInfos.map((info) => [info.discriminant.value, info.member]),
     ),
     discriminator: first.discriminator,
-    discriminants: memberInfos.map((info) => info.discriminant),
-    includes: includes,
-    sharedFields: sharedFields,
+    discriminants,
+    includes,
+    sharedFields,
   };
 }
 
 type Member = {
-  readonly member: StringLiteral | Interface;
+  readonly member: StringLiteral | BooleanLiteral | Interface;
   /**
    * True if the member is explicitly listed in the union type.
    * False if the member is included in the union type indirectly through
@@ -241,10 +268,10 @@ type InterfaceMemberInfo = {
   readonly errorToken: Span;
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
-  readonly discriminant: StringLiteral;
+  readonly discriminant: StringLiteral | BooleanLiteral;
 };
 
-function getMemberInfos(
+function getMemberInfo(
   member: Member,
   schema: SchemaView,
   other: InterfaceMemberInfo | null,
@@ -252,38 +279,58 @@ function getMemberInfos(
   if (member.member.kind !== "interface") {
     return makeSingletonErrors({
       span: member.errorToken,
-      message: "All members of an interface union must be interfaces",
+      message: "All members of a discriminated union must be interfaces",
     });
   }
   const { firstField } = member.member;
   if (!firstField) {
     return makeSingletonErrors({
       span: member.errorToken,
-      message: "Can't have an empty interface in a union type",
+      message: "Can't have an empty interface in a discriminated union",
     });
   }
-  const discriminatorType = resolveType(firstField.type, schema);
-  const discriminator = firstField!.name.text;
-  if (discriminatorType?.kind !== "string-literal") {
+  if (firstField.optional) {
     return makeSingletonErrors({
       span: member.errorToken,
-      message: `Type of '${discriminator}' field is not a string literal`,
-      rule: "All interfaces in a union type must have a string literal as the type of their first field",
+      message: `Discriminator ('${firstField.name.text}') can't be optional`,
     });
   }
-  if (other && discriminator !== other.discriminator) {
+  const discriminant = resolveType(firstField.type, schema);
+  const discriminator = firstField.name.text;
+  if (
+    discriminant.kind !== "string-literal" &&
+    discriminant.kind !== "boolean-literal"
+  ) {
     return makeSingletonErrors({
       span: member.errorToken,
-      message: `Discriminator field name '${discriminator}' does not match '${other.discriminator}'`,
-      rule: "All interfaces in a union type must have the same discriminator field name",
+      message: `Discriminator ('${discriminator}') is not a string/boolean literal`,
+      rule: "The discriminator of every interface in a discriminated union must be a string literal or boolean literal.",
     });
+  }
+  if (other) {
+    if (discriminator !== other.discriminator) {
+      return makeSingletonErrors({
+        span: member.errorToken,
+        message: `Discriminator name '${discriminator}' does not match '${other.discriminator}'`,
+        rule: "All interfaces in a discriminated union must have the same discriminator name",
+      });
+    }
+    if (discriminant.kind !== other.discriminant.kind) {
+      const expected = other.discriminant.kind.replace("-", " ");
+      const got = JSON.stringify(discriminant.value satisfies string | boolean);
+      return makeSingletonErrors({
+        span: member.errorToken,
+        message: `Expected: ${expected} discriminant; got: ${got}`,
+        rule: "All interfaces in a discriminated union must have the same discriminant type",
+      });
+    }
   }
   return {
     kind: "success",
     member: member.member,
     errorToken: member.errorToken,
     discriminator: discriminator,
-    discriminant: discriminatorType,
+    discriminant: discriminant,
   };
 }
 
@@ -344,16 +391,17 @@ function areResolvedTypesEqual(
         areTypesEqual(a.elementType, b.elementType, schema)
       );
     }
-    case "record": {
-      return (
-        b.kind === "record" && areTypesEqual(a.valueType, b.valueType, schema)
-      );
+    case "string-literal":
+    case "boolean-literal": {
+      return b.kind === "string-literal" && a.value === b.value;
     }
     case "primitive": {
       return b.kind === "primitive" && a.primitive === b.primitive;
     }
-    case "string-literal": {
-      return b.kind === "string-literal" && a.value === b.value;
+    case "record": {
+      return (
+        b.kind === "record" && areTypesEqual(a.valueType, b.valueType, schema)
+      );
     }
   }
 }

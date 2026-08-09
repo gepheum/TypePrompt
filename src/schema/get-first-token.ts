@@ -7,6 +7,8 @@ export function getFirstToken(type: Type): Span {
       return type.span;
     case "array":
       return getFirstToken(type.elementType);
+    case "boolean-literal":
+      return type.span;
     case "interface":
     case "record":
       return type.leftCurlyBracket;

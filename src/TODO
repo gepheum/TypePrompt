@@ -6,6 +6,11 @@ JSON:
   - add 'suggestions' when parsing JSON and a field is not found
   - add tests, I feel like the computation of the score might be imperfect
 
+SCHEMA:
+  - do support 'true' and 'false'?
+    - TODO: TYPE HINT
+  - maybe all these 3 tasks ^ later!
+
 LANGUAGE SERVER:
   - Support nameGroup (with definition etc.)
   - Auto-complete
@@ -25,11 +30,6 @@ ERRORS:
   - TODO: add warning
   - Support warnings, for XML comments where other comments would be accepted; or for input fields not used?
 
-SCHEMA:
-  - do support 'true' and 'false'?
-  - do support records keyed by string union {[foo: Season]: foo}
-  - do support discriminators which are string union?
-
 IDÉE BUSINESS:
   - The compiler generates an HTML file for quickly trying out the prompts
 
@@ -40,6 +40,11 @@ LATER?
   - TODO: support 'case="summer,fall"'
   - add tool choice?
   - Schema: maybe I do want to support 'true' and 'false'
+  - SCHEMA:
+    - do support records keyed by string union {[foo: Season]: foo}
+      - problem: very problematic for naming hints
+    - do support discriminators which are string union?
+      - problem avec les naming hints...
 
 MISC:
   - https://share.gemini.google/0FSezpOXrkQI

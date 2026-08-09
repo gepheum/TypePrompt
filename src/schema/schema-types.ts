@@ -46,6 +46,7 @@ export type SchemaField = {
 export type ResolvedType =
   | AnyType
   | Array
+  | BooleanLiteral
   | Interface
   | PrimitiveType
   | RecordType
@@ -74,6 +75,12 @@ export type StringLiteralView = {
 
 export type StringLiteral = StringLiteralView & {
   readonly quotedName: TextSpan;
+};
+
+export type BooleanLiteral = {
+  readonly kind: "boolean-literal";
+  readonly span: TextSpan<"true" | "false">;
+  readonly value: boolean;
 };
 
 export type Interface = {
@@ -196,19 +203,37 @@ export type UnionMembers =
       /** Other unions included in this union. */
       readonly includes: readonly Union[];
     }
+  | DiscriminatedUnionMembers;
+
+export type DiscriminatedUnionMembers = {
+  /** A discriminated union. */
+  readonly kind: "interfaces";
+  /**
+   * If the discriminants are booleans, the keys are the strings 'true' and
+   * 'false'.
+   */
+  readonly members: { [discriminant: string]: Interface };
+  /** Name of the discriminator field, e.g. 'kind'. */
+  readonly discriminator: string;
+  readonly discriminants: Discriminants;
+  /** Other unions included in this union. */
+  readonly includes: readonly Union[];
+  /**
+   * Fields shared across all members of the union.
+   * These fields are present in every member of the union with the same type.
+   */
+  readonly sharedFields: { readonly [name: string]: SyntheticSchemaField };
+};
+
+/** Discriminants of a discriminated union. */
+export type Discriminants =
   | {
-      readonly kind: "interfaces";
-      readonly members: { [kind: string]: Interface };
-      /** Name of the discriminator field, e.g. 'kind'. */
-      readonly discriminator: string;
+      readonly type: "string";
       readonly discriminants: readonly StringLiteral[];
-      /** Other unions included in this union. */
-      readonly includes: readonly Union[];
-      /**
-       * Fields shared across all members of the union.
-       * These fields are present in every member of the union with the same type.
-       */
-      readonly sharedFields: { readonly [name: string]: SyntheticSchemaField };
+    }
+  | {
+      readonly type: "boolean";
+      readonly discriminants: readonly BooleanLiteral[];
     };
 
 export type SyntheticUnionMembers =
@@ -222,5 +247,5 @@ export type SyntheticUnionMembers =
       readonly members: { [kind: string]: Interface | SyntheticInterface };
       /** Name of the discriminator field, e.g. 'kind'. */
       readonly discriminator: string;
-      readonly discriminants: readonly StringLiteralView[];
+      readonly discriminants: Discriminants;
     };

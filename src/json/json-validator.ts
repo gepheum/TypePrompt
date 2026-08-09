@@ -101,29 +101,17 @@ export function jsonMatchesType(
         );
       }
     }
-    case "primitive": {
-      if (value.kind === type.primitive.text) {
+    case "boolean-literal": {
+      if (value.kind === "boolean" && value.value === type.value) {
         return MATCH;
-      } else if (value.kind === "number" && type.primitive.text === "integer") {
-        if (
-          Number.isInteger(value.value) &&
-          -2147483648 <= value.value &&
-          value.value <= 2147483647
-        ) {
-          return MATCH;
-        } else {
-          return mismatch(
-            mode,
-            value.firstToken,
-            `Expected int but got float`,
-            0.5,
-          );
-        }
       } else {
+        const suggestions = [type.span.text];
         return mismatch(
           mode,
           value.firstToken,
-          `Expected ${type.primitive} but got ${value.kind}`,
+          makeExpectedOneOfMessage([type.value]),
+          value.kind === "boolean" ? 0.5 : 0,
+          suggestions,
         );
       }
     }
@@ -219,6 +207,32 @@ export function jsonMatchesType(
         );
       }
     }
+    case "primitive": {
+      if (value.kind === type.primitive.text) {
+        return MATCH;
+      } else if (value.kind === "number" && type.primitive.text === "integer") {
+        if (
+          Number.isInteger(value.value) &&
+          -2147483648 <= value.value &&
+          value.value <= 2147483647
+        ) {
+          return MATCH;
+        } else {
+          return mismatch(
+            mode,
+            value.firstToken,
+            `Expected int but got float`,
+            0.5,
+          );
+        }
+      } else {
+        return mismatch(
+          mode,
+          value.firstToken,
+          `Expected ${type.primitive} but got ${value.kind}`,
+        );
+      }
+    }
     case "record": {
       if (value.kind === "object") {
         const valueType = resolveSyntheticType(type.valueType, schema);
@@ -259,19 +273,16 @@ export function jsonMatchesType(
       }
     }
     case "string-literal": {
-      if (value.kind === "string") {
-        if (value.value === type.value) {
-          return MATCH;
-        } else {
-          // Not the right string.
-          return mismatch(mode, value.firstToken, `Expected "${type.value}"`);
-        }
+      if (value.kind === "string" && value.value === type.value) {
+        return MATCH;
       } else {
-        // Not a string.
+        const suggestions = [JSON.stringify(type.value satisfies string)];
         return mismatch(
           mode,
           value.firstToken,
-          `Expected string but got ${value.kind}`,
+          makeExpectedOneOfMessage([type.value]),
+          value.kind === "string" ? 0.5 : 0,
+          suggestions,
         );
       }
     }
@@ -310,40 +321,51 @@ export function jsonMatchesType(
               return MATCH;
             }
             const { discriminator } = members;
-            const kindValue = value.entries[discriminator];
-            if (kindValue) {
-              if (kindValue.value.kind === "string") {
-                const member = members.members[kindValue.value.value];
+            const discriminantEntry = value.entries[discriminator];
+            if (discriminantEntry) {
+              const discriminant: LooseJsonValue = discriminantEntry.value;
+              if (discriminant.kind === members.discriminants.type) {
+                const member = members.members[String(discriminant.value)];
                 if (member) {
                   return jsonMatchesType(value, member, mode, schema);
                 } else {
-                  // No matching member for the kind value in the union.
-                  const { discriminants } = members;
+                  // No matching member for the discriminant in the union.
+                  const { discriminants } = members.discriminants;
                   const message = makeExpectedOneOfMessage(
-                    discriminants.map((d) => d.value),
+                    discriminants.map((d) =>
+                      String(d.value satisfies string | boolean),
+                    ),
                   );
-                  const suggestions = Object.keys(members.members).map(
-                    (v) => `"${v}"`,
+                  const suggestions = discriminants.map((d) =>
+                    JSON.stringify(d.value satisfies string | boolean),
                   );
 
                   return mismatch(
                     mode,
-                    kindValue.value.firstToken,
+                    discriminant.firstToken,
                     message,
                     0.5,
                     suggestions,
                   );
                 }
               } else {
-                // Kind value is not a string.
+                // Discriminant value is not a string/boolean.
+                const { discriminants } = members;
+                const expected: "string" | "boolean" = discriminants.type;
+                const got = discriminant.kind;
+                const suggestions = discriminants.discriminants.map((d) =>
+                  JSON.stringify(d.value satisfies string | boolean),
+                );
                 return mismatch(
                   mode,
-                  kindValue.value.firstToken,
-                  "Expected string but got " + kindValue.value.kind,
+                  discriminant.firstToken,
+                  `Expected ${expected} but got ${got}`,
+                  0,
+                  suggestions,
                 );
               }
             } else {
-              // Kind field not found.
+              // Discriminator not found in JSON object.
               return mismatch(
                 mode,
                 value.firstToken,
@@ -367,12 +389,14 @@ export function jsonMatchesType(
 const MATCH = { kind: "match" } as const;
 const FAST_MISMATCH = { kind: "mismatch" } as const;
 
-function makeExpectedOneOfMessage(values: readonly string[]): string {
+function makeExpectedOneOfMessage(
+  values: ReadonlyArray<string | boolean>,
+): string {
   return values.length <= 0
     ? "Expected: never"
     : values.length <= 1
-      ? `Expected: '${values[0]}'`
-      : "Expected: one of ".concat(values.map((v) => `"${v}"`).join(", "));
+      ? "Expected ".concat(JSON.stringify(values[0]!))
+      : "Expected one of ".concat(JSON.stringify(values));
 }
 
 function mismatch(

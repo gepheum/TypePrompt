@@ -340,6 +340,12 @@ class SchemaParser {
               kind: "any",
               span: span,
             };
+          } else if (span.text === "true" || span.text === "false") {
+            return {
+              kind: "boolean-literal",
+              span: { ...span, text: span.text },
+              value: span.text === "true",
+            };
           } else {
             return {
               kind: "type-name",

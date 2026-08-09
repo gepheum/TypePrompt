@@ -28,7 +28,7 @@ export function validateSchema(
   const schemaView: SchemaView = {
     typeDeclarations: typeDeclarations,
     sharedDeclarations:
-      (context.kind === "template" || context.kind === "tool")
+      context.kind === "template" || context.kind === "tool"
         ? context.namespaceSchema.typeDeclarations
         : ({} as const),
   };
@@ -119,6 +119,7 @@ function validateType(
   function validate(type: Type | TypeDeclaration): null {
     switch (type.kind) {
       case "any":
+      case "boolean-literal":
       case "primitive": {
         return null;
       }
@@ -260,6 +261,7 @@ function collectIdentifiers(
   const collect = (type: Type | TypeDeclaration): null => {
     switch (type.kind) {
       case "any":
+      case "boolean-literal":
       case "primitive":
       case "string-literal": {
         return null;
@@ -313,6 +315,7 @@ function collectNamingHints(
   const collect = (type: Type, context: NamingHint): null => {
     switch (type.kind) {
       case "any":
+      case "boolean-literal":
       case "primitive":
       case "string-literal": {
         return null;

@@ -19,6 +19,7 @@ export function getNameDependencies(
   const collect = (type: Type, scope: NameScope): null => {
     switch (type.kind) {
       case "any":
+      case "boolean-literal":
       case "primitive":
       case "string-literal": {
         return null;

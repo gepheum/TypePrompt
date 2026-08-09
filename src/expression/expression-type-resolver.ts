@@ -73,7 +73,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
         ) {
           return {
             kind: "union",
-            members: members.discriminants,
+            members: members.discriminants.discriminants,
           };
         }
       }

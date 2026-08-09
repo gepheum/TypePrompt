@@ -314,6 +314,9 @@ function writeType(
         return `readonly ${writtenElement}[]`;
       }
     }
+    case "boolean-literal": {
+      return type.span.text satisfies "true" | "false";
+    }
     case "interface": {
       const fields = Object.entries(type.fields);
       if (fields.length <= 0) {
@@ -343,21 +346,21 @@ function writeType(
     case "record": {
       return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
     }
+    case "shared-type-name": {
+      return options.sharedTypePrefix.concat(type.name.text);
+    }
+    case "string-literal": {
+      return type.quotedName.text;
+    }
+    case "type-name": {
+      return type.name.text;
+    }
     case "union": {
       return "(\n"
         .concat(
           type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
         )
         .concat(")");
-    }
-    case "type-name": {
-      return type.name.text;
-    }
-    case "shared-type-name": {
-      return options.sharedTypePrefix.concat(type.name.text);
-    }
-    case "string-literal": {
-      return type.quotedName.text;
     }
   }
 }
@@ -457,6 +460,9 @@ function writeZodType(
       }
       case "array": {
         return write(type.elementType, scope).concat(".array()");
+      }
+      case "boolean-literal": {
+        return `z.literal(${type.value satisfies boolean})`;
       }
       case "interface": {
         const fieldDefs: string[] = [];
