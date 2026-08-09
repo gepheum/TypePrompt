@@ -116,27 +116,25 @@ describe("resolveType – pass-through types", () => {
 
   it("passes a synthetic interface through unchanged", () => {
     const synthetic: SyntheticInterface = {
-      kind: "synthetic-interface",
-      name: { text: "Foo" },
+      kind: "interface",
       fields: {},
     };
     expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
-      kind: "synthetic-interface",
-      name: { text: "Foo" },
+      kind: "interface",
+      fields: {},
     });
   });
 
   it("passes a synthetic array through unchanged", () => {
     const synthetic: SyntheticArray = {
-      kind: "synthetic-array",
+      kind: "array",
       elementType: {
-        kind: "synthetic-interface",
-        name: { text: "Item" },
+        kind: "interface",
         fields: {},
       },
     };
     expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
-      kind: "synthetic-array",
+      kind: "array",
     });
   });
 
