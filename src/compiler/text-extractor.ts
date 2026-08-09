@@ -20,7 +20,7 @@ export function extractTextContent(node: ElementNode):
     } else {
       errors.push({
         span: child.tag,
-        message: `Unexpected element '<${child.tag.text}>'`,
+        message: `Unexpected element <${child.tag.text}>`,
       });
     }
   }
