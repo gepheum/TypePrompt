@@ -34,14 +34,20 @@ class Generator {
       case "any": {
         return {};
       }
+      case "array": {
+        return { type: "array", items: this.typeToSchema(type.elementType) };
+      }
+      case "boolean-literal": {
+        return { type: "boolean", const: type.value };
+      }
+      case "interface": {
+        return this.interfaceToSchema(type);
+      }
       case "primitive": {
         return { type: type.primitive.text };
       }
       case "string-literal": {
         return { type: "string", const: type.value };
-      }
-      case "interface": {
-        return this.interfaceToSchema(type);
       }
       case "record": {
         return {
@@ -49,17 +55,14 @@ class Generator {
           additionalProperties: this.typeToSchema(type.valueType),
         };
       }
-      case "array": {
-        return { type: "array", items: this.typeToSchema(type.elementType) };
-      }
-      case "union": {
-        return this.unionToSchema(type);
+      case "shared-type-name": {
+        return this.namedTypeToRef(type.name.text, true);
       }
       case "type-name": {
         return this.namedTypeToRef(type.name.text, false);
       }
-      case "shared-type-name": {
-        return this.namedTypeToRef(type.name.text, true);
+      case "union": {
+        return this.unionToSchema(type);
       }
     }
   }
