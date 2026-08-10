@@ -22,11 +22,19 @@ export type Schema = SchemaView & {
   readonly kind: "success";
   /**
    * Field names and identifiers used in string literals.
+   * Includes identifiers from shared types if they are referenced from this schema.
    * Does not include types names.
    */
   readonly identifiers: ReadonlySet<string>;
+  /** Includes shared types. */
   readonly unionToMembers: ReadonlyMap<Union, UnionMembers>;
-  readonly typeToNamingHint: ReadonlyMap<Interface | Union, NamingHint>;
+  /** Hints for creating names for anonymous types in generated code. */
+  readonly namingHints: {
+    /** Covers types found in {@link SchemaView.typeDeclarations}. */
+    readonly defaultScope: ReadonlyMap<Interface | Union, NamingHint>;
+    /** Covers types found in {@link SchemaView.sharedDeclarations}. */
+    readonly shared: ReadonlyMap<Interface | Union, NamingHint>;
+  };
 };
 
 export type TypeDeclaration = {
@@ -167,7 +175,7 @@ export type SyntheticType =
   | SyntheticInterface
   | SyntheticUnion;
 
-/** Hint for generating a name for an anonymous type in a targeted language. */
+/** Hint for creating a name for an anonymous type in generated code. */
 export type NamingHint = {
   /**
    * Guaranteed to be non-empty.

@@ -5,6 +5,7 @@ import type {
   InternalErrors,
   TextSpan,
 } from "../util/shared-types.js";
+import { EMPTY_SCHEMA } from "./empty-schema.js";
 import type {
   Interface,
   NamingHint,
@@ -25,12 +26,20 @@ export function validateSchema(
 ): Schema | InternalErrors {
   const errors: InternalError[] = [];
 
+  const namespaceSchema = ((): Schema => {
+    switch (context.kind) {
+      case "template":
+      case "tool":
+        return context.namespaceSchema;
+      case "meta":
+      case "namespace":
+        return EMPTY_SCHEMA;
+    }
+  })();
+
   const schemaView: SchemaView = {
     typeDeclarations: typeDeclarations,
-    sharedDeclarations:
-      context.kind === "template" || context.kind === "tool"
-        ? context.namespaceSchema.typeDeclarations
-        : ({} as const),
+    sharedDeclarations: namespaceSchema.typeDeclarations,
   };
 
   const unionToMembers =
@@ -98,14 +107,17 @@ export function validateSchema(
   }
 
   const identifiers = collectIdentifiers(schemaView, sharedNames);
-  const typeToNamingHint = collectNamingHints(schemaView, unionToMembers);
+  const namingHints = {
+    defaultScope: collectNamingHints(schemaView, unionToMembers),
+    shared: namespaceSchema.namingHints.defaultScope,
+  } as const;
 
   return {
     ...schemaView,
     kind: "success",
     identifiers,
     unionToMembers,
-    typeToNamingHint,
+    namingHints,
   };
 }
 
