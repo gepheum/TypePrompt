@@ -23,6 +23,7 @@ import {
   NameScope,
 } from "../../schema/schema-utils.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
+import { capitalize, uncapitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateTypescriptCode(
@@ -602,12 +603,4 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n\n+/g, "\n\n")
       .replace(/\n\n$/g, "\n")
   );
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function uncapitalize(s: string): string {
-  return s.charAt(0).toLowerCase() + s.slice(1);
 }

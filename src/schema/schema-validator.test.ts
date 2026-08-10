@@ -5,8 +5,10 @@ import { MappedText } from "../util/shared-types.js";
 import { EMPTY_SCHEMA } from "./empty-schema.js";
 import { parseSchema } from "./schema-parser.js";
 import type {
+  Interface,
   SchemaValidationContext,
   TypeDeclaration,
+  Union,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
@@ -647,3 +649,178 @@ const TOOL: SchemaValidationContext = {
   kind: "tool",
   namespaceSchema: EMPTY_SCHEMA,
 };
+
+// ---------------------------------------------------------------------------
+// validateSchema – namingHints
+// ---------------------------------------------------------------------------
+
+describe("validateSchema – namingHints", () => {
+  it("registers a top-level interface with empty namePieces", () => {
+    const schema = validateSchema(
+      parseDeclarations("type Output = { name: string; };"),
+      NAMESPACE,
+    ) as { kind: "success" } & ReturnType<typeof validateSchema>;
+    if (schema.kind !== "success") throw new Error();
+    const iface = schema.typeDeclarations["Output"]!.valueType as Interface;
+    expect(schema.namingHints.defaultScope.get(iface)).toMatch({
+      namePieces: [],
+    });
+  });
+
+  it("registers a nested inline interface with the enclosing field name", () => {
+    const schema = validateSchema(
+      parseDeclarations(
+        "type Output = { address: { street: string; city: string }; };",
+      ),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const outer = schema.typeDeclarations["Output"]!.valueType as Interface;
+    const inner = outer.fields["address"]!.type as Interface;
+    expect(schema.namingHints.defaultScope.get(inner)).toMatch({
+      namePieces: [{ kind: "field", name: "address" }],
+    });
+  });
+
+  it("registers a doubly-nested inline interface with two field pieces", () => {
+    const schema = validateSchema(
+      parseDeclarations(
+        "type Output = { location: { address: { street: string } } };",
+      ),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const outer = schema.typeDeclarations["Output"]!.valueType as Interface;
+    const mid = outer.fields["location"]!.type as Interface;
+    const inner = mid.fields["address"]!.type as Interface;
+    expect(schema.namingHints.defaultScope.get(inner)).toMatch({
+      namePieces: [
+        { kind: "field", name: "location" },
+        { kind: "field", name: "address" },
+      ],
+    });
+  });
+
+  it("registers a top-level string-literal union with empty namePieces", () => {
+    const schema = validateSchema(
+      parseDeclarations('type Output = "a" | "b";'),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const union = schema.typeDeclarations["Output"]!.valueType as Union;
+    expect(schema.namingHints.defaultScope.get(union)).toMatch({
+      namePieces: [],
+    });
+  });
+
+  it("registers a discriminated interface union and each member with its discriminant", () => {
+    const schema = validateSchema(
+      parseDeclarations(
+        'type Output = { kind: "cat"; name: string } | { kind: "dog"; breed: string };',
+      ),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const union = schema.typeDeclarations["Output"]!.valueType as Union;
+    const members = schema.unionToMembers.get(union)!;
+    if (members.kind !== "interfaces") throw new Error();
+
+    expect(schema.namingHints.defaultScope.get(union)).toMatch({
+      namePieces: [],
+    });
+
+    const catHint = schema.namingHints.defaultScope.get(
+      members.members["cat"]!,
+    );
+    expect(catHint).toMatch({
+      namePieces: [
+        {
+          kind: "member",
+          discriminator: "kind",
+          discriminant: { type: "string", value: "cat" },
+        },
+      ],
+    });
+
+    const dogHint = schema.namingHints.defaultScope.get(
+      members.members["dog"]!,
+    );
+    expect(dogHint).toMatch({
+      namePieces: [
+        {
+          kind: "member",
+          discriminator: "kind",
+          discriminant: { type: "string", value: "dog" },
+        },
+      ],
+    });
+  });
+
+  it("registers boolean-discriminated union members with boolean discriminant type", () => {
+    const schema = validateSchema(
+      parseDeclarations(
+        "type Output = { success: true; value: string } | { success: false; error: string };",
+      ),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const union = schema.typeDeclarations["Output"]!.valueType as Union;
+    const members = schema.unionToMembers.get(union)!;
+    if (members.kind !== "interfaces") throw new Error();
+
+    const trueHint = schema.namingHints.defaultScope.get(
+      members.members["true"]!,
+    );
+    expect(trueHint).toMatch({
+      namePieces: [
+        {
+          kind: "member",
+          discriminator: "success",
+          discriminant: { type: "boolean", value: true },
+        },
+      ],
+    });
+
+    const falseHint = schema.namingHints.defaultScope.get(
+      members.members["false"]!,
+    );
+    expect(falseHint).toMatch({
+      namePieces: [
+        {
+          kind: "member",
+          discriminator: "success",
+          discriminant: { type: "boolean", value: false },
+        },
+      ],
+    });
+  });
+
+  it("traverses into an array element type to register nested interfaces", () => {
+    const schema = validateSchema(
+      parseDeclarations("type Output = { name: string }[];"),
+      NAMESPACE,
+    );
+    if (schema.kind !== "success") throw new Error();
+    const arrayType = schema.typeDeclarations["Output"]!.valueType;
+    if (arrayType.kind !== "array") throw new Error();
+    const iface = arrayType.elementType as Interface;
+    expect(schema.namingHints.defaultScope.get(iface)).toMatch({
+      namePieces: [],
+    });
+  });
+
+  it("populates the shared scope from the namespace schema's defaultScope", () => {
+    const ns = validateSchema(
+      parseDeclarations("type Profile = { name: string; };"),
+      NAMESPACE,
+    );
+    if (ns.kind !== "success") throw new Error();
+    const template = validateSchema(
+      parseDeclarations("type Input = string;\ntype Output = shared.Profile;"),
+      { kind: "template", namespaceSchema: ns },
+    );
+    if (template.kind !== "success") throw new Error();
+    // shared scope is the namespace's defaultScope
+    expect(template.namingHints.shared).toBe(ns.namingHints.defaultScope);
+  });
+});

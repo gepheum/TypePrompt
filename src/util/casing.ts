@@ -43,3 +43,11 @@ export function checkNameConflicts<S extends TextSpan>(
 
   return errors;
 }
+
+export function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}

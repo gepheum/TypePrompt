@@ -1,6 +1,7 @@
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { NamingHint, Schema } from "../../schema/schema-types.js";
+import { capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
@@ -34,27 +35,6 @@ function writeSchema(
   },
 ): string {
   const { typePrefix, sharedTypePrefix } = context;
-
-  const join = (hint: NamingHint): string =>
-    hint.namePieces
-      .map((piece) => {
-        switch (piece.kind) {
-          case "type":
-          case "field":
-            return piece.name;
-          case "member": {
-            switch (piece.discriminant.type) {
-              case "string":
-                return piece.discriminator.concat(piece.discriminant.value);
-              case "boolean":
-                return (piece.discriminant.value ? "" : "Not").concat(
-                  piece.discriminator,
-                );
-            }
-          }
-        }
-      })
-      .join("_");
 
   const lines: string[] = [];
   // for (const [type, namingHint] of schema.typeToNamingHint.entries()) {
@@ -149,3 +129,27 @@ function writeSchema(
 //     }
 //   }
 // }
+
+function makeNameFromHint(hint: NamingHint): string {
+  return hint.namePieces
+    .map((piece) => {
+      switch (piece.kind) {
+        case "type":
+        case "field":
+          return piece.name;
+        case "member": {
+          switch (piece.discriminant.type) {
+            case "string":
+              return capitalize(piece.discriminator).concat(
+                capitalize(piece.discriminant.value),
+              );
+            case "boolean":
+              return (piece.discriminant.value ? "" : "Not").concat(
+                capitalize(piece.discriminator),
+              );
+          }
+        }
+      }
+    })
+    .join("_");
+}
