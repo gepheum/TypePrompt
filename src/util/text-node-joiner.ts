@@ -2,8 +2,8 @@ import { MappedText, OffsetMapEntry } from "./shared-types.js";
 
 /**
  * Joins multiple non-overlapping text nodes into a single text node with a combined
- * decoded string and offset map. The resulting offsetMap entries have decoded offsets
- * relative to the start of the joined string.
+ * decoded string and offset map. The resulting `offsetMap` entries have decoded
+ * offsets relative to the start of the joined string.
  *
  * `startPosition` is used as the `sourceOffset` of the first entry when `textNodes` is
  * empty.
