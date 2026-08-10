@@ -1,5 +1,10 @@
 // TODO: pydoc
 // TODO: field name: lowercase, avoid keywords
+// TODO: optional fields...
+// TODO: Notification = Annotated[
+//     Union[EmailNotification, SMSNotification, PushNotification],
+//     Field(discriminator="type")
+// ]
 // TODO: pydantic
 
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
@@ -25,10 +30,14 @@ export function generatePythonCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  return writeSchema(compilationResult.metaSchema, {
-    typePrefix: "T_",
-    sharedTypePrefix: "T_",
-  });
+  return [
+    "from typing import Annotated, Literal, Union",
+    "from pydantic import BaseModel, Field\n\n",
+    writeSchema(compilationResult.metaSchema, {
+      typePrefix: "T_",
+      sharedTypePrefix: "T_",
+    }),
+  ].join("\n");
 }
 
 function writeSchema(
@@ -59,12 +68,14 @@ function writeSchema(
         const members = schema.unionToMembers.get(type)!;
         switch (members.kind) {
           case "interfaces": {
-            lines.push(`type ${name} = Union[`);
-            lines.push(" # Discriminator: ".concat(members.discriminator));
+            lines.push(`type ${name} = Annotated[`);
+            lines.push(" Union[");
             for (const member of Object.values(members.members)) {
               const memberType = writeType(member, schema, options);
-              lines.push(` ${memberType},`);
+              lines.push(`  ${memberType},`);
             }
+            lines.push(" ],");
+            lines.push(` Field(discriminator="${members.discriminator}")`);
             lines.push("]");
             break;
           }
@@ -125,9 +136,9 @@ function writeType(
         namingHint = schema.namingHints.shared.get(type);
         shared = true;
       }
-      return (shared ? options.sharedTypePrefix : options.typePrefix).concat(
-        makeNameFromHint(namingHint!),
-      );
+      const typePrefix = shared ? options.sharedTypePrefix : options.typePrefix;
+      const typeName = typePrefix.concat(makeNameFromHint(namingHint!));
+      return `'${typeName}'`;
     }
     case "primitive": {
       switch (type.primitive.text) {
@@ -152,7 +163,7 @@ function writeType(
       return writeType(declaration.valueType, schema, options);
     }
     case "string-literal": {
-      return `'${type.value}'`;
+      return `Literal['${type.value}']`;
     }
     case "type-name": {
       const declaration = schema.typeDeclarations[type.name.text]!;

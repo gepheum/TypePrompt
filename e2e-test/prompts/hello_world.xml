@@ -3,6 +3,13 @@
     /** Temperature setting for the template */
     temperature: number;
     foobar?: "foo" | "bar";
+    zooBar?: {
+        kind: "foo";
+        foo: string;
+      } | {
+        kind: "bar";
+        bar: string;
+      };
   };
 </meta>
 
