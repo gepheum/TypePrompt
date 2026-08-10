@@ -29,13 +29,13 @@ export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
   config: Config,
 ): readonly OutputFile[] {
-  const ts = config.gen.typescript;
-  if (!ts || ts.enabled === false) {
+  const tsConfig = config.gen.typescript;
+  if (!tsConfig || tsConfig.enabled === false) {
     return [];
   }
   return [
     {
-      path: ts.file,
+      path: tsConfig.file,
       content: writeAll(compilationResult),
     },
   ];
@@ -285,14 +285,6 @@ function writeSchema(
     );
   }
   return lines.join("\n");
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function uncapitalize(s: string): string {
-  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 function writeType(
@@ -610,4 +602,12 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n\n+/g, "\n\n")
       .replace(/\n\n$/g, "\n")
   );
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
