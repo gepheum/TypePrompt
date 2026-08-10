@@ -1,4 +1,10 @@
 class T_Meta:
- pass
-type T_Meta_Foobar = Union[
+ temperature: float
+ foobar: T_Meta_Foobar
+
+
+type T_Meta_Foobar = Literal[
+ 'foo',
+ 'bar',
 ]
+

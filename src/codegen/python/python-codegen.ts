@@ -1,3 +1,7 @@
+// TODO: pydoc
+// TODO: field name: lowercase, avoid keywords
+// TODO: pydantic
+
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
@@ -39,11 +43,16 @@ function writeSchema(
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = typePrefix.concat(makeNameFromHint(namingHint));
-    // TODO: pydoc
     switch (type.kind) {
       case "interface": {
         lines.push(`class ${name}:`);
-        lines.push(" pass");
+        if (Object.keys(type.fields).length <= 0) {
+          lines.push(" pass");
+        }
+        for (const field of Object.values(type.fields)) {
+          const type = writeType(field.type, schema, options);
+          lines.push(` ${field.name.text}: ${type}`);
+        }
         break;
       }
       case "union": {
@@ -54,7 +63,7 @@ function writeSchema(
             lines.push(" # Discriminator: ".concat(members.discriminator));
             for (const member of Object.values(members.members)) {
               const memberType = writeType(member, schema, options);
-              lines.push(indent(memberType).concat(","));
+              lines.push(` ${memberType},`);
             }
             lines.push("]");
             break;
@@ -62,7 +71,7 @@ function writeSchema(
           case "strings": {
             lines.push(`type ${name} = Literal[`);
             for (const member of Object.values(members.members)) {
-              lines.push(` '${member.value satisfies string}',`);
+              lines.push(` '${member.value}',`);
             }
             lines.push("]");
             break;
@@ -136,16 +145,14 @@ function writeType(
     }
     case "record": {
       const valueType = writeType(type.valueType, schema, options);
-      return ["Mapping[", " str", indent(valueType).concat(","), "]"].join(
-        "\n",
-      );
+      return `Mapping[str, ${valueType}]`;
     }
     case "shared-type-name": {
       const declaration = schema.sharedDeclarations[type.name.text]!;
       return writeType(declaration.valueType, schema, options);
     }
     case "string-literal": {
-      return `'${type.value satisfies string}'`;
+      return `'${type.value}'`;
     }
     case "type-name": {
       const declaration = schema.typeDeclarations[type.name.text]!;
@@ -179,6 +186,6 @@ function makeNameFromHint(hint: NamingHint): string {
     .join("_");
 }
 
-function indent(text: string, indent: string = " "): string {
-  return indent.concat(text.replace(/\n/g, "\n".concat(indent)));
+function indent(text: string): string {
+  return text.replace(/\n/g, "\n ");
 }
