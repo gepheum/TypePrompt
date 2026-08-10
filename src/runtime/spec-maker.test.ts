@@ -1,0 +1,995 @@
+import { expect } from "buckwheat";
+import { describe, it } from "mocha";
+
+import type {
+  Body,
+  Snippet,
+  ValidCompilationResult,
+} from "../compiler/compiler-types.js";
+import type { Expression } from "../expression/expression-types.js";
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
+import { parseSchema } from "../schema/schema-parser.js";
+import { validateSchema } from "../schema/schema-validator.js";
+import type { TextSpan } from "../util/shared-types.js";
+import { makeTemplates } from "./spec-maker.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function span<T extends string>(text: T): TextSpan<T> {
+  return { text, start: 0, end: text.length };
+}
+
+function str(value: string) {
+  return {
+    kind: "string" as const,
+    firstToken: { start: 0, end: value.length + 2 },
+    value,
+  };
+}
+
+function jsonObj(entries: Record<string, unknown>) {
+  return {
+    kind: "object" as const,
+    firstToken: { start: 0, end: 1 },
+    entries: Object.fromEntries(
+      Object.entries(entries).map(([key, value]) => [
+        key,
+        { key: str(key), value },
+      ]),
+    ),
+  };
+}
+
+function jsonArr(elements: unknown[]) {
+  return { kind: "array" as const, firstToken: { start: 0, end: 1 }, elements };
+}
+
+const NO_JSON_SCHEMAS = { includeJsonSchemas: false };
+const WITH_JSON_SCHEMAS = { includeJsonSchemas: true };
+
+/** Minimal valid compilation result with no templates, tools, or source files. */
+function emptyResult(): ValidCompilationResult {
+  return {
+    metaSchema: EMPTY_SCHEMA,
+    sourceFiles: {},
+    namespaces: {},
+    templates: {},
+    tools: {},
+    finalErrors: {},
+  } as unknown as ValidCompilationResult;
+}
+
+function emptyBody(): Body {
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// makeTemplates – empty result
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – empty result", () => {
+  it("produces empty templates, tools, and sourceFiles maps", () => {
+    expect(makeTemplates(emptyResult(), NO_JSON_SCHEMAS)).toMatch({
+      templates: {},
+      tools: {},
+      sourceFiles: {},
+    });
+  });
+
+  it("always sets signature to an empty string", () => {
+    expect(makeTemplates(emptyResult(), NO_JSON_SCHEMAS).signature).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – source files
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – source files", () => {
+  it("passes source file content through keyed by path", () => {
+    const result = {
+      ...emptyResult(),
+      sourceFiles: {
+        "a.xml": { content: "<template/>" },
+        "b.xml": { content: "<tool/>" },
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      sourceFiles: { "a.xml": "<template/>", "b.xml": "<tool/>" },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – tool
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – tool", () => {
+  function makeToolResult(name: string, descriptionText: string) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tool: {
+        kind: "success" as const,
+        name: span(name),
+        namespace: null,
+        description: [{ kind: "text" as const, text: descriptionText }],
+        schema: null,
+      },
+    };
+  }
+
+  it("sets id, name, and description from the tool", () => {
+    const result = {
+      ...emptyResult(),
+      tools: { "Main:search": makeToolResult("search", "Search the web") },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      tools: {
+        "Main:search": {
+          id: "Main:search",
+          name: "search",
+          description: "Search the web",
+        },
+      },
+    });
+  });
+
+  it("concatenates multi-piece descriptions", () => {
+    const toolResult = {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tool: {
+        kind: "success" as const,
+        name: span("tool"),
+        namespace: null,
+        description: [
+          { kind: "text" as const, text: "Hello" },
+          { kind: "text" as const, text: " world" },
+        ],
+        schema: null,
+      },
+    };
+    const result = {
+      ...emptyResult(),
+      tools: { "Main:tool": toolResult },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      tools: { "Main:tool": { description: "Hello world" } },
+    });
+  });
+
+  it("leaves inputJsonSchema and outputJsonSchema undefined when includeJsonSchemas is false", () => {
+    const result = {
+      ...emptyResult(),
+      tools: { "Main:search": makeToolResult("search", "") },
+    } as unknown as ValidCompilationResult;
+    const spec = makeTemplates(result, NO_JSON_SCHEMAS);
+    expect(spec.tools["Main:search"]!.inputJsonSchema).toBe(undefined);
+    expect(spec.tools["Main:search"]!.outputJsonSchema).toBe(undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – template: basic fields
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – template basic fields", () => {
+  function minimalTemplate(
+    name: string,
+    namespace: string | null,
+    outputFormat: string | null,
+  ) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span(name),
+        namespace: namespace ? span(namespace) : null,
+        outputFormat: outputFormat
+          ? span(outputFormat as "json" | "text")
+          : null,
+        contents: {
+          kind: "no-variants" as const,
+          content: {
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: undefined,
+          },
+        },
+        snippets: [],
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  it("copies name and namespace from the template", () => {
+    const result = {
+      ...emptyResult(),
+      templates: { "Geo:Greet": minimalTemplate("Greet", "Geo", null) },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Geo:Greet": { name: "Greet", namespace: "Geo" } },
+    });
+  });
+
+  it("defaults namespace to 'Main' when null", () => {
+    const result = {
+      ...emptyResult(),
+      templates: { "Main:Hello": minimalTemplate("Hello", null, null) },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Main:Hello": { namespace: "Main" } },
+    });
+  });
+
+  it("copies outputFormat when specified", () => {
+    const result = {
+      ...emptyResult(),
+      templates: { "Main:T": minimalTemplate("T", null, "text") },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Main:T": { outputFormat: "text" } },
+    });
+  });
+
+  it("defaults outputFormat to 'json' when null", () => {
+    const result = {
+      ...emptyResult(),
+      templates: { "Main:T": minimalTemplate("T", null, null) },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Main:T": { outputFormat: "json" } },
+    });
+  });
+
+  it("produces the tool id as namespace:toolName", () => {
+    const templateResult = {
+      ...minimalTemplate("T", "Geo", null),
+      tools: {
+        myTool: {
+          tool: {
+            kind: "success" as const,
+            schema: EMPTY_SCHEMA,
+            tool: {
+              kind: "success" as const,
+              name: span("search"),
+              namespace: null,
+              description: [],
+              schema: null,
+            },
+          },
+        },
+      },
+    };
+    const result = {
+      ...emptyResult(),
+      templates: { "Geo:T": templateResult },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Geo:T": { tools: [{ id: "Geo:search", name: "myTool" }] },
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – contents: no-variants vs variants
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – contents", () => {
+  function templateWithContents(contents: unknown) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span("T"),
+        namespace: span("Main"),
+        outputFormat: null,
+        contents,
+        snippets: [],
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  it("wraps no-variants content in kind 'noVariants'", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContents({
+          kind: "no-variants",
+          content: {
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: undefined,
+          },
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Main:T": { contents: { kind: "noVariants" } } },
+    });
+  });
+
+  it("wraps variants content in kind 'variants' with a defaultContent", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContents({
+          kind: "variants",
+          variants: [
+            {
+              case: span("dark"),
+              content: {
+                meta: undefined,
+                system: emptyBody(),
+                user: emptyBody(),
+                examples: undefined,
+              },
+            },
+          ],
+          defaultContent: {
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: undefined,
+          },
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            kind: "variants",
+            variants: { dark: {} },
+            defaultContent: {},
+          },
+        },
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – body pieces
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – body pieces", () => {
+  function templateWithUserBody(pieces: Body) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span("T"),
+        namespace: span("Main"),
+        outputFormat: null,
+        contents: {
+          kind: "no-variants",
+          content: {
+            meta: undefined,
+            system: emptyBody(),
+            user: pieces,
+            examples: undefined,
+          },
+        },
+        snippets: [],
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  it("converts 'text' pieces directly", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([{ kind: "text", text: "Hello!" }]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: { content: { user: [{ kind: "text", text: "Hello!" }] } },
+        },
+      },
+    });
+  });
+
+  it("converts 'c-tag' pieces to text pieces", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([
+          { kind: "c-tag", text: "myTag", cTag: {} },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: { content: { user: [{ kind: "text", text: "myTag" }] } },
+        },
+      },
+    });
+  });
+
+  it("converts 'insert-val' pieces with an expression and default format", () => {
+    const inputExpr: Expression<false> = { kind: "input" };
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([
+          { kind: "insert-val", val: inputExpr, format: null, indent: "" },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              user: [
+                {
+                  kind: "insertVal",
+                  val: { kind: "input" },
+                  format: "text",
+                  indent: "",
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("uses the explicit format from an 'insert-val' piece", () => {
+    const inputExpr: Expression<false> = { kind: "input" };
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([
+          {
+            kind: "insert-val",
+            val: inputExpr,
+            format: span("json"),
+            indent: "  ",
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              user: [{ kind: "insertVal", format: "json", indent: "  " }],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("converts 'insert-snippet' pieces", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([
+          { kind: "insert-snippet", snippet: span("header"), indent: "    " },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              user: [
+                { kind: "insertSnippet", snippet: "header", indent: "    " },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – expressions
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – expressions", () => {
+  function templateWithExprPiece(val: Expression<false>) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span("T"),
+        namespace: span("Main"),
+        outputFormat: null,
+        contents: {
+          kind: "no-variants",
+          content: {
+            meta: undefined,
+            system: emptyBody(),
+            user: [{ kind: "insert-val", val, format: null, indent: "" }],
+            examples: undefined,
+          },
+        },
+        snippets: [],
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  function getVal(result: ReturnType<typeof makeTemplates>) {
+    const tmpl = result.templates["Main:T"]!;
+    const content = (
+      tmpl.contents as { content: { user: readonly { val: unknown }[] } }
+    ).content;
+    return content.user[0]!.val;
+  }
+
+  it("converts 'input' expression to { kind: 'input' }", () => {
+    const result = {
+      ...emptyResult(),
+      templates: { "Main:T": templateWithExprPiece({ kind: "input" }) },
+    } as unknown as ValidCompilationResult;
+    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
+      kind: "input",
+    });
+  });
+
+  it("converts 'it' expression to { kind: 'input' }", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithExprPiece({
+          kind: "it",
+        } as unknown as Expression<false>),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
+      kind: "input",
+    });
+  });
+
+  it("converts 'property' expression recursively", () => {
+    const expr: Expression<false> = {
+      kind: "property",
+      left: { kind: "input" },
+      property: span("name"),
+    };
+    const result = {
+      ...emptyResult(),
+      templates: { "Main:T": templateWithExprPiece(expr) },
+    } as unknown as ValidCompilationResult;
+    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
+      kind: "property",
+      left: { kind: "input" },
+      property: "name",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – snippets
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – snippets", () => {
+  function templateWithSnippets(snippets: readonly Snippet[]) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span("T"),
+        namespace: span("Main"),
+        outputFormat: null,
+        contents: {
+          kind: "no-variants",
+          content: {
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: undefined,
+          },
+        },
+        snippets,
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  it("converts a plain 'snippet'", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithSnippets([
+          {
+            kind: "snippet",
+            name: span("header"),
+            body: [{ kind: "text", text: "Hi" }],
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          snippets: {
+            header: { kind: "snippet", body: [{ kind: "text", text: "Hi" }] },
+          },
+        },
+      },
+    });
+  });
+
+  it("converts a 'snippet-if' with no 'is' clause (defaults to 'true')", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithSnippets([
+          {
+            kind: "snippet-if",
+            name: span("maybeFooter"),
+            expression: { kind: "input" },
+            is: null,
+            then: [{ kind: "text", text: "Yes" }],
+            else: [{ kind: "text", text: "No" }],
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          snippets: {
+            maybeFooter: {
+              kind: "snippetIf",
+              is: "true",
+              then: [{ kind: "text", text: "Yes" }],
+              else: [{ kind: "text", text: "No" }],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("converts a 'snippet-if' with an explicit 'is' clause", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithSnippets([
+          {
+            kind: "snippet-if",
+            name: span("s"),
+            expression: { kind: "input" },
+            is: span("notNull"),
+            then: emptyBody(),
+            else: emptyBody(),
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": { snippets: { s: { kind: "snippetIf", is: "notNull" } } },
+      },
+    });
+  });
+
+  it("converts a 'snippet-switch' with branches keyed by case value", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithSnippets([
+          {
+            kind: "snippet-switch",
+            name: span("theme"),
+            switchTag: { start: 0, end: 0 },
+            expression: { kind: "input" },
+            branches: [
+              {
+                case: span("dark"),
+                body: [{ kind: "text", text: "Dark mode" }],
+              },
+              {
+                case: span("light"),
+                body: [{ kind: "text", text: "Light mode" }],
+              },
+            ],
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          snippets: {
+            theme: {
+              kind: "snippetSwitch",
+              branches: {
+                dark: [{ kind: "text", text: "Dark mode" }],
+                light: [{ kind: "text", text: "Light mode" }],
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – meta and examples
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – meta and examples", () => {
+  function templateWithContent(content: unknown) {
+    return {
+      kind: "success" as const,
+      schema: EMPTY_SCHEMA,
+      tools: {},
+      template: {
+        kind: "success" as const,
+        name: span("T"),
+        namespace: span("Main"),
+        outputFormat: null,
+        contents: { kind: "no-variants", content },
+        snippets: [],
+        tools: null,
+        schema: null,
+        tag: { start: 0, end: 0 },
+      },
+    };
+  }
+
+  it("unwraps a JSON meta value", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContent({
+          meta: {
+            value: jsonObj({
+              temperature: {
+                kind: "number",
+                firstToken: { start: 0, end: 1 },
+                value: 0.5,
+              },
+            }),
+          },
+          system: emptyBody(),
+          user: emptyBody(),
+          examples: undefined,
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": { contents: { content: { meta: { temperature: 0.5 } } } },
+      },
+    });
+  });
+
+  it("produces no meta when the content has no meta field", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContent({
+          meta: undefined,
+          system: emptyBody(),
+          user: emptyBody(),
+          examples: undefined,
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    const spec = makeTemplates(result, NO_JSON_SCHEMAS);
+    expect(spec.templates["Main:T"]!.contents).toMatch({ content: {} });
+    expect((spec.templates["Main:T"]!.contents as any).content.meta).toBe(
+      undefined,
+    );
+  });
+
+  it("converts few-shot examples from JSON", () => {
+    const examplesJson = jsonArr([
+      jsonObj({
+        input: jsonObj({ prompt: str("hi") }),
+        output: str("hello"),
+        intermediateSteps: jsonArr([]),
+      }),
+    ]);
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContent({
+          meta: undefined,
+          system: emptyBody(),
+          user: emptyBody(),
+          examples: examplesJson,
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              examples: [
+                {
+                  input: { prompt: "hi" },
+                  output: "hello",
+                  intermediateSteps: [],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("converts few-shot examples with intermediate tool-call steps", () => {
+    const examplesJson = jsonArr([
+      jsonObj({
+        input: str("q"),
+        output: str("a"),
+        intermediateSteps: jsonArr([
+          jsonObj({
+            toolCalls: jsonArr([
+              jsonObj({
+                callId: str("c1"),
+                tool: str("search"),
+                input: jsonObj({ query: str("q") }),
+                output: str("result"),
+              }),
+            ]),
+          }),
+        ]),
+      }),
+    ]);
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContent({
+          meta: undefined,
+          system: emptyBody(),
+          user: emptyBody(),
+          examples: examplesJson,
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              examples: [
+                {
+                  input: "q",
+                  output: "a",
+                  intermediateSteps: [
+                    {
+                      toolCalls: [
+                        {
+                          callId: "c1",
+                          toolId: "Main:search",
+                          toolName: "search",
+                          input: { query: "q" },
+                          output: "result",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("produces an empty examples array when examples is undefined", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithContent({
+          meta: undefined,
+          system: emptyBody(),
+          user: emptyBody(),
+          examples: undefined,
+        }),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+      templates: { "Main:T": { contents: { content: { examples: [] } } } },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// makeTemplates – JSON schemas
+// ---------------------------------------------------------------------------
+
+describe("makeTemplates – JSON schemas", () => {
+  it("includes JSON schemas when includeJsonSchemas is true", () => {
+    const schemaSource = "type Input = string\ntype Output = number";
+    const sourceSpan = {
+      text: schemaSource,
+      offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+    };
+    const parsed = parseSchema(sourceSpan);
+    if (parsed.kind !== "success") throw new Error("parse failed");
+    const schema = validateSchema(parsed.typeDeclarations, {
+      kind: "namespace",
+    });
+    if (schema.kind !== "success") throw new Error("validation failed");
+
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": {
+          kind: "success" as const,
+          schema,
+          tools: {},
+          template: {
+            kind: "success" as const,
+            name: span("T"),
+            namespace: span("Main"),
+            outputFormat: null,
+            contents: {
+              kind: "no-variants",
+              content: {
+                meta: undefined,
+                system: emptyBody(),
+                user: emptyBody(),
+                examples: undefined,
+              },
+            },
+            snippets: [],
+            tools: null,
+            schema: null,
+            tag: { start: 0, end: 0 },
+          },
+        },
+      },
+    } as unknown as ValidCompilationResult;
+
+    const spec = makeTemplates(result, WITH_JSON_SCHEMAS);
+    expect(spec.templates["Main:T"]!.inputJsonSchema).toMatch({
+      type: "string",
+    });
+    expect(spec.templates["Main:T"]!.outputJsonSchema).toMatch({
+      type: "number",
+    });
+  });
+});
