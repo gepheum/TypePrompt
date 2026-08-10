@@ -655,7 +655,7 @@ const TOOL: SchemaValidationContext = {
 // ---------------------------------------------------------------------------
 
 describe("validateSchema – namingHints", () => {
-  it("registers a top-level interface with empty namePieces", () => {
+  it("registers a top-level interface with the type name as the first piece", () => {
     const schema = validateSchema(
       parseDeclarations("type Output = { name: string; };"),
       NAMESPACE,
@@ -663,7 +663,7 @@ describe("validateSchema – namingHints", () => {
     if (schema.kind !== "success") throw new Error();
     const iface = schema.typeDeclarations["Output"]!.valueType as Interface;
     expect(schema.namingHints.defaultScope.get(iface)).toMatch({
-      namePieces: [],
+      namePieces: [{ kind: "type", name: "Output" }],
     });
   });
 
@@ -678,7 +678,10 @@ describe("validateSchema – namingHints", () => {
     const outer = schema.typeDeclarations["Output"]!.valueType as Interface;
     const inner = outer.fields["address"]!.type as Interface;
     expect(schema.namingHints.defaultScope.get(inner)).toMatch({
-      namePieces: [{ kind: "field", name: "address" }],
+      namePieces: [
+        { kind: "type", name: "Output" },
+        { kind: "field", name: "address" },
+      ],
     });
   });
 
@@ -695,13 +698,14 @@ describe("validateSchema – namingHints", () => {
     const inner = mid.fields["address"]!.type as Interface;
     expect(schema.namingHints.defaultScope.get(inner)).toMatch({
       namePieces: [
+        { kind: "type", name: "Output" },
         { kind: "field", name: "location" },
         { kind: "field", name: "address" },
       ],
     });
   });
 
-  it("registers a top-level string-literal union with empty namePieces", () => {
+  it("registers a top-level string-literal union with the type name as the first piece", () => {
     const schema = validateSchema(
       parseDeclarations('type Output = "a" | "b";'),
       NAMESPACE,
@@ -709,7 +713,7 @@ describe("validateSchema – namingHints", () => {
     if (schema.kind !== "success") throw new Error();
     const union = schema.typeDeclarations["Output"]!.valueType as Union;
     expect(schema.namingHints.defaultScope.get(union)).toMatch({
-      namePieces: [],
+      namePieces: [{ kind: "type", name: "Output" }],
     });
   });
 
@@ -726,7 +730,7 @@ describe("validateSchema – namingHints", () => {
     if (members.kind !== "interfaces") throw new Error();
 
     expect(schema.namingHints.defaultScope.get(union)).toMatch({
-      namePieces: [],
+      namePieces: [{ kind: "type", name: "Output" }],
     });
 
     const catHint = schema.namingHints.defaultScope.get(
@@ -734,6 +738,7 @@ describe("validateSchema – namingHints", () => {
     );
     expect(catHint).toMatch({
       namePieces: [
+        { kind: "type", name: "Output" },
         {
           kind: "member",
           discriminator: "kind",
@@ -747,6 +752,7 @@ describe("validateSchema – namingHints", () => {
     );
     expect(dogHint).toMatch({
       namePieces: [
+        { kind: "type", name: "Output" },
         {
           kind: "member",
           discriminator: "kind",
@@ -773,6 +779,7 @@ describe("validateSchema – namingHints", () => {
     );
     expect(trueHint).toMatch({
       namePieces: [
+        { kind: "type", name: "Output" },
         {
           kind: "member",
           discriminator: "success",
@@ -786,6 +793,7 @@ describe("validateSchema – namingHints", () => {
     );
     expect(falseHint).toMatch({
       namePieces: [
+        { kind: "type", name: "Output" },
         {
           kind: "member",
           discriminator: "success",
@@ -805,7 +813,7 @@ describe("validateSchema – namingHints", () => {
     if (arrayType.kind !== "array") throw new Error();
     const iface = arrayType.elementType as Interface;
     expect(schema.namingHints.defaultScope.get(iface)).toMatch({
-      namePieces: [],
+      namePieces: [{ kind: "type", name: "Output" }],
     });
   });
 

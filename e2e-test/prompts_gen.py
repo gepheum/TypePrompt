@@ -1,4 +1,4 @@
-class T_:
+class T_Meta:
  pass
-type T_Foobar = Union[
+type T_Meta_Foobar = Union[
 ]

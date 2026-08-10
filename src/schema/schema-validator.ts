@@ -402,7 +402,10 @@ function collectNamingHints(
   };
 
   for (const type of Object.values(schema.typeDeclarations)) {
-    collect(type.valueType, { namePieces: [], doc: null });
+    collect(type.valueType, {
+      namePieces: [{ kind: "type", name: type.name.text }],
+      doc: null,
+    });
   }
 
   return typeToNamingHint;
