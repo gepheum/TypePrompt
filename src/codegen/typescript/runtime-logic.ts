@@ -41,9 +41,7 @@ export type Tools<Id extends TemplateId> = {
     readonly myTool: Tool<string, string>;
     readonly otherTool: Tool<string, boolean>;
   };
-  readonly "Ns:Bar": {
-    // readonly myTool: Tool<string, string>;
-  };
+  readonly "Ns:Bar": {};
 }[Id];
 
 const zodSchemas = {
