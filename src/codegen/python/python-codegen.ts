@@ -37,22 +37,22 @@ function writeSchema(
   const { typePrefix, sharedTypePrefix } = context;
 
   const lines: string[] = [];
-  // for (const [type, namingHint] of schema.typeToNamingHint.entries()) {
-  //   const name = typePrefix.concat(join(namingHint));
-  //   // TODO: pydoc
-  //   switch (type.kind) {
-  //     case "interface": {
-  //       lines.push(`class ${name}:`);
-  //       lines.push(" pass");
-  //       break;
-  //     }
-  //     case "union": {
-  //       lines.push(`type ${name} = Union[`);
-  //       lines.push("]");
-  //       break;
-  //     }
-  //   }
-  // }
+  for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
+    const name = typePrefix.concat(makeNameFromHint(namingHint));
+    // TODO: pydoc
+    switch (type.kind) {
+      case "interface": {
+        lines.push(`class ${name}:`);
+        lines.push(" pass");
+        break;
+      }
+      case "union": {
+        lines.push(`type ${name} = Union[`);
+        lines.push("]");
+        break;
+      }
+    }
+  }
 
   // TODO: possibly output alias for Input, Output, Meta...
 
@@ -135,8 +135,9 @@ function makeNameFromHint(hint: NamingHint): string {
     .map((piece) => {
       switch (piece.kind) {
         case "type":
-        case "field":
           return piece.name;
+        case "field":
+          return capitalize(piece.name);
         case "member": {
           switch (piece.discriminant.type) {
             case "string":

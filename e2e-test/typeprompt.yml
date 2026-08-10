@@ -4,3 +4,6 @@ gen:
   typescript:
     enabled: true
     file: ./prompts.gen.ts
+  python:
+    enabled: true
+    file: ./prompts_gen.py
