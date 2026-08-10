@@ -19,8 +19,44 @@ export function resolveSwitchExpression(
   type: ResolvedType | NullableType,
   schema: Schema,
 ): SwitchExpressionResult {
+  // Check for a property access on a discriminated interface union first, before
+  // any union-member map lookup.
+  if (expression.kind === "property") {
+    const { left } = expression;
+    const resolvedType = resolveExpressionType(left, schema, null);
+    if (resolvedType.kind === "union") {
+      const unionMembers = schema.unionToMembers.get(resolvedType);
+      if (
+        unionMembers?.kind === "interfaces" &&
+        unionMembers.discriminator === expression.property.text
+      ) {
+        return {
+          kind: "success",
+          cases: Object.fromEntries(
+            Object.entries(unionMembers.members).map(([kind, member]) => {
+              return [
+                kind,
+                {
+                  it: { expression, type },
+                  typeOverrides: {
+                    [left.fullPath.text]: member,
+                  },
+                },
+              ];
+            }),
+          ),
+        };
+      }
+    }
+  }
+
   if (type.kind === "string-literal") {
-    type = { kind: "union", members: [type] };
+    return {
+      kind: "success",
+      cases: {
+        [type.value]: { it: { expression, type }, typeOverrides: {} },
+      },
+    };
   }
   if (type.kind !== "union") {
     return {
@@ -44,36 +80,6 @@ export function resolveSwitchExpression(
         },
       ],
     };
-  }
-
-  // See if expression refers to the 'kind' field of a union of interfaces.
-  if (expression.kind === "property") {
-    const { left } = expression;
-    const resolvedType = resolveExpressionType(left, schema, null);
-    if (resolvedType.kind === "union") {
-      const members = schema.unionToMembers.get(resolvedType)!;
-      if (
-        members.kind === "interfaces" &&
-        members.discriminator === expression.property.text
-      ) {
-        return {
-          kind: "success",
-          cases: Object.fromEntries(
-            Object.entries(members.members).map((kind, member) => {
-              return [
-                kind,
-                {
-                  it: { expression, type },
-                  typeOverrides: {
-                    [left.fullPath.text]: member,
-                  },
-                },
-              ];
-            }),
-          ),
-        };
-      }
-    }
   }
 
   return {

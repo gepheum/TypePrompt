@@ -21,7 +21,11 @@ function span<T extends string>(text: T): TextSpan<T> {
   return { text, start: 0, end: text.length };
 }
 
-function str(value: string) {
+function str(value: string): {
+  kind: "string";
+  firstToken: { start: number; end: number };
+  value: string;
+} {
   return {
     kind: "string" as const,
     firstToken: { start: 0, end: value.length + 2 },
@@ -29,7 +33,7 @@ function str(value: string) {
   };
 }
 
-function jsonObj(entries: Record<string, unknown>) {
+function jsonObj(entries: Record<string, unknown>): unknown {
   return {
     kind: "object" as const,
     firstToken: { start: 0, end: 1 },
@@ -42,8 +46,12 @@ function jsonObj(entries: Record<string, unknown>) {
   };
 }
 
-function jsonArr(elements: unknown[]) {
-  return { kind: "array" as const, firstToken: { start: 0, end: 1 }, elements };
+function jsonArr(elements: unknown[]): unknown {
+  return {
+    kind: "array" as const,
+    firstToken: { start: 0, end: 1 },
+    elements,
+  };
 }
 
 const NO_JSON_SCHEMAS = { includeJsonSchemas: false };
@@ -107,7 +115,7 @@ describe("makeTemplates – source files", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – tool", () => {
-  function makeToolResult(name: string, descriptionText: string) {
+  function makeToolResult(name: string, descriptionText: string): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -181,7 +189,7 @@ describe("makeTemplates – template basic fields", () => {
     name: string,
     namespace: string | null,
     outputFormat: string | null,
-  ) {
+  ): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -251,27 +259,48 @@ describe("makeTemplates – template basic fields", () => {
   });
 
   it("produces the tool id as namespace:toolName", () => {
-    const templateResult = {
-      ...minimalTemplate("T", "Geo", null),
-      tools: {
-        myTool: {
-          tool: {
-            kind: "success" as const,
-            schema: EMPTY_SCHEMA,
-            tool: {
-              kind: "success" as const,
-              name: span("search"),
-              namespace: null,
-              description: [],
-              schema: null,
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Geo:T": {
+          kind: "success" as const,
+          schema: EMPTY_SCHEMA,
+          tools: {
+            myTool: {
+              tool: {
+                kind: "success" as const,
+                schema: EMPTY_SCHEMA,
+                tool: {
+                  kind: "success" as const,
+                  name: span("search"),
+                  namespace: null,
+                  description: [],
+                  schema: null,
+                },
+              },
             },
+          },
+          template: {
+            kind: "success" as const,
+            name: span("T"),
+            namespace: span("Geo"),
+            outputFormat: null,
+            contents: {
+              kind: "no-variants" as const,
+              content: {
+                meta: undefined,
+                system: emptyBody(),
+                user: emptyBody(),
+                examples: undefined,
+              },
+            },
+            snippets: [],
+            tools: null,
+            schema: null,
+            tag: { start: 0, end: 0 },
           },
         },
       },
-    };
-    const result = {
-      ...emptyResult(),
-      templates: { "Geo:T": templateResult },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
       templates: {
@@ -286,7 +315,7 @@ describe("makeTemplates – template basic fields", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – contents", () => {
-  function templateWithContents(contents: unknown) {
+  function templateWithContents(contents: unknown): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -370,7 +399,7 @@ describe("makeTemplates – contents", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – body pieces", () => {
-  function templateWithUserBody(pieces: Body) {
+  function templateWithUserBody(pieces: Body): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -418,7 +447,11 @@ describe("makeTemplates – body pieces", () => {
       ...emptyResult(),
       templates: {
         "Main:T": templateWithUserBody([
-          { kind: "c-tag", text: "myTag", cTag: {} },
+          {
+            kind: "c-tag",
+            text: "myTag",
+            cTag: { kind: "identifier" as const, identifier: span("myTag") },
+          },
         ]),
       },
     } as unknown as ValidCompilationResult;
@@ -432,7 +465,10 @@ describe("makeTemplates – body pieces", () => {
   });
 
   it("converts 'insert-val' pieces with an expression and default format", () => {
-    const inputExpr: Expression<false> = { kind: "input" };
+    const inputExpr: Expression<false> = {
+      kind: "input",
+      fullPath: span("input"),
+    };
     const result = {
       ...emptyResult(),
       templates: {
@@ -462,7 +498,10 @@ describe("makeTemplates – body pieces", () => {
   });
 
   it("uses the explicit format from an 'insert-val' piece", () => {
-    const inputExpr: Expression<false> = { kind: "input" };
+    const inputExpr: Expression<false> = {
+      kind: "input",
+      fullPath: span("input"),
+    };
     const result = {
       ...emptyResult(),
       templates: {
@@ -519,7 +558,7 @@ describe("makeTemplates – body pieces", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – expressions", () => {
-  function templateWithExprPiece(val: Expression<false>) {
+  function templateWithExprPiece(val: Expression<false>): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -546,7 +585,7 @@ describe("makeTemplates – expressions", () => {
     };
   }
 
-  function getVal(result: ReturnType<typeof makeTemplates>) {
+  function getVal(result: ReturnType<typeof makeTemplates>): unknown {
     const tmpl = result.templates["Main:T"]!;
     const content = (
       tmpl.contents as { content: { user: readonly { val: unknown }[] } }
@@ -557,7 +596,12 @@ describe("makeTemplates – expressions", () => {
   it("converts 'input' expression to { kind: 'input' }", () => {
     const result = {
       ...emptyResult(),
-      templates: { "Main:T": templateWithExprPiece({ kind: "input" }) },
+      templates: {
+        "Main:T": templateWithExprPiece({
+          kind: "input",
+          fullPath: span("input"),
+        }),
+      },
     } as unknown as ValidCompilationResult;
     expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
       kind: "input",
@@ -581,8 +625,9 @@ describe("makeTemplates – expressions", () => {
   it("converts 'property' expression recursively", () => {
     const expr: Expression<false> = {
       kind: "property",
-      left: { kind: "input" },
+      left: { kind: "input", fullPath: span("input") },
       property: span("name"),
+      fullPath: span("input.name"),
     };
     const result = {
       ...emptyResult(),
@@ -601,7 +646,7 @@ describe("makeTemplates – expressions", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – snippets", () => {
-  function templateWithSnippets(snippets: readonly Snippet[]) {
+  function templateWithSnippets(snippets: readonly Snippet[]): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
@@ -660,7 +705,7 @@ describe("makeTemplates – snippets", () => {
           {
             kind: "snippet-if",
             name: span("maybeFooter"),
-            expression: { kind: "input" },
+            expression: { kind: "input" as const, fullPath: span("input") },
             is: null,
             then: [{ kind: "text", text: "Yes" }],
             else: [{ kind: "text", text: "No" }],
@@ -692,7 +737,7 @@ describe("makeTemplates – snippets", () => {
           {
             kind: "snippet-if",
             name: span("s"),
-            expression: { kind: "input" },
+            expression: { kind: "input" as const, fullPath: span("input") },
             is: span("notNull"),
             then: emptyBody(),
             else: emptyBody(),
@@ -716,7 +761,7 @@ describe("makeTemplates – snippets", () => {
             kind: "snippet-switch",
             name: span("theme"),
             switchTag: { start: 0, end: 0 },
-            expression: { kind: "input" },
+            expression: { kind: "input" as const, fullPath: span("input") },
             branches: [
               {
                 case: span("dark"),
@@ -754,7 +799,7 @@ describe("makeTemplates – snippets", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates – meta and examples", () => {
-  function templateWithContent(content: unknown) {
+  function templateWithContent(content: unknown): unknown {
     return {
       kind: "success" as const,
       schema: EMPTY_SCHEMA,
