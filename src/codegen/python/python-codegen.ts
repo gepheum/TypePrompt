@@ -1,6 +1,6 @@
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
-import { NamingHint, Schema } from "../../schema/schema-types.js";
+import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -29,12 +29,12 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
 function writeSchema(
   schema: Schema,
-  context: {
+  options: {
     readonly typePrefix: string;
     readonly sharedTypePrefix: string;
   },
 ): string {
-  const { typePrefix, sharedTypePrefix } = context;
+  const { typePrefix, sharedTypePrefix } = options;
 
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
@@ -47,11 +47,38 @@ function writeSchema(
         break;
       }
       case "union": {
-        lines.push(`type ${name} = Union[`);
-        lines.push("]");
+        const members = schema.unionToMembers.get(type)!;
+        switch (members.kind) {
+          case "interfaces": {
+            lines.push(`type ${name} = Union[`);
+            lines.push(" # Discriminator: ".concat(members.discriminator));
+            for (const member of Object.values(members.members)) {
+              const memberType = writeType(member, schema, options);
+              lines.push(indent(memberType).concat(","));
+            }
+            lines.push("]");
+            break;
+          }
+          case "strings": {
+            lines.push(`type ${name} = Literal[`);
+            for (const member of Object.values(members.members)) {
+              lines.push(` '${member.value satisfies string}',`);
+            }
+            lines.push("]");
+            break;
+          }
+          default: {
+            throw new Error(members satisfies never);
+          }
+        }
         break;
       }
+      default: {
+        throw new Error(type satisfies never);
+      }
     }
+    lines.push("");
+    lines.push("");
   }
 
   // TODO: possibly output alias for Input, Output, Meta...
@@ -59,76 +86,73 @@ function writeSchema(
   return lines.join("\n");
 }
 
-// function writeType(
-//   type: Type,
-//   context: {
-//     readonly schema: Schema;
-//     readonly nameScope: NameScope;
-//     readonly typePrefix: string;
-//     readonly sharedTypePrefix: string;
-//   },
-// ): string {
-//   switch (type.kind) {
-//     case "any": {
-//       return "Any";
-//     }
-//     case "array": {
-//       const { elementType } = type;
-//       const writtenElement = writeType(elementType, context);
-//       return `Sequence[${writtenElement}]`;
-//     }
-//     case "boolean-literal": {
-//       return type.value ? "Literal[True]" : "Literal[False]";
-//     }
-//     case "interface":
-//     case "union": {
-//       const namingHint = context.schema.typeToNamingHint.get(type)!;
-//       const fields = Object.entries(type.fields);
-//       if (fields.length <= 0) {
-//         return "{}";
-//       }
-//       let result = "{\n";
-//       for (const [fieldName, field] of fields) {
-//         result += [
-//           wrapJsdoc(field.doc),
-//           "readonly ",
-//           fieldName,
-//           field.optional ? "?: " : ": ",
-//           writeType(field.type, options),
-//           ";\n",
-//         ].join("");
-//       }
-//       result += "}";
-//       return result;
-//     }
-//     case "primitive": {
-//       if (type.primitive.text === "integer") {
-//         return "number";
-//       } else {
-//         return type.primitive.text;
-//       }
-//     }
-//     case "record": {
-//       return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
-//     }
-//     case "shared-type-name": {
-//       return options.sharedTypePrefix.concat(type.name.text);
-//     }
-//     case "string-literal": {
-//       return type.quotedName.text;
-//     }
-//     case "type-name": {
-//       return type.name.text;
-//     }
-//     case "union": {
-//       return "(\n"
-//         .concat(
-//           type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
-//         )
-//         .concat(")");
-//     }
-//   }
-// }
+function writeType(
+  type: Type,
+  schema: Schema,
+  options: {
+    readonly typePrefix: string;
+    readonly sharedTypePrefix: string;
+  },
+): string {
+  switch (type.kind) {
+    case "any": {
+      return "Any";
+    }
+    case "array": {
+      const { elementType } = type;
+      const writtenElement = writeType(elementType, schema, options);
+      return `Sequence[${writtenElement}]`;
+    }
+    case "boolean-literal": {
+      return type.value ? "Literal[True]" : "Literal[False]";
+    }
+    case "interface":
+    case "union": {
+      let namingHint = schema.namingHints.defaultScope.get(type);
+      let shared: boolean;
+      if (namingHint) {
+        shared = false;
+      } else {
+        namingHint = schema.namingHints.shared.get(type);
+        shared = true;
+      }
+      return (shared ? options.sharedTypePrefix : options.typePrefix).concat(
+        makeNameFromHint(namingHint!),
+      );
+    }
+    case "primitive": {
+      switch (type.primitive.text) {
+        case "boolean":
+          return "bool";
+        case "integer":
+          return "int";
+        case "number":
+          return "float";
+        case "string":
+          return "str";
+        default:
+          throw new Error(type.primitive.text satisfies never);
+      }
+    }
+    case "record": {
+      const valueType = writeType(type.valueType, schema, options);
+      return ["Mapping[", " str", indent(valueType).concat(","), "]"].join(
+        "\n",
+      );
+    }
+    case "shared-type-name": {
+      const declaration = schema.sharedDeclarations[type.name.text]!;
+      return writeType(declaration.valueType, schema, options);
+    }
+    case "string-literal": {
+      return `'${type.value satisfies string}'`;
+    }
+    case "type-name": {
+      const declaration = schema.typeDeclarations[type.name.text]!;
+      return writeType(declaration.valueType, schema, options);
+    }
+  }
+}
 
 function makeNameFromHint(hint: NamingHint): string {
   return hint.namePieces
@@ -153,4 +177,8 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
+}
+
+function indent(text: string, indent: string = " "): string {
+  return indent.concat(text.replace(/\n/g, "\n".concat(indent)));
 }
