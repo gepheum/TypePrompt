@@ -5,7 +5,7 @@ import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
-import { capitalize } from "../../util/casing.js";
+import { camelToSnakeCase, capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
@@ -52,7 +52,7 @@ function writeSchemas(compilationResult: ValidCompilationResult): string {
     ) {
       continue;
     }
-    const namespaceName: string = namespace.name;
+    const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     lines.push(` @final`);
     lines.push(` class ${namespaceName}:`);
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
@@ -66,7 +66,10 @@ function writeSchemas(compilationResult: ValidCompilationResult): string {
       );
     }
     for (const template of namespace.templates) {
-      const templateName: string = template.template.name.text;
+      const templateName = toPyName(
+        template.template.name.text,
+        "snake_case_class_name",
+      );
       lines.push(`  @final`);
       lines.push(`  class ${templateName}:`);
       lines.push(
@@ -79,7 +82,7 @@ function writeSchemas(compilationResult: ValidCompilationResult): string {
       );
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName: string = tool.tool.name.text;
+      const toolName = toPyName(tool.tool.name.text, "snake_case_class_name");
       lines.push(`  @final`);
       lines.push(`  class ${toolName}:`);
       lines.push(
@@ -120,8 +123,9 @@ function writeSchema(
             schema,
             options,
           );
-          lines.push(...writeComment(field.doc, ' '));
-          lines.push(` ${field.name.text}: ${type}`);
+          lines.push(...writeComment(field.doc, " "));
+          const pyName = toPyName(field.name.text, "field_name");
+          lines.push(` ${pyName}: ${type}`);
         }
         break;
       }
@@ -259,7 +263,7 @@ function writeType(
 }
 
 function makeNameFromHint(hint: NamingHint): string {
-  return hint.namePieces
+  const name = hint.namePieces
     .map((piece) => {
       switch (piece.kind) {
         case "type":
@@ -281,6 +285,38 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
+  if (hint.namePieces.length === 1) {
+    return toPyName(name, "ClassName");
+  } else {
+    return name;
+  }
+}
+
+function toPyName(
+  camelCaseName: string,
+  type: "field_name" | "ClassName" | "snake_case_class_name",
+): string {
+  let identifier: string;
+  let conflict: boolean;
+  switch (type) {
+    case "field_name": {
+      identifier = camelToSnakeCase(camelCaseName);
+      conflict =
+        PYTHON_HARD_KEYWORDS.has(identifier) || identifier.startsWith("model_");
+      break;
+    }
+    case "ClassName": {
+      identifier = camelCaseName;
+      conflict = PYTHON_HARD_KEYWORDS.has(identifier);
+      break;
+    }
+    case "snake_case_class_name": {
+      identifier = camelToSnakeCase(camelCaseName);
+      conflict = PYTHON_HARD_KEYWORDS.has(identifier);
+      break;
+    }
+  }
+  return conflict ? identifier.concat("_") : identifier;
 }
 
 function writeDocstring(doc: string, indent: " "): readonly string[] {
@@ -300,7 +336,7 @@ function writeDocstring(doc: string, indent: " "): readonly string[] {
   }
 }
 
-function writeComment(doc: string, indent: '' | " "): readonly string[] {
+function writeComment(doc: string, indent: "" | " "): readonly string[] {
   if (doc.length <= 0) {
     return [];
   } else {
@@ -311,3 +347,41 @@ function writeComment(doc: string, indent: '' | " "): readonly string[] {
 function scaleIndenting(input: string): string {
   return input.replace(/^ +/gm, (match) => match.repeat(2));
 }
+
+const PYTHON_HARD_KEYWORDS: ReadonlySet<string> = new Set([
+  "False",
+  "None",
+  "True",
+  "and",
+  "as",
+  "assert",
+  "async",
+  "await",
+  "break",
+  "class",
+  "continue",
+  "def",
+  "del",
+  "elif",
+  "else",
+  "except",
+  "finally",
+  "for",
+  "from",
+  "global",
+  "if",
+  "import",
+  "in",
+  "is",
+  "lambda",
+  "nonlocal",
+  "not",
+  "or",
+  "pass",
+  "raise",
+  "return",
+  "try",
+  "while",
+  "with",
+  "yield",
+]);
