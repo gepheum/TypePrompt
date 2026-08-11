@@ -4,6 +4,7 @@ import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
+import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { camelToSnakeCase, capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
@@ -26,13 +27,19 @@ export function generatePythonCode(
 
 function writeAll(compilationResult: ValidCompilationResult): string {
   return [
-    "from typing import Annotated, Literal, Optional, Union, final",
+    "from typing import Annotated, Any, Literal, Optional, Union, final",
     "from pydantic import BaseModel, Field\n\n",
-    scaleIndenting(writeSchemas(compilationResult)),
+    scaleIndenting(
+      [writeUserDefinedDatatypes(compilationResult), writeSpecDatatypes()].join(
+        "\n",
+      ),
+    ),
   ].join("\n");
 }
 
-function writeSchemas(compilationResult: ValidCompilationResult): string {
+function writeUserDefinedDatatypes(
+  compilationResult: ValidCompilationResult,
+): string {
   const lines = [
     "@final",
     "class schema:",
@@ -98,6 +105,20 @@ function writeSchemas(compilationResult: ValidCompilationResult): string {
   return lines.join("\n");
 }
 
+function writeSpecDatatypes(): string {
+  const lines = [
+    "@final",
+    "class _internal:",
+    writeSchema(runtimeTypesSchema, {
+      typePrefix: "_internal.",
+      indent: " ",
+    }),
+    "",
+    "",
+  ];
+  return lines.join("\n");
+}
+
 function writeSchema(
   schema: Schema,
   options: {
@@ -107,9 +128,13 @@ function writeSchema(
     readonly requiredTypes?: readonly string[];
   },
 ): string {
+  const {typePrefix} = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
+    if (!typePrefix.startsWith("_")) {
+      lines.push(`# Exported as '${typePrefix}${name}'`);
+    }
     switch (type.kind) {
       case "interface": {
         lines.push(`class ${name}(BaseModel):`);
