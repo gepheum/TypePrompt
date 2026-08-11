@@ -1,7 +1,7 @@
 // TODO: pydoc
 // TODO: I think I can just store the namespaces like this: class schema: class meta: /* schema definition */
 // TODO: optional fields...
-// TODO: field name: lowercase, avoid keywords
+// TODO: field name: lowercase, avoid keywords, avoid conflcit with pydantic generated symbols...
 // TODO: pydantic
 
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
@@ -32,10 +32,19 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   return [
     "from typing import Annotated, Literal, Optional, Union",
     "from pydantic import BaseModel, Field\n\n",
-    writeSchema(compilationResult.metaSchema, {
-      typePrefix: "T_",
-      sharedTypePrefix: "T_",
-    }),
+    scaleIndenting(
+      [
+        "class schema:",
+        " class meta:",
+        indent(
+          writeSchema(compilationResult.metaSchema, {
+            typePrefix: "schema.meta.",
+            sharedTypePrefix: "never.",
+          }),
+          "  ",
+        ),
+      ].join("\n"),
+    ),
   ].join("\n");
 }
 
@@ -46,11 +55,11 @@ function writeSchema(
     readonly sharedTypePrefix: string;
   },
 ): string {
-  const { typePrefix, sharedTypePrefix } = options;
+  const { typePrefix } = options;
 
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
-    const name = typePrefix.concat(makeNameFromHint(namingHint));
+    const name = makeNameFromHint(namingHint);
     switch (type.kind) {
       case "interface": {
         lines.push(`class ${name}(BaseModel):`);
@@ -59,7 +68,10 @@ function writeSchema(
         }
         for (const field of Object.values(type.fields)) {
           const type = writeType(
-            resolveFieldType(field, schema), schema, options);
+            resolveFieldType(field, schema),
+            schema,
+            options,
+          );
           lines.push(` ${field.name.text}: ${type}`);
         }
         break;
@@ -75,7 +87,7 @@ function writeSchema(
               lines.push(`  ${memberType},`);
             }
             lines.push(" ],");
-            lines.push(` Field(discriminator="${members.discriminator}")`);
+            lines.push(` Field(discriminator="${members.discriminator}"),`);
             lines.push("]");
             break;
           }
@@ -199,4 +211,12 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
+}
+
+function indent(input: string, indent: " " | "  " | "   " = " "): string {
+  return input.replace(/^(?=.+$)/gm, indent);
+}
+
+function scaleIndenting(input: string): string {
+  return input.replace(/^ +/gm, (match) => match.repeat(2));
 }
