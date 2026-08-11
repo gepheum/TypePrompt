@@ -208,11 +208,17 @@ export namespace $ {
 
   export namespace Main {
     export namespace MyTemplate {
+      /** The input */
+
       export type Input = {
         readonly firstName: string;
         readonly lastName: string;
         readonly fooToBar?: { [name: string]: number };
       };
+      /**
+       * The
+       * output
+       */
 
       export type Output = {
         readonly x: number;
@@ -244,13 +250,13 @@ const zodSchemas = {
           z.string(),
           z.int32(),
         ).optional(),
-      });
+      }).describe("The input");
       return inputSchema;
     })(),
     output: ((): z.ZodType<$.Main.MyTemplate.Output> => {
       const outputSchema: z.ZodType<$.Main.MyTemplate.Output> = z.object({
         x: z.int32(),
-      });
+      }).describe("The\noutput");
       return outputSchema;
     })(),
   },
@@ -715,7 +721,7 @@ const TEMPLATES_DATA: Spec.Templates = {
     }
   },
   "sourceFiles": {
-    "/Users/clementroux/Documents/Gepheum/typeprompt/e2e-test/prompts/hello_world.xml": "<meta>\n  type Meta = {\n    /** Temperature setting for the template */\n    temperature: number;\n    foobar?: \"foo\" | \"bar\";\n    zooBar?: {\n        kind: \"foo\";\n        foo: string;\n      } | {\n        kind: \"bar\";\n        bar: string;\n      };\n  };\n</meta>\n\n<tool name=\"myTool\">\n  <description>\n    A tool that does something\n  </description>\n\n  <schema>\n    type Input = {\n      foo: string;\n      x?: integer;\n      y?: integer;\n    };\n\n    type Output = {\n      bar: string;\n    };\n  </schema>\n</tool>\n\n<template name=\"MyTemplate\">\n  <meta>\n    temperature: 0.7\n    foobar: bar\n  </meta>\n\n  <tools>\n    - tool: myTool\n  </tools>\n\n  <schema>\n    type Input = {\n      firstName: string;\n      lastName: string;\n      fooToBar?: {[name: string]: integer};\n    };\n\n    type Output = {\n      x: integer;\n    };\n  </schema>\n\n  <system>\n    <insert snippet=\"greet\"/>\n\n    How many characters are in your full name?\n  </system>\n\n  <user>\n    Your <c>firstName</c> is: <insert val=\"input.firstName\"/>\n    Your <c>lastName</c> is: <insert val=\"input.lastName\"/>\n\n    For example <c>{\"firstName\": \"Bo\", \"lastName\": \"Zo\"}</c>\n  </user>\n\n  <examples>\n    - input:\n        firstName: \"John\"\n        lastName: \"Doe\"\n      output:\n        x: 8\n      intermediateSteps:\n        - toolCalls:\n          - callId: myCall\n            tool: myTool\n            input:\n              foo: \"hello\"\n            output:\n              bar: \"world\"\n    - input:\n        firstName: \"Jane\"\n        lastName: \"Smith\"\n      output:\n        x: 9\n  </examples>\n\n  <snippet name=\"greet\">\n    Hello,\n\n  </snippet>\n</template>\n\n"
+    "/Users/clementroux/Documents/Gepheum/typeprompt/e2e-test/prompts/hello_world.xml": "<meta>\n  type Meta = {\n    /** Temperature setting for the template */\n    temperature: number;\n    foobar?: \"foo\" | \"bar\";\n    zooBar?: {\n        kind: \"foo\";\n        foo: string;\n      } | {\n        kind: \"bar\";\n        bar: string;\n      };\n  };\n</meta>\n\n<tool name=\"myTool\">\n  <description>\n    A tool that does something\n  </description>\n\n  <schema>\n    type Input = {\n      foo: string;\n      x?: integer;\n      y?: integer;\n    };\n\n    type Output = {\n      bar: string;\n    };\n  </schema>\n</tool>\n\n<template name=\"MyTemplate\">\n  <meta>\n    temperature: 0.7\n    foobar: bar\n  </meta>\n\n  <tools>\n    - tool: myTool\n  </tools>\n\n  <schema>\n    /** The input */\n    type Input = {\n      firstName: string;\n      lastName: string;\n      fooToBar?: {[name: string]: integer};\n    };\n\n    /**\n     * The\n     * output\n     */\n    type Output = {\n      x: integer;\n    };\n  </schema>\n\n  <system>\n    <insert snippet=\"greet\"/>\n\n    How many characters are in your full name?\n  </system>\n\n  <user>\n    Your <c>firstName</c> is: <insert val=\"input.firstName\"/>\n    Your <c>lastName</c> is: <insert val=\"input.lastName\"/>\n\n    For example <c>{\"firstName\": \"Bo\", \"lastName\": \"Zo\"}</c>\n  </user>\n\n  <examples>\n    - input:\n        firstName: \"John\"\n        lastName: \"Doe\"\n      output:\n        x: 8\n      intermediateSteps:\n        - toolCalls:\n          - callId: myCall\n            tool: myTool\n            input:\n              foo: \"hello\"\n            output:\n              bar: \"world\"\n    - input:\n        firstName: \"Jane\"\n        lastName: \"Smith\"\n      output:\n        x: 9\n  </examples>\n\n  <snippet name=\"greet\">\n    Hello,\n\n  </snippet>\n</template>\n\n"
   }
 } as const;
 

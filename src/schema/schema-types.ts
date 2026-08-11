@@ -213,7 +213,7 @@ export type NamingHint = {
             };
       }
   >;
-  readonly doc: string | null;
+  readonly doc: string;
 };
 
 export type UnionMembers =

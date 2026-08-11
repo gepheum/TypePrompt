@@ -111,6 +111,7 @@ function writeSchema(
     switch (type.kind) {
       case "interface": {
         lines.push(`class ${name}(BaseModel):`);
+        lines.push(...writeDocstring(namingHint.doc, " "));
         if (Object.keys(type.fields).length <= 0) {
           lines.push(" pass");
         }
@@ -128,6 +129,7 @@ function writeSchema(
         const members = schema.unionToMembers.get(type)!;
         switch (members.kind) {
           case "interfaces": {
+            lines.push(...writeComment(namingHint.doc, ""));
             lines.push(`type ${name} = Annotated[`);
             lines.push(" Union[");
             for (const member of Object.values(members.members)) {
@@ -279,6 +281,31 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
+}
+
+function writeDocstring(doc: string, indent: " "): readonly string[] {
+  if (doc.length <= 0) {
+    return [];
+  } else if (doc.length <= 68 && !doc.includes("\n")) {
+    return [`${indent}"""${doc}"""`];
+  } else {
+    return [
+      `${indent}"""`,
+      ...doc
+        .split("\n")
+        .map((line) => `${indent}${line.replace(/"""/g, "'''")}`),
+      `${indent}"""`,
+      "",
+    ];
+  }
+}
+
+function writeComment(doc: string, indent: ""): readonly string[] {
+  if (doc.length <= 0) {
+    return [];
+  } else {
+    return doc.split("\n").map((line) => `${indent}# ${line}`);
+  }
 }
 
 function scaleIndenting(input: string): string {

@@ -42,12 +42,18 @@ class schema:
     @final
     class MyTemplate:
       class Input(BaseModel):
+        """The input"""
         firstName: str
         lastName: str
         fooToBar: Optional[dict[str, int]]
 
 
       class Output(BaseModel):
+        """
+        The
+        output
+        """
+
         x: int
 
 

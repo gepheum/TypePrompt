@@ -347,7 +347,7 @@ function collectNamingHints(
               ...context.namePieces,
               { kind: "field", name: field.name.text },
             ],
-            doc: null,
+            doc: "",
           };
           collect(field.type, newContext);
         }
@@ -387,7 +387,7 @@ function collectNamingHints(
                           },
                   },
                 ],
-                doc: null,
+                doc: "",
               };
               collect(member, newContext);
             }
@@ -404,7 +404,7 @@ function collectNamingHints(
   for (const type of Object.values(schema.typeDeclarations)) {
     collect(type.valueType, {
       namePieces: [{ kind: "type", name: type.name.text }],
-      doc: null,
+      doc: type.doc,
     });
   }
 

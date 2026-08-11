@@ -42,12 +42,17 @@
   </tools>
 
   <schema>
+    /** The input */
     type Input = {
       firstName: string;
       lastName: string;
       fooToBar?: {[name: string]: integer};
     };
 
+    /**
+     * The
+     * output
+     */
     type Output = {
       x: integer;
     };
