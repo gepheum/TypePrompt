@@ -2,9 +2,6 @@ TYPESCRIPT:
   - e2e test
   - add example of hook functions
 
-C-TAG:
-  - Do allow the content to be quoted
-
 JSON:
   - add 'suggestions' when parsing JSON and a field is not found
   - add tests, I feel like the computation of the score might be imperfect
