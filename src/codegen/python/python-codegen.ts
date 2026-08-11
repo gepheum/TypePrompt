@@ -1,5 +1,3 @@
-// TODO: field name: lowercase, avoid keywords, avoid conflcit with pydantic generated symbols...
-
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
