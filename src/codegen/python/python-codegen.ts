@@ -1,4 +1,3 @@
-// TODO: pydoc
 // TODO: field name: lowercase, avoid keywords, avoid conflcit with pydantic generated symbols...
 
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
