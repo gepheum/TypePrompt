@@ -1,11 +1,11 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 
-class T_Meta:
+class T_Meta(BaseModel):
  temperature: float
- foobar: 'T_Meta_Foobar'
- zooBar: 'T_Meta_ZooBar'
+ foobar: Optional['T_Meta_Foobar']
+ zooBar: Optional['T_Meta_ZooBar']
 
 
 type T_Meta_Foobar = Literal[
@@ -23,12 +23,12 @@ type T_Meta_ZooBar = Annotated[
 ]
 
 
-class T_Meta_ZooBar_KindFoo:
+class T_Meta_ZooBar_KindFoo(BaseModel):
  kind: Literal['foo']
  foo: str
 
 
-class T_Meta_ZooBar_KindBar:
+class T_Meta_ZooBar_KindBar(BaseModel):
  kind: Literal['bar']
  bar: str
 

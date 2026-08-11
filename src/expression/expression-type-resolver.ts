@@ -7,6 +7,7 @@ import {
   NullableType,
   NullType,
 } from "./expression-types.js";
+import { resolveFieldType } from "./get-field-type.js";
 
 export type ResolvedExpressionType<HasValContext extends boolean> =
   | ResolvedType
@@ -100,8 +101,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
           ],
         };
       }
-      const fieldType = resolveType(field.type, schema);
-      return field.optional ? { kind: "nullable", type: fieldType } : fieldType;
+      return resolveFieldType(field, schema);
     }
   }
 }

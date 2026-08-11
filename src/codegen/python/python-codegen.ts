@@ -1,14 +1,12 @@
 // TODO: pydoc
-// TODO: field name: lowercase, avoid keywords
 // TODO: optional fields...
-// TODO: Notification = Annotated[
-//     Union[EmailNotification, SMSNotification, PushNotification],
-//     Field(discriminator="type")
-// ]
+// TODO: field name: lowercase, avoid keywords
 // TODO: pydantic
 
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
+import { NullableType } from "../../expression/expression-types.js";
+import { resolveFieldType } from "../../expression/get-field-type.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
@@ -31,7 +29,7 @@ export function generatePythonCode(
 
 function writeAll(compilationResult: ValidCompilationResult): string {
   return [
-    "from typing import Annotated, Literal, Union",
+    "from typing import Annotated, Literal, Optional, Union",
     "from pydantic import BaseModel, Field\n\n",
     writeSchema(compilationResult.metaSchema, {
       typePrefix: "T_",
@@ -54,12 +52,13 @@ function writeSchema(
     const name = typePrefix.concat(makeNameFromHint(namingHint));
     switch (type.kind) {
       case "interface": {
-        lines.push(`class ${name}:`);
+        lines.push(`class ${name}(BaseModel):`);
         if (Object.keys(type.fields).length <= 0) {
           lines.push(" pass");
         }
         for (const field of Object.values(type.fields)) {
-          const type = writeType(field.type, schema, options);
+          const type = writeType(
+            resolveFieldType(field, schema), schema, options);
           lines.push(` ${field.name.text}: ${type}`);
         }
         break;
@@ -107,7 +106,7 @@ function writeSchema(
 }
 
 function writeType(
-  type: Type,
+  type: Type | NullableType,
   schema: Schema,
   options: {
     readonly typePrefix: string;
@@ -139,6 +138,10 @@ function writeType(
       const typePrefix = shared ? options.sharedTypePrefix : options.typePrefix;
       const typeName = typePrefix.concat(makeNameFromHint(namingHint!));
       return `'${typeName}'`;
+    }
+    case "nullable": {
+      const valueType = writeType(type.type, schema, options);
+      return `Optional[${valueType}]`;
     }
     case "primitive": {
       switch (type.primitive.text) {
