@@ -30,33 +30,84 @@ export function generatePythonCode(
 
 function writeAll(compilationResult: ValidCompilationResult): string {
   return [
-    "from typing import Annotated, Literal, Optional, Union",
+    "from typing import Annotated, Literal, Optional, Union, final",
     "from pydantic import BaseModel, Field\n\n",
-    scaleIndenting(
-      [
-        "class schema:",
-        " class meta:",
-        indent(
-          writeSchema(compilationResult.metaSchema, {
-            typePrefix: "schema.meta.",
-            sharedTypePrefix: "never.",
-          }),
-          "  ",
-        ),
-      ].join("\n"),
-    ),
+    scaleIndenting(writeSchemas(compilationResult)),
   ].join("\n");
+}
+
+function writeSchemas(compilationResult: ValidCompilationResult): string {
+  const lines = [
+    "@final",
+    "class schema:",
+    " @final",
+    " class meta:",
+    writeSchema(compilationResult.metaSchema, {
+      typePrefix: "schema.meta.",
+      indent: "  ",
+      requiredTypes: ["Meta"],
+    }),
+  ];
+  for (const namespace of Object.values(compilationResult.namespaces)) {
+    if (
+      namespace.schema.namingHints.defaultScope.size <= 0 &&
+      namespace.templates.length <= 0 &&
+      Object.keys(namespace.tools).length <= 0
+    ) {
+      continue;
+    }
+    const namespaceName: string = namespace.name;
+    lines.push(` @final`);
+    lines.push(` class ${namespaceName}:`);
+    if (namespace.schema.namingHints.defaultScope.size >= 1) {
+      lines.push(`  @final`);
+      lines.push("  class shared:");
+      lines.push(
+        writeSchema(namespace.schema, {
+          typePrefix: `schema.${namespaceName}.shared.`,
+          indent: "  ",
+        }),
+      );
+    }
+    for (const template of namespace.templates) {
+      const templateName: string = template.template.name.text;
+      lines.push(`  @final`);
+      lines.push(`  class ${templateName}:`);
+      lines.push(
+        writeSchema(template.schema, {
+          typePrefix: `schema.${namespaceName}.${templateName}.`,
+          sharedTypePrefix: `schema.${namespaceName}.shared.`,
+          indent: "   ",
+          requiredTypes: ["Input", "Output"],
+        }),
+      );
+    }
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName: string = tool.tool.name.text;
+      lines.push(`  @final`);
+      lines.push(`  class ${toolName}:`);
+      lines.push(
+        writeSchema(tool.schema, {
+          typePrefix: `schema.${namespaceName}.${toolName}.`,
+          sharedTypePrefix: `schema.${namespaceName}.shared.`,
+          indent: "   ",
+          requiredTypes: ["Input", "Output"],
+        }),
+      );
+    }
+  }
+  return lines.join("\n");
 }
 
 function writeSchema(
   schema: Schema,
   options: {
     readonly typePrefix: string;
-    readonly sharedTypePrefix: string;
+    readonly sharedTypePrefix?: string;
+    readonly indent: " " | "  " | "   ";
+    readonly requiredTypes?: readonly string[];
   },
 ): string {
-  const { typePrefix } = options;
-
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
@@ -109,13 +160,30 @@ function writeSchema(
         throw new Error(type satisfies never);
       }
     }
-    lines.push("");
-    lines.push("");
+    lines.push(...["", ""]);
   }
 
-  // TODO: possibly output alias for Input, Output, Meta...
+  for (const requiredType of options.requiredTypes ?? []) {
+    const declaration = schema.typeDeclarations[requiredType];
+    if (declaration) {
+      if (
+        declaration.valueType.kind !== "interface" &&
+        declaration.valueType.kind !== "union"
+      ) {
+        const type = writeType(declaration.valueType, schema, options);
+        lines.push(`type ${requiredType} = ${type}`);
+        lines.push(...["", ""]);
+      }
+    } else {
+      lines.push(`type ${requiredType} = Literal[None]`);
+      lines.push(...["", ""]);
+    }
+  }
 
-  return lines.join("\n");
+  const { indent } = options;
+  return lines
+    .map((line) => (line.length <= 0 ? line : indent.concat(line)))
+    .join("\n");
 }
 
 function writeType(
@@ -123,7 +191,7 @@ function writeType(
   schema: Schema,
   options: {
     readonly typePrefix: string;
-    readonly sharedTypePrefix: string;
+    readonly sharedTypePrefix?: string;
   },
 ): string {
   switch (type.kind) {
@@ -148,7 +216,10 @@ function writeType(
         namingHint = schema.namingHints.shared.get(type);
         shared = true;
       }
-      const typePrefix = shared ? options.sharedTypePrefix : options.typePrefix;
+      const typePrefix = shared
+        ? options.sharedTypePrefix!
+        : options.typePrefix;
+      if (!typePrefix) throw new Error();
       const typeName = typePrefix.concat(makeNameFromHint(namingHint!));
       return `'${typeName}'`;
     }
@@ -211,10 +282,6 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
-}
-
-function indent(input: string, indent: " " | "  " | "   " = " "): string {
-  return input.replace(/^(?=.+$)/gm, indent);
 }
 
 function scaleIndenting(input: string): string {

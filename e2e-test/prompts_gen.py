@@ -1,8 +1,10 @@
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Optional, Union, final
 from pydantic import BaseModel, Field
 
 
+@final
 class schema:
+  @final
   class meta:
     class Meta(BaseModel):
       temperature: float
@@ -33,4 +35,30 @@ class schema:
     class Meta_ZooBar_KindBar(BaseModel):
       kind: Literal['bar']
       bar: str
+
+
+  @final
+  class Main:
+    @final
+    class MyTemplate:
+      class Input(BaseModel):
+        firstName: str
+        lastName: str
+        fooToBar: Optional[dict[str, int]]
+
+
+      class Output(BaseModel):
+        x: int
+
+
+    @final
+    class myTool:
+      class Input(BaseModel):
+        foo: str
+        x: Optional[int]
+        y: Optional[int]
+
+
+      class Output(BaseModel):
+        bar: str
 
