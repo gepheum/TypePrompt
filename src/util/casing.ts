@@ -51,3 +51,21 @@ export function capitalize(s: string): string {
 export function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
+
+/**
+ * Converts a lowerCamelCase or UpperCamelCase identifier into lower_underscore format.
+ * 
+ * Correctly handles acronyms (e.g., `parseHTMLDocument` -> `parse_html_document`) and
+ * embedded digits (e.g., `IPv4Address` -> `ipv4_address`).
+ */
+export function camelToSnakeCase(identifier: string): string {
+  return identifier
+    // Insert underscore between consecutive uppercase letters when followed by lowercase (acronym boundary)
+    // Example: "HTMLDocument" -> "HTML_Document"
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    // Insert underscore between lowercase letter/digit and uppercase letter (word boundary)
+    // Example: "parseHTML" -> "parse_HTML", "v2Api" -> "v2_Api"
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    // Convert the entire result to lowercase
+    .toLowerCase();
+}

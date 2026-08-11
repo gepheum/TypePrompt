@@ -1,8 +1,5 @@
 // TODO: pydoc
-// TODO: I think I can just store the namespaces like this: class schema: class meta: /* schema definition */
-// TODO: optional fields...
 // TODO: field name: lowercase, avoid keywords, avoid conflcit with pydantic generated symbols...
-// TODO: pydantic
 
 import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
