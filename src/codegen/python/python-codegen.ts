@@ -121,6 +121,7 @@ function writeSchema(
             schema,
             options,
           );
+          lines.push(...writeComment(field.doc, ' '));
           lines.push(` ${field.name.text}: ${type}`);
         }
         break;
@@ -287,7 +288,7 @@ function writeDocstring(doc: string, indent: " "): readonly string[] {
   if (doc.length <= 0) {
     return [];
   } else if (doc.length <= 68 && !doc.includes("\n")) {
-    return [`${indent}"""${doc}"""`];
+    return [`${indent}"""${doc}"""`, ""];
   } else {
     return [
       `${indent}"""`,
@@ -300,7 +301,7 @@ function writeDocstring(doc: string, indent: " "): readonly string[] {
   }
 }
 
-function writeComment(doc: string, indent: ""): readonly string[] {
+function writeComment(doc: string, indent: '' | " "): readonly string[] {
   if (doc.length <= 0) {
     return [];
   } else {

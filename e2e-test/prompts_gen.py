@@ -7,6 +7,7 @@ class schema:
   @final
   class meta:
     class Meta(BaseModel):
+      # Temperature setting for the template
       temperature: float
       foobar: Optional['schema.meta.Meta_Foobar']
       zooBar: Optional['schema.meta.Meta_ZooBar']
@@ -43,6 +44,7 @@ class schema:
     class MyTemplate:
       class Input(BaseModel):
         """The input"""
+
         firstName: str
         lastName: str
         fooToBar: Optional[dict[str, int]]
