@@ -1,4 +1,5 @@
 // TODO: pydoc
+// TODO: I think I can just store the namespaces like this: class schema: class meta: /* schema definition */
 // TODO: optional fields...
 // TODO: field name: lowercase, avoid keywords
 // TODO: pydantic
@@ -120,7 +121,7 @@ function writeType(
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `Sequence[${writtenElement}]`;
+      return `list[${writtenElement}]`;
     }
     case "boolean-literal": {
       return type.value ? "Literal[True]" : "Literal[False]";
@@ -159,7 +160,7 @@ function writeType(
     }
     case "record": {
       const valueType = writeType(type.valueType, schema, options);
-      return `Mapping[str, ${valueType}]`;
+      return `dict[str, ${valueType}]`;
     }
     case "shared-type-name": {
       const declaration = schema.sharedDeclarations[type.name.text]!;
@@ -198,8 +199,4 @@ function makeNameFromHint(hint: NamingHint): string {
       }
     })
     .join("_");
-}
-
-function indent(text: string): string {
-  return text.replace(/\n/g, "\n ");
 }
