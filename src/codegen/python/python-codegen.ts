@@ -1,4 +1,13 @@
-import type { ValidCompilationResult } from "../../compiler/compiler-types.js";
+// I think I am leaning toward:
+//   PromptMaker().get_template('....').resolve(FOO)
+//   tools_of("fooo").
+//      - makeImpls
+//      - makeMap
+//      - pick
+//   OR maybe I put the 'tools' in template???
+
+import type { ValidatedTemplate, ValidCompilationResult, ValidTemplate } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
@@ -24,15 +33,37 @@ export function generatePythonCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
+  const { metaSchema, namespaces, templates, tools } = compilationResult;
+
   return [
-    "from typing import Annotated, Any, Literal, Optional, Union, final",
+    "from typing import Annotated, Any, Literal, Never, Optional, Union, final",
     "from pydantic import BaseModel, Field\n\n",
     scaleIndenting(
-      [writeUserDefinedDatatypes(compilationResult), writeSpecDatatypes()].join(
-        "\n",
-      ),
+      [
+        writeTemplateIdEnum(Object.values(templates)),
+        writeUserDefinedDatatypes(compilationResult),
+        writeSpecDatatypes(),
+      ].map((code) => code.trimEnd()).join("\n\n\n"),
     ),
   ].join("\n");
+}
+
+function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
+  const lines = [
+    "# Uniquely identifies a prompt template.",
+  ];
+  if (templates.length <= 0) {
+    lines.push("type TemplateId = Never");
+  } else {
+    lines.push("type TemplateId = Literal[");
+    for (const template of templates) {
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateName = template.template.name.text;
+      lines.push(` '${namespace}:${templateName}',`);
+    }
+    lines.push("]");
+  }
+  return lines.join("\n");
 }
 
 function writeUserDefinedDatatypes(
@@ -148,7 +179,8 @@ function writeSchema(
           );
           lines.push(...writeComment(field.doc, " "));
           const pyName = toPyName(field.name.text, "field_name");
-          lines.push(` ${pyName}: ${type}`);
+          const defaultValue = field.optional ? " = None" : "";
+          lines.push(` ${pyName}: ${type}${defaultValue}`);
         }
         break;
       }

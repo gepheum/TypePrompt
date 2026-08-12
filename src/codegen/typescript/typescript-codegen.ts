@@ -2,7 +2,6 @@ import type {
   NamespaceResult,
   Template,
   Tool,
-  ValidatedTemplate,
   ValidatedTool,
   ValidCompilationResult,
   ValidNamespaceResult,
@@ -52,8 +51,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       STATIC_SNIPPETS["typescript-public-types"],
       reformat(
         [
-          writeTemplateIdEnum(Object.values(templates), Object.values(tools)),
-          writeToolsType(Object.values(templates), Object.values(tools)),
+          writeTemplateIdEnum(Object.values(templates)),
+          writeToolsType(Object.values(templates)),
           writeInputOutputTypes(Object.values(templates)),
           writeUserDefinedDatatypes(metaSchema, Object.values(namespaces)),
           writeZodSchemas(Object.values(templates), Object.values(tools)),
@@ -144,12 +143,12 @@ function writeUserDefinedDatatypes(
 }
 
 function writeZodSchemas(
-  templates: readonly ValidatedTemplate[],
+  templates: readonly ValidTemplate[],
   tools: readonly ValidatedTool[],
 ): string {
   const lines = ["const zodSchemas = {"];
   const writeEntry = (
-    input: ValidatedTemplate | ValidatedTool,
+    input: ValidTemplate | ValidatedTool,
     named: Template | Tool,
   ): void => {
     const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
@@ -177,10 +176,7 @@ function writeZodSchemas(
   return lines.join("\n");
 }
 
-function writeTemplateIdEnum(
-  templates: readonly ValidatedTemplate[],
-  tools: readonly ValidatedTool[],
-): string {
+function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
   const lines = [
     "/** Uniquely identifies a prompt template. */",
     "export type TemplateId = (",
@@ -198,10 +194,7 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-function writeToolsType(
-  templates: readonly ValidTemplate[],
-  tools: readonly ValidatedTool[],
-): string {
+function writeToolsType(templates: readonly ValidTemplate[]): string {
   const lines = [
     "/** The tools available from the given template. */",
     "export type Tools<Id extends TemplateId> = {",
@@ -226,7 +219,7 @@ function writeToolsType(
 }
 
 function writeInputOutputTypes(
-  templates: readonly ValidatedTemplate[],
+  templates: readonly ValidTemplate[],
 ): string {
   const lines: string[] = [];
 

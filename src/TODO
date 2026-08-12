@@ -1,3 +1,6 @@
+CODEGEN:
+  - Move all the non-TS code to 'playground'
+
 TYPESCRIPT:
   - e2e test
   - add example of hook functions

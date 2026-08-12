@@ -1,5 +1,11 @@
-from typing import Annotated, Any, Literal, Optional, Union, final
+from typing import Annotated, Any, Literal, Never, Optional, Union, final
 from pydantic import BaseModel, Field
+
+
+# Uniquely identifies a prompt template.
+type TemplateId = Literal[
+  'Main:MyTemplate',
+]
 
 
 @final
@@ -10,8 +16,8 @@ class schema:
     class Meta(BaseModel):
       # Temperature setting for the template
       temperature: float
-      foobar: Optional['schema.meta.Meta_Foobar']
-      zoo_bar: Optional['schema.meta.Meta_ZooBar']
+      foobar: Optional['schema.meta.Meta_Foobar'] = None
+      zoo_bar: Optional['schema.meta.Meta_ZooBar'] = None
 
 
     # Exported as 'schema.meta.Meta_Foobar'
@@ -53,7 +59,7 @@ class schema:
 
         first_name: str
         last_name: str
-        foo_to_bar: Optional[dict[str, int]]
+        foo_to_bar: Optional[dict[str, int]] = None
 
 
       # Exported as 'schema.main.my_template.Output'
@@ -71,8 +77,8 @@ class schema:
       # Exported as 'schema.main.my_tool.Input'
       class Input(BaseModel):
         foo: str
-        x: Optional[int]
-        y: Optional[int]
+        x: Optional[int] = None
+        y: Optional[int] = None
 
 
       # Exported as 'schema.main.my_tool.Output'
@@ -97,8 +103,8 @@ class _internal:
     tools: list['_internal.TemplateTool']
     contents: '_internal.TemplateContents'
     snippets: dict[str, '_internal.Snippet']
-    input_json_schema: Optional[Any]
-    output_json_schema: Optional[Any]
+    input_json_schema: Optional[Any] = None
+    output_json_schema: Optional[Any] = None
 
 
   type OutputFormat = Literal[
@@ -133,10 +139,10 @@ class _internal:
 
 
   class TemplateContent(BaseModel):
-    meta: Optional[Any]
-    system: Optional[list['_internal.BodyPiece']]
-    user: Optional[list['_internal.BodyPiece']]
-    examples: Optional[list['_internal.FewShotExample']]
+    meta: Optional[Any] = None
+    system: Optional[list['_internal.BodyPiece']] = None
+    user: Optional[list['_internal.BodyPiece']] = None
+    examples: Optional[list['_internal.FewShotExample']] = None
 
 
   class FewShotExample(BaseModel):
@@ -256,8 +262,5 @@ class _internal:
     id: str
     name: str
     description: str
-    input_json_schema: Optional[Any]
-    output_json_schema: Optional[Any]
-
-
-
+    input_json_schema: Optional[Any] = None
+    output_json_schema: Optional[Any] = None
