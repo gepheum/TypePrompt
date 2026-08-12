@@ -344,5 +344,5 @@ _templates_data: Final = _internal.Templates.model_validate_json(
 def _get_template_impl(
   id: TemplateId,
   data: _internal.Templates | None,
-) -> Template[Any, Any, Any]:
+) -> Any:
   data = data or _templates_data
