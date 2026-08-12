@@ -7,26 +7,26 @@ import pydantic
 
 
 @dataclass(frozen=True)
-class Prompt[Output, Id=TemplateId]:
+class Prompt[Output]:
   meta: schema.meta.Meta
   system_message: str
   user_message: str
-  template_id: Id
-  examples: Sequence["FewShotExample"]
+  template_id: 'TemplateId'
+  examples: Sequence['FewShotExample']
   output_format: OutputFormat[Output]
 
 
 @dataclass(frozen=True)
 class FewShotExample:
   user_message: str
-  intermediate_steps: Sequence["IntermediateStepExample"];
+  intermediate_steps: Sequence['IntermediateStepExample'];
   response: str
 
 
 @dataclass(frozen=True)
 class IntermediateStepExample:
   # Tool calls made in parallel at this step.
-  tool_calls: Sequence["ToolCallExample"]
+  tool_calls: Sequence['ToolCallExample']
 
 
 @dataclass(frozen=True)
@@ -41,13 +41,13 @@ class ToolCallExample:
 
 @dataclass(frozen=True)
 class JsonOutputFormat[Output]:
-  format: Literal["json"]
+  format: Literal['json']
   type_adapter: pydantic.TypeAdapter[Output]
 
 
 @dataclass(frozen=True)
 class TextOutputFormat:
-  format: Literal["text"]
+  format: Literal['text']
 
 
 type OutputFormat[Output] = JsonOutputFormat[Output] | TextOutputFormat
