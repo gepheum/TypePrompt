@@ -1,3 +1,6 @@
+// Copied from generated code. Source of truth: 'src/runtime/runtime-types-schema.ts'
+// Do not edit.
+
 export type Templates = {
   readonly signature: string;
   readonly templates: { [id: string]: Template };

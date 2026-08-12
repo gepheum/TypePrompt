@@ -1,3 +1,6 @@
+# Copied from generated code. Source of truth: 'src/runtime/runtime-types-schema.ts'
+# Do not edit.
+
 from typing import Annotated, Any, Literal, Optional, Union, final
 from pydantic import BaseModel, Field
 
