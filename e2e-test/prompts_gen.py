@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Final, Literal, Never, Optional, Protocol, Union, final, overload
+from typing import Annotated, Any, Final, Literal, Mapping, Never, Optional, Protocol, Union, final, overload
 
 import pydantic
 
@@ -154,6 +154,18 @@ class schema:
       # Exported as 'schema.main.my_tool.Output'
       class Output(pydantic.BaseModel):
         bar: str
+
+
+_type_adapters: Final = {
+  "Main:MyTemplate": (
+    pydantic.TypeAdapter[schema.main.my_template.Input],
+    pydantic.TypeAdapter[schema.main.my_template.Output],
+  ),
+  "Main:myTool": (
+    pydantic.TypeAdapter[schema.main.my_tool.Input],
+    pydantic.TypeAdapter[schema.main.my_tool.Output],
+  ),
+}
 
 
 @final

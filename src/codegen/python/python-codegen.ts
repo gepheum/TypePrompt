@@ -69,7 +69,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 function writePromptMaker(templates: readonly ValidTemplate[]): string {
   const writeOverloadSig = (t: ValidTemplate): readonly string[] => {
     const id = getId(t.template);
-    const typePrefix = getTypePrefix(t);
+    const typePrefix = getTypePrefix(t.template);
     return [
       " def get_template(",
       "  self,",
@@ -200,21 +200,11 @@ function writePydanticTypeAdapters(
     named: Template | Tool,
   ): void => {
     const id = getId(named);
-
-    const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
-    const name = named.name.text;
-    const zodInputType = writeZodType(input.schema, "Input", {
-      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
-      sharedTypePrefix: `$.${namespace}.Shared.`,
-    });
-    const zodOutputType = writeZodType(input.schema, "Output", {
-      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
-      sharedTypePrefix: `$.${namespace}.Shared.`,
-    });
-    lines.push(`"${namespace}:${name}": {`);
-    lines.push(`input: ${zodInputType},`);
-    lines.push(`output: ${zodOutputType},`);
-    lines.push("},");
+    const typePrefix = getTypePrefix(named);
+    lines.push(` "${id}": (`);
+    lines.push(`  pydantic.TypeAdapter[${typePrefix}Input],`);
+    lines.push(`  pydantic.TypeAdapter[${typePrefix}Output],`);
+    lines.push(" ),");
   };
   for (const template of templates) {
     writeEntry(template, template.template);
@@ -479,14 +469,14 @@ function toPyName(
   return conflict ? identifier.concat("_") : identifier;
 }
 
-function getTypePrefix(template: ValidTemplate): string {
+function getTypePrefix(input: Template | Tool): string {
   return [
     "schema",
     toPyName(
-      template.template.namespace?.text ?? DEFAULT_NAMESPACE,
+      input.namespace?.text ?? DEFAULT_NAMESPACE,
       "snake_case_class_name",
     ),
-    toPyName(template.template.name.text, "snake_case_class_name"),
+    toPyName(input.name.text, "snake_case_class_name"),
     "",
   ].join(".");
 }
