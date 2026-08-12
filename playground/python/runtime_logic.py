@@ -12,7 +12,7 @@ import pydantic
 
 @dataclass(frozen=True)
 class PromptMaker:
-  _data: '_internal.Templates'
+  _data: _internal.Templates
 
   @overload
   def get_template(self, id: Literal["Main:MyTemplate"]) -> Template[str, str, None]:

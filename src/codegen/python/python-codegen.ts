@@ -57,7 +57,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     ),
   ]
     .map((code) => code.trimEnd())
-    .join("\n\n\n");
+    .join("\n\n\n")
+    .concat("\n");
 }
 
 function writePromptMaker(templates: readonly ValidTemplate[]): string {
@@ -74,7 +75,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
       " ) -> Prompt[",
       `  ${typePrefix}Input,`,
       `  ${typePrefix}Output,`,
-      " ]:"
+      " ]:",
     ];
   };
 
@@ -333,12 +334,11 @@ function writeType(
         ? options.sharedTypePrefix!
         : options.typePrefix;
       if (!typePrefix) throw new Error();
-      const typeName = typePrefix.concat(makeNameFromHint(namingHint!));
-      return `'${typeName}'`;
+      return typePrefix.concat(makeNameFromHint(namingHint!));
     }
     case "nullable": {
       const valueType = writeType(type.type, schema, options);
-      return `Optional[${valueType}]`;
+      return type.type.kind === "any" ? valueType : valueType.concat(" | None");
     }
     case "primitive": {
       switch (type.primitive.text) {
@@ -432,11 +432,11 @@ function toPyName(
 function getTypePrefix(template: ValidTemplate): string {
   return [
     "schema",
-    toPyName(template.template.namespace?.text ?? DEFAULT_NAMESPACE, "snake_case_class_name"),
     toPyName(
-        template.template.name.text,
-        "snake_case_class_name",
-      ),
+      template.template.namespace?.text ?? DEFAULT_NAMESPACE,
+      "snake_case_class_name",
+    ),
+    toPyName(template.template.name.text, "snake_case_class_name"),
     "",
   ].join(".");
 }
