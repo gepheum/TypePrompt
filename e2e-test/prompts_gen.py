@@ -11,9 +11,9 @@ class Prompt[Output]:
   meta: schema.meta.Meta
   system_message: str
   user_message: str
-  template_id: 'TemplateId'
   examples: Sequence['FewShotExample']
   output_format: OutputFormat[Output]
+  template_id: 'TemplateId'
 
 
 @dataclass(frozen=True)

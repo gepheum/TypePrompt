@@ -40,6 +40,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   const { metaSchema, namespaces, templates, tools } = compilationResult;
 
   return [
+    STATIC_SNIPPETS["python-imports"],
+    scaleIndenting(writePromptMaker(compilationResult)),
     STATIC_SNIPPETS["python-public-types"],
     scaleIndenting(
       [
