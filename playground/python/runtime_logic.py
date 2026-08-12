@@ -4,7 +4,7 @@ from runtime_types import _internal
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Final, Literal, Mapping, Never, Optional, Protocol, Union, final, overload
+from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload
 
 import pydantic
 # </static:python-imports>
