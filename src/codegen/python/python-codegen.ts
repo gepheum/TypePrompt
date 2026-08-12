@@ -1,6 +1,3 @@
-// I no longer need to quote types not yet defined!!!
-// '| None' instead of optional?
-// No Optional[Any]
 // I think I am leaning toward:
 //   PromptMaker().get_template('....').resolve(FOO)
 //   tools_of("fooo").
@@ -57,6 +54,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         .map((code) => code.trimEnd())
         .join("\n\n\n"),
     ),
+    STATIC_SNIPPETS["python-logic"],
   ]
     .map((code) => code.trimEnd())
     .join("\n\n\n")
@@ -84,7 +82,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
   const lines = [
     "@dataclass(frozen=True)",
     "class PromptMaker:",
-    " _data: _internal.Templates",
+    " _data: _internal.Templates | None = None",
   ];
   if (templates.length <= 0) {
     // pass
@@ -302,14 +300,13 @@ function writeSchema(
     .join("\n");
 }
 
-
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const templatesData = makeTemplates(compilationResult, {
     includeJsonSchemas: false,
   });
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   return [
-    "_templates_data = _internal.Templates.model_validate_json(",
+    "_templates_data: Final = _internal.Templates.model_validate_json(",
     ` ${stringifiedJson},`,
     ")",
   ].join("\n");

@@ -4,7 +4,7 @@ from runtime_types import _internal
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Literal, Never, Optional, Protocol, Union, final, overload
+from typing import Annotated, Any, Final, Literal, Never, Optional, Protocol, Union, final, overload
 
 import pydantic
 # </static:python-imports>
@@ -12,7 +12,7 @@ import pydantic
 
 @dataclass(frozen=True)
 class PromptMaker:
-  _data: _internal.Templates
+  _data: _internal.Templates | None = None
 
   @overload
   def get_template(self, id: Literal["Main:MyTemplate"]) -> Template[str, str, None]:
@@ -98,8 +98,23 @@ class schema:
     class other_template:
       type Input = int
       type Output = str
+
+
+_templates_data: Final = (
+  _internal.Templates(
+    signature="",
+    templates=dict(),
+    tools=dict(),
+    source_files=dict(),
+  )
+)
 # </generated>
 
 
-class _PromptMakerImpl:
-  pass
+# <static:python-logic>
+def _get_template_impl(
+  id: TemplateId,
+  data: _internal.Templates | None,
+) -> Template[Any, Any, Any]:
+  data = data or _templates_data
+# </static:python-logic>
