@@ -7,10 +7,14 @@
 //   OR maybe I put the 'tools' in template???
 
 import type {
+  Template,
+  Tool,
+  ValidatedTool,
   ValidCompilationResult,
   ValidTemplate,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
@@ -48,6 +52,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       [
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
+        writePydanticTypeAdapters(Object.values(templates), Object.values(tools)),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
       ]
@@ -63,10 +68,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
 function writePromptMaker(templates: readonly ValidTemplate[]): string {
   const writeOverloadSig = (t: ValidTemplate): readonly string[] => {
-    const id = [
-      t.template.namespace?.text ?? DEFAULT_NAMESPACE,
-      t.template.name.text,
-    ].join(":");
+    const id = getId(t.template);
     const typePrefix = getTypePrefix(t);
     return [
       " def get_template(",
@@ -185,6 +187,42 @@ function writeUserDefinedDatatypes(
       );
     }
   }
+  return lines.join("\n");
+}
+
+function writePydanticTypeAdapters(
+  templates: readonly ValidTemplate[],
+  tools: readonly ValidatedTool[],
+): string {
+  const lines = ["_type_adapters: Final = {"];
+  const writeEntry = (
+    input: ValidTemplate | ValidatedTool,
+    named: Template | Tool,
+  ): void => {
+    const id = getId(named);
+
+    const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
+    const name = named.name.text;
+    const zodInputType = writeZodType(input.schema, "Input", {
+      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
+      sharedTypePrefix: `$.${namespace}.Shared.`,
+    });
+    const zodOutputType = writeZodType(input.schema, "Output", {
+      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
+      sharedTypePrefix: `$.${namespace}.Shared.`,
+    });
+    lines.push(`"${namespace}:${name}": {`);
+    lines.push(`input: ${zodInputType},`);
+    lines.push(`output: ${zodOutputType},`);
+    lines.push("},");
+  };
+  for (const template of templates) {
+    writeEntry(template, template.template);
+  }
+  for (const tool of tools) {
+    writeEntry(tool, tool.tool);
+  }
+  lines.push("}");
   return lines.join("\n");
 }
 

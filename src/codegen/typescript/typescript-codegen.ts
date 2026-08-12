@@ -8,6 +8,7 @@ import type {
   ValidTemplate,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -185,9 +186,8 @@ function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
     lines.push(" never");
   } else {
     for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-      const templateName = template.template.name.text;
-      lines.push(`| "${namespace}:${templateName}"`);
+      const templateId = getId(template.template);
+      lines.push(`| "${templateId}"`);
     }
   }
   lines.push(");");
@@ -201,8 +201,7 @@ function writeToolsType(templates: readonly ValidTemplate[]): string {
   ];
   for (const template of templates) {
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateName = template.template.name.text;
-    const templateId = `${namespace}:${templateName}`;
+    const templateId = getId(template.template);
     lines.push(`"${templateId}": {`);
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.tool.name.text;
