@@ -20,7 +20,7 @@ class PromptMaker:
   @overload
   def get_template(self, id: Literal["Main:OtherTemplate"]) -> Template[int, str, None]:
     ...
-  def get_template(self, id: TemplateId) -> Any:
+  def get_template(self, id: TemplateId) -> Template:
     return _get_template_impl(id, self._data)
 
 
@@ -112,9 +112,21 @@ _templates_data: Final = (
 
 
 # <static:python-logic>
+@dataclass(frozen=True)
+class _TemplateImpl[Input, Output, ToolImpls]:
+  template_data: _internal.Template
+  data: _internal.Templates
+
+  def make(self, input: Input) -> Prompt[Output, ToolImpls]:
+    pass
+
+
 def _get_template_impl(
   id: TemplateId,
   data: _internal.Templates | None,
-) -> Any:
+) -> Template:
   data = data or _templates_data
+  template = data.templates[id]
+  ret: _TemplateImpl = _TemplateImpl(template_data=template, data=data)
+  return ret
 # </static:python-logic>
