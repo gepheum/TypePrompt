@@ -218,9 +218,7 @@ function writeToolsType(templates: readonly ValidTemplate[]): string {
   return lines.join("\n");
 }
 
-function writeInputOutputTypes(
-  templates: readonly ValidTemplate[],
-): string {
+function writeInputOutputTypes(templates: readonly ValidTemplate[]): string {
   const lines: string[] = [];
 
   for (const what of ["Input", "Output"]) {

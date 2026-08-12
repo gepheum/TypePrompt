@@ -6,13 +6,17 @@
 //      - pick
 //   OR maybe I put the 'tools' in template???
 
-import type { ValidatedTemplate, ValidCompilationResult, ValidTemplate } from "../../compiler/compiler-types.js";
+import type {
+  ValidCompilationResult,
+  ValidTemplate,
+} from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
+import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { camelToSnakeCase, capitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -36,22 +40,23 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   const { metaSchema, namespaces, templates, tools } = compilationResult;
 
   return [
-    "from typing import Annotated, Any, Literal, Never, Optional, Union, final",
-    "from pydantic import BaseModel, Field\n\n",
+    STATIC_SNIPPETS["python-public-types"],
     scaleIndenting(
       [
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
-      ].map((code) => code.trimEnd()).join("\n\n\n"),
+      ]
+        .map((code) => code.trimEnd())
+        .join("\n\n\n"),
     ),
-  ].join("\n");
+  ]
+    .map((code) => code.trimEnd())
+    .join("\n\n\n");
 }
 
 function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-  const lines = [
-    "# Uniquely identifies a prompt template.",
-  ];
+  const lines = ["# Uniquely identifies a prompt template."];
   if (templates.length <= 0) {
     lines.push("type TemplateId = Never");
   } else {
@@ -157,7 +162,7 @@ function writeSchema(
     readonly requiredTypes?: readonly string[];
   },
 ): string {
-  const {typePrefix} = options;
+  const { typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
@@ -166,7 +171,7 @@ function writeSchema(
     }
     switch (type.kind) {
       case "interface": {
-        lines.push(`class ${name}(BaseModel):`);
+        lines.push(`class ${name}(pydantic.BaseModel):`);
         lines.push(...writeDocstring(namingHint.doc, " "));
         if (Object.keys(type.fields).length <= 0) {
           lines.push(" pass");
@@ -196,7 +201,9 @@ function writeSchema(
               lines.push(`  ${memberType},`);
             }
             lines.push(" ],");
-            lines.push(` Field(discriminator="${members.discriminator}"),`);
+            lines.push(
+              ` pydantic.Field(discriminator="${members.discriminator}"),`,
+            );
             lines.push("]");
             break;
           }

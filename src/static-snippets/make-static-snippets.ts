@@ -1,20 +1,23 @@
 // Run with: npm run make-static-snippets
 
-// From the 'src' directory.
-const SOURCE_FILES = ["codegen/typescript/runtime-logic.ts"] as const;
+// From the project directory.
+const SOURCE_FILES = [
+  "src/codegen/typescript/runtime-logic.ts",
+  "playground/python/runtime_logic.py",
+] as const;
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SRC_DIR = path.join(__dirname, "..");
+const PROJECT_DIR = path.join(__dirname, "../..");
 const OUT_FILE = path.join(__dirname, "static-snippets.gen.ts");
 
 const snippets: Record<string, string> = {};
 
 for (const relPath of SOURCE_FILES) {
-  const fullPath = path.join(SRC_DIR, relPath);
+  const fullPath = path.join(PROJECT_DIR, relPath);
   const content = fs.readFileSync(fullPath, "utf8");
   const lines = content.split("\n");
 

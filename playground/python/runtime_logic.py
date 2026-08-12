@@ -1,28 +1,18 @@
-from pydantic import BaseModel
+# <static:python-public-types>
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Literal, final, overload
+from typing import Annotated, Any, Literal, Never, Optional, Union, final, overload
 
 import pydantic
 
 
-# <generated>
-@final
-class schema:
-  class meta:
-    class Meta(BaseModel):
-      temperature: float
-# </generated>
-
-
-# <static:python-public-types>
 @dataclass(frozen=True)
-class Prompt[Output]:
+class Prompt[Output, Id=TemplateId]:
   meta: schema.meta.Meta
   system_message: str
   user_message: str
-  template_id: str
+  template_id: Id
   examples: Sequence["FewShotExample"]
   output_format: OutputFormat[Output]
 
@@ -63,3 +53,18 @@ class TextOutputFormat:
 
 type OutputFormat[Output] = JsonOutputFormat[Output] | TextOutputFormat
 # </static:python-public-types>
+
+
+# <generated>
+# Uniquely identifies a prompt template.
+type TemplateId = Literal[
+  'Main:MyTemplate',
+]
+
+
+@final
+class schema:
+  class meta:
+    class Meta(BaseModel):
+      temperature: float
+# </generated>

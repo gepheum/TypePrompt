@@ -1,5 +1,56 @@
-from typing import Annotated, Any, Literal, Never, Optional, Union, final
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
+from collections.abc import Sequence
+
+from typing import Annotated, Any, Literal, Never, Optional, Union, final, overload
+
+import pydantic
+
+
+@dataclass(frozen=True)
+class Prompt[Output, Id=TemplateId]:
+  meta: schema.meta.Meta
+  system_message: str
+  user_message: str
+  template_id: Id
+  examples: Sequence["FewShotExample"]
+  output_format: OutputFormat[Output]
+
+
+@dataclass(frozen=True)
+class FewShotExample:
+  user_message: str
+  intermediate_steps: Sequence["IntermediateStepExample"];
+  response: str
+
+
+@dataclass(frozen=True)
+class IntermediateStepExample:
+  # Tool calls made in parallel at this step.
+  tool_calls: Sequence["ToolCallExample"]
+
+
+@dataclass(frozen=True)
+class ToolCallExample:
+  call_id: str
+  tool_name: str
+  # Stringified JSON input
+  stringified_input: str
+  # Stringified JSON output
+  stringified_output: str
+
+
+@dataclass(frozen=True)
+class JsonOutputFormat[Output]:
+  format: Literal["json"]
+  type_adapter: pydantic.TypeAdapter[Output]
+
+
+@dataclass(frozen=True)
+class TextOutputFormat:
+  format: Literal["text"]
+
+
+type OutputFormat[Output] = JsonOutputFormat[Output] | TextOutputFormat
 
 
 # Uniquely identifies a prompt template.
@@ -13,7 +64,7 @@ class schema:
   @final
   class meta:
     # Exported as 'schema.meta.Meta'
-    class Meta(BaseModel):
+    class Meta(pydantic.BaseModel):
       # Temperature setting for the template
       temperature: float
       foobar: Optional['schema.meta.Meta_Foobar'] = None
@@ -33,18 +84,18 @@ class schema:
         'schema.meta.Meta_ZooBar_KindFoo',
         'schema.meta.Meta_ZooBar_KindBar',
       ],
-      Field(discriminator="kind"),
+      pydantic.Field(discriminator="kind"),
     ]
 
 
     # Exported as 'schema.meta.Meta_ZooBar_KindFoo'
-    class Meta_ZooBar_KindFoo(BaseModel):
+    class Meta_ZooBar_KindFoo(pydantic.BaseModel):
       kind: Literal['foo']
       foo: str
 
 
     # Exported as 'schema.meta.Meta_ZooBar_KindBar'
-    class Meta_ZooBar_KindBar(BaseModel):
+    class Meta_ZooBar_KindBar(pydantic.BaseModel):
       kind: Literal['bar']
       bar: str
 
@@ -54,7 +105,7 @@ class schema:
     @final
     class my_template:
       # Exported as 'schema.main.my_template.Input'
-      class Input(BaseModel):
+      class Input(pydantic.BaseModel):
         """The input"""
 
         first_name: str
@@ -63,7 +114,7 @@ class schema:
 
 
       # Exported as 'schema.main.my_template.Output'
-      class Output(BaseModel):
+      class Output(pydantic.BaseModel):
         """
         The
         output
@@ -75,20 +126,20 @@ class schema:
     @final
     class my_tool:
       # Exported as 'schema.main.my_tool.Input'
-      class Input(BaseModel):
+      class Input(pydantic.BaseModel):
         foo: str
         x: Optional[int] = None
         y: Optional[int] = None
 
 
       # Exported as 'schema.main.my_tool.Output'
-      class Output(BaseModel):
+      class Output(pydantic.BaseModel):
         bar: str
 
 
 @final
 class _internal:
-  class Templates(BaseModel):
+  class Templates(pydantic.BaseModel):
     signature: str
     templates: dict[str, '_internal.Template']
     tools: dict[str, '_internal.Tool']
@@ -96,7 +147,7 @@ class _internal:
     source_files: dict[str, str]
 
 
-  class Template(BaseModel):
+  class Template(pydantic.BaseModel):
     name: str
     namespace: str
     output_format: '_internal.OutputFormat'
@@ -113,7 +164,7 @@ class _internal:
   ]
 
 
-  class TemplateTool(BaseModel):
+  class TemplateTool(pydantic.BaseModel):
     id: str
     name: str
 
@@ -123,39 +174,39 @@ class _internal:
       '_internal.TemplateContents_KindNoVariants',
       '_internal.TemplateContents_KindVariants',
     ],
-    Field(discriminator="kind"),
+    pydantic.Field(discriminator="kind"),
   ]
 
 
-  class TemplateContents_KindNoVariants(BaseModel):
+  class TemplateContents_KindNoVariants(pydantic.BaseModel):
     kind: Literal['noVariants']
     content: '_internal.TemplateContent'
 
 
-  class TemplateContents_KindVariants(BaseModel):
+  class TemplateContents_KindVariants(pydantic.BaseModel):
     kind: Literal['variants']
     variants: dict[str, '_internal.TemplateContent']
     default_content: '_internal.TemplateContent'
 
 
-  class TemplateContent(BaseModel):
+  class TemplateContent(pydantic.BaseModel):
     meta: Optional[Any] = None
     system: Optional[list['_internal.BodyPiece']] = None
     user: Optional[list['_internal.BodyPiece']] = None
     examples: Optional[list['_internal.FewShotExample']] = None
 
 
-  class FewShotExample(BaseModel):
+  class FewShotExample(pydantic.BaseModel):
     input: Any
     output: Any
     intermediate_steps: list['_internal.FewShotExample_IntermediateSteps']
 
 
-  class FewShotExample_IntermediateSteps(BaseModel):
+  class FewShotExample_IntermediateSteps(pydantic.BaseModel):
     tool_calls: list['_internal.ToolCallExample']
 
 
-  class ToolCallExample(BaseModel):
+  class ToolCallExample(pydantic.BaseModel):
     call_id: str
     tool_id: str
     tool_name: str
@@ -169,23 +220,23 @@ class _internal:
       '_internal.BodyPiece_KindInsertVal',
       '_internal.BodyPiece_KindInsertSnippet',
     ],
-    Field(discriminator="kind"),
+    pydantic.Field(discriminator="kind"),
   ]
 
 
-  class BodyPiece_KindText(BaseModel):
+  class BodyPiece_KindText(pydantic.BaseModel):
     kind: Literal['text']
     text: str
 
 
-  class BodyPiece_KindInsertVal(BaseModel):
+  class BodyPiece_KindInsertVal(pydantic.BaseModel):
     kind: Literal['insertVal']
     val: '_internal.Expression'
     format: '_internal.InsertFormat'
     indent: str
 
 
-  class BodyPiece_KindInsertSnippet(BaseModel):
+  class BodyPiece_KindInsertSnippet(pydantic.BaseModel):
     kind: Literal['insertSnippet']
     # Snippet name.
     snippet: str
@@ -208,15 +259,15 @@ class _internal:
       '_internal.Expression_KindInput',
       '_internal.Expression_KindProperty',
     ],
-    Field(discriminator="kind"),
+    pydantic.Field(discriminator="kind"),
   ]
 
 
-  class Expression_KindInput(BaseModel):
+  class Expression_KindInput(pydantic.BaseModel):
     kind: Literal['input']
 
 
-  class Expression_KindProperty(BaseModel):
+  class Expression_KindProperty(pydantic.BaseModel):
     kind: Literal['property']
     left: '_internal.Expression'
     property: str
@@ -228,16 +279,16 @@ class _internal:
       '_internal.Snippet_KindSnippetIf',
       '_internal.Snippet_KindSnippetSwitch',
     ],
-    Field(discriminator="kind"),
+    pydantic.Field(discriminator="kind"),
   ]
 
 
-  class Snippet_KindSnippet(BaseModel):
+  class Snippet_KindSnippet(pydantic.BaseModel):
     kind: Literal['snippet']
     body: list['_internal.BodyPiece']
 
 
-  class Snippet_KindSnippetIf(BaseModel):
+  class Snippet_KindSnippetIf(pydantic.BaseModel):
     kind: Literal['snippetIf']
     expression: '_internal.Expression'
     is_: '_internal.Snippet_KindSnippetIf_Is'
@@ -252,13 +303,13 @@ class _internal:
   ]
 
 
-  class Snippet_KindSnippetSwitch(BaseModel):
+  class Snippet_KindSnippetSwitch(pydantic.BaseModel):
     kind: Literal['snippetSwitch']
     expression: '_internal.Expression'
     branches: dict[str, list['_internal.BodyPiece']]
 
 
-  class Tool(BaseModel):
+  class Tool(pydantic.BaseModel):
     id: str
     name: str
     description: str
