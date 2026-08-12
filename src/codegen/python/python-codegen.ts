@@ -18,6 +18,7 @@ import type { Config } from "../../config/config-parser.js";
 import { NullableType } from "../../expression/expression-types.js";
 import { resolveFieldType } from "../../expression/get-field-type.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { camelToSnakeCase, capitalize } from "../../util/casing.js";
@@ -51,6 +52,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
+        writeTemplatesData(compilationResult),
       ]
         .map((code) => code.trimEnd())
         .join("\n\n\n"),
@@ -298,6 +300,19 @@ function writeSchema(
   return lines
     .map((line) => (line.length <= 0 ? line : indent.concat(line)))
     .join("\n");
+}
+
+
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: false,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  return [
+    "_templates_data = _internal.Templates.model_validate_json(",
+    ` ${stringifiedJson},`,
+    ")",
+  ].join("\n");
 }
 
 function writeType(
