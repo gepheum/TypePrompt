@@ -20,13 +20,12 @@ class PromptMaker:
   @overload
   def get_template(self, id: Literal["Main:OtherTemplate"]) -> Template[int, str, None]:
     ...
-  def get_template(self, id: 'TemplateId') -> Any:
+  def get_template(self, id: TemplateId) -> Any:
     return _get_template_impl(id, self._data)
 
 
-
 # <static:python-public-types>
-class Template[Input, Output, ToolImpls](Protocol):
+class Template[Input, Output, ToolImpls = None](Protocol):
   def make(self, input: Input) -> Prompt[Output, ToolImpls]:
     ...
 

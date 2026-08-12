@@ -1,3 +1,6 @@
+// I no longer need to quote types not yet defined!!!
+// '| None' instead of optional?
+// No Optional[Any]
 // I think I am leaning toward:
 //   PromptMaker().get_template('....').resolve(FOO)
 //   tools_of("fooo").
@@ -41,7 +44,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
   return [
     STATIC_SNIPPETS["python-imports"],
-    scaleIndenting(writePromptMaker(compilationResult)),
+    scaleIndenting(writePromptMaker(Object.values(templates))),
     STATIC_SNIPPETS["python-public-types"],
     scaleIndenting(
       [
@@ -55,6 +58,49 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   ]
     .map((code) => code.trimEnd())
     .join("\n\n\n");
+}
+
+function writePromptMaker(templates: readonly ValidTemplate[]): string {
+  const writeOverloadSig = (t: ValidTemplate): readonly string[] => {
+    const id = [
+      t.template.namespace?.text ?? DEFAULT_NAMESPACE,
+      t.template.name.text,
+    ].join(":");
+    const typePrefix = getTypePrefix(t);
+    return [
+      " def get_template(",
+      "  self,",
+      `  id: Literal['${id}'],`,
+      " ) -> Prompt[",
+      `  ${typePrefix}Input,`,
+      `  ${typePrefix}Output,`,
+      " ]:"
+    ];
+  };
+
+  const lines = [
+    "@dataclass(frozen=True)",
+    "class PromptMaker:",
+    " _data: _internal.Templates",
+  ];
+  if (templates.length <= 0) {
+    // pass
+  } else {
+    lines.push("");
+    if (templates.length === 1) {
+      const template = templates[0]!;
+      lines.push(...writeOverloadSig(template));
+    } else {
+      for (const template of templates) {
+        lines.push(" @overload");
+        lines.push(...writeOverloadSig(template));
+        lines.push("  ...");
+      }
+      lines.push(" def get_template(self, id: TemplateId) -> Any:");
+    }
+    lines.push("  return _get_template_impl(id, self._data)");
+  }
+  return lines.join("\n");
 }
 
 function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
@@ -381,6 +427,18 @@ function toPyName(
     }
   }
   return conflict ? identifier.concat("_") : identifier;
+}
+
+function getTypePrefix(template: ValidTemplate): string {
+  return [
+    "schema",
+    toPyName(template.template.namespace?.text ?? DEFAULT_NAMESPACE, "snake_case_class_name"),
+    toPyName(
+        template.template.name.text,
+        "snake_case_class_name",
+      ),
+    "",
+  ].join(".");
 }
 
 function writeDocstring(doc: string, indent: " "): readonly string[] {

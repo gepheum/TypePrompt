@@ -1,13 +1,32 @@
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Literal, Never, Optional, Union, final, overload
+from typing import Annotated, Any, Literal, Never, Optional, Protocol, Union, final, overload
 
 import pydantic
 
 
 @dataclass(frozen=True)
-class Prompt[Output]:
+class PromptMaker:
+  _data: _internal.Templates | None = None
+
+  def get_template(
+    self,
+    id: Literal['Main:MyTemplate'],
+  ) -> Prompt[
+    schema.main.my_template.Input,
+    schema.main.my_template.Output,
+  ]:
+    return _get_template_impl(id, self._data)
+
+
+class Template[Input, Output, ToolImpls](Protocol):
+  def make(self, input: Input) -> Prompt[Output, ToolImpls]:
+    ...
+
+
+@dataclass(frozen=True)
+class Prompt[Output, ToolImpls = None]:
   meta: schema.meta.Meta
   system_message: str
   user_message: str
