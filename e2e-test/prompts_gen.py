@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Final, Literal, Mapping, Never, Optional, Protocol, Union, final, overload
+from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload
 
 import pydantic
 
@@ -30,22 +30,22 @@ class Prompt[Output, ToolImpls = None]:
   meta: schema.meta.Meta
   system_message: str
   user_message: str
-  examples: Sequence['FewShotExample']
+  examples: Sequence[FewShotExample]
   output_format: OutputFormat[Output]
-  template_id: 'TemplateId'
+  template_id: TemplateId
 
 
 @dataclass(frozen=True)
 class FewShotExample:
   user_message: str
-  intermediate_steps: Sequence['IntermediateStepExample'];
+  intermediate_steps: Sequence[IntermediateStepExample];
   response: str
 
 
 @dataclass(frozen=True)
 class IntermediateStepExample:
   # Tool calls made in parallel at this step.
-  tool_calls: Sequence['ToolCallExample']
+  tool_calls: Sequence[ToolCallExample]
 
 
 @dataclass(frozen=True)
