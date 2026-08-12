@@ -127,6 +127,5 @@ def _get_template_impl(
 ) -> Template:
   data = data or _templates_data
   template = data.templates[id]
-  ret: _TemplateImpl = _TemplateImpl(template_data=template, data=data)
-  return ret
+  return _TemplateImpl(template_data=template, data=data)
 # </static:python-logic>

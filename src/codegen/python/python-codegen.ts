@@ -72,7 +72,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
       " def get_template(",
       "  self,",
       `  id: Literal['${id}'],`,
-      " ) -> Prompt[",
+      " ) -> Template[",
       `  ${typePrefix}Input,`,
       `  ${typePrefix}Output,`,
       " ]:",
