@@ -161,7 +161,13 @@ class tools:
         ) -> schema.main.my_tool.Output:
           ...
 
-      type ToolNames = Literal['myTool']
+      type ToolName = Literal[
+        'myTool',
+      ]
+
+      TOOL_NAMES: Final = (
+        'myTool',
+      )
 
 
 _type_adapters: Final = {
@@ -339,8 +345,8 @@ _templates_data: Final = _internal.Templates.model_validate_json(
 
 @dataclass(frozen=True)
 class _TemplateImpl[Input, Output, ToolImpls]:
-  template_data: _internal.Template
-  data: _internal.Templates
+  _template_data: _internal.Template
+  _data: _internal.Templates
 
   def make(self, input: Input) -> Prompt[Output, ToolImpls]:
     pass
@@ -352,4 +358,8 @@ def _get_template_impl(
 ) -> Template:
   data = data or _templates_data
   template = data.templates[id]
-  return _TemplateImpl(template_data=template, data=data)
+  return _TemplateImpl(_template_data=template, _data=data)
+
+# To disable linter warnings about unused imports
+_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload, pydantic)
+del _

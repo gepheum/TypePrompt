@@ -128,4 +128,8 @@ def _get_template_impl(
   data = data or _templates_data
   template = data.templates[id]
   return _TemplateImpl(_template_data=template, _data=data)
+
+# To disable linter warnings about unused imports
+_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload, pydantic)
+del _
 # </static:python-logic>

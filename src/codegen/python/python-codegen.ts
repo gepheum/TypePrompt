@@ -231,14 +231,19 @@ function writeToolImplProtocols(
         }
         lines.push("");
       }
-      lines.push(
-        [
-          "   type ToolNames = ",
-          toolNames.length <= 0 ? "Never" :
-          toolNames.length === 1 ? `Literal['${toolNames[0]!}']` :
-          "Literal[\n".concat(toolNames.map((name) => `    '${name}',\n`).join(""), "   ]"),
-        ].join(""),
-      );
+      if (toolNames.length <= 0) {
+        lines.push("   type ToolName = Never");
+      } else {
+        const commaSeparatedToolNames = toolNames.map((name) => `    '${name}',`);
+        lines.push("   type ToolName = Literal[");
+        lines.push(...commaSeparatedToolNames);
+        lines.push("   ]");
+        lines.push("");
+        lines.push("   TOOL_NAMES: Final = (");
+        lines.push(...commaSeparatedToolNames);
+        lines.push("   )")
+        lines.push("");
+      }
     }
   }
   return lines.join("\n");
