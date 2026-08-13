@@ -1,3 +1,4 @@
+// POSSIBLE BUG: escaped fields in Python which lead to a "_" in the JSON...
 // I think I am leaning toward:
 //   PromptMaker().get_template('....').resolve(FOO)
 //   tools_of("fooo").
@@ -52,7 +53,11 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       [
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
-        writePydanticTypeAdapters(Object.values(templates), Object.values(tools)),
+        writeToolImplProtocols(compilationResult),
+        writePydanticTypeAdapters(
+          Object.values(templates),
+          Object.values(tools),
+        ),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
       ]
@@ -190,6 +195,55 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
+function writeToolImplProtocols(
+  compilationResult: ValidCompilationResult,
+): string {
+  const namespaces = Object.values(compilationResult.namespaces)
+    .filter((namespace) => namespace.templates.length >= 1);
+  if (namespaces.length <= 0) return "";
+  const lines = [
+    "@final",
+    "class tools:",
+  ];
+  for (const namespace of namespaces) {
+    const namespaceName = toPyName(namespace.name, "snake_case_class_name");
+    lines.push(` @final`);
+    lines.push(` class ${namespaceName}:`);
+    for (const template of namespace.templates) {
+      const {tools} = template;
+      const toolNames = Object.keys(tools);
+      const templateName = toPyName(
+        template.template.name.text,
+        "snake_case_class_name",
+      );
+      lines.push(`  @final`);
+      lines.push(`  class ${templateName}:`);
+      if (toolNames.length > 0) {
+        lines.push("   class ToolCallHandler(Protocol):");
+        for (const [toolName, tool] of Object.entries(template.tools)) {
+          const methodName = toPyName(toolName, "snake_case_class_name");
+          const typePrefix = getTypePrefix(tool.tool.tool);
+          lines.push(`    async def ${methodName}(`);
+          lines.push(`     self,`);
+          lines.push(`     input: ${typePrefix}Input,`);
+          lines.push(`    ) -> ${typePrefix}Output:`);
+          lines.push(`     ...`);
+        }
+        lines.push("");
+      }
+      lines.push(
+        [
+          "   type ToolNames = ",
+          toolNames.length <= 0 ? "Never" :
+          toolNames.length === 1 ? `Literal['${toolNames[0]!}']` :
+          "Literal[\n".concat(toolNames.map((name) => `    '${name}',\n`).join(""), "   ]"),
+        ].join(""),
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
 function writePydanticTypeAdapters(
   templates: readonly ValidTemplate[],
   tools: readonly ValidatedTool[],
@@ -261,8 +315,19 @@ function writeSchema(
           );
           lines.push(...writeComment(field.doc, " "));
           const pyName = toPyName(field.name.text, "field_name");
-          const defaultValue = field.optional ? " = None" : "";
-          lines.push(` ${pyName}: ${type}${defaultValue}`);
+          let assignment: string;
+          if (pyName === field.name.text) {
+            assignment = field.optional ? " = None" : "";
+          } else {
+            assignment = [
+              " = pydantic.Field(",
+              field.optional ? "default=None, " : "",
+              "serialization_alias='",
+              field.name.text,
+              "')",
+            ].join("");
+          }
+          lines.push(` ${pyName}: ${type}${assignment}`);
         }
         break;
       }
@@ -302,7 +367,7 @@ function writeSchema(
         throw new Error(type satisfies never);
       }
     }
-    lines.push(...["", ""]);
+    lines.push("");
   }
 
   for (const requiredType of options.requiredTypes ?? []) {
