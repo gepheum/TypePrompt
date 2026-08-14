@@ -230,12 +230,12 @@ def tool_name_to_method_name(tool_name: str) -> str:
 
 _type_adapters: Final = {
   "Main:MyTemplate": (
-    pydantic.TypeAdapter[schema.main.my_template.Input],
-    pydantic.TypeAdapter[schema.main.my_template.Output],
+    pydantic.TypeAdapter(schema.main.my_template.Input),
+    pydantic.TypeAdapter(schema.main.my_template.Output),
   ),
   "Main:myTool": (
-    pydantic.TypeAdapter[schema.main.my_tool.Input],
-    pydantic.TypeAdapter[schema.main.my_tool.Output],
+    pydantic.TypeAdapter(schema.main.my_tool.Input),
+    pydantic.TypeAdapter(schema.main.my_tool.Output),
   ),
 }
 
@@ -568,7 +568,7 @@ class _TemplateImpl[Input, Output, ToolImpls]:
       return result
 
     input_adapter, output_adapter = _type_adapters[self._template_id]
-    input = input_adapter.validate_python(input)
+    input = input_adapter.dump_python(input, by_alias=True)
 
     template = self._template_data
     snippets = template.snippets

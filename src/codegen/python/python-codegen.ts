@@ -287,8 +287,8 @@ function writePydanticTypeAdapters(
     const id = getId(named);
     const typePrefix = getTypePrefix(named);
     lines.push(` "${id}": (`);
-    lines.push(`  pydantic.TypeAdapter[${typePrefix}Input],`);
-    lines.push(`  pydantic.TypeAdapter[${typePrefix}Output],`);
+    lines.push(`  pydantic.TypeAdapter(${typePrefix}Input),`);
+    lines.push(`  pydantic.TypeAdapter(${typePrefix}Output),`);
     lines.push(" ),");
   };
   for (const template of templates) {

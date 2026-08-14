@@ -1,2 +1,21 @@
+[project]
+name = "typeprompt-python"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.0",
+  "pyyaml",
+  "toon-format",
+]
+
+[project.optional-dependencies]
+dev = ["ruff"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [tool.pyright]
 pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
