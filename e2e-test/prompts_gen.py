@@ -266,6 +266,8 @@ class tools(_StaticClass):
         @final
         class my_template(_StaticClass):
             class ToolImpls(Protocol):
+                """Protocol for object implementing the tools callable by the LLM."""
+
                 async def my_tool(
                     self,
                     input: schema.main.my_tool.Input,

@@ -223,6 +223,9 @@ function writeToolImplProtocols(
       lines.push(`  class ${templateName}(_StaticClass):`);
       if (toolNames.length > 0) {
         lines.push("   class ToolImpls(Protocol):");
+        lines.push(
+          '   """Protocol for object implementing the tools callable by the LLM."""',
+        );
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "snake_case_class_name");
           const typePrefix = getTypePrefix(tool.tool.tool);
