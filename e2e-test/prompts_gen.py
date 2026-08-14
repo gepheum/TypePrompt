@@ -46,6 +46,14 @@ class Prompt[Output, ToolImpls = None]:
     """Parse the LLM response into the expected output type."""
     return _parse_response_impl(response, self)
 
+  async def call_tools(
+    self,
+    tool_calls: Sequence[ToolCall],
+    impls: ToolImpls,
+  ) -> Sequence[ToolCallResponse]:
+    """Execute the given tool calls in parallel."""
+    return await _call_tools_impl(tool_calls, impls, self)
+
 
 @dataclass(frozen=True)
 class FewShotExample:
@@ -96,6 +104,18 @@ class TextOutputFormat:
 
 
 type OutputFormat[Output] = JsonOutputFormat[Output] | TextOutputFormat
+
+
+@dataclass(frozen=True)
+class ToolCall:
+  call_id: str
+  tool_name: str
+  stringified_input: str
+
+@dataclass(frozen=True)
+class ToolCallResponse:
+  call_id: str
+  stringified_output: str
 
 
 # Uniquely identifies a prompt template.
@@ -400,6 +420,34 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
 
     case "text":
       return cast(Output, response)
+
+
+async def _call_tools_impl[ToolImpls](
+  tool_calls: Sequence[ToolCall],
+  impls: ToolImpls,
+  prompt: Prompt[Any, ToolImpls],
+) -> Sequence[ToolCallResponse]:
+  import asyncio
+
+  async def _call_one(call: ToolCall) -> ToolCallResponse:
+    tool = prompt.tools.get(call.tool_name)
+    if tool is None:
+      raise ValueError(f"Tool not found: {call.tool_name}")
+    method_name = tool_name_to_method_name(call.tool_name)
+    impl = getattr(impls, method_name, None) if impls is not None else None
+    if impl is None:
+      raise ValueError(f"Tool implementation not found: {call.tool_name}")
+    try:
+      input = tool.input_adapter.validate_json(call.stringified_input, by_alias=True)
+      raw_output = await impl(input)
+      validated_output = tool.output_adapter.validate_python(raw_output, by_alias=True)
+      stringified_output = tool.output_adapter.dump_json(validated_output, by_alias=True).decode()
+    except Exception as e:
+      call_info = json.dumps({"callId": call.call_id, "toolName": call.tool_name, "stringifiedInput": call.stringified_input})
+      raise type(e)(f"Tool call failed: {call_info} — {e}") from e
+    return ToolCallResponse(call_id=call.call_id, stringified_output=stringified_output)
+
+  return await asyncio.gather(*(_call_one(call) for call in tool_calls))
 
 
 @dataclass(frozen=True)
