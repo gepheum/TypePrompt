@@ -443,8 +443,7 @@ async def _call_tools_impl[ToolImpls](
     try:
       input = tool.input_adapter.validate_json(call.stringified_input, by_alias=True)
       raw_output = await impl(input)
-      validated_output = tool.output_adapter.validate_python(raw_output, by_alias=True)
-      stringified_output = tool.output_adapter.dump_json(validated_output, by_alias=True).decode()
+      stringified_output = tool.output_adapter.dump_json(raw_output, by_alias=True).decode()
     except Exception as e:
       call_info = json.dumps({"callId": call.call_id, "toolName": call.tool_name, "stringifiedInput": call.stringified_input})
       raise type(e)(f"Tool call failed: {call_info} — {e}") from e
