@@ -91,7 +91,12 @@ class Template[Input, Output, ToolImpls = None](Protocol):
 
 @dataclass(frozen=True)
 class Prompt[Output, ToolImpls = None]:
-    """A fully resolved prompt ready to be sent to an LLM."""
+    """A fully resolved prompt ready to be sent to an LLM.
+
+    Output: the type of the parsed LLM response.
+    ToolImpls: an object whose methods implement the template's tools,
+        or None if the template has no tools.
+    """
 
     # Metadata for this prompt.
     meta: schema.meta.Meta

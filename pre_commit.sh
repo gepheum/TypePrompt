@@ -3,6 +3,7 @@
 set -e
 
 npm i
+npm run make-static-snippets
 npm run lint:fix
 npm run lint
 npm run format
