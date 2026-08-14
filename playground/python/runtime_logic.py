@@ -181,7 +181,7 @@ class ToolCallResponse:
     stringified_output: str
 
 
-_StaticClass: Final = Protocol  # To prevent instantiation
+_StaticClass: Final = Protocol  # To prevent instantiation; use with @final
 # </static:python-public-types>
 
 
