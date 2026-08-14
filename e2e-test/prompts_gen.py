@@ -70,6 +70,14 @@ class PromptMaker:
 
 
 class Template[Input, Output, ToolImpls = None](Protocol):
+    """Builds Prompt instances for a specific template.
+
+    Input: the values substituted into the template's placeholders.
+    Output: the type of the parsed LLM response.
+    ToolImpls: an object whose methods implement the template's tools,
+        or None if the template has no tools.
+    """
+
     def make(self, input: Input) -> Prompt[Output, ToolImpls]: ...
 
 
@@ -165,6 +173,9 @@ class ToolCallResponse:
     stringified_output: str
 
 
+_StaticClass: Final = Protocol  # To prevent instantiation
+
+
 # Uniquely identifies a prompt template.
 type TemplateId = Literal[
     'Main:MyTemplate',
@@ -172,9 +183,11 @@ type TemplateId = Literal[
 
 
 @final
-class schema:
+class schema(_StaticClass):
+    """Contains the user-defined datatypes organized by namespace."""
+
     @final
-    class meta:
+    class meta(_StaticClass):
         # Exported as 'schema.meta.Meta'
         class Meta(pydantic.BaseModel):
             # Temperature setting for the template
@@ -208,9 +221,9 @@ class schema:
             bar: str
 
     @final
-    class main:
+    class main(_StaticClass):
         @final
-        class my_template:
+        class my_template(_StaticClass):
             # Exported as 'schema.main.my_template.Input'
             class Input(pydantic.BaseModel):
                 """The input"""
@@ -229,7 +242,7 @@ class schema:
                 x: int
 
         @final
-        class my_tool:
+        class my_tool(_StaticClass):
             # Exported as 'schema.main.my_tool.Input'
             class Input(pydantic.BaseModel):
                 foo: str
@@ -242,11 +255,11 @@ class schema:
 
 
 @final
-class tools:
+class tools(_StaticClass):
     @final
-    class main:
+    class main(_StaticClass):
         @final
-        class my_template:
+        class my_template(_StaticClass):
             class ToolImpls(Protocol):
                 async def my_tool(
                     self,
@@ -285,7 +298,7 @@ _type_adapters: Final = {
 
 
 @final
-class _internal:
+class _internal(_StaticClass):
     class Templates(pydantic.BaseModel):
         signature: str
         templates: dict[str, _internal.Template]

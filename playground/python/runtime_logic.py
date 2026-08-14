@@ -181,6 +181,7 @@ class ToolCallResponse:
     stringified_output: str
 
 
+_StaticClass: Final = Protocol  # To prevent instantiation
 # </static:python-public-types>
 
 
@@ -193,7 +194,7 @@ type TemplateId = Literal[
 
 
 @final
-class schema:
+class schema(_StaticClass):
     class meta:
         class Meta(pydantic.BaseModel):
             temperature: float

@@ -135,9 +135,11 @@ function writeUserDefinedDatatypes(
 ): string {
   const lines = [
     "@final",
-    "class schema:",
+    "class schema(_StaticClass):",
+    ' """Contains the user-defined datatypes organized by namespace."""',
+    "",
     " @final",
-    " class meta:",
+    " class meta(_StaticClass):",
     writeSchema(compilationResult.metaSchema, {
       typePrefix: "schema.meta.",
       indent: "  ",
@@ -154,10 +156,10 @@ function writeUserDefinedDatatypes(
     }
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     lines.push(` @final`);
-    lines.push(` class ${namespaceName}:`);
+    lines.push(` class ${namespaceName}(_StaticClass):`);
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
       lines.push(`  @final`);
-      lines.push("  class shared:");
+      lines.push("  class shared(_StaticClass):");
       lines.push(
         writeSchema(namespace.schema, {
           typePrefix: `schema.${namespaceName}.shared.`,
@@ -171,7 +173,7 @@ function writeUserDefinedDatatypes(
         "snake_case_class_name",
       );
       lines.push(`  @final`);
-      lines.push(`  class ${templateName}:`);
+      lines.push(`  class ${templateName}(_StaticClass):`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix: `schema.${namespaceName}.${templateName}.`,
@@ -184,7 +186,7 @@ function writeUserDefinedDatatypes(
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toPyName(tool.tool.name.text, "snake_case_class_name");
       lines.push(`  @final`);
-      lines.push(`  class ${toolName}:`);
+      lines.push(`  class ${toolName}(_StaticClass):`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix: `schema.${namespaceName}.${toolName}.`,
@@ -205,11 +207,11 @@ function writeToolImplProtocols(
     (namespace) => namespace.templates.length >= 1,
   );
   if (namespaces.length <= 0) return "";
-  const lines = ["@final", "class tools:"];
+  const lines = ["@final", "class tools(_StaticClass):"];
   for (const namespace of namespaces) {
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     lines.push(` @final`);
-    lines.push(` class ${namespaceName}:`);
+    lines.push(` class ${namespaceName}(_StaticClass):`);
     for (const template of namespace.templates) {
       const { tools } = template;
       const toolNames = Object.keys(tools);
@@ -218,7 +220,7 @@ function writeToolImplProtocols(
         "snake_case_class_name",
       );
       lines.push(`  @final`);
-      lines.push(`  class ${templateName}:`);
+      lines.push(`  class ${templateName}(_StaticClass):`);
       if (toolNames.length > 0) {
         lines.push("   class ToolImpls(Protocol):");
         for (const [toolName, tool] of Object.entries(template.tools)) {
@@ -304,7 +306,7 @@ function writePydanticTypeAdapters(
 function writeSpecDatatypes(): string {
   const lines = [
     "@final",
-    "class _internal:",
+    "class _internal(_StaticClass):",
     writeSchema(runtimeTypesSchema, {
       typePrefix: "_internal.",
       indent: " ",
