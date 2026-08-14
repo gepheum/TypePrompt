@@ -60,6 +60,8 @@ import toon_format
 
 @dataclass(frozen=True)
 class PromptMaker:
+    """Entry point for building prompts."""
+
     _data: _internal.Templates | None = None
 
     @overload
@@ -76,6 +78,14 @@ class PromptMaker:
 
 # <static:python-public-types>
 class Template[Input, Output, ToolImpls = None](Protocol):
+    """Builds Prompt instances for a specific template.
+
+    Input: the values substituted into the template's placeholders.
+    Output: the type of the parsed LLM response.
+    ToolImpls: an object whose methods implement the template's tools,
+        or None if the template has no tools.
+    """
+
     def make(self, input: Input) -> Prompt[Output, ToolImpls]: ...
 
 
