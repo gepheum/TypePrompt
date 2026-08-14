@@ -224,7 +224,7 @@ function writeToolImplProtocols(
       if (toolNames.length > 0) {
         lines.push("   class ToolImpls(Protocol):");
         lines.push(
-          '   """Protocol for object implementing the tools callable by the LLM."""',
+          '    """Protocol for object implementing the tools callable by the LLM."""',
         );
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "snake_case_class_name");
@@ -247,6 +247,9 @@ function writeToolImplProtocols(
         lines.push(...commaSeparatedToolNames);
         lines.push("   ]");
         lines.push("");
+        lines.push(
+          "   # Tuple of all tool names callable by the LLM for this template.",
+        );
         lines.push("   TOOL_NAMES: Final = (");
         lines.push(...commaSeparatedToolNames);
         lines.push("   )");
@@ -351,19 +354,20 @@ function writeSchema(
           );
           lines.push(...writeComment(field.doc, " "));
           const pyName = toPyName(field.name.text, "field_name");
-          let assignment: string;
           if (pyName === field.name.text) {
-            assignment = field.optional ? " = None" : "";
+            if (field.optional) {
+              lines.push(` ${pyName}: ${type} = None`);
+            } else {
+              lines.push(` ${pyName}: ${type}`);
+            }
           } else {
-            assignment = [
-              " = pydantic.Field(",
-              field.optional ? "default=None, " : "",
-              "serialization_alias='",
-              field.name.text,
-              "')",
-            ].join("");
+            lines.push(` ${pyName}: ${type} = pydantic.Field(`);
+            if (field.optional) {
+              lines.push("  default=None,");
+            }
+            lines.push(`  serialization_alias='${field.name.text}',`);
+            lines.push(" )");
           }
-          lines.push(` ${pyName}: ${type}${assignment}`);
         }
         break;
       }

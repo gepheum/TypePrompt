@@ -198,7 +198,10 @@ class schema(_StaticClass):
             # Temperature setting for the template
             temperature: float
             foobar: schema.meta.Meta_Foobar | None = None
-            zoo_bar: schema.meta.Meta_ZooBar | None = pydantic.Field(default=None, serialization_alias='zooBar')
+            zoo_bar: schema.meta.Meta_ZooBar | None = pydantic.Field(
+                default=None,
+                serialization_alias='zooBar',
+            )
 
         # Exported as 'schema.meta.Meta_Foobar'
         type Meta_Foobar = Literal[
@@ -233,9 +236,16 @@ class schema(_StaticClass):
             class Input(pydantic.BaseModel):
                 """The input"""
 
-                first_name: str = pydantic.Field(serialization_alias='firstName')
-                last_name: str = pydantic.Field(serialization_alias='lastName')
-                foo_to_bar: dict[str, int] | None = pydantic.Field(default=None, serialization_alias='fooToBar')
+                first_name: str = pydantic.Field(
+                    serialization_alias='firstName',
+                )
+                last_name: str = pydantic.Field(
+                    serialization_alias='lastName',
+                )
+                foo_to_bar: dict[str, int] | None = pydantic.Field(
+                    default=None,
+                    serialization_alias='fooToBar',
+                )
 
             # Exported as 'schema.main.my_template.Output'
             class Output(pydantic.BaseModel):
@@ -267,7 +277,6 @@ class tools(_StaticClass):
         class my_template(_StaticClass):
             class ToolImpls(Protocol):
                 """Protocol for object implementing the tools callable by the LLM."""
-
                 async def my_tool(
                     self,
                     input: schema.main.my_tool.Input,
@@ -278,6 +287,7 @@ class tools(_StaticClass):
                 'myTool',
             ]
 
+            # Tuple of all tool names callable by the LLM for this template.
             TOOL_NAMES: Final = (
                 'myTool',
             )
@@ -311,17 +321,27 @@ class _internal(_StaticClass):
         templates: dict[str, _internal.Template]
         tools: dict[str, _internal.Tool]
         # The key is a relative path to a .xml file. The value is the file content.
-        source_files: dict[str, str] = pydantic.Field(serialization_alias='sourceFiles')
+        source_files: dict[str, str] = pydantic.Field(
+            serialization_alias='sourceFiles',
+        )
 
     class Template(pydantic.BaseModel):
         name: str
         namespace: str
-        output_format: _internal.OutputFormat = pydantic.Field(serialization_alias='outputFormat')
+        output_format: _internal.OutputFormat = pydantic.Field(
+            serialization_alias='outputFormat',
+        )
         tools: list[_internal.TemplateTool]
         contents: _internal.TemplateContents
         snippets: dict[str, _internal.Snippet]
-        input_json_schema: Any = pydantic.Field(default=None, serialization_alias='inputJsonSchema')
-        output_json_schema: Any = pydantic.Field(default=None, serialization_alias='outputJsonSchema')
+        input_json_schema: Any = pydantic.Field(
+            default=None,
+            serialization_alias='inputJsonSchema',
+        )
+        output_json_schema: Any = pydantic.Field(
+            default=None,
+            serialization_alias='outputJsonSchema',
+        )
 
     type OutputFormat = Literal[
         'json',
@@ -347,7 +367,9 @@ class _internal(_StaticClass):
     class TemplateContents_KindVariants(pydantic.BaseModel):
         kind: Literal['variants']
         variants: dict[str, _internal.TemplateContent]
-        default_content: _internal.TemplateContent = pydantic.Field(serialization_alias='defaultContent')
+        default_content: _internal.TemplateContent = pydantic.Field(
+            serialization_alias='defaultContent',
+        )
 
     class TemplateContent(pydantic.BaseModel):
         meta: Any = None
@@ -358,15 +380,25 @@ class _internal(_StaticClass):
     class FewShotExample(pydantic.BaseModel):
         input: Any
         output: Any
-        intermediate_steps: list[_internal.FewShotExample_IntermediateSteps] = pydantic.Field(serialization_alias='intermediateSteps')
+        intermediate_steps: list[_internal.FewShotExample_IntermediateSteps] = pydantic.Field(
+            serialization_alias='intermediateSteps',
+        )
 
     class FewShotExample_IntermediateSteps(pydantic.BaseModel):
-        tool_calls: list[_internal.ToolCallExample] = pydantic.Field(serialization_alias='toolCalls')
+        tool_calls: list[_internal.ToolCallExample] = pydantic.Field(
+            serialization_alias='toolCalls',
+        )
 
     class ToolCallExample(pydantic.BaseModel):
-        call_id: str = pydantic.Field(serialization_alias='callId')
-        tool_id: str = pydantic.Field(serialization_alias='toolId')
-        tool_name: str = pydantic.Field(serialization_alias='toolName')
+        call_id: str = pydantic.Field(
+            serialization_alias='callId',
+        )
+        tool_id: str = pydantic.Field(
+            serialization_alias='toolId',
+        )
+        tool_name: str = pydantic.Field(
+            serialization_alias='toolName',
+        )
         input: Any
         output: Any
 
@@ -437,9 +469,13 @@ class _internal(_StaticClass):
     class Snippet_KindSnippetIf(pydantic.BaseModel):
         kind: Literal['snippetIf']
         expression: _internal.Expression
-        is_: _internal.Snippet_KindSnippetIf_Is = pydantic.Field(serialization_alias='is')
+        is_: _internal.Snippet_KindSnippetIf_Is = pydantic.Field(
+            serialization_alias='is',
+        )
         then: list[_internal.BodyPiece]
-        else_: list[_internal.BodyPiece] = pydantic.Field(serialization_alias='else')
+        else_: list[_internal.BodyPiece] = pydantic.Field(
+            serialization_alias='else',
+        )
 
     type Snippet_KindSnippetIf_Is = Literal[
         'notNull',
@@ -456,8 +492,14 @@ class _internal(_StaticClass):
         id: str
         name: str
         description: str
-        input_json_schema: Any = pydantic.Field(default=None, serialization_alias='inputJsonSchema')
-        output_json_schema: Any = pydantic.Field(default=None, serialization_alias='outputJsonSchema')
+        input_json_schema: Any = pydantic.Field(
+            default=None,
+            serialization_alias='inputJsonSchema',
+        )
+        output_json_schema: Any = pydantic.Field(
+            default=None,
+            serialization_alias='outputJsonSchema',
+        )
 
 
 _templates_data: Final = _internal.Templates.model_validate_json(
