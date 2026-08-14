@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload
 
@@ -168,6 +168,14 @@ class tools:
       TOOL_NAMES: Final = (
         'myTool',
       )
+
+
+_TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {
+  'myTool': 'my_tool',
+}
+
+def tool_name_to_method_name(tool_name: str) -> str:
+  return _TOOL_NAME_TO_METHOD_NAME[tool_name]
 
 
 _type_adapters: Final = {
@@ -361,5 +369,5 @@ def _get_template_impl(
   return _TemplateImpl(_template_data=template, _data=data)
 
 # To disable linter warnings about unused imports
-_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload, pydantic)
+_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Mapping, Never, Protocol, Union, final, overload, pydantic)
 del _

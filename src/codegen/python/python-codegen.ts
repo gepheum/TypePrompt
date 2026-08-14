@@ -1,11 +1,5 @@
-// POSSIBLE BUG: escaped fields in Python which lead to a "_" in the JSON...
-// I think I am leaning toward:
-//   PromptMaker().get_template('....').resolve(FOO)
-//   tools_of("fooo").
-//      - makeImpls
-//      - makeMap
-//      - pick
-//   OR maybe I put the 'tools' in template???
+// Add parseResponse, callTool, callTools
+// Update code which removes unused code warnings...
 
 import type {
   Template,
@@ -54,6 +48,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
         writeToolImplProtocols(compilationResult),
+        writeToolNameToMethodName(Object.values(tools)),
         writePydanticTypeAdapters(
           Object.values(templates),
           Object.values(tools),
@@ -198,19 +193,17 @@ function writeUserDefinedDatatypes(
 function writeToolImplProtocols(
   compilationResult: ValidCompilationResult,
 ): string {
-  const namespaces = Object.values(compilationResult.namespaces)
-    .filter((namespace) => namespace.templates.length >= 1);
+  const namespaces = Object.values(compilationResult.namespaces).filter(
+    (namespace) => namespace.templates.length >= 1,
+  );
   if (namespaces.length <= 0) return "";
-  const lines = [
-    "@final",
-    "class tools:",
-  ];
+  const lines = ["@final", "class tools:"];
   for (const namespace of namespaces) {
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     lines.push(` @final`);
     lines.push(` class ${namespaceName}:`);
     for (const template of namespace.templates) {
-      const {tools} = template;
+      const { tools } = template;
       const toolNames = Object.keys(tools);
       const templateName = toPyName(
         template.template.name.text,
@@ -234,18 +227,42 @@ function writeToolImplProtocols(
       if (toolNames.length <= 0) {
         lines.push("   type ToolName = Never");
       } else {
-        const commaSeparatedToolNames = toolNames.map((name) => `    '${name}',`);
+        const commaSeparatedToolNames = toolNames.map(
+          (name) => `    '${name}',`,
+        );
         lines.push("   type ToolName = Literal[");
         lines.push(...commaSeparatedToolNames);
         lines.push("   ]");
         lines.push("");
         lines.push("   TOOL_NAMES: Final = (");
         lines.push(...commaSeparatedToolNames);
-        lines.push("   )")
+        lines.push("   )");
         lines.push("");
       }
     }
   }
+  return lines.join("\n");
+}
+
+function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
+  if (tools.length <= 0) return "";
+  const seenToolNames = new Set<string>();
+  const lines = ["_TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {"];
+  for (const tool of tools) {
+    const toolName = tool.tool.name.text;
+    if (seenToolNames.has(toolName)) continue;
+    seenToolNames.add(toolName);
+    const methodName = toPyName(toolName, "snake_case_class_name");
+    lines.push(` '${toolName}': '${methodName}',`);
+  }
+  lines.push(
+    ...[
+      "}",
+      "",
+      "def tool_name_to_method_name(tool_name: str) -> str:",
+      " return _TOOL_NAME_TO_METHOD_NAME[tool_name]",
+    ],
+  );
   return lines.join("\n");
 }
 

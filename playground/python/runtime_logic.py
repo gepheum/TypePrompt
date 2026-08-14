@@ -2,7 +2,7 @@ from runtime_types import _internal
 
 # <static:python-imports>
 from dataclasses import dataclass
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload
 
@@ -130,6 +130,6 @@ def _get_template_impl(
   return _TemplateImpl(_template_data=template, _data=data)
 
 # To disable linter warnings about unused imports
-_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload, pydantic)
+_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Mapping, Never, Protocol, Union, final, overload, pydantic)
 del _
 # </static:python-logic>
