@@ -259,6 +259,7 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
     ...[
       "}",
       "",
+      "",
       "def tool_name_to_method_name(tool_name: str) -> str:",
       " return _TOOL_NAME_TO_METHOD_NAME[tool_name]",
     ],
