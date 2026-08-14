@@ -16,6 +16,7 @@ class PromptMaker:
   ) -> Template[
     schema.main.my_template.Input,
     schema.main.my_template.Output,
+    tools.main.my_template.ToolImpls,
   ]:
     return _get_template_impl(id, self._data)
 
@@ -154,7 +155,7 @@ class tools:
   class main:
     @final
     class my_template:
-      class ToolCallHandler(Protocol):
+      class ToolImpls(Protocol):
         async def my_tool(
           self,
           input: schema.main.my_tool.Input,
@@ -365,7 +366,7 @@ class _TemplateImpl[Input, Output, ToolImpls]:
 def _get_template_impl(
   id: TemplateId,
   data: _internal.Templates | None,
-) -> Template:
+) -> Template[Any, Any, Any]:
   data = data or _templates_data
   template = data.templates[id]
   return _TemplateImpl(_template_data=template, _data=data)

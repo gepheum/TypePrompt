@@ -32,16 +32,27 @@ class Template[Input, Output, ToolImpls = None](Protocol):
 
 @dataclass(frozen=True)
 class Prompt[Output, ToolImpls = None]:
+  """A fully resolved prompt ready to be sent to an LLM."""
+
+  # Metadata for this prompt.
   meta: schema.meta.Meta
   system_message: str
   user_message: str
   examples: Sequence[FewShotExample]
+  # The tools which can be called by the LLM, keyed by tool name.
+  tools: Mapping[str, Tool]
   output_format: OutputFormat[Output]
   template_id: TemplateId
 
 
 @dataclass(frozen=True)
 class FewShotExample:
+  """A single few-shot example.
+
+  Consists of a user message, optional intermediate tool-call steps, and the
+  expected response.
+  """
+
   user_message: str
   intermediate_steps: Sequence[IntermediateStepExample];
   response: str
@@ -61,6 +72,14 @@ class ToolCallExample:
   stringified_input: str
   # Stringified JSON output
   stringified_output: str
+
+
+@dataclass(frozen=True)
+class Tool[Input, Output]:
+  name: str
+  description: str
+  input_adapter: pydantic.TypeAdapter[Input]
+  output_adapter: pydantic.TypeAdapter[Output]
 
 
 @dataclass(frozen=True)
@@ -124,7 +143,7 @@ class _TemplateImpl[Input, Output, ToolImpls]:
 def _get_template_impl(
   id: TemplateId,
   data: _internal.Templates | None,
-) -> Template:
+) -> Template[Any, Any, Any]:
   data = data or _templates_data
   template = data.templates[id]
   return _TemplateImpl(_template_data=template, _data=data)

@@ -70,6 +70,13 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
   const writeOverloadSig = (t: ValidTemplate): readonly string[] => {
     const id = getId(t.template);
     const typePrefix = getTypePrefix(t.template);
+    let toolImpls: readonly string[];
+    if (Object.keys(t.tools).length <= 0) {
+      toolImpls = [];
+    } else {
+      const ref = getToolImplsRef(t.template);
+      toolImpls = [`  ${ref},`];
+    }
     return [
       " def get_template(",
       "  self,",
@@ -77,6 +84,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
       " ) -> Template[",
       `  ${typePrefix}Input,`,
       `  ${typePrefix}Output,`,
+      ...toolImpls,
       " ]:",
     ];
   };
@@ -99,7 +107,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
         lines.push(...writeOverloadSig(template));
         lines.push("  ...");
       }
-      lines.push(" def get_template(self, id: TemplateId) -> Any:");
+      lines.push(" def get_template(self, id: TemplateId) -> Template:");
     }
     lines.push("  return _get_template_impl(id, self._data)");
   }
@@ -212,7 +220,7 @@ function writeToolImplProtocols(
       lines.push(`  @final`);
       lines.push(`  class ${templateName}:`);
       if (toolNames.length > 0) {
-        lines.push("   class ToolCallHandler(Protocol):");
+        lines.push("   class ToolImpls(Protocol):");
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "snake_case_class_name");
           const typePrefix = getTypePrefix(tool.tool.tool);
@@ -567,6 +575,18 @@ function getTypePrefix(input: Template | Tool): string {
     ),
     toPyName(input.name.text, "snake_case_class_name"),
     "",
+  ].join(".");
+}
+
+function getToolImplsRef(input: Template): string {
+  return [
+    "tools",
+    toPyName(
+      input.namespace?.text ?? DEFAULT_NAMESPACE,
+      "snake_case_class_name",
+    ),
+    toPyName(input.name.text, "snake_case_class_name"),
+    "ToolImpls",
   ].join(".");
 }
 
