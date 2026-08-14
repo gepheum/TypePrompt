@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 
-from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, overload
+from typing import Annotated, Any, Final, Literal, Never, Protocol, Union, final, cast, overload
+import re
+import json
 
 import pydantic
 
@@ -28,16 +30,31 @@ class Template[Input, Output, ToolImpls = None](Protocol):
 
 @dataclass(frozen=True)
 class Prompt[Output, ToolImpls = None]:
+  """A fully resolved prompt ready to be sent to an LLM."""
+
+  # Metadata for this prompt.
   meta: schema.meta.Meta
   system_message: str
   user_message: str
   examples: Sequence[FewShotExample]
+  # The tools which can be called by the LLM, keyed by tool name.
+  tools: Mapping[str, Tool]
   output_format: OutputFormat[Output]
   template_id: TemplateId
+
+  def parse_response(self, response: str) -> Output:
+    """Parse the LLM response into the expected output type."""
+    return _parse_response_impl(response, self)
 
 
 @dataclass(frozen=True)
 class FewShotExample:
+  """A single few-shot example.
+
+  Consists of a user message, optional intermediate tool-call steps, and the
+  expected response.
+  """
+
   user_message: str
   intermediate_steps: Sequence[IntermediateStepExample];
   response: str
@@ -57,6 +74,14 @@ class ToolCallExample:
   stringified_input: str
   # Stringified JSON output
   stringified_output: str
+
+
+@dataclass(frozen=True)
+class Tool[Input, Output]:
+  name: str
+  description: str
+  input_adapter: pydantic.TypeAdapter[Input]
+  output_adapter: pydantic.TypeAdapter[Output]
 
 
 @dataclass(frozen=True)
@@ -354,6 +379,29 @@ _templates_data: Final = _internal.Templates.model_validate_json(
 )
 
 
+def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> Output:
+  output_format = prompt.output_format
+  match output_format.format:
+    case "json":
+      response = response.strip()
+      if response.startswith("```"):
+        # Remove code fences (``` or ```json) from start and end
+        response = re.sub(
+          r"^```(?:json)?\s*\n?(.*?)\n?```$",
+          r"\1",
+          response,
+          flags=re.DOTALL,
+        ).strip()
+
+      try:
+        return output_format.type_adapter.validate_json(response, by_alias=True)
+      except Exception as e:
+        raise type(e)(f"Template '{prompt.template_id}': {e}") from e
+
+    case "text":
+      return cast(Output, response)
+
+
 @dataclass(frozen=True)
 class _TemplateImpl[Input, Output, ToolImpls]:
   _template_data: _internal.Template
@@ -372,5 +420,5 @@ def _get_template_impl(
   return _TemplateImpl(_template_data=template, _data=data)
 
 # To disable linter warnings about unused imports
-_ = (dataclass, Sequence, Annotated, Any, Final, Literal, Mapping, Never, Protocol, Union, final, overload, pydantic)
+_ = (Annotated, Never, overload)
 del _

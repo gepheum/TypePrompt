@@ -80,6 +80,14 @@ export type ToolCallExample = {
   readonly stringifiedOutput: string;
 };
 
+/** A tool that can be called during prompt execution. */
+export type Tool<Input, Output> = {
+  readonly name: string;
+  readonly description: string;
+  readonly inputSchema: z.ZodType<Input>;
+  readonly outputSchema: z.ZodType<Output>;
+};
+
 /**
  * Describes how the LLM response for template `Id` should be structured and
  * parsed. When `kind === "logic"`, contains the Zod schema for the expected output.
@@ -90,14 +98,6 @@ export type OutputFormat<Id extends TemplateId> =
       readonly schema: z.ZodType<Output<Id>>;
     }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
-
-/** A tool that can be called during prompt execution. */
-export type Tool<Input, Output> = {
-  readonly name: string;
-  readonly description: string;
-  readonly inputSchema: z.ZodType<Input>;
-  readonly outputSchema: z.ZodType<Output>;
-};
 
 /** Names of the tools available from the given template. */
 export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
