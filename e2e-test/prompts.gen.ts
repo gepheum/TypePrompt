@@ -15,6 +15,7 @@ export function newPromptMaker(): PromptMaker {
 export type PromptMaker = {
   getTemplate<Id extends TemplateId>(templateId: Id): Template<Id>;
 };
+
 /** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
