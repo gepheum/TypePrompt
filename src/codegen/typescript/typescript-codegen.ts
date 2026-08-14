@@ -1,5 +1,4 @@
 import type {
-  NamespaceResult,
   Template,
   Tool,
   ValidatedTool,

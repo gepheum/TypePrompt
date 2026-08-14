@@ -1,14 +1,13 @@
+PYTHON:
+  - add more comments
+  - add an override handler?
+
 TYPESCRIPT:
-  - I think maybe I should use get_template(...) like in Python
   - e2e test
   - add example of hook functions
 
 CODEGEN:
   - Move all the non-TS code to 'playground'
-
-PYTHON:
-  - add more comments
-  - add an override handler?
 
 DOC:
   - Document recursive types
