@@ -616,7 +616,7 @@ function writeComment(doc: string, indent: "" | " "): readonly string[] {
 }
 
 function scaleIndenting(input: string): string {
-  return input.replace(/^ +/gm, (match) => match.repeat(2));
+  return input.replace(/^ +/gm, (match) => match.repeat(4));
 }
 
 const PYTHON_HARD_KEYWORDS: ReadonlySet<string> = new Set([
