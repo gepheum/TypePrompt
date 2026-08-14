@@ -40,8 +40,6 @@
  * ```
  */
 
-// To install dependencies:
-//   npm install @toon-format/toon yaml zod
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
