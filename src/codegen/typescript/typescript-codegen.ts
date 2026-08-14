@@ -48,8 +48,6 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["typescript-top-level"],
-      reformat(writePromptMaker(Object.values(namespaces))),
-      STATIC_SNIPPETS["typescript-public-types"],
       reformat(
         [
           writeTemplateIdEnum(Object.values(templates)),
@@ -64,33 +62,6 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       STATIC_SNIPPETS["typescript-logic"],
     ].join("\n\n"),
   ).concat("\n");
-}
-
-function writePromptMaker(namespaces: readonly NamespaceResult[]): string {
-  const lines = [
-    "/**",
-    " * Entry point for building prompts. Each property corresponds to a namespace,",
-    " * and each nested property corresponds to a template within that namespace.",
-    " */",
-    "export type PromptMaker = {",
-  ];
-  for (const namespace of namespaces) {
-    if (namespace.templates.length <= 0) continue;
-    if (namespace.name === DEFAULT_NAMESPACE) {
-      lines.push("/** Templates defined in the default namespace. */");
-    }
-    const namespaceProperty = uncapitalize(namespace.name);
-    lines.push(`readonly ${namespaceProperty}: {`);
-    for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
-      const templateProperty = uncapitalize(templateName);
-      const templateId = `${namespace.name}:${templateName}`;
-      lines.push(`readonly ${templateProperty}: Template<"${templateId}">;`);
-    }
-    lines.push("};");
-  }
-  lines.push("};");
-  return lines.join("\n");
 }
 
 function writeUserDefinedDatatypes(

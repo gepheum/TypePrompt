@@ -1,3 +1,8 @@
+TYPESCRIPT:
+  - I think maybe I should use get_template(...) like in Python
+  - e2e test
+  - add example of hook functions
+
 CODEGEN:
   - Move all the non-TS code to 'playground'
 
@@ -7,11 +12,6 @@ PYTHON:
 
 DOC:
   - Document recursive types
-
-TYPESCRIPT:
-  - I think maybe I should use get_template(...) like in Python
-  - e2e test
-  - add example of hook functions
 
 JSON:
   - add 'suggestions' when parsing JSON and a field is not found

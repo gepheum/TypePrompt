@@ -8,20 +8,13 @@ import * as z from "zod";
 
 /** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_DATA);
+  return new PromptMakerImpl(TEMPLATES_DATA);
 }
 
-/**
- * Entry point for building prompts. Each property corresponds to a namespace,
- * and each nested property corresponds to a template within that namespace.
- */
+/** Entry point for building prompts. */
 export type PromptMaker = {
-  /** Templates defined in the default namespace. */
-  readonly main: {
-    readonly myTemplate: Template<"Main:MyTemplate">;
-  };
+  getTemplate<Id extends TemplateId>(templateId: Id): Template<Id>;
 };
-
 /** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
@@ -122,42 +115,6 @@ export type ToolCallResponse = {
   readonly callId: string;
   readonly stringifiedOutput: string;
 };
-
-async function callToolsImpl<Id extends TemplateId>(
-  calls: readonly ToolCall[],
-  tools: Tools<Id>,
-  impls: ToolImpls<Id>,
-): Promise<ReadonlyArray<ToolCallResponse>> {
-  return Promise.all(
-    calls.map(async (call) => {
-      const { callId, toolName, stringifiedInput } = call;
-      const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
-      if (!tool) {
-        throw new Error("Tool not found: ".concat(toolName));
-      }
-      const impl = (
-        impls as Record<string, (input: unknown) => Promise<unknown>>
-      )[toolName];
-      if (!impl) {
-        throw new Error("Tool implementation not found: ".concat(toolName));
-      }
-      let stringifiedOutput: string;
-      try {
-        const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
-        const output = tool.outputSchema.parse(await impl(input));
-        stringifiedOutput = JSON.stringify(output);
-      } catch (e) {
-        throw new Error(
-          "Tool call failed: "
-            .concat(JSON.stringify({ callId, toolName, stringifiedInput }))
-            .concat(" — ")
-            .concat(String(e)),
-        );
-      }
-      return { callId, stringifiedOutput };
-    }),
-  );
-}
 
 /** Uniquely identifies a prompt template. */
 export type TemplateId = (
@@ -725,23 +682,55 @@ const TEMPLATES_DATA: Spec.Templates = {
   }
 } as const;
 
-function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
-  const result: {
-    [namespace: string]: {
-      [name: string]: Template<TemplateId>;
-    };
-  } = {};
-  for (const [templateId, templateSpec] of Object.entries(
-    templates.templates,
-  )) {
-    const namespace = uncapitalize(templateSpec.namespace);
-    const name = uncapitalize(templateSpec.name);
-    (result[namespace] ??= {})[name] = {
-      make: (input: Input<TemplateId>) =>
-        resolveTemplate(templateId as TemplateId, templates, input),
+async function callToolsImpl<Id extends TemplateId>(
+  calls: readonly ToolCall[],
+  tools: Tools<Id>,
+  impls: ToolImpls<Id>,
+): Promise<ReadonlyArray<ToolCallResponse>> {
+  return Promise.all(
+    calls.map(async (call) => {
+      const { callId, toolName, stringifiedInput } = call;
+      const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
+      if (!tool) {
+        throw new Error("Tool not found: ".concat(toolName));
+      }
+      const impl = (
+        impls as Record<string, (input: unknown) => Promise<unknown>>
+      )[toolName];
+      if (!impl) {
+        throw new Error("Tool implementation not found: ".concat(toolName));
+      }
+      let stringifiedOutput: string;
+      try {
+        const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
+        const output = tool.outputSchema.parse(await impl(input));
+        stringifiedOutput = JSON.stringify(output);
+      } catch (e) {
+        throw new Error(
+          "Tool call failed: "
+            .concat(JSON.stringify({ callId, toolName, stringifiedInput }))
+            .concat(" — ")
+            .concat(String(e)),
+        );
+      }
+      return { callId, stringifiedOutput };
+    }),
+  );
+}
+
+class PromptMakerImpl implements PromptMaker {
+  constructor(private readonly templates: Spec.Templates) {}
+
+  getTemplate<Id extends TemplateId>(templateId: Id): Template<Id> {
+    const templateSpec = this.templates.templates[templateId];
+    if (!templateSpec) {
+      throw new Error("Template not found: ".concat(templateId));
+    }
+    return {
+      make: (input: Input<Id>) =>
+        resolveTemplate(templateId, this.templates, input),
     };
   }
-  return result as PromptMaker;
 }
 
 export const promptMakerFactory: {
@@ -758,7 +747,7 @@ export const promptMakerFactory: {
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }
-    return newPromptMakerImpl(templatesData);
+    return new PromptMakerImpl(templatesData);
   },
 } as const;
 
@@ -1023,8 +1012,4 @@ function parseResponseImpl<Id extends TemplateId>(
       return response as unknown as Output<Id>;
     }
   }
-}
-
-function uncapitalize(s: string): string {
-  return s.charAt(0).toLowerCase() + s.slice(1);
 }

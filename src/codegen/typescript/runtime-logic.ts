@@ -12,74 +12,13 @@ import * as z from "zod";
 
 /** Creates a new {@link PromptMaker} instance. */
 export function newPromptMaker(): PromptMaker {
-  return newPromptMakerImpl(TEMPLATES_DATA);
+  return new PromptMakerImpl(TEMPLATES_DATA);
 }
-// </static:typescript-top-level>
 
-// <generated>
-/** Metadata associated with a prompt template. */
-export type Meta = {};
-
-/** Uniquely identifies a prompt template. */
-export type TemplateId = "Ns:Foo" | "Ns:Bar";
-
-/** The input required to resolve the template into a prompt. */
-export type Input<Id extends TemplateId> = {
-  "Ns:Foo": unknown;
-  "Ns:Bar": string;
-}[Id];
-
-/** Type of the structured response expected from the LLM. */
-export type Output<Id extends TemplateId> = {
-  "Ns:Foo": unknown;
-  "Ns:Bar": string;
-}[Id];
-
-/** The tools available from the given template. */
-export type Tools<Id extends TemplateId> = {
-  readonly "Ns:Foo": {
-    readonly myTool: Tool<string, string>;
-    readonly otherTool: Tool<string, boolean>;
-  };
-  readonly "Ns:Bar": {};
-}[Id];
-
-const zodSchemas = {
-  "Ns:Foo": {
-    input: z.any(),
-    output: z.any(),
-  },
-  "Ns:Bar": {
-    input: z.string(),
-    output: z.string(),
-  },
-  "Ns:myTool": {
-    input: z.number(),
-    output: z.number(),
-  },
-  "Ns:otherTool": {
-    input: z.boolean(),
-    output: z.number(),
-  },
-} as const;
-
+/** Entry point for building prompts. */
 export type PromptMaker = {
-  readonly [namespace: string]: {
-    readonly [name: string]: Template<TemplateId>;
-  };
+  getTemplate<Id extends TemplateId>(templateId: Id): Template<Id>;
 };
-
-const TEMPLATES_DATA: Spec.Templates = {
-  signature: "",
-  templates: {},
-  tools: {},
-  sourceFiles: {},
-} as const;
-
-const templatesSchema: z.ZodType<Spec.Templates> = z.any();
-// </generated>
-
-// <static:typescript-public-types>
 /** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly make: (input: Input<Id>) => Prompt<Id>;
@@ -180,7 +119,66 @@ export type ToolCallResponse = {
   readonly callId: string;
   readonly stringifiedOutput: string;
 };
+// </static:typescript-top-level>
 
+// <generated>
+/** Metadata associated with a prompt template. */
+export type Meta = {};
+
+/** Uniquely identifies a prompt template. */
+export type TemplateId = "Ns:Foo" | "Ns:Bar";
+
+/** The input required to resolve the template into a prompt. */
+export type Input<Id extends TemplateId> = {
+  "Ns:Foo": unknown;
+  "Ns:Bar": string;
+}[Id];
+
+/** Type of the structured response expected from the LLM. */
+export type Output<Id extends TemplateId> = {
+  "Ns:Foo": unknown;
+  "Ns:Bar": string;
+}[Id];
+
+/** The tools available from the given template. */
+export type Tools<Id extends TemplateId> = {
+  readonly "Ns:Foo": {
+    readonly myTool: Tool<string, string>;
+    readonly otherTool: Tool<string, boolean>;
+  };
+  readonly "Ns:Bar": {};
+}[Id];
+
+const zodSchemas = {
+  "Ns:Foo": {
+    input: z.any(),
+    output: z.any(),
+  },
+  "Ns:Bar": {
+    input: z.string(),
+    output: z.string(),
+  },
+  "Ns:myTool": {
+    input: z.number(),
+    output: z.number(),
+  },
+  "Ns:otherTool": {
+    input: z.boolean(),
+    output: z.number(),
+  },
+} as const;
+
+const TEMPLATES_DATA: Spec.Templates = {
+  signature: "",
+  templates: {},
+  tools: {},
+  sourceFiles: {},
+} as const;
+
+const templatesSchema: z.ZodType<Spec.Templates> = z.any();
+// </generated>
+
+// <static:typescript-logic>
 async function callToolsImpl<Id extends TemplateId>(
   calls: readonly ToolCall[],
   tools: Tools<Id>,
@@ -216,26 +214,20 @@ async function callToolsImpl<Id extends TemplateId>(
     }),
   );
 }
-// </static:typescript-public-types>
 
-// <static:typescript-logic>
-function newPromptMakerImpl(templates: Spec.Templates): PromptMaker {
-  const result: {
-    [namespace: string]: {
-      [name: string]: Template<TemplateId>;
-    };
-  } = {};
-  for (const [templateId, templateSpec] of Object.entries(
-    templates.templates,
-  )) {
-    const namespace = uncapitalize(templateSpec.namespace);
-    const name = uncapitalize(templateSpec.name);
-    (result[namespace] ??= {})[name] = {
-      make: (input: Input<TemplateId>) =>
-        resolveTemplate(templateId as TemplateId, templates, input),
+class PromptMakerImpl implements PromptMaker {
+  constructor(private readonly templates: Spec.Templates) {}
+
+  getTemplate<Id extends TemplateId>(templateId: Id): Template<Id> {
+    const templateSpec = this.templates.templates[templateId];
+    if (!templateSpec) {
+      throw new Error("Template not found: ".concat(templateId));
+    }
+    return {
+      make: (input: Input<Id>) =>
+        resolveTemplate(templateId, this.templates, input),
     };
   }
-  return result as PromptMaker;
 }
 
 export const promptMakerFactory: {
@@ -252,7 +244,7 @@ export const promptMakerFactory: {
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }
-    return newPromptMakerImpl(templatesData);
+    return new PromptMakerImpl(templatesData);
   },
 } as const;
 
@@ -517,10 +509,6 @@ function parseResponseImpl<Id extends TemplateId>(
       return response as unknown as Output<Id>;
     }
   }
-}
-
-function uncapitalize(s: string): string {
-  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 // </static:typescript-logic>
 
