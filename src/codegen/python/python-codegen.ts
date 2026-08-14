@@ -424,6 +424,7 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   return [
     "_templates_data: Final = _internal.Templates.model_validate_json(",
     ` ${stringifiedJson},`,
+    " by_alias=True,",
     ")",
   ].join("\n");
 }
