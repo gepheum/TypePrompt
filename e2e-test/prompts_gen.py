@@ -174,6 +174,7 @@ _TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {
   'myTool': 'my_tool',
 }
 
+
 def tool_name_to_method_name(tool_name: str) -> str:
   return _TOOL_NAME_TO_METHOD_NAME[tool_name]
 
