@@ -9,6 +9,8 @@ import re
 import json
 
 import pydantic
+import yaml
+import toon_format
 # </static:python-imports>
 
 
@@ -45,6 +47,7 @@ class Prompt[Output, ToolImpls = None]:
   tools: Mapping[str, Tool]
   output_format: OutputFormat[Output]
   template_id: TemplateId
+  _internal: None
 
   def parse_response(self, response: str) -> Output:
     """Parse the LLM response into the expected output type."""
@@ -144,6 +147,18 @@ class schema:
       type Input = int
       type Output = str
 
+    @final
+    class my_tool:
+      # Exported as 'schema.main.my_tool.Input'
+      class Input(pydantic.BaseModel):
+        foo: str
+        x: int | None = None
+        y: int | None = None
+
+      # Exported as 'schema.main.my_tool.Output'
+      class Output(pydantic.BaseModel):
+        bar: str
+
 
 _templates_data: Final = (
   _internal.Templates(
@@ -162,6 +177,18 @@ _TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {
 
 def tool_name_to_method_name(tool_name: str) -> str:
   return _TOOL_NAME_TO_METHOD_NAME[tool_name]
+
+
+_type_adapters: Final = {
+  "Main:MyTemplate": (
+    pydantic.TypeAdapter[schema.main.my_template.Input],
+    pydantic.TypeAdapter[schema.main.my_template.Output],
+  ),
+  "Main:myTool": (
+    pydantic.TypeAdapter[schema.main.my_tool.Input],
+    pydantic.TypeAdapter[schema.main.my_tool.Output],
+  ),
+}
 # </generated>
 
 
@@ -219,11 +246,173 @@ async def _call_tools_impl[ToolImpls](
 
 @dataclass(frozen=True)
 class _TemplateImpl[Input, Output, ToolImpls]:
+  _template_id: TemplateId
   _template_data: _internal.Template
   _data: _internal.Templates
 
   def make(self, input: Input) -> Prompt[Output, ToolImpls]:
-    pass
+    def evaluate(expression: _internal.Expression, val: Any) -> Any:
+      match expression.kind:
+        case "input":
+          return val
+        case "property":
+          obj = evaluate(expression.left, val)
+          return cast(dict, obj)[expression.property]
+
+    def indent(text: str, spaces: str) -> str:
+      if not spaces:
+        return text
+      return text.replace("\n", "\n" + spaces)
+
+    def format_table(v: Any, fmt: Literal["csv", "tsv"]) -> str:
+      separator = "," if fmt == "csv" else "\t"
+      rows = cast(list[dict], v)
+      if not rows:
+        return ""
+      header = list(rows[0].keys())
+      lines = [separator.join(header)]
+      for row in rows:
+        cells = row.values()
+        if fmt == "csv":
+          def csv_cell(c: Any) -> str:
+            s = str(c)
+            return '"' + s.replace('"', '""') + '"' if re.search(r'[",\n\r]', s) else s
+          lines.append(separator.join(csv_cell(c) for c in cells))
+        else:
+          def tsv_cell(c: Any) -> str:
+            return str(c).replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
+          lines.append(separator.join(tsv_cell(c) for c in cells))
+      return "\n".join(lines)
+
+    def format_value(v: Any, fmt: _internal.InsertFormat | None) -> str:
+      match fmt:
+        case None | "text":
+          return str(v)
+        case "json":
+          return json.dumps(v, indent=2)
+        case "yaml":
+          return yaml.dump(v, allow_unicode=True, default_flow_style=False).rstrip("\n")
+        case "toon":
+          return toon_format.encode(v)
+        case "csv" | "tsv":
+          return format_table(v, fmt)
+
+    def resolve_body(body: Sequence[_internal.BodyPiece], inp: Any, snippets: Mapping[str, _internal.Snippet]) -> str:
+      parts: list[str] = []
+      for piece in body:
+        match piece.kind:
+          case "text":
+            parts.append(piece.text)
+          case "insertVal":
+            parts.append(indent(format_value(evaluate(piece.val, inp), piece.format), piece.indent))
+          case "insertSnippet":
+            snippet = snippets.get(piece.snippet)
+            if snippet is None:
+              raise ValueError(f"Snippet not found: {piece.snippet}")
+            parts.append(indent(resolve_snippet(snippet, inp, snippets), piece.indent))
+      return "".join(parts)
+
+    def resolve_snippet(snippet: _internal.Snippet, inp: Any, snippets: Mapping[str, _internal.Snippet]) -> str:
+      match snippet.kind:
+        case "snippet":
+          return resolve_body(snippet.body, inp, snippets)
+        case "snippetIf":
+          eval_result = evaluate(snippet.expression, inp)
+          match snippet.is_:
+            case "notEmpty":
+              condition = len(eval_result) > 0
+            case "notNull":
+              condition = eval_result is None
+            case "true":
+              condition = bool(eval_result)
+          return resolve_body(snippet.then if condition else snippet.else_, inp, snippets)
+        case "snippetSwitch":
+          eval_result = evaluate(snippet.expression, inp)
+          branch = snippet.branches.get(str(eval_result))
+          if branch is None:
+            raise ValueError(f"Branch not found: {eval_result}")
+          return resolve_body(branch, inp, snippets)
+
+    def resolve_examples(
+      examples: Sequence[_internal.FewShotExample],
+      user_body: Sequence[_internal.BodyPiece],
+      tmpl: _internal.Template,
+    ) -> Sequence[FewShotExample]:
+      result = []
+      for ex in examples:
+        result.append(FewShotExample(
+          user_message=resolve_body(user_body, ex.input, tmpl.snippets),
+          intermediate_steps=[
+            IntermediateStepExample(tool_calls=[
+              ToolCallExample(
+                call_id=tc.call_id,
+                tool_name=tc.tool_name,
+                stringified_input=json.dumps(tc.input),
+                stringified_output=json.dumps(tc.output),
+              )
+              for tc in step.tool_calls
+            ])
+            for step in ex.intermediate_steps
+          ],
+          response=format_value(ex.output, tmpl.output_format),
+        ))
+      return result
+
+    input_adapter, output_adapter = _type_adapters[self._template_id]
+    input = input_adapter.validate_python(input)
+
+    template = self._template_data
+    snippets = template.snippets
+    contents = template.contents
+
+    if contents.kind == "noVariants":
+      content = contents.content
+      meta = content.meta
+      system_message = resolve_body(content.system or [], input, snippets)
+      user_body = content.user or []
+      user_message = resolve_body(user_body, input, snippets)
+      examples = resolve_examples(content.examples or [], user_body, template)
+    else:
+      variant = cast(dict, input)["variant"]
+      variant_content = contents.variants[variant]
+      default_content = contents.default_content
+      meta = variant_content.meta if variant_content.meta is not None else default_content.meta
+      system_body = variant_content.system if variant_content.system is not None else (default_content.system or [])
+      user_body = variant_content.user if variant_content.user is not None else (default_content.user or [])
+      system_message = resolve_body(system_body, input, snippets)
+      user_message = resolve_body(user_body, input, snippets)
+      raw_examples = variant_content.examples if variant_content.examples is not None else (default_content.examples or [])
+      examples = resolve_examples(raw_examples, user_body, template)
+
+    def make_tool(tool_spec: _internal.TemplateTool) -> Tool:
+      input_adapter, output_adapter = _type_adapters[tool_spec.id]
+      return Tool(
+        name=tool_spec.name,
+        description=self._data.tools[tool_spec.id].description,
+        input_adapter=input_adapter,
+        output_adapter=output_adapter,
+      )
+
+    tools = {
+      tool_spec.name: make_tool(tool_spec)
+      for tool_spec in template.tools
+    }
+
+    if template.output_format == "json":
+      output_format = cast(OutputFormat[Output], JsonOutputFormat(format="json", type_adapter=output_adapter))
+    else:
+      output_format = cast(OutputFormat[Output], TextOutputFormat(format="text"))
+
+    return Prompt(
+      meta=meta,
+      system_message=system_message,
+      user_message=user_message,
+      examples=examples,
+      tools=tools,
+      output_format=output_format,
+      template_id=self._template_id,
+      _internal=None,
+    )
 
 
 def _get_template_impl(
@@ -232,7 +421,7 @@ def _get_template_impl(
 ) -> Template[Any, Any, Any]:
   data = data or _templates_data
   template = data.templates[id]
-  return _TemplateImpl(_template_data=template, _data=data)
+  return _TemplateImpl(_template_id=id, _template_data=template, _data=data)
 
 # To disable linter warnings about unused imports
 _ = (Annotated, Never, overload)

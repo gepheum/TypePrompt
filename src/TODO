@@ -1,6 +1,9 @@
 CODEGEN:
   - Move all the non-TS code to 'playground'
 
+PYTHON:
+  - format runtime_logic
+
 DOC:
   - Document recursive types
 
