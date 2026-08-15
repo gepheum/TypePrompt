@@ -1,6 +1,3 @@
-// Add parseResponse, callTool, callTools
-// Update code which removes unused code warnings...
-
 import type {
   Template,
   Tool,

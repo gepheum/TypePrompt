@@ -554,7 +554,29 @@ def _get_template_impl(
     return _TemplateImpl(_template_id=id, _template_data=template, _data=data)
 
 
+class _PromptMakerFactory:
+    def templates_data(self) -> dict[str, Any]:
+        return _templates_data.model_dump(by_alias=True)
+
+    def new_with_overrides(self, overrides: dict[str, Any]) -> PromptMaker:
+        overrides_obj = _internal.Templates.model_validate(overrides)
+        del overrides
+        if _templates_data.signature != overrides_obj.signature:
+            raise ValueError("Signature mismatch")
+        return PromptMaker(
+            _data=_internal.Templates(
+                signature=_templates_data.signature,
+                templates={**_templates_data.templates, **overrides_obj.templates},
+                tools={**_templates_data.tools, **overrides_obj.tools},
+                source_files=_templates_data.source_files,
+            )
+        )
+
+
+_prompt_maker_factory: Final = _PromptMakerFactory()
+
+
 # To disable linter warnings about unused imports
-_ = (Annotated, Never, Union, overload)
+_ = (Annotated, Never, Union, overload, _prompt_maker_factory)
 del _
 # </static:python-logic>
