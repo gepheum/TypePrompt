@@ -4,11 +4,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from gen.prompt_maker_p1 import (
-    PromptMaker,
-    schema,
-    tools,
-)
+from gen.prompt_maker_p1 import (PromptMaker, ToolCall, schema)
 
 prompt_maker = PromptMaker()
 prompt = prompt_maker.get_template("Main:MyTemplate").make(
@@ -111,11 +107,11 @@ class TestCallTools:
     async def test_calls_the_impl_and_returns_stringified_output(self):
         result = await prompt.call_tools(
             [
-                type("ToolCall", (), {
-                    "call_id": "c1",
-                    "tool_name": "myTool",
-                    "stringified_input": '{"foo":"hello"}',
-                })()
+                ToolCall(
+                    call_id="c1",
+                    tool_name="myTool",
+                    stringified_input='{"foo":"hello"}',
+                )
             ],
             self._Impls(),
         )
@@ -128,11 +124,11 @@ class TestCallTools:
         with pytest.raises(Exception):
             await prompt.call_tools(
                 [
-                    type("ToolCall", (), {
-                        "call_id": "c1",
-                        "tool_name": "noSuchTool",
-                        "stringified_input": "{}",
-                    })()
+                    ToolCall(
+                        call_id="c1",
+                        tool_name="noSuchTool",
+                        stringified_input="{}",
+                    )
                 ],
                 self._Impls(),
             )

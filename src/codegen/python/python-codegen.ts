@@ -369,7 +369,13 @@ function writeSchema(
             if (field.optional) {
               lines.push("  default=None,");
             }
-            lines.push(`  alias='${field.name.text}',`);
+            const aliasChoices = [field.name.text, pyName]
+              .map((name) => `'${name}'`)
+              .join(", ");
+            lines.push(
+              `  validation_alias=pydantic.AliasChoices(${aliasChoices}),`,
+            );
+            lines.push(`  serialization_alias='${field.name.text}',`);
             lines.push(" )");
           }
         }
