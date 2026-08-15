@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { newPrompts, type $, type ToolImpls } from "./gen/prompts-p1.js";
+import { newPrompts, type $ } from "./gen/prompts-p1.js";
 
 const prompts = newPrompts();
 const prompt = prompts.myTemplate.render({
@@ -116,7 +116,7 @@ describe("newPromptMaker", () => {
     });
   });
 
-  describe("callTools", () => {
+  describe("executeTools", () => {
     const impls = {
       myTool: async ({ foo }: $.MyTool.Input) => ({
         bar: foo.toUpperCase(),
@@ -124,7 +124,7 @@ describe("newPromptMaker", () => {
     } as unknown as ToolImpls<"Main:MyTemplate">;
 
     it("calls the impl and returns stringified output", async () => {
-      const result = await prompt.callTools(
+      const result = await prompt.executeTools(
         [
           {
             callId: "c1",
@@ -142,7 +142,7 @@ describe("newPromptMaker", () => {
     it("throws when the tool input fails schema validation", async () => {
       let threw = false;
       try {
-        await prompt.callTools(
+        await prompt.executeTools(
           // foo must be a string, not a number
           [
             {
@@ -162,7 +162,7 @@ describe("newPromptMaker", () => {
     it("throws when the tool name is not registered", async () => {
       let threw = false;
       try {
-        await prompt.callTools(
+        await prompt.executeTools(
           [{ callId: "c1", toolName: "noSuchTool", stringifiedInput: "{}" }],
           impls,
         );

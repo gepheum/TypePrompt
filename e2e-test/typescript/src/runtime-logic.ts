@@ -26,12 +26,12 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * ```ts
  * async function callModel<Id extends TemplateId>(
  *   prompt: Prompt<Id>,
- *   toolImpls: ToolImpls<Id>,
+ *   toolExecutor: ToolExecutor<Id>,
  * ): Promise<Output<Id>> {
  *   // Build and send the API request using prompt.systemMessage,
  *   // prompt.userMessage, prompt.examples, and prompt.tools.
  *   // If the model requests tool calls, dispatch them:
- *   //   const results = await prompt.callTools(toolCalls, toolImpls);
+ *   //   const results = await prompt.executeTools(toolCalls, toolExecutor);
  *   // Repeat until the model produces a final response, then parse it:
  *   return prompt.parseResponse(modelResponse);
  * }
@@ -72,9 +72,9 @@ export type Prompt<Id extends TemplateId> = {
   readonly tools: Tools<Id>;
   readonly isToolName: (name: string) => name is ToolNames<Id>;
   /** Executes the given tool calls in parallel. */
-  readonly callTools: (
+  readonly executeTools: (
     calls: readonly ToolCall[],
-    impls: ToolImpls<Id>,
+    executor: ToolExecutor<Id>,
   ) => Promise<ReadonlyArray<ToolCallResponse>>;
   readonly outputFormat: OutputFormat<Id>;
   /** Parses the raw LLM response string into the typed {@link Output}. */
@@ -136,7 +136,7 @@ export type OutputFormat<Id extends TemplateId> =
 export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
 
 /** Implementation functions for all tools available from template `Id`. */
-export type ToolImpls<Id extends TemplateId> = {
+export type ToolExecutor<Id extends TemplateId> = {
   [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<
     infer Input,
     infer Output
@@ -222,10 +222,10 @@ const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
 // <static:typescript-logic>
-async function callToolsImpl<Id extends TemplateId>(
+async function executeToolsImpl<Id extends TemplateId>(
   calls: readonly ToolCall[],
   tools: Tools<Id>,
-  impls: ToolImpls<Id>,
+  executor: ToolExecutor<Id>,
 ): Promise<ReadonlyArray<ToolCallResponse>> {
   return Promise.all(
     calls.map(async (call) => {
@@ -235,7 +235,7 @@ async function callToolsImpl<Id extends TemplateId>(
         throw new Error("Tool not found: ".concat(toolName));
       }
       const impl = (
-        impls as Record<string, (input: unknown) => Promise<unknown>>
+        executor as Record<string, (input: unknown) => Promise<unknown>>
       )[toolName];
       if (!impl) {
         throw new Error("Tool implementation not found: ".concat(toolName));
@@ -360,9 +360,9 @@ function resolveTemplate<Id extends TemplateId>(
   };
   const callTools = (
     calls: readonly ToolCall[],
-    impls: ToolImpls<Id>,
+    executor: ToolExecutor<Id>,
   ): Promise<ReadonlyArray<ToolCallResponse>> =>
-    callToolsImpl(calls, tools, impls);
+    executeToolsImpl(calls, tools, executor);
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
@@ -377,7 +377,7 @@ function resolveTemplate<Id extends TemplateId>(
     examples,
     tools,
     isToolName,
-    callTools,
+    executeTools: callTools,
     outputFormat,
     parseResponse,
     templateId: templateId as Id,

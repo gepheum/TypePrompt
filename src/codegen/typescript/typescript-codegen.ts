@@ -182,6 +182,7 @@ function writeUserDefinedDatatypes(
     Object.keys(schema.typeDeclarations).length > 0;
   const lines = [
     "export type Meta = $.Meta.Meta;\n",
+    "/** Namespace containing the user-defined datatypes. */",
     "export namespace $ {",
     "export namespace Meta {",
   ];
@@ -296,10 +297,9 @@ function writeSchema(
   const lines: string[] = [];
   for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
     const name = typeDeclaration.name.text;
-    lines.push(wrapJsdoc(typeDeclaration.doc));
-    lines.push(
-      `export type ${name} = ${writeType(typeDeclaration.valueType, options)};`,
-    );
+    const jsdoc = wrapJsdoc(typeDeclaration.doc);
+    const type = writeType(typeDeclaration.valueType, options);
+    lines.push(`${jsdoc}export type ${name} = ${type};\n`);
   }
   return lines.join("\n");
 }
