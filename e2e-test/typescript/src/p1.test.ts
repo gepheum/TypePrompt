@@ -1,10 +1,10 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { newPromptMaker, type $, type ToolImpls } from "./gen/prompts-p1.js";
+import { newPrompts, type $, type ToolImpls } from "./gen/prompts-p1.js";
 
-const promptMaker = newPromptMaker();
-const prompt = promptMaker.getTemplate("Main:MyTemplate").make({
+const prompts = newPrompts();
+const prompt = prompts.myTemplate.render({
   firstName: "John",
   lastName: "Doe",
 });

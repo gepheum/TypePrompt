@@ -263,7 +263,7 @@ async function callToolsImpl<Id extends TemplateId>(
 function newPromptsImpl(templates: Spec.Templates): Prompts {
   const result: Record<string, Record<string, Template<TemplateId>>> = {};
   for (const template of Object.values(templates.templates)) {
-    const id = [template.namespace, template.name].join(".") as TemplateId;
+    const id = [template.namespace, template.name].join(":") as TemplateId;
     const namespace = uncapitalize(template.namespace);
     const name = uncapitalize(template.name);
     (result[namespace] ??= {})[name] = {
