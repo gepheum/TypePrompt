@@ -3,7 +3,7 @@ input: hello_world.xml
 gen:
   typescript:
     enabled: true
-    file: ../../python/gen/prompt-maker-p1.ts
+    file: ../../typescript/gen/prompt-maker-p1.ts
   python:
     enabled: true
-    file: ../../typescript/gen/prompt_maker_p1.py
+    file: ../../python/gen/prompt_maker_p1.py
