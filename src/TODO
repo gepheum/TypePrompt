@@ -5,6 +5,9 @@ TYPESCRIPT:
 CODEGEN:
   - Move all the non-TS code to 'playground'
 
+MAIN FILE:
+  - not good at all...
+
 DOC:
   - Document recursive types
 

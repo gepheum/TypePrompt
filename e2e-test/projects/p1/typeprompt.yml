@@ -1,9 +1,9 @@
 # TypePrompt configuration. Run "npx typeprompt gen" to generate code.
-input: ./*.xml
+input: hello_world.xml
 gen:
   typescript:
     enabled: true
-    file: ../../python/prompts.gen.ts
+    file: ../../python/gen/prompt-maker-p1.ts
   python:
     enabled: true
-    file: ../../typescript/prompts_gen.py
+    file: ../../typescript/gen/prompt_maker_p1.py
