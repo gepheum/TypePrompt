@@ -31,7 +31,7 @@
 
 <namespace name="Geo">
   type Foo = string;
-</template>
+</namespace>
 
 <template name="MyTemplate" namespace="Geo">
   <tools>

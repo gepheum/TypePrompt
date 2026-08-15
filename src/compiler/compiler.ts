@@ -51,9 +51,9 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
 
   const xmlDocument = parseXmlDocument(content);
   if (xmlDocument.kind === "error") {
+    result.parseErrors.push(...xmlDocument.errors);
     return result;
   }
-
   const topLevelNodes = checkAllAreElements(
     xmlDocument.root.topLevelNodes,
     ["template", "tool", "namespace", "meta"] as const,
