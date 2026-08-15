@@ -8,10 +8,10 @@ from runtime_types import _internal
 #
 # ## Usage
 #
-# Instantiate PromptMaker, then build a typed Prompt from any of your templates:
+# Instantiate Prompts, then build a typed Prompt from any of your templates:
 #
-#   prompt_maker = PromptMaker()
-#   prompt = prompt_maker.get_template("Greetings:Greet").make(
+#   prompts = new_prompts()
+#   prompt = prompts.greet.resolve(
 #       schema.greetings.greet.Input(name="Luke")
 #   )
 #
@@ -19,14 +19,14 @@ from runtime_types import _internal
 # message, user message, few-shot examples, available tools, and output format.
 # Wire it to your LLM API with a helper such as:
 #
-#   async def call_model[Output, ToolImpls](
-#       prompt: Prompt[Output, ToolImpls],
-#       tool_impls: ToolImpls,
+#   async def call_model[Output, ToolExecutor](
+#       prompt: Prompt[Output, ToolExecutor],
+#       tool_executor: ToolExecutor,
 #   ) -> Output:
 #       # Build and send the API request using prompt.system_message,
 #       # prompt.user_message, prompt.examples, and prompt.tools.
 #       # If the model requests tool calls, dispatch them:
-#       #   results = await prompt.call_tools(tool_calls, tool_impls)
+#       #   results = await prompt.call_tools(tool_calls, tool_executor)
 #       # Repeat until the model produces a final response, then parse it:
 #       return prompt.parse_response(model_response)
 #
@@ -59,7 +59,7 @@ import toon_format
 
 
 @dataclass(frozen=True)
-class PromptMaker:
+class Prompts:
     """Entry point for building prompts."""
 
     _data: _internal.Templates | None = None
@@ -77,24 +77,24 @@ class PromptMaker:
 
 
 # <static:python-public-types>
-class Template[Input, Output, ToolImpls = None](Protocol):
+class Template[Input, Output, ToolExecutor = None](Protocol):
     """Builds Prompt instances for a specific template.
 
     Input: the values substituted into the template's placeholders.
     Output: the type of the parsed LLM response.
-    ToolImpls: an object whose methods implement the template's tools,
+    ToolExecutor: an object whose methods implement the template's tools,
         or None if the template has no tools.
     """
 
-    def make(self, input: Input) -> Prompt[Output, ToolImpls]: ...
+    def render(self, input: Input) -> Prompt[Output, ToolExecutor]: ...
 
 
 @dataclass(frozen=True)
-class Prompt[Output, ToolImpls = None]:
+class Prompt[Output, ToolExecutor = None]:
     """A fully resolved prompt ready to be sent to an LLM.
 
     Output: the type of the parsed LLM response.
-    ToolImpls: an object whose methods implement the template's tools,
+    ToolExecutor: an object whose methods implement the template's tools,
         or None if the template has no tools.
     """
 
@@ -116,7 +116,7 @@ class Prompt[Output, ToolImpls = None]:
     async def call_tools(
         self,
         tool_calls: Sequence[ToolCall],
-        impls: ToolImpls,
+        impls: ToolExecutor,
     ) -> Sequence[ToolCallResponse]:
         """Execute the given tool calls in parallel."""
         return await _call_tools_impl(tool_calls, impls, self)
@@ -280,10 +280,10 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
             return cast(Output, response)
 
 
-async def _call_tools_impl[ToolImpls](
+async def _call_tools_impl[ToolExecutor](
     tool_calls: Sequence[ToolCall],
-    impls: ToolImpls,
-    prompt: Prompt[Any, ToolImpls],
+    impls: ToolExecutor,
+    prompt: Prompt[Any, ToolExecutor],
 ) -> Sequence[ToolCallResponse]:
     import asyncio
 
@@ -319,12 +319,12 @@ async def _call_tools_impl[ToolImpls](
 
 
 @dataclass(frozen=True)
-class _TemplateImpl[Input, Output, ToolImpls]:
+class _TemplateImpl[Input, Output, ToolExecutor]:
     _template_id: TemplateId
     _template_data: _internal.Template
     _data: _internal.Templates
 
-    def make(self, input: Input) -> Prompt[Output, ToolImpls]:
+    def render(self, input: Input) -> Prompt[Output, ToolExecutor]:
         def evaluate(expression: _internal.Expression, val: Any) -> Any:
             match expression.kind:
                 case "input":
@@ -553,16 +553,16 @@ def _get_template_impl(
     return _TemplateImpl(_template_id=id, _template_data=template, _data=data)
 
 
-class _PromptMakerFactory:
+class _PromptsFactory:
     def templates_data(self) -> dict[str, Any]:
         return _templates_data.model_dump(by_alias=True)
 
-    def new_with_overrides(self, overrides: dict[str, Any]) -> PromptMaker:
+    def new_with_overrides(self, overrides: dict[str, Any]) -> Prompts:
         overrides_obj = _internal.Templates.model_validate(overrides)
         del overrides
         if _templates_data.signature != overrides_obj.signature:
             raise ValueError("Signature mismatch")
-        return PromptMaker(
+        return Prompts(
             _data=_internal.Templates(
                 signature=_templates_data.signature,
                 templates={**_templates_data.templates, **overrides_obj.templates},
@@ -572,10 +572,10 @@ class _PromptMakerFactory:
         )
 
 
-_prompt_maker_factory: Final = _PromptMakerFactory()
+_prompts_factory: Final = _PromptsFactory()
 
 
 # To disable linter warnings about unused imports
-_ = (Annotated, Never, Union, overload, _prompt_maker_factory)
+_ = (Annotated, Never, Union, overload, _prompts_factory)
 del _
 # </static:python-logic>
