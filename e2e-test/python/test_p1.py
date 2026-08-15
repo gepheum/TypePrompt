@@ -4,7 +4,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from gen.prompt_maker_p1 import (PromptMaker, ToolCall, schema)
+from gen.prompt_maker_p1 import PromptMaker, ToolCall, schema
 
 prompt_maker = PromptMaker()
 prompt = prompt_maker.get_template("Main:MyTemplate").make(
@@ -53,13 +53,19 @@ class TestOutputFormat:
 
 class TestParseResponse:
     def test_parses_json_object(self):
-        assert prompt.parse_response('{ "x" : 42 }') == schema.main.my_template.Output(x=42)
+        assert prompt.parse_response('{ "x" : 42 }') == schema.main.my_template.Output(
+            x=42
+        )
 
     def test_strips_plain_code_fences(self):
-        assert prompt.parse_response('```\n{ "x" : 42 }\n```') == schema.main.my_template.Output(x=42)
+        assert prompt.parse_response(
+            '```\n{ "x" : 42 }\n```'
+        ) == schema.main.my_template.Output(x=42)
 
     def test_strips_json_code_fences(self):
-        assert prompt.parse_response('```json\n{ "x" : 42 }\n```') == schema.main.my_template.Output(x=42)
+        assert prompt.parse_response(
+            '```json\n{ "x" : 42 }\n```'
+        ) == schema.main.my_template.Output(x=42)
 
 
 class TestExamples:
