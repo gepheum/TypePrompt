@@ -340,7 +340,14 @@ function writeSchema(
       case "interface": {
         lines.push(`class ${name}(pydantic.BaseModel):`);
         lines.push(...writeDocstring(namingHint.doc, " "));
-        if (Object.keys(type.fields).length <= 0) {
+        const hasAliasedFields = Object.values(type.fields).some(
+          (f) => toPyName(f.name.text, "field_name") !== f.name.text,
+        );
+        if (hasAliasedFields) {
+          lines.push(
+            " model_config = pydantic.ConfigDict(populate_by_name=True)",
+          );
+        } else if (Object.keys(type.fields).length <= 0) {
           lines.push(" pass");
         }
         for (const field of Object.values(type.fields)) {
@@ -362,7 +369,7 @@ function writeSchema(
             if (field.optional) {
               lines.push("  default=None,");
             }
-            lines.push(`  serialization_alias='${field.name.text}',`);
+            lines.push(`  alias='${field.name.text}',`);
             lines.push(" )");
           }
         }
