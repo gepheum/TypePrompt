@@ -39,8 +39,9 @@ export function makeTemplates(
       result.content,
     ]),
   );
+  const singleNamespace = input.singleNamespace !== null;
   // TODO: set signature
-  return { signature: "", tools, templates, sourceFiles };
+  return { signature: "", tools, templates, singleNamespace, sourceFiles };
 }
 
 function makeTool(

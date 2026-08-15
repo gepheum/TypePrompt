@@ -26,7 +26,7 @@ export type CompilationResult = {
 export type ValidCompilationResult = CompilationResult & {
   readonly metaSchema: Schema;
   readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
-  readonly singleNamespaces: ValidNamespaceResult;
+  readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
 };

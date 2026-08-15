@@ -46,6 +46,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
   return coalesceEmptyLines(
     [
+      STATIC_SNIPPETS["typescript-imports"],
+      reformat(writePromptsInterface(compilationResult)),
       STATIC_SNIPPETS["typescript-top-level"],
       reformat(
         [
@@ -61,6 +63,105 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       STATIC_SNIPPETS["typescript-logic"],
     ].join("\n\n"),
   ).concat("\n");
+}
+
+function writePromptsInterface(
+  compilationResult: ValidCompilationResult,
+): string {
+  const writeTemplates = (namespace: ValidNamespaceResult): string => {
+    const { templates } = namespace;
+    if (templates.length <= 0) {
+      return "ReadonlyRecord<string, never>";
+    } else {
+      return [
+        "{",
+        ...Object.values(
+          namespace.templates.map((t) =>
+            [
+              "readonly ",
+              uncapitalize(t.template.name.text),
+              ': Template<"',
+              getId(t.template),
+              '">;',
+            ].join(""),
+          ),
+        ),
+        "}",
+      ].join("\n");
+    }
+  };
+  const lines = ["/** Entry point for building prompts. */"];
+  if (compilationResult.singleNamespace) {
+    const templates = writeTemplates(compilationResult.singleNamespace);
+    lines.push(`export type Prompts = ${templates};`);
+  } else {
+    lines.push("export type Prompts = {");
+    for (const namespace of Object.values(compilationResult.namespaces)) {
+      const namespaceName = uncapitalize(namespace.name);
+      const templates = writeTemplates(namespace);
+      lines.push(`readonly ${namespaceName}: ${templates};`);
+    }
+    lines.push("};");
+  }
+  return lines.join("\n");
+}
+
+function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
+  const lines = [
+    "/** Uniquely identifies a prompt template. */",
+    "export type TemplateId = (",
+  ];
+  if (templates.length <= 0) {
+    lines.push(" never");
+  } else {
+    for (const template of templates) {
+      const templateId = getId(template.template);
+      lines.push(`| "${templateId}"`);
+    }
+  }
+  lines.push(");");
+  return lines.join("\n");
+}
+
+function writeToolsType(templates: readonly ValidTemplate[]): string {
+  const lines = [
+    "/** The tools available from the given template. */",
+    "export type Tools<Id extends TemplateId> = {",
+  ];
+  for (const template of templates) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateId = getId(template.template);
+    lines.push(`"${templateId}": {`);
+    for (const tool of Object.values(template.tools)) {
+      const toolName = tool.tool.tool.name.text;
+      const typePrefix = `$.${namespace}.${capitalize(toolName)}.`;
+      lines.push(`${toolName}: Tool<`);
+      lines.push(`${typePrefix}Input,`);
+      lines.push(`${typePrefix}Output`);
+      lines.push(">,");
+    }
+    lines.push("},");
+  }
+  lines.push("}[Id];");
+  return lines.join("\n");
+}
+
+function writeInputOutputTypes(templates: readonly ValidTemplate[]): string {
+  const lines: string[] = [];
+
+  for (const what of ["Input", "Output"]) {
+    lines.push(`export type ${what}<Id extends TemplateId> = {`);
+    for (const template of templates) {
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateName = template.template.name.text;
+      const templateId = `${namespace}:${templateName}`;
+      lines.push(`"${templateId}": $.${namespace}.${templateName}.${what};`);
+    }
+    lines.push("}[Id];");
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }
 
 function writeUserDefinedDatatypes(
@@ -147,64 +248,6 @@ function writeZodSchemas(
   return lines.join("\n");
 }
 
-function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-  const lines = [
-    "/** Uniquely identifies a prompt template. */",
-    "export type TemplateId = (",
-  ];
-  if (templates.length <= 0) {
-    lines.push(" never");
-  } else {
-    for (const template of templates) {
-      const templateId = getId(template.template);
-      lines.push(`| "${templateId}"`);
-    }
-  }
-  lines.push(");");
-  return lines.join("\n");
-}
-
-function writeToolsType(templates: readonly ValidTemplate[]): string {
-  const lines = [
-    "/** The tools available from the given template. */",
-    "export type Tools<Id extends TemplateId> = {",
-  ];
-  for (const template of templates) {
-    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateId = getId(template.template);
-    lines.push(`"${templateId}": {`);
-    for (const tool of Object.values(template.tools)) {
-      const toolName = tool.tool.tool.name.text;
-      const typePrefix = `$.${namespace}.${capitalize(toolName)}.`;
-      lines.push(`${toolName}: Tool<`);
-      lines.push(`${typePrefix}Input,`);
-      lines.push(`${typePrefix}Output`);
-      lines.push(">,");
-    }
-    lines.push("},");
-  }
-  lines.push("}[Id];");
-  return lines.join("\n");
-}
-
-function writeInputOutputTypes(templates: readonly ValidTemplate[]): string {
-  const lines: string[] = [];
-
-  for (const what of ["Input", "Output"]) {
-    lines.push(`export type ${what}<Id extends TemplateId> = {`);
-    for (const template of templates) {
-      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-      const templateName = template.template.name.text;
-      const templateId = `${namespace}:${templateName}`;
-      lines.push(`"${templateId}": $.${namespace}.${templateName}.${what};`);
-    }
-    lines.push("}[Id];");
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
 function writeSpecDatatypes(): string {
   const options = {
     defaultScopeTypePrefix: "Spec.",
@@ -273,7 +316,7 @@ function writeType(
     case "interface": {
       const fields = Object.entries(type.fields);
       if (fields.length <= 0) {
-        return "Record<string, never>";
+        return "ReadonlyRecord<string, never>";
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
