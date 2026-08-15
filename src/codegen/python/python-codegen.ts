@@ -286,21 +286,20 @@ function writePydanticTypeAdapters(
 ): string {
   const lines = ["_type_adapters: Final = {"];
   const writeEntry = (
-    input: ValidTemplate | ValidatedTool,
-    named: Template | Tool,
+    input: Template | Tool,
   ): void => {
-    const id = getId(named);
-    const typePrefix = getTypePrefix(named);
+    const id = getId(input);
+    const typePrefix = getTypePrefix(input);
     lines.push(` "${id}": (`);
     lines.push(`  pydantic.TypeAdapter(${typePrefix}Input),`);
     lines.push(`  pydantic.TypeAdapter(${typePrefix}Output),`);
     lines.push(" ),");
   };
   for (const template of templates) {
-    writeEntry(template, template.template);
+    writeEntry(template.template);
   }
   for (const tool of tools) {
-    writeEntry(tool, tool.tool);
+    writeEntry(tool.tool);
   }
   lines.push("}");
   return lines.join("\n");
