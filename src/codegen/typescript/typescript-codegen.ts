@@ -42,7 +42,7 @@ export function generateTypescriptCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  const { metaSchema, namespaces, templates, tools } = compilationResult;
+  const { templates } = compilationResult;
 
   return coalesceEmptyLines(
     [

@@ -2,8 +2,8 @@
 
 // From the project directory.
 const SOURCE_FILES = [
-  "src/codegen/typescript/runtime-logic.ts",
   "e2e-test/python/runtime_logic.py",
+  "e2e-test/typescript/src/runtime-logic.ts",
 ] as const;
 
 import * as fs from "node:fs";

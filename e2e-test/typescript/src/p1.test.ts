@@ -118,7 +118,7 @@ describe("newPromptMaker", () => {
 
   describe("callTools", () => {
     const impls = {
-      myTool: async ({ foo }: $.Main.MyTool.Input) => ({
+      myTool: async ({ foo }: $.MyTool.Input) => ({
         bar: foo.toUpperCase(),
       }),
     } as unknown as ToolImpls<"Main:MyTemplate">;
