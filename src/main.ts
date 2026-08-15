@@ -43,23 +43,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  try {
-    if (command.kind === "init") {
-      initializeProject(resolve(command.projectPath ?? process.cwd()));
-      return;
-    }
-
-    const _: "gen" = command.kind;
-    await runGeneration(command.projectPath);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error(error.message);
-      process.exitCode = 1;
-      return;
-    }
-
-    throw error;
+  if (command.kind === "init") {
+    initializeProject(resolve(command.projectPath ?? process.cwd()));
+    return;
   }
+
+  const _: "gen" = command.kind;
+  await runGeneration(command.projectPath);
 }
 
 function parseCommandLine(argv: readonly string[]): Command {
@@ -161,7 +151,7 @@ async function runGeneration(projectPath?: string): Promise<void> {
     const { lineFinder } = compilationResult.sourceFiles[path]!;
     for (const error of errors) {
       console.error(formatError(error, path, lineFinder));
-      anyErrors = anyErrors && errors.length > 0;
+      anyErrors = anyErrors || errors.length > 0;
     }
   }
 
