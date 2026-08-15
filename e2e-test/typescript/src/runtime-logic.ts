@@ -135,9 +135,12 @@ export type OutputFormat<Id extends TemplateId> =
 /** Names of the tools available from the given template. */
 export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
 
-/** Implementation functions for all tools available from template `Id`. */
+/**
+ * An object with one async method per tool available from template `Id`.
+ * Each method receives the tool's typed input and returns its typed output.
+ */
 export type ToolExecutor<Id extends TemplateId> = {
-  [Name in keyof ToolNames<Id>]: Tools<Id> extends Tool<
+  [Name in keyof Tools<Id>]: Tools<Id>[Name] extends Tool<
     infer Input,
     infer Output
   >

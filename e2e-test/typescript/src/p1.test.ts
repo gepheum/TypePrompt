@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { newPrompts, type $ } from "./gen/prompts-p1.js";
+import { newPrompts, ToolExecutor, type $ } from "./gen/prompts-p1.js";
 
 const prompts = newPrompts();
 const prompt = prompts.myTemplate.render({
@@ -117,11 +117,11 @@ describe("newPromptMaker", () => {
   });
 
   describe("executeTools", () => {
-    const impls = {
+    const executor = {
       myTool: async ({ foo }: $.MyTool.Input) => ({
         bar: foo.toUpperCase(),
       }),
-    } as unknown as ToolImpls<"Main:MyTemplate">;
+    } satisfies ToolExecutor<"Main:MyTemplate">;
 
     it("calls the impl and returns stringified output", async () => {
       const result = await prompt.executeTools(
@@ -132,7 +132,7 @@ describe("newPromptMaker", () => {
             stringifiedInput: '{"foo":"hello"}',
           },
         ],
-        impls,
+        executor,
       );
       expect(result).toMatch([
         { callId: "c1", stringifiedOutput: '{"bar":"HELLO"}' },
@@ -151,7 +151,7 @@ describe("newPromptMaker", () => {
               stringifiedInput: '{"foo":42}',
             },
           ],
-          impls,
+          executor,
         );
       } catch {
         threw = true;
@@ -164,7 +164,7 @@ describe("newPromptMaker", () => {
       try {
         await prompt.executeTools(
           [{ callId: "c1", toolName: "noSuchTool", stringifiedInput: "{}" }],
-          impls,
+          executor,
         );
       } catch {
         threw = true;
