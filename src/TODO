@@ -1,6 +1,3 @@
-PYTHON:
-  - add an override handler?
-
 TYPESCRIPT:
   - e2e test
   - add example of hook functions
