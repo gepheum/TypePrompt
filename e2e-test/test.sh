@@ -7,6 +7,7 @@ cd e2e-test
 
 # Run codegen
 node ../dist/main.js gen -p projects/p1
+node ../dist/main.js gen -p projects/p2
 
 # Run Python unit tests
 cd python

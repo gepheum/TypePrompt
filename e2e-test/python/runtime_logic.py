@@ -291,7 +291,7 @@ async def _call_tools_impl[ToolImpls](
         tool = prompt.tools.get(call.tool_name)
         if tool is None:
             raise ValueError(f"Tool not found: {call.tool_name}")
-        method_name = tool_name_to_method_name(call.tool_name)
+        method_name = _TOOL_NAME_TO_METHOD_NAME[call.tool_name]
         impl = getattr(impls, method_name, None) if impls is not None else None
         if impl is None:
             raise ValueError(f"Tool implementation not found: {call.tool_name}")

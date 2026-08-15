@@ -258,9 +258,8 @@ function writeToolImplProtocols(
 }
 
 function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
-  if (tools.length <= 0) return "";
   const seenToolNames = new Set<string>();
-  const lines = ["_TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {"];
+  const lines = ["_TOOL_NAME_TO_METHOD_NAME: Final[Mapping[str, str]] = {"];
   for (const tool of tools) {
     const toolName = tool.tool.name.text;
     if (seenToolNames.has(toolName)) continue;
@@ -268,15 +267,16 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
     const methodName = toPyName(toolName, "snake_case_class_name");
     lines.push(` '${toolName}': '${methodName}',`);
   }
-  lines.push(
-    ...[
+  lines.push("}");
+  if (tools.length > 0) {
+    lines.push(
       "}",
       "",
       "",
       "def tool_name_to_method_name(tool_name: str) -> str:",
       " return _TOOL_NAME_TO_METHOD_NAME[tool_name]",
-    ],
-  );
+    );
+  }
   return lines.join("\n");
 }
 
@@ -288,10 +288,12 @@ function writePydanticTypeAdapters(
   const writeEntry = (input: Template | Tool): void => {
     const id = getId(input);
     const typePrefix = getTypePrefix(input);
-    lines.push(` "${id}": (`);
-    lines.push(`  pydantic.TypeAdapter(${typePrefix}Input),`);
-    lines.push(`  pydantic.TypeAdapter(${typePrefix}Output),`);
-    lines.push(" ),");
+    lines.push(
+      ` "${id}": (`,
+      `  pydantic.TypeAdapter(${typePrefix}Input),`,
+      `  pydantic.TypeAdapter(${typePrefix}Output),`,
+      " ),",
+    );
   };
   for (const template of templates) {
     writeEntry(template.template);
