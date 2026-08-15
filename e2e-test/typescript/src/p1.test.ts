@@ -5,7 +5,7 @@ import {
   newPromptMaker,
   type $,
   type ToolImpls,
-} from "./gen/prompt-maker-p1.js";
+} from "./gen/prompts-p1.js";
 
 const promptMaker = newPromptMaker();
 const prompt = promptMaker.getTemplate("Main:MyTemplate").make({

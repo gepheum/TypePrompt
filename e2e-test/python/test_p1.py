@@ -4,7 +4,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from gen.prompt_maker_p1 import PromptMaker, ToolCall, schema
+from gen.prompts_p1 import PromptMaker, ToolCall, schema
 
 prompt_maker = PromptMaker()
 prompt = prompt_maker.get_template("Main:MyTemplate").make(
