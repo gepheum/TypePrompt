@@ -270,7 +270,6 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
   lines.push("}");
   if (tools.length > 0) {
     lines.push(
-      "}",
       "",
       "",
       "def tool_name_to_method_name(tool_name: str) -> str:",
