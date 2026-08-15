@@ -273,7 +273,7 @@ function writeType(
     case "interface": {
       const fields = Object.entries(type.fields);
       if (fields.length <= 0) {
-        return "{}";
+        return "Record<string, never>";
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {

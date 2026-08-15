@@ -162,7 +162,7 @@ export type ToolCallResponse = {
 
 // <generated>
 /** Metadata associated with a prompt template. */
-export type Meta = {};
+export type Meta = never;
 
 /** Uniquely identifies a prompt template. */
 export type TemplateId = "Ns:Foo" | "Ns:Bar";
@@ -185,7 +185,7 @@ export type Tools<Id extends TemplateId> = {
     readonly myTool: Tool<string, string>;
     readonly otherTool: Tool<string, boolean>;
   };
-  readonly "Ns:Bar": {};
+  readonly "Ns:Bar": Record<string, never>;
 }[Id];
 
 const zodSchemas = {
