@@ -70,13 +70,15 @@ class TemplateParser {
 
     const { name, namespace } = attrs.attributes;
 
-    if (name.value.text.toLowerCase() === "shared") {
-      const caseNote =
-        name.value.text === "Shared" ? "" : " (case-insensitive)";
-      this.errors.push({
-        span: name.nameSpan,
-        message: "Template name cannot be 'Shared'".concat(caseNote),
-      });
+    for (const reservedName of ["Shared", "Meta"]) {
+      if (name.value.text.toLowerCase() === reservedName.toLowerCase()) {
+        const caseNote =
+          name.value.text === reservedName ? "" : " (case-insensitive)";
+        this.errors.push({
+          span: name.nameSpan,
+          message: `Template name cannot be '${reservedName}'${caseNote}`,
+        });
+      }
     }
 
     this.parseChildren();

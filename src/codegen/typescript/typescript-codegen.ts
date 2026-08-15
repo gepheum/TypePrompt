@@ -52,10 +52,10 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       reformat(
         [
           writeTemplateIdEnum(Object.values(templates)),
-          writeToolsType(Object.values(templates)),
-          writeInputOutputTypes(Object.values(templates)),
-          writeUserDefinedDatatypes(metaSchema, Object.values(namespaces)),
-          writeZodSchemas(Object.values(templates), Object.values(tools)),
+          writeToolsType(compilationResult),
+          writeInputOutputTypes(compilationResult),
+          writeUserDefinedDatatypes(compilationResult),
+          writeZodSchemas(compilationResult),
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
@@ -123,18 +123,21 @@ function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
   return lines.join("\n");
 }
 
-function writeToolsType(templates: readonly ValidTemplate[]): string {
+function writeToolsType(compilationResult: ValidCompilationResult): string {
+  const { singleNamespace, templates } = compilationResult;
   const lines = [
     "/** The tools available from the given template. */",
     "export type Tools<Id extends TemplateId> = {",
   ];
-  for (const template of templates) {
+  for (const template of Object.values(templates)) {
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateId = getId(template.template);
     lines.push(`"${templateId}": {`);
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.tool.name.text;
-      const typePrefix = `$.${namespace}.${capitalize(toolName)}.`;
+      const typePrefix = singleNamespace
+        ? `$.${capitalize(toolName)}.`
+        : `$.${namespace}.${capitalize(toolName)}.`;
       lines.push(`${toolName}: Tool<`);
       lines.push(`${typePrefix}Input,`);
       lines.push(`${typePrefix}Output`);
@@ -146,16 +149,23 @@ function writeToolsType(templates: readonly ValidTemplate[]): string {
   return lines.join("\n");
 }
 
-function writeInputOutputTypes(templates: readonly ValidTemplate[]): string {
+function writeInputOutputTypes(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
   const lines: string[] = [];
 
   for (const what of ["Input", "Output"]) {
     lines.push(`export type ${what}<Id extends TemplateId> = {`);
-    for (const template of templates) {
+    for (const template of Object.values(templates)) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
       const templateName = template.template.name.text;
       const templateId = `${namespace}:${templateName}`;
-      lines.push(`"${templateId}": $.${namespace}.${templateName}.${what};`);
+      lines.push(
+        singleNamespace
+          ? `"${templateId}": $.${templateName}.${what};`
+          : `"${templateId}": $.${namespace}.${templateName}.${what};`,
+      );
     }
     lines.push("}[Id];");
     lines.push("");
@@ -165,9 +175,9 @@ function writeInputOutputTypes(templates: readonly ValidTemplate[]): string {
 }
 
 function writeUserDefinedDatatypes(
-  metaSchema: Schema,
-  namespaces: readonly ValidNamespaceResult[],
+  compilationResult: ValidCompilationResult,
 ): string {
+  const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   const lines = [
@@ -181,67 +191,70 @@ function writeUserDefinedDatatypes(
     lines.push("export type Meta = never;\n");
   }
   lines.push("}\n");
-  for (const namespace of namespaces) {
-    lines.push(`export namespace ${namespace.name} {`);
+
+  const writeNamespace = (namespace: ValidNamespaceResult): void => {
     if (anyTypes(namespace.schema)) {
       lines.push("export namespace Shared {");
       lines.push(writeSchema(namespace.schema, { sharedTypePrefix: "Never." }));
       lines.push("}\n");
     }
+    const sharedTypePrefix = singleNamespace
+      ? "$.Shared."
+      : `$.${namespace.name}.Shared.`;
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
       lines.push(`export namespace ${templateName} {`);
-      lines.push(
-        writeSchema(template.schema, {
-          sharedTypePrefix: `$.${namespace.name}.Shared.`,
-        }),
-      );
+      lines.push(writeSchema(template.schema, { sharedTypePrefix }));
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       lines.push(`export namespace ${capitalize(toolName)} {\n`);
-      lines.push(
-        writeSchema(tool.schema, {
-          sharedTypePrefix: `$.${namespace.name}.Shared.`,
-        }),
-      );
+      lines.push(writeSchema(tool.schema, { sharedTypePrefix }));
       lines.push("}\n");
     }
-    lines.push("}\n");
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      lines.push(`export namespace ${namespace.name} {`);
+      writeNamespace(namespace);
+      lines.push("}\n");
+    }
   }
   lines.push("}\n");
   return lines.join("\n");
 }
 
-function writeZodSchemas(
-  templates: readonly ValidTemplate[],
-  tools: readonly ValidatedTool[],
-): string {
+function writeZodSchemas(compilationResult: ValidCompilationResult): string {
+  const { templates, tools, singleNamespace } = compilationResult;
   const lines = ["const zodSchemas = {"];
+
   const writeEntry = (
     input: ValidTemplate | ValidatedTool,
     named: Template | Tool,
   ): void => {
     const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
+    const typePrefixBase = singleNamespace ? "$." : `$.${namespace}.`;
     const name = named.name.text;
-    const zodInputType = writeZodType(input.schema, "Input", {
-      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
-      sharedTypePrefix: `$.${namespace}.Shared.`,
-    });
-    const zodOutputType = writeZodType(input.schema, "Output", {
-      defaultScopeTypePrefix: `$.${namespace}.${capitalize(name)}.`,
-      sharedTypePrefix: `$.${namespace}.Shared.`,
-    });
+    const options = {
+      defaultScopeTypePrefix: `${typePrefixBase}${capitalize(name)}.`,
+      sharedTypePrefix: `${typePrefixBase}Shared.`,
+    } as const;
+    const zodInputType = writeZodType(input.schema, "Input", options);
+    const zodOutputType = writeZodType(input.schema, "Output", options);
     lines.push(`"${namespace}:${name}": {`);
     lines.push(`input: ${zodInputType},`);
     lines.push(`output: ${zodOutputType},`);
     lines.push("},");
   };
-  for (const template of templates) {
+
+  for (const template of Object.values(templates)) {
     writeEntry(template, template.template);
   }
-  for (const tool of tools) {
+  for (const tool of Object.values(tools)) {
     writeEntry(tool, tool.tool);
   }
   lines.push("} as const;");
