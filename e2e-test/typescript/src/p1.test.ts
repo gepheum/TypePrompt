@@ -32,11 +32,11 @@ describe("newPromptMaker", () => {
     it("interpolates input properties into text pieces", () => {
       expect(prompt.userMessage).toMatch(
         [
-    "Your firstName is: John",
-    "Your lastName is: Doe",
-    "",
-    "For example {\"firstName\": \"Bo\", \"lastName\": \"Zo\"}",
-  ].join("\n"),
+          "Your firstName is: John",
+          "Your lastName is: Doe",
+          "",
+          'For example {"firstName": "Bo", "lastName": "Zo"}',
+        ].join("\n"),
       );
     });
   });
@@ -68,9 +68,11 @@ describe("newPromptMaker", () => {
 
   describe("parseResponse", () => {
     it("returns the raw string when output format is json", () => {
-      expect(prompt.parseResponse("{ \"x\" : 42 }")).toMatch({x: 42});
-      expect(prompt.parseResponse("```\n{ \"x\" : 42 }\n```")).toMatch({x: 42});
-      expect(prompt.parseResponse("```json\n{ \"x\" : 42 }\n```")).toMatch({x: 42});
+      expect(prompt.parseResponse('{ "x" : 42 }')).toMatch({ x: 42 });
+      expect(prompt.parseResponse('```\n{ "x" : 42 }\n```')).toMatch({ x: 42 });
+      expect(prompt.parseResponse('```json\n{ "x" : 42 }\n```')).toMatch({
+        x: 42,
+      });
     });
   });
 
@@ -82,19 +84,19 @@ describe("newPromptMaker", () => {
     it("resolves each example's user message from the input", () => {
       expect(prompt.examples[0]!.userMessage).toMatch(
         [
-    "Your firstName is: John",
-    "Your lastName is: Doe",
-    "",
-    "For example {\"firstName\": \"Bo\", \"lastName\": \"Zo\"}",
-  ].join("\n"),
+          "Your firstName is: John",
+          "Your lastName is: Doe",
+          "",
+          'For example {"firstName": "Bo", "lastName": "Zo"}',
+        ].join("\n"),
       );
       expect(prompt.examples[1]!.userMessage).toMatch(
         [
-    "Your firstName is: Jane",
-    "Your lastName is: Smith",
-    "",
-    "For example {\"firstName\": \"Bo\", \"lastName\": \"Zo\"}",
-  ].join("\n")
+          "Your firstName is: Jane",
+          "Your lastName is: Smith",
+          "",
+          'For example {"firstName": "Bo", "lastName": "Zo"}',
+        ].join("\n"),
       );
     });
 
@@ -146,7 +148,13 @@ describe("newPromptMaker", () => {
       try {
         await prompt.callTools(
           // foo must be a string, not a number
-          [{ callId: "c1", toolName: "myTool", stringifiedInput: '{"foo":42}' }],
+          [
+            {
+              callId: "c1",
+              toolName: "myTool",
+              stringifiedInput: '{"foo":42}',
+            },
+          ],
           impls,
         );
       } catch {

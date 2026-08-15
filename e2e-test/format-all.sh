@@ -1,4 +1,11 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
-./python/format.sh
+
+cd python
+./format.sh
+cd ..
+
+cd typescript
+npm i
+npm run format
+cd ..
