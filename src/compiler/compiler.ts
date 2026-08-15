@@ -139,6 +139,7 @@ class CompilationResultImpl implements CompilationResult {
   readonly sourceFiles: { [path: string]: SourceFileParseResult } = {};
   metaSchema: SchemaOrError = EMPTY_SCHEMA;
   readonly namespaces: { [name: string]: NamespaceResultImpl } = {};
+  singleNamespace: NamespaceResultImpl | null = null;
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
   readonly finalErrors: { [path: string]: InternalError[] } = {};
@@ -167,6 +168,11 @@ class CompilationResultImpl implements CompilationResult {
     this.resolveTools(tools, cache);
     this.resolveTemplates(templates, cache);
     this.checkNameConflictsWithinNamespaces();
+
+    const namespaceResults = Object.values(this.namespaces);
+    if (namespaceResults.length === 1) {
+      this.singleNamespace = namespaceResults[0]!;
+    }
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {

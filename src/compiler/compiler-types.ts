@@ -14,6 +14,8 @@ export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
   readonly metaSchema: SchemaOrError;
   readonly namespaces: { readonly [name: string]: NamespaceResult };
+  /** Set if there is exactly one namespace. */
+  readonly singleNamespace: NamespaceResult | null;
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
   /** Includes errors from `sourceFiles`. */
@@ -24,6 +26,7 @@ export type CompilationResult = {
 export type ValidCompilationResult = CompilationResult & {
   readonly metaSchema: Schema;
   readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
+  readonly singleNamespaces: ValidNamespaceResult;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
 };
