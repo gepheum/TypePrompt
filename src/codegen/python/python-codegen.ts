@@ -104,7 +104,7 @@ function writePromptMaker(templates: readonly ValidTemplate[]): string {
         lines.push(...writeOverloadSig(template));
         lines.push("  ...");
       }
-      lines.push(" def get_template(self, id: TemplateId) -> Template:");
+      lines.push(" def get_template(self, id: TemplateId) -> Any:");
     }
     lines.push("  return _get_template_impl(id, self._data)");
   }

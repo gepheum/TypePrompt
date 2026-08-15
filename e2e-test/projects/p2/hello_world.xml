@@ -34,10 +34,6 @@
 </namespace>
 
 <template name="MyTemplate" namespace="Geo">
-  <tools>
-    - tool: myTool
-  </tools>
-
   <schema>
     /** The input */
     type Input = shared.Foo;
