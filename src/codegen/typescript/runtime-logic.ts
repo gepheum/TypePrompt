@@ -242,12 +242,14 @@ async function callToolsImpl<Id extends TemplateId>(
         const output = tool.outputSchema.parse(await impl(input));
         stringifiedOutput = JSON.stringify(output);
       } catch (e) {
-        throw new Error(
+        const err = new Error(
           "Tool call failed: "
-            .concat(JSON.stringify({ callId, toolName, stringifiedInput }))
+            .concat(JSON.stringify({ callId, toolName }))
             .concat(" — ")
             .concat(String(e)),
         );
+        (err as { cause?: unknown }).cause = e;
+        throw err;
       }
       return { callId, stringifiedOutput };
     }),
@@ -348,14 +350,18 @@ function resolveTemplate<Id extends TemplateId>(
   const isToolName = (name: string): name is ToolNames<Id> => {
     return name in tools;
   };
-  const callTools = (calls: readonly ToolCall[], impls: ToolImpls<Id>) =>
+  const callTools = (
+    calls: readonly ToolCall[],
+    impls: ToolImpls<Id>,
+  ): Promise<ReadonlyArray<ToolCallResponse>> =>
     callToolsImpl(calls, tools, impls);
   const outputFormat = (
     template.outputFormat === "json"
       ? { kind: "json", schema: outputSchema }
       : { kind: "text" }
   ) as OutputFormat<Id>;
-  const parseResponse = (c: string) => parseResponseImpl(c, outputFormat);
+  const parseResponse = (c: string): Output<Id> =>
+    parseResponseImpl(c, outputFormat);
   return {
     meta,
     systemMessage: systemMessage,

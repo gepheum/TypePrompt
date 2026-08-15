@@ -308,7 +308,6 @@ async def _call_tools_impl[ToolImpls](
                 {
                     "callId": call.call_id,
                     "toolName": call.tool_name,
-                    "stringifiedInput": call.stringified_input,
                 }
             )
             raise type(e)(f"Tool call failed: {call_info} — {e}") from e

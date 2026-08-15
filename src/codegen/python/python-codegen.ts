@@ -285,9 +285,7 @@ function writePydanticTypeAdapters(
   tools: readonly ValidatedTool[],
 ): string {
   const lines = ["_type_adapters: Final = {"];
-  const writeEntry = (
-    input: Template | Tool,
-  ): void => {
+  const writeEntry = (input: Template | Tool): void => {
     const id = getId(input);
     const typePrefix = getTypePrefix(input);
     lines.push(` "${id}": (`);
