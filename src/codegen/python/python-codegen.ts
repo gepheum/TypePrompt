@@ -34,7 +34,7 @@ export function generatePythonCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  const { metaSchema, namespaces, templates, tools } = compilationResult;
+  const { templates, tools } = compilationResult;
 
   return [
     STATIC_SNIPPETS["python-imports"],
