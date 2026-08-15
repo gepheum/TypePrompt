@@ -6,4 +6,5 @@ e2e-test/python/.venv
 e2e-test/python/gen
 e2e-test/typescript/src/gen
 node_modules
+playground
 *.tsbuildinfo
