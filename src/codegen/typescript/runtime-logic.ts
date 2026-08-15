@@ -11,11 +11,11 @@ import { AssertSatisfies } from "../../util/static-assert.js";
  * @packageDocumentation
  * ## Usage
  *
- * Create a {@link Prompts} with {@link createPrompts}, then build a typed
+ * Create a {@link Prompts} with {@link newPrompts}, then build a typed
  * {@link Prompt} from any of your templates:
  *
  * ```ts
- * const prompts = createPrompts();
+ * const prompts = newPrompts();
  * const prompt = prompts.greet.render({ name: "Luke" });
  * ```
  *
@@ -49,8 +49,8 @@ import YAML from "yaml";
 import * as z from "zod";
 
 /** Creates a new {@link Prompts} instance. */
-export function createPrompts(): Prompts {
-  return doCreatePrompts(TEMPLATES_DATA);
+export function newPrompts(): Prompts {
+  return newPromptsImpl(TEMPLATES_DATA);
 }
 // </static:typescript-imports>
 
@@ -79,7 +79,7 @@ export type Prompt<Id extends TemplateId> = {
   readonly outputFormat: OutputFormat<Id>;
   /** Parses the raw LLM response string into the typed {@link Output}. */
   readonly parseResponse: (content: string) => Output<Id>;
-  readonly templateId: TemplateId;
+  readonly templateId: Id;
   /** The value passed to {@link Template.render} to produce this prompt. */
   readonly templateInput: Input<Id>;
 };
@@ -260,7 +260,7 @@ async function callToolsImpl<Id extends TemplateId>(
   );
 }
 
-function doCreatePrompts(templates: Spec.Templates): Prompts {
+function newPromptsImpl(templates: Spec.Templates): Prompts {
   const result: Record<string, Record<string, Template<TemplateId>>> = {};
   for (const template of Object.values(templates.templates)) {
     const id = [template.namespace, template.name].join(".") as TemplateId;
@@ -293,7 +293,7 @@ export const promptsFactory: {
     if (templatesData.signature !== TEMPLATES_DATA.signature) {
       throw new Error("Signature mismatch");
     }
-    return doCreatePrompts(templatesData);
+    return newPromptsImpl(templatesData);
   },
 } as const;
 
@@ -380,7 +380,7 @@ function resolveTemplate<Id extends TemplateId>(
     callTools,
     outputFormat,
     parseResponse,
-    templateId,
+    templateId: templateId as Id,
     templateInput: input,
   };
 }
