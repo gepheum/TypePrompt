@@ -3,6 +3,7 @@ import type {
   Tool,
   ValidatedTool,
   ValidCompilationResult,
+  ValidNamespaceResult,
   ValidTemplate,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -38,7 +39,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
   return [
     STATIC_SNIPPETS["python-imports"],
-    scaleIndenting(writePromptMaker(Object.values(templates))),
+    scaleIndenting(writePromptsClass(compilationResult)),
     STATIC_SNIPPETS["python-public-types"],
     scaleIndenting(
       [
@@ -63,50 +64,47 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     .concat("\n");
 }
 
-function writePromptMaker(templates: readonly ValidTemplate[]): string {
-  const writeOverloadSig = (t: ValidTemplate): readonly string[] => {
-    const id = getId(t.template);
-    const typePrefix = getTypePrefix(t.template);
-    let toolImpls: readonly string[];
-    if (Object.keys(t.tools).length <= 0) {
-      toolImpls = [];
-    } else {
-      const ref = getToolImplsRef(t.template);
-      toolImpls = [`  ${ref},`];
-    }
-    return [
-      " def get_template(",
-      "  self,",
-      `  id: Literal['${id}'],`,
-      " ) -> Template[",
-      `  ${typePrefix}Input,`,
-      `  ${typePrefix}Output,`,
-      ...toolImpls,
-      " ]:",
-    ];
-  };
+function writePromptsClass(compilationResult: ValidCompilationResult): string {
+  const { singleNamespace, namespaces } = compilationResult;
 
-  const lines = [
-    "@dataclass(frozen=True)",
-    "class PromptMaker:",
-    " _data: _internal.Templates | None = None",
-  ];
-  if (templates.length <= 0) {
-    // pass
-  } else {
-    lines.push("");
-    if (templates.length === 1) {
-      const template = templates[0]!;
-      lines.push(...writeOverloadSig(template));
+  const lines = ["@dataclass(frozen=True)", "class Prompts:"];
+
+  const writeTemplatesAttributes = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    if (namespace.templates.length <= 0) {
+      lines.push(" pass");
     } else {
-      for (const template of templates) {
-        lines.push(" @overload");
-        lines.push(...writeOverloadSig(template));
-        lines.push("  ...");
+      for (const t of namespace.templates) {
+        const typePrefix = getTypePrefix(t.template);
+        const pyName = toPyName(t.template.name.text, "field_name");
+        lines.push(` ${pyName}: Template[`);
+        lines.push(`  ${typePrefix}Input,`);
+        lines.push(`  ${typePrefix}Output,`);
+        if (Object.keys(t.tools).length > 0) {
+          lines.push(`  ${getToolImplsRef(t.template)},`);
+        }
+        lines.push(" ]");
       }
-      lines.push(" def get_template(self, id: TemplateId) -> Any:");
     }
-    lines.push("  return _get_template_impl(id, self._data)");
+    return lines;
+  };
+  lines.push(' """Entry point for building prompts."""');
+  lines.push("");
+  if (singleNamespace) {
+    lines.push(...writeTemplatesAttributes(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const pyName = toPyName(namespace.name, "field_name");
+      lines.push(" @dataclass(frozen=True)");
+      lines.push(` class _${namespace.name}:`);
+      lines.push(
+        ...writeTemplatesAttributes(namespace).map((line) => " ".concat(line)),
+      );
+      lines.push(` ${pyName}: _${namespace.name}`);
+      lines.push("");
+    }
   }
   return lines.join("\n");
 }
