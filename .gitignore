@@ -1,4 +1,6 @@
 .DS_Store
 dist
+e2e-test/python/gen
+e2e-test/typescript/gen
 node_modules
 *.tsbuildinfo
