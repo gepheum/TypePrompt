@@ -11,11 +11,9 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * @packageDocumentation
  * ## Usage
  *
- * Create a {@link Prompts} with {@link newPrompts}, then build a typed
- * {@link Prompt} from any of your templates:
+ * Build a typed {@link Prompt} from any of your templates:
  *
  * ```ts
- * const prompts = newPrompts();
  * const prompt = prompts.greet.render({ name: "Luke" });
  * ```
  *
@@ -47,11 +45,6 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
 import { encode as encodeToon } from "@toon-format/toon";
 import YAML from "yaml";
 import * as z from "zod";
-
-/** Creates a new {@link Prompts} instance. */
-export function newPrompts(): Prompts {
-  return newPromptsImpl(TEMPLATES_DATA);
-}
 // </static:typescript-imports>
 
 // <static:typescript-top-level>
@@ -271,7 +264,7 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
     const name = uncapitalize(template.name);
     (result[namespace] ??= {})[name] = {
       render: (input: unknown): Prompt<TemplateId> =>
-        resolveTemplate(id, templates, input as Input<TemplateId>),
+        renderTemplate(id, templates, input as Input<TemplateId>),
     };
   }
   const entries = Object.entries(result);
@@ -300,7 +293,7 @@ export const promptsFactory: {
   },
 } as const;
 
-function resolveTemplate<Id extends TemplateId>(
+function renderTemplate<Id extends TemplateId>(
   templateId: TemplateId,
   templates: Spec.Templates,
   input: Input<Id>,
@@ -319,9 +312,9 @@ function resolveTemplate<Id extends TemplateId>(
   if (contents.kind === "noVariants") {
     const { content } = contents;
     meta = content.meta as Meta;
-    systemMessage = resolveBody(content.system!, input, snippets);
-    userMessage = resolveBody(content.user!, input, snippets);
-    examples = resolveExamples(
+    systemMessage = renderBody(content.system!, input, snippets);
+    userMessage = renderBody(content.user!, input, snippets);
+    examples = renderExamples(
       content.examples!,
       content.user!,
       template,
@@ -334,9 +327,9 @@ function resolveTemplate<Id extends TemplateId>(
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
     const user = (variantContent.user ?? defaultContent.user)!;
-    systemMessage = resolveBody(system, input, snippets);
-    userMessage = resolveBody(user, input, snippets);
-    examples = resolveExamples(
+    systemMessage = renderBody(system, input, snippets);
+    userMessage = renderBody(user, input, snippets);
+    examples = renderExamples(
       (variantContent.examples ?? defaultContent.examples)!,
       user,
       template,
@@ -388,12 +381,12 @@ function resolveTemplate<Id extends TemplateId>(
   };
 }
 
-function resolveBody<Input>(
+function renderBody<Input>(
   body: Spec.Body,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
 ): string {
-  const resolvePiece = (piece: Spec.BodyPiece): string => {
+  const renderPiece = (piece: Spec.BodyPiece): string => {
     switch (piece.kind) {
       case "text": {
         return piece.text;
@@ -403,7 +396,7 @@ function resolveBody<Input>(
         if (!snippet) {
           throw new Error("Snippet not found: ".concat(piece.snippet));
         }
-        return indent(resolveSnippet(snippet, input, snippets), piece.indent);
+        return indent(renderSnippet(snippet, input, snippets), piece.indent);
       }
       case "insertVal": {
         const val = evaluate(input, piece.val);
@@ -411,17 +404,17 @@ function resolveBody<Input>(
       }
     }
   };
-  return body.map(resolvePiece).join("");
+  return body.map(renderPiece).join("");
 }
 
-function resolveSnippet<Input>(
+function renderSnippet<Input>(
   snippet: Spec.Snippet,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
 ): string {
   switch (snippet.kind) {
     case "snippet": {
-      return resolveBody(snippet.body, input, snippets);
+      return renderBody(snippet.body, input, snippets);
     }
     case "snippetIf": {
       const { expression, then: thenBody, else: elseBody } = snippet;
@@ -440,7 +433,7 @@ function resolveSnippet<Input>(
         }
       })();
       const body = condition ? thenBody : elseBody;
-      return resolveBody(body, input, snippets);
+      return renderBody(body, input, snippets);
     }
     case "snippetSwitch": {
       const { expression, branches } = snippet;
@@ -449,7 +442,7 @@ function resolveSnippet<Input>(
       if (!branch) {
         throw new Error("Branch not found: ".concat(evalResult as string));
       }
-      return resolveBody(branch, input, snippets);
+      return renderBody(branch, input, snippets);
     }
   }
 }
@@ -474,14 +467,14 @@ function evaluate<Input>(input: Input, expression: Spec.Expression): unknown {
   }
 }
 
-function resolveExamples(
+function renderExamples(
   inputs: readonly Spec.FewShotExample[],
   body: Spec.Body,
   template: Spec.Template,
   tools: { [id: string]: Spec.Tool },
 ): readonly FewShotExample[] {
   return inputs.map(({ input, output, intermediateSteps }) => ({
-    userMessage: resolveBody(body, input, template.snippets),
+    userMessage: renderBody(body, input, template.snippets),
     intermediateSteps: intermediateSteps.map((step) => ({
       toolCalls: step.toolCalls.map((tc) => ({
         callId: tc.callId,
@@ -570,6 +563,9 @@ function parseResponseImpl<Id extends TemplateId>(
 function uncapitalize(name: string): string {
   return name[0]!.toLowerCase().concat(name.slice(1));
 }
+
+/** Entry point for building prompts. */
+export const prompts = newPromptsImpl(TEMPLATES_DATA);
 // </static:typescript-logic>
 
 type _ToolCallCheck = AssertSatisfies<ToolCallExample, ToolCall> &

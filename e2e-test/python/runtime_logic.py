@@ -55,11 +55,18 @@ import json
 import pydantic
 import yaml
 import toon_format
+
+
+def new_prompt_builder() -> PromptBuilder:
+    """Create a new Prompts instance with no overrides."""
+    return _new_prompt_maker_impl()
+
+
 # </static:python-imports>
 
 
 @dataclass(frozen=True)
-class Prompts:
+class PromptBuilder:
     """Entry point for building prompts."""
 
     _data: _internal.Templates | None = None
@@ -553,16 +560,16 @@ def _get_template_impl(
     return _TemplateImpl(_template_id=id, _template_data=template, _data=data)
 
 
-class _PromptsFactory:
+class _PromptBuilderFactory:
     def templates_data(self) -> dict[str, Any]:
         return _templates_data.model_dump(by_alias=True)
 
-    def new_with_overrides(self, overrides: dict[str, Any]) -> Prompts:
+    def new_with_overrides(self, overrides: dict[str, Any]) -> PromptBuilder:
         overrides_obj = _internal.Templates.model_validate(overrides)
         del overrides
         if _templates_data.signature != overrides_obj.signature:
             raise ValueError("Signature mismatch")
-        return Prompts(
+        return PromptBuilder(
             _data=_internal.Templates(
                 signature=_templates_data.signature,
                 templates={**_templates_data.templates, **overrides_obj.templates},
@@ -572,10 +579,7 @@ class _PromptsFactory:
         )
 
 
-_prompts_factory: Final = _PromptsFactory()
-
-
 # To disable linter warnings about unused imports
-_ = (Annotated, Never, Union, overload, _prompts_factory)
+_ = (Annotated, Never, Union, overload)
 del _
 # </static:python-logic>
