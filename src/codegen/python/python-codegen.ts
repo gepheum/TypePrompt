@@ -140,13 +140,13 @@ function writeUserDefinedDatatypes(
     ) {
       return [" pass"];
     }
-    const lines = [" @final"];
+    const lines = [];
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     const schemaPrefix = singleNamespace
       ? "schema."
       : `schema.${namespaceName}.`;
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
-      lines.push(` @final`);
+      lines.push(" @final");
       lines.push(" class shared(_StaticClass):");
       lines.push(
         ...writeSchema(namespace.schema, {
@@ -436,11 +436,11 @@ function writeSchema(
       ) {
         const type = writeType(declaration.valueType, schema, options);
         lines.push(`type ${requiredType} = ${type}`);
-        lines.push(...["", ""]);
+        lines.push("");
       }
     } else {
       lines.push(`type ${requiredType} = Literal[None]`);
-      lines.push(...["", ""]);
+      lines.push("");
     }
   }
 
