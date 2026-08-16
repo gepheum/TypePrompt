@@ -53,6 +53,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         ),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
+        writeCreatePromptsFunction(compilationResult),
       ]
         .map((code) => code.trimEnd())
         .join("\n\n\n"),
@@ -450,6 +451,34 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     " by_alias=True,",
     ")",
   ].join("\n");
+}
+
+function writeCreatePromptsFunction(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { namespaces, singleNamespace } = compilationResult;
+  const lines = [
+    "def _create_prompts(data: _internal.Templates) -> Prompts:",
+    " return Prompts(",
+  ];
+  const writeArgs = (namespace: ValidNamespaceResult): readonly string[] =>
+    Object.values(namespace.templates).map((t) => {
+      const fieldName = toPyName(t.template.name.text, "field_name");
+      const templateId = getId(t.template);
+      return `  ${fieldName}=_get_template_impl("${templateId}", data),`;
+    });
+  if (singleNamespace) {
+    lines.push(...writeArgs(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const fieldName = toPyName(namespace.name, "field_name");
+      lines.push(`  ${fieldName}=_${namespace.name}(`);
+      lines.push(...writeArgs(namespace).map((line) => " ".concat(line)));
+      lines.push("  ),");
+    }
+  }
+  lines.push(" )");
+  return lines.join("\n");
 }
 
 function writeType(

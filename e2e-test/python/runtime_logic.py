@@ -252,6 +252,8 @@ def _create_prompts(data: _internal.Templates) -> Prompts:
         my_template=_get_template_impl("Main:MyTemplate", data),
         other_template=_get_template_impl("Main:OtherTemplate", data),
     )
+
+
 # </generated>
 
 
@@ -411,9 +413,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                         if snippet is None:
                             raise ValueError(f"Snippet not found: {piece.snippet}")
                         parts.append(
-                            indent(
-                                render_snippet(snippet, inp, snippets), piece.indent
-                            )
+                            indent(render_snippet(snippet, inp, snippets), piece.indent)
                         )
             return "".join(parts)
 
