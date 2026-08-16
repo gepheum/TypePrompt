@@ -1,9 +1,8 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { newPrompts, type $, type ToolExecutor } from "./gen/prompts-p2.js";
+import { prompts, type $, type ToolExecutor } from "./gen/prompts-p2.js";
 
-const prompts = newPrompts();
 const mainPrompt = prompts.main.myTemplate.render(42);
 const geoPrompt = prompts.geo.myTemplate.render("hello");
 

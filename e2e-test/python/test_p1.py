@@ -4,10 +4,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from gen.prompts_p1 import PromptMaker, ToolCall, schema
+from gen.prompts_p1 import ToolCall, prompts, schema
 
-prompt_maker = PromptMaker()
-prompt = prompt_maker.get_template("Main:MyTemplate").make(
+prompt = prompts.my_template.render(
     schema.main.my_template.Input(
         first_name="John",
         last_name="Doe",
@@ -111,7 +110,7 @@ class TestCallTools:
 
     @pytest.mark.asyncio
     async def test_calls_the_impl_and_returns_stringified_output(self):
-        result = await prompt.call_tools(
+        result = await prompt.execute_tools(
             [
                 ToolCall(
                     call_id="c1",
@@ -128,7 +127,7 @@ class TestCallTools:
     @pytest.mark.asyncio
     async def test_throws_when_tool_name_is_not_registered(self):
         with pytest.raises(Exception):
-            await prompt.call_tools(
+            await prompt.execute_tools(
                 [
                     ToolCall(
                         call_id="c1",

@@ -258,9 +258,6 @@ def _create_prompts(data: _internal.Templates) -> Prompts:
 
 
 # <static:python-logic>
-prompts: Final[Prompts] = _create_prompts(_templates_data)
-
-
 def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> Output:
     output_format = prompt.output_format
     match output_format.format:
@@ -580,6 +577,10 @@ class _TemplateOverrider:
 # When using overrides, inject the resulting Prompts instance as a dependency
 # rather than relying on the global 'prompts' variable.
 template_overrider: Final = _TemplateOverrider()
+
+
+# Entry point for building prompts.
+prompts: Final[Prompts] = _create_prompts(_templates_data)
 
 
 # To disable linter warnings about unused imports
