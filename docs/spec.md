@@ -45,7 +45,9 @@ The following elements may appear at the top level of any file:
 
 ## The `<meta>` element
 
-`<meta>` appears in two places: once at the top level to *declare* the metadata type, and once inside each `<template>` to *supply* the metadata values.
+`<meta>` lets you attach structured metadata to each template — for example, the model to use, the sampling temperature, or any other configuration your LLM client needs. You define the shape of that metadata once at the top level, then supply values per template.
+
+`<meta>` therefore appears in two places: once at the top level to *declare* the metadata type, and once inside each `<template>` to *supply* the metadata values.
 
 ### Top-level `<meta>` — declaring the type
 
@@ -69,7 +71,7 @@ When a top-level `<meta>` is declared, every `<template>` must include a `<meta>
 <template name="Summarize">
   <meta>
     temperature: 0.3
-    model: gpt-4o
+    model: gpt4o
   </meta>
   ...
 </template>
@@ -95,13 +97,11 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 | `<meta>` | If top-level `<meta>` exists | Per-template metadata values |
 | `<schema>` | Yes | `Input` and `Output` types |
 | `<tools>` | No | Tools the model may call |
-| `<system>` | Yes* | System instructions |
-| `<user>` | Yes* | User message |
+| `<system>` | Yes | System instructions |
+| `<user>` | Yes | User message |
 | `<examples>` | No | Few-shot examples |
 | `<snippet>` | No | Reusable text fragments |
-| `<variant>` | No | Prompt variants (replaces `<system>`, `<user>`, `<examples>`) |
-
-\* Required unless `<variant>` elements are used instead.
+| `<variant>` | No | Prompt variants |
 
 ---
 
