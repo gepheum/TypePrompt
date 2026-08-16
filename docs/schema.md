@@ -14,9 +14,10 @@ TypePrompt uses a schema definition language (SDL) to describe the inputs and ou
 6. [Arrays](#arrays)
 7. [Union types](#union-types)
 8. [String literals](#string-literals)
-9. [Shared types](#shared-types)
-10. [Naming rules](#naming-rules)
-11. [Comments and JSDoc](#comments-and-jsdoc)
+9. [Recursive types](#recursive-types)
+10. [Shared types](#shared-types)
+11. [Naming rules](#naming-rules)
+12. [Comments and JSDoc](#comments-and-jsdoc)
 
 ---
 
@@ -90,7 +91,7 @@ A record maps arbitrary string keys to values of a single type:
 type Scores = { [name: string]: number };
 ```
 
-The key name (`name` above) is only used as documentation; it does not affect runtime behavior.
+The key type must always be `string`; other key types (e.g. `number`) are not supported. The key name (`name` above) is only used as documentation; it does not affect runtime behavior.
 
 ---
 
@@ -161,6 +162,21 @@ type Status = "pending" | "inProgress" | "done";
 - Must start with a lowercase letter.
 - Must contain only alphanumeric characters (`[a-z][A-Za-z0-9]*`).
 - Both `"double"` and `'single'` quotes are accepted by the parser, but the value must satisfy the naming rule above.
+
+---
+
+## Recursive types
+
+Recursive types are supported through discriminated unions. The **first member** of the union must be non-recursive (the base case); all subsequent members may reference the type being defined.
+
+```ts
+type Expr =
+  | { kind: "number"; value: number }
+  | { kind: "add"; left: Expr; right: Expr }
+  | { kind: "if"; condition: Expr; then: Expr; else: Expr };
+```
+
+ircular references that do not go through a discriminated union boundary are not allowed.
 
 ---
 

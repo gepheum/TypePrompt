@@ -13,13 +13,13 @@ Elements which can be defined at the top-level:
 
 ## The `<meta>` element (top-level)
 
-When defined at the top level, the `<meta>` element takes no attribute. The text content must define a `Meta` type using Origamic's SDL language.
+When defined at the top level, the `<meta>` element takes no attribute. The text content must define a `Meta` type using TypePrompt's SDL language.
 
 Example:
 
 ```xml
 <meta>
-  type Meta = {
+  interface Meta {
     temperature: number;
     num_retries?: integer;
   };
@@ -37,7 +37,6 @@ Attributes of `<template>` are:
 | `namespace` | Optional; defaults to `Main` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
 
 It can have the following child elements:
-  - `<help>`: optional documentation for this template
   - `<meta>`: metadata for this template; a value of type `Meta`
   - `<schema>`: input and output schema
   - `<system>`: system instructions
@@ -45,7 +44,6 @@ It can have the following child elements:
   - `<examples>`: few-shot examples
   - `<variant>`: one variant of the prompt
   - `<snippet>`: a piece of text which can be inserted into the system/user instructions
-  - `<let>`: alias for an expression
 
 ## The `<meta>` element (inside `<template>...</template>`)
 
@@ -73,7 +71,7 @@ Example:
 
 ## The `<schema>` element
 
-The text content must define both an `Input` and an `Output` type using Origamic's SDL language.
+The text content must define both an `Input` and an `Output` type using TypePrompt's SDL language.
 
 The `<schema>` tag has an optional `output-format` attribute which defaults to `json`. If the output format is not `json`, then the `Output` type must be the `string` type. Pre-defined values for `output-format` are `json` and `text`, but you can use any lowerCamelIdentifier: you will then need to write in your application the logic for handling this custom format.
 
@@ -113,11 +111,11 @@ In addition to text nodes, `<system>`/`<user>` can contain the following element
 
 ### Indentation rules
 
-Origamic has simple rules which allow you to indent the content of `<system>` and `<user>` so your XML file looks properly formatted.
+TypePrompt has simple rules which allow you to indent the content of `<system>` and `<user>` so your XML file looks properly formatted.
 
-If the first child is a text node with more than one line and the first line only contains whitespace characters, Origamic determines the base indentation with this logic: let P be the position of the first non-whitespace character if there is one, or the end position of the text node otherwise; the base indentation is the sequence of space and tab characters precending P.
+If the first child is a text node with more than one line and the first line only contains whitespace characters, TypePrompt determines the base indentation with this logic: let P be the position of the first non-whitespace character if there is one, or the end position of the text node otherwise; the base indentation is the sequence of space and tab characters precending P.
 
-Origamic trims the computed base indentation from the start of every line of every text node in the element. If a line is non-empty, it must start with base indentation or Origamic will report an error at compilation. Finally, leading and trailing empty lines are trimmed.
+TypePrompt trims the computed base indentation from the start of every line of every text node in the element. If a line is non-empty, it must start with base indentation or TypePrompt will report an error at compilation. Finally, leading and trailing empty lines are trimmed.
 
 Example:
 
@@ -260,7 +258,7 @@ The <c> element can also wrap around a JSON value. The compiler will check that 
 
 In this example, the compiler will raise an error because `{"full-name": "John Doe"}` does not comply to any named type defined in the schema: the output's field name is `fullName` and not `full-name`.
 
-Origamic permits the usage of an ellipsis (`...`) in the JSON inside a `<c>` in 2 places:
+TypePrompt permits the usage of an ellipsis (`...`) in the JSON inside a `<c>` in 2 places:
   - where another JSON value would be expected, e.g. `<c>["first", ...]</c>`
   - where a sequence of key:value pairs would be expected, e.g. `<c>{"foo": "bar", ...}`
 
