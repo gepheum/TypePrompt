@@ -176,7 +176,7 @@ type Expr =
   | { kind: "if"; condition: Expr; then: Expr; else: Expr };
 ```
 
-ircular references that do not go through a discriminated union boundary are not allowed.
+Circular references that do not go through a discriminated union boundary are not allowed.
 
 ---
 
