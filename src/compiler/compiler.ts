@@ -169,6 +169,20 @@ class CompilationResultImpl implements CompilationResult {
     this.resolveTemplates(templates, cache);
     this.checkNameConflictsWithinNamespaces();
 
+    {
+      // Remove the default namespace if it doesn't contain any schema,
+      // templates or tools.
+      const defaultNamespace = this.namespaces[DEFAULT_NAMESPACE]!;
+      const isEmpty =
+        defaultNamespace.schema.kind === "success" &&
+        defaultNamespace.templates.length <= 0 &&
+        Object.keys(defaultNamespace.tools).length <= 0 &&
+        Object.keys(defaultNamespace.names).length <= 0;
+      if (isEmpty) {
+        delete this.namespaces[DEFAULT_NAMESPACE];
+      }
+    }
+
     const namespaceResults = Object.values(this.namespaces);
     if (namespaceResults.length === 1) {
       this.singleNamespace = namespaceResults[0]!;
@@ -219,7 +233,7 @@ class CompilationResultImpl implements CompilationResult {
           templates: [],
           names: [],
         };
-        // Errors will be pused to the finalErrors map below.
+        // Errors will be pushed to the finalErrors map below.
       }
     }
 
