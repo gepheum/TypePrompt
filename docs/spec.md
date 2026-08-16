@@ -323,7 +323,7 @@ Defines few-shot examples that are included in every rendered prompt. The text c
 ```yaml
 - input: <Input value>
   output: <Output value>
-  intermediateSteps:          # optional; include when the example involves tool calls
+  intermediateSteps:  # optional; include when the example involves tool calls
     - toolCalls:
       - callId: <string>
         tool: <tool name>
@@ -435,7 +435,7 @@ The `switch` attribute must resolve to a string-union type, and there must be ex
 Variants let you define multiple versions of a prompt that share the same `Input`/`Output` types but differ in instructions or examples — for example, to A/B test different system prompts or to handle a `style` field in the input.
 
 **Requirements:**
-- The `Input` type must include a `variant` field of type `"member1" | "member2" | ...`.
+- The `Input` type must include a `variant` field of type `"a" | "b" | ...`.
 - There must be exactly one `<variant name="...">` for each member of that union.
 - Each `<variant>` may contain `<meta>`, `<system>`, `<user>`, and `<examples>`.
 - Elements defined directly under `<template>` act as defaults and are inherited by variants that omit them. An element defined under `<template>` cannot be redefined under `<variant>`.
