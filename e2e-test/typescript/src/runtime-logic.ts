@@ -277,6 +277,13 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
   }
 }
 
+/**
+ * Use this with external frameworks that support template override injection
+ * for experimentation or A/B testing.
+ *
+ * When using overrides, inject the resulting {@link Prompts} instance as a
+ * dependency rather than relying on the global {@link prompts} variable.
+ */
 export const templateOverrider: {
   readonly templatesData: unknown;
   readonly applyOverrides: (overrides: unknown) => Prompts;

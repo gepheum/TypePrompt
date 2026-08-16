@@ -27,7 +27,7 @@ from runtime_types import _internal
 #       # Build and send the API request using prompt.system_message,
 #       # prompt.user_message, prompt.examples, and prompt.tools.
 #       # If the model requests tool calls, dispatch them:
-#       #   results = await prompt.call_tools(tool_calls, tool_executor)
+#       #   results = await prompt.execute_tools(tool_calls, tool_executor)
 #       # Repeat until the model produces a final response, then parse it:
 #       return prompt.parse_response(model_response)
 #
@@ -104,13 +104,13 @@ class Prompt[Output, ToolExecutor = None]:
         """Parse the LLM response into the expected output type."""
         return _parse_response_impl(response, self)
 
-    async def call_tools(
+    async def execute_tools(
         self,
         tool_calls: Sequence[ToolCall],
         impls: ToolExecutor,
     ) -> Sequence[ToolCallResponse]:
         """Execute the given tool calls in parallel."""
-        return await _call_tools_impl(tool_calls, impls, self)
+        return await _execute_tools_impl(tool_calls, impls, self)
 
 
 @dataclass(frozen=True)
@@ -282,7 +282,7 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
             return cast(Output, response)
 
 
-async def _call_tools_impl[ToolExecutor](
+async def _execute_tools_impl[ToolExecutor](
     tool_calls: Sequence[ToolCall],
     impls: ToolExecutor,
     prompt: Prompt[Any, ToolExecutor],
@@ -575,6 +575,10 @@ class _TemplateOverrider:
         )
 
 
+# Use this with external frameworks that support template override injection
+# for experimentation or A/B testing.
+# When using overrides, inject the resulting Prompts instance as a dependency
+# rather than relying on the global 'prompts' variable.
 template_overrider: Final = _TemplateOverrider()
 
 
