@@ -324,8 +324,10 @@ When using variants, you can define `<meta>`, `<system>`, `<user>`, `<examples>`
 <template name="AssembleName">
   <schema>
     interface Input {
-      firstName: string;
-      lastName: string;
+      nameComponents: {
+        firstName: string;
+        lastName: string;
+      }
       variant: "formal" | "informal"
     }
 
@@ -345,8 +347,10 @@ When using variants, you can define `<meta>`, `<system>`, `<user>`, `<examples>`
 
     <examples>
       - input:
-          firstName: Jane
-          lastName: Doe
+          nameComponents:
+            firstName: Jane
+            lastName: Doe
+          # variant: formal  # Can be left out
         output:
           fullName: Jane Doe
     </examples>
@@ -359,8 +363,10 @@ When using variants, you can define `<meta>`, `<system>`, `<user>`, `<examples>`
 
     <examples>
       - input:
-          firstName: Jane
-          lastName: Doe
+          nameComponents:
+            firstName: Jane
+            lastName: Doe
+          # variant: informal  # Can be left out
         output:
           fullName: J. Doe
     </examples>
@@ -380,34 +386,90 @@ Example:
 </snippet>
 ```
 
-A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
+The name of a snippet must be in lowerCamelCase format. A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
 
 ### Conditional snippets
 
-You can make the content of a snippet depend on the value of an expression. For this, set the `switch` attribute. It expects an expression which resolves to a possibly-nullable boolean or union of string literals. When `switch` is set, the content of the snippet must be split between different `<case when="...">` branches. All cases must be covered, and there is no default case.
+You can make the content of a snippet depend on the value of an expression. For this, set the `if` or `switch` attribute.
+
+#### Snippet with `if` attribute
 
 Example:
 
 ```xml
-<snippet name="timeOfDay" switch="input.timeOfDay.notEmpty">
-  <case when="true">
-    The time today is <insert val="input.timeOfDay"/>.
-  </case>
-  <case when="false"></case>
-</snippet>
+<snippet name="timeOfDay" if="input.timeOfDay" is="notEmpty">
+  <then>
+    The time today is <insert val="it"/>
 
-<snippet name="tellLeavesColor" switch="input.season">
-  <case when="spring,summer">Leaves are green.</case>
-  <case when="autumn">Leaves are orange.</case>
-  <case when="winter">There are no leaves.</case>
+  </then>
+  <else></else>
 </snippet>
 ```
+
+In this example, if `input.timeOfDay` is a non-empty string, the snippet renders as *The time today is* followed by the string (`it` is an alias for the expression being tested) and an empty line. If `input.timeOfDay` is an empty string, the snippet renders as an empty string.
+
+#### Snippet with `switch` attribute
+
+Example:
+
+```xml
+<snippet name="leafColor" switch="input.season">
+  <on case="spring">green</on>
+  <on case="summer">green</on>
+  <on case="fall">orange</on>
+  <on case="winter">n/a</on>
+</snippet>
+```
+
+The value of the `switch` attribute (e.g. `input.season`) must resolve to an expression of type union of string literals. There must be one `<one case="...">` element for each member in the union. 
+
+## The `<tool>` element
+
+Defines a tool which can be called by an LLM.
+
+Attributes of `<tool>` are:
+| Attribute | Required? | Format | Description |
+| --- | --- | --- | --- | --- |
+| `name` | Required | UpperCamelCase identifier | Uniquely identifies this template within the namespace |
+| `namespace` | Optional; defaults to `Main` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
+
+It must have 2 child elements:
+  - `<description>`: description of the tool
+  - `<schema>`: input and output schema
+
+The `<description>` element gives a description of the tool; it will be provided to the model when sending prompts which have the tools registered. Besides raw text, it can contain `<c>` and `<enclosed>` elements.
+
+The `<schema>` element lets you define both the `Input` and `Output` type of the tool using TypePrompt's SDL language.
+
+Example:
+
+<tool name="getTemperatureInLocation">
+  <schema>
+    interface Input {
+      location: GeoLocation;
+    }
+
+    interface GeoLocation {
+      lat: number;
+      lng: number;
+    }
+
+    interface Output {
+      temperatureCelcius: number;
+      rainLikelihood: number;
+    }
+  </schema>
+
+  <description>
+    TODO
+  </description>
+</tool>
 
 ## The `<namespace>` element
 
 The `<namespace>` element serves 2 purposes:
-  - organization: group together multiple templates which share common features
-  - definition of common types: `<namespace>` allows you to define types which can be shared by multiple templates.
+  - organization: organize templates and tools into groups; mostly useful; if you have ~10+ templates
+  - definition of common types: `<namespace>` allows you to define types which can be shared by multiple templates and tools.
 
 Example:
 
@@ -429,6 +491,14 @@ Example:
     type Output = { ... };
   </schema>
 
+  <tools>
+    - tool: myTool
+  </tools>
+
   ...
 </template>
+
+<tool name="myTool" namespace="Events">
+  ...
+</tool>
 ```
