@@ -287,7 +287,7 @@ The `<description>` element inside `<tool>` may also contain `<enclosed>` and `<
 </system>
 ```
 
-The valid identifier names for a schema are all field names and all string literal values.
+The valid identifier names are: all field names and string literal values from the template's schema, the names of registered tools, and all field names and string literal values from each registered tool's schema.
 
 For readability, you may quote the identifier inside `<c>`:
 `<c>"documentText"</c>` is equivalent to `"<c>documentText</c>"`.
