@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from gen.prompts_p1 import ToolCall, prompts, schema
 
 prompt = prompts.my_template.render(
-    schema.main.my_template.Input(
+    schema.my_template.Input(
         first_name="John",
         last_name="Doe",
     )
@@ -52,19 +52,17 @@ class TestOutputFormat:
 
 class TestParseResponse:
     def test_parses_json_object(self):
-        assert prompt.parse_response('{ "x" : 42 }') == schema.main.my_template.Output(
-            x=42
-        )
+        assert prompt.parse_response('{ "x" : 42 }') == schema.my_template.Output(x=42)
 
     def test_strips_plain_code_fences(self):
         assert prompt.parse_response(
             '```\n{ "x" : 42 }\n```'
-        ) == schema.main.my_template.Output(x=42)
+        ) == schema.my_template.Output(x=42)
 
     def test_strips_json_code_fences(self):
         assert prompt.parse_response(
             '```json\n{ "x" : 42 }\n```'
-        ) == schema.main.my_template.Output(x=42)
+        ) == schema.my_template.Output(x=42)
 
 
 class TestExamples:
@@ -103,10 +101,8 @@ class TestExamples:
 
 class TestCallTools:
     class _Impls:
-        async def my_tool(
-            self, input: schema.main.my_tool.Input
-        ) -> schema.main.my_tool.Output:
-            return schema.main.my_tool.Output(bar=input.foo.upper())
+        async def my_tool(self, input: schema.my_tool.Input) -> schema.my_tool.Output:
+            return schema.my_tool.Output(bar=input.foo.upper())
 
     @pytest.mark.asyncio
     async def test_calls_the_impl_and_returns_stringified_output(self):

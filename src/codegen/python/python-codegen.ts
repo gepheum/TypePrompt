@@ -45,12 +45,9 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       [
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
-        writeToolImplProtocols(compilationResult),
+        writeToolExecutorProtocols(compilationResult),
         writeToolNameToMethodName(Object.values(tools)),
-        writePydanticTypeAdapters(
-          Object.values(templates),
-          Object.values(tools),
-        ),
+        writePydanticTypeAdapters(compilationResult),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
         writeCreatePromptsFunction(compilationResult),
@@ -78,13 +75,19 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       lines.push(" pass");
     } else {
       for (const t of namespace.templates) {
-        const typePrefix = getTypePrefix(t.template);
+        const typePrefix = getTypePrefix(t.template, compilationResult);
         const fieldName = toPyName(t.template.name.text, "field_name");
-        lines.push(` ${fieldName}: Template[`);
-        lines.push(`  ${typePrefix}Input,`);
-        lines.push(`  ${typePrefix}Output,`);
+        lines.push(
+          ` ${fieldName}: Template[`,
+          `  ${typePrefix}Input,`,
+          `  ${typePrefix}Output,`,
+        );
         if (Object.keys(t.tools).length > 0) {
-          lines.push(`  ${getToolImplsRef(t.template)},`);
+          const toolExecutorRef = getToolExecutorRef(
+            t.template,
+            compilationResult,
+          );
+          lines.push(`  ${toolExecutorRef},`);
         }
         lines.push(" ]");
       }
@@ -208,7 +211,7 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
-function writeToolImplProtocols(
+function writeToolExecutorProtocols(
   compilationResult: ValidCompilationResult,
 ): string {
   const namespaces = Object.values(compilationResult.namespaces).filter(
@@ -230,18 +233,20 @@ function writeToolImplProtocols(
       lines.push(`  @final`);
       lines.push(`  class ${templateName}(_StaticClass):`);
       if (toolNames.length > 0) {
-        lines.push("   class ToolImpls(Protocol):");
         lines.push(
+          "   class ToolExecutor(Protocol):",
           '    """Protocol for object implementing the tools callable by the LLM."""',
         );
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "field_name");
-          const typePrefix = getTypePrefix(tool.tool.tool);
-          lines.push(`    async def ${methodName}(`);
-          lines.push(`     self,`);
-          lines.push(`     input: ${typePrefix}Input,`);
-          lines.push(`    ) -> ${typePrefix}Output:`);
-          lines.push(`     ...`);
+          const typePrefix = getTypePrefix(tool.tool.tool, compilationResult);
+          lines.push(
+            `    async def ${methodName}(`,
+            `     self,`,
+            `     input: ${typePrefix}Input,`,
+            `    ) -> ${typePrefix}Output:`,
+            `     ...`,
+          );
         }
         lines.push("");
       }
@@ -291,13 +296,13 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
 }
 
 function writePydanticTypeAdapters(
-  templates: readonly ValidTemplate[],
-  tools: readonly ValidatedTool[],
+  validationResult: ValidCompilationResult,
 ): string {
+  const { templates, tools } = validationResult;
   const lines = ["_type_adapters: Final = {"];
   const writeEntry = (input: Template | Tool): void => {
     const id = getId(input);
-    const typePrefix = getTypePrefix(input);
+    const typePrefix = getTypePrefix(input, validationResult);
     lines.push(
       ` "${id}": (`,
       `  pydantic.TypeAdapter(${typePrefix}Input),`,
@@ -305,10 +310,10 @@ function writePydanticTypeAdapters(
       " ),",
     );
   };
-  for (const template of templates) {
+  for (const template of Object.values(templates)) {
     writeEntry(template.template);
   }
-  for (const tool of tools) {
+  for (const tool of Object.values(tools)) {
     writeEntry(tool.tool);
   }
   lines.push("}");
@@ -594,27 +599,43 @@ function makeNameFromHint(hint: NamingHint): string {
   }
 }
 
-function getTypePrefix(input: Template | Tool): string {
+function getTypePrefix(
+  input: Template | Tool,
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace } = compilationResult;
   return [
     "schema",
-    toPyName(
-      input.namespace?.text ?? DEFAULT_NAMESPACE,
-      "snake_case_class_name",
-    ),
+    ...(singleNamespace
+      ? []
+      : [
+          toPyName(
+            input.namespace?.text ?? DEFAULT_NAMESPACE,
+            "snake_case_class_name",
+          ),
+        ]),
     toPyName(input.name.text, "snake_case_class_name"),
     "",
   ].join(".");
 }
 
-function getToolImplsRef(input: Template): string {
+function getToolExecutorRef(
+  input: Template,
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace } = compilationResult;
   return [
     "tools",
-    toPyName(
-      input.namespace?.text ?? DEFAULT_NAMESPACE,
-      "snake_case_class_name",
-    ),
+    ...(singleNamespace
+      ? []
+      : [
+          toPyName(
+            input.namespace?.text ?? DEFAULT_NAMESPACE,
+            "snake_case_class_name",
+          ),
+        ]),
     toPyName(input.name.text, "snake_case_class_name"),
-    "ToolImpls",
+    "ToolExecutor",
   ].join(".");
 }
 
