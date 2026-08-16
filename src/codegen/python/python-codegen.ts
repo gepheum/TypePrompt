@@ -140,18 +140,17 @@ function writeUserDefinedDatatypes(
     ) {
       return [" pass"];
     }
-    const lines: string[] = [];
+    const lines = [" @final"];
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
-    lines.push(` @final`);
+    lines.push(" @final");
     lines.push(` class ${namespaceName}(_StaticClass):`);
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
       lines.push(`  @final`);
       lines.push("  class shared(_StaticClass):");
       lines.push(
-        writeSchema(namespace.schema, {
+        ...writeSchema(namespace.schema, {
           typePrefix: `schema.${namespaceName}.shared.`,
-          indent: "  ",
-        }),
+        }).map((line) => indentLine(line, "   ")),
       );
     }
     for (const template of namespace.templates) {
@@ -162,12 +161,11 @@ function writeUserDefinedDatatypes(
       lines.push(`  @final`);
       lines.push(`  class ${templateName}(_StaticClass):`);
       lines.push(
-        writeSchema(template.schema, {
+        ...writeSchema(template.schema, {
           typePrefix: `schema.${namespaceName}.${templateName}.`,
           sharedTypePrefix: `schema.${namespaceName}.shared.`,
-          indent: "   ",
           requiredTypes: ["Input", "Output"],
-        }),
+        }).map((line) => indentLine(line, "   ")),
       );
     }
     for (const tool of Object.values(namespace.tools)) {
@@ -175,12 +173,11 @@ function writeUserDefinedDatatypes(
       lines.push(`  @final`);
       lines.push(`  class ${toolName}(_StaticClass):`);
       lines.push(
-        writeSchema(tool.schema, {
+        ...writeSchema(tool.schema, {
           typePrefix: `schema.${namespaceName}.${toolName}.`,
           sharedTypePrefix: `schema.${namespaceName}.shared.`,
-          indent: "   ",
           requiredTypes: ["Input", "Output"],
-        }),
+        }).map((line) => indentLine(line, "   ")),
       );
     }
     return lines;
@@ -192,11 +189,10 @@ function writeUserDefinedDatatypes(
     "",
     " @final",
     " class meta(_StaticClass):",
-    writeSchema(metaSchema, {
+    ...writeSchema(metaSchema, {
       typePrefix: "schema.meta.",
-      indent: "  ",
       requiredTypes: ["Meta"],
-    }),
+    }).map((line) => indentLine(line, "  ")),
   ];
   if (singleNamespace) {
     lines.push(...writeDatatypes(singleNamespace));
@@ -322,10 +318,9 @@ function writeSpecDatatypes(): string {
   const lines = [
     "@final",
     "class _internal(_StaticClass):",
-    writeSchema(runtimeTypesSchema, {
+    ...writeSchema(runtimeTypesSchema, {
       typePrefix: "_internal.",
-      indent: " ",
-    }),
+    }).map((line) => indentLine(line, " ")),
     "",
     "",
   ];
@@ -337,10 +332,9 @@ function writeSchema(
   options: {
     readonly typePrefix: string;
     readonly sharedTypePrefix?: string;
-    readonly indent: " " | "  " | "   ";
     readonly requiredTypes?: readonly string[];
   },
-): string {
+): readonly string[] {
   const { typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
@@ -449,10 +443,11 @@ function writeSchema(
     }
   }
 
-  const { indent } = options;
-  return lines
-    .map((line) => (line.length <= 0 ? line : indent.concat(line)))
-    .join("\n");
+  return lines;
+}
+
+function indentLine(line: string, indent: " " | "  " | "   "): string {
+  return line.length <= 0 ? "" : indent.concat(line);
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
@@ -487,7 +482,7 @@ function writeCreatePromptsFunction(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const fieldName = toPyName(namespace.name, "field_name");
-      lines.push(`  ${fieldName}=_${namespace.name}(`);
+      lines.push(`  ${fieldName}=Prompts._${namespace.name}(`);
       lines.push(...writeArgs(namespace).map((line) => " ".concat(line)));
       lines.push("  ),");
     }
