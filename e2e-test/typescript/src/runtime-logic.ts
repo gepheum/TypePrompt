@@ -14,7 +14,9 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * Build a typed {@link Prompt} from any of your templates:
  *
  * ```ts
- * const prompt = prompts.greet.render({ name: "Luke" });
+ *   import { prompts, type Prompt, type ToolExecutor } from "...";
+ *
+ *   const prompt = prompts.greet.render({ name: "Luke" });
  * ```
  *
  * A `Prompt` bundles everything your LLM request needs: the resolved system
@@ -22,23 +24,23 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * Wire it to your LLM API with a helper such as:
  *
  * ```ts
- * async function callModel<Id extends TemplateId>(
- *   prompt: Prompt<Id>,
- *   toolExecutor: ToolExecutor<Id>,
- * ): Promise<Output<Id>> {
- *   // Build and send the API request using prompt.systemMessage,
- *   // prompt.userMessage, prompt.examples, and prompt.tools.
- *   // If the model requests tool calls, dispatch them:
- *   //   const results = await prompt.executeTools(toolCalls, toolExecutor);
- *   // Repeat until the model produces a final response, then parse it:
- *   return prompt.parseResponse(modelResponse);
- * }
+ *   async function callModel<Id extends TemplateId>(
+ *     prompt: Prompt<Id>,
+ *     toolExecutor: ToolExecutor<Id>,
+ *   ): Promise<Output<Id>> {
+ *     // Build and send the API request using prompt.systemMessage,
+ *     // prompt.userMessage, prompt.examples, and prompt.tools.
+ *     // If the model requests tool calls, dispatch them:
+ *     //   const results = await prompt.executeTools(toolCalls, toolExecutor);
+ *     // Repeat until the model produces a final response, then parse it:
+ *     return prompt.parseResponse(modelResponse);
+ *   }
  * ```
  *
  * Then call it:
  *
  * ```ts
- * const output = await callModel(prompt, {});
+ *   const output = await callModel(prompt, {});
  * ```
  */
 
@@ -275,12 +277,12 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
   }
 }
 
-export const promptsFactory: {
+export const templateOverrider: {
   readonly templatesData: unknown;
-  readonly newWithOverrides: (overrides: unknown) => Prompts;
+  readonly applyOverrides: (overrides: unknown) => Prompts;
 } = {
   templatesData: TEMPLATES_DATA,
-  newWithOverrides: (overrides: unknown) => {
+  applyOverrides: (overrides: unknown) => {
     const templatesData = templatesSchema.parse(
       typeof overrides === "object"
         ? { ...TEMPLATES_DATA, ...overrides }

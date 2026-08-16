@@ -8,10 +8,11 @@ from runtime_types import _internal
 #
 # ## Usage
 #
-# Instantiate Prompts, then build a typed Prompt from any of your templates:
+# Build a typed Prompt from any of your templates:
 #
-#   prompts = new_prompts()
-#   prompt = prompts.greet.resolve(
+#   from ... import prompts, schema, Prompt, ToolExecutor
+#
+#   prompt = prompts.greet.render(
 #       schema.greetings.greet.Input(name="Luke")
 #   )
 #
@@ -55,32 +56,15 @@ import json
 import pydantic
 import yaml
 import toon_format
-
-
-def new_prompt_builder() -> PromptBuilder:
-    """Create a new Prompts instance with no overrides."""
-    return _new_prompt_maker_impl()
-
-
 # </static:python-imports>
 
 
 @dataclass(frozen=True)
-class PromptBuilder:
+class Prompts:
     """Entry point for building prompts."""
 
-    _data: _internal.Templates | None = None
-
-    @overload
-    def get_template(
-        self, id: Literal["Main:MyTemplate"]
-    ) -> Template[str, str, None]: ...
-    @overload
-    def get_template(
-        self, id: Literal["Main:OtherTemplate"]
-    ) -> Template[int, str, None]: ...
-    def get_template(self, id: TemplateId) -> Template:
-        return _get_template_impl(id, self._data)
+    my_template: Template[str, int, None]
+    otherTemplate: Template[int, str, None]
 
 
 # <static:python-public-types>
@@ -237,6 +221,7 @@ _templates_data: Final = _internal.Templates(
     signature="",
     templates=dict(),
     tools=dict(),
+    single_namespace=True,
     source_files=dict(),
 )
 
@@ -260,10 +245,20 @@ _type_adapters = {
         pydantic.TypeAdapter(schema.main.my_tool.Output),
     ),
 }
+
+
+def _create_prompts(data: _internal.Templates) -> Prompts:
+    return Prompts(
+        my_template=_get_template_impl("Main:MyTemplate", data),
+        otherTemplate=_get_template_impl("Main:OtherTemplate", data),
+    )
 # </generated>
 
 
 # <static:python-logic>
+prompts: Final[Prompts] = _create_prompts(_templates_data)
+
+
 def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> Output:
     output_format = prompt.output_format
     match output_format.format:
@@ -394,7 +389,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 case "csv" | "tsv":
                     return format_table(v, fmt)
 
-        def resolve_body(
+        def render_body(
             body: Sequence[_internal.BodyPiece],
             inp: Any,
             snippets: Mapping[str, _internal.Snippet],
@@ -417,19 +412,19 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                             raise ValueError(f"Snippet not found: {piece.snippet}")
                         parts.append(
                             indent(
-                                resolve_snippet(snippet, inp, snippets), piece.indent
+                                render_snippet(snippet, inp, snippets), piece.indent
                             )
                         )
             return "".join(parts)
 
-        def resolve_snippet(
+        def render_snippet(
             snippet: _internal.Snippet,
             inp: Any,
             snippets: Mapping[str, _internal.Snippet],
         ) -> str:
             match snippet.kind:
                 case "snippet":
-                    return resolve_body(snippet.body, inp, snippets)
+                    return render_body(snippet.body, inp, snippets)
                 case "snippetIf":
                     eval_result = evaluate(snippet.expression, inp)
                     match snippet.is_:
@@ -439,7 +434,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                             condition = eval_result is None
                         case "true":
                             condition = bool(eval_result)
-                    return resolve_body(
+                    return render_body(
                         snippet.then if condition else snippet.else_, inp, snippets
                     )
                 case "snippetSwitch":
@@ -447,9 +442,9 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                     branch = snippet.branches.get(str(eval_result))
                     if branch is None:
                         raise ValueError(f"Branch not found: {eval_result}")
-                    return resolve_body(branch, inp, snippets)
+                    return render_body(branch, inp, snippets)
 
-        def resolve_examples(
+        def render_examples(
             examples: Sequence[_internal.FewShotExample],
             user_body: Sequence[_internal.BodyPiece],
             tmpl: _internal.Template,
@@ -458,7 +453,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             for ex in examples:
                 result.append(
                     FewShotExample(
-                        user_message=resolve_body(user_body, ex.input, tmpl.snippets),
+                        user_message=render_body(user_body, ex.input, tmpl.snippets),
                         intermediate_steps=[
                             IntermediateStepExample(
                                 tool_calls=[
@@ -488,10 +483,10 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
         if contents.kind == "noVariants":
             content = contents.content
             meta = content.meta
-            system_message = resolve_body(content.system or [], input, snippets)
+            system_message = render_body(content.system or [], input, snippets)
             user_body = content.user or []
-            user_message = resolve_body(user_body, input, snippets)
-            examples = resolve_examples(content.examples or [], user_body, template)
+            user_message = render_body(user_body, input, snippets)
+            examples = render_examples(content.examples or [], user_body, template)
         else:
             variant = cast(dict, input)["variant"]
             variant_content = contents.variants[variant]
@@ -511,14 +506,14 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 if variant_content.user is not None
                 else (default_content.user or [])
             )
-            system_message = resolve_body(system_body, input, snippets)
-            user_message = resolve_body(user_body, input, snippets)
+            system_message = render_body(system_body, input, snippets)
+            user_message = render_body(user_body, input, snippets)
             raw_examples = (
                 variant_content.examples
                 if variant_content.examples is not None
                 else (default_content.examples or [])
             )
-            examples = resolve_examples(raw_examples, user_body, template)
+            examples = render_examples(raw_examples, user_body, template)
 
         def make_tool(tool_spec: _internal.TemplateTool) -> Tool:
             input_adapter, output_adapter = _type_adapters[tool_spec.id]
@@ -560,23 +555,27 @@ def _get_template_impl(
     return _TemplateImpl(_template_id=id, _template_data=template, _data=data)
 
 
-class _PromptBuilderFactory:
+class _TemplateOverrider:
     def templates_data(self) -> dict[str, Any]:
         return _templates_data.model_dump(by_alias=True)
 
-    def new_with_overrides(self, overrides: dict[str, Any]) -> PromptBuilder:
+    def apply_overrides(self, overrides: dict[str, Any]) -> Prompts:
         overrides_obj = _internal.Templates.model_validate(overrides)
         del overrides
         if _templates_data.signature != overrides_obj.signature:
             raise ValueError("Signature mismatch")
-        return PromptBuilder(
-            _data=_internal.Templates(
+        return _create_prompts(
+            _internal.Templates(
                 signature=_templates_data.signature,
                 templates={**_templates_data.templates, **overrides_obj.templates},
                 tools={**_templates_data.tools, **overrides_obj.tools},
+                single_namespace=True,
                 source_files=_templates_data.source_files,
             )
         )
+
+
+template_overrider: Final = _TemplateOverrider()
 
 
 # To disable linter warnings about unused imports

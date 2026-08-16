@@ -11,6 +11,7 @@ class _internal:
         signature: str
         templates: dict[str, _internal.Template]
         tools: dict[str, _internal.Tool]
+        single_namespace: bool
         # The key is a relative path to a .xml file. The value is the file content.
         source_files: dict[str, str] = pydantic.Field(serialization_alias="sourceFiles")
 
