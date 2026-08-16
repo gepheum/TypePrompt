@@ -9,11 +9,13 @@ The TypePrompt parser takes all the input .xml files and concatenates their cont
 Elements which can be defined at the top-level:
 - `<meta>`
 - `<template>`
+- `<tool>`
 - `<namespace>`
 
 ## The `<meta>` element (top-level)
 
-When defined at the top level, the `<meta>` element takes no attribute. The text content must define a `Meta` type using TypePrompt's SDL language.
+When defined at the top level, `<meta>` allows you to specify the type of the metadata you can add to each template.
+The text content must define a `Meta` type using TypePrompt's SDL language.
 
 Example:
 
@@ -22,9 +24,12 @@ Example:
   interface Meta {
     temperature: number;
     num_retries?: integer;
+    // TODO: add more fields
   };
 </meta>
 ```
+
+It is an optional feature: if you don't define a top-level `<meta>` element, you cannot add metadata to your templates.
 
 ## The `<template>` element
 
@@ -39,6 +44,7 @@ Attributes of `<template>` are:
 It can have the following child elements:
   - `<meta>`: metadata for this template; a value of type `Meta`
   - `<schema>`: input and output schema
+  - `<tools>`: tools which can be called by the model
   - `<system>`: system instructions
   - `<user>`: user instructions
   - `<examples>`: few-shot examples
@@ -47,12 +53,12 @@ It can have the following child elements:
 
 ## The `<meta>` element (inside `<template>...</template>`)
 
-The text content is the JSON representation of a value of type `Meta`. Must be present in each template definition if and only if there is a `<meta>` element defined at the top level.
+The text content is the YAML representation of a value of type `Meta`. Must be present in each template definition if and only if there is a `<meta>` element defined at the top level.
 
 Example:
 ```xml
 <meta>
-  type Meta = {
+  interface Meta {
     temperature: number;
     num_retries?: integer;
   };
@@ -60,9 +66,7 @@ Example:
 
 <template name="Wave">
   <meta>
-    {
-      "temperature": 0.8
-    }
+    temperature: 0.8
   </meta>
 
   ...
@@ -71,23 +75,21 @@ Example:
 
 ## The `<schema>` element
 
-The text content must define both an `Input` and an `Output` type using TypePrompt's SDL language.
+Required. The text content must define both an `Input` and an `Output` type using TypePrompt's SDL language.
 
-The `<schema>` tag has an optional `output-format` attribute which defaults to `json`. If the output format is not `json`, then the `Output` type must be the `string` type. Pre-defined values for `output-format` are `json` and `text`, but you can use any lowerCamelIdentifier: you will then need to write in your application the logic for handling this custom format.
-
-Every `<template>` must have exactly one `<schema>` element.
+The `<schema>` tag has an optional `output-format` attribute which can be either `text` or `json` and defaults to `json`. If it is `text`, the `Output` type must be `string`.
 
 Example:
 
 ```xml
 <template>
   <schema>
-    type Input = {
+    interface Input {
       dateToday: string;
       ...
     };
 
-    type Output = {
+    interface Output = {
       ...
     }
   </schema>
@@ -96,13 +98,30 @@ Example:
 </template>
 ```
 
+## The `<tools>` elements
+
+Optional. Lets you register tools which can be called by the model for this prompt.
+
+The text content must be the YAML representation of na array of `{tool: string}` objects. Example:
+
+```xml`
+<template>
+  ...
+
+  <tools>
+    - name: getUserHistory
+    - name: getTemperatureInLocation
+  </tools>
+</template>
+```
+
+Every tool name must match a `<tool>` defined at the top-level.
+
 ## The `<system>` and `<user>` elements
 
 System and user instructions.
 
-If the template has any `<variant>` element, then `<system>` and `<user>` must be defined inside each `<variant>` as opposed to being defined directly inside `<template>`.
-
-There must be exactly one `<system>` and one `<user>` element per template or template variant.
+There must be exactly one `<system>` and one `<user>` element per template or template variant; see the section about template variants below.
 
 In addition to text nodes, `<system>`/`<user>` can contain the following elements:
 - `<insert>`
@@ -115,7 +134,7 @@ TypePrompt has simple rules which allow you to indent the content of `<system>` 
 
 If the first child is a text node with more than one line and the first line only contains whitespace characters, TypePrompt determines the base indentation with this logic: let P be the position of the first non-whitespace character if there is one, or the end position of the text node otherwise; the base indentation is the sequence of space and tab characters precending P.
 
-TypePrompt trims the computed base indentation from the start of every line of every text node in the element. If a line is non-empty, it must start with base indentation or TypePrompt will report an error at compilation. Finally, leading and trailing empty lines are trimmed.
+TypePrompt trims the computed base indentation from the start of every line of every text node in the element. If a line is non-empty, it must start with base indentation or TypePrompt will report an error at compilation. Finally, leading empty lines are removed, and the last line is removed if it's empty.
 
 Example:
 
@@ -173,20 +192,19 @@ This is more readable than escaping every `<` and `>` in the XML:
 A placeholder which will be replaced with either a formatted value or a snippet of text at resolution.
 
 To insert a value, use the `val` attribute, e.g. `<insert val="input.dateToday"/>`. The value is an expression of `input`.
-The `format` attribute defaults to `text`, and `text` can only be used if the expression type is string. It means that if the expression has a complex type, you must set `format`. Pre-defined values are:
+The `format` attribute can be one of:
+- `text`: default option. Requires the inserted value to be a string.
 - `json`: pretty-printed JSON
-- `toon`:
-- `yaml`:
-- `csv`: ...
-- `tsv`: ...
-
-You can also define your own format TODO
+- `toon`: see TODO
+- `yaml`: TODO
+- `csv`: TODO; explain that the inserted value must be an array of objects and each field of the object must be a string or an integer
+- `tsv`: TODO; same requirement as `csv`
 
 To insert a snippet of text (defined with `<snippet>`), use the `snippet` attribute, e.g. `<insert snippet="waveUser"/>`
 
 ### Indentation
 
-If the last multiline of the last text node preceding the `<insert>` element starts with a sequence of whitespace characters, this sequence is inserted after every new line character in the formatted value or snippet at resolution. 
+If the line which contains the `<insert>` is indented, this indenting is added after every new line character in the formatted value or snippet at resolution.
 
 Example:
 ```xml
@@ -208,100 +226,90 @@ The resolved text is:
 
 ## `<c>`
 
-The `<c>` element allows you to check at compile-time that a name present in the instructions does refer to a field or string literal defined in the schema.
+When it wraps around an identifier, `<c>` allows you to check at compile-time that the identifier matches a name found in the template's schema, the template's registered tools, or any of the registered tools' schemas. The set of names for a schema are the field names and the string literal values.
 
-Consider this template:
+Example:
 
 ```xml
 <template name="AssembleName">
   <schema>
-    type Input = {
-      nameComponents: {
-        firstName: string;
-        lastName: string;
-      };
+    interface Input {
+      firstName: string;
+      lastName: string;
     };
 
-    type Output = {
+    interface Output {
       fullName: string;
     };
   </schema>
 
   <system>
-    Assemble firstName and familyName into a full name.
+    Assemble <c>firstName</c> and <c>lastName</c> into a full name, store the result in <c>fullName</c>.
   </system>
 
   <user>
-    <insert val="input.nameComponents" format="json"/>
+    <insert val="input" format="json"/>
   </user>
 </template>
 ```
 
-There is an inconsistency between `familyName`, used in the system instructions, and `lastName`, used in the schema. Using `<c>` allows you to catch such inconsistency at compile time:
-```xml
-<system>
-  Assemble <c>firstName</c> and <c>familyName</c> into a full name.
-</system>
-```
+If you rename `lastName` to `familyName` in the schema but not the instructions, you will get a compile-time error reminding you that your instructions are no longer in sync with your schema.
 
-In this example, the compiler will raise an error because `familyName` is not defined in the schema.
+You can wrap the identifier inside double/single/backstick quotes within a `<c>` element: `<c>"firstName"</c>` is equivalent to `"<c>firstName</c>"`. Prefer the former form for readability.
 
-The <c> element can also wrap around a JSON value. The compiler will check that the text content is well-formed JSON and that it complies to at least one named type defined in the schema. For example:
+The <c> element can also wrap around a JSON value. The compiler will check that the text content is well-formed JSON and that it complies to at least one named type defined in the schema or any of the registered tools's schemas. For example:
 
 <system>
   Assemble <c>firstName</c> and <c>lastName</c> into a full name.
 
   Example:
     - input: <c>{"firstName": "John", "lastName": "Doe"}</c>
-    - output: <c>{"full-name": "John Doe"}</c>
+    - output: <c>{"fullName": "John Doe"}</c>
 </system>
 
-In this example, the compiler will raise an error because `{"full-name": "John Doe"}` does not comply to any named type defined in the schema: the output's field name is `fullName` and not `full-name`.
-
-TypePrompt permits the usage of an ellipsis (`...`) in the JSON inside a `<c>` in 2 places:
-  - where another JSON value would be expected, e.g. `<c>["first", ...]</c>`
-  - where a sequence of key:value pairs would be expected, e.g. `<c>{"foo": "bar", ...}`
+To keep examples short, you can The JSON wrapped inside `<c>...</c>` tags can contain an ellipsis (`...`) where:
+  - another JSON value would be expected, e.g. `<c>["first", ...]</c>`
+  - a sequence of key:value pairs would be expected, e.g. `<c>{"foo": "bar", ...}</c>`
 
 ## `<examples>`
 
-The `<examples>` element allows you to specify few-shot examples.
+Optional. Allows you to specify few-shot examples.
 
-The text content is the JSON representation of a JSON array of type:
+The text content is the YAML representation of an array of this type:
 ```ts
 {
-  help?: string;
   input: Input;
   output: Input;
+
+  /** If your example includes tool calls. */
+  intermediateSteps?: {
+    /** Tool calls made in parallel. */
+    toolCalls: {
+      callId: string;
+      /** Name of a registered tool. */
+      tool: string;
+      input: ToolInput;
+      output: ToolOutput;
+    }[];
+  }[];
 }[]
 ```
 
 Example:
 ```
 <examples>
-  [
-    {
-      "input": {
-        "firstName": "Jane",
-        "lastName": "Doe"
-      },
-      "output": {
-        "fullName": "Jane Doe"
-      }
-    },
-    {
-      "input": {
-        "firstName": "John",
-        "lastName": "Doe"
-      },
-      "output": {
-        "fullName": "John Doe"
-      }
-    }
-  ]
+  - input:
+      firstName: Jane
+      lastName: Doe
+    output:
+      fullName: Jane Doe
+  - input:
+      firstName: John
+      lastName: Doe
+    output:
+      fullName: John Doe
 </examples>
 ```
-
-If the template has any `<variant>` element, then `<examples>` must be defined inside each `<variant>` as opposed to being defined directly inside `<template>`.
 
 There can be at most one `<examples>` element per template or template variant.
 
@@ -310,56 +318,37 @@ There can be at most one `<examples>` element per template or template variant.
 This element allows you to define different variants of your prompt. All variants share the same input and output type, but the instructions and few-shot examples can be different.
 
 Using `<variant>` requires the `Input` type to have a `variant` field of type union of string literals. There must be one `<variant>` per member in the union.
-When using variants, the `<system>`, `<user>` and `<examples>` elements must be defined within each `<variant>` element as opposed to being direct children of the `<template>`.
+When using variants, you can define `<meta>`, `<system>`, `<user>`, `<examples>` elements within `<variant>` elements instead of directly under `<template>`. You can choose for each tag, for example, in the same template you can choose to define `<meta>` under `<template>` and `<system>` under `<variant>`. In this case, there cannot be a `<meta>` under `<variant>`, and `<user>` cannot appear under `<template>`.
 
 ```xml
 <template name="AssembleName">
   <schema>
-    type Input = {
+    interface Input {
       firstName: string;
       lastName: string;
       variant: "formal" | "informal"
     }
 
-    type Output = {
+    interface Output {
       fullName: string;
     }
   </schema>
+
+  <user>
+    <insert val="input.nameComponents" format="json"/>
+  </user>
 
   <variant name="formal">
     <system>
       Assemble firstName and familyName into a full name.
     </system>
 
-    <user>
-      <insert val="input.nameComponents" format="json"/>
-    </user>
-
     <examples>
-      [
-        {
-          "input": {
-            "nameComponents": {
-              "firstName": "Jane",
-              "lastName": "Doe"
-            },
-          },
-          "output": {
-            "fullName": "Jane Doe"
-          }
-        },
-        {
-          "input": {
-            "nameComponents": {
-              "firstName": "John",
-              "lastName": "Doe"
-            },
-          },
-          "output": {
-            "fullName": "John Doe"
-          }
-        }
-      ]
+      - input:
+          firstName: Jane
+          lastName: Doe
+        output:
+          fullName: Jane Doe
     </examples>
   </variant>
 
@@ -368,35 +357,12 @@ When using variants, the `<system>`, `<user>` and `<examples>` elements must be 
       Returns an informal `fullName` for the given person.
     </system>
 
-    <user>
-      <insert val="input.nameComponents" format="json"/>
-    </user>
-
     <examples>
-      [
-        {
-          "input": {
-            "nameComponents": {
-              "firstName": "Jane",
-              "lastName": "Doe"
-            },
-          },
-          "output": {
-            "fullName": "J. Do"
-          }
-        },
-        {
-          "input": {
-            "nameComponents": {
-              "firstName": "John",
-              "lastName": "Doe"
-            },
-          },
-          "output": {
-            "fullName": "Johny D"
-          }
-        }
-      ]
+      - input:
+          firstName: Jane
+          lastName: Doe
+        output:
+          fullName: J. Doe
     </examples>
   </variant>
 </template>
@@ -437,13 +403,6 @@ Example:
 </snippet>
 ```
 
-### Expression languages
-
-Valid operators are `and`, `or`, `not`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `??`, `.`, `?.`.
-Strings have 2 properties: `empty` and `notEmpty`.
-Arrays have 2 properties: `empty`, `notEmpty` and `length`.
-Union of string literal types (e.g. `| "spring" | "summer"`) have one generated property per member: `isSpring`, `isSummer`.
-
 ## The `<namespace>` element
 
 The `<namespace>` element serves 2 purposes:
@@ -454,7 +413,7 @@ Example:
 
 ```xml
 <namespace name="Events">
-  type Weather = {
+  interface Weather {
     temperatureCelcius: number;
     raining: boolean;
   };
@@ -462,8 +421,8 @@ Example:
 
 <template name="PlanEvent" namespace="Events">
   <schema>
-    type Input = {
-      weather: Common.Weather;
+    interface Input {
+      weather: shared.Weather;
       ...
     };
 

@@ -14,7 +14,11 @@ export function parseCTag(content: MappedText): CTag | InternalErrors {
         end: textToSourcePosition(content, identifier.length),
       },
     };
-  } else if (/^"(\w+)"$/.test(content.text)) {
+  } else if (
+    /^"(\w+)"$/.test(content.text) ||
+    /^'(\w+)'$/.test(content.text) ||
+    /^`(\w+)`$/.test(content.text)
+  ) {
     // Quoted identifier.
     const identifier = content.text.slice(1, -1);
     return {
