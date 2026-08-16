@@ -34,10 +34,10 @@ The following elements may appear at the top level of any file:
 
 | Element | Purpose |
 |---|---|
-| `<namespace>` | Group templates and tools; define shared types |
 | `<meta>` | Declare the type of per-template metadata |
 | `<template>` | Define a prompt template |
 | `<tool>` | Define a callable tool |
+| `<namespace>` | Group templates and tools; define shared types |
 
 ---
 
