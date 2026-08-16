@@ -410,7 +410,7 @@ A snippet can conditionally render one of two bodies depending on an expression:
 | Attribute | Description |
 |---|---|
 | `if` | Expression to evaluate (e.g. `input.userLocation`) |
-| `is` | Condition type: `notNull` (value is not null/undefined), `notEmpty` (string or array is non-empty), `true` (value is truthy) |
+| `is` | Condition type: `notNull` (value is not null/undefined), `notEmpty` (string or array is non-empty), `true` (value is truthy). Defaults to `true`. |
 
 When the condition holds, the `<then>` body is rendered; otherwise the `<else>` body is rendered.
 
