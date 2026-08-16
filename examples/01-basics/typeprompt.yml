@@ -2,4 +2,4 @@
 input: prompts.xml
 gen:
   typescript:
-    file: gen/prompts.ts
+    enabled: false
