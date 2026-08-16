@@ -142,8 +142,8 @@ Registers tools that the model may call during this prompt. The text content is 
 ```xml
 <template name="ResearchAssistant">
   <tools>
-    - tool: WebSearch
-    - tool: ReadDocument
+    - tool: webSearch
+    - tool: readDocument
   </tools>
   ...
 </template>
@@ -201,7 +201,7 @@ The `format` attribute controls serialization:
 | `json` | Pretty-printed JSON (2-space indent). |
 | `yaml` | YAML serialization. |
 | `toon` | [TOON](https://toonformat.dev) — a structured, human-readable format optimized for LLM consumption. |
-| `csv` | Comma-separated values. The value must be an array of objects whose fields are strings or numbers; the first object's keys become the header row. |
+| `csv` | Comma-separated values. The value must be an array of objects whose fields are strings or numbers; the field names become the header row. |
 | `tsv` | Tab-separated values. Same requirements as `csv`. |
 
 **To insert a snippet**, use the `snippet` attribute:
@@ -362,7 +362,7 @@ For a template that uses tools:
     intermediateSteps:
       - toolCalls:
         - callId: c1
-          tool: WebSearch
+          tool: webSearch
           input:
             query: "capital of France"
           output:
@@ -495,7 +495,7 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 
 | Attribute | Required | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `UpperCamelCase` | Unique name within the namespace |
+| `name` | Yes | `lowerCamelCase` | Unique name within the namespace |
 | `namespace` | No | `UpperCamelCase` | Namespace this tool belongs to; defaults to `Main` |
 
 **Child elements:**
@@ -506,7 +506,7 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 | `<schema>` | Yes | `Input` and `Output` types |
 
 ```xml
-<tool name="GetWeather">
+<tool name="getWeather">
   <description>
     Returns the current weather at a given location. Use this when the user's
     request depends on real-time weather conditions.
@@ -556,7 +556,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
   ...
 </template>
 
-<tool name="Geocode" namespace="Geo">
+<tool name="geocode" namespace="Geo">
   ...
 </tool>
 ```
