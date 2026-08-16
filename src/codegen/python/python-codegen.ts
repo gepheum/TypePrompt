@@ -99,11 +99,11 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     for (const namespace of Object.values(namespaces)) {
       const fieldName = toPyName(namespace.name, "field_name");
       lines.push(" @dataclass(frozen=True)");
-      lines.push(` class _${namespace.name}:`);
+      lines.push(` class ${namespace.name}Namespace:`);
       lines.push(
         ...writeTemplatesAttributes(namespace).map((line) => " ".concat(line)),
       );
-      lines.push(` ${fieldName}: _${namespace.name}`);
+      lines.push(` ${fieldName}: ${namespace.name}Namespace`);
       lines.push("");
     }
   }
@@ -142,15 +142,16 @@ function writeUserDefinedDatatypes(
     }
     const lines = [" @final"];
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
-    lines.push(" @final");
-    lines.push(` class ${namespaceName}(_StaticClass):`);
+    const schemaPrefix = singleNamespace
+      ? "schema."
+      : `schema.${namespaceName}.`;
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
-      lines.push(`  @final`);
-      lines.push("  class shared(_StaticClass):");
+      lines.push(` @final`);
+      lines.push(" class shared(_StaticClass):");
       lines.push(
         ...writeSchema(namespace.schema, {
-          typePrefix: `schema.${namespaceName}.shared.`,
-        }).map((line) => indentLine(line, "   ")),
+          typePrefix: schemaPrefix.concat("shared."),
+        }).map((line) => indentLine(line, "  ")),
       );
     }
     for (const template of namespace.templates) {
@@ -158,26 +159,26 @@ function writeUserDefinedDatatypes(
         template.template.name.text,
         "snake_case_class_name",
       );
-      lines.push(`  @final`);
-      lines.push(`  class ${templateName}(_StaticClass):`);
+      lines.push(` @final`);
+      lines.push(` class ${templateName}(_StaticClass):`);
       lines.push(
         ...writeSchema(template.schema, {
-          typePrefix: `schema.${namespaceName}.${templateName}.`,
-          sharedTypePrefix: `schema.${namespaceName}.shared.`,
+          typePrefix: `${schemaPrefix}${templateName}.`,
+          sharedTypePrefix: schemaPrefix.concat("shared."),
           requiredTypes: ["Input", "Output"],
-        }).map((line) => indentLine(line, "   ")),
+        }).map((line) => indentLine(line, "  ")),
       );
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toPyName(tool.tool.name.text, "snake_case_class_name");
-      lines.push(`  @final`);
-      lines.push(`  class ${toolName}(_StaticClass):`);
+      lines.push(` @final`);
+      lines.push(` class ${toolName}(_StaticClass):`);
       lines.push(
         ...writeSchema(tool.schema, {
-          typePrefix: `schema.${namespaceName}.${toolName}.`,
-          sharedTypePrefix: `schema.${namespaceName}.shared.`,
+          typePrefix: `${schemaPrefix}${toolName}.`,
+          sharedTypePrefix: schemaPrefix.concat("shared"),
           requiredTypes: ["Input", "Output"],
-        }).map((line) => indentLine(line, "   ")),
+        }).map((line) => indentLine(line, "  ")),
       );
     }
     return lines;
@@ -482,7 +483,7 @@ function writeCreatePromptsFunction(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const fieldName = toPyName(namespace.name, "field_name");
-      lines.push(`  ${fieldName}=Prompts._${namespace.name}(`);
+      lines.push(`  ${fieldName}=Prompts.${namespace.name}Namespace(`);
       lines.push(...writeArgs(namespace).map((line) => " ".concat(line)));
       lines.push("  ),");
     }
