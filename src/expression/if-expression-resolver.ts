@@ -17,12 +17,12 @@ export type IfExpressionResult =
 export function resolveIfExpression(
   expression: Expression,
   type: ResolvedType | NullableType,
-  is: TextSpan<"notNull" | "notEmpty"> | null,
+  is: TextSpan<"notNull" | "notEmpty" | "true"> | null,
 ): IfExpressionResult {
   const it: ExpressionContext["it"] = { expression, type };
 
   if (type.kind === "primitive" && type.primitive.text === "boolean") {
-    if (is) {
+    if (is && is.text !== "true") {
       return {
         kind: "error",
         errors: [
@@ -113,6 +113,7 @@ export function resolveIfExpression(
           ],
         };
       }
+      case "true":
       case undefined: {
         return {
           kind: "error",

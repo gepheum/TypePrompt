@@ -119,7 +119,7 @@ export type Snippet =
       readonly kind: "snippet-if";
       readonly name: TextSpan;
       readonly expression: Expression;
-      readonly is: TextSpan<"notNull" | "notEmpty"> | null;
+      readonly is: TextSpan<"notNull" | "notEmpty" | "true"> | null;
       readonly then: BodyInContext;
       readonly else: BodyInContext;
     }

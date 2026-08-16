@@ -293,8 +293,8 @@ class TemplateParser {
         expected: "a string",
       },
       is: {
-        schema: z.enum(["notNull", "notEmpty"]).optional(),
-        expected: "'notNull' or 'notEmpty'",
+        schema: z.enum(["notNull", "notEmpty", "true"]).optional(),
+        expected: "'notNull', 'notEmpty' or 'true'",
       },
       switch: {
         schema: z.string().optional(),
@@ -345,7 +345,7 @@ class TemplateParser {
   private parseSnippetWithIf(
     snippetNode: ElementNode,
     ifAttr: AttributeValue<string>,
-    isAttr: AttributeValue<"notNull" | "notEmpty"> | undefined,
+    isAttr: AttributeValue<"notNull" | "notEmpty" | "true"> | undefined,
   ): void {
     const expression = parseExpression(ifAttr.value, {
       hasValContext: false,
