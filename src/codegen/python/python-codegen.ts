@@ -79,8 +79,8 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     } else {
       for (const t of namespace.templates) {
         const typePrefix = getTypePrefix(t.template);
-        const pyName = toPyName(t.template.name.text, "field_name");
-        lines.push(` ${pyName}: Template[`);
+        const fieldName = toPyName(t.template.name.text, "field_name");
+        lines.push(` ${fieldName}: Template[`);
         lines.push(`  ${typePrefix}Input,`);
         lines.push(`  ${typePrefix}Output,`);
         if (Object.keys(t.tools).length > 0) {
@@ -97,13 +97,13 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     lines.push(...writeTemplatesAttributes(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const pyName = toPyName(namespace.name, "field_name");
+      const fieldName = toPyName(namespace.name, "field_name");
       lines.push(" @dataclass(frozen=True)");
       lines.push(` class _${namespace.name}:`);
       lines.push(
         ...writeTemplatesAttributes(namespace).map((line) => " ".concat(line)),
       );
-      lines.push(` ${pyName}: _${namespace.name}`);
+      lines.push(` ${fieldName}: _${namespace.name}`);
       lines.push("");
     }
   }
@@ -129,27 +129,18 @@ function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
 ): string {
-  const lines = [
-    "@final",
-    "class schema(_StaticClass):",
-    ' """Contains the user-defined datatypes organized by namespace."""',
-    "",
-    " @final",
-    " class meta(_StaticClass):",
-    writeSchema(compilationResult.metaSchema, {
-      typePrefix: "schema.meta.",
-      indent: "  ",
-      requiredTypes: ["Meta"],
-    }),
-  ];
-  for (const namespace of Object.values(compilationResult.namespaces)) {
+  const { metaSchema, namespaces, singleNamespace } = compilationResult;
+  const writeDatatypes = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
     if (
       namespace.schema.namingHints.defaultScope.size <= 0 &&
       namespace.templates.length <= 0 &&
       Object.keys(namespace.tools).length <= 0
     ) {
-      continue;
+      return [" pass"];
     }
+    const lines: string[] = [];
     const namespaceName = toPyName(namespace.name, "snake_case_class_name");
     lines.push(` @final`);
     lines.push(` class ${namespaceName}(_StaticClass):`);
@@ -192,6 +183,30 @@ function writeUserDefinedDatatypes(
         }),
       );
     }
+    return lines;
+  };
+  const lines = [
+    "@final",
+    "class schema(_StaticClass):",
+    ' """Contains the user-defined datatypes organized by namespace."""',
+    "",
+    " @final",
+    " class meta(_StaticClass):",
+    writeSchema(metaSchema, {
+      typePrefix: "schema.meta.",
+      indent: "  ",
+      requiredTypes: ["Meta"],
+    }),
+  ];
+  if (singleNamespace) {
+    lines.push(...writeDatatypes(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const templateName = toPyName(namespace.name, "snake_case_class_name");
+      lines.push(` @final`);
+      lines.push(` class ${templateName}(_StaticClass):`);
+      lines.push(...writeDatatypes(namespace).map((line) => " ".concat(line)));
+    }
   }
   return lines.join("\n");
 }
@@ -223,7 +238,7 @@ function writeToolImplProtocols(
           '    """Protocol for object implementing the tools callable by the LLM."""',
         );
         for (const [toolName, tool] of Object.entries(template.tools)) {
-          const methodName = toPyName(toolName, "snake_case_class_name");
+          const methodName = toPyName(toolName, "field_name");
           const typePrefix = getTypePrefix(tool.tool.tool);
           lines.push(`    async def ${methodName}(`);
           lines.push(`     self,`);
@@ -263,7 +278,7 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
     const toolName = tool.tool.name.text;
     if (seenToolNames.has(toolName)) continue;
     seenToolNames.add(toolName);
-    const methodName = toPyName(toolName, "snake_case_class_name");
+    const methodName = toPyName(toolName, "field_name");
     lines.push(` '${toolName}': '${methodName}',`);
   }
   lines.push("}");
@@ -354,19 +369,19 @@ function writeSchema(
             options,
           );
           lines.push(...writeComment(field.doc, " "));
-          const pyName = toPyName(field.name.text, "field_name");
-          if (pyName === field.name.text) {
+          const fieldName = toPyName(field.name.text, "field_name");
+          if (fieldName === field.name.text) {
             if (field.optional) {
-              lines.push(` ${pyName}: ${type} = None`);
+              lines.push(` ${fieldName}: ${type} = None`);
             } else {
-              lines.push(` ${pyName}: ${type}`);
+              lines.push(` ${fieldName}: ${type}`);
             }
           } else {
-            lines.push(` ${pyName}: ${type} = pydantic.Field(`);
+            lines.push(` ${fieldName}: ${type} = pydantic.Field(`);
             if (field.optional) {
               lines.push("  default=None,");
             }
-            const aliasChoices = [field.name.text, pyName]
+            const aliasChoices = [field.name.text, fieldName]
               .map((name) => `'${name}'`)
               .join(", ");
             lines.push(
@@ -583,6 +598,30 @@ function makeNameFromHint(hint: NamingHint): string {
   }
 }
 
+function getTypePrefix(input: Template | Tool): string {
+  return [
+    "schema",
+    toPyName(
+      input.namespace?.text ?? DEFAULT_NAMESPACE,
+      "snake_case_class_name",
+    ),
+    toPyName(input.name.text, "snake_case_class_name"),
+    "",
+  ].join(".");
+}
+
+function getToolImplsRef(input: Template): string {
+  return [
+    "tools",
+    toPyName(
+      input.namespace?.text ?? DEFAULT_NAMESPACE,
+      "snake_case_class_name",
+    ),
+    toPyName(input.name.text, "snake_case_class_name"),
+    "ToolImpls",
+  ].join(".");
+}
+
 function toPyName(
   camelCaseName: string,
   type: "field_name" | "ClassName" | "snake_case_class_name",
@@ -608,30 +647,6 @@ function toPyName(
     }
   }
   return conflict ? identifier.concat("_") : identifier;
-}
-
-function getTypePrefix(input: Template | Tool): string {
-  return [
-    "schema",
-    toPyName(
-      input.namespace?.text ?? DEFAULT_NAMESPACE,
-      "snake_case_class_name",
-    ),
-    toPyName(input.name.text, "snake_case_class_name"),
-    "",
-  ].join(".");
-}
-
-function getToolImplsRef(input: Template): string {
-  return [
-    "tools",
-    toPyName(
-      input.namespace?.text ?? DEFAULT_NAMESPACE,
-      "snake_case_class_name",
-    ),
-    toPyName(input.name.text, "snake_case_class_name"),
-    "ToolImpls",
-  ].join(".");
 }
 
 function writeDocstring(doc: string, indent: " "): readonly string[] {
