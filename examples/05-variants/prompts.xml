@@ -5,15 +5,15 @@
 -->
 <template name="WriteProductDescription">
   <schema>
-    type Input = {
+    interface Input {
       productName: string;
       features: string[];
       variant: "marketing" | "technical" | "brief";
-    };
+    }
 
-    type Output = {
+    interface Output {
       description: string;
-    };
+    }
   </schema>
 
   <!-- Shared user message: same for all variants -->

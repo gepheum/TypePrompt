@@ -9,17 +9,17 @@
   </description>
 
   <schema>
-    type Input = {
+    interface Input {
       query: string;
-    };
+    }
 
-    type Output = {
+    interface Output {
       results: {
         title: string;
         url: string;
         snippet: string;
       }[];
-    };
+    }
   </schema>
 </tool>
 
@@ -29,15 +29,15 @@
   </tools>
 
   <schema>
-    type Input = {
+    interface Input {
       question: string;
-    };
+    }
 
-    type Output = {
+    interface Output {
       answer: string;
       /** URLs of sources used. */
       sources: string[];
-    };
+    }
   </schema>
 
   <system>

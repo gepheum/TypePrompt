@@ -4,18 +4,18 @@
 -->
 <template name="SummarizeDocument">
   <schema>
-    type Input = {
+    interface Input {
       title: string;
       content: string;
       /** If provided, the summary should focus on this topic. */
       focusTopic?: string;
       audience: "executive" | "technical" | "general";
-    };
+    }
 
-    type Output = {
+    interface Output {
       summary: string;
       keyPoints: string[];
-    };
+    }
   </schema>
 
   <!--

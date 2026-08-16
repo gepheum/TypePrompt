@@ -1,9 +1,9 @@
 <template name="Translate">
   <schema output-format="text">
-    type Input = {
+    interface Input {
       text: string;
       targetLanguage: string;
-    };
+    }
 
     type Output = string;
   </schema>

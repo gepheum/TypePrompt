@@ -5,12 +5,12 @@
 <template name="TriageTicket">
   <schema>
     /** A support ticket to be triaged. */
-    type Input = {
+    interface Input {
       subject: string;
       body: string;
-    };
+    }
 
-    type Output = {
+    interface Output {
       /** Broad category of the issue. */
       category: "billing" | "technicalIssue" | "featureRequest" | "other";
 
@@ -22,7 +22,7 @@
 
       /** Suggested first response, if the issue is straightforward. */
       suggestedReply?: string;
-    };
+    }
   </schema>
 
   <system>
