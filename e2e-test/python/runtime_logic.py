@@ -64,7 +64,7 @@ class Prompts:
     """Entry point for building prompts."""
 
     my_template: Template[str, int, None]
-    otherTemplate: Template[int, str, None]
+    other_template: Template[int, str, None]
 
 
 # <static:python-public-types>
@@ -107,10 +107,10 @@ class Prompt[Output, ToolExecutor = None]:
     async def execute_tools(
         self,
         tool_calls: Sequence[ToolCall],
-        impls: ToolExecutor,
+        tool_executor: ToolExecutor,
     ) -> Sequence[ToolCallResponse]:
         """Execute the given tool calls in parallel."""
-        return await _execute_tools_impl(tool_calls, impls, self)
+        return await _execute_tools_impl(tool_calls, tool_executor, self)
 
 
 @dataclass(frozen=True)
@@ -250,7 +250,7 @@ _type_adapters = {
 def _create_prompts(data: _internal.Templates) -> Prompts:
     return Prompts(
         my_template=_get_template_impl("Main:MyTemplate", data),
-        otherTemplate=_get_template_impl("Main:OtherTemplate", data),
+        other_template=_get_template_impl("Main:OtherTemplate", data),
     )
 # </generated>
 
@@ -284,7 +284,7 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
 
 async def _execute_tools_impl[ToolExecutor](
     tool_calls: Sequence[ToolCall],
-    impls: ToolExecutor,
+    executor: ToolExecutor,
     prompt: Prompt[Any, ToolExecutor],
 ) -> Sequence[ToolCallResponse]:
     import asyncio
@@ -294,7 +294,7 @@ async def _execute_tools_impl[ToolExecutor](
         if tool is None:
             raise ValueError(f"Tool not found: {call.tool_name}")
         method_name = _TOOL_NAME_TO_METHOD_NAME[call.tool_name]
-        impl = getattr(impls, method_name, None) if impls is not None else None
+        impl = getattr(executor, method_name, None) if executor is not None else None
         if impl is None:
             raise ValueError(f"Tool implementation not found: {call.tool_name}")
         try:
