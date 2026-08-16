@@ -399,11 +399,13 @@ A snippet can conditionally render one of two bodies depending on an expression:
 ```xml
 <snippet name="locationContext" if="input.userLocation" is="notNull">
   <then>
-    The user is located in <insert val="input.userLocation"/>.
+    The user is located in <insert val="it"/>.
   </then>
   <else></else>
 </snippet>
 ```
+
+Inside the `<then>` and `<else>` bodies, `it` is an alias for the expression passed to `if` — in this case `input.userLocation`. This avoids repeating the expression and makes snippets easier to read.
 
 **Attributes:**
 
