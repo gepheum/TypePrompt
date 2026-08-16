@@ -1,504 +1,572 @@
-# The XML tree
+# TypePrompt Language Specification
 
-## File hierarchy
+TypePrompt projects are made up of `.xml` files. This document describes every XML element and attribute in the TypePrompt language.
 
-The TypePrompt parser takes all the input .xml files and concatenates their contents. It does not matter what file an XML element is defined in. This means you can freely rename files, move elements across files, without causing any change in the generated code.
+For the type system (schemas, SDL), see [schema.md](schema.md).
 
-## Top-level
+---
 
-Elements which can be defined at the top-level:
-- `<meta>`
-- `<template>`
-- `<tool>`
-- `<namespace>`
+## Table of Contents
 
-## The `<meta>` element (top-level)
+1. [File structure](#file-structure)
+2. [`<meta>`](#the-meta-element)
+3. [`<template>`](#the-template-element)
+   - [`<schema>`](#the-schema-element)
+   - [`<tools>`](#the-tools-element)
+   - [`<system>` and `<user>`](#the-system-and-user-elements)
+     - [Indentation](#indentation)
+     - [`<insert>`](#insert)
+     - [`<enclosed>`](#enclosed)
+     - [`<c>`](#c)
+   - [`<examples>`](#examples)
+   - [`<snippet>`](#snippet)
+   - [`<variant>`](#variant)
+4. [`<tool>`](#the-tool-element)
+5. [`<namespace>`](#the-namespace-element)
 
-When defined at the top level, `<meta>` allows you to specify the type of the metadata you can add to each template.
-The text content must define a `Meta` type using TypePrompt's SDL language.
+---
 
-Example:
+## File structure
+
+TypePrompt reads all `.xml` files in the project directory and merges their contents. The file an element is defined in has no significance — you can freely split, rename, or reorganize files without affecting the generated code.
+
+The following elements may appear at the top level of any file:
+
+| Element | Purpose |
+|---|---|
+| `<namespace>` | Group templates and tools; define shared types |
+| `<meta>` | Declare the type of per-template metadata |
+| `<template>` | Define a prompt template |
+| `<tool>` | Define a callable tool |
+
+---
+
+---
+
+## The `<meta>` element
+
+`<meta>` appears in two places: once at the top level to *declare* the metadata type, and once inside each `<template>` to *supply* the metadata values.
+
+### Top-level `<meta>` — declaring the type
+
+The text content must define a `Meta` type using TypePrompt's SDL. This is optional; if omitted, templates cannot carry metadata.
 
 ```xml
 <meta>
   interface Meta {
+    /** Sampling temperature (0–2). */
     temperature: number;
-    num_retries?: integer;
-    // TODO: add more fields
-  };
+    model?: "gpt4o" | "gpt4oMini" | "o3";
+  }
 </meta>
 ```
 
-It is an optional feature: if you don't define a top-level `<meta>` element, you cannot add metadata to your templates.
+### Template-level `<meta>` — supplying values
+
+When a top-level `<meta>` is declared, every `<template>` must include a `<meta>` child whose text content is a YAML value of type `Meta`.
+
+```xml
+<template name="Summarize">
+  <meta>
+    temperature: 0.3
+    model: gpt-4o
+  </meta>
+  ...
+</template>
+```
+
+---
 
 ## The `<template>` element
 
-A `<template>` defines a template for a prompt that will be sent to an LLM.
+A `<template>` defines a prompt that can be built and sent to an LLM.
 
-Attributes of `<template>` are:
-| Attribute | Required? | Format | Description |
-| --- | --- | --- | --- | --- |
-| `name` | Required | UpperCamelCase identifier | Uniquely identifies this template within the namespace |
-| `namespace` | Optional; defaults to `Main` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
+**Attributes:**
 
-It can have the following child elements:
-  - `<meta>`: metadata for this template; a value of type `Meta`
-  - `<schema>`: input and output schema
-  - `<tools>`: tools which can be called by the model
-  - `<system>`: system instructions
-  - `<user>`: user instructions
-  - `<examples>`: few-shot examples
-  - `<variant>`: one variant of the prompt
-  - `<snippet>`: a piece of text which can be inserted into the system/user instructions
+| Attribute | Required | Format | Description |
+|---|---|---|---|
+| `name` | Yes | `UpperCamelCase` | Unique name within the namespace |
+| `namespace` | No | `UpperCamelCase` | Namespace this template belongs to; defaults to `Main` |
 
-## The `<meta>` element (inside `<template>...</template>`)
+**Child elements** (in any order):
 
-The text content is the YAML representation of a value of type `Meta`. Must be present in each template definition if and only if there is a `<meta>` element defined at the top level.
+| Element | Required | Description |
+|---|---|---|
+| `<meta>` | If top-level `<meta>` exists | Per-template metadata values |
+| `<schema>` | Yes | `Input` and `Output` types |
+| `<tools>` | No | Tools the model may call |
+| `<system>` | Yes* | System instructions |
+| `<user>` | Yes* | User message |
+| `<examples>` | No | Few-shot examples |
+| `<snippet>` | No | Reusable text fragments |
+| `<variant>` | No | Prompt variants (replaces `<system>`, `<user>`, `<examples>`) |
 
-Example:
-```xml
-<meta>
-  interface Meta {
-    temperature: number;
-    num_retries?: integer;
-  };
-</meta>
+\* Required unless `<variant>` elements are used instead.
 
-<template name="Wave">
-  <meta>
-    temperature: 0.8
-  </meta>
+---
 
-  ...
-</template>
-```
+### The `<schema>` element
 
-## The `<schema>` element
-
-Required. The text content must define both an `Input` and an `Output` type using TypePrompt's SDL language.
-
-The `<schema>` tag has an optional `output-format` attribute which can be either `text` or `json` and defaults to `json`. If it is `text`, the `Output` type must be `string`.
-
-Example:
+Defines the `Input` and `Output` types for the template using TypePrompt's SDL. Both types are required.
 
 ```xml
-<template>
+<template name="ClassifyEmail">
   <schema>
     interface Input {
-      dateToday: string;
-      ...
-    };
-
-    interface Output = {
-      ...
+      subject: string;
+      body: string;
     }
-  </schema>
-
-  ...
-</template>
-```
-
-## The `<tools>` elements
-
-Optional. Lets you register tools which can be called by the model for this prompt.
-
-The text content must be the YAML representation of na array of `{tool: string}` objects. Example:
-
-```xml`
-<template>
-  ...
-
-  <tools>
-    - name: getUserHistory
-    - name: getTemperatureInLocation
-  </tools>
-</template>
-```
-
-Every tool name must match a `<tool>` defined at the top-level.
-
-## The `<system>` and `<user>` elements
-
-System and user instructions.
-
-There must be exactly one `<system>` and one `<user>` element per template or template variant; see the section about template variants below.
-
-In addition to text nodes, `<system>`/`<user>` can contain the following elements:
-- `<insert>`
-- `<enclosed>`
-- `<c>`
-
-### Indentation rules
-
-TypePrompt has simple rules which allow you to indent the content of `<system>` and `<user>` so your XML file looks properly formatted.
-
-If the first child is a text node with more than one line and the first line only contains whitespace characters, TypePrompt determines the base indentation with this logic: let P be the position of the first non-whitespace character if there is one, or the end position of the text node otherwise; the base indentation is the sequence of space and tab characters precending P.
-
-TypePrompt trims the computed base indentation from the start of every line of every text node in the element. If a line is non-empty, it must start with base indentation or TypePrompt will report an error at compilation. Finally, leading empty lines are removed, and the last line is removed if it's empty.
-
-Example:
-
-```xml
-<template>
-  ...
-
-  <system>
-    Hello
-    world
-      This is indented
-  </system>
-</template>
-```
-
-The resolved text:
-```
-Hello
-world
-  This is indented
-```
-
-## `<enclosed>`
-
-The `enclosed` tag will be replaced with the tag name specified in the `tag` attribute in the resolve text.
-
-Example:
-```xml
-<user>
-  <enclosed tag="Article">
-    Article content...
-  </enclosed>
-</user>
-```
-
-The resolved text:
-```
-<Article>
-  Article content...
-</Article>
-```
-
-This is more readable than escaping every `<` and `>` in the XML:
-```xml
-<!-- Same result, less readable. -->
-<user>
-  &lt;Article&gt;
-    Article content...
-  &lt;/Article&gt;
-</user>
-```
-
-## `<insert>`
-
-A placeholder which will be replaced with either a formatted value or a snippet of text at resolution.
-
-To insert a value, use the `val` attribute, e.g. `<insert val="input.dateToday"/>`. The value is an expression of `input`.
-The `format` attribute can be one of:
-- `text`: default option. Requires the inserted value to be a string.
-- `json`: pretty-printed JSON
-- `toon`: see TODO
-- `yaml`: TODO
-- `csv`: TODO; explain that the inserted value must be an array of objects and each field of the object must be a string or an integer
-- `tsv`: TODO; same requirement as `csv`
-
-To insert a snippet of text (defined with `<snippet>`), use the `snippet` attribute, e.g. `<insert snippet="waveUser"/>`
-
-### Indentation
-
-If the line which contains the `<insert>` is indented, this indenting is added after every new line character in the formatted value or snippet at resolution.
-
-Example:
-```xml
-<user>
-  <enclosed tag="Article">
-    <insert val="input.articleContent"/>
-  </enclosed>
-</user>
-```
-
-The resolved text is:
-```
-<Article>
-  Article line 1
-  Article line 2
-  Article line 3
-</Article>
-```
-
-## `<c>`
-
-When it wraps around an identifier, `<c>` allows you to check at compile-time that the identifier matches a name found in the template's schema, the template's registered tools, or any of the registered tools' schemas. The set of names for a schema are the field names and the string literal values.
-
-Example:
-
-```xml
-<template name="AssembleName">
-  <schema>
-    interface Input {
-      firstName: string;
-      lastName: string;
-    };
 
     interface Output {
-      fullName: string;
-    };
+      category: "billing" | "support" | "feedback" | "other";
+      urgency: "low" | "medium" | "high";
+      summary: string;
+    }
   </schema>
-
-  <system>
-    Assemble <c>firstName</c> and <c>lastName</c> into a full name, store the result in <c>fullName</c>.
-  </system>
-
-  <user>
-    <insert val="input" format="json"/>
-  </user>
+  ...
 </template>
 ```
 
-If you rename `lastName` to `familyName` in the schema but not the instructions, you will get a compile-time error reminding you that your instructions are no longer in sync with your schema.
+**Attributes:**
 
-You can wrap the identifier inside double/single/backstick quotes within a `<c>` element: `<c>"firstName"</c>` is equivalent to `"<c>firstName</c>"`. Prefer the former form for readability.
+| Attribute | Values | Default | Description |
+|---|---|---|---|
+| `output-format` | `json`, `text` | `json` | How the model's response is parsed. Use `text` when `Output` is `string`. |
 
-The <c> element can also wrap around a JSON value. The compiler will check that the text content is well-formed JSON and that it complies to at least one named type defined in the schema or any of the registered tools's schemas. For example:
+---
+
+### The `<tools>` element
+
+Registers tools that the model may call during this prompt. The text content is a YAML list of tool references.
+
+```xml
+<template name="ResearchAssistant">
+  <tools>
+    - tool: WebSearch
+    - tool: ReadDocument
+  </tools>
+  ...
+</template>
+```
+
+Each `tool` value must match a `<tool>` element defined at the top level (in the same namespace).
+
+---
+
+### The `<system>` and `<user>` elements
+
+These elements contain the system and user messages. Each may contain a mix of plain text and the inline elements described below: [`<insert>`](#insert), [`<enclosed>`](#enclosed), and [`<c>`](#c).
+
+#### Indentation
+
+TypePrompt automatically strips leading indentation so you can format your XML neatly without it affecting the resolved text.
+
+If the element's content begins with a line containing only whitespace, TypePrompt treats the indent of the *first non-empty line* as the base indent and strips it from every subsequent line. Lines that are non-empty but don't start with the base indent are a compile error.
+
+```xml
+<system>
+  You are a helpful assistant.
+  Today is <insert val="input.dateToday"/>.
+
+  Answer the user's question clearly and concisely.
+</system>
+```
+
+Resolved text:
+```
+You are a helpful assistant.
+Today is 2025-03-14.
+
+Answer the user's question clearly and concisely.
+```
+
+---
+
+#### `<insert>`
+
+Inserts a formatted value or a snippet into the message at this position.
+
+**To insert a value**, set the `val` attribute to an expression rooted at `input`:
+
+```xml
+<insert val="input.userQuery"/>
+<insert val="input.documents" format="json"/>
+```
+
+The `format` attribute controls serialization:
+
+| Value | Description |
+|---|---|
+| `text` | *(default)* Renders the value as a plain string. The value must be of type `string`. |
+| `json` | Pretty-printed JSON (2-space indent). |
+| `yaml` | YAML serialization. |
+| `toon` | [TOON](https://toonformat.dev) — a structured, human-readable format optimized for LLM consumption. |
+| `csv` | Comma-separated values. The value must be an array of objects whose fields are strings or numbers; the first object's keys become the header row. |
+| `tsv` | Tab-separated values. Same requirements as `csv`. |
+
+**To insert a snippet**, use the `snippet` attribute:
+
+```xml
+<insert snippet="systemContext"/>
+```
+
+**Indentation propagation:** if the `<insert>` tag appears on an indented line, that indentation is prepended to every line of the resolved value or snippet. This lets you embed multi-line content inside a block element cleanly:
+
+```xml
+<user>
+  <enclosed tag="Document">
+    <insert val="input.documentContent"/>
+  </enclosed>
+</user>
+```
+
+If `documentContent` is a three-line string, the resolved text is:
+
+```
+<Document>
+  Line 1
+  Line 2
+  Line 3
+</Document>
+```
+
+---
+
+#### `<enclosed>`
+
+Wraps its content in an XML-like tag in the resolved text. This is more readable than escaping `<` and `>` manually.
+
+```xml
+<user>
+  <enclosed tag="Context">
+    <insert val="input.background"/>
+  </enclosed>
+  <enclosed tag="Question">
+    <insert val="input.question"/>
+  </enclosed>
+</user>
+```
+
+Resolved text:
+```
+<Context>
+  ...background...
+</Context>
+<Question>
+  ...question...
+</Question>
+```
+
+The `<description>` element inside `<tool>` may also contain `<enclosed>` and `<c>`.
+
+---
+
+#### `<c>`
+
+`<c>` (short for *check*) wraps an identifier or JSON value and verifies at compile time that it matches something in the template's schema. This keeps your instructions in sync with your types — if you rename a field or change a literal value, TypePrompt will report an error wherever `<c>` references the old name.
+
+**Wrapping an identifier:**
+
+```xml
+<schema>
+  interface Input {
+    documentText: string;
+    targetLanguage: string;
+  }
+
+  interface Output {
+    translatedText: string;
+    detectedSourceLanguage: string;
+  }
+</schema>
 
 <system>
-  Assemble <c>firstName</c> and <c>lastName</c> into a full name.
-
-  Example:
-    - input: <c>{"firstName": "John", "lastName": "Doe"}</c>
-    - output: <c>{"fullName": "John Doe"}</c>
+  Translate the <c>documentText</c> into the <c>targetLanguage</c>.
+  Return the result as <c>translatedText</c> and set <c>detectedSourceLanguage</c>
+  to the language you detected in the input.
 </system>
-
-To keep examples short, you can The JSON wrapped inside `<c>...</c>` tags can contain an ellipsis (`...`) where:
-  - another JSON value would be expected, e.g. `<c>["first", ...]</c>`
-  - a sequence of key:value pairs would be expected, e.g. `<c>{"foo": "bar", ...}</c>`
-
-## `<examples>`
-
-Optional. Allows you to specify few-shot examples.
-
-The text content is the YAML representation of an array of this type:
-```ts
-{
-  input: Input;
-  output: Input;
-
-  /** If your example includes tool calls. */
-  intermediateSteps?: {
-    /** Tool calls made in parallel. */
-    toolCalls: {
-      callId: string;
-      /** Name of a registered tool. */
-      tool: string;
-      input: ToolInput;
-      output: ToolOutput;
-    }[];
-  }[];
-}[]
 ```
 
-Example:
+The valid identifier names for a schema are all field names and all string literal values.
+
+For readability, you may quote the identifier inside `<c>`:
+`<c>"documentText"</c>` is equivalent to `"<c>documentText</c>"`.
+
+**Wrapping a JSON value:**
+
+`<c>` also validates inline JSON examples — useful when your instructions include sample inputs or outputs:
+
+```xml
+<system>
+  Translate the given document.
+
+  Example input:  <c>{"documentText": "Bonjour", "targetLanguage": "en"}</c>
+  Example output: <c>{"translatedText": "Hello", "detectedSourceLanguage": "fr"}</c>
+</system>
 ```
+
+The compiler checks that the JSON is well-formed and conforms to at least one named type in the schema.
+
+To keep inline examples concise, you may use an ellipsis (`...`) as a placeholder:
+
+```xml
+<c>{"documentText": "...", ...}</c>
+<c>[{"translatedText": "Hello"}, ...]</c>
+```
+
+---
+
+### `<examples>`
+
+Defines few-shot examples that are included in every rendered prompt. The text content is a YAML list with the following structure:
+
+```yaml
+- input: <Input value>
+  output: <Output value>
+  intermediateSteps:          # optional; include when the example involves tool calls
+    - toolCalls:
+      - callId: <string>
+        tool: <tool name>
+        input: <tool Input value>
+        output: <tool Output value>
+```
+
+For a template that classifies emails:
+
+```xml
 <examples>
   - input:
-      firstName: Jane
-      lastName: Doe
+      subject: "Invoice #4821 overdue"
+      body: "Please settle your outstanding balance."
     output:
-      fullName: Jane Doe
+      category: billing
+      urgency: high
+      summary: Overdue invoice reminder.
+
   - input:
-      firstName: John
-      lastName: Doe
+      subject: "Love the new dashboard!"
+      body: "The new analytics view is exactly what I needed."
     output:
-      fullName: John Doe
+      category: feedback
+      urgency: low
+      summary: Positive feedback about the dashboard.
 </examples>
 ```
 
-There can be at most one `<examples>` element per template or template variant.
-
-## `<variant>`
-
-This element allows you to define different variants of your prompt. All variants share the same input and output type, but the instructions and few-shot examples can be different.
-
-Using `<variant>` requires the `Input` type to have a `variant` field of type union of string literals. There must be one `<variant>` per member in the union.
-When using variants, you can define `<meta>`, `<system>`, `<user>`, `<examples>` elements within `<variant>` elements instead of directly under `<template>`. You can choose for each tag, for example, in the same template you can choose to define `<meta>` under `<template>` and `<system>` under `<variant>`. In this case, there cannot be a `<meta>` under `<variant>`, and `<user>` cannot appear under `<template>`.
+For a template that uses tools:
 
 ```xml
-<template name="AssembleName">
-  <schema>
-    interface Input {
-      nameComponents: {
-        firstName: string;
-        lastName: string;
-      }
-      variant: "formal" | "informal"
-    }
-
-    interface Output {
-      fullName: string;
-    }
-  </schema>
-
-  <user>
-    <insert val="input.nameComponents" format="json"/>
-  </user>
-
-  <variant name="formal">
-    <system>
-      Assemble firstName and familyName into a full name.
-    </system>
-
-    <examples>
-      - input:
-          nameComponents:
-            firstName: Jane
-            lastName: Doe
-          # variant: formal  # Can be left out
-        output:
-          fullName: Jane Doe
-    </examples>
-  </variant>
-
-  <variant name="informal">
-    <system>
-      Returns an informal `fullName` for the given person.
-    </system>
-
-    <examples>
-      - input:
-          nameComponents:
-            firstName: Jane
-            lastName: Doe
-          # variant: informal  # Can be left out
-        output:
-          fullName: J. Doe
-    </examples>
-  </variant>
-</template>
+<examples>
+  - input:
+      question: "What is the capital of France?"
+    intermediateSteps:
+      - toolCalls:
+        - callId: c1
+          tool: WebSearch
+          input:
+            query: "capital of France"
+          output:
+            results: ["Paris is the capital of France."]
+    output:
+      answer: Paris
 ```
 
-## `<snippet>`
+There may be at most one `<examples>` element per template or variant.
 
-A snippet of text which can be inserted into system instructions, user instructions or another `<snippet>`.
+---
 
-Example:
+### `<snippet>`
+
+A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..."/>`.
 
 ```xml
-<snippet name="dateToday">
-  The date today is <insert val="input.dateToday"/>.
+<snippet name="todayDate">
+  Today's date is <insert val="input.dateToday"/>.
 </snippet>
+
+<system>
+  <insert snippet="todayDate"/>
+  Answer the following question.
+</system>
 ```
 
-The name of a snippet must be in lowerCamelCase format. A `<snippet>` element may contain the same nodes as a `<system>` or `<user>` element. The same dedentation rules apply; for example in the example above, the snippet's resolved text starts with **The date** not preceded by any whitespace.
+Snippet names must be `lowerCamelCase`. The same indentation-stripping rules that apply to `<system>` and `<user>` apply here.
 
-### Conditional snippets
+#### Conditional snippet (`if`)
 
-You can make the content of a snippet depend on the value of an expression. For this, set the `if` or `switch` attribute.
-
-#### Snippet with `if` attribute
-
-Example:
+A snippet can conditionally render one of two bodies depending on an expression:
 
 ```xml
-<snippet name="timeOfDay" if="input.timeOfDay" is="notEmpty">
+<snippet name="locationContext" if="input.userLocation" is="notNull">
   <then>
-    The time today is <insert val="it"/>
-
+    The user is located in <insert val="input.userLocation"/>.
   </then>
   <else></else>
 </snippet>
 ```
 
-In this example, if `input.timeOfDay` is a non-empty string, the snippet renders as *The time today is* followed by the string (`it` is an alias for the expression being tested) and an empty line. If `input.timeOfDay` is an empty string, the snippet renders as an empty string.
+**Attributes:**
 
-#### Snippet with `switch` attribute
+| Attribute | Description |
+|---|---|
+| `if` | Expression to evaluate (e.g. `input.userLocation`) |
+| `is` | Condition type: `notNull` (value is not null/undefined), `notEmpty` (string or array is non-empty), `true` (value is truthy) |
 
-Example:
+When the condition holds, the `<then>` body is rendered; otherwise the `<else>` body is rendered.
+
+#### Switch snippet (`switch`)
+
+A snippet can branch on a string-union expression:
 
 ```xml
-<snippet name="leafColor" switch="input.season">
-  <on case="spring">green</on>
-  <on case="summer">green</on>
-  <on case="fall">orange</on>
-  <on case="winter">n/a</on>
+<snippet name="formalityInstruction" switch="input.tone">
+  <on case="formal">Use formal, professional language.</on>
+  <on case="casual">Keep the tone friendly and conversational.</on>
+  <on case="technical">Use precise technical terminology.</on>
 </snippet>
 ```
 
-The value of the `switch` attribute (e.g. `input.season`) must resolve to an expression of type union of string literals. There must be one `<one case="...">` element for each member in the union. 
+The `switch` attribute must resolve to a string-union type, and there must be exactly one `<on case="...">` for each member of that union.
 
-## The `<tool>` element
+---
 
-Defines a tool which can be called by an LLM.
+### `<variant>`
 
-Attributes of `<tool>` are:
-| Attribute | Required? | Format | Description |
-| --- | --- | --- | --- | --- |
-| `name` | Required | UpperCamelCase identifier | Uniquely identifies this template within the namespace |
-| `namespace` | Optional; defaults to `Main` | UpperCamelCase identifier | Must match the name of a declared `<namespace>` |
+Variants let you define multiple versions of a prompt that share the same `Input`/`Output` types but differ in instructions or examples — for example, to A/B test different system prompts or to handle a `style` field in the input.
 
-It must have 2 child elements:
-  - `<description>`: description of the tool
-  - `<schema>`: input and output schema
+**Requirements:**
+- The `Input` type must include a `variant` field of type `"member1" | "member2" | ...`.
+- There must be exactly one `<variant name="...">` for each member of that union.
+- Each `<variant>` may contain `<meta>`, `<system>`, `<user>`, and `<examples>`.
+- Elements defined directly under `<template>` act as defaults and are inherited by variants that omit them. An element defined under `<template>` cannot be redefined under `<variant>`.
 
-The `<description>` element gives a description of the tool; it will be provided to the model when sending prompts which have the tools registered. Besides raw text, it can contain `<c>` and `<enclosed>` elements.
-
-The `<schema>` element lets you define both the `Input` and `Output` type of the tool using TypePrompt's SDL language.
-
-Example:
-
-<tool name="getTemperatureInLocation">
+```xml
+<template name="WriteEmail">
   <schema>
     interface Input {
-      location: GeoLocation;
-    }
-
-    interface GeoLocation {
-      lat: number;
-      lng: number;
+      recipient: string;
+      topic: string;
+      variant: "formal" | "casual";
     }
 
     interface Output {
-      temperatureCelcius: number;
-      rainLikelihood: number;
+      subject: string;
+      body: string;
     }
   </schema>
 
+  <!-- Shared across both variants -->
+  <user>
+    Recipient: <insert val="input.recipient"/>
+    Topic: <insert val="input.topic"/>
+  </user>
+
+  <variant name="formal">
+    <system>
+      Write a professional business email. Use a formal salutation and sign off with
+      "Best regards".
+    </system>
+    <examples>
+      - input:
+          recipient: Dr. Lee
+          topic: project update
+          # variant is optional in examples
+        output:
+          subject: Project Status Update
+          body: "Dear Dr. Lee, ..."
+    </examples>
+  </variant>
+
+  <variant name="casual">
+    <system>
+      Write a friendly, informal email. Keep it short and conversational.
+    </system>
+  </variant>
+</template>
+```
+
+---
+
+## The `<tool>` element
+
+Defines a tool that the model can call during prompt execution. Tools have a description (shown to the model), and typed input/output schemas.
+
+**Attributes:**
+
+| Attribute | Required | Format | Description |
+|---|---|---|---|
+| `name` | Yes | `UpperCamelCase` | Unique name within the namespace |
+| `namespace` | No | `UpperCamelCase` | Namespace this tool belongs to; defaults to `Main` |
+
+**Child elements:**
+
+| Element | Required | Description |
+|---|---|---|
+| `<description>` | Yes | Human/model-readable description of what the tool does |
+| `<schema>` | Yes | `Input` and `Output` types |
+
+```xml
+<tool name="GetWeather">
   <description>
-    TODO
+    Returns the current weather at a given location. Use this when the user's
+    request depends on real-time weather conditions.
   </description>
+
+  <schema>
+    interface Input {
+      city: string;
+      countryCode: string;
+    }
+
+    interface Output {
+      temperatureCelsius: number;
+      condition: "sunny" | "cloudy" | "rainy" | "snowy";
+      humidity: number;
+    }
+  </schema>
 </tool>
+```
+
+The `<description>` element may contain `<c>` and `<enclosed>` in addition to plain text.
+
+---
 
 ## The `<namespace>` element
 
-The `<namespace>` element serves 2 purposes:
-  - organization: organize templates and tools into groups; mostly useful; if you have ~10+ templates
-  - definition of common types: `<namespace>` allows you to define types which can be shared by multiple templates and tools.
-
-Example:
+Namespaces serve two purposes: organizing large projects and defining types that are shared across multiple templates and tools within the namespace.
 
 ```xml
-<namespace name="Events">
-  interface Weather {
-    temperatureCelcius: number;
-    raining: boolean;
-  };
+<namespace name="Geo">
+  interface Address {
+    street: string;
+    city: string;
+    country: string;
+  }
 </namespace>
 
-<template name="PlanEvent" namespace="Events">
+<template name="FormatAddress" namespace="Geo">
   <schema>
     interface Input {
-      weather: shared.Weather;
-      ...
-    };
+      address: shared.Address;
+      locale: string;
+    }
 
-    type Output = { ... };
+    type Output = string;
   </schema>
-
-  <tools>
-    - tool: myTool
-  </tools>
-
   ...
 </template>
 
-<tool name="myTool" namespace="Events">
+<tool name="Geocode" namespace="Geo">
   ...
 </tool>
 ```
+
+Types declared inside `<namespace>` can be referenced from template and tool schemas using the `shared.TypeName` prefix (see [Shared types](schema.md#shared-types) in schema.md).
+
+**Attributes:**
+
+| Attribute | Required | Format | Description |
+|---|---|---|---|
+| `name` | Yes | `UpperCamelCase` | Unique identifier for this namespace |
+
+If no namespace is declared, all templates and tools belong to the implicit `Main` namespace.
