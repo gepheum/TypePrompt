@@ -1,0 +1,62 @@
+<!--
+  Demonstrates: <snippet>, conditional snippet (if/then/else), switch snippet,
+  and <insert snippet="...">.
+-->
+<template name="SummarizeDocument">
+  <schema>
+    type Input = {
+      title: string;
+      content: string;
+      /** If provided, the summary should focus on this topic. */
+      focusTopic?: string;
+      audience: "executive" | "technical" | "general";
+    };
+
+    type Output = {
+      summary: string;
+      keyPoints: string[];
+    };
+  </schema>
+
+  <!--
+    Reusable snippet: inserted at the top of the system prompt.
+    Uses <insert val="it"/> to reference the focusTopic expression tested by `if`.
+  -->
+  <snippet name="focusInstruction" if="input.focusTopic" is="notNull">
+    <then>
+      Focus the summary specifically on the topic: <insert val="it"/>.
+    </then>
+    <else></else>
+  </snippet>
+
+  <!--
+    Switch snippet: tailors the tone to the target audience.
+  -->
+  <snippet name="audienceInstruction" switch="input.audience">
+    <on case="executive">
+      Write for a non-technical executive audience. Be concise and highlight
+      business impact. Avoid jargon.
+    </on>
+    <on case="technical">
+      Write for a technical audience. You may use domain-specific terminology
+      and include implementation details where relevant.
+    </on>
+    <on case="general">
+      Write for a general audience with no assumed background knowledge.
+      Explain any specialized terms you use.
+    </on>
+  </snippet>
+
+  <system>
+    You are an expert document summarizer.
+    <insert snippet="audienceInstruction"/>
+    <insert snippet="focusInstruction"/>
+  </system>
+
+  <user>
+    Summarize the following document.
+
+    <enclosed tag="Title"><insert val="input.title"/></enclosed>
+    <enclosed tag="Document"><insert val="input.content"/></enclosed>
+  </user>
+</template>

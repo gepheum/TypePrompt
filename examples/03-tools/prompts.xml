@@ -1,0 +1,72 @@
+<!--
+  Demonstrates: <tool> definition, <tools> registration, tool call examples
+  with intermediateSteps.
+-->
+<tool name="webSearch">
+  <description>
+    Search the web and return a list of relevant results. Each result has a
+    <c>title</c>, <c>url</c>, and a short <c>snippet</c>.
+  </description>
+
+  <schema>
+    type Input = {
+      query: string;
+    };
+
+    type Output = {
+      results: {
+        title: string;
+        url: string;
+        snippet: string;
+      }[];
+    };
+  </schema>
+</tool>
+
+<template name="ResearchQuestion">
+  <tools>
+    - tool: webSearch
+  </tools>
+
+  <schema>
+    type Input = {
+      question: string;
+    };
+
+    type Output = {
+      answer: string;
+      /** URLs of sources used. */
+      sources: string[];
+    };
+  </schema>
+
+  <system>
+    You are a research assistant. Use the <c>webSearch</c> tool to find
+    up-to-date information, then provide a concise, well-sourced answer.
+    Always cite the URLs you relied on.
+  </system>
+
+  <user>
+    <insert val="input.question"/>
+  </user>
+
+  <examples>
+    - input:
+        question: "What is the current population of Tokyo?"
+      intermediateSteps:
+        - toolCalls:
+          - callId: s1
+            tool: webSearch
+            input:
+              query: "Tokyo population 2024"
+            output:
+              results:
+                - title: "Tokyo Metropolitan Government"
+                  url: "https://www.metro.tokyo.lg.jp/english/"
+                  snippet: "As of 2024, the population of Tokyo is approximately 13.96 million."
+      output:
+        answer: "As of 2024, Tokyo's population is approximately 13.96 million."
+        sources:
+          - "https://www.metro.tokyo.lg.jp/english/"
+  </examples>
+</template>

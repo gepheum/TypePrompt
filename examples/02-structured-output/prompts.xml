@@ -1,0 +1,57 @@
+<!--
+  Demonstrates: structured JSON output, union types (string-literal and
+  discriminated), optional fields, JSDoc on types.
+-->
+<template name="TriageTicket">
+  <schema>
+    /** A support ticket to be triaged. */
+    type Input = {
+      subject: string;
+      body: string;
+    };
+
+    type Output = {
+      /** Broad category of the issue. */
+      category: "billing" | "technicalIssue" | "featureRequest" | "other";
+
+      /** How quickly this ticket needs attention. */
+      urgency: "low" | "medium" | "high" | "critical";
+
+      /** One-sentence summary of the issue. */
+      summary: string;
+
+      /** Suggested first response, if the issue is straightforward. */
+      suggestedReply?: string;
+    };
+  </schema>
+
+  <system>
+    You are a support ticket triage assistant. Analyze the ticket and return a
+    structured assessment. Set <c>urgency</c> to <c>"critical"</c> only when
+    the user reports data loss or a complete service outage.
+  </system>
+
+  <user>
+    <enclosed tag="Subject"><insert val="input.subject"/></enclosed>
+    <enclosed tag="Body"><insert val="input.body"/></enclosed>
+  </user>
+
+  <examples>
+    - input:
+        subject: "Cannot log in — account locked"
+        body: "I've tried resetting my password three times but keep getting 'account locked'."
+      output:
+        category: technicalIssue
+        urgency: high
+        summary: User's account is locked and cannot be accessed despite password resets.
+        suggestedReply: "We've unlocked your account. Please try logging in again and let us know if the issue persists."
+
+    - input:
+        subject: "Would love a dark mode"
+        body: "The app looks great but a dark mode option would really help at night."
+      output:
+        category: featureRequest
+        urgency: low
+        summary: User requests a dark mode option.
+  </examples>
+</template>

@@ -1,0 +1,72 @@
+<!--
+  Demonstrates: <variant> with per-variant system prompts and examples.
+  All variants share the same Input/Output types and user message.
+  The `variant` field in Input drives which variant is selected at runtime.
+-->
+<template name="WriteProductDescription">
+  <schema>
+    type Input = {
+      productName: string;
+      features: string[];
+      variant: "marketing" | "technical" | "brief";
+    };
+
+    type Output = {
+      description: string;
+    };
+  </schema>
+
+  <!-- Shared user message: same for all variants -->
+  <user>
+    Product: <insert val="input.productName"/>
+    Features: <insert val="input.features" format="json"/>
+  </user>
+
+  <variant name="marketing">
+    <system>
+      Write an engaging, benefit-focused product description for a marketing
+      website. Lead with the customer's problem, then present the product as
+      the solution. Use vivid, persuasive language. Keep it to 2–3 sentences.
+    </system>
+    <examples>
+      - input:
+          productName: "AquaFilter Pro"
+          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+          # variant field can be omitted in examples
+        output:
+          description: >
+            Tired of worrying about what's in your tap water? AquaFilter Pro
+            eliminates 99.9% of contaminants, so your family drinks nothing but
+            pure, clean water — and it installs in minutes and lasts six months.
+  </variant>
+
+  <variant name="technical">
+    <system>
+      Write a precise, specification-driven product description for a technical
+      datasheet. List key capabilities clearly. Avoid marketing language.
+    </system>
+    <examples>
+      - input:
+          productName: "AquaFilter Pro"
+          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+        output:
+          description: >
+            AquaFilter Pro is a point-of-use water filtration unit rated to
+            remove 99.9% of contaminants including heavy metals and chlorine.
+            Filter lifespan: 6 months / ~1,500 L. Tool-free cartridge
+            replacement; compatible with standard ½" fittings.
+  </variant>
+
+  <variant name="brief">
+    <system>
+      Write a single punchy sentence — product name, top benefit, one
+      differentiator. 15 words maximum.
+    </system>
+    <examples>
+      - input:
+          productName: "AquaFilter Pro"
+          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+        output:
+          description: "AquaFilter Pro delivers pure water with zero-tool installation and a 6-month filter life."
+  </variant>
+</template>
