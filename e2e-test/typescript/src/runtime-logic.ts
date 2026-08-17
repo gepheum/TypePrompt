@@ -434,7 +434,7 @@ function renderSnippet<Input>(
             return (evalResult as { readonly length: number }).length > 0;
           }
           case "notNull": {
-            return evalResult === undefined || evalResult === null;
+            return evalResult !== undefined && evalResult !== null;
           }
           case "true": {
             return !!evalResult;

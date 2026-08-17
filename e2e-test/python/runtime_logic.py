@@ -430,7 +430,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                         case "notEmpty":
                             condition = len(eval_result) > 0
                         case "notNull":
-                            condition = eval_result is None
+                            condition = eval_result is not None
                         case "true":
                             condition = bool(eval_result)
                     return render_body(
