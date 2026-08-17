@@ -104,7 +104,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       lines.push(" @dataclass(frozen=True)");
       lines.push(` class ${namespace.name}Namespace:`);
       lines.push(
-        ...writeTemplatesAttributes(namespace).map((line) => " ".concat(line)),
+        ...writeTemplatesAttributes(namespace).map((line) => indentLine(line, " ")),
       );
       lines.push(` ${fieldName}: ${namespace.name}Namespace`);
       lines.push("");
@@ -205,7 +205,7 @@ function writeUserDefinedDatatypes(
       const templateName = toPyName(namespace.name, "snake_case_class_name");
       lines.push(` @final`);
       lines.push(` class ${templateName}(_StaticClass):`);
-      lines.push(...writeDatatypes(namespace).map((line) => " ".concat(line)));
+      lines.push(...writeDatatypes(namespace).map((line) => indentLine(line, " ")));
     }
   }
   return lines.join("\n");
@@ -489,7 +489,7 @@ function writeCreatePromptsFunction(
     for (const namespace of Object.values(namespaces)) {
       const fieldName = toPyName(namespace.name, "field_name");
       lines.push(`  ${fieldName}=Prompts.${namespace.name}Namespace(`);
-      lines.push(...writeArgs(namespace).map((line) => " ".concat(line)));
+      lines.push(...writeArgs(namespace).map((line) => indentLine(line, " ")));
       lines.push("  ),");
     }
   }
