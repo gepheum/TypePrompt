@@ -325,11 +325,15 @@ class TemplateParser {
     if (attrs.attributes.if) {
       this.parseSnippetWithIf(
         snippetNode,
+        attrs.attributes.name.value,
         attrs.attributes.if,
         attrs.attributes.is,
       );
     } else if (attrs.attributes.switch) {
-      this.parseSnippetWithSwitch(snippetNode, attrs.attributes.switch);
+      this.parseSnippetWithSwitch(
+        snippetNode,
+        attrs.attributes.name.value,
+        attrs.attributes.switch);
     } else {
       const body = parseBody(snippetNode, this.errors, {
         hasValContext: false,
@@ -344,6 +348,7 @@ class TemplateParser {
 
   private parseSnippetWithIf(
     snippetNode: ElementNode,
+    name: TextSpan,
     ifAttr: AttributeValue<string>,
     isAttr: AttributeValue<"notNull" | "notEmpty" | "true"> | undefined,
   ): void {
@@ -393,7 +398,7 @@ class TemplateParser {
     }
     this.snippets.push({
       kind: "snippet-if",
-      name: snippetNode.tag,
+      name,
       expression: expression.expression,
       is: isAttr?.value ?? null,
       then: branches.then!,
@@ -403,6 +408,7 @@ class TemplateParser {
 
   private parseSnippetWithSwitch(
     snippetNode: ElementNode,
+    name: TextSpan,
     switchAttr: AttributeValue<string>,
   ): void {
     const expression = parseExpression(switchAttr.value, {
@@ -454,7 +460,7 @@ class TemplateParser {
     }
     this.snippets.push({
       kind: "snippet-switch",
-      name: snippetNode.tag,
+      name,
       switchTag: switchAttr.nameSpan,
       expression: expression.expression,
       branches: branches,
