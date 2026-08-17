@@ -193,23 +193,23 @@ function validateVariants(
   if (template.contents.kind !== "variants") {
     return [];
   }
-  const outputTypeDeclaration = templateSchema.typeDeclarations["Output"]!;
-  const outputType = resolveType(outputTypeDeclaration, templateSchema);
-  if (outputType.kind !== "interface") {
+  const inputTypeDeclaration = templateSchema.typeDeclarations["Input"]!;
+  const inputType = resolveType(inputTypeDeclaration, templateSchema);
+  if (inputType.kind !== "interface") {
     return [
       {
-        span: outputTypeDeclaration.name,
-        message: "'Output' must be an interface when using <variant> elements",
+        span: inputTypeDeclaration.name,
+        message: "'Input' must be an interface when using <variant> elements",
       },
     ];
   }
-  const variantField = outputType.fields["variant"];
+  const variantField = inputType.fields["variant"];
   if (!variantField) {
     return [
       {
-        span: outputTypeDeclaration.name,
+        span: inputTypeDeclaration.name,
         message:
-          "'Output' must have a 'variant' field when using <variant> elements",
+          "'Input' must have a 'variant' field when using <variant> elements",
       },
     ];
   }
@@ -250,7 +250,7 @@ function validateVariants(
     if (unionMembers.values.has(variantName)) continue;
     errors.push({
       span: variant.case,
-      message: `'Output.variant' can never be '${variantName}'`,
+      message: `'Input.variant' can never be '${variantName}'`,
     });
   }
   return errors;
@@ -304,23 +304,19 @@ function makeExamplesType(
 ): SyntheticArray & HasName {
   const { typeDeclarations } = templateSchema;
 
-  const inputType = typeDeclarations["Input"]!.valueType;
+  let inputType: Type | SyntheticInterface = typeDeclarations["Input"]!.valueType;
+  const outputType = typeDeclarations["Output"]!.valueType;
 
-  let outputType: Type | SyntheticInterface =
-    typeDeclarations["Output"]!.valueType;
   if (options.isVariantSpecialization) {
-    const resolvedOutputType = resolveSyntheticType(
-      outputType!,
-      templateSchema,
-    );
+    const resolvedInputType = resolveSyntheticType(inputType!, templateSchema);
     if (
-      resolvedOutputType.kind === "interface" &&
-      resolvedOutputType.fields["variant"]
+      resolvedInputType.kind === "interface" &&
+      resolvedInputType.fields["variant"]
     ) {
-      outputType = {
+      inputType = {
         kind: "interface",
         fields: Object.fromEntries(
-          Object.entries(resolvedOutputType.fields).map(([name, field]) =>
+          Object.entries(resolvedInputType.fields).map(([name, field]) =>
             name === "variant"
               ? [name, { ...field, optional: true }]
               : [name, field],
