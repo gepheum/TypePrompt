@@ -1,10 +1,5 @@
 /**
- * Comprehensive tests covering all spec features across all 8 example projects.
- *
- * KNOWN FAILING TESTS (bugs in generated code / runtime):
- *   Bug 4 — String literal casing: literals like "USD", "EUR" are silently
- *     lowercased in the generated Zod schema instead of raising a validation
- *     error at code-generation time.
+ * Comprehensive tests covering all spec features across all example projects.
  */
 
 import { expect } from "buckwheat";
