@@ -310,38 +310,31 @@ class TestWriteProductDescription:
 
 # ─── 06 Toon format: complex nested input types, format="toon" ───────────────
 
-# The toon-format Python encoder is not yet implemented; skip these tests.
-try:
-    _provider = s06.write_comparison_article.Provider(
-        name="CloudX",
-        region="us-east",
-        category="compute",
-        pricing=s06.write_comparison_article.Pricing(model="perHour", base_price=0.1),
-        benchmarks=[
-            s06.write_comparison_article.Benchmark(
-                name="throughput", score=1000, unit="rps"
+_toon_prompt = p06.write_comparison_article.render(
+    s06.write_comparison_article.Input(
+        providers=[
+            s06.write_comparison_article.Provider(
+                name="CloudX",
+                region="us-east",
+                category="compute",
+                pricing=s06.write_comparison_article.Pricing(
+                    model="perHour", base_price=0.1
+                ),
+                benchmarks=[
+                    s06.write_comparison_article.Benchmark(
+                        name="throughput", score=1000, unit="rps"
+                    )
+                ],
+                pros=["fast"],
+                cons=["pricey"],
             )
         ],
-        pros=["fast"],
-        cons=["pricey"],
+        use_case="serving ML inference workloads",
+        audience="architect",
     )
-    _toon_prompt = p06.write_comparison_article.render(
-        s06.write_comparison_article.Input(
-            providers=[_provider],
-            use_case="serving ML inference workloads",
-            audience="architect",
-        )
-    )
-    _toon_available = True
-except NotImplementedError:
-    _toon_available = False
-
-_skip_toon = pytest.mark.skipif(
-    not _toon_available, reason="toon-format encoder not yet implemented"
 )
 
 
-@_skip_toon
 class TestWriteComparisonArticle:
     def test_json_output_format(self):
         assert _toon_prompt.output_format.format == "json"

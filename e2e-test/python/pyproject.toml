@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
   "pydantic>=2.0",
   "pyyaml",
-  "toon-format",
+  "toon_format @ git+https://github.com/toon-format/toon-python.git",
 ]
 
 [project.optional-dependencies]
