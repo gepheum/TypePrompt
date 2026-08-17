@@ -571,4 +571,4 @@ Types declared inside `<namespace>` can be referenced from template and tool sch
 |---|---|---|---|
 | `name` | Yes | `UpperCamelCase` | Unique identifier for this namespace |
 
-If no namespace is declared, all templates and tools belong to the implicit `Main` namespace.
+If you don't declare any namespaces, all templates and tools belong to the implicit `Main` namespace. You can still define shared types for that default namespace by declaring `<namespace name="Main">` — any types defined there will be available via `shared.TypeName` in all `Main` templates and tools.
