@@ -333,7 +333,8 @@ class TemplateParser {
       this.parseSnippetWithSwitch(
         snippetNode,
         attrs.attributes.name.value,
-        attrs.attributes.switch);
+        attrs.attributes.switch,
+      );
     } else {
       const body = parseBody(snippetNode, this.errors, {
         hasValContext: false,

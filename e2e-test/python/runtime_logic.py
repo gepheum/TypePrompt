@@ -1,3 +1,5 @@
+# Contains snippets of code to copy to each generated files.
+
 from runtime_types import _internal
 
 # <static:python-imports>
@@ -471,7 +473,8 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             return result
 
         input_adapter, output_adapter = _type_adapters[self._template_id]
-        input = input_adapter.dump_python(input, by_alias=True)
+        input_val = input_adapter.dump_python(cast(Any, input), by_alias=True)
+        del input
 
         template = self._template_data
         snippets = template.snippets
@@ -480,12 +483,12 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
         if contents.kind == "noVariants":
             content = contents.content
             meta = content.meta
-            system_message = render_body(content.system or [], input, snippets)
+            system_message = render_body(content.system or [], input_val, snippets)
             user_body = content.user or []
-            user_message = render_body(user_body, input, snippets)
+            user_message = render_body(user_body, input_val, snippets)
             examples = render_examples(content.examples or [], user_body, template)
         else:
-            variant = cast(dict, input)["variant"]
+            variant = cast(dict, input_val)["variant"]
             variant_content = contents.variants[variant]
             default_content = contents.default_content
             meta = (
@@ -503,8 +506,8 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 if variant_content.user is not None
                 else (default_content.user or [])
             )
-            system_message = render_body(system_body, input, snippets)
-            user_message = render_body(user_body, input, snippets)
+            system_message = render_body(system_body, input_val, snippets)
+            user_message = render_body(user_body, input_val, snippets)
             raw_examples = (
                 variant_content.examples
                 if variant_content.examples is not None

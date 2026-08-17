@@ -304,7 +304,8 @@ function makeExamplesType(
 ): SyntheticArray & HasName {
   const { typeDeclarations } = templateSchema;
 
-  let inputType: Type | SyntheticInterface = typeDeclarations["Input"]!.valueType;
+  let inputType: Type | SyntheticInterface =
+    typeDeclarations["Input"]!.valueType;
   const outputType = typeDeclarations["Output"]!.valueType;
 
   if (options.isVariantSpecialization) {

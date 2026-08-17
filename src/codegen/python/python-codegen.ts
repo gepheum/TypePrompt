@@ -104,7 +104,9 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       lines.push(" @dataclass(frozen=True)");
       lines.push(` class ${namespace.name}Namespace:`);
       lines.push(
-        ...writeTemplatesAttributes(namespace).map((line) => indentLine(line, " ")),
+        ...writeTemplatesAttributes(namespace).map((line) =>
+          indentLine(line, " "),
+        ),
       );
       lines.push(` ${fieldName}: ${namespace.name}Namespace`);
       lines.push("");
@@ -205,7 +207,9 @@ function writeUserDefinedDatatypes(
       const templateName = toPyName(namespace.name, "snake_case_class_name");
       lines.push(` @final`);
       lines.push(` class ${templateName}(_StaticClass):`);
-      lines.push(...writeDatatypes(namespace).map((line) => indentLine(line, " ")));
+      lines.push(
+        ...writeDatatypes(namespace).map((line) => indentLine(line, " ")),
+      );
     }
   }
   return lines.join("\n");
@@ -214,9 +218,11 @@ function writeUserDefinedDatatypes(
 function writeToolExecutorProtocols(
   compilationResult: ValidCompilationResult,
 ): string {
-  const {singleNamespace, namespaces} = compilationResult;
-  const writeNamespace = (namespace: ValidNamespaceResult): readonly string[] => {
-    const {templates} = namespace;
+  const { singleNamespace, namespaces } = compilationResult;
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const { templates } = namespace;
     if (templates.length <= 0) {
       return [" pass"];
     }
@@ -277,7 +283,9 @@ function writeToolExecutorProtocols(
       const namespaceName = toPyName(namespace.name, "snake_case_class_name");
       lines.push(" @final");
       lines.push(` class ${namespaceName}(_StaticClass):`);
-      lines.push(...writeNamespace(namespace).map((line) => indentLine(line, " ")));
+      lines.push(
+        ...writeNamespace(namespace).map((line) => indentLine(line, " ")),
+      );
     }
   }
   return lines.join("\n");
