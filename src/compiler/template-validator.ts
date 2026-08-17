@@ -65,7 +65,7 @@ export function validateTemplate(args: {
   }
 
   const options: Options = {
-    isVariantSpecialization: false,
+    isVariantSpecialization: template.contents.kind === "variants",
     namespaceTools: args.namespaceTools,
     templateTools: tools.kind === "success" ? tools.tools : {},
   };
