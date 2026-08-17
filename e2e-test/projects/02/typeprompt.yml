@@ -1,0 +1,8 @@
+input: ../../../examples/02-structured-output/prompts.xml
+gen:
+  typescript:
+    enabled: true
+    file: ../../typescript/src/gen/prompts-02.ts
+  python:
+    enabled: true
+    file: ../../python/gen/prompts_02.py

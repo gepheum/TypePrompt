@@ -1,0 +1,8 @@
+input: ../../../examples/01-basics/prompts.xml
+gen:
+  typescript:
+    enabled: true
+    file: ../../typescript/src/gen/prompts-01.ts
+  python:
+    enabled: true
+    file: ../../python/gen/prompts_01.py

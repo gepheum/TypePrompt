@@ -1,0 +1,8 @@
+input: ../../../examples/05-variants/prompts.xml
+gen:
+  typescript:
+    enabled: true
+    file: ../../typescript/src/gen/prompts-05.ts
+  python:
+    enabled: true
+    file: ../../python/gen/prompts_05.py
