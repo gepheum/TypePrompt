@@ -1,0 +1,146 @@
+<!--
+  Demonstrates: two named namespaces, each with its own shared types and two
+  templates. Templates reference shared types from their own namespace using
+  the `shared.` prefix.
+-->
+
+<!-- ── Finance namespace ────────────────────────────────────────────────── -->
+
+<namespace name="Finance">
+  type Currency = "USD" | "EUR" | "GBP" | "JPY";
+
+  type MoneyAmount = {
+    value: number;
+    currency: Currency;
+  };
+</namespace>
+
+<template name="SummarizeTransaction" namespace="Finance">
+  <schema>
+    interface Input {
+      description: string;
+      amount: shared.MoneyAmount;
+      category: "income" | "expense" | "transfer";
+      date: string;
+    }
+
+    interface Output {
+      summary: string;
+      /** Suggested label for bookkeeping. */
+      bookkeepingLabel: string;
+    }
+  </schema>
+
+  <system>
+    You are a bookkeeping assistant. Summarize the transaction in one sentence
+    and suggest a concise bookkeeping label (e.g. "SaaS Subscription",
+    "Client Invoice #42").
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>
+
+<template name="DetectAnomaly" namespace="Finance">
+  <schema>
+    interface Input {
+      recentTransactions: {
+        description: string;
+        amount: shared.MoneyAmount;
+        date: string;
+      }[];
+      newTransaction: {
+        description: string;
+        amount: shared.MoneyAmount;
+        date: string;
+      };
+    }
+
+    interface Output {
+      isAnomaly: boolean;
+      reason?: string;
+    }
+  </schema>
+
+  <system>
+    You are a fraud detection assistant. Given a list of recent transactions
+    and a new transaction, determine whether the new transaction looks
+    anomalous. An anomaly might be an unusual amount, an unfamiliar merchant,
+    or an atypical time pattern.
+  </system>
+
+  <user>
+    Recent transactions:
+    <insert val="input.recentTransactions" format="json"/>
+
+    New transaction:
+    <insert val="input.newTransaction" format="json"/>
+  </user>
+</template>
+
+
+<!-- ── Legal namespace ──────────────────────────────────────────────────── -->
+
+<namespace name="Legal">
+  type Party = {
+    name: string;
+    role: "client" | "counterparty" | "witness" | "arbitrator";
+    jurisdiction: string;
+  };
+</namespace>
+
+<template name="DraftNda" namespace="Legal">
+  <schema output-format="text">
+    interface Input {
+      disclosingParty: shared.Party;
+      receivingParty: shared.Party;
+      purposeOfDisclosure: string;
+      durationYears: integer;
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    You are a legal drafting assistant. Draft a concise, plain-English
+    non-disclosure agreement based on the provided details. Include standard
+    clauses for confidentiality obligations, exclusions, and term.
+    Add a signature block for both parties.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>
+
+<template name="SummarizeClause" namespace="Legal">
+  <schema>
+    interface Input {
+      clauseText: string;
+      /** Who is asking — affects what risks to highlight. */
+      reviewingParty: shared.Party;
+    }
+
+    interface Output {
+      plainEnglishSummary: string;
+      potentialRisks: string[];
+      /** Whether the clause is standard or unusual. */
+      assessment: "standard" | "unusual" | "redFlag";
+    }
+  </schema>
+
+  <system>
+    You are a legal analyst. Summarize the contract clause in plain English,
+    list any risks it poses to the reviewing party, and assess whether the
+    clause is standard, unusual, or a red flag.
+  </system>
+
+  <user>
+    Reviewing party: <insert val="input.reviewingParty" format="json"/>
+
+    <enclosed tag="Clause">
+      <insert val="input.clauseText"/>
+    </enclosed>
+  </user>
+</template>

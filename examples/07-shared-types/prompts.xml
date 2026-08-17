@@ -1,0 +1,73 @@
+<!--
+  Demonstrates: <namespace name="Main"> to define shared types used by multiple
+  templates in the default namespace. Both templates reference shared.Address
+  via the `shared.` prefix.
+-->
+
+<!-- Shared types for the Main namespace -->
+<namespace name="Main">
+  type Address = {
+    street: string;
+    city: string;
+    country: string;
+    postalCode?: string;
+  };
+
+  type ContactInfo = {
+    name: string;
+    email: string;
+    address: Address;
+  };
+</namespace>
+
+
+<!-- Template 1: drafts a shipping confirmation email -->
+<template name="ShippingConfirmation">
+  <schema output-format="text">
+    interface Input {
+      recipient: shared.ContactInfo;
+      orderNumber: string;
+      estimatedDelivery: string;
+      items: {
+        name: string;
+        quantity: integer;
+      }[];
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    You are a customer service assistant. Write a friendly, concise shipping
+    confirmation email. Include the order number, delivery estimate, and a
+    brief item list.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>
+
+
+<!-- Template 2: generates a return label slip -->
+<template name="ReturnSlip">
+  <schema output-format="text">
+    interface Input {
+      customer: shared.ContactInfo;
+      returnReason: "defective" | "wrongItem" | "changedMind" | "other";
+      orderNumber: string;
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    Generate a short return slip to be printed and included in the return
+    package. Include the customer name, return address, order number, and
+    reason code.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>
