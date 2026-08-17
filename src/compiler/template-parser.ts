@@ -697,7 +697,7 @@ class ContentBuilder {
       switch (tag) {
         case "system":
         case "user": {
-          if (!this[tag]) {
+          if (!this[tag] && !defaultContentMask[tag]) {
             errors.push({
               span: variantTag,
               message: `Missing <${tag}> element`,

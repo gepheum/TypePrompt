@@ -438,7 +438,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
 
 **Requirements:**
 - The `Input` type must include a `variant` field of type `"a" | "b" | ...`.
-- There must be exactly one `<variant name="...">` for each member of that union.
+- There must be exactly one `<variant case="...">` for each member of that union.
 - Each `<variant>` may contain `<meta>`, `<system>`, `<user>`, and `<examples>`.
 - Elements defined directly under `<template>` act as defaults and are inherited by variants that omit them. An element defined under `<template>` cannot be redefined under `<variant>`.
 
@@ -463,7 +463,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
     Topic: <insert val="input.topic"/>
   </user>
 
-  <variant name="formal">
+  <variant case="formal">
     <system>
       Write a professional business email. Use a formal salutation and sign off with
       "Best regards".
@@ -479,7 +479,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
     </examples>
   </variant>
 
-  <variant name="casual">
+  <variant case="casual">
     <system>
       Write a friendly, informal email. Keep it short and conversational.
     </system>
