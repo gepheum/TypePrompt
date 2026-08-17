@@ -214,15 +214,13 @@ function writeUserDefinedDatatypes(
 function writeToolExecutorProtocols(
   compilationResult: ValidCompilationResult,
 ): string {
-  const namespaces = Object.values(compilationResult.namespaces).filter(
-    (namespace) => namespace.templates.length >= 1,
-  );
-  if (namespaces.length <= 0) return "";
-  const lines = ["@final", "class tools(_StaticClass):"];
-  for (const namespace of namespaces) {
-    const namespaceName = toPyName(namespace.name, "snake_case_class_name");
-    lines.push(` @final`);
-    lines.push(` class ${namespaceName}(_StaticClass):`);
+  const {singleNamespace, namespaces} = compilationResult;
+  const writeNamespace = (namespace: ValidNamespaceResult): readonly string[] => {
+    const {templates} = namespace;
+    if (templates.length <= 0) {
+      return [" pass"];
+    }
+    const lines: string[] = [];
     for (const template of namespace.templates) {
       const { tools } = template;
       const toolNames = Object.keys(tools);
@@ -230,44 +228,56 @@ function writeToolExecutorProtocols(
         template.template.name.text,
         "snake_case_class_name",
       );
-      lines.push(`  @final`);
-      lines.push(`  class ${templateName}(_StaticClass):`);
+      lines.push(" @final");
+      lines.push(` class ${templateName}(_StaticClass):`);
       if (toolNames.length > 0) {
         lines.push(
-          "   class ToolExecutor(Protocol):",
-          '    """Protocol for object implementing the tools callable by the LLM."""',
+          "  class ToolExecutor(Protocol):",
+          '   """Protocol for object implementing the tools callable by the LLM."""',
         );
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "field_name");
           const typePrefix = getTypePrefix(tool.tool.tool, compilationResult);
           lines.push(
-            `    async def ${methodName}(`,
-            `     self,`,
-            `     input: ${typePrefix}Input,`,
-            `    ) -> ${typePrefix}Output:`,
-            `     ...`,
+            `   async def ${methodName}(`,
+            "    self,",
+            `    input: ${typePrefix}Input,`,
+            `   ) -> ${typePrefix}Output:`,
+            "    ...",
           );
         }
         lines.push("");
       }
       if (toolNames.length <= 0) {
-        lines.push("   type ToolName = Never");
+        lines.push("  type ToolName = Never");
       } else {
         const commaSeparatedToolNames = toolNames.map(
-          (name) => `    '${name}',`,
+          (name) => `   '${name}',`,
         );
-        lines.push("   type ToolName = Literal[");
+        lines.push("  type ToolName = Literal[");
         lines.push(...commaSeparatedToolNames);
-        lines.push("   ]");
+        lines.push("  ]");
         lines.push("");
         lines.push(
-          "   # Tuple of all tool names callable by the LLM for this template.",
+          "  # Tuple of all tool names callable by the LLM for this template.",
         );
-        lines.push("   TOOL_NAMES: Final = (");
+        lines.push("  TOOL_NAMES: Final = (");
         lines.push(...commaSeparatedToolNames);
-        lines.push("   )");
+        lines.push("  )");
         lines.push("");
       }
+    }
+    return lines;
+  };
+  const lines = ["@final", "class tools(_StaticClass):"];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const namespaceName = toPyName(namespace.name, "snake_case_class_name");
+      lines.push(" @final");
+      lines.push(` class ${namespaceName}(_StaticClass):`);
+      lines.push(...writeNamespace(namespace).map((line) => indentLine(line, " ")));
     }
   }
   return lines.join("\n");
