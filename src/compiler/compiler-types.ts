@@ -130,7 +130,7 @@ export type Snippet =
       readonly expression: Expression;
       readonly branches: ReadonlyArray<{
         readonly case: TextSpan;
-        readonly body: BodyInContext;
+        readonly body: Body;
       }>;
     };
 

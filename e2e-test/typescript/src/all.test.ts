@@ -2,8 +2,6 @@
  * Comprehensive tests covering all spec features across all 8 example projects.
  *
  * KNOWN FAILING TESTS (bugs in generated code / runtime):
- *   Bug 2 — `it` alias in conditional snippets: resolves to the entire input
- *     object instead of the expression passed to `if="..."`.
  *   Bug 3 — is="notNull" semantics: shows the <then> body when the value IS
  *     null/undefined; hides it when a value is present (counter-intuitive naming).
  *   Bug 4 — String literal casing: literals like "USD", "EUR" are silently

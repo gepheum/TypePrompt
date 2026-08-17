@@ -421,7 +421,7 @@ class TemplateParser {
     }
     const branches: Array<{
       readonly case: TextSpan;
-      readonly body: BodyInContext;
+      readonly body: Body;
     }> = [];
     const seenOptions = new Set<string>();
     const children = checkAllAreElements(
@@ -444,9 +444,7 @@ class TemplateParser {
             break;
           }
           const caseSpan = attrs.attributes.case.value;
-          const body = parseBody(child, this.errors, {
-            hasValContext: true,
-          });
+          const body = parseBody(child, this.errors, { hasValContext: false });
           if (seenOptions.has(caseSpan.text)) {
             this.errors.push({
               span: attrs.attributes.case.value,

@@ -1,6 +1,5 @@
 import type {
   Body,
-  BodyInContext,
   Snippet,
   TemplateContent,
   TemplateContents,
@@ -110,8 +109,8 @@ function makeContent(
 ): Spec.TemplateContent {
   return {
     meta: input.meta ? unwrapJsonValue(input.meta.value) : undefined,
-    system: input.system ? makeBody(input.system) : undefined,
-    user: input.user ? makeBody(input.user) : undefined,
+    system: input.system ? makeBody(input.system, {}) : undefined,
+    user: input.user ? makeBody(input.user, {}) : undefined,
     examples: makeExamples(input.examples, context),
   };
 }
@@ -172,7 +171,14 @@ function makeExamples(
   return (input as StrictJsonArray).elements.map(makeExample);
 }
 
-function makeBody(input: Body | BodyInContext): Spec.Body {
+type ValContext<HasValContext extends boolean> = HasValContext extends true
+  ? { it: Spec.Expression }
+  : { it?: undefined };
+
+function makeBody<HasValContext extends boolean>(
+  input: Body<HasValContext>,
+  context: ValContext<HasValContext>,
+): Spec.Body {
   const pieces: Spec.BodyPiece[] = [];
   for (const piece of input) {
     switch (piece.kind) {
@@ -184,7 +190,7 @@ function makeBody(input: Body | BodyInContext): Spec.Body {
       case "insert-val": {
         pieces.push({
           kind: "insertVal",
-          val: makeExpression(piece.val),
+          val: makeExpression(piece.val, context),
           format: piece.format?.text ?? "text",
           indent: piece.indent,
         });
@@ -207,7 +213,12 @@ function makeBody(input: Body | BodyInContext): Spec.Body {
   return pieces;
 }
 
-function makeExpression(input: Expression<boolean>): Spec.Expression {
+function makeExpression<HasValContext extends boolean>(
+  input: Expression<HasValContext>,
+  context: HasValContext extends true
+    ? { it: Spec.Expression }
+    : { it?: undefined },
+): Spec.Expression {
   switch (input.kind) {
     case "input": {
       return { kind: "input" };
@@ -215,12 +226,12 @@ function makeExpression(input: Expression<boolean>): Spec.Expression {
     case "property": {
       return {
         kind: "property",
-        left: makeExpression(input.left),
+        left: makeExpression(input.left, context),
         property: input.property.text,
       };
     }
     case "it": {
-      return { kind: "input" };
+      return context.it!;
     }
   }
 }
@@ -238,25 +249,27 @@ function makeSnippets(input: readonly Snippet[]): {
 function makeSnippet(input: Snippet): Spec.Snippet {
   switch (input.kind) {
     case "snippet": {
-      return { kind: "snippet", body: makeBody(input.body) };
+      return { kind: "snippet", body: makeBody(input.body, {}) };
     }
     case "snippet-if": {
+      const expression = makeExpression(input.expression, {});
       return {
         kind: "snippetIf",
-        expression: makeExpression(input.expression),
+        expression,
         is: input.is?.text ?? "true",
-        then: makeBody(input.then),
-        else: makeBody(input.else),
+        then: makeBody(input.then, { it: expression }),
+        else: makeBody(input.else, { it: expression }),
       };
     }
     case "snippet-switch": {
       const branches: { [c: string]: Spec.Body } = {};
       for (const branch of input.branches) {
-        branches[branch.case.text] = makeBody(branch.body);
+        branches[branch.case.text] = makeBody(branch.body, {});
       }
+      const expression = makeExpression(input.expression, {});
       return {
         kind: "snippetSwitch",
-        expression: makeExpression(input.expression),
+        expression,
         branches,
       };
     }

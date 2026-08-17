@@ -608,20 +608,6 @@ describe("makeTemplates – expressions", () => {
     });
   });
 
-  it("converts 'it' expression to { kind: 'input' }", () => {
-    const result = {
-      ...emptyResult(),
-      templates: {
-        "Main:T": templateWithExprPiece({
-          kind: "it",
-        } as unknown as Expression<false>),
-      },
-    } as unknown as ValidCompilationResult;
-    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
-      kind: "input",
-    });
-  });
-
   it("converts 'property' expression recursively", () => {
     const expr: Expression<false> = {
       kind: "property",

@@ -532,25 +532,25 @@ function validateSnippet(
         errors.push(...expressionType.errors);
         break;
       }
-      const switchContext = resolveSwitchExpression(
+      const expressionResult = resolveSwitchExpression(
         snippet.expression,
         expressionType,
         templateSchema,
       );
-      if (switchContext.kind === "error") {
-        errors.push(...switchContext.errors);
+      if (expressionResult.kind === "error") {
+        errors.push(...expressionResult.errors);
         break;
       }
       const handledCases = new Set(snippet.branches.map((b) => b.case.text));
-      const missingCases = Object.keys(switchContext.cases).filter(
+      const missingCases = Object.keys(expressionResult.cases).filter(
         (c) => !handledCases.has(c),
       );
       for (const branch of snippet.branches) {
-        const context = switchContext.cases[branch.case.text];
-        if (!context) {
+        const case_: string = branch.case.text;
+        if (!expressionResult.cases[case_]) {
           errors.push({
             span: branch.case,
-            message: `Expression can never be '${branch.case.text}'`,
+            message: `Expression can never be '${case_}'`,
             suggestions: missingCases,
           });
           continue;
@@ -560,7 +560,7 @@ function validateSnippet(
             branch.body,
             templateSchema,
             options.templateTools,
-            context,
+            null,
           ),
         );
       }
