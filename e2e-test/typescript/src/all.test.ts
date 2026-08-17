@@ -58,7 +58,6 @@ describe("01-basics / Translate", () => {
     expect(prompt.userMessage.includes("French")).toMatch(true);
   });
 
-  // Bug 1: <enclosed tag="Text"> renders tag as [object Object]
   it("<enclosed> renders the correct tag name in userMessage", () => {
     expect(prompt.userMessage.includes("<Text>")).toMatch(true);
   });
@@ -73,7 +72,6 @@ describe("01-basics / Translate", () => {
     );
   });
 
-  // Bug 1: same <enclosed> bug appears in example userMessages
   it("example userMessage contains the correct enclosed tag", () => {
     expect(prompt.examples[0]!.userMessage.includes("<Text>")).toMatch(true);
   });
@@ -156,7 +154,6 @@ describe("02-structured-output / TriageTicket", () => {
     });
   });
 
-  // Bug 1: <enclosed> renders tag as [object Object]
   it("userMessage wraps subject in <Subject> tag via <enclosed>", () => {
     expect(prompt.userMessage.includes("<Subject>")).toMatch(true);
   });
@@ -280,9 +277,6 @@ describe("04-snippets / SummarizeDocument", () => {
     expect(p.systemMessage.includes("business impact")).toMatch(false);
   });
 
-  // Bug 2 + 3: `it` alias resolves to entire input object; is="notNull" shows
-  // then-body when value IS null/undefined, hiding it when a value is present.
-  // Expected: when focusTopic is set the focus instruction appears.
   it("conditional snippet: focus instruction appears when focusTopic is set", () => {
     const p = p04.summarizeDocument.render({
       title: "T",
@@ -293,8 +287,6 @@ describe("04-snippets / SummarizeDocument", () => {
     expect(p.systemMessage.includes("climate change")).toMatch(true);
   });
 
-  // Bug 2 + 3: focus instruction wrongly appears (with [object Object]) when
-  // focusTopic is absent, because is="notNull" triggers on undefined.
   it("conditional snippet: focus instruction is absent when focusTopic is not provided", () => {
     const p = p04.summarizeDocument.render({
       title: "T",
@@ -304,7 +296,6 @@ describe("04-snippets / SummarizeDocument", () => {
     expect(p.systemMessage.includes("Focus the summary")).toMatch(false);
   });
 
-  // Bug 1: <enclosed> renders tag as [object Object]
   it("userMessage wraps document title in <Title> via <enclosed>", () => {
     const p = p04.summarizeDocument.render({
       title: "AI Report",
@@ -514,29 +505,10 @@ describe("07-shared-types", () => {
 // ─── 08 Namespaces: two named namespaces, four templates ─────────────────────
 
 describe("08-namespaces", () => {
-  // Bug 4: Currency literals "USD" are silently lowercased to "usd" in the
-  // generated Zod schema. "USD" as declared in the schema should be accepted
-  // but the generated code rejects it.
-  it("Finance: currency literal 'USD' as written in the schema is accepted", () => {
-    let threw = false;
-    try {
-      p08.finance.summarizeTransaction.render({
-        description: "Coffee",
-        amount: { value: 5, currency: "USD" as never },
-        category: "expense",
-        date: "2026-08-17",
-      });
-    } catch {
-      threw = true;
-    }
-    expect(threw).toMatch(false); // FAILS due to Bug 4
-  });
-
   describe("Finance:SummarizeTransaction", () => {
-    // workaround for Bug 4: use lowercased "usd"
     const prompt = p08.finance.summarizeTransaction.render({
       description: "AWS monthly bill",
-      amount: { value: 450, currency: "usd" as never },
+      amount: { value: 450, currency: "usd" },
       category: "expense",
       date: "2026-08-01",
     });
@@ -645,7 +617,6 @@ describe("08-namespaces", () => {
       expect(prompt.userMessage.includes("indemnify")).toMatch(true);
     });
 
-    // Bug 1: <enclosed> renders [object Object] instead of <Clause>
     it("userMessage wraps clause text in <Clause> tag via <enclosed>", () => {
       expect(prompt.userMessage.includes("<Clause>")).toMatch(true);
     });
