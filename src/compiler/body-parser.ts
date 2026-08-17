@@ -143,9 +143,10 @@ function parseBodyImpl<HasValContext extends boolean>(
           errors.push(...encAttrs.errors);
         } else {
           const encTagName = encAttrs.attributes.tag.value;
-          rawPieces.push({ kind: "synthetic-text", text: `<${encTagName}>` });
+          const tagName: string = encTagName.text;
+          rawPieces.push({ kind: "synthetic-text", text: `<${tagName}>` });
           visitChildren(child);
-          rawPieces.push({ kind: "synthetic-text", text: `</${encTagName}>` });
+          rawPieces.push({ kind: "synthetic-text", text: `</${tagName}>` });
         }
         return null;
       }

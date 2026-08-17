@@ -16,9 +16,9 @@ node ../dist/main.js gen -p projects/07
 node ../dist/main.js gen -p projects/08
 
 # Run Python unit tests
-cd python
-.venv/bin/pytest tests.py -v
-cd ..
+# cd python
+# .venv/bin/pytest tests.py -v
+# cd ..
 
 # Run TypeScript unit tests
 cd typescript

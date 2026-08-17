@@ -2,8 +2,6 @@
  * Comprehensive tests covering all spec features across all 8 example projects.
  *
  * KNOWN FAILING TESTS (bugs in generated code / runtime):
- *   Bug 1 — <enclosed> rendering: the `tag` attribute resolves to [object Object]
- *     instead of the tag string value.
  *   Bug 2 — `it` alias in conditional snippets: resolves to the entire input
  *     object instead of the expression passed to `if="..."`.
  *   Bug 3 — is="notNull" semantics: shows the <then> body when the value IS
@@ -20,8 +18,8 @@ import { prompts as p01 } from "./gen/prompts-01.js";
 import { prompts as p02 } from "./gen/prompts-02.js";
 import {
   prompts as p03,
-  type ToolExecutor as ToolExecutor03,
   type $ as $03,
+  type ToolExecutor as ToolExecutor03,
 } from "./gen/prompts-03.js";
 import { prompts as p04 } from "./gen/prompts-04.js";
 import { prompts as p05 } from "./gen/prompts-05.js";
@@ -32,7 +30,10 @@ import { prompts as p08 } from "./gen/prompts-08.js";
 // ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
 describe("01-basics / Translate", () => {
-  const prompt = p01.translate.render({ text: "Hello world", targetLanguage: "French" });
+  const prompt = p01.translate.render({
+    text: "Hello world",
+    targetLanguage: "French",
+  });
 
   it("has text output format", () => {
     expect(prompt.outputFormat).toMatch({ kind: "text" });
@@ -43,11 +44,16 @@ describe("01-basics / Translate", () => {
   });
 
   it("exposes validated templateInput", () => {
-    expect(prompt.templateInput).toMatch({ text: "Hello world", targetLanguage: "French" });
+    expect(prompt.templateInput).toMatch({
+      text: "Hello world",
+      targetLanguage: "French",
+    });
   });
 
   it("systemMessage mentions the translator role", () => {
-    expect(prompt.systemMessage.includes("professional translator")).toMatch(true);
+    expect(prompt.systemMessage.includes("professional translator")).toMatch(
+      true,
+    );
   });
 
   it("userMessage mentions the target language", () => {
@@ -64,7 +70,9 @@ describe("01-basics / Translate", () => {
   });
 
   it("first example response is the translated string", () => {
-    expect(prompt.examples[0]!.response).toMatch("La réunion est prévue pour lundi à 15h.");
+    expect(prompt.examples[0]!.response).toMatch(
+      "La réunion est prévue pour lundi à 15h.",
+    );
   });
 
   // Bug 1: same <enclosed> bug appears in example userMessages
@@ -84,7 +92,10 @@ describe("01-basics / Translate", () => {
 // ─── 02 Structured output: JSON format, union types, optional fields ─────────
 
 describe("02-structured-output / TriageTicket", () => {
-  const prompt = p02.triageTicket.render({ subject: "App crashes on login", body: "It crashes every time." });
+  const prompt = p02.triageTicket.render({
+    subject: "App crashes on login",
+    body: "It crashes every time.",
+  });
 
   it("has json output format", () => {
     expect(prompt.outputFormat).toMatch({ kind: "json" });
@@ -101,18 +112,26 @@ describe("02-structured-output / TriageTicket", () => {
   });
 
   it("first example response contains the JSON-encoded output category", () => {
-    expect(prompt.examples[0]!.response.includes('"technicalIssue"')).toMatch(true);
+    expect(prompt.examples[0]!.response.includes('"technicalIssue"')).toMatch(
+      true,
+    );
   });
 
   it("second example response contains the JSON-encoded output category", () => {
-    expect(prompt.examples[1]!.response.includes('"featureRequest"')).toMatch(true);
+    expect(prompt.examples[1]!.response.includes('"featureRequest"')).toMatch(
+      true,
+    );
   });
 
   it("parseResponse parses JSON output", () => {
     const result = prompt.parseResponse(
       '{"category":"billing","urgency":"low","summary":"Invoice question"}',
     );
-    expect(result).toMatch({ category: "billing", urgency: "low", summary: "Invoice question" });
+    expect(result).toMatch({
+      category: "billing",
+      urgency: "low",
+      summary: "Invoice question",
+    });
   });
 
   it("parseResponse strips ```json code fences", () => {
@@ -133,7 +152,10 @@ describe("02-structured-output / TriageTicket", () => {
     const result = prompt.parseResponse(
       '{"category":"featureRequest","urgency":"low","summary":"Dark mode"}',
     );
-    expect(result).toMatch({ category: "featureRequest", suggestedReply: undefined });
+    expect(result).toMatch({
+      category: "featureRequest",
+      suggestedReply: undefined,
+    });
   });
 
   // Bug 1: <enclosed> renders tag as [object Object]
@@ -145,14 +167,18 @@ describe("02-structured-output / TriageTicket", () => {
 // ─── 03 Tools: tool registration, executeTools, example with intermediateSteps
 
 describe("03-tools / ResearchQuestion", () => {
-  const prompt = p03.researchQuestion.render({ question: "What is the population of Tokyo?" });
+  const prompt = p03.researchQuestion.render({
+    question: "What is the population of Tokyo?",
+  });
 
   it("registers webSearch tool with correct name", () => {
     expect(prompt.tools.webSearch.name).toMatch("webSearch");
   });
 
   it("webSearch tool description mentions searching the web", () => {
-    expect(prompt.tools.webSearch.description.includes("Search the web")).toMatch(true);
+    expect(
+      prompt.tools.webSearch.description.includes("Search the web"),
+    ).toMatch(true);
   });
 
   it("isToolName returns true for a registered tool", () => {
@@ -187,7 +213,13 @@ describe("03-tools / ResearchQuestion", () => {
     } satisfies ToolExecutor03<"Main:ResearchQuestion">;
 
     const result = await prompt.executeTools(
-      [{ callId: "c1", toolName: "webSearch", stringifiedInput: '{"query":"test"}' }],
+      [
+        {
+          callId: "c1",
+          toolName: "webSearch",
+          stringifiedInput: '{"query":"test"}',
+        },
+      ],
       executor,
     );
     expect(result.length).toMatch(1);
@@ -202,7 +234,9 @@ describe("03-tools / ResearchQuestion", () => {
         [{ callId: "c1", toolName: "noSuchTool", stringifiedInput: "{}" }],
         { webSearch: async () => ({ results: [] }) },
       );
-    } catch { threw = true; }
+    } catch {
+      threw = true;
+    }
     expect(threw).toMatch(true);
   });
 });
@@ -211,22 +245,40 @@ describe("03-tools / ResearchQuestion", () => {
 
 describe("04-snippets / SummarizeDocument", () => {
   it("switch snippet: executive audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({ title: "T", content: "C", audience: "executive" });
-    expect(p.systemMessage.includes("non-technical executive audience")).toMatch(true);
+    const p = p04.summarizeDocument.render({
+      title: "T",
+      content: "C",
+      audience: "executive",
+    });
+    expect(
+      p.systemMessage.includes("non-technical executive audience"),
+    ).toMatch(true);
   });
 
   it("switch snippet: technical audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({ title: "T", content: "C", audience: "technical" });
+    const p = p04.summarizeDocument.render({
+      title: "T",
+      content: "C",
+      audience: "technical",
+    });
     expect(p.systemMessage.includes("technical audience")).toMatch(true);
   });
 
   it("switch snippet: general audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({ title: "T", content: "C", audience: "general" });
+    const p = p04.summarizeDocument.render({
+      title: "T",
+      content: "C",
+      audience: "general",
+    });
     expect(p.systemMessage.includes("general audience")).toMatch(true);
   });
 
   it("switch snippet: executive instruction does not bleed into technical render", () => {
-    const p = p04.summarizeDocument.render({ title: "T", content: "C", audience: "technical" });
+    const p = p04.summarizeDocument.render({
+      title: "T",
+      content: "C",
+      audience: "technical",
+    });
     expect(p.systemMessage.includes("business impact")).toMatch(false);
   });
 
@@ -235,7 +287,10 @@ describe("04-snippets / SummarizeDocument", () => {
   // Expected: when focusTopic is set the focus instruction appears.
   it("conditional snippet: focus instruction appears when focusTopic is set", () => {
     const p = p04.summarizeDocument.render({
-      title: "T", content: "C", focusTopic: "climate change", audience: "general",
+      title: "T",
+      content: "C",
+      focusTopic: "climate change",
+      audience: "general",
     });
     expect(p.systemMessage.includes("climate change")).toMatch(true);
   });
@@ -243,13 +298,21 @@ describe("04-snippets / SummarizeDocument", () => {
   // Bug 2 + 3: focus instruction wrongly appears (with [object Object]) when
   // focusTopic is absent, because is="notNull" triggers on undefined.
   it("conditional snippet: focus instruction is absent when focusTopic is not provided", () => {
-    const p = p04.summarizeDocument.render({ title: "T", content: "C", audience: "executive" });
+    const p = p04.summarizeDocument.render({
+      title: "T",
+      content: "C",
+      audience: "executive",
+    });
     expect(p.systemMessage.includes("Focus the summary")).toMatch(false);
   });
 
   // Bug 1: <enclosed> renders tag as [object Object]
   it("userMessage wraps document title in <Title> via <enclosed>", () => {
-    const p = p04.summarizeDocument.render({ title: "AI Report", content: "...", audience: "technical" });
+    const p = p04.summarizeDocument.render({
+      title: "AI Report",
+      content: "...",
+      audience: "technical",
+    });
     expect(p.userMessage.includes("<Title>")).toMatch(true);
   });
 });
@@ -261,20 +324,33 @@ describe("05-variants / WriteProductDescription", () => {
     productName: "AquaFilter Pro",
     features: ["removes 99.9% of contaminants", "lasts 6 months"],
   };
-  const marketing = p05.writeProductDescription.render({ ...base, variant: "marketing" });
-  const technical = p05.writeProductDescription.render({ ...base, variant: "technical" });
-  const brief = p05.writeProductDescription.render({ ...base, variant: "brief" });
+  const marketing = p05.writeProductDescription.render({
+    ...base,
+    variant: "marketing",
+  });
+  const technical = p05.writeProductDescription.render({
+    ...base,
+    variant: "technical",
+  });
+  const brief = p05.writeProductDescription.render({
+    ...base,
+    variant: "brief",
+  });
 
   it("marketing variant system prompt mentions benefit-focused writing", () => {
     expect(marketing.systemMessage.includes("benefit-focused")).toMatch(true);
   });
 
   it("technical variant system prompt mentions specification-driven writing", () => {
-    expect(technical.systemMessage.includes("specification-driven")).toMatch(true);
+    expect(technical.systemMessage.includes("specification-driven")).toMatch(
+      true,
+    );
   });
 
   it("brief variant system prompt mentions a single punchy sentence", () => {
-    expect(brief.systemMessage.includes("single punchy sentence")).toMatch(true);
+    expect(brief.systemMessage.includes("single punchy sentence")).toMatch(
+      true,
+    );
   });
 
   it("all variants share the exact same user message", () => {
@@ -287,7 +363,9 @@ describe("05-variants / WriteProductDescription", () => {
   });
 
   it("user message contains features as a JSON array", () => {
-    expect(marketing.userMessage.includes('"removes 99.9% of contaminants"')).toMatch(true);
+    expect(
+      marketing.userMessage.includes('"removes 99.9% of contaminants"'),
+    ).toMatch(true);
   });
 
   it("marketing variant has one example", () => {
@@ -295,8 +373,12 @@ describe("05-variants / WriteProductDescription", () => {
   });
 
   it("marketing example response includes expected output text", () => {
-    expect(marketing.examples[0]!.response.includes('"description"')).toMatch(true);
-    expect(marketing.examples[0]!.response.includes("Tired of worrying")).toMatch(true);
+    expect(marketing.examples[0]!.response.includes('"description"')).toMatch(
+      true,
+    );
+    expect(
+      marketing.examples[0]!.response.includes("Tired of worrying"),
+    ).toMatch(true);
   });
 
   it("brief variant has one example", () => {
@@ -343,7 +425,9 @@ describe("06-toon-format / WriteComparisonArticle", () => {
   });
 
   it("userMessage contains the use case (plain <insert val>)", () => {
-    expect(prompt.userMessage.includes("serving ML inference workloads")).toMatch(true);
+    expect(
+      prompt.userMessage.includes("serving ML inference workloads"),
+    ).toMatch(true);
   });
 
   it("userMessage contains the provider name from toon-encoded data", () => {
@@ -362,9 +446,15 @@ describe("06-toon-format / WriteComparisonArticle", () => {
 // ─── 07 Shared types: two templates sharing Main namespace types ───────────────
 
 describe("07-shared-types", () => {
-  const address: $07.Shared.Address = { street: "1 Main St", city: "Paris", country: "France" };
+  const address: $07.Shared.Address = {
+    street: "1 Main St",
+    city: "Paris",
+    country: "France",
+  };
   const contact: $07.Shared.ContactInfo = {
-    name: "Alice Dupont", email: "alice@example.com", address,
+    name: "Alice Dupont",
+    email: "alice@example.com",
+    address,
   };
 
   describe("ShippingConfirmation", () => {
@@ -392,7 +482,9 @@ describe("07-shared-types", () => {
     });
 
     it("systemMessage mentions shipping confirmation", () => {
-      expect(prompt.systemMessage.includes("shipping confirmation")).toMatch(true);
+      expect(prompt.systemMessage.includes("shipping confirmation")).toMatch(
+        true,
+      );
     });
   });
 
@@ -436,8 +528,10 @@ describe("08-namespaces", () => {
         category: "expense",
         date: "2026-08-17",
       });
-    } catch { threw = true; }
-    expect(threw).toMatch(false);  // FAILS due to Bug 4
+    } catch {
+      threw = true;
+    }
+    expect(threw).toMatch(false); // FAILS due to Bug 4
   });
 
   describe("Finance:SummarizeTransaction", () => {
@@ -454,7 +548,9 @@ describe("08-namespaces", () => {
     });
 
     it("is accessible via prompts.finance.summarizeTransaction", () => {
-      expect(typeof p08.finance.summarizeTransaction.render).toMatch("function");
+      expect(typeof p08.finance.summarizeTransaction.render).toMatch(
+        "function",
+      );
     });
 
     it("has json output format", () => {
@@ -491,8 +587,16 @@ describe("08-namespaces", () => {
 
   describe("Legal:DraftNda", () => {
     const prompt = p08.legal.draftNda.render({
-      disclosingParty: { name: "Acme Corp", role: "client", jurisdiction: "California" },
-      receivingParty: { name: "Beta LLC", role: "counterparty", jurisdiction: "Delaware" },
+      disclosingParty: {
+        name: "Acme Corp",
+        role: "client",
+        jurisdiction: "California",
+      },
+      receivingParty: {
+        name: "Beta LLC",
+        role: "counterparty",
+        jurisdiction: "Delaware",
+      },
       purposeOfDisclosure: "Evaluating a potential acquisition",
       durationYears: 3,
     });
@@ -515,7 +619,9 @@ describe("08-namespaces", () => {
     });
 
     it("systemMessage mentions non-disclosure agreement", () => {
-      expect(prompt.systemMessage.includes("non-disclosure agreement")).toMatch(true);
+      expect(prompt.systemMessage.includes("non-disclosure agreement")).toMatch(
+        true,
+      );
     });
   });
 
@@ -553,22 +659,36 @@ describe("08-namespaces", () => {
 describe("parseResponse", () => {
   it("parses plain JSON without fences", () => {
     const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
-    expect(prompt.parseResponse('{"category":"other","urgency":"low","summary":"x"}')).toMatch({ category: "other" });
+    expect(
+      prompt.parseResponse(
+        '{"category":"other","urgency":"low","summary":"x"}',
+      ),
+    ).toMatch({ category: "other" });
   });
 
   it("strips ``` plain fences", () => {
     const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
-    expect(prompt.parseResponse('```\n{"category":"other","urgency":"low","summary":"x"}\n```')).toMatch({ category: "other" });
+    expect(
+      prompt.parseResponse(
+        '```\n{"category":"other","urgency":"low","summary":"x"}\n```',
+      ),
+    ).toMatch({ category: "other" });
   });
 
   it("strips ```json fences", () => {
     const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
-    expect(prompt.parseResponse('```json\n{"category":"other","urgency":"low","summary":"x"}\n```')).toMatch({ category: "other" });
+    expect(
+      prompt.parseResponse(
+        '```json\n{"category":"other","urgency":"low","summary":"x"}\n```',
+      ),
+    ).toMatch({ category: "other" });
   });
 
   it("returns raw string for text output format", () => {
-    const prompt = p01.translate.render({ text: "hi", targetLanguage: "Spanish" });
+    const prompt = p01.translate.render({
+      text: "hi",
+      targetLanguage: "Spanish",
+    });
     expect(prompt.parseResponse("Hola")).toMatch("Hola");
   });
 });
-
