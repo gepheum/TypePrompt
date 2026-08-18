@@ -7,7 +7,7 @@
 <!-- ── Finance namespace ────────────────────────────────────────────────── -->
 
 <namespace name="Finance">
-  type Currency = "usd" | "eur" | "gbp" | "jpy";
+  type Currency = "USD" | "EUR" | "GBP" | "JPY";
 
   type MoneyAmount = {
     value: number;

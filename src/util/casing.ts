@@ -5,14 +5,14 @@ type Error<S extends TextSpan> = {
 } & InternalError;
 
 export function checkNameConflicts<S extends TextSpan>(
-  names: ReadonlyArray<S>,
+  names: readonly S[],
 ): ReadonlyArray<Error<S>> {
   const firstByLowercase = new Map<string, S>();
   const firstDuplicateAlreadyReported = new Set<string>();
   const errors: Error<S>[] = [];
 
   for (const name of names) {
-    const lowercase = name.text.toLowerCase();
+    const lowercase = name.text.toLowerCase().replace(/[_\-./]/g, "");
     const first = firstByLowercase.get(lowercase);
     if (first === undefined) {
       firstByLowercase.set(lowercase, name);
@@ -52,22 +52,40 @@ export function uncapitalize(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
+/** Splits an identifier into lower-case words, treating separators and camelCase boundaries as breaks. */
+function splitIntoWords(identifier: string): string[] {
+  return identifier
+    .replace(/[_\-./]+/g, " ")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(" ")
+    .filter((w) => w.length > 0);
+}
+
 /**
- * Converts a lowerCamelCase or UpperCamelCase identifier into lower_underscore format.
+ * Converts an identifier into lower_snake_case.
+ * Symbols are treated as word breaks and stripped.
  *
- * Correctly handles acronyms (e.g., `parseHTMLDocument` -> `parse_html_document`) and
- * embedded digits (e.g., `IPv4Address` -> `ipv4_address`).
+ * Examples:
+ *   `parseHTMLDocument` -> `parse_html_document`
+ *   `foo-bar.baz_qux`  -> `foo_bar_baz_qux`
  */
-export function camelToSnakeCase(identifier: string): string {
-  return (
-    identifier
-      // Insert underscore between consecutive uppercase letters when followed by lowercase (acronym boundary)
-      // Example: "HTMLDocument" -> "HTML_Document"
-      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
-      // Insert underscore between lowercase letter/digit and uppercase letter (word boundary)
-      // Example: "parseHTML" -> "parse_HTML", "v2Api" -> "v2_Api"
-      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-      // Convert the entire result to lowercase
-      .toLowerCase()
-  );
+export function toSnakeCase(identifier: string): string {
+  return splitIntoWords(identifier).join("_");
+}
+
+/**
+ * Converts an identifier into PascalCase.
+ * Symbols are treated as word breaks and stripped.
+ * ALL_CAPS runs are lowercased before capitalizing, so `parseHTML` -> `ParseHtml`.
+ *
+ * Examples:
+ *   `parseHTMLDocument` -> `ParseHtmlDocument`
+ *   `foo-bar.baz_qux`  -> `FooBarBazQux`
+ */
+export function toPascalCase(identifier: string): string {
+  return splitIntoWords(identifier)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join("");
 }

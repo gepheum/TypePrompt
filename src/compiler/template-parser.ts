@@ -215,8 +215,8 @@ class TemplateParser {
   private parseVariant(variantNode: ElementNode): void {
     const attrs = checkXmlAttributes(variantNode, {
       case: {
-        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-        expected: "a lowerCamelCase identifier",
+        schema: z.string(),
+        expected: "a string",
       },
     });
     if (attrs.kind === "error") {
@@ -435,8 +435,8 @@ class TemplateParser {
         case "on": {
           const attrs = checkXmlAttributes(child, {
             case: {
-              schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-              expected: "a lowerCamelCase identifier",
+              schema: z.string(),
+              expected: "a string",
             },
           });
           if (attrs.kind === "error") {

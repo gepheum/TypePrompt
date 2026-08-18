@@ -157,13 +157,23 @@ function validateType(
         return validate(type.valueType);
       }
       case "string-literal": {
-        if (!/^[a-z][A-Za-z0-9]*$/.test(type.value)) {
+        const { value } = type;
+        if (!/^[A-Za-z]/.test(value)) {
           errors.push({
             span: {
               start: type.quotedName.start + 1,
               end: type.quotedName.end - 1,
             },
-            message: WORD_MUST_START_WITH_LOWERCASE,
+            message: "String must start with a letter",
+          });
+        } else if (!/^[A-Za-z0-9_\-./]+$/.test(value)) {
+          errors.push({
+            span: {
+              start: type.quotedName.start + 1,
+              end: type.quotedName.end - 1,
+            },
+            message:
+              "String must only contain letters, digits, or allowed symbols (_ - . /)",
           });
         }
         return null;

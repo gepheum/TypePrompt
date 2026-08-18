@@ -1,7 +1,119 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { checkNameConflicts } from "./casing.js";
+import { checkNameConflicts, toPascalCase, toSnakeCase } from "./casing.js";
+
+describe("toSnakeCase", () => {
+  it("converts lowerCamelCase", () => {
+    expect(toSnakeCase("fooBar")).toMatch("foo_bar");
+  });
+
+  it("converts UpperCamelCase", () => {
+    expect(toSnakeCase("FooBar")).toMatch("foo_bar");
+  });
+
+  it("handles acronyms", () => {
+    expect(toSnakeCase("parseHTMLDocument")).toMatch("parse_html_document");
+  });
+
+  it("treats dash as word break and strips it", () => {
+    expect(toSnakeCase("foo-bar")).toMatch("foo_bar");
+  });
+
+  it("treats dot as word break and strips it", () => {
+    expect(toSnakeCase("foo.bar")).toMatch("foo_bar");
+  });
+
+  it("treats underscore as word break", () => {
+    expect(toSnakeCase("foo_bar")).toMatch("foo_bar");
+  });
+
+  it("handles mixed separators and camel case", () => {
+    expect(toSnakeCase("foo-bar.baz_qux")).toMatch("foo_bar_baz_qux");
+  });
+
+  it("handles camel case combined with separators", () => {
+    expect(toSnakeCase("parseHTML-document")).toMatch("parse_html_document");
+  });
+
+  it("collapses consecutive separators", () => {
+    expect(toSnakeCase("foo--bar")).toMatch("foo_bar");
+  });
+
+  it("strips a trailing separator", () => {
+    expect(toSnakeCase("foo_")).toMatch("foo");
+  });
+
+  it("treats a digit before an uppercase letter as a word break", () => {
+    expect(toSnakeCase("foo2Bar")).toMatch("foo2_bar");
+  });
+
+  it("does not break on a digit embedded in a word", () => {
+    expect(toSnakeCase("foo2bar")).toMatch("foo2bar");
+  });
+
+  it("keeps a trailing digit attached to the word", () => {
+    expect(toSnakeCase("fooBar2")).toMatch("foo_bar2");
+  });
+});
+
+describe("toPascalCase", () => {
+  it("converts lowerCamelCase", () => {
+    expect(toPascalCase("fooBar")).toMatch("FooBar");
+  });
+
+  it("converts UpperCamelCase", () => {
+    expect(toPascalCase("FooBar")).toMatch("FooBar");
+  });
+
+  it("lowercases ALL_CAPS runs", () => {
+    expect(toPascalCase("parseHTMLDocument")).toMatch("ParseHtmlDocument");
+  });
+
+  it("treats dash as word break and strips it", () => {
+    expect(toPascalCase("foo-bar")).toMatch("FooBar");
+  });
+
+  it("treats dot as word break and strips it", () => {
+    expect(toPascalCase("foo.bar")).toMatch("FooBar");
+  });
+
+  it("treats underscore as word break", () => {
+    expect(toPascalCase("foo_bar")).toMatch("FooBar");
+  });
+
+  it("handles mixed separators", () => {
+    expect(toPascalCase("foo-bar.baz_qux")).toMatch("FooBarBazQux");
+  });
+
+  it("handles camel case combined with separators", () => {
+    expect(toPascalCase("parseHTML-document")).toMatch("ParseHtmlDocument");
+  });
+
+  it("collapses consecutive separators", () => {
+    expect(toPascalCase("foo--bar")).toMatch("FooBar");
+  });
+
+  it("capitalizes a single word", () => {
+    expect(toPascalCase("foo")).toMatch("Foo");
+  });
+
+  it("strips a trailing separator", () => {
+    expect(toPascalCase("foo_")).toMatch("Foo");
+  });
+
+  it("treats a digit before an uppercase letter as a word break", () => {
+    expect(toPascalCase("foo2Bar")).toMatch("Foo2Bar");
+  });
+
+  it("does not break on a digit embedded in a word", () => {
+    expect(toPascalCase("foo2bar")).toMatch("Foo2bar");
+  });
+
+  it("keeps a trailing digit attached to the word", () => {
+    expect(toPascalCase("fooBar2")).toMatch("FooBar2");
+  });
+});
 
 describe("checkNameConflicts", () => {
   it("returns no errors when all casings are consistent", () => {
@@ -16,10 +128,11 @@ describe("checkNameConflicts", () => {
   it("reports an error for each name that conflicts with first casing", () => {
     const result = checkNameConflicts([
       { text: "Response", start: 0, end: 8 },
-      { text: "response", start: 10, end: 18 },
-      { text: "RESPONSE", start: 20, end: 28 },
-      { text: "Error", start: 30, end: 35 },
-      { text: "error", start: 36, end: 41 },
+      { text: "response", start: 10, end: 11 },
+      { text: "RESPONSE", start: 20, end: 21 },
+      { text: "R.e-sponse_", start: 30, end: 31 },
+      { text: "Error", start: 40, end: 41 },
+      { text: "error", start: 50, end: 51 },
     ]);
 
     expect(result).toMatch([
@@ -27,21 +140,28 @@ describe("checkNameConflicts", () => {
         message: "'response' and 'Response' differ only by casing",
         span: {
           start: 10,
-          end: 18,
+          end: 11,
         },
       },
       {
         message: "'RESPONSE' and 'Response' differ only by casing",
         span: {
           start: 20,
-          end: 28,
+          end: 21,
+        },
+      },
+      {
+        message: "'R.e-sponse_' and 'Response' differ only by casing",
+        span: {
+          start: 30,
+          end: 31,
         },
       },
       {
         message: "'error' and 'Error' differ only by casing",
         span: {
-          start: 36,
-          end: 41,
+          start: 50,
+          end: 51,
         },
       },
     ]);

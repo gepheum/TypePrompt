@@ -116,7 +116,7 @@ Union types follow strict rules. Every union must be **homogeneous**: all member
 type Color = "red" | "green" | "blue";
 ```
 
-- Each member must be a `lowerCamelCase` quoted string (see [String literals](#string-literals)).
+- Each member must be a quoted string starting with a letter (see [String literals](#string-literals)).
 - Members must be case-insensitively unique — `"Red"` and `"red"` cannot coexist.
 
 ### Interface unions (discriminated unions)
@@ -153,14 +153,15 @@ The same homogeneity and uniqueness rules apply to the flattened result. Circula
 
 ## String literals
 
-Quoted string values used as types must be `lowerCamelCase` identifiers:
+Quoted string values used as types must start with a letter and contain only letters, digits, underscores, dashes or dots:
 
 ```ts
-type Status = "pending" | "inProgress" | "done";
+type Status = "pending" | "in-progress" | "done";
+type Format = "application/json" | "text/plain";
 ```
 
-- Must start with a lowercase letter.
-- Must contain only alphanumeric characters (`[a-z][A-Za-z0-9]*`).
+- Must start with a letter (`[A-Za-z]`).
+- Must only contain letters, digits, underscore, dash, dot or slash (`[A-Za-z0-9._/-]`).
 - Both `"double"` and `'single'` quotes are accepted by the parser, but the value must satisfy the naming rule above.
 
 ---
@@ -215,7 +216,7 @@ Inside a **template** or **tool** schema, you may reference a type from the encl
 |-----------------|----------------------------|-----------------|
 | Type names      | `[A-Z][A-Za-z0-9]*`        | `MyResponse`    |
 | Field names     | `[a-z][A-Za-z0-9]*`        | `firstName`     |
-| String literals | `[a-z][A-Za-z0-9]*`        | `"inProgress"`  |
+| String literals | `[A-Za-z][A-Za-z0-9._/-]*` | `"application/json"` |
 | Identifiers     | No leading digit, no `_`   | `myVar`         |
 
 Type names across all declarations in a file must be case-insensitively unique: you cannot have both `GoodDay` and `Goodday` in the same schema.

@@ -15,7 +15,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { camelToSnakeCase, capitalize } from "../../util/casing.js";
+import { capitalize, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
@@ -665,7 +665,7 @@ function toPyName(
   let conflict: boolean;
   switch (type) {
     case "field_name": {
-      identifier = camelToSnakeCase(camelCaseName);
+      identifier = toSnakeCase(camelCaseName);
       conflict =
         PYTHON_HARD_KEYWORDS.has(identifier) || identifier.startsWith("model_");
       break;
@@ -676,7 +676,7 @@ function toPyName(
       break;
     }
     case "snake_case_class_name": {
-      identifier = camelToSnakeCase(camelCaseName);
+      identifier = toSnakeCase(camelCaseName);
       conflict = PYTHON_HARD_KEYWORDS.has(identifier);
       break;
     }

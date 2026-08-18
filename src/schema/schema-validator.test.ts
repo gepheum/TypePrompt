@@ -109,7 +109,9 @@ describe("validateSchema – success", () => {
 
   it("accepts a Meta field with a string literal union type", () => {
     const result = validateSchema(
-      parseDeclarations('type Meta = { role: "admin" | "user"; }'),
+      parseDeclarations(
+        'type Meta = { role: "admin" | "user" | "FOO/-BAR_-3.1"; }',
+      ),
       META,
     );
     expect(result).toMatch({ kind: "success" });
@@ -211,6 +213,33 @@ describe("validateSchema – naming errors", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateSchema - type references", () => {
+  it("reports an invalid string literal starting wiht a digit", () => {
+    const result = validateSchema(
+      parseDeclarations("type Output = '3foo';"),
+      NAMESPACE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: "String must start with a letter" }],
+    });
+  });
+
+  it("reports an invalid string literal containing invalid character", () => {
+    const result = validateSchema(
+      parseDeclarations("type Output = 'foo bar';"),
+      NAMESPACE,
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message:
+            "String must only contain letters, digits, or allowed symbols (_ - . /)",
+        },
+      ],
+    });
+  });
+
   it("reports an unknown type reference", () => {
     const result = validateSchema(
       parseDeclarations("type Output = { value: Unknown; };"),

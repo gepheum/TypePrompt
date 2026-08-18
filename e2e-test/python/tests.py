@@ -23,17 +23,25 @@ from gen.prompts_e01 import prompts as pe01, schema as s_e01
 # ─── e01 CSV/TSV format: tabular data serialization ──────────────────────────
 
 _rows = [
-    s_e01.analyze_sales_data.SalesRow(product="Widget A", units=120, revenue_cents=240000, region="north"),
-    s_e01.analyze_sales_data.SalesRow(product="Widget B", units=85, revenue_cents=340000, region="south"),
+    s_e01.analyze_sales_data.SalesRow(
+        product="Widget A", units=120, revenue_cents=240000, region="north"
+    ),
+    s_e01.analyze_sales_data.SalesRow(
+        product="Widget B", units=85, revenue_cents=340000, region="south"
+    ),
 ]
 
 
 class TestAnalyzeSalesData:
     csv_prompt = pe01.analyze_sales_data.render(
-        s_e01.analyze_sales_data.Input(rows=_rows, question="Top product?", variant="csv")
+        s_e01.analyze_sales_data.Input(
+            rows=_rows, question="Top product?", variant="csv"
+        )
     )
     tsv_prompt = pe01.analyze_sales_data.render(
-        s_e01.analyze_sales_data.Input(rows=_rows, question="Top product?", variant="tsv")
+        s_e01.analyze_sales_data.Input(
+            rows=_rows, question="Top product?", variant="tsv"
+        )
     )
 
     def test_csv_user_message_has_comma_separated_header(self):
@@ -61,11 +69,17 @@ class TestAnalyzeSalesData:
 
     def test_csv_variant_has_one_example_with_csv_data(self):
         assert len(self.csv_prompt.examples) == 1
-        assert "product,units,revenueCents,region" in self.csv_prompt.examples[0].user_message
+        assert (
+            "product,units,revenueCents,region"
+            in self.csv_prompt.examples[0].user_message
+        )
 
     def test_tsv_variant_has_one_example_with_tsv_data(self):
         assert len(self.tsv_prompt.examples) == 1
-        assert "product\tunits\trevenueCents\tregion" in self.tsv_prompt.examples[0].user_message
+        assert (
+            "product\tunits\trevenueCents\tregion"
+            in self.tsv_prompt.examples[0].user_message
+        )
 
     def test_csv_system_message_mentions_csv(self):
         assert re.search(r"comma-separated", self.csv_prompt.system_message)
@@ -473,7 +487,7 @@ class TestFinanceSummarizeTransaction:
     prompt = p08.finance.summarize_transaction.render(
         s08.finance.summarize_transaction.Input(
             description="AWS monthly bill",
-            amount=s08.finance.shared.MoneyAmount(value=450, currency="usd"),
+            amount=s08.finance.shared.MoneyAmount(value=450, currency="USD"),
             category="expense",
             date="2026-08-01",
         )
@@ -491,12 +505,11 @@ class TestFinanceSummarizeTransaction:
     def test_user_message_contains_description(self):
         assert re.search(r"AWS monthly bill", self.prompt.user_message)
 
-    # The currency literals in the schema are intentionally lowercase ("usd" etc.)
     def test_currency_literal_lowercase_is_accepted(self):
         p08.finance.summarize_transaction.render(
             s08.finance.summarize_transaction.Input(
                 description="Test",
-                amount=s08.finance.shared.MoneyAmount(value=1, currency="usd"),
+                amount=s08.finance.shared.MoneyAmount(value=1, currency="USD"),
                 category="expense",
                 date="2026-08-17",
             )
@@ -509,7 +522,7 @@ class TestFinanceDetectAnomaly:
             recent_transactions=[],
             new_transaction=s08.finance.detect_anomaly.Input_NewTransaction(
                 description="Casino chips",
-                amount=s08.finance.shared.MoneyAmount(value=5000, currency="usd"),
+                amount=s08.finance.shared.MoneyAmount(value=5000, currency="USD"),
                 date="2026-08-17",
             ),
         )

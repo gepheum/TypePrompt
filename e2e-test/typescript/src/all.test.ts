@@ -478,7 +478,7 @@ describe("08-namespaces", () => {
   describe("Finance:SummarizeTransaction", () => {
     const prompt = p08.finance.summarizeTransaction.render({
       description: "AWS monthly bill",
-      amount: { value: 450, currency: "usd" },
+      amount: { value: 450, currency: "USD" },
       category: "expense",
       date: "2026-08-01",
     });
@@ -507,7 +507,7 @@ describe("08-namespaces", () => {
       recentTransactions: [],
       newTransaction: {
         description: "Casino chips",
-        amount: { value: 5000, currency: "usd" as never },
+        amount: { value: 5000, currency: "USD" as never },
         date: "2026-08-17",
       },
     });
@@ -638,17 +638,21 @@ describe("e01 / AnalyzeSalesData", () => {
       question: "Any data?",
       variant: "csv",
     });
-    expect(empty.userMessage).toMatch(/^(?![\s\S]*product,units)/);  // no header row
+    expect(empty.userMessage).toMatch(/^(?![\s\S]*product,units)/); // no header row
   });
 
   it("csv variant has one example with csv-formatted data", () => {
     expect(csv.examples.length).toMatch(1);
-    expect(csv.examples[0]!.userMessage).toMatch(/product,units,revenueCents,region/);
+    expect(csv.examples[0]!.userMessage).toMatch(
+      /product,units,revenueCents,region/,
+    );
   });
 
   it("tsv variant has one example with tsv-formatted data", () => {
     expect(tsv.examples.length).toMatch(1);
-    expect(tsv.examples[0]!.userMessage).toMatch(/product\tunits\trevenueCents\tregion/);
+    expect(tsv.examples[0]!.userMessage).toMatch(
+      /product\tunits\trevenueCents\tregion/,
+    );
   });
 
   it("csv system message mentions CSV", () => {
