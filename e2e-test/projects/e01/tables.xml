@@ -1,0 +1,102 @@
+<!--
+  Demonstrates: format="csv" and format="tsv" using <variant>.
+  Both variants receive the same tabular data but serialize it differently.
+  The `variant` field in Input selects the serialization format at runtime.
+-->
+<template name="AnalyzeSalesData">
+  <schema>
+    type SalesRow = {
+      product: string;
+      units: integer;
+      revenueCents: integer;
+      region: string;
+    };
+
+    interface Input {
+      rows: SalesRow[];
+      question: string;
+      variant: "csv" | "tsv";
+    }
+
+    interface Output {
+      analysis: string;
+      topProduct: string;
+      totalRevenue: number;
+    }
+  </schema>
+
+  <!-- Both variants share the same Input/Output schema and question field. -->
+  <variant case="csv">
+    <system>
+      You are a sales analyst. The data below is comma-separated (CSV).
+      Analyze it and answer the question concisely.
+    </system>
+
+    <user>
+      <insert val="input.question"/>
+
+      Data:
+      <insert val="input.rows" format="csv"/>
+    </user>
+
+    <examples>
+      - input:
+          rows:
+            - product: "Widget A"
+              units: 120
+              revenueCents: 240000
+              region: north
+            - product: "Widget B"
+              units: 85
+              revenueCents: 340000
+              region: south
+            - product: "Widget C"
+              units: 200
+              revenueCents: 180000
+              region: east
+          question: "Which product generated the most revenue?"
+          variant: csv
+        output:
+          analysis: Widget B leads in revenue at $3,400 despite lower unit volume.
+          topProduct: Widget B
+          totalRevenue: 7600.0
+    </examples>
+  </variant>
+
+  <variant case="tsv">
+    <system>
+      You are a sales analyst. The data below is tab-separated (TSV).
+      Analyze it and answer the question concisely.
+    </system>
+
+    <user>
+      <insert val="input.question"/>
+
+      Data:
+      <insert val="input.rows" format="tsv"/>
+    </user>
+
+    <examples>
+      - input:
+          rows:
+            - product: "Widget A"
+              units: 120
+              revenueCents: 240000
+              region: north
+            - product: "Widget B"
+              units: 85
+              revenueCents: 340000
+              region: south
+            - product: "Widget C"
+              units: 200
+              revenueCents: 180000
+              region: east
+          question: "Which product generated the most revenue?"
+          variant: tsv
+        output:
+          analysis: Widget B leads in revenue at $3,400 despite lower unit volume.
+          topProduct: Widget B
+          totalRevenue: 7600.0
+    </examples>
+  </variant>
+</template>

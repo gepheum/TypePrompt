@@ -1,0 +1,9 @@
+# TypePrompt configuration. Run "npx typeprompt gen" to generate code.
+input: tables.xml
+gen:
+  typescript:
+    enabled: true
+    file: ../../typescript/src/gen/prompts-e01.ts
+  python:
+    enabled: true
+    file: ../../python/gen/prompts_e01.py

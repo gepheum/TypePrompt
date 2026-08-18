@@ -17,6 +17,7 @@ import { prompts as p05 } from "./gen/prompts-05.js";
 import { prompts as p06, type $ as $06 } from "./gen/prompts-06.js";
 import { prompts as p07, type $ as $07 } from "./gen/prompts-07.js";
 import { prompts as p08 } from "./gen/prompts-08.js";
+import { prompts as pe01 } from "./gen/prompts-e01.js";
 
 // ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
@@ -587,6 +588,66 @@ describe("08-namespaces", () => {
     it("userMessage wraps clause text in <Clause> tag via <enclosed>", () => {
       expect(prompt.userMessage).toMatch(/<Clause>/);
     });
+  });
+});
+
+// ─── e01 CSV/TSV format: tabular data serialization ─────────────────────────
+
+describe("e01 / AnalyzeSalesData", () => {
+  const rows = [
+    { product: "Widget A", units: 120, revenueCents: 240000, region: "north" },
+    { product: "Widget B", units: 85, revenueCents: 340000, region: "south" },
+  ];
+
+  const csv = pe01.analyzeSalesData.render({
+    rows,
+    question: "Top product?",
+    variant: "csv",
+  });
+  const tsv = pe01.analyzeSalesData.render({
+    rows,
+    question: "Top product?",
+    variant: "tsv",
+  });
+
+  it("csv variant: userMessage contains a comma-separated header row", () => {
+    expect(csv.userMessage).toMatch(/product,units,revenueCents,region/);
+  });
+
+  it("csv variant: userMessage contains comma-separated data rows", () => {
+    expect(csv.userMessage).toMatch(/Widget A,120,240000,north/);
+    expect(csv.userMessage).toMatch(/Widget B,85,340000,south/);
+  });
+
+  it("tsv variant: userMessage contains a tab-separated header row", () => {
+    expect(tsv.userMessage).toMatch(/product\tunits\trevenueCents\tregion/);
+  });
+
+  it("tsv variant: userMessage contains tab-separated data rows", () => {
+    expect(tsv.userMessage).toMatch(/Widget A\t120\t240000\tnorth/);
+    expect(tsv.userMessage).toMatch(/Widget B\t85\t340000\tsouth/);
+  });
+
+  it("csv and tsv variants produce different userMessages", () => {
+    expect(csv.userMessage === tsv.userMessage).toMatch(false);
+  });
+
+  it("csv variant has one example with csv-formatted data", () => {
+    expect(csv.examples.length).toMatch(1);
+    expect(csv.examples[0]!.userMessage).toMatch(/product,units,revenueCents,region/);
+  });
+
+  it("tsv variant has one example with tsv-formatted data", () => {
+    expect(tsv.examples.length).toMatch(1);
+    expect(tsv.examples[0]!.userMessage).toMatch(/product\tunits\trevenueCents\tregion/);
+  });
+
+  it("csv system message mentions CSV", () => {
+    expect(csv.systemMessage).toMatch(/comma-separated/);
+  });
+
+  it("tsv system message mentions TSV", () => {
+    expect(tsv.systemMessage).toMatch(/tab-separated/);
   });
 });
 

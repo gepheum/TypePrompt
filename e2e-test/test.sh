@@ -14,6 +14,7 @@ node ../dist/main.js gen -p projects/05
 node ../dist/main.js gen -p projects/06
 node ../dist/main.js gen -p projects/07
 node ../dist/main.js gen -p projects/08
+node ../dist/main.js gen -p projects/e01
 
 # Run Python unit tests
 cd python
