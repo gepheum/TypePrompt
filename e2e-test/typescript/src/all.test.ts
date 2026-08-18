@@ -632,6 +632,15 @@ describe("e01 / AnalyzeSalesData", () => {
     expect(csv.userMessage === tsv.userMessage).toMatch(false);
   });
 
+  it("empty rows list renders no table content", () => {
+    const empty = pe01.analyzeSalesData.render({
+      rows: [],
+      question: "Any data?",
+      variant: "csv",
+    });
+    expect(empty.userMessage).toMatch(/^(?![\s\S]*product,units)/);  // no header row
+  });
+
   it("csv variant has one example with csv-formatted data", () => {
     expect(csv.examples.length).toMatch(1);
     expect(csv.examples[0]!.userMessage).toMatch(/product,units,revenueCents,region/);

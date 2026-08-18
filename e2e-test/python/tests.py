@@ -53,6 +53,12 @@ class TestAnalyzeSalesData:
     def test_csv_and_tsv_produce_different_user_messages(self):
         assert self.csv_prompt.user_message != self.tsv_prompt.user_message
 
+    def test_empty_rows_renders_no_table_content(self):
+        empty = pe01.analyze_sales_data.render(
+            s_e01.analyze_sales_data.Input(rows=[], question="Any data?", variant="csv")
+        )
+        assert "product,units" not in empty.user_message
+
     def test_csv_variant_has_one_example_with_csv_data(self):
         assert len(self.csv_prompt.examples) == 1
         assert "product,units,revenueCents,region" in self.csv_prompt.examples[0].user_message
