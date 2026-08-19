@@ -58,6 +58,7 @@
   </system>
 
   <user>
+    <!-- format="toon" is another good choice for structured LLM-readable output -->
     <insert val="input" format="yaml"/>
   </user>
 
