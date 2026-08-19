@@ -84,10 +84,10 @@ function validateBodyImpl<HasValContext extends boolean>(
       continue;
     }
     if (!piece.format) {
-      if (!isStringType(type, templateSchema)) {
+      if (!isStringOrIntegerType(type, templateSchema)) {
         errors.push({
           span: expression.fullPath,
-          message: "Not a string type and no format specified",
+          message: "Must specify format when type is not string or integer",
           hint: "Add a format attribute, for example format='json'",
         });
       }
@@ -96,10 +96,10 @@ function validateBodyImpl<HasValContext extends boolean>(
     const insertFormat: InsertFormat = piece.format.text;
     switch (insertFormat) {
       case "text": {
-        if (!isStringType(type, templateSchema)) {
+        if (!isStringOrIntegerType(type, templateSchema)) {
           errors.push({
             span: piece.format,
-            message: "'text' can only be used with string types",
+            message: "'text' can only be used with string and integer types",
           });
         }
         break;
@@ -129,7 +129,7 @@ function validateBodyImpl<HasValContext extends boolean>(
   return errors;
 }
 
-function isStringType(
+function isStringOrIntegerType(
   type: ResolvedType | SyntheticType,
   schema: Schema,
 ): boolean {
@@ -158,9 +158,6 @@ function isTabularType(type: ResolvedType, schema: Schema): boolean {
       return false;
     }
     const fieldType = resolveType(field.type, schema);
-    return (
-      isStringType(fieldType, schema) ||
-      (fieldType.kind === "primitive" && fieldType.primitive.text === "integer")
-    );
+    return isStringOrIntegerType(fieldType, schema)
   });
 }

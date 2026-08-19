@@ -197,7 +197,7 @@ The `format` attribute controls serialization:
 
 | Value | Description |
 |---|---|
-| `text` | *(default)* Renders the value as a plain string. The value must be of type `string`. |
+| `text` | *(default)* Renders the value as a plain string. The value must be of type `string` or `integer`. |
 | `json` | Pretty-printed JSON (2-space indent). |
 | `yaml` | YAML serialization. |
 | `toon` | [TOON](https://toonformat.dev) — a structured, human-readable format optimized for LLM consumption. |
