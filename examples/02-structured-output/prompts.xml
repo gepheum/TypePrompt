@@ -1,6 +1,6 @@
 <!--
-  Demonstrates: structured JSON output, union types (string-literal and
-  discriminated), optional fields, JSDoc on types.
+  Demonstrates: <meta> definition, array type, format="yaml" for rendering structured
+  data, JSDoc on types.
 -->
 <meta>
   interface Meta {
@@ -17,15 +17,23 @@
   </meta>
 
   <schema>
+    type TicketCategory = "billing" | "technical-issue" | "feature-request" | "other";
+
     /** A support ticket to be triaged. */
     interface Input {
       subject: string;
       body: string;
+      customerTier: "free" | "pro" | "enterprise";
+      /** Previous tickets from this customer, for context. */
+      recentTickets: {
+        id: string;
+        summary: string;
+        category: TicketCategory;
+      }[];
     }
 
     interface Output {
-      /** Broad category of the issue. */
-      category: "billing" | "technicalIssue" | "featureRequest" | "other";
+      category: TicketCategory;
 
       /** How quickly this ticket needs attention. */
       urgency: "low" | "medium" | "high" | "critical";
@@ -33,7 +41,10 @@
       /** One-sentence summary of the issue. */
       summary: string;
 
-      /** Suggested first response, if the issue is straightforward. */
+      /** Concrete next steps to resolve the ticket. */
+      suggestedActions: string[];
+
+      /** Suggested first reply to the customer, if the issue is straightforward. */
       suggestedReply?: string;
     }
   </schema>
@@ -41,30 +52,51 @@
   <system>
     You are a support ticket triage assistant. Analyze the ticket and return a
     structured assessment. Set <c>urgency</c> to <c>"critical"</c> only when
-    the user reports data loss or a complete service outage.
+    the user reports data loss or a complete service outage. For
+    <c>"enterprise"</c> customers, bump urgency one level higher than you would
+    for other tiers.
   </system>
 
   <user>
     <enclosed tag="Subject"><insert val="input.subject"/></enclosed>
     <enclosed tag="Body"><insert val="input.body"/></enclosed>
+    Customer tier: <insert val="input.customerTier"/>
+    <enclosed tag="RecentTickets"><insert val="input.recentTickets" format="yaml"/></enclosed>
   </user>
 
   <examples>
     - input:
-        subject: "Cannot log in — account locked"
-        body: "I've tried resetting my password three times but keep getting 'account locked'."
+        subject: "Dashboard won't load since yesterday"
+        body: "Our whole team is blocked — it just shows a spinner."
+        customerTier: enterprise
+        recentTickets:
+          - id: T-201
+            summary: Slow report exports
+            category: technical-issue
+          - id: T-184
+            summary: Billing invoice discrepancy
+            category: billing
       output:
-        category: technicalIssue
-        urgency: high
-        summary: User's account is locked and cannot be accessed despite password resets.
-        suggestedReply: "We've unlocked your account. Please try logging in again and let us know if the issue persists."
+        category: technical-issue
+        urgency: critical
+        summary: Enterprise customer's dashboard is completely unavailable, blocking the entire team.
+        suggestedActions:
+          - Escalate to on-call engineer immediately
+          - Check recent deploy logs for regressions
+          - Send acknowledgement within 15 minutes
+        suggestedReply: "We've escalated this to our engineering team as a top priority. You'll hear from us within 15 minutes."
 
     - input:
-        subject: "Would love a dark mode"
-        body: "The app looks great but a dark mode option would really help at night."
+        subject: "Can you add CSV export to the reports page?"
+        body: "It would save us a lot of time if we could download reports as CSV."
+        customerTier: pro
+        recentTickets: []
       output:
-        category: featureRequest
+        category: feature-request
         urgency: low
-        summary: User requests a dark mode option.
+        summary: Customer requests CSV export for the reports page.
+        suggestedActions:
+          - Log in the feature request tracker
+          - Acknowledge the request and share the roadmap link
   </examples>
 </template>

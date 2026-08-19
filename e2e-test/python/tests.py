@@ -139,7 +139,12 @@ class TestTranslate:
 
 class TestTriageTicket:
     prompt = p02.triage_ticket.render(
-        s02.triage_ticket.Input(subject="App crashes", body="Every time.")
+        s02.triage_ticket.Input(
+            subject="App crashes",
+            body="Every time.",
+            customer_tier="pro",
+            recent_tickets=[],
+        )
     )
 
     def test_json_output_format(self):
@@ -154,35 +159,50 @@ class TestTriageTicket:
         assert len(self.prompt.examples) == 2
 
     def test_first_example_response_contains_output_category(self):
-        assert '"technicalIssue"' in self.prompt.examples[0].response
+        assert '"technical-issue"' in self.prompt.examples[0].response
 
     def test_second_example_response_contains_output_category(self):
-        assert '"featureRequest"' in self.prompt.examples[1].response
+        assert '"feature-request"' in self.prompt.examples[1].response
 
     def test_parse_response_parses_json(self):
         result = self.prompt.parse_response(
-            '{"category":"billing","urgency":"low","summary":"Invoice"}'
+            '{"category":"billing","urgency":"low","summary":"Invoice","suggestedActions":[]}'
         )
         assert result.category == "billing"
         assert result.urgency == "low"
 
     def test_parse_response_strips_json_code_fences(self):
         result = self.prompt.parse_response(
-            '```json\n{"category":"other","urgency":"medium","summary":"x"}\n```'
+            '```json\n{"category":"other","urgency":"medium","summary":"x","suggestedActions":[]}\n```'
         )
         assert result.category == "other"
 
     def test_parse_response_strips_plain_code_fences(self):
         result = self.prompt.parse_response(
-            '```\n{"category":"other","urgency":"medium","summary":"x"}\n```'
+            '```\n{"category":"other","urgency":"medium","summary":"x","suggestedActions":[]}\n```'
         )
         assert result.category == "other"
 
     def test_optional_field_absent_when_omitted(self):
         result = self.prompt.parse_response(
-            '{"category":"featureRequest","urgency":"low","summary":"Dark mode"}'
+            '{"category":"feature-request","urgency":"low","summary":"Dark mode","suggestedActions":["Log request"]}'
         )
         assert result.suggested_reply is None
+
+    def test_user_message_contains_yaml_rendered_recent_tickets(self):
+        p = p02.triage_ticket.render(
+            s02.triage_ticket.Input(
+                subject="X",
+                body="Y",
+                customer_tier="pro",
+                recent_tickets=[
+                    s02.triage_ticket.Input_RecentTicketsItem(
+                        id="T-1", summary="Login bug", category="technical-issue"
+                    )
+                ],
+            )
+        )
+        assert "T-1" in p.user_message
 
     def test_user_message_wraps_subject_in_enclosed_tag(self):
         assert "<Subject>" in self.prompt.user_message

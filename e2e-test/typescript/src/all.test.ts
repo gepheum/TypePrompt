@@ -77,12 +77,14 @@ describe("01-basics / Translate", () => {
   });
 });
 
-// ─── 02 Structured output: JSON format, union types, optional fields ─────────
+// ─── 02 Structured output: named type alias, array field, format=yaml ────────
 
 describe("02-structured-output / TriageTicket", () => {
   const prompt = p02.triageTicket.render({
     subject: "App crashes on login",
     body: "It crashes every time.",
+    customerTier: "pro",
+    recentTickets: [],
   });
 
   it("has json output format", () => {
@@ -100,16 +102,16 @@ describe("02-structured-output / TriageTicket", () => {
   });
 
   it("first example response contains the JSON-encoded output category", () => {
-    expect(prompt.examples[0]!.response).toMatch(/"technicalIssue"/);
+    expect(prompt.examples[0]!.response).toMatch(/"technical-issue"/);
   });
 
   it("second example response contains the JSON-encoded output category", () => {
-    expect(prompt.examples[1]!.response).toMatch(/"featureRequest"/);
+    expect(prompt.examples[1]!.response).toMatch(/"feature-request"/);
   });
 
   it("parseResponse parses JSON output", () => {
     const result = prompt.parseResponse(
-      '{"category":"billing","urgency":"low","summary":"Invoice question"}',
+      '{"category":"billing","urgency":"low","summary":"Invoice question","suggestedActions":[]}',
     );
     expect(result).toMatch({
       category: "billing",
@@ -120,26 +122,36 @@ describe("02-structured-output / TriageTicket", () => {
 
   it("parseResponse strips ```json code fences", () => {
     const result = prompt.parseResponse(
-      '```json\n{"category":"other","urgency":"medium","summary":"test"}\n```',
+      '```json\n{"category":"other","urgency":"medium","summary":"test","suggestedActions":[]}\n```',
     );
     expect(result).toMatch({ category: "other" });
   });
 
   it("parseResponse strips ``` code fences", () => {
     const result = prompt.parseResponse(
-      '```\n{"category":"other","urgency":"medium","summary":"test"}\n```',
+      '```\n{"category":"other","urgency":"medium","summary":"test","suggestedActions":[]}\n```',
     );
     expect(result).toMatch({ category: "other" });
   });
 
   it("optional field suggestedReply is absent when omitted from output", () => {
     const result = prompt.parseResponse(
-      '{"category":"featureRequest","urgency":"low","summary":"Dark mode"}',
+      '{"category":"feature-request","urgency":"low","summary":"Dark mode","suggestedActions":["Log request"]}',
     );
     expect(result).toMatch({
-      category: "featureRequest",
+      category: "feature-request",
       suggestedReply: undefined,
     });
+  });
+
+  it("userMessage contains YAML-rendered recentTickets", () => {
+    const p = p02.triageTicket.render({
+      subject: "X",
+      body: "Y",
+      customerTier: "pro",
+      recentTickets: [{ id: "T-1", summary: "Login bug", category: "technical-issue" }],
+    });
+    expect(p.userMessage).toMatch(/id: T-1/);
   });
 
   it("userMessage wraps subject in <Subject> tag via <enclosed>", () => {
@@ -671,29 +683,29 @@ describe("e01 / AnalyzeSalesData", () => {
 // ─── Cross-cutting: parseResponse code fence stripping ───────────────────────
 
 describe("parseResponse", () => {
+  const p02Render = () =>
+    p02.triageTicket.render({ subject: "X", body: "Y", customerTier: "pro", recentTickets: [] });
+
   it("parses plain JSON without fences", () => {
-    const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
     expect(
-      prompt.parseResponse(
-        '{"category":"other","urgency":"low","summary":"x"}',
+      p02Render().parseResponse(
+        '{"category":"other","urgency":"low","summary":"x","suggestedActions":[]}',
       ),
     ).toMatch({ category: "other" });
   });
 
   it("strips ``` plain fences", () => {
-    const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
     expect(
-      prompt.parseResponse(
-        '```\n{"category":"other","urgency":"low","summary":"x"}\n```',
+      p02Render().parseResponse(
+        '```\n{"category":"other","urgency":"low","summary":"x","suggestedActions":[]}\n```',
       ),
     ).toMatch({ category: "other" });
   });
 
   it("strips ```json fences", () => {
-    const prompt = p02.triageTicket.render({ subject: "X", body: "Y" });
     expect(
-      prompt.parseResponse(
-        '```json\n{"category":"other","urgency":"low","summary":"x"}\n```',
+      p02Render().parseResponse(
+        '```json\n{"category":"other","urgency":"low","summary":"x","suggestedActions":[]}\n```',
       ),
     ).toMatch({ category: "other" });
   });
