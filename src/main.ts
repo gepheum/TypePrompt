@@ -156,7 +156,7 @@ async function runGeneration(projectPath?: string): Promise<void> {
   }
 
   if (anyErrors) {
-    return;
+    throw new Error("Compilation failed due to errors");
   }
 
   const validCompilationResult = compilationResult as ValidCompilationResult;

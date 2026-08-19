@@ -149,13 +149,16 @@ describe("02-structured-output / TriageTicket", () => {
       subject: "X",
       body: "Y",
       customerTier: "pro",
-      recentTickets: [{ id: "T-1", summary: "Login bug", category: "technical-issue" }],
+      recentTickets: [
+        { id: "T-1", summary: "Login bug", category: "technical-issue" },
+      ],
     });
     expect(p.userMessage).toMatch(/id: T-1/);
   });
 
-  it("userMessage wraps subject in <Subject> tag via <enclosed>", () => {
-    expect(prompt.userMessage).toMatch(/<Subject>/);
+  it("userMessage contains the input rendered as YAML", () => {
+    expect(prompt.userMessage).toMatch(/subject:/);
+    expect(prompt.userMessage).toMatch(/customerTier:/);
   });
 
   it("meta contains the model and temperature declared in <meta>", () => {
@@ -684,7 +687,12 @@ describe("e01 / AnalyzeSalesData", () => {
 
 describe("parseResponse", () => {
   const p02Render = () =>
-    p02.triageTicket.render({ subject: "X", body: "Y", customerTier: "pro", recentTickets: [] });
+    p02.triageTicket.render({
+      subject: "X",
+      body: "Y",
+      customerTier: "pro",
+      recentTickets: [],
+    });
 
   it("parses plain JSON without fences", () => {
     expect(

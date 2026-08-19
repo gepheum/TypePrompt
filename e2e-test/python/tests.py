@@ -196,7 +196,7 @@ class TestTriageTicket:
                 body="Y",
                 customer_tier="pro",
                 recent_tickets=[
-                    s02.triage_ticket.Input_RecentTicketsItem(
+                    s02.triage_ticket.Input_RecentTickets(
                         id="T-1", summary="Login bug", category="technical-issue"
                     )
                 ],
@@ -204,8 +204,9 @@ class TestTriageTicket:
         )
         assert "T-1" in p.user_message
 
-    def test_user_message_wraps_subject_in_enclosed_tag(self):
-        assert "<Subject>" in self.prompt.user_message
+    def test_user_message_contains_input_as_yaml(self):
+        assert "subject:" in self.prompt.user_message
+        assert "customerTier:" in self.prompt.user_message
 
     def test_meta_contains_declared_model_and_temperature(self):
         assert self.prompt.meta.model == "gpt-4o"

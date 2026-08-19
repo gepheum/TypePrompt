@@ -78,8 +78,10 @@ function parseBodyImpl<HasValContext extends boolean>(
         expected: "a valid expression",
       },
       format: {
-        schema: z.enum(["text", "json", "toon", "csv", "tsv"]).optional(),
-        expected: "one of: 'text', 'json', 'toon', 'csv', 'tsv'",
+        schema: z
+          .enum(["text", "json", "yaml", "toon", "csv", "tsv"])
+          .optional(),
+        expected: "one of: 'text', 'json', 'yaml', 'toon', 'csv', 'tsv'",
       },
     });
     if (attrs.kind === "error") {

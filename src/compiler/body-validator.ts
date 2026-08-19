@@ -135,7 +135,9 @@ function isStringOrIntegerType(
 ): boolean {
   switch (type.kind) {
     case "primitive":
-      return type.primitive.text === "string";
+      return (
+        type.primitive.text === "string" || type.primitive.text === "integer"
+      );
     case "string-literal":
       return true;
     case "union":
@@ -158,6 +160,6 @@ function isTabularType(type: ResolvedType, schema: Schema): boolean {
       return false;
     }
     const fieldType = resolveType(field.type, schema);
-    return isStringOrIntegerType(fieldType, schema)
+    return isStringOrIntegerType(fieldType, schema);
   });
 }

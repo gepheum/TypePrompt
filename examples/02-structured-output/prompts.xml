@@ -58,10 +58,7 @@
   </system>
 
   <user>
-    <enclosed tag="Subject"><insert val="input.subject"/></enclosed>
-    <enclosed tag="Body"><insert val="input.body"/></enclosed>
-    Customer tier: <insert val="input.customerTier"/>
-    <enclosed tag="RecentTickets"><insert val="input.recentTickets" format="yaml"/></enclosed>
+    <insert val="input" format="yaml"/>
   </user>
 
   <examples>
