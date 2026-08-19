@@ -13,6 +13,7 @@ import {
   AttributeValue,
   checkNoXmlAttributes,
   checkXmlAttributes,
+  oneOf,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import {
@@ -164,10 +165,7 @@ class TemplateParser {
       });
     }
     const attrs = checkXmlAttributes(schemaNode, {
-      "output-format": {
-        schema: z.enum(["json", "text"]).optional(),
-        expected: "'json' or 'text'",
-      },
+      "output-format": oneOf(["json", "text"]),
     });
     if (attrs.kind === "error") {
       this.errors.push(...attrs.errors);

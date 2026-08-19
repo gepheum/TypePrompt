@@ -1,4 +1,4 @@
-import { type ZodType } from "zod";
+import { type ZodType, z } from "zod";
 
 import type {
   InternalError,
@@ -12,6 +12,14 @@ export type AttributeSchemaEntry = {
   readonly schema: ZodType<string | undefined>;
   readonly expected: string;
 };
+
+/** Builds an optional enum attribute entry from a list of allowed values. */
+export function oneOf<const T extends string>(values: readonly [T, ...T[]]) {
+  return {
+    schema: z.enum(values as [T, ...T[]]).optional(),
+    expected: `one of: ${values.map((v) => `'${v}'`).join(", ")}`,
+  };
+}
 
 export type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 

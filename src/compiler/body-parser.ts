@@ -2,6 +2,7 @@ import type { ErrorSink, MappedText, TextSpan } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
+  oneOf,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
 import type {
@@ -77,12 +78,7 @@ function parseBodyImpl<HasValContext extends boolean>(
         schema: z.string(),
         expected: "a valid expression",
       },
-      format: {
-        schema: z
-          .enum(["text", "json", "yaml", "toon", "csv", "tsv"])
-          .optional(),
-        expected: "one of: 'text', 'json', 'yaml', 'toon', 'csv', 'tsv'",
-      },
+      format: oneOf(["text", "json", "yaml", "toon", "csv", "tsv"]),
     });
     if (attrs.kind === "error") {
       errors.push(...attrs.errors);
