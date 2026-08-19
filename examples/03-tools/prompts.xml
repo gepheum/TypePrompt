@@ -2,6 +2,14 @@
   Demonstrates: <tool> definition, <tools> registration, tool call examples
   with intermediateSteps.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
+
 <tool name="webSearch">
   <description>
     Search the web and return a list of relevant results. Each result has a
@@ -24,6 +32,11 @@
 </tool>
 
 <template name="ResearchQuestion">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <tools>
     - tool: webSearch
   </tools>

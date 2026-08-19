@@ -260,6 +260,12 @@ def _create_prompts(data: _internal.Templates) -> Prompts:
 
 
 # <static:python-logic>
+type Meta = schema.meta.Meta
+
+
+_meta_type_adapter: Final = pydantic.TypeAdapter(Meta)
+
+
 def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> Output:
     output_format = prompt.output_format
     match output_format.format:
@@ -482,7 +488,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
 
         if contents.kind == "noVariants":
             content = contents.content
-            meta = content.meta
+            meta = _meta_type_adapter.validate_python(content.meta, by_alias=True)
             system_message = render_body(content.system or [], input_val, snippets)
             user_body = content.user or []
             user_message = render_body(user_body, input_val, snippets)
@@ -491,10 +497,11 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             variant = cast(dict, input_val)["variant"]
             variant_content = contents.variants[variant]
             default_content = contents.default_content
-            meta = (
+            meta = _meta_type_adapter.validate_python(
                 variant_content.meta
                 if variant_content.meta is not None
-                else default_content.meta
+                else default_content.meta,
+                by_alias=True,
             )
             system_body = (
                 variant_content.system
@@ -560,7 +567,7 @@ class _TemplateOverrider:
         return _templates_data.model_dump(by_alias=True)
 
     def apply_overrides(self, overrides: dict[str, Any]) -> Prompts:
-        overrides_obj = _internal.Templates.model_validate(overrides)
+        overrides_obj = _internal.Templates.model_validate(overrides, by_alias=True)
         del overrides
         if _templates_data.signature != overrides_obj.signature:
             raise ValueError("Signature mismatch")

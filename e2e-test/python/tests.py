@@ -187,6 +187,10 @@ class TestTriageTicket:
     def test_user_message_wraps_subject_in_enclosed_tag(self):
         assert "<Subject>" in self.prompt.user_message
 
+    def test_meta_contains_declared_model_and_temperature(self):
+        assert self.prompt.meta.model == "gpt-4o"
+        assert self.prompt.meta.temperature == 0.2
+
 
 # ─── 03 Tools: tool registration, execute_tools, example with intermediate steps
 

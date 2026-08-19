@@ -3,6 +3,13 @@
   templates in the default namespace. Both templates reference shared.Address
   via the `shared.` prefix.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
 
 <!-- Shared types for the Main namespace -->
 <namespace name="Main">
@@ -23,6 +30,11 @@
 
 <!-- Template 1: drafts a shipping confirmation email -->
 <template name="ShippingConfirmation">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema output-format="text">
     interface Input {
       recipient: shared.ContactInfo;
@@ -51,6 +63,11 @@
 
 <!-- Template 2: generates a return label slip -->
 <template name="ReturnSlip">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema output-format="text">
     interface Input {
       customer: shared.ContactInfo;

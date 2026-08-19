@@ -2,7 +2,20 @@
   Demonstrates: structured JSON output, union types (string-literal and
   discriminated), optional fields, JSDoc on types.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
+
 <template name="TriageTicket">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     /** A support ticket to be triaged. */
     interface Input {

@@ -145,6 +145,10 @@ describe("02-structured-output / TriageTicket", () => {
   it("userMessage wraps subject in <Subject> tag via <enclosed>", () => {
     expect(prompt.userMessage).toMatch(/<Subject>/);
   });
+
+  it("meta contains the model and temperature declared in <meta>", () => {
+    expect(prompt.meta).toMatch({ model: "gpt-4o", temperature: 0.2 });
+  });
 });
 
 // ─── 03 Tools: tool registration, executeTools, example with intermediateSteps

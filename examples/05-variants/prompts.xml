@@ -3,7 +3,20 @@
   All variants share the same Input/Output types and user message.
   The `variant` field in Input drives which variant is selected at runtime.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
+
 <template name="WriteProductDescription">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     interface Input {
       productName: string;

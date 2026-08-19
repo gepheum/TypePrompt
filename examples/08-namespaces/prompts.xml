@@ -3,6 +3,13 @@
   templates. Templates reference shared types from their own namespace using
   the `shared.` prefix.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
 
 <!-- ── Finance namespace ────────────────────────────────────────────────── -->
 
@@ -16,6 +23,11 @@
 </namespace>
 
 <template name="SummarizeTransaction" namespace="Finance">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     interface Input {
       description: string;
@@ -43,6 +55,11 @@
 </template>
 
 <template name="DetectAnomaly" namespace="Finance">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     interface Input {
       recentTransactions: {
@@ -91,6 +108,11 @@
 </namespace>
 
 <template name="DraftNda" namespace="Legal">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema output-format="text">
     interface Input {
       disclosingParty: shared.Party;
@@ -115,6 +137,11 @@
 </template>
 
 <template name="SummarizeClause" namespace="Legal">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     interface Input {
       clauseText: string;

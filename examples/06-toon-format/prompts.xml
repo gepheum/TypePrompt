@@ -3,7 +3,20 @@
   TOON (https://toonformat.dev) is a structured text format that is more
   compact and readable than JSON for LLMs, especially with deeply nested data.
 -->
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>
+
 <template name="WriteComparisonArticle">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
   <schema>
     type ProductCategory = "storage" | "compute" | "database" | "networking";
 
