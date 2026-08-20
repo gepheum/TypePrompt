@@ -161,7 +161,6 @@ describe("02-structured-output / TriageTicket", () => {
     expect(prompt.userMessage).toMatch(/customerTier:/);
   });
 
-  // Python sorts YAML fields alphabetically; TypeScript preserves schema declaration order.
   // Python strips the trailing newline emitted by the YAML serializer; TypeScript does not.
   it("yaml: exact userMessage", () => {
     expect(prompt.userMessage).toMatch(

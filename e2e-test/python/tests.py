@@ -254,10 +254,10 @@ class TestTriageTicket:
         assert "subject:" in self.prompt.user_message
         assert "customerTier:" in self.prompt.user_message
 
-    # Python sorts YAML fields alphabetically; TypeScript preserves schema declaration order.
+    # Python strips the trailing newline emitted by the YAML serializer; TypeScript does not.
     def test_yaml_exact_user_message(self):
         assert self.prompt.user_message == (
-            "body: Every time.\ncustomerTier: pro\nrecentTickets: []\nsubject: App crashes"
+            "subject: App crashes\nbody: Every time.\ncustomerTier: pro\nrecentTickets: []"
         )
 
     def test_meta_contains_declared_model_and_temperature(self):

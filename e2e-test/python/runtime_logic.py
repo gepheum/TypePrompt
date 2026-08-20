@@ -389,7 +389,10 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                     return json.dumps(v, indent=2)
                 case "yaml":
                     return yaml.dump(
-                        v, allow_unicode=True, default_flow_style=False
+                        v,
+                        allow_unicode=True,
+                        default_flow_style=False,
+                        sort_keys=False,
                     ).rstrip("\n")
                 case "toon":
                     return toon_format.encode(v)
