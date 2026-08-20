@@ -14,9 +14,17 @@ export type AttributeSchemaEntry = {
 };
 
 /** Builds an optional enum attribute entry from a list of allowed values. */
-export function oneOf<const T extends string>(values: readonly [T, ...T[]]) {
+export function oneOf<const T extends string>(
+  values: readonly [T, ...T[]],
+): {
+  readonly schema: ZodType<T | undefined, string | undefined>;
+  readonly expected: string;
+} {
   return {
-    schema: z.enum(values as [T, ...T[]]).optional(),
+    schema: z.enum(values as [T, ...T[]]).optional() satisfies ZodType<
+      T | undefined,
+      string | undefined
+    >,
     expected: `one of: ${values.map((v) => `'${v}'`).join(", ")}`,
   };
 }
