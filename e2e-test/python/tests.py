@@ -87,6 +87,52 @@ class TestAnalyzeSalesData:
     def test_tsv_system_message_mentions_tsv(self):
         assert re.search(r"tab-separated", self.tsv_prompt.system_message)
 
+    def test_csv_exact_system_message(self):
+        assert self.csv_prompt.system_message == (
+            "You are a sales analyst. The data below is comma-separated (CSV).\n"
+            "Analyze it and answer the question concisely."
+        )
+
+    def test_csv_exact_user_message(self):
+        assert self.csv_prompt.user_message == (
+            "Top product?\n\nData:\n"
+            "product,units,revenueCents,region\n"
+            "Widget A,120,240000,north\n"
+            "Widget B,85,340000,south"
+        )
+
+    def test_csv_exact_example0_user_message(self):
+        assert self.csv_prompt.examples[0].user_message == (
+            "Which product generated the most revenue?\n\nData:\n"
+            "product,units,revenueCents,region\n"
+            "Widget A,120,240000,north\n"
+            "Widget B,85,340000,south\n"
+            "Widget C,200,180000,east"
+        )
+
+    def test_tsv_exact_system_message(self):
+        assert self.tsv_prompt.system_message == (
+            "You are a sales analyst. The data below is tab-separated (TSV).\n"
+            "Analyze it and answer the question concisely."
+        )
+
+    def test_tsv_exact_user_message(self):
+        assert self.tsv_prompt.user_message == (
+            "Top product?\n\nData:\n"
+            "product\tunits\trevenueCents\tregion\n"
+            "Widget A\t120\t240000\tnorth\n"
+            "Widget B\t85\t340000\tsouth"
+        )
+
+    def test_tsv_exact_example0_user_message(self):
+        assert self.tsv_prompt.examples[0].user_message == (
+            "Which product generated the most revenue?\n\nData:\n"
+            "product\tunits\trevenueCents\tregion\n"
+            "Widget A\t120\t240000\tnorth\n"
+            "Widget B\t85\t340000\tsouth\n"
+            "Widget C\t200\t180000\teast"
+        )
+
 
 # ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
@@ -207,6 +253,12 @@ class TestTriageTicket:
     def test_user_message_contains_input_as_yaml(self):
         assert "subject:" in self.prompt.user_message
         assert "customerTier:" in self.prompt.user_message
+
+    # Python sorts YAML fields alphabetically; TypeScript preserves schema declaration order.
+    def test_yaml_exact_user_message(self):
+        assert self.prompt.user_message == (
+            "body: Every time.\ncustomerTier: pro\nrecentTickets: []\nsubject: App crashes"
+        )
 
     def test_meta_contains_declared_model_and_temperature(self):
         assert self.prompt.meta.model == "gpt-4o"
@@ -447,6 +499,27 @@ class TestWriteComparisonArticle:
 
     def test_has_no_tools(self):
         assert len(_toon_prompt.tools) == 0
+
+    # Python renders integer scores as floats (1000.0) and emits null optional fields (e.g. overage: null).
+    # TypeScript omits null optional fields and renders integers as integers.
+    def test_toon_exact_user_message(self):
+        assert _toon_prompt.user_message == (
+            "Write a comparison article framed around this use case: serving ML inference workloads\n"
+            "\nHere is the data for each provider:\n"
+            "\n[1]:\n"
+            "  - name: CloudX\n"
+            "    region: us-east\n"
+            "    category: compute\n"
+            "    pricing:\n"
+            "      model: perHour\n"
+            "      basePrice: 0.1\n"
+            "      overage: null\n"
+            "    benchmarks[1]{name,score,unit}:\n"
+            "      throughput,1000.0,rps\n"
+            "    pros[1]: fast\n"
+            "    cons[1]: pricey\n"
+            "\nTarget audience: architect"
+        )
 
 
 # ─── 07 Shared types: two templates sharing Main namespace types ───────────────

@@ -161,6 +161,14 @@ describe("02-structured-output / TriageTicket", () => {
     expect(prompt.userMessage).toMatch(/customerTier:/);
   });
 
+  // Python sorts YAML fields alphabetically; TypeScript preserves schema declaration order.
+  // Python strips the trailing newline emitted by the YAML serializer; TypeScript does not.
+  it("yaml: exact userMessage", () => {
+    expect(prompt.userMessage).toMatch(
+      "subject: App crashes on login\nbody: It crashes every time.\ncustomerTier: pro\nrecentTickets: []\n",
+    );
+  });
+
   it("meta contains the model and temperature declared in <meta>", () => {
     expect(prompt.meta).toMatch({ model: "gpt-4o", temperature: 0.2 });
   });
@@ -421,6 +429,13 @@ describe("06-toon-format / WriteComparisonArticle", () => {
   it("has no tools", () => {
     expect(Object.keys(prompt.tools).length).toMatch(0);
   });
+
+  // Python renders integer scores as floats (1000.0) and emits null optional fields (e.g. overage: null).
+  it("toon: exact userMessage", () => {
+    expect(prompt.userMessage).toMatch(
+      "Write a comparison article framed around this use case: serving ML inference workloads\n\nHere is the data for each provider:\n\n[1]:\n  - name: CloudX\n    region: us-east\n    category: compute\n    pricing:\n      model: perHour\n      basePrice: 0.1\n    benchmarks[1]{name,score,unit}:\n      throughput,1000,rps\n    pros[2]: fast,reliable\n    cons[1]: pricey\n\nTarget audience: architect",
+    );
+  });
 });
 
 // ─── 07 Shared types: two templates sharing Main namespace types ───────────────
@@ -680,6 +695,42 @@ describe("e01 / AnalyzeSalesData", () => {
 
   it("tsv system message mentions TSV", () => {
     expect(tsv.systemMessage).toMatch(/tab-separated/);
+  });
+
+  it("csv: exact systemMessage", () => {
+    expect(csv.systemMessage).toMatch(
+      "You are a sales analyst. The data below is comma-separated (CSV).\nAnalyze it and answer the question concisely.",
+    );
+  });
+
+  it("csv: exact userMessage", () => {
+    expect(csv.userMessage).toMatch(
+      "Top product?\n\nData:\nproduct,units,revenueCents,region\nWidget A,120,240000,north\nWidget B,85,340000,south",
+    );
+  });
+
+  it("csv: exact example[0] userMessage", () => {
+    expect(csv.examples[0]!.userMessage).toMatch(
+      "Which product generated the most revenue?\n\nData:\nproduct,units,revenueCents,region\nWidget A,120,240000,north\nWidget B,85,340000,south\nWidget C,200,180000,east",
+    );
+  });
+
+  it("tsv: exact systemMessage", () => {
+    expect(tsv.systemMessage).toMatch(
+      "You are a sales analyst. The data below is tab-separated (TSV).\nAnalyze it and answer the question concisely.",
+    );
+  });
+
+  it("tsv: exact userMessage", () => {
+    expect(tsv.userMessage).toMatch(
+      "Top product?\n\nData:\nproduct\tunits\trevenueCents\tregion\nWidget A\t120\t240000\tnorth\nWidget B\t85\t340000\tsouth",
+    );
+  });
+
+  it("tsv: exact example[0] userMessage", () => {
+    expect(tsv.examples[0]!.userMessage).toMatch(
+      "Which product generated the most revenue?\n\nData:\nproduct\tunits\trevenueCents\tregion\nWidget A\t120\t240000\tnorth\nWidget B\t85\t340000\tsouth\nWidget C\t200\t180000\teast",
+    );
   });
 });
 
