@@ -64,8 +64,8 @@ export function validateTemplate(args: {
     errors.push(...tools.errors);
   }
 
-  const options: Options = {
-    isVariantSpecialization: template.contents.kind === "variants",
+  const topLevelOptions: Options = {
+    isVariantSpecialization: false,
     namespaceTools: args.namespaceTools,
     templateTools: tools.kind === "success" ? tools.tools : {},
   };
@@ -74,7 +74,7 @@ export function validateTemplate(args: {
       ...validateTemplateContent(
         template.contents.content,
         templateSchema,
-        options,
+        topLevelOptions,
       ),
     );
   } else {
@@ -82,18 +82,21 @@ export function validateTemplate(args: {
       ...validateTemplateContent(
         template.contents.defaultContent,
         templateSchema,
-        options,
+        topLevelOptions,
       ),
     );
     for (const variant of template.contents.variants) {
       errors.push(
-        ...validateTemplateContent(variant.content, templateSchema, options),
+        ...validateTemplateContent(variant.content, templateSchema, {
+          ...topLevelOptions,
+          isVariantSpecialization: true,
+        }),
       );
     }
   }
 
   for (const snippet of template.snippets) {
-    errors.push(...validateSnippet(snippet, templateSchema, options));
+    errors.push(...validateSnippet(snippet, templateSchema, topLevelOptions));
   }
 
   if (errors.length > 0) {
