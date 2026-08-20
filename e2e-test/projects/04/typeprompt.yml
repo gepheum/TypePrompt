@@ -1,4 +1,4 @@
-input: ../../../examples/04-snippets/prompts.xml
+input: ../../../examples/04-variants/prompts.xml
 gen:
   typescript:
     enabled: true

@@ -252,7 +252,7 @@ describe("03-tools / ResearchQuestion", () => {
 
 describe("04-snippets / SummarizeDocument", () => {
   it("switch snippet: executive audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       audience: "executive",
@@ -261,7 +261,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("switch snippet: technical audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       audience: "technical",
@@ -270,7 +270,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("switch snippet: general audience instruction is selected", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       audience: "general",
@@ -279,7 +279,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("switch snippet: executive instruction does not bleed into technical render", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       audience: "technical",
@@ -288,7 +288,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("conditional snippet: focus instruction appears when focusTopic is set", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       focusTopic: "climate change",
@@ -298,7 +298,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("conditional snippet: focus instruction is absent when focusTopic is not provided", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "T",
       content: "C",
       audience: "executive",
@@ -307,7 +307,7 @@ describe("04-snippets / SummarizeDocument", () => {
   });
 
   it("userMessage wraps document title in <Title> via <enclosed>", () => {
-    const p = p04.summarizeDocument.render({
+    const p = p05.summarizeDocument.render({
       title: "AI Report",
       content: "...",
       audience: "technical",
@@ -323,15 +323,15 @@ describe("05-variants / WriteProductDescription", () => {
     productName: "AquaFilter Pro",
     features: ["removes 99.9% of contaminants", "lasts 6 months"],
   };
-  const marketing = p05.writeProductDescription.render({
+  const marketing = p04.writeProductDescription.render({
     ...base,
     variant: "marketing",
   });
-  const technical = p05.writeProductDescription.render({
+  const technical = p04.writeProductDescription.render({
     ...base,
     variant: "technical",
   });
-  const brief = p05.writeProductDescription.render({
+  const brief = p04.writeProductDescription.render({
     ...base,
     variant: "brief",
   });

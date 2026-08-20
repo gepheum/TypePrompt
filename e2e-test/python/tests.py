@@ -345,32 +345,32 @@ class TestResearchQuestion:
 
 class TestSummarizeDocument:
     def test_switch_snippet_selects_executive_instruction(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(title="T", content="C", audience="executive")
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(title="T", content="C", audience="executive")
         )
         assert re.search(r"non-technical executive audience", p.system_message)
 
     def test_switch_snippet_selects_technical_instruction(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(title="T", content="C", audience="technical")
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(title="T", content="C", audience="technical")
         )
         assert re.search(r"technical audience", p.system_message)
 
     def test_switch_snippet_selects_general_instruction(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(title="T", content="C", audience="general")
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(title="T", content="C", audience="general")
         )
         assert re.search(r"general audience", p.system_message)
 
     def test_switch_snippet_does_not_bleed_into_other_variant(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(title="T", content="C", audience="technical")
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(title="T", content="C", audience="technical")
         )
         assert "business impact" not in p.system_message
 
     def test_conditional_snippet_focus_instruction_when_focus_topic_set(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(
                 title="T",
                 content="C",
                 audience="general",
@@ -380,14 +380,14 @@ class TestSummarizeDocument:
         assert "AI safety" in p.system_message
 
     def test_conditional_snippet_no_focus_instruction_when_absent(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(title="T", content="C", audience="executive")
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(title="T", content="C", audience="executive")
         )
         assert "Focus the summary" not in p.system_message
 
     def test_user_message_wraps_title_in_enclosed_tag(self):
-        p = p04.summarize_document.render(
-            s04.summarize_document.Input(
+        p = p05.summarize_document.render(
+            s05.summarize_document.Input(
                 title="AI Report", content="...", audience="technical"
             )
         )
@@ -402,14 +402,14 @@ class TestWriteProductDescription:
         "product_name": "AquaFilter Pro",
         "features": ["removes 99.9% of contaminants", "lasts 6 months"],
     }
-    marketing = p05.write_product_description.render(
-        s05.write_product_description.Input(**base, variant="marketing")
+    marketing = p04.write_product_description.render(
+        s04.write_product_description.Input(**base, variant="marketing")
     )
-    technical = p05.write_product_description.render(
-        s05.write_product_description.Input(**base, variant="technical")
+    technical = p04.write_product_description.render(
+        s04.write_product_description.Input(**base, variant="technical")
     )
-    brief = p05.write_product_description.render(
-        s05.write_product_description.Input(**base, variant="brief")
+    brief = p04.write_product_description.render(
+        s04.write_product_description.Input(**base, variant="brief")
     )
 
     def test_marketing_system_prompt(self):

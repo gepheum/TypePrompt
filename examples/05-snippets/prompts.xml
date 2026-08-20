@@ -31,6 +31,19 @@
     }
   </schema>
 
+  <system>
+    You are an expert document summarizer.
+    <insert snippet="audienceInstruction"/>
+    <insert snippet="focusInstruction"/>
+  </system>
+
+  <user>
+    Summarize the following document.
+
+    <enclosed tag="Title"><insert val="input.title"/></enclosed>
+    <enclosed tag="Document"><insert val="input.content"/></enclosed>
+  </user>
+
   <!--
     Reusable snippet: inserted at the top of the system prompt.
     Uses <insert val="it"/> to reference the focusTopic expression tested by `if`.
@@ -59,17 +72,4 @@
       Explain any specialized terms you use.
     </on>
   </snippet>
-
-  <system>
-    You are an expert document summarizer.
-    <insert snippet="audienceInstruction"/>
-    <insert snippet="focusInstruction"/>
-  </system>
-
-  <user>
-    Summarize the following document.
-
-    <enclosed tag="Title"><insert val="input.title"/></enclosed>
-    <enclosed tag="Document"><insert val="input.content"/></enclosed>
-  </user>
 </template>
