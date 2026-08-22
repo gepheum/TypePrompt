@@ -36,9 +36,11 @@ class WatchModeMainLoop {
     private readonly mode: "watch" | "once",
   ) {}
 
+  private readonly include = Paths.resolve(Paths.join(this.project, this.config.include));
+
   async start(): Promise<void> {
     await this.generate();
-    const include = Paths.join(this.project, this.config.include);
+    const { include } = this;
     const watcher = new Watcher(globParent(include), {
       renameDetection: true,
       recursive: true,
@@ -117,10 +119,7 @@ class WatchModeMainLoop {
           const successMessage = `Generation succeeded at ${date}`;
           console.log(makeGreen(successMessage));
           console.log("\nWaiting for changes in files matching:");
-          const glob = Paths.resolve(
-            Paths.join(this.project, this.config.include),
-          );
-          console.log(`  ${glob}`);
+          console.log("  ".concat(this.include));
         }
         return true;
       }
