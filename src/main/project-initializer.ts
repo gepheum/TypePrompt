@@ -33,7 +33,7 @@ export function initializeProject(projectDir: string): void {
   console.log("Done. Run: npx typeprompt gen");
 }
 
-const DEFAULT_CONFIG_YAML = `
+export const DEFAULT_CONFIG_YAML = `
 # TypePrompt configuration. Run 'npx typeprompt gen' to generate code.",
 
 include: prompts/**/*.xml
@@ -46,7 +46,7 @@ gen:
     file: ./prompts.gen.ts
 `.trimStart();
 
-const HELLO_WORLD_TEMPLATE = `
+export const HELLO_WORLD_TEMPLATE = `
 <template name="SayHello">
   <schema>
     interface Input {

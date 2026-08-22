@@ -46,7 +46,7 @@ export function formatError(
     " - ",
     error.message,
     error.hint ? makeLightGray(`\nHint: ${error.hint}`) : "",
-    error.rule ? makeLightGray(`\nRule: ${error.hint}`) : "",
+    error.rule ? makeLightGray(`\nRule: ${error.rule}`) : "",
     "\n\n",
     makeBlackOnWhite(lineNumberStr),
     ` ${line.line}\n`,
