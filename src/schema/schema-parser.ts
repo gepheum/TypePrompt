@@ -241,8 +241,8 @@ class SchemaParser {
         "(": EXACT_MATCHER,
         "{": EXACT_MATCHER,
         "|": context?.lastTokenWasPipe ? NEVER_MATCHER : EXACT_MATCHER,
-        stringLiteral: STRING_LITERAL_MATCHER,
         shared: EXACT_MATCHER,
+        stringLiteral: STRING_LITERAL_MATCHER,
         identifier: IDENTIFIER_MATCHER,
       });
       switch (match) {
@@ -523,10 +523,10 @@ class SchemaParser {
     const descriptors = Object.entries(matchers)
       .map(([id, matcher]) => matcher.descriptor(id))
       .filter((d) => d)
-      .join(" or ");
+      .join(", ");
     this.parserErrors.push({
       span: this.tokenToSpan(token),
-      message: `Expected: ${descriptors}`,
+      message: `Expected one of: ${descriptors}`,
     });
     return "noMatch";
   }
@@ -610,7 +610,7 @@ const IDENTIFIER_MATCHER: TokenMatcher = {
 
 const STRING_LITERAL_MATCHER: TokenMatcher = {
   test: (token: Token) => token.kind === "string-literal",
-  descriptor: () => "string",
+  descriptor: () => "string literal",
 };
 
 type TokenMatchers = { readonly [id: string]: TokenMatcher };
