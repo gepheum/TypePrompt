@@ -22,12 +22,13 @@ export function makeRenderableErrors(
       readonly lineFinder: LineFinderData;
     };
   },
+  pathNormalizer: (path: string) => string,
 ): readonly RenderableError[] {
   const result: RenderableError[] = [];
   for (const [path, errors] of Object.entries(pathToErrors)) {
     const { lineFinder } = pathToLineFinder[path]!;
     for (const error of errors) {
-      result.push(makeRenderableError(error, path, lineFinder));
+      result.push(makeRenderableError(error, path, lineFinder, pathNormalizer));
     }
   }
   return result;
@@ -37,7 +38,9 @@ export function makeRenderableError(
   error: InternalError,
   path: string,
   lineFinder: LineFinderData,
+  pathNormalizer: (path: string) => string,
 ): RenderableError {
+  path = pathNormalizer(path);
   const { message, hint, rule, suggestions } = error;
   const start = findLine(error.span.start, lineFinder);
   const end = findLine(error.span.end, lineFinder);

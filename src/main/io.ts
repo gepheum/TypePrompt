@@ -1,6 +1,5 @@
 import * as FileSystem from "fs";
 import * as FileSystemPromises from "fs/promises";
-import * as Paths from "path";
 
 export interface FileReader {
   readTextFile(path: string): string | undefined;
@@ -69,14 +68,5 @@ export async function isDirectory(path: string): Promise<boolean> {
     return (await FileSystemPromises.lstat(path)).isDirectory();
   } catch (_e) {
     return false;
-  }
-}
-
-export function rewritePathForRendering(path: string): string {
-  if (Paths.isAbsolute(path) || /^\.{1,2}[/\\]$/.test(path)) {
-    return path;
-  } else {
-    // To make it clear that it's a path, prepend "./"
-    return `.${Paths.sep}${path}`;
   }
 }

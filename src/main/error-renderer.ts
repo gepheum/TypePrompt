@@ -45,6 +45,8 @@ export function formatError(
     formatLocation(error.path, error.start),
     " - ",
     error.message,
+    ...(error.hint ? ["\n  hint: ", makeGray(error.hint)] : []),
+    ...(error.rule ? ["\n  rule: ", makeGray(error.rule)] : []),
     "\n\n",
     makeBlackOnWhite(lineNumberStr),
     ` ${line.line}\n`,

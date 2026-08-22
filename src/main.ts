@@ -13,11 +13,7 @@ import { parseConfigYaml, type Config } from "./config/config-parser.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import { makeGreen, makeRed, renderErrors } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
-import {
-  isDirectory,
-  REAL_FILE_SYSTEM,
-  rewritePathForRendering,
-} from "./main/io.js";
+import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 // import { initializeProject } from "./project_initializer.js";
 import globParent from "glob-parent";
@@ -31,13 +27,14 @@ import { createLineFinder } from "./util/line-finder.js";
 
 class WatchModeMainLoop {
   constructor(
-    private readonly project: string,
+    private readonly resolvedProject: string,
     private readonly config: Config,
     private readonly mode: "watch" | "once",
   ) {}
 
-  private readonly include = Paths.resolve(
-    Paths.join(this.project, this.config.include),
+  private readonly include = Paths.join(
+    this.resolvedProject,
+    this.config.include,
   );
 
   async start(): Promise<void> {
@@ -90,7 +87,7 @@ class WatchModeMainLoop {
       let compilationResult: CompilationResult;
       try {
         const templateFiles = await collectTemplateFiles(
-          this.project,
+          this.resolvedProject,
           this.config,
         );
         compilationResult = compile(templateFiles, {
@@ -109,6 +106,7 @@ class WatchModeMainLoop {
         const errors = makeRenderableErrors(
           compilationResult.finalErrors,
           compilationResult.sourceFiles,
+          makePathNormalizer(this.resolvedProject),
         );
         renderErrors(errors, "error");
         return false;
@@ -143,7 +141,7 @@ class WatchModeMainLoop {
     // Write all the generated files.
     await Promise.all(
       outputFiles.map(async (outputFile) => {
-        const fsPath = Paths.join(this.project, outputFile.path);
+        const fsPath = Paths.join(this.resolvedProject, outputFile.path);
         await FileSystem.mkdir(Paths.dirname(fsPath), { recursive: true });
         await FileSystem.writeFile(fsPath, outputFile.content, "utf-8");
       }),
@@ -227,18 +225,29 @@ async function format(
 }
 
 async function runGeneration(
-  project: string,
+  resolvedProject: string,
   config: Config,
   mode: "watch" | "once",
 ): Promise<void> {
   // Run the code generators in watch mode or once.
-  const watchModeMainLoop = new WatchModeMainLoop(project, config, mode);
+  const watchModeMainLoop = new WatchModeMainLoop(
+    resolvedProject,
+    config,
+    mode,
+  );
   if (mode === "watch") {
     await watchModeMainLoop.start();
   } else {
     const success: boolean = await watchModeMainLoop.generate();
     process.exit(success ? 0 : 1);
   }
+}
+
+function makePathNormalizer(projectDir: string): (path: string) => string {
+  const currentDir = Paths.resolve(".");
+  return (path: string): string => {
+    return Paths.relative(currentDir, Paths.join(projectDir, path));
+  };
 }
 
 async function main(): Promise<void> {
@@ -253,10 +262,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const project = args.project || ".";
+  const resolvedProject = Paths.resolve(args.project ?? ".");
 
-  if (!(await isDirectory(project))) {
-    console.error(makeRed(`Not a directory: ${project}`));
+  if (!(await isDirectory(resolvedProject))) {
+    console.error(makeRed(`Not a directory: ${resolvedProject}`));
     process.exit(1);
   }
 
@@ -272,9 +281,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const configPath = rewritePathForRendering(
-    Paths.join(project, "typeprompt.yml"),
-  );
+  const configPath = Paths.join(resolvedProject, "typeprompt.yml");
   const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
   if (configContent === undefined) {
     console.error(makeRed(`Cannot find ${configPath}`));
@@ -284,8 +291,9 @@ async function main(): Promise<void> {
   const configResult = parseConfigYaml(configContent);
   if (configResult.kind === "error") {
     const lineFinder = createLineFinder(configContent);
+    const pathNormalizer = makePathNormalizer(resolvedProject);
     const errors = configResult.errors.map((e): RenderableError =>
-      makeRenderableError(e, configPath, lineFinder),
+      makeRenderableError(e, configPath, lineFinder, pathNormalizer),
     );
     console.error(makeRed("Invalid TypePrompt config"));
     renderErrors(errors, "error");
@@ -305,7 +313,7 @@ async function main(): Promise<void> {
       break;
     }
     case "gen": {
-      await runGeneration(project, config, args.subcommand ?? "once");
+      await runGeneration(resolvedProject, config, args.subcommand ?? "once");
       break;
     }
     default: {
