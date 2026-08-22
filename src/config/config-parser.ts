@@ -1,44 +1,30 @@
-import { LineCounter, parseDocument, Scalar, YAMLMap } from "yaml";
+import { parseDocument, Scalar, YAMLMap } from "yaml";
 import { z } from "zod";
+import { InternalError, InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
   /// Glob pattern to match template files to be processed.
   /// Defaults to `prompts/*.xml`.
-  readonly input?: string;
+  readonly include: string;
 
-  readonly gen: {
-    readonly typescript?:
-      | {
-          readonly enabled: false;
-        }
-      | {
-          readonly enabled: true;
-          /** Path to the generated .ts file. */
-          readonly file: string;
-        };
-    readonly python?:
-      | {
-          readonly enabled: false;
-        }
-      | {
-          readonly enabled: true;
-          /** Path to the generated .py file. */
-          readonly file: string;
-        };
+  readonly gen?: {
+    readonly typescript?: {
+      /** Path to the generated .ts file. */
+      readonly file: string;
+    };
+    readonly python?: {
+      /** Path to the generated .py file. */
+      readonly file: string;
+    };
   };
 };
 
-export interface ConfigParseError {
-  readonly ok: false;
-  readonly messages: readonly string[];
-}
-
 export interface ConfigParseSuccess {
-  readonly ok: true;
+  readonly kind: "success";
   readonly config: Config;
 }
 
-export type ConfigParseResult = ConfigParseSuccess | ConfigParseError;
+export type ConfigParseResult = ConfigParseSuccess | InternalErrors;
 
 export interface ParseConfigYamlArgs {
   readonly content: string;
@@ -46,16 +32,15 @@ export interface ParseConfigYamlArgs {
 }
 
 export function parseConfigYaml(args: ParseConfigYamlArgs): ConfigParseResult {
-  const lineCounter = new LineCounter();
-  const doc = parseDocument(args.content, { lineCounter });
+  const doc = parseDocument(args.content);
 
   if (doc.errors.length > 0) {
     return {
-      ok: false,
-      messages: doc.errors.map((e) => {
-        const pos = lineCounter.linePos(e.pos[0]);
-        return `${args.path}:${pos.line}:${pos.col}: ${e.message}`;
-      }),
+      kind: "error",
+      errors: doc.errors.map((e) => ({
+        span: { start: e.pos[0], end: e.pos[1] },
+        message: e.message,
+      })),
     };
   }
 
@@ -63,58 +48,47 @@ export function parseConfigYaml(args: ParseConfigYamlArgs): ConfigParseResult {
 
   if (!parseResult.success) {
     return {
-      ok: false,
-      messages: parseResult.error.issues.map((issue) =>
-        formatSchemaIssue(args.path, issue, doc, lineCounter),
+      kind: "error",
+      errors: parseResult.error.issues.map((issue) =>
+        makeSchemaIssueError(issue, doc),
       ),
     };
   }
 
-  return { ok: true, config: parseResult.data };
+  return { kind: "success", config: parseResult.data };
 }
 
 const RawConfigSchema = z
   .object({
-    input: z.string().min(1, "must be a non-empty string").optional(),
+    include: z.string().min(1, "must be a non-empty string"),
     gen: z
       .object({
         typescript: z
-          .discriminatedUnion("enabled", [
-            z.object({ enabled: z.literal(false) }).strict(),
-            z
-              .object({
-                enabled: z.literal(true),
-                file: z
-                  .string()
-                  .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
-              })
-              .strict(),
-          ])
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
+          })
+          .strict()
           .optional(),
         python: z
-          .discriminatedUnion("enabled", [
-            z.object({ enabled: z.literal(false) }).strict(),
-            z
-              .object({
-                enabled: z.literal(true),
-                file: z
-                  .string()
-                  .refine((f) => f.endsWith(".py"), `must end with '.py'`),
-              })
-              .strict(),
-          ])
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+          })
+          .strict()
           .optional(),
       })
-      .strict(),
+      .strict()
+      .optional(),
   })
   .strict();
 
-function formatSchemaIssue(
-  filePath: string,
+function makeSchemaIssueError(
   issue: z.core.$ZodIssue,
   doc: ReturnType<typeof parseDocument>,
-  lineCounter: LineCounter,
-): string {
+): InternalError {
   // Walk up the path until we find a node with a source range.
   let nodePath = [...issue.path] as PropertyKey[];
   let node: Scalar | YAMLMap | undefined;
@@ -127,20 +101,20 @@ function formatSchemaIssue(
     nodePath = nodePath.slice(0, -1);
   }
 
-  const locationPrefix = node?.range
-    ? ((): string => {
-        const pos = lineCounter.linePos(node.range[0]);
-        return `${filePath}:${pos.line}:${pos.col}`;
-      })()
-    : filePath;
+  const span = node?.range
+    ? { start: node.range[0], end: node.range[1] }
+    : { start: 0, end: 0 };
 
   if (issue.code === "unrecognized_keys") {
     const keys = issue.keys.map((key) => `'${key}'`).join(", ");
-    return `${locationPrefix}: unknown config field(s): ${keys}`;
+    return { span, message: `Unknown config field(s): ${keys}` };
   }
 
   const issuePath = formatIssuePath(issue.path);
-  return `${locationPrefix}: invalid value for '${issuePath}': ${issue.message}`;
+  return {
+    span,
+    message: `Invalid value for '${issuePath}': ${issue.message}`,
+  };
 }
 
 function formatIssuePath(path: readonly PropertyKey[]): string {
