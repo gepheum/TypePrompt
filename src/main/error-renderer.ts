@@ -43,7 +43,9 @@ export function formatError(
   }
   return [
     formatLocation(error.path, error.start),
-    " - \n\n",
+    " - ",
+    error.message,
+    "\n\n",
     makeBlackOnWhite(lineNumberStr),
     ` ${line.line}\n`,
     makeBlackOnWhite(" ".repeat(lineNumberStr.length)),
