@@ -1,0 +1,35 @@
+<template name="SayHello">
+  <schema>
+    interface Input {
+      /** The name of the person (or planet) to greet. */
+      name: string;
+      /** The language to greet them in. */
+      language: string;
+    }
+
+    interface Output {
+      /** The greeting. */
+      greeting: string;
+      /** A fun fact about the language. */
+      funFact: string;
+    }
+  </schema>
+
+  <system>
+    You are a warm and knowledgeable greeter. Say hello to the given name
+    in the requested language, then share one short fun fact about that language.
+  </system>
+
+  <user>
+    Say hello to <insert val="input.name"/> in <insert val="input.language"/>.
+  </user>
+
+  <examples>
+    - input:
+        name: World
+        language: Hawaiian
+      output:
+        greeting: Aloha, World!
+        funFact: Hawaiian has only 13 letters in its alphabet.
+  </examples>
+</template>

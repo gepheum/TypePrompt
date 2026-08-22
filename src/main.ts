@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import * as FileSystem from "fs/promises";
+import globParent from "glob-parent";
+import { minimatch } from "minimatch";
 import * as Paths from "path";
 import Watcher from "watcher";
 import { OutputFile } from "./codegen/codegen-types.js";
@@ -14,15 +16,13 @@ import { parseCommandLine } from "./main/command-line-parser.js";
 import { makeGreen, makeRed, renderErrors } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
-import { collectTemplateFiles } from "./main/template-files-collector.js";
-// import { initializeProject } from "./project_initializer.js";
-import globParent from "glob-parent";
-import { minimatch } from "minimatch";
+import { initializeProject } from "./main/project-initializer.js";
 import {
   makeRenderableError,
   makeRenderableErrors,
   RenderableError,
 } from "./main/renderable-error.js";
+import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { createLineFinder } from "./util/line-finder.js";
 
 class WatchModeMainLoop {
@@ -262,17 +262,11 @@ async function main(): Promise<void> {
     return;
   }
 
-  const resolvedProject = Paths.resolve(args.project ?? ".");
-
-  if (!(await isDirectory(resolvedProject))) {
-    console.error(makeRed(`Not a directory: ${resolvedProject}`));
-    process.exit(1);
-  }
+  const project = args.project ?? ".";
 
   switch (args.kind) {
     case "init": {
-      // TODO
-      // initializeProject(project);
+      initializeProject(project);
       return;
     }
     case "help":
@@ -281,6 +275,12 @@ async function main(): Promise<void> {
     }
   }
 
+  if (!(await isDirectory(project))) {
+    console.error(makeRed(`Not a directory: ${project}`));
+    process.exit(1);
+  }
+
+  const resolvedProject = Paths.resolve(args.project ?? ".");
   const configPath = Paths.join(resolvedProject, "typeprompt.yml");
   const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
   if (configContent === undefined) {

@@ -1,13 +1,18 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export function initializeProject(rootDir: string): void {
-  const configPath = join(rootDir, "typeprompt.yml");
-  const promptsDir = join(rootDir, "prompts");
-  const helloWorldPath = join(promptsDir, "hello_world.tp");
+export function initializeProject(projectDir: string): void {
+  if (!existsSync(projectDir)) {
+    mkdirSync(projectDir);
+    console.log(`Created ${projectDir}`);
+  }
+
+  const configPath = join(projectDir, "typeprompt.yml");
+  const promptsDir = join(projectDir, "prompts");
+  const helloWorldPath = join(promptsDir, "hello-world.xml");
 
   if (!existsSync(configPath)) {
-    writeFileSync(configPath, DEFAULT_CONFIG_TOML, "utf8");
+    writeFileSync(configPath, DEFAULT_CONFIG_YAML, "utf8");
     console.log(`Created ${configPath}`);
   } else {
     console.log(`Config already exists: ${configPath}`);
@@ -28,25 +33,53 @@ export function initializeProject(rootDir: string): void {
   console.log("Done. Run: npx typeprompt gen");
 }
 
-const DEFAULT_CONFIG_TOML = [
-  '# TypePrompt configuration. Run "npx typeprompt gen" to generate code.',
-  "gen:",
-  "  typescript:",
-  "    enabled: true",
-  "    file: ./prompts.gen.ts",
-  "",
-].join("\n");
+const DEFAULT_CONFIG_YAML = `
+# TypePrompt configuration. Run 'npx typeprompt gen' to generate code.",
 
-const HELLO_WORLD_TEMPLATE = [
-  "HelloWorld:",
-  "  Say hello to $name.",
-  "  $<schema>",
-  "    interface Response {",
-  "      message: string;",
-  "    }",
-  "  $</schema>",
-  "  $<example>",
-  '    {"message": "Hello"}',
-  "  $</example>",
-  "",
-].join("\n");
+include: prompts/**/*.xml
+
+# Uncomment and configure the generators for your target language(s).
+gen:
+  # python:
+  #   file: ./prompts_gen.py
+  typescript:
+    file: ./prompts.gen.ts
+`.trimStart();
+
+const HELLO_WORLD_TEMPLATE = `
+<template name="SayHello">
+  <schema>
+    interface Input {
+      /** The name of the person (or planet) to greet. */
+      name: string;
+      /** The language to greet them in. */
+      language: string;
+    }
+
+    interface Output {
+      /** The greeting. */
+      greeting: string;
+      /** A fun fact about the language. */
+      funFact: string;
+    }
+  </schema>
+
+  <system>
+    You are a warm and knowledgeable greeter. Say hello to the given name
+    in the requested language, then share one short fun fact about that language.
+  </system>
+
+  <user>
+    Say hello to <insert val="input.name"/> in <insert val="input.language"/>.
+  </user>
+
+  <examples>
+    - input:
+        name: World
+        language: Hawaiian
+      output:
+        greeting: Aloha, World!
+        funFact: Hawaiian has only 13 letters in its alphabet.
+  </examples>
+</template>
+`.trimStart();
