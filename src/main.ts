@@ -36,7 +36,9 @@ class WatchModeMainLoop {
     private readonly mode: "watch" | "once",
   ) {}
 
-  private readonly include = Paths.resolve(Paths.join(this.project, this.config.include));
+  private readonly include = Paths.resolve(
+    Paths.join(this.project, this.config.include),
+  );
 
   async start(): Promise<void> {
     await this.generate();

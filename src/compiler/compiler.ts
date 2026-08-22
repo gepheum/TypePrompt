@@ -277,11 +277,6 @@ class CompilationResultImpl implements CompilationResult {
     if (this.metaSchema.kind !== "success") return;
 
     for (const [id, tools] of Object.entries(idToTools)) {
-      if (tools.length !== 1) {
-        // The error will be reported when we look for name conflicts in each
-        // namespace.
-        continue;
-      }
       const tool = tools[0]!;
       const { name } = tool.element;
 
@@ -298,6 +293,15 @@ class CompilationResultImpl implements CompilationResult {
         continue;
       }
 
+      for (const tool of tools) {
+        namespace.names.push({ ...name, path: tool.sourceFile.path });
+      }
+      if (tools.length > 1) {
+        // The error will be reported when we look for name conflicts in each
+        // namespace.
+        continue;
+      }
+
       let validationResult: ToolValidationResult;
       if (tool.cached && namespace === cache?.namespaces[namespaceName]) {
         // Reuse the cached schema validation result.
@@ -311,7 +315,6 @@ class CompilationResultImpl implements CompilationResult {
 
       this.tools[id] = validationResult;
       namespace.tools[name.text] = validationResult;
-      namespace.names.push({ ...name, path: tool.sourceFile.path });
 
       if (validationResult.kind === "error") {
         this.finalErrors[tool.sourceFile.path]!.push(
@@ -340,15 +343,10 @@ class CompilationResultImpl implements CompilationResult {
     }
 
     for (const [id, templates] of Object.entries(idToTemplates)) {
-      if (templates.length !== 1) {
-        // The error will be reported when we look for name conflicts in each
-        // namespace.
-        continue;
-      }
       const template = templates[0]!;
-
       const namespaceName =
         template.element.namespace?.text ?? DEFAULT_NAMESPACE;
+
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[template.sourceFile.path]!.push({
@@ -358,6 +356,18 @@ class CompilationResultImpl implements CompilationResult {
         });
         continue;
       } else if (namespace.schema.kind !== "success") {
+        continue;
+      }
+
+      for (const template of templates) {
+        namespace.names.push({
+          ...template.element.name,
+          path: template.sourceFile.path,
+        });
+      }
+      if (templates.length > 1) {
+        // The error will be reported when we look for name conflicts in each
+        // namespace.
         continue;
       }
 
@@ -397,10 +407,6 @@ class CompilationResultImpl implements CompilationResult {
         });
 
       this.templates[id] = validationResult;
-      namespace.names.push({
-        ...template.element.name,
-        path: template.sourceFile.path,
-      });
 
       if (validationResult.kind === "success") {
         namespace.templates.push(validationResult);
