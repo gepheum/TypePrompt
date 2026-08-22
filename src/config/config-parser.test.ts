@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import { type ConfigParseResult, parseConfigYaml } from "./config-parser.js";
 
 function parse(content: string): ConfigParseResult {
-  return parseConfigYaml({ content, path: "config.yml" });
+  return parseConfigYaml(content);
 }
 
 describe("parseConfigYaml", () => {

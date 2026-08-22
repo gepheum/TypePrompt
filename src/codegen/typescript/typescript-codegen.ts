@@ -29,8 +29,8 @@ export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
   config: Config,
 ): readonly OutputFile[] {
-  const tsConfig = config.gen.typescript;
-  if (!tsConfig || tsConfig.enabled === false) {
+  const tsConfig = config.gen?.typescript;
+  if (!tsConfig) {
     return [];
   }
   return [

@@ -26,13 +26,8 @@ export interface ConfigParseSuccess {
 
 export type ConfigParseResult = ConfigParseSuccess | InternalErrors;
 
-export interface ParseConfigYamlArgs {
-  readonly content: string;
-  readonly path: string;
-}
-
-export function parseConfigYaml(args: ParseConfigYamlArgs): ConfigParseResult {
-  const doc = parseDocument(args.content);
+export function parseConfigYaml(content: string): ConfigParseResult {
+  const doc = parseDocument(content);
 
   if (doc.errors.length > 0) {
     return {

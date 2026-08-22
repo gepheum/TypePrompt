@@ -20,6 +20,7 @@ export type CompilationResult = {
   readonly tools: { readonly [id: string]: ToolValidationResult };
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: InternalError[] };
+  readonly anyErrors: boolean;
 };
 
 /** A {@link CompilationResult} known not to have any errors. */

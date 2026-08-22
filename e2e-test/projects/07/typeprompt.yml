@@ -1,8 +1,6 @@
-input: ../../../examples/07-shared-types/prompts.xml
+include: ../../../examples/07-shared-types/prompts.xml
 gen:
   typescript:
-    enabled: true
     file: ../../typescript/src/gen/prompts-07.ts
   python:
-    enabled: true
     file: ../../python/gen/prompts_07.py

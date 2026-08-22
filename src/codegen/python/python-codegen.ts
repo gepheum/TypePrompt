@@ -22,8 +22,8 @@ export function generatePythonCode(
   compilationResult: ValidCompilationResult,
   config: Config,
 ): readonly OutputFile[] {
-  const pyConfig = config.gen.python;
-  if (!pyConfig || pyConfig.enabled === false) {
+  const pyConfig = config.gen?.python;
+  if (!pyConfig) {
     return [];
   }
   return [

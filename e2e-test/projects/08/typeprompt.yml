@@ -1,8 +1,6 @@
-input: ../../../examples/08-namespaces/prompts.xml
+include: ../../../examples/08-namespaces/prompts.xml
 gen:
   typescript:
-    enabled: true
     file: ../../typescript/src/gen/prompts-08.ts
   python:
-    enabled: true
     file: ../../python/gen/prompts_08.py

@@ -143,6 +143,7 @@ class CompilationResultImpl implements CompilationResult {
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
   readonly finalErrors: { [path: string]: InternalError[] } = {};
+  anyErrors = false;
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];
@@ -187,6 +188,10 @@ class CompilationResultImpl implements CompilationResult {
     if (namespaceResults.length === 1) {
       this.singleNamespace = namespaceResults[0]!;
     }
+
+    this.anyErrors = Object.values(this.finalErrors).some(
+      (errors) => errors.length > 0,
+    );
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {

@@ -1,8 +1,6 @@
-input: ../../../examples/06-toon-format/prompts.xml
+include: ../../../examples/06-toon-format/prompts.xml
 gen:
   typescript:
-    enabled: true
     file: ../../typescript/src/gen/prompts-06.ts
   python:
-    enabled: true
     file: ../../python/gen/prompts_06.py

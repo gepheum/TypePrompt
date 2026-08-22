@@ -1,5 +1,1 @@
-# TypePrompt configuration. Run "npx typeprompt gen" to generate code.
-input: prompts.xml
-gen:
-  typescript:
-    enabled: false
+include: prompts.xml

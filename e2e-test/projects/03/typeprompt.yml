@@ -1,8 +1,6 @@
-input: ../../../examples/03-tools/prompts.xml
+include: ../../../examples/03-tools/prompts.xml
 gen:
   typescript:
-    enabled: true
     file: ../../typescript/src/gen/prompts-03.ts
   python:
-    enabled: true
     file: ../../python/gen/prompts_03.py
