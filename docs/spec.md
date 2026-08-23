@@ -325,10 +325,10 @@ Defines few-shot examples that are included in every rendered prompt. The text c
   output: <Output value>
   intermediateSteps:  # optional; include when the example involves tool calls
     - toolCalls:
-      - callId: <string>
-        tool: <tool name>
-        input: <tool Input value>
-        output: <tool Output value>
+        - callId: <string>
+          tool: <tool name>
+          input: <tool Input value>
+          output: <tool Output value>
 ```
 
 For a template that classifies emails:
