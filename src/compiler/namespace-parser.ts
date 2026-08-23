@@ -25,6 +25,7 @@ export function parseNamespace(
   const { name } = attrs.attributes;
 
   const errors: InternalError[] = [];
+  const warnings: InternalError[] = [];
 
   const nameText = name.value.text;
   if (nameText.toLowerCase() === "meta") {
@@ -44,12 +45,13 @@ export function parseNamespace(
     });
   }
 
-  const textContent = extractTextContent(namespaceNode);
+  const textContent = extractTextContent(namespaceNode, "typescript");
   if (textContent.kind === "error") {
     errors.push(...textContent.errors);
     return { kind: "error", errors };
   }
 
+  warnings.push(...textContent.warnings);
   const schemaParseResult = parseSchema(textContent.text);
   if (schemaParseResult.kind === "error") {
     errors.push(...schemaParseResult.errors);
@@ -71,6 +73,7 @@ export function parseNamespace(
   return {
     kind: "namespace",
     name: attrs.attributes.name.value,
-    schema: schema,
+    schema,
+    warnings,
   };
 }

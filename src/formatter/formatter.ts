@@ -6,7 +6,8 @@ import { XmlComment, XmlDocument, XmlNode } from "../xml/xml-types.js";
 
 export async function formatTemplateFile(content: string): Promise<string> {
   const xmlDocument = parseXmlDocument(content) as XmlDocument;
-  const {slices, anyXmlCommentsInCode} = collectFormattableSlicesForXmlDocument(xmlDocument);
+  const { slices, anyXmlCommentsInCode } =
+    collectFormattableSlicesForXmlDocument(xmlDocument);
 
   if (anyXmlCommentsInCode) {
     // If there are XML comments in TypeScript/YAML code, we cannot format the file.
@@ -36,9 +37,7 @@ type FormattableSlice = {
   readonly format: "typescript" | "xml" | "yaml";
 };
 
-function collectFormattableSlicesForXmlDocument(
-  xmlDocument: XmlDocument,
-): {
+function collectFormattableSlicesForXmlDocument(xmlDocument: XmlDocument): {
   readonly slices: FormattableSlice[];
   readonly anyXmlCommentsInCode: boolean;
 } {
@@ -49,7 +48,7 @@ function collectFormattableSlicesForXmlDocument(
   const xmlCommentsInCode: true[] = [];
   collectFormattableSlices(items, topLevel, slices, xmlCommentsInCode);
   const anyXmlCommentsInCode = xmlCommentsInCode.length > 0;
-  return {slices, anyXmlCommentsInCode};
+  return { slices, anyXmlCommentsInCode };
 }
 
 function collectFormattableSlices(

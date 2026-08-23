@@ -102,6 +102,7 @@ class TemplateParser {
       outputFormat: this.outputFormat,
       contents: contents!,
       snippets: this.snippets,
+      warnings: this.warnings,
     };
   }
 
@@ -175,11 +176,12 @@ class TemplateParser {
         this.outputFormat = outputFormat.value;
       }
     }
-    const textContent = extractTextContent(schemaNode);
+    const textContent = extractTextContent(schemaNode, "typescript");
     if (textContent.kind === "error") {
       this.errors.push(...textContent.errors);
       return;
     }
+    this.warnings.push(...textContent.warnings);
     const schema = parseSchema(textContent.text);
     if (schema.kind === "error") {
       this.errors.push(...schema.errors);
@@ -196,11 +198,12 @@ class TemplateParser {
       return;
     }
     this.errors.push(...checkNoXmlAttributes(toolsNode));
-    const textContent = extractTextContent(toolsNode);
+    const textContent = extractTextContent(toolsNode, "yaml");
     if (textContent.kind === "error") {
       this.errors.push(...textContent.errors);
       return;
     }
+    this.warnings.push(...textContent.warnings);
     const tools = parseYaml(textContent.text);
     if (tools.kind === "error") {
       this.errors.push(...tools.errors);
@@ -242,9 +245,11 @@ class TemplateParser {
       case: caseVal,
       content: contentBuilder,
     });
+    this.warnings.push(...contentBuilder.warnings);
   }
 
   private buildContents(): TemplateContents | null {
+    this.warnings.push(...this.topLevelContent.warnings);
     if (this.variants.length <= 0) {
       const templateTag = this.templateNode.tag;
       const content = this.topLevelContent.buildTopLevel(
@@ -564,6 +569,7 @@ class TemplateParser {
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
   private readonly snippets: Snippet[] = [];
+  private readonly warnings: InternalError[] = [];
 }
 
 type VariantBuilder = {
@@ -583,6 +589,7 @@ class ContentBuilder {
   system: WithTag<Body> | undefined;
   user: WithTag<Body> | undefined;
   examples: WithTag<StrictJsonValue> | undefined;
+  warnings: InternalError[] = [];
 
   parse(
     tag: "meta" | "system" | "user" | "examples",
@@ -599,16 +606,17 @@ class ContentBuilder {
     switch (tag) {
       case "meta": {
         errors.push(...checkNoXmlAttributes(e));
-        const textContent = extractTextContent(e);
+        const textContent = extractTextContent(e, "yaml");
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
-          return;
-        }
-        const meta = parseYaml(textContent.text);
-        if (meta.kind === "error") {
-          errors.push(...meta.errors);
         } else {
-          this.meta = { value: meta, tag: e.tag };
+          this.warnings.push(...textContent.warnings);
+          const meta = parseYaml(textContent.text);
+          if (meta.kind === "error") {
+            errors.push(...meta.errors);
+          } else {
+            this.meta = { value: meta, tag: e.tag };
+          }
         }
         break;
       }
@@ -619,10 +627,11 @@ class ContentBuilder {
         break;
       }
       case "examples": {
-        const textContent = extractTextContent(e);
+        const textContent = extractTextContent(e, "yaml");
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
         } else {
+          this.warnings.push(...textContent.warnings);
           const examples = parseYaml(textContent.text);
           if (examples.kind === "error") {
             errors.push(...examples.errors);

@@ -33,6 +33,7 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
 
   const { name, namespace } = attrs.attributes;
   const errors: InternalError[] = [];
+  const warnings: InternalError[] = [];
 
   let schema: SchemaParseResult | null = null;
   let description: ToolDescription | null = null;
@@ -62,10 +63,11 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
       }
       case "schema": {
         errors.push(...checkNoXmlAttributes(child));
-        const textContent = extractTextContent(child);
+        const textContent = extractTextContent(child, "typescript");
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
         } else {
+          warnings.push(...textContent.warnings);
           const parsed = parseSchema(textContent.text);
           if (parsed.kind === "error") {
             errors.push(...parsed.errors);
@@ -96,5 +98,6 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
     namespace: namespace?.value ?? null,
     description: description!,
     schema: schema!,
+    warnings,
   };
 }

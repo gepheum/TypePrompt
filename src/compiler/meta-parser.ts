@@ -14,7 +14,7 @@ export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
     return attrs;
   }
 
-  const textContent = extractTextContent(metaNode);
+  const textContent = extractTextContent(metaNode, "typescript");
   if (textContent.kind === "error") {
     return textContent;
   }
@@ -35,5 +35,6 @@ export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
     kind: "meta",
     tag: metaNode.tag,
     schema: schema,
+    warnings: textContent.warnings,
   };
 }

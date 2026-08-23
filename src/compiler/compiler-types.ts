@@ -21,6 +21,7 @@ export type CompilationResult = {
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: InternalError[] };
   readonly anyErrors: boolean;
+  readonly warnings: { readonly [path: string]: InternalError[] };
 };
 
 /** A {@link CompilationResult} known not to have any errors. */
@@ -43,6 +44,7 @@ export type SourceFileParseResult = {
   readonly metas: readonly Meta[];
 
   readonly parseErrors: readonly InternalError[];
+  readonly warnings: readonly InternalError[];
 };
 
 export type Template = {
@@ -55,6 +57,7 @@ export type Template = {
   readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
+  readonly warnings: readonly InternalError[];
 };
 
 export type OutputFormat = "json" | "text";
@@ -142,6 +145,7 @@ export type Tool = {
   readonly namespace: TextSpan | null;
   readonly description: ToolDescription;
   readonly schema: SchemaParseResult;
+  readonly warnings: readonly InternalError[];
 };
 
 export type ToolDescription = readonly ToolDescriptionPiece[];
@@ -155,6 +159,7 @@ export type Namespace = {
   readonly kind: "namespace";
   readonly name: TextSpan;
   readonly schema: Schema;
+  readonly warnings: readonly InternalError[];
 };
 
 /** Top-level <meta> element. */
@@ -162,6 +167,7 @@ export type Meta = {
   readonly kind: "meta";
   readonly tag: Span;
   readonly schema: Schema;
+  readonly warnings: readonly InternalError[];
 };
 
 export type NamespaceResult = {

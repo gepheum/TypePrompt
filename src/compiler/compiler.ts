@@ -118,6 +118,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
   readonly metas: Meta[] = [];
 
   readonly parseErrors: InternalError[] = [];
+  readonly warnings: InternalError[] = [];
 }
 
 type Sourced<T> = {
@@ -143,6 +144,7 @@ class CompilationResultImpl implements CompilationResult {
   readonly tools: { [id: string]: ToolValidationResult } = {};
   readonly finalErrors: { [path: string]: InternalError[] } = {};
   anyErrors = false;
+  readonly warnings: { [path: string]: InternalError[] } = {};
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];

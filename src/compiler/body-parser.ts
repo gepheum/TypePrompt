@@ -113,7 +113,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     switch (tag) {
       case "c": {
         errors.push(...checkNoXmlAttributes(child));
-        const textContent = extractTextContent(child);
+        const textContent = extractTextContent(child, "c-tag");
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
           return null;
