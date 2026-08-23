@@ -90,7 +90,7 @@ export type TemplateMeta = {
 };
 
 export type Body<HasValContext extends boolean = false> =
-  readonly BodyPiece<HasValContext>[];
+  ReadonlyArray<BodyPiece<HasValContext>>;
 
 export type BodyInContext = Body<true>;
 
