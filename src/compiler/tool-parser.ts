@@ -17,14 +17,14 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
   const attrs = checkXmlAttributes(toolNode, {
     name: {
       schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-      expected: "a lowerCamelCase identifier",
+      expected: "a camelCase identifier",
     },
     namespace: {
       schema: z
         .string()
         .regex(/^[A-Z][A-Za-z0-9]*$/)
         .optional(),
-      expected: "an UpperCamelCase identifier",
+      expected: "an PascalCase identifier",
     },
   });
   if (attrs.kind === "error") {

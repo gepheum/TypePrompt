@@ -74,7 +74,7 @@ export function parseExpression<HasValContext extends boolean>(
     const identMatch = IDENTIFIER_PATTERN.exec(text);
 
     if (!identMatch) {
-      return fail(pos, length, "Expected: lowerCamelCase identifier");
+      return fail(pos, length, "Expected: camelCase identifier");
     }
 
     pos += identMatch[0].length;

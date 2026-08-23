@@ -204,21 +204,21 @@ describe("parseExpression – property chain errors", () => {
   it("reports an error for a trailing dot with no identifier", () => {
     expect(parseExpression(textNode("input."), NO_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected: lowerCamelCase identifier" }],
+      errors: [{ message: "Expected: camelCase identifier" }],
     });
   });
 
   it("reports an error when the property identifier starts with uppercase", () => {
     expect(parseExpression(textNode("input.Name"), NO_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected: lowerCamelCase identifier" }],
+      errors: [{ message: "Expected: camelCase identifier" }],
     });
   });
 
   it("reports an error when the property identifier starts with a digit", () => {
     expect(parseExpression(textNode("input.1name"), NO_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected: lowerCamelCase identifier" }],
+      errors: [{ message: "Expected: camelCase identifier" }],
     });
   });
 
@@ -247,7 +247,7 @@ describe("parseExpression – property chain errors", () => {
   it("reports an error when a dot has only whitespace after it", () => {
     expect(parseExpression(textNode("input. name"), NO_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected: lowerCamelCase identifier" }],
+      errors: [{ message: "Expected: camelCase identifier" }],
     });
   });
 });

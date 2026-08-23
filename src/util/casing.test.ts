@@ -4,11 +4,11 @@ import { describe, it } from "mocha";
 import { checkNameConflicts, toPascalCase, toSnakeCase } from "./casing.js";
 
 describe("toSnakeCase", () => {
-  it("converts lowerCamelCase", () => {
+  it("converts camelCase", () => {
     expect(toSnakeCase("fooBar")).toMatch("foo_bar");
   });
 
-  it("converts UpperCamelCase", () => {
+  it("converts PascalCase", () => {
     expect(toSnakeCase("FooBar")).toMatch("foo_bar");
   });
 
@@ -58,11 +58,11 @@ describe("toSnakeCase", () => {
 });
 
 describe("toPascalCase", () => {
-  it("converts lowerCamelCase", () => {
+  it("converts camelCase", () => {
     expect(toPascalCase("fooBar")).toMatch("FooBar");
   });
 
-  it("converts UpperCamelCase", () => {
+  it("converts PascalCase", () => {
     expect(toPascalCase("FooBar")).toMatch("FooBar");
   });
 

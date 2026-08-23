@@ -72,8 +72,8 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 
 | Attribute | Required | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `UpperCamelCase` | Unique name within the namespace |
-| `namespace` | No | `UpperCamelCase` | Namespace this template belongs to; defaults to `Main` |
+| `name` | Yes | `PascalCase` | Unique name within the namespace |
+| `namespace` | No | `PascalCase` | Namespace this template belongs to; defaults to `Main` |
 
 **Child elements** (in any order):
 
@@ -392,7 +392,7 @@ A named, reusable fragment of text that can be inserted into `<system>`, `<user>
 </system>
 ```
 
-Snippet names must be `lowerCamelCase`. The same indentation-stripping rules that apply to `<system>` and `<user>` apply here.
+Snippet names must be `camelCase`. The same indentation-stripping rules that apply to `<system>` and `<user>` apply here.
 
 #### Conditional snippet (`if`)
 
@@ -500,8 +500,8 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 
 | Attribute | Required | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `lowerCamelCase` | Unique name within the namespace |
-| `namespace` | No | `UpperCamelCase` | Namespace this tool belongs to; defaults to `Main` |
+| `name` | Yes | `camelCase` | Unique name within the namespace |
+| `namespace` | No | `PascalCase` | Namespace this tool belongs to; defaults to `Main` |
 
 **Child elements:**
 
@@ -576,6 +576,6 @@ Types declared inside `<namespace>` can be referenced from template and tool sch
 
 | Attribute | Required | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `UpperCamelCase` | Unique identifier for this namespace |
+| `name` | Yes | `PascalCase` | Unique identifier for this namespace |
 
 If you don't declare any namespaces, all templates and tools belong to the implicit `Main` namespace. You can still define shared types for that default namespace by declaring `<namespace name="Main">` — any types defined there will be available via `shared.TypeName` in all `Main` templates and tools.

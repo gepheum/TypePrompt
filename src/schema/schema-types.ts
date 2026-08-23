@@ -198,14 +198,14 @@ export type NamingHint = {
         /**
          * Name of the discriminator field.
          * Common to all members in the discriminated union.
-         * In lowerCamelCase.
+         * In camelCase.
          */
         readonly discriminator: string;
         /** Value of the discriminator field. Specific to this member. */
         readonly discriminant:
           | {
               readonly type: "string";
-              /** In lowerCamelCase. */
+              /** In camelCase. */
               readonly value: string;
             }
           | {

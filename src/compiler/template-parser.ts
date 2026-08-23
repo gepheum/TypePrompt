@@ -55,14 +55,14 @@ class TemplateParser {
     const attrs = checkXmlAttributes(this.templateNode, {
       name: {
         schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-        expected: "an UpperCamelCase identifier",
+        expected: "an PascalCase identifier",
       },
       namespace: {
         schema: z
           .string()
           .regex(/^[A-Z][A-Za-z0-9]*$/)
           .optional(),
-        expected: "an UpperCamelCase identifier",
+        expected: "an PascalCase identifier",
       },
     });
     if (attrs.kind === "error") {
@@ -288,7 +288,7 @@ class TemplateParser {
     const attrs = checkXmlAttributes(snippetNode, {
       name: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-        expected: "a lowerCamelCase identifier",
+        expected: "a camelCase identifier",
       },
       if: {
         schema: z.string().optional(),

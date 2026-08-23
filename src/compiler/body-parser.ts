@@ -58,7 +58,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     const attrs = checkXmlAttributes(insertNode, {
       snippet: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-        expected: "a lowerCamelCase identifier",
+        expected: "a camelCase identifier",
       },
     });
     if (attrs.kind === "error") {
