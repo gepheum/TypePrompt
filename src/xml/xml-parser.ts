@@ -115,7 +115,13 @@ class XmlParser {
         message: "Unclosed XML comment",
       });
     } else {
-      this.appendComment({ start: tokenStart, end: tokenEnd });
+      const xmlSlice = this.content.slice(tokenStart, tokenEnd);
+      this.appendComment({
+        kind: "comment",
+        start: tokenStart,
+        end: tokenEnd,
+        xmlSlice,
+      });
     }
     this.cursor = tokenEnd;
   }

@@ -34,4 +34,7 @@ export type Attribute = {
   readonly value: MappedSpan;
 };
 
-export type XmlComment = Span;
+export type XmlComment = Span & {
+  readonly kind: "comment";
+  readonly xmlSlice: string;
+};
