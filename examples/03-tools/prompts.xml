@@ -68,15 +68,15 @@
         question: "What is the current population of Tokyo?"
       intermediateSteps:
         - toolCalls:
-          - callId: s1
-            tool: webSearch
-            input:
-              query: "Tokyo population 2024"
-            output:
-              results:
-                - title: "Tokyo Metropolitan Government"
-                  url: "https://www.metro.tokyo.lg.jp/english/"
-                  snippet: "As of 2024, the population of Tokyo is approximately 13.96 million."
+            - callId: s1
+              tool: webSearch
+              input:
+                query: "Tokyo population 2024"
+              output:
+                results:
+                  - title: "Tokyo Metropolitan Government"
+                    url: "https://www.metro.tokyo.lg.jp/english/"
+                    snippet: "As of 2024, the population of Tokyo is approximately 13.96 million."
       output:
         answer: "As of 2024, Tokyo's population is approximately 13.96 million."
         sources:

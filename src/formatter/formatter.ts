@@ -154,19 +154,17 @@ async function formatCodeElement(
 
   const openTag = rawOpenTag(el, source);
   const closeTag = `</${el.tag.text}>`;
-  const decoded = el.children
-    .map((c) => (c as TextNode).text)
-    .join("")
-    .trim();
+  const raw = el.children.map((c) => (c as TextNode).text).join("");
+  const dedented = stripBaseIndent(raw).trim();
 
-  if (!decoded) {
+  if (!dedented) {
     return `${indent}${openTag}${closeTag}`;
   }
 
   let formatted: string;
   try {
     formatted = (
-      await prettierFormat(decoded, { parser, printWidth: 80, tabWidth: 2 })
+      await prettierFormat(dedented, { parser, printWidth: 80, tabWidth: 2 })
     ).trimEnd();
   } catch {
     return preserveRaw(el, depth);
@@ -273,6 +271,24 @@ function encodeXml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
+/** Strips the leading whitespace of the first non-empty line from every line. */
+function stripBaseIndent(text: string): string {
+  const lines = text.split("\n");
+  let baseIndent = "";
+  for (const line of lines) {
+    if (line.trim() !== "") {
+      baseIndent = line.match(/^([ \t]*)/)![1]!;
+      break;
+    }
+  }
+  if (!baseIndent) return text;
+  return lines
+    .map((line) =>
+      line.startsWith(baseIndent) ? line.slice(baseIndent.length) : line,
+    )
+    .join("\n");
+}
+
 /**
  * Strips the leading whitespace shared by all content lines and re-indents with
  * `newIndent`. All leading blank lines are removed; at most one trailing blank
@@ -312,27 +328,33 @@ const INDENT = "  ";
 
 // Elements whose entire text content is TypeScript
 const TS_CODE_TAGS: ReadonlySet<string> = new Set(["schema", "namespace"]);
+
 // Elements whose entire text content is YAML
 const YAML_CODE_TAGS: ReadonlySet<string> = new Set(["examples", "tools"]);
+
 // Outer elements that contain child elements
 const STRUCTURAL_TAGS: ReadonlySet<string> = new Set([
   "template",
   "tool",
   "variant",
 ]);
-// Elements with whitespace-sensitive mixed text + inline XML content
+
+// Elements with whitespace-sensitive mixed text + inline XML content, plus
+// <examples> whose nested-sequence style conflicts with prettier's formatting
 const WS_SENSITIVE_TAGS: ReadonlySet<string> = new Set([
+  "description",
+  "else",
+  "examples",
+  "on",
+  "snippet",
   "system",
   "user",
-  "description",
-  "snippet",
   "then",
-  "else",
-  "on",
 ]);
+
 // Block-level child tags that make a <snippet> structural rather than inline
 const SNIPPET_BLOCK_CHILDREN: ReadonlySet<string> = new Set([
-  "then",
   "else",
   "on",
+  "then",
 ]);

@@ -12,7 +12,6 @@
 </meta>
 
 <!-- ── Finance namespace ────────────────────────────────────────────────── -->
-
 <namespace name="Finance">
   type Currency = "USD" | "EUR" | "GBP" | "JPY";
 
@@ -96,9 +95,7 @@
   </user>
 </template>
 
-
 <!-- ── Legal namespace ──────────────────────────────────────────────────── -->
-
 <namespace name="Legal">
   type Party = {
     name: string;

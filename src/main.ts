@@ -12,8 +12,14 @@ import {
 } from "./compiler/compiler-types.js";
 import { compile } from "./compiler/compiler.js";
 import { parseConfigYaml, type Config } from "./config/config-parser.js";
+import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
-import { makeGreen, makeRed, renderErrors } from "./main/error-renderer.js";
+import {
+  makeGray,
+  makeGreen,
+  makeRed,
+  renderErrors,
+} from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
 import { initializeProject } from "./main/project-initializer.js";
@@ -154,74 +160,70 @@ class WatchModeMainLoop {
   private previousCompilationResult: CompilationResult | null = null;
 }
 
-// TODO
-// type ModuleFormatResult = {
-//   readonly formattedCode: string;
-//   readonly alreadyFormatted: boolean;
-// };
+type ModuleFormatResult = {
+  readonly path: string;
+  readonly formatted: string;
+  readonly alreadyFormatted: boolean;
+};
 
 async function format(
+  resolvedProject: string,
   config: Config,
-  project: string,
   mode: "fix" | "check",
 ): Promise<void> {
-  // const moduleSet = await collectModules(srcDir, undefined, "lenient");
-  // const pathToFormatResult = new Map<string, ModuleFormatResult>();
-  // for await (const [modulePath, module] of moduleSet.modules) {
-  //   const unformattedCode = module.result.sourceCode;
-  //   const formattedModule = formatModule({
-  //     sourceCode: unformattedCode,
-  //     modulePath: modulePath,
-  //     resolvedModule: module.result,
-  //   });
-  //   const { errors } = formattedModule;
-  //   if (errors.length) {
-  //     renderErrors(errors, "error");
-  //     process.exit(1);
-  //   }
-  //   const fullPath = Paths.join(srcDir, modulePath);
-  //   pathToFormatResult.set(fullPath, {
-  //     formattedCode: formattedModule.newSourceCode,
-  //     alreadyFormatted: formattedModule.newSourceCode === unformattedCode,
-  //   });
-  // }
-  // let numFilesNotFormatted = 0;
-  // const writeTasks: Promise<void>[] = [];
-  // for (const [path, result] of pathToFormatResult) {
-  //   const relativePath = Paths.relative(srcDir, path).replace(/\\/g, "/");
-  //   if (mode === "fix") {
-  //     if (result.alreadyFormatted) {
-  //       console.log(`${makeGray(relativePath)} (unchanged)`);
-  //     } else {
-  //       writeTasks.push(
-  //         FileSystem.writeFile(path, result.formattedCode, "utf-8"),
-  //       );
-  //       console.log(makeGray(relativePath));
-  //     }
-  //   } else {
-  //     const _: "check" = mode;
-  //     if (result.alreadyFormatted) {
-  //       console.log(`${makeGray(relativePath)} (OK)`);
-  //     } else {
-  //       console.log(makeRed(relativePath));
-  //       ++numFilesNotFormatted;
-  //     }
-  //   }
-  // }
-  // await Promise.all(writeTasks);
-  // if (numFilesNotFormatted) {
-  //   console.log();
-  //   console.log(
-  //     makeRed(
-  //       `${numFilesNotFormatted} file${
-  //         numFilesNotFormatted > 1 ? "s" : ""
-  //       } not formatted; run with 'format fix' to format ${
-  //         numFilesNotFormatted > 1 ? "them" : "it"
-  //       }`,
-  //     ),
-  //   );
-  //   process.exit(1);
-  // }
+  const templateFiles = await collectTemplateFiles(resolvedProject, config);
+  const compilationResult = compile(templateFiles, { cache: null });
+  if (compilationResult.anyErrors) {
+    const errors = makeRenderableErrors(
+      compilationResult.finalErrors,
+      compilationResult.sourceFiles,
+      makePathNormalizer(resolvedProject),
+    );
+    renderErrors(errors, "error");
+    process.exit(1);
+  }
+  const pathNormalizer = makePathNormalizer(resolvedProject);
+  const formatResults: ModuleFormatResult[] = await Promise.all(
+    Object.entries(templateFiles).map(async ([relativePath, unformatted]) => {
+      const formatted = await formatTemplateFile(unformatted);
+      const path = pathNormalizer(relativePath);
+      return { path, formatted, alreadyFormatted: formatted === unformatted };
+    }),
+  );
+  let numFilesNotFormatted = 0;
+  const writeTasks: Promise<void>[] = [];
+  for (const { path, formatted, alreadyFormatted } of formatResults) {
+    if (mode === "fix") {
+      if (alreadyFormatted) {
+        console.log(`${makeGray(path)} (unchanged)`);
+      } else {
+        writeTasks.push(FileSystem.writeFile(path, formatted, "utf-8"));
+        console.log(makeGray(path));
+      }
+    } else {
+      const _: "check" = mode;
+      if (alreadyFormatted) {
+        console.log(`${makeGray(path)} (OK)`);
+      } else {
+        console.log(makeRed(path));
+        ++numFilesNotFormatted;
+      }
+    }
+  }
+  await Promise.all(writeTasks);
+  if (numFilesNotFormatted) {
+    console.log();
+    console.log(
+      makeRed(
+        `${numFilesNotFormatted} file${
+          numFilesNotFormatted > 1 ? "s" : ""
+        } not formatted; run with 'format fix' to format ${
+          numFilesNotFormatted > 1 ? "them" : "it"
+        }`,
+      ),
+    );
+    process.exit(1);
+  }
 }
 
 async function runGeneration(
@@ -304,12 +306,8 @@ async function main(): Promise<void> {
   switch (args.kind) {
     case "format": {
       // Check or fix the formatting of the template files.
-      // TODO
-      // await format(
-      //   config,
-      //   project,
-      //   args.subcommand === "ci" ? "check" : "fix",
-      // );
+      const mode = args.subcommand === "ci" ? "check" : "fix";
+      await format(project, config, mode);
       break;
     }
     case "gen": {

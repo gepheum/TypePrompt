@@ -79,6 +79,10 @@ export function makeOrange(text: string): string {
   return `\x1b[38;5;208m${text}\x1b[0m`;
 }
 
+export function makeGray(text: string): string {
+  return `\x1b[90m${text}\x1b[0m`;
+}
+
 export function makeLightGray(text: string): string {
   return `\x1b[37m${text}\x1b[0m`;
 }
