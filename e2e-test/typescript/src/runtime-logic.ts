@@ -209,6 +209,7 @@ const zodSchemas = {
 } as const;
 
 const TEMPLATES_DATA: Spec.Templates = {
+  edition: 0,
   signature: "",
   templates: {},
   tools: {},
@@ -318,7 +319,7 @@ function renderTemplate<Id extends TemplateId>(
   let systemMessage: string;
   let userMessage: string;
   let examples: readonly FewShotExample[];
-  if (contents.kind === "noVariants") {
+  if (contents.kind === "no-variants") {
     const { content } = contents;
     meta = content.meta as Meta;
     systemMessage = renderBody(content.system!, input, snippets);
@@ -400,14 +401,14 @@ function renderBody<Input>(
       case "text": {
         return piece.text;
       }
-      case "insertSnippet": {
+      case "insert-snippet": {
         const snippet = snippets[piece.snippet];
         if (!snippet) {
           throw new Error("Snippet not found: ".concat(piece.snippet));
         }
         return indent(renderSnippet(snippet, input, snippets), piece.indent);
       }
-      case "insertVal": {
+      case "insert-val": {
         const val = evaluate(input, piece.val);
         return indent(format(val, piece.format), piece.indent);
       }
@@ -425,15 +426,15 @@ function renderSnippet<Input>(
     case "snippet": {
       return renderBody(snippet.body, input, snippets);
     }
-    case "snippetIf": {
+    case "snippet-if": {
       const { expression, then: thenBody, else: elseBody } = snippet;
       const evalResult = evaluate(input, expression);
       const condition = ((): boolean => {
         switch (snippet.is) {
-          case "notEmpty": {
+          case "not-empty": {
             return (evalResult as { readonly length: number }).length > 0;
           }
-          case "notNull": {
+          case "not-null": {
             return evalResult !== undefined && evalResult !== null;
           }
           case "true": {
@@ -444,7 +445,7 @@ function renderSnippet<Input>(
       const body = condition ? thenBody : elseBody;
       return renderBody(body, input, snippets);
     }
-    case "snippetSwitch": {
+    case "snippet-switch": {
       const { expression, branches } = snippet;
       const evalResult = evaluate(input, expression);
       const branch = branches[evalResult as string];

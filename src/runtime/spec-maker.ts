@@ -39,8 +39,9 @@ export function makeTemplates(
     ]),
   );
   const singleNamespace = input.singleNamespace !== null;
-  // TODO: set signature
-  return { signature: "", tools, templates, singleNamespace, sourceFiles };
+  const edition = 0;
+  const signature = crypto.randomUUID();
+  return { edition, signature, tools, templates, singleNamespace, sourceFiles };
 }
 
 function makeTool(
@@ -89,7 +90,10 @@ function makeContents(
   context: { readonly namespace: string },
 ): Spec.TemplateContents {
   if (input.kind === "no-variants") {
-    return { kind: "noVariants", content: makeContent(input.content, context) };
+    return {
+      kind: "no-variants",
+      content: makeContent(input.content, context),
+    };
   } else {
     const variants: { [c: string]: Spec.TemplateContent } = {};
     for (const variant of input.variants) {
@@ -189,7 +193,7 @@ function makeBody<HasValContext extends boolean>(
       }
       case "insert-val": {
         pieces.push({
-          kind: "insertVal",
+          kind: "insert-val",
           val: makeExpression(piece.val, context),
           format: piece.format?.text ?? "text",
           indent: piece.indent,
@@ -198,7 +202,7 @@ function makeBody<HasValContext extends boolean>(
       }
       case "insert-snippet": {
         pieces.push({
-          kind: "insertSnippet",
+          kind: "insert-snippet",
           snippet: piece.snippet.text,
           indent: piece.indent,
         });
@@ -253,10 +257,20 @@ function makeSnippet(input: Snippet): Spec.Snippet {
     }
     case "snippet-if": {
       const expression = makeExpression(input.expression, {});
+      const is = ((): "true" | "not-null" | "not-empty" => {
+        switch (input.is?.text ?? "true") {
+          case "true":
+            return "true";
+          case "notNull":
+            return "not-null";
+          case "notEmpty":
+            return "not-empty";
+        }
+      })();
       return {
-        kind: "snippetIf",
+        kind: "snippet-if",
         expression,
-        is: input.is?.text ?? "true",
+        is,
         then: makeBody(input.then, { it: expression }),
         else: makeBody(input.else, { it: expression }),
       };
@@ -268,7 +282,7 @@ function makeSnippet(input: Snippet): Spec.Snippet {
       }
       const expression = makeExpression(input.expression, {});
       return {
-        kind: "snippetSwitch",
+        kind: "snippet-switch",
         expression,
         branches,
       };

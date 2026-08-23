@@ -85,10 +85,6 @@ describe("makeTemplates – empty result", () => {
       sourceFiles: {},
     });
   });
-
-  it("always sets signature to an empty string", () => {
-    expect(makeTemplates(emptyResult(), NO_JSON_SCHEMAS).signature).toBe("");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -350,7 +346,7 @@ describe("makeTemplates – contents", () => {
       },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
-      templates: { "Main:T": { contents: { kind: "noVariants" } } },
+      templates: { "Main:T": { contents: { kind: "no-variants" } } },
     });
   });
 
@@ -484,7 +480,7 @@ describe("makeTemplates – body pieces", () => {
             content: {
               user: [
                 {
-                  kind: "insertVal",
+                  kind: "insert-val",
                   val: { kind: "input" },
                   format: "text",
                   indent: "",
@@ -520,7 +516,7 @@ describe("makeTemplates – body pieces", () => {
         "Main:T": {
           contents: {
             content: {
-              user: [{ kind: "insertVal", format: "json", indent: "  " }],
+              user: [{ kind: "insert-val", format: "json", indent: "  " }],
             },
           },
         },
@@ -543,7 +539,7 @@ describe("makeTemplates – body pieces", () => {
           contents: {
             content: {
               user: [
-                { kind: "insertSnippet", snippet: "header", indent: "    " },
+                { kind: "insert-snippet", snippet: "header", indent: "    " },
               ],
             },
           },
@@ -704,7 +700,7 @@ describe("makeTemplates – snippets", () => {
         "Main:T": {
           snippets: {
             maybeFooter: {
-              kind: "snippetIf",
+              kind: "snippet-if",
               is: "true",
               then: [{ kind: "text", text: "Yes" }],
               else: [{ kind: "text", text: "No" }],
@@ -733,7 +729,7 @@ describe("makeTemplates – snippets", () => {
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
       templates: {
-        "Main:T": { snippets: { s: { kind: "snippetIf", is: "notNull" } } },
+        "Main:T": { snippets: { s: { kind: "snippet-if", is: "not-null" } } },
       },
     });
   });
@@ -767,7 +763,7 @@ describe("makeTemplates – snippets", () => {
         "Main:T": {
           snippets: {
             theme: {
-              kind: "snippetSwitch",
+              kind: "snippet-switch",
               branches: {
                 dark: [{ kind: "text", text: "Dark mode" }],
                 light: [{ kind: "text", text: "Light mode" }],

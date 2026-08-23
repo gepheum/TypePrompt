@@ -15,7 +15,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toSnakeCase } from "../../util/casing.js";
+import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
@@ -599,7 +599,7 @@ function makeNameFromHint(hint: NamingHint): string {
           switch (piece.discriminant.type) {
             case "string":
               return capitalize(piece.discriminator).concat(
-                capitalize(piece.discriminant.value),
+                toPascalCase(piece.discriminant.value),
               );
             case "boolean":
               return (piece.discriminant.value ? "" : "Not").concat(

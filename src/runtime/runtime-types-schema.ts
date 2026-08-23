@@ -4,6 +4,7 @@ import { validateSchema } from "../schema/schema-validator.js";
 
 const SCHEMA = `
 type Templates = {
+  edition: integer;
   signature: string;
   templates: { [id: string]: Template };
   tools: { [id: string]: Tool };
@@ -31,7 +32,7 @@ type TemplateTool = {
 };
 
 type TemplateContents =
-  | { kind: "noVariants"; content: TemplateContent }
+  | { kind: "no-variants"; content: TemplateContent }
   | {
       kind: "variants";
       variants: { [c: string]: TemplateContent };
@@ -66,13 +67,13 @@ type Body = BodyPiece[];
 type BodyPiece =
   | { kind: "text"; text: string }
   | {
-      kind: "insertVal";
+      kind: "insert-val";
       val: Expression;
       format: InsertFormat;
       indent: string;
     }
   | {
-      kind: "insertSnippet";
+      kind: "insert-snippet";
       /** Snippet name. */
       snippet: string;
       /** Only contains whitespace characters. */
@@ -97,14 +98,14 @@ type Snippet =
       body: Body;
     }
   | {
-      kind: "snippetIf";
+      kind: "snippet-if";
       expression: Expression;
-      is: "notNull" | "notEmpty" | "true";
+      is: "not-null" | "not-empty" | "true";
       then: Body;
       else: Body;
     }
   | {
-      kind: "snippetSwitch";
+      kind: "snippet-switch";
       expression: Expression;
       branches: { [c: string]: Body };
     };

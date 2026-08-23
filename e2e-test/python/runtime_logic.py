@@ -220,6 +220,7 @@ class schema(_StaticClass):
 
 
 _templates_data: Final = _internal.Templates(
+    edition=0,
     signature="",
     templates=dict(),
     tools=dict(),
@@ -409,14 +410,14 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 match piece.kind:
                     case "text":
                         parts.append(piece.text)
-                    case "insertVal":
+                    case "insert-val":
                         parts.append(
                             indent(
                                 format_value(evaluate(piece.val, inp), piece.format),
                                 piece.indent,
                             )
                         )
-                    case "insertSnippet":
+                    case "insert-snippet":
                         snippet = snippets.get(piece.snippet)
                         if snippet is None:
                             raise ValueError(f"Snippet not found: {piece.snippet}")
@@ -433,19 +434,19 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             match snippet.kind:
                 case "snippet":
                     return render_body(snippet.body, inp, snippets)
-                case "snippetIf":
+                case "snippet-if":
                     eval_result = evaluate(snippet.expression, inp)
                     match snippet.is_:
-                        case "notEmpty":
+                        case "not-empty":
                             condition = len(eval_result) > 0
-                        case "notNull":
+                        case "not-null":
                             condition = eval_result is not None
                         case "true":
                             condition = bool(eval_result)
                     return render_body(
                         snippet.then if condition else snippet.else_, inp, snippets
                     )
-                case "snippetSwitch":
+                case "snippet-switch":
                     eval_result = evaluate(snippet.expression, inp)
                     branch = snippet.branches.get(str(eval_result))
                     if branch is None:
@@ -489,7 +490,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
         snippets = template.snippets
         contents = template.contents
 
-        if contents.kind == "noVariants":
+        if contents.kind == "no-variants":
             content = contents.content
             meta = _meta_type_adapter.validate_python(content.meta, by_alias=True)
             system_message = render_body(content.system or [], input_val, snippets)
@@ -576,6 +577,7 @@ class _TemplateOverrider:
             raise ValueError("Signature mismatch")
         return _create_prompts(
             _internal.Templates(
+                edition=_templates_data.edition,
                 signature=_templates_data.signature,
                 templates={**_templates_data.templates, **overrides_obj.templates},
                 tools={**_templates_data.tools, **overrides_obj.tools},

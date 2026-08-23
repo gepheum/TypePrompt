@@ -2,6 +2,7 @@
 // Do not edit.
 
 export type Templates = {
+  readonly edition: number;
   readonly signature: string;
   readonly templates: { [id: string]: Template };
   readonly tools: { [id: string]: Tool };
@@ -30,7 +31,7 @@ export type TemplateTool = {
 
 export type TemplateContents =
   | {
-      readonly kind: "noVariants";
+      readonly kind: "no-variants";
       readonly content: TemplateContent;
     }
   | {
@@ -70,13 +71,13 @@ export type BodyPiece =
       readonly text: string;
     }
   | {
-      readonly kind: "insertVal";
+      readonly kind: "insert-val";
       readonly val: Expression;
       readonly format: InsertFormat;
       readonly indent: string;
     }
   | {
-      readonly kind: "insertSnippet";
+      readonly kind: "insert-snippet";
       /** Snippet name. */
       readonly snippet: string;
       /** Only contains whitespace characters. */
@@ -101,14 +102,14 @@ export type Snippet =
       readonly body: Body;
     }
   | {
-      readonly kind: "snippetIf";
+      readonly kind: "snippet-if";
       readonly expression: Expression;
-      readonly is: "notNull" | "notEmpty" | "true";
+      readonly is: "not-null" | "not-empty" | "true";
       readonly then: Body;
       readonly else: Body;
     }
   | {
-      readonly kind: "snippetSwitch";
+      readonly kind: "snippet-switch";
       readonly expression: Expression;
       readonly branches: { [c: string]: Body };
     };
