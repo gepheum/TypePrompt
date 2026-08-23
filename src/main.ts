@@ -108,17 +108,22 @@ class WatchModeMainLoop {
           throw e;
         }
       }
+      const pathNormalizer = makePathNormalizer(this.resolvedProject);
       if (compilationResult.anyErrors) {
         const errors = makeRenderableErrors(
           compilationResult.finalErrors,
           compilationResult.sourceFiles,
-          makePathNormalizer(this.resolvedProject),
+          pathNormalizer,
         );
         renderErrors(errors, "error");
         return false;
       } else {
-        // TODO
-        // renderErrors(warnings, "warning");
+        const warnings = makeRenderableErrors(
+          compilationResult.warnings,
+          compilationResult.sourceFiles,
+          pathNormalizer,
+        );
+        renderErrors(warnings, "warning");
         await this.doGenerate(compilationResult as ValidCompilationResult);
         if (this.mode === "watch") {
           const date = new Date().toLocaleTimeString("en-US");

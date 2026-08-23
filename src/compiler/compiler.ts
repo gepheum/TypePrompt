@@ -68,6 +68,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...template.errors);
       } else {
         result.templates.push(template);
+        result.warnings.push(...template.warnings);
       }
       break;
     }
@@ -77,6 +78,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...tool.errors);
       } else {
         result.tools.push(tool);
+        result.warnings.push(...tool.warnings);
       }
       break;
     }
@@ -86,6 +88,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...namespace.errors);
       } else {
         result.namespaces.push(namespace);
+        result.warnings.push(...namespace.warnings);
       }
       break;
     }
@@ -95,6 +98,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...meta.errors);
       } else {
         result.metas.push(meta);
+        result.warnings.push(...meta.warnings);
       }
       break;
     }
@@ -163,6 +167,7 @@ class CompilationResultImpl implements CompilationResult {
       templates.push(...sourceFile.templates.map(source));
       tools.push(...sourceFile.tools.map(source));
       this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
+      this.warnings[sourceFile.path] = [...sourceFile.warnings];
     }
 
     this.resolveMeta(metas);
