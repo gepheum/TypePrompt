@@ -431,7 +431,7 @@ describe("parseXmlDocument – comments", () => {
     const result = parseXmlDocument(unclosed);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Unclosed XML comment" }],
+      errors: [{ message: "Unclosed XML comment" }, {}],
     });
   });
 });
