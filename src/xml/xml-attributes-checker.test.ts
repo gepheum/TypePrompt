@@ -13,12 +13,7 @@ function parseElement(xml: string): ElementNode {
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  for (const node of result.root.topLevelNodes) {
-    if (node.kind === "element") {
-      return node;
-    }
-  }
-  throw new Error("No element node found");
+  return result.root;
 }
 
 describe("checkXmlAttributes", () => {

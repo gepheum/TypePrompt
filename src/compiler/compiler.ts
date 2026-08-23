@@ -55,49 +55,48 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
     return result;
   }
   const topLevelNodes = checkAllAreElements(
-    xmlDocument.root.topLevelNodes,
+    [xmlDocument.root],
     ["template", "tool", "namespace", "meta"] as const,
     " at the top level",
     result.parseErrors,
   );
-  for (const [tag, topLevelNode] of topLevelNodes) {
-    switch (tag) {
-      case "template": {
-        const template = parseTemplate(topLevelNode);
-        if (template.kind === "error") {
-          result.parseErrors.push(...template.errors);
-        } else {
-          result.templates.push(template);
-        }
-        break;
+  const [tag, topLevelNode] = topLevelNodes[0]!;
+  switch (tag) {
+    case "template": {
+      const template = parseTemplate(topLevelNode);
+      if (template.kind === "error") {
+        result.parseErrors.push(...template.errors);
+      } else {
+        result.templates.push(template);
       }
-      case "tool": {
-        const tool = parseTool(topLevelNode);
-        if (tool.kind === "error") {
-          result.parseErrors.push(...tool.errors);
-        } else {
-          result.tools.push(tool);
-        }
-        break;
+      break;
+    }
+    case "tool": {
+      const tool = parseTool(topLevelNode);
+      if (tool.kind === "error") {
+        result.parseErrors.push(...tool.errors);
+      } else {
+        result.tools.push(tool);
       }
-      case "namespace": {
-        const namespace = parseNamespace(topLevelNode);
-        if (namespace.kind === "error") {
-          result.parseErrors.push(...namespace.errors);
-        } else {
-          result.namespaces.push(namespace);
-        }
-        break;
+      break;
+    }
+    case "namespace": {
+      const namespace = parseNamespace(topLevelNode);
+      if (namespace.kind === "error") {
+        result.parseErrors.push(...namespace.errors);
+      } else {
+        result.namespaces.push(namespace);
       }
-      case "meta": {
-        const meta = parseMeta(topLevelNode);
-        if (meta.kind === "error") {
-          result.parseErrors.push(...meta.errors);
-        } else {
-          result.metas.push(meta);
-        }
-        break;
+      break;
+    }
+    case "meta": {
+      const meta = parseMeta(topLevelNode);
+      if (meta.kind === "error") {
+        result.parseErrors.push(...meta.errors);
+      } else {
+        result.metas.push(meta);
       }
+      break;
     }
   }
 

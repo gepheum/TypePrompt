@@ -31,7 +31,7 @@ class XmlParser {
   private cursor = 0;
   private readonly errors: InternalError[] = [];
   private readonly openElements: OpenElement[] = [];
-  private readonly topLevelNodes: XmlNode[] = [];
+  private root: ElementNode | null = null;
   private readonly topLevelComments: XmlComment[] = [];
 
   constructor(private readonly content: string) {}
@@ -66,15 +66,21 @@ class XmlParser {
       this.appendNode(el);
     }
 
+    if (this.root === null) {
+      this.errors.push({
+        message: "No root element found",
+        span: { start: 0, end: 0 },
+      });
+    }
+
     if (this.errors.length > 0) {
       return { kind: "error", errors: this.errors };
     }
+
     return {
       kind: "success",
-      root: {
-        topLevelNodes: this.topLevelNodes,
-        topLevelComments: this.topLevelComments,
-      },
+      root: this.root!,
+      topLevelComments: this.topLevelComments,
     };
   }
 
@@ -475,7 +481,22 @@ class XmlParser {
     if (parent !== undefined) {
       parent.children.push(node);
     } else {
-      this.topLevelNodes.push(node);
+      // Top-level
+      if (node.kind === "element") {
+        if (this.root === null) {
+          this.root = node;
+        } else {
+          this.errors.push({
+            span: node.tag,
+            message: "Multiple root elements are not allowed",
+          });
+        }
+      } else if (node.kind === "text" && !node.allWhitespace) {
+        this.errors.push({
+          span: node,
+          message: "Unexpected text node at top level",
+        });
+      }
     }
   }
 

@@ -35,8 +35,8 @@ function collectFormattableSlicesForXmlDocument(
   xmlDocument: XmlDocument,
 ): readonly FormattableSlice[] {
   const slices: FormattableSlice[] = [];
-  const { topLevelNodes, topLevelComments } = xmlDocument.root;
-  const items = buildItems(topLevelNodes, topLevelComments);
+  const { root, topLevelComments } = xmlDocument;
+  const items = buildItems([root], topLevelComments);
   const topLevel = true;
   collectFormattableSlices(items, topLevel, slices);
   return slices;

@@ -3,10 +3,8 @@ import { TextSpan } from "../util/shared-types.js";
 
 export type XmlDocument = {
   readonly kind: "success";
-  readonly root: {
-    readonly topLevelNodes: readonly XmlNode[];
-    readonly topLevelComments: readonly XmlComment[];
-  };
+  readonly root: ElementNode;
+  readonly topLevelComments: readonly XmlComment[];
 };
 
 export type XmlNode = TextNode | ElementNode;
