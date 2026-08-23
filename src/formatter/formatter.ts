@@ -132,7 +132,7 @@ async function formatTypescriptAndYaml(
   content: string,
   slices: readonly FormattableSlice[],
 ): Promise<string> {
-  Promise.all(
+  await Promise.all(
     slices
       .filter((r) => r.format === "typescript" || r.format === "yaml")
       .map(async (slice) => {
@@ -151,24 +151,58 @@ async function formatWhitespaceSensitiveXml(
   content: string,
   slices: readonly FormattableSlice[],
 ): Promise<string> {
-  Promise.all(
+  await Promise.all(
     slices
       .filter((r) => r.format === "xml")
       .map(async (slice) => {
-        const { placeholder } = slice;
-        const indent = getPrecedingWhitespace({ content, placeholder });
-        let formatted = await prettierFormat(slice.unformatted, {
+        const { placeholder, unformatted } = slice;
+        const dedented = dedent(unformatted);
+        const wrapped = `<z>${dedented}</z>`
+        let formatted = await prettierFormat(wrapped, {
           parser: "xml",
           plugins: [plugin],
           printWidth: 80,
           tabWidth: 2,
           xmlWhitespaceSensitivity: "strict",
         });
+        formatted = formatted.slice(3, -4); // Remove the <z> wrapper
+        const indent = getPrecedingWhitespace({ content, placeholder });
         formatted = formatted.replace(/^(.+)$/gm, indent.concat("$1"));
         content = content.replace(placeholder, formatted);
       }),
   );
   return content;
+}
+
+function dedent(text: string): string {
+  const baseIndent = computeBaseIndent(text);
+  if (baseIndent.length === 0) {
+    return text;
+  }
+  const regex = new RegExp("\n".concat(baseIndent), "g");
+  return text.replace(regex, "\n");
+}
+
+function computeBaseIndent(text: string): string {
+  const firstNl = text.indexOf("\n");
+  if (firstNl === -1) {
+    return "";
+  }
+  const firstLine = text.slice(0, firstNl);
+  if (/[^ \t]/.test(firstLine)) {
+    return "";
+  }
+  const lines = text.split("\n");
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (/[^ \t]/.test(line)) {
+      const m = line.match(/^[ \t]*/);
+      return m ? m[0] : "";
+    }
+  }
+  const last = lines.at(-1) ?? "";
+  const m = last.match(/^[ \t]*/);
+  return m ? m[0] : "";
 }
 
 function getPrecedingWhitespace(args: {
