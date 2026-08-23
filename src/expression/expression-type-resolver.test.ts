@@ -47,7 +47,7 @@ function parseSchemaOrThrow(source: string): Schema {
   const node = textNode(source);
   const parsed = parseSchema(node);
   if (parsed.kind !== "success") throw new Error("parse failed");
-  const validated = validateSchema(parsed.typeDeclarations, {
+  const validated = validateSchema(parsed, {
     kind: "namespace",
   });
   if (validated.kind !== "success") throw new Error("validation failed");

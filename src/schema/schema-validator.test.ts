@@ -6,8 +6,8 @@ import { EMPTY_SCHEMA } from "./empty-schema.js";
 import { parseSchema } from "./schema-parser.js";
 import type {
   Interface,
+  SchemaParseResult,
   SchemaValidationContext,
-  TypeDeclaration,
   Union,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
@@ -19,16 +19,14 @@ function textNode(source: string): MappedText {
   };
 }
 
-function parseDeclarations(source: string): {
-  readonly [name: string]: TypeDeclaration;
-} {
+function parseDeclarations(source: string): SchemaParseResult {
   const result = parseSchema(textNode(source));
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  return result.typeDeclarations;
+  return result;
 }
 
 // ---------------------------------------------------------------------------

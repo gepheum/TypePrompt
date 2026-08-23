@@ -980,7 +980,7 @@ describe("makeTemplates – JSON schemas", () => {
     };
     const parsed = parseSchema(sourceSpan);
     if (parsed.kind !== "success") throw new Error("parse failed");
-    const schema = validateSchema(parsed.typeDeclarations, {
+    const schema = validateSchema(parsed, {
       kind: "namespace",
     });
     if (schema.kind !== "success") throw new Error("validation failed");

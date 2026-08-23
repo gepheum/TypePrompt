@@ -51,7 +51,7 @@ function parseSchemaOrThrow(source: string): Schema {
     const errors = schemaParseResult.errors.map((e) => e.message).join(", ");
     throw new Error(`Schema parse failed: ${errors}`);
   }
-  const schema = validateSchema(schemaParseResult.typeDeclarations, {
+  const schema = validateSchema(schemaParseResult, {
     kind: "namespace",
   });
   if (schema.kind !== "success") {

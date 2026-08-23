@@ -45,10 +45,7 @@ export function validateTemplate(args: {
     kind: "template",
     namespaceSchema,
   };
-  const templateSchema = validateSchema(
-    template.schema.typeDeclarations,
-    validationContext,
-  );
+  const templateSchema = validateSchema(template.schema, validationContext);
   if (templateSchema.kind === "error") {
     errors.push(...templateSchema.errors);
     return {

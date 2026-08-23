@@ -21,7 +21,7 @@ function compile(source: string): Schema {
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  const validated = validateSchema(parsed.typeDeclarations, {
+  const validated = validateSchema(parsed, {
     kind: "namespace",
   });
   if (validated.kind !== "success") {
@@ -43,7 +43,7 @@ function compileTemplate(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  const validated = validateSchema(parsed.typeDeclarations, {
+  const validated = validateSchema(parsed, {
     kind: "template",
     namespaceSchema: ns,
   });

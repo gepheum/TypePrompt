@@ -10,6 +10,7 @@ import type {
   Interface,
   NamingHint,
   Schema,
+  SchemaParseResult,
   SchemaValidationContext,
   SchemaView,
   Type,
@@ -21,9 +22,11 @@ import { getNameDependencies, NameDependencies } from "./schema-utils.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(
-  typeDeclarations: { readonly [name: string]: TypeDeclaration },
+  schema: SchemaParseResult,
   context: SchemaValidationContext,
 ): Schema | InternalErrors {
+  const { typeDeclarations } = schema;
+
   const errors: InternalError[] = [];
 
   const namespaceSchema = ((): Schema => {

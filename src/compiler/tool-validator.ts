@@ -13,10 +13,7 @@ export function validateTool(args: {
     kind: "tool",
     namespaceSchema,
   };
-  const toolSchema = validateSchema(
-    tool.schema.typeDeclarations,
-    validationContext,
-  );
+  const toolSchema = validateSchema(tool.schema, validationContext);
   if (toolSchema.kind === "error") {
     return toolSchema;
   }

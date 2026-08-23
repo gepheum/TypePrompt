@@ -58,7 +58,7 @@ export function parseNamespace(
     return { kind: "error", errors };
   }
 
-  const schema = validateSchema(schemaParseResult.typeDeclarations, {
+  const schema = validateSchema(schemaParseResult, {
     kind: "namespace",
   });
   if (schema.kind === "error") {
