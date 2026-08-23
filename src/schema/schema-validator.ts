@@ -82,8 +82,8 @@ export function validateSchema(
     if (!requiredType) {
       errors.push({
         span: {
-          start: 0,
-          end: 0,
+          start: schema.sourcePosition,
+          end: schema.sourcePosition,
         },
         message: `Missing required type '${requiredTypeName}'`,
       });

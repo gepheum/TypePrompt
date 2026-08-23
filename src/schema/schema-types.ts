@@ -3,6 +3,7 @@ import type { Span, TextSpan } from "../util/shared-types.js";
 export type SchemaParseResult = {
   readonly kind: "success";
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
+  readonly sourcePosition: number;
 };
 
 export type SchemaValidationContext =

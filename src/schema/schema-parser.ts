@@ -76,6 +76,7 @@ class SchemaParser {
       typeDeclarations: Object.fromEntries(
         typeDeclarations.map((t) => [t.name.text, t]),
       ),
+      sourcePosition: textToSourcePosition(this.content, 0),
     };
   }
 
