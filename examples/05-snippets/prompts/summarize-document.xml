@@ -1,15 +1,3 @@
-<!--
-  Demonstrates: <snippet>, conditional snippet (if/then/else), switch snippet,
-  and <insert snippet="...">.
--->
-<meta>
-  interface Meta {
-    model: "gpt-4o" | "gpt-4o-mini";
-    /** Sampling temperature (0-2). */
-    temperature?: number;
-  }
-</meta>
-
 <template name="SummarizeDocument">
   <meta>
     model: gpt-4o

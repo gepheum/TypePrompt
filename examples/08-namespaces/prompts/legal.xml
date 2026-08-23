@@ -1,0 +1,7 @@
+<namespace name="Legal">
+  type Party = {
+    name: string;
+    role: "client" | "counterparty" | "witness" | "arbitrator";
+    jurisdiction: string;
+  };
+</namespace>

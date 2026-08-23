@@ -1,0 +1,8 @@
+<namespace name="Finance">
+  type Currency = "USD" | "EUR" | "GBP" | "JPY";
+
+  type MoneyAmount = {
+    value: number;
+    currency: Currency;
+  };
+</namespace>

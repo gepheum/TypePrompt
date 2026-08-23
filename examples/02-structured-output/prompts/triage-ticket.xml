@@ -1,15 +1,3 @@
-<!--
-  Demonstrates: <meta> definition, array type, format="yaml" for rendering structured
-  data, JSDoc on types.
--->
-<meta>
-  interface Meta {
-    model: "gpt-4o" | "gpt-4o-mini";
-    /** Sampling temperature (0-2). */
-    temperature?: number;
-  }
-</meta>
-
 <template name="TriageTicket">
   <meta>
     model: gpt-4o

@@ -1,0 +1,35 @@
+<template name="SummarizeClause" namespace="Legal">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema>
+    interface Input {
+      clauseText: string;
+      /** Who is asking — affects what risks to highlight. */
+      reviewingParty: shared.Party;
+    }
+
+    interface Output {
+      plainEnglishSummary: string;
+      potentialRisks: string[];
+      /** Whether the clause is standard or unusual. */
+      assessment: "standard" | "unusual" | "redFlag";
+    }
+  </schema>
+
+  <system>
+    You are a legal analyst. Summarize the contract clause in plain English,
+    list any risks it poses to the reviewing party, and assess whether the
+    clause is standard, unusual, or a red flag.
+  </system>
+
+  <user>
+    Reviewing party: <insert val="input.reviewingParty" format="json"/>
+
+    <enclosed tag="Clause">
+      <insert val="input.clauseText"/>
+    </enclosed>
+  </user>
+</template>

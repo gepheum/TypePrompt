@@ -1,4 +1,4 @@
-include: ../../../examples/06-toon-format/prompts.xml
+include: ../../../examples/06-toon-format/**/*.xml
 gen:
   typescript:
     file: ../../typescript/src/gen/prompts-06.ts

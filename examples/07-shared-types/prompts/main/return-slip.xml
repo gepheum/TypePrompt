@@ -1,0 +1,27 @@
+<!-- Template 2: generates a return label slip -->
+<template name="ReturnSlip">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema output-format="text">
+    interface Input {
+      customer: shared.ContactInfo;
+      returnReason: "defective" | "wrongItem" | "changedMind" | "other";
+      orderNumber: string;
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    Generate a short return slip to be printed and included in the return
+    package. Include the customer name, return address, order number, and
+    reason code.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>

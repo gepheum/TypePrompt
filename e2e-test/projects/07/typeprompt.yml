@@ -1,4 +1,4 @@
-include: ../../../examples/07-shared-types/prompts.xml
+include: ../../../examples/07-shared-types/**/*.xml
 gen:
   typescript:
     file: ../../typescript/src/gen/prompts-07.ts

@@ -1,0 +1,31 @@
+<template name="SummarizeTransaction" namespace="Finance">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema>
+    interface Input {
+      description: string;
+      amount: shared.MoneyAmount;
+      category: "income" | "expense" | "transfer";
+      date: string;
+    }
+
+    interface Output {
+      summary: string;
+      /** Suggested label for bookkeeping. */
+      bookkeepingLabel: string;
+    }
+  </schema>
+
+  <system>
+    You are a bookkeeping assistant. Summarize the transaction in one sentence
+    and suggest a concise bookkeeping label (e.g. "SaaS Subscription",
+    "Client Invoice #42").
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>

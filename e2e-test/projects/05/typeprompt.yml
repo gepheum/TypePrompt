@@ -1,4 +1,4 @@
-include: ../../../examples/05-snippets/prompts.xml
+include: ../../../examples/05-snippets/**/*.xml
 gen:
   typescript:
     file: ../../typescript/src/gen/prompts-05.ts

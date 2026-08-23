@@ -1,0 +1,7 @@
+<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>

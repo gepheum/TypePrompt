@@ -1,1 +1,1 @@
-include: prompts.xml
+include: prompts/**/*.xml

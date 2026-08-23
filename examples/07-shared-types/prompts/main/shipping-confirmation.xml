@@ -1,0 +1,31 @@
+<!-- Template 1: drafts a shipping confirmation email -->
+<template name="ShippingConfirmation">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema output-format="text">
+    interface Input {
+      recipient: shared.ContactInfo;
+      orderNumber: string;
+      estimatedDelivery: string;
+      items: {
+        name: string;
+        quantity: integer;
+      }[];
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    You are a customer service assistant. Write a friendly, concise shipping
+    confirmation email. Include the order number, delivery estimate, and a
+    brief item list.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>

@@ -1,0 +1,15 @@
+<!-- Shared types for the Main namespace -->
+<namespace name="Main">
+  type Address = {
+    street: string;
+    city: string;
+    country: string;
+    postalCode?: string;
+  };
+
+  type ContactInfo = {
+    name: string;
+    email: string;
+    address: Address;
+  };
+</namespace>

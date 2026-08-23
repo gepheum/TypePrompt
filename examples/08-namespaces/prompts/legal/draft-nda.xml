@@ -1,0 +1,28 @@
+<template name="DraftNda" namespace="Legal">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema output-format="text">
+    interface Input {
+      disclosingParty: shared.Party;
+      receivingParty: shared.Party;
+      purposeOfDisclosure: string;
+      durationYears: integer;
+    }
+
+    type Output = string;
+  </schema>
+
+  <system>
+    You are a legal drafting assistant. Draft a concise, plain-English
+    non-disclosure agreement based on the provided details. Include standard
+    clauses for confidentiality obligations, exclusions, and term.
+    Add a signature block for both parties.
+  </system>
+
+  <user>
+    <insert val="input" format="json"/>
+  </user>
+</template>

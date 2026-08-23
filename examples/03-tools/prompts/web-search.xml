@@ -1,0 +1,20 @@
+<tool name="webSearch">
+  <description>
+    Search the web and return a list of relevant results. Each result has a
+    <c>title</c>, <c>url</c>, and a short <c>snippet</c>.
+  </description>
+
+  <schema>
+    interface Input {
+      query: string;
+    }
+
+    interface Output {
+      results: {
+        title: string;
+        url: string;
+        snippet: string;
+      }[];
+    }
+  </schema>
+</tool>

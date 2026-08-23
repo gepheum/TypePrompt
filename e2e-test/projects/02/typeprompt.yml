@@ -1,4 +1,4 @@
-include: ../../../examples/02-structured-output/prompts.xml
+include: ../../../examples/02-structured-output/**/*.xml
 gen:
   typescript:
     file: ../../typescript/src/gen/prompts-02.ts
