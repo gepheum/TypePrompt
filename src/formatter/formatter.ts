@@ -1,3 +1,5 @@
+// TODO: bug of extra lines...
+
 import plugin from "@prettier/plugin-xml";
 
 import { format as prettierFormat } from "prettier";
@@ -10,7 +12,6 @@ export async function formatTemplateFile(content: string): Promise<string> {
 
   content = replaceWithPlaceholders(content, slices);
 
-  content = await formatTypescriptAndYaml(content, slices);
   content = await prettierFormat(content, {
     parser: "xml",
     plugins: [plugin],
@@ -18,6 +19,7 @@ export async function formatTemplateFile(content: string): Promise<string> {
     tabWidth: 2,
     xmlWhitespaceSensitivity: "ignore",
   });
+  content = await formatTypescriptAndYaml(content, slices);
   content = await formatWhitespaceSensitiveXml(content, slices);
 
   return content;
@@ -136,12 +138,17 @@ async function formatTypescriptAndYaml(
     slices
       .filter((r) => r.format === "typescript" || r.format === "yaml")
       .map(async (slice) => {
-        const formatted = await prettierFormat(slice.unformatted, {
+        const { placeholder, unformatted } = slice;
+        const formatted = await prettierFormat(unformatted, {
           parser: slice.format,
           printWidth: 80,
           tabWidth: 2,
         });
-        content = content.replace(slice.placeholder, formatted);
+        content = replacePlaceholder({
+          content,
+          placeholder,
+          replacement: formatted,
+        });
       }),
   );
   return content;
@@ -157,7 +164,7 @@ async function formatWhitespaceSensitiveXml(
       .map(async (slice) => {
         const { placeholder, unformatted } = slice;
         const dedented = dedent(unformatted);
-        const wrapped = `<z>${dedented}</z>`
+        const wrapped = `<z>${dedented}</z>`;
         let formatted = await prettierFormat(wrapped, {
           parser: "xml",
           plugins: [plugin],
@@ -165,10 +172,12 @@ async function formatWhitespaceSensitiveXml(
           tabWidth: 2,
           xmlWhitespaceSensitivity: "strict",
         });
-        formatted = formatted.slice(3, -4); // Remove the <z> wrapper
-        const indent = getPrecedingWhitespace({ content, placeholder });
-        formatted = formatted.replace(/^(.+)$/gm, indent.concat("$1"));
-        content = content.replace(placeholder, formatted);
+        formatted = formatted.slice(3, -5); // Remove the <z> wrapper
+        content = replacePlaceholder({
+          content,
+          placeholder,
+          replacement: formatted,
+        });
       }),
   );
   return content;
@@ -203,6 +212,20 @@ function computeBaseIndent(text: string): string {
   const last = lines.at(-1) ?? "";
   const m = last.match(/^[ \t]*/);
   return m ? m[0] : "";
+}
+
+function replacePlaceholder(args: {
+  content: string;
+  placeholder: string;
+  replacement: string;
+}): string {
+  const { placeholder, replacement } = args;
+  const whitespace = getPrecedingWhitespace(args);
+  const indentedReplacement = replacement.replace(
+    /\n(.+)/g,
+    "\n".concat(whitespace, "$1"),
+  );
+  return args.content.replace(placeholder, indentedReplacement);
 }
 
 function getPrecedingWhitespace(args: {
