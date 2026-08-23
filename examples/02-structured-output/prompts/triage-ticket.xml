@@ -5,7 +5,8 @@
   </meta>
 
   <schema>
-    type TicketCategory = "billing" | "technical-issue" | "feature-request" | "other";
+    type TicketCategory =
+      "billing" | "technical-issue" | "feature-request" | "other";
 
     /** A support ticket to be triaged. */
     interface Input {
@@ -47,7 +48,7 @@
 
   <user>
     <!-- format="toon" is another good choice for structured LLM-readable output -->
-    <insert val="input" format="yaml"/>
+    <insert val="input" format="yaml" />
   </user>
 
   <examples>

@@ -21,15 +21,15 @@
 
   <system>
     You are an expert document summarizer.
-    <insert snippet="audienceInstruction"/>
-    <insert snippet="focusInstruction"/>
+    <insert snippet="audienceInstruction" />
+    <insert snippet="focusInstruction" />
   </system>
 
   <user>
     Summarize the following document.
 
-    <enclosed tag="Title"><insert val="input.title"/></enclosed>
-    <enclosed tag="Document"><insert val="input.content"/></enclosed>
+    <enclosed tag="Title"><insert val="input.title" /></enclosed>
+    <enclosed tag="Document"><insert val="input.content" /></enclosed>
   </user>
 
   <!--
@@ -38,9 +38,9 @@
   -->
   <snippet name="focusInstruction" if="input.focusTopic" is="notNull">
     <then>
-      Focus the summary specifically on the topic: <insert val="it"/>.
+      Focus the summary specifically on the topic: <insert val="it" />.
     </then>
-    <else></else>
+    <else />
   </snippet>
 
   <!--

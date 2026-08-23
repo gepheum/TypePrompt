@@ -14,10 +14,10 @@
   </system>
 
   <user>
-    Translate the following text into <insert val="input.targetLanguage"/>:
+    Translate the following text into <insert val="input.targetLanguage" />:
 
     <enclosed tag="Text">
-      <insert val="input.text"/>
+      <insert val="input.text" />
     </enclosed>
   </user>
 

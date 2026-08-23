@@ -26,10 +26,10 @@
   </system>
 
   <user>
-    Reviewing party: <insert val="input.reviewingParty" format="json"/>
+    Reviewing party: <insert val="input.reviewingParty" format="json" />
 
     <enclosed tag="Clause">
-      <insert val="input.clauseText"/>
+      <insert val="input.clauseText" />
     </enclosed>
   </user>
 </template>

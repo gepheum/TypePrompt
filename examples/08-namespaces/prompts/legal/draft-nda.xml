@@ -23,6 +23,6 @@
   </system>
 
   <user>
-    <insert val="input" format="json"/>
+    <insert val="input" format="json" />
   </user>
 </template>

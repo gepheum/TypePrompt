@@ -33,9 +33,9 @@
 
   <user>
     Recent transactions:
-    <insert val="input.recentTransactions" format="json"/>
+    <insert val="input.recentTransactions" format="json" />
 
     New transaction:
-    <insert val="input.newTransaction" format="json"/>
+    <insert val="input.newTransaction" format="json" />
   </user>
 </template>

@@ -18,8 +18,8 @@
 
   <!-- Shared user message: same for all variants -->
   <user>
-    Product: <insert val="input.productName"/>
-    Features: <insert val="input.features" format="json"/>
+    Product: <insert val="input.productName" />
+    Features: <insert val="input.features" format="json" />
   </user>
 
   <variant case="marketing">
@@ -31,7 +31,8 @@
     <examples>
       - input:
           productName: "AquaFilter Pro"
-          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+          features:
+            ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
           # variant field can be omitted in examples
         output:
           description: >
@@ -49,7 +50,8 @@
     <examples>
       - input:
           productName: "AquaFilter Pro"
-          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+          features:
+            ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
           description: >
             AquaFilter Pro is a point-of-use water filtration unit rated to
@@ -67,7 +69,8 @@
     <examples>
       - input:
           productName: "AquaFilter Pro"
-          features: ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
+          features:
+            ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
           description: "AquaFilter Pro delivers pure water with zero-tool installation and a 6-month filter life."
     </examples>

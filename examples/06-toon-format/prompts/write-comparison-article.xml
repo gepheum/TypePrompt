@@ -59,12 +59,14 @@
   </system>
 
   <user>
-    Write a comparison article framed around this use case: <insert val="input.useCase"/>
+    Write a comparison article framed around this use case: <insert
+        val="input.useCase"
+      />
 
     Here is the data for each provider:
 
-    <insert val="input.providers" format="toon"/>
+    <insert val="input.providers" format="toon" />
 
-    Target audience: <insert val="input.audience"/>
+    Target audience: <insert val="input.audience" />
   </user>
 </template>
