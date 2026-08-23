@@ -28,9 +28,9 @@ For the type system (schemas, SDL), see [schema.md](schema.md).
 
 ## File structure
 
-TypePrompt reads all `.xml` files in the project directory and merges their contents. The file an element is defined in has no significance — you can freely split, rename, or reorganize files without affecting the generated code.
+TypePrompt reads all `.xml` files in the project directory. The file an element is defined in has no significance for the compiler — you can freely split, rename, or reorganize files without affecting the generated code.
 
-The following elements may appear at the top level of any file:
+The top-level element of any `.xml` file must be one of the following:
 
 | Element | Purpose |
 |---|---|
@@ -43,17 +43,16 @@ The following elements may appear at the top level of any file:
 
 ---
 
-## The `<meta>` element
+## The `<meta>` element (top level)
 
 `<meta>` lets you attach structured metadata to each template — for example, the model to use, the sampling temperature, or any other configuration your LLM client needs. You define the shape of that metadata once at the top level, then supply values per template.
 
-`<meta>` therefore appears in two places: once at the top level to *declare* the metadata type, and once inside each `<template>` to *supply* the metadata values.
+`<meta>` can therefore appear in two places: once at the top level of a file to *declare* the metadata type, and once inside each `<template>` to *supply* the metadata values.
 
-### Top-level `<meta>` — declaring the type
-
-The text content must define a `Meta` type using TypePrompt's SDL. This is optional; if omitted, templates cannot carry metadata.
+At the top level of a file, the text content of `<meta>` must define a `Meta` type using TypePrompt's SDL.
 
 ```xml
+<!-- meta.xml -->
 <meta>
   interface Meta {
     /** Sampling temperature (0–2). */
@@ -61,20 +60,6 @@ The text content must define a `Meta` type using TypePrompt's SDL. This is optio
     model?: "gpt4o" | "gpt4oMini" | "o3";
   }
 </meta>
-```
-
-### Template-level `<meta>` — supplying values
-
-When a top-level `<meta>` is declared, every `<template>` must include a `<meta>` child whose text content is a YAML value of type `Meta`.
-
-```xml
-<template name="Summarize">
-  <meta>
-    temperature: 0.3
-    model: gpt4o
-  </meta>
-  ...
-</template>
 ```
 
 ---
@@ -105,11 +90,27 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 
 ---
 
+### Template-level `<meta>` — supplying values
+
+When a top-level `<meta>` is declared, every `<template>` must include a `<meta>` child whose text content is a YAML value of type `Meta`.
+
+```xml
+<!-- summarize.xml -->
+<template name="Summarize">
+  <meta>
+    temperature: 0.3
+    model: gpt4o
+  </meta>
+  ...
+</template>
+```
+
 ### The `<schema>` element
 
 Defines the `Input` and `Output` types for the template using TypePrompt's SDL. Both types are required.
 
 ```xml
+<!-- classify-email.xml -->
 <template name="ClassifyEmail">
   <schema>
     interface Input {
@@ -140,6 +141,7 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
 Registers tools that the model may call during this prompt. The text content is a YAML list of tool references.
 
 ```xml
+<!-- research-assistant.xml -->
 <template name="ResearchAssistant">
   <tools>
     - tool: webSearch
@@ -443,6 +445,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
 - Elements defined directly under `<template>` act as defaults and are inherited by variants that omit them. An element defined under `<template>` cannot be redefined under `<variant>`.
 
 ```xml
+<!-- write-email.xml -->
 <template name="WriteEmail">
   <schema>
     interface Input {
@@ -508,6 +511,7 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 | `<schema>` | Yes | `Input` and `Output` types |
 
 ```xml
+<!-- get-weather.xml -->
 <tool name="getWeather">
   <description>
     Returns the current weather at a given location. Use this when the user's
@@ -538,6 +542,7 @@ The `<description>` element may contain `<c>` and `<enclosed>` in addition to pl
 Namespaces serve two purposes: organizing large projects and defining types that are shared across multiple templates and tools within the namespace.
 
 ```xml
+<!-- geo.xml -->
 <namespace name="Geo">
   interface Address {
     street: string;
@@ -546,6 +551,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
   }
 </namespace>
 
+<!-- geo/format-address.xml -->
 <template name="FormatAddress" namespace="Geo">
   <schema>
     interface Input {
@@ -558,6 +564,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
   ...
 </template>
 
+<!-- geo/geocode.xml -->
 <tool name="geocode" namespace="Geo">
   ...
 </tool>
