@@ -6,7 +6,12 @@ import { XmlComment, XmlDocument, XmlNode } from "../xml/xml-types.js";
 
 export async function formatTemplateFile(content: string): Promise<string> {
   const xmlDocument = parseXmlDocument(content) as XmlDocument;
-  const slices = collectFormattableSlicesForXmlDocument(xmlDocument);
+  const {slices, anyXmlCommentsInCode} = collectFormattableSlicesForXmlDocument(xmlDocument);
+
+  if (anyXmlCommentsInCode) {
+    // If there are XML comments in TypeScript/YAML code, we cannot format the file.
+    return content;
+  }
 
   content = replaceWithPlaceholders(content, slices);
 
@@ -33,19 +38,25 @@ type FormattableSlice = {
 
 function collectFormattableSlicesForXmlDocument(
   xmlDocument: XmlDocument,
-): readonly FormattableSlice[] {
-  const slices: FormattableSlice[] = [];
+): {
+  readonly slices: FormattableSlice[];
+  readonly anyXmlCommentsInCode: boolean;
+} {
   const { root, topLevelComments } = xmlDocument;
   const items = buildItems([root], topLevelComments);
   const topLevel = true;
-  collectFormattableSlices(items, topLevel, slices);
-  return slices;
+  const slices: FormattableSlice[] = [];
+  const xmlCommentsInCode: true[] = [];
+  collectFormattableSlices(items, topLevel, slices, xmlCommentsInCode);
+  const anyXmlCommentsInCode = xmlCommentsInCode.length > 0;
+  return {slices, anyXmlCommentsInCode};
 }
 
 function collectFormattableSlices(
   items: readonly Item[],
   topLevel: boolean,
   slices: FormattableSlice[],
+  xmlCommentsInCode: true[],
 ): void {
   for (const item of items) {
     if (item.kind !== "element") continue;
@@ -81,7 +92,10 @@ function collectFormattableSlices(
       if (format === "typescript" || format === "yaml") {
         // Do not format TypeScript/YAML code if the content contains XML comments.
         const anyComments = item.comments.length > 0;
-        if (anyComments) return null;
+        if (anyComments) {
+          xmlCommentsInCode.push(true);
+          return null;
+        }
       }
       const start = childItems[0]!.start;
       const end = childItems.at(-1)!.end;
@@ -93,7 +107,8 @@ function collectFormattableSlices(
     if (slice) {
       slices.push(slice);
     } else {
-      collectFormattableSlices(childItems, false, slices);
+      const topLevel = false;
+      collectFormattableSlices(childItems, topLevel, slices, xmlCommentsInCode);
     }
   }
 }
