@@ -1,5 +1,3 @@
-// TODO: bug of extra lines...
-
 import plugin from "@prettier/plugin-xml";
 
 import { format as prettierFormat } from "prettier";
@@ -220,12 +218,18 @@ function replacePlaceholder(args: {
   replacement: string;
 }): string {
   const { placeholder, replacement } = args;
-  const whitespace = getPrecedingWhitespace(args);
-  const indentedReplacement = replacement.replace(
-    /\n(.+)/g,
-    "\n".concat(whitespace, "$1"),
-  );
-  return args.content.replace(placeholder, indentedReplacement);
+  const indent = getPrecedingWhitespace(args);
+  const lines = replacement.split("\n");
+  while (lines[0]?.trim() === "") {
+    lines.shift();
+  }
+  if (lines.at(-1)?.trim() === "") {
+    lines.pop();
+  }
+  const indented = lines
+    .map((l, i) => (l.trim() === "" ? "" : i <= 0 ? l : indent.concat(l)))
+    .join("\n");
+  return args.content.replace(placeholder, indented);
 }
 
 function getPrecedingWhitespace(args: {
