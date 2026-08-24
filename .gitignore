@@ -2,6 +2,12 @@
 TODO
 dist
 
+e2e-test/csharp/bin/
+e2e-test/csharp/obj/
+e2e-test/csharp/.vs/
+e2e-test/csharp/**/*.user
+e2e-test/csharp/**/*.suo
+
 e2e-test/kotlin/**/*.tsbuildinfo
 e2e-test/kotlin/.gradle/
 e2e-test/kotlin/build/
@@ -10,7 +16,9 @@ e2e-test/kotlin/**/*.iml
 
 e2e-test/python/.ruff_cache
 e2e-test/python/.venv
+e2e-test/python/__pycache/
 e2e-test/python/gen
+e2e-test/python/**/*.pyc
 
 e2e-test/typescript/src/gen
 

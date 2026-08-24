@@ -14,3 +14,8 @@ cd kotlin
 ./gradlew ktlintFormat
 cd ..
 
+cd csharp
+./format.sh
+cd ..
+
+

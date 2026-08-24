@@ -52,3 +52,9 @@ cd ..
 cd kotlin
 ./gradlew test
 cd ..
+
+# Run C# unit tests
+cd csharp
+dotnet test
+cd ..
+
