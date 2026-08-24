@@ -95,10 +95,10 @@ const UNION: Union = {
 };
 
 // ---------------------------------------------------------------------------
-// resolveType – pass-through types
+// resolveType - pass-through types
 // ---------------------------------------------------------------------------
 
-describe("resolveType – pass-through types", () => {
+describe("resolveType - pass-through types", () => {
   it("passes a string-literal through unchanged", () => {
     expect(resolveType(STRING_LITERAL, EMPTY_SCHEMA)).toMatch({
       kind: "string-literal",
@@ -162,10 +162,10 @@ describe("resolveType – pass-through types", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveType – type-name resolution
+// resolveType - type-name resolution
 // ---------------------------------------------------------------------------
 
-describe("resolveType – type-name resolution", () => {
+describe("resolveType - type-name resolution", () => {
   it("resolves a type-name to its local declaration", () => {
     const schema: Schema = {
       ...EMPTY_SCHEMA,
@@ -203,10 +203,10 @@ describe("resolveType – type-name resolution", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveType – shared-type-name resolution
+// resolveType - shared-type-name resolution
 // ---------------------------------------------------------------------------
 
-describe("resolveType – shared-type-name resolution", () => {
+describe("resolveType - shared-type-name resolution", () => {
   it("resolves a shared-type-name via sharedDeclarations", () => {
     const schema: Schema = {
       ...EMPTY_SCHEMA,
@@ -232,10 +232,10 @@ describe("resolveType – shared-type-name resolution", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveMaybeInvalidType – null cases
+// resolveMaybeInvalidType - null cases
 // ---------------------------------------------------------------------------
 
-describe("resolveMaybeInvalidType – null cases", () => {
+describe("resolveMaybeInvalidType - null cases", () => {
   it("returns null for an unknown type-name", () => {
     expect(resolveMaybeInvalidType(typeName("Unknown"), EMPTY_SCHEMA)).toMatch(
       null,
@@ -279,10 +279,10 @@ describe("resolveMaybeInvalidType – null cases", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveMaybeInvalidType – valid resolution
+// resolveMaybeInvalidType - valid resolution
 // ---------------------------------------------------------------------------
 
-describe("resolveMaybeInvalidType – valid resolution", () => {
+describe("resolveMaybeInvalidType - valid resolution", () => {
   it("passes a primitive type through unchanged", () => {
     expect(resolveMaybeInvalidType(PRIMITIVE_STRING, EMPTY_SCHEMA)).toMatch({
       kind: "primitive",

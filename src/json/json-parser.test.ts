@@ -11,7 +11,7 @@ function textNode(source: string): MappedText {
   };
 }
 
-describe("parseJson – primitives", () => {
+describe("parseJson - primitives", () => {
   it("parses a string", () => {
     expect(parseJson(textNode('"hello"'))).toMatch({
       kind: "string",
@@ -61,7 +61,7 @@ describe("parseJson – primitives", () => {
   });
 });
 
-describe("parseJson – object", () => {
+describe("parseJson - object", () => {
   it("parses an empty object", () => {
     expect(parseJson(textNode("{}"))).toMatch({
       kind: "object",
@@ -105,7 +105,7 @@ describe("parseJson – object", () => {
   });
 });
 
-describe("parseJson – array", () => {
+describe("parseJson - array", () => {
   it("parses an empty array", () => {
     expect(parseJson(textNode("[]"))).toMatch({
       kind: "array",
@@ -132,7 +132,7 @@ describe("parseJson – array", () => {
   });
 });
 
-describe("parseJson – comments", () => {
+describe("parseJson - comments", () => {
   it("skips line comments", () => {
     expect(parseJson(textNode("// before\ntrue // after"))).toMatch({
       kind: "boolean",
@@ -157,7 +157,7 @@ describe("parseJson – comments", () => {
   });
 });
 
-describe("parseJson – source spans", () => {
+describe("parseJson - source spans", () => {
   it("records the span of a string token", () => {
     expect(parseJson(textNode(' "hi" '))).toMatch({
       kind: "string",
@@ -173,7 +173,7 @@ describe("parseJson – source spans", () => {
   });
 });
 
-describe("parseJson – errors", () => {
+describe("parseJson - errors", () => {
   it("reports error for empty input", () => {
     expect(parseJson(textNode("   "))).toMatch({
       kind: "error",
@@ -246,7 +246,7 @@ describe("parseJson – errors", () => {
   });
 });
 
-describe("parseJson – strict mode", () => {
+describe("parseJson - strict mode", () => {
   it("parses plain JSON successfully in strict mode", () => {
     expect(parseJson(textNode('{"a": [1, true, null]}'), "strict")).toMatch({
       kind: "object",
@@ -301,7 +301,7 @@ describe("parseJson – strict mode", () => {
   });
 });
 
-describe("parseJson – loose mode (default)", () => {
+describe("parseJson - loose mode (default)", () => {
   it("accepts an array ellipsis in loose mode", () => {
     expect(parseJson(textNode("[1, ...]"))).toMatch({
       kind: "array",
@@ -325,7 +325,7 @@ describe("parseJson – loose mode (default)", () => {
   });
 });
 
-describe("parseJson – source offset remapping", () => {
+describe("parseJson - source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
     const content: MappedText = {
       text: '"hello"',

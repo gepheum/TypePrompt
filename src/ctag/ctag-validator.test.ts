@@ -100,7 +100,7 @@ function identifierCTag(text: string): CTag {
 // Identifier examples
 // ---------------------------------------------------------------------------
 
-describe("validateExample – identifier", () => {
+describe("validateExample - identifier", () => {
   it("accepts an identifier that is a known field name", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     expect(validateCTag(identifierCTag("name"), [schema], new Set())).toMatch(
@@ -138,10 +138,10 @@ describe("validateExample – identifier", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JSON examples – exact match
+// JSON examples - exact match
 // ---------------------------------------------------------------------------
 
-describe("validateExample – json: exact match", () => {
+describe("validateExample - json: exact match", () => {
   it("accepts a string for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     expect(validateCTag(jsonCTag(str("hello")), [schema], new Set())).toMatch(
@@ -273,10 +273,10 @@ describe("validateExample – json: exact match", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JSON examples – no close match (score < 0.5) → single error
+// JSON examples - no close match (score < 0.5) → single error
 // ---------------------------------------------------------------------------
 
-describe("validateExample – json: no close match", () => {
+describe("validateExample - json: no close match", () => {
   it("returns a single error when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     expect(validateCTag(jsonCTag(num(42)), [schema], new Set())).toMatch([
@@ -335,10 +335,10 @@ describe("validateExample – json: no close match", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JSON examples – close match (score >= 0.5) → two errors
+// JSON examples - close match (score >= 0.5) → two errors
 // ---------------------------------------------------------------------------
 
-describe("validateExample – json: close match", () => {
+describe("validateExample - json: close match", () => {
   it("returns 2 errors for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     expect(
@@ -371,10 +371,10 @@ describe("validateExample – json: close match", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JSON examples – multi-type schema
+// JSON examples - multi-type schema
 // ---------------------------------------------------------------------------
 
-describe("validateExample – json: multi-type schema", () => {
+describe("validateExample - json: multi-type schema", () => {
   it("accepts json that matches a non-root type in the schema", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { item: Detail }; type Detail = { x: string; };",

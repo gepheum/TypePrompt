@@ -19,6 +19,7 @@ import type { ElementNode } from "../xml/xml-types.js";
 import {
   Body,
   BodyInContext,
+  InsertFormat,
   OutputFormat,
   Snippet,
   Template,
@@ -86,6 +87,7 @@ class TemplateParser {
     const contents = this.buildContents();
     if (contents) {
       this.verifySnippets(contents);
+      this.verifyLineBreakAfterSomeInserts(contents);
     }
 
     if (this.errors.length > 0) {
@@ -554,6 +556,112 @@ class TemplateParser {
           span: snippet.name,
           message: `Snippet '${snippet.name.text}' is never used`,
         });
+      }
+    }
+  }
+
+  private verifyLineBreakAfterSomeInserts(contents: TemplateContents): void {
+    // Verify that every <insert val='...' format='yaml|toom|csv|tsv'> is the
+    // last piece on its line. Same for every <insert snippet='...'> if the
+    // last piece of the snippet is an
+    // <insert val='...' format='yaml|toom|csv|tsv'>.
+    const snippets = this.indexSnippets();
+    const requiresLineBreak = (format: InsertFormat | undefined): boolean => {
+      switch (format) {
+        case "yaml":
+        case "toon":
+        case "csv":
+        case "tsv":
+          return true;
+        case "text":
+        case "json":
+        case undefined:
+          return false;
+      }
+    };
+
+    const snippetRequiresLineBreak = (
+      snippet: Snippet,
+      seenSnippets: Set<string>,
+    ): boolean => {
+      const name = snippet.name.text;
+      if (seenSnippets.has(name)) return false;
+      seenSnippets.add(name);
+      const bodies = ((): ReadonlyArray<Body | BodyInContext> => {
+        switch (snippet.kind) {
+          case "snippet": {
+            return [snippet.body];
+          }
+          case "snippet-if": {
+            return [snippet.then, snippet.else];
+          }
+          case "snippet-switch": {
+            return snippet.branches.map((b) => b.body);
+          }
+        }
+      })();
+      return bodies.some((body) => {
+        if (body.length <= 0) return false;
+        const lastPiece = body.at(-1)!;
+        switch (lastPiece.kind) {
+          case "insert-val": {
+            const format = lastPiece.format?.text;
+            return requiresLineBreak(format);
+          }
+          case "insert-snippet": {
+            const snippet = snippets[lastPiece.snippet.text];
+            if (!snippet) return false;
+            return snippetRequiresLineBreak(snippet, seenSnippets);
+          }
+          default:
+            return false;
+        }
+      });
+    };
+
+    const verifyBody = (body: Body | BodyInContext | undefined): void => {
+      if (!body) return;
+      for (let i = 0; i < body.length - 1; i++) {
+        const piece = body[i]!;
+        const nextPiece = body[i + 1]!;
+        const hasLineBreak =
+          nextPiece.kind === "text" && nextPiece.text.startsWith("\n");
+        if (hasLineBreak) continue;
+        if (piece.kind === "insert-val") {
+          const format = piece.format?.text;
+          if (format && requiresLineBreak(format)) {
+            this.errors.push({
+              span: piece.tag,
+              message: "Must be followed by line break",
+            });
+          }
+        } else if (piece.kind === "insert-snippet") {
+          const snippetName = piece.snippet.text;
+          const snippet = snippets[snippetName];
+          if (snippet && snippetRequiresLineBreak(snippet, new Set())) {
+            this.errors.push({
+              span: piece.tag,
+              message: "Must be followed by line break",
+            });
+          }
+        }
+      }
+    };
+
+    switch (contents.kind) {
+      case "no-variants": {
+        verifyBody(contents.content.system);
+        verifyBody(contents.content.user);
+        break;
+      }
+      case "variants": {
+        verifyBody(contents.defaultContent.system);
+        verifyBody(contents.defaultContent.user);
+        for (const variant of contents.variants) {
+          verifyBody(variant.content.system);
+          verifyBody(variant.content.user);
+        }
+        break;
       }
     }
   }

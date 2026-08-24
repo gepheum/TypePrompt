@@ -96,10 +96,10 @@ function safeCast(strictValue: StrictJsonValue): LooseJsonValue {
 }
 
 // ---------------------------------------------------------------------------
-// validateJson – exact match
+// validateJson - exact match
 // ---------------------------------------------------------------------------
 
-describe("validateJson – exact match", () => {
+describe("validateJson - exact match", () => {
   it("accepts a string for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
@@ -247,10 +247,10 @@ describe("validateJson – exact match", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – mismatch
+// validateJson - mismatch
 // ---------------------------------------------------------------------------
 
-describe("validateJson – mismatch", () => {
+describe("validateJson - mismatch", () => {
   it("returns 2 errors when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
@@ -337,10 +337,10 @@ describe("validateJson – mismatch", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – integer type
+// validateJson - integer type
 // ---------------------------------------------------------------------------
 
-describe("validateJson – integer type", () => {
+describe("validateJson - integer type", () => {
   it("accepts an in-range integer number", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
@@ -374,10 +374,10 @@ describe("validateJson – integer type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – boolean-literal type
+// validateJson - boolean-literal type
 // ---------------------------------------------------------------------------
 
-describe("validateJson – boolean-literal type", () => {
+describe("validateJson - boolean-literal type", () => {
   it("accepts the matching boolean value", () => {
     const schema = parseSchemaOrThrow("type Response = false");
     const type = schema.typeDeclarations["Response"]!;
@@ -404,10 +404,10 @@ describe("validateJson – boolean-literal type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – record type
+// validateJson - record type
 // ---------------------------------------------------------------------------
 
-describe("validateJson – record type", () => {
+describe("validateJson - record type", () => {
   it("accepts an object whose values all match the record value type", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
@@ -457,10 +457,10 @@ describe("validateJson – record type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – interface extras
+// validateJson - interface extras
 // ---------------------------------------------------------------------------
 
-describe("validateJson – interface extras", () => {
+describe("validateJson - interface extras", () => {
   it("rejects an object with an unknown field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     const type = schema.typeDeclarations["Response"]!;
@@ -481,10 +481,10 @@ describe("validateJson – interface extras", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateJson – boolean-discriminated union
+// validateJson - boolean-discriminated union
 // ---------------------------------------------------------------------------
 
-describe("validateJson – boolean-discriminated union", () => {
+describe("validateJson - boolean-discriminated union", () => {
   it("accepts a matching member of a boolean-discriminated union", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { success: true; value: string } | { success: false; error: string }",
@@ -517,7 +517,7 @@ describe("validateJson – boolean-discriminated union", () => {
 });
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType – helpers
+// jsonMatchesType - helpers
 // ---------------------------------------------------------------------------
 
 // Minimal SchemaView (no named types, no unions).
@@ -593,10 +593,10 @@ function recordType(
 }
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType – result shape and mode
+// jsonMatchesType - result shape and mode
 // ---------------------------------------------------------------------------
 
-describe("jsonMatchesType – result shape and mode", () => {
+describe("jsonMatchesType - result shape and mode", () => {
   it("returns { kind: 'match' } on a successful match", () => {
     expect(
       jsonMatchesType(str("hi"), primType("string"), "thorough", EMPTY_VIEW),
@@ -628,10 +628,10 @@ describe("jsonMatchesType – result shape and mode", () => {
 });
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType – ellipsis value
+// jsonMatchesType - ellipsis value
 // ---------------------------------------------------------------------------
 
-describe("jsonMatchesType – ellipsis value", () => {
+describe("jsonMatchesType - ellipsis value", () => {
   it("ellipsis matches any type in thorough mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("string"), "thorough", EMPTY_VIEW),
@@ -674,10 +674,10 @@ describe("jsonMatchesType – ellipsis value", () => {
 });
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType – matchScore
+// jsonMatchesType - matchScore
 // ---------------------------------------------------------------------------
 
-describe("jsonMatchesType – matchScore", () => {
+describe("jsonMatchesType - matchScore", () => {
   it("string-literal: wrong string value → matchScore 0.5", () => {
     expect(
       jsonMatchesType(str("bad"), litType("ok"), "thorough", EMPTY_VIEW),
@@ -740,10 +740,10 @@ describe("jsonMatchesType – matchScore", () => {
 });
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType – fast mode short-circuiting
+// jsonMatchesType - fast mode short-circuiting
 // ---------------------------------------------------------------------------
 
-describe("jsonMatchesType – fast mode short-circuit", () => {
+describe("jsonMatchesType - fast mode short-circuit", () => {
   it("array: stops at first element mismatch", () => {
     const arrT: Array = { kind: "array", elementType: primType("number") };
     const result = jsonMatchesType(

@@ -9,7 +9,7 @@ import { joinTextNodes } from "./text-node-joiner.js";
 // textToSourcePosition
 // ---------------------------------------------------------------------------
 
-describe("textToSourcePosition – single segment (identity mapping)", () => {
+describe("textToSourcePosition - single segment (identity mapping)", () => {
   const node: MappedText = {
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
@@ -28,7 +28,7 @@ describe("textToSourcePosition – single segment (identity mapping)", () => {
   });
 });
 
-describe("textToSourcePosition – single segment with source offset", () => {
+describe("textToSourcePosition - single segment with source offset", () => {
   const node: MappedText = {
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
@@ -47,7 +47,7 @@ describe("textToSourcePosition – single segment with source offset", () => {
   });
 });
 
-describe("textToSourcePosition – multiple segments", () => {
+describe("textToSourcePosition - multiple segments", () => {
   // text = "abcde" (5 chars)
   // segment 0: textPosition=0 → sourcePosition=100  (covers text[0..2])
   // segment 1: textPosition=3 → sourcePosition=200  (covers text[3..4])
@@ -74,7 +74,7 @@ describe("textToSourcePosition – multiple segments", () => {
   });
 });
 
-describe("textToSourcePosition – error cases", () => {
+describe("textToSourcePosition - error cases", () => {
   const node: MappedText = {
     text: "hi",
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
@@ -107,7 +107,7 @@ describe("textToSourcePosition – error cases", () => {
 // joinTextNodes
 // ---------------------------------------------------------------------------
 
-describe("joinTextNodes – empty array", () => {
+describe("joinTextNodes - empty array", () => {
   it("returns empty text when given no nodes", () => {
     expect(joinTextNodes([], 0).text).toBe("");
   });
@@ -119,7 +119,7 @@ describe("joinTextNodes – empty array", () => {
   });
 });
 
-describe("joinTextNodes – single node", () => {
+describe("joinTextNodes - single node", () => {
   const node: MappedText = {
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
@@ -136,7 +136,7 @@ describe("joinTextNodes – single node", () => {
   });
 });
 
-describe("joinTextNodes – two nodes", () => {
+describe("joinTextNodes - two nodes", () => {
   const nodeA: MappedText = {
     text: "abc",
     offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
@@ -170,7 +170,7 @@ describe("joinTextNodes – two nodes", () => {
   });
 });
 
-describe("joinTextNodes – node with multiple offsetMap entries", () => {
+describe("joinTextNodes - node with multiple offsetMap entries", () => {
   // nodeA has its own two segments; after joining, their textPositions must be
   // shifted by the length of any preceding nodes' text.
   const nodeA: MappedText = {

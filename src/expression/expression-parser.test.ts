@@ -15,10 +15,10 @@ const NO_CONTEXT = { hasValContext: false as const };
 const WITH_CONTEXT = { hasValContext: true as const };
 
 // ---------------------------------------------------------------------------
-// Success – base expressions
+// Success - base expressions
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – base expressions", () => {
+describe("parseExpression - base expressions", () => {
   it("parses 'input'", () => {
     expect(parseExpression(textNode("input"), NO_CONTEXT)).toMatch({
       kind: "success",
@@ -49,10 +49,10 @@ describe("parseExpression – base expressions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Success – property chains
+// Success - property chains
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – property chains", () => {
+describe("parseExpression - property chains", () => {
   it("parses 'input.name' as a property access", () => {
     expect(parseExpression(textNode("input.name"), NO_CONTEXT)).toMatch({
       kind: "success",
@@ -109,10 +109,10 @@ describe("parseExpression – property chains", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Success – source position remapping
+// Success - source position remapping
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – source position remapping", () => {
+describe("parseExpression - source position remapping", () => {
   it("remaps the input span via the offsetMap", () => {
     const content: MappedText = {
       text: "input",
@@ -137,10 +137,10 @@ describe("parseExpression – source position remapping", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Errors – base expression not matched
+// Errors - base expression not matched
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – base not matched", () => {
+describe("parseExpression - base not matched", () => {
   it("reports 'Expected input' for empty input (no context)", () => {
     expect(parseExpression(textNode(""), NO_CONTEXT)).toMatch({
       kind: "error",
@@ -177,10 +177,10 @@ describe("parseExpression – base not matched", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Errors – 'it' without context
+// Errors - 'it' without context
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – 'it' without context", () => {
+describe("parseExpression - 'it' without context", () => {
   it("rejects 'it' when hasValContext is false", () => {
     expect(parseExpression(textNode("it"), NO_CONTEXT)).toMatch({
       kind: "error",
@@ -197,10 +197,10 @@ describe("parseExpression – 'it' without context", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Errors – property chain
+// Errors - property chain
 // ---------------------------------------------------------------------------
 
-describe("parseExpression – property chain errors", () => {
+describe("parseExpression - property chain errors", () => {
   it("reports an error for a trailing dot with no identifier", () => {
     expect(parseExpression(textNode("input."), NO_CONTEXT)).toMatch({
       kind: "error",

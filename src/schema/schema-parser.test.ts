@@ -15,7 +15,7 @@ function textNode(source: string): MappedText {
 // Basic success cases
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – interfaces", () => {
+describe("parseSchema - interfaces", () => {
   it("parses a simple interface declaration", () => {
     const result = parseSchema(textNode("type Response = { name: string; };"));
     expect(result).toMatch({
@@ -175,7 +175,7 @@ describe("parseSchema – interfaces", () => {
 // Records
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – records", () => {
+describe("parseSchema - records", () => {
   it("parses a record type", () => {
     const result = parseSchema(
       textNode("type Response = {[foo: string]: integer};"),
@@ -203,7 +203,7 @@ describe("parseSchema – records", () => {
 // Type aliases
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – type aliases", () => {
+describe("parseSchema - type aliases", () => {
   it("parses a type alias to a primitive", () => {
     const result = parseSchema(textNode("type Response = string;"));
     expect(result).toMatch({
@@ -393,7 +393,7 @@ describe("parseSchema – type aliases", () => {
 // Multiple types
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – multiple types", () => {
+describe("parseSchema - multiple types", () => {
   it("parses multiple type declarations", () => {
     const result = parseSchema(
       textNode(
@@ -442,7 +442,7 @@ describe("parseSchema – multiple types", () => {
 // Shared type names
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – shared type names", () => {
+describe("parseSchema - shared type names", () => {
   it("parses a shared type name as a type alias", () => {
     const result = parseSchema(textNode("type Response = shared.Profile;"));
     expect(result).toMatch({
@@ -537,7 +537,7 @@ describe("parseSchema – shared type names", () => {
 // Comments and JSDoc
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – comments and JSDoc", () => {
+describe("parseSchema - comments and JSDoc", () => {
   it("accepts a single-line comment", () => {
     const result = parseSchema(
       textNode("// This is a comment\ntype Response = { name: string; };"),
@@ -687,7 +687,7 @@ describe("parseSchema – comments and JSDoc", () => {
 // Tokenizer error cases
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – tokenizer errors", () => {
+describe("parseSchema - tokenizer errors", () => {
   it("reports error for an identifier starting with a digit", () => {
     const result = parseSchema(textNode("type Response = { 1name: string; };"));
     expect(result).toMatch({
@@ -742,10 +742,10 @@ describe("parseSchema – tokenizer errors", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Validator error cases – naming
+// Validator error cases - naming
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – naming errors", () => {
+describe("parseSchema - naming errors", () => {
   it("reports error for type names that conflict by case", () => {
     const result = parseSchema(
       textNode(
@@ -766,7 +766,7 @@ describe("parseSchema – naming errors", () => {
 // interface keyword
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – interface keyword", () => {
+describe("parseSchema - interface keyword", () => {
   it("parses an interface declaration using the interface keyword", () => {
     const result = parseSchema(
       textNode("interface Response { name: string; age: number; }"),
@@ -816,7 +816,7 @@ describe("parseSchema – interface keyword", () => {
 // any type
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – any type", () => {
+describe("parseSchema - any type", () => {
   it("parses any as a top-level type alias", () => {
     const result = parseSchema(textNode("type Payload = any;"));
     expect(result).toMatch({
@@ -866,7 +866,7 @@ describe("parseSchema – any type", () => {
 // Boolean literals
 // ---------------------------------------------------------------------------
 
-describe("parseSchema – boolean literals", () => {
+describe("parseSchema - boolean literals", () => {
   it("parses true as a top-level type alias", () => {
     const result = parseSchema(textNode("type AlwaysTrue = true;"));
     expect(result).toMatch({

@@ -12,10 +12,10 @@ function textNode(source: string): MappedText {
 }
 
 // ---------------------------------------------------------------------------
-// Identifier path – unquoted word
+// Identifier path - unquoted word
 // ---------------------------------------------------------------------------
 
-describe("parseCTag – unquoted identifier", () => {
+describe("parseCTag - unquoted identifier", () => {
   it("parses a simple word as an identifier", () => {
     expect(parseCTag(textNode("hello"))).toMatch({
       kind: "identifier",
@@ -55,10 +55,10 @@ describe("parseCTag – unquoted identifier", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Identifier path – quoted word
+// Identifier path - quoted word
 // ---------------------------------------------------------------------------
 
-describe("parseCTag – quoted identifier", () => {
+describe("parseCTag - quoted identifier", () => {
   it("parses a quoted word as an identifier and strips the quotes", () => {
     expect(parseCTag(textNode('"hello"'))).toMatch({
       kind: "identifier",
@@ -83,10 +83,10 @@ describe("parseCTag – quoted identifier", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JSON path – falls through to loose JSON parsing
+// JSON path - falls through to loose JSON parsing
 // ---------------------------------------------------------------------------
 
-describe("parseCTag – JSON values", () => {
+describe("parseCTag - JSON values", () => {
   it("parses a quoted string containing a space as a JSON string", () => {
     // Space is not a word char, so "hello world" does not match the identifier regexes.
     expect(parseCTag(textNode('"hello world"'))).toMatch({
@@ -176,7 +176,7 @@ describe("parseCTag – JSON values", () => {
 // Error path
 // ---------------------------------------------------------------------------
 
-describe("parseCTag – errors", () => {
+describe("parseCTag - errors", () => {
   it("returns an error for an invalid JSON value", () => {
     expect(parseCTag(textNode("@"))).toMatch({
       kind: "error",
@@ -219,7 +219,7 @@ describe("parseCTag – errors", () => {
 // Source position remapping
 // ---------------------------------------------------------------------------
 
-describe("parseCTag – source position remapping", () => {
+describe("parseCTag - source position remapping", () => {
   it("remaps unquoted identifier spans via the offsetMap", () => {
     const content: MappedText = {
       text: "hello",
@@ -232,7 +232,7 @@ describe("parseCTag – source position remapping", () => {
   });
 
   it("remaps quoted identifier spans via the offsetMap", () => {
-    // text = '"hi"', identifier text positions 1–3, source offset = +5
+    // text = '"hi"', identifier text positions 1-3, source offset = +5
     const content: MappedText = {
       text: '"hi"',
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],

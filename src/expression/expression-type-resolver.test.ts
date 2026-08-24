@@ -73,10 +73,10 @@ function makeContext(
 }
 
 // ---------------------------------------------------------------------------
-// resolveExpressionType – input expression
+// resolveExpressionType - input expression
 // ---------------------------------------------------------------------------
 
-describe("resolveExpressionType – input", () => {
+describe("resolveExpressionType - input", () => {
   it("resolves 'input' to the Input type declared in the schema", () => {
     const schema = parseSchemaOrThrow("type Input = string");
     expect(resolveExpressionType(makeExpr("input"), schema, null)).toMatch({
@@ -94,10 +94,10 @@ describe("resolveExpressionType – input", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveExpressionType – it expression
+// resolveExpressionType - it expression
 // ---------------------------------------------------------------------------
 
-describe("resolveExpressionType – it", () => {
+describe("resolveExpressionType - it", () => {
   it("resolves 'it' to the context it.type", () => {
     const schema = parseSchemaOrThrow("type Input = string");
     const expr = makeExprCtx("it");
@@ -119,10 +119,10 @@ describe("resolveExpressionType – it", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveExpressionType – property on interface
+// resolveExpressionType - property on interface
 // ---------------------------------------------------------------------------
 
-describe("resolveExpressionType – property access on interface", () => {
+describe("resolveExpressionType - property access on interface", () => {
   it("resolves 'input.name' to the field type of a required field", () => {
     const schema = parseSchemaOrThrow("type Input = { name: string; }");
     expect(resolveExpressionType(makeExpr("input.name"), schema, null)).toMatch(
@@ -187,10 +187,10 @@ describe("resolveExpressionType – property access on interface", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveExpressionType – property on union (discriminator)
+// resolveExpressionType - property on union (discriminator)
 // ---------------------------------------------------------------------------
 
-describe("resolveExpressionType – property on discriminated union", () => {
+describe("resolveExpressionType - property on discriminated union", () => {
   it("resolves the discriminator property to a union of its string literal values", () => {
     const schema = parseSchemaOrThrow(
       'type Input = { kind: "cat" } | { kind: "dog" }',
@@ -201,10 +201,10 @@ describe("resolveExpressionType – property on discriminated union", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveExpressionType – type overrides and it-prefix rewriting
+// resolveExpressionType - type overrides and it-prefix rewriting
 // ---------------------------------------------------------------------------
 
-describe("resolveExpressionType – type overrides", () => {
+describe("resolveExpressionType - type overrides", () => {
   it("returns the override when the full path is in typeOverrides", () => {
     const schema = parseSchemaOrThrow("type Input = string");
     // makeExprCtx so HasValContext=true, which allows passing a context
@@ -232,10 +232,10 @@ describe("resolveExpressionType – type overrides", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveIfExpression – boolean type
+// resolveIfExpression - boolean type
 // ---------------------------------------------------------------------------
 
-describe("resolveIfExpression – boolean type", () => {
+describe("resolveIfExpression - boolean type", () => {
   const expr = makeExpr("input");
 
   it("succeeds with no 'is' clause for a boolean type", () => {
@@ -257,10 +257,10 @@ describe("resolveIfExpression – boolean type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveIfExpression – nullable type
+// resolveIfExpression - nullable type
 // ---------------------------------------------------------------------------
 
-describe("resolveIfExpression – nullable type", () => {
+describe("resolveIfExpression - nullable type", () => {
   const expr = makeExpr("input");
   const nType = nullable(prim("string"));
 
@@ -289,10 +289,10 @@ describe("resolveIfExpression – nullable type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveIfExpression – array and string types
+// resolveIfExpression - array and string types
 // ---------------------------------------------------------------------------
 
-describe("resolveIfExpression – array and string types", () => {
+describe("resolveIfExpression - array and string types", () => {
   const expr = makeExpr("input");
   const arrayType: ResolvedType = {
     kind: "array",
@@ -333,10 +333,10 @@ describe("resolveIfExpression – array and string types", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveIfExpression – other types (no matching 'is' value)
+// resolveIfExpression - other types (no matching 'is' value)
 // ---------------------------------------------------------------------------
 
-describe("resolveIfExpression – other types", () => {
+describe("resolveIfExpression - other types", () => {
   const expr = makeExpr("input");
 
   it("reports 'Expected: nullable value' for 'is=\"notNull\"' on a number", () => {
@@ -364,10 +364,10 @@ describe("resolveIfExpression – other types", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveSwitchExpression – errors
+// resolveSwitchExpression - errors
 // ---------------------------------------------------------------------------
 
-describe("resolveSwitchExpression – errors", () => {
+describe("resolveSwitchExpression - errors", () => {
   it("rejects a primitive (non-union) type with 'Expected: union type'", () => {
     const schema = parseSchemaOrThrow("type Input = string");
     expect(
@@ -397,10 +397,10 @@ describe("resolveSwitchExpression – errors", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveSwitchExpression – string union
+// resolveSwitchExpression - string union
 // ---------------------------------------------------------------------------
 
-describe("resolveSwitchExpression – string union", () => {
+describe("resolveSwitchExpression - string union", () => {
   it("produces a case entry for each string literal in the union", () => {
     const schema = parseSchemaOrThrow('type Input = "a" | "b" | "c"');
     const inputType = resolveExpressionType(makeExpr("input"), schema, null);
@@ -428,10 +428,10 @@ describe("resolveSwitchExpression – string union", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveSwitchExpression – discriminator property
+// resolveSwitchExpression - discriminator property
 // ---------------------------------------------------------------------------
 
-describe("resolveSwitchExpression – discriminated interface union via property", () => {
+describe("resolveSwitchExpression - discriminated interface union via property", () => {
   it("produces a case per member with a type override for the left expression", () => {
     const schema = parseSchemaOrThrow(
       'type Input = { kind: "cat"; name: string } | { kind: "dog"; breed: string }',

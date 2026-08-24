@@ -399,7 +399,7 @@ describe("TextNode.allWhitespace", () => {
 // // Comments
 // // ---------------------------------------------------------------------------
 
-describe("parseXmlDocument – comments", () => {
+describe("parseXmlDocument - comments", () => {
   it("save comments", () => {
     const input = "<!-- ignored --> <root><!-- comment --><child/></root>";
     expect(parseXmlDocument(input)).toMatch({

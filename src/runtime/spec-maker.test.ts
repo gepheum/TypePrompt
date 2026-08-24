@@ -74,10 +74,10 @@ function emptyBody(): Body {
 }
 
 // ---------------------------------------------------------------------------
-// makeTemplates – empty result
+// makeTemplates - empty result
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – empty result", () => {
+describe("makeTemplates - empty result", () => {
   it("produces empty templates, tools, and sourceFiles maps", () => {
     expect(makeTemplates(emptyResult(), NO_JSON_SCHEMAS)).toMatch({
       templates: {},
@@ -88,10 +88,10 @@ describe("makeTemplates – empty result", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – source files
+// makeTemplates - source files
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – source files", () => {
+describe("makeTemplates - source files", () => {
   it("passes source file content through keyed by path", () => {
     const result = {
       ...emptyResult(),
@@ -107,10 +107,10 @@ describe("makeTemplates – source files", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – tool
+// makeTemplates - tool
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – tool", () => {
+describe("makeTemplates - tool", () => {
   function makeToolResult(name: string, descriptionText: string): unknown {
     return {
       kind: "success" as const,
@@ -177,10 +177,10 @@ describe("makeTemplates – tool", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – template: basic fields
+// makeTemplates - template: basic fields
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – template basic fields", () => {
+describe("makeTemplates - template basic fields", () => {
   function minimalTemplate(
     name: string,
     namespace: string | null,
@@ -307,10 +307,10 @@ describe("makeTemplates – template basic fields", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – contents: no-variants vs variants
+// makeTemplates - contents: no-variants vs variants
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – contents", () => {
+describe("makeTemplates - contents", () => {
   function templateWithContents(contents: unknown): unknown {
     return {
       kind: "success" as const,
@@ -391,10 +391,10 @@ describe("makeTemplates – contents", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – body pieces
+// makeTemplates - body pieces
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – body pieces", () => {
+describe("makeTemplates - body pieces", () => {
   function templateWithUserBody(pieces: Body): unknown {
     return {
       kind: "success" as const,
@@ -469,7 +469,13 @@ describe("makeTemplates – body pieces", () => {
       ...emptyResult(),
       templates: {
         "Main:T": templateWithUserBody([
-          { kind: "insert-val", val: inputExpr, format: null, indent: "" },
+          {
+            kind: "insert-val",
+            val: inputExpr,
+            format: null,
+            indent: "",
+            tag: { start: 0, end: 0 },
+          },
         ]),
       },
     } as unknown as ValidCompilationResult;
@@ -507,6 +513,7 @@ describe("makeTemplates – body pieces", () => {
             val: inputExpr,
             format: span("json"),
             indent: "  ",
+            tag: { start: 0, end: 0 },
           },
         ]),
       },
@@ -529,7 +536,12 @@ describe("makeTemplates – body pieces", () => {
       ...emptyResult(),
       templates: {
         "Main:T": templateWithUserBody([
-          { kind: "insert-snippet", snippet: span("header"), indent: "    " },
+          {
+            kind: "insert-snippet",
+            snippet: span("header"),
+            indent: "    ",
+            tag: { start: 0, end: 0 },
+          },
         ]),
       },
     } as unknown as ValidCompilationResult;
@@ -550,10 +562,10 @@ describe("makeTemplates – body pieces", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – expressions
+// makeTemplates - expressions
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – expressions", () => {
+describe("makeTemplates - expressions", () => {
   function templateWithExprPiece(val: Expression<false>): unknown {
     return {
       kind: "success" as const,
@@ -624,10 +636,10 @@ describe("makeTemplates – expressions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – snippets
+// makeTemplates - snippets
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – snippets", () => {
+describe("makeTemplates - snippets", () => {
   function templateWithSnippets(snippets: readonly Snippet[]): unknown {
     return {
       kind: "success" as const,
@@ -777,10 +789,10 @@ describe("makeTemplates – snippets", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – meta and examples
+// makeTemplates - meta and examples
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – meta and examples", () => {
+describe("makeTemplates - meta and examples", () => {
   function templateWithContent(content: unknown): unknown {
     return {
       kind: "success" as const,
@@ -964,10 +976,10 @@ describe("makeTemplates – meta and examples", () => {
 });
 
 // ---------------------------------------------------------------------------
-// makeTemplates – JSON schemas
+// makeTemplates - JSON schemas
 // ---------------------------------------------------------------------------
 
-describe("makeTemplates – JSON schemas", () => {
+describe("makeTemplates - JSON schemas", () => {
   it("includes JSON schemas when includeJsonSchemas is true", () => {
     const schemaSource = "type Input = string\ntype Output = number";
     const sourceSpan = {

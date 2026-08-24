@@ -152,7 +152,7 @@ class XmlParser {
     RE_XML_NAME.lastIndex = nameStart;
     const tagNameMatch = RE_XML_NAME.exec(this.content);
     if (tagNameMatch === null) {
-      // '<' not followed by a valid name-start char – emit as literal text.
+      // '<' not followed by a valid name-start char - emit as literal text.
       this.appendNode({
         ...this.decodeXmlText(tokenStart, tokenStart + 1),
         kind: "text",
@@ -324,7 +324,7 @@ class XmlParser {
       return;
     }
 
-    // Mismatch – search for a matching ancestor.
+    // Mismatch - search for a matching ancestor.
     let foundIndex = -1;
     for (let i = this.openElements.length - 2; i >= 0; i--) {
       if (this.openElements[i]!.tag.text === name) {
@@ -405,10 +405,10 @@ class XmlParser {
         continue;
       }
 
-      // '&' found – look for the closing ';'.
+      // '&' found - look for the closing ';'.
       const semicolon = raw.indexOf(";", i + 1);
       if (semicolon === -1) {
-        // No ';' – treat '&' as a literal character.
+        // No ';' - treat '&' as a literal character.
         const last = offsetMap.at(-1);
         if (last === undefined || last.textPosition !== decodedOffset) {
           offsetMap.push({
@@ -439,7 +439,7 @@ class XmlParser {
         });
         i = semicolon + 1;
       } else {
-        // Unknown or malformed entity – record an error and keep the raw text.
+        // Unknown or malformed entity - record an error and keep the raw text.
         this.errors.push({
           span: {
             start: start + i,

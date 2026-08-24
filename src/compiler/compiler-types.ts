@@ -89,8 +89,9 @@ export type TemplateMeta = {
   readonly value: StrictJsonValue;
 };
 
-export type Body<HasValContext extends boolean = false> =
-  ReadonlyArray<BodyPiece<HasValContext>>;
+export type Body<HasValContext extends boolean = false> = ReadonlyArray<
+  BodyPiece<HasValContext>
+>;
 
 export type BodyInContext = Body<true>;
 
@@ -103,12 +104,16 @@ export type BodyPiece<HasValContext extends boolean = false> =
       readonly format: TextSpan<InsertFormat> | null;
       /** Only contains whitespace characters. */
       readonly indent: string;
+      /** The insert tag. */
+      readonly tag: Span;
     }
   | {
       readonly kind: "insert-snippet";
       readonly snippet: TextSpan;
       /** Only contains whitespace characters. */
       readonly indent: string;
+      /** The insert tag. */
+      readonly tag: Span;
     };
 
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";

@@ -19,7 +19,7 @@ function textNode(source: string): MappedText {
 // Errors
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – errors", () => {
+describe("parseYaml - errors", () => {
   it("rejects an empty string", () => {
     expect(parseYaml(textNode(""))).toMatch({
       kind: "error",
@@ -54,7 +54,7 @@ describe("parseYaml – errors", () => {
 // Null scalars
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – null scalar", () => {
+describe("parseYaml - null scalar", () => {
   it("parses the 'null' keyword", () => {
     expect(parseYaml(textNode("null"))).toMatch({ kind: "null" });
   });
@@ -82,7 +82,7 @@ describe("parseYaml – null scalar", () => {
 // Boolean scalars
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – boolean scalar", () => {
+describe("parseYaml - boolean scalar", () => {
   it("parses 'true'", () => {
     expect(parseYaml(textNode("true"))).toMatch({
       kind: "boolean",
@@ -104,7 +104,7 @@ describe("parseYaml – boolean scalar", () => {
 // Number scalars
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – number scalar", () => {
+describe("parseYaml - number scalar", () => {
   it("parses an integer", () => {
     expect(parseYaml(textNode("42"))).toMatch({
       kind: "number",
@@ -134,7 +134,7 @@ describe("parseYaml – number scalar", () => {
 // String scalars
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – string scalar", () => {
+describe("parseYaml - string scalar", () => {
   it("parses an unquoted string", () => {
     expect(parseYaml(textNode("hello"))).toMatch({
       kind: "string",
@@ -188,7 +188,7 @@ describe("parseYaml – string scalar", () => {
 // Block map
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – block map", () => {
+describe("parseYaml - block map", () => {
   it("parses a single-entry block map", () => {
     expect(parseYaml(textNode("x: 1"))).toMatch({
       kind: "object",
@@ -336,7 +336,7 @@ describe("parseYaml – block map", () => {
 // Flow map
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – flow map", () => {
+describe("parseYaml - flow map", () => {
   it("parses a flow map", () => {
     expect(parseYaml(textNode("{x: 1, y: 2}"))).toMatch({
       kind: "object",
@@ -370,7 +370,7 @@ describe("parseYaml – flow map", () => {
 // Block sequence
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – block sequence", () => {
+describe("parseYaml - block sequence", () => {
   it("parses a block sequence of scalars", () => {
     expect(parseYaml(textNode("- 1\n- 2\n- 3"))).toMatch({
       kind: "array",
@@ -425,7 +425,7 @@ describe("parseYaml – block sequence", () => {
 // Flow sequence
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – flow sequence", () => {
+describe("parseYaml - flow sequence", () => {
   it("parses a flow sequence of numbers", () => {
     expect(parseYaml(textNode("[10, 20, 30]"))).toMatch({
       kind: "array",
@@ -475,7 +475,7 @@ describe("parseYaml – flow sequence", () => {
 // Source offset remapping
 // ---------------------------------------------------------------------------
 
-describe("parseYaml – source offset remapping", () => {
+describe("parseYaml - source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
     const content: MappedText = {
       text: "null",
@@ -503,7 +503,7 @@ describe("parseYaml – source offset remapping", () => {
   });
 });
 
-describe("parseYaml – span preservation", () => {
+describe("parseYaml - span preservation", () => {
   it("preserves offsets across a full block map document", () => {
     const src = "name: Alice\nage: 30\n";
     // "name" at 0..4, value "Alice" at 6..11

@@ -1,4 +1,9 @@
-import type { ErrorSink, MappedText, TextSpan } from "../util/shared-types.js";
+import type {
+  ErrorSink,
+  MappedText,
+  Span,
+  TextSpan,
+} from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
@@ -68,6 +73,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     rawPieces.push({
       kind: "insert-snippet",
       snippet: attrs.attributes.snippet.value,
+      tag: insertNode.tag,
     });
   };
 
@@ -94,6 +100,7 @@ function parseBodyImpl<HasValContext extends boolean>(
       kind: "insert-val",
       val: val.expression,
       format: format,
+      tag: insertNode.tag,
     });
   };
 
@@ -183,10 +190,12 @@ type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
       readonly kind: "insert-val";
       readonly val: Expression<HasValContext>;
       readonly format: TextSpan<InsertFormat> | null;
+      readonly tag: Span;
     }
   | {
       readonly kind: "insert-snippet";
       readonly snippet: TextSpan;
+      readonly tag: Span;
     };
 
 /** A piece collected from a raw XML body walk, before trim/dedent. */

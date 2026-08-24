@@ -33,7 +33,7 @@ function parseDeclarations(source: string): SchemaParseResult {
 // Success cases
 // ---------------------------------------------------------------------------
 
-describe("validateSchema – success", () => {
+describe("validateSchema - success", () => {
   it("validates a simple interface", () => {
     const result = validateSchema(
       parseDeclarations("type Output = { name: string; };"),
@@ -120,7 +120,7 @@ describe("validateSchema – success", () => {
 // Required type
 // ---------------------------------------------------------------------------
 
-describe("validateSchema – required type", () => {
+describe("validateSchema - required type", () => {
   it("reports missing Input/Output in template context", () => {
     const result = validateSchema(parseDeclarations(""), TEMPLATE);
     expect(result).toMatch({
@@ -161,7 +161,7 @@ describe("validateSchema – required type", () => {
 // Naming errors
 // ---------------------------------------------------------------------------
 
-describe("validateSchema – naming errors", () => {
+describe("validateSchema - naming errors", () => {
   it("reports a type name starting with lowercase", () => {
     const result = validateSchema(
       parseDeclarations("type response = { name: string; };"),
@@ -544,7 +544,7 @@ describe("validateSchema - union type errors", () => {
 // Shared type names
 // ---------------------------------------------------------------------------
 
-describe("validateSchema – shared type names", () => {
+describe("validateSchema - shared type names", () => {
   function makeTemplateContext(
     namespaceSource: string,
   ): SchemaValidationContext {
@@ -678,10 +678,10 @@ const TOOL: SchemaValidationContext = {
 };
 
 // ---------------------------------------------------------------------------
-// validateSchema – namingHints
+// validateSchema - namingHints
 // ---------------------------------------------------------------------------
 
-describe("validateSchema – namingHints", () => {
+describe("validateSchema - namingHints", () => {
   it("registers a top-level interface with the type name as the first piece", () => {
     const schema = validateSchema(
       parseDeclarations("type Output = { name: string; };"),

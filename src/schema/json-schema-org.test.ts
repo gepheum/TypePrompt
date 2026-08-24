@@ -64,7 +64,7 @@ function gen(source: string, typeName = "Output"): Record<string, unknown> {
 // Primitive types
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – primitive types", () => {
+describe("toJsonSchema - primitive types", () => {
   it("generates { type: string } for string", () => {
     expect(gen("type Output = string;")).toMatch({ type: "string" });
   });
@@ -86,7 +86,7 @@ describe("toJsonSchema – primitive types", () => {
 // any type
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – any type", () => {
+describe("toJsonSchema - any type", () => {
   it("generates an unconstrained schema {} for any", () => {
     // any → {} means no constraints: all values are valid
     expect(gen("type Output = any;").$defs).toBe(undefined);
@@ -98,7 +98,7 @@ describe("toJsonSchema – any type", () => {
 // Literal types
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – literal types", () => {
+describe("toJsonSchema - literal types", () => {
   it("generates a string const schema for a string literal", () => {
     expect(gen('type Output = "active";')).toMatch({
       type: "string",
@@ -125,7 +125,7 @@ describe("toJsonSchema – literal types", () => {
 // Array types
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – array types", () => {
+describe("toJsonSchema - array types", () => {
   it("generates an array schema with an items sub-schema", () => {
     expect(gen("type Output = string[];")).toMatch({
       type: "array",
@@ -145,7 +145,7 @@ describe("toJsonSchema – array types", () => {
 // Interface types
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – interface types", () => {
+describe("toJsonSchema - interface types", () => {
   it("generates an empty object schema for an empty interface", () => {
     expect(gen("type Output = {};")).toMatch({
       type: "object",
@@ -247,7 +247,7 @@ describe("toJsonSchema – interface types", () => {
 // Record types
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – record types", () => {
+describe("toJsonSchema - record types", () => {
   it("generates additionalProperties for a record type", () => {
     expect(gen("type Output = { [key: string]: number };")).toMatch({
       type: "object",
@@ -267,7 +267,7 @@ describe("toJsonSchema – record types", () => {
 // String literal unions
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – string literal unions", () => {
+describe("toJsonSchema - string literal unions", () => {
   it("generates an enum schema for a string literal union", () => {
     expect(gen('type Output = "active" | "inactive";')).toMatch({
       enum: ["active", "inactive"],
@@ -285,7 +285,7 @@ describe("toJsonSchema – string literal unions", () => {
 // Discriminated interface unions (string discriminant)
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – discriminated interface unions", () => {
+describe("toJsonSchema - discriminated interface unions", () => {
   it("generates anyOf for a two-member discriminated union", () => {
     expect(
       gen(
@@ -334,7 +334,7 @@ describe("toJsonSchema – discriminated interface unions", () => {
 // Discriminated interface unions (boolean discriminant)
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – boolean-discriminated unions", () => {
+describe("toJsonSchema - boolean-discriminated unions", () => {
   it("generates anyOf with boolean const fields", () => {
     expect(
       gen(
@@ -369,7 +369,7 @@ describe("toJsonSchema – boolean-discriminated unions", () => {
 // Named type refs and $defs
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – named type refs and $defs", () => {
+describe("toJsonSchema - named type refs and $defs", () => {
   it("emits a $ref for a field of a named type", () => {
     expect(
       gen(
@@ -485,7 +485,7 @@ describe("toJsonSchema – named type refs and $defs", () => {
 // Shared type refs (template context)
 // ---------------------------------------------------------------------------
 
-describe("toJsonSchema – shared type refs", () => {
+describe("toJsonSchema - shared type refs", () => {
   function genTemplate(
     templateSource: string,
     namespaceSource: string,
