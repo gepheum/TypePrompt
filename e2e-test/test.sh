@@ -47,3 +47,8 @@ cd typescript
 npm i
 npm run test
 cd ..
+
+# Run Kotlin unit tests
+cd kotlin
+./gradlew test
+cd ..
