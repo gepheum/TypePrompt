@@ -508,7 +508,8 @@ function format(input: unknown, format?: Spec.InsertFormat): string {
       return JSON.stringify(input, undefined, 2);
     }
     case "yaml": {
-      return YAML.stringify(input);
+      // Remove trailing newline if present.
+      return YAML.stringify(input).replace(/\n$/, "");
     }
     case "toon": {
       return encodeToon(input);

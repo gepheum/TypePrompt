@@ -164,7 +164,7 @@ describe("02-structured-output / TriageTicket", () => {
   // Python strips the trailing newline emitted by the YAML serializer; TypeScript does not.
   it("yaml: exact userMessage", () => {
     expect(prompt.userMessage).toMatch(
-      "subject: App crashes on login\nbody: It crashes every time.\ncustomerTier: pro\nrecentTickets: []\n",
+      "subject: App crashes on login\nbody: It crashes every time.\ncustomerTier: pro\nrecentTickets: []",
     );
   });
 
