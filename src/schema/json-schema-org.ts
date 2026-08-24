@@ -118,7 +118,7 @@ class Generator {
     }
     // Discriminated interface union
     return {
-      anyOf: Object.values(members.members).map((iface) =>
+      oneOf: Object.values(members.members).map((iface) =>
         this.interfaceToSchema(iface),
       ),
     };

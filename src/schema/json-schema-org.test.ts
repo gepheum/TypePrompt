@@ -286,13 +286,13 @@ describe("toJsonSchema - string literal unions", () => {
 // ---------------------------------------------------------------------------
 
 describe("toJsonSchema - discriminated interface unions", () => {
-  it("generates anyOf for a two-member discriminated union", () => {
+  it("generates oneOf for a two-member discriminated union", () => {
     expect(
       gen(
         'type Output = { kind: "circle"; radius: number } | { kind: "rect"; width: number; height: number };',
       ),
     ).toMatch({
-      anyOf: [
+      oneOf: [
         {
           type: "object",
           properties: {
@@ -316,12 +316,12 @@ describe("toJsonSchema - discriminated interface unions", () => {
     });
   });
 
-  it("preserves member order in anyOf", () => {
+  it("preserves member order in oneOf", () => {
     const result = gen(
       'type Output = { kind: "a" } | { kind: "b" } | { kind: "c" };',
     );
     expect(result).toMatch({
-      anyOf: [
+      oneOf: [
         { properties: { kind: { const: "a" } } },
         { properties: { kind: { const: "b" } } },
         { properties: { kind: { const: "c" } } },
@@ -335,13 +335,13 @@ describe("toJsonSchema - discriminated interface unions", () => {
 // ---------------------------------------------------------------------------
 
 describe("toJsonSchema - boolean-discriminated unions", () => {
-  it("generates anyOf with boolean const fields", () => {
+  it("generates oneOf with boolean const fields", () => {
     expect(
       gen(
         "type Output = { success: true; value: string } | { success: false; error: string };",
       ),
     ).toMatch({
-      anyOf: [
+      oneOf: [
         {
           type: "object",
           properties: {
