@@ -78,6 +78,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         const typePrefix = getTypePrefix(t.template, compilationResult);
         const fieldName = toPyName(t.template.name.text, "field_name");
         lines.push(
+          ` # Defined in '${t.template.sourcePath}'`,
           ` ${fieldName}: Template[`,
           `  ${typePrefix}Input,`,
           `  ${typePrefix}Output,`,

@@ -78,7 +78,9 @@ function writePromptsInterface(
         ...Object.values(
           namespace.templates.map((t) =>
             [
-              "readonly ",
+              "// Defined in '",
+              t.template.sourcePath,
+              "'\nreadonly ",
               uncapitalize(t.template.name.text),
               ': Template<"',
               getId(t.template),

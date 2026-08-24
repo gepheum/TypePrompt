@@ -49,6 +49,8 @@ export type SourceFileParseResult = {
 
 export type Template = {
   readonly kind: "success";
+  /** Path to the XML file where the template is defined. */
+  readonly sourcePath: string;
   readonly tag: Span;
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;

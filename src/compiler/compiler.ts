@@ -63,7 +63,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
   const [tag, topLevelNode] = topLevelNodes[0]!;
   switch (tag) {
     case "template": {
-      const template = parseTemplate(topLevelNode);
+      const template = parseTemplate(topLevelNode, path);
       if (template.kind === "error") {
         result.parseErrors.push(...template.errors);
       } else {

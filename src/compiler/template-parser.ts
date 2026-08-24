@@ -39,17 +39,24 @@ import { extractTextContent } from "./text-extractor.js";
 /** Parses a <template> element. The result has yet to be validated. */
 export function parseTemplate(
   templateNode: ElementNode,
+  sourcePath: string,
 ): Template | InternalErrors {
-  return TemplateParser.parseTemplate(templateNode);
+  return TemplateParser.parseTemplate(templateNode, sourcePath);
 }
 
 class TemplateParser {
-  static parseTemplate(templateNode: ElementNode): Template | InternalErrors {
-    const parser = new TemplateParser(templateNode);
+  static parseTemplate(
+    templateNode: ElementNode,
+    sourcePath: string,
+  ): Template | InternalErrors {
+    const parser = new TemplateParser(templateNode, sourcePath);
     return parser.parse();
   }
 
-  private constructor(readonly templateNode: ElementNode) {}
+  private constructor(
+    readonly templateNode: ElementNode,
+    readonly sourcePath: string,
+  ) {}
 
   parse(): Template | InternalErrors {
     // 1. Validate <template> attributes.
@@ -96,6 +103,7 @@ class TemplateParser {
 
     return {
       kind: "success",
+      sourcePath: this.sourcePath,
       tag: this.templateNode.tag,
       name: name.value,
       namespace: namespace?.value ?? null,
