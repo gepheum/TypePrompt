@@ -58,3 +58,17 @@ cd csharp
 dotnet test
 cd ..
 
+# Run Rust unit tests
+cd rust
+cargo test
+cd ..
+
+# Run Swift unit tests
+cd swift
+swift test
+cd ..
+
+# Run Dart unit tests
+cd dart
+dart test
+cd ..

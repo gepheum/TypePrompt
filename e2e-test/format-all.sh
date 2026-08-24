@@ -18,4 +18,14 @@ cd csharp
 ./format.sh
 cd ..
 
+cd rust
+./format.sh
+cd ..
 
+cd swift
+./format.sh
+cd ..
+
+cd dart
+./format.sh
+cd ..

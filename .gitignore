@@ -8,8 +8,12 @@ e2e-test/csharp/.vs/
 e2e-test/csharp/**/*.user
 e2e-test/csharp/**/*.suo
 
-e2e-test/kotlin/**/*.tsbuildinfo
+e2e-test/dart/.dart_tool/
+e2e-test/dart/build/
+e2e-test/dart/.packages
+
 e2e-test/kotlin/.gradle/
+e2e-test/kotlin/.kotlin/
 e2e-test/kotlin/build/
 e2e-test/kotlin/.idea/
 e2e-test/kotlin/**/*.iml
@@ -20,7 +24,12 @@ e2e-test/python/__pycache/
 e2e-test/python/gen
 e2e-test/python/**/*.pyc
 
+e2e-test/rust/target/
+
+e2e-test/swift/.build/
+
 e2e-test/typescript/src/gen
 
 node_modules
 playground
+*.tsbuildinfo
