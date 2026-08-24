@@ -4,7 +4,10 @@
     temperature: 0.2
   </meta>
 
-  <tools>- tool: webSearch</tools>
+  <tools>
+    # List of tools in YAML format
+    - tool: webSearch
+  </tools>
 
   <schema>
     interface Input {
