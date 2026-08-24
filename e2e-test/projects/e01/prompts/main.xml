@@ -1,0 +1,6 @@
+<namespace name="Main">
+  type Expr =
+    | { kind: "number"; value: number }
+    | { kind: "add"; left: Expr; right: Expr }
+    | { kind: "if"; condition: Expr; then: Expr; else: Expr };
+</namespace>

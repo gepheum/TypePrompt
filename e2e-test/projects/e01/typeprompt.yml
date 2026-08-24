@@ -1,5 +1,5 @@
-# TypePrompt configuration. Run "npx typeprompt gen" to generate code.
-include: tables.xml
+include: "prompts/**/*.xml"
+
 gen:
   typescript:
     file: ../../typescript/src/gen/prompts-e01.ts

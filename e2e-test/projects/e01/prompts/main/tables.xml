@@ -33,10 +33,10 @@
     </system>
 
     <user>
-      <insert val="input.question"/>
+      <insert val="input.question" />
 
       Data:
-      <insert val="input.rows" format="csv"/>
+      <insert val="input.rows" format="csv" />
     </user>
 
     <examples>
@@ -70,10 +70,10 @@
     </system>
 
     <user>
-      <insert val="input.question"/>
+      <insert val="input.question" />
 
       Data:
-      <insert val="input.rows" format="tsv"/>
+      <insert val="input.rows" format="tsv" />
     </user>
 
     <examples>
