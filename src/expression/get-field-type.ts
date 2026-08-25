@@ -1,10 +1,14 @@
-import { ResolvedType, Schema, SchemaField } from "../schema/schema-types.js";
+import {
+  ResolvedType,
+  SchemaField,
+  SchemaView,
+} from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { NullableType } from "./expression-types.js";
 
 export function resolveFieldType(
   field: SchemaField,
-  schema: Schema,
+  schema: SchemaView,
 ): ResolvedType | NullableType {
   if (field.optional) {
     return {

@@ -1,3 +1,5 @@
+import { NullableType } from "../expression/expression-types.js";
+import { resolveFieldType } from "../expression/get-field-type.js";
 import { makeSingletonErrors } from "../util/errors.js";
 import { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
@@ -339,7 +341,7 @@ function collectSharedFields(
   const first = members[0]!;
   const result: SyntheticSchemaField[] = [];
   for (const [name, field] of Object.entries(first.member.fields)) {
-    const fieldType = resolveType(field.type, schema);
+    const fieldType = resolveFieldType(field, schema);
     if (fieldType.kind === "string-literal") {
       continue;
     }
@@ -348,11 +350,8 @@ function collectSharedFields(
       if (!otherField) {
         return false;
       }
-      const otherFieldType = resolveType(otherField.type, schema);
-      return (
-        field.optional === otherField.optional &&
-        areResolvedTypesEqual(fieldType, otherFieldType, schema)
-      );
+      const otherFieldType = resolveFieldType(otherField, schema);
+      return areResolvedTypesEqual(fieldType, otherFieldType, schema);
     });
     if (isShared) {
       const docs = new Set(
@@ -373,8 +372,8 @@ function collectSharedFields(
 }
 
 function areResolvedTypesEqual(
-  a: ResolvedType,
-  b: ResolvedType,
+  a: ResolvedType | NullableType,
+  b: ResolvedType | NullableType,
   schema: SchemaView,
 ): boolean {
   switch (a.kind) {
@@ -389,9 +388,13 @@ function areResolvedTypesEqual(
         areTypesEqual(a.elementType, b.elementType, schema)
       );
     }
-    case "string-literal":
     case "boolean-literal": {
-      return b.kind === "string-literal" && a.value === b.value;
+      return b.kind === "boolean-literal" && a.value === b.value;
+    }
+    case "nullable": {
+      return (
+        b.kind === "nullable" && areResolvedTypesEqual(a.type, b.type, schema)
+      );
     }
     case "primitive": {
       return b.kind === "primitive" && a.primitive === b.primitive;
@@ -400,6 +403,9 @@ function areResolvedTypesEqual(
       return (
         b.kind === "record" && areTypesEqual(a.valueType, b.valueType, schema)
       );
+    }
+    case "string-literal": {
+      return b.kind === "string-literal" && a.value === b.value;
     }
   }
 }
