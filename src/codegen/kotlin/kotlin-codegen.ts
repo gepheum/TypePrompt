@@ -3,8 +3,8 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
-import type { Schema, Type } from "../../schema/schema-types.js";
-import { capitalize } from "../../util/casing.js";
+import type { NamingHint, Schema, Type } from "../../schema/schema-types.js";
+import { capitalize, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateKotlinCode(
@@ -165,37 +165,60 @@ function writeUserDefinedDatatypes(
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   const lines = [
-    "export type Meta = $.Meta.Meta;\n",
+    "typealias Meta = Schema.Meta.Meta;\n",
     "/** Namespace containing the user-defined datatypes. */",
-    "export namespace $ {",
-    "export namespace Meta {",
+    "object Meta {",
+    "object Meta {",
   ];
   if (anyTypes(metaSchema)) {
-    lines.push(writeSchema(metaSchema, { sharedTypePrefix: "Never." }));
+    lines.push(
+      writeSchema(metaSchema, {
+        typePrefix: "Schema.Meta.",
+        requiredTypes: ["Meta"],
+      }),
+    );
   } else {
-    lines.push("export type Meta = never;\n");
+    lines.push("export type Meta = Nothing?;\n");
   }
   lines.push("}\n");
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const namespaceName = namespace.name;
+    const schemaPrefix = singleNamespace
+      ? "Schema."
+      : `Schema.${namespaceName}.`;
     if (anyTypes(namespace.schema)) {
-      lines.push("export namespace Shared {");
-      lines.push(writeSchema(namespace.schema, { sharedTypePrefix: "Never." }));
+      lines.push("object Shared {");
+      lines.push(
+        writeSchema(namespace.schema, {
+          typePrefix: schemaPrefix,
+        }),
+      );
       lines.push("}\n");
     }
-    const sharedTypePrefix = singleNamespace
-      ? "$.Shared."
-      : `$.${namespace.name}.Shared.`;
+    const sharedTypePrefix = schemaPrefix.concat("Shared.");
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
-      lines.push(`export namespace ${templateName} {`);
-      lines.push(writeSchema(template.schema, { sharedTypePrefix }));
+      lines.push(`object ${templateName} {`);
+      lines.push(
+        writeSchema(template.schema, {
+          typePrefix: schemaPrefix.concat(templateName, "."),
+          sharedTypePrefix,
+          requiredTypes: ["Input", "Output"],
+        }),
+      );
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      lines.push(`export namespace ${capitalize(toolName)} {\n`);
-      lines.push(writeSchema(tool.schema, { sharedTypePrefix }));
+      const toolName = capitalize(tool.tool.name.text);
+      lines.push(`export namespace ${toolName} {\n`);
+      lines.push(
+        writeSchema(tool.schema, {
+          typePrefix: schemaPrefix.concat(toolName, "."),
+          sharedTypePrefix,
+          requiredTypes: ["Input", "Output"],
+        }),
+      );
       lines.push("}\n");
     }
   };
@@ -204,7 +227,7 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      lines.push(`export namespace ${namespace.name} {`);
+      lines.push(`object ${namespace.name} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
@@ -276,22 +299,54 @@ function writeUserDefinedDatatypes(
 
 function writeSchema(
   schema: Schema,
-  options: { readonly sharedTypePrefix: string },
+  options: {
+    readonly typePrefix: string;
+    readonly sharedTypePrefix?: string;
+    readonly requiredTypes?: readonly string[];
+    readonly isPrivate?: true;
+  },
 ): string {
+  const { isPrivate, typePrefix } = options;
   const lines: string[] = [];
-  for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
-    const name = typeDeclaration.name.text;
-    const jsdoc = wrapJsdoc(typeDeclaration.doc);
-    const type = writeType(typeDeclaration.valueType, options);
-    lines.push(`${jsdoc}export type ${name} = ${type};\n`);
+  for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
+    const name = makeNameFromHint(namingHint);
+    if (!isPrivate) {
+      lines.push(`// Exported as '${typePrefix}${name}'`);
+    }
+    lines.push(wrapKDoc(namingHint.doc));
+    switch (type.kind) {
+      case "interface": {
+        break;
+      }
+      case "union": {
+        break;
+      }
+    }
   }
+
+  for (const requiredType of options.requiredTypes ?? []) {
+    const declaration = schema.typeDeclarations[requiredType];
+    if (declaration) {
+      if (
+        declaration.valueType.kind !== "interface" &&
+        declaration.valueType.kind !== "union"
+      ) {
+        const type = writeType(declaration.valueType, schema, options);
+        lines.push(`typealias ${requiredType} = ${type}\n`);
+      }
+    } else {
+      lines.push(`typealias ${requiredType} = Unknown?\n`);
+    }
+  }
+
   return lines.join("\n");
 }
 
 function writeType(
   type: Type,
+  schema: Schema,
   options: {
-    readonly sharedTypePrefix: string;
+    readonly sharedTypePrefix?: string;
   },
 ): string {
   switch (type.kind) {
@@ -300,7 +355,7 @@ function writeType(
     }
     case "array": {
       const { elementType } = type;
-      const writtenElement = writeType(elementType, options);
+      const writtenElement = writeType(elementType, schema, options);
       if (elementType.kind === "union") {
         return `readonly (${writtenElement})[]`;
       } else {
@@ -318,11 +373,11 @@ function writeType(
       let result = "{\n";
       for (const [fieldName, field] of fields) {
         result += [
-          wrapJsdoc(field.doc),
+          wrapKDoc(field.doc),
           "readonly ",
           fieldName,
           field.optional ? "?: " : ": ",
-          writeType(field.type, options),
+          writeType(field.type, schema, options),
           ";\n",
         ].join("");
       }
@@ -331,15 +386,25 @@ function writeType(
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "number";
+        return "Int";
       } else {
-        return type.primitive.text;
+        switch (type.primitive.text) {
+          case "boolean":
+            return "Boolean";
+          case "string":
+            return "String";
+          case "number":
+            return "Double";
+          default:
+            throw new Error(type.primitive.text satisfies never);
+        }
       }
     }
     case "record": {
-      return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
+      return `Map<String, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name": {
+      if (!options.sharedTypePrefix) throw new Error();
       return options.sharedTypePrefix.concat(type.name.text);
     }
     case "string-literal": {
@@ -351,11 +416,38 @@ function writeType(
     case "union": {
       return "(\n"
         .concat(
-          type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
+          type.members
+            .map((m) => `| ${writeType(m, schema, options)}\n`)
+            .join(""),
         )
         .concat(")");
     }
   }
+}
+
+function makeNameFromHint(hint: NamingHint): string {
+  return hint.namePieces
+    .map((piece) => {
+      switch (piece.kind) {
+        case "type":
+          return piece.name;
+        case "field":
+          return capitalize(piece.name);
+        case "member": {
+          switch (piece.discriminant.type) {
+            case "string":
+              return capitalize(piece.discriminator).concat(
+                toPascalCase(piece.discriminant.value),
+              );
+            case "boolean":
+              return (piece.discriminant.value ? "" : "Not").concat(
+                capitalize(piece.discriminator),
+              );
+          }
+        }
+      }
+    })
+    .join("_");
 }
 
 // function writeZodType(
@@ -543,7 +635,11 @@ function writeType(
 //   ].join("\n");
 // }
 
-function wrapJsdoc(doc: string): string {
+function toKotlinName(name: string): string {
+  return KOTLIN_HARD_KEYWORDS.has(name) ? `\`${name}\`` : name;
+}
+
+function wrapKDoc(doc: string): string {
   if (!doc) return "";
   const lines = doc.split("\n");
   if (lines.length === 1) {
@@ -604,3 +700,53 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n$/g, "\n")
   );
 }
+
+const KOTLIN_HARD_KEYWORDS: ReadonlySet<string> = new Set([
+  "abstract",
+  "annotation",
+  "as",
+  "break",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "crossinline",
+  "data",
+  "else",
+  "enum",
+  "external",
+  "final",
+  "finally",
+  "for",
+  "fun",
+  "if",
+  "import",
+  "in",
+  "inline",
+  "interface",
+  "internal",
+  "is",
+  "lateinit",
+  "noinline",
+  "object",
+  "open",
+  "operator",
+  "override",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "reified",
+  "return",
+  "sealed",
+  "super",
+  "suspend",
+  "this",
+  "throw",
+  "try",
+  "typealias",
+  "val",
+  "var",
+  "when",
+  "while",
+]);
