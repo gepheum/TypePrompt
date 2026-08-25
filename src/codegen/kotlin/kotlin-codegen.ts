@@ -3,7 +3,13 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
-import type { NamingHint, Schema, Type } from "../../schema/schema-types.js";
+import type {
+  Interface,
+  NamingHint,
+  Schema,
+  Type,
+  Union,
+} from "../../schema/schema-types.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -297,15 +303,14 @@ function writeUserDefinedDatatypes(
 //   );
 // }
 
-function writeSchema(
-  schema: Schema,
-  options: {
-    readonly typePrefix: string;
-    readonly sharedTypePrefix?: string;
-    readonly requiredTypes?: readonly string[];
-    readonly isPrivate?: true;
-  },
-): string {
+type WriteSchemaOptions = {
+  readonly typePrefix: string;
+  readonly sharedTypePrefix?: string;
+  readonly requiredTypes?: readonly string[];
+  readonly isPrivate?: true;
+};
+
+function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const { isPrivate, typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
@@ -316,9 +321,11 @@ function writeSchema(
     lines.push(wrapKDoc(namingHint.doc));
     switch (type.kind) {
       case "interface": {
+        lines.push(...writeTypepromptInterface(type, name, schema, options));
         break;
       }
       case "union": {
+        lines.push(...writeTypepromptUnion(type, name, schema, options));
         break;
       }
     }
@@ -339,6 +346,42 @@ function writeSchema(
     }
   }
 
+  return lines.join("\n");
+}
+
+function writeTypepromptInterface(
+  type: Interface,
+  typeName: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  const lines: string[] = [];
+  return lines.join("\n");
+}
+
+function writeTypepromptUnion(
+  type: Union,
+  typeName: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  const members = schema.unionToMembers.get(type)!;
+  const lines: string[] = [];
+  switch (members.kind) {
+    case "strings": {
+      lines.push(`enum class ${typeName} {\n`);
+      for (const member of members.members) {
+        lines.push(toPascalCase(member.value));
+      }
+      lines.push("}");
+      break;
+    }
+    case "interfaces": {
+      lines.push(`sealed interface ${typeName} {`);
+
+      lines.push("}");
+    }
+  }
   return lines.join("\n");
 }
 

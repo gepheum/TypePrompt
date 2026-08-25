@@ -8,13 +8,16 @@ fun main() {
     println(getGreeting())
 }
 
-sealed interface MyInterface
+sealed interface MyInterface {
+    val x: Int
+        get() = 3
+}
 
 sealed interface MyOtherInterface
 
-data class Foo(val x: Int) : MyInterface
+data class Foo(override val x: Int) : MyInterface
 
-data class Bar(val x: Int) : MyInterface, MyOtherInterface
+data class Bar(override val x: Int) : MyInterface, MyOtherInterface
 
 fun f(i: MyInterface): String {
     return when (i) {
