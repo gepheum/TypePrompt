@@ -11,6 +11,7 @@ import type {
   Type,
   Union,
 } from "../../schema/schema-types.js";
+import { resolveType } from "../../schema/type-resolver.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -357,6 +358,16 @@ function writeTypepromptInterface(
   options: WriteSchemaOptions,
 ): string {
   const lines: string[] = [];
+  lines.push(`class ${typeName}(`);
+  for (const field of Object.values(type.fields)) {
+    const type = resolveType(field.type, schema);
+    // TODO
+    const fieldType = writeType(field.type, schema, options);
+    const name = toKotlinName(field.name.text);
+    lines.push(`val ${name}: ${fieldType}`);
+  }
+  lines.push(") {");
+  lines.push("}");
   return lines.join("\n");
 }
 
@@ -370,9 +381,14 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
+      lines.push("@Serializable")
       lines.push(`enum class ${typeName} {\n`);
       for (const member of members.members) {
-        lines.push(toPascalCase(member.value));
+        const kotlinName = toPascalCase(member.value);
+        if (kotlinName !== member.value) {
+          lines.push(`@SerialName("${member.value}")`);
+        }
+        lines.push(kotlinName);
       }
       lines.push("}");
       break;
