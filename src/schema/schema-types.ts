@@ -146,10 +146,10 @@ export type SyntheticArray = {
 
 export type SyntheticInterface = {
   readonly kind: "interface";
-  readonly fields: { readonly [name: string]: SyntheticSchemaField };
+  readonly fields: { readonly [name: string]: SyntheticField };
 };
 
-export type SyntheticSchemaField = {
+export type SyntheticField = {
   readonly name: {
     readonly text: string;
   };
@@ -240,11 +240,8 @@ export type DiscriminatedUnionMembers = {
   readonly discriminants: Discriminants;
   /** Other unions included in this union. */
   readonly includes: readonly Union[];
-  /**
-   * Fields shared across all members of the union.
-   * These fields are present in every member of the union with the same type.
-   */
-  readonly sharedFields: { readonly [name: string]: SyntheticSchemaField };
+  /** Fields common to all members of the union: same name, type, optionality. */
+  readonly commonFields: readonly CommonField[];
 };
 
 /** Discriminants of a discriminated union. */
@@ -257,6 +254,11 @@ export type Discriminants =
       readonly type: "boolean";
       readonly values: readonly BooleanLiteral[];
     };
+
+/** A field common to all members of a discriminated union. */
+export type CommonField = SyntheticField & {
+  readonly memberFields: readonly SchemaField[];
+};
 
 export type SyntheticUnionMembers =
   | {

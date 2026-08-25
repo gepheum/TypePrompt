@@ -5,13 +5,14 @@ import { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
 import {
   BooleanLiteral,
+  CommonField,
   Discriminants,
   DiscriminatedUnionMembers,
   Interface,
   ResolvedType,
+  SchemaField,
   SchemaView,
   StringLiteral,
-  SyntheticSchemaField,
   Type,
   Union,
   UnionMembers,
@@ -223,7 +224,7 @@ function makeInterfaceUnionMembers(
     }
   })();
 
-  const sharedFields = collectSharedFields(memberInfos, schema);
+  const commonFields = collectCommonFields(memberInfos, schema);
 
   return {
     kind: "interfaces",
@@ -233,7 +234,7 @@ function makeInterfaceUnionMembers(
     discriminator: first.discriminator,
     discriminants,
     includes,
-    sharedFields,
+    commonFields,
   };
 }
 
@@ -334,23 +335,19 @@ function getMemberInfo(
   };
 }
 
-function collectSharedFields(
+function collectCommonFields(
   members: readonly InterfaceMemberInfo[],
   schema: SchemaView,
-): { readonly [name: string]: SyntheticSchemaField } {
+): readonly CommonField[] {
   const first = members[0]!;
-  const result: SyntheticSchemaField[] = [];
+  const commonFields: CommonField[] = [];
   for (const [name, field] of Object.entries(first.member.fields)) {
     const fieldType = resolveFieldType(field, schema);
-    if (fieldType.kind === "string-literal") {
-      continue;
-    }
-    const isShared = members.every((m) => {
-      const otherField = m.member.fields[name];
-      if (!otherField) {
-        return false;
-      }
-      const otherFieldType = resolveFieldType(otherField, schema);
+    if (fieldType.kind === "string-literal") continue;
+    const memberFields = members.map((m) => m.member.fields[name]);
+    const isShared = memberFields.slice(1).every((m) => {
+      if (!m) return false;
+      const otherFieldType = resolveFieldType(m, schema);
       return areResolvedTypesEqual(fieldType, otherFieldType, schema);
     });
     if (isShared) {
@@ -360,15 +357,16 @@ function collectSharedFields(
           .filter((doc) => doc !== ""),
       );
       const doc = docs.size === 1 ? [...docs][0]! : "";
-      result.push({
+      commonFields.push({
         name: { text: name },
         optional: field.optional,
         type: field.type,
-        doc: doc,
+        doc,
+        memberFields: memberFields as readonly SchemaField[],
       });
     }
   }
-  return Object.fromEntries(result.map((field) => [field.name.text, field]));
+  return commonFields;
 }
 
 function areResolvedTypesEqual(
