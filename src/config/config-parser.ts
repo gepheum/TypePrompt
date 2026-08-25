@@ -8,12 +8,32 @@ export type Config = {
   readonly include: string;
 
   readonly gen?: {
-    readonly typescript?: {
-      /** Path to the generated .ts file. */
+    readonly csharp?: {
+      /** Path to the generated .cs file. */
+      readonly file: string;
+    };
+    readonly dart?: {
+      /** Path to the generated .dart file. */
+      readonly file: string;
+    };
+    readonly kotlin?: {
+      /** Path to the generated .kt file. */
       readonly file: string;
     };
     readonly python?: {
       /** Path to the generated .py file. */
+      readonly file: string;
+    };
+    readonly rust?: {
+      /** Path to the generated .rs file. */
+      readonly file: string;
+    };
+    readonly swift?: {
+      /** Path to the generated .swift file. */
+      readonly file: string;
+    };
+    readonly typescript?: {
+      /** Path to the generated .ts file. */
       readonly file: string;
     };
   };
