@@ -358,9 +358,8 @@ function collectCommonFields(
       );
       const doc = docs.size === 1 ? [...docs][0]! : "";
       commonFields.push({
-        name: { text: name },
-        optional: field.optional,
-        type: field.type,
+        name,
+        type: fieldType,
         doc,
         memberFields: memberFields as readonly SchemaField[],
       });

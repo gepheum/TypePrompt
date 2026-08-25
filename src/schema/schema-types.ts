@@ -1,3 +1,4 @@
+import { NullableType } from "../expression/expression-types.js";
 import type { Span, TextSpan } from "../util/shared-types.js";
 
 export type SchemaParseResult = {
@@ -256,7 +257,10 @@ export type Discriminants =
     };
 
 /** A field common to all members of a discriminated union. */
-export type CommonField = SyntheticField & {
+export type CommonField = {
+  readonly name: string;
+  readonly type: ResolvedType | NullableType;
+  readonly doc?: string;
   readonly memberFields: readonly SchemaField[];
 };
 

@@ -3,6 +3,7 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
+import { NullableType } from "../../expression/expression-types.js";
 import type {
   Interface,
   NamingHint,
@@ -378,7 +379,11 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       lines.push(`sealed interface ${typeName} {`);
-
+      for (const member of members.commonFields) {
+        const name = toKotlinName(member.name);
+        const type = writeType(member.type, schema, options);
+        lines.push(`val ${name}: ${type}`);
+      }
       lines.push("}");
     }
   }
@@ -386,7 +391,7 @@ function writeTypepromptUnion(
 }
 
 function writeType(
-  type: Type,
+  type: Type | NullableType,
   schema: Schema,
   options: {
     readonly sharedTypePrefix?: string;
@@ -426,6 +431,9 @@ function writeType(
       }
       result += "}";
       return result;
+    }
+    case "nullable": {
+      return writeType(type.type, schema, options).concat("?");
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
