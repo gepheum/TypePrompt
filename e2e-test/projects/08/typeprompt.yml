@@ -1,6 +1,8 @@
-include: ../../../examples/08-namespaces/**/*.xml
+include: ../../../examples/01-basics/**/*.xml
 gen:
-  typescript:
-    file: ../../typescript/src/gen/prompts-08.ts
+  kotlin:
+    file: ../../kotlin/src/main/gen/Prompts08.kt
   python:
     file: ../../python/gen/prompts_08.py
+  typescript:
+    file: ../../typescript/src/gen/prompts-08.ts

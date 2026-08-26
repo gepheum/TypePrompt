@@ -78,11 +78,19 @@ const RawConfigSchema = z
     include: z.string().min(1, "must be a non-empty string"),
     gen: z
       .object({
-        typescript: z
+        dart: z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
+              .refine((f) => f.endsWith(".dart"), `must end with '.dart'`),
+          })
+          .strict()
+          .optional(),
+        kotlin: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".kt"), `must end with '.kt'`),
           })
           .strict()
           .optional(),
@@ -91,6 +99,14 @@ const RawConfigSchema = z
             file: z
               .string()
               .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+          })
+          .strict()
+          .optional(),
+        typescript: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
           })
           .strict()
           .optional(),

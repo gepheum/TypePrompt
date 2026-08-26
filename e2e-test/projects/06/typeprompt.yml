@@ -1,6 +1,8 @@
-include: ../../../examples/06-toon-format/**/*.xml
+include: ../../../examples/01-basics/**/*.xml
 gen:
-  typescript:
-    file: ../../typescript/src/gen/prompts-06.ts
+  kotlin:
+    file: ../../kotlin/src/main/gen/Prompts06.kt
   python:
     file: ../../python/gen/prompts_06.py
+  typescript:
+    file: ../../typescript/src/gen/prompts-06.ts

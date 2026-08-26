@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import type {
+  Field,
   Interface,
   NamingHint,
   Optional,
@@ -170,21 +171,26 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
 ): string {
+  const unionContext = makeUnionContext(compilationResult);
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   const lines = [
     "typealias Meta = Schema.Meta.Meta;\n",
     "/** Namespace containing the user-defined datatypes. */",
-    "object Meta {",
+    "object Schema {",
     "object Meta {",
   ];
   if (anyTypes(metaSchema)) {
     lines.push(
-      writeSchema(metaSchema, {
-        typePrefix: "Schema.Meta.",
-        requiredTypes: ["Meta"],
-      }),
+      writeSchema(
+        metaSchema,
+        {
+          typePrefix: "Schema.Meta.",
+          requiredTypes: ["Meta"],
+        },
+        unionContext,
+      ),
     );
   } else {
     lines.push("export type Meta = Nothing?;\n");
@@ -192,29 +198,37 @@ function writeUserDefinedDatatypes(
   lines.push("}\n");
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = namespace.name;
-    const schemaPrefix = singleNamespace
+    const namespaceName: string = namespace.name;
+    const typePrefixBase = singleNamespace
       ? "Schema."
       : `Schema.${namespaceName}.`;
+    const sharedTypePrefix = typePrefixBase.concat("Shared.");
     if (anyTypes(namespace.schema)) {
       lines.push("object Shared {");
       lines.push(
-        writeSchema(namespace.schema, {
-          typePrefix: schemaPrefix,
-        }),
+        writeSchema(
+          namespace.schema,
+          {
+            typePrefix: sharedTypePrefix,
+          },
+          unionContext,
+        ),
       );
       lines.push("}\n");
     }
-    const sharedTypePrefix = schemaPrefix.concat("Shared.");
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
       lines.push(`object ${templateName} {`);
       lines.push(
-        writeSchema(template.schema, {
-          typePrefix: schemaPrefix.concat(templateName, "."),
-          sharedTypePrefix,
-          requiredTypes: ["Input", "Output"],
-        }),
+        writeSchema(
+          template.schema,
+          {
+            typePrefix: typePrefixBase.concat(templateName, "."),
+            sharedTypePrefix,
+            requiredTypes: ["Input", "Output"],
+          },
+          unionContext,
+        ),
       );
       lines.push("}\n");
     }
@@ -222,11 +236,15 @@ function writeUserDefinedDatatypes(
       const toolName = capitalize(tool.tool.name.text);
       lines.push(`export namespace ${toolName} {\n`);
       lines.push(
-        writeSchema(tool.schema, {
-          typePrefix: schemaPrefix.concat(toolName, "."),
-          sharedTypePrefix,
-          requiredTypes: ["Input", "Output"],
-        }),
+        writeSchema(
+          tool.schema,
+          {
+            typePrefix: typePrefixBase.concat(toolName, "."),
+            sharedTypePrefix,
+            requiredTypes: ["Input", "Output"],
+          },
+          unionContext,
+        ),
       );
       lines.push("}\n");
     }
@@ -313,7 +331,11 @@ type WriteSchemaOptions = {
   readonly isPrivate?: true;
 };
 
-function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
+function writeSchema(
+  schema: Schema,
+  options: WriteSchemaOptions,
+  context: UnionContext,
+): string {
   const { isPrivate, typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
@@ -321,17 +343,20 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     if (!isPrivate) {
       lines.push(`// Exported as '${typePrefix}${name}'`);
     }
-    lines.push(wrapKDoc(namingHint.doc));
+    lines.push(...wrapKDoc(namingHint.doc));
     switch (type.kind) {
       case "interface": {
-        lines.push(...writeTypepromptInterface(type, name, schema, options));
+        lines.push(
+          writeTypepromptInterface(type, name, schema, options, context),
+        );
         break;
       }
       case "union": {
-        lines.push(...writeTypepromptUnion(type, name, schema, options));
+        lines.push(writeTypepromptUnion(type, name, schema, options));
         break;
       }
     }
+    lines.push("");
   }
 
   for (const requiredType of options.requiredTypes ?? []) {
@@ -357,20 +382,34 @@ function writeTypepromptInterface(
   typeName: string,
   schema: Schema,
   options: WriteSchemaOptions,
+  context: UnionContext,
 ): string {
-  const lines: string[] = [];
-  lines.push(`class ${typeName}(`);
-  for (const field of Object.values(type.fields)) {
+  const fields = Object.values(type.fields);
+  const isDataClass = fields.some((f) => !isLiteralType(f.type));
+  const lines = [
+    "@Serializable",
+    (isDataClass ? "data " : "").concat(`class ${typeName}(`),
+  ];
+  for (const field of fields) {
     const type = resolveType(field.type, schema);
-    if (isLiteralType(field.type)) {
-      // TODO
-      continue;
-    }
-    const fieldType = writeType(field.type, schema, options);
+    if (isLiteralType(type)) continue;
+    lines.push(...wrapKDoc(field.doc));
     const name = toKotlinName(field.name.text);
+    const fieldType = writeType(type, schema, options);
     lines.push(`val ${name}: ${fieldType}`);
   }
-  lines.push(") {");
+  const interfaces = context.interfaceMemberToUnionRefs.get(type);
+  const implementClause = interfaces ? ": ".concat(interfaces.join(", ")) : "";
+  lines.push(`)${implementClause} {`);
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    if (!isLiteralType(type)) continue;
+    const name = toKotlinName(field.name.text);
+    const fieldType = type.kind === "string-literal" ? "String" : "Bool";
+    const literal = JSON.stringify(type.value);
+    lines.push(...wrapKDoc(field.doc));
+    lines.push(`val ${name}: ${fieldType} get() = ${literal}`);
+  }
   lines.push("}");
   return lines.join("\n");
 }
@@ -401,10 +440,7 @@ function writeTypepromptUnion(
       lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
         const name = toKotlinName(member.name);
-        if (isLiteralType(member.type)) {
-          // TODO
-          continue;
-        }
+        if (isLiteralType(member.type)) continue;
         const type = writeType(member.type, schema, options);
         lines.push(`val ${name}: ${type}`);
       }
@@ -705,22 +741,75 @@ function makeNameFromHint(hint: NamingHint): string {
 //   ].join("\n");
 // }
 
+type UnionContext = {
+  readonly interfaceMemberToUnionRefs: Map<Interface, readonly string[]>;
+  readonly overrideFields: Set<Field>;
+};
+
+function makeUnionContext(
+  compilationResult: ValidCompilationResult,
+): UnionContext {
+  const interfaceMemberToUnionRefs = new Map<Interface, string[]>();
+  const overrideFields = new Set<Field>();
+
+  const processSchema = (schema: Schema, typePrefix: string): void => {
+    for (const [
+      type,
+      namingHint,
+    ] of schema.namingHints.defaultScope.entries()) {
+      if (type.kind !== "union") continue;
+      const members = schema.unionToMembers.get(type)!;
+      if (members.kind !== "interfaces") continue;
+      const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
+      for (const member of Object.values(members.members)) {
+        const unionRefs = interfaceMemberToUnionRefs.get(member) ?? [];
+        if (unionRefs.length <= 0) {
+          interfaceMemberToUnionRefs.set(member, unionRefs);
+        }
+        unionRefs.push(unionRef);
+
+        for (const commonField of members.commonFields) {
+          for (const memberField of commonField.memberFields) {
+            overrideFields.add(memberField);
+          }
+        }
+      }
+    }
+  };
+
+  processSchema(compilationResult.metaSchema, "Schema.Meta.");
+  for (const namespace of Object.values(compilationResult.namespaces)) {
+    const typePrefixBase = compilationResult.singleNamespace
+      ? "Schema."
+      : "Schema.".concat(namespace.name, ".");
+    processSchema(namespace.schema, typePrefixBase.concat("Shared."));
+    for (const template of namespace.templates) {
+      const templateName = template.template.name.text;
+      processSchema(template.schema, typePrefixBase.concat(templateName, "."));
+    }
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = capitalize(tool.tool.name.text);
+      processSchema(tool.schema, typePrefixBase.concat(toolName, "."));
+    }
+  }
+
+  return {
+    interfaceMemberToUnionRefs,
+    overrideFields,
+  };
+}
+
 function toKotlinName(name: string): string {
   return KOTLIN_HARD_KEYWORDS.has(name) ? `\`${name}\`` : name;
 }
 
-function wrapKDoc(doc: string): string {
-  if (!doc) return "";
+function wrapKDoc(doc: string): readonly string[] {
+  if (!doc) return [];
   const lines = doc.split("\n");
   if (lines.length === 1) {
-    return `/** ${doc} */\n`;
+    return [`/** ${doc} */`];
   } else {
-    let result = `/**\n`;
-    for (const line of lines) {
-      result += line ? ` * ${line}\n` : ` *\n`;
-    }
-    result += ` */\n`;
-    return result;
+    return ["/**", ...lines.map((line) => (line ? ` * ${line}` : " *")), " */"];
   }
 }
 

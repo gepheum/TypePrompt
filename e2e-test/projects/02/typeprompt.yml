@@ -1,6 +1,8 @@
-include: ../../../examples/02-structured-output/**/*.xml
+include: ../../../examples/01-basics/**/*.xml
 gen:
-  typescript:
-    file: ../../typescript/src/gen/prompts-02.ts
+  kotlin:
+    file: ../../kotlin/src/main/gen/Prompts02.kt
   python:
     file: ../../python/gen/prompts_02.py
+  typescript:
+    file: ../../typescript/src/gen/prompts-02.ts

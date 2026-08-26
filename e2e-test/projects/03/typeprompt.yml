@@ -1,6 +1,8 @@
-include: ../../../examples/03-tools/**/*.xml
+include: ../../../examples/01-basics/**/*.xml
 gen:
-  typescript:
-    file: ../../typescript/src/gen/prompts-03.ts
+  kotlin:
+    file: ../../kotlin/src/main/gen/Prompts03.kt
   python:
     file: ../../python/gen/prompts_03.py
+  typescript:
+    file: ../../typescript/src/gen/prompts-03.ts
