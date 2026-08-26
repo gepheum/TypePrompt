@@ -1,7 +1,12 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { ExpressionContext } from "../expression/expression-types.js";
-import { ResolvedType, Schema, SyntheticType } from "../schema/schema-types.js";
+import {
+  ResolvedFieldType,
+  ResolvedType,
+  Schema,
+  SyntheticType,
+} from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { InternalError } from "../util/shared-types.js";
 import {
@@ -130,7 +135,7 @@ function validateBodyImpl<HasValContext extends boolean>(
 }
 
 function isStringOrIntegerType(
-  type: ResolvedType | SyntheticType,
+  type: ResolvedFieldType | SyntheticType,
   schema: Schema,
 ): boolean {
   switch (type.kind) {
@@ -156,9 +161,6 @@ function isTabularType(type: ResolvedType, schema: Schema): boolean {
     return false;
   }
   return Object.values(elementType.fields).every((field) => {
-    if (field.optional) {
-      return false;
-    }
     const fieldType = resolveType(field.type, schema);
     return isStringOrIntegerType(fieldType, schema);
   });

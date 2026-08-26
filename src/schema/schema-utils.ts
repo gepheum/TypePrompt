@@ -1,4 +1,4 @@
-import { SchemaView, Type } from "./schema-types.js";
+import { FieldType, SchemaView, Type } from "./schema-types.js";
 
 export type NameScope = "defaultScope" | "shared";
 
@@ -7,7 +7,7 @@ export type NameDependencies = {
 };
 
 export function getNameDependencies(
-  type: Type | { readonly kind: "types"; types: readonly Type[] },
+  type: FieldType | { readonly kind: "types"; types: readonly Type[] },
   scope: NameScope,
   schema: SchemaView,
   mode: "direct" | "recursive" | "cycle-detection",
@@ -16,7 +16,7 @@ export function getNameDependencies(
     defaultScope: new Set<string>(),
     shared: new Set<string>(),
   };
-  const collect = (type: Type, scope: NameScope): null => {
+  const collect = (type: FieldType, scope: NameScope): null => {
     switch (type.kind) {
       case "any":
       case "boolean-literal":
@@ -32,6 +32,9 @@ export function getNameDependencies(
           collect(field.type, scope);
         }
         return null;
+      }
+      case "nullable": {
+        return collect(type.type, scope);
       }
       case "record": {
         return collect(type.valueType, scope);

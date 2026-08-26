@@ -1,11 +1,11 @@
 import type {
   HasName,
-  ResolvedType,
+  ResolvedFieldType,
   Schema,
   SyntheticType,
   TypeDeclaration,
 } from "../schema/schema-types.js";
-import { resolveSyntheticType } from "../schema/type-resolver.js";
+import { resolveType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
 import type {
   JsonTypeMatch,
@@ -26,7 +26,7 @@ export function validateJson(
 ): InternalError[] {
   const result = jsonMatchesType(
     json as LooseJsonValue,
-    resolveSyntheticType(type, schema),
+    resolveType(type.kind === "type" ? type.valueType : type, schema),
     "thorough",
     schema,
   );
@@ -51,7 +51,7 @@ export function validateJson(
 
 export function jsonMatchesType(
   value: LooseJsonValue,
-  type: ResolvedType | SyntheticType,
+  type: ResolvedFieldType | SyntheticType,
   mode: "fast" | "thorough",
   schema: SchemaView,
 ): JsonTypeMatch {
@@ -64,7 +64,7 @@ export function jsonMatchesType(
     }
     case "array": {
       if (value.kind === "array") {
-        const elementType = resolveSyntheticType(type.elementType, schema);
+        const elementType = resolveType(type.elementType, schema);
         let matchScoreTotal = 0.0;
         const { elements } = value;
         for (const element of elements) {
@@ -118,7 +118,7 @@ export function jsonMatchesType(
     case "interface": {
       if (value.kind === "object") {
         const requiredFields = Object.values(type.fields).filter(
-          (field) => !field.optional,
+          (field) => field.type.kind !== "nullable",
         );
         if (
           Object.keys(value.entries).length === 0 &&
@@ -135,7 +135,7 @@ export function jsonMatchesType(
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
           if (field) {
-            const fieldType = resolveSyntheticType(field.type, schema);
+            const fieldType = resolveType(field.type, schema);
             const fieldMatch = jsonMatchesType(
               entry.value,
               fieldType,
@@ -207,6 +207,14 @@ export function jsonMatchesType(
         );
       }
     }
+    case "nullable": {
+      if (value.kind === "null") {
+        return MATCH;
+      } else {
+        const innerType = resolveType(type.type, schema);
+        return jsonMatchesType(value, innerType, mode, schema);
+      }
+    }
     case "primitive": {
       if (value.kind === type.primitive.text) {
         return MATCH;
@@ -235,7 +243,7 @@ export function jsonMatchesType(
     }
     case "record": {
       if (value.kind === "object") {
-        const valueType = resolveSyntheticType(type.valueType, schema);
+        const valueType = resolveType(type.valueType, schema);
         let matchScoreTotal = 0.0;
         for (const entry of Object.values(value.entries)) {
           const valueMatch = jsonMatchesType(

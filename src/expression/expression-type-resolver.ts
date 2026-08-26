@@ -1,13 +1,12 @@
-import { ResolvedType, Schema } from "../schema/schema-types.js";
+import {
+  NullableType,
+  ResolvedFieldType,
+  ResolvedType,
+  Schema,
+} from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { InternalErrors } from "../util/shared-types.js";
-import {
-  Expression,
-  ExpressionContext,
-  NullableType,
-  NullType,
-} from "./expression-types.js";
-import { resolveFieldType } from "./get-field-type.js";
+import { Expression, ExpressionContext, NullType } from "./expression-types.js";
 
 export type ResolvedExpressionType<HasValContext extends boolean> =
   | ResolvedType
@@ -30,7 +29,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
   expression: Expression<HasValContext>,
   schema: Schema,
   context: HasValContext extends true ? ExpressionContext : null,
-): ResolvedType | NullableType | NullType | InternalErrors {
+): ResolvedFieldType | NullType | InternalErrors {
   if (context) {
     let fullPath = expression.fullPath.text;
     if (fullPath === "it" || fullPath.startsWith("it.")) {
@@ -45,7 +44,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
   switch (expression.kind) {
     case "input": {
       const input = schema.typeDeclarations["Input"]!;
-      return resolveType(input, schema);
+      return resolveType(input.valueType, schema);
     }
     case "it": {
       return context!.it.type;
@@ -101,7 +100,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
           ],
         };
       }
-      return resolveFieldType(field, schema);
+      return resolveType(field.type, schema);
     }
   }
 }

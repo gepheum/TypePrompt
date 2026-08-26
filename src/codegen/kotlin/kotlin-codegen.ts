@@ -381,7 +381,7 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push("@Serializable")
+      lines.push("@Serializable");
       lines.push(`enum class ${typeName} {\n`);
       for (const member of members.members) {
         const kotlinName = toPascalCase(member.value);

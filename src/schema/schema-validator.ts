@@ -7,6 +7,7 @@ import type {
 } from "../util/shared-types.js";
 import { EMPTY_SCHEMA } from "./empty-schema.js";
 import type {
+  FieldType,
   Interface,
   NamingHint,
   Schema,
@@ -131,7 +132,7 @@ function validateType(
   unionToMembers: Map<Union, UnionMembers>,
   errors: ErrorSink,
 ): void {
-  function validate(type: Type | TypeDeclaration): null {
+  function validate(type: FieldType | TypeDeclaration): null {
     switch (type.kind) {
       case "any":
       case "boolean-literal":
@@ -155,6 +156,9 @@ function validateType(
           validate(field.type);
         }
         return null;
+      }
+      case "nullable": {
+        return validate(type.type);
       }
       case "record": {
         return validate(type.valueType);
@@ -283,15 +287,11 @@ function collectIdentifiers(
 ): ReadonlySet<string> {
   const identifiers = new Set<string>();
 
-  const collect = (type: Type | TypeDeclaration): null => {
+  const collect = (type: FieldType | TypeDeclaration): null => {
     switch (type.kind) {
       case "any":
       case "boolean-literal":
       case "primitive": {
-        return null;
-      }
-      case "string-literal": {
-        identifiers.add(type.value);
         return null;
       }
       case "array": {
@@ -304,11 +304,18 @@ function collectIdentifiers(
         }
         return null;
       }
+      case "nullable": {
+        return collect(type.type);
+      }
       case "record": {
         return collect(type.valueType);
       }
       case "shared-type-name":
       case "type-name": {
+        return null;
+      }
+      case "string-literal": {
+        identifiers.add(type.value);
         return null;
       }
       case "type": {
@@ -340,7 +347,7 @@ function collectNamingHints(
 ): ReadonlyMap<Interface | Union, NamingHint> {
   const typeToNamingHint = new Map<Interface | Union, NamingHint>();
 
-  const collect = (type: Type, context: NamingHint): null => {
+  const collect = (type: FieldType, context: NamingHint): null => {
     switch (type.kind) {
       case "any":
       case "boolean-literal":
@@ -365,6 +372,9 @@ function collectNamingHints(
           collect(field.type, newContext);
         }
         return null;
+      }
+      case "nullable": {
+        return collect(type.type, context);
       }
       case "record": {
         return collect(type.valueType, context);

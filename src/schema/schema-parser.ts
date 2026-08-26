@@ -6,8 +6,11 @@ import type {
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
+import { getFirstToken } from "./get-first-token.js";
 import type {
-  SchemaField,
+  Field,
+  FieldType,
+  Literal,
   SchemaParseResult,
   Type,
   TypeDeclaration,
@@ -176,8 +179,8 @@ class SchemaParser {
     };
   }
 
-  private parseFields(): readonly SchemaField[] {
-    const result: SchemaField[] = [];
+  private parseFields(): readonly Field[] {
+    const result: Field[] = [];
     while (true) {
       const field = this.tryParseField();
       if (field !== null) {
@@ -189,7 +192,7 @@ class SchemaParser {
     return result;
   }
 
-  private tryParseField(): SchemaField | null {
+  private tryParseField(): Field | null {
     let token = this.peekToken();
     let jsdoc: Token | undefined;
     if (token.kind === "jsdoc") {
@@ -207,6 +210,7 @@ class SchemaParser {
       }
       return null;
     }
+    const doc = getDocText(jsdoc);
     this.movePast(name);
     token = this.peekToken();
     const optional = token.text === "?";
@@ -216,9 +220,10 @@ class SchemaParser {
     if (!this.expectExactThenMove(":", token)) {
       return null;
     }
-    const typeRef = this.parseTypeRef();
-    if (typeRef === null) {
-      return null;
+    let type: FieldType | null = this.parseTypeRef();
+    if (type === null) return null;
+    if (optional) {
+      type = { kind: "nullable", type: type };
     }
     token = this.peekToken();
     if (token.text === ";" || token.text === ",") {
@@ -227,16 +232,30 @@ class SchemaParser {
       // Will always push an error.
       this.expectExactThenMove(";", token);
     }
-    return {
-      name: this.tokenToSpan(name),
-      optional: optional,
-      type: typeRef,
-      doc: getDocText(jsdoc),
-    };
+    return { name: this.tokenToSpan(name), type, doc };
   }
 
-  private parseTypeRef(context?: { lastTokenWasPipe?: boolean }): Type | null {
-    let type: Type | null = ((): Type | null => {
+  private parseTypeRef(context: {
+    lastTokenWasPipe: true;
+    allowLiteral: true;
+  }): Type | Literal | null;
+  private parseTypeRef(context: {
+    lastTokenWasPipe: false;
+    allowLiteral?: undefined;
+  }): Type | Literal | null;
+  private parseTypeRef(context?: undefined): Type | null;
+  private parseTypeRef(
+    context?:
+      | {
+          lastTokenWasPipe: true;
+          allowLiteral: true;
+        }
+      | {
+          lastTokenWasPipe: false;
+          allowLiteral: undefined;
+        },
+  ): Type | Literal | null {
+    let type = ((): Type | Literal | null => {
       const token = this.peekToken();
       const match = this.expectThenMove(token, {
         "(": EXACT_MATCHER,
@@ -276,9 +295,9 @@ class SchemaParser {
             if (!this.expectExactThenMove("}")) return null;
             return {
               kind: "record",
-              keyName: keyName,
+              keyName,
               leftCurlyBracket: this.tokenToSpan(token),
-              valueType: valueType,
+              valueType,
             };
           } else {
             // Inline interface
@@ -293,15 +312,15 @@ class SchemaParser {
           }
         }
         case "|": {
-          return this.parseTypeRef({ lastTokenWasPipe: true });
+          return this.parseTypeRef({
+            lastTokenWasPipe: true,
+            allowLiteral: true,
+          });
         }
         case "stringLiteral": {
           const value = token.text.slice(1, -1);
-          return {
-            kind: "string-literal",
-            value,
-            quotedName: this.tokenToSpan(token),
-          };
+          const quotedName = this.tokenToSpan(token);
+          return { kind: "string-literal", value, quotedName };
         }
         case "shared": {
           if (!this.expectExactThenMove(".")) {
@@ -353,27 +372,35 @@ class SchemaParser {
         }
       }
     })();
-    if (type === null) {
-      return null;
-    }
     while (true) {
+      if (type === null) return null;
       let token = this.peekToken();
-      if (token.text === "[") {
+      if (token.text === "|") {
+        this.movePast(token);
+        const rightType = this.parseTypeRef({
+          lastTokenWasPipe: true,
+          allowLiteral: true,
+        });
+        if (rightType === null) {
+          return null;
+        }
+        return joinTypes(type, rightType);
+      } else if (!context?.allowLiteral && isLiteralType(type)) {
+        this.parserErrors.push(makeLiteralTypeNotAllowedError(type));
+        return null;
+      } else if (token.text === "[") {
         token = this.movePastThenPeek(token);
         if (!this.expectExactThenMove("]", token)) {
+          return null;
+        }
+        if (isLiteralType(type)) {
+          this.parserErrors.push(makeLiteralTypeNotAllowedError(type));
           return null;
         }
         type = {
           kind: "array",
           elementType: type,
         };
-      } else if (token.text === "|") {
-        this.movePast(token);
-        const rightType = this.parseTypeRef({ lastTokenWasPipe: true });
-        if (rightType === null) {
-          return null;
-        }
-        return joinTypes(type, rightType);
       } else {
         return type;
       }
@@ -636,7 +663,7 @@ function getDocText(jsdoc: Token | undefined): string {
   return lines.join("\n");
 }
 
-function joinTypes(a: Type, b: Type): Union {
+function joinTypes(a: Type | Literal, b: Type | Literal): Union {
   if (a.kind === "union") {
     if (b.kind === "union") {
       return {
@@ -660,4 +687,16 @@ function joinTypes(a: Type, b: Type): Union {
       members: [a, b],
     };
   }
+}
+
+function isLiteralType(type: Type | Literal): type is Literal {
+  return type.kind === "string-literal" || type.kind === "boolean-literal";
+}
+
+function makeLiteralTypeNotAllowedError(type: Literal): InternalError {
+  return {
+    span: getFirstToken(type),
+    message: "Literal type not allowed here",
+    rule: "Literal types are allowed only as field types or members in a union",
+  };
 }

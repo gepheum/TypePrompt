@@ -1,5 +1,6 @@
 import {
   Interface,
+  Literal,
   SchemaView,
   Type,
   Union,
@@ -29,7 +30,7 @@ class Generator {
     private readonly unionToMembers: ReadonlyMap<Union, UnionMembers>,
   ) {}
 
-  typeToSchema(type: Type): Record<string, unknown> {
+  typeToSchema(type: Type | Literal): Record<string, unknown> {
     switch (type.kind) {
       case "any": {
         return {};
@@ -46,9 +47,6 @@ class Generator {
       case "primitive": {
         return { type: type.primitive.text };
       }
-      case "string-literal": {
-        return { type: "string", const: type.value };
-      }
       case "record": {
         return {
           type: "object",
@@ -57,6 +55,9 @@ class Generator {
       }
       case "shared-type-name": {
         return this.namedTypeToRef(type.name.text, true);
+      }
+      case "string-literal": {
+        return { type: "string", const: type.value };
       }
       case "type-name": {
         return this.namedTypeToRef(type.name.text, false);
@@ -94,14 +95,17 @@ class Generator {
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
     for (const [fieldName, field] of Object.entries(iface.fields)) {
-      const fieldSchema = this.typeToSchema(field.type);
+      let type = field.type;
+      if (type.kind === "nullable") {
+        type = type.type;
+      } else {
+        required.push(fieldName);
+      }
+      const fieldSchema = this.typeToSchema(type);
       if (field.doc) {
         fieldSchema.description = field.doc;
       }
       properties[fieldName] = fieldSchema;
-      if (!field.optional) {
-        required.push(fieldName);
-      }
     }
     const schema: Record<string, unknown> = { type: "object", properties };
     if (required.length > 0) {

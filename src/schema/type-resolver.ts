@@ -1,41 +1,51 @@
 import type {
+  FieldType,
+  Literal,
+  ResolvedFieldType,
   ResolvedType,
   SchemaView,
   SyntheticType,
   Type,
-  TypeDeclaration,
+  UnionMemberType,
 } from "./schema-types.js";
 
-export function resolveType(
-  type: Type | TypeDeclaration,
-  schema: SchemaView,
-): ResolvedType {
-  return doResolveType<never>(type, schema, null)!;
-}
+export function resolveType(type: Type, schema: SchemaView): ResolvedType;
 
-export function resolveSyntheticType(
-  type: Type | TypeDeclaration | SyntheticType,
+export function resolveType(
+  type: FieldType,
   schema: SchemaView,
-): ResolvedType | SyntheticType {
-  return doResolveType<SyntheticType>(type, schema, null)!;
+): ResolvedFieldType;
+
+export function resolveType(
+  type: Type | SyntheticType,
+  schema: SchemaView,
+): ResolvedType | SyntheticType;
+
+export function resolveType(
+  type: FieldType | SyntheticType,
+  schema: SchemaView,
+): ResolvedFieldType | SyntheticType;
+
+export function resolveType(
+  type: Type | FieldType | SyntheticType,
+  schema: SchemaView,
+): ResolvedFieldType | SyntheticType {
+  return doResolveType(type, schema, null)!;
 }
 
 export function resolveMaybeInvalidType(
-  type: Type | TypeDeclaration,
+  type: UnionMemberType,
   schema: SchemaView,
-): ResolvedType | null {
+): ResolvedType | Literal | null {
   const seenNames = new Set<string>();
-  return doResolveType<never>(type, schema, seenNames);
+  return doResolveType(type, schema, seenNames) as ResolvedType | null;
 }
 
-function doResolveType<S extends SyntheticType | never>(
-  type: Type | TypeDeclaration | S,
+function doResolveType(
+  type: FieldType | SyntheticType,
   schema: SchemaView,
   seenNames: Set<string> | null,
-): ResolvedType | null | S {
-  if (type.kind === "type") {
-    type = type.valueType;
-  }
+): ResolvedFieldType | SyntheticType | null {
   switch (type.kind) {
     case "type-name": {
       const typeName = type.name.text;
@@ -49,7 +59,7 @@ function doResolveType<S extends SyntheticType | never>(
       if (!resolved) {
         return null;
       }
-      return doResolveType<S>(resolved, schema, seenNames);
+      return doResolveType(resolved.valueType, schema, seenNames);
     }
     case "shared-type-name": {
       const typeName = type.name.text;
@@ -61,7 +71,7 @@ function doResolveType<S extends SyntheticType | never>(
       if (!resolved) {
         return null;
       }
-      return doResolveType<S>(resolved, schema, seenNames);
+      return doResolveType(resolved.valueType, schema, seenNames);
     }
     default: {
       return type;

@@ -1,5 +1,3 @@
-import { NullableType } from "../expression/expression-types.js";
-import { resolveFieldType } from "../expression/get-field-type.js";
 import { makeSingletonErrors } from "../util/errors.js";
 import { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
@@ -8,9 +6,9 @@ import {
   CommonField,
   Discriminants,
   DiscriminatedUnionMembers,
+  Field,
   Interface,
-  ResolvedType,
-  SchemaField,
+  ResolvedFieldType,
   SchemaView,
   StringLiteral,
   Type,
@@ -290,12 +288,6 @@ function getMemberInfo(
       message: "Can't have an empty interface in a discriminated union",
     });
   }
-  if (firstField.optional) {
-    return makeSingletonErrors({
-      span: member.errorToken,
-      message: `Discriminator ('${firstField.name.text}') can't be optional`,
-    });
-  }
   const discriminant = resolveType(firstField.type, schema);
   const discriminator = firstField.name.text;
   if (
@@ -342,12 +334,12 @@ function collectCommonFields(
   const first = members[0]!;
   const commonFields: CommonField[] = [];
   for (const [name, field] of Object.entries(first.member.fields)) {
-    const fieldType = resolveFieldType(field, schema);
+    const fieldType = resolveType(field.type, schema);
     if (fieldType.kind === "string-literal") continue;
     const memberFields = members.map((m) => m.member.fields[name]);
     const isShared = memberFields.slice(1).every((m) => {
       if (!m) return false;
-      const otherFieldType = resolveFieldType(m, schema);
+      const otherFieldType = resolveType(m.type, schema);
       return areResolvedTypesEqual(fieldType, otherFieldType, schema);
     });
     if (isShared) {
@@ -361,7 +353,7 @@ function collectCommonFields(
         name,
         type: fieldType,
         doc,
-        memberFields: memberFields as readonly SchemaField[],
+        memberFields: memberFields as readonly Field[],
       });
     }
   }
@@ -369,8 +361,8 @@ function collectCommonFields(
 }
 
 function areResolvedTypesEqual(
-  a: ResolvedType | NullableType,
-  b: ResolvedType | NullableType,
+  a: ResolvedFieldType,
+  b: ResolvedFieldType,
   schema: SchemaView,
 ): boolean {
   switch (a.kind) {
@@ -389,9 +381,7 @@ function areResolvedTypesEqual(
       return b.kind === "boolean-literal" && a.value === b.value;
     }
     case "nullable": {
-      return (
-        b.kind === "nullable" && areResolvedTypesEqual(a.type, b.type, schema)
-      );
+      return b.kind === "nullable" && areTypesEqual(a.type, b.type, schema);
     }
     case "primitive": {
       return b.kind === "primitive" && a.primitive === b.primitive;

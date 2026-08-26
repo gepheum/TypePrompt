@@ -17,7 +17,7 @@ import {
   Type,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import { resolveSyntheticType, resolveType } from "../schema/type-resolver.js";
+import { resolveType } from "../schema/type-resolver.js";
 import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { validateTemplateBody } from "./body-validator.js";
 import {
@@ -194,7 +194,7 @@ function validateVariants(
     return [];
   }
   const inputTypeDeclaration = templateSchema.typeDeclarations["Input"]!;
-  const inputType = resolveType(inputTypeDeclaration, templateSchema);
+  const inputType = resolveType(inputTypeDeclaration.valueType, templateSchema);
   if (inputType.kind !== "interface") {
     return [
       {
@@ -219,9 +219,6 @@ function validateVariants(
       message: "Type of 'variant' field must be a union of string literals",
     },
   ];
-  if (variantField.optional) {
-    return makeVariantFieldTypeError();
-  }
   let variantFieldType = resolveType(variantField.type, templateSchema);
   if (variantFieldType.kind === "string-literal") {
     variantFieldType = {
@@ -309,7 +306,7 @@ function makeExamplesType(
   const outputType = typeDeclarations["Output"]!.valueType;
 
   if (options.isVariantSpecialization) {
-    const resolvedInputType = resolveSyntheticType(inputType!, templateSchema);
+    const resolvedInputType = resolveType(inputType, templateSchema);
     if (
       resolvedInputType.kind === "interface" &&
       resolvedInputType.fields["variant"]
@@ -346,7 +343,6 @@ function makeExamplesType(
         name: {
           text: "intermediateSteps",
         },
-        optional: true,
         type: {
           kind: "array",
           elementType: {

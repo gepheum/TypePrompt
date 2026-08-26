@@ -29,7 +29,6 @@ describe("parseSchema - interfaces", () => {
             fields: {
               name: {
                 name: { text: "name" },
-                optional: false,
                 type: { kind: "primitive", primitive: { text: "string" } },
                 doc: "",
               },
@@ -79,8 +78,13 @@ describe("parseSchema - interfaces", () => {
         Response: {
           valueType: {
             fields: {
-              required: { optional: false },
-              optional: { optional: true },
+              required: { type: { kind: "primitive" } },
+              optional: {
+                type: {
+                  kind: "nullable",
+                  type: { kind: "primitive", primitive: { text: "number" } },
+                },
+              },
             },
           },
         },
@@ -868,26 +872,38 @@ describe("parseSchema - any type", () => {
 
 describe("parseSchema - boolean literals", () => {
   it("parses true as a top-level type alias", () => {
-    const result = parseSchema(textNode("type AlwaysTrue = true;"));
+    const result = parseSchema(
+      textNode("type S = { alwaysTrue: true; alwaysFalse: false }"),
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
-        AlwaysTrue: {
-          valueType: { kind: "boolean-literal", value: true },
+        S: {
+          valueType: {
+            kind: "interface",
+            fields: {
+              alwaysTrue: {
+                type: {
+                  kind: "boolean-literal",
+                  value: true,
+                  span: { start: 35, end: 39 },
+                },
+              },
+              alwaysFalse: { type: { kind: "boolean-literal", value: false } },
+            },
+          },
         },
       },
     });
   });
 
-  it("parses false as a top-level type alias", () => {
-    const result = parseSchema(textNode("type AlwaysFalse = false;"));
+  it("boolean literal only accepted as field type", () => {
+    const result = parseSchema(
+      textNode("type AlwaysFalse = false; type S = { alwaysTrue: true[] }"),
+    );
     expect(result).toMatch({
-      kind: "success",
-      typeDeclarations: {
-        AlwaysFalse: {
-          valueType: { kind: "boolean-literal", value: false },
-        },
-      },
+      kind: "error",
+      errors: [],
     });
   });
 
@@ -923,46 +939,6 @@ describe("parseSchema - boolean literals", () => {
                 },
               },
             ],
-          },
-        },
-      },
-    });
-  });
-
-  it("records correct span and value for a true literal", () => {
-    // "type Flag = true;"
-    //  01234567890123456
-    //              ^
-    //              12
-    const result = parseSchema(textNode("type Flag = true;"));
-    expect(result).toMatch({
-      kind: "success",
-      typeDeclarations: {
-        Flag: {
-          valueType: {
-            kind: "boolean-literal",
-            value: true,
-            span: { text: "true", start: 12, end: 16 },
-          },
-        },
-      },
-    });
-  });
-
-  it("records correct span and value for a false literal", () => {
-    // "type Flag = false;"
-    //  0123456789012345678
-    //              ^
-    //              12
-    const result = parseSchema(textNode("type Flag = false;"));
-    expect(result).toMatch({
-      kind: "success",
-      typeDeclarations: {
-        Flag: {
-          valueType: {
-            kind: "boolean-literal",
-            value: false,
-            span: { text: "false", start: 12, end: 17 },
           },
         },
       },

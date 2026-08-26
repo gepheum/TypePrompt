@@ -1,4 +1,3 @@
-import { NullableType } from "../expression/expression-types.js";
 import type { Span, TextSpan } from "../util/shared-types.js";
 
 export type SchemaParseResult = {
@@ -46,26 +45,30 @@ export type TypeDeclaration = {
   readonly doc: string;
 };
 
-export type SchemaField = {
+export type Field = {
   readonly name: TextSpan;
-  readonly optional: boolean;
-  readonly type: Type;
+  readonly type: FieldType;
   readonly doc: string;
 };
 
 export type ResolvedType =
+  AnyType | Array | Interface | PrimitiveType | RecordType | Union;
+
+export type Type =
   | AnyType
   | Array
-  | BooleanLiteral
   | Interface
   | PrimitiveType
   | RecordType
-  | StringLiteral
-  | Union;
+  | Union
+  | TypeName
+  | SharedTypeName;
 
-export type Type = ResolvedType | TypeName | SharedTypeName;
+export type Literal = BooleanLiteral | StringLiteral;
 
-export type NonUnionType = Exclude<Type, Union>;
+export type ResolvedFieldType = ResolvedType | Literal | NullableType;
+
+export type FieldType = Type | Literal | NullableType;
 
 export type TypeName = {
   readonly kind: "type-name";
@@ -97,8 +100,8 @@ export type Interface = {
   readonly kind: "interface";
   readonly name?: undefined;
   readonly leftCurlyBracket: Span;
-  readonly fields: { readonly [name: string]: SchemaField };
-  readonly firstField?: SchemaField;
+  readonly fields: { readonly [name: string]: Field };
+  readonly firstField?: Field;
 };
 
 export type RecordType = {
@@ -122,10 +125,17 @@ export type Array = {
   readonly elementType: Type;
 };
 
+export type NullableType = {
+  readonly kind: "nullable";
+  readonly type: Exclude<Type, NullableType>;
+};
+
+export type UnionMemberType = Exclude<Type, Union> | Literal;
+
 export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
-  readonly members: readonly NonUnionType[];
+  readonly members: readonly UnionMemberType[];
 };
 
 export type PrimitiveTypeView = {
@@ -154,8 +164,7 @@ export type SyntheticField = {
   readonly name: {
     readonly text: string;
   };
-  readonly optional?: boolean;
-  readonly type: Type | SyntheticType;
+  readonly type: FieldType | SyntheticType;
   readonly doc?: string;
 };
 
@@ -259,9 +268,9 @@ export type Discriminants =
 /** A field common to all members of a discriminated union. */
 export type CommonField = {
   readonly name: string;
-  readonly type: ResolvedType | NullableType;
+  readonly type: FieldType;
   readonly doc?: string;
-  readonly memberFields: readonly SchemaField[];
+  readonly memberFields: readonly Field[];
 };
 
 export type SyntheticUnionMembers =

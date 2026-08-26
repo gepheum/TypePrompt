@@ -1,7 +1,7 @@
 import { Span } from "../util/shared-types.js";
-import { Type } from "./schema-types.js";
+import { FieldType } from "./schema-types.js";
 
-export function getFirstToken(type: Type): Span {
+export function getFirstToken(type: FieldType): Span {
   switch (type.kind) {
     case "any":
       return type.span;
@@ -12,14 +12,16 @@ export function getFirstToken(type: Type): Span {
     case "interface":
     case "record":
       return type.leftCurlyBracket;
+    case "nullable":
+      return getFirstToken(type.type);
     case "primitive":
       return type.primitive;
+    case "shared-type-name":
+      return type.shared;
     case "string-literal":
       return type.quotedName;
     case "type-name":
       return type.name;
-    case "shared-type-name":
-      return type.shared;
     case "union":
       return getFirstToken(type.members[0]!);
   }
