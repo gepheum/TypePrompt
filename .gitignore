@@ -15,6 +15,7 @@ e2e-test/dart/.packages
 e2e-test/kotlin/.gradle/
 e2e-test/kotlin/.kotlin/
 e2e-test/kotlin/build/
+
 e2e-test/kotlin/.idea/
 e2e-test/kotlin/**/*.iml
 
