@@ -1,7 +1,8 @@
 include: prompts/**/*.xml
 gen:
   kotlin:
-    file: ../../kotlin/src/main/gen/PromptsE01.kt
+    file: ../../kotlin/src/main/kotlin/gen/PromptsE01.kt
+    package: com.example.prompts_e01
   python:
     file: ../../python/gen/prompts_e01.py
   typescript:

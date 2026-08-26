@@ -19,6 +19,7 @@ export type Config = {
     readonly kotlin?: {
       /** Path to the generated .kt file. */
       readonly file: string;
+      readonly package: string;
     };
     readonly python?: {
       /** Path to the generated .py file. */
@@ -91,6 +92,9 @@ const RawConfigSchema = z
             file: z
               .string()
               .refine((f) => f.endsWith(".kt"), `must end with '.kt'`),
+            package: z
+              .string()
+              .regex(/^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/),
           })
           .strict()
           .optional(),

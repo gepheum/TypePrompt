@@ -1,7 +1,8 @@
 include: ../../../examples/05-snippets/**/*.xml
 gen:
   kotlin:
-    file: ../../kotlin/src/main/gen/Prompts05.kt
+    file: ../../kotlin/src/main/kotlin/gen/Prompts05.kt
+    package: com.example.prompts05
   python:
     file: ../../python/gen/prompts_05.py
   typescript:

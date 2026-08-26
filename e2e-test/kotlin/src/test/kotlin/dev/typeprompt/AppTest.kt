@@ -1,4 +1,4 @@
-package com.typeprompt
+package dev.typeprompt
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

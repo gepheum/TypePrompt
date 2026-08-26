@@ -1,7 +1,8 @@
 include: ../../../examples/01-basics/**/*.xml
 gen:
   kotlin:
-    file: ../../kotlin/src/main/gen/Prompts01.kt
+    file: ../../kotlin/src/main/kotlin/gen/Prompt01.kt
+    package: com.example.prompts01
   python:
     file: ../../python/gen/prompts_01.py
   typescript:

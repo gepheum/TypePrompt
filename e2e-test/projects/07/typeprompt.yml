@@ -1,7 +1,8 @@
 include: ../../../examples/07-shared-types/**/*.xml
 gen:
   kotlin:
-    file: ../../kotlin/src/main/gen/Prompts07.kt
+    file: ../../kotlin/src/main/kotlin/gen/Prompts07.kt
+    package: com.example.prompts07
   python:
     file: ../../python/gen/prompts_07.py
   typescript:

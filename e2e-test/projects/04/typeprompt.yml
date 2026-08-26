@@ -1,7 +1,8 @@
 include: ../../../examples/04-variants/**/*.xml
 gen:
   kotlin:
-    file: ../../kotlin/src/main/gen/Prompts04.kt
+    file: ../../kotlin/src/main/kotlin/gen/Prompts04.kt
+    package: com.example.prompts04
   python:
     file: ../../python/gen/prompts_04.py
   typescript:
