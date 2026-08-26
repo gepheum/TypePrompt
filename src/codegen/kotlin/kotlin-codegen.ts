@@ -10,6 +10,7 @@ import type {
   Optional,
   Schema,
   Type,
+  TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
 import { isLiteralType } from "../../schema/schema-utils.js";
@@ -175,27 +176,26 @@ function writeUserDefinedDatatypes(
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
-  const lines = [
-    "typealias Meta = Schema.Meta.Meta;\n",
+  const lines: string[] = [];
+
+  const metaType = anyTypes(metaSchema)
+    ? writeType(
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        { typePrefix: "Schema.Meta." },
+      )
+    : "Nothing?";
+  lines.push(
+    `typealias Meta = ${metaType}\n`,
     "/** Namespace containing the user-defined datatypes. */",
     "object Schema {",
     "object Meta {",
-  ];
-  if (anyTypes(metaSchema)) {
-    lines.push(
-      writeSchema(
-        metaSchema,
-        {
-          typePrefix: "Schema.Meta.",
-          requiredTypes: ["Meta"],
-        },
-        unionContext,
-      ),
-    );
-  } else {
-    lines.push("export type Meta = Nothing?;\n");
-  }
-  lines.push("}\n");
+    writeSchema(metaSchema, unionContext, { typePrefix: "Schema.Meta." }),
+    "}",
+  );
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName: string = namespace.name;
@@ -206,45 +206,33 @@ function writeUserDefinedDatatypes(
     if (anyTypes(namespace.schema)) {
       lines.push("object Shared {");
       lines.push(
-        writeSchema(
-          namespace.schema,
-          {
-            typePrefix: sharedTypePrefix,
-          },
-          unionContext,
-        ),
+        writeSchema(namespace.schema, unionContext, {
+          typePrefix: sharedTypePrefix,
+        }),
       );
       lines.push("}\n");
     }
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
+      const typePrefix = typePrefixBase.concat(templateName, ".");
       lines.push(`object ${templateName} {`);
       lines.push(
-        writeSchema(
-          template.schema,
-          {
-            typePrefix: typePrefixBase.concat(templateName, "."),
-            sharedTypePrefix,
-            requiredTypes: ["Input", "Output"],
-          },
-          unionContext,
-        ),
+        writeSchema(template.schema, unionContext, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
       );
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = capitalize(tool.tool.name.text);
+      const typePrefix = typePrefixBase.concat(toolName, ".");
       lines.push(`export namespace ${toolName} {\n`);
       lines.push(
-        writeSchema(
-          tool.schema,
-          {
-            typePrefix: typePrefixBase.concat(toolName, "."),
-            sharedTypePrefix,
-            requiredTypes: ["Input", "Output"],
-          },
-          unionContext,
-        ),
+        writeSchema(tool.schema, unionContext, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
       );
       lines.push("}\n");
     }
@@ -327,14 +315,13 @@ function writeUserDefinedDatatypes(
 type WriteSchemaOptions = {
   readonly typePrefix: string;
   readonly sharedTypePrefix?: string;
-  readonly requiredTypes?: readonly string[];
   readonly isPrivate?: true;
 };
 
 function writeSchema(
   schema: Schema,
-  options: WriteSchemaOptions,
   context: UnionContext,
+  options: WriteSchemaOptions,
 ): string {
   const { isPrivate, typePrefix } = options;
   const lines: string[] = [];
@@ -357,21 +344,6 @@ function writeSchema(
       }
     }
     lines.push("");
-  }
-
-  for (const requiredType of options.requiredTypes ?? []) {
-    const declaration = schema.typeDeclarations[requiredType];
-    if (declaration) {
-      if (
-        declaration.valueType.kind !== "interface" &&
-        declaration.valueType.kind !== "union"
-      ) {
-        const type = writeType(declaration.valueType, schema, options);
-        lines.push(`typealias ${requiredType} = ${type}\n`);
-      }
-    } else {
-      lines.push(`typealias ${requiredType} = Unknown?\n`);
-    }
   }
 
   return lines.join("\n");
@@ -451,9 +423,10 @@ function writeTypepromptUnion(
 }
 
 function writeType(
-  type: Type | Optional,
+  type: Type | Optional | TypeNameView,
   schema: Schema,
   options: {
+    readonly typePrefix: string;
     readonly sharedTypePrefix?: string;
   },
 ): string {
@@ -470,24 +443,21 @@ function writeType(
         return `readonly ${writtenElement}[]`;
       }
     }
-    case "interface": {
-      const fields = Object.entries(type.fields);
-      if (fields.length <= 0) {
-        return "ReadonlyRecord<string, never>";
+    case "interface":
+    case "union": {
+      let namingHint = schema.namingHints.defaultScope.get(type);
+      let shared: boolean;
+      if (namingHint) {
+        shared = false;
+      } else {
+        namingHint = schema.namingHints.shared.get(type);
+        shared = true;
       }
-      let result = "{\n";
-      for (const [fieldName, field] of fields) {
-        // result += [
-        //   wrapKDoc(field.doc),
-        //   "readonly ",
-        //   fieldName,
-        //   field.optional ? "?: " : ": ",
-        //   writeType(field.type, schema, options),
-        //   ";\n",
-        // ].join("");
-      }
-      result += "}";
-      return result;
+      const typePrefix = shared
+        ? options.sharedTypePrefix!
+        : options.typePrefix;
+      if (!typePrefix) throw new Error();
+      return typePrefix.concat(makeNameFromHint(namingHint!));
     }
     case "optional": {
       return writeType(type.innerType, schema, options).concat("?");
@@ -511,22 +481,10 @@ function writeType(
     case "record": {
       return `Map<String, ${writeType(type.valueType, schema, options)}>`;
     }
-    case "shared-type-name": {
-      if (!options.sharedTypePrefix) throw new Error();
-      return options.sharedTypePrefix.concat(type.name.text);
-    }
+    case "shared-type-name":
     case "type-name": {
-      return type.name.text;
-    }
-    case "union": {
-      return "";
-      // return "(\n"
-      //   .concat(
-      //     type.members
-      //       .map((m) => `| ${writeType(m, schema, options)}\n`)
-      //       .join(""),
-      //   )
-      //   .concat(")");
+      const resolvedType = resolveType(type, schema);
+      return writeType(resolvedType, schema, options);
     }
   }
 }

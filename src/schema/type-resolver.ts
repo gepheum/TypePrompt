@@ -6,28 +6,32 @@ import type {
   SchemaView,
   SyntheticType,
   Type,
+  TypeNameView,
   UnionMemberType,
 } from "./schema-types.js";
 
-export function resolveType(type: Type, schema: SchemaView): ResolvedType;
+export function resolveType(
+  type: Type | TypeNameView,
+  schema: SchemaView,
+): ResolvedType;
 
 export function resolveType(
-  type: FieldType,
+  type: FieldType | TypeNameView,
   schema: SchemaView,
 ): ResolvedFieldType;
 
 export function resolveType(
-  type: Type | SyntheticType,
+  type: Type | TypeNameView | SyntheticType,
   schema: SchemaView,
 ): ResolvedType | SyntheticType;
 
 export function resolveType(
-  type: FieldType | SyntheticType,
+  type: FieldType | TypeNameView | SyntheticType,
   schema: SchemaView,
 ): ResolvedFieldType | SyntheticType;
 
 export function resolveType(
-  type: Type | FieldType | SyntheticType,
+  type: FieldType | TypeNameView | SyntheticType,
   schema: SchemaView,
 ): ResolvedFieldType | SyntheticType {
   return doResolveType(type, schema, null)!;
@@ -42,7 +46,7 @@ export function resolveMaybeInvalidType(
 }
 
 function doResolveType(
-  type: FieldType | SyntheticType,
+  type: FieldType | TypeNameView | SyntheticType,
   schema: SchemaView,
   seenNames: Set<string> | null,
 ): ResolvedFieldType | SyntheticType | null {

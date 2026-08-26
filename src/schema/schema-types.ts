@@ -116,6 +116,13 @@ export type TypeName = {
   readonly name: TextSpan;
 };
 
+export type TypeNameView = {
+  readonly kind: "type-name";
+  readonly name: {
+    readonly text: string;
+  };
+};
+
 export type SharedTypeName = {
   readonly kind: "shared-type-name";
   readonly shared: Span;
