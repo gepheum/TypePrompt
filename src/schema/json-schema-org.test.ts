@@ -100,16 +100,24 @@ describe("toJsonSchema - any type", () => {
 
 describe("toJsonSchema - literal types", () => {
   it("generates a string const schema for a string literal", () => {
-    expect(gen('type Output = "active";')).toMatch({
-      type: "string",
-      const: "active",
+    expect(gen('type Output = { status: "active" }')).toMatch({
+      type: "object",
+      properties: {
+        status: { type: "string", const: "active" },
+      },
+      required: ["status"],
+      additionalProperties: false,
     });
   });
 
   it("generates a boolean const true schema for a true literal", () => {
-    expect(gen("type Output = true;")).toMatch({
-      type: "boolean",
-      const: true,
+    expect(gen("type Output = { status: true }")).toMatch({
+      type: "object",
+      properties: {
+        status: { type: "boolean", const: true },
+      },
+      required: ["status"],
+      additionalProperties: false,
     });
   });
 
