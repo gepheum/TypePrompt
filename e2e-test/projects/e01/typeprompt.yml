@@ -1,4 +1,4 @@
-include: ../../../examples/01-basics/**/*.xml
+include: prompts/**/*.xml
 gen:
   kotlin:
     file: ../../kotlin/src/main/gen/PromptsE01.kt

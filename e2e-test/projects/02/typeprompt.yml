@@ -1,4 +1,4 @@
-include: ../../../examples/01-basics/**/*.xml
+include: ../../../examples/02-structured-output/**/*.xml
 gen:
   kotlin:
     file: ../../kotlin/src/main/gen/Prompts02.kt

@@ -1,4 +1,4 @@
-include: ../../../examples/01-basics/**/*.xml
+include: ../../../examples/06-toon-format/**/*.xml
 gen:
   kotlin:
     file: ../../kotlin/src/main/gen/Prompts06.kt

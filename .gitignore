@@ -21,7 +21,7 @@ e2e-test/kotlin/**/*.iml
 e2e-test/python/.ruff_cache
 e2e-test/python/.venv
 e2e-test/python/__pycache/
-e2e-test/python/gen
+e2e-test/python/gen/
 e2e-test/python/**/*.pyc
 
 e2e-test/rust/target/

@@ -1,4 +1,4 @@
-include: ../../../examples/01-basics/**/*.xml
+include: ../../../examples/07-shared-types/**/*.xml
 gen:
   kotlin:
     file: ../../kotlin/src/main/gen/Prompts07.kt
