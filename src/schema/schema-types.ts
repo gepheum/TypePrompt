@@ -162,7 +162,7 @@ export type SyntheticInterface = {
 
 export type SyntheticOptional = {
   readonly kind: "optional";
-  readonly innerType: SyntheticType;
+  readonly innerType: Type | SyntheticType;
 };
 
 export type SyntheticField = {

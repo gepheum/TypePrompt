@@ -13,9 +13,11 @@ import {
   Schema,
   SchemaValidationContext,
   SyntheticArray,
+  SyntheticField,
   SyntheticInterface,
   Type,
 } from "../schema/schema-types.js";
+import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
@@ -219,13 +221,7 @@ function validateVariants(
       message: "Type of 'variant' field must be a union of string literals",
     },
   ];
-  let variantFieldType = resolveType(variantField.type, templateSchema);
-  if (variantFieldType.kind === "string-literal") {
-    variantFieldType = {
-      kind: "union",
-      members: [variantFieldType],
-    };
-  }
+  const variantFieldType = resolveType(variantField.type, templateSchema);
   if (variantFieldType.kind !== "union") {
     return makeVariantFieldTypeError();
   }
@@ -314,11 +310,19 @@ function makeExamplesType(
       inputType = {
         kind: "interface",
         fields: Object.fromEntries(
-          Object.entries(resolvedInputType.fields).map(([name, field]) =>
-            name === "variant"
-              ? [name, { ...field, optional: true }]
-              : [name, field],
-          ),
+          Object.entries(resolvedInputType.fields).map(([name, field]) => {
+            if (name !== "variant" || isLiteralType(field.type)) {
+              return [name, field];
+            }
+            return [
+              name,
+              {
+                type: { kind: "optional", innerType: field.type },
+                name: field.name,
+                doc: field.doc,
+              } satisfies SyntheticField,
+            ];
+          }),
         ),
       };
     }

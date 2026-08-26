@@ -1,6 +1,14 @@
-import { FieldType, Literal, SchemaView, Type } from "./schema-types.js";
+import {
+  FieldType,
+  Literal,
+  SchemaView,
+  SyntheticType,
+  Type,
+} from "./schema-types.js";
 
-export function isLiteralType(type: FieldType): type is Literal {
+export function isLiteralType(
+  type: FieldType | SyntheticType,
+): type is Literal {
   return type.kind === "string-literal" || type.kind === "boolean-literal";
 }
 
