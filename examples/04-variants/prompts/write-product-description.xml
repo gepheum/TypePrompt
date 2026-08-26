@@ -33,7 +33,7 @@
           productName: "AquaFilter Pro"
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
-          # variant field can be omitted in examples
+          # variant field must be omitted when inside a variant tag
         output:
           description: >
             Tired of worrying about what's in your tap water? AquaFilter Pro
