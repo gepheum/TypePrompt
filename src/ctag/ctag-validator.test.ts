@@ -242,8 +242,10 @@ describe("validateExample - json: exact match", () => {
   });
 
   it("accepts the exact string for a string-literal type", () => {
-    const schema = parseSchemaOrThrow('type Response = "ok"');
-    expect(validateCTag(jsonCTag(str("ok")), [schema], new Set())).toMatch([]);
+    const schema = parseSchemaOrThrow('type Response = {status: "ok"}');
+    expect(
+      validateCTag(jsonCTag(obj([["status", str("ok")]])), [schema], new Set()),
+    ).toMatch([]);
   });
 
   it("accepts a matching value from a string union", () => {

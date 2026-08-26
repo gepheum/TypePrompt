@@ -431,8 +431,12 @@ describe("resolveSwitchExpression - string union", () => {
   });
 
   it("wraps a single string-literal type into a one-case result", () => {
-    const schema = parseSchemaOrThrow('type Input = "only"');
-    const inputType = resolveExpressionType(makeExpr("input"), schema, null);
+    const schema = parseSchemaOrThrow('type Input = { status: "only" }');
+    const inputType = resolveExpressionType(
+      makeExpr("input.status"),
+      schema,
+      null,
+    );
     const result = resolveSwitchExpression(
       makeExpr("input"),
       inputType as ResolvedType,
