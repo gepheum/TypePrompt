@@ -187,6 +187,14 @@ class SchemaParser {
       if (field !== null) {
         result.push(field);
       } else {
+        // Error. Move to the next '}'
+        let token: Token;
+        while (
+          (token = this.peekToken()).kind !== "string-end" &&
+          token.text !== "}"
+        ) {
+          this.movePast(token);
+        }
         break;
       }
     }
@@ -560,9 +568,13 @@ class SchemaParser {
       .map(([id, matcher]) => matcher.descriptor(id))
       .filter((d) => d)
       .join(", ");
+    const message =
+      Object.keys(matchers).length === 1
+        ? `Expected: ${descriptors}`
+        : `Expected one of: ${descriptors}`;
     this.parserErrors.push({
       span: this.tokenToSpan(token),
-      message: `Expected one of: ${descriptors}`,
+      message,
     });
     return "noMatch";
   }

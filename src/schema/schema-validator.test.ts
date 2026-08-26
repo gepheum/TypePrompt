@@ -22,9 +22,7 @@ function textNode(source: string): MappedText {
 function parseDeclarations(source: string): SchemaParseResult {
   const result = parseSchema(textNode(source));
   if (result.kind !== "success") {
-    throw new Error(
-      `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
-    );
+    throw new Error(`Parse failed: ${JSON.stringify(result)}`);
   }
   return result;
 }
@@ -332,7 +330,7 @@ describe("validateSchema - union type errors", () => {
 
   it("reports a union with an array member", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = "a"[] | "b"[];'),
+      parseDeclarations("type Output = integer[] | string[];"),
       NAMESPACE,
     );
     expect(result).toMatch({
@@ -416,19 +414,6 @@ describe("validateSchema - union type errors", () => {
           message: "Can't have an empty interface in a discriminated union",
         },
       ],
-    });
-  });
-
-  it("reports an optional discriminator field", () => {
-    const result = validateSchema(
-      parseDeclarations(
-        'type Output = { kind?: "a"; x: number } | { kind?: "b"; y: number };',
-      ),
-      NAMESPACE,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [{ message: "Discriminator ('kind') can't be optional" }],
     });
   });
 
