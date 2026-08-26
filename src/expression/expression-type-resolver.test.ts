@@ -1,8 +1,10 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type {
+  NullableType,
   PrimitiveType,
   ResolvedType,
   Schema,
@@ -11,11 +13,7 @@ import { validateSchema } from "../schema/schema-validator.js";
 import type { MappedText, TextSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
-import type {
-  Expression,
-  ExpressionContext,
-  NullableType,
-} from "./expression-types.js";
+import type { Expression, ExpressionContext } from "./expression-types.js";
 import { resolveIfExpression } from "./if-expression-resolver.js";
 import { resolveSwitchExpression } from "./switch-expression-resolver.js";
 
@@ -239,7 +237,9 @@ describe("resolveIfExpression - boolean type", () => {
   const expr = makeExpr("input");
 
   it("succeeds with no 'is' clause for a boolean type", () => {
-    expect(resolveIfExpression(expr, prim("boolean"), null)).toMatch({
+    expect(
+      resolveIfExpression(expr, prim("boolean"), null, EMPTY_SCHEMA),
+    ).toMatch({
       kind: "success",
       then: {},
       else: {},
@@ -247,12 +247,12 @@ describe("resolveIfExpression - boolean type", () => {
   });
 
   it("rejects an 'is' clause for a boolean type", () => {
-    expect(resolveIfExpression(expr, prim("boolean"), span("notNull"))).toMatch(
-      {
-        kind: "error",
-        errors: [{ message: "Cannot use 'is' attribute with boolean type" }],
-      },
-    );
+    expect(
+      resolveIfExpression(expr, prim("boolean"), span("notNull"), EMPTY_SCHEMA),
+    ).toMatch({
+      kind: "error",
+      errors: [{ message: "Cannot use 'is' attribute with boolean type" }],
+    });
   });
 });
 
@@ -265,7 +265,12 @@ describe("resolveIfExpression - nullable type", () => {
   const nType = nullable(prim("string"));
 
   it("succeeds with 'is=\"notNull\"' for a nullable type", () => {
-    const result = resolveIfExpression(expr, nType, span("notNull"));
+    const result = resolveIfExpression(
+      expr,
+      nType,
+      span("notNull"),
+      EMPTY_SCHEMA,
+    );
     expect(result).toMatch({
       kind: "success",
       then: { typeOverrides: { input: { kind: "primitive" } } },
@@ -274,14 +279,16 @@ describe("resolveIfExpression - nullable type", () => {
   });
 
   it("rejects a missing 'is' clause for a nullable type", () => {
-    expect(resolveIfExpression(expr, nType, null)).toMatch({
+    expect(resolveIfExpression(expr, nType, null, EMPTY_SCHEMA)).toMatch({
       kind: "error",
       errors: [{ message: "must use 'is=\"notNull\"' with nullable type" }],
     });
   });
 
   it("rejects 'is=\"notEmpty\"' for a nullable type", () => {
-    expect(resolveIfExpression(expr, nType, span("notEmpty"))).toMatch({
+    expect(
+      resolveIfExpression(expr, nType, span("notEmpty"), EMPTY_SCHEMA),
+    ).toMatch({
       kind: "error",
       errors: [{ message: "must use 'is=\"notNull\"' with nullable type" }],
     });
@@ -300,13 +307,15 @@ describe("resolveIfExpression - array and string types", () => {
   };
 
   it("succeeds with 'is=\"notEmpty\"' for an array type", () => {
-    expect(resolveIfExpression(expr, arrayType, span("notEmpty"))).toMatch({
+    expect(
+      resolveIfExpression(expr, arrayType, span("notEmpty"), EMPTY_SCHEMA),
+    ).toMatch({
       kind: "success",
     });
   });
 
   it("rejects a missing 'is' clause for an array type", () => {
-    expect(resolveIfExpression(expr, arrayType, null)).toMatch({
+    expect(resolveIfExpression(expr, arrayType, null, EMPTY_SCHEMA)).toMatch({
       kind: "error",
       errors: [
         { message: "must use 'is=\"notEmpty\"' with array or string type" },
@@ -315,15 +324,17 @@ describe("resolveIfExpression - array and string types", () => {
   });
 
   it("succeeds with 'is=\"notEmpty\"' for a string type", () => {
-    expect(resolveIfExpression(expr, prim("string"), span("notEmpty"))).toMatch(
-      {
-        kind: "success",
-      },
-    );
+    expect(
+      resolveIfExpression(expr, prim("string"), span("notEmpty"), EMPTY_SCHEMA),
+    ).toMatch({
+      kind: "success",
+    });
   });
 
   it("rejects a missing 'is' clause for a string type", () => {
-    expect(resolveIfExpression(expr, prim("string"), null)).toMatch({
+    expect(
+      resolveIfExpression(expr, prim("string"), null, EMPTY_SCHEMA),
+    ).toMatch({
       kind: "error",
       errors: [
         { message: "must use 'is=\"notEmpty\"' with array or string type" },
@@ -340,23 +351,27 @@ describe("resolveIfExpression - other types", () => {
   const expr = makeExpr("input");
 
   it("reports 'Expected: nullable value' for 'is=\"notNull\"' on a number", () => {
-    expect(resolveIfExpression(expr, prim("number"), span("notNull"))).toMatch({
+    expect(
+      resolveIfExpression(expr, prim("number"), span("notNull"), EMPTY_SCHEMA),
+    ).toMatch({
       kind: "error",
       errors: [{ message: "Expected: nullable value" }],
     });
   });
 
   it("reports 'Expected: array or string' for 'is=\"notEmpty\"' on a number", () => {
-    expect(resolveIfExpression(expr, prim("number"), span("notEmpty"))).toMatch(
-      {
-        kind: "error",
-        errors: [{ message: "Expected: array or string" }],
-      },
-    );
+    expect(
+      resolveIfExpression(expr, prim("number"), span("notEmpty"), EMPTY_SCHEMA),
+    ).toMatch({
+      kind: "error",
+      errors: [{ message: "Expected: array or string" }],
+    });
   });
 
   it("reports 'Expected: boolean' when no 'is' is provided for a number", () => {
-    expect(resolveIfExpression(expr, prim("number"), null)).toMatch({
+    expect(
+      resolveIfExpression(expr, prim("number"), null, EMPTY_SCHEMA),
+    ).toMatch({
       kind: "error",
       errors: [{ message: "Expected: boolean" }],
     });

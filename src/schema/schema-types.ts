@@ -160,6 +160,11 @@ export type SyntheticInterface = {
   readonly fields: { readonly [name: string]: SyntheticField };
 };
 
+export type SyntheticNullableType = {
+  readonly kind: "nullable";
+  readonly type: SyntheticType;
+};
+
 export type SyntheticField = {
   readonly name: {
     readonly text: string;
@@ -184,7 +189,10 @@ export type SyntheticType =
   | PrimitiveTypeView
   | SyntheticArray
   | SyntheticInterface
+  | SyntheticNullableType
   | SyntheticUnion;
+
+export type NullType = { readonly kind: "null" };
 
 /** Hint for creating a name for an anonymous type in generated code. */
 export type NamingHint = {

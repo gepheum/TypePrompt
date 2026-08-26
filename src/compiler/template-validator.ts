@@ -495,6 +495,7 @@ function validateSnippet(
         snippet.expression,
         expressionType,
         snippet.is,
+        templateSchema,
       );
       if (ifContext.kind === "error") {
         errors.push(...ifContext.errors);

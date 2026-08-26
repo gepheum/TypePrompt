@@ -47,8 +47,12 @@ function validateJsonCTag(
     schemas.some((schema) =>
       Object.values(schema.typeDeclarations).some(
         (t) =>
-          jsonMatchesType(cTag.json, resolveType(t, schema), "fast", schema)
-            .kind === "match",
+          jsonMatchesType(
+            cTag.json,
+            resolveType(t.valueType, schema),
+            "fast",
+            schema,
+          ).kind === "match",
       ),
     )
   ) {
@@ -58,7 +62,7 @@ function validateJsonCTag(
       Object.entries(schema.typeDeclarations).map(([name, t]) => {
         const result = jsonMatchesType(
           cTag.json,
-          resolveType(t, schema),
+          resolveType(t.valueType, schema),
           "thorough",
           schema,
         );

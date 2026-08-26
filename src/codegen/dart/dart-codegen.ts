@@ -294,68 +294,69 @@ function writeType(
     readonly sharedTypePrefix: string;
   },
 ): string {
-  switch (type.kind) {
-    case "any": {
-      return "unknown";
-    }
-    case "array": {
-      const { elementType } = type;
-      const writtenElement = writeType(elementType, options);
-      if (elementType.kind === "union") {
-        return `readonly (${writtenElement})[]`;
-      } else {
-        return `readonly ${writtenElement}[]`;
-      }
-    }
-    case "boolean-literal": {
-      return type.span.text satisfies "true" | "false";
-    }
-    case "interface": {
-      const fields = Object.entries(type.fields);
-      if (fields.length <= 0) {
-        return "ReadonlyRecord<string, never>";
-      }
-      let result = "{\n";
-      for (const [fieldName, field] of fields) {
-        result += [
-          wrapJsdoc(field.doc),
-          "readonly ",
-          fieldName,
-          field.optional ? "?: " : ": ",
-          writeType(field.type, options),
-          ";\n",
-        ].join("");
-      }
-      result += "}";
-      return result;
-    }
-    case "primitive": {
-      if (type.primitive.text === "integer") {
-        return "number";
-      } else {
-        return type.primitive.text;
-      }
-    }
-    case "record": {
-      return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
-    }
-    case "shared-type-name": {
-      return options.sharedTypePrefix.concat(type.name.text);
-    }
-    case "string-literal": {
-      return type.quotedName.text;
-    }
-    case "type-name": {
-      return type.name.text;
-    }
-    case "union": {
-      return "(\n"
-        .concat(
-          type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
-        )
-        .concat(")");
-    }
-  }
+  // switch (type.kind) {
+  //   case "any": {
+  //     return "unknown";
+  //   }
+  //   case "array": {
+  //     const { elementType } = type;
+  //     const writtenElement = writeType(elementType, options);
+  //     if (elementType.kind === "union") {
+  //       return `readonly (${writtenElement})[]`;
+  //     } else {
+  //       return `readonly ${writtenElement}[]`;
+  //     }
+  //   }
+  //   case "boolean-literal": {
+  //     return type.span.text satisfies "true" | "false";
+  //   }
+  //   case "interface": {
+  //     const fields = Object.entries(type.fields);
+  //     if (fields.length <= 0) {
+  //       return "ReadonlyRecord<string, never>";
+  //     }
+  //     let result = "{\n";
+  //     for (const [fieldName, field] of fields) {
+  //       result += [
+  //         wrapJsdoc(field.doc),
+  //         "readonly ",
+  //         fieldName,
+  //         field.optional ? "?: " : ": ",
+  //         writeType(field.type, options),
+  //         ";\n",
+  //       ].join("");
+  //     }
+  //     result += "}";
+  //     return result;
+  //   }
+  //   case "primitive": {
+  //     if (type.primitive.text === "integer") {
+  //       return "number";
+  //     } else {
+  //       return type.primitive.text;
+  //     }
+  //   }
+  //   case "record": {
+  //     return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
+  //   }
+  //   case "shared-type-name": {
+  //     return options.sharedTypePrefix.concat(type.name.text);
+  //   }
+  //   case "string-literal": {
+  //     return type.quotedName.text;
+  //   }
+  //   case "type-name": {
+  //     return type.name.text;
+  //   }
+  //   case "union": {
+  //     return "(\n"
+  //       .concat(
+  //         type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
+  //       )
+  //       .concat(")");
+  //   }
+  // }
+  return "";
 }
 
 // function writeZodType(

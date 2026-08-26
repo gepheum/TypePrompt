@@ -1,11 +1,7 @@
-import { ResolvedType, Schema } from "../schema/schema-types.js";
+import { ResolvedFieldType, Schema } from "../schema/schema-types.js";
 import { InternalErrors } from "../util/shared-types.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
-import type {
-  Expression,
-  ExpressionContext,
-  NullableType,
-} from "./expression-types.js";
+import type { Expression, ExpressionContext } from "./expression-types.js";
 
 export type SwitchExpressionResult =
   | {
@@ -16,7 +12,7 @@ export type SwitchExpressionResult =
 
 export function resolveSwitchExpression(
   expression: Expression,
-  type: ResolvedType | NullableType,
+  type: ResolvedFieldType,
   schema: Schema,
 ): SwitchExpressionResult {
   // Check for a property access on a discriminated interface union first, before

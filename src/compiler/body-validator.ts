@@ -3,7 +3,6 @@ import { resolveExpressionType } from "../expression/expression-type-resolver.js
 import { ExpressionContext } from "../expression/expression-types.js";
 import {
   ResolvedFieldType,
-  ResolvedType,
   Schema,
   SyntheticType,
 } from "../schema/schema-types.js";
@@ -152,7 +151,7 @@ function isStringOrIntegerType(
   }
 }
 
-function isTabularType(type: ResolvedType, schema: Schema): boolean {
+function isTabularType(type: ResolvedFieldType, schema: Schema): boolean {
   if (type.kind !== "array") {
     return false;
   }

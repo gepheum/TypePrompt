@@ -3,14 +3,15 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
-import { NullableType } from "../../expression/expression-types.js";
 import type {
   Interface,
   NamingHint,
+  NullableType,
   Schema,
   Type,
   Union,
 } from "../../schema/schema-types.js";
+import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
@@ -361,7 +362,10 @@ function writeTypepromptInterface(
   lines.push(`class ${typeName}(`);
   for (const field of Object.values(type.fields)) {
     const type = resolveType(field.type, schema);
-    // TODO
+    if (isLiteralType(field.type)) {
+      // TODO
+      continue;
+    }
     const fieldType = writeType(field.type, schema, options);
     const name = toKotlinName(field.name.text);
     lines.push(`val ${name}: ${fieldType}`);
@@ -397,6 +401,10 @@ function writeTypepromptUnion(
       lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
         const name = toKotlinName(member.name);
+        if (isLiteralType(member.type)) {
+          // TODO
+          continue;
+        }
         const type = writeType(member.type, schema, options);
         lines.push(`val ${name}: ${type}`);
       }
@@ -426,9 +434,6 @@ function writeType(
         return `readonly ${writtenElement}[]`;
       }
     }
-    case "boolean-literal": {
-      return type.span.text satisfies "true" | "false";
-    }
     case "interface": {
       const fields = Object.entries(type.fields);
       if (fields.length <= 0) {
@@ -436,14 +441,14 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
-        result += [
-          wrapKDoc(field.doc),
-          "readonly ",
-          fieldName,
-          field.optional ? "?: " : ": ",
-          writeType(field.type, schema, options),
-          ";\n",
-        ].join("");
+        // result += [
+        //   wrapKDoc(field.doc),
+        //   "readonly ",
+        //   fieldName,
+        //   field.optional ? "?: " : ": ",
+        //   writeType(field.type, schema, options),
+        //   ";\n",
+        // ].join("");
       }
       result += "}";
       return result;
@@ -474,20 +479,18 @@ function writeType(
       if (!options.sharedTypePrefix) throw new Error();
       return options.sharedTypePrefix.concat(type.name.text);
     }
-    case "string-literal": {
-      return type.quotedName.text;
-    }
     case "type-name": {
       return type.name.text;
     }
     case "union": {
-      return "(\n"
-        .concat(
-          type.members
-            .map((m) => `| ${writeType(m, schema, options)}\n`)
-            .join(""),
-        )
-        .concat(")");
+      return "";
+      // return "(\n"
+      //   .concat(
+      //     type.members
+      //       .map((m) => `| ${writeType(m, schema, options)}\n`)
+      //       .join(""),
+      //   )
+      //   .concat(")");
     }
   }
 }

@@ -1,10 +1,7 @@
-import { ResolvedType } from "../schema/schema-types.js";
+import { ResolvedFieldType, SchemaView } from "../schema/schema-types.js";
+import { resolveType } from "../schema/type-resolver.js";
 import { InternalErrors, TextSpan } from "../util/shared-types.js";
-import {
-  Expression,
-  ExpressionContext,
-  NullableType,
-} from "./expression-types.js";
+import { Expression, ExpressionContext } from "./expression-types.js";
 
 export type IfExpressionResult =
   | {
@@ -16,8 +13,9 @@ export type IfExpressionResult =
 
 export function resolveIfExpression(
   expression: Expression,
-  type: ResolvedType | NullableType,
+  type: ResolvedFieldType,
   is: TextSpan<"notNull" | "notEmpty" | "true"> | null,
+  schema: SchemaView,
 ): IfExpressionResult {
   const it: ExpressionContext["it"] = { expression, type };
 
@@ -41,13 +39,14 @@ export function resolveIfExpression(
       };
     }
   } else if (type.kind === "nullable") {
+    const thenType = resolveType(type.type, schema);
     if (is?.text === "notNull") {
       return {
         kind: "success",
         then: {
           it,
           typeOverrides: {
-            [expression.fullPath.text]: type.type,
+            [expression.fullPath.text]: thenType,
           },
         },
         else: {

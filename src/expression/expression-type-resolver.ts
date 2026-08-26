@@ -1,15 +1,15 @@
 import {
   NullableType,
+  NullType,
   ResolvedFieldType,
-  ResolvedType,
   Schema,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import { InternalErrors } from "../util/shared-types.js";
-import { Expression, ExpressionContext, NullType } from "./expression-types.js";
+import { Expression, ExpressionContext } from "./expression-types.js";
 
 export type ResolvedExpressionType<HasValContext extends boolean> =
-  | ResolvedType
+  | ResolvedFieldType
   | (HasValContext extends true ? NullType : NullableType)
   | InternalErrors;
 

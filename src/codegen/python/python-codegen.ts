@@ -9,11 +9,10 @@ import type {
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
-import { NullableType } from "../../expression/expression-types.js";
-import { resolveFieldType } from "../../expression/get-field-type.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
-import { NamingHint, Schema, Type } from "../../schema/schema-types.js";
+import { FieldType, NamingHint, Schema } from "../../schema/schema-types.js";
+import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
@@ -383,21 +382,21 @@ function writeSchema(
         }
         for (const field of Object.values(type.fields)) {
           const type = writeType(
-            resolveFieldType(field, schema),
+            resolveType(field.type, schema),
             schema,
             options,
           );
           lines.push(...writeComment(field.doc, " "));
           const fieldName = toPyName(field.name.text, "field_name");
           if (fieldName === field.name.text) {
-            if (field.optional) {
+            if (field.type.kind === "nullable") {
               lines.push(` ${fieldName}: ${type} = None`);
             } else {
               lines.push(` ${fieldName}: ${type}`);
             }
           } else {
             lines.push(` ${fieldName}: ${type} = pydantic.Field(`);
-            if (field.optional) {
+            if (field.type.kind === "nullable") {
               lines.push("  default=None,");
             }
             const aliasChoices = [field.name.text, fieldName]
@@ -517,7 +516,7 @@ function writeCreatePromptsFunction(
 }
 
 function writeType(
-  type: Type | NullableType,
+  type: FieldType,
   schema: Schema,
   options: {
     readonly typePrefix: string;

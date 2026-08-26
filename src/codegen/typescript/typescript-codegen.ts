@@ -12,6 +12,7 @@ import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
+  Literal,
   Schema,
   Type,
   TypeDeclarations,
@@ -20,6 +21,7 @@ import {
   getNameDependencies,
   NAME_SCOPES,
   NameScope,
+  unwrapNullable,
 } from "../../schema/schema-utils.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, uncapitalize } from "../../util/casing.js";
@@ -307,7 +309,7 @@ function writeSchema(
 }
 
 function writeType(
-  type: Type,
+  type: Type | Literal,
   options: {
     readonly sharedTypePrefix: string;
   },
@@ -335,12 +337,13 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
+        const { type, isNullable } = unwrapNullable(field.type);
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
-          field.optional ? "?: " : ": ",
-          writeType(field.type, options),
+          isNullable ? "?: " : ": ",
+          writeType(type, options),
           ";\n",
         ].join("");
       }
@@ -464,7 +467,7 @@ function writeZodType(
     defs.push(def);
   };
 
-  const write = (type: Type, scope: NameScope): string => {
+  const write = (type: Type | Literal, scope: NameScope): string => {
     switch (type.kind) {
       case "any": {
         return "z.any()";
@@ -479,12 +482,13 @@ function writeZodType(
         const fieldDefs: string[] = [];
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
+          const { type, isNullable } = unwrapNullable(field.type);
           fieldDefs.push(
             [
               field.name.text,
               ": ",
-              write(field.type, scope),
-              field.optional ? ".optional()" : "",
+              write(type, scope),
+              isNullable ? ".optional()" : "",
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",
             ].join(""),

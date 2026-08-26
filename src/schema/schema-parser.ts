@@ -16,6 +16,7 @@ import type {
   TypeDeclaration,
   Union,
 } from "./schema-types.js";
+import { isLiteralType } from "./schema-utils.js";
 
 export function parseSchema(
   content: MappedText,
@@ -687,10 +688,6 @@ function joinTypes(a: Type | Literal, b: Type | Literal): Union {
       members: [a, b],
     };
   }
-}
-
-function isLiteralType(type: Type | Literal): type is Literal {
-  return type.kind === "string-literal" || type.kind === "boolean-literal";
 }
 
 function makeLiteralTypeNotAllowedError(type: Literal): InternalError {

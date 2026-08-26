@@ -1,4 +1,25 @@
-import { FieldType, SchemaView, Type } from "./schema-types.js";
+import { FieldType, Literal, SchemaView, Type } from "./schema-types.js";
+
+export function isLiteralType(type: FieldType): type is Literal {
+  return type.kind === "string-literal" || type.kind === "boolean-literal";
+}
+
+export function unwrapNullable(type: FieldType): {
+  type: Type | Literal;
+  isNullable: boolean;
+} {
+  if (type.kind === "nullable") {
+    return {
+      type: type.type,
+      isNullable: true,
+    };
+  } else {
+    return {
+      type,
+      isNullable: false,
+    };
+  }
+}
 
 export type NameScope = "defaultScope" | "shared";
 

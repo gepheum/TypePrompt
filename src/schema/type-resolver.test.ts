@@ -19,11 +19,7 @@ import type {
   TypeName,
   Union,
 } from "./schema-types.js";
-import {
-  resolveMaybeInvalidType,
-  resolveSyntheticType,
-  resolveType,
-} from "./type-resolver.js";
+import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,7 +119,7 @@ describe("resolveType - pass-through types", () => {
       kind: "interface",
       fields: {},
     };
-    expect(resolveSyntheticType(synthetic, EMPTY_SCHEMA)).toMatch({
+    expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
       kind: "interface",
       fields: {},
     });
@@ -137,7 +133,7 @@ describe("resolveType - pass-through types", () => {
         fields: {},
       },
     };
-    expect(resolveSyntheticType(synthetic, EMPTY_SCHEMA)).toMatch({
+    expect(resolveType(synthetic, EMPTY_SCHEMA)).toMatch({
       kind: "array",
     });
   });
@@ -187,18 +183,6 @@ describe("resolveType - type-name resolution", () => {
       kind: "primitive",
       primitive: { text: "string" },
     });
-  });
-
-  it("unwraps a TypeDeclaration and resolves its valueType", () => {
-    expect(resolveType(typeDecl("Profile", INTERFACE), EMPTY_SCHEMA)).toMatch({
-      kind: "interface",
-    });
-  });
-
-  it("unwraps a TypeDeclaration whose valueType is a primitive", () => {
-    expect(
-      resolveType(typeDecl("MyString", PRIMITIVE_STRING), EMPTY_SCHEMA),
-    ).toMatch({ kind: "primitive", primitive: { text: "string" } });
   });
 });
 
