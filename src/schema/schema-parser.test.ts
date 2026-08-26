@@ -875,28 +875,19 @@ describe("parseSchema - any type", () => {
 
 describe("parseSchema - boolean literals", () => {
   it("parses true as a top-level type alias", () => {
-    const result = parseSchema(
-      textNode("type S = { alwaysTrue: true; alwaysFalse: false }"),
-    );
+    const result = parseSchema(textNode("type S = true"));
     expect(result).toMatch({
-      kind: "success",
-      typeDeclarations: {
-        S: {
-          valueType: {
-            kind: "interface",
-            fields: {
-              alwaysTrue: {
-                type: {
-                  kind: "boolean-literal",
-                  value: true,
-                  span: { start: 35, end: 39 },
-                },
-              },
-              alwaysFalse: { type: { kind: "boolean-literal", value: false } },
-            },
+      kind: "error",
+      errors: [
+        {
+          span: {
+            start: 9,
+            end: 13,
           },
+          message: "Literal type not allowed here",
+          rule: "Literal types are allowed only as non-optional field types or members in a union",
         },
-      },
+      ],
     });
   });
 
@@ -906,7 +897,18 @@ describe("parseSchema - boolean literals", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [],
+      errors: [
+        {
+          span: {
+            start: 19,
+            end: 24,
+          },
+          message: "Literal type not allowed here",
+        },
+        {
+          message: "Literal type not allowed here",
+        },
+      ],
     });
   });
 

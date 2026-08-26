@@ -213,7 +213,7 @@ describe("validateSchema - naming errors", () => {
 describe("validateSchema - type references", () => {
   it("reports an invalid string literal starting wiht a digit", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = '3foo';"),
+      parseDeclarations("type Output = {status: '3foo'};"),
       NAMESPACE,
     );
     expect(result).toMatch({
@@ -224,7 +224,7 @@ describe("validateSchema - type references", () => {
 
   it("reports an invalid string literal containing invalid character", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = 'foo bar';"),
+      parseDeclarations("type Output = {status: 'foo bar'};"),
       NAMESPACE,
     );
     expect(result).toMatch({
