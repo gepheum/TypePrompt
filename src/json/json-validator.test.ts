@@ -149,9 +149,11 @@ describe("validateJson - exact match", () => {
   });
 
   it("accepts a boolean matching a boolean-literal type", () => {
-    const schema = parseSchemaOrThrow("type Response = true");
+    const schema = parseSchemaOrThrow("type Response = {status: true}");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(bool(true), type, schema)).toMatch([]);
+    expect(
+      validateJson(objStrict([["status", bool(true)]]), type, schema),
+    ).toMatch([]);
   });
 
   it("accepts a matching record value", () => {
@@ -381,27 +383,33 @@ describe("validateJson - integer type", () => {
 
 describe("validateJson - boolean-literal type", () => {
   it("accepts the matching boolean value", () => {
-    const schema = parseSchemaOrThrow("type Response = false");
+    const schema = parseSchemaOrThrow("type Response = {status: false}");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(bool(false), type, schema)).toMatch([]);
+    expect(
+      validateJson(objStrict([["status", bool(false)]]), type, schema),
+    ).toMatch([]);
   });
 
   it("rejects the opposite boolean value with a close-match error", () => {
-    const schema = parseSchemaOrThrow("type Response = true");
+    const schema = parseSchemaOrThrow("type Response = { status: true }");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(bool(false), type, schema)).toMatch([
+    expect(
+      validateJson(objStrict([["status", bool(false)]]), type, schema),
+    ).toMatch([
       { message: "Does not match type 'Response'" },
       { message: "Expected true" },
     ]);
   });
 
   it("rejects a non-boolean with 2 errors", () => {
-    const schema = parseSchemaOrThrow("type Response = true");
+    const schema = parseSchemaOrThrow("type Response = { status: true }");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(1), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Expected true" },
-    ]);
+    expect(validateJson(objStrict([["status", num(1)]]), type, schema)).toMatch(
+      [
+        { message: "Does not match type 'Response'" },
+        { message: "Expected true" },
+      ],
+    );
   });
 });
 
