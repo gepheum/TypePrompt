@@ -122,9 +122,13 @@ describe("toJsonSchema - literal types", () => {
   });
 
   it("generates a boolean const false schema for a false literal", () => {
-    expect(gen("type Output = false;")).toMatch({
-      type: "boolean",
-      const: false,
+    expect(gen("type Output = { status: false }")).toMatch({
+      type: "object",
+      properties: {
+        status: { type: "boolean", const: false },
+      },
+      required: ["status"],
+      additionalProperties: false,
     });
   });
 });
