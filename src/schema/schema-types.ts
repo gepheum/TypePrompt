@@ -45,30 +45,71 @@ export type TypeDeclaration = {
   readonly doc: string;
 };
 
-export type Field = {
-  readonly name: TextSpan;
-  readonly type: FieldType;
-  readonly doc: string;
-};
-
 export type ResolvedType =
   AnyType | Array | Interface | PrimitiveType | RecordType | Union;
 
-export type Type =
-  | AnyType
-  | Array
-  | Interface
-  | PrimitiveType
-  | RecordType
-  | Union
-  | TypeName
-  | SharedTypeName;
+export type Type = ResolvedType | TypeName | SharedTypeName;
 
 export type Literal = BooleanLiteral | StringLiteral;
 
 export type ResolvedFieldType = ResolvedType | Literal | Optional;
 
 export type FieldType = Type | Literal | Optional;
+
+export type AnyType = {
+  readonly kind: "any";
+  readonly span: Span;
+};
+
+export type AnyTypeView = {
+  readonly kind: "any";
+};
+
+export type Array = {
+  readonly kind: "array";
+  readonly elementType: Type;
+};
+
+export type Interface = {
+  readonly kind: "interface";
+  readonly name?: undefined;
+  readonly leftCurlyBracket: Span;
+  readonly fields: { readonly [name: string]: Field };
+  readonly firstField?: Field;
+};
+
+export type Field = {
+  readonly name: TextSpan;
+  readonly type: FieldType;
+  readonly doc: string;
+};
+
+export type PrimitiveType = {
+  readonly kind: "primitive";
+  readonly primitive: TextSpan<"number" | "string" | "boolean" | "integer">;
+};
+
+export type PrimitiveTypeView = {
+  readonly kind: "primitive";
+  readonly primitive: {
+    readonly text: "number" | "string" | "boolean" | "integer";
+  };
+};
+
+export type RecordType = {
+  readonly kind: "record";
+  readonly leftCurlyBracket: Span;
+  readonly keyName: string;
+  readonly valueType: Type;
+};
+
+export type Union = {
+  readonly kind: "union";
+  /** Guaranteed to contain 2+ elements. */
+  readonly members: readonly UnionMemberType[];
+};
+
+export type UnionMemberType = Exclude<Type, Union> | Literal;
 
 export type TypeName = {
   readonly kind: "type-name";
@@ -81,13 +122,13 @@ export type SharedTypeName = {
   readonly name: TextSpan;
 };
 
+export type StringLiteral = StringLiteralView & {
+  readonly quotedName: TextSpan;
+};
+
 export type StringLiteralView = {
   readonly kind: "string-literal";
   readonly value: string;
-};
-
-export type StringLiteral = StringLiteralView & {
-  readonly quotedName: TextSpan;
 };
 
 export type BooleanLiteral = {
@@ -96,58 +137,9 @@ export type BooleanLiteral = {
   readonly value: boolean;
 };
 
-export type Interface = {
-  readonly kind: "interface";
-  readonly name?: undefined;
-  readonly leftCurlyBracket: Span;
-  readonly fields: { readonly [name: string]: Field };
-  readonly firstField?: Field;
-};
-
-export type RecordType = {
-  readonly kind: "record";
-  readonly leftCurlyBracket: Span;
-  readonly keyName: string;
-  readonly valueType: Type;
-};
-
-export type AnyTypeView = {
-  readonly kind: "any";
-};
-
-export type AnyType = {
-  readonly kind: "any";
-  readonly span: Span;
-};
-
-export type Array = {
-  readonly kind: "array";
-  readonly elementType: Type;
-};
-
 export type Optional = {
   readonly kind: "optional";
   readonly innerType: Exclude<Type, Optional>;
-};
-
-export type UnionMemberType = Exclude<Type, Union> | Literal;
-
-export type Union = {
-  readonly kind: "union";
-  /** Guaranteed to contain 2+ elements. */
-  readonly members: readonly UnionMemberType[];
-};
-
-export type PrimitiveTypeView = {
-  readonly kind: "primitive";
-  readonly primitive: {
-    readonly text: "number" | "string" | "boolean" | "integer";
-  };
-};
-
-export type PrimitiveType = {
-  readonly kind: "primitive";
-  readonly primitive: TextSpan<"number" | "string" | "boolean" | "integer">;
 };
 
 export type SyntheticArray = {
