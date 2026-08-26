@@ -344,53 +344,56 @@ function makeExamplesType(
           text: "intermediateSteps",
         },
         type: {
-          kind: "array",
-          elementType: {
-            kind: "interface",
-            fields: {
-              toolCalls: {
-                name: {
-                  text: "toolCalls",
-                },
-                type: {
-                  kind: "array",
-                  elementType: {
-                    kind: "interface",
-                    fields: {
-                      tool: {
-                        name: {
-                          text: "tool",
-                        },
-                        type: {
-                          kind: "synthetic-union",
-                          members: {
-                            kind: "strings",
-                            values: new Set(
-                              Object.keys(options.namespaceTools),
-                            ),
+          kind: "optional",
+          innerType: {
+            kind: "array",
+            elementType: {
+              kind: "interface",
+              fields: {
+                toolCalls: {
+                  name: {
+                    text: "toolCalls",
+                  },
+                  type: {
+                    kind: "array",
+                    elementType: {
+                      kind: "interface",
+                      fields: {
+                        tool: {
+                          name: {
+                            text: "tool",
+                          },
+                          type: {
+                            kind: "synthetic-union",
+                            members: {
+                              kind: "strings",
+                              values: new Set(
+                                Object.keys(options.namespaceTools),
+                              ),
+                            },
                           },
                         },
-                      },
-                      callId: {
-                        name: {
-                          text: "callId",
+                        callId: {
+                          name: {
+                            text: "callId",
+                          },
+                          type: {
+                            kind: "primitive",
+                            primitive: { text: "string" },
+                          },
                         },
-                        type: {
-                          kind: "primitive",
-                          primitive: { text: "string" },
+                        input: {
+                          name: {
+                            text: "input",
+                          },
+                          type: { kind: "any" },
                         },
-                      },
-                      input: {
-                        name: {
-                          text: "input",
+                        output: {
+                          name: {
+                            text: "output",
+                          },
+                          type: { kind: "any" },
                         },
-                        type: { kind: "any" },
-                      },
-                      output: {
-                        name: {
-                          text: "output",
-                        },
-                        type: { kind: "any" },
                       },
                     },
                   },
