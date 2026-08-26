@@ -1,6 +1,6 @@
 import {
-  NullableType,
   NullType,
+  Optional,
   ResolvedFieldType,
   Schema,
 } from "../schema/schema-types.js";
@@ -10,7 +10,7 @@ import { Expression, ExpressionContext } from "./expression-types.js";
 
 export type ResolvedExpressionType<HasValContext extends boolean> =
   | ResolvedFieldType
-  | (HasValContext extends true ? NullType : NullableType)
+  | (HasValContext extends true ? NullType : Optional)
   | InternalErrors;
 
 export function resolveExpressionType<HasValContext extends boolean>(
@@ -54,7 +54,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
       if (left.kind === "error") {
         return left;
       }
-      if (left.kind === "nullable" || left.kind === "null") {
+      if (left.kind === "optional" || left.kind === "null") {
         return {
           kind: "error",
           errors: [

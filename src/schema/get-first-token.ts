@@ -12,8 +12,8 @@ export function getFirstToken(type: FieldType): Span {
     case "interface":
     case "record":
       return type.leftCurlyBracket;
-    case "nullable":
-      return getFirstToken(type.type);
+    case "optional":
+      return getFirstToken(type.innerType);
     case "primitive":
       return type.primitive;
     case "shared-type-name":

@@ -38,8 +38,8 @@ export function resolveIfExpression(
         else: { it, typeOverrides: {} },
       };
     }
-  } else if (type.kind === "nullable") {
-    const thenType = resolveType(type.type, schema);
+  } else if (type.kind === "optional") {
+    const thenType = resolveType(type.innerType, schema);
     if (is?.text === "notNull") {
       return {
         kind: "success",
@@ -62,7 +62,7 @@ export function resolveIfExpression(
         errors: [
           {
             span: is ?? expression.fullPath,
-            message: `must use 'is="notNull"' with nullable type`,
+            message: `must use 'is="notNull"' with optional type`,
           },
         ],
       };
@@ -96,7 +96,7 @@ export function resolveIfExpression(
           errors: [
             {
               span: expression.fullPath,
-              message: "Expected: nullable value",
+              message: "Expected: optional value",
             },
           ],
         };

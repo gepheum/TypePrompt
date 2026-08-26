@@ -157,8 +157,8 @@ function validateType(
         }
         return null;
       }
-      case "nullable": {
-        return validate(type.type);
+      case "optional": {
+        return validate(type.innerType);
       }
       case "record": {
         return validate(type.valueType);
@@ -304,8 +304,8 @@ function collectIdentifiers(
         }
         return null;
       }
-      case "nullable": {
-        return collect(type.type);
+      case "optional": {
+        return collect(type.innerType);
       }
       case "record": {
         return collect(type.valueType);
@@ -373,8 +373,8 @@ function collectNamingHints(
         }
         return null;
       }
-      case "nullable": {
-        return collect(type.type, context);
+      case "optional": {
+        return collect(type.innerType, context);
       }
       case "record": {
         return collect(type.valueType, context);

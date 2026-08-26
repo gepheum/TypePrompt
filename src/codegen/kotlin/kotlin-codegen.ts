@@ -6,7 +6,7 @@ import type { Config } from "../../config/config-parser.js";
 import type {
   Interface,
   NamingHint,
-  NullableType,
+  Optional,
   Schema,
   Type,
   Union,
@@ -415,7 +415,7 @@ function writeTypepromptUnion(
 }
 
 function writeType(
-  type: Type | NullableType,
+  type: Type | Optional,
   schema: Schema,
   options: {
     readonly sharedTypePrefix?: string;
@@ -453,8 +453,8 @@ function writeType(
       result += "}";
       return result;
     }
-    case "nullable": {
-      return writeType(type.type, schema, options).concat("?");
+    case "optional": {
+      return writeType(type.innerType, schema, options).concat("?");
     }
     case "primitive": {
       if (type.primitive.text === "integer") {

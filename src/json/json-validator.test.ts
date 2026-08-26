@@ -48,15 +48,15 @@ function parseSchemaOrThrow(source: string): Schema {
   );
   const schemaParseResult = parseSchema(textNode);
   if (schemaParseResult.kind !== "success") {
-    const errors = schemaParseResult.errors.map((e) => e.message).join(", ");
-    throw new Error(`Schema parse failed: ${errors}`);
+    throw new Error(
+      `Schema parse failed: ${JSON.stringify(schemaParseResult)}`,
+    );
   }
   const schema = validateSchema(schemaParseResult, {
     kind: "namespace",
   });
   if (schema.kind !== "success") {
-    const errors = schema.errors.map((e) => e.message).join(", ");
-    throw new Error(`Schema validation failed: ${errors}`);
+    throw new Error(`Schema validation failed: ${JSON.stringify(schema)}`);
   }
   return schema;
 }
@@ -207,9 +207,11 @@ describe("validateJson - exact match", () => {
   });
 
   it("accepts the exact string for a string-literal type", () => {
-    const schema = parseSchemaOrThrow('type Response = "ok"');
+    const schema = parseSchemaOrThrow('type Response = {status: "ok"}');
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("ok"), type, schema)).toMatch([]);
+    expect(
+      validateJson(objStrict([["status", str("ok")]]), type, schema),
+    ).toMatch([]);
   });
 
   it("accepts a matching value from a string union", () => {

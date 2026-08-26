@@ -389,14 +389,14 @@ function writeSchema(
           lines.push(...writeComment(field.doc, " "));
           const fieldName = toPyName(field.name.text, "field_name");
           if (fieldName === field.name.text) {
-            if (field.type.kind === "nullable") {
+            if (field.type.kind === "optional") {
               lines.push(` ${fieldName}: ${type} = None`);
             } else {
               lines.push(` ${fieldName}: ${type}`);
             }
           } else {
             lines.push(` ${fieldName}: ${type} = pydantic.Field(`);
-            if (field.type.kind === "nullable") {
+            if (field.type.kind === "optional") {
               lines.push("  default=None,");
             }
             const aliasChoices = [field.name.text, fieldName]
@@ -551,9 +551,11 @@ function writeType(
       if (!typePrefix) throw new Error();
       return typePrefix.concat(makeNameFromHint(namingHint!));
     }
-    case "nullable": {
-      const valueType = writeType(type.type, schema, options);
-      return type.type.kind === "any" ? valueType : valueType.concat(" | None");
+    case "optional": {
+      const valueType = writeType(type.innerType, schema, options);
+      return type.innerType.kind === "any"
+        ? valueType
+        : valueType.concat(" | None");
     }
     case "primitive": {
       switch (type.primitive.text) {

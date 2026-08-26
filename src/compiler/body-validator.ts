@@ -80,7 +80,7 @@ function validateBodyImpl<HasValContext extends boolean>(
         message: "Always null",
       });
       continue;
-    } else if (type.kind === "nullable") {
+    } else if (type.kind === "optional") {
       errors.push({
         span: expression.fullPath,
         message: "May be null",

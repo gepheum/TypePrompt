@@ -21,7 +21,7 @@ import {
   getNameDependencies,
   NAME_SCOPES,
   NameScope,
-  unwrapNullable,
+  unwrapNullable as unwrapOptional,
 } from "../../schema/schema-utils.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, uncapitalize } from "../../util/casing.js";
@@ -337,12 +337,12 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
-        const { type, isNullable } = unwrapNullable(field.type);
+        const { type, isOptional } = unwrapOptional(field.type);
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
-          isNullable ? "?: " : ": ",
+          isOptional ? "?: " : ": ",
           writeType(type, options),
           ";\n",
         ].join("");
@@ -482,13 +482,13 @@ function writeZodType(
         const fieldDefs: string[] = [];
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
-          const { type, isNullable } = unwrapNullable(field.type);
+          const { type, isOptional } = unwrapOptional(field.type);
           fieldDefs.push(
             [
               field.name.text,
               ": ",
               write(type, scope),
-              isNullable ? ".optional()" : "",
+              isOptional ? ".optional()" : "",
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",
             ].join(""),

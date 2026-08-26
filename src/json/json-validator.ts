@@ -118,7 +118,7 @@ export function jsonMatchesType(
     case "interface": {
       if (value.kind === "object") {
         const requiredFields = Object.values(type.fields).filter(
-          (field) => field.type.kind !== "nullable",
+          (field) => field.type.kind !== "optional",
         );
         if (
           Object.keys(value.entries).length === 0 &&
@@ -207,11 +207,11 @@ export function jsonMatchesType(
         );
       }
     }
-    case "nullable": {
+    case "optional": {
       if (value.kind === "null") {
         return MATCH;
       } else {
-        const innerType = resolveType(type.type, schema);
+        const innerType = resolveType(type.innerType, schema);
         return jsonMatchesType(value, innerType, mode, schema);
       }
     }

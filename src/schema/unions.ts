@@ -380,8 +380,10 @@ function areResolvedTypesEqual(
     case "boolean-literal": {
       return b.kind === "boolean-literal" && a.value === b.value;
     }
-    case "nullable": {
-      return b.kind === "nullable" && areTypesEqual(a.type, b.type, schema);
+    case "optional": {
+      return (
+        b.kind === "optional" && areTypesEqual(a.innerType, b.innerType, schema)
+      );
     }
     case "primitive": {
       return b.kind === "primitive" && a.primitive === b.primitive;

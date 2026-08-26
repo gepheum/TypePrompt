@@ -66,9 +66,9 @@ export type Type =
 
 export type Literal = BooleanLiteral | StringLiteral;
 
-export type ResolvedFieldType = ResolvedType | Literal | NullableType;
+export type ResolvedFieldType = ResolvedType | Literal | Optional;
 
-export type FieldType = Type | Literal | NullableType;
+export type FieldType = Type | Literal | Optional;
 
 export type TypeName = {
   readonly kind: "type-name";
@@ -125,9 +125,9 @@ export type Array = {
   readonly elementType: Type;
 };
 
-export type NullableType = {
-  readonly kind: "nullable";
-  readonly type: Exclude<Type, NullableType>;
+export type Optional = {
+  readonly kind: "optional";
+  readonly innerType: Exclude<Type, Optional>;
 };
 
 export type UnionMemberType = Exclude<Type, Union> | Literal;
@@ -160,9 +160,9 @@ export type SyntheticInterface = {
   readonly fields: { readonly [name: string]: SyntheticField };
 };
 
-export type SyntheticNullableType = {
-  readonly kind: "nullable";
-  readonly type: SyntheticType;
+export type SyntheticOptional = {
+  readonly kind: "optional";
+  readonly innerType: SyntheticType;
 };
 
 export type SyntheticField = {
@@ -189,7 +189,7 @@ export type SyntheticType =
   | PrimitiveTypeView
   | SyntheticArray
   | SyntheticInterface
-  | SyntheticNullableType
+  | SyntheticOptional
   | SyntheticUnion;
 
 export type NullType = { readonly kind: "null" };

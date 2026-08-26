@@ -6,17 +6,17 @@ export function isLiteralType(type: FieldType): type is Literal {
 
 export function unwrapNullable(type: FieldType): {
   type: Type | Literal;
-  isNullable: boolean;
+  isOptional: boolean;
 } {
-  if (type.kind === "nullable") {
+  if (type.kind === "optional") {
     return {
-      type: type.type,
-      isNullable: true,
+      type: type.innerType,
+      isOptional: true,
     };
   } else {
     return {
       type,
-      isNullable: false,
+      isOptional: false,
     };
   }
 }
@@ -54,8 +54,8 @@ export function getNameDependencies(
         }
         return null;
       }
-      case "nullable": {
-        return collect(type.type, scope);
+      case "optional": {
+        return collect(type.innerType, scope);
       }
       case "record": {
         return collect(type.valueType, scope);

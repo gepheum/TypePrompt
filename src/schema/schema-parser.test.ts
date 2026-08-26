@@ -81,8 +81,11 @@ describe("parseSchema - interfaces", () => {
               required: { type: { kind: "primitive" } },
               optional: {
                 type: {
-                  kind: "nullable",
-                  type: { kind: "primitive", primitive: { text: "number" } },
+                  kind: "optional",
+                  innerType: {
+                    kind: "primitive",
+                    primitive: { text: "number" },
+                  },
                 },
               },
             },

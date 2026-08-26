@@ -221,10 +221,14 @@ class SchemaParser {
     if (!this.expectExactThenMove(":", token)) {
       return null;
     }
-    let type: FieldType | null = this.parseTypeRef();
+    let type: FieldType | null = this.parseTypeRef({ allowLiteral: true });
     if (type === null) return null;
     if (optional) {
-      type = { kind: "nullable", type: type };
+      if (isLiteralType(type)) {
+        this.parserErrors.push(makeLiteralTypeNotAllowedError(type));
+        return null;
+      }
+      type = { kind: "optional", innerType: type };
     }
     token = this.peekToken();
     if (token.text === ";" || token.text === ",") {
@@ -240,11 +244,14 @@ class SchemaParser {
     lastTokenWasPipe: true;
     allowLiteral: true;
   }): Type | Literal | null;
+
   private parseTypeRef(context: {
-    lastTokenWasPipe: false;
-    allowLiteral?: undefined;
+    lastTokenWasPipe?: undefined;
+    allowLiteral: true;
   }): Type | Literal | null;
+
   private parseTypeRef(context?: undefined): Type | null;
+
   private parseTypeRef(
     context?:
       | {
@@ -252,8 +259,8 @@ class SchemaParser {
           allowLiteral: true;
         }
       | {
-          lastTokenWasPipe: false;
-          allowLiteral: undefined;
+          lastTokenWasPipe?: undefined;
+          allowLiteral: true;
         },
   ): Type | Literal | null {
     let type = ((): Type | Literal | null => {
@@ -694,6 +701,6 @@ function makeLiteralTypeNotAllowedError(type: Literal): InternalError {
   return {
     span: getFirstToken(type),
     message: "Literal type not allowed here",
-    rule: "Literal types are allowed only as field types or members in a union",
+    rule: "Literal types are allowed only as non-optional field types or members in a union",
   };
 }

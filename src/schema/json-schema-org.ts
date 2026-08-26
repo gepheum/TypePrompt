@@ -96,8 +96,8 @@ class Generator {
     const required: string[] = [];
     for (const [fieldName, field] of Object.entries(iface.fields)) {
       let type = field.type;
-      if (type.kind === "nullable") {
-        type = type.type;
+      if (type.kind === "optional") {
+        type = type.innerType;
       } else {
         required.push(fieldName);
       }

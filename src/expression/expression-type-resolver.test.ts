@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type {
-  NullableType,
+  Optional,
   PrimitiveType,
   ResolvedType,
   Schema,
@@ -58,13 +58,13 @@ function prim(
   return { kind: "primitive", primitive: { text, start: 0, end: text.length } };
 }
 
-function nullable(type: ResolvedType): NullableType {
-  return { kind: "nullable", type };
+function optional(type: ResolvedType): Optional {
+  return { kind: "optional", innerType: type };
 }
 
 function makeContext(
   expression: Expression,
-  type: ResolvedType | NullableType,
+  type: ResolvedType | Optional,
   typeOverrides: ExpressionContext["typeOverrides"] = {},
 ): ExpressionContext {
   return { it: { expression, type }, typeOverrides };
@@ -106,12 +106,12 @@ describe("resolveExpressionType - it", () => {
     });
   });
 
-  it("resolves 'it' to a nullable type from context", () => {
+  it("resolves 'it' to an optional type from context", () => {
     const schema = parseSchemaOrThrow("type Input = string");
     const expr = makeExprCtx("it");
-    const context = makeContext(makeExpr("input"), nullable(prim("string")));
+    const context = makeContext(makeExpr("input"), optional(prim("string")));
     expect(resolveExpressionType(expr, schema, context) as unknown).toMatch({
-      kind: "nullable",
+      kind: "optional",
     });
   });
 });
@@ -131,13 +131,13 @@ describe("resolveExpressionType - property access on interface", () => {
     );
   });
 
-  it("returns a nullable type for an optional field", () => {
+  it("returns an optional type for an optional field", () => {
     const schema = parseSchemaOrThrow("type Input = { value?: number; }");
     expect(
       resolveExpressionType(makeExpr("input.value"), schema, null),
     ).toMatch({
-      kind: "nullable",
-      type: { kind: "primitive", primitive: { text: "number" } },
+      kind: "optional",
+      innerType: { kind: "primitive", primitive: { text: "number" } },
     });
   });
 
@@ -159,7 +159,7 @@ describe("resolveExpressionType - property access on interface", () => {
     );
   });
 
-  it("reports an error when the left side is nullable", () => {
+  it("reports an error when the left side is optional", () => {
     const schema = parseSchemaOrThrow(
       "type Input = { child?: { name: string; }; }",
     );
@@ -257,14 +257,14 @@ describe("resolveIfExpression - boolean type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveIfExpression - nullable type
+// resolveIfExpression - optional type
 // ---------------------------------------------------------------------------
 
-describe("resolveIfExpression - nullable type", () => {
+describe("resolveIfExpression - optional type", () => {
   const expr = makeExpr("input");
-  const nType = nullable(prim("string"));
+  const nType = optional(prim("string"));
 
-  it("succeeds with 'is=\"notNull\"' for a nullable type", () => {
+  it("succeeds with 'is=\"notNull\"' for an optional type", () => {
     const result = resolveIfExpression(
       expr,
       nType,
@@ -278,19 +278,19 @@ describe("resolveIfExpression - nullable type", () => {
     });
   });
 
-  it("rejects a missing 'is' clause for a nullable type", () => {
+  it("rejects a missing 'is' clause for an optional type", () => {
     expect(resolveIfExpression(expr, nType, null, EMPTY_SCHEMA)).toMatch({
       kind: "error",
-      errors: [{ message: "must use 'is=\"notNull\"' with nullable type" }],
+      errors: [{ message: "must use 'is=\"notNull\"' with optional type" }],
     });
   });
 
-  it("rejects 'is=\"notEmpty\"' for a nullable type", () => {
+  it("rejects 'is=\"notEmpty\"' for an optional type", () => {
     expect(
       resolveIfExpression(expr, nType, span("notEmpty"), EMPTY_SCHEMA),
     ).toMatch({
       kind: "error",
-      errors: [{ message: "must use 'is=\"notNull\"' with nullable type" }],
+      errors: [{ message: "must use 'is=\"notNull\"' with optional type" }],
     });
   });
 });
@@ -350,12 +350,12 @@ describe("resolveIfExpression - array and string types", () => {
 describe("resolveIfExpression - other types", () => {
   const expr = makeExpr("input");
 
-  it("reports 'Expected: nullable value' for 'is=\"notNull\"' on a number", () => {
+  it("reports 'Expected: optional value' for 'is=\"notNull\"' on a number", () => {
     expect(
       resolveIfExpression(expr, prim("number"), span("notNull"), EMPTY_SCHEMA),
     ).toMatch({
       kind: "error",
-      errors: [{ message: "Expected: nullable value" }],
+      errors: [{ message: "Expected: optional value" }],
     });
   });
 
