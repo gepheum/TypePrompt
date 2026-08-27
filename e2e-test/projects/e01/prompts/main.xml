@@ -25,4 +25,7 @@
   interface AnyHolder {
     any: any;
   }
+  interface SerializerHolder {
+    serializer: any;
+  }
 </namespace>
