@@ -190,7 +190,10 @@ function writeUserDefinedDatatypes(
           name: { text: "Meta" },
         },
         metaSchema,
-        { typePrefix: "Schema.Meta." },
+        {
+          context: "top-level",
+          typePrefix: "Schema.Meta.",
+        },
       )
     : "Nothing?";
   lines.push(
@@ -201,7 +204,10 @@ function writeUserDefinedDatatypes(
   if (anyTypes(metaSchema)) {
     lines.push(
       "object Meta {",
-      writeSchema(metaSchema, unionContext, { typePrefix: "Schema.Meta." }),
+      writeSchema(metaSchema, unionContext, {
+        typePrefix: "Schema.Meta.",
+        context: "meta",
+      }),
       "}\n",
     );
   }
@@ -216,6 +222,7 @@ function writeUserDefinedDatatypes(
       lines.push("object Shared {");
       lines.push(
         writeSchema(namespace.schema, unionContext, {
+          context: "namespace",
           typePrefix: sharedTypePrefix,
         }),
       );
@@ -227,6 +234,7 @@ function writeUserDefinedDatatypes(
       lines.push(`object ${templateName} {`);
       lines.push(
         writeSchema(template.schema, unionContext, {
+          context: "template",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -239,6 +247,7 @@ function writeUserDefinedDatatypes(
       lines.push(`object ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, unionContext, {
+          context: "tool",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -322,29 +331,32 @@ function writeUserDefinedDatatypes(
 //   );
 // }
 
-type WriteSchemaOptions = {
-  readonly typePrefix: string;
-  readonly sharedTypePrefix?: string;
-  readonly isPrivate?: true;
-};
+type WriteSchemaOptions =
+  | {
+      readonly context: "meta" | "namespace" | "top-level";
+      readonly typePrefix: string;
+    }
+  | {
+      readonly context: "template" | "tool";
+      readonly typePrefix: string;
+      readonly sharedTypePrefix: string;
+    };
 
 function writeSchema(
   schema: Schema,
-  context: UnionContext,
+  unionContext: UnionContext,
   options: WriteSchemaOptions,
 ): string {
-  const { isPrivate, typePrefix } = options;
+  const { typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
-    if (!isPrivate) {
-      lines.push(`// Exported as '${typePrefix}${name}'`);
-    }
+    lines.push(`// Exported as '${typePrefix}${name}'`);
     lines.push(...wrapKDoc(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(
-          writeTypepromptInterface(type, name, schema, options, context),
+          writeTypepromptInterface(type, name, schema, options, unionContext),
         );
         break;
       }
@@ -364,7 +376,7 @@ function writeTypepromptInterface(
   typeName: string,
   schema: Schema,
   options: WriteSchemaOptions,
-  context: UnionContext,
+  unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
   const isDataClass = fields.some((f) => !isLiteralType(f.type));
@@ -372,7 +384,7 @@ function writeTypepromptInterface(
     "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",
   ];
-  const discriminant = context.intMemberToStringDiscriminant.get(type);
+  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
   if (discriminant) {
     lines.push(`@SerialName("${discriminant}")`);
   }
@@ -383,11 +395,11 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const name = toKotlinName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    const override = context.overrideFields.has(field) ? "override " : "";
+    const override = unionContext.overrideFields.has(field) ? "override " : "";
     lines.push(...wrapKDoc(field.doc));
     lines.push(`${override}val ${name}: ${fieldType},`);
   }
-  const interfaces = context.intMemberToUnionRefs.get(type);
+  const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementClause = interfaces ? " : ".concat(interfaces.join(", ")) : "";
   lines.push(`)${implementClause} {`);
   for (const field of fields) {
@@ -396,7 +408,7 @@ function writeTypepromptInterface(
     const name = toKotlinName(field.name.text);
     const fieldType = type.kind === "string-literal" ? "String" : "Boolean";
     const literal = JSON.stringify(type.value);
-    const override = context.overrideFields.has(field) ? "override " : "";
+    const override = unionContext.overrideFields.has(field) ? "override " : "";
     lines.push(...wrapKDoc(field.doc));
     lines.push("@EncodeDefault");
     lines.push(`${override}val ${name}: ${fieldType} get() = ${literal}`);
@@ -482,10 +494,7 @@ function writeTypepromptUnion(
 function writeType(
   type: Type | Optional | TypeNameView,
   schema: Schema,
-  options: {
-    readonly typePrefix: string;
-    readonly sharedTypePrefix?: string;
-  },
+  options: WriteSchemaOptions,
 ): string {
   switch (type.kind) {
     case "any": {
@@ -498,19 +507,20 @@ function writeType(
     }
     case "interface":
     case "union": {
+      const { context, typePrefix } = options;
       let namingHint = schema.namingHints.defaultScope.get(type);
-      let shared: boolean;
       if (namingHint) {
-        shared = false;
-      } else {
+        if (context === "top-level") {
+          return typePrefix.concat(makeNameFromHint(namingHint));
+        } else {
+          return makeNameFromHint(namingHint!);
+        }
+      } else if (options.context === "template" || options.context === "tool") {
         namingHint = schema.namingHints.shared.get(type);
-        shared = true;
+        return options.sharedTypePrefix.concat(makeNameFromHint(namingHint!));
+      } else {
+        throw new Error();
       }
-      const typePrefix = shared
-        ? options.sharedTypePrefix!
-        : options.typePrefix;
-      if (!typePrefix) throw new Error();
-      return typePrefix.concat(makeNameFromHint(namingHint!));
     }
     case "optional": {
       return writeType(type.innerType, schema, options).concat("?");
@@ -565,7 +575,6 @@ function makeNameFromHint(hint: NamingHint): string {
         }
       }
     })
-
     .join("_");
 }
 
@@ -890,6 +899,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Double",
   "EncodeDefault",
   "ExperimentalSerializationApi",
+  "Int",
   "JsonClassDiscriminator",
   "JsonContentPolymorphicSerializer",
   "JsonElement",
