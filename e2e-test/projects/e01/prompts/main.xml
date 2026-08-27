@@ -23,6 +23,6 @@
   interface EncodeDefault {}
   interface Serializable {}
   interface AnyHolder {
-    any: Any;
+    any: any;
   }
 </namespace>

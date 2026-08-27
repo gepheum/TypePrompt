@@ -372,10 +372,11 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
-    lines.push(...wrapKDoc(field.doc));
     const name = toKotlinName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    lines.push(`val ${name}: ${fieldType},`);
+    const override = context.overrideFields.has(field) ? "override " : "";
+    lines.push(...wrapKDoc(field.doc));
+    lines.push(`${override}val ${name}: ${fieldType},`);
   }
   const interfaces = context.interfaceMemberToUnionRefs.get(type);
   const implementClause = interfaces ? ": ".concat(interfaces.join(", ")) : "";
@@ -386,9 +387,10 @@ function writeTypepromptInterface(
     const name = toKotlinName(field.name.text);
     const fieldType = type.kind === "string-literal" ? "String" : "Boolean";
     const literal = JSON.stringify(type.value);
+    const override = context.overrideFields.has(field) ? "override " : "";
     lines.push(...wrapKDoc(field.doc));
     lines.push("@EncodeDefault");
-    lines.push(`val ${name}: ${fieldType} get() = ${literal}`);
+    lines.push(`${override}val ${name}: ${fieldType} get() = ${literal}`);
   }
   lines.push("}");
   return lines.join("\n");
@@ -440,7 +442,7 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return "unknown";
+      return "JsonElement";
     }
     case "array": {
       const { elementType } = type;
@@ -494,13 +496,12 @@ function writeType(
 }
 
 function makeNameFromHint(hint: NamingHint): string {
-  return hint.namePieces
+  const { namePieces } = hint;
+  return namePieces
     .map((piece) => {
       switch (piece.kind) {
         case "type":
-          return hint.namePieces.length <= 1
-            ? toKotlinName(piece.name)
-            : piece.name;
+          return namePieces.length <= 1 ? toKotlinName(piece.name) : piece.name;
         case "field":
           return capitalize(piece.name);
         case "member": {
@@ -834,6 +835,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Double",
   "EncodeDefault",
   "ExperimentalSerializationApi",
+  "JsonElement",
   "List",
   "Map",
   "OptIn",
