@@ -29,4 +29,8 @@
   interface SerializerHolder {
     serializer: any;
   }
+  interface Square {
+    kind: "square";
+    size: number;
+  }
 </namespace>
