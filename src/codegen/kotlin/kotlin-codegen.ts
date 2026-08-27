@@ -367,8 +367,13 @@ function writeTypepromptInterface(
   const lines = [
     "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",
-    (isDataClass ? "data " : "").concat(`class ${typeName}(`),
   ];
+  const discriminant = context.intMemberToDiscriminant.get(type);
+  if (discriminant) {
+    lines.push(`@SerialName("${discriminant}")`);
+  }
+  lines.push((isDataClass ? "data " : "").concat(`class ${typeName}(`));
+
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
@@ -378,7 +383,7 @@ function writeTypepromptInterface(
     lines.push(...wrapKDoc(field.doc));
     lines.push(`${override}val ${name}: ${fieldType},`);
   }
-  const interfaces = context.interfaceMemberToUnionRefs.get(type);
+  const interfaces = context.intMemberToUnionRefs.get(type);
   const implementClause = interfaces ? ": ".concat(interfaces.join(", ")) : "";
   lines.push(`)${implementClause} {`);
   for (const field of fields) {
@@ -419,7 +424,12 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      lines.push(`sealed interface ${typeName} {`);
+      lines.push(
+        "@OptIn(ExperimentalSerializationApi::class)",
+        "@Serializable",
+        `@JsonClassDiscriminator("${members.discriminator}")`,
+        `sealed interface ${typeName} {`,
+      );
       for (const member of members.commonFields) {
         const name = toKotlinName(member.name);
         if (isLiteralType(member.type)) continue;
@@ -708,14 +718,16 @@ function makeNameFromHint(hint: NamingHint): string {
 // }
 
 type UnionContext = {
-  readonly interfaceMemberToUnionRefs: Map<Interface, readonly string[]>;
+  readonly intMemberToUnionRefs: Map<Interface, readonly string[]>;
+  readonly intMemberToDiscriminant: Map<Interface, string>;
   readonly overrideFields: Set<Field>;
 };
 
 function makeUnionContext(
   compilationResult: ValidCompilationResult,
 ): UnionContext {
-  const interfaceMemberToUnionRefs = new Map<Interface, string[]>();
+  const intMemberToUnionRefs = new Map<Interface, string[]>();
+  const intMemberToDiscriminant = new Map<Interface, string>();
   const overrideFields = new Set<Field>();
 
   const processSchema = (schema: Schema, typePrefix: string): void => {
@@ -727,12 +739,14 @@ function makeUnionContext(
       const members = schema.unionToMembers.get(type)!;
       if (members.kind !== "interfaces") continue;
       const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
-      for (const member of Object.values(members.members)) {
-        const unionRefs = interfaceMemberToUnionRefs.get(member) ?? [];
+      for (const [discriminant, member] of Object.entries(members.members)) {
+        const unionRefs = intMemberToUnionRefs.get(member) ?? [];
         if (unionRefs.length <= 0) {
-          interfaceMemberToUnionRefs.set(member, unionRefs);
+          intMemberToUnionRefs.set(member, unionRefs);
         }
         unionRefs.push(unionRef);
+
+        intMemberToDiscriminant.set(member, discriminant);
 
         for (const commonField of members.commonFields) {
           for (const memberField of commonField.memberFields) {
@@ -760,7 +774,8 @@ function makeUnionContext(
   }
 
   return {
-    interfaceMemberToUnionRefs,
+    intMemberToUnionRefs,
+    intMemberToDiscriminant,
     overrideFields,
   };
 }
@@ -835,6 +850,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Double",
   "EncodeDefault",
   "ExperimentalSerializationApi",
+  "JsonClassDiscriminator",
   "JsonElement",
   "List",
   "Map",
