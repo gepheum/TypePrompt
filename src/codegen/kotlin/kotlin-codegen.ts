@@ -368,7 +368,7 @@ function writeTypepromptInterface(
     "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",
   ];
-  const discriminant = context.intMemberToDiscriminant.get(type);
+  const discriminant = context.intMemberToStringDiscriminant.get(type);
   if (discriminant) {
     lines.push(`@SerialName("${discriminant}")`);
   }
@@ -384,7 +384,7 @@ function writeTypepromptInterface(
     lines.push(`${override}val ${name}: ${fieldType},`);
   }
   const interfaces = context.intMemberToUnionRefs.get(type);
-  const implementClause = interfaces ? ": ".concat(interfaces.join(", ")) : "";
+  const implementClause = interfaces ? " : ".concat(interfaces.join(", ")) : "";
   lines.push(`)${implementClause} {`);
   for (const field of fields) {
     const type = resolveType(field.type, schema);
@@ -424,12 +424,20 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      lines.push(
-        "@OptIn(ExperimentalSerializationApi::class)",
-        "@Serializable",
-        `@JsonClassDiscriminator("${members.discriminator}")`,
-        `sealed interface ${typeName} {`,
-      );
+      const { discriminants, discriminator } = members;
+      if (discriminants.type === "string") {
+        lines.push(
+          "@OptIn(ExperimentalSerializationApi::class)",
+          "@Serializable",
+          `@JsonClassDiscriminator("${discriminator}")`,
+        );
+      } else {
+        // kotlinx.serialization only supports String values for discriminator fields
+        // out of the box
+        const _: "boolean" = discriminants.type;
+        lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
+      }
+      lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
         const name = toKotlinName(member.name);
         if (isLiteralType(member.type)) continue;
@@ -437,6 +445,31 @@ function writeTypepromptUnion(
         lines.push(`val ${name}: ${type}`);
       }
       lines.push("}");
+      if (discriminants.type === "boolean") {
+        const trueInt = members.members["true"]!;
+        const falseInt = members.members["false"]!;
+        lines.push(
+          "\n",
+          [
+            `private object ${typeName}_Serializer`,
+            `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
+          ].join(" : "),
+          [
+            "override fun selectDeserializer(element: JsonElement)",
+            `DeserializationStrategy<${typeName}> {`,
+          ].join(": "),
+          [
+            `return if (element.jsonObject["${discriminator}"]`,
+            `jsonPrimitive?.booleanOrNull == true) {`,
+          ].join("?."),
+          writeType(trueInt, schema, options).concat("::class.serializer()"),
+          "} else {",
+          writeType(falseInt, schema, options).concat("::class.serializer()"),
+          "}",
+          "}",
+          "}\n",
+        );
+      }
     }
   }
   return lines.join("\n");
@@ -719,7 +752,7 @@ function makeNameFromHint(hint: NamingHint): string {
 
 type UnionContext = {
   readonly intMemberToUnionRefs: Map<Interface, readonly string[]>;
-  readonly intMemberToDiscriminant: Map<Interface, string>;
+  readonly intMemberToStringDiscriminant: Map<Interface, string>;
   readonly overrideFields: Set<Field>;
 };
 
@@ -727,7 +760,7 @@ function makeUnionContext(
   compilationResult: ValidCompilationResult,
 ): UnionContext {
   const intMemberToUnionRefs = new Map<Interface, string[]>();
-  const intMemberToDiscriminant = new Map<Interface, string>();
+  const intMemberToStringDiscriminant = new Map<Interface, string>();
   const overrideFields = new Set<Field>();
 
   const processSchema = (schema: Schema, typePrefix: string): void => {
@@ -746,7 +779,9 @@ function makeUnionContext(
         }
         unionRefs.push(unionRef);
 
-        intMemberToDiscriminant.set(member, discriminant);
+        if (members.discriminants.type === "string") {
+          intMemberToStringDiscriminant.set(member, discriminant);
+        }
 
         for (const commonField of members.commonFields) {
           for (const memberField of commonField.memberFields) {
@@ -775,7 +810,7 @@ function makeUnionContext(
 
   return {
     intMemberToUnionRefs,
-    intMemberToDiscriminant,
+    intMemberToStringDiscriminant,
     overrideFields,
   };
 }
@@ -847,10 +882,12 @@ function coalesceEmptyLines(code: string): string {
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Boolean",
+  "DeserializationStrategy",
   "Double",
   "EncodeDefault",
   "ExperimentalSerializationApi",
   "JsonClassDiscriminator",
+  "JsonContentPolymorphicSerializer",
   "JsonElement",
   "List",
   "Map",
