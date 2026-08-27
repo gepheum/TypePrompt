@@ -5,10 +5,21 @@
     | { kind: "if"; condition: Expr; then: Expr; else: Expr };
 
   type EnumWithCommonFields =
-    | { success: false; x: integer; y: number }
-    | { success: true; x: integer; z: number };
+    | {
+        success: false;
+        /** x coordinate */ x: integer;
+        /** y coordinate */ y: number;
+        z: string;
+      }
+    | { success: true; /** x coordinate */ x: integer; y: number; z: integer };
 
   interface Schema {
     e: EnumWithCommonFields;
   }
+  interface String {}
+  interface Boolean {}
+  interface List {}
+  interface Map {}
+  interface EncodeDefault {}
+  interface Serializable {}
 </namespace>

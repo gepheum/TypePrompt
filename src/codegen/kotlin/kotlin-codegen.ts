@@ -203,7 +203,7 @@ function writeUserDefinedDatatypes(
   );
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName: string = namespace.name;
+    const namespaceName = toKotlinName(namespace.name);
     const typePrefixBase = singleNamespace
       ? "Schema."
       : `Schema.${namespaceName}.`;
@@ -218,7 +218,7 @@ function writeUserDefinedDatatypes(
       lines.push("}\n");
     }
     for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
+      const templateName = toKotlinName(template.template.name.text);
       const typePrefix = typePrefixBase.concat(templateName, ".");
       lines.push(`object ${templateName} {`);
       lines.push(
@@ -230,7 +230,7 @@ function writeUserDefinedDatatypes(
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = capitalize(tool.tool.name.text);
+      const toolName = toKotlinName(capitalize(tool.tool.name.text));
       const typePrefix = typePrefixBase.concat(toolName, ".");
       lines.push(`object ${toolName} {\n`);
       lines.push(
@@ -247,7 +247,8 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      lines.push(`object ${namespace.name} {`);
+      const namespaceName = toKotlinName(namespace.name);
+      lines.push(`object ${namespaceName} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
@@ -497,7 +498,9 @@ function makeNameFromHint(hint: NamingHint): string {
     .map((piece) => {
       switch (piece.kind) {
         case "type":
-          return piece.name;
+          return hint.namePieces.length <= 1
+            ? toKotlinName(piece.name)
+            : piece.name;
         case "field":
           return capitalize(piece.name);
         case "member": {
@@ -514,6 +517,7 @@ function makeNameFromHint(hint: NamingHint): string {
         }
       }
     })
+
     .join("_");
 }
 
@@ -761,7 +765,11 @@ function makeUnionContext(
 }
 
 function toKotlinName(name: string): string {
-  return KOTLIN_HARD_KEYWORDS.has(name) ? `\`${name}\`` : name;
+  return RESERVED_NAMES.has(name)
+    ? name.concat("_")
+    : KOTLIN_HARD_KEYWORDS.has(name)
+      ? `\`${name}\``
+      : name;
 }
 
 function wrapKDoc(doc: string): readonly string[] {
@@ -820,6 +828,19 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n$/g, "\n")
   );
 }
+
+const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  "Boolean",
+  "Double",
+  "EncodeDefault",
+  "ExperimentalSerializationApi",
+  "List",
+  "Map",
+  "OptIn",
+  "Schema",
+  "Serializable",
+  "String",
+] as const);
 
 const KOTLIN_HARD_KEYWORDS: ReadonlySet<string> = new Set([
   "abstract",

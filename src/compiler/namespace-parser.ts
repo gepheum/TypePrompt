@@ -28,12 +28,14 @@ export function parseNamespace(
   const warnings: InternalError[] = [];
 
   const nameText = name.value.text;
-  if (nameText.toLowerCase() === "meta") {
-    const caseNote = nameText === "Meta" ? "" : " (case-insensitive)";
-    errors.push({
-      span: name.nameSpan,
-      message: "Namespace name cannot be 'Meta'".concat(caseNote),
-    });
+  for (const reserved of ["Meta", "Schema"]) {
+    if (nameText.toLowerCase() === "meta") {
+      const caseNote = nameText === "Meta" ? "" : " (case-insensitive)";
+      errors.push({
+        span: name.nameSpan,
+        message: "Namespace name cannot be 'Meta'".concat(caseNote),
+      });
+    }
   }
   if (
     nameText.toLowerCase() === DEFAULT_NAMESPACE.toLowerCase() &&
