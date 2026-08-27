@@ -15,6 +15,7 @@ import type {
 } from "../../schema/schema-types.js";
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
+import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -29,17 +30,21 @@ export function generateKotlinCode(
   return [
     {
       path: kotlinConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, kotlinConfig),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  kotlinConfig: { package: string },
+): string {
   const { templates } = compilationResult;
 
   return coalesceEmptyLines(
     [
-      // STATIC_SNIPPETS["typescript-imports"],
+      `package ${kotlinConfig.package};`,
+      STATIC_SNIPPETS["kotlin-imports"],
       // reformat(writePromptsInterface(compilationResult)),
       // STATIC_SNIPPETS["typescript-top-level"],
       reformat(
@@ -227,7 +232,7 @@ function writeUserDefinedDatatypes(
     for (const tool of Object.values(namespace.tools)) {
       const toolName = capitalize(tool.tool.name.text);
       const typePrefix = typePrefixBase.concat(toolName, ".");
-      lines.push(`export namespace ${toolName} {\n`);
+      lines.push(`object ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, unionContext, {
           typePrefix,
@@ -359,6 +364,7 @@ function writeTypepromptInterface(
   const fields = Object.values(type.fields);
   const isDataClass = fields.some((f) => !isLiteralType(f.type));
   const lines = [
+    "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",
     (isDataClass ? "data " : "").concat(`class ${typeName}(`),
   ];
@@ -368,7 +374,7 @@ function writeTypepromptInterface(
     lines.push(...wrapKDoc(field.doc));
     const name = toKotlinName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    lines.push(`val ${name}: ${fieldType}`);
+    lines.push(`val ${name}: ${fieldType},`);
   }
   const interfaces = context.interfaceMemberToUnionRefs.get(type);
   const implementClause = interfaces ? ": ".concat(interfaces.join(", ")) : "";
@@ -377,9 +383,10 @@ function writeTypepromptInterface(
     const type = resolveType(field.type, schema);
     if (!isLiteralType(type)) continue;
     const name = toKotlinName(field.name.text);
-    const fieldType = type.kind === "string-literal" ? "String" : "Bool";
+    const fieldType = type.kind === "string-literal" ? "String" : "Boolean";
     const literal = JSON.stringify(type.value);
     lines.push(...wrapKDoc(field.doc));
+    lines.push("@EncodeDefault");
     lines.push(`val ${name}: ${fieldType} get() = ${literal}`);
   }
   lines.push("}");
@@ -403,7 +410,7 @@ function writeTypepromptUnion(
         if (kotlinName !== member.value) {
           lines.push(`@SerialName("${member.value}")`);
         }
-        lines.push(kotlinName);
+        lines.push(kotlinName.concat(","));
       }
       lines.push("}");
       break;
@@ -437,11 +444,7 @@ function writeType(
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      if (elementType.kind === "union") {
-        return `readonly (${writtenElement})[]`;
-      } else {
-        return `readonly ${writtenElement}[]`;
-      }
+      return `List<${writtenElement}>`;
     }
     case "interface":
     case "union": {

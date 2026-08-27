@@ -3,4 +3,12 @@
     | { kind: "number"; value: number }
     | { kind: "add"; left: Expr; right: Expr }
     | { kind: "if"; condition: Expr; then: Expr; else: Expr };
+
+  type EnumWithCommonFields =
+    | { success: false; x: integer; y: number }
+    | { success: true; x: integer; z: number };
+
+  interface Schema {
+    e: EnumWithCommonFields;
+  }
 </namespace>

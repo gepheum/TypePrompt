@@ -2,6 +2,7 @@
 
 // From the project directory.
 const SOURCE_FILES = [
+  "e2e-test/kotlin/src/main/kotlin/dev/typeprompt/RuntimeLogic.kt",
   "e2e-test/python/runtime_logic.py",
   "e2e-test/typescript/src/runtime-logic.ts",
 ] as const;
