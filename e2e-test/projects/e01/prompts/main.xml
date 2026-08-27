@@ -9,6 +9,7 @@
         success: false;
         /** x coordinate */ x: integer;
         /** y coordinate */ y: number;
+        /** z coordinate */
         z: string;
       }
     | { success: true; /** x coordinate */ x: integer; y: number; z: integer };

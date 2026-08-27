@@ -197,10 +197,14 @@ function writeUserDefinedDatatypes(
     `typealias Meta = ${metaType}\n`,
     "/** Namespace containing the user-defined datatypes. */",
     "object Schema {",
-    "object Meta {",
-    writeSchema(metaSchema, unionContext, { typePrefix: "Schema.Meta." }),
-    "}",
   );
+  if (anyTypes(metaSchema)) {
+    lines.push(
+      "object Meta {",
+      writeSchema(metaSchema, unionContext, { typePrefix: "Schema.Meta." }),
+      "}\n",
+    );
+  }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName = toKotlinName(namespace.name);
@@ -845,7 +849,7 @@ function reformat(code: string): string {
       line.startsWith("]") ||
       line.startsWith(">")
     ) {
-      indent = indent.slice(0, -2);
+      indent = indent.slice(0, -4);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
     outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
@@ -855,7 +859,7 @@ function reformat(code: string): string {
       line.endsWith("[") ||
       line.endsWith("<")
     ) {
-      indent = indent + "  ";
+      indent = indent + "    ";
     }
   }
   return outputLines.join("\n");
