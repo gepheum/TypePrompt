@@ -15,6 +15,7 @@ import {
   Union,
   UnionMembers,
 } from "./schema-types.js";
+import { isLiteralType } from "./schema-utils.js";
 import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 
 export function computeUnionMembers(
@@ -335,7 +336,7 @@ function collectCommonFields(
   const commonFields: CommonField[] = [];
   for (const [name, field] of Object.entries(first.member.fields)) {
     const fieldType = resolveType(field.type, schema);
-    if (fieldType.kind === "string-literal") continue;
+    if (isLiteralType(fieldType)) continue;
     const memberFields = members.map((m) => m.member.fields[name]);
     const isShared = memberFields.slice(1).every((m) => {
       if (!m) return false;
@@ -366,10 +367,8 @@ function areResolvedTypesEqual(
   schema: SchemaView,
 ): boolean {
   switch (a.kind) {
-    case "any":
-    case "interface":
-    case "union": {
-      return a === b;
+    case "any": {
+      return b.kind === "any";
     }
     case "array": {
       return (
@@ -380,13 +379,17 @@ function areResolvedTypesEqual(
     case "boolean-literal": {
       return b.kind === "boolean-literal" && a.value === b.value;
     }
+    case "interface":
+    case "union": {
+      return a === b;
+    }
     case "optional": {
       return (
         b.kind === "optional" && areTypesEqual(a.innerType, b.innerType, schema)
       );
     }
     case "primitive": {
-      return b.kind === "primitive" && a.primitive === b.primitive;
+      return b.kind === "primitive" && a.primitive.text === b.primitive.text;
     }
     case "record": {
       return (
