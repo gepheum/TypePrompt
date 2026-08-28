@@ -335,7 +335,7 @@ export function jsonMatchesType(
               if (discriminant.kind === members.discriminants.type) {
                 const member = members.members[String(discriminant.value)];
                 if (member) {
-                  return jsonMatchesType(value, member, mode, schema);
+                  return jsonMatchesType(value, member.resolved, mode, schema);
                 } else {
                   // No matching member for the discriminant in the union.
                   const discriminants = members.discriminants.values;

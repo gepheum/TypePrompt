@@ -462,8 +462,10 @@ function writeTypepromptUnion(
       }
       lines.push("}");
       if (discriminants.type === "boolean") {
-        const trueInt = members.members["true"]!;
-        const falseInt = members.members["false"]!;
+        const writeSerializer = (discriminant: boolean): string => {
+          const { resolved } = members.members[String(discriminant)]!;
+          return writeType(resolved, schema, options).concat(".serializer()");
+        };
         lines.push(
           "\n",
           [
@@ -478,9 +480,9 @@ function writeTypepromptUnion(
             `return if (element.jsonObject["${discriminator}"]`,
             `jsonPrimitive?.booleanOrNull == true) {`,
           ].join("?."),
-          writeType(trueInt, schema, options).concat(".serializer()"),
+          writeSerializer(true),
           "} else {",
-          writeType(falseInt, schema, options).concat(".serializer()"),
+          writeSerializer(false),
           "}",
           "}",
           "}\n",
@@ -786,14 +788,15 @@ function makeUnionContext(
       if (members.kind !== "interfaces") continue;
       const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
       for (const [discriminant, member] of Object.entries(members.members)) {
-        const unionRefs = intMemberToUnionRefs.get(member) ?? [];
+        const { resolved } = member;
+        const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];
         if (unionRefs.length <= 0) {
-          intMemberToUnionRefs.set(member, unionRefs);
+          intMemberToUnionRefs.set(resolved, unionRefs);
         }
         unionRefs.push(unionRef);
 
         if (members.discriminants.type === "string") {
-          intMemberToStringDiscriminant.set(member, discriminant);
+          intMemberToStringDiscriminant.set(resolved, discriminant);
         }
 
         for (const commonField of members.commonFields) {

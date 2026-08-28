@@ -251,7 +251,12 @@ export type DiscriminatedUnionMembers = {
    * If the discriminants are booleans, the keys are the strings 'true' and
    * 'false'.
    */
-  readonly members: { [discriminant: string]: Interface };
+  readonly members: {
+    [discriminant: string]: {
+      readonly resolved: Interface;
+      readonly unresolved: UnionMemberType;
+    };
+  };
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
   readonly discriminants: Discriminants;
@@ -288,7 +293,11 @@ export type SyntheticUnionMembers =
     }
   | {
       readonly kind: "interfaces";
-      readonly members: { [kind: string]: Interface | SyntheticInterface };
+      readonly members: {
+        [kind: string]: {
+          readonly resolved: Interface | SyntheticInterface;
+        };
+      };
       /** Name of the discriminator field, e.g. 'kind'. */
       readonly discriminator: string;
       readonly discriminants: Discriminants;

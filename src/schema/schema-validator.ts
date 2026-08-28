@@ -412,7 +412,7 @@ function collectNamingHints(
                 ],
                 doc: "",
               };
-              collect(member, newContext);
+              collect(member.unresolved, newContext);
             }
             return null;
           }

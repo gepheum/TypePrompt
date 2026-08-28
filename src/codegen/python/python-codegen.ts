@@ -419,7 +419,7 @@ function writeSchema(
             lines.push(`type ${name} = Annotated[`);
             lines.push(" Union[");
             for (const member of Object.values(members.members)) {
-              const memberType = writeType(member, schema, options);
+              const memberType = writeType(member.resolved, schema, options);
               lines.push(`  ${memberType},`);
             }
             lines.push(" ],");

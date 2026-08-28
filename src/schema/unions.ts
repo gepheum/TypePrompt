@@ -14,6 +14,7 @@ import {
   Type,
   Union,
   UnionMembers,
+  UnionMemberType,
 } from "./schema-types.js";
 import { isLiteralType } from "./schema-utils.js";
 import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
@@ -37,15 +38,16 @@ function doGetUnionMembers(
     // This way, we report the error on the actual type alias used next to a
     // pipe symbol and not where the resolved type is defined.
     const errorToken = getFirstToken(rawMember);
-    const resolvedMember = resolveMaybeInvalidType(rawMember, schema);
-    if (!resolvedMember) {
+    const resolved = resolveMaybeInvalidType(rawMember, schema);
+    if (!resolved) {
       return EMPTY_ERROR;
     }
-    switch (resolvedMember.kind) {
+    switch (resolved.kind) {
       case "string-literal":
       case "interface": {
         members.push({
-          member: resolvedMember,
+          resolved,
+          unresolved: rawMember,
           direct: true,
           errorToken,
         });
@@ -63,11 +65,7 @@ function doGetUnionMembers(
           }
           inProgress.add(typeName);
         }
-        const otherMembers = doGetUnionMembers(
-          resolvedMember,
-          schema,
-          inProgress,
-        );
+        const otherMembers = doGetUnionMembers(resolved, schema, inProgress);
         if (typeName) {
           inProgress.delete(typeName);
         }
@@ -75,17 +73,26 @@ function doGetUnionMembers(
           /** Do not return `otherMembers` or we'll end up with duplicates. */
           return EMPTY_ERROR;
         }
-        members.push(
-          ...(otherMembers.kind === "interfaces"
-            ? Object.values(otherMembers.members)
-            : otherMembers.members
-          ).map((m) => ({
-            member: m,
-            direct: false,
-            errorToken,
-          })),
-        );
-        includes.push(resolvedMember);
+        if (otherMembers.kind === "interfaces") {
+          members.push(
+            ...Object.values(otherMembers.members).map((m) => ({
+              resolved: m.resolved,
+              unresolved: m.unresolved,
+              direct: false,
+              errorToken,
+            })),
+          );
+        } else {
+          members.push(
+            ...otherMembers.members.map((m) => ({
+              resolved: m,
+              unresolved: m,
+              direct: false,
+              errorToken,
+            })),
+          );
+        }
+        includes.push(resolved);
         includes.push(...otherMembers.includes);
         break;
       }
@@ -101,14 +108,14 @@ function doGetUnionMembers(
         });
       }
       default: {
-        const _: never = resolvedMember;
+        const _: never = resolved;
         throw new Error(_);
       }
     }
   }
 
   const firstMember = members[0]!;
-  return firstMember.member.kind === "string-literal"
+  return firstMember.resolved.kind === "string-literal"
     ? makeStringLiteralUnionMembers(members, includes)
     : makeInterfaceUnionMembers(members, includes, schema);
 }
@@ -120,8 +127,8 @@ function makeStringLiteralUnionMembers(
   // "abc" -> ["Abc", ...]
   const lowercaseToNameToken = new Map<string, [string, Span]>();
   for (const member of members) {
-    if (member.member.kind === "string-literal") {
-      const name = member.member.value;
+    if (member.resolved.kind === "string-literal") {
+      const name = member.resolved.value;
       const lowercase = name.toLowerCase();
       {
         const otherNameToken = lowercaseToNameToken.get(lowercase);
@@ -147,7 +154,7 @@ function makeStringLiteralUnionMembers(
       });
     }
   }
-  const stringLiterals = members.map((m) => m.member as StringLiteral);
+  const stringLiterals = members.map((m) => m.resolved as StringLiteral);
   return {
     kind: "strings",
     members: stringLiterals,
@@ -228,7 +235,13 @@ function makeInterfaceUnionMembers(
   return {
     kind: "interfaces",
     members: Object.fromEntries(
-      memberInfos.map((info) => [info.discriminant.value, info.member]),
+      memberInfos.map((info) => [
+        String(info.discriminant.value),
+        {
+          resolved: info.resolved,
+          unresolved: info.unresolved,
+        },
+      ]),
     ),
     discriminator: first.discriminator,
     discriminants,
@@ -238,7 +251,8 @@ function makeInterfaceUnionMembers(
 }
 
 type Member = {
-  readonly member: StringLiteral | BooleanLiteral | Interface;
+  readonly unresolved: UnionMemberType;
+  readonly resolved: StringLiteral | BooleanLiteral | Interface;
   /**
    * True if the member is explicitly listed in the union type.
    * False if the member is included in the union type indirectly through
@@ -264,7 +278,8 @@ const EMPTY_ERROR: InternalErrors = { kind: "error", errors: [] } as const;
 
 type InterfaceMemberInfo = {
   readonly kind: "success";
-  readonly member: Interface;
+  readonly resolved: Interface;
+  readonly unresolved: UnionMemberType;
   readonly errorToken: Span;
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
@@ -276,13 +291,13 @@ function getMemberInfo(
   schema: SchemaView,
   other: InterfaceMemberInfo | null,
 ): InterfaceMemberInfo | InternalErrors {
-  if (member.member.kind !== "interface") {
+  if (member.resolved.kind !== "interface") {
     return makeSingletonErrors({
       span: member.errorToken,
       message: "All members of a discriminated union must be interfaces",
     });
   }
-  const { firstField } = member.member;
+  const { firstField } = member.resolved;
   if (!firstField) {
     return makeSingletonErrors({
       span: member.errorToken,
@@ -321,7 +336,8 @@ function getMemberInfo(
   }
   return {
     kind: "success",
-    member: member.member,
+    resolved: member.resolved,
+    unresolved: member.unresolved,
     errorToken: member.errorToken,
     discriminator: discriminator,
     discriminant: discriminant,
@@ -334,10 +350,10 @@ function collectCommonFields(
 ): readonly CommonField[] {
   const first = members[0]!;
   const commonFields: CommonField[] = [];
-  for (const [name, field] of Object.entries(first.member.fields)) {
+  for (const [name, field] of Object.entries(first.resolved.fields)) {
     const fieldType = resolveType(field.type, schema);
     if (isLiteralType(fieldType)) continue;
-    const memberFields = members.map((m) => m.member.fields[name]);
+    const memberFields = members.map((m) => m.resolved.fields[name]);
     const isShared = memberFields.slice(1).every((m) => {
       if (!m) return false;
       const otherFieldType = resolveType(m.type, schema);
@@ -346,7 +362,7 @@ function collectCommonFields(
     if (isShared) {
       const docs = new Set(
         members
-          .map((m) => m.member.fields[name]!.doc)
+          .map((m) => m.resolved.fields[name]!.doc)
           .filter((doc) => doc !== ""),
       );
       const doc = docs.size === 1 ? [...docs][0]! : "";

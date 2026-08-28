@@ -123,7 +123,7 @@ class Generator {
     // Discriminated interface union
     return {
       oneOf: Object.values(members.members).map((iface) =>
-        this.interfaceToSchema(iface),
+        this.interfaceToSchema(iface.resolved),
       ),
     };
   }

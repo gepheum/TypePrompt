@@ -35,7 +35,7 @@ export function resolveSwitchExpression(
                 {
                   it: { expression, type },
                   typeOverrides: {
-                    [left.fullPath.text]: member,
+                    [left.fullPath.text]: member.resolved,
                   },
                 },
               ];

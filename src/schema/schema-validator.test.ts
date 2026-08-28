@@ -746,7 +746,7 @@ describe("validateSchema - namingHints", () => {
     });
 
     const catHint = schema.namingHints.defaultScope.get(
-      members.members["cat"]!,
+      members.members["cat"]!.resolved,
     );
     expect(catHint).toMatch({
       namePieces: [
@@ -760,7 +760,7 @@ describe("validateSchema - namingHints", () => {
     });
 
     const dogHint = schema.namingHints.defaultScope.get(
-      members.members["dog"]!,
+      members.members["dog"]!.resolved,
     );
     expect(dogHint).toMatch({
       namePieces: [
@@ -787,7 +787,7 @@ describe("validateSchema - namingHints", () => {
     if (members.kind !== "interfaces") throw new Error();
 
     const trueHint = schema.namingHints.defaultScope.get(
-      members.members["true"]!,
+      members.members["true"]!.resolved,
     );
     expect(trueHint).toMatch({
       namePieces: [
@@ -801,7 +801,7 @@ describe("validateSchema - namingHints", () => {
     });
 
     const falseHint = schema.namingHints.defaultScope.get(
-      members.members["false"]!,
+      members.members["false"]!.resolved,
     );
     expect(falseHint).toMatch({
       namePieces: [

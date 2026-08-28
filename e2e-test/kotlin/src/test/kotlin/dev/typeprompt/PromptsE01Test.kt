@@ -2,7 +2,6 @@ package dev.typeprompt
 
 import com.example.prompts_e01.Meta
 import com.example.prompts_e01.Schema
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -11,7 +10,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -19,7 +17,6 @@ import kotlin.test.assertTrue
 
 class PromptsE01Test {
     private val json = Json
-    private val jsonIgnoreUnknownKeys = Json { ignoreUnknownKeys = true }
 
     // ─── Meta Typealias ────────────────────────────────────────────────────────
 
@@ -208,95 +205,57 @@ class PromptsE01Test {
     }
 
     @Test
-    fun testDirectShapeSerialization() {
-        // Individual shape classes can be serialized directly
-        val circle = Schema.MyTemplate.Output_Shape_KindCircle(radius = 5.5)
-        val serializedCircle = json.encodeToString(circle)
-        assertEquals("""{"radius":5.5}""", serializedCircle)
-        assertEquals(circle, json.decodeFromString<Schema.MyTemplate.Output_Shape_KindCircle>(serializedCircle))
-
-        val square = Schema.MyTemplate.Output_Shape_KindSquare(size = 10.0)
-        val serializedSquare = json.encodeToString(square)
-        assertEquals("""{"size":10.0}""", serializedSquare)
-        assertEquals(square, json.decodeFromString<Schema.MyTemplate.Output_Shape_KindSquare>(serializedSquare))
-
-        val sharedSquare = Schema.Shared.Square(size = 20.0)
-        val serializedSharedSquare = json.encodeToString(sharedSquare)
-        assertEquals("""{"size":20.0}""", serializedSharedSquare)
-        assertEquals(sharedSquare, json.decodeFromString<Schema.Shared.Square>(serializedSharedSquare))
-    }
-
-    @Test
-    fun testOutputShapeDuplicateSerialNameBug() {
-        // BUG: Both Schema.Shared.Square and Schema.MyTemplate.Output_Shape_KindSquare implement
-        // Schema.MyTemplate.Output_Shape with @SerialName("square").
-        // This causes SealedClassSerializer initialization to fail with IllegalStateException.
-        val error =
-            assertFailsWith<Throwable> {
-                json.decodeFromString<Schema.MyTemplate.Output>(
-                    """{"reversedText":"test","shape":{"kind":"circle","radius":5.5}}""",
-                )
-            }
-        val actualCause = if (error is java.lang.ExceptionInInitializerError) error.cause else error
-        assertTrue(
-            actualCause is IllegalStateException || error is java.lang.NoClassDefFoundError,
-            "Expected IllegalStateException or NoClassDefFoundError due to duplicate serial name 'square', got: $error",
-        )
+    fun testMyTemplateOutputWithCircle() {
+        val shape: Schema.MyTemplate.Output_Shape = Schema.MyTemplate.Output_Shape_KindCircle(radius = 5.5)
+        val output =
+            Schema.MyTemplate.Output(
+                reversedText = "olleh",
+                shape = shape,
+            )
+        val serialized = json.encodeToString(output)
+        val deserialized = json.decodeFromString<Schema.MyTemplate.Output>(serialized)
+        assertEquals(output, deserialized)
+        assertIs<Schema.MyTemplate.Output_Shape_KindCircle>(deserialized.shape)
+        assertEquals(5.5, deserialized.shape.radius)
     }
 
     // ─── EnumWithCommonFields Tests (Boolean Discriminant) ─────────────────────
 
     @Test
-    fun testEnumWithCommonFieldsDirectSerializationOmitsGetterField() {
-        // BUG: Because `val success: Boolean get() = true/false` is a getter without backing field,
-        // kotlinx.serialization does not serialize `success` into the JSON payload.
-        val successObj = Schema.Shared.EnumWithCommonFields_Success(x = 10, y = 20.5, z = 99)
-        val serialized = json.encodeToString(successObj)
-        assertEquals("""{"x":10,"y":20.5,"z":99}""", serialized)
-
-        val notSuccessObj = Schema.Shared.EnumWithCommonFields_NotSuccess(x = 5, y = 15.0, z = "error")
-        val serializedNotSuccess = json.encodeToString(notSuccessObj)
-        assertEquals("""{"x":5,"y":15.0,"z":"error"}""", serializedNotSuccess)
-    }
-
-    @Test
-    fun testEnumWithCommonFieldsStrictDeserializationFailsOnUnknownSuccessKey() {
-        // BUG: In standard Json (ignoreUnknownKeys = false), JsonContentPolymorphicSerializer
-        // passes the element containing "success" to the target serializer, which treats "success"
-        // as an unknown key because it is not in the primary constructor.
+    fun testEnumWithCommonFieldsSuccessSerializationAndDeserialization() {
         val jsonString = """{"success":true,"x":10,"y":20.5,"z":99}"""
-        assertFailsWith<SerializationException> {
-            json.decodeFromString<Schema.Shared.EnumWithCommonFields>(jsonString)
-        }
+        val deserialized = json.decodeFromString<Schema.Shared.EnumWithCommonFields>(jsonString)
+        assertIs<Schema.Shared.EnumWithCommonFields_Success>(deserialized)
+        assertEquals(10, deserialized.x)
+        assertEquals(20.5, deserialized.y)
+        assertEquals(99, deserialized.z)
+        assertTrue(deserialized.success)
+
+        val reserialized = json.encodeToString<Schema.Shared.EnumWithCommonFields>(deserialized)
+        val roundtrip = json.decodeFromString<Schema.Shared.EnumWithCommonFields>(reserialized)
+        assertEquals(deserialized, roundtrip)
     }
 
     @Test
-    fun testEnumWithCommonFieldsDeserializationWithIgnoreUnknownKeys() {
-        // When ignoreUnknownKeys = true, deserialization correctly uses the custom serializer
-        val successJson = """{"success":true,"x":10,"y":20.5,"z":99}"""
-        val deserializedSuccess = jsonIgnoreUnknownKeys.decodeFromString<Schema.Shared.EnumWithCommonFields>(successJson)
-        assertIs<Schema.Shared.EnumWithCommonFields_Success>(deserializedSuccess)
-        assertEquals(10, deserializedSuccess.x)
-        assertEquals(20.5, deserializedSuccess.y)
-        assertEquals(99, deserializedSuccess.z)
-        assertTrue(deserializedSuccess.success)
+    fun testEnumWithCommonFieldsNotSuccessSerializationAndDeserialization() {
+        val jsonString = """{"success":false,"x":5,"y":15.0,"z":"failure-reason"}"""
+        val deserialized = json.decodeFromString<Schema.Shared.EnumWithCommonFields>(jsonString)
+        assertIs<Schema.Shared.EnumWithCommonFields_NotSuccess>(deserialized)
+        assertEquals(5, deserialized.x)
+        assertEquals(15.0, deserialized.y)
+        assertEquals("failure-reason", deserialized.z)
+        assertFalse(deserialized.success)
 
-        val notSuccessJson = """{"success":false,"x":5,"y":15.0,"z":"failure-reason"}"""
-        val deserializedNotSuccess = jsonIgnoreUnknownKeys.decodeFromString<Schema.Shared.EnumWithCommonFields>(notSuccessJson)
-        assertIs<Schema.Shared.EnumWithCommonFields_NotSuccess>(deserializedNotSuccess)
-        assertEquals(5, deserializedNotSuccess.x)
-        assertEquals(15.0, deserializedNotSuccess.y)
-        assertEquals("failure-reason", deserializedNotSuccess.z)
-        assertFalse(deserializedNotSuccess.success)
+        val reserialized = json.encodeToString<Schema.Shared.EnumWithCommonFields>(deserialized)
+        val roundtrip = json.decodeFromString<Schema.Shared.EnumWithCommonFields>(reserialized)
+        assertEquals(deserialized, roundtrip)
     }
 
     @Test
-    fun testSchema_WrapperDeserializationWithIgnoreUnknownKeys() {
-        val jsonString = """{"e":{"success":true,"x":1,"y":2.0,"z":3}}"""
-        val deserialized = jsonIgnoreUnknownKeys.decodeFromString<Schema.Shared.Schema_>(jsonString)
-        assertIs<Schema.Shared.EnumWithCommonFields_Success>(deserialized.e)
-        assertEquals(1, deserialized.e.x)
-        assertEquals(2.0, deserialized.e.y)
-        assertEquals(3, (deserialized.e as Schema.Shared.EnumWithCommonFields_Success).z)
+    fun testSchema_WrapperSerializationAndDeserialization() {
+        val wrapper = Schema.Shared.Schema_(e = Schema.Shared.EnumWithCommonFields_Success(x = 1, y = 2.0, z = 3))
+        val serialized = json.encodeToString(wrapper)
+        val deserialized = json.decodeFromString<Schema.Shared.Schema_>(serialized)
+        assertEquals(wrapper, deserialized)
     }
 }
