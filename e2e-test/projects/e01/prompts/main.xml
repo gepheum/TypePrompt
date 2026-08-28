@@ -35,4 +35,8 @@
   }
 
   type E = "class" | "if" | "foo-BAR";
+
+  type Matrix = {
+    matrix: Square[][];
+  };
 </namespace>

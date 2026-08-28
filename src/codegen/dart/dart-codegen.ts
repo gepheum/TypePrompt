@@ -362,9 +362,11 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const name = toDartName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    const override = unionContext.overrideFields.has(field) ? "@override " : "";
     lines.push(...wrapDocComment(field.doc));
-    lines.push(`${override}final ${fieldType} ${name};`);
+    if (unionContext.overrideFields.has(field)) {
+      lines.push("@override");
+    }
+    lines.push(`final ${fieldType} ${name};`);
   }
   lines.push("");
   if (fields.some((f) => !isLiteralType(f.type))) {
@@ -376,6 +378,25 @@ function writeTypepromptInterface(
     }
     lines.push("});");
   }
+  lines.push("");
+  if (interfaces) {
+    lines.push("@override");
+  }
+  lines.push("Map<String, dynamic> toJson() {");
+  lines.push("return {");
+  for (const field of fields) {
+    const name = field.name.text;
+    const dartName = toDartName(name);
+    if (isLiteralType(field.type)) {
+      const value = JSON.stringify(field.type.value satisfies string | boolean);
+      lines.push(`"${name}": ${value},`);
+    } else {
+      const toJsonExpr = writeToJsonExpr(field.type, dartName, schema, options);
+      lines.push(`"${name}": ${toJsonExpr},`);
+    }
+  }
+  lines.push("};");
+  lines.push("}");
   lines.push("}");
   return lines.join("\n");
 }
@@ -393,10 +414,21 @@ function writeTypepromptUnion(
     case "strings": {
       lines.push(`enum ${typePrefix}${typeName} {\n`);
       for (const member of members.members) {
+        const isLast = member === members.members.at(-1);
         const dartName = toDartName(toLowerCase(member.value));
-        lines.push(dartName.concat(","));
+        lines.push(dartName.concat(isLast ? ";" : ","));
       }
-      lines.push("}");
+      lines.push("String toJson() {");
+      lines.push("switch (this) {");
+      for (const member of members.members) {
+        const name = member.value;
+        const dartName = toDartName(toLowerCase(name));
+        lines.push(`case ${dartName}:`);
+        lines.push(`return "${name}";`);
+      }
+      lines.push("}"); // switch
+      lines.push("}"); // toJson()
+      lines.push("}"); // enum
       break;
     }
     case "interfaces": {
@@ -407,6 +439,7 @@ function writeTypepromptUnion(
         const type = writeType(member.type, schema, options);
         lines.push(`${type} get ${name};`);
       }
+      lines.push("", "Map<String, dynamic> toJson();");
       lines.push("}");
     }
   }
@@ -463,6 +496,57 @@ function writeType(
     case "type-name": {
       const resolvedType = resolveType(type, schema);
       return writeType(resolvedType, schema, options);
+    }
+  }
+}
+
+function writeToJsonExpr(
+  type: Type | Optional,
+  inputExpr: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  switch (type.kind) {
+    case "any":
+    case "primitive": {
+      return inputExpr;
+    }
+    case "array": {
+      const elementToExpr = writeToJsonExpr(
+        type.elementType,
+        "e",
+        schema,
+        options,
+      );
+      return `${inputExpr}.map((e) => ${elementToExpr}).toList()`;
+    }
+    case "interface":
+    case "union": {
+      return inputExpr.concat(".toJson()");
+    }
+    case "optional": {
+      const innerToExpr = writeToJsonExpr(
+        type.innerType,
+        inputExpr,
+        schema,
+        options,
+      );
+      if (innerToExpr === inputExpr) {
+        return inputExpr;
+      } else if (innerToExpr.startsWith(inputExpr.concat("."))) {
+        return innerToExpr.replace(".", "?.");
+      } else {
+        return `${inputExpr} == null ? null : ${innerToExpr}`;
+      }
+    }
+    case "record": {
+      const valueToExpr = writeToJsonExpr(type.valueType, "v", schema, options);
+      return inputExpr.concat(`.map((k, v) => MapEntry(k, ${valueToExpr}))`);
+    }
+    case "shared-type-name":
+    case "type-name": {
+      const resolvedType = resolveType(type, schema);
+      return writeToJsonExpr(resolvedType, inputExpr, schema, options);
     }
   }
 }
