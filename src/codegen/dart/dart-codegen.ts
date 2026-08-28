@@ -766,7 +766,7 @@ function reformat(code: string): string {
       line.startsWith("]") ||
       line.startsWith(">")
     ) {
-      indent = indent.slice(0, -4);
+      indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
     outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
@@ -776,7 +776,7 @@ function reformat(code: string): string {
       line.endsWith("[") ||
       line.endsWith("<")
     ) {
-      indent = indent + "    ";
+      indent = indent + "  ";
     }
   }
   return outputLines.join("\n");

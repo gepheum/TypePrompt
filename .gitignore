@@ -9,8 +9,9 @@ e2e-test/csharp/**/*.user
 e2e-test/csharp/**/*.suo
 
 e2e-test/dart/.dart_tool/
-e2e-test/dart/build/
 e2e-test/dart/.packages
+e2e-test/dart/build/
+e2e-test/dart/lib/gen/
 
 e2e-test/kotlin/.gradle/
 e2e-test/kotlin/.kotlin/
