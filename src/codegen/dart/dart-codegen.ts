@@ -356,7 +356,7 @@ function writeTypepromptInterface(
     ? " implements ".concat(interfaces.join(", "))
     : "";
 
-  const lines = [`class ${className}${implementsClause} {`];
+  const lines = [`final class ${className}${implementsClause} {`];
   const fields = Object.values(type.fields);
   for (const field of fields) {
     const type = resolveType(field.type, schema);
@@ -378,6 +378,8 @@ function writeTypepromptInterface(
       lines.push(`required this.${name},`);
     }
     lines.push("});");
+  } else {
+    lines.push(`${className}();`);
   }
   lines.push("");
   if (interfaces) {
@@ -482,7 +484,12 @@ function writeTypepromptUnion(
         lines.push(`${type} get ${name};`);
       }
       lines.push("", "Map<String, dynamic> toJson();");
-      lines.push("}");
+      lines.push(
+        "",
+        `factory ${className}.fromJson(Map<String, dynamic> json) {`,
+      );
+      lines.push("}"); // fromJson
+      lines.push("}"); // sealed class
     }
   }
   return lines.join("\n");
