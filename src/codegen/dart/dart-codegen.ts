@@ -349,13 +349,14 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const { typePrefix } = options;
+  const className = typePrefix.concat(typeName);
 
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " implements ".concat(interfaces.join(", "))
     : "";
 
-  const lines = [`class ${typePrefix}${typeName}${implementsClause} {`];
+  const lines = [`class ${className}${implementsClause} {`];
   const fields = Object.values(type.fields);
   for (const field of fields) {
     const type = resolveType(field.type, schema);
@@ -370,7 +371,7 @@ function writeTypepromptInterface(
   }
   lines.push("");
   if (fields.some((f) => !isLiteralType(f.type))) {
-    lines.push(`${typePrefix}${typeName}({`);
+    lines.push(`${className}({`);
     for (const field of fields) {
       if (isLiteralType(field.type)) continue;
       const name = toDartName(field.name.text);
@@ -395,9 +396,32 @@ function writeTypepromptInterface(
       lines.push(`"${name}": ${toJsonExpr},`);
     }
   }
-  lines.push("};");
-  lines.push("}");
-  lines.push("}");
+  lines.push(
+    "};", // Map literal
+    "}", // toJson()
+    "",
+  );
+  lines.push(
+    `factory ${className}.fromJson(Map<String, dynamic> json) {`,
+    `return ${className}(`,
+  );
+  for (const field of fields) {
+    if (isLiteralType(field.type)) continue;
+    const name = field.name.text;
+    const dartName = toDartName(name);
+    const valueExpr = `json["${field.name.text}"]`;
+    const valueFromJsonExpr = writeFromJsonExpr(
+      field.type,
+      valueExpr,
+      schema,
+      options,
+    );
+    lines.push(`${dartName}: ${valueFromJsonExpr},`);
+  }
+  lines.push(`);`, `}`);
+
+  lines.push("}"); // class
+
   return lines.join("\n");
 }
 
@@ -530,36 +554,43 @@ function writeToJsonExpr(
       return inputExpr;
     }
     case "array": {
-      const elementToExpr = writeToJsonExpr(
+      const elementToJsonExpr = writeToJsonExpr(
         type.elementType,
         "e",
         schema,
         options,
       );
-      return `${inputExpr}.map((e) => ${elementToExpr}).toList()`;
+      return `${inputExpr}.map((e) => ${elementToJsonExpr}).toList()`;
     }
     case "interface":
     case "union": {
       return inputExpr.concat(".toJson()");
     }
     case "optional": {
-      const innerToExpr = writeToJsonExpr(
+      const innerToJsonExpr = writeToJsonExpr(
         type.innerType,
         inputExpr,
         schema,
         options,
       );
-      if (innerToExpr === inputExpr) {
+      if (innerToJsonExpr === inputExpr) {
         return inputExpr;
-      } else if (innerToExpr.startsWith(inputExpr.concat("."))) {
-        return innerToExpr.replace(".", "?.");
+      } else if (innerToJsonExpr.startsWith(inputExpr.concat("."))) {
+        return innerToJsonExpr.replace(".", "?.");
       } else {
-        return `${inputExpr} == null ? null : ${innerToExpr}`;
+        return `${inputExpr} == null ? null : ${innerToJsonExpr}`;
       }
     }
     case "record": {
-      const valueToExpr = writeToJsonExpr(type.valueType, "v", schema, options);
-      return inputExpr.concat(`.map((k, v) => MapEntry(k, ${valueToExpr}))`);
+      const valueToJsonExpr = writeToJsonExpr(
+        type.valueType,
+        "v",
+        schema,
+        options,
+      );
+      return inputExpr.concat(
+        `.map((k, v) => MapEntry(k, ${valueToJsonExpr}))`,
+      );
     }
     case "shared-type-name":
     case "type-name": {
@@ -576,18 +607,17 @@ function writeFromJsonExpr(
   options: WriteSchemaOptions,
 ): string {
   switch (type.kind) {
-    case "any":
-    case "primitive": {
+    case "any": {
       return inputExpr;
     }
     case "array": {
-      const elementFromExpr = writeFromJsonExpr(
+      const elementFromJsonExpr = writeFromJsonExpr(
         type.elementType,
         "e",
         schema,
         options,
       );
-      return `${inputExpr}.map((e) => ${elementFromExpr}).toList()`;
+      return `${inputExpr}.map((e) => ${elementFromJsonExpr}).toList()`;
     }
     case "interface":
     case "union": {
@@ -595,26 +625,41 @@ function writeFromJsonExpr(
       return `${typeName}.fromJson(${inputExpr})`;
     }
     case "optional": {
-      const innerFromExpr = writeFromJsonExpr(
+      const innerFromJsonExpr = writeFromJsonExpr(
         type.innerType,
         inputExpr,
         schema,
         options,
       );
-      if (innerFromExpr === inputExpr) {
+      if (innerFromJsonExpr === inputExpr) {
         return inputExpr;
       } else {
-        return `${inputExpr} == null ? null : ${innerFromExpr}`;
+        return `${inputExpr} == null ? null : ${innerFromJsonExpr}`;
+      }
+    }
+    case "primitive": {
+      switch (type.primitive.text) {
+        case "boolean":
+        case "string":
+          return inputExpr;
+        case "integer":
+          return `(${inputExpr} as num).toInt()`;
+        case "number":
+          return `(${inputExpr} as num).toDouble()`;
+        default:
+          throw new Error(type.primitive.text satisfies never);
       }
     }
     case "record": {
-      const valueFromExpr = writeFromJsonExpr(
+      const valueFromJsonExpr = writeFromJsonExpr(
         type.valueType,
         "v",
         schema,
         options,
       );
-      return inputExpr.concat(`.map((k, v) => MapEntry(k, ${valueFromExpr}))`);
+      return inputExpr.concat(
+        `.map((k, v) => MapEntry(k, ${valueFromJsonExpr}))`,
+      );
     }
     case "shared-type-name":
     case "type-name": {
@@ -941,7 +986,7 @@ function reformat(code: string): string {
       indent = indent + "  ";
     } else if (line.endsWith(":")) {
       continuationIndent = "  ";
-    } else if (line.endsWith(",")) {
+    } else if (line.endsWith(";")) {
       continuationIndent = "";
     }
   }
@@ -1036,4 +1081,6 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "noSuchMethod",
   "runtimeType",
   "toString",
+  // Generated symbols
+  "toJson",
 ] as const);
