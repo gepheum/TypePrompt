@@ -412,8 +412,18 @@ function writeTypepromptInterface(
   };
   writeCtorParams(true);
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
-  const implementClause = interfaces ? " : ".concat(interfaces.join(", ")) : "";
-  lines.push(`)${implementClause} {`);
+  const implementsClause = interfaces
+    ? " : ".concat(
+        interfaces
+          .map((i) =>
+            i.startsWith(options.typePrefix)
+              ? i.slice(options.typePrefix.length)
+              : i,
+          )
+          .join(", "),
+      )
+    : "";
+  lines.push(`)${implementsClause} {`);
   if (hasLiteralField) {
     lines.push("constructor(");
     writeCtorParams(false);
