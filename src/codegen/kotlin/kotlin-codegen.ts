@@ -458,18 +458,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      if (discriminants.type === "string") {
-        lines.push(
-          "@OptIn(ExperimentalSerializationApi::class)",
-          "@Serializable",
-          `@JsonClassDiscriminator("${discriminator}")`,
-        );
-      } else {
-        // kotlinx.serialization only supports String values for discriminator fields
-        // out of the box
-        const _: "boolean" = discriminants.type;
-        lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-      }
+      lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
       lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
         const name = toKotlinName(member.name);
@@ -478,33 +467,36 @@ function writeTypepromptUnion(
         lines.push(`val ${name}: ${type}`);
       }
       lines.push("}");
-      if (discriminants.type === "boolean") {
-        const writeSerializer = (discriminant: boolean): string => {
-          const { resolved } = members.members[String(discriminant)]!;
-          return writeType(resolved, schema, options).concat(".serializer()");
-        };
+
+      // Write the custom serializer for the union type based on the discriminant
+      lines.push(
+        "\n",
+        [
+          `private object ${typeName}_Serializer`,
+          `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
+        ].join(" : "),
+        [
+          "override fun selectDeserializer(element: JsonElement)",
+          `DeserializationStrategy<${typeName}> {`,
+        ].join(": "),
+        [
+          `return when (val kind = element.jsonObject["${discriminator}"]`,
+          "jsonPrimitive?.contentOrNull) {",
+        ].join("?."),
+      );
+      for (const [discriminant, member] of Object.entries(members.members)) {
         lines.push(
-          "\n",
           [
-            `private object ${typeName}_Serializer`,
-            `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-          ].join(" : "),
-          [
-            "override fun selectDeserializer(element: JsonElement)",
-            `DeserializationStrategy<${typeName}> {`,
-          ].join(": "),
-          [
-            `return if (element.jsonObject["${discriminator}"]`,
-            `jsonPrimitive?.booleanOrNull == true) {`,
-          ].join("?."),
-          writeSerializer(true),
-          "} else {",
-          writeSerializer(false),
-          "}",
-          "}",
-          "}\n",
+            `"${discriminant}" -> `,
+            writeType(member.resolved, schema, options),
+            ".serializer()",
+          ].join(""),
         );
       }
+      lines.push(
+        "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
+      );
+      lines.push("}", "}", "}\n");
     }
   }
   return lines.join("\n");
@@ -925,8 +917,8 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Double",
   "ExperimentalSerializationApi",
   "Int",
-  "JsonClassDiscriminator",
   "JsonContentPolymorphicSerializer",
+  "IllegalArgumentException",
   "JsonElement",
   "List",
   "Map",
