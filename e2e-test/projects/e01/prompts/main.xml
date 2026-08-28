@@ -38,5 +38,7 @@
 
   type Matrix = {
     matrix: Square[][];
+    otherMatrix?: Square[][];
+    foo?: { [x: string]: Square[] };
   };
 </namespace>

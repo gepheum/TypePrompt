@@ -408,11 +408,12 @@ function writeTypepromptUnion(
   options: WriteSchemaOptions,
 ): string {
   const { typePrefix } = options;
+  const className = typePrefix.concat(typeName);
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum ${typePrefix}${typeName} {\n`);
+      lines.push(`enum ${className} {\n`);
       for (const member of members.members) {
         const isLast = member === members.members.at(-1);
         const dartName = toDartName(toLowerCase(member.value));
@@ -423,12 +424,29 @@ function writeTypepromptUnion(
       for (const member of members.members) {
         const name = member.value;
         const dartName = toDartName(toLowerCase(name));
-        lines.push(`case ${dartName}:`);
-        lines.push(`return "${name}";`);
+        lines.push(`case ${dartName}:`, `return "${name}";`);
       }
-      lines.push("}"); // switch
-      lines.push("}"); // toJson()
-      lines.push("}"); // enum
+      lines.push(
+        "}", // switch
+        "}", // toJson()
+        "",
+      );
+      lines.push(`factory ${className}.fromJson(String json) {`);
+      lines.push("switch (json) {");
+      for (const member of members.members) {
+        const name = member.value;
+        const dartName = toDartName(toLowerCase(name));
+        lines.push(`case "${name}":`, `return ${dartName};`);
+      }
+      lines.push(
+        "default:",
+        'throw FormatException("Unknown json value: $json");',
+      );
+      lines.push(
+        "}", // switch
+        "}", // fromJson()
+        "}",
+      ); // enum
       break;
     }
     case "interfaces": {
@@ -547,6 +565,61 @@ function writeToJsonExpr(
     case "type-name": {
       const resolvedType = resolveType(type, schema);
       return writeToJsonExpr(resolvedType, inputExpr, schema, options);
+    }
+  }
+}
+
+function writeFromJsonExpr(
+  type: Type | Optional,
+  inputExpr: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  switch (type.kind) {
+    case "any":
+    case "primitive": {
+      return inputExpr;
+    }
+    case "array": {
+      const elementFromExpr = writeFromJsonExpr(
+        type.elementType,
+        "e",
+        schema,
+        options,
+      );
+      return `${inputExpr}.map((e) => ${elementFromExpr}).toList()`;
+    }
+    case "interface":
+    case "union": {
+      const typeName = writeType(type, schema, options);
+      return `${typeName}.fromJson(${inputExpr})`;
+    }
+    case "optional": {
+      const innerFromExpr = writeFromJsonExpr(
+        type.innerType,
+        inputExpr,
+        schema,
+        options,
+      );
+      if (innerFromExpr === inputExpr) {
+        return inputExpr;
+      } else {
+        return `${inputExpr} == null ? null : ${innerFromExpr}`;
+      }
+    }
+    case "record": {
+      const valueFromExpr = writeFromJsonExpr(
+        type.valueType,
+        "v",
+        schema,
+        options,
+      );
+      return inputExpr.concat(`.map((k, v) => MapEntry(k, ${valueFromExpr}))`);
+    }
+    case "shared-type-name":
+    case "type-name": {
+      const resolvedType = resolveType(type, schema);
+      return writeFromJsonExpr(resolvedType, inputExpr, schema, options);
     }
   }
 }
@@ -842,6 +915,7 @@ function reformat(code: string): string {
   const inputLines: readonly string[] = code.split("\n");
   const outputLines: string[] = [];
   let indent = "";
+  let continuationIndent = "";
   for (const inputLine of inputLines) {
     const line = inputLine.trim();
     if (
@@ -853,7 +927,11 @@ function reformat(code: string): string {
       indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
+    outputLines.push(
+      line.length <= 0
+        ? line
+        : [indent, continuationIndent, starPrefix, line].join(""),
+    );
     if (
       line.endsWith("{") ||
       line.endsWith("(") ||
@@ -861,6 +939,10 @@ function reformat(code: string): string {
       line.endsWith("<")
     ) {
       indent = indent + "  ";
+    } else if (line.endsWith(":")) {
+      continuationIndent = "  ";
+    } else if (line.endsWith(",")) {
+      continuationIndent = "";
     }
   }
   return outputLines.join("\n");
