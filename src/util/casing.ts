@@ -85,7 +85,20 @@ export function toSnakeCase(identifier: string): string {
  *   `foo-bar.baz_qux`  -> `FooBarBazQux`
  */
 export function toPascalCase(identifier: string): string {
+  return splitIntoWords(identifier).map(capitalize).join("");
+}
+
+/**
+ * Converts an identifier into lowerCase.
+ * Symbols are treated as word breaks and stripped.
+ * ALL_CAPS runs are lowercased before capitalizing, so `parseHTML` -> `parseHtml`.
+ *
+ * Examples:
+ *   `parseHTMLDocument` -> `parseHtmlDocument`
+ *   `foo-bar.baz_qux`  -> `fooBarBazQux`
+ */
+export function toLowerCase(identifier: string): string {
   return splitIntoWords(identifier)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w, i) => (i <= 0 ? w : capitalize(w)))
     .join("");
 }

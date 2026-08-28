@@ -457,10 +457,8 @@ function writeTypepromptUnion(
       lines.push("@Serializable");
       lines.push(`enum class ${typeName} {\n`);
       for (const member of members.members) {
-        const kotlinName = toPascalCase(member.value);
-        if (kotlinName !== member.value) {
-          lines.push(`@SerialName("${member.value}")`);
-        }
+        const kotlinName = toKotlinName(toPascalCase(member.value));
+        lines.push(`@SerialName("${member.value}")`);
         lines.push(kotlinName.concat(","));
       }
       lines.push("}");

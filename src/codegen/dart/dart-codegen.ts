@@ -14,7 +14,7 @@ import type {
 } from "../../schema/schema-types.js";
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
-import { capitalize, toPascalCase } from "../../util/casing.js";
+import { capitalize, toLowerCase, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateDartCode(
@@ -207,9 +207,7 @@ function writeUserDefinedDatatypes(
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName = namespace.name;
-    const typePrefixBase = singleNamespace
-      ? ""
-      : namespaceName.concat("_");
+    const typePrefixBase = singleNamespace ? "" : namespaceName.concat("_");
     const sharedTypePrefix = typePrefixBase.concat("Shared_");
     if (anyTypes(namespace.schema)) {
       lines.push(
@@ -222,14 +220,20 @@ function writeUserDefinedDatatypes(
       const templateName = template.template.name.text;
       const typePrefix = typePrefixBase.concat(templateName, "_");
       lines.push(
-        writeSchema(template.schema, unionContext, { typePrefix, sharedTypePrefix }),
+        writeSchema(template.schema, unionContext, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
       );
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = capitalize(tool.tool.name.text);
       const typePrefix = typePrefixBase.concat(toolName, "_");
       lines.push(
-        writeSchema(tool.schema, unionContext, { typePrefix, sharedTypePrefix }),
+        writeSchema(tool.schema, unionContext, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
       );
     }
   };
@@ -318,7 +322,7 @@ function writeSchema(
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
-    lines.push(...wrapDartDoc(namingHint.doc));
+    lines.push(...wrapDocComment(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(
@@ -359,11 +363,11 @@ function writeTypepromptInterface(
     const name = toDartName(field.name.text);
     const fieldType = writeType(type, schema, options);
     const override = unionContext.overrideFields.has(field) ? "@override " : "";
-    lines.push(...wrapDartDoc(field.doc));
+    lines.push(...wrapDocComment(field.doc));
     lines.push(`${override}final ${fieldType} ${name};`);
   }
   lines.push("");
-  if (fields.some((f) => isLiteralType(f.type))) {
+  if (fields.some((f) => !isLiteralType(f.type))) {
     lines.push(`${typePrefix}${typeName}({`);
     for (const field of fields) {
       if (isLiteralType(field.type)) continue;
@@ -371,8 +375,6 @@ function writeTypepromptInterface(
       lines.push(`required this.${name},`);
     }
     lines.push("});");
-  } else {
-    lines.push(`${typePrefix}_${typeName}();`);
   }
   lines.push("}");
   return lines.join("\n");
@@ -384,44 +386,30 @@ function writeTypepromptUnion(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
-  // const members = schema.unionToMembers.get(type)!;
+  const { typePrefix } = options;
+  const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  // switch (members.kind) {
-  //   case "strings": {
-  //     lines.push("@Serializable");
-  //     lines.push(`enum class ${typeName} {\n`);
-  //     for (const member of members.members) {
-  //       const dartName = toPascalCase(member.value);
-  //       if (dartName !== member.value) {
-  //         lines.push(`@SerialName("${member.value}")`);
-  //       }
-  //       lines.push(dartName.concat(","));
-  //     }
-  //     lines.push("}");
-  //     break;
-  //   }
-  //   case "interfaces": {
-  //     const { discriminants, discriminator } = members;
-  //     if (discriminants.type === "string") {
-  //       lines.push(
-  //         "@OptIn(ExperimentalSerializationApi::class)",
-  //         "@Serializable",
-  //         `@JsonClassDiscriminator("${discriminator}")`,
-  //       );
-  //     } else {
-  //       const _: "boolean" = discriminants.type;
-  //       lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-  //     }
-  //     lines.push(`sealed interface ${typeName} {`);
-  //     for (const member of members.commonFields) {
-  //       const name = toDartName(member.name);
-  //       if (isLiteralType(member.type)) continue;
-  //       const type = writeType(member.type, schema, options);
-  //       lines.push(`val ${name}: ${type}`);
-  //     }
-  //     lines.push("}");
-  //   }
-  // }
+  switch (members.kind) {
+    case "strings": {
+      lines.push(`enum ${typePrefix}${typeName} {\n`);
+      for (const member of members.members) {
+        const dartName = toDartName(toLowerCase(member.value));
+        lines.push(dartName.concat(","));
+      }
+      lines.push("}");
+      break;
+    }
+    case "interfaces": {
+      lines.push(`sealed class ${typePrefix}${typeName} {`);
+      for (const member of members.commonFields) {
+        const name = toDartName(member.name);
+        if (isLiteralType(member.type)) continue;
+        const type = writeType(member.type, schema, options);
+        lines.push(`${type} get ${name};`);
+      }
+      lines.push("}");
+    }
+  }
   return lines.join("\n");
 }
 
@@ -432,7 +420,7 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return "any";
+      return "dynamic";
     }
     case "array": {
       const { elementType } = type;
@@ -757,21 +745,13 @@ function makeUnionContext(
 }
 
 function toDartName(name: string): string {
-  return RESERVED_NAMES.has(name)
-    ? name.concat("_")
-    : KOTLIN_HARD_KEYWORDS.has(name)
-      ? `\`${name}\``
-      : name;
+  return RESERVED_NAMES.has(name) ? name.concat("_") : name;
 }
 
-function wrapDartDoc(doc: string): readonly string[] {
+function wrapDocComment(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  if (lines.length === 1) {
-    return [`/** ${doc} */`];
-  } else {
-    return ["/**", ...lines.map((line) => (line ? ` * ${line}` : " *")), " */"];
-  }
+  return lines.map((l) => `/// ${l}`);
 }
 
 function reformat(code: string): string {
@@ -822,57 +802,72 @@ function coalesceEmptyLines(code: string): string {
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
-  "List",
-  "Map",
-  "String",
-] as const);
-
-const KOTLIN_HARD_KEYWORDS: ReadonlySet<string> = new Set([
   "abstract",
-  "annotation",
   "as",
+  "assert",
+  "async",
+  "await",
   "break",
+  "case",
   "catch",
   "class",
   "const",
   "continue",
-  "crossinline",
-  "data",
+  "covariant",
+  "default",
+  "deferred",
+  "do",
+  "dynamic",
   "else",
   "enum",
+  "export",
+  "extends",
+  "extension",
   "external",
+  "factory",
+  "false",
   "final",
   "finally",
   "for",
-  "fun",
+  "Function",
+  "get",
+  "hide",
   "if",
+  "implements",
   "import",
   "in",
-  "inline",
   "interface",
-  "internal",
   "is",
-  "lateinit",
-  "noinline",
-  "object",
-  "open",
+  "late",
+  "library",
+  "mixin",
+  "new",
+  "null",
+  "on",
   "operator",
-  "override",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "reified",
+  "part",
+  "required",
+  "rethrow",
   "return",
-  "sealed",
+  "set",
+  "show",
+  "static",
   "super",
-  "suspend",
+  "switch",
+  "sync",
   "this",
   "throw",
+  "true",
   "try",
-  "typealias",
-  "val",
+  "typedef",
   "var",
-  "when",
+  "void",
   "while",
-]);
+  "with",
+  "yield",
+  // Symbols on Object
+  "hashCode",
+  "noSuchMethod",
+  "runtimeType",
+  "toString",
+] as const);

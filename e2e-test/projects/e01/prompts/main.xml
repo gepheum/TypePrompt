@@ -33,4 +33,6 @@
     kind: "square";
     size: number;
   }
+
+  type E = "class" | "if" | "foo-BAR";
 </namespace>
