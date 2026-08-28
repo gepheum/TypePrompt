@@ -5,11 +5,10 @@ import type {
 import type { Config } from "../../config/config-parser.js";
 import type {
   Field,
+  FieldType,
   Interface,
   NamingHint,
-  Optional,
   Schema,
-  Type,
   TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
@@ -373,27 +372,18 @@ function writeTypepromptInterface(
   options: WriteSchemaOptions,
   unionContext: UnionContext,
 ): string {
+  const { typePrefix } = options;
+  const lines = [`class ${typePrefix}_${typeName} {`];
   const fields = Object.values(type.fields);
-  const isDataClass = fields.some((f) => !isLiteralType(f.type));
-  const lines = [
-    "@OptIn(ExperimentalSerializationApi::class)",
-    "@Serializable",
-  ];
-  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
-  if (discriminant) {
-    lines.push(`@SerialName("${discriminant}")`);
-  }
-  lines.push((isDataClass ? "data " : "").concat(`class ${typeName}(`));
-
   for (const field of fields) {
     const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
     const name = toDartName(field.name.text);
     const fieldType = writeType(type, schema, options);
     const override = unionContext.overrideFields.has(field) ? "override " : "";
     lines.push(...wrapKDoc(field.doc));
     lines.push(`${override}val ${name}: ${fieldType},`);
   }
+  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementClause = interfaces ? " : ".concat(interfaces.join(", ")) : "";
   lines.push(`)${implementClause} {`);
@@ -418,60 +408,63 @@ function writeTypepromptUnion(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
-  const members = schema.unionToMembers.get(type)!;
+  // const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  switch (members.kind) {
-    case "strings": {
-      lines.push("@Serializable");
-      lines.push(`enum class ${typeName} {\n`);
-      for (const member of members.members) {
-        const dartName = toPascalCase(member.value);
-        if (dartName !== member.value) {
-          lines.push(`@SerialName("${member.value}")`);
-        }
-        lines.push(dartName.concat(","));
-      }
-      lines.push("}");
-      break;
-    }
-    case "interfaces": {
-      const { discriminants, discriminator } = members;
-      if (discriminants.type === "string") {
-        lines.push(
-          "@OptIn(ExperimentalSerializationApi::class)",
-          "@Serializable",
-          `@JsonClassDiscriminator("${discriminator}")`,
-        );
-      } else {
-        const _: "boolean" = discriminants.type;
-        lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-      }
-      lines.push(`sealed interface ${typeName} {`);
-      for (const member of members.commonFields) {
-        const name = toDartName(member.name);
-        if (isLiteralType(member.type)) continue;
-        const type = writeType(member.type, schema, options);
-        lines.push(`val ${name}: ${type}`);
-      }
-      lines.push("}");
-    }
-  }
+  // switch (members.kind) {
+  //   case "strings": {
+  //     lines.push("@Serializable");
+  //     lines.push(`enum class ${typeName} {\n`);
+  //     for (const member of members.members) {
+  //       const dartName = toPascalCase(member.value);
+  //       if (dartName !== member.value) {
+  //         lines.push(`@SerialName("${member.value}")`);
+  //       }
+  //       lines.push(dartName.concat(","));
+  //     }
+  //     lines.push("}");
+  //     break;
+  //   }
+  //   case "interfaces": {
+  //     const { discriminants, discriminator } = members;
+  //     if (discriminants.type === "string") {
+  //       lines.push(
+  //         "@OptIn(ExperimentalSerializationApi::class)",
+  //         "@Serializable",
+  //         `@JsonClassDiscriminator("${discriminator}")`,
+  //       );
+  //     } else {
+  //       const _: "boolean" = discriminants.type;
+  //       lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
+  //     }
+  //     lines.push(`sealed interface ${typeName} {`);
+  //     for (const member of members.commonFields) {
+  //       const name = toDartName(member.name);
+  //       if (isLiteralType(member.type)) continue;
+  //       const type = writeType(member.type, schema, options);
+  //       lines.push(`val ${name}: ${type}`);
+  //     }
+  //     lines.push("}");
+  //   }
+  // }
   return lines.join("\n");
 }
 
 function writeType(
-  type: Type | Optional | TypeNameView,
+  type: FieldType | TypeNameView,
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
   switch (type.kind) {
     case "any": {
-      return "JsonElement";
+      return "any";
     }
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
       return `List<${writtenElement}>`;
+    }
+    case "boolean-literal": {
+      return "bool";
     }
     case "interface":
     case "union": {
@@ -495,15 +488,15 @@ function writeType(
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "Int";
+        return "int";
       } else {
         switch (type.primitive.text) {
           case "boolean":
-            return "Boolean";
+            return "bool";
           case "string":
             return "String";
           case "number":
-            return "Double";
+            return "double";
           default:
             throw new Error(type.primitive.text satisfies never);
         }
@@ -516,6 +509,9 @@ function writeType(
     case "type-name": {
       const resolvedType = resolveType(type, schema);
       return writeType(resolvedType, schema, options);
+    }
+    case "string-literal": {
+      return "String";
     }
   }
 }

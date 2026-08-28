@@ -378,7 +378,7 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
-  const isDataClass = fields.some((f) => !isLiteralType(f.type));
+  const isDataClass = fields.length > 0;
   const lines = [
     "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",
