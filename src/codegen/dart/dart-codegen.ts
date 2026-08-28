@@ -560,7 +560,11 @@ function writeToJsonExpr(
         schema,
         options,
       );
-      return `${inputExpr}.map((e) => ${elementToJsonExpr}).toList()`;
+      if (elementToJsonExpr.endsWith("(e)")) {
+        return `${inputExpr}.map(${elementToJsonExpr.slice(0, -3)}).toList()`;
+      } else {
+        return `${inputExpr}.map((e) => ${elementToJsonExpr}).toList()`;
+      }
     }
     case "interface":
     case "union": {
@@ -617,7 +621,11 @@ function writeFromJsonExpr(
         schema,
         options,
       );
-      return `${inputExpr}.map((e) => ${elementFromJsonExpr}).toList()`;
+      if (elementFromJsonExpr.endsWith("(e)")) {
+        return `${inputExpr}.map(${elementFromJsonExpr.slice(0, -3)}).toList()`;
+      } else {
+        return `${inputExpr}.map((e) => ${elementFromJsonExpr}).toList()`;
+      }
     }
     case "interface":
     case "union": {
@@ -633,6 +641,8 @@ function writeFromJsonExpr(
       );
       if (innerFromJsonExpr === inputExpr) {
         return inputExpr;
+      } else if (innerFromJsonExpr.startsWith(inputExpr.concat("."))) {
+        return innerFromJsonExpr.replace(".", "?.");
       } else {
         return `${inputExpr} == null ? null : ${innerFromJsonExpr}`;
       }
