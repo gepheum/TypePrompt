@@ -476,6 +476,7 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
+      const discriminator = members.discriminator;
       lines.push(`sealed class ${typePrefix}${typeName} {`);
       for (const member of members.commonFields) {
         const name = toDartName(member.name);
@@ -487,9 +488,28 @@ function writeTypepromptUnion(
       lines.push(
         "",
         `factory ${className}.fromJson(Map<String, dynamic> json) {`,
+        `switch (json['${discriminator}']) {`,
       );
-      lines.push("}"); // fromJson
-      lines.push("}"); // sealed class
+      for (const [discriminant, member] of Object.entries(members.members)) {
+        const memberType = resolveType(member.resolved, schema);
+        lines.push(
+          `case "${discriminant}":`,
+          [
+            "return ",
+            writeType(memberType, schema, options),
+            ".fromJson(json);",
+          ].join(""),
+        );
+      }
+      lines.push(
+        "default:",
+        `throw FormatException("Unknown discriminator: \${json['${discriminator}']}");`,
+      );
+      lines.push(
+        "}", // switch
+        "}", // fromJson
+        "}",
+      ); // sealed class
     }
   }
   return lines.join("\n");
@@ -567,7 +587,9 @@ function writeToJsonExpr(
         schema,
         options,
       );
-      if (elementToJsonExpr.endsWith("(e)")) {
+      if (elementToJsonExpr === "e") {
+        return inputExpr;
+      } else if (elementToJsonExpr.endsWith("(e)")) {
         return `${inputExpr}.map(${elementToJsonExpr.slice(0, -3)}).toList()`;
       } else {
         return `${inputExpr}.map((e) => ${elementToJsonExpr}).toList()`;
@@ -628,7 +650,9 @@ function writeFromJsonExpr(
         schema,
         options,
       );
-      if (elementFromJsonExpr.endsWith("(e)")) {
+      if (elementFromJsonExpr === "e") {
+        return inputExpr;
+      } else if (elementFromJsonExpr.endsWith("(e)")) {
         return `${inputExpr}.map(${elementFromJsonExpr.slice(0, -3)}).toList()`;
       } else {
         return `${inputExpr}.map((e) => ${elementFromJsonExpr}).toList()`;

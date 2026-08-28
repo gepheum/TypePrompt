@@ -1,4 +1,5 @@
 <namespace name="Main">
+  /** An expression */
   type Expr =
     | { kind: "number"; value: number }
     | { kind: "add"; left: Expr; right: Expr }
@@ -40,5 +41,6 @@
     matrix: Square[][];
     otherMatrix?: Square[][];
     foo?: { [x: string]: Square[] };
+    ints: integer[];
   };
 </namespace>
