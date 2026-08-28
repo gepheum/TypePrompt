@@ -5,11 +5,10 @@ import type {
 import type { Config } from "../../config/config-parser.js";
 import type {
   Field,
+  FieldType,
   Interface,
   NamingHint,
-  Optional,
   Schema,
-  Type,
   TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
@@ -388,30 +387,48 @@ function writeTypepromptInterface(
   if (discriminant) {
     lines.push(`@SerialName("${discriminant}")`);
   }
-  lines.push((isDataClass ? "data " : "").concat(`class ${typeName}(`));
+  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
+  lines.push(
+    [
+      isDataClass ? "data class " : "class ",
+      typeName,
+      hasLiteralField ? " private constructor" : "",
+      "(",
+    ].join(""),
+  );
 
-  for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
-    const name = toKotlinName(field.name.text);
-    const fieldType = writeType(type, schema, options);
-    const override = unionContext.overrideFields.has(field) ? "override " : "";
-    lines.push(...wrapKDoc(field.doc));
-    lines.push(`${override}val ${name}: ${fieldType},`);
-  }
+  const writeCtorParams = (primary: boolean): void => {
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type) && !primary) continue;
+      const name = toKotlinName(field.name.text);
+      const fieldType = writeType(type, schema, options);
+      const override =
+        primary && unionContext.overrideFields.has(field) ? "override " : "";
+      const val = primary ? "val " : "";
+      lines.push(...wrapKDoc(field.doc));
+      lines.push(`${override}${val}${name}: ${fieldType},`);
+    }
+  };
+  writeCtorParams(true);
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementClause = interfaces ? " : ".concat(interfaces.join(", ")) : "";
   lines.push(`)${implementClause} {`);
-  for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (!isLiteralType(type)) continue;
-    const name = toKotlinName(field.name.text);
-    const fieldType = type.kind === "string-literal" ? "String" : "Boolean";
-    const literal = JSON.stringify(type.value);
-    const override = unionContext.overrideFields.has(field) ? "override " : "";
-    lines.push(...wrapKDoc(field.doc));
-    lines.push("@EncodeDefault");
-    lines.push(`${override}val ${name}: ${fieldType} get() = ${literal}`);
+  if (hasLiteralField) {
+    lines.push("constructor(");
+    writeCtorParams(false);
+    lines.push(") : this(");
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      const name = toKotlinName(field.name.text);
+      if (isLiteralType(type)) {
+        const literal = JSON.stringify(type.value);
+        lines.push(`${name} = ${literal},`);
+      } else {
+        lines.push(`${name} = ${name},`);
+      }
+    }
+    lines.push(")");
   }
   lines.push("}");
   return lines.join("\n");
@@ -494,7 +511,7 @@ function writeTypepromptUnion(
 }
 
 function writeType(
-  type: Type | Optional | TypeNameView,
+  type: FieldType | TypeNameView,
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
@@ -506,6 +523,9 @@ function writeType(
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
       return `List<${writtenElement}>`;
+    }
+    case "boolean-literal": {
+      return "Boolean";
     }
     case "interface":
     case "union": {
@@ -550,6 +570,9 @@ function writeType(
     case "type-name": {
       const resolvedType = resolveType(type, schema);
       return writeType(resolvedType, schema, options);
+    }
+    case "string-literal": {
+      return "String";
     }
   }
 }
@@ -900,7 +923,6 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Boolean",
   "DeserializationStrategy",
   "Double",
-  "EncodeDefault",
   "ExperimentalSerializationApi",
   "Int",
   "JsonClassDiscriminator",

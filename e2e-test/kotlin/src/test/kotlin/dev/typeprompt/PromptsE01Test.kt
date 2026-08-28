@@ -184,10 +184,6 @@ class PromptsE01Test {
         assertEquals("{}", json.encodeToString(map))
         json.decodeFromString<Schema.Shared.Map_>("{}")
 
-        val encodeDefault = Schema.Shared.EncodeDefault_()
-        assertEquals("{}", json.encodeToString(encodeDefault))
-        json.decodeFromString<Schema.Shared.EncodeDefault_>("{}")
-
         val serializable = Schema.Shared.Serializable_()
         assertEquals("{}", json.encodeToString(serializable))
         json.decodeFromString<Schema.Shared.Serializable_>("{}")
