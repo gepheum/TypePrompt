@@ -206,10 +206,10 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = toDartName(namespace.name);
+    const namespaceName = namespace.name;
     const typePrefixBase = singleNamespace
-      ? "Schema_"
-      : `Schema_${namespaceName}_`;
+      ? ""
+      : namespaceName.concat("_");
     const sharedTypePrefix = typePrefixBase.concat("Shared_");
     if (anyTypes(namespace.schema)) {
       lines.push(
@@ -222,20 +222,14 @@ function writeUserDefinedDatatypes(
       const templateName = template.template.name.text;
       const typePrefix = typePrefixBase.concat(templateName, "_");
       lines.push(
-        writeSchema(template.schema, unionContext, {
-          typePrefix,
-          sharedTypePrefix,
-        }),
+        writeSchema(template.schema, unionContext, { typePrefix, sharedTypePrefix }),
       );
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = capitalize(tool.tool.name.text);
       const typePrefix = typePrefixBase.concat(toolName, "_");
       lines.push(
-        writeSchema(tool.schema, unionContext, {
-          typePrefix,
-          sharedTypePrefix,
-        }),
+        writeSchema(tool.schema, unionContext, { typePrefix, sharedTypePrefix }),
       );
     }
   };
@@ -357,7 +351,7 @@ function writeTypepromptInterface(
     ? " implements ".concat(interfaces.join(", "))
     : "";
 
-  const lines = [`class ${typePrefix}_${typeName}${implementsClause} {`];
+  const lines = [`class ${typePrefix}${typeName}${implementsClause} {`];
   const fields = Object.values(type.fields);
   for (const field of fields) {
     const type = resolveType(field.type, schema);
@@ -370,9 +364,9 @@ function writeTypepromptInterface(
   }
   lines.push("");
   if (fields.some((f) => isLiteralType(f.type))) {
-    lines.push(`${typePrefix}_${typeName}({`);
+    lines.push(`${typePrefix}${typeName}({`);
     for (const field of fields) {
-      if (isLiteralType(type)) continue;
+      if (isLiteralType(field.type)) continue;
       const name = toDartName(field.name.text);
       lines.push(`required this.${name},`);
     }
@@ -739,11 +733,11 @@ function makeUnionContext(
     }
   };
 
-  processSchema(compilationResult.metaSchema, "Schema_Meta_");
+  processSchema(compilationResult.metaSchema, "Meta_");
   for (const namespace of Object.values(compilationResult.namespaces)) {
     const typePrefixBase = compilationResult.singleNamespace
-      ? "Schema_"
-      : "Schema_".concat(namespace.name, "_");
+      ? ""
+      : namespace.name.concat("_");
     processSchema(namespace.schema, typePrefixBase.concat("Shared_"));
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
