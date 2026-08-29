@@ -41,11 +41,16 @@
   type E = "class" | "if" | "foo-BAR";
 
   type Matrix = {
+    kind: "matrix";
     matrix: Square[][];
     otherMatrix?: Square[][];
     foo?: { [x: string]: Square[] };
     ints: integer[];
+    init: boolean;
+    encode: boolean;
   };
+
+  type MatrixUnion = Matrix | { kind: "empty"; init: boolean; encode: boolean };
 
   type DiscriminatorCodingKeys = {};
 </namespace>

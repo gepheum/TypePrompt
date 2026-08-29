@@ -105,3 +105,18 @@ import Testing
     Issue.record("Expected .success")
   }
 }
+
+@Test func testCommonFieldsGetters() async throws {
+  let notSuccess = TypePrompt.Schema.Shared.EnumWithCommonFields.notSuccess(
+    TypePrompt.Schema.Shared.EnumWithCommonFields_NotSuccess(x: 15, y: 35.5, z: "test")
+  )
+  let success = TypePrompt.Schema.Shared.EnumWithCommonFields.success(
+    TypePrompt.Schema.Shared.EnumWithCommonFields_Success(x: 42, y: 84.0, z: 123)
+  )
+
+  #expect(notSuccess.x == 15)
+  #expect(notSuccess.y == 35.5)
+
+  #expect(success.x == 42)
+  #expect(success.y == 84.0)
+}

@@ -101,6 +101,26 @@ enum TypePrompt {
         case notSuccess(EnumWithCommonFields_NotSuccess)
         case success(EnumWithCommonFields_Success)
 
+        /// x coordinate
+        var x: Int32 {
+          switch self {
+            case .notSuccess(let value):
+              return value.x
+            case .success(let value):
+              return value.x
+          }
+        }
+
+        /// y coordinate
+        var y: Double {
+          switch self {
+            case .notSuccess(let value):
+              return value.y
+            case .success(let value):
+              return value.y
+          }
+        }
+
         func encode(to encoder: any Encoder) throws {
           var container = encoder.singleValueContainer()
           switch self {
@@ -232,10 +252,102 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.Matrix'
       struct Matrix : Codable {
+        let kind: String
         let matrix: [[Square]]
         let otherMatrix: [[Square]]?
         let foo: [String: [Square]]?
         let ints: [Int32]
+        let `init`: Bool
+        let encode: Bool
+
+        init(
+          matrix: [[Square]],
+          otherMatrix: [[Square]]?,
+          foo: [String: [Square]]?,
+          ints: [Int32],
+          `init`: Bool,
+          encode: Bool,
+        ) {
+          self.kind = "matrix"
+          self.matrix = matrix
+          self.otherMatrix = otherMatrix
+          self.foo = foo
+          self.ints = ints
+          self.`init` = `init`
+          self.encode = encode
+        }
+      }
+
+      // Exported as 'TypePrompt.Schema.Shared.MatrixUnion'
+      indirect enum MatrixUnion : Codable {
+        case kindMatrix(Matrix)
+        case kindEmpty(MatrixUnion_KindEmpty)
+
+        var `init`: Bool {
+          switch self {
+            case .kindMatrix(let value):
+              return value.`init`
+            case .kindEmpty(let value):
+              return value.`init`
+          }
+        }
+
+        var encode: Bool {
+          switch self {
+            case .kindMatrix(let value):
+              return value.encode
+            case .kindEmpty(let value):
+              return value.encode
+          }
+        }
+
+        func encode(to encoder: any Encoder) throws {
+          var container = encoder.singleValueContainer()
+          switch self {
+            case .kindMatrix(let value):
+              try container.encode(value)
+            case .kindEmpty(let value):
+              try container.encode(value)
+          }
+        }
+
+        private enum DiscriminatorCodingKeys: String, CodingKey {
+          case discriminator = "kind"
+        }
+
+        init(from decoder: any Decoder) throws {
+          let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+          let discriminator = try container.decode(String.self, forKey: .discriminator)
+          switch discriminator {
+            case "matrix":
+              self = .kindMatrix(try Matrix(from: decoder))
+            case "empty":
+              self = .kindEmpty(try MatrixUnion_KindEmpty(from: decoder))
+            default:
+              throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                  codingPath: decoder.codingPath,
+                  debugDescription: "Unknown discriminator: \(discriminator)"
+              )
+            )
+          }
+        }
+      }
+
+      // Exported as 'TypePrompt.Schema.Shared.MatrixUnion_KindEmpty'
+      struct MatrixUnion_KindEmpty : Codable {
+        let kind: String
+        let `init`: Bool
+        let encode: Bool
+
+        init(
+          `init`: Bool,
+          encode: Bool,
+        ) {
+          self.kind = "empty"
+          self.`init` = `init`
+          self.encode = encode
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.DiscriminatorCodingKeys'
