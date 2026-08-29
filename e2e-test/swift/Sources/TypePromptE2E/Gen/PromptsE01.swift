@@ -191,6 +191,7 @@ enum TypePrompt {
       // Exported as 'TypePrompt.Schema.MyTool.Shared_'
       struct Shared_ {
         let value: String
+        let square: Shared.Square
       }
     }
   }
