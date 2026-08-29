@@ -200,7 +200,7 @@ function validateType(
         return null;
       }
       case "shared-type-name": {
-        if (context.kind !== "template") {
+        if (context.kind === "namespace" || context.kind === "meta") {
           errors.push({
             span: type.shared,
             message: `'shared' not allowed inside <${context.kind}> elements`,

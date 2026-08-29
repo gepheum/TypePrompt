@@ -181,7 +181,7 @@ function writeUserDefinedDatatypes(
       lines.push(
         ...writeSchema(tool.schema, {
           typePrefix: `${schemaPrefix}${toolName}.`,
-          sharedTypePrefix: schemaPrefix.concat("shared"),
+          sharedTypePrefix: schemaPrefix.concat("shared."),
           requiredTypes: ["Input", "Output"],
         }).map((line) => indentLine(line, "  ")),
       );

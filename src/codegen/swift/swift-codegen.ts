@@ -51,7 +51,7 @@ function writeAll(
         // writeTemplateIdEnum(Object.values(templates)),
         // writeToolsType(compilationResult),
         // writeInputOutputTypes(compilationResult),
-        writeUserDefinedDatatypes(compilationResult),
+        writeUserDefinedDatatypes(compilationResult, config),
         // writeZodSchemas(compilationResult),
         // writeSpecDatatypes(),
         // writeTemplatesData(compilationResult),
@@ -175,6 +175,7 @@ function writeAll(
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
+  config: { swiftNamespace: string },
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
@@ -189,8 +190,8 @@ function writeUserDefinedDatatypes(
         },
         metaSchema,
         {
-          context: "top-level",
-          typePrefix: "Schema.Meta.",
+          topLevel: true,
+          typePrefix: `${config.swiftNamespace}.Schema.Meta.`,
         },
       )
     : "Nothing?";
@@ -202,8 +203,7 @@ function writeUserDefinedDatatypes(
     lines.push(
       "enum Meta {",
       writeSchema(metaSchema, {
-        typePrefix: "Schema.Meta.",
-        context: "meta",
+        typePrefix: `${config.swiftNamespace}.Schema.Meta.`,
       }),
       "}\n",
     );
@@ -212,14 +212,13 @@ function writeUserDefinedDatatypes(
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName = toSwiftName(namespace.name);
     const typePrefixBase = singleNamespace
-      ? "Schema."
-      : `Schema.${namespaceName}.`;
-    const sharedTypePrefix = typePrefixBase.concat("Shared.");
+      ? `${config.swiftNamespace}.Schema.`
+      : `${config.swiftNamespace}.Schema.${namespaceName}.`;
+    const sharedTypePrefix = `${config.swiftNamespace}.Schema.Shared.`;
     if (anyTypes(namespace.schema)) {
       lines.push("enum Shared {");
       lines.push(
         writeSchema(namespace.schema, {
-          context: "namespace",
           typePrefix: sharedTypePrefix,
         }),
       );
@@ -231,7 +230,6 @@ function writeUserDefinedDatatypes(
       lines.push(`enum ${templateName} {`);
       lines.push(
         writeSchema(template.schema, {
-          context: "template",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -244,7 +242,6 @@ function writeUserDefinedDatatypes(
       lines.push(`enum ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
-          context: "tool",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -328,16 +325,11 @@ function writeUserDefinedDatatypes(
 //   );
 // }
 
-type WriteSchemaOptions =
-  | {
-      readonly context: "meta" | "namespace" | "top-level";
-      readonly typePrefix: string;
-    }
-  | {
-      readonly context: "template" | "tool";
-      readonly typePrefix: string;
-      readonly sharedTypePrefix: string;
-    };
+type WriteSchemaOptions = {
+  readonly topLevel?: true;
+  readonly typePrefix: string;
+  readonly sharedTypePrefix?: string;
+};
 
 function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const { typePrefix } = options;
@@ -455,19 +447,21 @@ function writeType(
     }
     case "interface":
     case "union": {
-      const { context, typePrefix } = options;
+      const { sharedTypePrefix, topLevel, typePrefix } = options;
       let namingHint = schema.namingHints.defaultScope.get(type);
       if (namingHint) {
-        if (context === "top-level") {
+        if (topLevel) {
           return typePrefix.concat(makeNameFromHint(namingHint));
         } else {
           return makeNameFromHint(namingHint!);
         }
-      } else if (options.context === "template" || options.context === "tool") {
-        namingHint = schema.namingHints.shared.get(type);
-        return options.sharedTypePrefix.concat(makeNameFromHint(namingHint!));
       } else {
-        throw new Error();
+        namingHint = schema.namingHints.shared.get(type);
+        if (topLevel) {
+          return sharedTypePrefix!.concat(makeNameFromHint(namingHint!));
+        } else {
+          return "Shared.".concat(makeNameFromHint(namingHint!));
+        }
       }
     }
     case "optional": {
@@ -851,19 +845,11 @@ function coalesceEmptyLines(code: string): string {
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
-  "Boolean",
-  "DeserializationStrategy",
+  "Bool",
   "Double",
-  "ExperimentalSerializationApi",
-  "Int",
-  "JsonContentPolymorphicSerializer",
-  "IllegalArgumentException",
+  "Int32",
   "JsonElement",
-  "List",
-  "Map",
-  "OptIn",
-  "Schema",
-  "Serializable",
+  "Shared",
   "String",
 ] as const);
 

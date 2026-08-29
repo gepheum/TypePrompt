@@ -190,7 +190,7 @@ function writeUserDefinedDatatypes(
         },
         metaSchema,
         {
-          context: "top-level",
+          topLevel: true,
           typePrefix: "Schema.Meta.",
         },
       )
@@ -205,7 +205,6 @@ function writeUserDefinedDatatypes(
       "object Meta {",
       writeSchema(metaSchema, unionContext, {
         typePrefix: "Schema.Meta.",
-        context: "meta",
       }),
       "}\n",
     );
@@ -221,7 +220,6 @@ function writeUserDefinedDatatypes(
       lines.push("object Shared {");
       lines.push(
         writeSchema(namespace.schema, unionContext, {
-          context: "namespace",
           typePrefix: sharedTypePrefix,
         }),
       );
@@ -233,7 +231,6 @@ function writeUserDefinedDatatypes(
       lines.push(`object ${templateName} {`);
       lines.push(
         writeSchema(template.schema, unionContext, {
-          context: "template",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -246,7 +243,6 @@ function writeUserDefinedDatatypes(
       lines.push(`object ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, unionContext, {
-          context: "tool",
           typePrefix,
           sharedTypePrefix,
         }),
@@ -330,16 +326,11 @@ function writeUserDefinedDatatypes(
 //   );
 // }
 
-type WriteSchemaOptions =
-  | {
-      readonly context: "meta" | "namespace" | "top-level";
-      readonly typePrefix: string;
-    }
-  | {
-      readonly context: "template" | "tool";
-      readonly typePrefix: string;
-      readonly sharedTypePrefix: string;
-    };
+type WriteSchemaOptions = {
+  readonly topLevel?: true;
+  readonly typePrefix: string;
+  readonly sharedTypePrefix?: string;
+};
 
 function writeSchema(
   schema: Schema,
@@ -465,7 +456,7 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      const { discriminants, discriminator } = members;
+      const { discriminator } = members;
       lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
       lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
@@ -529,19 +520,17 @@ function writeType(
     }
     case "interface":
     case "union": {
-      const { context, typePrefix } = options;
+      const { sharedTypePrefix, topLevel, typePrefix } = options;
       let namingHint = schema.namingHints.defaultScope.get(type);
       if (namingHint) {
-        if (context === "top-level") {
+        if (topLevel) {
           return typePrefix.concat(makeNameFromHint(namingHint));
         } else {
           return makeNameFromHint(namingHint!);
         }
-      } else if (options.context === "template" || options.context === "tool") {
-        namingHint = schema.namingHints.shared.get(type);
-        return options.sharedTypePrefix.concat(makeNameFromHint(namingHint!));
       } else {
-        throw new Error();
+        namingHint = schema.namingHints.shared.get(type);
+        return sharedTypePrefix!.concat(makeNameFromHint(namingHint!));
       }
     }
     case "optional": {

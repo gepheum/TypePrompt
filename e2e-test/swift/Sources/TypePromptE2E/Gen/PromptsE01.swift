@@ -4,7 +4,7 @@ enum TypePrompt {
   /// Namespace containing the user-defined datatypes.
   enum Schema {
     enum Shared {
-      // Exported as 'Schema.Shared.Expr'
+      // Exported as 'TypePrompt.Schema.Shared.Expr'
       /// An expression
       indirect enum Expr {
         case kindNumber(Expr_KindNumber)
@@ -12,31 +12,31 @@ enum TypePrompt {
         case kindIf(Expr_KindIf)
       }
 
-      // Exported as 'Schema.Shared.Expr_KindNumber'
+      // Exported as 'TypePrompt.Schema.Shared.Expr_KindNumber'
       struct Expr_KindNumber {
         let value: Double
       }
 
-      // Exported as 'Schema.Shared.Expr_KindAdd'
+      // Exported as 'TypePrompt.Schema.Shared.Expr_KindAdd'
       struct Expr_KindAdd {
         let `left`: Expr
         let `right`: Expr
       }
 
-      // Exported as 'Schema.Shared.Expr_KindIf'
+      // Exported as 'TypePrompt.Schema.Shared.Expr_KindIf'
       struct Expr_KindIf {
         let condition: Expr
         let then: Expr
         let `else`: Expr
       }
 
-      // Exported as 'Schema.Shared.EnumWithCommonFields'
+      // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields'
       indirect enum EnumWithCommonFields {
         case notSuccess(EnumWithCommonFields_NotSuccess)
         case success(EnumWithCommonFields_Success)
       }
 
-      // Exported as 'Schema.Shared.EnumWithCommonFields_NotSuccess'
+      // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_NotSuccess'
       struct EnumWithCommonFields_NotSuccess {
         /// x coordinate
         let x: Int32
@@ -46,7 +46,7 @@ enum TypePrompt {
         let z: String
       }
 
-      // Exported as 'Schema.Shared.EnumWithCommonFields_Success'
+      // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_Success'
       struct EnumWithCommonFields_Success {
         /// x coordinate
         let x: Int32
@@ -54,53 +54,53 @@ enum TypePrompt {
         let z: Int32
       }
 
-      // Exported as 'Schema.Shared.Schema_'
-      struct Schema_ {
+      // Exported as 'TypePrompt.Schema.Shared.Schema'
+      struct Schema {
         let e: EnumWithCommonFields
       }
 
-      // Exported as 'Schema.Shared.String_'
+      // Exported as 'TypePrompt.Schema.Shared.String_'
       struct String_ {}
 
-      // Exported as 'Schema.Shared.Boolean_'
-      struct Boolean_ {}
+      // Exported as 'TypePrompt.Schema.Shared.Boolean'
+      struct Boolean {}
 
-      // Exported as 'Schema.Shared.List_'
-      struct List_ {}
+      // Exported as 'TypePrompt.Schema.Shared.List'
+      struct List {}
 
-      // Exported as 'Schema.Shared.Map_'
-      struct Map_ {}
+      // Exported as 'TypePrompt.Schema.Shared.Map'
+      struct Map {}
 
-      // Exported as 'Schema.Shared.EncodeDefault'
+      // Exported as 'TypePrompt.Schema.Shared.EncodeDefault'
       struct EncodeDefault {}
 
-      // Exported as 'Schema.Shared.Serializable_'
-      struct Serializable_ {}
+      // Exported as 'TypePrompt.Schema.Shared.Serializable'
+      struct Serializable {}
 
-      // Exported as 'Schema.Shared.AnyHolder'
+      // Exported as 'TypePrompt.Schema.Shared.AnyHolder'
       struct AnyHolder {
         let `any`: JsonElement
       }
 
-      // Exported as 'Schema.Shared.SerializerHolder'
+      // Exported as 'TypePrompt.Schema.Shared.SerializerHolder'
       struct SerializerHolder {
         let serializer: JsonElement
       }
 
-      // Exported as 'Schema.Shared.Square'
+      // Exported as 'TypePrompt.Schema.Shared.Square'
       struct Square {
         let size: Double
         let fromJson: String
       }
 
-      // Exported as 'Schema.Shared.E'
+      // Exported as 'TypePrompt.Schema.Shared.E'
       enum E {
         case `class`
         case `if`
         case fooBar
       }
 
-      // Exported as 'Schema.Shared.Matrix'
+      // Exported as 'TypePrompt.Schema.Shared.Matrix'
       struct Matrix {
         let matrix: [[Square]]
         let otherMatrix: [[Square]]?
@@ -110,7 +110,7 @@ enum TypePrompt {
     }
 
     enum AnalyzeSalesData {
-      // Exported as 'Schema.AnalyzeSalesData.SalesRow'
+      // Exported as 'TypePrompt.Schema.AnalyzeSalesData.SalesRow'
       struct SalesRow {
         let product: String
         let units: Int32
@@ -118,20 +118,20 @@ enum TypePrompt {
         let region: String
       }
 
-      // Exported as 'Schema.AnalyzeSalesData.Input'
+      // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Input'
       struct Input {
         let rows: [SalesRow]
         let question: String
         let variant: Input_Variant
       }
 
-      // Exported as 'Schema.AnalyzeSalesData.Input_Variant'
+      // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Input_Variant'
       enum Input_Variant {
         case csv
         case tsv
       }
 
-      // Exported as 'Schema.AnalyzeSalesData.Output'
+      // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Output'
       struct Output {
         let analysis: String
         let topProduct: String
@@ -140,26 +140,57 @@ enum TypePrompt {
     }
 
     enum MyTemplate {
-      // Exported as 'Schema.MyTemplate.Input'
+      // Exported as 'TypePrompt.Schema.MyTemplate.Input'
       struct Input {
         let text: String
       }
 
-      // Exported as 'Schema.MyTemplate.Output'
+      // Exported as 'TypePrompt.Schema.MyTemplate.Output'
       struct Output {
         let reversedText: String
         let shape: Output_Shape
       }
 
-      // Exported as 'Schema.MyTemplate.Output_Shape'
+      // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape'
       indirect enum Output_Shape {
-        case kindSquare(Schema.Shared.Square)
+        case kindSquare(Shared.Square)
         case kindCircle(Output_Shape_KindCircle)
       }
 
-      // Exported as 'Schema.MyTemplate.Output_Shape_KindCircle'
+      // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape_KindCircle'
       struct Output_Shape_KindCircle {
         let radius: Double
+      }
+    }
+
+    enum MyOtherTemplate {
+      // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output'
+      struct Output {
+        let reversedText: String
+        let shape: Output_Shape
+      }
+
+      // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape'
+      indirect enum Output_Shape {
+        case kindSquare(Shared.Square)
+        case kindCircle(Output_Shape_KindCircle)
+      }
+
+      // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape_KindCircle'
+      struct Output_Shape_KindCircle {
+        let radius: Double
+      }
+    }
+
+    enum MyTool {
+      // Exported as 'TypePrompt.Schema.MyTool.Output'
+      struct Output {
+        let shared: Shared_
+      }
+
+      // Exported as 'TypePrompt.Schema.MyTool.Shared_'
+      struct Shared_ {
+        let value: String
       }
     }
   }

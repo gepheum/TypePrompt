@@ -1,0 +1,16 @@
+<template name="MyOtherTemplate">
+  <schema>
+    type Input = shared.Square;
+
+    interface Output {
+      reversedText: string;
+      shape: shared.Square | { kind: "circle"; radius: number };
+    }
+  </schema>
+  <user>
+    U
+  </user>
+  <system>
+    S
+  </system>
+</template>

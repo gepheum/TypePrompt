@@ -592,17 +592,6 @@ describe("validateSchema - shared type names", () => {
       errors: [{ message: "Unknown type 'Missing'" }],
     });
   });
-
-  it("reports error for shared.X in tool context", () => {
-    const result = validateSchema(
-      parseDeclarations("type Input = string;\ntype Output = shared.Profile;"),
-      TOOL,
-    );
-    expect(result).toMatch({
-      kind: "error",
-      errors: [{ message: "'shared' not allowed inside <tool> elements" }],
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------
