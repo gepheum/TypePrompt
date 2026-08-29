@@ -1,5 +1,7 @@
 include: ../../../examples/02-structured-output/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_02.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompts02.kt
     package: com.example.prompts02

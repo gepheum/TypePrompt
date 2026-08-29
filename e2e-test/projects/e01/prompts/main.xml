@@ -33,6 +33,7 @@
   interface Square {
     kind: "square";
     size: number;
+    fromJson: string;
   }
 
   type E = "class" | "if" | "foo-BAR";

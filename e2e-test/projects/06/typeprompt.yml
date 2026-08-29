@@ -1,5 +1,7 @@
 include: ../../../examples/06-toon-format/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_06.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompts06.kt
     package: com.example.prompts06

@@ -34,10 +34,10 @@ export function generateDartCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  const { templates } = compilationResult;
-
   return coalesceEmptyLines(
     [
+      "import 'dart:convert';",
+      "",
       // STATIC_SNIPPETS["dart-imports"],
       // reformat(writePromptsInterface(compilationResult)),
       // STATIC_SNIPPETS["typescript-top-level"],
@@ -47,7 +47,6 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult),
-          // writeZodSchemas(compilationResult),
           // writeSpecDatatypes(),
           // writeTemplatesData(compilationResult),
         ].join("\n\n"),
@@ -248,39 +247,6 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
-// function writeZodSchemas(compilationResult: ValidCompilationResult): string {
-//   const { templates, tools, singleNamespace } = compilationResult;
-//   const lines = ["const zodSchemas = {"];
-
-//   const writeEntry = (
-//     input: ValidTemplate | ValidatedTool,
-//     named: Template | Tool,
-//   ): void => {
-//     const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const typePrefixBase = singleNamespace ? "$." : `$.${namespace}.`;
-//     const name = named.name.text;
-//     const options = {
-//       defaultScopeTypePrefix: `${typePrefixBase}${capitalize(name)}.`,
-//       sharedTypePrefix: `${typePrefixBase}Shared.`,
-//     } as const;
-//     const zodInputType = writeZodType(input.schema, "Input", options);
-//     const zodOutputType = writeZodType(input.schema, "Output", options);
-//     lines.push(`"${namespace}:${name}": {`);
-//     lines.push(`input: ${zodInputType},`);
-//     lines.push(`output: ${zodOutputType},`);
-//     lines.push("},");
-//   };
-
-//   for (const template of Object.values(templates)) {
-//     writeEntry(template, template.template);
-//   }
-//   for (const tool of Object.values(tools)) {
-//     writeEntry(tool, tool.tool);
-//   }
-//   lines.push("} as const;");
-//   return lines.join("\n");
-// }
-
 // function writeSpecDatatypes(): string {
 //   const options = {
 //     defaultScopeTypePrefix: "Spec.",
@@ -358,6 +324,10 @@ function writeTypepromptInterface(
 
   const lines = [`final class ${className}${implementsClause} {`];
   const fields = Object.values(type.fields);
+  const hasNonLiteralFields = fields.some(
+    (f) => !isLiteralType(resolveType(f.type, schema)),
+  );
+
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
@@ -370,16 +340,46 @@ function writeTypepromptInterface(
     lines.push(`final ${fieldType} ${name};`);
   }
   lines.push("");
-  if (fields.some((f) => !isLiteralType(f.type))) {
+  if (hasNonLiteralFields) {
     lines.push(`${className}({`);
     for (const field of fields) {
-      if (isLiteralType(field.type)) continue;
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type)) continue;
       const name = toDartName(field.name.text);
       lines.push(`required this.${name},`);
     }
     lines.push("});");
   } else {
     lines.push(`${className}();`);
+  }
+  lines.push("");
+  if (hasNonLiteralFields) {
+    lines.push(`${className} copyWith({`);
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type)) continue;
+      const name = toDartName(field.name.text);
+      const fieldType = writeType(type, schema, options);
+      const paramType =
+        fieldType.endsWith("?") || fieldType === "dynamic"
+          ? fieldType
+          : `${fieldType}?`;
+      lines.push(`${paramType} ${name},`);
+    }
+    lines.push("}) {");
+    lines.push(`return ${className}(`);
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type)) continue;
+      const name = toDartName(field.name.text);
+      lines.push(`${name}: ${name} ?? this.${name},`);
+    }
+    lines.push(");");
+    lines.push("}");
+  } else {
+    lines.push(`${className} copyWith() {`);
+    lines.push(`return ${className}();`);
+    lines.push("}");
   }
   lines.push("");
   if (interfaces) {
@@ -390,11 +390,19 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const name = field.name.text;
     const dartName = toDartName(name);
-    if (isLiteralType(field.type)) {
-      const value = JSON.stringify(field.type.value satisfies string | boolean);
+    const resolvedFieldType = resolveType(field.type, schema);
+    if (isLiteralType(resolvedFieldType)) {
+      const value = JSON.stringify(
+        resolvedFieldType.value satisfies string | boolean,
+      );
       lines.push(`"${name}": ${value},`);
     } else {
-      const toJsonExpr = writeToJsonExpr(field.type, dartName, schema, options);
+      const toJsonExpr = writeToJsonExpr(
+        resolvedFieldType,
+        dartName,
+        schema,
+        options,
+      );
       lines.push(`"${name}": ${toJsonExpr},`);
     }
   }
@@ -404,16 +412,24 @@ function writeTypepromptInterface(
     "",
   );
   lines.push(
+    "@override",
+    "String toString() {",
+    'return JsonEncoder.withIndent("  ").convert(toJson());',
+    "}",
+    "",
+  );
+  lines.push(
     `factory ${className}.fromJson(Map<String, dynamic> json) {`,
     `return ${className}(`,
   );
   for (const field of fields) {
-    if (isLiteralType(field.type)) continue;
+    const type = resolveType(field.type, schema);
+    if (isLiteralType(type)) continue;
     const name = field.name.text;
     const dartName = toDartName(name);
     const valueExpr = `json["${field.name.text}"]`;
     const valueFromJsonExpr = writeFromJsonExpr(
-      field.type,
+      type,
       valueExpr,
       schema,
       options,
@@ -1124,4 +1140,5 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "toString",
   // Generated symbols
   "toJson",
+  "copyWith",
 ] as const);

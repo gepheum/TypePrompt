@@ -1,5 +1,7 @@
 include: ../../../examples/08-namespaces/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_08.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompts08.kt
     package: com.example.prompts08

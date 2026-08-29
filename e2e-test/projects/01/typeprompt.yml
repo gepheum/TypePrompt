@@ -1,5 +1,7 @@
 include: ../../../examples/01-basics/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_01.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompt01.kt
     package: com.example.prompts01

@@ -1,5 +1,7 @@
 include: ../../../examples/07-shared-types/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_07.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompts07.kt
     package: com.example.prompts07

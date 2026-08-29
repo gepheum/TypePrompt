@@ -1,5 +1,7 @@
 include: ../../../examples/04-variants/**/*.xml
 gen:
+  dart:
+    file: ../../dart/lib/gen/prompts_04.dart
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/Prompts04.kt
     package: com.example.prompts04
