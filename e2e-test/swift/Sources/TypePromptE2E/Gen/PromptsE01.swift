@@ -14,19 +14,20 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindNumber'
       struct Expr_KindNumber : Codable {
-        let kind: String = "number"
+        let kind: String
         let value: Double
 
         init(
           value: Double,
         ) {
+          self.kind = "number"
           self.value = value
         }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindAdd'
       struct Expr_KindAdd : Codable {
-        let kind: String = "add"
+        let kind: String
         let `left`: Expr
         let `right`: Expr
 
@@ -34,6 +35,7 @@ enum TypePrompt {
           `left`: Expr,
           `right`: Expr,
         ) {
+          self.kind = "add"
           self.`left` = `left`
           self.`right` = `right`
         }
@@ -41,7 +43,7 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindIf'
       struct Expr_KindIf : Codable {
-        let kind: String = "if"
+        let kind: String
         let condition: Expr
         let then: Expr
         let `else`: Expr
@@ -51,6 +53,7 @@ enum TypePrompt {
           then: Expr,
           `else`: Expr,
         ) {
+          self.kind = "if"
           self.condition = condition
           self.then = then
           self.`else` = `else`
@@ -65,7 +68,7 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_NotSuccess'
       struct EnumWithCommonFields_NotSuccess : Codable {
-        let success: Bool = false
+        let success: Bool
         /// x coordinate
         let x: Int32
         /// y coordinate
@@ -78,6 +81,7 @@ enum TypePrompt {
           y: Double,
           z: String,
         ) {
+          self.success = false
           self.x = x
           self.y = y
           self.z = z
@@ -86,7 +90,7 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_Success'
       struct EnumWithCommonFields_Success : Codable {
-        let success: Bool = true
+        let success: Bool
         /// x coordinate
         let x: Int32
         let y: Double
@@ -97,6 +101,7 @@ enum TypePrompt {
           y: Double,
           z: Int32,
         ) {
+          self.success = true
           self.x = x
           self.y = y
           self.z = z
@@ -138,20 +143,22 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.Shared.Square'
       struct Square : Codable {
-        let kind: String = "square"
+        let kind: String
         let size: Double
         let fromJson: String
         let self_: String
-        let foo: String = "foo"
+        let foo: String
 
         init(
           size: Double,
           fromJson: String,
           self_: String,
         ) {
+          self.kind = "square"
           self.size = size
           self.fromJson = fromJson
           self.self_ = self_
+          self.foo = "foo"
         }
       }
 
@@ -221,12 +228,13 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape_KindCircle'
       struct Output_Shape_KindCircle : Codable {
-        let kind: String = "circle"
+        let kind: String
         let radius: Double
 
         init(
           radius: Double,
         ) {
+          self.kind = "circle"
           self.radius = radius
         }
       }
@@ -247,12 +255,13 @@ enum TypePrompt {
 
       // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape_KindCircle'
       struct Output_Shape_KindCircle : Codable {
-        let kind: String = "circle"
+        let kind: String
         let radius: Double
 
         init(
           radius: Double,
         ) {
+          self.kind = "circle"
           self.radius = radius
         }
       }

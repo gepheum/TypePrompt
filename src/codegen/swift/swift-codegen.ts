@@ -369,11 +369,8 @@ function writeTypepromptInterface(
     const { type } = field;
     const name = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    const assignment = isLiteralType(type)
-      ? " = ".concat(JSON.stringify(type.value))
-      : "";
     lines.push(...wrapDocComment(field.doc));
-    lines.push(`let ${name}: ${fieldType}${assignment}`);
+    lines.push(`let ${name}: ${fieldType}`);
   }
 
   if (hasLiteralField) {
@@ -387,10 +384,13 @@ function writeTypepromptInterface(
     }
     lines.push(") {");
     for (const field of fields) {
-      const { type } = field;
-      if (isLiteralType(type)) continue;
       const name = toSwiftName(field.name.text);
-      lines.push(`self.${name} = ${name}`);
+      const { type } = field;
+      if (isLiteralType(type)) {
+        lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
+      } else {
+        lines.push(`self.${name} = ${name}`);
+      }
     }
     lines.push("}");
   }
