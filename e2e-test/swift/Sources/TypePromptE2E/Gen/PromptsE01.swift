@@ -6,7 +6,11 @@ enum TypePrompt {
     enum Shared {
       // Exported as 'Schema.Shared.Expr'
       /// An expression
-      enum Expr {}
+      indirect enum Expr {
+        case kindNumber(Expr_KindNumber)
+        case kindAdd(Expr_KindAdd)
+        case kindIf(Expr_KindIf)
+      }
 
       // Exported as 'Schema.Shared.Expr_KindNumber'
       struct Expr_KindNumber {
@@ -27,7 +31,10 @@ enum TypePrompt {
       }
 
       // Exported as 'Schema.Shared.EnumWithCommonFields'
-      enum EnumWithCommonFields {}
+      indirect enum EnumWithCommonFields {
+        case notSuccess(EnumWithCommonFields_NotSuccess)
+        case success(EnumWithCommonFields_Success)
+      }
 
       // Exported as 'Schema.Shared.EnumWithCommonFields_NotSuccess'
       struct EnumWithCommonFields_NotSuccess {
@@ -88,9 +95,9 @@ enum TypePrompt {
 
       // Exported as 'Schema.Shared.E'
       enum E {
-        case Class
-        case If
-        case FooBar
+        case `class`
+        case `if`
+        case fooBar
       }
 
       // Exported as 'Schema.Shared.Matrix'
@@ -120,8 +127,8 @@ enum TypePrompt {
 
       // Exported as 'Schema.AnalyzeSalesData.Input_Variant'
       enum Input_Variant {
-        case Csv
-        case Tsv
+        case csv
+        case tsv
       }
 
       // Exported as 'Schema.AnalyzeSalesData.Output'
@@ -145,7 +152,10 @@ enum TypePrompt {
       }
 
       // Exported as 'Schema.MyTemplate.Output_Shape'
-      enum Output_Shape {}
+      indirect enum Output_Shape {
+        case kindSquare(Schema.Shared.Square)
+        case kindCircle(Output_Shape_KindCircle)
+      }
 
       // Exported as 'Schema.MyTemplate.Output_Shape_KindCircle'
       struct Output_Shape_KindCircle {

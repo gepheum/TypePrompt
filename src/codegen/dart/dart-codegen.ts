@@ -15,7 +15,7 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toLowerCase, toPascalCase } from "../../util/casing.js";
+import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateDartCode(
@@ -459,14 +459,14 @@ function writeTypepromptUnion(
       lines.push(`enum ${className} {\n`);
       for (const member of members.members) {
         const isLast = member === members.members.at(-1);
-        const dartName = toDartName(toLowerCase(member.value));
+        const dartName = toDartName(toCamelCase(member.value));
         lines.push(dartName.concat(isLast ? ";" : ","));
       }
       lines.push("String toJson() {");
       lines.push("switch (this) {");
       for (const member of members.members) {
         const name = member.value;
-        const dartName = toDartName(toLowerCase(name));
+        const dartName = toDartName(toCamelCase(name));
         lines.push(`case ${dartName}:`, `return "${name}";`);
       }
       lines.push(
@@ -478,7 +478,7 @@ function writeTypepromptUnion(
       lines.push("switch (json) {");
       for (const member of members.members) {
         const name = member.value;
-        const dartName = toDartName(toLowerCase(name));
+        const dartName = toDartName(toCamelCase(name));
         lines.push(`case "${name}":`, `return ${dartName};`);
       }
       lines.push(

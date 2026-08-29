@@ -15,7 +15,7 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toPascalCase } from "../../util/casing.js";
+import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateSwiftCode(
@@ -398,7 +398,7 @@ function writeTypepromptUnion(
     case "strings": {
       lines.push(`enum ${typeName} {\n`);
       for (const member of members.members) {
-        const swiftName = toSwiftName(toPascalCase(member.value));
+        const swiftName = toSwiftName(toCamelCase(member.value));
         lines.push(`case ${swiftName}`);
       }
       lines.push("}");
@@ -406,7 +406,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      lines.push(`enum ${typeName} {`);
+      lines.push(`indirect enum ${typeName} {`);
       // TODO
       // for (const member of members.commonFields) {
       //   const name = toSwiftName(member.name);
@@ -414,6 +414,22 @@ function writeTypepromptUnion(
       //   const type = writeType(member.type, schema, options);
       //   lines.push(`val ${name}: ${type}`);
       // }
+      for (const [discriminant, member] of Object.entries(members.members)) {
+        const caseName = toSwiftName(
+          ((): string => {
+            switch (discriminants.type) {
+              case "string":
+                return discriminator.concat(toPascalCase(discriminant));
+              case "boolean":
+                return discriminant === "true"
+                  ? discriminator
+                  : "not".concat(capitalize(discriminator));
+            }
+          })(),
+        );
+        const type = writeType(member.resolved, schema, options);
+        lines.push(`case ${caseName}(${type})`);
+      }
       lines.push("}");
     }
   }

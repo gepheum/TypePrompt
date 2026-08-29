@@ -89,7 +89,7 @@ export function toPascalCase(identifier: string): string {
 }
 
 /**
- * Converts an identifier into lowerCase.
+ * Converts an identifier into camelCase.
  * Symbols are treated as word breaks and stripped.
  * ALL_CAPS runs are lowercased before capitalizing, so `parseHTML` -> `parseHtml`.
  *
@@ -97,7 +97,7 @@ export function toPascalCase(identifier: string): string {
  *   `parseHTMLDocument` -> `parseHtmlDocument`
  *   `foo-bar.baz_qux`  -> `fooBarBazQux`
  */
-export function toLowerCase(identifier: string): string {
+export function toCamelCase(identifier: string): string {
   return splitIntoWords(identifier)
     .map((w, i) => (i <= 0 ? w : capitalize(w)))
     .join("");
