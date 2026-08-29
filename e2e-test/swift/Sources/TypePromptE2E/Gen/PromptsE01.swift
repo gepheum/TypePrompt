@@ -13,21 +13,48 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindNumber'
-      struct Expr_KindNumber {
+      struct Expr_KindNumber : Codable {
+        let kind: String = "number"
         let value: Double
+
+        init(
+          value: Double,
+        ) {
+          self.value = value
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindAdd'
-      struct Expr_KindAdd {
+      struct Expr_KindAdd : Codable {
+        let kind: String = "add"
         let `left`: Expr
         let `right`: Expr
+
+        init(
+          `left`: Expr,
+          `right`: Expr,
+        ) {
+          self.`left` = `left`
+          self.`right` = `right`
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindIf'
-      struct Expr_KindIf {
+      struct Expr_KindIf : Codable {
+        let kind: String = "if"
         let condition: Expr
         let then: Expr
         let `else`: Expr
+
+        init(
+          condition: Expr,
+          then: Expr,
+          `else`: Expr,
+        ) {
+          self.condition = condition
+          self.then = then
+          self.`else` = `else`
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields'
@@ -37,60 +64,95 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_NotSuccess'
-      struct EnumWithCommonFields_NotSuccess {
+      struct EnumWithCommonFields_NotSuccess : Codable {
+        let success: Bool = false
         /// x coordinate
         let x: Int32
         /// y coordinate
         let y: Double
         /// z coordinate
         let z: String
+
+        init(
+          x: Int32,
+          y: Double,
+          z: String,
+        ) {
+          self.x = x
+          self.y = y
+          self.z = z
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_Success'
-      struct EnumWithCommonFields_Success {
+      struct EnumWithCommonFields_Success : Codable {
+        let success: Bool = true
         /// x coordinate
         let x: Int32
         let y: Double
         let z: Int32
+
+        init(
+          x: Int32,
+          y: Double,
+          z: Int32,
+        ) {
+          self.x = x
+          self.y = y
+          self.z = z
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Schema'
-      struct Schema {
+      struct Schema : Codable {
         let e: EnumWithCommonFields
       }
 
       // Exported as 'TypePrompt.Schema.Shared.String_'
-      struct String_ {}
+      struct String_ : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.Boolean'
-      struct Boolean {}
+      struct Boolean : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.List'
-      struct List {}
+      struct List : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.Map'
-      struct Map {}
+      struct Map : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.EncodeDefault'
-      struct EncodeDefault {}
+      struct EncodeDefault : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.Serializable'
-      struct Serializable {}
+      struct Serializable : Codable {}
 
       // Exported as 'TypePrompt.Schema.Shared.AnyHolder'
-      struct AnyHolder {
+      struct AnyHolder : Codable {
         let `any`: JsonElement
       }
 
       // Exported as 'TypePrompt.Schema.Shared.SerializerHolder'
-      struct SerializerHolder {
+      struct SerializerHolder : Codable {
         let serializer: JsonElement
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Square'
-      struct Square {
+      struct Square : Codable {
+        let kind: String = "square"
         let size: Double
         let fromJson: String
+        let self_: String
+        let foo: String = "foo"
+
+        init(
+          size: Double,
+          fromJson: String,
+          self_: String,
+        ) {
+          self.size = size
+          self.fromJson = fromJson
+          self.self_ = self_
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.E'
@@ -101,7 +163,7 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Matrix'
-      struct Matrix {
+      struct Matrix : Codable {
         let matrix: [[Square]]
         let otherMatrix: [[Square]]?
         let foo: [String: [Square]]?
@@ -111,7 +173,7 @@ enum TypePrompt {
 
     enum AnalyzeSalesData {
       // Exported as 'TypePrompt.Schema.AnalyzeSalesData.SalesRow'
-      struct SalesRow {
+      struct SalesRow : Codable {
         let product: String
         let units: Int32
         let revenueCents: Int32
@@ -119,7 +181,7 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Input'
-      struct Input {
+      struct Input : Codable {
         let rows: [SalesRow]
         let question: String
         let variant: Input_Variant
@@ -132,7 +194,7 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Output'
-      struct Output {
+      struct Output : Codable {
         let analysis: String
         let topProduct: String
         let totalRevenue: Double
@@ -141,12 +203,12 @@ enum TypePrompt {
 
     enum MyTemplate {
       // Exported as 'TypePrompt.Schema.MyTemplate.Input'
-      struct Input {
+      struct Input : Codable {
         let text: String
       }
 
       // Exported as 'TypePrompt.Schema.MyTemplate.Output'
-      struct Output {
+      struct Output : Codable {
         let reversedText: String
         let shape: Output_Shape
       }
@@ -158,14 +220,21 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape_KindCircle'
-      struct Output_Shape_KindCircle {
+      struct Output_Shape_KindCircle : Codable {
+        let kind: String = "circle"
         let radius: Double
+
+        init(
+          radius: Double,
+        ) {
+          self.radius = radius
+        }
       }
     }
 
     enum MyOtherTemplate {
       // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output'
-      struct Output {
+      struct Output : Codable {
         let reversedText: String
         let shape: Output_Shape
       }
@@ -177,19 +246,26 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape_KindCircle'
-      struct Output_Shape_KindCircle {
+      struct Output_Shape_KindCircle : Codable {
+        let kind: String = "circle"
         let radius: Double
+
+        init(
+          radius: Double,
+        ) {
+          self.radius = radius
+        }
       }
     }
 
     enum MyTool {
       // Exported as 'TypePrompt.Schema.MyTool.Output'
-      struct Output {
+      struct Output : Codable {
         let shared: Shared_
       }
 
       // Exported as 'TypePrompt.Schema.MyTool.Shared_'
-      struct Shared_ {
+      struct Shared_ : Codable {
         let value: String
         let square: Shared.Square
       }

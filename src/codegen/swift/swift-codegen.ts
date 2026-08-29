@@ -363,15 +363,36 @@ function writeTypepromptInterface(
   const fields = Object.values(type.fields);
   const lines: string[] = [];
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
-  lines.push(`struct ${typeName} {`);
+  lines.push(`struct ${typeName} : Codable {`);
 
   for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
+    const { type } = field;
     const name = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
+    const assignment = isLiteralType(type)
+      ? " = ".concat(JSON.stringify(type.value))
+      : "";
     lines.push(...wrapDocComment(field.doc));
-    lines.push(`let ${name}: ${fieldType}`);
+    lines.push(`let ${name}: ${fieldType}${assignment}`);
+  }
+
+  if (hasLiteralField) {
+    lines.push("", "init(");
+    for (const field of fields) {
+      const { type } = field;
+      if (isLiteralType(type)) continue;
+      const name = toSwiftName(field.name.text);
+      const fieldType = writeType(type, schema, options);
+      lines.push(`${name}: ${fieldType},`);
+    }
+    lines.push(") {");
+    for (const field of fields) {
+      const { type } = field;
+      if (isLiteralType(type)) continue;
+      const name = toSwiftName(field.name.text);
+      lines.push(`self.${name} = ${name}`);
+    }
+    lines.push("}");
   }
 
   lines.push("}");
@@ -714,66 +735,6 @@ type UnionContext = {
   readonly overrideFields: Set<Field>;
 };
 
-function makeUnionContext(
-  compilationResult: ValidCompilationResult,
-): UnionContext {
-  const intMemberToUnionRefs = new Map<Interface, string[]>();
-  const intMemberToStringDiscriminant = new Map<Interface, string>();
-  const overrideFields = new Set<Field>();
-
-  const processSchema = (schema: Schema, typePrefix: string): void => {
-    for (const [
-      type,
-      namingHint,
-    ] of schema.namingHints.defaultScope.entries()) {
-      if (type.kind !== "union") continue;
-      const members = schema.unionToMembers.get(type)!;
-      if (members.kind !== "interfaces") continue;
-      const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
-      for (const [discriminant, member] of Object.entries(members.members)) {
-        const { resolved } = member;
-        const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];
-        if (unionRefs.length <= 0) {
-          intMemberToUnionRefs.set(resolved, unionRefs);
-        }
-        unionRefs.push(unionRef);
-
-        if (members.discriminants.type === "string") {
-          intMemberToStringDiscriminant.set(resolved, discriminant);
-        }
-
-        for (const commonField of members.commonFields) {
-          for (const memberField of commonField.memberFields) {
-            overrideFields.add(memberField);
-          }
-        }
-      }
-    }
-  };
-
-  processSchema(compilationResult.metaSchema, "Schema.Meta.");
-  for (const namespace of Object.values(compilationResult.namespaces)) {
-    const typePrefixBase = compilationResult.singleNamespace
-      ? "Schema."
-      : "Schema.".concat(namespace.name, ".");
-    processSchema(namespace.schema, typePrefixBase.concat("Shared."));
-    for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
-      processSchema(template.schema, typePrefixBase.concat(templateName, "."));
-    }
-    for (const tool of Object.values(namespace.tools)) {
-      const toolName = capitalize(tool.tool.name.text);
-      processSchema(tool.schema, typePrefixBase.concat(toolName, "."));
-    }
-  }
-
-  return {
-    intMemberToUnionRefs,
-    intMemberToStringDiscriminant,
-    overrideFields,
-  };
-}
-
 function toSwiftName(name: string): string {
   return RESERVED_NAMES.has(name)
     ? name.concat("_")
@@ -846,11 +807,13 @@ function coalesceEmptyLines(code: string): string {
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Bool",
+  "Codable",
   "Double",
   "Int32",
   "JsonElement",
   "Shared",
   "String",
+  "self",
 ] as const);
 
 const SWIFT_HARD_KEYWORDS: ReadonlySet<string> = new Set([

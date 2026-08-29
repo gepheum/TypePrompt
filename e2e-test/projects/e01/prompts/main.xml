@@ -34,6 +34,8 @@
     kind: "square";
     size: number;
     fromJson: string;
+    self: string;
+    foo: "foo";
   }
 
   type E = "class" | "if" | "foo-BAR";
