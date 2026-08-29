@@ -46,4 +46,6 @@
     foo?: { [x: string]: Square[] };
     ints: integer[];
   };
+
+  type DiscriminatorCodingKeys = {};
 </namespace>

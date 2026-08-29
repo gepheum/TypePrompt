@@ -409,17 +409,17 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum ${typeName} {\n`);
+      lines.push(`enum ${typeName} : String, Codable {\n`);
       for (const member of members.members) {
         const swiftName = toSwiftName(toCamelCase(member.value));
-        lines.push(`case ${swiftName}`);
+        lines.push(`case ${swiftName} = ${JSON.stringify(member.value)}`);
       }
       lines.push("}");
       break;
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      lines.push(`indirect enum ${typeName} {`);
+      lines.push(`indirect enum ${typeName} : Codable {`);
       // TODO
       // for (const member of members.commonFields) {
       //   const name = toSwiftName(member.name);
@@ -427,22 +427,83 @@ function writeTypepromptUnion(
       //   const type = writeType(member.type, schema, options);
       //   lines.push(`val ${name}: ${type}`);
       // }
-      for (const [discriminant, member] of Object.entries(members.members)) {
-        const caseName = toSwiftName(
-          ((): string => {
-            switch (discriminants.type) {
-              case "string":
-                return discriminator.concat(toPascalCase(discriminant));
-              case "boolean":
-                return discriminant === "true"
-                  ? discriminator
-                  : "not".concat(capitalize(discriminator));
-            }
-          })(),
-        );
-        const type = writeType(member.resolved, schema, options);
+      const caseEntries = Object.entries(members.members).map(
+        ([discriminant, member]) => {
+          const caseName = toSwiftName(
+            ((): string => {
+              switch (discriminants.type) {
+                case "string":
+                  return discriminator.concat(toPascalCase(discriminant));
+                case "boolean":
+                  return discriminant === "true"
+                    ? discriminator
+                    : "not".concat(capitalize(discriminator));
+              }
+            })(),
+          );
+          const type = writeType(member.resolved, schema, options);
+          return { discriminant, caseName, type };
+        },
+      );
+
+      for (const { caseName, type } of caseEntries) {
         lines.push(`case ${caseName}(${type})`);
       }
+
+      lines.push("", "func encode(to encoder: any Encoder) throws {");
+      lines.push("var container = encoder.singleValueContainer()");
+      lines.push("switch self {");
+      for (const { caseName } of caseEntries) {
+        lines.push(`case .${caseName}(let value):`);
+        lines.push("try container.encode(value)");
+      }
+      lines.push("}", "}");
+
+      lines.push(
+        "",
+        "private enum DiscriminatorCodingKeys: String, CodingKey {",
+        `case discriminator = "${discriminator}"`,
+        "}",
+        "",
+        "init(from decoder: any Decoder) throws {",
+        "let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)",
+      );
+
+      if (discriminants.type === "string") {
+        lines.push(
+          "let discriminator = try container.decode(String.self, forKey: .discriminator)",
+          "switch discriminator {",
+        );
+        for (const { discriminant, caseName, type } of caseEntries) {
+          lines.push(
+            `case "${discriminant}":`,
+            `self = .${caseName}(try ${type}(from: decoder))`,
+          );
+        }
+        lines.push(
+          "default:",
+          "throw DecodingError.dataCorrupted(",
+          "DecodingError.Context(",
+          "codingPath: decoder.codingPath,",
+          'debugDescription: "Unknown discriminator: \\(discriminator)"',
+          ")",
+          ")",
+          "}",
+        );
+      } else {
+        lines.push(
+          "let discriminator = try container.decode(Bool.self, forKey: .discriminator)",
+          "switch discriminator {",
+        );
+        for (const { discriminant, caseName, type } of caseEntries) {
+          lines.push(
+            `case ${discriminant}:`,
+            `self = .${caseName}(try ${type}(from: decoder))`,
+          );
+        }
+        lines.push("}"); // switch
+      }
+      lines.push("}");
       lines.push("}");
     }
   }
@@ -808,6 +869,8 @@ function coalesceEmptyLines(code: string): string {
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Bool",
   "Codable",
+  "Decoder",
+  "DecodingError",
   "Double",
   "Int32",
   "JsonElement",

@@ -6,10 +6,46 @@ enum TypePrompt {
     enum Shared {
       // Exported as 'TypePrompt.Schema.Shared.Expr'
       /// An expression
-      indirect enum Expr {
+      indirect enum Expr : Codable {
         case kindNumber(Expr_KindNumber)
         case kindAdd(Expr_KindAdd)
         case kindIf(Expr_KindIf)
+
+        func encode(to encoder: any Encoder) throws {
+          var container = encoder.singleValueContainer()
+          switch self {
+            case .kindNumber(let value):
+              try container.encode(value)
+            case .kindAdd(let value):
+              try container.encode(value)
+            case .kindIf(let value):
+              try container.encode(value)
+          }
+        }
+
+        private enum DiscriminatorCodingKeys: String, CodingKey {
+          case discriminator = "kind"
+        }
+
+        init(from decoder: any Decoder) throws {
+          let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+          let discriminator = try container.decode(String.self, forKey: .discriminator)
+          switch discriminator {
+            case "number":
+              self = .kindNumber(try Expr_KindNumber(from: decoder))
+            case "add":
+              self = .kindAdd(try Expr_KindAdd(from: decoder))
+            case "if":
+              self = .kindIf(try Expr_KindIf(from: decoder))
+            default:
+              throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                  codingPath: decoder.codingPath,
+                  debugDescription: "Unknown discriminator: \(discriminator)"
+              )
+            )
+          }
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Expr_KindNumber'
@@ -61,9 +97,34 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields'
-      indirect enum EnumWithCommonFields {
+      indirect enum EnumWithCommonFields : Codable {
         case notSuccess(EnumWithCommonFields_NotSuccess)
         case success(EnumWithCommonFields_Success)
+
+        func encode(to encoder: any Encoder) throws {
+          var container = encoder.singleValueContainer()
+          switch self {
+            case .notSuccess(let value):
+              try container.encode(value)
+            case .success(let value):
+              try container.encode(value)
+          }
+        }
+
+        private enum DiscriminatorCodingKeys: String, CodingKey {
+          case discriminator = "success"
+        }
+
+        init(from decoder: any Decoder) throws {
+          let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+          let discriminator = try container.decode(Bool.self, forKey: .discriminator)
+          switch discriminator {
+            case false:
+              self = .notSuccess(try EnumWithCommonFields_NotSuccess(from: decoder))
+            case true:
+              self = .success(try EnumWithCommonFields_Success(from: decoder))
+          }
+        }
       }
 
       // Exported as 'TypePrompt.Schema.Shared.EnumWithCommonFields_NotSuccess'
@@ -163,10 +224,10 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.Shared.E'
-      enum E {
-        case `class`
-        case `if`
-        case fooBar
+      enum E : String, Codable {
+        case `class` = "class"
+        case `if` = "if"
+        case fooBar = "foo-BAR"
       }
 
       // Exported as 'TypePrompt.Schema.Shared.Matrix'
@@ -176,6 +237,9 @@ enum TypePrompt {
         let foo: [String: [Square]]?
         let ints: [Int32]
       }
+
+      // Exported as 'TypePrompt.Schema.Shared.DiscriminatorCodingKeys'
+      struct DiscriminatorCodingKeys : Codable {}
     }
 
     enum AnalyzeSalesData {
@@ -195,9 +259,9 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Input_Variant'
-      enum Input_Variant {
-        case csv
-        case tsv
+      enum Input_Variant : String, Codable {
+        case csv = "csv"
+        case tsv = "tsv"
       }
 
       // Exported as 'TypePrompt.Schema.AnalyzeSalesData.Output'
@@ -221,9 +285,41 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape'
-      indirect enum Output_Shape {
+      indirect enum Output_Shape : Codable {
         case kindSquare(Shared.Square)
         case kindCircle(Output_Shape_KindCircle)
+
+        func encode(to encoder: any Encoder) throws {
+          var container = encoder.singleValueContainer()
+          switch self {
+            case .kindSquare(let value):
+              try container.encode(value)
+            case .kindCircle(let value):
+              try container.encode(value)
+          }
+        }
+
+        private enum DiscriminatorCodingKeys: String, CodingKey {
+          case discriminator = "kind"
+        }
+
+        init(from decoder: any Decoder) throws {
+          let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+          let discriminator = try container.decode(String.self, forKey: .discriminator)
+          switch discriminator {
+            case "square":
+              self = .kindSquare(try Shared.Square(from: decoder))
+            case "circle":
+              self = .kindCircle(try Output_Shape_KindCircle(from: decoder))
+            default:
+              throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                  codingPath: decoder.codingPath,
+                  debugDescription: "Unknown discriminator: \(discriminator)"
+              )
+            )
+          }
+        }
       }
 
       // Exported as 'TypePrompt.Schema.MyTemplate.Output_Shape_KindCircle'
@@ -248,9 +344,41 @@ enum TypePrompt {
       }
 
       // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape'
-      indirect enum Output_Shape {
+      indirect enum Output_Shape : Codable {
         case kindSquare(Shared.Square)
         case kindCircle(Output_Shape_KindCircle)
+
+        func encode(to encoder: any Encoder) throws {
+          var container = encoder.singleValueContainer()
+          switch self {
+            case .kindSquare(let value):
+              try container.encode(value)
+            case .kindCircle(let value):
+              try container.encode(value)
+          }
+        }
+
+        private enum DiscriminatorCodingKeys: String, CodingKey {
+          case discriminator = "kind"
+        }
+
+        init(from decoder: any Decoder) throws {
+          let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+          let discriminator = try container.decode(String.self, forKey: .discriminator)
+          switch discriminator {
+            case "square":
+              self = .kindSquare(try Shared.Square(from: decoder))
+            case "circle":
+              self = .kindCircle(try Output_Shape_KindCircle(from: decoder))
+            default:
+              throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                  codingPath: decoder.codingPath,
+                  debugDescription: "Unknown discriminator: \(discriminator)"
+              )
+            )
+          }
+        }
       }
 
       // Exported as 'TypePrompt.Schema.MyOtherTemplate.Output_Shape_KindCircle'
