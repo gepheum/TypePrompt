@@ -14,6 +14,7 @@ import type {
 } from "../../schema/schema-types.js";
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
+import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, toLowerCase, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -36,7 +37,7 @@ export function generateDartCode(
 function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
     [
-      "import 'dart:convert';",
+      STATIC_SNIPPETS["dart-imports"],
       "",
       // STATIC_SNIPPETS["dart-imports"],
       // reformat(writePromptsInterface(compilationResult)),

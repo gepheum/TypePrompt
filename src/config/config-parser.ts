@@ -79,6 +79,14 @@ const RawConfigSchema = z
     include: z.string().min(1, "must be a non-empty string"),
     gen: z
       .object({
+        csharp: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".cs"), `must end with '.cs'`),
+          })
+          .strict()
+          .optional(),
         dart: z
           .object({
             file: z
@@ -103,6 +111,22 @@ const RawConfigSchema = z
             file: z
               .string()
               .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+          })
+          .strict()
+          .optional(),
+        rust: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".rs"), `must end with '.rs'`),
+          })
+          .strict()
+          .optional(),
+        swift: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".swift"), `must end with '.swift'`),
           })
           .strict()
           .optional(),
