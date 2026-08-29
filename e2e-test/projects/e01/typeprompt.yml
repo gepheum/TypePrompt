@@ -7,5 +7,7 @@ gen:
     package: com.example.prompts_e01
   python:
     file: ../../python/gen/prompts_e01.py
+  swift:
+    file: ../../swift/Sources/TypePromptE2E/Gen/PromptsE01.swift
   typescript:
     file: ../../typescript/src/gen/prompts-e01.ts

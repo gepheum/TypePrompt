@@ -29,13 +29,17 @@ export function generateSwiftCode(
   return [
     {
       path: swiftConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, swiftConfig),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  config: { swiftNamespace: string },
+): string {
   const { templates } = compilationResult;
+  const { swiftNamespace } = config;
 
   return coalesceEmptyLines(
     [
@@ -44,6 +48,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       // STATIC_SNIPPETS["typescript-top-level"],
       reformat(
         [
+          `enum ${swiftNamespace} {`,
           // writeTemplateIdEnum(Object.values(templates)),
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
@@ -51,6 +56,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           // writeZodSchemas(compilationResult),
           // writeSpecDatatypes(),
           // writeTemplatesData(compilationResult),
+          "}",
         ].join("\n\n"),
       ),
       // STATIC_SNIPPETS["typescript-logic"],
@@ -193,12 +199,12 @@ function writeUserDefinedDatatypes(
     : "Nothing?";
   lines.push(
     `typealias Meta = ${metaType}\n`,
-    "/** Namespace containing the user-defined datatypes. */",
-    "object Schema {",
+    "/// Namespace containing the user-defined datatypes.",
+    "enum Schema {",
   );
   if (anyTypes(metaSchema)) {
     lines.push(
-      "object Meta {",
+      "enum Meta {",
       writeSchema(metaSchema, unionContext, {
         typePrefix: "Schema.Meta.",
         context: "meta",
@@ -214,7 +220,7 @@ function writeUserDefinedDatatypes(
       : `Schema.${namespaceName}.`;
     const sharedTypePrefix = typePrefixBase.concat("Shared.");
     if (anyTypes(namespace.schema)) {
-      lines.push("object Shared {");
+      lines.push("enum Shared {");
       lines.push(
         writeSchema(namespace.schema, unionContext, {
           context: "namespace",
@@ -226,7 +232,7 @@ function writeUserDefinedDatatypes(
     for (const template of namespace.templates) {
       const templateName = toSwiftName(template.template.name.text);
       const typePrefix = typePrefixBase.concat(templateName, ".");
-      lines.push(`object ${templateName} {`);
+      lines.push(`enum ${templateName} {`);
       lines.push(
         writeSchema(template.schema, unionContext, {
           context: "template",
@@ -239,7 +245,7 @@ function writeUserDefinedDatatypes(
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toSwiftName(capitalize(tool.tool.name.text));
       const typePrefix = typePrefixBase.concat(toolName, ".");
-      lines.push(`object ${toolName} {\n`);
+      lines.push(`enum ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, unionContext, {
           context: "tool",
@@ -256,7 +262,7 @@ function writeUserDefinedDatatypes(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const namespaceName = toSwiftName(namespace.name);
-      lines.push(`object ${namespaceName} {`);
+      lines.push(`enum ${namespaceName} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
@@ -375,14 +381,8 @@ function writeTypepromptInterface(
 ): string {
   const fields = Object.values(type.fields);
   const isDataClass = fields.length > 0;
-  const lines = [
-    "@OptIn(ExperimentalSerializationApi::class)",
-    "@Serializable",
-  ];
+  const lines: string[] = [];
   const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
-  if (discriminant) {
-    lines.push(`@SerialName("${discriminant}")`);
-  }
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
   lines.push(
     [
@@ -450,11 +450,9 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push("@Serializable");
       lines.push(`enum class ${typeName} {\n`);
       for (const member of members.members) {
         const swiftName = toSwiftName(toPascalCase(member.value));
-        lines.push(`@SerialName("${member.value}")`);
         lines.push(swiftName.concat(","));
       }
       lines.push("}");
@@ -462,7 +460,6 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
       lines.push(`sealed interface ${typeName} {`);
       for (const member of members.commonFields) {
         const name = toSwiftName(member.name);
@@ -471,36 +468,6 @@ function writeTypepromptUnion(
         lines.push(`val ${name}: ${type}`);
       }
       lines.push("}");
-
-      // Write the custom serializer for the union type based on the discriminant
-      lines.push(
-        "\n",
-        [
-          `private object ${typeName}_Serializer`,
-          `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-        ].join(" : "),
-        [
-          "override fun selectDeserializer(element: JsonElement)",
-          `DeserializationStrategy<${typeName}> {`,
-        ].join(": "),
-        [
-          `return when (val kind = element.jsonObject["${discriminator}"]`,
-          "jsonPrimitive?.contentOrNull) {",
-        ].join("?."),
-      );
-      for (const [discriminant, member] of Object.entries(members.members)) {
-        lines.push(
-          [
-            `"${discriminant}" -> `,
-            writeType(member.resolved, schema, options),
-            ".serializer()",
-          ].join(""),
-        );
-      }
-      lines.push(
-        "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
-      );
-      lines.push("}", "}", "}\n");
     }
   }
   return lines.join("\n");
