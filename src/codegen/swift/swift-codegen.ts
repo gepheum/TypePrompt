@@ -42,25 +42,23 @@ function writeAll(
   const { swiftNamespace } = config;
 
   return coalesceEmptyLines(
-    [
-      STATIC_SNIPPETS["swift-imports"],
-      // reformat(writePromptsInterface(compilationResult)),
-      // STATIC_SNIPPETS["typescript-top-level"],
-      reformat(
-        [
-          `enum ${swiftNamespace} {`,
-          // writeTemplateIdEnum(Object.values(templates)),
-          // writeToolsType(compilationResult),
-          // writeInputOutputTypes(compilationResult),
-          writeUserDefinedDatatypes(compilationResult),
-          // writeZodSchemas(compilationResult),
-          // writeSpecDatatypes(),
-          // writeTemplatesData(compilationResult),
-          "}",
-        ].join("\n\n"),
-      ),
-      // STATIC_SNIPPETS["typescript-logic"],
-    ].join("\n\n"),
+    reformat(
+      [
+        STATIC_SNIPPETS["swift-imports"],
+        // reformat(writePromptsInterface(compilationResult)),
+        // STATIC_SNIPPETS["typescript-top-level"],
+        `enum ${swiftNamespace} {`,
+        // writeTemplateIdEnum(Object.values(templates)),
+        // writeToolsType(compilationResult),
+        // writeInputOutputTypes(compilationResult),
+        writeUserDefinedDatatypes(compilationResult),
+        // writeZodSchemas(compilationResult),
+        // writeSpecDatatypes(),
+        // writeTemplatesData(compilationResult),
+        STATIC_SNIPPETS["swift-logic"],
+        "}",
+      ].join("\n\n"),
+    ),
   ).concat("\n");
 }
 
@@ -178,7 +176,6 @@ function writeAll(
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
 ): string {
-  const unionContext = makeUnionContext(compilationResult);
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
@@ -198,14 +195,13 @@ function writeUserDefinedDatatypes(
       )
     : "Nothing?";
   lines.push(
-    `typealias Meta = ${metaType}\n`,
     "/// Namespace containing the user-defined datatypes.",
     "enum Schema {",
   );
   if (anyTypes(metaSchema)) {
     lines.push(
       "enum Meta {",
-      writeSchema(metaSchema, unionContext, {
+      writeSchema(metaSchema, {
         typePrefix: "Schema.Meta.",
         context: "meta",
       }),
@@ -222,7 +218,7 @@ function writeUserDefinedDatatypes(
     if (anyTypes(namespace.schema)) {
       lines.push("enum Shared {");
       lines.push(
-        writeSchema(namespace.schema, unionContext, {
+        writeSchema(namespace.schema, {
           context: "namespace",
           typePrefix: sharedTypePrefix,
         }),
@@ -234,7 +230,7 @@ function writeUserDefinedDatatypes(
       const typePrefix = typePrefixBase.concat(templateName, ".");
       lines.push(`enum ${templateName} {`);
       lines.push(
-        writeSchema(template.schema, unionContext, {
+        writeSchema(template.schema, {
           context: "template",
           typePrefix,
           sharedTypePrefix,
@@ -247,7 +243,7 @@ function writeUserDefinedDatatypes(
       const typePrefix = typePrefixBase.concat(toolName, ".");
       lines.push(`enum ${toolName} {\n`);
       lines.push(
-        writeSchema(tool.schema, unionContext, {
+        writeSchema(tool.schema, {
           context: "tool",
           typePrefix,
           sharedTypePrefix,
@@ -343,22 +339,16 @@ type WriteSchemaOptions =
       readonly sharedTypePrefix: string;
     };
 
-function writeSchema(
-  schema: Schema,
-  unionContext: UnionContext,
-  options: WriteSchemaOptions,
-): string {
+function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const { typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
     lines.push(`// Exported as '${typePrefix}${name}'`);
-    lines.push(...wrapKDoc(namingHint.doc));
+    lines.push(...wrapDocComment(namingHint.doc));
     switch (type.kind) {
       case "interface": {
-        lines.push(
-          writeTypepromptInterface(type, name, schema, options, unionContext),
-        );
+        lines.push(writeTypepromptInterface(type, name, schema, options));
         break;
       }
       case "union": {
@@ -377,65 +367,21 @@ function writeTypepromptInterface(
   typeName: string,
   schema: Schema,
   options: WriteSchemaOptions,
-  unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
-  const isDataClass = fields.length > 0;
   const lines: string[] = [];
-  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
-  lines.push(
-    [
-      isDataClass ? "data class " : "class ",
-      typeName,
-      hasLiteralField ? " private constructor" : "",
-      "(",
-    ].join(""),
-  );
+  lines.push(`struct ${typeName} {`);
 
-  const writeCtorParams = (primary: boolean): void => {
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      if (isLiteralType(type) && !primary) continue;
-      const name = toSwiftName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      const override =
-        primary && unionContext.overrideFields.has(field) ? "override " : "";
-      const val = primary ? "val " : "";
-      lines.push(...wrapKDoc(field.doc));
-      lines.push(`${override}${val}${name}: ${fieldType},`);
-    }
-  };
-  writeCtorParams(true);
-  const interfaces = unionContext.intMemberToUnionRefs.get(type);
-  const implementsClause = interfaces
-    ? " : ".concat(
-        interfaces
-          .map((i) =>
-            i.startsWith(options.typePrefix)
-              ? i.slice(options.typePrefix.length)
-              : i,
-          )
-          .join(", "),
-      )
-    : "";
-  lines.push(`)${implementsClause} {`);
-  if (hasLiteralField) {
-    lines.push("constructor(");
-    writeCtorParams(false);
-    lines.push(") : this(");
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      const name = toSwiftName(field.name.text);
-      if (isLiteralType(type)) {
-        const literal = JSON.stringify(type.value);
-        lines.push(`${name} = ${literal},`);
-      } else {
-        lines.push(`${name} = ${name},`);
-      }
-    }
-    lines.push(")");
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    if (isLiteralType(type)) continue;
+    const name = toSwiftName(field.name.text);
+    const fieldType = writeType(type, schema, options);
+    lines.push(...wrapDocComment(field.doc));
+    lines.push(`let ${name}: ${fieldType}`);
   }
+
   lines.push("}");
   return lines.join("\n");
 }
@@ -450,23 +396,24 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum class ${typeName} {\n`);
+      lines.push(`enum ${typeName} {\n`);
       for (const member of members.members) {
         const swiftName = toSwiftName(toPascalCase(member.value));
-        lines.push(swiftName.concat(","));
+        lines.push(`case ${swiftName}`);
       }
       lines.push("}");
       break;
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      lines.push(`sealed interface ${typeName} {`);
-      for (const member of members.commonFields) {
-        const name = toSwiftName(member.name);
-        if (isLiteralType(member.type)) continue;
-        const type = writeType(member.type, schema, options);
-        lines.push(`val ${name}: ${type}`);
-      }
+      lines.push(`enum ${typeName} {`);
+      // TODO
+      // for (const member of members.commonFields) {
+      //   const name = toSwiftName(member.name);
+      //   if (isLiteralType(member.type)) continue;
+      //   const type = writeType(member.type, schema, options);
+      //   lines.push(`val ${name}: ${type}`);
+      // }
       lines.push("}");
     }
   }
@@ -485,10 +432,10 @@ function writeType(
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `List<${writtenElement}>`;
+      return `[${writtenElement}]`;
     }
     case "boolean-literal": {
-      return "Boolean";
+      return "Bool";
     }
     case "interface":
     case "union": {
@@ -512,11 +459,11 @@ function writeType(
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "Int";
+        return "Int32";
       } else {
         switch (type.primitive.text) {
           case "boolean":
-            return "Boolean";
+            return "Bool";
           case "string":
             return "String";
           case "number":
@@ -527,7 +474,7 @@ function writeType(
       }
     }
     case "record": {
-      return `Map<String, ${writeType(type.valueType, schema, options)}>`;
+      return `[String: ${writeType(type.valueType, schema, options)}]`;
     }
     case "shared-type-name":
     case "type-name": {
@@ -820,25 +767,22 @@ function makeUnionContext(
 function toSwiftName(name: string): string {
   return RESERVED_NAMES.has(name)
     ? name.concat("_")
-    : KOTLIN_HARD_KEYWORDS.has(name)
+    : SWIFT_HARD_KEYWORDS.has(name)
       ? `\`${name}\``
       : name;
 }
 
-function wrapKDoc(doc: string): readonly string[] {
+function wrapDocComment(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  if (lines.length === 1) {
-    return [`/** ${doc} */`];
-  } else {
-    return ["/**", ...lines.map((line) => (line ? ` * ${line}` : " *")), " */"];
-  }
+  return lines.map((l) => `/// ${l}`);
 }
 
 function reformat(code: string): string {
   const inputLines: readonly string[] = code.split("\n");
   const outputLines: string[] = [];
   let indent = "";
+  let continuationIndent = "";
   for (const inputLine of inputLines) {
     const line = inputLine.trim();
     if (
@@ -847,17 +791,25 @@ function reformat(code: string): string {
       line.startsWith("]") ||
       line.startsWith(">")
     ) {
-      indent = indent.slice(0, -4);
+      indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
+    outputLines.push(
+      line.length <= 0
+        ? line
+        : [indent, continuationIndent, starPrefix, line].join(""),
+    );
     if (
       line.endsWith("{") ||
       line.endsWith("(") ||
       line.endsWith("[") ||
       line.endsWith("<")
     ) {
-      indent = indent + "    ";
+      indent = indent + "  ";
+    } else if (line.endsWith(":")) {
+      continuationIndent = "  ";
+    } else if (!line.endsWith(",")) {
+      continuationIndent = "";
     }
   }
   return outputLines.join("\n");
@@ -899,52 +851,101 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "String",
 ] as const);
 
-const KOTLIN_HARD_KEYWORDS: ReadonlySet<string> = new Set([
-  "abstract",
-  "annotation",
-  "as",
-  "break",
-  "catch",
+const SWIFT_HARD_KEYWORDS: ReadonlySet<string> = new Set([
+  // Keywords used in declarations.
+  "associatedtype",
   "class",
-  "const",
-  "continue",
-  "crossinline",
-  "data",
-  "else",
+  "deinit",
   "enum",
-  "external",
-  "final",
-  "finally",
-  "for",
-  "fun",
-  "if",
+  "extension",
+  "fileprivate",
+  "func",
   "import",
-  "in",
-  "inline",
-  "interface",
+  "init",
+  "inout",
   "internal",
-  "is",
-  "lateinit",
-  "noinline",
-  "object",
+  "let",
   "open",
   "operator",
+  "private",
+  "protocol",
+  "public",
+  "rethrows",
+  "static",
+  "struct",
+  "subscript",
+  "typealias",
+  "var",
+
+  // Keywords used in statements.
+  "break",
+  "case",
+  "continue",
+  "default",
+  "defer",
+  "do",
+  "else",
+  "fallthrough",
+  "for",
+  "guard",
+  "if",
+  "in",
+  "repeat",
+  "return",
+  "switch",
+  "where",
+  "while",
+
+  // Keywords used in expressions and types.
+  "Any",
+  "as",
+  "catch",
+  "false",
+  "is",
+  "nil",
+  "Self",
+  "self",
+  "super",
+  "throw",
+  "throws",
+  "true",
+  "try",
+
+  // Contextual / special-purpose keywords that commonly conflict with identifiers.
+  "actor",
+  "any",
+  "associativity",
+  "async",
+  "await",
+  "borrowing",
+  "convenience",
+  "consuming",
+  "didSet",
+  "distributed",
+  "dynamic",
+  "final",
+  "get",
+  "indirect",
+  "infix",
+  "isolated",
+  "lazy",
+  "left",
+  "mutating",
+  "none",
+  "nonmutating",
+  "optional",
   "override",
   "package",
-  "private",
-  "protected",
-  "public",
-  "reified",
-  "return",
-  "sealed",
-  "super",
-  "suspend",
-  "this",
-  "throw",
-  "try",
-  "typealias",
-  "val",
-  "var",
-  "when",
-  "while",
+  "postfix",
+  "precedence",
+  "prefix",
+  "Protocol",
+  "required",
+  "right",
+  "set",
+  "some",
+  "Type",
+  "unowned",
+  "weak",
+  "willSet",
 ]);
