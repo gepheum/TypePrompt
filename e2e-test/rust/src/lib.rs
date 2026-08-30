@@ -1,3 +1,7 @@
+pub mod gen {
+    pub mod prompts_e01;
+}
+
 pub fn get_greeting() -> &'static str {
     "Hello, World!"
 }

@@ -450,11 +450,9 @@ function writeTypepromptUnion(
           return { quotedDiscriminant, caseName, type };
         },
       );
-
       for (const { caseName, type } of caseEntries) {
         lines.push(`${caseName}(${type}),`);
       }
-
       lines.push("}"); // enum
 
       lines.push(
@@ -499,8 +497,32 @@ function writeTypepromptUnion(
       lines.push(
         "}", // match
         "}", // fn deserialize
-        "}", // impl Deerialize
+        "}", // impl Deserialize
       );
+      const nonLiteralCommonFields = members.commonFields.filter(
+        (f) => !isLiteralType(f.type),
+      );
+
+      if (nonLiteralCommonFields.length > 0) {
+        lines.push("", `impl ${typeName} {`);
+        for (const member of nonLiteralCommonFields) {
+          const rustName = toRustName(toSnakeCase(member.name));
+          const type = writeType(member.type, schema, options);
+          if (member.doc) {
+            lines.push(...wrapRustDoc(member.doc));
+          }
+          lines.push(`pub fn ${rustName}(&self) -> &${type} {`);
+          lines.push("match self {");
+          for (const { caseName } of caseEntries) {
+            lines.push(`${typeName}::${caseName}(v) => &v.${rustName},`);
+          }
+          lines.push(
+            "}", // match
+            "}", // fn
+          );
+        }
+        lines.push("}"); // impl
+      }
     }
   }
   return lines.join("\n");

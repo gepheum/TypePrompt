@@ -133,6 +133,23 @@ pub mod schema {
       }
     }
 
+    impl EnumWithCommonFields {
+      /// x coordinate
+      pub fn x(&self) -> &i32 {
+        match self {
+          EnumWithCommonFields::NotSuccess(v) => &v.x,
+          EnumWithCommonFields::Success(v) => &v.x,
+        }
+      }
+      /// y coordinate
+      pub fn y(&self) -> &f64 {
+        match self {
+          EnumWithCommonFields::NotSuccess(v) => &v.y,
+          EnumWithCommonFields::Success(v) => &v.y,
+        }
+      }
+    }
+
     // Exported as 'schema::shared::EnumWithCommonFields_NotSuccess'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct EnumWithCommonFields_NotSuccess {
@@ -309,6 +326,21 @@ pub mod schema {
             Ok(MatrixUnion::KindEmpty(v))
           }
           other => Err(de::Error::unknown_variant(other, &["matrix", "empty"])),
+        }
+      }
+    }
+
+    impl MatrixUnion {
+      pub fn init(&self) -> &bool {
+        match self {
+          MatrixUnion::KindMatrix(v) => &v.init,
+          MatrixUnion::KindEmpty(v) => &v.init,
+        }
+      }
+      pub fn encode(&self) -> &bool {
+        match self {
+          MatrixUnion::KindMatrix(v) => &v.encode,
+          MatrixUnion::KindEmpty(v) => &v.encode,
         }
       }
     }
