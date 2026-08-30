@@ -24,6 +24,7 @@
   interface Map {}
   interface EncodeDefault {}
   interface Serializable {}
+  interface KindAdd {}
   interface AnyHolder {
     any: any;
   }

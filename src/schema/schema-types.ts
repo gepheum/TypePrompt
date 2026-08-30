@@ -253,6 +253,7 @@ export type DiscriminatedUnionMembers = {
    */
   readonly members: {
     [discriminant: string]: {
+      readonly discriminant: StringLiteral | BooleanLiteral;
       readonly resolved: Interface;
       readonly unresolved: UnionMemberType;
     };

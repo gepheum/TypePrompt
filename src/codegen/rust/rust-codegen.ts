@@ -14,7 +14,7 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
+import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateRustCode(
@@ -183,17 +183,17 @@ function writeUserDefinedDatatypes(
         metaSchema,
         {
           topLevel: true,
-          typePrefix: "Schema.Meta.",
+          typePrefix: "schema::meta.",
         },
       )
     : "Nothing?";
   lines.push(
     "/// Namespace containing the user-defined datatypes.",
-    "enum Schema {",
+    "pub mod schema {",
   );
   if (anyTypes(metaSchema)) {
     lines.push(
-      "enum Meta {",
+      "pub mod meta {",
       writeSchema(metaSchema, {
         typePrefix: "Schema.Meta.",
       }),
@@ -206,39 +206,39 @@ function writeUserDefinedDatatypes(
     const typePrefixBase = singleNamespace
       ? "Schema."
       : `Schema.${namespaceName}.`;
-    const sharedTypePrefix = "Schema.Shared.";
+    const sharedTypePrefix = "schema::shared::";
     if (anyTypes(namespace.schema)) {
-      lines.push("enum Shared {");
+      lines.push("pub mod shared {");
       lines.push(
         writeSchema(namespace.schema, {
           typePrefix: sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push("}\n"); // pub mod shared
     }
     for (const template of namespace.templates) {
       const templateName = toRustName(template.template.name.text);
       const typePrefix = typePrefixBase.concat(templateName, ".");
-      lines.push(`enum ${templateName} {`);
+      lines.push(`pub mod ${templateName} {`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push("}\n"); // pub mod ${templateName}
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toRustName(capitalize(tool.tool.name.text));
       const typePrefix = typePrefixBase.concat(toolName, ".");
-      lines.push(`enum ${toolName} {\n`);
+      lines.push(`pub mod ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push("}\n"); // pub mod ${toolName}
     }
   };
 
@@ -247,9 +247,9 @@ function writeUserDefinedDatatypes(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const namespaceName = toRustName(namespace.name);
-      lines.push(`enum ${namespaceName} {`);
+      lines.push(`pub mod ${namespaceName} {`);
       writeNamespace(namespace);
-      lines.push("}\n");
+      lines.push("}\n"); // pub mod ${namespaceName}
     }
   }
   lines.push("}\n");
@@ -329,7 +329,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
     lines.push(`// Exported as '${typePrefix}${name}'`);
-    lines.push(...wrapDocComment(namingHint.doc));
+    lines.push(...wrapRustDoc(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(writeTypepromptInterface(type, name, schema, options));
@@ -355,39 +355,47 @@ function writeTypepromptInterface(
   const fields = Object.values(type.fields);
   const lines: string[] = [];
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
-  lines.push(`struct ${typeName} : Codable {`);
 
+  lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
+  lines.push(`struct ${typeName} {`);
   for (const field of fields) {
     const { type } = field;
-    const name = toRustName(field.name.text);
+    if (isLiteralType(type)) continue;
+    const name = field.name.text;
+    const rustName = toRustName(toSnakeCase(name));
     const fieldType = writeType(type, schema, options);
-    lines.push(...wrapDocComment(field.doc));
-    lines.push(`let ${name}: ${fieldType}`);
+    if (name !== rustName && !hasLiteralField) {
+      lines.push(`#[serde(rename = "${name}")]`);
+    }
+    lines.push(...wrapRustDoc(field.doc));
+    lines.push(`pub ${rustName}: ${fieldType},`);
   }
+  lines.push("}"); // struct
 
   if (hasLiteralField) {
-    lines.push("", "init(");
+    lines.push(
+      "",
+      `impl Serialize for ${typeName} {`,
+      "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {",
+      `let mut state = serializer.serialize_struct("${typeName}", ${fields.length})?;`,
+    );
     for (const field of fields) {
       const { type } = field;
-      if (isLiteralType(type)) continue;
-      const name = toRustName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      lines.push(`${name}: ${fieldType},`);
-    }
-    lines.push(") {");
-    for (const field of fields) {
-      const name = toRustName(field.name.text);
-      const { type } = field;
+      const name = field.name.text;
       if (isLiteralType(type)) {
-        lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
+        lines.push(
+          `state.serialize_field("${name}", ${JSON.stringify(type.value)})?;`,
+        );
       } else {
-        lines.push(`self.${name} = ${name}`);
+        const rustName = toRustName(toSnakeCase(name));
+        lines.push(`state.serialize_field("${name}", &self.${rustName})?;`);
       }
     }
-    lines.push("}");
+    lines.push("state.end()");
+    lines.push("}"); // fn serialize
+    lines.push("}"); // impl Serialize
   }
 
-  lines.push("}");
   return lines.join("\n");
 }
 
@@ -399,114 +407,100 @@ function writeTypepromptUnion(
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
+  lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
+  lines.push(`enum ${typeName} {\n`);
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum ${typeName} : String, Codable {\n`);
       for (const member of members.members) {
-        const rustName = toRustName(toCamelCase(member.value));
-        lines.push(`case ${rustName} = ${JSON.stringify(member.value)}`);
+        const rustName = toRustName(toPascalCase(member.value));
+        lines.push(`#[serde(rename = "${member.value}")]`);
+        lines.push(rustName.concat(","));
       }
-      lines.push("}");
+      lines.push("}"); // enum
       break;
     }
     case "interfaces": {
-      const { discriminants, discriminator } = members;
-      lines.push(`indirect enum ${typeName} : Codable {`);
-      const caseEntries = Object.entries(members.members).map(
-        ([discriminant, member]) => {
+      const { discriminator } = members;
+      const caseEntries = Object.values(members.members).map(
+        (
+          member,
+        ): {
+          readonly quotedDiscriminant: string;
+          readonly caseName: string;
+          readonly type: string;
+        } => {
+          const { discriminant } = member;
           const caseName = toRustName(
             ((): string => {
-              switch (discriminants.type) {
-                case "string":
-                  return discriminator.concat(toPascalCase(discriminant));
-                case "boolean":
-                  return discriminant === "true"
-                    ? discriminator
-                    : "not".concat(capitalize(discriminator));
+              switch (discriminant.kind) {
+                case "string-literal": {
+                  return capitalize(discriminator).concat(
+                    toPascalCase(discriminant.value),
+                  );
+                }
+                case "boolean-literal":
+                  return discriminant.value === true
+                    ? capitalize(discriminator)
+                    : "Not".concat(capitalize(discriminator));
               }
             })(),
           );
           const type = writeType(member.resolved, schema, options);
-          return { discriminant, caseName, type };
+          const quotedDiscriminant = JSON.stringify(discriminant.value);
+          return { quotedDiscriminant, caseName, type };
         },
       );
 
       for (const { caseName, type } of caseEntries) {
-        lines.push(`case ${caseName}(${type})`);
+        lines.push(`${caseName}(${type}),`);
       }
 
-      for (const member of members.commonFields) {
-        if (isLiteralType(member.type)) continue;
-        const name = toRustName(member.name);
-        const type = writeType(member.type, schema, options);
-        lines.push("");
-        if (member.doc) {
-          lines.push(...wrapDocComment(member.doc));
-        }
-        lines.push(`var ${name}: ${type} {`);
-        lines.push("switch self {");
-        for (const { caseName } of caseEntries) {
-          lines.push(`case .${caseName}(let value):`);
-          lines.push(`return value.${name}`);
-        }
-        lines.push("}", "}");
-      }
-
-      lines.push("", "func encode(to encoder: any Encoder) throws {");
-      lines.push("var container = encoder.singleValueContainer()");
-      lines.push("switch self {");
-      for (const { caseName } of caseEntries) {
-        lines.push(`case .${caseName}(let value):`);
-        lines.push("try container.encode(value)");
-      }
-      lines.push("}", "}");
+      lines.push("}"); // enum
 
       lines.push(
         "",
-        "private enum DiscriminatorCodingKeys: String, CodingKey {",
-        `case discriminator = "${discriminator}"`,
-        "}",
-        "",
-        "init(from decoder: any Decoder) throws {",
-        "let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)",
+        `impl Serialize for ${typeName} {`,
+        "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : Serializer {",
+        "match self {",
+      );
+      for (const { caseName } of caseEntries) {
+        lines.push(`${typeName}::${caseName}(v) => v.serialize(serializer),`);
+      }
+      lines.push(
+        "}", // match
+        "}", // fn serialize
+        "}", // impl Serialize
       );
 
-      if (discriminants.type === "string") {
+      lines.push(
+        "",
+        `impl<'de> Deserialize<'de> for ${typeName} {`,
+        "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {",
+        "let value = serde::Value::deserialize(deserializer)?;",
+        `let discriminant = value.get("${discriminator}")`,
+        ".and_then(serde::Value::as_str)",
+        `.ok_or_else(|| de::Error::missing_field("${discriminator}"))?;`,
+        "match discriminant {",
+      );
+      for (const { caseName, quotedDiscriminant, type } of caseEntries) {
+        lines.push(`${quotedDiscriminant} => {`);
         lines.push(
-          "let discriminator = try container.decode(String.self, forKey: .discriminator)",
-          "switch discriminator {",
+          `let v = ${type}::deserialize(value).map_err(de::Error::custom)?;`,
         );
-        for (const { discriminant, caseName, type } of caseEntries) {
-          lines.push(
-            `case "${discriminant}":`,
-            `self = .${caseName}(try ${type}(from: decoder))`,
-          );
-        }
-        lines.push(
-          "default:",
-          "throw DecodingError.dataCorrupted(",
-          "DecodingError.Context(",
-          "codingPath: decoder.codingPath,",
-          'debugDescription: "Unknown discriminator: \\(discriminator)"',
-          ")",
-          ")",
-          "}",
-        );
-      } else {
-        lines.push(
-          "let discriminator = try container.decode(Bool.self, forKey: .discriminator)",
-          "switch discriminator {",
-        );
-        for (const { discriminant, caseName, type } of caseEntries) {
-          lines.push(
-            `case ${discriminant}:`,
-            `self = .${caseName}(try ${type}(from: decoder))`,
-          );
-        }
-        lines.push("}"); // switch
+        lines.push(`Ok(${typeName}::${caseName}(v))`);
+        lines.push("}");
       }
-      lines.push("}");
-      lines.push("}");
+      const discriminants = caseEntries
+        .map((e) => e.quotedDiscriminant)
+        .join(", ");
+      lines.push(
+        `other => Err(de::Error::unknown_variant(other, &[${discriminants}])),`,
+      );
+      lines.push(
+        "}", // match
+        "}", // fn deserialize
+        "}", // impl Deerialize
+      );
     }
   }
   return lines.join("\n");
@@ -519,15 +513,15 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return "JsonElement";
+      return "serde_json::Value";
     }
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `[${writtenElement}]`;
+      return `Vec<${writtenElement}>`;
     }
     case "boolean-literal": {
-      return "Bool";
+      return "bool";
     }
     case "interface":
     case "union": {
@@ -544,31 +538,32 @@ function writeType(
         if (topLevel) {
           return sharedTypePrefix!.concat(makeNameFromHint(namingHint!));
         } else {
-          return "Shared.".concat(makeNameFromHint(namingHint!));
+          return "shared::".concat(makeNameFromHint(namingHint!));
         }
       }
     }
     case "optional": {
-      return writeType(type.innerType, schema, options).concat("?");
+      const writtenInner = writeType(type.innerType, schema, options);
+      return `Option<${writtenInner}>`;
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "Int32";
+        return "i32";
       } else {
         switch (type.primitive.text) {
           case "boolean":
-            return "Bool";
+            return "bool";
           case "string":
             return "String";
           case "number":
-            return "Double";
+            return "f64";
           default:
             throw new Error(type.primitive.text satisfies never);
         }
       }
     }
     case "record": {
-      return `[String: ${writeType(type.valueType, schema, options)}]`;
+      return `HashMap<String, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
@@ -793,14 +788,12 @@ function makeNameFromHint(hint: NamingHint): string {
 // }
 
 function toRustName(name: string): string {
-  return RESERVED_NAMES.has(name)
+  return RESERVED_NAMES.has(name) || RUST_HARD_KEYWORDS.has(name)
     ? name.concat("_")
-    : RUST_HARD_KEYWORDS.has(name)
-      ? `\`${name}\``
-      : name;
+    : name;
 }
 
-function wrapDocComment(doc: string): readonly string[] {
+function wrapRustDoc(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
   return lines.map((l) => `/// ${l}`);
@@ -863,113 +856,73 @@ function coalesceEmptyLines(code: string): string {
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
-  "Bool",
-  "Codable",
-  "Decoder",
-  "DecodingError",
-  "Double",
-  "Int32",
-  "JsonElement",
-  "Shared",
+  "Debug",
+  "Deserialize",
+  "HashMap",
+  "Option",
+  "PartialEq",
+  "Result",
+  "Serialize",
   "String",
-  "self",
+  "Vec",
+  "derive",
+  "serde",
+  "serde_json",
 ] as const);
 
 const RUST_HARD_KEYWORDS: ReadonlySet<string> = new Set([
-  // Keywords used in declarations.
-  "associatedtype",
-  "class",
-  "deinit",
+  "Self",
+  // Strict keywords
+  "as",
+  "break",
+  "const",
+  "continue",
+  "crate",
+  "else",
   "enum",
-  "extension",
-  "fileprivate",
-  "func",
-  "import",
-  "init",
-  "inout",
-  "internal",
+  "extern",
+  "false",
+  "fn",
+  "for",
+  "if",
+  "impl",
+  "in",
   "let",
-  "open",
-  "operator",
-  "private",
-  "protocol",
-  "public",
-  "rethrows",
+  "loop",
+  "match",
+  "mod",
+  "move",
+  "mut",
+  "pub",
+  "ref",
+  "return",
+  "self",
   "static",
   "struct",
-  "subscript",
-  "typealias",
-  "var",
-
-  // Keywords used in statements.
-  "break",
-  "case",
-  "continue",
-  "default",
-  "defer",
-  "do",
-  "else",
-  "fallthrough",
-  "for",
-  "guard",
-  "if",
-  "in",
-  "repeat",
-  "return",
-  "switch",
+  "super",
+  "trait",
+  "true",
+  "type",
+  "unsafe",
+  "use",
   "where",
   "while",
-
-  // Keywords used in expressions and types.
-  "Any",
-  "as",
-  "catch",
-  "false",
-  "is",
-  "nil",
-  "Self",
-  "self",
-  "super",
-  "throw",
-  "throws",
-  "true",
-  "try",
-
-  // Contextual / special-purpose keywords that commonly conflict with identifiers.
-  "actor",
-  "any",
-  "associativity",
+  // Reserved keywords (not yet used but reserved)
+  "abstract",
+  "become",
+  "box",
+  "do",
+  "final",
+  "macro",
+  "override",
+  "priv",
+  "typeof",
+  "unsized",
+  "virtual",
+  "yield",
+  // 2018+ keywords
   "async",
   "await",
-  "borrowing",
-  "convenience",
-  "consuming",
-  "didSet",
-  "distributed",
-  "dynamic",
-  "final",
-  "get",
-  "indirect",
-  "infix",
-  "isolated",
-  "lazy",
-  "left",
-  "mutating",
-  "none",
-  "nonmutating",
-  "optional",
-  "override",
-  "package",
-  "postfix",
-  "precedence",
-  "prefix",
-  "Protocol",
-  "required",
-  "right",
-  "set",
-  "some",
-  "Type",
-  "unowned",
-  "weak",
-  "willSet",
+  "dyn",
+  "try",
 ]);

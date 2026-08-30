@@ -240,6 +240,7 @@ function makeInterfaceUnionMembers(
         {
           resolved: info.resolved,
           unresolved: info.unresolved,
+          discriminant: info.discriminant,
         },
       ]),
     ),
