@@ -354,35 +354,6 @@ function writeTypepromptInterface(
     lines.push(`${className}();`);
   }
   lines.push("");
-  if (hasNonLiteralFields) {
-    lines.push(`${className} copyWith({`);
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      if (isLiteralType(type)) continue;
-      const name = toDartName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      const paramType =
-        fieldType.endsWith("?") || fieldType === "dynamic"
-          ? fieldType
-          : `${fieldType}?`;
-      lines.push(`${paramType} ${name},`);
-    }
-    lines.push("}) {");
-    lines.push(`return ${className}(`);
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      if (isLiteralType(type)) continue;
-      const name = toDartName(field.name.text);
-      lines.push(`${name}: ${name} ?? this.${name},`);
-    }
-    lines.push(");");
-    lines.push("}");
-  } else {
-    lines.push(`${className} copyWith() {`);
-    lines.push(`return ${className}();`);
-    lines.push("}");
-  }
-  lines.push("");
   if (interfaces) {
     lines.push("@override");
   }
