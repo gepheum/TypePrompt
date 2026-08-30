@@ -29,6 +29,7 @@ e2e-test/python/**/*.pyc
 e2e-test/rust/target/
 
 e2e-test/swift/.build/
+e2e-test/swift/Sources/TypePromptE2E/Gen/
 
 e2e-test/typescript/src/gen
 
