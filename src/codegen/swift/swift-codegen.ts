@@ -419,24 +419,23 @@ function writeTypepromptUnion(
     case "interfaces": {
       const { discriminants, discriminator } = members;
       lines.push(`indirect enum ${typeName} : Codable {`);
-      const caseEntries = Object.entries(members.members).map(
-        ([discriminant, member]) => {
-          const caseName = toSwiftName(
-            ((): string => {
-              switch (discriminants.type) {
-                case "string":
-                  return discriminator.concat(toPascalCase(discriminant));
-                case "boolean":
-                  return discriminant === "true"
-                    ? discriminator
-                    : "not".concat(capitalize(discriminator));
-              }
-            })(),
-          );
-          const type = writeType(member.resolved, schema, options);
-          return { discriminant, caseName, type };
-        },
-      );
+      const caseEntries = Object.values(members.members).map((member) => {
+        const { discriminant } = member;
+        const caseName = toSwiftName(
+          ((): string => {
+            switch (discriminant.kind) {
+              case "string-literal":
+                return discriminator.concat(toPascalCase(discriminant.value));
+              case "boolean-literal":
+                return discriminant.value
+                  ? discriminator
+                  : "not".concat(capitalize(discriminator));
+            }
+          })(),
+        );
+        const type = writeType(member.resolved, schema, options);
+        return { discriminant, caseName, type };
+      });
 
       for (const { caseName, type } of caseEntries) {
         lines.push(`case ${caseName}(${type})`);

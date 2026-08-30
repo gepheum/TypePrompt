@@ -478,10 +478,11 @@ function writeTypepromptUnion(
         `factory ${className}.fromJson(Map<String, dynamic> json) {`,
         `switch (json['${discriminator}']) {`,
       );
-      for (const [discriminant, member] of Object.entries(members.members)) {
+      for (const member of Object.values(members.members)) {
+        const quotedDiscriminant = JSON.stringify(member.discriminant.value);
         const memberType = resolveType(member.resolved, schema);
         lines.push(
-          `case "${discriminant}":`,
+          `case ${quotedDiscriminant}:`,
           [
             "return ",
             writeType(memberType, schema, options),
@@ -931,16 +932,16 @@ function makeUnionContext(
       const members = schema.unionToMembers.get(type)!;
       if (members.kind !== "interfaces") continue;
       const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
-      for (const [discriminant, member] of Object.entries(members.members)) {
-        const { resolved } = member;
+      for (const member of Object.values(members.members)) {
+        const { discriminant, resolved } = member;
         const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];
         if (unionRefs.length <= 0) {
           intMemberToUnionRefs.set(resolved, unionRefs);
         }
         unionRefs.push(unionRef);
 
-        if (members.discriminants.type === "string") {
-          intMemberToStringDiscriminant.set(resolved, discriminant);
+        if (discriminant.kind === "string-literal") {
+          intMemberToStringDiscriminant.set(resolved, discriminant.value);
         }
 
         for (const commonField of members.commonFields) {
