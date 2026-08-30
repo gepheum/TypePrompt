@@ -434,7 +434,8 @@ function writeTypepromptUnion(
           })(),
         );
         const type = writeType(member.resolved, schema, options);
-        return { discriminant, caseName, type };
+        const quotedDiscriminant = JSON.stringify(discriminant.value);
+        return { quotedDiscriminant, caseName, type };
       });
 
       for (const { caseName, type } of caseEntries) {
@@ -482,9 +483,9 @@ function writeTypepromptUnion(
           "let discriminator = try container.decode(String.self, forKey: .discriminator)",
           "switch discriminator {",
         );
-        for (const { discriminant, caseName, type } of caseEntries) {
+        for (const { quotedDiscriminant, caseName, type } of caseEntries) {
           lines.push(
-            `case "${discriminant}":`,
+            `case ${quotedDiscriminant}:`,
             `self = .${caseName}(try ${type}(from: decoder))`,
           );
         }
@@ -503,9 +504,9 @@ function writeTypepromptUnion(
           "let discriminator = try container.decode(Bool.self, forKey: .discriminator)",
           "switch discriminator {",
         );
-        for (const { discriminant, caseName, type } of caseEntries) {
+        for (const { quotedDiscriminant, caseName, type } of caseEntries) {
           lines.push(
-            `case ${discriminant}:`,
+            `case ${quotedDiscriminant}:`,
             `self = .${caseName}(try ${type}(from: decoder))`,
           );
         }
