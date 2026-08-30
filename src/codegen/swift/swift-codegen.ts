@@ -4,7 +4,6 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import type {
-  Field,
   FieldType,
   Interface,
   NamingHint,

@@ -4,7 +4,6 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import type {
-  Field,
   FieldType,
   Interface,
   NamingHint,
@@ -34,9 +33,7 @@ export function generateRustCode(
   ];
 }
 
-function writeAll(
-  compilationResult: ValidCompilationResult,
-): string {
+function writeAll(compilationResult: ValidCompilationResult): string {
   const { templates } = compilationResult;
 
   return coalesceEmptyLines(
