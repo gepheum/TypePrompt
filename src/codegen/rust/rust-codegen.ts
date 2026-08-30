@@ -3,8 +3,19 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
-import type { Schema, Type } from "../../schema/schema-types.js";
-import { capitalize } from "../../util/casing.js";
+import type {
+  Field,
+  FieldType,
+  Interface,
+  NamingHint,
+  Schema,
+  TypeNameView,
+  Union,
+} from "../../schema/schema-types.js";
+import { isLiteralType } from "../../schema/schema-utils.js";
+import { resolveType } from "../../schema/type-resolver.js";
+import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
+import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateRustCode(
@@ -23,27 +34,27 @@ export function generateRustCode(
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+): string {
   const { templates } = compilationResult;
 
   return coalesceEmptyLines(
-    [
-      // STATIC_SNIPPETS["typescript-imports"],
-      // reformat(writePromptsInterface(compilationResult)),
-      // STATIC_SNIPPETS["typescript-top-level"],
-      reformat(
-        [
-          // writeTemplateIdEnum(Object.values(templates)),
-          // writeToolsType(compilationResult),
-          // writeInputOutputTypes(compilationResult),
-          writeUserDefinedDatatypes(compilationResult),
-          // writeZodSchemas(compilationResult),
-          // writeSpecDatatypes(),
-          // writeTemplatesData(compilationResult),
-        ].join("\n\n"),
-      ),
-      // STATIC_SNIPPETS["typescript-logic"],
-    ].join("\n\n"),
+    reformat(
+      [
+        STATIC_SNIPPETS["rust-imports"],
+        // reformat(writePromptsInterface(compilationResult)),
+        // STATIC_SNIPPETS["typescript-top-level"],
+        // writeTemplateIdEnum(Object.values(templates)),
+        // writeToolsType(compilationResult),
+        // writeInputOutputTypes(compilationResult),
+        writeUserDefinedDatatypes(compilationResult),
+        // writeZodSchemas(compilationResult),
+        // writeSpecDatatypes(),
+        // writeTemplatesData(compilationResult),
+        STATIC_SNIPPETS["rust-logic"],
+      ].join("\n\n"),
+    ),
   ).concat("\n");
 }
 
@@ -164,38 +175,72 @@ function writeUserDefinedDatatypes(
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
-  const lines = [
-    "export type Meta = $.Meta.Meta;\n",
-    "/** Namespace containing the user-defined datatypes. */",
-    "export namespace $ {",
-    "export namespace Meta {",
-  ];
+  const lines: string[] = [];
+
+  const metaType = anyTypes(metaSchema)
+    ? writeType(
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "Schema.Meta.",
+        },
+      )
+    : "Nothing?";
+  lines.push(
+    "/// Namespace containing the user-defined datatypes.",
+    "enum Schema {",
+  );
   if (anyTypes(metaSchema)) {
-    lines.push(writeSchema(metaSchema, { sharedTypePrefix: "Never." }));
-  } else {
-    lines.push("export type Meta = never;\n");
+    lines.push(
+      "enum Meta {",
+      writeSchema(metaSchema, {
+        typePrefix: "Schema.Meta.",
+      }),
+      "}\n",
+    );
   }
-  lines.push("}\n");
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const namespaceName = toRustName(namespace.name);
+    const typePrefixBase = singleNamespace
+      ? "Schema."
+      : `Schema.${namespaceName}.`;
+    const sharedTypePrefix = "Schema.Shared.";
     if (anyTypes(namespace.schema)) {
-      lines.push("export namespace Shared {");
-      lines.push(writeSchema(namespace.schema, { sharedTypePrefix: "Never." }));
+      lines.push("enum Shared {");
+      lines.push(
+        writeSchema(namespace.schema, {
+          typePrefix: sharedTypePrefix,
+        }),
+      );
       lines.push("}\n");
     }
-    const sharedTypePrefix = singleNamespace
-      ? "$.Shared."
-      : `$.${namespace.name}.Shared.`;
     for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
-      lines.push(`export namespace ${templateName} {`);
-      lines.push(writeSchema(template.schema, { sharedTypePrefix }));
+      const templateName = toRustName(template.template.name.text);
+      const typePrefix = typePrefixBase.concat(templateName, ".");
+      lines.push(`enum ${templateName} {`);
+      lines.push(
+        writeSchema(template.schema, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
+      );
       lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      lines.push(`export namespace ${capitalize(toolName)} {\n`);
-      lines.push(writeSchema(tool.schema, { sharedTypePrefix }));
+      const toolName = toRustName(capitalize(tool.tool.name.text));
+      const typePrefix = typePrefixBase.concat(toolName, ".");
+      lines.push(`enum ${toolName} {\n`);
+      lines.push(
+        writeSchema(tool.schema, {
+          typePrefix,
+          sharedTypePrefix,
+        }),
+      );
       lines.push("}\n");
     }
   };
@@ -204,7 +249,8 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      lines.push(`export namespace ${namespace.name} {`);
+      const namespaceName = toRustName(namespace.name);
+      lines.push(`enum ${namespaceName} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
@@ -274,89 +320,294 @@ function writeUserDefinedDatatypes(
 //   );
 // }
 
-function writeSchema(
-  schema: Schema,
-  options: { readonly sharedTypePrefix: string },
-): string {
+type WriteSchemaOptions = {
+  readonly topLevel?: true;
+  readonly typePrefix: string;
+  readonly sharedTypePrefix?: string;
+};
+
+function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
+  const { typePrefix } = options;
   const lines: string[] = [];
-  for (const typeDeclaration of Object.values(schema.typeDeclarations)) {
-    const name = typeDeclaration.name.text;
-    const jsdoc = wrapJsdoc(typeDeclaration.doc);
-    const type = writeType(typeDeclaration.valueType, options);
-    lines.push(`${jsdoc}export type ${name} = ${type};\n`);
+  for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
+    const name = makeNameFromHint(namingHint);
+    lines.push(`// Exported as '${typePrefix}${name}'`);
+    lines.push(...wrapDocComment(namingHint.doc));
+    switch (type.kind) {
+      case "interface": {
+        lines.push(writeTypepromptInterface(type, name, schema, options));
+        break;
+      }
+      case "union": {
+        lines.push(writeTypepromptUnion(type, name, schema, options));
+        break;
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+function writeTypepromptInterface(
+  type: Interface,
+  typeName: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  const fields = Object.values(type.fields);
+  const lines: string[] = [];
+  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
+  lines.push(`struct ${typeName} : Codable {`);
+
+  for (const field of fields) {
+    const { type } = field;
+    const name = toRustName(field.name.text);
+    const fieldType = writeType(type, schema, options);
+    lines.push(...wrapDocComment(field.doc));
+    lines.push(`let ${name}: ${fieldType}`);
+  }
+
+  if (hasLiteralField) {
+    lines.push("", "init(");
+    for (const field of fields) {
+      const { type } = field;
+      if (isLiteralType(type)) continue;
+      const name = toRustName(field.name.text);
+      const fieldType = writeType(type, schema, options);
+      lines.push(`${name}: ${fieldType},`);
+    }
+    lines.push(") {");
+    for (const field of fields) {
+      const name = toRustName(field.name.text);
+      const { type } = field;
+      if (isLiteralType(type)) {
+        lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
+      } else {
+        lines.push(`self.${name} = ${name}`);
+      }
+    }
+    lines.push("}");
+  }
+
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function writeTypepromptUnion(
+  type: Union,
+  typeName: string,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  const members = schema.unionToMembers.get(type)!;
+  const lines: string[] = [];
+  switch (members.kind) {
+    case "strings": {
+      lines.push(`enum ${typeName} : String, Codable {\n`);
+      for (const member of members.members) {
+        const rustName = toRustName(toCamelCase(member.value));
+        lines.push(`case ${rustName} = ${JSON.stringify(member.value)}`);
+      }
+      lines.push("}");
+      break;
+    }
+    case "interfaces": {
+      const { discriminants, discriminator } = members;
+      lines.push(`indirect enum ${typeName} : Codable {`);
+      const caseEntries = Object.entries(members.members).map(
+        ([discriminant, member]) => {
+          const caseName = toRustName(
+            ((): string => {
+              switch (discriminants.type) {
+                case "string":
+                  return discriminator.concat(toPascalCase(discriminant));
+                case "boolean":
+                  return discriminant === "true"
+                    ? discriminator
+                    : "not".concat(capitalize(discriminator));
+              }
+            })(),
+          );
+          const type = writeType(member.resolved, schema, options);
+          return { discriminant, caseName, type };
+        },
+      );
+
+      for (const { caseName, type } of caseEntries) {
+        lines.push(`case ${caseName}(${type})`);
+      }
+
+      for (const member of members.commonFields) {
+        if (isLiteralType(member.type)) continue;
+        const name = toRustName(member.name);
+        const type = writeType(member.type, schema, options);
+        lines.push("");
+        if (member.doc) {
+          lines.push(...wrapDocComment(member.doc));
+        }
+        lines.push(`var ${name}: ${type} {`);
+        lines.push("switch self {");
+        for (const { caseName } of caseEntries) {
+          lines.push(`case .${caseName}(let value):`);
+          lines.push(`return value.${name}`);
+        }
+        lines.push("}", "}");
+      }
+
+      lines.push("", "func encode(to encoder: any Encoder) throws {");
+      lines.push("var container = encoder.singleValueContainer()");
+      lines.push("switch self {");
+      for (const { caseName } of caseEntries) {
+        lines.push(`case .${caseName}(let value):`);
+        lines.push("try container.encode(value)");
+      }
+      lines.push("}", "}");
+
+      lines.push(
+        "",
+        "private enum DiscriminatorCodingKeys: String, CodingKey {",
+        `case discriminator = "${discriminator}"`,
+        "}",
+        "",
+        "init(from decoder: any Decoder) throws {",
+        "let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)",
+      );
+
+      if (discriminants.type === "string") {
+        lines.push(
+          "let discriminator = try container.decode(String.self, forKey: .discriminator)",
+          "switch discriminator {",
+        );
+        for (const { discriminant, caseName, type } of caseEntries) {
+          lines.push(
+            `case "${discriminant}":`,
+            `self = .${caseName}(try ${type}(from: decoder))`,
+          );
+        }
+        lines.push(
+          "default:",
+          "throw DecodingError.dataCorrupted(",
+          "DecodingError.Context(",
+          "codingPath: decoder.codingPath,",
+          'debugDescription: "Unknown discriminator: \\(discriminator)"',
+          ")",
+          ")",
+          "}",
+        );
+      } else {
+        lines.push(
+          "let discriminator = try container.decode(Bool.self, forKey: .discriminator)",
+          "switch discriminator {",
+        );
+        for (const { discriminant, caseName, type } of caseEntries) {
+          lines.push(
+            `case ${discriminant}:`,
+            `self = .${caseName}(try ${type}(from: decoder))`,
+          );
+        }
+        lines.push("}"); // switch
+      }
+      lines.push("}");
+      lines.push("}");
+    }
   }
   return lines.join("\n");
 }
 
 function writeType(
-  type: Type,
-  options: {
-    readonly sharedTypePrefix: string;
-  },
+  type: FieldType | TypeNameView,
+  schema: Schema,
+  options: WriteSchemaOptions,
 ): string {
-  return "";
-  // switch (type.kind) {
-  //   case "any": {
-  //     return "unknown";
-  //   }
-  //   case "array": {
-  //     const { elementType } = type;
-  //     const writtenElement = writeType(elementType, options);
-  //     if (elementType.kind === "union") {
-  //       return `readonly (${writtenElement})[]`;
-  //     } else {
-  //       return `readonly ${writtenElement}[]`;
-  //     }
-  //   }
-  //   case "boolean-literal": {
-  //     return type.span.text satisfies "true" | "false";
-  //   }
-  //   case "interface": {
-  //     const fields = Object.entries(type.fields);
-  //     if (fields.length <= 0) {
-  //       return "ReadonlyRecord<string, never>";
-  //     }
-  //     let result = "{\n";
-  //     for (const [fieldName, field] of fields) {
-  //       result += [
-  //         wrapJsdoc(field.doc),
-  //         "readonly ",
-  //         fieldName,
-  //         field.optional ? "?: " : ": ",
-  //         writeType(field.type, options),
-  //         ";\n",
-  //       ].join("");
-  //     }
-  //     result += "}";
-  //     return result;
-  //   }
-  //   case "primitive": {
-  //     if (type.primitive.text === "integer") {
-  //       return "number";
-  //     } else {
-  //       return type.primitive.text;
-  //     }
-  //   }
-  //   case "record": {
-  //     return `{ [${type.keyName}: string]: ${writeType(type.valueType, options)} }`;
-  //   }
-  //   case "shared-type-name": {
-  //     return options.sharedTypePrefix.concat(type.name.text);
-  //   }
-  //   case "string-literal": {
-  //     return type.quotedName.text;
-  //   }
-  //   case "type-name": {
-  //     return type.name.text;
-  //   }
-  //   case "union": {
-  //     return "(\n"
-  //       .concat(
-  //         type.members.map((m) => `| ${writeType(m, options)}\n`).join(""),
-  //       )
-  //       .concat(")");
-  //   }
-  // }
+  switch (type.kind) {
+    case "any": {
+      return "JsonElement";
+    }
+    case "array": {
+      const { elementType } = type;
+      const writtenElement = writeType(elementType, schema, options);
+      return `[${writtenElement}]`;
+    }
+    case "boolean-literal": {
+      return "Bool";
+    }
+    case "interface":
+    case "union": {
+      const { sharedTypePrefix, topLevel, typePrefix } = options;
+      let namingHint = schema.namingHints.defaultScope.get(type);
+      if (namingHint) {
+        if (topLevel) {
+          return typePrefix.concat(makeNameFromHint(namingHint));
+        } else {
+          return makeNameFromHint(namingHint!);
+        }
+      } else {
+        namingHint = schema.namingHints.shared.get(type);
+        if (topLevel) {
+          return sharedTypePrefix!.concat(makeNameFromHint(namingHint!));
+        } else {
+          return "Shared.".concat(makeNameFromHint(namingHint!));
+        }
+      }
+    }
+    case "optional": {
+      return writeType(type.innerType, schema, options).concat("?");
+    }
+    case "primitive": {
+      if (type.primitive.text === "integer") {
+        return "Int32";
+      } else {
+        switch (type.primitive.text) {
+          case "boolean":
+            return "Bool";
+          case "string":
+            return "String";
+          case "number":
+            return "Double";
+          default:
+            throw new Error(type.primitive.text satisfies never);
+        }
+      }
+    }
+    case "record": {
+      return `[String: ${writeType(type.valueType, schema, options)}]`;
+    }
+    case "shared-type-name":
+    case "type-name": {
+      const resolvedType = resolveType(type, schema);
+      return writeType(resolvedType, schema, options);
+    }
+    case "string-literal": {
+      return "String";
+    }
+  }
+}
+
+function makeNameFromHint(hint: NamingHint): string {
+  const { namePieces } = hint;
+  return namePieces
+    .map((piece) => {
+      switch (piece.kind) {
+        case "type":
+          return namePieces.length <= 1 ? toRustName(piece.name) : piece.name;
+        case "field":
+          return capitalize(piece.name);
+        case "member": {
+          switch (piece.discriminant.type) {
+            case "string":
+              return capitalize(piece.discriminator).concat(
+                toPascalCase(piece.discriminant.value),
+              );
+            case "boolean":
+              return (piece.discriminant.value ? "" : "Not").concat(
+                capitalize(piece.discriminator),
+              );
+          }
+        }
+      }
+    })
+    .join("_");
 }
 
 // function writeZodType(
@@ -544,25 +795,25 @@ function writeType(
 //   ].join("\n");
 // }
 
-function wrapJsdoc(doc: string): string {
-  if (!doc) return "";
+function toRustName(name: string): string {
+  return RESERVED_NAMES.has(name)
+    ? name.concat("_")
+    : RUST_HARD_KEYWORDS.has(name)
+      ? `\`${name}\``
+      : name;
+}
+
+function wrapDocComment(doc: string): readonly string[] {
+  if (!doc) return [];
   const lines = doc.split("\n");
-  if (lines.length === 1) {
-    return `/** ${doc} */\n`;
-  } else {
-    let result = `/**\n`;
-    for (const line of lines) {
-      result += line ? ` * ${line}\n` : ` *\n`;
-    }
-    result += ` */\n`;
-    return result;
-  }
+  return lines.map((l) => `/// ${l}`);
 }
 
 function reformat(code: string): string {
   const inputLines: readonly string[] = code.split("\n");
   const outputLines: string[] = [];
   let indent = "";
+  let continuationIndent = "";
   for (const inputLine of inputLines) {
     const line = inputLine.trim();
     if (
@@ -574,7 +825,11 @@ function reformat(code: string): string {
       indent = indent.slice(0, -2);
     }
     const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
+    outputLines.push(
+      line.length <= 0
+        ? line
+        : [indent, continuationIndent, starPrefix, line].join(""),
+    );
     if (
       line.endsWith("{") ||
       line.endsWith("(") ||
@@ -582,6 +837,10 @@ function reformat(code: string): string {
       line.endsWith("<")
     ) {
       indent = indent + "  ";
+    } else if (line.endsWith(":")) {
+      continuationIndent = "  ";
+    } else if (!line.endsWith(",")) {
+      continuationIndent = "";
     }
   }
   return outputLines.join("\n");
@@ -605,3 +864,115 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n$/g, "\n")
   );
 }
+
+const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  "Bool",
+  "Codable",
+  "Decoder",
+  "DecodingError",
+  "Double",
+  "Int32",
+  "JsonElement",
+  "Shared",
+  "String",
+  "self",
+] as const);
+
+const RUST_HARD_KEYWORDS: ReadonlySet<string> = new Set([
+  // Keywords used in declarations.
+  "associatedtype",
+  "class",
+  "deinit",
+  "enum",
+  "extension",
+  "fileprivate",
+  "func",
+  "import",
+  "init",
+  "inout",
+  "internal",
+  "let",
+  "open",
+  "operator",
+  "private",
+  "protocol",
+  "public",
+  "rethrows",
+  "static",
+  "struct",
+  "subscript",
+  "typealias",
+  "var",
+
+  // Keywords used in statements.
+  "break",
+  "case",
+  "continue",
+  "default",
+  "defer",
+  "do",
+  "else",
+  "fallthrough",
+  "for",
+  "guard",
+  "if",
+  "in",
+  "repeat",
+  "return",
+  "switch",
+  "where",
+  "while",
+
+  // Keywords used in expressions and types.
+  "Any",
+  "as",
+  "catch",
+  "false",
+  "is",
+  "nil",
+  "Self",
+  "self",
+  "super",
+  "throw",
+  "throws",
+  "true",
+  "try",
+
+  // Contextual / special-purpose keywords that commonly conflict with identifiers.
+  "actor",
+  "any",
+  "associativity",
+  "async",
+  "await",
+  "borrowing",
+  "convenience",
+  "consuming",
+  "didSet",
+  "distributed",
+  "dynamic",
+  "final",
+  "get",
+  "indirect",
+  "infix",
+  "isolated",
+  "lazy",
+  "left",
+  "mutating",
+  "none",
+  "nonmutating",
+  "optional",
+  "override",
+  "package",
+  "postfix",
+  "precedence",
+  "prefix",
+  "Protocol",
+  "required",
+  "right",
+  "set",
+  "some",
+  "Type",
+  "unowned",
+  "weak",
+  "willSet",
+]);

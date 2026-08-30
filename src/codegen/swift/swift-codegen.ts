@@ -800,12 +800,6 @@ function makeNameFromHint(hint: NamingHint): string {
 //   ].join("\n");
 // }
 
-type UnionContext = {
-  readonly intMemberToUnionRefs: Map<Interface, readonly string[]>;
-  readonly intMemberToStringDiscriminant: Map<Interface, string>;
-  readonly overrideFields: Set<Field>;
-};
-
 function toSwiftName(name: string): string {
   return RESERVED_NAMES.has(name)
     ? name.concat("_")
