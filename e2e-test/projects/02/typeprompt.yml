@@ -1,5 +1,8 @@
 include: ../../../examples/02-structured-output/**/*.xml
 gen:
+  csharp:
+    file: ../../csharp/Gen/PromptsE02.cs
+    rootNamespace: TypePromptE02
   dart:
     file: ../../dart/lib/gen/prompts_02.dart
   kotlin:
