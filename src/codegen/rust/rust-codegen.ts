@@ -367,10 +367,10 @@ function writeTypepromptInterface(
     const name = field.name.text;
     const rustName = toRustName(toSnakeCase(name));
     const fieldType = writeType(type, schema, options);
+    lines.push(...wrapRustDoc(field.doc));
     if (name !== rustName && !hasLiteralField) {
       lines.push(`#[serde(rename = "${name}")]`);
     }
-    lines.push(...wrapRustDoc(field.doc));
     lines.push(`pub ${rustName}: ${fieldType},`);
   }
   lines.push("}"); // struct

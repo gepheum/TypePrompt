@@ -1,5 +1,13 @@
 pub mod gen {
     pub mod prompts_e01;
+    pub mod prompts_01;
+    pub mod prompts_02;
+    pub mod prompts_03;
+    pub mod prompts_04;
+    pub mod prompts_05;
+    pub mod prompts_06;
+    pub mod prompts_07;
+    pub mod prompts_08;
 }
 
 pub fn get_greeting() -> &'static str {
