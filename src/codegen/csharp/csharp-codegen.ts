@@ -177,7 +177,7 @@ function writeUserDefinedDatatypes(
   config: { readonly rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
-  const unionContext = makeUnionContext(compilationResult);
+  const unionContext = makeUnionContext(compilationResult, config);
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
@@ -755,12 +755,16 @@ type UnionContext = {
 
 function makeUnionContext(
   compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
 ): UnionContext {
+  const { singleNamespace } = compilationResult;
+  const { rootNamespace } = config;
+
   const intMemberToUnionRefs = new Map<Interface, string[]>();
   const intMemberToStringDiscriminant = new Map<Interface, string>();
   const overrideFields = new Set<Field>();
 
-  const processSchema = (schema: Schema, typePrefix: string): void => {
+  const processSchema = (schema: Schema, namespace: string): void => {
     for (const [
       type,
       namingHint,
@@ -768,7 +772,7 @@ function makeUnionContext(
       if (type.kind !== "union") continue;
       const members = schema.unionToMembers.get(type)!;
       if (members.kind !== "interfaces") continue;
-      const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
+      const unionRef = namespace.concat(makeNameFromHint(namingHint));
       for (const [discriminant, member] of Object.entries(members.members)) {
         const { resolved } = member;
         const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];
@@ -792,17 +796,17 @@ function makeUnionContext(
 
   processSchema(compilationResult.metaSchema, "Schema.Meta.");
   for (const namespace of Object.values(compilationResult.namespaces)) {
-    const typePrefixBase = compilationResult.singleNamespace
-      ? "Schema."
-      : "Schema.".concat(namespace.name, ".");
-    processSchema(namespace.schema, typePrefixBase.concat("Shared."));
+    const namespaceBase = singleNamespace
+      ? `${rootNamespace}.Schema.`
+      : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
+    processSchema(namespace.schema, namespaceBase.concat("Shared"));
     for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
-      processSchema(template.schema, typePrefixBase.concat(templateName, "."));
+      const templateName = toCSharpName(template.template.name.text);
+      processSchema(template.schema, namespaceBase.concat(templateName));
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = capitalize(tool.tool.name.text);
-      processSchema(tool.schema, typePrefixBase.concat(toolName, "."));
+      const toolName = toCSharpName(capitalize(tool.tool.name.text));
+      processSchema(tool.schema, namespaceBase.concat(toolName));
     }
   }
 

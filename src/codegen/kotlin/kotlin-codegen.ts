@@ -827,11 +827,11 @@ function makeUnionContext(
       : "Schema.".concat(namespace.name, ".");
     processSchema(namespace.schema, typePrefixBase.concat("Shared."));
     for (const template of namespace.templates) {
-      const templateName = template.template.name.text;
+      const templateName = toKotlinName(template.template.name.text);
       processSchema(template.schema, typePrefixBase.concat(templateName, "."));
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = capitalize(tool.tool.name.text);
+      const toolName = toKotlinName(capitalize(tool.tool.name.text));
       processSchema(tool.schema, typePrefixBase.concat(toolName, "."));
     }
   }
