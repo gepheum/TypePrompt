@@ -12,6 +12,7 @@ import type {
   TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
+import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
@@ -375,7 +376,19 @@ function writeTypepromptInterface(
     const csharpName = toCSharpName(capitalize(name));
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapXmlDoc(field.doc));
-    lines.push(`${fieldType} ${csharpName};`);
+    if (isLiteralType(type)) {
+      const quotedValue = JSON.stringify(type.value);
+      lines.push(
+        "[JsonInclude]",
+        `[JsonPropertyName("${name}")]`,
+        `private readonly ${fieldType} ${csharpName} = ${quotedValue};`,
+      );
+    } else {
+      lines.push(
+        `[JsonPropertyName("${name}")]`,
+        `public ${fieldType} ${csharpName};`,
+      );
+    }
   }
 
   lines.push("}");
@@ -390,61 +403,63 @@ function writeTypepromptUnion(
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  // switch (members.kind) {
-  //   case "strings": {
-  //     lines.push("@Serializable");
-  //     lines.push(`enum class ${typeName} {\n`);
-  //     for (const member of members.members) {
-  //       const csharpName = toCSharpName(toPascalCase(member.value));
-  //       lines.push(`@SerialName("${member.value}")`);
-  //       lines.push(csharpName.concat(","));
-  //     }
-  //     lines.push("}");
-  //     break;
-  //   }
-  //   case "interfaces": {
-  //     const { discriminator } = members;
-  //     lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-  //     lines.push(`sealed interface ${typeName} {`);
-  //     for (const member of members.commonFields) {
-  //       const name = toCSharpName(member.name);
-  //       if (isLiteralType(member.type)) continue;
-  //       const type = writeType(member.type, schema, options);
-  //       lines.push(`val ${name}: ${type}`);
-  //     }
-  //     lines.push("}");
+  switch (members.kind) {
+    case "strings": {
+      lines.push(
+        "[JsonConverter(typeof(JsonStringEnumConverter))]",
+        `public enum ${typeName} {\n`,
+      );
+      for (const member of members.members) {
+        const csharpName = toCSharpName(toPascalCase(member.value));
+        lines.push(`[JsonStringEnumMemberName("${member.value}")]`);
+        lines.push(csharpName.concat(","));
+      }
+      lines.push("}");
+      break;
+    }
+    //   case "interfaces": {
+    //     const { discriminator } = members;
+    //     lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
+    //     lines.push(`sealed interface ${typeName} {`);
+    //     for (const member of members.commonFields) {
+    //       const name = toCSharpName(member.name);
+    //       if (isLiteralType(member.type)) continue;
+    //       const type = writeType(member.type, schema, options);
+    //       lines.push(`val ${name}: ${type}`);
+    //     }
+    //     lines.push("}");
 
-  //     // Write the custom serializer for the union type based on the discriminant
-  //     lines.push(
-  //       "\n",
-  //       [
-  //         `private object ${typeName}_Serializer`,
-  //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-  //       ].join(" : "),
-  //       [
-  //         "override fun selectDeserializer(element: JsonElement)",
-  //         `DeserializationStrategy<${typeName}> {`,
-  //       ].join(": "),
-  //       [
-  //         `return when (val kind = element.jsonObject["${discriminator}"]`,
-  //         "jsonPrimitive?.contentOrNull) {",
-  //       ].join("?."),
-  //     );
-  //     for (const [discriminant, member] of Object.entries(members.members)) {
-  //       lines.push(
-  //         [
-  //           `"${discriminant}" -> `,
-  //           writeType(member.resolved, schema, options),
-  //           ".serializer()",
-  //         ].join(""),
-  //       );
-  //     }
-  //     lines.push(
-  //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
-  //     );
-  //     lines.push("}", "}", "}\n");
-  //   }
-  // }
+    //     // Write the custom serializer for the union type based on the discriminant
+    //     lines.push(
+    //       "\n",
+    //       [
+    //         `private object ${typeName}_Serializer`,
+    //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
+    //       ].join(" : "),
+    //       [
+    //         "override fun selectDeserializer(element: JsonElement)",
+    //         `DeserializationStrategy<${typeName}> {`,
+    //       ].join(": "),
+    //       [
+    //         `return when (val kind = element.jsonObject["${discriminator}"]`,
+    //         "jsonPrimitive?.contentOrNull) {",
+    //       ].join("?."),
+    //     );
+    //     for (const [discriminant, member] of Object.entries(members.members)) {
+    //       lines.push(
+    //         [
+    //           `"${discriminant}" -> `,
+    //           writeType(member.resolved, schema, options),
+    //           ".serializer()",
+    //         ].join(""),
+    //       );
+    //     }
+    //     lines.push(
+    //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
+    //     );
+    //     lines.push("}", "}", "}\n");
+    //   }
+  }
   return lines.join("\n");
 }
 
@@ -496,7 +511,7 @@ function writeType(
           case "boolean":
             return "bool";
           case "string":
-            return "String";
+            return "string";
           case "number":
             return "double";
           default:
@@ -513,7 +528,7 @@ function writeType(
       return writeType(resolvedType, schema, options);
     }
     case "string-literal": {
-      return "String";
+      return "string";
     }
   }
 }
@@ -883,8 +898,11 @@ function coalesceEmptyLines(code: string): string {
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Dictionary",
+  "JsonConverter",
+  "JsonInclude",
+  "JsonStringEnumConverter",
+  "JsonStringEnumMemberName",
   "List",
-  "String",
 ] as const);
 
 const CSHARP_HARD_KEYWORDS: ReadonlySet<string> = new Set([
