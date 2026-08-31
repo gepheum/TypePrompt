@@ -7,6 +7,8 @@ gen:
     package: com.example.prompts05
   python:
     file: ../../python/gen/prompts_05.py
+  rust:
+    file: ../../rust/src/gen/prompts_05.rs
   swift:
     file: ../../swift/Sources/TypePromptE2E/Gen/Prompts05.swift
     swiftNamespace: TypePrompt05
