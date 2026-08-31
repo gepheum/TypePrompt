@@ -459,11 +459,11 @@ function writeTypepromptUnion(
       const { discriminator } = members;
       lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
       lines.push(`sealed interface ${typeName} {`);
-      for (const member of members.commonFields) {
-        const name = toKotlinName(member.name);
-        if (isLiteralType(member.type)) continue;
-        const type = writeType(member.type, schema, options);
-        lines.push(`val ${name}: ${type}`);
+      for (const commonField of members.commonFields) {
+        const name = toKotlinName(commonField.name);
+        if (isLiteralType(commonField.type)) continue;
+        const type = writeType(commonField.type, schema, options);
+        lines.push(...wrapKDoc(commonField.doc ?? ""), `val ${name}: ${type}`);
       }
       lines.push("}");
 

@@ -466,11 +466,14 @@ function writeTypepromptUnion(
     case "interfaces": {
       const discriminator = members.discriminator;
       lines.push(`sealed class ${typePrefix}${typeName} {`);
-      for (const member of members.commonFields) {
-        const name = toDartName(member.name);
-        if (isLiteralType(member.type)) continue;
-        const type = writeType(member.type, schema, options);
-        lines.push(`${type} get ${name};`);
+      for (const commonField of members.commonFields) {
+        const name = toDartName(commonField.name);
+        if (isLiteralType(commonField.type)) continue;
+        const type = writeType(commonField.type, schema, options);
+        lines.push(
+          ...wrapDocComment(commonField.doc ?? ""),
+          `${type} get ${name};`,
+        );
       }
       lines.push("", "Map<String, dynamic> toJson();");
       lines.push(

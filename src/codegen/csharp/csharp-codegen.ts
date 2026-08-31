@@ -386,7 +386,7 @@ function writeTypepromptInterface(
     } else {
       lines.push(
         `[JsonPropertyName("${name}")]`,
-        `public ${fieldType} ${csharpName};`,
+        `public ${fieldType} ${csharpName} { get; init; }`,
       );
     }
   }
@@ -417,48 +417,51 @@ function writeTypepromptUnion(
       lines.push("}");
       break;
     }
-    //   case "interfaces": {
-    //     const { discriminator } = members;
-    //     lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-    //     lines.push(`sealed interface ${typeName} {`);
-    //     for (const member of members.commonFields) {
-    //       const name = toCSharpName(member.name);
-    //       if (isLiteralType(member.type)) continue;
-    //       const type = writeType(member.type, schema, options);
-    //       lines.push(`val ${name}: ${type}`);
-    //     }
-    //     lines.push("}");
+    case "interfaces": {
+      const { discriminator } = members;
+      lines.push(`public interface ${typeName}`, "{");
 
-    //     // Write the custom serializer for the union type based on the discriminant
-    //     lines.push(
-    //       "\n",
-    //       [
-    //         `private object ${typeName}_Serializer`,
-    //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-    //       ].join(" : "),
-    //       [
-    //         "override fun selectDeserializer(element: JsonElement)",
-    //         `DeserializationStrategy<${typeName}> {`,
-    //       ].join(": "),
-    //       [
-    //         `return when (val kind = element.jsonObject["${discriminator}"]`,
-    //         "jsonPrimitive?.contentOrNull) {",
-    //       ].join("?."),
-    //     );
-    //     for (const [discriminant, member] of Object.entries(members.members)) {
-    //       lines.push(
-    //         [
-    //           `"${discriminant}" -> `,
-    //           writeType(member.resolved, schema, options),
-    //           ".serializer()",
-    //         ].join(""),
-    //       );
-    //     }
-    //     lines.push(
-    //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
-    //     );
-    //     lines.push("}", "}", "}\n");
-    //   }
+      for (const commonField of members.commonFields) {
+        const csharpName = toCSharpName(capitalize(commonField.name));
+        if (isLiteralType(commonField.type)) continue;
+        const type = writeType(commonField.type, schema, options);
+        lines.push(
+          ...wrapXmlDoc(commonField.doc ?? ""),
+          `public ${type} ${csharpName} { get; }`,
+        );
+      }
+      lines.push("}");
+
+      //     // Write the custom serializer for the union type based on the discriminant
+      //     lines.push(
+      //       "\n",
+      //       [
+      //         `private object ${typeName}_Serializer`,
+      //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
+      //       ].join(" : "),
+      //       [
+      //         "override fun selectDeserializer(element: JsonElement)",
+      //         `DeserializationStrategy<${typeName}> {`,
+      //       ].join(": "),
+      //       [
+      //         `return when (val kind = element.jsonObject["${discriminator}"]`,
+      //         "jsonPrimitive?.contentOrNull) {",
+      //       ].join("?."),
+      //     );
+      //     for (const [discriminant, member] of Object.entries(members.members)) {
+      //       lines.push(
+      //         [
+      //           `"${discriminant}" -> `,
+      //           writeType(member.resolved, schema, options),
+      //           ".serializer()",
+      //         ].join(""),
+      //       );
+      //     }
+      //     lines.push(
+      //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
+      //     );
+      //     lines.push("}", "}", "}\n");
+    }
   }
   return lines.join("\n");
 }
