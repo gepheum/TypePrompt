@@ -26,6 +26,7 @@ e2e-test/python/__pycache/
 e2e-test/python/gen/
 e2e-test/python/**/*.pyc
 
+e2e-test/rust/src/gen/
 e2e-test/rust/target/
 
 e2e-test/swift/.build/
