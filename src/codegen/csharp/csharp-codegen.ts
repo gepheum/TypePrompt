@@ -772,7 +772,7 @@ function makeUnionContext(
       if (type.kind !== "union") continue;
       const members = schema.unionToMembers.get(type)!;
       if (members.kind !== "interfaces") continue;
-      const unionRef = namespace.concat(makeNameFromHint(namingHint));
+      const unionRef = namespace.concat(".", makeNameFromHint(namingHint));
       for (const [discriminant, member] of Object.entries(members.members)) {
         const { resolved } = member;
         const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];

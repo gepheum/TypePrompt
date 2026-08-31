@@ -6,7 +6,7 @@ namespace TypePrompt.Schema.Shared
     public interface Expr
     {}
 
-    public record Expr_KindNumber : TypePrompt.Schema.SharedExpr
+    public record Expr_KindNumber : Expr
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -15,7 +15,7 @@ namespace TypePrompt.Schema.Shared
         public double Value { get; init; }
     }
 
-    public record Expr_KindAdd : TypePrompt.Schema.SharedExpr
+    public record Expr_KindAdd : Expr
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -26,7 +26,7 @@ namespace TypePrompt.Schema.Shared
         public Expr Right { get; init; }
     }
 
-    public record Expr_KindIf : TypePrompt.Schema.SharedExpr
+    public record Expr_KindIf : Expr
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -47,7 +47,7 @@ namespace TypePrompt.Schema.Shared
         public double Y { get; }
     }
 
-    public record EnumWithCommonFields_NotSuccess : TypePrompt.Schema.SharedEnumWithCommonFields
+    public record EnumWithCommonFields_NotSuccess : EnumWithCommonFields
     {
         [JsonInclude]
         [JsonPropertyName("success")]
@@ -63,7 +63,7 @@ namespace TypePrompt.Schema.Shared
         public string Z { get; init; }
     }
 
-    public record EnumWithCommonFields_Success : TypePrompt.Schema.SharedEnumWithCommonFields
+    public record EnumWithCommonFields_Success : EnumWithCommonFields
     {
         [JsonInclude]
         [JsonPropertyName("success")]
@@ -116,7 +116,7 @@ namespace TypePrompt.Schema.Shared
         public JsonElement Serializer { get; init; }
     }
 
-    public record Square : TypePrompt.Schema.MyTemplateOutput_Shape, TypePrompt.Schema.MyOtherTemplateOutput_Shape
+    public record Square : TypePrompt.Schema.MyTemplate.Output_Shape, TypePrompt.Schema.MyOtherTemplate.Output_Shape
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -142,7 +142,7 @@ namespace TypePrompt.Schema.Shared
         FooBar,
     }
 
-    public record Matrix : TypePrompt.Schema.SharedMatrixUnion
+    public record Matrix : MatrixUnion
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -167,7 +167,7 @@ namespace TypePrompt.Schema.Shared
         public bool Encode { get; }
     }
 
-    public record MatrixUnion_KindEmpty : TypePrompt.Schema.SharedMatrixUnion
+    public record MatrixUnion_KindEmpty : MatrixUnion
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -244,7 +244,7 @@ namespace TypePrompt.Schema.MyTemplate
     public interface Output_Shape
     {}
 
-    public record Output_Shape_KindCircle : TypePrompt.Schema.MyTemplateOutput_Shape
+    public record Output_Shape_KindCircle : Output_Shape
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
@@ -267,7 +267,7 @@ namespace TypePrompt.Schema.MyOtherTemplate
     public interface Output_Shape
     {}
 
-    public record Output_Shape_KindCircle : TypePrompt.Schema.MyOtherTemplateOutput_Shape
+    public record Output_Shape_KindCircle : Output_Shape
     {
         [JsonInclude]
         [JsonPropertyName("kind")]
