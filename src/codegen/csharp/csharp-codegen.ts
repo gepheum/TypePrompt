@@ -399,7 +399,7 @@ function writeTypepromptInterface(
     } else {
       lines.push(
         `[System.Text.Json.Serialization.JsonPropertyName("${name}")]`,
-        `public ${fieldType} ${csharpName} { get; init; }`,
+        `public required ${fieldType} ${csharpName} { get; init; }`,
       );
     }
   }

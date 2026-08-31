@@ -45,7 +45,7 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "number";
         [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public double Value { get; init; }
+        public required double Value { get; init; }
     }
 
     public record Expr_KindAdd : Expr
@@ -54,9 +54,9 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "add";
         [System.Text.Json.Serialization.JsonPropertyName("left")]
-        public Expr Left { get; init; }
+        public required Expr Left { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("right")]
-        public Expr Right { get; init; }
+        public required Expr Right { get; init; }
     }
 
     public record Expr_KindIf : Expr
@@ -65,11 +65,11 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "if";
         [System.Text.Json.Serialization.JsonPropertyName("condition")]
-        public Expr Condition { get; init; }
+        public required Expr Condition { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("then")]
-        public Expr Then { get; init; }
+        public required Expr Then { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("else")]
-        public Expr Else { get; init; }
+        public required Expr Else { get; init; }
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(EnumWithCommonFields__Converter))]
@@ -118,13 +118,13 @@ namespace TypePrompt.Schema.Shared
         private readonly bool Success = false;
         /// <summary>x coordinate</summary>
         [System.Text.Json.Serialization.JsonPropertyName("x")]
-        public int X { get; init; }
+        public required int X { get; init; }
         /// <summary>y coordinate</summary>
         [System.Text.Json.Serialization.JsonPropertyName("y")]
-        public double Y { get; init; }
+        public required double Y { get; init; }
         /// <summary>z coordinate</summary>
         [System.Text.Json.Serialization.JsonPropertyName("z")]
-        public string Z { get; init; }
+        public required string Z { get; init; }
     }
 
     public record EnumWithCommonFields_Success : EnumWithCommonFields
@@ -134,17 +134,17 @@ namespace TypePrompt.Schema.Shared
         private readonly bool Success = true;
         /// <summary>x coordinate</summary>
         [System.Text.Json.Serialization.JsonPropertyName("x")]
-        public int X { get; init; }
+        public required int X { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("y")]
-        public double Y { get; init; }
+        public required double Y { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("z")]
-        public int Z { get; init; }
+        public required int Z { get; init; }
     }
 
     public record Schema
     {
         [System.Text.Json.Serialization.JsonPropertyName("e")]
-        public EnumWithCommonFields E { get; init; }
+        public required EnumWithCommonFields E { get; init; }
     }
 
     public record String
@@ -171,13 +171,13 @@ namespace TypePrompt.Schema.Shared
     public record AnyHolder
     {
         [System.Text.Json.Serialization.JsonPropertyName("any")]
-        public System.Text.Json.JsonElement Any { get; init; }
+        public required System.Text.Json.JsonElement Any { get; init; }
     }
 
     public record SerializerHolder
     {
         [System.Text.Json.Serialization.JsonPropertyName("serializer")]
-        public System.Text.Json.JsonElement Serializer { get; init; }
+        public required System.Text.Json.JsonElement Serializer { get; init; }
     }
 
     public record Square : TypePrompt.Schema.MyTemplate.Output_Shape, TypePrompt.Schema.MyOtherTemplate.Output_Shape
@@ -186,11 +186,11 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "square";
         [System.Text.Json.Serialization.JsonPropertyName("size")]
-        public double Size { get; init; }
+        public required double Size { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("fromJson")]
-        public string FromJson { get; init; }
+        public required string FromJson { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("self")]
-        public string Self { get; init; }
+        public required string Self { get; init; }
         [System.Text.Json.Serialization.JsonInclude]
         [System.Text.Json.Serialization.JsonPropertyName("foo")]
         private readonly string Foo = "foo";
@@ -214,17 +214,17 @@ namespace TypePrompt.Schema.Shared
         private readonly string Kind = "matrix";
         System.Collections.Generic.List<System.Collections.Generic.List<Square>> TypePrompt.Schema.Shared.MatrixUnion.Matrix => matrix;
         [System.Text.Json.Serialization.JsonPropertyName("matrix")]
-        public System.Collections.Generic.List<System.Collections.Generic.List<Square>> matrix { get; init; }
+        public required System.Collections.Generic.List<System.Collections.Generic.List<Square>> matrix { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("otherMatrix")]
-        public System.Collections.Generic.List<System.Collections.Generic.List<Square>>? OtherMatrix { get; init; }
+        public required System.Collections.Generic.List<System.Collections.Generic.List<Square>>? OtherMatrix { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("foo")]
-        public System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Square>>? Foo { get; init; }
+        public required System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Square>>? Foo { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("ints")]
-        public System.Collections.Generic.List<int> Ints { get; init; }
+        public required System.Collections.Generic.List<int> Ints { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("init")]
-        public bool Init { get; init; }
+        public required bool Init { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("encode")]
-        public bool Encode { get; init; }
+        public required bool Encode { get; init; }
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(MatrixUnion__Converter))]
@@ -272,13 +272,13 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "empty";
         [System.Text.Json.Serialization.JsonPropertyName("init")]
-        public bool Init { get; init; }
+        public required bool Init { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("encode")]
-        public bool Encode { get; init; }
+        public required bool Encode { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("matrix")]
-        public System.Collections.Generic.List<System.Collections.Generic.List<Square>> Matrix { get; init; }
+        public required System.Collections.Generic.List<System.Collections.Generic.List<Square>> Matrix { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("foo")]
-        public string Foo { get; init; }
+        public required string Foo { get; init; }
     }
 
     public record DiscriminatorCodingKeys
@@ -290,23 +290,23 @@ namespace TypePrompt.Schema.AnalyzeSalesData
     public record SalesRow
     {
         [System.Text.Json.Serialization.JsonPropertyName("product")]
-        public string Product { get; init; }
+        public required string Product { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("units")]
-        public int Units { get; init; }
+        public required int Units { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("revenueCents")]
-        public int RevenueCents { get; init; }
+        public required int RevenueCents { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("region")]
-        public string Region { get; init; }
+        public required string Region { get; init; }
     }
 
     public record Input
     {
         [System.Text.Json.Serialization.JsonPropertyName("rows")]
-        public System.Collections.Generic.List<SalesRow> Rows { get; init; }
+        public required System.Collections.Generic.List<SalesRow> Rows { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("question")]
-        public string Question { get; init; }
+        public required string Question { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("variant")]
-        public Input_Variant Variant { get; init; }
+        public required Input_Variant Variant { get; init; }
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
@@ -321,11 +321,11 @@ namespace TypePrompt.Schema.AnalyzeSalesData
     public record Output
     {
         [System.Text.Json.Serialization.JsonPropertyName("analysis")]
-        public string Analysis { get; init; }
+        public required string Analysis { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("topProduct")]
-        public string TopProduct { get; init; }
+        public required string TopProduct { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("totalRevenue")]
-        public double TotalRevenue { get; init; }
+        public required double TotalRevenue { get; init; }
     }
 }  // namespace TypePrompt.Schema.AnalyzeSalesData
 
@@ -334,15 +334,15 @@ namespace TypePrompt.Schema.MyTemplate
     public record Input
     {
         [System.Text.Json.Serialization.JsonPropertyName("text")]
-        public string Text { get; init; }
+        public required string Text { get; init; }
     }
 
     public record Output
     {
         [System.Text.Json.Serialization.JsonPropertyName("reversedText")]
-        public string ReversedText { get; init; }
+        public required string ReversedText { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("shape")]
-        public Output_Shape Shape { get; init; }
+        public required Output_Shape Shape { get; init; }
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(Output_Shape__Converter))]
@@ -386,7 +386,7 @@ namespace TypePrompt.Schema.MyTemplate
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "circle";
         [System.Text.Json.Serialization.JsonPropertyName("radius")]
-        public double Radius { get; init; }
+        public required double Radius { get; init; }
     }
 }  // namespace TypePrompt.Schema.MyTemplate
 
@@ -395,9 +395,9 @@ namespace TypePrompt.Schema.MyOtherTemplate
     public record Output
     {
         [System.Text.Json.Serialization.JsonPropertyName("reversedText")]
-        public string ReversedText { get; init; }
+        public required string ReversedText { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("shape")]
-        public Output_Shape Shape { get; init; }
+        public required Output_Shape Shape { get; init; }
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(Output_Shape__Converter))]
@@ -441,7 +441,7 @@ namespace TypePrompt.Schema.MyOtherTemplate
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "circle";
         [System.Text.Json.Serialization.JsonPropertyName("radius")]
-        public double Radius { get; init; }
+        public required double Radius { get; init; }
     }
 }  // namespace TypePrompt.Schema.MyOtherTemplate
 
@@ -450,14 +450,14 @@ namespace TypePrompt.Schema.MyTool
     public record Output
     {
         [System.Text.Json.Serialization.JsonPropertyName("shared")]
-        public Shared Shared { get; init; }
+        public required Shared Shared { get; init; }
     }
 
     public record Shared
     {
         [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public string Value { get; init; }
+        public required string Value { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("square")]
-        public global::TypePrompt.Schema.Shared.Square Square { get; init; }
+        public required global::TypePrompt.Schema.Shared.Square Square { get; init; }
     }
 }  // namespace TypePrompt.Schema.MyTool
