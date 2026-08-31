@@ -5,6 +5,7 @@ Comprehensive tests covering all spec features across all example projects.
 import sys
 import os
 import re
+import pydantic
 import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -691,3 +692,59 @@ class TestLegalSummarizeClause:
 
     def test_user_message_wraps_clause_in_enclosed_tag(self):
         assert "<Clause>" in self.prompt.user_message
+
+
+class TestE01JsonSerialization:
+    def test_expr_serialization_and_deserialization(self):
+        adapter = pydantic.TypeAdapter(s_e01.shared.Expr)
+        expr_num = s_e01.shared.Expr_KindNumber(kind="number", value=42.0)
+        json_str = adapter.dump_json(expr_num).decode("utf-8")
+        decoded_num = adapter.validate_json(json_str)
+        assert isinstance(decoded_num, s_e01.shared.Expr_KindNumber)
+        assert decoded_num.value == 42.0
+
+        expr_add = s_e01.shared.Expr_KindAdd(
+            kind="add",
+            left=s_e01.shared.Expr_KindNumber(kind="number", value=1.0),
+            right=s_e01.shared.Expr_KindNumber(kind="number", value=2.0),
+        )
+        json_add = adapter.dump_json(expr_add).decode("utf-8")
+        decoded_add = adapter.validate_json(json_add)
+        assert isinstance(decoded_add, s_e01.shared.Expr_KindAdd)
+        assert decoded_add.left.value == 1.0
+        assert decoded_add.right.value == 2.0
+
+    def test_enum_with_common_fields_serialization(self):
+        adapter = pydantic.TypeAdapter(s_e01.shared.EnumWithCommonFields)
+        not_success = s_e01.shared.EnumWithCommonFields_NotSuccess(
+            success=False, x=10, y=20.5, z="error"
+        )
+        json_not_success = adapter.dump_json(not_success).decode("utf-8")
+        decoded_not_success = adapter.validate_json(json_not_success)
+        assert isinstance(
+            decoded_not_success, s_e01.shared.EnumWithCommonFields_NotSuccess
+        )
+        assert decoded_not_success.x == 10
+        assert decoded_not_success.y == 20.5
+        assert decoded_not_success.z == "error"
+
+        success = s_e01.shared.EnumWithCommonFields_Success(
+            success=True, x=42, y=84.0, z=99
+        )
+        json_success = adapter.dump_json(success).decode("utf-8")
+        decoded_success = adapter.validate_json(json_success)
+        assert isinstance(decoded_success, s_e01.shared.EnumWithCommonFields_Success)
+        assert decoded_success.x == 42
+        assert decoded_success.y == 84.0
+        assert decoded_success.z == 99
+
+    def test_matrix_with_omitted_optional_fields(self):
+        matrix = s_e01.shared.Matrix(
+            kind="matrix",
+            matrix=[],
+            ints=[1, 2, 3],
+            init=True,
+            encode=False,
+        )
+        assert matrix.other_matrix is None
+        assert matrix.foo is None

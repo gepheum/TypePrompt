@@ -19,7 +19,7 @@ mod tests {
     use super::*;
     use gen::prompts_e01::schema::shared::{
         EnumWithCommonFields, EnumWithCommonFields_NotSuccess, EnumWithCommonFields_Success, Expr,
-        Expr_KindAdd, Expr_KindNumber,
+        Expr_KindAdd, Expr_KindNumber, Matrix,
     };
     use gen::prompts_e01::schema::AnalyzeSalesData::Input_Variant;
 
@@ -70,5 +70,23 @@ mod tests {
 
         assert_eq!(*success.x(), 42);
         assert_eq!(*success.y(), 84.0);
+    }
+
+    #[test]
+    fn test_matrix_serialization() {
+        let matrix = Matrix {
+            matrix: vec![],
+            other_matrix: None,
+            foo: None,
+            ints: vec![1, 2, 3],
+            init: true,
+            encode: false,
+        };
+
+        let json = serde_json::to_string(&matrix).unwrap();
+        assert!(json.contains("\"kind\":\"matrix\""));
+
+        let decoded: Matrix = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, matrix);
     }
 }

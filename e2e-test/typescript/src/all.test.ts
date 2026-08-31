@@ -17,7 +17,7 @@ import { prompts as p05 } from "./gen/prompts-05.js";
 import { prompts as p06, type $ as $06 } from "./gen/prompts-06.js";
 import { prompts as p07, type $ as $07 } from "./gen/prompts-07.js";
 import { prompts as p08 } from "./gen/prompts-08.js";
-import { prompts as pe01 } from "./gen/prompts-e01.js";
+import { prompts as pe01, type $ as $e01 } from "./gen/prompts-e01.js";
 
 // ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
@@ -774,5 +774,71 @@ describe("parseResponse", () => {
       targetLanguage: "Spanish",
     });
     expect(prompt.parseResponse("Hola")).toMatch("Hola");
+  });
+});
+
+// ─── e01 JSON serialization & deserialization ───────────────────────────────
+
+describe("e01 / JSON serialization & deserialization", () => {
+  it("serializes and deserializes Expr (number, add, if)", () => {
+    const num: $e01.Shared.Expr = { kind: "number", value: 42.0 };
+    const jsonNum = JSON.stringify(num);
+    expect(jsonNum).toMatch('{"kind":"number","value":42}');
+    const parsedNum: $e01.Shared.Expr = JSON.parse(jsonNum);
+    expect(parsedNum).toMatch({ kind: "number", value: 42 });
+
+    const add: $e01.Shared.Expr = {
+      kind: "add",
+      left: { kind: "number", value: 1.0 },
+      right: { kind: "number", value: 2.0 },
+    };
+    const jsonAdd = JSON.stringify(add);
+    const parsedAdd: $e01.Shared.Expr = JSON.parse(jsonAdd);
+    expect(parsedAdd).toMatch(add);
+  });
+
+  it("serializes and deserializes EnumWithCommonFields (boolean discriminant)", () => {
+    const notSuccess: $e01.Shared.EnumWithCommonFields = {
+      success: false,
+      x: 10,
+      y: 20.5,
+      z: "error",
+    };
+    const jsonNotSuccess = JSON.stringify(notSuccess);
+    const parsedNotSuccess: $e01.Shared.EnumWithCommonFields =
+      JSON.parse(jsonNotSuccess);
+    expect(parsedNotSuccess).toMatch(notSuccess);
+
+    const success: $e01.Shared.EnumWithCommonFields = {
+      success: true,
+      x: 42,
+      y: 84.0,
+      z: 99,
+    };
+    const jsonSuccess = JSON.stringify(success);
+    const parsedSuccess: $e01.Shared.EnumWithCommonFields =
+      JSON.parse(jsonSuccess);
+    expect(parsedSuccess).toMatch(success);
+  });
+
+  it("serializes and deserializes string enum variant", () => {
+    const variant: $e01.AnalyzeSalesData.Input_Variant = "csv";
+    const jsonVariant = JSON.stringify(variant);
+    expect(jsonVariant).toMatch('"csv"');
+    const parsedVariant: $e01.AnalyzeSalesData.Input_Variant =
+      JSON.parse(jsonVariant);
+    expect(parsedVariant).toMatch("csv");
+  });
+
+  it("allows omitting optional fields in Matrix", () => {
+    const matrix: $e01.Shared.Matrix = {
+      kind: "matrix",
+      matrix: [],
+      ints: [1, 2, 3],
+      init: true,
+      encode: false,
+    };
+    expect(matrix.otherMatrix).toMatch(undefined);
+    expect(matrix.foo).toMatch(undefined);
   });
 });
