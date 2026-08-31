@@ -206,7 +206,7 @@ function writeUserDefinedDatatypes(
     const typePrefixBase = singleNamespace
       ? "Schema."
       : `Schema.${namespaceName}.`;
-    const sharedTypePrefix = "schema::shared::";
+    const sharedTypePrefix = "super::shared::";
     if (anyTypes(namespace.schema)) {
       lines.push("pub mod shared {");
       lines.push(
@@ -356,7 +356,10 @@ function writeTypepromptInterface(
   const lines: string[] = [];
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
 
-  lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
+  const derives = hasLiteralField
+    ? "serde::Deserialize, Debug, PartialEq"
+    : "serde::Serialize, serde::Deserialize, Debug, PartialEq";
+  lines.push(`#[derive(${derives})]`);
   lines.push(`pub struct ${typeName} {`);
   for (const field of fields) {
     const { type } = field;
@@ -375,25 +378,27 @@ function writeTypepromptInterface(
   if (hasLiteralField) {
     lines.push(
       "",
-      `impl Serialize for ${typeName} {`,
-      "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {",
-      `let mut state = serializer.serialize_struct("${typeName}", ${fields.length})?;`,
+      `impl serde::Serialize for ${typeName} {`,
+      "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {",
+      `let mut state = serde::Serializer::serialize_struct(serializer, "${typeName}", ${fields.length})?;`,
     );
     for (const field of fields) {
       const { type } = field;
       const name = field.name.text;
       if (isLiteralType(type)) {
         lines.push(
-          `state.serialize_field("${name}", ${JSON.stringify(type.value)})?;`,
+          `serde::ser::SerializeStruct::serialize_field(&mut state, "${name}", &${JSON.stringify(type.value)})?;`,
         );
       } else {
         const rustName = toRustName(toSnakeCase(name));
-        lines.push(`state.serialize_field("${name}", &self.${rustName})?;`);
+        lines.push(
+          `serde::ser::SerializeStruct::serialize_field(&mut state, "${name}", &self.${rustName})?;`,
+        );
       }
     }
-    lines.push("state.end()");
+    lines.push("serde::ser::SerializeStruct::end(state)");
     lines.push("}"); // fn serialize
-    lines.push("}"); // impl Serialize
+    lines.push("}"); // impl serde::Serialize
   }
 
   return lines.join("\n");
@@ -407,10 +412,12 @@ function writeTypepromptUnion(
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
-  lines.push(`pub enum ${typeName} {\n`);
   switch (members.kind) {
     case "strings": {
+      lines.push(
+        "#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]",
+      );
+      lines.push(`pub enum ${typeName} {\n`);
       for (const member of members.members) {
         const rustName = toRustName(toPascalCase(member.value));
         lines.push(`#[serde(rename = "${member.value}")]`);
@@ -420,6 +427,8 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
+      lines.push("#[derive(Debug, PartialEq)]");
+      lines.push(`pub enum ${typeName} {\n`);
       const { discriminator } = members;
       const caseEntries = Object.values(members.members).map(
         (
@@ -460,49 +469,53 @@ function writeTypepromptUnion(
 
       lines.push(
         "",
-        `impl Serialize for ${typeName} {`,
-        "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : Serializer {",
+        `impl serde::Serialize for ${typeName} {`,
+        "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : serde::Serializer {",
         "match self {",
       );
       for (const { caseName } of caseEntries) {
-        lines.push(`${typeName}::${caseName}(v) => v.serialize(serializer),`);
+        lines.push(
+          `${typeName}::${caseName}(v) => serde::Serialize::serialize(v, serializer),`,
+        );
       }
       lines.push(
         "}", // match
         "}", // fn serialize
-        "}", // impl Serialize
+        "}", // impl serde::Serialize
       );
 
-      const value_getter =
+      const valueGetter =
         members.discriminants.type === "boolean" ? "as_bool" : "as_str";
       lines.push(
         "",
-        `impl<'de> Deserialize<'de> for ${typeName} {`,
-        "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {",
-        "let value = serde::Value::deserialize(deserializer)?;",
+        `impl<'de> serde::Deserialize<'de> for ${typeName} {`,
+        "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : serde::Deserializer<'de> {",
+        "let value = serde_json::Value::deserialize(deserializer)?;",
         `let discriminant = value.get("${discriminator}")`,
-        `.and_then(serde::Value::as_${value_getter})`,
-        `.ok_or_else(|| de::Error::missing_field("${discriminator}"))?;`,
+        `.and_then(serde_json::Value::${valueGetter})`,
+        `.ok_or_else(|| serde::de::Error::missing_field("${discriminator}"))?;`,
         "match discriminant {",
       );
       for (const { caseName, quotedDiscriminant, type } of caseEntries) {
         lines.push(`${quotedDiscriminant} => {`);
         lines.push(
-          `let v = ${type}::deserialize(value).map_err(de::Error::custom)?;`,
+          `let v = <${type}>::deserialize(value).map_err(serde::de::Error::custom)?;`,
         );
         lines.push(`Ok(${typeName}::${caseName}(v))`);
         lines.push("}");
       }
-      const discriminants = caseEntries
-        .map((e) => e.quotedDiscriminant)
-        .join(", ");
-      lines.push(
-        `other => Err(de::Error::unknown_variant(other, &[${discriminants}])),`,
-      );
+      if (members.discriminants.type === "string") {
+        const discriminants = caseEntries
+          .map((e) => e.quotedDiscriminant)
+          .join(", ");
+        lines.push(
+          `other => Err(serde::de::Error::unknown_variant(other, &[${discriminants}])),`,
+        );
+      }
       lines.push(
         "}", // match
         "}", // fn deserialize
-        "}", // impl Deserialize
+        "}", // impl serde::Deserialize
       );
       const nonLiteralCommonFields = members.commonFields.filter(
         (f) => !isLiteralType(f.type),
@@ -565,7 +578,7 @@ function writeType(
         if (topLevel) {
           return sharedTypePrefix!.concat(makeNameFromHint(namingHint!));
         } else {
-          return "shared::".concat(makeNameFromHint(namingHint!));
+          return "super::shared::".concat(makeNameFromHint(namingHint!));
         }
       }
     }
@@ -590,7 +603,7 @@ function writeType(
       }
     }
     case "record": {
-      return `HashMap<String, ${writeType(type.valueType, schema, options)}>`;
+      return `std::collections::HashMap<String, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
