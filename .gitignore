@@ -2,6 +2,7 @@
 TODO
 dist
 
+e2e-test/csharp/Gen
 e2e-test/csharp/bin/
 e2e-test/csharp/obj/
 e2e-test/csharp/.vs/
