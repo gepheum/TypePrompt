@@ -372,9 +372,22 @@ function writeTypepromptInterface(
 
   for (const field of fields) {
     const { type } = field;
-    const name = field.name.text;
-    const csharpName = toCSharpName(capitalize(name));
     const fieldType = writeType(type, schema, options);
+    const name = field.name.text;
+    let csharpName = toCSharpName(capitalize(name));
+    if (csharpName === typeName) {
+      // In C#, a record (like a class or struct) cannot contain a member—including a
+      // field, property, or method—that shares the exact same name as its enclosing
+      // type.
+      // Just use camelCase for the field name.
+      const camelCaseName = toCSharpName(name);
+      if (unionContext.overrideFields.has(field)) {
+        for (const int of interfaces!) {
+          lines.push(`${fieldType} ${int}.${csharpName} => ${camelCaseName};`);
+        }
+      }
+      csharpName = camelCaseName;
+    }
     lines.push(...wrapXmlDoc(field.doc));
     if (isLiteralType(type)) {
       const quotedValue = JSON.stringify(type.value);

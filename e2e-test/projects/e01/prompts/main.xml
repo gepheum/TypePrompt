@@ -51,7 +51,15 @@
     encode: boolean;
   };
 
-  type MatrixUnion = Matrix | { kind: "empty"; init: boolean; encode: boolean };
+  type MatrixUnion =
+    | Matrix
+    | {
+        kind: "empty";
+        init: boolean;
+        encode: boolean;
+        matrix: Square[][];
+        foo: string;
+      };
 
   type DiscriminatorCodingKeys = {};
 </namespace>
