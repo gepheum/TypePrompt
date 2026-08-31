@@ -3,419 +3,185 @@
 namespace TypePrompt.Schema.Shared
 {
     /// <summary>An expression</summary>
-    @Serializable(with = Expr_Serializer::class)
-    sealed interface Expr {}
 
-    private object Expr_Serializer : JsonContentPolymorphicSerializer<Expr>(Expr::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Expr> {
-            return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
-                "number" -> Expr_KindNumber.serializer()
-                "add" -> Expr_KindAdd.serializer()
-                "if" -> Expr_KindIf.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
-            }
-        }
+    public record Expr_KindNumber : Schema.Shared.Expr
+    {
+        String Kind;
+        double Value;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("number")
-    data class Expr_KindNumber private constructor(
-        val kind: String,
-        val value: Double,
-    ) : Schema.Shared.Expr {
-        constructor(
-            value: Double,
-        ) : this(
-            kind = "number",
-            value = value,
-        )
+    public record Expr_KindAdd : Schema.Shared.Expr
+    {
+        String Kind;
+        Expr Left;
+        Expr Right;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("add")
-    data class Expr_KindAdd private constructor(
-        val kind: String,
-        val left: Expr,
-        val right: Expr,
-    ) : Schema.Shared.Expr {
-        constructor(
-            left: Expr,
-            right: Expr,
-        ) : this(
-            kind = "add",
-            left = left,
-            right = right,
-        )
+    public record Expr_KindIf : Schema.Shared.Expr
+    {
+        String Kind;
+        Expr Condition;
+        Expr Then;
+        Expr Else;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("if")
-    data class Expr_KindIf private constructor(
-        val kind: String,
-        val condition: Expr,
-        val then: Expr,
-        val else_: Expr,
-    ) : Schema.Shared.Expr {
-        constructor(
-            condition: Expr,
-            then: Expr,
-            else_: Expr,
-        ) : this(
-            kind = "if",
-            condition = condition,
-            then = then,
-            else_ = else_,
-        )
-    }
-
-    @Serializable(with = EnumWithCommonFields_Serializer::class)
-    sealed interface EnumWithCommonFields {
-        val x: Int
-        val y: Double
-    }
-
-    private object EnumWithCommonFields_Serializer : JsonContentPolymorphicSerializer<EnumWithCommonFields>(EnumWithCommonFields::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<EnumWithCommonFields> {
-            return when (val kind = element.jsonObject["success"]?.jsonPrimitive?.contentOrNull) {
-                "false" -> EnumWithCommonFields_NotSuccess.serializer()
-                "true" -> EnumWithCommonFields_Success.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
-            }
-        }
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class EnumWithCommonFields_NotSuccess private constructor(
-        val success: Boolean,
+    public record EnumWithCommonFields_NotSuccess : Schema.Shared.EnumWithCommonFields
+    {
+        Boolean Success;
         /// <summary>x coordinate</summary>
-        override val x: Int,
+        int X;
         /// <summary>y coordinate</summary>
-        override val y: Double,
+        double Y;
         /// <summary>z coordinate</summary>
-        val z: String,
-    ) : Schema.Shared.EnumWithCommonFields {
-        constructor(
-            /// <summary>x coordinate</summary>
-            x: Int,
-            /// <summary>y coordinate</summary>
-            y: Double,
-            /// <summary>z coordinate</summary>
-            z: String,
-        ) : this(
-            success = false,
-            x = x,
-            y = y,
-            z = z,
-        )
+        String Z;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class EnumWithCommonFields_Success private constructor(
-        val success: Boolean,
+    public record EnumWithCommonFields_Success : Schema.Shared.EnumWithCommonFields
+    {
+        Boolean Success;
         /// <summary>x coordinate</summary>
-        override val x: Int,
-        override val y: Double,
-        val z: Int,
-    ) : Schema.Shared.EnumWithCommonFields {
-        constructor(
-            /// <summary>x coordinate</summary>
-            x: Int,
-            y: Double,
-            z: Int,
-        ) : this(
-            success = true,
-            x = x,
-            y = y,
-            z = z,
-        )
+        int X;
+        double Y;
+        int Z;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Schema(
-        val e: EnumWithCommonFields,
-    ) {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class String_() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class Boolean() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class List() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class Map() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class EncodeDefault() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class Serializable() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class KindAdd() {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class AnyHolder(
-        val any: JsonElement,
-    ) {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class SerializerHolder(
-        val serializer: JsonElement,
-    ) {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("square")
-    data class Square private constructor(
-        val kind: String,
-        val size: Double,
-        val fromJson: String,
-        val self: String,
-        val foo: String,
-    ) : Schema.MyTemplate.Output_Shape, Schema.MyOtherTemplate.Output_Shape {
-        constructor(
-            size: Double,
-            fromJson: String,
-            self: String,
-        ) : this(
-            kind = "square",
-            size = size,
-            fromJson = fromJson,
-            self = self,
-            foo = "foo",
-        )
+    public record Schema
+    {
+        EnumWithCommonFields E;
     }
 
-    @Serializable
-    enum class E {
-        @SerialName("class")
-        Class,
-        @SerialName("if")
-        If,
-        @SerialName("foo-BAR")
-        FooBar,
+    public record String_
+    {}
+
+    public record Boolean
+    {}
+
+    public record List_
+    {}
+
+    public record Map
+    {}
+
+    public record EncodeDefault
+    {}
+
+    public record Serializable
+    {}
+
+    public record KindAdd
+    {}
+
+    public record AnyHolder
+    {
+        JsonElement Any;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("matrix")
-    data class Matrix private constructor(
-        val kind: String,
-        val matrix: List<List<Square>>,
-        val otherMatrix: List<List<Square>>?,
-        val foo: Map<String, List<Square>>?,
-        val ints: List<Int>,
-        override val init: Boolean,
-        override val encode: Boolean,
-    ) : Schema.Shared.MatrixUnion {
-        constructor(
-            matrix: List<List<Square>>,
-            otherMatrix: List<List<Square>>?,
-            foo: Map<String, List<Square>>?,
-            ints: List<Int>,
-            init: Boolean,
-            encode: Boolean,
-        ) : this(
-            kind = "matrix",
-            matrix = matrix,
-            otherMatrix = otherMatrix,
-            foo = foo,
-            ints = ints,
-            init = init,
-            encode = encode,
-        )
+    public record SerializerHolder
+    {
+        JsonElement Serializer;
     }
 
-    @Serializable(with = MatrixUnion_Serializer::class)
-    sealed interface MatrixUnion {
-        val init: Boolean
-        val encode: Boolean
+    public record Square : Schema.MyTemplate.Output_Shape, Schema.MyOtherTemplate.Output_Shape
+    {
+        String Kind;
+        double Size;
+        String FromJson;
+        String Self;
+        String Foo;
     }
 
-    private object MatrixUnion_Serializer : JsonContentPolymorphicSerializer<MatrixUnion>(MatrixUnion::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<MatrixUnion> {
-            return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
-                "matrix" -> Matrix.serializer()
-                "empty" -> MatrixUnion_KindEmpty.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
-            }
-        }
+    public record Matrix : Schema.Shared.MatrixUnion
+    {
+        String Kind;
+        List<List<Square>> Matrix;
+        List<List<Square>>? OtherMatrix;
+        Dictionary<String, List<Square>>? Foo;
+        List<int> Ints;
+        bool Init;
+        bool Encode;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("empty")
-    data class MatrixUnion_KindEmpty private constructor(
-        val kind: String,
-        override val init: Boolean,
-        override val encode: Boolean,
-    ) : Schema.Shared.MatrixUnion {
-        constructor(
-            init: Boolean,
-            encode: Boolean,
-        ) : this(
-            kind = "empty",
-            init = init,
-            encode = encode,
-        )
+    public record MatrixUnion_KindEmpty : Schema.Shared.MatrixUnion
+    {
+        String Kind;
+        bool Init;
+        bool Encode;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    class DiscriminatorCodingKeys() {}
+    public record DiscriminatorCodingKeys
+    {}
 }  // namespace TypePrompt.Schema.Shared
 
 namespace TypePrompt.Schema.AnalyzeSalesData
 {
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class SalesRow(
-        val product: String,
-        val units: Int,
-        val revenueCents: Int,
-        val region: String,
-    ) {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Input(
-        val rows: List<SalesRow>,
-        val question: String,
-        val variant: Input_Variant,
-    ) {}
-
-    @Serializable
-    enum class Input_Variant {
-        @SerialName("csv")
-        Csv,
-        @SerialName("tsv")
-        Tsv,
+    public record SalesRow
+    {
+        String Product;
+        int Units;
+        int RevenueCents;
+        String Region;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Output(
-        val analysis: String,
-        val topProduct: String,
-        val totalRevenue: Double,
-    ) {}
+    public record Input
+    {
+        List<SalesRow> Rows;
+        String Question;
+        Input_Variant Variant;
+    }
+
+    public record Output
+    {
+        String Analysis;
+        String TopProduct;
+        double TotalRevenue;
+    }
 }  // namespace TypePrompt.Schema.AnalyzeSalesData
-}
 
 namespace TypePrompt.Schema.MyTemplate
 {
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Input(
-        val text: String,
-    ) {}
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Output(
-        val reversedText: String,
-        val shape: Output_Shape,
-    ) {}
-
-    @Serializable(with = Output_Shape_Serializer::class)
-    sealed interface Output_Shape {}
-
-    private object Output_Shape_Serializer : JsonContentPolymorphicSerializer<Output_Shape>(Output_Shape::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Output_Shape> {
-            return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
-                "square" -> global.TypePrompt.Schema.Shared.Square.serializer()
-                "circle" -> Output_Shape_KindCircle.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
-            }
-        }
+    public record Input
+    {
+        String Text;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("circle")
-    data class Output_Shape_KindCircle private constructor(
-        val kind: String,
-        val radius: Double,
-    ) : Schema.MyTemplate.Output_Shape {
-        constructor(
-            radius: Double,
-        ) : this(
-            kind = "circle",
-            radius = radius,
-        )
+    public record Output
+    {
+        String ReversedText;
+        Output_Shape Shape;
+    }
+
+    public record Output_Shape_KindCircle : Schema.MyTemplate.Output_Shape
+    {
+        String Kind;
+        double Radius;
     }
 }  // namespace TypePrompt.Schema.MyTemplate
-}
 
 namespace TypePrompt.Schema.MyOtherTemplate
 {
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Output(
-        val reversedText: String,
-        val shape: Output_Shape,
-    ) {}
-
-    @Serializable(with = Output_Shape_Serializer::class)
-    sealed interface Output_Shape {}
-
-    private object Output_Shape_Serializer : JsonContentPolymorphicSerializer<Output_Shape>(Output_Shape::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Output_Shape> {
-            return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
-                "square" -> global.TypePrompt.Schema.Shared.Square.serializer()
-                "circle" -> Output_Shape_KindCircle.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
-            }
-        }
+    public record Output
+    {
+        String ReversedText;
+        Output_Shape Shape;
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    @SerialName("circle")
-    data class Output_Shape_KindCircle private constructor(
-        val kind: String,
-        val radius: Double,
-    ) : Schema.MyOtherTemplate.Output_Shape {
-        constructor(
-            radius: Double,
-        ) : this(
-            kind = "circle",
-            radius = radius,
-        )
+    public record Output_Shape_KindCircle : Schema.MyOtherTemplate.Output_Shape
+    {
+        String Kind;
+        double Radius;
     }
 }  // namespace TypePrompt.Schema.MyOtherTemplate
-}
 
 namespace TypePrompt.Schema.MyTool
 {
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Output(
-        val shared: Shared,
-    ) {}
+    public record Output
+    {
+        Shared Shared;
+    }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
-    data class Shared(
-        val value: String,
-        val square: global.TypePrompt.Schema.Shared.Square,
-    ) {}
+    public record Shared
+    {
+        String Value;
+        global.TypePrompt.Schema.Shared.Square Square;
+    }
 }  // namespace TypePrompt.Schema.MyTool

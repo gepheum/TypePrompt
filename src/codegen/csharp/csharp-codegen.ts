@@ -12,7 +12,6 @@ import type {
   TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
-import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { capitalize, toPascalCase } from "../../util/casing.js";
@@ -224,7 +223,6 @@ function writeUserDefinedDatatypes(
           sharedNamespace,
         }),
       );
-      lines.push("}\n");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toCSharpName(capitalize(tool.tool.name.text));
@@ -355,39 +353,7 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
-  const isDataClass = fields.length > 0;
-  const lines = [
-    "@OptIn(ExperimentalSerializationApi::class)",
-    "@Serializable",
-  ];
-  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
-  if (discriminant) {
-    lines.push(`@SerialName("${discriminant}")`);
-  }
-  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
-  lines.push(
-    [
-      isDataClass ? "data class " : "class ",
-      typeName,
-      hasLiteralField ? " private constructor" : "",
-      "(",
-    ].join(""),
-  );
 
-  const writeCtorParams = (primary: boolean): void => {
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      if (isLiteralType(type) && !primary) continue;
-      const name = toCSharpName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      const override =
-        primary && unionContext.overrideFields.has(field) ? "override " : "";
-      const val = primary ? "val " : "";
-      lines.push(...wrapXmlDoc(field.doc));
-      lines.push(`${override}${val}${name}: ${fieldType},`);
-    }
-  };
-  writeCtorParams(true);
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
@@ -400,23 +366,18 @@ function writeTypepromptInterface(
           .join(", "),
       )
     : "";
-  lines.push(`)${implementsClause} {`);
-  if (hasLiteralField) {
-    lines.push("constructor(");
-    writeCtorParams(false);
-    lines.push(") : this(");
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      const name = toCSharpName(field.name.text);
-      if (isLiteralType(type)) {
-        const literal = JSON.stringify(type.value);
-        lines.push(`${name} = ${literal},`);
-      } else {
-        lines.push(`${name} = ${name},`);
-      }
-    }
-    lines.push(")");
+
+  const lines = [`public record ${typeName}${implementsClause}`, "{"];
+
+  for (const field of fields) {
+    const { type } = field;
+    const name = field.name.text;
+    const csharpName = toCSharpName(capitalize(name));
+    const fieldType = writeType(type, schema, options);
+    lines.push(...wrapXmlDoc(field.doc));
+    lines.push(`${fieldType} ${csharpName};`);
   }
+
   lines.push("}");
   return lines.join("\n");
 }
@@ -429,61 +390,61 @@ function writeTypepromptUnion(
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  switch (members.kind) {
-    case "strings": {
-      lines.push("@Serializable");
-      lines.push(`enum class ${typeName} {\n`);
-      for (const member of members.members) {
-        const csharpName = toCSharpName(toPascalCase(member.value));
-        lines.push(`@SerialName("${member.value}")`);
-        lines.push(csharpName.concat(","));
-      }
-      lines.push("}");
-      break;
-    }
-    case "interfaces": {
-      const { discriminator } = members;
-      lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
-      lines.push(`sealed interface ${typeName} {`);
-      for (const member of members.commonFields) {
-        const name = toCSharpName(member.name);
-        if (isLiteralType(member.type)) continue;
-        const type = writeType(member.type, schema, options);
-        lines.push(`val ${name}: ${type}`);
-      }
-      lines.push("}");
+  // switch (members.kind) {
+  //   case "strings": {
+  //     lines.push("@Serializable");
+  //     lines.push(`enum class ${typeName} {\n`);
+  //     for (const member of members.members) {
+  //       const csharpName = toCSharpName(toPascalCase(member.value));
+  //       lines.push(`@SerialName("${member.value}")`);
+  //       lines.push(csharpName.concat(","));
+  //     }
+  //     lines.push("}");
+  //     break;
+  //   }
+  //   case "interfaces": {
+  //     const { discriminator } = members;
+  //     lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
+  //     lines.push(`sealed interface ${typeName} {`);
+  //     for (const member of members.commonFields) {
+  //       const name = toCSharpName(member.name);
+  //       if (isLiteralType(member.type)) continue;
+  //       const type = writeType(member.type, schema, options);
+  //       lines.push(`val ${name}: ${type}`);
+  //     }
+  //     lines.push("}");
 
-      // Write the custom serializer for the union type based on the discriminant
-      lines.push(
-        "\n",
-        [
-          `private object ${typeName}_Serializer`,
-          `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-        ].join(" : "),
-        [
-          "override fun selectDeserializer(element: JsonElement)",
-          `DeserializationStrategy<${typeName}> {`,
-        ].join(": "),
-        [
-          `return when (val kind = element.jsonObject["${discriminator}"]`,
-          "jsonPrimitive?.contentOrNull) {",
-        ].join("?."),
-      );
-      for (const [discriminant, member] of Object.entries(members.members)) {
-        lines.push(
-          [
-            `"${discriminant}" -> `,
-            writeType(member.resolved, schema, options),
-            ".serializer()",
-          ].join(""),
-        );
-      }
-      lines.push(
-        "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
-      );
-      lines.push("}", "}", "}\n");
-    }
-  }
+  //     // Write the custom serializer for the union type based on the discriminant
+  //     lines.push(
+  //       "\n",
+  //       [
+  //         `private object ${typeName}_Serializer`,
+  //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
+  //       ].join(" : "),
+  //       [
+  //         "override fun selectDeserializer(element: JsonElement)",
+  //         `DeserializationStrategy<${typeName}> {`,
+  //       ].join(": "),
+  //       [
+  //         `return when (val kind = element.jsonObject["${discriminator}"]`,
+  //         "jsonPrimitive?.contentOrNull) {",
+  //       ].join("?."),
+  //     );
+  //     for (const [discriminant, member] of Object.entries(members.members)) {
+  //       lines.push(
+  //         [
+  //           `"${discriminant}" -> `,
+  //           writeType(member.resolved, schema, options),
+  //           ".serializer()",
+  //         ].join(""),
+  //       );
+  //     }
+  //     lines.push(
+  //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
+  //     );
+  //     lines.push("}", "}", "}\n");
+  //   }
+  // }
   return lines.join("\n");
 }
 
@@ -529,22 +490,22 @@ function writeType(
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "Int";
+        return "int";
       } else {
         switch (type.primitive.text) {
           case "boolean":
-            return "Boolean";
+            return "bool";
           case "string":
             return "String";
           case "number":
-            return "Double";
+            return "double";
           default:
             throw new Error(type.primitive.text satisfies never);
         }
       }
     }
     case "record": {
-      return `Map<String, ${writeType(type.valueType, schema, options)}>`;
+      return `Dictionary<String, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
@@ -920,7 +881,11 @@ function coalesceEmptyLines(code: string): string {
   );
 }
 
-const RESERVED_NAMES: ReadonlySet<string> = new Set(["String"] as const);
+const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  "Dictionary",
+  "List",
+  "String",
+] as const);
 
 const CSHARP_HARD_KEYWORDS: ReadonlySet<string> = new Set([
   "abstract",
