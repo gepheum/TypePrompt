@@ -5,7 +5,7 @@ namespace TypePrompt.Schema.Shared
     /// <summary>An expression</summary>
     [System.Text.Json.Serialization.JsonConverter(typeof(Expr__Converter))]
     public interface Expr
-    { }
+    {}
 
     internal class Expr__Converter : System.Text.Json.Serialization.JsonConverter<Expr>
     {
@@ -136,25 +136,25 @@ namespace TypePrompt.Schema.Shared
     }
 
     public record String
-    { }
+    {}
 
     public record Boolean
-    { }
+    {}
 
     public record List_
-    { }
+    {}
 
     public record Map
-    { }
+    {}
 
     public record EncodeDefault
-    { }
+    {}
 
     public record Serializable
-    { }
+    {}
 
     public record KindAdd
-    { }
+    {}
 
     public record AnyHolder
     {
@@ -185,8 +185,7 @@ namespace TypePrompt.Schema.Shared
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-    public enum E
-    {
+    public enum E {
         [System.Text.Json.Serialization.JsonStringEnumMemberName("class")]
         Class,
         [System.Text.Json.Serialization.JsonStringEnumMemberName("if")]
@@ -201,7 +200,7 @@ namespace TypePrompt.Schema.Shared
         [System.Text.Json.Serialization.JsonPropertyName("kind")]
         private readonly string Kind = "matrix";
         [System.Text.Json.Serialization.JsonPropertyName("matrix")]
-        public System.Collections.Generic.List<System.Collections.Generic.List<Square>> Matrix_ { get; init; }
+        public System.Collections.Generic.List<System.Collections.Generic.List<Square>> Matrix { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("otherMatrix")]
         public System.Collections.Generic.List<System.Collections.Generic.List<Square>>? OtherMatrix { get; init; }
         [System.Text.Json.Serialization.JsonPropertyName("foo")]
@@ -258,7 +257,7 @@ namespace TypePrompt.Schema.Shared
     }
 
     public record DiscriminatorCodingKeys
-    { }
+    {}
 }  // namespace TypePrompt.Schema.Shared
 
 namespace TypePrompt.Schema.AnalyzeSalesData
@@ -286,8 +285,7 @@ namespace TypePrompt.Schema.AnalyzeSalesData
     }
 
     [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-    public enum Input_Variant
-    {
+    public enum Input_Variant {
         [System.Text.Json.Serialization.JsonStringEnumMemberName("csv")]
         Csv,
         [System.Text.Json.Serialization.JsonStringEnumMemberName("tsv")]
@@ -323,7 +321,7 @@ namespace TypePrompt.Schema.MyTemplate
 
     [System.Text.Json.Serialization.JsonConverter(typeof(Output_Shape__Converter))]
     public interface Output_Shape
-    { }
+    {}
 
     internal class Output_Shape__Converter : System.Text.Json.Serialization.JsonConverter<Output_Shape>
     {
@@ -372,7 +370,7 @@ namespace TypePrompt.Schema.MyOtherTemplate
 
     [System.Text.Json.Serialization.JsonConverter(typeof(Output_Shape__Converter))]
     public interface Output_Shape
-    { }
+    {}
 
     internal class Output_Shape__Converter : System.Text.Json.Serialization.JsonConverter<Output_Shape>
     {
