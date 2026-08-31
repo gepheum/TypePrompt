@@ -32,4 +32,15 @@ void main() {
       );
     });
   });
+
+  test('construct without optional fields', () {
+    final matrix = Shared_Matrix(
+      matrix: [],
+      ints: [1, 2, 3],
+      init: true,
+      encode: false,
+    );
+    expect(matrix.otherMatrix, isNull);
+    expect(matrix.foo, isNull);
+  });
 }

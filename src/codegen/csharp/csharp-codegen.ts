@@ -397,9 +397,11 @@ function writeTypepromptInterface(
         `private readonly ${fieldType} ${csharpName} = ${quotedValue};`,
       );
     } else {
+      const isOptional = resolveType(type, schema).kind === "optional";
+      const required = isOptional ? "" : "required ";
       lines.push(
         `[JsonPropertyName("${name}")]`,
-        `public required ${fieldType} ${csharpName} { get; init; }`,
+        `public ${required}${fieldType} ${csharpName} { get; init; }`,
       );
     }
   }

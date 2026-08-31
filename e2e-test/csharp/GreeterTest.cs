@@ -74,5 +74,20 @@ public class GreeterTest
         Assert.Equal(84.0, succ.Y);
         Assert.Equal(99, succ.Z);
     }
+
+    [Fact]
+    public void TestOptionalFieldsOmission()
+    {
+        var matrix = new Matrix
+        {
+            matrix = new List<List<Square>>(),
+            Ints = new List<int> { 1, 2, 3 },
+            Init = true,
+            Encode = false
+        };
+
+        Assert.Null(matrix.OtherMatrix);
+        Assert.Null(matrix.Foo);
+    }
 }
 

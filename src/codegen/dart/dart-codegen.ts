@@ -347,7 +347,9 @@ function writeTypepromptInterface(
       const type = resolveType(field.type, schema);
       if (isLiteralType(type)) continue;
       const name = toDartName(field.name.text);
-      lines.push(`required this.${name},`);
+      const isOptional = type.kind === "optional";
+      const required = isOptional ? "" : "required ";
+      lines.push(`${required}this.${name},`);
     }
     lines.push("});");
   } else {

@@ -254,4 +254,17 @@ class PromptsE01Test {
         val deserialized = json.decodeFromString<Schema.Shared.Schema_>(serialized)
         assertEquals(wrapper, deserialized)
     }
+
+    @Test
+    fun testOptionalFieldsOmission() {
+        val matrix =
+            Schema.Shared.Matrix(
+                matrix = emptyList(),
+                ints = listOf(1, 2, 3),
+                init = true,
+                encode = false,
+            )
+        assertNull(matrix.otherMatrix)
+        assertNull(matrix.foo)
+    }
 }

@@ -120,3 +120,14 @@ import Testing
   #expect(success.x == 42)
   #expect(success.y == 84.0)
 }
+
+@Test func testOptionalFieldsOmission() async throws {
+  let matrix = TypePrompt.Schema.Shared.Matrix(
+    matrix: [],
+    ints: [1, 2, 3],
+    init: true,
+    encode: false
+  )
+  #expect(matrix.otherMatrix == nil)
+  #expect(matrix.foo == nil)
+}

@@ -361,7 +361,6 @@ function writeTypepromptInterface(
 ): string {
   const fields = Object.values(type.fields);
   const lines: string[] = [];
-  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
   lines.push(`struct ${typeName} : Codable {`);
 
   for (const field of fields) {
@@ -372,14 +371,18 @@ function writeTypepromptInterface(
     lines.push(`let ${name}: ${fieldType}`);
   }
 
-  if (hasLiteralField) {
+  const anyLiteralOrOptionalFields = fields.some(
+    (field) => isLiteralType(field.type) || field.type.kind === "optional",
+  );
+  if (anyLiteralOrOptionalFields) {
     lines.push("", "init(");
     for (const field of fields) {
       const { type } = field;
       if (isLiteralType(type)) continue;
       const name = toSwiftName(field.name.text);
       const fieldType = writeType(type, schema, options);
-      lines.push(`${name}: ${fieldType},`);
+      const defaultVal = type.kind === "optional" ? " = nil" : "";
+      lines.push(`${name}: ${fieldType}${defaultVal},`);
     }
     lines.push(") {");
     for (const field of fields) {
