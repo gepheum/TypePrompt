@@ -379,13 +379,13 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) {
       const quotedValue = JSON.stringify(type.value);
       lines.push(
-        "[JsonInclude]",
-        `[JsonPropertyName("${name}")]`,
+        "[System.Text.Json.Serialization.JsonInclude]",
+        `[System.Text.Json.Serialization.JsonPropertyName("${name}")]`,
         `private readonly ${fieldType} ${csharpName} = ${quotedValue};`,
       );
     } else {
       lines.push(
-        `[JsonPropertyName("${name}")]`,
+        `[System.Text.Json.Serialization.JsonPropertyName("${name}")]`,
         `public ${fieldType} ${csharpName} { get; init; }`,
       );
     }
@@ -406,19 +406,24 @@ function writeTypepromptUnion(
   switch (members.kind) {
     case "strings": {
       lines.push(
-        "[JsonConverter(typeof(JsonStringEnumConverter))]",
+        "[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]",
         `public enum ${typeName} {\n`,
       );
       for (const member of members.members) {
         const csharpName = toCSharpName(toPascalCase(member.value));
-        lines.push(`[JsonStringEnumMemberName("${member.value}")]`);
+        lines.push(
+          `[System.Text.Json.Serialization.JsonStringEnumMemberName("${member.value}")]`,
+        );
         lines.push(csharpName.concat(","));
       }
       lines.push("}");
       break;
     }
     case "interfaces": {
-      const { discriminator } = members;
+      const { discriminator, discriminants } = members;
+      lines.push(
+        `[System.Text.Json.Serialization.JsonConverter(typeof(${typeName}__Converter))]`,
+      );
       lines.push(`public interface ${typeName}`, "{");
 
       for (const commonField of members.commonFields) {
@@ -432,35 +437,61 @@ function writeTypepromptUnion(
       }
       lines.push("}");
 
-      //     // Write the custom serializer for the union type based on the discriminant
-      //     lines.push(
-      //       "\n",
-      //       [
-      //         `private object ${typeName}_Serializer`,
-      //         `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
-      //       ].join(" : "),
-      //       [
-      //         "override fun selectDeserializer(element: JsonElement)",
-      //         `DeserializationStrategy<${typeName}> {`,
-      //       ].join(": "),
-      //       [
-      //         `return when (val kind = element.jsonObject["${discriminator}"]`,
-      //         "jsonPrimitive?.contentOrNull) {",
-      //       ].join("?."),
-      //     );
-      //     for (const [discriminant, member] of Object.entries(members.members)) {
-      //       lines.push(
-      //         [
-      //           `"${discriminant}" -> `,
-      //           writeType(member.resolved, schema, options),
-      //           ".serializer()",
-      //         ].join(""),
-      //       );
-      //     }
-      //     lines.push(
-      //       "else -> throw IllegalArgumentException(\"Unknown discriminant: '${kind}'\")",
-      //     );
-      //     lines.push("}", "}", "}\n");
+      lines.push(
+        "",
+        `internal class ${typeName}__Converter : System.Text.Json.Serialization.JsonConverter<${typeName}>`,
+        "{",
+        `public override ${typeName}? Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)`,
+        "{",
+        "using var doc = System.Text.Json.JsonDocument.ParseValue(ref reader);",
+        "var root = doc.RootElement;",
+        `if (!root.TryGetProperty("${discriminator}", out var discElem))`,
+        "{",
+        `throw new System.Text.Json.JsonException("Missing discriminator property '${discriminator}'");`,
+        "}",
+      );
+
+      if (discriminants.type === "string") {
+        lines.push(
+          "var discriminant = discElem.GetString();",
+          "return discriminant switch",
+          "{",
+        );
+        for (const [discriminant, member] of Object.entries(members.members)) {
+          const type = writeType(member.resolved, schema, options);
+          lines.push(
+            `"${discriminant}" => System.Text.Json.JsonSerializer.Deserialize<${type}>(root, options),`,
+          );
+        }
+        lines.push(
+          `_ => throw new System.Text.Json.JsonException($"Unknown discriminant value '{discriminant}'")`,
+          "};",
+        );
+      } else {
+        lines.push(
+          "var discriminant = discElem.GetBoolean();",
+          "return discriminant switch",
+          "{",
+        );
+        for (const [discriminant, member] of Object.entries(members.members)) {
+          const type = writeType(member.resolved, schema, options);
+          lines.push(
+            `${discriminant} => System.Text.Json.JsonSerializer.Deserialize<${type}>(root, options),`,
+          );
+        }
+        lines.push("};");
+      }
+
+      lines.push(
+        "}",
+        "",
+        `public override void Write(System.Text.Json.Utf8JsonWriter writer, ${typeName} value, System.Text.Json.JsonSerializerOptions options)`,
+        "{",
+        "System.Text.Json.JsonSerializer.Serialize(writer, value, value.GetType(), options);",
+        "}",
+        "}",
+      );
+      break;
     }
   }
   return lines.join("\n");
@@ -473,15 +504,15 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return "JsonElement";
+      return "System.Text.Json.JsonElement";
     }
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `List<${writtenElement}>`;
+      return `System.Collections.Generic.List<${writtenElement}>`;
     }
     case "boolean-literal": {
-      return "Boolean";
+      return "bool";
     }
     case "interface":
     case "union": {
@@ -495,7 +526,7 @@ function writeType(
         }
       } else {
         namingHint = schema.namingHints.shared.get(type);
-        const global = topLevel ? "" : "global.";
+        const global = topLevel ? "" : "global::";
         return global.concat(
           sharedNamespace!,
           ".",
@@ -523,7 +554,7 @@ function writeType(
       }
     }
     case "record": {
-      return `Dictionary<String, ${writeType(type.valueType, schema, options)}>`;
+      return `System.Collections.Generic.Dictionary<string, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
