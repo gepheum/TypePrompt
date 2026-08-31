@@ -392,13 +392,13 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) {
       const quotedValue = JSON.stringify(type.value);
       lines.push(
-        "[System.Text.Json.Serialization.JsonInclude]",
-        `[System.Text.Json.Serialization.JsonPropertyName("${name}")]`,
+        "[JsonInclude]",
+        `[JsonPropertyName("${name}")]`,
         `private readonly ${fieldType} ${csharpName} = ${quotedValue};`,
       );
     } else {
       lines.push(
-        `[System.Text.Json.Serialization.JsonPropertyName("${name}")]`,
+        `[JsonPropertyName("${name}")]`,
         `public required ${fieldType} ${csharpName} { get; init; }`,
       );
     }
@@ -419,14 +419,12 @@ function writeTypepromptUnion(
   switch (members.kind) {
     case "strings": {
       lines.push(
-        "[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]",
+        "[JsonConverter(typeof(JsonStringEnumConverter))]",
         `public enum ${typeName} {\n`,
       );
       for (const member of members.members) {
         const csharpName = toCSharpName(toPascalCase(member.value));
-        lines.push(
-          `[System.Text.Json.Serialization.JsonStringEnumMemberName("${member.value}")]`,
-        );
+        lines.push(`[JsonStringEnumMemberName("${member.value}")]`);
         lines.push(csharpName.concat(","));
       }
       lines.push("}");
@@ -434,9 +432,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminator, discriminants } = members;
-      lines.push(
-        `[System.Text.Json.Serialization.JsonConverter(typeof(${typeName}__Converter))]`,
-      );
+      lines.push(`[JsonConverter(typeof(${typeName}__Converter))]`);
       lines.push(`public interface ${typeName}`, "{");
 
       for (const commonField of members.commonFields) {
@@ -452,18 +448,18 @@ function writeTypepromptUnion(
 
       lines.push(
         "",
-        `internal class ${typeName}__Converter : System.Text.Json.Serialization.JsonConverter<${typeName}>`,
+        `internal class ${typeName}__Converter : JsonConverter<${typeName}>`,
         "{",
         `public override ${typeName}? Read(`,
-        "ref System.Text.Json.Utf8JsonReader reader,",
+        "ref Utf8JsonReader reader,",
         "System.Type typeToConvert,",
-        "System.Text.Json.JsonSerializerOptions options)",
+        "JsonSerializerOptions options)",
         "{",
-        "using var doc = System.Text.Json.JsonDocument.ParseValue(ref reader);",
+        "using var doc = JsonDocument.ParseValue(ref reader);",
         "var root = doc.RootElement;",
         `if (!root.TryGetProperty("${discriminator}", out var discElem))`,
         "{",
-        `throw new System.Text.Json.JsonException("Missing discriminator property '${discriminator}'");`,
+        `throw new JsonException("Missing discriminator property '${discriminator}'");`,
         "}",
       );
 
@@ -476,11 +472,11 @@ function writeTypepromptUnion(
         for (const [discriminant, member] of Object.entries(members.members)) {
           const type = writeType(member.resolved, schema, options);
           lines.push(
-            `"${discriminant}" => System.Text.Json.JsonSerializer.Deserialize<${type}>(root, options),`,
+            `"${discriminant}" => JsonSerializer.Deserialize<${type}>(root, options),`,
           );
         }
         lines.push(
-          `_ => throw new System.Text.Json.JsonException($"Unknown discriminant value '{discriminant}'")`,
+          `_ => throw new JsonException($"Unknown discriminant value '{discriminant}'")`,
           "};",
         );
       } else {
@@ -492,7 +488,7 @@ function writeTypepromptUnion(
         for (const [discriminant, member] of Object.entries(members.members)) {
           const type = writeType(member.resolved, schema, options);
           lines.push(
-            `${discriminant} => System.Text.Json.JsonSerializer.Deserialize<${type}>(root, options),`,
+            `${discriminant} => JsonSerializer.Deserialize<${type}>(root, options),`,
           );
         }
         lines.push("};");
@@ -502,11 +498,11 @@ function writeTypepromptUnion(
         "}",
         "",
         "public override void Write(",
-        "System.Text.Json.Utf8JsonWriter writer,",
+        "Utf8JsonWriter writer,",
         `${typeName} value,`,
-        "System.Text.Json.JsonSerializerOptions options)",
+        "JsonSerializerOptions options)",
         "{",
-        "System.Text.Json.JsonSerializer.Serialize(writer, value, value.GetType(), options);",
+        "JsonSerializer.Serialize(writer, value, value.GetType(), options);",
         "}",
         "}",
       );
@@ -523,12 +519,12 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return "System.Text.Json.JsonElement";
+      return "JsonElement";
     }
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `System.Collections.Generic.List<${writtenElement}>`;
+      return `List<${writtenElement}>`;
     }
     case "boolean-literal": {
       return "bool";
@@ -573,7 +569,7 @@ function writeType(
       }
     }
     case "record": {
-      return `System.Collections.Generic.Dictionary<string, ${writeType(type.valueType, schema, options)}>`;
+      return `Dictionary<string, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
@@ -956,10 +952,19 @@ function coalesceEmptyLines(code: string): string {
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Dictionary",
   "JsonConverter",
+  "JsonDocument",
+  "JsonElement",
+  "JsonException",
   "JsonInclude",
+  "JsonPropertyName",
+  "JsonSerializer",
+  "JsonSerializerOptions",
   "JsonStringEnumConverter",
   "JsonStringEnumMemberName",
   "List",
+  "System",
+  "Utf8JsonReader",
+  "Utf8JsonWriter",
 ] as const);
 
 const CSHARP_HARD_KEYWORDS: ReadonlySet<string> = new Set([
