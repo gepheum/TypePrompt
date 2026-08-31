@@ -2,6 +2,7 @@
 
 // From the project directory.
 const SOURCE_FILES = [
+  "e2e-test/csharp/RuntimeLogic.cs",
   "e2e-test/dart/lib/runtime_logic.dart",
   "e2e-test/kotlin/src/main/kotlin/dev/typeprompt/RuntimeLogic.kt",
   "e2e-test/python/runtime_logic.py",

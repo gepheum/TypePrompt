@@ -11,6 +11,6 @@ gen:
     file: ../../rust/src/gen/prompts_04.rs
   swift:
     file: ../../swift/Sources/TypePromptE2E/Gen/Prompts04.swift
-    swiftNamespace: TypePrompt04
+    rootNamespace: TypePrompt04
   typescript:
     file: ../../typescript/src/gen/prompts-04.ts

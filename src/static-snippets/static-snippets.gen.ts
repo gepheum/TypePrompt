@@ -2,6 +2,7 @@
 // To regenerate, run: npm run make-static-snippets
 
 export const STATIC_SNIPPETS = {
+  "csharp-imports": "",
   "dart-imports": "import 'dart:convert';",
   "kotlin-imports":
     "import kotlinx.serialization.DeserializationStrategy\nimport kotlinx.serialization.EncodeDefault\nimport kotlinx.serialization.ExperimentalSerializationApi\nimport kotlinx.serialization.json.JsonClassDiscriminator\nimport kotlinx.serialization.json.JsonContentPolymorphicSerializer\nimport kotlinx.serialization.json.JsonElement\nimport kotlinx.serialization.SerialName\nimport kotlinx.serialization.Serializable\nimport kotlinx.serialization.json.contentOrNull\nimport kotlinx.serialization.json.jsonObject\nimport kotlinx.serialization.json.jsonPrimitive",

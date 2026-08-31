@@ -1,5 +1,7 @@
 include: prompts/**/*.xml
 gen:
+  csharp:
+    file: e2e-test/csharp/Gen/PromptsE01.cs
   dart:
     file: ../../dart/lib/gen/prompts_e01.dart
   kotlin:

@@ -11,6 +11,7 @@ export type Config = {
     readonly csharp?: {
       /** Path to the generated .cs file. */
       readonly file: string;
+      readonly rootNamespace: string;
     };
     readonly dart?: {
       /** Path to the generated .dart file. */
@@ -32,7 +33,7 @@ export type Config = {
     readonly swift?: {
       /** Path to the generated .swift file. */
       readonly file: string;
-      readonly swiftNamespace: string;
+      readonly rootNamespace: string;
     };
     readonly typescript?: {
       /** Path to the generated .ts file. */
@@ -85,6 +86,14 @@ const RawConfigSchema = z
             file: z
               .string()
               .refine((f) => f.endsWith(".cs"), `must end with '.cs'`),
+            rootNamespace: z
+              .string()
+              .regex(
+                /^[A-Z][A-Za-z0-9_]*$/,
+                "must be a valid PascalCase identifier",
+              )
+              .optional()
+              .default("TypePrompt"),
           })
           .strict()
           .optional(),
@@ -128,7 +137,7 @@ const RawConfigSchema = z
             file: z
               .string()
               .refine((f) => f.endsWith(".swift"), `must end with '.swift'`),
-            swiftNamespace: z
+            rootNamespace: z
               .string()
               .regex(
                 /^[A-Z][A-Za-z0-9_]*$/,

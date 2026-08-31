@@ -35,10 +35,10 @@ export function generateSwiftCode(
 
 function writeAll(
   compilationResult: ValidCompilationResult,
-  config: { swiftNamespace: string },
+  config: { rootNamespace: string },
 ): string {
   const { templates } = compilationResult;
-  const { swiftNamespace } = config;
+  const { rootNamespace } = config;
 
   return coalesceEmptyLines(
     reformat(
@@ -46,7 +46,7 @@ function writeAll(
         STATIC_SNIPPETS["swift-imports"],
         // reformat(writePromptsInterface(compilationResult)),
         // STATIC_SNIPPETS["typescript-top-level"],
-        `enum ${swiftNamespace} {`,
+        `enum ${rootNamespace} {`,
         // writeTemplateIdEnum(Object.values(templates)),
         // writeToolsType(compilationResult),
         // writeInputOutputTypes(compilationResult),
@@ -174,7 +174,7 @@ function writeAll(
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
-  config: { swiftNamespace: string },
+  config: { rootNamespace: string },
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
@@ -190,7 +190,7 @@ function writeUserDefinedDatatypes(
         metaSchema,
         {
           topLevel: true,
-          typePrefix: `${config.swiftNamespace}.Schema.Meta.`,
+          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
         },
       )
     : "Nothing?";
@@ -202,7 +202,7 @@ function writeUserDefinedDatatypes(
     lines.push(
       "enum Meta {",
       writeSchema(metaSchema, {
-        typePrefix: `${config.swiftNamespace}.Schema.Meta.`,
+        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
       }),
       "}\n",
     );
@@ -211,9 +211,9 @@ function writeUserDefinedDatatypes(
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName = toSwiftName(namespace.name);
     const typePrefixBase = singleNamespace
-      ? `${config.swiftNamespace}.Schema.`
-      : `${config.swiftNamespace}.Schema.${namespaceName}.`;
-    const sharedTypePrefix = `${config.swiftNamespace}.Schema.Shared.`;
+      ? `${config.rootNamespace}.Schema.`
+      : `${config.rootNamespace}.Schema.${namespaceName}.`;
+    const sharedTypePrefix = `${config.rootNamespace}.Schema.Shared.`;
     if (anyTypes(namespace.schema)) {
       lines.push("enum Shared {");
       lines.push(
