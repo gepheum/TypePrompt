@@ -1,8 +1,8 @@
 include: ../../../examples/01-basics/**/*.xml
 gen:
   csharp:
-    file: ../../csharp/Gen/PromptsE01.cs
-    rootNamespace: TypePromptE01
+    file: ../../csharp/Gen/Prompts01.cs
+    rootNamespace: TypePrompt01
   dart:
     file: ../../dart/lib/gen/prompts_01.dart
   kotlin:

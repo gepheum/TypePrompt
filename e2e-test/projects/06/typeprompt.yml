@@ -1,8 +1,8 @@
 include: ../../../examples/06-toon-format/**/*.xml
 gen:
   csharp:
-    file: ../../csharp/Gen/PromptsE06.cs
-    rootNamespace: TypePromptE06
+    file: ../../csharp/Gen/Prompts06.cs
+    rootNamespace: TypePrompt06
   dart:
     file: ../../dart/lib/gen/prompts_06.dart
   kotlin:

@@ -1,8 +1,8 @@
 include: ../../../examples/07-shared-types/**/*.xml
 gen:
   csharp:
-    file: ../../csharp/Gen/PromptsE07.cs
-    rootNamespace: TypePromptE07
+    file: ../../csharp/Gen/Prompts07.cs
+    rootNamespace: TypePrompt07
   dart:
     file: ../../dart/lib/gen/prompts_07.dart
   kotlin:
