@@ -357,7 +357,7 @@ function writeTypepromptInterface(
   const hasLiteralField = fields.some((f) => isLiteralType(f.type));
 
   lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
-  lines.push(`struct ${typeName} {`);
+  lines.push(`pub struct ${typeName} {`);
   for (const field of fields) {
     const { type } = field;
     if (isLiteralType(type)) continue;
@@ -408,7 +408,7 @@ function writeTypepromptUnion(
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
   lines.push("#[derive(Serialize, Deserialize, Debug, PartialEq)]");
-  lines.push(`enum ${typeName} {\n`);
+  lines.push(`pub enum ${typeName} {\n`);
   switch (members.kind) {
     case "strings": {
       for (const member of members.members) {
@@ -470,13 +470,15 @@ function writeTypepromptUnion(
         "}", // impl Serialize
       );
 
+      const value_getter =
+        members.discriminants.type === "boolean" ? "as_bool" : "as_str";
       lines.push(
         "",
         `impl<'de> Deserialize<'de> for ${typeName} {`,
         "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {",
         "let value = serde::Value::deserialize(deserializer)?;",
         `let discriminant = value.get("${discriminator}")`,
-        ".and_then(serde::Value::as_str)",
+        `.and_then(serde::Value::as_${value_getter})`,
         `.ok_or_else(|| de::Error::missing_field("${discriminator}"))?;`,
         "match discriminant {",
       );
@@ -887,6 +889,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Serialize",
   "String",
   "Vec",
+  "de",
   "derive",
   "serde",
   "serde_json",

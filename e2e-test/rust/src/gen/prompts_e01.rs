@@ -1,4 +1,5 @@
-
+use std::collections::HashMap;
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 /// Namespace containing the user-defined datatypes.
 pub mod schema {
@@ -6,7 +7,7 @@ pub mod schema {
     // Exported as 'schema::shared::Expr'
     /// An expression
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum Expr {
+    pub enum Expr {
       KindNumber(Expr_KindNumber),
       KindAdd(Expr_KindAdd),
       KindIf(Expr_KindIf),
@@ -26,7 +27,7 @@ pub mod schema {
       fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {
         let value = serde::Value::deserialize(deserializer)?;
         let discriminant = value.get("kind")
-        .and_then(serde::Value::as_str)
+        .and_then(serde::Value::as_as_str)
         .ok_or_else(|| de::Error::missing_field("kind"))?;
         match discriminant {
           "number" => {
@@ -48,7 +49,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::Expr_KindNumber'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Expr_KindNumber {
+    pub struct Expr_KindNumber {
       pub value: f64,
     }
 
@@ -63,7 +64,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::Expr_KindAdd'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Expr_KindAdd {
+    pub struct Expr_KindAdd {
       pub left: Expr,
       pub right: Expr,
     }
@@ -80,7 +81,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::Expr_KindIf'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Expr_KindIf {
+    pub struct Expr_KindIf {
       pub condition: Expr,
       pub then: Expr,
       pub else_: Expr,
@@ -99,7 +100,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::EnumWithCommonFields'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum EnumWithCommonFields {
+    pub enum EnumWithCommonFields {
       NotSuccess(EnumWithCommonFields_NotSuccess),
       Success(EnumWithCommonFields_Success),
     }
@@ -117,7 +118,7 @@ pub mod schema {
       fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {
         let value = serde::Value::deserialize(deserializer)?;
         let discriminant = value.get("success")
-        .and_then(serde::Value::as_str)
+        .and_then(serde::Value::as_as_bool)
         .ok_or_else(|| de::Error::missing_field("success"))?;
         match discriminant {
           false => {
@@ -152,7 +153,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::EnumWithCommonFields_NotSuccess'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct EnumWithCommonFields_NotSuccess {
+    pub struct EnumWithCommonFields_NotSuccess {
       /// x coordinate
       pub x: i32,
       /// y coordinate
@@ -174,7 +175,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::EnumWithCommonFields_Success'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct EnumWithCommonFields_Success {
+    pub struct EnumWithCommonFields_Success {
       /// x coordinate
       pub x: i32,
       pub y: f64,
@@ -194,53 +195,53 @@ pub mod schema {
 
     // Exported as 'schema::shared::Schema'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Schema {
+    pub struct Schema {
       pub e: EnumWithCommonFields,
     }
 
     // Exported as 'schema::shared::String_'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct String_ {}
+    pub struct String_ {}
 
     // Exported as 'schema::shared::Boolean'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Boolean {}
+    pub struct Boolean {}
 
     // Exported as 'schema::shared::List'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct List {}
+    pub struct List {}
 
     // Exported as 'schema::shared::Map'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Map {}
+    pub struct Map {}
 
     // Exported as 'schema::shared::EncodeDefault'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct EncodeDefault {}
+    pub struct EncodeDefault {}
 
     // Exported as 'schema::shared::Serializable'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Serializable {}
+    pub struct Serializable {}
 
     // Exported as 'schema::shared::KindAdd'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct KindAdd {}
+    pub struct KindAdd {}
 
     // Exported as 'schema::shared::AnyHolder'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct AnyHolder {
+    pub struct AnyHolder {
       pub any: serde_json::Value,
     }
 
     // Exported as 'schema::shared::SerializerHolder'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct SerializerHolder {
+    pub struct SerializerHolder {
       pub serializer: serde_json::Value,
     }
 
     // Exported as 'schema::shared::Square'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Square {
+    pub struct Square {
       pub size: f64,
       pub from_json: String,
       pub self_: String,
@@ -260,7 +261,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::E'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum E {
+    pub enum E {
       #[serde(rename = "class")]
       Class,
       #[serde(rename = "if")]
@@ -271,7 +272,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::Matrix'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Matrix {
+    pub struct Matrix {
       pub matrix: Vec<Vec<Square>>,
       pub other_matrix: Option<Vec<Vec<Square>>>,
       pub foo: Option<HashMap<String, Vec<Square>>>,
@@ -296,7 +297,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::MatrixUnion'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum MatrixUnion {
+    pub enum MatrixUnion {
       KindMatrix(Matrix),
       KindEmpty(MatrixUnion_KindEmpty),
     }
@@ -314,7 +315,7 @@ pub mod schema {
       fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {
         let value = serde::Value::deserialize(deserializer)?;
         let discriminant = value.get("kind")
-        .and_then(serde::Value::as_str)
+        .and_then(serde::Value::as_as_str)
         .ok_or_else(|| de::Error::missing_field("kind"))?;
         match discriminant {
           "matrix" => {
@@ -347,7 +348,7 @@ pub mod schema {
 
     // Exported as 'schema::shared::MatrixUnion_KindEmpty'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct MatrixUnion_KindEmpty {
+    pub struct MatrixUnion_KindEmpty {
       pub init: bool,
       pub encode: bool,
     }
@@ -364,13 +365,13 @@ pub mod schema {
 
     // Exported as 'schema::shared::DiscriminatorCodingKeys'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct DiscriminatorCodingKeys {}
+    pub struct DiscriminatorCodingKeys {}
   }
 
   pub mod AnalyzeSalesData {
     // Exported as 'Schema.AnalyzeSalesData.SalesRow'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct SalesRow {
+    pub struct SalesRow {
       pub product: String,
       pub units: i32,
       #[serde(rename = "revenueCents")]
@@ -380,7 +381,7 @@ pub mod schema {
 
     // Exported as 'Schema.AnalyzeSalesData.Input'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Input {
+    pub struct Input {
       pub rows: Vec<SalesRow>,
       pub question: String,
       pub variant: Input_Variant,
@@ -388,7 +389,7 @@ pub mod schema {
 
     // Exported as 'Schema.AnalyzeSalesData.Input_Variant'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum Input_Variant {
+    pub enum Input_Variant {
       #[serde(rename = "csv")]
       Csv,
       #[serde(rename = "tsv")]
@@ -397,7 +398,7 @@ pub mod schema {
 
     // Exported as 'Schema.AnalyzeSalesData.Output'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output {
+    pub struct Output {
       pub analysis: String,
       #[serde(rename = "topProduct")]
       pub top_product: String,
@@ -409,13 +410,13 @@ pub mod schema {
   pub mod MyTemplate {
     // Exported as 'Schema.MyTemplate.Input'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Input {
+    pub struct Input {
       pub text: String,
     }
 
     // Exported as 'Schema.MyTemplate.Output'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output {
+    pub struct Output {
       #[serde(rename = "reversedText")]
       pub reversed_text: String,
       pub shape: Output_Shape,
@@ -423,7 +424,7 @@ pub mod schema {
 
     // Exported as 'Schema.MyTemplate.Output_Shape'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum Output_Shape {
+    pub enum Output_Shape {
       KindSquare(shared::Square),
       KindCircle(Output_Shape_KindCircle),
     }
@@ -441,7 +442,7 @@ pub mod schema {
       fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {
         let value = serde::Value::deserialize(deserializer)?;
         let discriminant = value.get("kind")
-        .and_then(serde::Value::as_str)
+        .and_then(serde::Value::as_as_str)
         .ok_or_else(|| de::Error::missing_field("kind"))?;
         match discriminant {
           "square" => {
@@ -459,7 +460,7 @@ pub mod schema {
 
     // Exported as 'Schema.MyTemplate.Output_Shape_KindCircle'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output_Shape_KindCircle {
+    pub struct Output_Shape_KindCircle {
       pub radius: f64,
     }
 
@@ -476,7 +477,7 @@ pub mod schema {
   pub mod MyOtherTemplate {
     // Exported as 'Schema.MyOtherTemplate.Output'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output {
+    pub struct Output {
       #[serde(rename = "reversedText")]
       pub reversed_text: String,
       pub shape: Output_Shape,
@@ -484,7 +485,7 @@ pub mod schema {
 
     // Exported as 'Schema.MyOtherTemplate.Output_Shape'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum Output_Shape {
+    pub enum Output_Shape {
       KindSquare(shared::Square),
       KindCircle(Output_Shape_KindCircle),
     }
@@ -502,7 +503,7 @@ pub mod schema {
       fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : Deserializer<'de> {
         let value = serde::Value::deserialize(deserializer)?;
         let discriminant = value.get("kind")
-        .and_then(serde::Value::as_str)
+        .and_then(serde::Value::as_as_str)
         .ok_or_else(|| de::Error::missing_field("kind"))?;
         match discriminant {
           "square" => {
@@ -520,7 +521,7 @@ pub mod schema {
 
     // Exported as 'Schema.MyOtherTemplate.Output_Shape_KindCircle'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output_Shape_KindCircle {
+    pub struct Output_Shape_KindCircle {
       pub radius: f64,
     }
 
@@ -537,13 +538,13 @@ pub mod schema {
   pub mod MyTool {
     // Exported as 'Schema.MyTool.Output'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Output {
+    pub struct Output {
       pub shared: Shared,
     }
 
     // Exported as 'Schema.MyTool.Shared'
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct Shared {
+    pub struct Shared {
       pub value: String,
       pub square: shared::Square,
     }
