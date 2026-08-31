@@ -256,6 +256,7 @@ export type DiscriminatedUnionMembers = {
       readonly discriminant: StringLiteral | BooleanLiteral;
       readonly resolved: Interface;
       readonly unresolved: UnionMemberType;
+      readonly isRecursive: boolean;
     };
   };
   /** Name of the discriminator field, e.g. 'kind'. */

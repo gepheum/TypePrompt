@@ -429,7 +429,7 @@ function writeTypepromptUnion(
           readonly caseName: string;
           readonly type: string;
         } => {
-          const { discriminant } = member;
+          const { discriminant, isRecursive } = member;
           const caseName = toRustName(
             ((): string => {
               switch (discriminant.kind) {
@@ -445,7 +445,10 @@ function writeTypepromptUnion(
               }
             })(),
           );
-          const type = writeType(member.resolved, schema, options);
+          let type = writeType(member.resolved, schema, options);
+          if (isRecursive) {
+            type = `Box<${type}>`;
+          }
           const quotedDiscriminant = JSON.stringify(discriminant.value);
           return { quotedDiscriminant, caseName, type };
         },
@@ -880,6 +883,7 @@ function coalesceEmptyLines(code: string): string {
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  "Box",
   "Debug",
   "Deserialize",
   "HashMap",

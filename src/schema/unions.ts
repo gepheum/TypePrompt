@@ -7,6 +7,7 @@ import {
   Discriminants,
   DiscriminatedUnionMembers,
   Field,
+  FieldType,
   Interface,
   ResolvedFieldType,
   SchemaView,
@@ -168,13 +169,13 @@ function makeInterfaceUnionMembers(
   includes: readonly Union[],
   schema: SchemaView,
 ): DiscriminatedUnionMembers | InternalErrors {
-  const first = getMemberInfo(members[0]!, schema, null);
+  const first = getInterfaceMemberInfo(members[0]!, schema, null);
   if (first.kind === "error") {
     return first;
   }
   const memberInfos: InterfaceMemberInfo[] = [first];
   for (const member of members.slice(1)) {
-    const info = getMemberInfo(member, schema, first);
+    const info = getInterfaceMemberInfo(member, schema, first);
     if (info.kind === "error") {
       return info;
     }
@@ -241,6 +242,7 @@ function makeInterfaceUnionMembers(
           resolved: info.resolved,
           unresolved: info.unresolved,
           discriminant: info.discriminant,
+          isRecursive: info.isRecursive,
         },
       ]),
     ),
@@ -285,9 +287,10 @@ type InterfaceMemberInfo = {
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
   readonly discriminant: StringLiteral | BooleanLiteral;
+  readonly isRecursive: boolean;
 };
 
-function getMemberInfo(
+function getInterfaceMemberInfo(
   member: Member,
   schema: SchemaView,
   other: InterfaceMemberInfo | null,
@@ -335,6 +338,7 @@ function getMemberInfo(
       });
     }
   }
+  const isRecursive = isInterfaceMemberRecursive(member.resolved, schema);
   return {
     kind: "success",
     resolved: member.resolved,
@@ -342,7 +346,54 @@ function getMemberInfo(
     errorToken: member.errorToken,
     discriminator: discriminator,
     discriminant: discriminant,
+    isRecursive,
   };
+}
+
+function isInterfaceMemberRecursive(
+  member: Interface,
+  schema: SchemaView,
+): boolean {
+  const seenNames = new Set<string>();
+  const checkType = (type: FieldType, first?: "first"): boolean => {
+    switch (type.kind) {
+      case "any":
+      case "boolean-literal":
+      case "primitive":
+      case "string-literal": {
+        return false;
+      }
+      case "array": {
+        return checkType(type.elementType);
+      }
+      case "interface": {
+        return (
+          (type === member && !first) ||
+          Object.values(type.fields).some((field) => checkType(field.type))
+        );
+      }
+      case "union": {
+        return type.members.some((member) => checkType(member));
+      }
+      case "optional": {
+        return checkType(type.innerType);
+      }
+      case "record": {
+        return checkType(type.valueType);
+      }
+      case "shared-type-name": {
+        return false;
+      }
+      case "type-name": {
+        if (seenNames.has(type.name.text)) return false;
+        seenNames.add(type.name.text);
+        const declaration = schema.typeDeclarations[type.name.text];
+        if (!declaration) return false;
+        return checkType(declaration.valueType);
+      }
+    }
+  };
+  return checkType(member, "first");
 }
 
 function collectCommonFields(

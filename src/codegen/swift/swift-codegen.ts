@@ -418,7 +418,10 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminants, discriminator } = members;
-      lines.push(`indirect enum ${typeName} : Codable {`);
+      const indirect = Object.values(members.members).some((m) => m.isRecursive)
+        ? "indirect "
+        : "";
+      lines.push(`${indirect}enum ${typeName} : Codable {`);
       const caseEntries = Object.values(members.members).map((member) => {
         const { discriminant } = member;
         const caseName = toSwiftName(

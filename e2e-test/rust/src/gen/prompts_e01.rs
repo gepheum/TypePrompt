@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
 
 /// Namespace containing the user-defined datatypes.
 pub mod schema {
@@ -9,8 +9,8 @@ pub mod schema {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     pub enum Expr {
       KindNumber(Expr_KindNumber),
-      KindAdd(Expr_KindAdd),
-      KindIf(Expr_KindIf),
+      KindAdd(Box<Expr_KindAdd>),
+      KindIf(Box<Expr_KindIf>),
     }
 
     impl Serialize for Expr {
@@ -35,11 +35,11 @@ pub mod schema {
             Ok(Expr::KindNumber(v))
           }
           "add" => {
-            let v = Expr_KindAdd::deserialize(value).map_err(de::Error::custom)?;
+            let v = Box<Expr_KindAdd>::deserialize(value).map_err(de::Error::custom)?;
             Ok(Expr::KindAdd(v))
           }
           "if" => {
-            let v = Expr_KindIf::deserialize(value).map_err(de::Error::custom)?;
+            let v = Box<Expr_KindIf>::deserialize(value).map_err(de::Error::custom)?;
             Ok(Expr::KindIf(v))
           }
           other => Err(de::Error::unknown_variant(other, &["number", "add", "if"])),
