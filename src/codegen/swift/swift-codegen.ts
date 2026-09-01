@@ -46,7 +46,6 @@ function writeAll(
   compilationResult: ValidCompilationResult,
   config: { rootNamespace: string },
 ): string {
-  const { templates } = compilationResult;
   const { rootNamespace } = config;
 
   return coalesceEmptyLines(
@@ -227,10 +226,12 @@ function writeUserDefinedDatatypes(
           typePrefix: `${config.rootNamespace}.Schema.Meta.`,
         },
       )
-    : "Nothing?";
+    : "Never?";
   lines.push(
+    `public typealias Meta = ${metaType}`,
+    "",
     "/// Namespace containing the user-defined datatypes.",
-    "enum Schema {",
+    "public enum Schema {",
   );
   if (anyTypes(metaSchema)) {
     lines.push(

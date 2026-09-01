@@ -42,7 +42,6 @@ function writeAll(
   compilationResult: ValidCompilationResult,
   kotlinConfig: { package: string },
 ): string {
-  const { templates } = compilationResult;
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
@@ -112,15 +111,17 @@ function writeAll(
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
 ): string {
-  const { singleNamespace, templates } = compilationResult;
-  if (Object.keys(templates).length <= 0) {
+  const templates = Object.values(compilationResult.templates);
+  if (templates.length <= 0) {
     return "";
   }
+  const { singleNamespace } = compilationResult;
   const lines = [
     "/** Uniquely identifies a prompt template. */",
     "enum class TemplateId(val id: String) {",
   ];
-  for (const template of Object.values(templates)) {
+  for (const template of templates) {
+    const isLast = template === templates.at(-1);
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateName = template.template.name.text;
     const rawMemberName = singleNamespace
@@ -128,9 +129,9 @@ function writeTemplateIdEnum(
       : `${toSnakeCase(namespace).toUpperCase()}__${toSnakeCase(templateName).toUpperCase()}`;
     const entryName = toKotlinName(rawMemberName);
     const templateId = getId(template.template);
-    lines.push(`${entryName}("${templateId}"),`);
+    const comma = isLast ? ";" : ",";
+    lines.push(`${entryName}("${templateId}")${comma}`);
   }
-  lines.push(";");
   lines.push("", "override fun toString(): String = id", "}");
   return lines.join("\n");
 }

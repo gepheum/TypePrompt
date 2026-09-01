@@ -38,8 +38,6 @@ export function generateRustCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  const { templates } = compilationResult;
-
   return coalesceEmptyLines(
     reformat(
       [
@@ -224,8 +222,10 @@ function writeUserDefinedDatatypes(
           typePrefix: "schema::meta::",
         },
       )
-    : "Nothing?";
+    : "()";
   lines.push(
+    `pub type Meta = ${metaType};`,
+    "",
     "/// Namespace containing the user-defined datatypes.",
     "pub mod schema {",
   );

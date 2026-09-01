@@ -42,7 +42,6 @@ function writeAll(
   compilationResult: ValidCompilationResult,
   config: { rootNamespace: string },
 ): string {
-  const { templates } = compilationResult;
   const unionContext = makeUnionContext(compilationResult, config);
 
   return coalesceEmptyLines(
@@ -292,7 +291,6 @@ function writeUserDefinedDatatypes(
     writeTypepromptNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toCSharpName(namespace.name);
       writeTypepromptNamespace(namespace);
     }
   }

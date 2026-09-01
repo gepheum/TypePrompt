@@ -14,6 +14,7 @@ import type {
   Optional,
   Schema,
   Type,
+  TypeNameView,
   Union,
 } from "../../schema/schema-types.js";
 import { isLiteralType } from "../../schema/schema-utils.js";
@@ -44,7 +45,6 @@ export function generateDartCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
-  const { templates } = compilationResult;
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
@@ -207,21 +207,21 @@ function writeUserDefinedDatatypes(
     Object.keys(schema.typeDeclarations).length > 0;
   const lines: string[] = [];
 
-  // const metaType = anyTypes(metaSchema)
-  //   ? writeType(
-  //       {
-  //         kind: "type-name",
-  //         name: { text: "Meta" },
-  //       },
-  //       metaSchema,
-  //       {
-  //         context: "top-level",
-  //         typePrefix: "Schema.Meta.",
-  //       },
-  //     )
-  //   : "Nothing?";
+  const metaType = anyTypes(metaSchema)
+    ? writeType(
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          typePrefix: "Meta_",
+        },
+      )
+    : "Null";
   lines.push(
-    // `typealias Meta = ${metaType}\n`,
+    `typedef Meta = ${metaType};`,
+    "",
     "// ".concat("-".repeat(77)),
     "// User-defined datatypes",
     "// ".concat("-".repeat(77)),
@@ -535,7 +535,7 @@ function writeTypepromptUnion(
 }
 
 function writeType(
-  type: Type | Optional,
+  type: Type | TypeNameView | Optional,
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
