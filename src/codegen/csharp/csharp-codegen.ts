@@ -52,7 +52,7 @@ function writeAll(
       reformat(
         [
           writeTemplateIdEnum(compilationResult, config),
-          // writeToolsType(compilationResult),
+          writeToolExecutorInterfaces(compilationResult, config),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
           writeSpecDatatypes(unionContext, config),
@@ -162,31 +162,74 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-// function writeToolsType(compilationResult: ValidCompilationResult): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines = [
-//     "/** The tools available from the given template. */",
-//     "export type Tools<Id extends TemplateId> = {",
-//   ];
-//   for (const template of Object.values(templates)) {
-//     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const templateId = getId(template.template);
-//     lines.push(`"${templateId}": {`);
-//     for (const tool of Object.values(template.tools)) {
-//       const toolName = tool.tool.tool.name.text;
-//       const typePrefix = singleNamespace
-//         ? `$.${capitalize(toolName)}.`
-//         : `$.${namespace}.${capitalize(toolName)}.`;
-//       lines.push(`${toolName}: Tool<`);
-//       lines.push(`${typePrefix}Input,`);
-//       lines.push(`${typePrefix}Output`);
-//       lines.push(">,");
-//     }
-//     lines.push("},");
-//   }
-//   lines.push("}[Id];");
-//   return lines.join("\n");
-// }
+function writeToolExecutorInterfaces(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const { singleNamespace, namespaces } = compilationResult;
+  const sections: string[] = [];
+
+  const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const namespaceBase = singleNamespace
+      ? `${rootNamespace}.Tools`
+      : `${rootNamespace}.Tools.${toCSharpName(namespace.name)}`;
+    const schemaNamespaceBase = singleNamespace
+      ? `${rootNamespace}.Schema.`
+      : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
+    const sharedNamespace = schemaNamespaceBase.concat("Shared");
+
+    const lines = [`namespace ${namespaceBase}`, "{"];
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = tool.tool.name.text;
+      const interfaceName = `${capitalize(toolName)}Executor`;
+      const toolTypeName = toCSharpName(capitalize(toolName));
+      const toolNamespace = schemaNamespaceBase.concat(toolTypeName);
+      const options: WriteSchemaOptions = {
+        namespace: toolNamespace,
+        sharedNamespace,
+        topLevel: true,
+      };
+
+      const inputDecl = tool.schema.typeDeclarations["Input"];
+      const outputDecl = tool.schema.typeDeclarations["Output"];
+      const inputType = inputDecl
+        ? writeType(
+            resolveType(inputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolNamespace}.Input`;
+      const outputType = outputDecl
+        ? writeType(
+            resolveType(outputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolNamespace}.Output`;
+
+      lines.push(
+        `public interface ${interfaceName}`,
+        "{",
+        `System.Threading.Tasks.Task<${outputType}> ${toCSharpName(capitalize(toolName))}(${inputType} input);`,
+        "}",
+        "",
+      );
+    }
+    lines.push(`}  // namespace ${namespaceBase}`);
+    sections.push(lines.join("\n"));
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      writeNamespace(namespace);
+    }
+  }
+
+  return sections.join("\n\n");
+}
 
 // function writeInputOutputTypes(
 //   compilationResult: ValidCompilationResult,

@@ -56,7 +56,7 @@ function writeAll(
         // STATIC_SNIPPETS["typescript-top-level"],
         `enum ${rootNamespace} {`,
         writeTemplateIdEnum(compilationResult),
-        // writeToolsType(compilationResult),
+        writeToolExecutorProtocols(compilationResult, config),
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult, config),
         writeSpecDatatypes(),
@@ -154,31 +154,77 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-// function writeToolsType(compilationResult: ValidCompilationResult): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines = [
-//     "/** The tools available from the given template. */",
-//     "export type Tools<Id extends TemplateId> = {",
-//   ];
-//   for (const template of Object.values(templates)) {
-//     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const templateId = getId(template.template);
-//     lines.push(`"${templateId}": {`);
-//     for (const tool of Object.values(template.tools)) {
-//       const toolName = tool.tool.tool.name.text;
-//       const typePrefix = singleNamespace
-//         ? `$.${capitalize(toolName)}.`
-//         : `$.${namespace}.${capitalize(toolName)}.`;
-//       lines.push(`${toolName}: Tool<`);
-//       lines.push(`${typePrefix}Input,`);
-//       lines.push(`${typePrefix}Output`);
-//       lines.push(">,");
-//     }
-//     lines.push("},");
-//   }
-//   lines.push("}[Id];");
-//   return lines.join("\n");
-// }
+function writeToolExecutorProtocols(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    const namespaceName = toSwiftName(namespace.name);
+    const typePrefixBase = singleNamespace
+      ? `${config.rootNamespace}.Schema.`
+      : `${config.rootNamespace}.Schema.${namespaceName}.`;
+    const sharedTypePrefix = typePrefixBase.concat("Shared.");
+
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = tool.tool.name.text;
+      const interfaceName = `${capitalize(toolName)}Executor`;
+      const toolTypeName = toSwiftName(capitalize(toolName));
+      const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
+      const options: WriteSchemaOptions = {
+        typePrefix: toolTypePrefix,
+        sharedTypePrefix,
+        topLevel: true,
+      };
+
+      const inputDecl = tool.schema.typeDeclarations["Input"];
+      const outputDecl = tool.schema.typeDeclarations["Output"];
+      const inputType = inputDecl
+        ? writeType(
+            resolveType(inputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Input`;
+      const outputType = outputDecl
+        ? writeType(
+            resolveType(outputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Output`;
+
+      lines.push(
+        `public protocol ${interfaceName}: Sendable {`,
+        `func ${toSwiftName(toolName)}(input: ${inputType}) async throws -> ${outputType}`,
+        "}",
+        "",
+      );
+    }
+    return lines;
+  };
+
+  const lines = [
+    "/// Namespace containing tool executor protocols.",
+    "public enum Tools {",
+  ];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const namespaceName = toSwiftName(namespace.name);
+      lines.push(`public enum ${namespaceName} {`);
+      lines.push(...writeNamespace(namespace));
+      lines.push(`}  // enum ${namespaceName}`, "");
+    }
+  }
+  lines.push("}  // enum Tools");
+  return lines.join("\n");
+}
 
 // function writeInputOutputTypes(
 //   compilationResult: ValidCompilationResult,

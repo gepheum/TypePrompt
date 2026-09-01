@@ -45,7 +45,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         // reformat(writePromptsInterface(compilationResult)),
         // STATIC_SNIPPETS["typescript-top-level"],
         writeTemplateIdEnum(compilationResult),
-        // writeToolsType(compilationResult),
+        writeToolExecutorTraits(compilationResult),
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
@@ -151,31 +151,77 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-// function writeToolsType(compilationResult: ValidCompilationResult): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines = [
-//     "/** The tools available from the given template. */",
-//     "export type Tools<Id extends TemplateId> = {",
-//   ];
-//   for (const template of Object.values(templates)) {
-//     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const templateId = getId(template.template);
-//     lines.push(`"${templateId}": {`);
-//     for (const tool of Object.values(template.tools)) {
-//       const toolName = tool.tool.tool.name.text;
-//       const typePrefix = singleNamespace
-//         ? `$.${capitalize(toolName)}.`
-//         : `$.${namespace}.${capitalize(toolName)}.`;
-//       lines.push(`${toolName}: Tool<`);
-//       lines.push(`${typePrefix}Input,`);
-//       lines.push(`${typePrefix}Output`);
-//       lines.push(">,");
-//     }
-//     lines.push("},");
-//   }
-//   lines.push("}[Id];");
-//   return lines.join("\n");
-// }
+function writeToolExecutorTraits(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    const namespaceName = toRustName(namespace.name);
+    const typePrefixBase = singleNamespace
+      ? "super::schema::"
+      : `super::super::schema::${namespaceName}::`;
+    const sharedTypePrefix = typePrefixBase.concat("shared::");
+
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = tool.tool.name.text;
+      const interfaceName = `${capitalize(toolName)}Executor`;
+      const toolTypeName = toRustName(capitalize(toolName));
+      const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
+      const options: WriteSchemaOptions = {
+        typePrefix: toolTypePrefix,
+        sharedTypePrefix,
+        topLevel: true,
+      };
+
+      const inputDecl = tool.schema.typeDeclarations["Input"];
+      const outputDecl = tool.schema.typeDeclarations["Output"];
+      const inputType = inputDecl
+        ? writeType(
+            resolveType(inputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Input`;
+      const outputType = outputDecl
+        ? writeType(
+            resolveType(outputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Output`;
+
+      const methodName = toRustName(toSnakeCase(toolName));
+      lines.push(
+        `pub trait ${interfaceName} {`,
+        `async fn ${methodName}(&self, input: ${inputType}) -> ${outputType};`,
+        "}",
+        "",
+      );
+    }
+    return lines;
+  };
+
+  const lines = [
+    "/// Namespace containing tool executor traits.",
+    "pub mod tools {",
+  ];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const namespaceName = toRustName(namespace.name);
+      lines.push(`pub mod ${namespaceName} {`);
+      lines.push(...writeNamespace(namespace));
+      lines.push(`}  // mod ${namespaceName}`, "");
+    }
+  }
+  lines.push("}  // mod tools");
+  return lines.join("\n");
+}
 
 // function writeInputOutputTypes(
 //   compilationResult: ValidCompilationResult,

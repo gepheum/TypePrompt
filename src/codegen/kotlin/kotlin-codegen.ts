@@ -53,7 +53,7 @@ function writeAll(
       reformat(
         [
           writeTemplateIdEnum(compilationResult),
-          writeToolExecutorProtocols(compilationResult),
+          writeToolExecutorInterfaces(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
@@ -136,7 +136,7 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-function writeToolExecutorProtocols(
+function writeToolExecutorInterfaces(
   compilationResult: ValidCompilationResult,
 ): string {
   const { singleNamespace, namespaces } = compilationResult;

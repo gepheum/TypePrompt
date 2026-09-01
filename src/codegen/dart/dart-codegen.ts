@@ -57,7 +57,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       reformat(
         [
           writeTemplateIdEnum(compilationResult),
-          // writeToolsType(compilationResult),
+          writeToolExecutorClasses(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
@@ -147,31 +147,65 @@ function writeTemplateIdEnum(
   return lines.join("\n");
 }
 
-// function writeToolsType(compilationResult: ValidCompilationResult): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines = [
-//     "/** The tools available from the given template. */",
-//     "export type Tools<Id extends TemplateId> = {",
-//   ];
-//   for (const template of Object.values(templates)) {
-//     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const templateId = getId(template.template);
-//     lines.push(`"${templateId}": {`);
-//     for (const tool of Object.values(template.tools)) {
-//       const toolName = tool.tool.tool.name.text;
-//       const typePrefix = singleNamespace
-//         ? `$.${capitalize(toolName)}.`
-//         : `$.${namespace}.${capitalize(toolName)}.`;
-//       lines.push(`${toolName}: Tool<`);
-//       lines.push(`${typePrefix}Input,`);
-//       lines.push(`${typePrefix}Output`);
-//       lines.push(">,");
-//     }
-//     lines.push("},");
-//   }
-//   lines.push("}[Id];");
-//   return lines.join("\n");
-// }
+function writeToolExecutorClasses(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+  const lines: string[] = [];
+
+  const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const namespaceName = namespace.name;
+    const typePrefixBase = singleNamespace ? "" : namespaceName.concat("_");
+    const sharedTypePrefix = typePrefixBase.concat("Shared_");
+
+    for (const tool of Object.values(namespace.tools)) {
+      const toolName = tool.tool.name.text;
+      const capitalizedToolName = capitalize(toolName);
+      const interfaceName = singleNamespace
+        ? `Tools_${capitalizedToolName}Executor`
+        : `Tools_${namespaceName}_${capitalizedToolName}Executor`;
+      const toolTypePrefix = typePrefixBase.concat(capitalizedToolName, "_");
+      const options: WriteSchemaOptions = {
+        typePrefix: toolTypePrefix,
+        sharedTypePrefix,
+      };
+
+      const inputDecl = tool.schema.typeDeclarations["Input"];
+      const outputDecl = tool.schema.typeDeclarations["Output"];
+      const inputType = inputDecl
+        ? writeType(
+            resolveType(inputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Input`;
+      const outputType = outputDecl
+        ? writeType(
+            resolveType(outputDecl.valueType, tool.schema),
+            tool.schema,
+            options,
+          )
+        : `${toolTypePrefix}Output`;
+
+      lines.push(
+        `abstract class ${interfaceName} {`,
+        `Future<${outputType}> ${toDartName(toolName)}(${inputType} input);`,
+        "}",
+        "",
+      );
+    }
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      writeNamespace(namespace);
+    }
+  }
+
+  return lines.join("\n");
+}
 
 // function writeInputOutputTypes(
 //   compilationResult: ValidCompilationResult,
