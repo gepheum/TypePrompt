@@ -165,14 +165,13 @@ describe("makeTemplates - tool", () => {
     });
   });
 
-  it("leaves inputJsonSchema and outputJsonSchema undefined when includeJsonSchemas is false", () => {
+  it("leaves inputJsonSchema undefined when includeJsonSchemas is false", () => {
     const result = {
       ...emptyResult(),
       tools: { "Main:search": makeToolResult("search", "") },
     } as unknown as ValidCompilationResult;
     const spec = makeTemplates(result, NO_JSON_SCHEMAS);
     expect(spec.tools["Main:search"]!.inputJsonSchema).toBe(undefined);
-    expect(spec.tools["Main:search"]!.outputJsonSchema).toBe(undefined);
   });
 });
 
@@ -1024,9 +1023,6 @@ describe("makeTemplates - JSON schemas", () => {
     } as unknown as ValidCompilationResult;
 
     const spec = makeTemplates(result, WITH_JSON_SCHEMAS);
-    expect(spec.templates["Main:T"]!.inputJsonSchema).toMatch({
-      type: "string",
-    });
     expect(spec.templates["Main:T"]!.outputJsonSchema).toMatch({
       type: "number",
     });

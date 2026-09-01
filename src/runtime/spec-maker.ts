@@ -49,27 +49,20 @@ function makeTool(
   id: string,
   options: Options,
 ): Spec.Tool {
-  const { inputJsonSchema, outputJsonSchema } = makeJsonSchemas(
-    input.schema,
-    options,
-  );
+  const { inputJsonSchema } = makeJsonSchemas(input.schema, options);
   const { tool } = input;
   return {
     id,
     name: tool.name.text,
     description: tool.description.map((p) => p.text).join(""),
     inputJsonSchema,
-    outputJsonSchema,
   };
 }
 
 function makeTemplate(input: ValidTemplate, options: Options): Spec.Template {
   const { template } = input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const { inputJsonSchema, outputJsonSchema } = makeJsonSchemas(
-    input.schema,
-    options,
-  );
+  const { outputJsonSchema } = makeJsonSchemas(input.schema, options);
   return {
     name: template.name.text,
     namespace: namespace,
@@ -80,7 +73,6 @@ function makeTemplate(input: ValidTemplate, options: Options): Spec.Template {
     })),
     contents: makeContents(template.contents, { namespace: namespace }),
     snippets: makeSnippets(template.snippets),
-    inputJsonSchema,
     outputJsonSchema,
   };
 }

@@ -20,7 +20,6 @@ type Template = {
   tools: TemplateTool[];
   contents: TemplateContents;
   snippets: { [name: string]: Snippet };
-  inputJsonSchema?: any;
   outputJsonSchema?: any;
 };
 
@@ -114,7 +113,6 @@ type Tool = {
   id: string;
   name: string;
   description: string;
-  inputJsonSchema?: any;
   outputJsonSchema?: any;
 };
 `;

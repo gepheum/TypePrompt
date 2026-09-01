@@ -18,7 +18,6 @@ export type Template = {
   readonly tools: readonly TemplateTool[];
   readonly contents: TemplateContents;
   readonly snippets: { [name: string]: Snippet };
-  readonly inputJsonSchema?: unknown;
   readonly outputJsonSchema?: unknown;
 };
 
@@ -119,5 +118,4 @@ export type Tool = {
   readonly name: string;
   readonly description: string;
   readonly inputJsonSchema?: unknown;
-  readonly outputJsonSchema?: unknown;
 };
