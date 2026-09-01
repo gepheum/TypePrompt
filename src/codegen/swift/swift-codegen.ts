@@ -221,7 +221,7 @@ function writeUserDefinedDatatypes(
           typePrefix: sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push("}  // enum Shared", "");
     }
     for (const template of namespace.templates) {
       const templateName = toSwiftName(template.template.name.text);
@@ -233,7 +233,7 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push(`}  // enum ${templateName}`, "");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toSwiftName(capitalize(tool.tool.name.text));
@@ -245,7 +245,7 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push(`}  // enum ${toolName}`, "");
     }
   };
 
@@ -259,7 +259,7 @@ function writeUserDefinedDatatypes(
       lines.push("}\n");
     }
   }
-  lines.push("}\n");
+  lines.push("}  // enum Schema", "");
   return lines.join("\n");
 }
 
@@ -297,7 +297,9 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
-    lines.push(`// Exported as '${typePrefix}${name}'`);
+    if (typePrefix !== "Spec.") {
+      lines.push(`// Exported as '${typePrefix}${name}'`);
+    }
     lines.push(...wrapDocComment(namingHint.doc));
     switch (type.kind) {
       case "interface": {
