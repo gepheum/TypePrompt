@@ -3,6 +3,7 @@ import type {
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
+import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import type {
   Field,
   Interface,
@@ -35,6 +36,8 @@ export function generateDartCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
+  const unionContext = makeUnionContext(compilationResult);
+
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["dart-imports"],
@@ -47,8 +50,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           // writeTemplateIdEnum(Object.values(templates)),
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
-          writeUserDefinedDatatypes(compilationResult),
-          // writeSpecDatatypes(),
+          writeUserDefinedDatatypes(compilationResult, unionContext),
+          writeSpecDatatypes(unionContext),
           // writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
@@ -170,8 +173,8 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
+  unionContext: UnionContext,
 ): string {
-  const unionContext = makeUnionContext(compilationResult);
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
@@ -248,22 +251,12 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
-// function writeSpecDatatypes(): string {
-//   const options = {
-//     defaultScopeTypePrefix: "Spec.",
-//     sharedTypePrefix: "Never.",
-//   } as const;
-//   const lines = [
-//     "namespace Spec {",
-//     writeSchema(runtimeTypesSchema, options),
-//     "}",
-//     "",
-//     "const templatesSchema = " +
-//       writeZodType(runtimeTypesSchema, "Templates", options) +
-//       ";",
-//   ];
-//   return lines.join("\n");
-// }
+function writeSpecDatatypes(unionContext: UnionContext): string {
+  const options = {
+    typePrefix: "_Spec_",
+  } as const;
+  return writeSchema(runtimeTypesSchema, unionContext, options);
+}
 
 // function writeTemplatesData(compilationResult: ValidCompilationResult): string {
 //   const templatesData = makeTemplates(compilationResult, {
@@ -447,16 +440,16 @@ function writeTypepromptUnion(
         "}", // toJson()
         "",
       );
-      lines.push(`factory ${className}.fromJson(String json) {`);
-      lines.push("switch (json) {");
+      lines.push(`factory ${className}.fromJson(String value) {`);
+      lines.push("switch (value) {");
       for (const member of members.members) {
         const name = member.value;
         const dartName = toDartName(toCamelCase(name));
-        lines.push(`case "${name}":`, `return ${dartName};`);
+        lines.push(`case "${name}":`, `return ${className}.${dartName};`);
       }
       lines.push(
         "default:",
-        'throw FormatException("Unknown json value: $json");',
+        'throw FormatException("Unknown json value: $value");',
       );
       lines.push(
         "}", // switch
@@ -730,191 +723,6 @@ function makeNameFromHint(hint: NamingHint): string {
     .join("_");
 }
 
-// function writeZodType(
-//   schema: Schema,
-//   typeName: string,
-//   options: {
-//     readonly defaultScopeTypePrefix: string;
-//     readonly sharedTypePrefix: string;
-//   },
-// ): string {
-//   const { defaultScopeTypePrefix, sharedTypePrefix } = options;
-
-//   const makeTypeId = (name: string, scope: NameScope): string => {
-//     switch (scope) {
-//       case "defaultScope":
-//         return name;
-//       case "shared":
-//         return "_".concat(name);
-//     }
-//   };
-
-//   const getTypePrefix = (scope: NameScope): string => {
-//     switch (scope) {
-//       case "defaultScope":
-//         return defaultScopeTypePrefix;
-//       case "shared":
-//         return sharedTypePrefix;
-//     }
-//   };
-
-//   const getQualifiedTypeName = (typeName: string, scope: NameScope): string => {
-//     return getTypePrefix(scope).concat(typeName);
-//   };
-
-//   const getTypeDeclarations = (scope: NameScope): TypeDeclarations => {
-//     switch (scope) {
-//       case "defaultScope":
-//         return schema.typeDeclarations;
-//       case "shared":
-//         return schema.sharedDeclarations;
-//     }
-//   };
-
-//   const typeIdToStatus: { [id: string]: "pending" | "done" } = {};
-//   const defs: string[] = [];
-
-//   const getVarName = (typeName: string, scope: NameScope): string => {
-//     const uncapitalized = uncapitalize(makeTypeId(typeName, scope));
-//     const prefix = ((): string => {
-//       switch (scope) {
-//         case "defaultScope":
-//           return "";
-//         case "shared":
-//           return "_";
-//       }
-//     })();
-//     return `${prefix}${uncapitalized}Schema`;
-//   };
-
-//   const populateVarDef = (typeName: string, scope: NameScope): void => {
-//     const typeId = makeTypeId(typeName, scope);
-//     if (typeIdToStatus[typeId]) return;
-//     typeIdToStatus[typeId] = "pending";
-//     const declarations = getTypeDeclarations(scope);
-//     const declaration = declarations[typeName];
-//     if (!declaration) {
-//       throw new Error(`Type declaration not found for '${typeName}'`);
-//     }
-//     const { valueType } = declaration;
-//     const directDeps = getNameDependencies(valueType, scope, schema, "direct");
-//     for (const s of NAME_SCOPES) {
-//       for (const dep of directDeps[s]) {
-//         populateVarDef(dep, s);
-//       }
-//     }
-//     const doc: string = declaration.doc;
-//     const def = [
-//       "const ",
-//       getVarName(typeName, scope),
-//       ": z.ZodType<",
-//       getQualifiedTypeName(typeName, scope),
-//       "> = ",
-//       write(valueType, scope),
-//       doc ? `.describe(${JSON.stringify(doc)})` : "",
-//       ";",
-//     ].join("");
-//     typeIdToStatus[typeId] = "done";
-//     defs.push(def);
-//   };
-
-//   const write = (type: Type, scope: NameScope): string => {
-//     switch (type.kind) {
-//       case "any": {
-//         return "z.any()";
-//       }
-//       case "array": {
-//         return write(type.elementType, scope).concat(".array()");
-//       }
-//       case "boolean-literal": {
-//         return `z.literal(${type.value satisfies boolean})`;
-//       }
-//       case "interface": {
-//         const fieldDefs: string[] = [];
-//         for (const field of Object.values(type.fields)) {
-//           const doc: string = field.doc;
-//           fieldDefs.push(
-//             [
-//               field.name.text,
-//               ": ",
-//               write(field.type, scope),
-//               field.optional ? ".optional()" : "",
-//               doc ? `.describe(${JSON.stringify(doc)})` : "",
-//               ",",
-//             ].join(""),
-//           );
-//         }
-//         return ["z.object({", ...fieldDefs, "})"].join("\n");
-//       }
-//       case "primitive": {
-//         if (type.primitive.text === "integer") {
-//           return "z.int32()";
-//         } else {
-//           return `z.${type.primitive.text}()`;
-//         }
-//       }
-//       case "record": {
-//         return [
-//           "z.record(\n",
-//           "z.string(),\n",
-//           write(type.valueType, scope),
-//           ",\n)",
-//         ].join("");
-//       }
-//       case "shared-type-name": {
-//         return getVarName(type.name.text, "shared");
-//       }
-//       case "string-literal": {
-//         return `z.literal(${type.quotedName.text})`;
-//       }
-//       case "type-name": {
-//         const typeName = type.name.text;
-//         const typeId = makeTypeId(typeName, scope);
-//         if (typeIdToStatus[typeId] === "done") {
-//           return getVarName(typeName, scope);
-//         } else {
-//           // Need to use lazy
-//           const varName = getVarName(typeName, scope);
-//           const qualifiedTypeName = getQualifiedTypeName(typeName, scope);
-//           return `z.lazy((): z.ZodType<${qualifiedTypeName}> => ${varName})`;
-//         }
-//       }
-//       case "union": {
-//         const members = schema.unionToMembers.get(type)!;
-//         if (members.kind === "interfaces") {
-//           return [
-//             "z.discriminatedUnion(",
-//             JSON.stringify(members.discriminator).concat(","),
-//             "[",
-//             ...Object.values(type.members).map((m) =>
-//               write(m, scope).concat(","),
-//             ),
-//             "],",
-//             ")",
-//           ].join("\n");
-//         } else {
-//           return [
-//             "z.enum([",
-//             ...members.members.map((v) =>
-//               JSON.stringify(v.value satisfies string).concat(","),
-//             ),
-//             "])",
-//           ].join("\n");
-//         }
-//       }
-//     }
-//   };
-
-//   populateVarDef(typeName, "defaultScope");
-//   const qualifiedTypeName = getQualifiedTypeName(typeName, "defaultScope");
-//   return [
-//     `((): z.ZodType<${qualifiedTypeName}> => {`,
-//     ...defs,
-//     `return ${getVarName(typeName, "defaultScope")};`,
-//     "})()",
-//   ].join("\n");
-// }
-
 type UnionContext = {
   readonly intMemberToUnionRefs: Map<Interface, readonly string[]>;
   readonly intMemberToStringDiscriminant: Map<Interface, string>;
@@ -973,6 +781,8 @@ function makeUnionContext(
       processSchema(tool.schema, typePrefixBase.concat(toolName, "_"));
     }
   }
+
+  processSchema(runtimeTypesSchema, "_Spec_");
 
   return {
     intMemberToUnionRefs,
