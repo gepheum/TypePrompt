@@ -228,6 +228,7 @@ function writeUserDefinedDatatypes(
       )
     : "Never?";
   lines.push(
+    "/// Metadata associated with a prompt.",
     `public typealias Meta = ${metaType}`,
     "",
     "/// Namespace containing the user-defined datatypes.",

@@ -210,6 +210,7 @@ function writeUserDefinedDatatypes(
       )
     : "Nothing?";
   lines.push(
+    "/** Metadata associated with a prompt. */",
     `typealias Meta = ${metaType}\n`,
     "/** Namespace containing the user-defined datatypes. */",
     "object Schema {",

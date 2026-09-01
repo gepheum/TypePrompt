@@ -239,6 +239,7 @@ function writeUserDefinedDatatypes(
           namespace: rootNamespace.concat(".Schema.Meta"),
         },
       );
+      lines.push("/// <summary>Metadata associated with a prompt.</summary>");
       lines.push(`using Meta = ${metaType};`);
     } else {
       lines.push("public enum Meta", "{", "Default = 0", "}");

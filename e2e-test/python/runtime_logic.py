@@ -261,6 +261,7 @@ def _create_prompts(data: _internal.Templates) -> Prompts:
 
 
 # <static:python-logic>
+# Metadata associated with a prompt.
 type Meta = schema.meta.Meta
 
 

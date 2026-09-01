@@ -224,6 +224,7 @@ function writeUserDefinedDatatypes(
       )
     : "()";
   lines.push(
+    "/// Metadata associated with a prompt.",
     `pub type Meta = ${metaType};`,
     "",
     "/// Namespace containing the user-defined datatypes.",

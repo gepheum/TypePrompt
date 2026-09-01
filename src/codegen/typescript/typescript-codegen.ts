@@ -185,6 +185,7 @@ function writeUserDefinedDatatypes(
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
   const lines = [
+    "/** Metadata associated with a prompt. */",
     "export type Meta = $.Meta.Meta;\n",
     "/** Namespace containing the user-defined datatypes. */",
     "export namespace $ {",

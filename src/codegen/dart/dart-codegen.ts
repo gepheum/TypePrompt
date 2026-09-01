@@ -220,6 +220,7 @@ function writeUserDefinedDatatypes(
       )
     : "Null";
   lines.push(
+    "/// Metadata associated with a prompt.",
     `typedef Meta = ${metaType};`,
     "",
     "// ".concat("-".repeat(77)),
