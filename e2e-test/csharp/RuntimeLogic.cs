@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 // </static:csharp-imports>
 
+// <generated:spec>
 namespace Spec
 {
     file record Templates
@@ -365,3 +366,4 @@ namespace Spec
         public JsonElement? OutputJsonSchema { get; init; }
     }
 }  // namespace Spec
+// </generated:spec>
