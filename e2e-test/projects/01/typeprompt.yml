@@ -6,7 +6,7 @@ gen:
   dart:
     file: ../../dart/lib/gen/prompts_01.dart
   kotlin:
-    file: ../../kotlin/src/main/kotlin/gen/Prompt01.kt
+    file: ../../kotlin/src/main/kotlin/gen/Prompts01.kt
     package: com.example.prompts01
   python:
     file: ../../python/gen/prompts_01.py
