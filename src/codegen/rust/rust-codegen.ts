@@ -300,7 +300,11 @@ function writeSpecDatatypes(): string {
     typePrefix: "spec::",
     file: true,
   } as const;
-  const lines = ["mod spec {", writeSchema(runtimeTypesSchema, options), "}"];
+  const lines = [
+    "mod spec {",
+    writeSchema(runtimeTypesSchema, options),
+    "}  // mod spec",
+  ];
   return lines.join("\n");
 }
 

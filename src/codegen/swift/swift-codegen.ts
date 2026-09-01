@@ -304,7 +304,7 @@ function writeSpecDatatypes(): string {
   const lines = [
     "fileprivate enum Spec {",
     writeSchema(runtimeTypesSchema, options),
-    "}",
+    "}  // enum Spec",
   ];
   return lines.join("\n");
 }

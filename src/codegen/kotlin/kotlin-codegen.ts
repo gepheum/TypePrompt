@@ -285,7 +285,7 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   const lines = [
     "internal object Spec {",
     writeSchema(runtimeTypesSchema, unionContext, options),
-    "}",
+    "}  // object Spec",
   ];
   return lines.join("\n");
 }
