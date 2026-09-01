@@ -2,6 +2,8 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -17,7 +19,12 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
+import {
+  capitalize,
+  toCamelCase,
+  toPascalCase,
+  uncapitalize,
+} from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateDartCode(
@@ -37,6 +44,7 @@ export function generateDartCode(
 }
 
 function writeAll(compilationResult: ValidCompilationResult): string {
+  const { templates } = compilationResult;
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
@@ -48,7 +56,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       // STATIC_SNIPPETS["typescript-top-level"],
       reformat(
         [
-          // writeTemplateIdEnum(Object.values(templates)),
+          writeTemplateIdEnum(compilationResult),
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
@@ -104,22 +112,40 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 //   return lines.join("\n");
 // }
 
-// function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-//   const lines = [
-//     "/** Uniquely identifies a prompt template. */",
-//     "export type TemplateId = (",
-//   ];
-//   if (templates.length <= 0) {
-//     lines.push(" never");
-//   } else {
-//     for (const template of templates) {
-//       const templateId = getId(template.template);
-//       lines.push(`| "${templateId}"`);
-//     }
-//   }
-//   lines.push(");");
-//   return lines.join("\n");
-// }
+function writeTemplateIdEnum(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  const templateList = Object.values(templates);
+  if (templateList.length <= 0) {
+    return "";
+  }
+  const lines = [
+    "/// Uniquely identifies a prompt template.",
+    "enum TemplateId {",
+  ];
+  for (const template of templateList) {
+    const isLast = template === templateList.at(-1);
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? uncapitalize(templateName)
+      : `${uncapitalize(namespace)}_${templateName}`;
+    const caseName = toDartName(rawMemberName);
+    const templateId = getId(template.template);
+    lines.push(`${caseName}("${templateId}")${isLast ? ";" : ","}`);
+  }
+  lines.push(
+    "",
+    "final String id;",
+    "const TemplateId(this.id);",
+    "",
+    "@override",
+    "String toString() => id;",
+    "}",
+  );
+  return lines.join("\n");
+}
 
 // function writeToolsType(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, templates } = compilationResult;
@@ -269,7 +295,7 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   );
   const lines = [
     `final _templatesData = _Spec_Templates.fromJson(`,
-    `  jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
+    `jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
     `);`,
   ];
   return lines.join("\n");

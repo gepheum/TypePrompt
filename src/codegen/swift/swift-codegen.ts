@@ -2,6 +2,8 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -16,7 +18,12 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toCamelCase, toPascalCase } from "../../util/casing.js";
+import {
+  capitalize,
+  toCamelCase,
+  toPascalCase,
+  uncapitalize,
+} from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateSwiftCode(
@@ -49,7 +56,7 @@ function writeAll(
         // reformat(writePromptsInterface(compilationResult)),
         // STATIC_SNIPPETS["typescript-top-level"],
         `enum ${rootNamespace} {`,
-        // writeTemplateIdEnum(Object.values(templates)),
+        writeTemplateIdEnum(compilationResult),
         // writeToolsType(compilationResult),
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult, config),
@@ -105,22 +112,48 @@ function writeAll(
 //   return lines.join("\n");
 // }
 
-// function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-//   const lines = [
-//     "/** Uniquely identifies a prompt template. */",
-//     "export type TemplateId = (",
-//   ];
-//   if (templates.length <= 0) {
-//     lines.push(" never");
-//   } else {
-//     for (const template of templates) {
-//       const templateId = getId(template.template);
-//       lines.push(`| "${templateId}"`);
-//     }
-//   }
-//   lines.push(");");
-//   return lines.join("\n");
-// }
+function writeTemplateIdEnum(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  if (Object.keys(templates).length <= 0) {
+    return "";
+  }
+  const lines = [
+    "/// Uniquely identifies a prompt template.",
+    "public enum TemplateId: Sendable, CaseIterable, CustomStringConvertible {",
+  ];
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? uncapitalize(templateName)
+      : `${uncapitalize(namespace)}_${templateName}`;
+    const caseName = toSwiftName(rawMemberName);
+    lines.push(`case ${caseName}`);
+  }
+  lines.push("", "public var id: String {", "switch self {");
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? uncapitalize(templateName)
+      : `${uncapitalize(namespace)}_${templateName}`;
+    const caseName = toSwiftName(rawMemberName);
+    const templateId = getId(template.template);
+    lines.push(`case .${caseName}:`, `return "${templateId}"`);
+  }
+  lines.push(
+    "}",
+    "}",
+    "",
+    "public var description: String {",
+    "return id",
+    "}",
+    "}",
+  );
+  return lines.join("\n");
+}
 
 // function writeToolsType(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, templates } = compilationResult;
@@ -283,8 +316,8 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
     "private static let templatesData: Spec.Templates = try! Foundation.JSONDecoder().decode(",
-    "  Spec.Templates.self,",
-    `  from: Foundation.Data(${stringifiedJson}.utf8)`,
+    "Spec.Templates.self,",
+    `from: Foundation.Data(${stringifiedJson}.utf8)`,
     ")",
   ];
   return lines.join("\n");

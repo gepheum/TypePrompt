@@ -2,6 +2,8 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -50,7 +52,7 @@ function writeAll(
       // STATIC_SNIPPETS["typescript-top-level"],
       reformat(
         [
-          // writeTemplateIdEnum(Object.values(templates)),
+          writeTemplateIdEnum(compilationResult, config),
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
@@ -106,22 +108,60 @@ function writeAll(
 //   return lines.join("\n");
 // }
 
-// function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-//   const lines = [
-//     "/** Uniquely identifies a prompt template. */",
-//     "export type TemplateId = (",
-//   ];
-//   if (templates.length <= 0) {
-//     lines.push(" never");
-//   } else {
-//     for (const template of templates) {
-//       const templateId = getId(template.template);
-//       lines.push(`| "${templateId}"`);
-//     }
-//   }
-//   lines.push(");");
-//   return lines.join("\n");
-// }
+function writeTemplateIdEnum(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  if (Object.keys(templates).length <= 0) {
+    return "";
+  }
+  const { rootNamespace } = config;
+  const lines = [
+    `namespace ${rootNamespace}`,
+    "{",
+    "/// <summary>",
+    "/// Uniquely identifies a prompt template.",
+    "/// </summary>",
+    "public enum TemplateId",
+    "{",
+  ];
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? templateName
+      : `${namespace}_${templateName}`;
+    const memberName = toCSharpName(rawMemberName);
+    lines.push(`${memberName},`);
+  }
+  lines.push(
+    "}",
+    "",
+    "public static class TemplateIdExtensions",
+    "{",
+    "public static string GetId(this TemplateId templateId) =>",
+    "templateId switch",
+    "{",
+  );
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? templateName
+      : `${namespace}_${templateName}`;
+    const memberName = toCSharpName(rawMemberName);
+    const templateId = getId(template.template);
+    lines.push(`TemplateId.${memberName} => "${templateId}",`);
+  }
+  lines.push(
+    "_ => throw new System.ArgumentOutOfRangeException(nameof(templateId)),",
+    "};",
+    "}",
+    "}",
+  );
+  return lines.join("\n");
+}
 
 // function writeToolsType(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, templates } = compilationResult;
@@ -274,13 +314,13 @@ function writeTemplatesData(
   const lines = [
     `namespace ${rootNamespace}`,
     "{",
-    "  file static class RuntimeData",
-    "  {",
-    "    public static readonly Spec.Templates TemplatesData = JsonSerializer.Deserialize<Spec.Templates>(",
-    `      ${stringifiedJson}`,
-    "    )!;",
-    "  }",
-    `}`,
+    "file static class RuntimeData",
+    "{",
+    "public static readonly Spec.Templates TemplatesData = JsonSerializer.Deserialize<Spec.Templates>(",
+    stringifiedJson,
+    ")!;",
+    "}",
+    "}",
   ];
   return lines.join("\n");
 }

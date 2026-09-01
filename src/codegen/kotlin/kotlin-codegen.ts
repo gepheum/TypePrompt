@@ -2,6 +2,8 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -17,7 +19,7 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toPascalCase } from "../../util/casing.js";
+import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateKotlinCode(
@@ -51,7 +53,7 @@ function writeAll(
       // STATIC_SNIPPETS["typescript-top-level"],
       reformat(
         [
-          // writeTemplateIdEnum(Object.values(templates)),
+          writeTemplateIdEnum(compilationResult),
           // writeToolsType(compilationResult),
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
@@ -107,22 +109,31 @@ function writeAll(
 //   return lines.join("\n");
 // }
 
-// function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-//   const lines = [
-//     "/** Uniquely identifies a prompt template. */",
-//     "export type TemplateId = (",
-//   ];
-//   if (templates.length <= 0) {
-//     lines.push(" never");
-//   } else {
-//     for (const template of templates) {
-//       const templateId = getId(template.template);
-//       lines.push(`| "${templateId}"`);
-//     }
-//   }
-//   lines.push(");");
-//   return lines.join("\n");
-// }
+function writeTemplateIdEnum(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  if (Object.keys(templates).length <= 0) {
+    return "";
+  }
+  const lines = [
+    "/** Uniquely identifies a prompt template. */",
+    "enum class TemplateId(val id: String) {",
+  ];
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? toSnakeCase(templateName).toUpperCase()
+      : `${toSnakeCase(namespace).toUpperCase()}__${toSnakeCase(templateName).toUpperCase()}`;
+    const entryName = toKotlinName(rawMemberName);
+    const templateId = getId(template.template);
+    lines.push(`${entryName}("${templateId}"),`);
+  }
+  lines.push(";");
+  lines.push("", "override fun toString(): String = id", "}");
+  return lines.join("\n");
+}
 
 // function writeToolsType(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, templates } = compilationResult;
@@ -289,7 +300,7 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   );
   const lines = [
     "private val templatesData: Spec.Templates = kotlinx.serialization.json.Json.decodeFromString(",
-    `  ${stringifiedJson},`,
+    `${stringifiedJson},`,
     ")",
   ];
   return lines.join("\n");

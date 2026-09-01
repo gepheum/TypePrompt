@@ -2,6 +2,8 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "../../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
+import { getId } from "../../compiler/ids.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
@@ -44,7 +46,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         STATIC_SNIPPETS["rust-imports"],
         // reformat(writePromptsInterface(compilationResult)),
         // STATIC_SNIPPETS["typescript-top-level"],
-        // writeTemplateIdEnum(Object.values(templates)),
+        writeTemplateIdEnum(compilationResult),
         // writeToolsType(compilationResult),
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult),
@@ -99,22 +101,57 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 //   return lines.join("\n");
 // }
 
-// function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
-//   const lines = [
-//     "/** Uniquely identifies a prompt template. */",
-//     "export type TemplateId = (",
-//   ];
-//   if (templates.length <= 0) {
-//     lines.push(" never");
-//   } else {
-//     for (const template of templates) {
-//       const templateId = getId(template.template);
-//       lines.push(`| "${templateId}"`);
-//     }
-//   }
-//   lines.push(");");
-//   return lines.join("\n");
-// }
+function writeTemplateIdEnum(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  if (Object.keys(templates).length <= 0) {
+    return "";
+  }
+  const lines = [
+    "/// Uniquely identifies a prompt template.",
+    "#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]",
+    "pub enum TemplateId {",
+  ];
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? templateName
+      : `${namespace}_${templateName}`;
+    const variantName = toRustName(rawMemberName);
+    lines.push(`${variantName},`);
+  }
+  lines.push(
+    "}",
+    "",
+    "impl TemplateId {",
+    "pub const fn as_str(&self) -> &'static str {",
+    "match self {",
+  );
+  for (const template of Object.values(templates)) {
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const templateName = template.template.name.text;
+    const rawMemberName = singleNamespace
+      ? templateName
+      : `${namespace}_${templateName}`;
+    const variantName = toRustName(rawMemberName);
+    const templateId = getId(template.template);
+    lines.push(`TemplateId::${variantName} => "${templateId}",`);
+  }
+  lines.push(
+    "}",
+    "}",
+    "}",
+    "",
+    "impl std::fmt::Display for TemplateId {",
+    "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
+    'write!(f, "{}", self.as_str())',
+    "}",
+    "}",
+  );
+  return lines.join("\n");
+}
 
 // function writeToolsType(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, templates } = compilationResult;
@@ -274,9 +311,9 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
     `static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {`,
-    `  serde_json::from_str(`,
-    `    ${stringifiedJson},`,
-    `  ).unwrap()`,
+    `serde_json::from_str(`,
+    `${stringifiedJson},`,
+    `).unwrap()`,
     `});`,
   ];
   return lines.join("\n");
