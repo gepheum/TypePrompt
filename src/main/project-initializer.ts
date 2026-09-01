@@ -40,10 +40,21 @@ include: prompts/**/*.xml
 
 # Uncomment and configure the generators for your target language(s).
 gen:
+  # csharp:
+  #   file: ./Prompts.generated.cs
+  # dart:
+  #   file: ../lib/prompts.g.dart
+  # kotlin:
+  #   file: ./src/main/kotlin/Prompts_Generated.kt
   # python:
   #   file: ./prompts_gen.py
+  # rust:
+  #   file: ./src/generated/prompts.rs
+  # swift:
+  #   file: ./Sources/Prompts.Generated.swift
   typescript:
     file: ./prompts.gen.ts
+
 `.trimStart();
 
 export const HELLO_WORLD_TEMPLATE = `
