@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
   Field,
   FieldType,
@@ -54,7 +55,7 @@ function writeAll(
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
           writeSpecDatatypes(unionContext, config),
-          // writeTemplatesData(compilationResult),
+          writeTemplatesData(compilationResult, config),
         ].join("\n\n"),
       ),
       // STATIC_SNIPPETS["typescript-logic"],
@@ -261,16 +262,28 @@ function writeSpecDatatypes(
   return writeSchema(runtimeTypesSchema, unionContext, options);
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult, {
-//     includeJsonSchemas: false,
-//   });
-//   return (
-//     "const TEMPLATES_DATA: Spec.Templates = " +
-//     JSON.stringify(templatesData, undefined, 2) +
-//     " as const;"
-//   );
-// }
+function writeTemplatesData(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: true,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  const lines = [
+    `namespace ${rootNamespace}`,
+    "{",
+    "  file static class RuntimeData",
+    "  {",
+    "    public static readonly Spec.Templates TemplatesData = JsonSerializer.Deserialize<Spec.Templates>(",
+    `      ${stringifiedJson}`,
+    "    )!;",
+    "  }",
+    `}`,
+  ];
+  return lines.join("\n");
+}
 
 type WriteSchemaOptions = {
   readonly topLevel?: true;

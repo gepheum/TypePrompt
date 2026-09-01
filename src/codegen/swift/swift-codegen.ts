@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
   FieldType,
   Interface,
@@ -53,7 +54,7 @@ function writeAll(
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult, config),
         writeSpecDatatypes(),
-        // writeTemplatesData(compilationResult),
+        writeTemplatesData(compilationResult),
         STATIC_SNIPPETS["swift-logic"],
         "}",
       ].join("\n\n"),
@@ -275,16 +276,19 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult, {
-//     includeJsonSchemas: false,
-//   });
-//   return (
-//     "const TEMPLATES_DATA: Spec.Templates = " +
-//     JSON.stringify(templatesData, undefined, 2) +
-//     " as const;"
-//   );
-// }
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: true,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  const lines = [
+    "private static let templatesData: Spec.Templates = try! Foundation.JSONDecoder().decode(",
+    "  Spec.Templates.self,",
+    `  from: Foundation.Data(${stringifiedJson}.utf8)`,
+    ")",
+  ];
+  return lines.join("\n");
+}
 
 type WriteSchemaOptions = {
   readonly topLevel?: true;
@@ -325,7 +329,7 @@ function writeTypepromptInterface(
 ): string {
   const fields = Object.values(type.fields);
   const lines: string[] = [];
-  lines.push(`struct ${typeName} : Codable {`);
+  lines.push(`struct ${typeName} : Codable, Sendable {`);
 
   for (const field of fields) {
     const { type } = field;
@@ -375,7 +379,7 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum ${typeName} : String, Codable {\n`);
+      lines.push(`enum ${typeName} : String, Codable, Sendable {\n`);
       for (const member of members.members) {
         const swiftName = toSwiftName(toCamelCase(member.value));
         lines.push(`case ${swiftName} = ${JSON.stringify(member.value)}`);
@@ -388,7 +392,7 @@ function writeTypepromptUnion(
       const indirect = Object.values(members.members).some((m) => m.isRecursive)
         ? "indirect "
         : "";
-      lines.push(`${indirect}enum ${typeName} : Codable {`);
+      lines.push(`${indirect}enum ${typeName} : Codable, Sendable {`);
       const caseEntries = Object.values(members.members).map((member) => {
         const { discriminant } = member;
         const caseName = toSwiftName(

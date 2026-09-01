@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
   FieldType,
   Interface,
@@ -48,7 +49,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
-        // writeTemplatesData(compilationResult),
+        writeTemplatesData(compilationResult),
         STATIC_SNIPPETS["rust-logic"],
       ].join("\n\n"),
     ),
@@ -266,16 +267,20 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult, {
-//     includeJsonSchemas: false,
-//   });
-//   return (
-//     "const TEMPLATES_DATA: Spec.Templates = " +
-//     JSON.stringify(templatesData, undefined, 2) +
-//     " as const;"
-//   );
-// }
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: true,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  const lines = [
+    `static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {`,
+    `  serde_json::from_str(`,
+    `    ${stringifiedJson},`,
+    `  ).unwrap()`,
+    `});`,
+  ];
+  return lines.join("\n");
+}
 
 type WriteSchemaOptions = {
   readonly topLevel?: true;

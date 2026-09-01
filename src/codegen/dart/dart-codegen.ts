@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
   Field,
   Interface,
@@ -52,7 +53,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
-          // writeTemplatesData(compilationResult),
+          writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
       // STATIC_SNIPPETS["typescript-logic"],
@@ -258,16 +259,21 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   return writeSchema(runtimeTypesSchema, unionContext, options);
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult, {
-//     includeJsonSchemas: false,
-//   });
-//   return (
-//     "const TEMPLATES_DATA: Spec.Templates = " +
-//     JSON.stringify(templatesData, undefined, 2) +
-//     " as const;"
-//   );
-// }
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: true,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
+    /\$/g,
+    "\\$",
+  );
+  const lines = [
+    `final _templatesData = _Spec_Templates.fromJson(`,
+    `  jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
+    `);`,
+  ];
+  return lines.join("\n");
+}
 
 type WriteSchemaOptions = {
   readonly typePrefix: string;

@@ -4,6 +4,7 @@ import type {
 } from "../../compiler/compiler-types.js";
 import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import type {
   Field,
   FieldType,
@@ -55,7 +56,7 @@ function writeAll(
           // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
-          // writeTemplatesData(compilationResult),
+          writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
       // STATIC_SNIPPETS["typescript-logic"],
@@ -278,16 +279,21 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   return lines.join("\n");
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult, {
-//     includeJsonSchemas: false,
-//   });
-//   return (
-//     "const TEMPLATES_DATA: Spec.Templates = " +
-//     JSON.stringify(templatesData, undefined, 2) +
-//     " as const;"
-//   );
-// }
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult, {
+    includeJsonSchemas: true,
+  });
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
+    /\$/g,
+    "\\$",
+  );
+  const lines = [
+    "private val templatesData: Spec.Templates = kotlinx.serialization.json.Json.decodeFromString(",
+    `  ${stringifiedJson},`,
+    ")",
+  ];
+  return lines.join("\n");
+}
 
 type WriteSchemaOptions = {
   readonly topLevel?: true;

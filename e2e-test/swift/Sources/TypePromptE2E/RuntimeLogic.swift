@@ -1,9 +1,10 @@
 // <static:swift-imports>
-// </static:swift-imports>
 import Foundation
 
+// </static:swift-imports>
+
 // <static:swift-logic>
-public enum JsonElement: Codable, Equatable {
+public enum JsonElement: Codable, Sendable, Equatable {
   case string(String)
   case number(Double)
   case bool(Bool)
