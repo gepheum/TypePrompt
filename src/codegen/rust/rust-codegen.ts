@@ -183,7 +183,7 @@ function writeUserDefinedDatatypes(
         metaSchema,
         {
           topLevel: true,
-          typePrefix: "schema::meta.",
+          typePrefix: "schema::meta::",
         },
       )
     : "Nothing?";
@@ -195,17 +195,18 @@ function writeUserDefinedDatatypes(
     lines.push(
       "pub mod meta {",
       writeSchema(metaSchema, {
-        typePrefix: "Schema.Meta.",
+        typePrefix: "schema::meta::",
       }),
-      "}\n",
+      "}  // mod meta",
+      "",
     );
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceName = toRustName(namespace.name);
     const typePrefixBase = singleNamespace
-      ? "Schema."
-      : `Schema.${namespaceName}.`;
+      ? "schema::"
+      : `schema::${namespaceName}::`;
     const sharedTypePrefix = "super::shared::";
     if (anyTypes(namespace.schema)) {
       lines.push("pub mod shared {");
@@ -214,11 +215,11 @@ function writeUserDefinedDatatypes(
           typePrefix: sharedTypePrefix,
         }),
       );
-      lines.push("}\n"); // pub mod shared
+      lines.push(`}  // mod shared`, "");
     }
     for (const template of namespace.templates) {
       const templateName = toRustName(template.template.name.text);
-      const typePrefix = typePrefixBase.concat(templateName, ".");
+      const typePrefix = typePrefixBase.concat(templateName, "::");
       lines.push(`pub mod ${templateName} {`);
       lines.push(
         writeSchema(template.schema, {
@@ -226,11 +227,11 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n"); // pub mod ${templateName}
+      lines.push(`}  // mod ${templateName}`, "");
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toRustName(capitalize(tool.tool.name.text));
-      const typePrefix = typePrefixBase.concat(toolName, ".");
+      const typePrefix = typePrefixBase.concat(toolName, "::");
       lines.push(`pub mod ${toolName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
@@ -238,7 +239,7 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n"); // pub mod ${toolName}
+      lines.push(`}  // mod ${toolName}`, "");
     }
   };
 
@@ -249,10 +250,10 @@ function writeUserDefinedDatatypes(
       const namespaceName = toRustName(namespace.name);
       lines.push(`pub mod ${namespaceName} {`);
       writeNamespace(namespace);
-      lines.push("}\n"); // pub mod ${namespaceName}
+      lines.push(`}  // mod ${namespaceName}`, "");
     }
   }
-  lines.push("}\n");
+  lines.push("}  // mod schema\n");
   return lines.join("\n");
 }
 

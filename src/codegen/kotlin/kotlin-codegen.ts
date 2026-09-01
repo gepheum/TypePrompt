@@ -207,7 +207,7 @@ function writeUserDefinedDatatypes(
       writeSchema(metaSchema, unionContext, {
         typePrefix: "Schema.Meta.",
       }),
-      "}\n",
+      "}  // object Meta\n",
     );
   }
 
@@ -224,7 +224,7 @@ function writeUserDefinedDatatypes(
           typePrefix: sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push("}  // object Shared\n");
     }
     for (const template of namespace.templates) {
       const templateName = toKotlinName(template.template.name.text);
@@ -236,7 +236,7 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push(`}  // object ${templateName}\n`);
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toKotlinName(capitalize(tool.tool.name.text));
@@ -248,7 +248,7 @@ function writeUserDefinedDatatypes(
           sharedTypePrefix,
         }),
       );
-      lines.push("}\n");
+      lines.push(`}  // object ${toolName}\n`);
     }
   };
 
@@ -259,7 +259,7 @@ function writeUserDefinedDatatypes(
       const namespaceName = toKotlinName(namespace.name);
       lines.push(`object ${namespaceName} {`);
       writeNamespace(namespace);
-      lines.push("}\n");
+      lines.push(`}  // object ${namespaceName}\n`);
     }
   }
   lines.push("}\n");
