@@ -223,10 +223,13 @@ function writeUserDefinedDatatypes(
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length > 0;
-  const lines: string[] = [];
+  const sections: string[] = [];
 
-  const metaType = anyTypes(metaSchema)
-    ? writeType(
+  // Define Meta type alias
+  {
+    const lines = [`namespace ${rootNamespace}`, "{"];
+    if (anyTypes(metaSchema)) {
+      const metaType = writeType(
         {
           kind: "type-name",
           name: { text: "Meta" },
@@ -234,12 +237,19 @@ function writeUserDefinedDatatypes(
         metaSchema,
         {
           topLevel: true,
-          namespace: rootNamespace.concat("Schema.Meta"),
+          namespace: rootNamespace.concat(".Schema.Meta"),
         },
-      )
-    : "null";
+      );
+      lines.push(`using Meta = ${metaType};`);
+    } else {
+      lines.push("public enum Meta", "{", "Default = 0", "}");
+    }
+    lines.push(`}  // namespace ${rootNamespace}`);
+    sections.push(lines.join("\n"));
+  }
+
   if (anyTypes(metaSchema)) {
-    lines.push(
+    sections.push(
       writeSchema(metaSchema, unionContext, {
         namespace: `${rootNamespace}.Schema.Meta`,
       }),
@@ -252,7 +262,7 @@ function writeUserDefinedDatatypes(
       : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
     const sharedNamespace = namespaceBase.concat("Shared");
     if (anyTypes(namespace.schema)) {
-      lines.push(
+      sections.push(
         writeSchema(namespace.schema, unionContext, {
           namespace: sharedNamespace,
         }),
@@ -260,7 +270,7 @@ function writeUserDefinedDatatypes(
     }
     for (const template of namespace.templates) {
       const templateName = toCSharpName(template.template.name.text);
-      lines.push(
+      sections.push(
         writeSchema(template.schema, unionContext, {
           namespace: namespaceBase.concat(templateName),
           sharedNamespace,
@@ -269,7 +279,7 @@ function writeUserDefinedDatatypes(
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toCSharpName(capitalize(tool.tool.name.text));
-      lines.push(
+      sections.push(
         writeSchema(tool.schema, unionContext, {
           namespace: namespaceBase.concat(toolName),
           sharedNamespace,
@@ -287,7 +297,7 @@ function writeUserDefinedDatatypes(
     }
   }
 
-  return lines.join("\n\n");
+  return sections.join("\n\n");
 }
 
 function writeSpecDatatypes(
@@ -765,11 +775,11 @@ function coalesceEmptyLines(code: string): string {
   return (
     code
       // Remove spaces enclosed within curly brackets if that's all there is.
-      .replace(/\{\s+\}/g, "{}")
+      .replace(/\{\s+\}/g, "{ }")
       // Remove spaces enclosed within round brackets if that's all there is.
-      .replace(/\(\s+\)/g, "()")
+      .replace(/\(\s+\)/g, "( )")
       // Remove spaces enclosed within square brackets if that's all there is.
-      .replace(/\[\s+\]/g, "[]")
+      .replace(/\[\s+\]/g, "[ ]")
       // Remove empty line following an open curly bracket.
       .replace(/(\{\n *)\n/g, "$1")
       // Remove empty line preceding a closed curly bracket.
