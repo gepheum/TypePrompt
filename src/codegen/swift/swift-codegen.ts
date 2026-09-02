@@ -131,7 +131,7 @@ function writeTemplateIdEnum(
     const caseName = toSwiftName(rawMemberName);
     lines.push(`case ${caseName}`);
   }
-  lines.push("", "public var id: String {", "switch self {");
+  lines.push("", "private var id: String {", "switch self {");
   for (const template of Object.values(templates)) {
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateName = template.template.name.text;

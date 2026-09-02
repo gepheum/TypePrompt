@@ -137,11 +137,11 @@ function writeTemplateIdEnum(
   }
   lines.push(
     "",
-    "final String id;",
-    "const TemplateId(this.id);",
+    "final String _id;",
+    "const TemplateId(this._id);",
     "",
     "@override",
-    "String toString() => id;",
+    "String toString() => _id;",
     "}",
   );
   return lines.join("\n");
@@ -594,7 +594,10 @@ function writeType(
       return typePrefix.concat(makeNameFromHint(namingHint));
     }
     case "optional": {
-      return writeType(type.innerType, schema, options).concat("?");
+      const innerType = resolveType(type.innerType, schema);
+      return innerType.kind === "any"
+        ? "dynamic"
+        : writeType(innerType, schema, options).concat("?");
     }
     case "primitive": {
       if (type.primitive.text === "integer") {

@@ -182,7 +182,7 @@ function writeToolExecutorInterfaces(
     const lines = [`namespace ${namespaceBase}`, "{"];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      const interfaceName = `${capitalize(toolName)}Executor`;
+      const interfaceName = `I${capitalize(toolName)}Executor`;
       const toolTypeName = toCSharpName(capitalize(toolName));
       const toolNamespace = schemaNamespaceBase.concat(toolTypeName);
       const options: WriteSchemaOptions = {

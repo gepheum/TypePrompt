@@ -118,7 +118,7 @@ function writeTemplateIdEnum(
   const { singleNamespace } = compilationResult;
   const lines = [
     "/** Uniquely identifies a prompt template. */",
-    "enum class TemplateId(val id: String) {",
+    "enum class TemplateId(private val id: String) {",
   ];
   for (const template of templates) {
     const isLast = template === templates.at(-1);
