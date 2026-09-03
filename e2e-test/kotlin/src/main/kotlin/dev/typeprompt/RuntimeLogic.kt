@@ -14,6 +14,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 // </static:kotlin-imports>
 
+// <static:kotlin-public-types>
+// </static:kotlin-public-types>
+
+// <static:kotlin-logic>
+// </static:kotlin-logic>
+
 // <generated:spec>
 internal object Spec {
     // Exported as 'Spec.Templates'

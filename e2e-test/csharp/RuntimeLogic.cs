@@ -3,6 +3,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 // </static:csharp-imports>
 
+// <static:csharp-public-types>
+// </static:csharp-public-types>
+
+// <static:csharp-logic>
+// </static:csharp-logic>
+
 // <generated:spec>
 namespace Spec
 {

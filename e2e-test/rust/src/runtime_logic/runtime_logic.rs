@@ -1,6 +1,9 @@
 // <static:rust-imports>
 // </static:rust-imports>
 
+// <static:rust-public-types>
+// </static:rust-public-types>
+
 // <static:rust-logic>
 // </static:rust-logic>
 

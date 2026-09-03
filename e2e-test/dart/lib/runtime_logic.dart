@@ -2,6 +2,12 @@
 import 'dart:convert';
 // </static:dart-imports>
 
+// <static:dart-public-types>
+// </static:dart-public-types>
+
+// <static:dart-logic>
+// </static:dart-logic>
+
 // <generated:spec>
 final class _Spec_Templates {
   final int edition;

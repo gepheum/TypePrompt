@@ -3,6 +3,12 @@ import Foundation
 
 // </static:swift-imports>
 
+// <static:swift-public-types>
+// </static:swift-public-types>
+
+// <static:swift-logic>
+// </static:swift-logic>
+
 // <static:swift-logic>
 public enum JsonElement: Codable, Sendable, Equatable {
   case string(String)
