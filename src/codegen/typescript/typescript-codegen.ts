@@ -50,7 +50,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     [
       STATIC_SNIPPETS["typescript-imports"],
       reformat(writePromptsInterface(compilationResult)),
-      STATIC_SNIPPETS["typescript-top-level"],
+      STATIC_SNIPPETS["typescript-public-types"],
       reformat(
         [
           writeTemplateIdEnum(Object.values(templates)),

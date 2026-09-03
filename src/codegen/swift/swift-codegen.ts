@@ -53,7 +53,7 @@ function writeAll(
       [
         STATIC_SNIPPETS["swift-imports"],
         // reformat(writePromptsInterface(compilationResult)),
-        // STATIC_SNIPPETS["typescript-top-level"],
+        // STATIC_SNIPPETS["typescript-public-types"],
         `enum ${rootNamespace} {`,
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorProtocols(compilationResult, config),

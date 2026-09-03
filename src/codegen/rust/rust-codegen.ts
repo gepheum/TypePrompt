@@ -43,7 +43,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       [
         STATIC_SNIPPETS["rust-imports"],
         // reformat(writePromptsInterface(compilationResult)),
-        // STATIC_SNIPPETS["typescript-top-level"],
+        // STATIC_SNIPPETS["typescript-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorTraits(compilationResult),
         // writeInputOutputTypes(compilationResult),

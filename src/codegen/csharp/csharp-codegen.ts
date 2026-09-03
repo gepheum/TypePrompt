@@ -48,7 +48,7 @@ function writeAll(
     [
       STATIC_SNIPPETS["csharp-imports"],
       // reformat(writePromptsInterface(compilationResult)),
-      // STATIC_SNIPPETS["typescript-top-level"],
+      // STATIC_SNIPPETS["typescript-public-types"],
       reformat(
         [
           writeTemplateIdEnum(compilationResult, config),

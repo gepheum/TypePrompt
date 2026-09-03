@@ -49,7 +49,7 @@ import YAML from "yaml";
 import * as z from "zod";
 // </static:typescript-imports>
 
-// <static:typescript-top-level>
+// <static:typescript-public-types>
 /** Builds {@link Prompt} instances for the template identified by `Id`. */
 export type Template<Id extends TemplateId> = {
   readonly render: (input: Input<Id>) => Prompt<Id>;
@@ -153,7 +153,7 @@ export type ToolCallResponse = {
   readonly callId: string;
   readonly stringifiedOutput: string;
 };
-// </static:typescript-top-level>
+// </static:typescript-public-types>
 
 // <generated>
 /** Entry point for building prompts. */
