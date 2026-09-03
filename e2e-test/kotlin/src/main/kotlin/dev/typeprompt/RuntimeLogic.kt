@@ -1,9 +1,12 @@
 package dev.typeprompt
 
 // <static:kotlin-imports>
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
@@ -15,6 +18,16 @@ import kotlinx.serialization.json.jsonPrimitive
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
+data class ToolCall(
+    val callId: String,
+    val toolName: String,
+    val stringifiedInput: String,
+)
+
+data class ToolCallResponse(
+    val callId: String,
+    val stringifiedOutput: String,
+)
 // </static:kotlin-public-types>
 
 // <static:kotlin-logic>

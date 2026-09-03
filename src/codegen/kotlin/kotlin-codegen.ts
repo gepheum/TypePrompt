@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
@@ -57,6 +58,7 @@ function writeAll(
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
           writeTemplatesData(compilationResult),
+          writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["kotlin-logic"],
@@ -155,30 +157,7 @@ function writeToolExecutorInterfaces(
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `${capitalize(toolName)}Executor`;
-      const toolTypeName = toKotlinName(capitalize(toolName));
-      const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
-      const options: WriteSchemaOptions = {
-        typePrefix: toolTypePrefix,
-        sharedTypePrefix,
-        topLevel: true,
-      };
-
-      const inputDecl = tool.schema.typeDeclarations["Input"];
-      const outputDecl = tool.schema.typeDeclarations["Output"];
-      const inputType = inputDecl
-        ? writeType(
-            resolveType(inputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Input`;
-      const outputType = outputDecl
-        ? writeType(
-            resolveType(outputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Output`;
+      const { inputType, outputType } = getToolTypes(tool, compilationResult);
 
       lines.push(
         `interface ${interfaceName} {`,
@@ -326,6 +305,111 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     `${stringifiedJson},`,
     ")",
   ];
+  return lines.join("\n");
+}
+
+function getToolTypes(
+  tool: ValidatedTool,
+  compilationResult: ValidCompilationResult,
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const toolName = tool.tool.name.text;
+  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toKotlinName(toolNamespace);
+  const sharedTypePrefix = singleNamespace
+    ? "Schema.Shared."
+    : `Schema.${namespaceName}.Shared.`;
+  const typePrefixBase = singleNamespace
+    ? "Schema."
+    : `Schema.${namespaceName}.`;
+
+  const toolTypeName = toKotlinName(capitalize(toolName));
+  const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
+  const options: WriteSchemaOptions = {
+    typePrefix: toolTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputDecl = tool.schema.typeDeclarations["Input"];
+  const outputDecl = tool.schema.typeDeclarations["Output"];
+  const inputType = inputDecl
+    ? writeType(
+        resolveType(inputDecl.valueType, tool.schema),
+        tool.schema,
+        options,
+      )
+    : `${toolTypePrefix}Input`;
+  const outputType = outputDecl
+    ? writeType(
+        resolveType(outputDecl.valueType, tool.schema),
+        tool.schema,
+        options,
+      )
+    : `${toolTypePrefix}Output`;
+
+  return { inputType, outputType };
+}
+
+function writeExecuteToolCall(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, tools } = compilationResult;
+  const toolList = Object.values(tools);
+
+  const lines = [
+    '@Suppress("unused")',
+    "private suspend fun executeToolCall(",
+    "toolCall: ToolCall,",
+    "namespace: String,",
+    "executor: Any,",
+    "): ToolCallResponse {",
+  ];
+
+  if (toolList.length <= 0) {
+    lines.push(
+      'throw IllegalArgumentException("Tool not found: ${toolCall.toolName}")',
+      "}",
+    );
+    return lines.join("\n");
+  }
+
+  lines.push('when ("$namespace:${toolCall.toolName}") {');
+
+  for (const tool of toolList) {
+    const toolName = tool.tool.name.text;
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const toolId = getId(tool.tool);
+    const { inputType } = getToolTypes(tool, compilationResult);
+
+    const toolInterface = singleNamespace
+      ? `Tools.${capitalize(toolName)}Executor`
+      : `Tools.${toKotlinName(toolNamespace)}.${capitalize(toolName)}Executor`;
+    const methodName = toKotlinName(toolName);
+
+    lines.push(
+      `"${toolId}" -> {`,
+      `val toolExecutor = executor as? ${toolInterface}`,
+      `?: throw IllegalArgumentException("Tool implementation not found: \${toolCall.toolName}")`,
+      "val stringifiedOutput = try {",
+      `val input = Json.decodeFromString<${inputType}>(toolCall.stringifiedInput)`,
+      `val rawOutput = toolExecutor.${methodName}(input)`,
+      "Json.encodeToString(rawOutput)",
+      "} catch (e: Exception) {",
+      'val callInfo = "{\\"callId\\": \\"${toolCall.callId}\\", \\"toolName\\": \\"${toolCall.toolName}\\"}"',
+      'throw RuntimeException("Tool call failed: $callInfo — ${e.message ?: e.toString()}", e)',
+      "}",
+      "return ToolCallResponse(toolCall.callId, stringifiedOutput)",
+      "}",
+    );
+  }
+
+  lines.push(
+    'else -> throw IllegalArgumentException("Tool not found: ${toolCall.toolName}")',
+    "}",
+    "}",
+  );
+
   return lines.join("\n");
 }
 
