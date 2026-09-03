@@ -298,7 +298,7 @@ async def _execute_tools_impl[ToolExecutor](
 ) -> Sequence[ToolCallResponse]:
     import asyncio
 
-    async def _call_one(call: ToolCall) -> ToolCallResponse:
+    async def _execute_one(call: ToolCall) -> ToolCallResponse:
         tool = prompt.tools.get(call.tool_name)
         if tool is None:
             raise ValueError(f"Tool not found: {call.tool_name}")
@@ -326,7 +326,7 @@ async def _execute_tools_impl[ToolExecutor](
             call_id=call.call_id, stringified_output=stringified_output
         )
 
-    return await asyncio.gather(*(_call_one(call) for call in tool_calls))
+    return await asyncio.gather(*(_execute_one(call) for call in tool_calls))
 
 
 @dataclass(frozen=True)
