@@ -48,18 +48,17 @@ function writeAll(
     [
       STATIC_SNIPPETS["csharp-imports"],
       // reformat(writePromptsInterface(compilationResult)),
-      // STATIC_SNIPPETS["typescript-public-types"],
+      STATIC_SNIPPETS["csharp-public-types"],
       reformat(
         [
           writeTemplateIdEnum(compilationResult, config),
           writeToolExecutorInterfaces(compilationResult, config),
-          // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
           writeSpecDatatypes(unionContext, config),
           writeTemplatesData(compilationResult, config),
         ].join("\n\n"),
       ),
-      // STATIC_SNIPPETS["typescript-logic"],
+      STATIC_SNIPPETS["csharp-logic"],
     ].join("\n\n"),
   ).concat("\n");
 }
@@ -230,31 +229,6 @@ function writeToolExecutorInterfaces(
 
   return sections.join("\n\n");
 }
-
-// function writeInputOutputTypes(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines: string[] = [];
-
-//   for (const what of ["Input", "Output"]) {
-//     lines.push(`export type ${what}<Id extends TemplateId> = {`);
-//     for (const template of Object.values(templates)) {
-//       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//       const templateName = template.template.name.text;
-//       const templateId = `${namespace}:${templateName}`;
-//       lines.push(
-//         singleNamespace
-//           ? `"${templateId}": $.${templateName}.${what};`
-//           : `"${templateId}": $.${namespace}.${templateName}.${what};`,
-//       );
-//     }
-//     lines.push("}[Id];");
-//     lines.push("");
-//   }
-
-//   return lines.join("\n");
-// }
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,

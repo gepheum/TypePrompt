@@ -43,10 +43,9 @@ function writeAll(compilationResult: ValidCompilationResult): string {
       [
         STATIC_SNIPPETS["rust-imports"],
         // reformat(writePromptsInterface(compilationResult)),
-        // STATIC_SNIPPETS["typescript-public-types"],
+        STATIC_SNIPPETS["rust-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorTraits(compilationResult),
-        // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
@@ -222,31 +221,6 @@ function writeToolExecutorTraits(
   lines.push("}  // mod tools");
   return lines.join("\n");
 }
-
-// function writeInputOutputTypes(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines: string[] = [];
-
-//   for (const what of ["Input", "Output"]) {
-//     lines.push(`export type ${what}<Id extends TemplateId> = {`);
-//     for (const template of Object.values(templates)) {
-//       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//       const templateName = template.template.name.text;
-//       const templateId = `${namespace}:${templateName}`;
-//       lines.push(
-//         singleNamespace
-//           ? `"${templateId}": $.${templateName}.${what};`
-//           : `"${templateId}": $.${namespace}.${templateName}.${what};`,
-//       );
-//     }
-//     lines.push("}[Id];");
-//     lines.push("");
-//   }
-
-//   return lines.join("\n");
-// }
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,

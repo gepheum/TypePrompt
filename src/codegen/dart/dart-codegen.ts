@@ -51,20 +51,18 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     [
       STATIC_SNIPPETS["dart-imports"],
       "",
-      // STATIC_SNIPPETS["dart-imports"],
       // reformat(writePromptsInterface(compilationResult)),
-      // STATIC_SNIPPETS["typescript-public-types"],
+      STATIC_SNIPPETS["dart-public-types"],
       reformat(
         [
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorClasses(compilationResult),
-          // writeInputOutputTypes(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
-      // STATIC_SNIPPETS["typescript-logic"],
+      STATIC_SNIPPETS["dart-logic"],
     ].join("\n\n"),
   ).concat("\n");
 }
@@ -206,31 +204,6 @@ function writeToolExecutorClasses(
 
   return lines.join("\n");
 }
-
-// function writeInputOutputTypes(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines: string[] = [];
-
-//   for (const what of ["Input", "Output"]) {
-//     lines.push(`export type ${what}<Id extends TemplateId> = {`);
-//     for (const template of Object.values(templates)) {
-//       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//       const templateName = template.template.name.text;
-//       const templateId = `${namespace}:${templateName}`;
-//       lines.push(
-//         singleNamespace
-//           ? `"${templateId}": $.${templateName}.${what};`
-//           : `"${templateId}": $.${namespace}.${templateName}.${what};`,
-//       );
-//     }
-//     lines.push("}[Id];");
-//     lines.push("");
-//   }
-
-//   return lines.join("\n");
-// }
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,

@@ -53,11 +53,10 @@ function writeAll(
       [
         STATIC_SNIPPETS["swift-imports"],
         // reformat(writePromptsInterface(compilationResult)),
-        // STATIC_SNIPPETS["typescript-public-types"],
+        STATIC_SNIPPETS["swift-public-types"],
         `enum ${rootNamespace} {`,
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorProtocols(compilationResult, config),
-        // writeInputOutputTypes(compilationResult),
         writeUserDefinedDatatypes(compilationResult, config),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
@@ -225,31 +224,6 @@ function writeToolExecutorProtocols(
   lines.push("}  // enum Tools");
   return lines.join("\n");
 }
-
-// function writeInputOutputTypes(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { singleNamespace, templates } = compilationResult;
-//   const lines: string[] = [];
-
-//   for (const what of ["Input", "Output"]) {
-//     lines.push(`export type ${what}<Id extends TemplateId> = {`);
-//     for (const template of Object.values(templates)) {
-//       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//       const templateName = template.template.name.text;
-//       const templateId = `${namespace}:${templateName}`;
-//       lines.push(
-//         singleNamespace
-//           ? `"${templateId}": $.${templateName}.${what};`
-//           : `"${templateId}": $.${namespace}.${templateName}.${what};`,
-//       );
-//     }
-//     lines.push("}[Id];");
-//     lines.push("");
-//   }
-
-//   return lines.join("\n");
-// }
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
