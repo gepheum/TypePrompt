@@ -397,15 +397,13 @@ function writeExecuteToolCall(
 
   for (const template of Object.values(templates)) {
     const templateTools = Object.values(template.tools).map((t) => t.tool);
-    if (templateTools.length <= 0) {
-      continue;
-    }
+    if (templateTools.length <= 0) continue;
 
     const templateName = template.template.name.text;
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const functionName = singleNamespace
       ? `execute_${toSnakeCase(templateName)}_tool_call`
-      : `execute_${toSnakeCase(namespace)}_${toSnakeCase(templateName)}_tool_call`;
+      : `execute_${toSnakeCase(namespace)}__${toSnakeCase(templateName)}_tool_call`;
 
     const uniqueTraits = Array.from(
       new Set(
@@ -415,12 +413,11 @@ function writeExecuteToolCall(
     const traitBounds = `?Sized + ${uniqueTraits.join(" + ")}`;
 
     const lines = [
-      "#[allow(dead_code)]",
       `async fn ${functionName}<E: ${traitBounds}>(`,
-      "  tool_call: &ToolCall,",
-      "  executor: &E,",
+      "tool_call: &ToolCall,",
+      "executor: &E,",
       ") -> Result<ToolCallResponse, Box<dyn std::error::Error + Send + Sync>> {",
-      "  match tool_call.tool_name.as_str() {",
+      "match tool_call.tool_name.as_str() {",
     ];
 
     for (const tool of templateTools) {
@@ -447,8 +444,8 @@ function writeExecuteToolCall(
     }
 
     lines.push(
-      '    _ => Err(format!("Tool not found: {}", tool_call.tool_name).into()),',
-      "  }",
+      '_ => Err(format!("Tool not found: {}", tool_call.tool_name).into()),',
+      "}",
       "}",
     );
 
