@@ -7,6 +7,12 @@
       shape: shared.Square | { kind: "circle"; radius: number };
     }
   </schema>
+
+  <tools>
+    - tool: myTool
+    - tool: myOtherTool
+  </tools>
+
   <user>
     U
   </user>
