@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
@@ -53,13 +54,14 @@ function writeAll(
       [
         STATIC_SNIPPETS["swift-imports"],
         // reformat(writePromptsInterface(compilationResult)),
-        STATIC_SNIPPETS["swift-public-types"],
         `enum ${rootNamespace} {`,
+        STATIC_SNIPPETS["swift-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorProtocols(compilationResult, config),
         writeUserDefinedDatatypes(compilationResult, config),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
+        writeExecuteToolCall(compilationResult, config),
         STATIC_SNIPPETS["swift-logic"],
         "}",
       ].join("\n\n"),
@@ -163,39 +165,14 @@ function writeToolExecutorProtocols(
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
     const lines: string[] = [];
-    const namespaceName = toSwiftName(namespace.name);
-    const typePrefixBase = singleNamespace
-      ? `${config.rootNamespace}.Schema.`
-      : `${config.rootNamespace}.Schema.${namespaceName}.`;
-    const sharedTypePrefix = typePrefixBase.concat("Shared.");
-
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `${capitalize(toolName)}Executor`;
-      const toolTypeName = toSwiftName(capitalize(toolName));
-      const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
-      const options: WriteSchemaOptions = {
-        typePrefix: toolTypePrefix,
-        sharedTypePrefix,
-        topLevel: true,
-      };
-
-      const inputDecl = tool.schema.typeDeclarations["Input"];
-      const outputDecl = tool.schema.typeDeclarations["Output"];
-      const inputType = inputDecl
-        ? writeType(
-            resolveType(inputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Input`;
-      const outputType = outputDecl
-        ? writeType(
-            resolveType(outputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Output`;
+      const { inputType, outputType } = getToolTypes(
+        tool,
+        compilationResult,
+        config,
+      );
 
       lines.push(
         `public protocol ${interfaceName}: Sendable {`,
@@ -342,6 +319,113 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     `from: Foundation.Data(${stringifiedJson}.utf8)`,
     ")",
   ];
+  return lines.join("\n");
+}
+
+function getToolTypes(
+  tool: ValidatedTool,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const toolName = tool.tool.name.text;
+  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toSwiftName(toolNamespace);
+  const typePrefixBase = singleNamespace
+    ? `${config.rootNamespace}.Schema.`
+    : `${config.rootNamespace}.Schema.${namespaceName}.`;
+  const sharedTypePrefix = typePrefixBase.concat("Shared.");
+
+  const toolTypeName = toSwiftName(capitalize(toolName));
+  const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
+  const options: WriteSchemaOptions = {
+    typePrefix: toolTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    tool.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    tool.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function writeExecuteToolCall(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { singleNamespace, tools } = compilationResult;
+  const toolList = Object.values(tools);
+
+  if (toolList.length <= 0) {
+    return "";
+  }
+
+  const lines = [
+    "fileprivate struct ToolExecutionError: Error, CustomStringConvertible {",
+    "let description: String",
+    "}",
+    "",
+    "fileprivate struct ToolNotFoundError: Error, CustomStringConvertible {",
+    "let description: String",
+    "}",
+    "",
+    "fileprivate static func executeToolCall(",
+    "toolCall: ToolCall,",
+    "namespace: String,",
+    "executor: any Any",
+    ") async throws -> ToolCallResponse {",
+    'var stringifiedOutput = ""',
+    "do {",
+    'switch "\\(namespace):\\(toolCall.toolName)" {',
+  ];
+
+  for (const tool of toolList) {
+    const toolName = tool.tool.name.text;
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const toolId = getId(tool.tool);
+    const { inputType } = getToolTypes(tool, compilationResult, config);
+
+    const interfaceName = singleNamespace
+      ? `Tools.${capitalize(toolName)}Executor`
+      : `Tools.${toSwiftName(toolNamespace)}.${capitalize(toolName)}Executor`;
+    const methodName = toSwiftName(toolName);
+
+    lines.push(
+      `case "${toolId}":`,
+      `guard let toolExecutor = executor as? ${interfaceName} else {`,
+      "break",
+      "}",
+      `let input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
+      `let rawOutput = try await toolExecutor.${methodName}(input: input)`,
+      "let outputData = try Foundation.JSONEncoder().encode(rawOutput)",
+      "stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
+    );
+  }
+
+  lines.push(
+    "default:",
+    "break",
+    "}",
+    "} catch {",
+    'let callInfo = "{\\"callId\\": \\"\\(toolCall.callId)\\", \\"toolName\\": \\"\\(toolCall.toolName)\\"}"',
+    'throw ToolExecutionError(description: "Tool call failed: \\(callInfo) — \\(error)")',
+    "}",
+    "if stringifiedOutput.isEmpty {",
+    'throw ToolNotFoundError(description: "Tool not found: \\(toolCall.toolName)")',
+    "}",
+    "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)",
+    "}",
+  );
+
   return lines.join("\n");
 }
 

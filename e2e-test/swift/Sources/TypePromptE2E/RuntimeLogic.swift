@@ -3,8 +3,31 @@ import Foundation
 
 // </static:swift-imports>
 
-// <static:swift-public-types>
-// </static:swift-public-types>
+public enum TypePromptRuntime {
+  // <static:swift-public-types>
+  public struct ToolCall: Sendable, Codable, Equatable {
+    public let callId: String
+    public let toolName: String
+    public let stringifiedInput: String
+
+    public init(callId: String, toolName: String, stringifiedInput: String) {
+      self.callId = callId
+      self.toolName = toolName
+      self.stringifiedInput = stringifiedInput
+    }
+  }
+
+  public struct ToolCallResponse: Sendable, Codable, Equatable {
+    public let callId: String
+    public let stringifiedOutput: String
+
+    public init(callId: String, stringifiedOutput: String) {
+      self.callId = callId
+      self.stringifiedOutput = stringifiedOutput
+    }
+  }
+  // </static:swift-public-types>
+}
 
 // <static:swift-logic>
 // </static:swift-logic>

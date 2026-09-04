@@ -3,8 +3,21 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 // </static:csharp-imports>
 
-// <static:csharp-public-types>
-// </static:csharp-public-types>
+namespace TypePromptRuntime
+{
+    // <static:csharp-public-types>
+    public record ToolCall(
+        string CallId,
+        string ToolName,
+        string StringifiedInput
+    );
+
+    public record ToolCallResponse(
+        string CallId,
+        string StringifiedOutput
+    );
+    // </static:csharp-public-types>
+}
 
 // <static:csharp-logic>
 // </static:csharp-logic>

@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
@@ -60,6 +61,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
           writeTemplatesData(compilationResult),
+          writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["dart-logic"],
@@ -152,42 +154,15 @@ function writeToolExecutorClasses(
   const lines: string[] = [];
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = namespace.name;
-    const typePrefixBase = singleNamespace ? "" : namespaceName.concat("_");
-    const sharedTypePrefix = typePrefixBase.concat("Shared_");
-
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      const capitalizedToolName = capitalize(toolName);
-      const interfaceName = singleNamespace
-        ? `Tools_${capitalizedToolName}Executor`
-        : `Tools_${namespaceName}_${capitalizedToolName}Executor`;
-      const toolTypePrefix = typePrefixBase.concat(capitalizedToolName, "_");
-      const options: WriteSchemaOptions = {
-        typePrefix: toolTypePrefix,
-        sharedTypePrefix,
-      };
-
-      const inputDecl = tool.schema.typeDeclarations["Input"];
-      const outputDecl = tool.schema.typeDeclarations["Output"];
-      const inputType = inputDecl
-        ? writeType(
-            resolveType(inputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Input`;
-      const outputType = outputDecl
-        ? writeType(
-            resolveType(outputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Output`;
+      const { interfaceName, methodName, inputType, outputType } = getToolInfo(
+        tool,
+        compilationResult,
+      );
 
       lines.push(
         `abstract class ${interfaceName} {`,
-        `Future<${outputType}> ${toDartName(toolName)}(${inputType} input);`,
+        `Future<${outputType}> ${methodName}(${inputType} input);`,
         "}",
         "",
       );
@@ -306,6 +281,129 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     `jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
     `);`,
   ];
+  return lines.join("\n");
+}
+
+function getToolInfo(
+  tool: ValidatedTool,
+  compilationResult: ValidCompilationResult,
+): {
+  readonly interfaceName: string;
+  readonly methodName: string;
+  readonly inputTypeNode: Type | Optional;
+  readonly outputTypeNode: Type | Optional;
+  readonly options: WriteSchemaOptions;
+  readonly inputType: string;
+  readonly outputType: string;
+} {
+  const { singleNamespace } = compilationResult;
+  const toolName = tool.tool.name.text;
+  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+  const capitalizedToolName = capitalize(toolName);
+  const typePrefixBase = singleNamespace ? "" : toolNamespace.concat("_");
+  const sharedTypePrefix = typePrefixBase.concat("Shared_");
+  const interfaceName = singleNamespace
+    ? `Tools_${capitalizedToolName}Executor`
+    : `Tools_${toolNamespace}_${capitalizedToolName}Executor`;
+  const toolTypePrefix = typePrefixBase.concat(capitalizedToolName, "_");
+  const options: WriteSchemaOptions = {
+    typePrefix: toolTypePrefix,
+    sharedTypePrefix,
+  };
+
+  const inputTypeNode = resolveType(
+    { kind: "type-name", name: { text: "Input" } },
+    tool.schema,
+  );
+  const outputTypeNode = resolveType(
+    { kind: "type-name", name: { text: "Output" } },
+    tool.schema,
+  );
+
+  const inputType = writeType(inputTypeNode, tool.schema, options);
+  const outputType = writeType(outputTypeNode, tool.schema, options);
+
+  return {
+    interfaceName,
+    methodName: toDartName(toolName),
+    inputTypeNode,
+    outputTypeNode,
+    options,
+    inputType,
+    outputType,
+  };
+}
+
+function writeExecuteToolCall(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { tools } = compilationResult;
+  const toolList = Object.values(tools);
+
+  if (toolList.length <= 0) {
+    return "";
+  }
+
+  const lines = [
+    "Future<ToolCallResponse> _executeToolCall(",
+    "ToolCall toolCall,",
+    "String namespace,",
+    "Object executor,",
+    ") async {",
+    "var stringifiedOutput = '';",
+    "try {",
+    'switch ("$namespace:${toolCall.toolName}") {',
+  ];
+
+  for (const tool of toolList) {
+    const toolId = getId(tool.tool);
+    const {
+      interfaceName,
+      methodName,
+      inputTypeNode,
+      outputTypeNode,
+      options,
+    } = getToolInfo(tool, compilationResult);
+
+    const inputFromJson = writeFromJsonExpr(
+      inputTypeNode,
+      "jsonDecode(toolCall.stringifiedInput)",
+      tool.schema,
+      options,
+    );
+    const outputToJson = writeToJsonExpr(
+      outputTypeNode,
+      "rawOutput",
+      tool.schema,
+      options,
+    );
+
+    lines.push(
+      `case "${toolId}":`,
+      `if (executor is! ${interfaceName}) break;`,
+      `final input = ${inputFromJson};`,
+      `final rawOutput = await executor.${methodName}(input);`,
+      `final json = ${outputToJson};`,
+      "stringifiedOutput = jsonEncode(json);",
+      "break;",
+    );
+  }
+
+  lines.push(
+    "default:",
+    "break;",
+    "}",
+    "} catch (e) {",
+    'final callInfo = \'{"callId": "\' + toolCall.callId + \'", "toolName": "\' + toolCall.toolName + \'"}\';',
+    "throw Exception('Tool call failed: $callInfo — $e');",
+    "}",
+    "if (stringifiedOutput.isEmpty) {",
+    'throw ArgumentError("Tool not found: ${toolCall.toolName}");',
+    "}",
+    "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput);",
+    "}",
+  );
+
   return lines.join("\n");
 }
 

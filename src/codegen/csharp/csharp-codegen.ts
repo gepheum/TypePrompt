@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
@@ -42,20 +43,22 @@ function writeAll(
   compilationResult: ValidCompilationResult,
   config: { rootNamespace: string },
 ): string {
+  const { rootNamespace } = config;
   const unionContext = makeUnionContext(compilationResult, config);
 
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["csharp-imports"],
       // reformat(writePromptsInterface(compilationResult)),
-      STATIC_SNIPPETS["csharp-public-types"],
       reformat(
         [
+          `namespace ${rootNamespace}\n{\n${STATIC_SNIPPETS["csharp-public-types"]}\n}`,
           writeTemplateIdEnum(compilationResult, config),
           writeToolExecutorInterfaces(compilationResult, config),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
           writeSpecDatatypes(unionContext, config),
           writeTemplatesData(compilationResult, config),
+          writeExecuteToolCall(compilationResult, config),
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["csharp-logic"],
@@ -173,39 +176,16 @@ function writeToolExecutorInterfaces(
     const namespaceBase = singleNamespace
       ? `${rootNamespace}.Tools`
       : `${rootNamespace}.Tools.${toCSharpName(namespace.name)}`;
-    const schemaNamespaceBase = singleNamespace
-      ? `${rootNamespace}.Schema.`
-      : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
-    const sharedNamespace = schemaNamespaceBase.concat("Shared");
 
     const lines = [`namespace ${namespaceBase}`, "{"];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `I${capitalize(toolName)}Executor`;
-      const toolTypeName = toCSharpName(capitalize(toolName));
-      const toolNamespace = schemaNamespaceBase.concat(toolTypeName);
-      const options: WriteSchemaOptions = {
-        namespace: toolNamespace,
-        sharedNamespace,
-        topLevel: true,
-      };
-
-      const inputDecl = tool.schema.typeDeclarations["Input"];
-      const outputDecl = tool.schema.typeDeclarations["Output"];
-      const inputType = inputDecl
-        ? writeType(
-            resolveType(inputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolNamespace}.Input`;
-      const outputType = outputDecl
-        ? writeType(
-            resolveType(outputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolNamespace}.Output`;
+      const { inputType, outputType } = getToolTypes(
+        tool,
+        compilationResult,
+        config,
+      );
 
       lines.push(
         `public interface ${interfaceName}`,
@@ -348,6 +328,120 @@ function writeTemplatesData(
     "}",
     "}",
   ];
+  return lines.join("\n");
+}
+
+function getToolTypes(
+  tool: ValidatedTool,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): { readonly inputType: string; readonly outputType: string } {
+  const { rootNamespace } = config;
+  const { singleNamespace } = compilationResult;
+  const toolName = tool.tool.name.text;
+  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+  const schemaNamespaceBase = singleNamespace
+    ? `${rootNamespace}.Schema.`
+    : `${rootNamespace}.Schema.${toCSharpName(toolNamespace)}.`;
+  const sharedNamespace = schemaNamespaceBase.concat("Shared");
+
+  const toolTypeName = toCSharpName(capitalize(toolName));
+  const toolNamespacePath = schemaNamespaceBase.concat(toolTypeName);
+  const options: WriteSchemaOptions = {
+    namespace: toolNamespacePath,
+    sharedNamespace,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    tool.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    tool.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function writeExecuteToolCall(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const { singleNamespace, tools } = compilationResult;
+  const toolList = Object.values(tools);
+
+  if (toolList.length <= 0) {
+    return "";
+  }
+
+  const lines = [
+    `namespace ${rootNamespace}`,
+    "{",
+    "file static class ToolExecution",
+    "{",
+    "private static async System.Threading.Tasks.Task<ToolCallResponse> ExecuteToolCall(",
+    "ToolCall toolCall,",
+    "string @namespace,",
+    "object executor)",
+    "{",
+    'var stringifiedOutput = "";',
+    "try",
+    "{",
+    'switch ($"{@namespace}:{toolCall.ToolName}")',
+    "{",
+  ];
+
+  for (const tool of toolList) {
+    const toolName = tool.tool.name.text;
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const toolId = getId(tool.tool);
+    const { inputType } = getToolTypes(tool, compilationResult, config);
+
+    const interfaceName = singleNamespace
+      ? `${rootNamespace}.Tools.I${capitalize(toolName)}Executor`
+      : `${rootNamespace}.Tools.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}Executor`;
+    const methodName = toCSharpName(capitalize(toolName));
+
+    lines.push(
+      `case "${toolId}":`,
+      "{",
+      `if (executor is not ${interfaceName} toolExecutor)`,
+      "{",
+      "break;",
+      "}",
+      `var input = JsonSerializer.Deserialize<${inputType}>(toolCall.StringifiedInput)!;`,
+      `var rawOutput = await toolExecutor.${methodName}(input);`,
+      "stringifiedOutput = JsonSerializer.Serialize(rawOutput);",
+      "break;",
+      "}",
+    );
+  }
+
+  lines.push(
+    "default:",
+    "break;",
+    "}",
+    "}",
+    "catch (System.Exception e)",
+    "{",
+    'var callInfo = $"{{\\"callId\\": \\"{toolCall.CallId}\\", \\"toolName\\": \\"{toolCall.ToolName}\\"}}";',
+    'throw new System.Exception($"Tool call failed: {callInfo} — {e.Message}", e);',
+    "}",
+    "if (string.IsNullOrEmpty(stringifiedOutput))",
+    "{",
+    'throw new System.ArgumentException($"Tool not found: {toolCall.ToolName}");',
+    "}",
+    "return new ToolCallResponse(toolCall.CallId, stringifiedOutput);",
+    "}",
+    "}",
+    "}",
+  );
+
   return lines.join("\n");
 }
 

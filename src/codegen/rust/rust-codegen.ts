@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
@@ -49,6 +50,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         writeUserDefinedDatatypes(compilationResult),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
+        writeExecuteToolCall(compilationResult),
         STATIC_SNIPPETS["rust-logic"],
       ].join("\n\n"),
     ),
@@ -176,22 +178,16 @@ function writeToolExecutorTraits(
         topLevel: true,
       };
 
-      const inputDecl = tool.schema.typeDeclarations["Input"];
-      const outputDecl = tool.schema.typeDeclarations["Output"];
-      const inputType = inputDecl
-        ? writeType(
-            resolveType(inputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Input`;
-      const outputType = outputDecl
-        ? writeType(
-            resolveType(outputDecl.valueType, tool.schema),
-            tool.schema,
-            options,
-          )
-        : `${toolTypePrefix}Output`;
+      const inputType = writeType(
+        { kind: "type-name", name: { text: "Input" } },
+        tool.schema,
+        options,
+      );
+      const outputType = writeType(
+        { kind: "type-name", name: { text: "Output" } },
+        tool.schema,
+        options,
+      );
 
       const methodName = toRustName(toSnakeCase(toolName));
       lines.push(
@@ -342,6 +338,124 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     `});`,
   ];
   return lines.join("\n");
+}
+
+function getToolInfo(
+  tool: ValidatedTool,
+  compilationResult: ValidCompilationResult,
+): {
+  readonly traitName: string;
+  readonly methodName: string;
+  readonly inputType: string;
+  readonly outputType: string;
+} {
+  const { singleNamespace } = compilationResult;
+  const toolName = tool.tool.name.text;
+  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toRustName(toolNamespace);
+
+  const traitName = singleNamespace
+    ? `tools::${capitalize(toolName)}Executor`
+    : `tools::${namespaceName}::${capitalize(toolName)}Executor`;
+
+  const typePrefixBase = singleNamespace
+    ? "schema::"
+    : `schema::${namespaceName}::`;
+  const sharedTypePrefix = typePrefixBase.concat("shared::");
+  const toolTypeName = toRustName(capitalize(toolName));
+  const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
+  const options: WriteSchemaOptions = {
+    typePrefix: toolTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    tool.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    tool.schema,
+    options,
+  );
+
+  return {
+    traitName,
+    methodName: toRustName(toSnakeCase(toolName)),
+    inputType,
+    outputType,
+  };
+}
+
+function writeExecuteToolCall(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, templates } = compilationResult;
+  const sections: string[] = [];
+
+  for (const template of Object.values(templates)) {
+    const templateTools = Object.values(template.tools).map((t) => t.tool);
+    if (templateTools.length <= 0) {
+      continue;
+    }
+
+    const templateName = template.template.name.text;
+    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const functionName = singleNamespace
+      ? `execute_${toSnakeCase(templateName)}_tool_call`
+      : `execute_${toSnakeCase(namespace)}_${toSnakeCase(templateName)}_tool_call`;
+
+    const uniqueTraits = Array.from(
+      new Set(
+        templateTools.map((t) => getToolInfo(t, compilationResult).traitName),
+      ),
+    );
+    const traitBounds = `?Sized + ${uniqueTraits.join(" + ")}`;
+
+    const lines = [
+      "#[allow(dead_code)]",
+      `async fn ${functionName}<E: ${traitBounds}>(`,
+      "  tool_call: &ToolCall,",
+      "  executor: &E,",
+      ") -> Result<ToolCallResponse, Box<dyn std::error::Error + Send + Sync>> {",
+      "  match tool_call.tool_name.as_str() {",
+    ];
+
+    for (const tool of templateTools) {
+      const toolName = tool.tool.name.text;
+      const { methodName, inputType } = getToolInfo(tool, compilationResult);
+
+      lines.push(
+        `"${toolName}" => {`,
+        `let input: ${inputType} = serde_json::from_str(&tool_call.stringified_input).map_err(|e| {`,
+        'let call_info = format!(r#"{{"callId": "{}", "toolName": "{}"}}"#, tool_call.call_id, tool_call.tool_name);',
+        'format!("Tool call failed: {} — {}", call_info, e)',
+        "})?;",
+        `let raw_output = executor.${methodName}(input).await;`,
+        "let stringified_output = serde_json::to_string(&raw_output).map_err(|e| {",
+        'let call_info = format!(r#"{{"callId": "{}", "toolName": "{}"}}"#, tool_call.call_id, tool_call.tool_name);',
+        'format!("Tool call failed: {} — {}", call_info, e)',
+        "})?;",
+        "Ok(ToolCallResponse {",
+        "call_id: tool_call.call_id.clone(),",
+        "stringified_output,",
+        "})",
+        "}",
+      );
+    }
+
+    lines.push(
+      '    _ => Err(format!("Tool not found: {}", tool_call.tool_name).into()),',
+      "  }",
+      "}",
+    );
+
+    sections.push(lines.join("\n"));
+  }
+
+  return sections.join("\n\n");
 }
 
 type WriteSchemaOptions = {

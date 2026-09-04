@@ -2,6 +2,18 @@
 // </static:rust-imports>
 
 // <static:rust-public-types>
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ToolCall {
+  pub call_id: String,
+  pub tool_name: String,
+  pub stringified_input: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ToolCallResponse {
+  pub call_id: String,
+  pub stringified_output: String,
+}
 // </static:rust-public-types>
 
 // <static:rust-logic>

@@ -2,9 +2,9 @@
   <schema>
     type Input = shared.Square;
 
-    interface Output {
+    type Output = {
       shared: Shared;
-    }
+    }[];
 
     type Shared = {
       value: string;

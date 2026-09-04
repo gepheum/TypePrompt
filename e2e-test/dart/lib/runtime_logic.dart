@@ -3,6 +3,27 @@ import 'dart:convert';
 // </static:dart-imports>
 
 // <static:dart-public-types>
+final class ToolCall {
+  final String callId;
+  final String toolName;
+  final String stringifiedInput;
+
+  const ToolCall({
+    required this.callId,
+    required this.toolName,
+    required this.stringifiedInput,
+  });
+}
+
+final class ToolCallResponse {
+  final String callId;
+  final String stringifiedOutput;
+
+  const ToolCallResponse({
+    required this.callId,
+    required this.stringifiedOutput,
+  });
+}
 // </static:dart-public-types>
 
 // <static:dart-logic>
