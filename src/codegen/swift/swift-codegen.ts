@@ -478,33 +478,26 @@ function writeTypepromptInterface(
     lines.push(`let ${name}: ${fieldType}`);
   }
 
-  const anyLiteralOrOptionalFields = fields.some(
-    (field) => isLiteralType(field.type) || field.type.kind === "optional",
-  );
-  if (anyLiteralOrOptionalFields) {
-    lines.push("", "init(");
-    for (const field of fields) {
-      const { type } = field;
-      if (isLiteralType(type)) continue;
-      const name = toSwiftName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      const defaultVal = type.kind === "optional" ? " = nil" : "";
-      lines.push(`${name}: ${fieldType}${defaultVal},`);
-    }
-    lines.push(") {");
-    for (const field of fields) {
-      const name = toSwiftName(field.name.text);
-      const { type } = field;
-      if (isLiteralType(type)) {
-        lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
-      } else {
-        lines.push(`self.${name} = ${name}`);
-      }
-    }
-    lines.push("}");
+  lines.push("", "init(");
+  for (const field of fields) {
+    const { type } = field;
+    if (isLiteralType(type)) continue;
+    const name = toSwiftName(field.name.text);
+    const fieldType = writeType(type, schema, options);
+    const defaultVal = type.kind === "optional" ? " = nil" : "";
+    lines.push(`${name}: ${fieldType}${defaultVal},`);
   }
-
-  lines.push("}");
+  lines.push(") {");
+  for (const field of fields) {
+    const name = toSwiftName(field.name.text);
+    const { type } = field;
+    if (isLiteralType(type)) {
+      lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
+    } else {
+      lines.push(`self.${name} = ${name}`);
+    }
+  }
+  lines.push("}", "}");
   return lines.join("\n");
 }
 
