@@ -379,22 +379,24 @@ function writeExecuteToolCall(
     );
 
     lines.push(
-      `case "${toolId}":`,
+      `case "${toolId}": {`,
       `if (executor is! ${interfaceName}) break;`,
       `final input = ${inputFromJson};`,
       `final rawOutput = await executor.${methodName}(input);`,
       `final json = ${outputToJson};`,
       "stringifiedOutput = jsonEncode(json);",
       "break;",
+      "}",
     );
   }
 
   lines.push(
-    "default:",
+    "default: {",
     "break;",
     "}",
+    "}",
     "} catch (e) {",
-    'final callInfo = \'{"callId": "\' + toolCall.callId + \'", "toolName": "\' + toolCall.toolName + \'"}\';',
+    'final callInfo = \'{"callId": "${toolCall.callId}", "toolName": "${toolCall.toolName}"}\';',
     "throw Exception('Tool call failed: $callInfo — $e');",
     "}",
     "if (stringifiedOutput.isEmpty) {",
