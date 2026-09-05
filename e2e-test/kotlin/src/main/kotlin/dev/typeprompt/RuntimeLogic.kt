@@ -18,6 +18,55 @@ import kotlinx.serialization.json.jsonPrimitive
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
+interface Template<in Input, out Output, in ToolExecutor> {
+    fun render(input: Input): Prompt<Output, ToolExecutor>
+}
+
+data class Prompt<out Output, in ToolExecutor>(
+    val meta: Meta,
+    val systemMessage: String,
+    val userMessage: String,
+    val examples: List<FewShotExample>,
+    val tools: Map<String, Tool>,
+    val outputFormat: OutputFormat,
+    val templateId: TemplateId,
+) {
+    fun parseResponse(response: String): Output {
+        when (outputFormat) {
+            is JsonOutputFormat -> {
+                var cleaned = response.trim()
+                if (cleaned.startsWith("```")) {
+                    cleaned = cleaned.replace(Regex("""^```(?:json)?\s*\n?([\s\S]*?)\n?```$"""), "$1").trim()
+                }
+                try {
+                    val jsonElement = Json.parseToJsonElement(cleaned)
+                    @Suppress("UNCHECKED_CAST")
+                    return jsonElement as Output
+                } catch (e: Exception) {
+                    throw Exception("Template '$templateId': ${e.message}", e)
+                }
+            }
+            is TextOutputFormat -> {
+                @Suppress("UNCHECKED_CAST")
+                return response as Output
+            }
+        }
+    }
+}
+
+
+sealed class OutputFormat
+
+data class JsonOutputFormat(
+    val stringifiedJsonSchema: String,
+) : OutputFormat()
+
+class TextOutputFormat : OutputFormat()
+
+data class Tool(
+    val name: String,
+    val description: String,
+)
 /**
  * A single few-shot example consisting of a user message, optional intermediate
  * tool-call steps, and the expected response.
@@ -55,6 +104,9 @@ data class ToolCallResponse(
     val stringifiedOutput: String,
 )
 // </static:kotlin-public-types>
+
+enum class TemplateId { Todo }
+enum class Meta { Default }
 
 // <static:kotlin-logic>
 // </static:kotlin-logic>

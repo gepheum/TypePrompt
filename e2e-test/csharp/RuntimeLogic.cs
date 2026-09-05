@@ -6,6 +6,62 @@ using System.Text.Json.Serialization;
 namespace TypePromptRuntime
 {
     // <static:csharp-public-types>
+    public interface Template<TInput, TOutput, TToolExecutor>
+    {
+        Prompt<TOutput, TToolExecutor> Render(TInput input);
+    }
+
+    public record Prompt<TOutput, TToolExecutor>(
+        object? Meta,
+        string SystemMessage,
+        string UserMessage,
+        IReadOnlyList<FewShotExample> Examples,
+        IReadOnlyDictionary<string, Tool> Tools,
+        OutputFormat OutputFormat,
+        TemplateId TemplateId
+    )
+    {
+        public TOutput ParseResponse(string response)
+        {
+            if (OutputFormat is JsonOutputFormat)
+            {
+                response = response.Trim();
+                if (response.StartsWith("```"))
+                {
+                    response = System.Text.RegularExpressions.Regex.Replace(
+                        response,
+                        @"^```(?:json)?\s*\n?([\s\S]*?)\n?```$",
+                        "$1"
+                    ).Trim();
+                }
+                try
+                {
+                    return JsonSerializer.Deserialize<TOutput>(response)!;
+                }
+                catch (System.Exception e)
+                {
+                    throw new System.Exception($"Template '{TemplateId}': {e.Message}", e);
+                }
+            }
+            else if (OutputFormat is TextOutputFormat)
+            {
+                return (TOutput)(object)response;
+            }
+            throw new System.InvalidOperationException($"Unsupported output format: {OutputFormat}");
+        }
+    }
+
+    public abstract record OutputFormat;
+
+    public record JsonOutputFormat(string StringifiedJsonSchema) : OutputFormat;
+
+    public record TextOutputFormat : OutputFormat;
+
+    public record Tool(
+        string Name,
+        string Description
+    );
+
     /// <summary>
     /// A single few-shot example consisting of a user message, optional intermediate
     /// tool-call steps, and the expected response.
@@ -43,6 +99,8 @@ namespace TypePromptRuntime
         string StringifiedOutput
     );
     // </static:csharp-public-types>
+
+    public enum TemplateId { Todo }
 }
 
 // <static:csharp-logic>

@@ -2,6 +2,70 @@
 // </static:rust-imports>
 
 // <static:rust-public-types>
+pub trait Template<Input, Output, ToolExecutor> {
+  fn render(&self, input: Input) -> Prompt<Output, ToolExecutor>;
+}
+
+pub struct Prompt<Output, ToolExecutor> {
+  pub meta: Meta,
+  pub system_message: String,
+  pub user_message: String,
+  pub examples: Vec<FewShotExample>,
+  pub tools: std::collections::HashMap<String, Tool>,
+  pub output_format: OutputFormat,
+  pub template_id: TemplateId,
+  pub _phantom: std::marker::PhantomData<(Output, ToolExecutor)>,
+}
+
+impl<Output, ToolExecutor> Prompt<Output, ToolExecutor> {
+  pub fn parse_response(&self, response: &str) -> Result<Output, String>
+  where
+    Output: serde::de::DeserializeOwned,
+  {
+    match &self.output_format {
+      OutputFormat::Json(_) => {
+        let mut cleaned = response.trim();
+        if cleaned.starts_with("```") {
+          if let Some(stripped) = cleaned.strip_prefix("```json") {
+            cleaned = stripped;
+          } else if let Some(stripped) = cleaned.strip_prefix("```") {
+            cleaned = stripped;
+          }
+          if let Some(stripped) = cleaned.strip_suffix("```") {
+            cleaned = stripped;
+          }
+          cleaned = cleaned.trim();
+        }
+        serde_json::from_str::<Output>(cleaned)
+          .map_err(|e| format!("Template '{:?}': {}", self.template_id, e))
+      }
+      OutputFormat::Text => {
+        serde_json::from_value::<Output>(serde_json::Value::String(response.to_string()))
+          .map_err(|e| format!("Template '{:?}': {}", self.template_id, e))
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum OutputFormat {
+  Json(JsonOutputFormat),
+  Text,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct JsonOutputFormat {
+  pub stringified_json_schema: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TextOutputFormat;
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Tool {
+  pub name: String,
+  pub description: String,
+}
 /// A single few-shot example consisting of a user message, optional intermediate
 /// tool-call steps, and the expected response.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -40,6 +104,10 @@ pub struct ToolCallResponse {
   pub stringified_output: String,
 }
 // </static:rust-public-types>
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemplateId { Todo }
+pub type Meta = ();
 
 // <static:rust-logic>
 // </static:rust-logic>

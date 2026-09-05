@@ -3,6 +3,77 @@ import 'dart:convert';
 // </static:dart-imports>
 
 // <static:dart-public-types>
+abstract interface class Template<Input, Output, ToolExecutor> {
+  Prompt<Output, ToolExecutor> render(Input input);
+}
+
+final class Prompt<Output, ToolExecutor> {
+  final Meta meta;
+  final String systemMessage;
+  final String userMessage;
+  final List<FewShotExample> examples;
+  final Map<String, Tool> tools;
+  final OutputFormat outputFormat;
+  final TemplateId templateId;
+
+  const Prompt({
+    required this.meta,
+    required this.systemMessage,
+    required this.userMessage,
+    required this.examples,
+    required this.tools,
+    required this.outputFormat,
+    required this.templateId,
+  });
+
+  Output parseResponse(String response) {
+    switch (outputFormat) {
+      case JsonOutputFormat():
+        var cleaned = response.trim();
+        if (cleaned.startsWith('```')) {
+          cleaned = cleaned
+              .replaceAllMapped(
+                RegExp(r'^```(?:json)?\s*\n?([\s\S]*?)\n?```$'),
+                (m) => m[1]!,
+              )
+              .trim();
+        }
+        try {
+          final decoded = jsonDecode(cleaned);
+          return decoded as Output;
+        } catch (e) {
+          throw FormatException("Template '$templateId': $e");
+        }
+      case TextOutputFormat():
+        return response as Output;
+    }
+  }
+}
+
+sealed class OutputFormat {
+  const OutputFormat();
+}
+
+final class JsonOutputFormat extends OutputFormat {
+  final String stringifiedJsonSchema;
+
+  const JsonOutputFormat({required this.stringifiedJsonSchema});
+}
+
+final class TextOutputFormat extends OutputFormat {
+  const TextOutputFormat();
+}
+
+final class Tool {
+  final String name;
+  final String description;
+
+  const Tool({
+    required this.name,
+    required this.description,
+  });
+}
+
 /// A single few-shot example consisting of a user message, optional intermediate
 /// tool-call steps, and the expected response.
 final class FewShotExample {
@@ -64,6 +135,10 @@ final class ToolCallResponse {
   });
 }
 // </static:dart-public-types>
+
+enum TemplateId { todo }
+
+typedef Meta = dynamic;
 
 // <static:dart-logic>
 // </static:dart-logic>

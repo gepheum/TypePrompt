@@ -5,6 +5,118 @@ import Foundation
 
 public enum TypePromptRuntime {
   // <static:swift-public-types>
+  public protocol Template: Sendable {
+    associatedtype Input
+    associatedtype Output
+    associatedtype ToolExecutor
+
+    func render(input: Input) -> Prompt<Output, ToolExecutor>
+  }
+
+  public struct Prompt<Output, ToolExecutor>: Sendable {
+    public let meta: Meta
+    public let systemMessage: String
+    public let userMessage: String
+    public let examples: [FewShotExample]
+    public let tools: [String: Tool]
+    public let outputFormat: OutputFormat
+    public let templateId: TemplateId
+
+    public init(
+      meta: Meta,
+      systemMessage: String,
+      userMessage: String,
+      examples: [FewShotExample],
+      tools: [String: Tool],
+      outputFormat: OutputFormat,
+      templateId: TemplateId
+    ) {
+      self.meta = meta
+      self.systemMessage = systemMessage
+      self.userMessage = userMessage
+      self.examples = examples
+      self.tools = tools
+      self.outputFormat = outputFormat
+      self.templateId = templateId
+    }
+
+    public func parseResponse(_ response: String) throws -> Output {
+      switch outputFormat {
+      case .json:
+        var cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("```") {
+          if let regex = try? NSRegularExpression(
+            pattern: "^```(?:json)?\\s*\\n?([\\s\\S]*?)\\n?```$", options: [])
+          {
+            let range = NSRange(cleaned.startIndex..<cleaned.endIndex, in: cleaned)
+            cleaned = regex.stringByReplacingMatches(
+              in: cleaned, options: [], range: range, withTemplate: "$1"
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
+          }
+        }
+        if let decodableType = Output.self as? Decodable.Type {
+          let data = Data(cleaned.utf8)
+          do {
+            return try JSONDecoder().decode(decodableType, from: data) as! Output
+          } catch {
+            throw DecodingError.dataCorrupted(
+              DecodingError.Context(
+                codingPath: [],
+                debugDescription: "Template '\(templateId)': \(error)"
+              )
+            )
+          }
+        }
+        throw DecodingError.dataCorrupted(
+          DecodingError.Context(
+            codingPath: [],
+            debugDescription: "Template '\(templateId)': Output type is not Decodable"
+          )
+        )
+      case .text:
+        if let result = response as? Output {
+          return result
+        }
+        throw DecodingError.dataCorrupted(
+          DecodingError.Context(
+            codingPath: [],
+            debugDescription: "Template '\(templateId)': Expected String output for text format"
+          )
+        )
+      }
+    }
+  }
+
+  public enum OutputFormat: Sendable, Codable, Equatable {
+    case json(JsonOutputFormat)
+    case text(TextOutputFormat)
+
+    public static var text: OutputFormat {
+      .text(TextOutputFormat())
+    }
+  }
+
+  public struct JsonOutputFormat: Sendable, Codable, Equatable {
+    public let stringifiedJsonSchema: String
+
+    public init(stringifiedJsonSchema: String) {
+      self.stringifiedJsonSchema = stringifiedJsonSchema
+    }
+  }
+
+  public struct TextOutputFormat: Sendable, Codable, Equatable {
+    public init() {}
+  }
+
+  public struct Tool: Sendable, Codable, Equatable {
+    public let name: String
+    public let description: String
+
+    public init(name: String, description: String) {
+      self.name = name
+      self.description = description
+    }
+  }
   /// A single few-shot example consisting of a user message, optional intermediate
   /// tool-call steps, and the expected response.
   public struct FewShotExample: Sendable, Codable, Equatable {
@@ -75,6 +187,10 @@ public enum TypePromptRuntime {
     }
   }
   // </static:swift-public-types>
+  public enum TemplateId: String, CaseIterable, Codable, Sendable {
+    case todo
+  }
+  public typealias Meta = Never?
 }
 
 // <static:swift-logic>
