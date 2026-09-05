@@ -658,7 +658,7 @@ function writeType(
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, schema, options);
-      return `List<${writtenElement}>`;
+      return `IReadOnlyList<${writtenElement}>`;
     }
     case "boolean-literal": {
       return "bool";
@@ -703,7 +703,7 @@ function writeType(
       }
     }
     case "record": {
-      return `Dictionary<string, ${writeType(type.valueType, schema, options)}>`;
+      return `IReadOnlyDictionary<string, ${writeType(type.valueType, schema, options)}>`;
     }
     case "shared-type-name":
     case "type-name": {
@@ -903,7 +903,8 @@ function coalesceEmptyLines(code: string): string {
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
-  "Dictionary",
+  "IReadOnlyDictionary",
+  "IReadOnlyList",
   "JsonConverter",
   "JsonDocument",
   "JsonElement",
@@ -914,7 +915,6 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonSerializerOptions",
   "JsonStringEnumConverter",
   "JsonStringEnumMemberName",
-  "List",
   "System",
   "Utf8JsonReader",
   "Utf8JsonWriter",
