@@ -815,9 +815,11 @@ function makeUnionContext(
 }
 
 function toCSharpName(name: string): string {
-  return RESERVED_NAMES.has(name) || CSHARP_HARD_KEYWORDS.has(name)
-    ? name.concat("_")
-    : name;
+  return CSHARP_HARD_KEYWORDS.has(name)
+    ? "@".concat(name)
+    : RESERVED_NAMES.has(name)
+      ? name.concat("_")
+      : name;
 }
 
 /**

@@ -18,6 +18,32 @@ import kotlinx.serialization.json.jsonPrimitive
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
+/**
+ * A single few-shot example consisting of a user message, optional intermediate
+ * tool-call steps, and the expected response.
+ */
+data class FewShotExample(
+    val userMessage: String,
+    val intermediateSteps: List<IntermediateStepExample>,
+    val response: String,
+)
+
+/**
+ * One intermediate step within a few-shot example, containing the tool
+ * calls made at that step.
+ */
+data class IntermediateStepExample(
+    val toolCalls: List<ToolCallExample>,
+)
+
+/** A single tool call recorded inside an intermediate step. */
+data class ToolCallExample(
+    val callId: String,
+    val toolName: String,
+    val stringifiedInput: String,
+    val stringifiedOutput: String,
+)
+
 data class ToolCall(
     val callId: String,
     val toolName: String,

@@ -2,6 +2,31 @@
 // </static:rust-imports>
 
 // <static:rust-public-types>
+/// A single few-shot example consisting of a user message, optional intermediate
+/// tool-call steps, and the expected response.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FewShotExample {
+  pub user_message: String,
+  pub intermediate_steps: Vec<IntermediateStepExample>,
+  pub response: String,
+}
+
+/// One intermediate step within a few-shot example, containing the tool
+/// calls made at that step.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IntermediateStepExample {
+  pub tool_calls: Vec<ToolCallExample>,
+}
+
+/// A single tool call recorded inside an intermediate step.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ToolCallExample {
+  pub call_id: String,
+  pub tool_name: String,
+  pub stringified_input: String,
+  pub stringified_output: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCall {
   pub call_id: String,

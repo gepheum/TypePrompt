@@ -6,6 +6,32 @@ using System.Text.Json.Serialization;
 namespace TypePromptRuntime
 {
     // <static:csharp-public-types>
+    /// <summary>
+    /// A single few-shot example consisting of a user message, optional intermediate
+    /// tool-call steps, and the expected response.
+    /// </summary>
+    public record FewShotExample(
+        string UserMessage,
+        IReadOnlyList<IntermediateStepExample> IntermediateSteps,
+        string Response
+    );
+
+    /// <summary>
+    /// One intermediate step within a few-shot example, containing the tool
+    /// calls made at that step.
+    /// </summary>
+    public record IntermediateStepExample(
+        IReadOnlyList<ToolCallExample> ToolCalls
+    );
+
+    /// <summary>A single tool call recorded inside an intermediate step.</summary>
+    public record ToolCallExample(
+        string CallId,
+        string ToolName,
+        string StringifiedInput,
+        string StringifiedOutput
+    );
+
     public record ToolCall(
         string CallId,
         string ToolName,

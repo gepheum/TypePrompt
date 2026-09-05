@@ -5,6 +5,54 @@ import Foundation
 
 public enum TypePromptRuntime {
   // <static:swift-public-types>
+  /// A single few-shot example consisting of a user message, optional intermediate
+  /// tool-call steps, and the expected response.
+  public struct FewShotExample: Sendable, Codable, Equatable {
+    public let userMessage: String
+    public let intermediateSteps: [IntermediateStepExample]
+    public let response: String
+
+    public init(
+      userMessage: String,
+      intermediateSteps: [IntermediateStepExample],
+      response: String
+    ) {
+      self.userMessage = userMessage
+      self.intermediateSteps = intermediateSteps
+      self.response = response
+    }
+  }
+
+  /// One intermediate step within a few-shot example, containing the tool
+  /// calls made at that step.
+  public struct IntermediateStepExample: Sendable, Codable, Equatable {
+    public let toolCalls: [ToolCallExample]
+
+    public init(toolCalls: [ToolCallExample]) {
+      self.toolCalls = toolCalls
+    }
+  }
+
+  /// A single tool call recorded inside an intermediate step.
+  public struct ToolCallExample: Sendable, Codable, Equatable {
+    public let callId: String
+    public let toolName: String
+    public let stringifiedInput: String
+    public let stringifiedOutput: String
+
+    public init(
+      callId: String,
+      toolName: String,
+      stringifiedInput: String,
+      stringifiedOutput: String
+    ) {
+      self.callId = callId
+      self.toolName = toolName
+      self.stringifiedInput = stringifiedInput
+      self.stringifiedOutput = stringifiedOutput
+    }
+  }
+
   public struct ToolCall: Sendable, Codable, Equatable {
     public let callId: String
     public let toolName: String

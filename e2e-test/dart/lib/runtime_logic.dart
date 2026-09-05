@@ -3,6 +3,45 @@ import 'dart:convert';
 // </static:dart-imports>
 
 // <static:dart-public-types>
+/// A single few-shot example consisting of a user message, optional intermediate
+/// tool-call steps, and the expected response.
+final class FewShotExample {
+  final String userMessage;
+  final List<IntermediateStepExample> intermediateSteps;
+  final String response;
+
+  const FewShotExample({
+    required this.userMessage,
+    required this.intermediateSteps,
+    required this.response,
+  });
+}
+
+/// One intermediate step within a few-shot example, containing the tool
+/// calls made at that step.
+final class IntermediateStepExample {
+  final List<ToolCallExample> toolCalls;
+
+  const IntermediateStepExample({
+    required this.toolCalls,
+  });
+}
+
+/// A single tool call recorded inside an intermediate step.
+final class ToolCallExample {
+  final String callId;
+  final String toolName;
+  final String stringifiedInput;
+  final String stringifiedOutput;
+
+  const ToolCallExample({
+    required this.callId,
+    required this.toolName,
+    required this.stringifiedInput,
+    required this.stringifiedOutput,
+  });
+}
+
 final class ToolCall {
   final String callId;
   final String toolName;
