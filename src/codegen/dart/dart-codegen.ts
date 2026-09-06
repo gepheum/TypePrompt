@@ -118,7 +118,12 @@ function writeTemplateIdEnum(
   const { singleNamespace, templates } = compilationResult;
   const templateList = Object.values(templates);
   if (templateList.length <= 0) {
-    return "";
+    return [
+      "/// Uniquely identifies a prompt template.",
+      "abstract final class TemplateId {",
+      "  const TemplateId._();",
+      "}",
+    ].join("\n");
   }
   const lines = [
     "/// Uniquely identifies a prompt template.",

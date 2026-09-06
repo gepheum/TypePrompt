@@ -1,13 +1,18 @@
 import 'dart:convert';
 import 'package:test/test.dart';
+import 'package:typeprompt_e2e_test/gen/prompts_01.dart' as p01;
+import 'package:typeprompt_e2e_test/gen/prompts_02.dart' as p02;
+import 'package:typeprompt_e2e_test/gen/prompts_03.dart' as p03;
+import 'package:typeprompt_e2e_test/gen/prompts_04.dart' as p04;
+import 'package:typeprompt_e2e_test/gen/prompts_05.dart' as p05;
+import 'package:typeprompt_e2e_test/gen/prompts_06.dart' as p06;
+import 'package:typeprompt_e2e_test/gen/prompts_07.dart' as p07;
+import 'package:typeprompt_e2e_test/gen/prompts_08.dart' as p08;
 import 'package:typeprompt_e2e_test/gen/prompts_e01.dart';
-import 'package:typeprompt_e2e_test/typeprompt_e2e_test.dart';
+import 'package:typeprompt_e2e_test/gen/prompts_e02.dart' as e02;
+import 'package:typeprompt_e2e_test/gen/prompts_e03.dart' as e03;
 
 void main() {
-  test('greeting', () {
-    expect(getGreeting(), equals('Hello, World!'));
-  });
-
   group('toString', () {
     test('returns pretty-printed JSON', () {
       final add = Shared_Expr_KindAdd(
@@ -87,4 +92,17 @@ void main() {
     expect(AnalyzeSalesData_Input_Variant.fromJson("csv"),
         equals(AnalyzeSalesData_Input_Variant.csv));
   });
+
+  [
+    p01.FewShotExample,
+    p02.FewShotExample,
+    p03.FewShotExample,
+    p04.FewShotExample,
+    p05.FewShotExample,
+    p06.FewShotExample,
+    p07.FewShotExample,
+    p08.FewShotExample,
+    e02.FewShotExample,
+    e03.FewShotExample
+  ];
 }
