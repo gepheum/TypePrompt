@@ -105,7 +105,13 @@ data class ToolCallResponse(
 )
 // </static:kotlin-public-types>
 
-enum class TemplateId { Todo }
+/** Uniquely identifies a prompt template. */
+enum class TemplateId(private val id: String) {
+    TODO("Main:Todo");
+
+    override fun toString(): String = id
+}
+
 enum class Meta { Default }
 
 // <static:kotlin-logic>

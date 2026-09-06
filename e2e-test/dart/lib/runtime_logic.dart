@@ -136,7 +136,16 @@ final class ToolCallResponse {
 }
 // </static:dart-public-types>
 
-enum TemplateId { todo }
+/// Uniquely identifies a prompt template.
+enum TemplateId {
+  todo("Main:Todo");
+
+  final String _id;
+  const TemplateId(this._id);
+
+  @override
+  String toString() => _id;
+}
 
 typedef Meta = dynamic;
 

@@ -1,0 +1,65 @@
+<namespace name="Main">
+  /** An expression */
+  type Expr =
+    | { kind: "number"; value: number }
+    | { kind: "add"; left: Expr; right: Expr }
+    | { kind: "if"; condition: Expr; then: Expr; else: Expr };
+
+  type EnumWithCommonFields =
+    | {
+        success: false;
+        /** x coordinate */ x: integer;
+        /** y coordinate */ y: number;
+        /** z coordinate */
+        z: string;
+      }
+    | { success: true; /** x coordinate */ x: integer; y: number; z: integer };
+
+  interface Schema {
+    e: EnumWithCommonFields;
+  }
+  interface String {}
+  interface Boolean {}
+  interface List {}
+  interface Map {}
+  interface EncodeDefault {}
+  interface Serializable {}
+  interface KindAdd {}
+  interface AnyHolder {
+    any: any;
+  }
+  interface SerializerHolder {
+    serializer: any;
+  }
+  interface Square {
+    kind: "square";
+    size: number;
+    fromJson: string;
+    self: string;
+    foo: "foo";
+  }
+
+  type E = "class" | "if" | "foo-BAR";
+
+  type Matrix = {
+    kind: "matrix";
+    matrix: Square[][];
+    otherMatrix?: Square[][];
+    foo?: { [x: string]: Square[] };
+    ints: integer[];
+    init: boolean;
+    encode: boolean;
+  };
+
+  type MatrixUnion =
+    | Matrix
+    | {
+        kind: "empty";
+        init: boolean;
+        encode: boolean;
+        matrix: Square[][];
+        foo: string;
+      };
+
+  type DiscriminatorCodingKeys = {};
+</namespace>

@@ -114,9 +114,6 @@ function writeTemplateIdEnum(
   config: { readonly rootNamespace: string },
 ): string {
   const { singleNamespace, templates } = compilationResult;
-  if (Object.keys(templates).length <= 0) {
-    return "";
-  }
   const { rootNamespace } = config;
   const lines = [
     `namespace ${rootNamespace}`,

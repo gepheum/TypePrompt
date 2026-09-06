@@ -187,8 +187,20 @@ public enum TypePromptRuntime {
     }
   }
   // </static:swift-public-types>
-  public enum TemplateId: String, CaseIterable, Codable, Sendable {
+  /// Uniquely identifies a prompt template.
+  public enum TemplateId: Sendable, CaseIterable, CustomStringConvertible {
     case todo
+
+    private var id: String {
+      switch self {
+      case .todo:
+        return "Main:Todo"
+      }
+    }
+
+    public var description: String {
+      return id
+    }
   }
   public typealias Meta = Never?
 }

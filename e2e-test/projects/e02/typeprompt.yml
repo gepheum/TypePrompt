@@ -1,0 +1,19 @@
+include: prompts/**/*.xml
+gen:
+  csharp:
+    file: ../../csharp/Gen/PromptsE02.cs
+    rootNamespace: TypePromptE02
+  dart:
+    file: ../../dart/lib/gen/prompts_e02.dart
+  kotlin:
+    file: ../../kotlin/src/main/kotlin/gen/PromptsE02.kt
+    package: com.example.prompts_e02
+  python:
+    file: ../../python/gen/prompts_e02.py
+  rust:
+    file: ../../rust/src/gen/prompts_e02.rs
+  swift:
+    file: ../../swift/Sources/TypePromptE2E/Gen/PromptsE02.swift
+    rootNamespace: TypePromptE02
+  typescript:
+    file: ../../typescript/src/gen/prompts-e02.ts

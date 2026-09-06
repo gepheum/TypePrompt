@@ -37,11 +37,11 @@ impl<Output, ToolExecutor> Prompt<Output, ToolExecutor> {
           cleaned = cleaned.trim();
         }
         serde_json::from_str::<Output>(cleaned)
-          .map_err(|e| format!("Template '{:?}': {}", self.template_id, e))
+          .map_err(|e| format!("Template '{}': {}", self.template_id, e))
       }
       OutputFormat::Text => {
         serde_json::from_value::<Output>(serde_json::Value::String(response.to_string()))
-          .map_err(|e| format!("Template '{:?}': {}", self.template_id, e))
+          .map_err(|e| format!("Template '{}': {}", self.template_id, e))
       }
     }
   }
@@ -105,8 +105,24 @@ pub struct ToolCallResponse {
 }
 // </static:rust-public-types>
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TemplateId { Todo }
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum TemplateId {
+  Todo,
+}
+
+impl TemplateId {
+  pub const fn as_str(&self) -> &'static str {
+    match self {
+      TemplateId::Todo => "Main:Todo",
+    }
+  }
+}
+
+impl std::fmt::Display for TemplateId {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
+}
 pub type Meta = ();
 
 // <static:rust-logic>

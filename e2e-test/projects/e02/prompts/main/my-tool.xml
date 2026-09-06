@@ -1,0 +1,17 @@
+<tool name="myTool">
+  <schema>
+    type Input = shared.Square;
+
+    interface Output {
+      shared: Shared;
+    }
+
+    type Shared = {
+      value: string;
+      square: shared.Square;
+    };
+  </schema>
+  <description>
+    Hello
+  </description>
+</tool>

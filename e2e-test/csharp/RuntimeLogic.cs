@@ -40,7 +40,7 @@ namespace TypePromptRuntime
                 }
                 catch (System.Exception e)
                 {
-                    throw new System.Exception($"Template '{TemplateId}': {e.Message}", e);
+                    throw new System.Exception($"Template '{TemplateId.GetId()}': {e.Message}", e);
                 }
             }
             else if (OutputFormat is TextOutputFormat)
@@ -100,7 +100,23 @@ namespace TypePromptRuntime
     );
     // </static:csharp-public-types>
 
-    public enum TemplateId { Todo }
+    /// <summary>
+    /// Uniquely identifies a prompt template.
+    /// </summary>
+    public enum TemplateId
+    {
+        Todo,
+    }
+
+    public static class TemplateIdExtensions
+    {
+        public static string GetId(this TemplateId templateId) =>
+            templateId switch
+            {
+                TemplateId.Todo => "Main:Todo",
+                _ => throw new System.ArgumentOutOfRangeException(nameof(templateId)),
+            };
+    }
 }
 
 // <static:csharp-logic>

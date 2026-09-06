@@ -1,0 +1,17 @@
+<tool name="myOtherTool">
+  <schema>
+    type Input = shared.Square;
+
+    type Output = {
+      shared: Shared;
+    }[];
+
+    type Shared = {
+      value: string;
+      square: shared.Square;
+    };
+  </schema>
+  <description>
+    Bonjour
+  </description>
+</tool>

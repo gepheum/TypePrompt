@@ -104,9 +104,6 @@ function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
 ): string {
   const { singleNamespace, templates } = compilationResult;
-  if (Object.keys(templates).length <= 0) {
-    return "";
-  }
   const lines = [
     "/// Uniquely identifies a prompt template.",
     "#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]",
