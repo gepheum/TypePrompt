@@ -151,34 +151,98 @@ function writeToolExecutorInterfaces(
     const lines: string[] = [];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      const interfaceName = `${capitalize(toolName)}Executor`;
+      const interfaceName = capitalize(toolName);
       const { inputType, outputType } = getToolTypes(tool, compilationResult);
 
       lines.push(
+        `/** Tool executor interface for the '${toolName}' tool. */`,
         `interface ${interfaceName} {`,
-        `suspend fun ${toKotlinName(toolName)}(input: ${inputType}): ${outputType}`,
+        `suspend fun ${toKotlinName(toolName)}(`,
+        `input: ${inputType},`,
+        `): ${outputType}`,
         "}",
         "",
       );
+    }
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length < 2) continue;
+      const templateName = template.template.name.text;
+      const toolInfoList = toolEntries.map((t) => {
+        const tool = t.tool;
+        const toolName = capitalize(tool.tool.name.text);
+        const interfaceRef = toolName;
+        const paramName = toKotlinName(tool.tool.name.text);
+        const methodName = toKotlinName(tool.tool.name.text);
+        const { inputType, outputType } = getToolTypes(tool, compilationResult);
+        return {
+          rawToolName: tool.tool.name.text,
+          interfaceRef,
+          paramName,
+          methodName,
+          inputType,
+          outputType,
+        };
+      });
+
+      const inherited = toolInfoList.map((t) => t.interfaceRef).join(", ");
+      const toolNamesList = toolInfoList
+        .map((t) => `'${t.rawToolName}'`)
+        .join(", ");
+      const callArgs = toolInfoList.map((t) => t.paramName).join(", ");
+
+      lines.push(
+        "/**",
+        ` * Composite executor interface for the '${templateName}' prompt template.`,
+        ` * Requires implementations for tools: ${toolNamesList}.`,
+        " */",
+        `interface ${templateName} : ${inherited} {`,
+        "companion object {",
+        "/**",
+        ` * Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
+        " */",
+        "fun create(",
+        ...toolInfoList.map((t) => `${t.paramName}: ${t.interfaceRef},`),
+        `): ${templateName} = Forwarding(${callArgs})`,
+        "}",
+        "",
+        "private class Forwarding(",
+        ...toolInfoList.map(
+          (t) => `private val ${t.paramName}: ${t.interfaceRef},`,
+        ),
+        `) : ${templateName} {`,
+      );
+
+      for (const t of toolInfoList) {
+        lines.push(
+          `override suspend fun ${t.methodName}(`,
+          `input: ${t.inputType},`,
+          `) = ${t.paramName}.${t.methodName} (input)`,
+          "",
+        );
+      }
+
+      lines.push("}", "}", "");
     }
     return lines;
   };
 
   const lines = [
     "/** Namespace containing tool executor interfaces. */",
-    "object Tools {",
+    "object ToolExecutor {",
   ];
   if (singleNamespace) {
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
       const namespaceName = toKotlinName(namespace.name);
-      lines.push(`object ${namespaceName} {`);
+      lines.push(`object ${namespaceName} {
+          `);
       lines.push(...writeNamespace(namespace));
       lines.push(`}  // object ${namespaceName}`, "");
     }
   }
-  lines.push("}  // object Tools");
+  lines.push("}  // object ToolExecutor");
   return lines.join("\n");
 }
 
@@ -369,8 +433,8 @@ function writeExecuteToolCall(
     const { inputType } = getToolTypes(tool, compilationResult);
 
     const toolInterface = singleNamespace
-      ? `Tools.${capitalize(toolName)}Executor`
-      : `Tools.${toKotlinName(toolNamespace)}.${capitalize(toolName)}Executor`;
+      ? `ToolExecutor.${capitalize(toolName)}`
+      : `ToolExecutor.${toKotlinName(toolNamespace)}.${capitalize(toolName)}`;
     const methodName = toKotlinName(toolName);
 
     lines.push(

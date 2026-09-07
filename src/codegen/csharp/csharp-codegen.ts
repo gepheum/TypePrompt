@@ -146,7 +146,9 @@ function writeToolExecutorInterfaces(
         "/// </summary>",
         `public interface ${interfaceName}`,
         "{",
-        `System.Threading.Tasks.Task<${outputType}> ${capitalize(toolName)}(${inputType} input);`,
+        `Task<${outputType}> ${capitalize(toolName)}(`,
+        `${inputType} input`,
+        ");",
         "}",
         "",
       );
@@ -180,9 +182,6 @@ function writeToolExecutorInterfaces(
       const toolNamesList = toolInfoList
         .map((t) => `'${t.rawToolName}'`)
         .join(", ");
-      const paramArgs = toolInfoList
-        .map((t) => `${t.interfaceRef} ${t.paramName}`)
-        .join(", ");
       const callArgs = toolInfoList.map((t) => t.paramName).join(", ");
 
       lines.push(
@@ -195,8 +194,12 @@ function writeToolExecutorInterfaces(
         "/// <summary>",
         `/// Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
         "/// </summary>",
-        `public static I${templateName} Create(${paramArgs}) =>`,
-        `    new Forwarding(${callArgs});`,
+        `public static I${templateName} Create(`,
+        ...toolInfoList.map(
+          (t, idx) =>
+            `${t.interfaceRef} ${t.paramName}${idx < toolInfoList.length - 1 ? "," : ""}`,
+        ),
+        `) => new Forwarding(${callArgs});`,
         "",
         `private sealed class Forwarding(`,
         ...toolInfoList.map(
@@ -209,8 +212,9 @@ function writeToolExecutorInterfaces(
 
       for (const t of toolInfoList) {
         lines.push(
-          `public System.Threading.Tasks.Task<${t.outputType}> ${t.methodName}(${t.inputType} input) =>`,
-          `    ${t.paramName}.${t.methodName}(input);`,
+          `public Task<${t.outputType}> ${t.methodName}(`,
+          `${t.inputType} input`,
+          `) => ${t.paramName}.${t.methodName}(input);`,
           "",
         );
       }
@@ -406,7 +410,7 @@ function writeExecuteToolCall(
     "{",
     "file static class ToolExecution",
     "{",
-    "private static async System.Threading.Tasks.Task<ToolCallResponse> ExecuteToolCall(",
+    "private static async Task<ToolCallResponse> ExecuteToolCall(",
     "ToolCall toolCall,",
     "string @namespace,",
     "object executor)",
@@ -938,6 +942,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonStringEnumConverter",
   "JsonStringEnumMemberName",
   "System",
+  "Task",
   "Utf8JsonReader",
   "Utf8JsonWriter",
 ] as const);

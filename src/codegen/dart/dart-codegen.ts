@@ -165,12 +165,74 @@ function writeToolExecutorClasses(
         compilationResult,
       );
 
+      const rawToolName: string = tool.tool.name.text;
       lines.push(
+        `/// Tool executor interface for the '${rawToolName}' tool.`,
         `abstract class ${interfaceName} {`,
         `Future<${outputType}> ${methodName}(${inputType} input);`,
         "}",
         "",
       );
+    }
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length < 2) continue;
+      const templateName = template.template.name.text;
+      const templateNamespace =
+        template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateInterface = singleNamespace
+        ? `ToolExecutor_${templateName}`
+        : `ToolExecutor_${templateNamespace}_${templateName}`;
+      const toolInfoList = toolEntries.map((t) => {
+        const { interfaceName, methodName, inputType, outputType } =
+          getToolInfo(t.tool, compilationResult);
+        const paramName = toDartName(t.tool.tool.name.text);
+        return {
+          rawToolName: t.tool.tool.name.text,
+          interfaceName,
+          paramName,
+          methodName,
+          inputType,
+          outputType,
+        };
+      });
+
+      const inherited = toolInfoList.map((t) => t.interfaceName).join(", ");
+      const toolNamesList = toolInfoList
+        .map((t) => `'${t.rawToolName}'`)
+        .join(", ");
+      const callArgs = toolInfoList.map((t) => t.paramName).join(", ");
+
+      lines.push(
+        `/// Composite executor interface for the '${templateName}' prompt template.`,
+        `/// Requires implementations for tools: ${toolNamesList}.`,
+        `abstract class ${templateInterface} implements ${inherited} {`,
+        `/// Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
+        `factory ${templateInterface}.create(`,
+        ...toolInfoList.map((t) => `${t.interfaceName} ${t.paramName},`),
+        `) => _${templateInterface}Forwarding(${callArgs});`,
+        "}",
+        "",
+        `class _${templateInterface}Forwarding implements ${templateInterface} {`,
+        ...toolInfoList.map((t) => `final ${t.interfaceName} _${t.paramName};`),
+        "",
+        `_${templateInterface}Forwarding(`,
+        ...toolInfoList.map((t) => `this._${t.paramName},`),
+        `);`,
+        "",
+      );
+
+      for (const t of toolInfoList) {
+        lines.push(
+          "@override",
+          `Future<${t.outputType}> ${t.methodName}(`,
+          `${t.inputType} input`,
+          `) => _${t.paramName}.${t.methodName}(input);`,
+          "",
+        );
+      }
+
+      lines.push("}", "");
     }
   };
 
@@ -308,8 +370,8 @@ function getToolInfo(
   const typePrefixBase = singleNamespace ? "" : toolNamespace.concat("_");
   const sharedTypePrefix = typePrefixBase.concat("Shared_");
   const interfaceName = singleNamespace
-    ? `Tools_${capitalizedToolName}Executor`
-    : `Tools_${toolNamespace}_${capitalizedToolName}Executor`;
+    ? `ToolExecutor_${capitalizedToolName}`
+    : `ToolExecutor_${toolNamespace}_${capitalizedToolName}`;
   const toolTypePrefix = typePrefixBase.concat(capitalizedToolName, "_");
   const options: WriteSchemaOptions = {
     typePrefix: toolTypePrefix,
