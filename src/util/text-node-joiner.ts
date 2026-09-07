@@ -12,7 +12,7 @@ export function joinTextNodes(
   textNodes: readonly MappedText[],
   startPosition: number,
 ): MappedText {
-  if (textNodes.length === 0) {
+  if (textNodes.length <= 0) {
     return {
       text: "",
       offsetMap: [

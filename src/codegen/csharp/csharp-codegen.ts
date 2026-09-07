@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
   ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -51,6 +52,7 @@ function writeAll(
       STATIC_SNIPPETS["csharp-imports"],
       reformat(
         [
+          writePromptsClass(compilationResult, config),
           `namespace ${rootNamespace}\n{\n${STATIC_SNIPPETS["csharp-public-types"]}\n}`,
           writeTemplateIdEnum(compilationResult, config),
           writeToolExecutorInterfaces(compilationResult, config),
@@ -234,6 +236,154 @@ function writeToolExecutorInterfaces(
   }
 
   return sections.join("\n\n");
+}
+
+function getTemplateTypes(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): { readonly inputType: string; readonly outputType: string } {
+  const { rootNamespace } = config;
+  const { singleNamespace } = compilationResult;
+  const templateName = toCSharpName(template.template.name.text);
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const schemaNamespaceBase = singleNamespace
+    ? `${rootNamespace}.Schema.`
+    : `${rootNamespace}.Schema.${toCSharpName(templateNamespace)}.`;
+  const sharedNamespace = schemaNamespaceBase.concat("Shared");
+
+  const templateNamespacePath = schemaNamespaceBase.concat(templateName);
+  const options: WriteSchemaOptions = {
+    namespace: templateNamespacePath,
+    sharedNamespace,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    template.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    template.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function getToolExecutorRef(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const { singleNamespace } = compilationResult;
+  const toolEntries = Object.values(template.tools);
+  const [firstToolEntry] = toolEntries;
+  if (toolEntries.length === 1 && firstToolEntry) {
+    const tool = firstToolEntry.tool;
+    const toolName = tool.tool.name.text;
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const namespaceBase = singleNamespace
+      ? `${rootNamespace}.ToolExecutor`
+      : `${rootNamespace}.ToolExecutor.${toCSharpName(toolNamespace)}`;
+    return `${namespaceBase}.I${capitalize(toolName)}`;
+  } else {
+    const templateName = template.template.name.text;
+    const templateNamespace =
+      template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const namespaceBase = singleNamespace
+      ? `${rootNamespace}.ToolExecutor`
+      : `${rootNamespace}.ToolExecutor.${toCSharpName(templateNamespace)}`;
+    return `${namespaceBase}.I${templateName}`;
+  }
+}
+
+function writePromptsClass(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const lines = [`namespace ${rootNamespace}`, "{"];
+
+  const writeTemplatesParameters = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const propLines: string[] = [];
+    const templateCount = namespace.templates.length;
+    for (let i = 0; i < templateCount; i++) {
+      const t = namespace.templates[i]!;
+      const { inputType, outputType } = getTemplateTypes(
+        t,
+        compilationResult,
+        config,
+      );
+      const propertyName = toCSharpName(capitalize(t.template.name.text));
+      const typeArgs = [inputType, outputType];
+      if (Object.keys(t.tools).length > 0) {
+        const toolExecutorRef = getToolExecutorRef(
+          t,
+          compilationResult,
+          config,
+        );
+        typeArgs.push(toolExecutorRef);
+      }
+      const comma = i < templateCount - 1 ? "," : "";
+      propLines.push(
+        `// Defined in '${t.template.sourcePath}'`,
+        `Template<${typeArgs.join(", ")}> ${propertyName}${comma}`,
+      );
+    }
+    return propLines;
+  };
+
+  lines.push(
+    "/// <summary>",
+    "/// Entry point for building prompts.",
+    "/// </summary>",
+  );
+  if (singleNamespace) {
+    const params = writeTemplatesParameters(singleNamespace);
+    if (params.length <= 0) {
+      lines.push("public record Prompts();");
+    } else {
+      lines.push("public record Prompts(", ...params, ");");
+    }
+  } else {
+    const nsList = Object.values(namespaces);
+    lines.push("public record Prompts(");
+    for (let i = 0; i < nsList.length; i++) {
+      const ns = nsList[i]!;
+      const namespaceRecordName = ns.name.concat("Namespace");
+      const propertyName = toCSharpName(ns.name);
+      const comma = i < nsList.length - 1 ? "," : "";
+      lines.push(`Prompts.${namespaceRecordName} ${propertyName}${comma}`);
+    }
+    lines.push(")", "{");
+    for (const namespace of nsList) {
+      const namespaceRecordName = namespace.name.concat("Namespace");
+      const params = writeTemplatesParameters(namespace);
+      if (params.length <= 0) {
+        lines.push(`public record ${namespaceRecordName}();`, "");
+      } else {
+        lines.push(
+          `public record ${namespaceRecordName}(`,
+          ...params,
+          ");",
+          "",
+        );
+      }
+    }
+    lines.push("}");
+  }
+
+  lines.push("}");
+  return lines.join("\n");
 }
 
 function writeUserDefinedDatatypes(

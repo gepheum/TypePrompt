@@ -33,7 +33,7 @@ export type ParsedArgs =
  * @returns ParsedCommandLine object representing the command and its options
  */
 export function parseCommandLine(args: string[]): ParsedArgs {
-  if (args.length === 0) {
+  if (args.length <= 0) {
     printHelp();
     return { kind: "help" };
   }

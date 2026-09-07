@@ -370,7 +370,7 @@ class XmlParser {
 
   private decodeXmlText(start: number, end: number): MappedSpan {
     const raw = this.content.slice(start, end);
-    if (raw.length === 0) {
+    if (raw.length <= 0) {
       return {
         text: "",
         start: start,
@@ -538,7 +538,7 @@ function decodeXmlEntityResult(entityBody: string): EntityDecodeResult {
 
   if (entityBody.startsWith("#x") || entityBody.startsWith("#X")) {
     const hex = entityBody.slice(2);
-    if (hex.length === 0 || !/^[0-9A-Fa-f]+$/.test(hex)) {
+    if (hex.length <= 0 || !/^[0-9A-Fa-f]+$/.test(hex)) {
       return { kind: "malformed" };
     }
     const codePoint = Number.parseInt(hex, 16);
@@ -550,7 +550,7 @@ function decodeXmlEntityResult(entityBody: string): EntityDecodeResult {
 
   if (entityBody.startsWith("#")) {
     const dec = entityBody.slice(1);
-    if (dec.length === 0 || !/^[0-9]+$/.test(dec)) {
+    if (dec.length <= 0 || !/^[0-9]+$/.test(dec)) {
       return { kind: "malformed" };
     }
     const codePoint = Number.parseInt(dec, 10);

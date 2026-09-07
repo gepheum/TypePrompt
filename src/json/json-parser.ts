@@ -26,7 +26,7 @@ export function parseJson<Mode extends JsonMode = "loose">(
   parser.skipSpaces();
 
   if (parser.cursor >= content.text.length) {
-    if (parser.errors.length === 0) {
+    if (parser.errors.length <= 0) {
       parser.pushError(parser.cursor, parser.cursor, "Expected JSON value");
     }
     return { kind: "error", errors: parser.errors };

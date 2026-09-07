@@ -1,11 +1,17 @@
 // <static:csharp-imports>
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 // </static:csharp-imports>
 
 namespace TypePromptRuntime
 {
     // <static:csharp-public-types>
+    public interface Template<TInput, TOutput>
+    {
+        Prompt<TOutput, object?> Render(TInput input);
+    }
+
     public interface Template<TInput, TOutput, TToolExecutor>
     {
         Prompt<TOutput, TToolExecutor> Render(TInput input);
@@ -28,7 +34,7 @@ namespace TypePromptRuntime
                 response = response.Trim();
                 if (response.StartsWith("```"))
                 {
-                    response = System.Text.RegularExpressions.Regex.Replace(
+                    response = Regex.Replace(
                         response,
                         @"^```(?:json)?\s*\n?([\s\S]*?)\n?```$",
                         "$1"

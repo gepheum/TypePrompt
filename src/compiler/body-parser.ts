@@ -263,7 +263,7 @@ function removeIndentAfterEol(
   errors: ErrorSink,
 ): string {
   const { text } = textNode;
-  if (text.length === 0 || baseIndent.length === 0) return text;
+  if (text.length <= 0 || baseIndent.length <= 0) return text;
   let out = "";
   let cursor = 0;
   while (true) {

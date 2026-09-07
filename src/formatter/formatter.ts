@@ -197,7 +197,7 @@ async function formatWhitespaceSensitiveXml(
 
 function dedent(text: string): string {
   const baseIndent = computeBaseIndent(text);
-  if (baseIndent.length === 0) {
+  if (baseIndent.length <= 0) {
     return text;
   }
   const regex = new RegExp("\n".concat(baseIndent), "g");

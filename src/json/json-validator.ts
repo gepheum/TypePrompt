@@ -121,8 +121,8 @@ export function jsonMatchesType(
           (field) => field.type.kind !== "optional",
         );
         if (
-          Object.keys(value.entries).length === 0 &&
-          (requiredFields.length === 0 || value.ellipsis)
+          Object.keys(value.entries).length <= 0 &&
+          (requiredFields.length <= 0 || value.ellipsis)
         ) {
           // To avoid a division by zero later.
           return MATCH;
