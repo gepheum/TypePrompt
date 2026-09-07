@@ -131,3 +131,47 @@ import Testing
   #expect(matrix.otherMatrix == nil)
   #expect(matrix.foo == nil)
 }
+
+private struct TestMyTool: TypePrompt.ToolExecutor.MyTool {
+  func myTool(
+    input: TypePrompt.Schema.Shared.Square
+  ) async throws -> TypePrompt.Schema.MyTool.Output {
+    TypePrompt.Schema.MyTool.Output(
+      shared: TypePrompt.Schema.MyTool.Shared_(
+        value: "hello",
+        square: input
+      )
+    )
+  }
+}
+
+private struct TestMyOtherTool: TypePrompt.ToolExecutor.MyOtherTool {
+  func myOtherTool(
+    input: TypePrompt.Schema.Shared.Square
+  ) async throws -> [TypePrompt.Schema.MyOtherTool.Output] {
+    [
+      TypePrompt.Schema.MyOtherTool.Output(
+        shared: TypePrompt.Schema.MyOtherTool.Shared_(
+          value: "world",
+          square: input
+        )
+      )
+    ]
+  }
+}
+
+@Test func testCompositeToolExecutor() async throws {
+  let composite = TypePrompt.ToolExecutor.createMyOtherTemplate(
+    myTool: TestMyTool(),
+    myOtherTool: TestMyOtherTool()
+  )
+  let square = TypePrompt.Schema.Shared.Square(
+    size: 5.0,
+    fromJson: "a",
+    self_: "b"
+  )
+  let out1 = try await composite.myTool(input: square)
+  #expect(out1.shared.value == "hello")
+  let out2 = try await composite.myOtherTool(input: square)
+  #expect(out2.first?.shared.value == "world")
+}

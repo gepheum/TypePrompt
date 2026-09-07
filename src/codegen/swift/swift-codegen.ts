@@ -164,7 +164,7 @@ function writeToolExecutorProtocols(
     const lines: string[] = [];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      const interfaceName = `${capitalize(toolName)}Executor`;
+      const interfaceName = capitalize(toolName);
       const { inputType, outputType } = getToolTypes(
         tool,
         compilationResult,
@@ -172,18 +172,93 @@ function writeToolExecutorProtocols(
       );
 
       lines.push(
+        `/// Tool executor interface for the '${toolName}' tool.`,
         `public protocol ${interfaceName}: Sendable {`,
-        `func ${toSwiftName(toolName)}(input: ${inputType}) async throws -> ${outputType}`,
+        `func ${toSwiftName(toolName)}(`,
+        `input: ${inputType}`,
+        `) async throws -> ${outputType}`,
         "}",
         "",
       );
+    }
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length < 2) continue;
+      const templateName = template.template.name.text;
+      const toolInfoList = toolEntries.map((t) => {
+        const tool = t.tool;
+        const toolName = tool.tool.name.text;
+        const interfaceRef = capitalize(toolName);
+        const paramName = toSwiftName(toolName);
+        const methodName = toSwiftName(toolName);
+        const { inputType, outputType } = getToolTypes(
+          tool,
+          compilationResult,
+          config,
+        );
+        return {
+          rawToolName: toolName,
+          interfaceRef,
+          paramName,
+          methodName,
+          inputType,
+          outputType,
+        };
+      });
+
+      const inherited = toolInfoList.map((t) => t.interfaceRef).join(", ");
+      const toolNamesList = toolInfoList
+        .map((t) => `'${t.rawToolName}'`)
+        .join(", ");
+      const callArgs = toolInfoList
+        .map((t) => `${t.paramName}: ${t.paramName}`)
+        .join(", ");
+
+      lines.push(
+        `/// Composite executor interface for the '${templateName}' prompt template.`,
+        `/// Requires implementations for tools: ${toolNamesList}.`,
+        `public protocol ${templateName}: ${inherited}, Sendable {`,
+        "}",
+        "",
+        `/// Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
+        `public static func create${templateName}(`,
+        ...toolInfoList.map((t) => `${t.paramName}: any ${t.interfaceRef},`),
+        `) -> any ${templateName} {`,
+        `_Forwarding${templateName}(${callArgs})`,
+        "}",
+        "",
+        `fileprivate struct _Forwarding${templateName}: ${templateName} {`,
+        ...toolInfoList.map(
+          (t) => `private let ${t.paramName}: any ${t.interfaceRef}`,
+        ),
+        "",
+        "init(",
+        ...toolInfoList.map((t) => `${t.paramName}: any ${t.interfaceRef},`),
+        ") {",
+        ...toolInfoList.map((t) => `self.${t.paramName} = ${t.paramName}`),
+        "}",
+        "",
+      );
+
+      for (const t of toolInfoList) {
+        lines.push(
+          `func ${t.methodName}(`,
+          `input: ${t.inputType}`,
+          `) async throws -> ${t.outputType} {`,
+          `try await ${t.paramName}.${t.methodName}(input: input)`,
+          "}",
+          "",
+        );
+      }
+
+      lines.push("}", "");
     }
     return lines;
   };
 
   const lines = [
     "/// Namespace containing tool executor protocols.",
-    "public enum Tools {",
+    "public enum ToolExecutor {",
   ];
   if (singleNamespace) {
     lines.push(...writeNamespace(singleNamespace));
@@ -195,7 +270,7 @@ function writeToolExecutorProtocols(
       lines.push(`}  // enum ${namespaceName}`, "");
     }
   }
-  lines.push("}  // enum Tools");
+  lines.push("}  // enum ToolExecutor");
   return lines.join("\n");
 }
 
@@ -392,8 +467,8 @@ function writeExecuteToolCall(
     const { inputType } = getToolTypes(tool, compilationResult, config);
 
     const interfaceName = singleNamespace
-      ? `Tools.${capitalize(toolName)}Executor`
-      : `Tools.${toSwiftName(toolNamespace)}.${capitalize(toolName)}Executor`;
+      ? `ToolExecutor.${capitalize(toolName)}`
+      : `ToolExecutor.${toSwiftName(toolNamespace)}.${capitalize(toolName)}`;
     const methodName = toSwiftName(toolName);
 
     lines.push(
@@ -801,6 +876,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonElement",
   "Shared",
   "String",
+  "ToolExecutor",
   "self",
 ] as const);
 
