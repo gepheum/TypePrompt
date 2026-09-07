@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
   ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -20,7 +21,12 @@ import type {
 import { isLiteralType } from "../../schema/schema-utils.js";
 import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
+import {
+  capitalize,
+  toPascalCase,
+  toSnakeCase,
+  uncapitalize,
+} from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateKotlinCode(
@@ -49,7 +55,7 @@ function writeAll(
     [
       `package ${kotlinConfig.package};`,
       STATIC_SNIPPETS["kotlin-imports"],
-      // reformat(writePromptsInterface(compilationResult)),
+      reformat(writePromptsClass(compilationResult)),
       STATIC_SNIPPETS["kotlin-public-types"],
       reformat(
         [
@@ -66,48 +72,126 @@ function writeAll(
   ).concat("\n");
 }
 
-// function writePromptsInterface(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const writeTemplates = (namespace: ValidNamespaceResult): string => {
-//     const { templates } = namespace;
-//     if (templates.length <= 0) {
-//       return "ReadonlyRecord<string, never>";
-//     } else {
-//       return [
-//         "{",
-//         ...Object.values(
-//           namespace.templates.map((t) =>
-//             [
-//               "// Defined in '",
-//               t.template.sourcePath,
-//               "'\nreadonly ",
-//               uncapitalize(t.template.name.text),
-//               ': Template<"',
-//               getId(t.template),
-//               '">;',
-//             ].join(""),
-//           ),
-//         ),
-//         "}",
-//       ].join("\n");
-//     }
-//   };
-//   const lines = ["/** Entry point for building prompts. */"];
-//   if (compilationResult.singleNamespace) {
-//     const templates = writeTemplates(compilationResult.singleNamespace);
-//     lines.push(`export type Prompts = ${templates};`);
-//   } else {
-//     lines.push("export type Prompts = {");
-//     for (const namespace of Object.values(compilationResult.namespaces)) {
-//       const namespaceName = uncapitalize(namespace.name);
-//       const templates = writeTemplates(namespace);
-//       lines.push(`readonly ${namespaceName}: ${templates};`);
-//     }
-//     lines.push("};");
-//   }
-//   return lines.join("\n");
-// }
+function getTemplateTypes(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const templateName = toKotlinName(template.template.name.text);
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toKotlinName(templateNamespace);
+  const sharedTypePrefix = singleNamespace
+    ? "Schema.Shared."
+    : `Schema.${namespaceName}.Shared.`;
+  const typePrefixBase = singleNamespace
+    ? "Schema."
+    : `Schema.${namespaceName}.`;
+
+  const templateTypePrefix = typePrefixBase.concat(templateName, ".");
+  const options: WriteSchemaOptions = {
+    typePrefix: templateTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    template.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    template.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function getToolExecutorRef(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace } = compilationResult;
+  const toolEntries = Object.values(template.tools);
+  const [firstToolEntry] = toolEntries;
+  if (toolEntries.length === 1 && firstToolEntry) {
+    const tool = firstToolEntry.tool;
+    const toolName = capitalize(tool.tool.name.text);
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const namespaceBase = singleNamespace
+      ? "ToolExecutor"
+      : `ToolExecutor.${toKotlinName(toolNamespace)}`;
+    return `${namespaceBase}.${toolName}`;
+  } else {
+    const templateName = template.template.name.text;
+    const templateNamespace =
+      template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const namespaceBase = singleNamespace
+      ? "ToolExecutor"
+      : `ToolExecutor.${toKotlinName(templateNamespace)}`;
+    return `${namespaceBase}.${templateName}`;
+  }
+}
+
+function writePromptsClass(compilationResult: ValidCompilationResult): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeTemplatesParameters = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const propLines: string[] = [];
+    const templateCount = namespace.templates.length;
+    for (let i = 0; i < templateCount; i++) {
+      const t = namespace.templates[i]!;
+      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
+      const propertyName = toKotlinName(uncapitalize(t.template.name.text));
+      const toolExecutorRef =
+        Object.keys(t.tools).length > 0
+          ? getToolExecutorRef(t, compilationResult)
+          : "Unit";
+      propLines.push(
+        `// Defined in '${t.template.sourcePath}'`,
+        `val ${propertyName}: Template<${inputType}, ${outputType}, ${toolExecutorRef}>,`,
+      );
+    }
+    return propLines;
+  };
+
+  const lines = ["/** Entry point for building prompts. */"];
+
+  if (singleNamespace) {
+    const params = writeTemplatesParameters(singleNamespace);
+    if (params.length <= 0) {
+      lines.push("class Prompts()");
+    } else {
+      lines.push("data class Prompts(", ...params, ")");
+    }
+  } else {
+    const nsList = Object.values(namespaces);
+    lines.push("data class Prompts(");
+    for (let i = 0; i < nsList.length; i++) {
+      const ns = nsList[i]!;
+      const namespaceRecordName = ns.name.concat("Namespace");
+      const propertyName = toKotlinName(uncapitalize(ns.name));
+      lines.push(`val ${propertyName}: ${namespaceRecordName},`);
+    }
+    lines.push(") {");
+    for (const namespace of nsList) {
+      const namespaceRecordName = namespace.name.concat("Namespace");
+      const params = writeTemplatesParameters(namespace);
+      if (params.length <= 0) {
+        lines.push(`class ${namespaceRecordName}()`, "");
+      } else {
+        lines.push(`data class ${namespaceRecordName}(`, ...params, ")", "");
+      }
+    }
+    lines.push("}");
+  }
+
+  return lines.join("\n");
+}
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,

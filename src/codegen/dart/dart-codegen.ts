@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
   ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -51,8 +52,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["dart-imports"],
-      "",
-      // reformat(writePromptsInterface(compilationResult)),
+      reformat(writePromptsClass(compilationResult)),
       STATIC_SNIPPETS["dart-public-types"],
       reformat(
         [
@@ -69,48 +69,144 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   ).concat("\n");
 }
 
-// function writePromptsInterface(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const writeTemplates = (namespace: ValidNamespaceResult): string => {
-//     const { templates } = namespace;
-//     if (templates.length <= 0) {
-//       return "ReadonlyRecord<string, never>";
-//     } else {
-//       return [
-//         "{",
-//         ...Object.values(
-//           namespace.templates.map((t) =>
-//             [
-//               "// Defined in '",
-//               t.template.sourcePath,
-//               "'\nreadonly ",
-//               uncapitalize(t.template.name.text),
-//               ': Template<"',
-//               getId(t.template),
-//               '">;',
-//             ].join(""),
-//           ),
-//         ),
-//         "}",
-//       ].join("\n");
-//     }
-//   };
-//   const lines = ["/** Entry point for building prompts. */"];
-//   if (compilationResult.singleNamespace) {
-//     const templates = writeTemplates(compilationResult.singleNamespace);
-//     lines.push(`export type Prompts = ${templates};`);
-//   } else {
-//     lines.push("export type Prompts = {");
-//     for (const namespace of Object.values(compilationResult.namespaces)) {
-//       const namespaceName = uncapitalize(namespace.name);
-//       const templates = writeTemplates(namespace);
-//       lines.push(`readonly ${namespaceName}: ${templates};`);
-//     }
-//     lines.push("};");
-//   }
-//   return lines.join("\n");
-// }
+function getTemplateTypes(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const templateName = template.template.name.text;
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const typePrefixBase = singleNamespace ? "" : templateNamespace.concat("_");
+  const sharedTypePrefix = typePrefixBase.concat("Shared_");
+  const templateTypePrefix = typePrefixBase.concat(templateName, "_");
+
+  const options: WriteSchemaOptions = {
+    typePrefix: templateTypePrefix,
+    sharedTypePrefix,
+  };
+
+  const inputTypeNode = resolveType(
+    { kind: "type-name", name: { text: "Input" } },
+    template.schema,
+  );
+  const outputTypeNode = resolveType(
+    { kind: "type-name", name: { text: "Output" } },
+    template.schema,
+  );
+
+  const inputType = writeType(inputTypeNode, template.schema, options);
+  const outputType = writeType(outputTypeNode, template.schema, options);
+
+  return { inputType, outputType };
+}
+
+function getToolExecutorRef(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace } = compilationResult;
+  const toolEntries = Object.values(template.tools);
+  const [firstToolEntry] = toolEntries;
+  if (toolEntries.length === 1 && firstToolEntry) {
+    const tool = firstToolEntry.tool;
+    const toolName = tool.tool.name.text;
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const capitalizedToolName = capitalize(toolName);
+    return singleNamespace
+      ? `ToolExecutor_${capitalizedToolName}`
+      : `ToolExecutor_${toolNamespace}_${capitalizedToolName}`;
+  } else {
+    const templateName = template.template.name.text;
+    const templateNamespace =
+      template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    return singleNamespace
+      ? `ToolExecutor_${templateName}`
+      : `ToolExecutor_${templateNamespace}_${templateName}`;
+  }
+}
+
+function writePromptsClass(compilationResult: ValidCompilationResult): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespaceMembers = (
+    className: string,
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [`final class ${className} {`];
+    const templateCount = namespace.templates.length;
+    for (let i = 0; i < templateCount; i++) {
+      const t = namespace.templates[i]!;
+      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
+      const propertyName = toDartName(uncapitalize(t.template.name.text));
+      const toolExecutorRef =
+        Object.keys(t.tools).length > 0
+          ? getToolExecutorRef(t, compilationResult)
+          : "void";
+      lines.push(
+        `// Defined in '${t.template.sourcePath}'`,
+        `final Template<${inputType}, ${outputType}, ${toolExecutorRef}> ${propertyName};`,
+        "",
+      );
+    }
+
+    if (templateCount <= 0) {
+      lines.push(`const ${className}._();`);
+    } else {
+      lines.push(`const ${className}._({`);
+      for (const t of namespace.templates) {
+        const propertyName = toDartName(uncapitalize(t.template.name.text));
+        lines.push(`required this.${propertyName},`);
+      }
+      lines.push("});");
+    }
+    lines.push("}");
+    return lines;
+  };
+
+  const sections: string[] = [];
+  if (singleNamespace) {
+    sections.push(
+      [
+        "/// Entry point for building prompts.",
+        ...writeNamespaceMembers("Prompts", singleNamespace),
+      ].join("\n"),
+    );
+  } else {
+    const nsList = Object.values(namespaces);
+    const promptsLines: string[] = [
+      "/// Entry point for building prompts.",
+      "final class Prompts {",
+    ];
+    for (const ns of nsList) {
+      const namespaceClassName = ns.name.concat("Namespace");
+      const propertyName = toDartName(uncapitalize(ns.name));
+      promptsLines.push(`final ${namespaceClassName} ${propertyName};`);
+    }
+    promptsLines.push("");
+    if (nsList.length <= 0) {
+      promptsLines.push("const Prompts._();");
+    } else {
+      promptsLines.push("const Prompts._({");
+      for (const ns of nsList) {
+        const propertyName = toDartName(uncapitalize(ns.name));
+        promptsLines.push(`required this.${propertyName},`);
+      }
+      promptsLines.push("});");
+    }
+    promptsLines.push("}");
+    sections.push(promptsLines.join("\n"));
+
+    for (const namespace of nsList) {
+      const namespaceClassName = namespace.name.concat("Namespace");
+      sections.push(
+        writeNamespaceMembers(namespaceClassName, namespace).join("\n"),
+      );
+    }
+  }
+
+  return sections.join("\n\n");
+}
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,

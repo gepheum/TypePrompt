@@ -103,6 +103,8 @@ void main() {
     p07.FewShotExample,
     p08.FewShotExample,
     e02.FewShotExample,
-    e03.FewShotExample
+    e03.FewShotExample,
+    p01.Prompts,
+    p08.Prompts,
   ];
 }
