@@ -49,7 +49,6 @@ function writeAll(
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["csharp-imports"],
-      // reformat(writePromptsInterface(compilationResult)),
       reformat(
         [
           `namespace ${rootNamespace}\n{\n${STATIC_SNIPPETS["csharp-public-types"]}\n}`,
@@ -65,49 +64,6 @@ function writeAll(
     ].join("\n\n"),
   ).concat("\n");
 }
-
-// function writePromptsInterface(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const writeTemplates = (namespace: ValidNamespaceResult): string => {
-//     const { templates } = namespace;
-//     if (templates.length <= 0) {
-//       return "ReadonlyRecord<string, never>";
-//     } else {
-//       return [
-//         "{",
-//         ...Object.values(
-//           namespace.templates.map((t) =>
-//             [
-//               "// Defined in '",
-//               t.template.sourcePath,
-//               "'\nreadonly ",
-//               uncapitalize(t.template.name.text),
-//               ': Template<"',
-//               getId(t.template),
-//               '">;',
-//             ].join(""),
-//           ),
-//         ),
-//         "}",
-//       ].join("\n");
-//     }
-//   };
-//   const lines = ["/** Entry point for building prompts. */"];
-//   if (compilationResult.singleNamespace) {
-//     const templates = writeTemplates(compilationResult.singleNamespace);
-//     lines.push(`export type Prompts = ${templates};`);
-//   } else {
-//     lines.push("export type Prompts = {");
-//     for (const namespace of Object.values(compilationResult.namespaces)) {
-//       const namespaceName = uncapitalize(namespace.name);
-//       const templates = writeTemplates(namespace);
-//       lines.push(`readonly ${namespaceName}: ${templates};`);
-//     }
-//     lines.push("};");
-//   }
-//   return lines.join("\n");
-// }
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
@@ -171,13 +127,13 @@ function writeToolExecutorInterfaces(
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.Tools`
-      : `${rootNamespace}.Tools.${toCSharpName(namespace.name)}`;
+      ? `${rootNamespace}.ToolExecutor`
+      : `${rootNamespace}.ToolExecutor.${toCSharpName(namespace.name)}`;
 
     const lines = [`namespace ${namespaceBase}`, "{"];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      const interfaceName = `I${capitalize(toolName)}Executor`;
+      const interfaceName = `I${capitalize(toolName)}`;
       const { inputType, outputType } = getToolTypes(
         tool,
         compilationResult,
@@ -185,12 +141,81 @@ function writeToolExecutorInterfaces(
       );
 
       lines.push(
+        "/// <summary>",
+        `/// Tool executor interface for the '${toolName}' tool.`,
+        "/// </summary>",
         `public interface ${interfaceName}`,
         "{",
-        `System.Threading.Tasks.Task<${outputType}> ${toCSharpName(capitalize(toolName))}(${inputType} input);`,
+        `System.Threading.Tasks.Task<${outputType}> ${capitalize(toolName)}(${inputType} input);`,
         "}",
         "",
       );
+    }
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length < 2) continue;
+      const templateName = template.template.name.text;
+      const toolInfoList = toolEntries.map((t) => {
+        const tool = t.tool;
+        const toolName = capitalize(tool.tool.name.text);
+        const interfaceRef = `I${toolName}`;
+        const paramName = toCSharpName(tool.tool.name.text);
+        const methodName = capitalize(tool.tool.name.text);
+        const { inputType, outputType } = getToolTypes(
+          tool,
+          compilationResult,
+          config,
+        );
+        return {
+          rawToolName: tool.tool.name.text,
+          interfaceRef,
+          paramName,
+          methodName,
+          inputType,
+          outputType,
+        };
+      });
+
+      const inherited = toolInfoList.map((t) => t.interfaceRef).join(", ");
+      const toolNamesList = toolInfoList
+        .map((t) => `'${t.rawToolName}'`)
+        .join(", ");
+      const paramArgs = toolInfoList
+        .map((t) => `${t.interfaceRef} ${t.paramName}`)
+        .join(", ");
+      const callArgs = toolInfoList.map((t) => t.paramName).join(", ");
+
+      lines.push(
+        "/// <summary>",
+        `/// Composite executor interface for the '${templateName}' prompt template.`,
+        `/// Requires implementations for tools: ${toolNamesList}.`,
+        "/// </summary>",
+        `public interface I${templateName} : ${inherited}`,
+        "{",
+        "/// <summary>",
+        `/// Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
+        "/// </summary>",
+        `public static I${templateName} Create(${paramArgs}) =>`,
+        `    new Forwarding(${callArgs});`,
+        "",
+        `private sealed class Forwarding(`,
+        ...toolInfoList.map(
+          (t, idx) =>
+            `    ${t.interfaceRef} ${t.paramName}${idx < toolInfoList.length - 1 ? "," : ""}`,
+        ),
+        `) : I${templateName}`,
+        "{",
+      );
+
+      for (const t of toolInfoList) {
+        lines.push(
+          `public System.Threading.Tasks.Task<${t.outputType}> ${t.methodName}(${t.inputType} input) =>`,
+          `    ${t.paramName}.${t.methodName}(input);`,
+          "",
+        );
+      }
+
+      lines.push("}", "}", "");
     }
     lines.push(`}  // namespace ${namespaceBase}`);
     sections.push(lines.join("\n"));
@@ -400,9 +425,9 @@ function writeExecuteToolCall(
     const { inputType } = getToolTypes(tool, compilationResult, config);
 
     const interfaceName = singleNamespace
-      ? `${rootNamespace}.Tools.I${capitalize(toolName)}Executor`
-      : `${rootNamespace}.Tools.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}Executor`;
-    const methodName = toCSharpName(capitalize(toolName));
+      ? `${rootNamespace}.ToolExecutor.I${capitalize(toolName)}`
+      : `${rootNamespace}.ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}`;
+    const methodName = capitalize(toolName);
 
     lines.push(
       `case "${toolId}":`,
