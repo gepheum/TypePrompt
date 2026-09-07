@@ -8,6 +8,8 @@ pub mod gen {
     pub mod prompts_07;
     pub mod prompts_08;
     pub mod prompts_e01;
+    pub mod prompts_e02;
+    pub mod prompts_e03;
 }
 
 pub fn get_greeting() -> &'static str {
@@ -88,5 +90,114 @@ mod tests {
 
         let decoded: Matrix = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, matrix);
+    }
+
+    struct TestMyTool;
+    impl gen::prompts_e01::tool_executor::MyTool for TestMyTool {
+        async fn my_tool(
+            &self,
+            input: gen::prompts_e01::schema::shared::Square,
+        ) -> gen::prompts_e01::schema::MyTool::Output {
+            gen::prompts_e01::schema::MyTool::Output {
+                shared: gen::prompts_e01::schema::MyTool::Shared {
+                    value: "hello".to_string(),
+                    square: input,
+                },
+            }
+        }
+    }
+
+    struct TestMyOtherTool;
+    impl gen::prompts_e01::tool_executor::MyOtherTool for TestMyOtherTool {
+        async fn my_other_tool(
+            &self,
+            input: gen::prompts_e01::schema::shared::Square,
+        ) -> Vec<gen::prompts_e01::schema::MyOtherTool::Output> {
+            vec![gen::prompts_e01::schema::MyOtherTool::Output {
+                shared: gen::prompts_e01::schema::MyOtherTool::Shared {
+                    value: "world".to_string(),
+                    square: input,
+                },
+            }]
+        }
+    }
+
+    #[test]
+    fn test_composite_tool_executor() {
+        use gen::prompts_e01::tool_executor::{self, MyOtherTool, MyTool};
+        let composite = tool_executor::MyOtherTemplate {
+            my_tool: TestMyTool,
+            my_other_tool: TestMyOtherTool,
+        };
+
+        fn block_on<F: std::future::Future>(f: F) -> F::Output {
+            let waker = std::task::Waker::noop();
+            let mut cx = std::task::Context::from_waker(&waker);
+            let mut f = std::pin::pin!(f);
+            loop {
+                match f.as_mut().poll(&mut cx) {
+                    std::task::Poll::Ready(val) => return val,
+                    std::task::Poll::Pending => panic!("Pending not supported"),
+                }
+            }
+        }
+
+        let square = gen::prompts_e01::schema::shared::Square {
+            size: 5.0,
+            from_json: "a".to_string(),
+            self_: "b".to_string(),
+        };
+
+        let out1 = block_on(composite.my_tool(square));
+        assert_eq!(out1.shared.value, "hello");
+
+        let square2 = gen::prompts_e01::schema::shared::Square {
+            size: 5.0,
+            from_json: "a".to_string(),
+            self_: "b".to_string(),
+        };
+        let out2 = block_on(composite.my_other_tool(square2));
+        assert_eq!(out2.len(), 1);
+        assert_eq!(out2[0].shared.value, "world");
+    }
+
+    #[test]
+    fn test_composite_tool_executor_with_box_and_ref() {
+        use gen::prompts_e01::tool_executor::{self, MyOtherTool, MyTool};
+        let my_other = TestMyOtherTool;
+        let composite = tool_executor::MyOtherTemplate {
+            my_tool: Box::new(TestMyTool),
+            my_other_tool: &my_other,
+        };
+
+        fn block_on<F: std::future::Future>(f: F) -> F::Output {
+            let waker = std::task::Waker::noop();
+            let mut cx = std::task::Context::from_waker(&waker);
+            let mut f = std::pin::pin!(f);
+            loop {
+                match f.as_mut().poll(&mut cx) {
+                    std::task::Poll::Ready(val) => return val,
+                    std::task::Poll::Pending => panic!("Pending not supported"),
+                }
+            }
+        }
+
+        let square = gen::prompts_e01::schema::shared::Square {
+            size: 5.0,
+            from_json: "a".to_string(),
+            self_: "b".to_string(),
+        };
+
+        let out1 = block_on(composite.my_tool(square));
+        assert_eq!(out1.shared.value, "hello");
+
+        let square2 = gen::prompts_e01::schema::shared::Square {
+            size: 5.0,
+            from_json: "a".to_string(),
+            self_: "b".to_string(),
+        };
+        let out2 = block_on(composite.my_other_tool(square2));
+        assert_eq!(out2.len(), 1);
+        assert_eq!(out2[0].shared.value, "world");
     }
 }

@@ -19,6 +19,8 @@ from gen.prompts_06 import prompts as p06, schema as s06
 from gen.prompts_07 import prompts as p07, schema as s07
 from gen.prompts_08 import prompts as p08, schema as s08
 from gen.prompts_e01 import prompts as pe01, schema as s_e01
+from gen.prompts_e02 import prompts as _pe02, schema as _s_e02
+from gen.prompts_e03 import prompts as _pe03, schema as _s_e03
 
 
 # ─── e01 CSV/TSV format: tabular data serialization ──────────────────────────

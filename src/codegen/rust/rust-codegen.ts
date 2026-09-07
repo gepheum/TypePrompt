@@ -118,28 +118,39 @@ function writeTemplateIdEnum(
     const variantName = toRustName(rawMemberName);
     lines.push(`${variantName},`);
   }
-  lines.push(
-    "}",
-    "",
-    "impl TemplateId {",
-    "pub const fn as_str(&self) -> &'static str {",
-    "match self {",
-  );
-  for (const template of Object.values(templates)) {
-    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateName = template.template.name.text;
-    const rawMemberName = singleNamespace
-      ? templateName
-      : `${namespace}_${templateName}`;
-    const variantName = toRustName(rawMemberName);
-    const templateId = getId(template.template);
-    lines.push(`TemplateId::${variantName} => "${templateId}",`);
+  const templateList = Object.values(templates);
+  if (templateList.length <= 0) {
+    lines.push(
+      "}",
+      "",
+      "impl TemplateId {",
+      "pub const fn as_str(&self) -> &'static str {",
+      "match *self {}",
+      "}",
+      "}",
+      "",
+    );
+  } else {
+    lines.push(
+      "}",
+      "",
+      "impl TemplateId {",
+      "pub const fn as_str(&self) -> &'static str {",
+      "match self {",
+    );
+    for (const template of templateList) {
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateName = template.template.name.text;
+      const rawMemberName = singleNamespace
+        ? templateName
+        : `${namespace}_${templateName}`;
+      const variantName = toRustName(rawMemberName);
+      const templateId = getId(template.template);
+      lines.push(`TemplateId::${variantName} => "${templateId}",`);
+    }
+    lines.push("}", "}", "}", "");
   }
   lines.push(
-    "}",
-    "}",
-    "}",
-    "",
     "impl std::fmt::Display for TemplateId {",
     "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
     'write!(f, "{}", self.as_str())',
@@ -166,7 +177,7 @@ function writeToolExecutorTraits(
 
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
-      const interfaceName = `${capitalize(toolName)}Executor`;
+      const interfaceName = toRustName(capitalize(toolName));
       const toolTypeName = toRustName(capitalize(toolName));
       const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
       const options: WriteSchemaOptions = {
@@ -174,7 +185,6 @@ function writeToolExecutorTraits(
         sharedTypePrefix,
         topLevel: true,
       };
-
       const inputType = writeType(
         { kind: "type-name", name: { text: "Input" } },
         tool.schema,
@@ -188,18 +198,121 @@ function writeToolExecutorTraits(
 
       const methodName = toRustName(toSnakeCase(toolName));
       lines.push(
+        `/// Tool executor interface for the '${toolName}' tool.`,
         `pub trait ${interfaceName} {`,
-        `async fn ${methodName}(&self, input: ${inputType}) -> ${outputType};`,
+        `async fn ${methodName}(`,
+        "&self,",
+        `input: ${inputType},`,
+        `) -> ${outputType};`,
+        "}",
+        "",
+        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for &T {`,
+        `async fn ${methodName}(`,
+        "&self,",
+        `input: ${inputType},`,
+        `) -> ${outputType} {`,
+        `(**self).${methodName}(input).await`,
+        "}",
+        "}",
+        "",
+        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for Box<T> {`,
+        `async fn ${methodName}(`,
+        "&self,",
+        `input: ${inputType},`,
+        `) -> ${outputType} {`,
+        `(**self).${methodName}(input).await`,
+        "}",
+        "}",
+        "",
+        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for std::sync::Arc<T> {`,
+        `async fn ${methodName}(`,
+        "&self,",
+        `input: ${inputType},`,
+        `) -> ${outputType} {`,
+        `(**self).${methodName}(input).await`,
+        "}",
         "}",
         "",
       );
+    }
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length < 2) continue;
+      const rawTemplateName = template.template.name.text;
+      const templateName = toRustName(rawTemplateName);
+      const toolInfoList = toolEntries.map((t, idx) => {
+        const tool = t.tool;
+        const toolName = tool.tool.name.text;
+        const interfaceRef = toRustName(capitalize(toolName));
+        const paramName = toRustName(toSnakeCase(toolName));
+        const methodName = toRustName(toSnakeCase(toolName));
+        const genericParam = `T_${interfaceRef}`;
+        const toolTypeName = toRustName(capitalize(toolName));
+        const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
+        const options: WriteSchemaOptions = {
+          typePrefix: toolTypePrefix,
+          sharedTypePrefix,
+          topLevel: true,
+        };
+        const inputType = writeType(
+          { kind: "type-name", name: { text: "Input" } },
+          tool.schema,
+          options,
+        );
+        const outputType = writeType(
+          { kind: "type-name", name: { text: "Output" } },
+          tool.schema,
+          options,
+        );
+        return {
+          rawToolName: toolName,
+          interfaceRef,
+          paramName,
+          methodName,
+          genericParam,
+          inputType,
+          outputType,
+        };
+      });
+
+      const toolNamesList = toolInfoList
+        .map((t) => `'${t.rawToolName}'`)
+        .join(", ");
+      const typeParams = toolInfoList.map((t) => t.genericParam).join(", ");
+      const typeParamsWithBounds = toolInfoList
+        .map((t) => `${t.genericParam}: ${t.interfaceRef}`)
+        .join(", ");
+
+      lines.push(
+        `/// Composite tool executor for the '${rawTemplateName}' prompt template.`,
+        `/// Requires implementations for tools: ${toolNamesList}.`,
+        `pub struct ${templateName}<${typeParamsWithBounds}> {`,
+        ...toolInfoList.map((t) => `pub ${t.paramName}: ${t.genericParam},`),
+        "}",
+        "",
+      );
+
+      for (const t of toolInfoList) {
+        lines.push(
+          `impl<${typeParamsWithBounds}> ${t.interfaceRef} for ${templateName}<${typeParams}> {`,
+          `async fn ${t.methodName}(`,
+          "&self,",
+          `input: ${t.inputType},`,
+          `) -> ${t.outputType} {`,
+          `self.${t.paramName}.${t.methodName}(input).await`,
+          "}",
+          "}",
+          "",
+        );
+      }
     }
     return lines;
   };
 
   const lines = [
     "/// Namespace containing tool executor traits.",
-    "pub mod tools {",
+    "#[allow(non_camel_case_types)]",
+    "pub mod tool_executor {",
   ];
   if (singleNamespace) {
     lines.push(...writeNamespace(singleNamespace));
@@ -211,7 +324,7 @@ function writeToolExecutorTraits(
       lines.push(`}  // mod ${namespaceName}`, "");
     }
   }
-  lines.push("}  // mod tools");
+  lines.push("}  // mod tool_executor");
   return lines.join("\n");
 }
 
@@ -352,8 +465,8 @@ function getToolInfo(
   const namespaceName = toRustName(toolNamespace);
 
   const traitName = singleNamespace
-    ? `tools::${capitalize(toolName)}Executor`
-    : `tools::${namespaceName}::${capitalize(toolName)}Executor`;
+    ? `tool_executor::${toRustName(capitalize(toolName))}`
+    : `tool_executor::${namespaceName}::${toRustName(capitalize(toolName))}`;
 
   const typePrefixBase = singleNamespace
     ? "schema::"
@@ -378,9 +491,11 @@ function getToolInfo(
     options,
   );
 
+  const methodName = toRustName(toSnakeCase(toolName));
+
   return {
     traitName,
-    methodName: toRustName(toSnakeCase(toolName)),
+    methodName,
     inputType,
     outputType,
   };
@@ -389,18 +504,25 @@ function getToolInfo(
 function writeExecuteToolCall(
   compilationResult: ValidCompilationResult,
 ): string {
-  const { singleNamespace, templates } = compilationResult;
+  const { templates, singleNamespace } = compilationResult;
+  const anyTools = Object.values(templates).some(
+    (t) => Object.keys(t.tools).length > 0,
+  );
+  if (!anyTools) return "";
+
   const sections: string[] = [];
 
   for (const template of Object.values(templates)) {
     const templateTools = Object.values(template.tools).map((t) => t.tool);
     if (templateTools.length <= 0) continue;
 
-    const templateName = template.template.name.text;
+    const rawTemplateName = template.template.name.text;
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const functionName = singleNamespace
-      ? `execute_${toSnakeCase(templateName)}_tool_call`
-      : `execute_${toSnakeCase(namespace)}__${toSnakeCase(templateName)}_tool_call`;
+      ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
+      : toRustName(
+          `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+        );
 
     const uniqueTraits = Array.from(
       new Set(
@@ -857,10 +979,12 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "PartialEq",
   "Result",
   "String",
+  "ToolExecutor",
   "Vec",
   "derive",
   "serde",
   "serde_json",
+  "tool_executor",
 ] as const);
 
 const RUST_HARD_KEYWORDS: ReadonlySet<string> = new Set([
