@@ -138,11 +138,7 @@ function writeToolExecutorInterfaces(
       const toolName = tool.tool.name.text;
       const interfaceName = `I${capitalize(toolName)}`;
       const methodName = toCSharpName(capitalize(toolName));
-      const { inputType, outputType } = getToolTypes(
-        tool,
-        compilationResult,
-        config,
-      );
+      const { inputType, outputType } = getToolTypes(tool, compilationResult);
 
       lines.push(
         "/// <summary>",
@@ -161,17 +157,13 @@ function writeToolExecutorInterfaces(
       const templateName = template.template.name.text;
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
-        const toolName = tool.tool.name.text;
-        const interfaceRef = `I${capitalize(toolName)}`;
-        const paramName = toCSharpName(tool.tool.name.text);
-        const methodName = toCSharpName(capitalize(tool.tool.name.text));
-        const { inputType, outputType } = getToolTypes(
-          tool,
-          compilationResult,
-          config,
-        );
+        const rawToolName = tool.tool.name.text;
+        const interfaceRef = `I${capitalize(rawToolName)}`;
+        const paramName = toCSharpName(rawToolName);
+        const methodName = toCSharpName(capitalize(rawToolName));
+        const { inputType, outputType } = getToolTypes(tool, compilationResult);
         return {
-          rawToolName: tool.tool.name.text,
+          rawToolName,
           interfaceRef,
           paramName,
           methodName,
@@ -249,8 +241,8 @@ function getTemplateTypes(
   const templateNamespace =
     template.template.namespace?.text ?? DEFAULT_NAMESPACE;
   const schemaNamespaceBase = singleNamespace
-    ? `${rootNamespace}.Schema.`
-    : `${rootNamespace}.Schema.${toCSharpName(templateNamespace)}.`;
+    ? "Schema."
+    : `Schema.${toCSharpName(templateNamespace)}.`;
   const sharedNamespace = schemaNamespaceBase.concat("Shared");
 
   const templateNamespacePath = schemaNamespaceBase.concat(templateName);
@@ -518,15 +510,13 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
 function getToolTypes(
   tool: ValidatedTool,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
-  const { rootNamespace } = config;
   const { singleNamespace } = compilationResult;
   const toolName = tool.tool.name.text;
   const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
   const schemaNamespaceBase = singleNamespace
-    ? `${rootNamespace}.Schema.`
-    : `${rootNamespace}.Schema.${toCSharpName(toolNamespace)}.`;
+    ? "Schema."
+    : `Schema.${toCSharpName(toolNamespace)}.`;
   const sharedNamespace = schemaNamespaceBase.concat("Shared");
 
   const toolTypeName = toCSharpName(capitalize(toolName));
@@ -578,7 +568,7 @@ function writeExecuteToolCall(
     const toolName = tool.tool.name.text;
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const toolId = getId(tool.tool);
-    const { inputType } = getToolTypes(tool, compilationResult, config);
+    const { inputType } = getToolTypes(tool, compilationResult);
 
     const interfaceName = singleNamespace
       ? `ToolExecutor.I${capitalize(toolName)}`
