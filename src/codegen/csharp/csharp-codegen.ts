@@ -280,16 +280,16 @@ function getToolExecutorRef(
     const toolName = tool.tool.name.text;
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.ToolExecutor`
-      : `${rootNamespace}.ToolExecutor.${toCSharpName(toolNamespace)}`;
+      ? "ToolExecutor"
+      : `ToolExecutor.${toCSharpName(toolNamespace)}`;
     return `${namespaceBase}.I${capitalize(toolName)}`;
   } else {
     const templateName = template.template.name.text;
     const templateNamespace =
       template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.ToolExecutor`
-      : `${rootNamespace}.ToolExecutor.${toCSharpName(templateNamespace)}`;
+      ? "ToolExecutor"
+      : `ToolExecutor.${toCSharpName(templateNamespace)}`;
     return `${namespaceBase}.I${templateName}`;
   }
 }
