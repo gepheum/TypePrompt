@@ -5,7 +5,7 @@ import Foundation
 
 public enum TypePromptRuntime {
   // <static:swift-public-types>
-  public protocol Template: Sendable {
+  public protocol Template<Input, Output, ToolExecutor>: Sendable {
     associatedtype Input
     associatedtype Output
     associatedtype ToolExecutor

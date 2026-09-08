@@ -161,17 +161,24 @@ private struct TestMyOtherTool: TypePrompt.ToolExecutor.MyOtherTool {
 }
 
 @Test func testCompositeToolExecutor() async throws {
-  let composite = TypePrompt.ToolExecutor.createMyOtherTemplate(
+  let composite = TypePrompt.ToolExecutor.MyOtherTemplate(
     myTool: TestMyTool(),
     myOtherTool: TestMyOtherTool()
   )
+  let executor: any TypePrompt.ToolExecutor.MyTool & TypePrompt.ToolExecutor.MyOtherTool = composite
   let square = TypePrompt.Schema.Shared.Square(
     size: 5.0,
     fromJson: "a",
     self_: "b"
   )
-  let out1 = try await composite.myTool(input: square)
+  let out1 = try await executor.myTool(input: square)
   #expect(out1.shared.value == "hello")
-  let out2 = try await composite.myOtherTool(input: square)
+  let out2 = try await executor.myOtherTool(input: square)
   #expect(out2.first?.shared.value == "world")
+}
+
+@Test func testPromptsStructCompilation() async throws {
+  _ = TypePrompt01.Prompts.self
+  _ = TypePrompt08.Prompts.self
+  _ = TypePrompt.Prompts.self
 }

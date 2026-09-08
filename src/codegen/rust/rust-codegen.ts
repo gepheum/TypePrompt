@@ -285,7 +285,7 @@ function writeToolExecutorTraits(
 
       lines.push(
         `/// Composite tool executor for the '${rawTemplateName}' prompt template.`,
-        `/// Requires implementations for tools: ${toolNamesList}.`,
+        `/// Forwards to implementations of tools: ${toolNamesList}.`,
         `pub struct ${templateName}<${typeParamsWithBounds}> {`,
         ...toolInfoList.map((t) => `pub ${t.paramName}: ${t.genericParam},`),
         "}",
@@ -338,16 +338,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+      },
+    )
     : "()";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -521,8 +521,8 @@ function writeExecuteToolCall(
     const functionName = singleNamespace
       ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
       : toRustName(
-          `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-        );
+        `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+      );
 
     const uniqueTraits = Array.from(
       new Set(

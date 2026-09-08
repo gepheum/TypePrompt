@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
   ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -53,8 +54,8 @@ function writeAll(
     reformat(
       [
         STATIC_SNIPPETS["swift-imports"],
-        // reformat(writePromptsInterface(compilationResult)),
         `enum ${rootNamespace} {`,
+        writePromptsStruct(compilationResult, config),
         STATIC_SNIPPETS["swift-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorProtocols(compilationResult, config),
@@ -69,48 +70,165 @@ function writeAll(
   ).concat("\n");
 }
 
-// function writePromptsInterface(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const writeTemplates = (namespace: ValidNamespaceResult): string => {
-//     const { templates } = namespace;
-//     if (templates.length <= 0) {
-//       return "ReadonlyRecord<string, never>";
-//     } else {
-//       return [
-//         "{",
-//         ...Object.values(
-//           namespace.templates.map((t) =>
-//             [
-//               "// Defined in '",
-//               t.template.sourcePath,
-//               "'\nreadonly ",
-//               uncapitalize(t.template.name.text),
-//               ': Template<"',
-//               getId(t.template),
-//               '">;',
-//             ].join(""),
-//           ),
-//         ),
-//         "}",
-//       ].join("\n");
-//     }
-//   };
-//   const lines = ["/** Entry point for building prompts. */"];
-//   if (compilationResult.singleNamespace) {
-//     const templates = writeTemplates(compilationResult.singleNamespace);
-//     lines.push(`export type Prompts = ${templates};`);
-//   } else {
-//     lines.push("export type Prompts = {");
-//     for (const namespace of Object.values(compilationResult.namespaces)) {
-//       const namespaceName = uncapitalize(namespace.name);
-//       const templates = writeTemplates(namespace);
-//       lines.push(`readonly ${namespaceName}: ${templates};`);
-//     }
-//     lines.push("};");
-//   }
-//   return lines.join("\n");
-// }
+function getTemplateTypes(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const templateName = toSwiftName(template.template.name.text);
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toSwiftName(templateNamespace);
+  const typePrefixBase = singleNamespace
+    ? "Schema."
+    : `Schema.${namespaceName}.`;
+  const sharedTypePrefix = typePrefixBase.concat("Shared.");
+  const templateTypePrefix = typePrefixBase.concat(templateName, ".");
+
+  const options: WriteSchemaOptions = {
+    typePrefix: templateTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    template.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    template.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function getToolExecutorRef(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { singleNamespace } = compilationResult;
+  const toolEntries = Object.values(template.tools);
+  if (toolEntries.length <= 0) {
+    return "Void";
+  }
+  const traitNames = Array.from(
+    new Set(
+      toolEntries.map((entry) => {
+        const tool = entry.tool;
+        const toolName = capitalize(tool.tool.name.text);
+        const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+        const namespaceBase = singleNamespace
+          ? "ToolExecutor"
+          : `ToolExecutor.${toSwiftName(toolNamespace)}`;
+        return `${namespaceBase}.${toolName}`;
+      }),
+    ),
+  );
+  return `any ${traitNames.join(" & ")}`;
+}
+
+function writePromptsStruct(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespaceMembers = (
+    structName: string,
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [`public struct ${structName}: Sendable {`];
+    const templateCount = namespace.templates.length;
+    const templateProps: { readonly name: string; readonly type: string }[] =
+      [];
+
+    for (let i = 0; i < templateCount; i++) {
+      const t = namespace.templates[i]!;
+      const { inputType, outputType } = getTemplateTypes(
+        t,
+        compilationResult,
+        config,
+      );
+      const propertyName = toSwiftName(uncapitalize(t.template.name.text));
+      const toolExecutorRef =
+        Object.keys(t.tools).length > 0
+          ? getToolExecutorRef(t, compilationResult, config)
+          : "Void";
+      const fullType = `any Template<${inputType}, ${outputType}, ${toolExecutorRef}>`;
+      templateProps.push({ name: propertyName, type: fullType });
+      lines.push(
+        `// Defined in '${t.template.sourcePath}'`,
+        `public let ${propertyName}: ${fullType}`,
+        "",
+      );
+    }
+
+    if (templateCount <= 0) {
+      lines.push("fileprivate init() {}");
+    } else {
+      lines.push("fileprivate init(");
+      for (let i = 0; i < templateProps.length; i++) {
+        const prop = templateProps[i]!;
+        lines.push(`${prop.name}: ${prop.type},`);
+      }
+      lines.push(") {");
+      for (const prop of templateProps) {
+        lines.push(`self.${prop.name} = ${prop.name}`);
+      }
+      lines.push("}");
+    }
+    lines.push("}");
+    return lines;
+  };
+
+  if (singleNamespace) {
+    return [
+      "/// Entry point for building prompts.",
+      ...writeNamespaceMembers("Prompts", singleNamespace),
+    ].join("\n");
+  } else {
+    const nsList = Object.values(namespaces);
+    const lines: string[] = [
+      "/// Entry point for building prompts.",
+      "public struct Prompts: Sendable {",
+    ];
+    for (const ns of nsList) {
+      const namespaceStructName = ns.name.concat("Namespace");
+      const propertyName = toSwiftName(uncapitalize(ns.name));
+      lines.push(`public let ${propertyName}: ${namespaceStructName}`);
+    }
+    lines.push("");
+    if (nsList.length <= 0) {
+      lines.push("fileprivate init() {}");
+    } else {
+      lines.push("fileprivate init(");
+      for (let i = 0; i < nsList.length; i++) {
+        const ns = nsList[i]!;
+        const namespaceStructName = ns.name.concat("Namespace");
+        const propertyName = toSwiftName(uncapitalize(ns.name));
+        lines.push(`${propertyName}: ${namespaceStructName},`);
+      }
+      lines.push(") {");
+      for (const ns of nsList) {
+        const propertyName = toSwiftName(uncapitalize(ns.name));
+        lines.push(`self.${propertyName} = ${propertyName}`);
+      }
+      lines.push("}");
+    }
+    lines.push("");
+    for (const namespace of nsList) {
+      const namespaceStructName = namespace.name.concat("Namespace");
+      lines.push(...writeNamespaceMembers(namespaceStructName, namespace), "");
+    }
+    lines.push("}");
+    return lines.join("\n");
+  }
+}
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
@@ -187,17 +305,17 @@ function writeToolExecutorProtocols(
       const templateName = template.template.name.text;
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
-        const toolName = tool.tool.name.text;
-        const interfaceRef = capitalize(toolName);
-        const paramName = toSwiftName(toolName);
-        const methodName = toSwiftName(toolName);
+        const rawToolName = tool.tool.name.text;
+        const interfaceRef = toSwiftName(capitalize(rawToolName));
+        const paramName = toSwiftName(rawToolName);
+        const methodName = toSwiftName(rawToolName);
         const { inputType, outputType } = getToolTypes(
           tool,
           compilationResult,
           config,
         );
         return {
-          rawToolName: toolName,
+          rawToolName,
           interfaceRef,
           paramName,
           methodName,
@@ -206,34 +324,26 @@ function writeToolExecutorProtocols(
         };
       });
 
-      const inherited = toolInfoList.map((t) => t.interfaceRef).join(", ");
+      const inherited = Array.from(
+        new Set(toolInfoList.map((t) => t.interfaceRef)),
+      ).join(", ");
       const toolNamesList = toolInfoList
         .map((t) => `'${t.rawToolName}'`)
         .join(", ");
-      const callArgs = toolInfoList
-        .map((t) => `${t.paramName}: ${t.paramName}`)
-        .join(", ");
 
       lines.push(
-        `/// Composite executor interface for the '${templateName}' prompt template.`,
-        `/// Requires implementations for tools: ${toolNamesList}.`,
-        `public protocol ${templateName}: ${inherited}, Sendable {`,
-        "}",
-        "",
-        `/// Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
-        `public static func create${templateName}(`,
-        ...toolInfoList.map((t) => `${t.paramName}: any ${t.interfaceRef},`),
-        `) -> any ${templateName} {`,
-        `_Forwarding${templateName}(${callArgs})`,
-        "}",
-        "",
-        `fileprivate struct _Forwarding${templateName}: ${templateName} {`,
+        `/// Composite tool executor for the '${templateName}' prompt template.`,
+        `/// Forwards to implementations of tools: ${toolNamesList}.`,
+        `public struct ${toSwiftName(templateName)}: ${inherited}, Sendable {`,
         ...toolInfoList.map(
-          (t) => `private let ${t.paramName}: any ${t.interfaceRef}`,
+          (t) => `public let ${t.paramName}: any ${t.interfaceRef}`,
         ),
         "",
-        "init(",
-        ...toolInfoList.map((t) => `${t.paramName}: any ${t.interfaceRef},`),
+        "public init(",
+        ...toolInfoList.map(
+          (t, i) =>
+            `${t.paramName}: any ${t.interfaceRef}${i < toolInfoList.length - 1 ? "," : ""}`,
+        ),
         ") {",
         ...toolInfoList.map((t) => `self.${t.paramName} = ${t.paramName}`),
         "}",
@@ -242,7 +352,7 @@ function writeToolExecutorProtocols(
 
       for (const t of toolInfoList) {
         lines.push(
-          `func ${t.methodName}(`,
+          `public func ${t.methodName}(`,
           `input: ${t.inputType}`,
           `) async throws -> ${t.outputType} {`,
           `try await ${t.paramName}.${t.methodName}(input: input)`,
