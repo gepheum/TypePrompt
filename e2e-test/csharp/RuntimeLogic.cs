@@ -55,6 +55,23 @@ namespace TypePromptRuntime
             }
             throw new InvalidOperationException($"Unsupported output format: {OutputFormat}");
         }
+
+        /// <summary>
+        /// Execute the given tool calls in parallel.
+        /// </summary>
+        public async Task<IReadOnlyList<ToolCallResponse>> ExecuteTools(
+            IEnumerable<ToolCall> toolCalls,
+            TToolExecutor toolExecutor
+        )
+        {
+            var @namespace = TemplateId.GetId().Split(':')[0];
+            var tasks = new List<Task<ToolCallResponse>>();
+            foreach (var call in toolCalls)
+            {
+                tasks.Add(ToolExecution.ExecuteToolCall(call, @namespace, toolExecutor!));
+            }
+            return await Task.WhenAll(tasks);
+        }
     }
 
     public abstract record OutputFormat;
@@ -106,6 +123,8 @@ namespace TypePromptRuntime
     );
     // </static:csharp-public-types>
 
+    // <generated>
+
     /// <summary>
     /// Uniquely identifies a prompt template.
     /// </summary>
@@ -123,6 +142,17 @@ namespace TypePromptRuntime
                 _ => throw new ArgumentOutOfRangeException(nameof(templateId)),
             };
     }
+
+    file static class ToolExecution
+    {
+        public static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)
+        {
+            // Correct implementation will be produced by C# code generator.
+            throw new NotImplementedException();
+        }
+    }
+
+    // </generated>
 }
 
 // <static:csharp-logic>

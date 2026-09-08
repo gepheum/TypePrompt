@@ -550,16 +550,12 @@ function writeExecuteToolCall(
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
 
-  if (toolList.length <= 0) {
-    return "";
-  }
-
   const lines = [
     `namespace ${rootNamespace}`,
     "{",
     "file static class ToolExecution",
     "{",
-    "static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)",
+    "public static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)",
     "{",
     'var stringifiedOutput = "";',
     "try",
