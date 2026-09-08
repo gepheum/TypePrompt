@@ -1014,19 +1014,11 @@ function wrapXmlDoc(doc: string): readonly string[] {
     .replace(/'/g, "&apos;");
 
   const lines = escaped.split("\n");
-  if (lines.length === 1) {
-    // Single-line doc: use inline summary
-    return [` /// <summary>${lines[0]}</summary>`];
-  }
-
-  // Multi-line doc: use block summary
-  const result: string[] = [];
-  result.push(" /// <summary>");
-  for (const line of lines) {
-    result.push(` /// ${line}`);
-  }
-  result.push(" /// </summary>");
-  return result;
+  return [
+    " /// <summary>",
+    ...lines.map((line) => ` /// ${line}`),
+    " /// </summary>",
+  ];
 }
 
 function reformat(code: string): string {
@@ -1089,6 +1081,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonSerializerOptions",
   "JsonStringEnumConverter",
   "JsonStringEnumMemberName",
+  "Schema",
   "Type",
   "Utf8JsonReader",
   "Utf8JsonWriter",
