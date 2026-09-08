@@ -52,14 +52,18 @@ function writeAll(
       STATIC_SNIPPETS["csharp-imports"],
       reformat(
         [
+          `namespace ${rootNamespace}\n{`,
           writePromptsClass(compilationResult, config),
-          `namespace ${rootNamespace}\n{\n${STATIC_SNIPPETS["csharp-public-types"]}\n}`,
+          STATIC_SNIPPETS["csharp-public-types"],
           writeTemplateIdEnum(compilationResult, config),
+          `}  // namespace ${rootNamespace}`,
           writeToolExecutorInterfaces(compilationResult, config),
           writeUserDefinedDatatypes(compilationResult, unionContext, config),
           writeSpecDatatypes(unionContext, config),
-          writeTemplatesData(compilationResult, config),
+          `namespace ${rootNamespace}\n{`,
+          writeTemplatesData(compilationResult),
           writeExecuteToolCall(compilationResult, config),
+          `}  // namespace ${rootNamespace}`,
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["csharp-logic"],
@@ -74,8 +78,6 @@ function writeTemplateIdEnum(
   const { singleNamespace, templates } = compilationResult;
   const { rootNamespace } = config;
   const lines = [
-    `namespace ${rootNamespace}`,
-    "{",
     "/// <summary>",
     "/// Uniquely identifies a prompt template.",
     "/// </summary>",
@@ -113,7 +115,6 @@ function writeTemplateIdEnum(
   lines.push(
     "_ => throw new ArgumentOutOfRangeException(nameof(templateId)),",
     "};",
-    "}",
     "}",
   );
   return lines.join("\n");
@@ -305,11 +306,13 @@ function writePromptsClass(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
-  const { rootNamespace } = config;
   const { singleNamespace, namespaces } = compilationResult;
 
-  const lines = [`namespace ${rootNamespace}`, "{"];
-
+  const lines = [
+    "/// <summary>",
+    "/// Entry point for building prompts.",
+    "/// </summary>",
+  ];
   const writeTemplatesParameters = (
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
@@ -341,11 +344,6 @@ function writePromptsClass(
     return propLines;
   };
 
-  lines.push(
-    "/// <summary>",
-    "/// Entry point for building prompts.",
-    "/// </summary>",
-  );
   if (singleNamespace) {
     const params = writeTemplatesParameters(singleNamespace);
     if (params.length <= 0) {
@@ -381,7 +379,6 @@ function writePromptsClass(
     lines.push("}");
   }
 
-  lines.push("}");
   return lines.join("\n");
 }
 
@@ -483,24 +480,17 @@ function writeSpecDatatypes(
   return writeSchema(runtimeTypesSchema, unionContext, options);
 }
 
-function writeTemplatesData(
-  compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
-): string {
-  const { rootNamespace } = config;
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const templatesData = makeTemplates(compilationResult, {
     includeJsonSchemas: true,
   });
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
-    `namespace ${rootNamespace}`,
-    "{",
     "file static class RuntimeData",
     "{",
     "public static readonly Spec.Templates TemplatesData = JsonSerializer.Deserialize<Spec.Templates>(",
     stringifiedJson,
     ")!;",
-    "}",
     "}",
   ];
   return lines.join("\n");
@@ -546,16 +536,17 @@ function writeExecuteToolCall(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
-  const { rootNamespace } = config;
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
 
   const lines = [
-    `namespace ${rootNamespace}`,
-    "{",
     "file static class ToolExecution",
     "{",
-    "public static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)",
+    "public static async Task<ToolCallResponse> ExecuteToolCall(",
+    "ToolCall toolCall,",
+    "string @namespace,",
+    "object executor",
+    ")",
     "{",
     'var stringifiedOutput = "";',
     "try",
@@ -571,8 +562,8 @@ function writeExecuteToolCall(
     const { inputType } = getToolTypes(tool, compilationResult, config);
 
     const interfaceName = singleNamespace
-      ? `${rootNamespace}.ToolExecutor.I${capitalize(toolName)}`
-      : `${rootNamespace}.ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}`;
+      ? `ToolExecutor.I${capitalize(toolName)}`
+      : `ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}`;
     const methodName = capitalize(toolName);
 
     lines.push(
@@ -609,7 +600,6 @@ function writeExecuteToolCall(
     "return new ToolCallResponse(toolCall.CallId, stringifiedOutput);",
     "}",
     "}  // class ToolExecution",
-    `}  // namespace ${rootNamespace}`,
   );
 
   return lines.join("\n");
