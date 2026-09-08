@@ -136,6 +136,7 @@ function writeToolExecutorInterfaces(
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `I${capitalize(toolName)}`;
+      const methodName = toCSharpName(capitalize(toolName));
       const { inputType, outputType } = getToolTypes(
         tool,
         compilationResult,
@@ -148,9 +149,7 @@ function writeToolExecutorInterfaces(
         "/// </summary>",
         `public interface ${interfaceName}`,
         "{",
-        `Task<${outputType}> ${capitalize(toolName)}(`,
-        `${inputType} input`,
-        ");",
+        `Task<${outputType}> ${methodName}(${inputType} input);`,
         "}",
         "",
       );
@@ -161,10 +160,10 @@ function writeToolExecutorInterfaces(
       const templateName = template.template.name.text;
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
-        const toolName = capitalize(tool.tool.name.text);
-        const interfaceRef = `I${toolName}`;
+        const toolName = tool.tool.name.text;
+        const interfaceRef = `I${capitalize(toolName)}`;
         const paramName = toCSharpName(tool.tool.name.text);
-        const methodName = capitalize(tool.tool.name.text);
+        const methodName = toCSharpName(capitalize(tool.tool.name.text));
         const { inputType, outputType } = getToolTypes(
           tool,
           compilationResult,
@@ -560,10 +559,7 @@ function writeExecuteToolCall(
     "{",
     "file static class ToolExecution",
     "{",
-    "private static async Task<ToolCallResponse> ExecuteToolCall(",
-    "ToolCall toolCall,",
-    "string @namespace,",
-    "object executor)",
+    "static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)",
     "{",
     'var stringifiedOutput = "";',
     "try",
@@ -600,7 +596,9 @@ function writeExecuteToolCall(
 
   lines.push(
     "default:",
+    "{",
     "break;",
+    "}",
     "}",
     "}",
     "catch (Exception e)",
@@ -614,8 +612,8 @@ function writeExecuteToolCall(
     "}",
     "return new ToolCallResponse(toolCall.CallId, stringifiedOutput);",
     "}",
-    "}",
-    "}",
+    "}  // class ToolExecution",
+    `}  // namespace ${rootNamespace}`,
   );
 
   return lines.join("\n");
@@ -768,7 +766,7 @@ function writeTypepromptUnion(
         "",
         `${converterVisibility} class ${typeName}__Converter : JsonConverter<${typeName}>`,
         "{",
-        `public override ${typeName}? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options) {`,
+        `public override ${typeName}? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {`,
         "using var doc = JsonDocument.ParseValue(ref reader);",
         "var root = doc.RootElement;",
         `if (!root.TryGetProperty("${discriminator}", out var discElem))`,
@@ -1091,8 +1089,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonSerializerOptions",
   "JsonStringEnumConverter",
   "JsonStringEnumMemberName",
-  "System",
-  "Task",
+  "Type",
   "Utf8JsonReader",
   "Utf8JsonWriter",
 ] as const);
