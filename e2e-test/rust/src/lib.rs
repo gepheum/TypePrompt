@@ -122,13 +122,32 @@ mod tests {
         }
     }
 
+    struct CombinedExecutor;
+    impl gen::prompts_e01::tool_executor::MyTool for CombinedExecutor {
+        async fn my_tool(
+            &self,
+            input: gen::prompts_e01::schema::shared::Square,
+        ) -> gen::prompts_e01::schema::MyTool::Output {
+            TestMyTool.my_tool(input).await
+        }
+    }
+    impl gen::prompts_e01::tool_executor::MyOtherTool for CombinedExecutor {
+        async fn my_other_tool(
+            &self,
+            input: gen::prompts_e01::schema::shared::Square,
+        ) -> Vec<gen::prompts_e01::schema::MyOtherTool::Output> {
+            TestMyOtherTool.my_other_tool(input).await
+        }
+    }
+
     #[test]
     fn test_composite_tool_executor() {
         use gen::prompts_e01::tool_executor::{self, MyOtherTool, MyTool};
-        let composite = tool_executor::MyOtherTemplate {
-            my_tool: TestMyTool,
-            my_other_tool: TestMyOtherTool,
-        };
+
+        fn assert_composite<T: tool_executor::MyOtherTemplate>(_: &T) {}
+
+        let composite = CombinedExecutor;
+        assert_composite(&composite);
 
         fn block_on<F: std::future::Future>(f: F) -> F::Output {
             let waker = std::task::Waker::noop();
@@ -164,11 +183,12 @@ mod tests {
     #[test]
     fn test_composite_tool_executor_with_box_and_ref() {
         use gen::prompts_e01::tool_executor::{self, MyOtherTool, MyTool};
-        let my_other = TestMyOtherTool;
-        let composite = tool_executor::MyOtherTemplate {
-            my_tool: Box::new(TestMyTool),
-            my_other_tool: &my_other,
-        };
+
+        fn assert_composite<T: tool_executor::MyOtherTemplate>(_: &T) {}
+
+        let composite = Box::new(CombinedExecutor);
+        assert_composite(&composite);
+        assert_composite(&&CombinedExecutor);
 
         fn block_on<F: std::future::Future>(f: F) -> F::Output {
             let waker = std::task::Waker::noop();
@@ -199,5 +219,40 @@ mod tests {
         let out2 = block_on(composite.my_other_tool(square2));
         assert_eq!(out2.len(), 1);
         assert_eq!(out2[0].shared.value, "world");
+    }
+
+    #[test]
+    fn test_prompts_types() {
+        struct MockTemplate<Input, Output, ToolExecutor: ?Sized = ()> {
+            _phantom: std::marker::PhantomData<(Input, Output, fn() -> ToolExecutor)>,
+        }
+        impl<Input, Output, ToolExecutor: ?Sized>
+            gen::prompts_01::Template<Input, Output, ToolExecutor>
+            for MockTemplate<Input, Output, ToolExecutor>
+        {
+            fn render(&self, _input: Input) -> gen::prompts_01::Prompt<Output, ToolExecutor> {
+                gen::prompts_01::Prompt {
+                    meta: (),
+                    system_message: String::new(),
+                    user_message: String::new(),
+                    examples: vec![],
+                    tools: std::collections::HashMap::new(),
+                    output_format: gen::prompts_01::OutputFormat::Text,
+                    template_id: gen::prompts_01::TemplateId::Translate,
+                    _phantom: std::marker::PhantomData,
+                }
+            }
+        }
+
+        let prompts_01 = gen::prompts_01::Prompts {
+            translate: Box::new(MockTemplate {
+                _phantom: std::marker::PhantomData,
+            }),
+        };
+        fn assert_send_sync<T: Send + Sync>(_: &T) {}
+        assert_send_sync(&prompts_01);
+
+        let prompts_e02 = gen::prompts_e02::Prompts {};
+        assert_send_sync(&prompts_e02);
     }
 }

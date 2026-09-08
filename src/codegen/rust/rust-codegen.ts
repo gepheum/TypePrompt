@@ -1,6 +1,7 @@
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
+  ValidTemplate,
   ValidatedTool,
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
@@ -43,7 +44,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     reformat(
       [
         STATIC_SNIPPETS["rust-imports"],
-        // reformat(writePromptsInterface(compilationResult)),
+        writePromptsStruct(compilationResult),
         STATIC_SNIPPETS["rust-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorTraits(compilationResult),
@@ -57,48 +58,118 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   ).concat("\n");
 }
 
-// function writePromptsInterface(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const writeTemplates = (namespace: ValidNamespaceResult): string => {
-//     const { templates } = namespace;
-//     if (templates.length <= 0) {
-//       return "ReadonlyRecord<string, never>";
-//     } else {
-//       return [
-//         "{",
-//         ...Object.values(
-//           namespace.templates.map((t) =>
-//             [
-//               "// Defined in '",
-//               t.template.sourcePath,
-//               "'\nreadonly ",
-//               uncapitalize(t.template.name.text),
-//               ': Template<"',
-//               getId(t.template),
-//               '">;',
-//             ].join(""),
-//           ),
-//         ),
-//         "}",
-//       ].join("\n");
-//     }
-//   };
-//   const lines = ["/** Entry point for building prompts. */"];
-//   if (compilationResult.singleNamespace) {
-//     const templates = writeTemplates(compilationResult.singleNamespace);
-//     lines.push(`export type Prompts = ${templates};`);
-//   } else {
-//     lines.push("export type Prompts = {");
-//     for (const namespace of Object.values(compilationResult.namespaces)) {
-//       const namespaceName = uncapitalize(namespace.name);
-//       const templates = writeTemplates(namespace);
-//       lines.push(`readonly ${namespaceName}: ${templates};`);
-//     }
-//     lines.push("};");
-//   }
-//   return lines.join("\n");
-// }
+function getTemplateTypes(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): { readonly inputType: string; readonly outputType: string } {
+  const { singleNamespace } = compilationResult;
+  const templateName = toRustName(template.template.name.text);
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const namespaceName = toRustName(templateNamespace);
+  const typePrefixBase = singleNamespace
+    ? "schema::"
+    : `schema::${namespaceName}::`;
+  const sharedTypePrefix = typePrefixBase.concat("shared::");
+  const templateTypePrefix = typePrefixBase.concat(templateName, "::");
+
+  const options: WriteSchemaOptions = {
+    typePrefix: templateTypePrefix,
+    sharedTypePrefix,
+    topLevel: true,
+  };
+
+  const inputType = writeType(
+    { kind: "type-name", name: { text: "Input" } },
+    template.schema,
+    options,
+  );
+  const outputType = writeType(
+    { kind: "type-name", name: { text: "Output" } },
+    template.schema,
+    options,
+  );
+
+  return { inputType, outputType };
+}
+
+function getToolExecutorRef(
+  template: ValidTemplate,
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace } = compilationResult;
+  const toolEntries = Object.values(template.tools);
+  if (toolEntries.length <= 0) {
+    return "()";
+  }
+  if (toolEntries.length === 1) {
+    const tool = toolEntries[0]!.tool;
+    const toolName = toRustName(capitalize(tool.tool.name.text));
+    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const traitPath = singleNamespace
+      ? `tool_executor::${toolName}`
+      : `tool_executor::${toRustName(toolNamespace)}::${toolName}`;
+    return `dyn ${traitPath}`;
+  }
+  const rawTemplateName = template.template.name.text;
+  const templateName = toRustName(rawTemplateName);
+  const templateNamespace =
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const traitPath = singleNamespace
+    ? `tool_executor::${templateName}`
+    : `tool_executor::${toRustName(templateNamespace)}::${templateName}`;
+  return `dyn ${traitPath}`;
+}
+
+function writePromptsStruct(compilationResult: ValidCompilationResult): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeTemplatesMembers = (
+    structName: string,
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [`pub struct ${structName} {`];
+    for (const t of namespace.templates) {
+      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
+      const propertyName = toRustName(toSnakeCase(t.template.name.text));
+      const toolExecutorRef = getToolExecutorRef(t, compilationResult);
+      lines.push(
+        `// Defined in '${t.template.sourcePath}'`,
+        `pub ${propertyName}: Box<dyn Template<${inputType}, ${outputType}, ${toolExecutorRef}> + Send + Sync>,`,
+        "",
+      );
+    }
+    lines.push("}");
+    return lines;
+  };
+
+  if (singleNamespace) {
+    return [
+      "/// Entry point for building prompts.",
+      ...writeTemplatesMembers("Prompts", singleNamespace),
+    ].join("\n");
+  } else {
+    const nsList = Object.values(namespaces);
+    const lines: string[] = [
+      "/// Entry point for building prompts.",
+      "pub struct Prompts {",
+    ];
+    for (const ns of nsList) {
+      const namespaceStructName = toRustName(ns.name.concat("Namespace"));
+      const propertyName = toRustName(toSnakeCase(ns.name));
+      lines.push(`pub ${propertyName}: ${namespaceStructName},`);
+    }
+    lines.push("}", "");
+
+    for (const namespace of nsList) {
+      const namespaceStructName = toRustName(
+        namespace.name.concat("Namespace"),
+      );
+      lines.push(...writeTemplatesMembers(namespaceStructName, namespace), "");
+    }
+    return lines.join("\n");
+  }
+}
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
@@ -203,10 +274,12 @@ function writeToolExecutorTraits(
         `async fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
-        `) -> ${outputType};`,
+        `) -> ${outputType}`,
+        "where",
+        "Self: Sized;",
         "}",
         "",
-        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for &T {`,
+        `impl<T: ${interfaceName}> ${interfaceName} for &T {`,
         `async fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
@@ -215,7 +288,7 @@ function writeToolExecutorTraits(
         "}",
         "}",
         "",
-        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for Box<T> {`,
+        `impl<T: ${interfaceName}> ${interfaceName} for Box<T> {`,
         `async fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
@@ -224,7 +297,7 @@ function writeToolExecutorTraits(
         "}",
         "}",
         "",
-        `impl<T: ?Sized + ${interfaceName}> ${interfaceName} for std::sync::Arc<T> {`,
+        `impl<T: ${interfaceName}> ${interfaceName} for std::sync::Arc<T> {`,
         `async fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
@@ -240,71 +313,30 @@ function writeToolExecutorTraits(
       if (toolEntries.length < 2) continue;
       const rawTemplateName = template.template.name.text;
       const templateName = toRustName(rawTemplateName);
-      const toolInfoList = toolEntries.map((t, idx) => {
+      const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
         const toolName = tool.tool.name.text;
         const interfaceRef = toRustName(capitalize(toolName));
-        const paramName = toRustName(toSnakeCase(toolName));
-        const methodName = toRustName(toSnakeCase(toolName));
-        const genericParam = `T_${interfaceRef}`;
-        const toolTypeName = toRustName(capitalize(toolName));
-        const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
-        const options: WriteSchemaOptions = {
-          typePrefix: toolTypePrefix,
-          sharedTypePrefix,
-          topLevel: true,
-        };
-        const inputType = writeType(
-          { kind: "type-name", name: { text: "Input" } },
-          tool.schema,
-          options,
-        );
-        const outputType = writeType(
-          { kind: "type-name", name: { text: "Output" } },
-          tool.schema,
-          options,
-        );
         return {
           rawToolName: toolName,
           interfaceRef,
-          paramName,
-          methodName,
-          genericParam,
-          inputType,
-          outputType,
         };
       });
 
       const toolNamesList = toolInfoList
         .map((t) => `'${t.rawToolName}'`)
         .join(", ");
-      const typeParams = toolInfoList.map((t) => t.genericParam).join(", ");
-      const typeParamsWithBounds = toolInfoList
-        .map((t) => `${t.genericParam}: ${t.interfaceRef}`)
-        .join(", ");
+      const inheritedTraits = toolInfoList
+        .map((t) => t.interfaceRef)
+        .join(" + ");
 
       lines.push(
-        `/// Composite tool executor for the '${rawTemplateName}' prompt template.`,
-        `/// Forwards to implementations of tools: ${toolNamesList}.`,
-        `pub struct ${templateName}<${typeParamsWithBounds}> {`,
-        ...toolInfoList.map((t) => `pub ${t.paramName}: ${t.genericParam},`),
-        "}",
+        `/// Composite tool executor trait for the '${rawTemplateName}' prompt template.`,
+        `/// Requires implementations of tools: ${toolNamesList}.`,
+        `pub trait ${templateName}: ${inheritedTraits} {}`,
+        `impl<T: ?Sized + ${inheritedTraits}> ${templateName} for T {}`,
         "",
       );
-
-      for (const t of toolInfoList) {
-        lines.push(
-          `impl<${typeParamsWithBounds}> ${t.interfaceRef} for ${templateName}<${typeParams}> {`,
-          `async fn ${t.methodName}(`,
-          "&self,",
-          `input: ${t.inputType},`,
-          `) -> ${t.outputType} {`,
-          `self.${t.paramName}.${t.methodName}(input).await`,
-          "}",
-          "}",
-          "",
-        );
-      }
     }
     return lines;
   };
@@ -338,16 +370,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+        },
+      )
     : "()";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -521,15 +553,15 @@ function writeExecuteToolCall(
     const functionName = singleNamespace
       ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
       : toRustName(
-        `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-      );
+          `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+        );
 
     const uniqueTraits = Array.from(
       new Set(
         templateTools.map((t) => getToolInfo(t, compilationResult).traitName),
       ),
     );
-    const traitBounds = `?Sized + ${uniqueTraits.join(" + ")}`;
+    const traitBounds = uniqueTraits.join(" + ");
 
     const lines = [
       `async fn ${functionName}<E: ${traitBounds}>(`,
@@ -977,8 +1009,11 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Debug",
   "Option",
   "PartialEq",
+  "Prompt",
+  "Prompts",
   "Result",
   "String",
+  "Template",
   "ToolExecutor",
   "Vec",
   "derive",

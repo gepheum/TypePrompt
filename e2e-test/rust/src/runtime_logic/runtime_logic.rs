@@ -2,11 +2,11 @@
 // </static:rust-imports>
 
 // <static:rust-public-types>
-pub trait Template<Input, Output, ToolExecutor> {
+pub trait Template<Input, Output, ToolExecutor: ?Sized = ()> {
   fn render(&self, input: Input) -> Prompt<Output, ToolExecutor>;
 }
 
-pub struct Prompt<Output, ToolExecutor> {
+pub struct Prompt<Output, ToolExecutor: ?Sized = ()> {
   pub meta: Meta,
   pub system_message: String,
   pub user_message: String,
@@ -14,10 +14,10 @@ pub struct Prompt<Output, ToolExecutor> {
   pub tools: std::collections::HashMap<String, Tool>,
   pub output_format: OutputFormat,
   pub template_id: TemplateId,
-  pub _phantom: std::marker::PhantomData<(Output, ToolExecutor)>,
+  pub _phantom: std::marker::PhantomData<(Output, fn() -> ToolExecutor)>,
 }
 
-impl<Output, ToolExecutor> Prompt<Output, ToolExecutor> {
+impl<Output, ToolExecutor: ?Sized> Prompt<Output, ToolExecutor> {
   pub fn parse_response(&self, response: &str) -> Result<Output, String>
   where
     Output: serde::de::DeserializeOwned,
