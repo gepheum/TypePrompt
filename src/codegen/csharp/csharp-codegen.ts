@@ -130,10 +130,10 @@ function writeToolExecutorInterfaces(
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.ToolExecutor`
-      : `${rootNamespace}.ToolExecutor.${toCSharpName(namespace.name)}`;
+      ? "ToolExecutor"
+      : `ToolExecutor.${toCSharpName(namespace.name)}`;
 
-    const lines = [`namespace ${namespaceBase}`, "{"];
+    const lines = [`namespace ${rootNamespace}.${namespaceBase}`, "{"];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `I${capitalize(toolName)}`;
@@ -223,7 +223,7 @@ function writeToolExecutorInterfaces(
 
       lines.push("}", "}", "");
     }
-    lines.push(`}  // namespace ${namespaceBase}`);
+    lines.push(`}  // namespace ${rootNamespace}.${namespaceBase}`);
     sections.push(lines.join("\n"));
   };
 
@@ -419,40 +419,60 @@ function writeUserDefinedDatatypes(
 
   if (anyTypes(metaSchema)) {
     sections.push(
-      writeSchema(metaSchema, unionContext, {
-        namespace: `${rootNamespace}.Schema.Meta`,
-      }),
+      writeSchema(
+        metaSchema,
+        unionContext,
+        {
+          namespace: "Schema.Meta",
+        },
+        config,
+      ),
     );
   }
 
   const writeTypepromptNamespace = (namespace: ValidNamespaceResult): void => {
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.Schema.`
-      : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
+      ? "Schema."
+      : `Schema.${toCSharpName(namespace.name)}.`;
     const sharedNamespace = namespaceBase.concat("Shared");
     if (anyTypes(namespace.schema)) {
       sections.push(
-        writeSchema(namespace.schema, unionContext, {
-          namespace: sharedNamespace,
-        }),
+        writeSchema(
+          namespace.schema,
+          unionContext,
+          {
+            namespace: sharedNamespace,
+          },
+          config,
+        ),
       );
     }
     for (const template of namespace.templates) {
       const templateName = toCSharpName(template.template.name.text);
       sections.push(
-        writeSchema(template.schema, unionContext, {
-          namespace: namespaceBase.concat(templateName),
-          sharedNamespace,
-        }),
+        writeSchema(
+          template.schema,
+          unionContext,
+          {
+            namespace: namespaceBase.concat(templateName),
+            sharedNamespace,
+          },
+          config,
+        ),
       );
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toCSharpName(capitalize(tool.tool.name.text));
       sections.push(
-        writeSchema(tool.schema, unionContext, {
-          namespace: namespaceBase.concat(toolName),
-          sharedNamespace,
-        }),
+        writeSchema(
+          tool.schema,
+          unionContext,
+          {
+            namespace: namespaceBase.concat(toolName),
+            sharedNamespace,
+          },
+          config,
+        ),
       );
     }
   };
@@ -472,12 +492,11 @@ function writeSpecDatatypes(
   unionContext: UnionContext,
   config: { readonly rootNamespace: string },
 ): string {
-  const { rootNamespace } = config;
   const options = {
-    namespace: `${rootNamespace}.Spec`,
+    namespace: "Spec",
     file: true,
   } as const;
-  return writeSchema(runtimeTypesSchema, unionContext, options);
+  return writeSchema(runtimeTypesSchema, unionContext, options, config);
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
@@ -616,10 +635,12 @@ function writeSchema(
   schema: Schema,
   unionContext: UnionContext,
   options: WriteSchemaOptions,
+  config: { readonly rootNamespace: string },
 ): string {
   const { namespace } = options;
+  const { rootNamespace } = config;
   const lines: string[] = [];
-  lines.push(`namespace ${namespace}`);
+  lines.push(`namespace ${rootNamespace}.${namespace}`);
   lines.push("{");
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
@@ -638,7 +659,7 @@ function writeSchema(
     }
     lines.push("");
   }
-  lines.push(`}  // namespace ${namespace}`);
+  lines.push(`}  // namespace ${rootNamespace}.${namespace}`);
 
   return lines.join("\n");
 }
@@ -835,12 +856,7 @@ function writeType(
         }
       } else {
         namingHint = schema.namingHints.shared.get(type);
-        const global = topLevel ? "" : "global::";
-        return global.concat(
-          sharedNamespace!,
-          ".",
-          makeNameFromHint(namingHint!),
-        );
+        return sharedNamespace!.concat(".", makeNameFromHint(namingHint!));
       }
     }
     case "optional": {
