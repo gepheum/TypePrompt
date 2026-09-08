@@ -958,8 +958,8 @@ function makeUnionContext(
   processSchema(compilationResult.metaSchema, "Schema.Meta.");
   for (const namespace of Object.values(compilationResult.namespaces)) {
     const namespaceBase = singleNamespace
-      ? `${rootNamespace}.Schema.`
-      : `${rootNamespace}.Schema.${toCSharpName(namespace.name)}.`;
+      ? "Schema."
+      : `Schema.${toCSharpName(namespace.name)}.`;
     processSchema(namespace.schema, namespaceBase.concat("Shared"));
     for (const template of namespace.templates) {
       const templateName = toCSharpName(template.template.name.text);
@@ -971,7 +971,7 @@ function makeUnionContext(
     }
   }
 
-  processSchema(runtimeTypesSchema, `${rootNamespace}.Spec`);
+  processSchema(runtimeTypesSchema, "Spec");
 
   return {
     intMemberToUnionRefs,
