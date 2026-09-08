@@ -46,7 +46,7 @@ export function parseJson<Mode extends JsonMode = "loose">(
     );
   }
 
-  if (parser.errors.length > 0) {
+  if (parser.errors.length >= 1) {
     return { kind: "error", errors: parser.errors };
   }
 

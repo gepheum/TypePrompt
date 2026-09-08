@@ -98,7 +98,7 @@ export function validateTemplate(args: {
     errors.push(...validateSnippet(snippet, templateSchema, topLevelOptions));
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return {
       kind: "error",
       errors,
@@ -568,7 +568,7 @@ function validateSnippet(
           ),
         );
       }
-      if (missingCases.length > 0) {
+      if (missingCases.length >= 1) {
         const missingTags = missingCases
           .map((c) => `<on case='${c}'>`)
           .join(", ");
@@ -605,7 +605,7 @@ function validateTools(
     sharedDeclarations: {},
     unionToMembers: new Map(),
   });
-  if (validationErrors.length > 0) {
+  if (validationErrors.length >= 1) {
     return {
       kind: "error",
       errors: validationErrors,

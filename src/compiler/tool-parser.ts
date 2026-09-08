@@ -88,7 +88,7 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
     errors.push({ span: toolNode.tag, message: `Missing <${tag}> element` });
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
 

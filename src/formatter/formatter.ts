@@ -47,7 +47,7 @@ function collectFormattableSlicesForXmlDocument(xmlDocument: XmlDocument): {
   const slices: FormattableSlice[] = [];
   const xmlCommentsInCode: true[] = [];
   collectFormattableSlices(items, topLevel, slices, xmlCommentsInCode);
-  const anyXmlCommentsInCode = xmlCommentsInCode.length > 0;
+  const anyXmlCommentsInCode = xmlCommentsInCode.length >= 1;
   return { slices, anyXmlCommentsInCode };
 }
 
@@ -90,7 +90,7 @@ function collectFormattableSlices(
       }
       if (format === "typescript" || format === "yaml") {
         // Do not format TypeScript/YAML code if the content contains XML comments.
-        const anyComments = item.comments.length > 0;
+        const anyComments = item.comments.length >= 1;
         if (anyComments) {
           xmlCommentsInCode.push(true);
           return null;

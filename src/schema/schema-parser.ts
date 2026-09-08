@@ -673,11 +673,11 @@ function getDocText(jsdoc: Token | undefined): string {
     .split("\n")
     .map((line) => line.trimEnd().replace(/^\s*\*? ?/, ""));
   // Remove the first line if it's empty (artifact of `/**` on its own line)
-  if (lines.length > 0 && lines[0]!.trim() === "") {
+  if (lines.length >= 1 && lines[0]!.trim() === "") {
     lines.shift();
   }
   // Remove the last line if it's empty (artifact of ` */` on its own line)
-  if (lines.length > 0 && lines.at(-1)!.trim() === "") {
+  if (lines.length >= 1 && lines.at(-1)!.trim() === "") {
     lines.pop();
   }
   return lines.join("\n");

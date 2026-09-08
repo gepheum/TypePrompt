@@ -196,7 +196,7 @@ class CompilationResultImpl implements CompilationResult {
     }
 
     this.anyErrors = Object.values(this.finalErrors).some(
-      (errors) => errors.length > 0,
+      (errors) => errors.length >= 1,
     );
   }
 

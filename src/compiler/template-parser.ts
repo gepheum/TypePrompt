@@ -97,7 +97,7 @@ class TemplateParser {
       this.verifyLineBreakAfterSomeInserts(contents);
     }
 
-    if (this.errors.length > 0) {
+    if (this.errors.length >= 1) {
       return { kind: "error", errors: this.errors };
     }
 

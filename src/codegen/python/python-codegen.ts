@@ -82,7 +82,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
           `  ${typePrefix}Input,`,
           `  ${typePrefix}Output,`,
         );
-        if (Object.keys(t.tools).length > 0) {
+        if (Object.keys(t.tools).length >= 1) {
           const toolExecutorRef = getToolExecutorRef(
             t.template,
             compilationResult,
@@ -170,7 +170,6 @@ function writeUserDefinedDatatypes(
         ...writeSchema(template.schema, {
           typePrefix: `${schemaPrefix}${templateName}.`,
           sharedTypePrefix: schemaPrefix.concat("shared."),
-          requiredTypes: ["Input", "Output"],
         }).map((line) => indentLine(line, "  ")),
       );
     }
@@ -182,7 +181,6 @@ function writeUserDefinedDatatypes(
         ...writeSchema(tool.schema, {
           typePrefix: `${schemaPrefix}${toolName}.`,
           sharedTypePrefix: schemaPrefix.concat("shared."),
-          requiredTypes: ["Input", "Output"],
         }).map((line) => indentLine(line, "  ")),
       );
     }
@@ -197,7 +195,6 @@ function writeUserDefinedDatatypes(
     " class meta(_StaticClass):",
     ...writeSchema(metaSchema, {
       typePrefix: "schema.meta.",
-      requiredTypes: ["Meta"],
     }).map((line) => indentLine(line, "  ")),
   ];
   if (singleNamespace) {
@@ -236,7 +233,7 @@ function writeToolExecutorProtocols(
       );
       lines.push(" @final");
       lines.push(` class ${templateName}(_StaticClass):`);
-      if (toolNames.length > 0) {
+      if (toolNames.length >= 1) {
         lines.push(
           "  class ToolExecutor(Protocol):",
           '   """Protocol for object implementing the tools callable by the LLM."""',
@@ -302,7 +299,7 @@ function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
     lines.push(` '${toolName}': '${methodName}',`);
   }
   lines.push("}");
-  if (tools.length > 0) {
+  if (tools.length >= 1) {
     lines.push(
       "",
       "",
@@ -356,7 +353,6 @@ function writeSchema(
   options: {
     readonly typePrefix: string;
     readonly sharedTypePrefix?: string;
-    readonly requiredTypes?: readonly string[];
   },
 ): readonly string[] {
   const { typePrefix } = options;
@@ -448,23 +444,6 @@ function writeSchema(
       }
     }
     lines.push("");
-  }
-
-  for (const requiredType of options.requiredTypes ?? []) {
-    const declaration = schema.typeDeclarations[requiredType];
-    if (declaration) {
-      if (
-        declaration.valueType.kind !== "interface" &&
-        declaration.valueType.kind !== "union"
-      ) {
-        const type = writeType(declaration.valueType, schema, options);
-        lines.push(`type ${requiredType} = ${type}`);
-        lines.push("");
-      }
-    } else {
-      lines.push(`type ${requiredType} = Literal[None]`);
-      lines.push("");
-    }
   }
 
   return lines;

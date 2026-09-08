@@ -52,7 +52,7 @@ export type ConfigParseResult = ConfigParseSuccess | InternalErrors;
 export function parseConfigYaml(content: string): ConfigParseResult {
   const doc = parseDocument(content);
 
-  if (doc.errors.length > 0) {
+  if (doc.errors.length >= 1) {
     return {
       kind: "error",
       errors: doc.errors.map((e) => ({
@@ -169,7 +169,7 @@ function makeSchemaIssueError(
   // Walk up the path until we find a node with a source range.
   let nodePath = [...issue.path] as PropertyKey[];
   let node: Scalar | YAMLMap | undefined;
-  while (nodePath.length > 0) {
+  while (nodePath.length >= 1) {
     const candidate = doc.getIn(nodePath, true);
     if (candidate instanceof Scalar || candidate instanceof YAMLMap) {
       node = candidate;

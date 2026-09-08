@@ -367,7 +367,7 @@ function writeUserDefinedDatatypes(
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
-    Object.keys(schema.typeDeclarations).length > 0;
+    Object.keys(schema.typeDeclarations).length >= 1;
   const lines: string[] = [];
 
   const metaType = anyTypes(metaSchema)
@@ -540,7 +540,7 @@ function writeExecuteToolCall(
 ): string {
   const { templates, singleNamespace } = compilationResult;
   const anyTools = Object.values(templates).some(
-    (t) => Object.keys(t.tools).length > 0,
+    (t) => Object.keys(t.tools).length >= 1,
   );
   if (!anyTools) return "";
 
@@ -817,7 +817,7 @@ function writeTypepromptUnion(
         (f) => !isLiteralType(f.type),
       );
 
-      if (nonLiteralCommonFields.length > 0) {
+      if (nonLiteralCommonFields.length >= 1) {
         lines.push("", `impl ${typeName} {`);
         for (const member of nonLiteralCommonFields) {
           const rustName = toRustName(toSnakeCase(member.name));

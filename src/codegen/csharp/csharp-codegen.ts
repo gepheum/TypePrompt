@@ -325,7 +325,7 @@ function writePromptsClass(
       );
       const propertyName = toCSharpName(capitalize(t.template.name.text));
       const typeArgs = [inputType, outputType];
-      if (Object.keys(t.tools).length > 0) {
+      if (Object.keys(t.tools).length >= 1) {
         const toolExecutorRef = getToolExecutorRef(
           t,
           compilationResult,
@@ -394,7 +394,7 @@ function writeUserDefinedDatatypes(
   const { rootNamespace } = config;
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
-    Object.keys(schema.typeDeclarations).length > 0;
+    Object.keys(schema.typeDeclarations).length >= 1;
   const sections: string[] = [];
 
   // Define Meta type alias

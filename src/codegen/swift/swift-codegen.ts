@@ -156,7 +156,7 @@ function writePromptsStruct(
       );
       const propertyName = toSwiftName(uncapitalize(t.template.name.text));
       const toolExecutorRef =
-        Object.keys(t.tools).length > 0
+        Object.keys(t.tools).length >= 1
           ? getToolExecutorRef(t, compilationResult, config)
           : "Void";
       const fullType = `any Template<${inputType}, ${outputType}, ${toolExecutorRef}>`;
@@ -394,7 +394,7 @@ function writeUserDefinedDatatypes(
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
-    Object.keys(schema.typeDeclarations).length > 0;
+    Object.keys(schema.typeDeclarations).length >= 1;
   const lines: string[] = [];
 
   const metaType = anyTypes(metaSchema)

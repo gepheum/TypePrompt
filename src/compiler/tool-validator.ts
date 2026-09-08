@@ -22,7 +22,7 @@ export function validateTool(args: {
     description: tool.description,
     toolSchema: toolSchema,
   });
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
 

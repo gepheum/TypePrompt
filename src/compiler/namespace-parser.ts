@@ -68,7 +68,7 @@ export function parseNamespace(
     return { kind: "error", errors };
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
 

@@ -91,7 +91,7 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
     }
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
   return { kind: "success", attributes: values as AttributeValues<T> };

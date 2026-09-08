@@ -15,7 +15,7 @@ export function toJsonSchema(
   const gen = new Generator(schema, unionToMembers);
   const root = gen.typeToSchema(schema.typeDeclarations[typeName]!.valueType);
   const defs = gen.defs;
-  if (Object.keys(defs).length > 0) {
+  if (Object.keys(defs).length >= 1) {
     root.$defs = defs;
   }
   return root;
@@ -108,7 +108,7 @@ class Generator {
       properties[fieldName] = fieldSchema;
     }
     const schema: Record<string, unknown> = { type: "object", properties };
-    if (required.length > 0) {
+    if (required.length >= 1) {
       schema.required = required;
     }
     schema.additionalProperties = false;

@@ -54,7 +54,7 @@ class XmlParser {
     }
 
     // Report unclosed tags innermost-first, closing them into their parents.
-    while (this.openElements.length > 0) {
+    while (this.openElements.length >= 1) {
       const el = this.openElements.pop()!;
       this.errors.push({
         span: {
@@ -73,7 +73,7 @@ class XmlParser {
       });
     }
 
-    if (this.errors.length > 0) {
+    if (this.errors.length >= 1) {
       return { kind: "error", errors: this.errors };
     }
 

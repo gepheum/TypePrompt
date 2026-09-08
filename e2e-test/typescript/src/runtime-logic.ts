@@ -432,7 +432,7 @@ function renderSnippet<Input>(
       const condition = ((): boolean => {
         switch (snippet.is) {
           case "not-empty": {
-            return (evalResult as { readonly length: number }).length > 0;
+            return (evalResult as { readonly length: number }).length >= 1;
           }
           case "not-null": {
             return evalResult !== undefined && evalResult !== null;

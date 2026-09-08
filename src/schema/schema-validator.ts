@@ -91,7 +91,7 @@ export function validateSchema(
     }
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
 
@@ -106,7 +106,7 @@ export function validateSchema(
     sharedNames = allTypesUsedResult.nameDependencies.shared;
   }
 
-  if (errors.length > 0) {
+  if (errors.length >= 1) {
     return { kind: "error", errors };
   }
 

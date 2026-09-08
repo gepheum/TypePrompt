@@ -183,7 +183,7 @@ function writeUserDefinedDatatypes(
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
-    Object.keys(schema.typeDeclarations).length > 0;
+    Object.keys(schema.typeDeclarations).length >= 1;
   const lines = [
     "/** Metadata associated with a prompt. */",
     "export type Meta = $.Meta.Meta;\n",

@@ -148,7 +148,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       const { inputType, outputType } = getTemplateTypes(t, compilationResult);
       const propertyName = toKotlinName(uncapitalize(t.template.name.text));
       const toolExecutorRef =
-        Object.keys(t.tools).length > 0
+        Object.keys(t.tools).length >= 1
           ? getToolExecutorRef(t, compilationResult)
           : "Unit";
       propLines.push(
@@ -336,7 +336,7 @@ function writeUserDefinedDatatypes(
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
-    Object.keys(schema.typeDeclarations).length > 0;
+    Object.keys(schema.typeDeclarations).length >= 1;
   const lines: string[] = [];
 
   const metaType = anyTypes(metaSchema)
@@ -592,7 +592,7 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
-  const isDataClass = fields.length > 0;
+  const isDataClass = fields.length >= 1;
   const lines = [
     "@OptIn(ExperimentalSerializationApi::class)",
     "@Serializable",

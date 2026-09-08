@@ -18,7 +18,7 @@ export function parseYaml(
 ): StrictJsonValue | InternalErrors {
   const doc = parseDocument(content.text, { logLevel: "silent" });
 
-  if (doc.errors.length > 0) {
+  if (doc.errors.length >= 1) {
     return {
       kind: "error",
       errors: doc.errors.map((err) => ({

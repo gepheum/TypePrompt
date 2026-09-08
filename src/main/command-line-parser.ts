@@ -230,7 +230,7 @@ function validateNoUnknownOptions(
   options: ParsedOptions,
   command: string,
 ): void {
-  if (options.unknown.length > 0) {
+  if (options.unknown.length >= 1) {
     throw new CommandLineParseError(
       `Unknown option${options.unknown.length > 1 ? "s" : ""} for '${command}': ${options.unknown.join(", ")}`,
     );

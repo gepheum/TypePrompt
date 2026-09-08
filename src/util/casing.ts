@@ -60,7 +60,7 @@ function splitIntoWords(identifier: string): string[] {
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .toLowerCase()
     .split(" ")
-    .filter((w) => w.length > 0);
+    .filter((w) => w.length >= 1);
 }
 
 /**
