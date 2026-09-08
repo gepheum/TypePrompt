@@ -198,7 +198,7 @@ function writePromptsStruct(
       "public struct Prompts: Sendable {",
     ];
     for (const ns of nsList) {
-      const namespaceStructName = ns.name.concat("Namespace");
+      const namespaceStructName = ns.name.concat("Prompts");
       const propertyName = toSwiftName(uncapitalize(ns.name));
       lines.push(`public let ${propertyName}: ${namespaceStructName}`);
     }
@@ -209,7 +209,7 @@ function writePromptsStruct(
       lines.push("fileprivate init(");
       for (let i = 0; i < nsList.length; i++) {
         const ns = nsList[i]!;
-        const namespaceStructName = ns.name.concat("Namespace");
+        const namespaceStructName = ns.name.concat("Prompts");
         const propertyName = toSwiftName(uncapitalize(ns.name));
         lines.push(`${propertyName}: ${namespaceStructName},`);
       }
@@ -222,8 +222,12 @@ function writePromptsStruct(
     }
     lines.push("");
     for (const namespace of nsList) {
-      const namespaceStructName = namespace.name.concat("Namespace");
-      lines.push(...writeNamespaceMembers(namespaceStructName, namespace), "");
+      const namespaceStructName = namespace.name.concat("Prompts");
+      lines.push(
+        `/// Prompts in the '${namespace.name}' namespace.`,
+        ...writeNamespaceMembers(namespaceStructName, namespace),
+        "",
+      );
     }
     lines.push("}");
     return lines.join("\n");

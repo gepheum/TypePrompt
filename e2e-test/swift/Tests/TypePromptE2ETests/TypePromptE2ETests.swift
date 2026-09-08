@@ -180,5 +180,7 @@ private struct TestMyOtherTool: TypePrompt.ToolExecutor.MyOtherTool {
 @Test func testPromptsStructCompilation() async throws {
   _ = TypePrompt01.Prompts.self
   _ = TypePrompt08.Prompts.self
+  _ = TypePrompt08.Prompts.LegalPrompts.self
+  _ = TypePrompt08.Prompts.FinancePrompts.self
   _ = TypePrompt.Prompts.self
 }

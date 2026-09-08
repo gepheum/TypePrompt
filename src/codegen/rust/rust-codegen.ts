@@ -155,17 +155,19 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
       "pub struct Prompts {",
     ];
     for (const ns of nsList) {
-      const namespaceStructName = toRustName(ns.name.concat("Namespace"));
+      const namespaceStructName = ns.name.concat("Prompts");
       const propertyName = toRustName(toSnakeCase(ns.name));
       lines.push(`pub ${propertyName}: ${namespaceStructName},`);
     }
     lines.push("}", "");
 
     for (const namespace of nsList) {
-      const namespaceStructName = toRustName(
-        namespace.name.concat("Namespace"),
+      const namespaceStructName = namespace.name.concat("Prompts");
+      lines.push(
+        `/// Prompts in the '${namespace.name}' namespace.`,
+        ...writeTemplatesMembers(namespaceStructName, namespace),
+        "",
       );
-      lines.push(...writeTemplatesMembers(namespaceStructName, namespace), "");
     }
     return lines.join("\n");
   }

@@ -254,5 +254,39 @@ mod tests {
 
         let prompts_e02 = gen::prompts_e02::Prompts {};
         assert_send_sync(&prompts_e02);
+
+        struct MockE03Template<Input, Output, ToolExecutor: ?Sized = ()> {
+            _phantom: std::marker::PhantomData<(Input, Output, fn() -> ToolExecutor)>,
+        }
+        impl<Input, Output, ToolExecutor: ?Sized>
+            gen::prompts_e03::Template<Input, Output, ToolExecutor>
+            for MockE03Template<Input, Output, ToolExecutor>
+        {
+            fn render(&self, _input: Input) -> gen::prompts_e03::Prompt<Output, ToolExecutor> {
+                gen::prompts_e03::Prompt {
+                    meta: (),
+                    system_message: String::new(),
+                    user_message: String::new(),
+                    examples: vec![],
+                    tools: std::collections::HashMap::new(),
+                    output_format: gen::prompts_e03::OutputFormat::Text,
+                    template_id: gen::prompts_e03::TemplateId::Foo_MyTemplate,
+                    _phantom: std::marker::PhantomData,
+                }
+            }
+        }
+        let prompts_e03 = gen::prompts_e03::Prompts {
+            foo: gen::prompts_e03::FooPrompts {
+                my_template: Box::new(MockE03Template {
+                    _phantom: std::marker::PhantomData,
+                }),
+            },
+            bar: gen::prompts_e03::BarPrompts {
+                my_other_template: Box::new(MockE03Template {
+                    _phantom: std::marker::PhantomData,
+                }),
+            },
+        };
+        assert_send_sync(&prompts_e03);
     }
 }

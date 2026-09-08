@@ -179,7 +179,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "final class Prompts {",
     ];
     for (const ns of nsList) {
-      const namespaceClassName = ns.name.concat("Namespace");
+      const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toDartName(uncapitalize(ns.name));
       promptsLines.push(`final ${namespaceClassName} ${propertyName};`);
     }
@@ -198,9 +198,12 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     sections.push(promptsLines.join("\n"));
 
     for (const namespace of nsList) {
-      const namespaceClassName = namespace.name.concat("Namespace");
+      const namespaceClassName = namespace.name.concat("Prompts");
       sections.push(
-        writeNamespaceMembers(namespaceClassName, namespace).join("\n"),
+        [
+          `/// Prompts in the '${namespace.name}' namespace.`,
+          ...writeNamespaceMembers(namespaceClassName, namespace),
+        ].join("\n"),
       );
     }
   }

@@ -106,5 +106,7 @@ void main() {
     e03.FewShotExample,
     p01.Prompts,
     p08.Prompts,
+    p08.LegalPrompts,
+    p08.FinancePrompts,
   ];
 }
