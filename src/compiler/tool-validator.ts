@@ -27,7 +27,7 @@ export function validateTool(args: {
   }
 
   return {
-    kind: "success",
+    kind: "tool",
     tool: tool,
     schema: toolSchema,
   };

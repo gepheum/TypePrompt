@@ -197,7 +197,7 @@ export type SchemaOrError =
   Schema | InternalErrors | { readonly kind: "other-error" };
 
 export type ValidatedTool = {
-  readonly kind: "success";
+  readonly kind: "tool";
   readonly tool: Tool;
   readonly schema: Schema;
 };
@@ -205,7 +205,7 @@ export type ValidatedTool = {
 export type ToolValidationResult = ValidatedTool | InternalErrors;
 
 export type ValidatedTemplate = {
-  readonly kind: "success";
+  readonly kind: "template";
   readonly template: Template;
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };

@@ -106,7 +106,7 @@ export function validateTemplate(args: {
   }
 
   return {
-    kind: "success",
+    kind: "template",
     template,
     schema: templateSchema,
     tools: tools.kind === "success" ? tools.tools : {},

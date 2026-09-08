@@ -26,7 +26,7 @@ export function validateTemplateBody<HasValContext extends boolean>(
     templateSchema,
     ...Object.values(tools)
       .map((tool) => tool.tool)
-      .filter((tool) => tool.kind === "success")
+      .filter((tool) => tool.kind === "tool")
       .map((tool) => tool.schema),
   ];
   return validateBodyImpl(

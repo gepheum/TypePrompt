@@ -1,6 +1,5 @@
 import type {
   Template,
-  Tool,
   ValidatedTool,
   ValidCompilationResult,
   ValidNamespaceResult,
@@ -74,13 +73,13 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       lines.push(" pass");
     } else {
       for (const t of namespace.templates) {
-        const typePrefix = getTypePrefix(t.template, compilationResult);
+        const { input, output } = writeInputOutputTypes(t, compilationResult);
         const fieldName = toPyName(t.template.name.text, "field_name");
         lines.push(
           ` # Defined in '${t.template.sourcePath}'`,
           ` ${fieldName}: Template[`,
-          `  ${typePrefix}Input,`,
-          `  ${typePrefix}Output,`,
+          `  ${input},`,
+          `  ${output},`,
         );
         if (Object.keys(t.tools).length >= 1) {
           const toolExecutorRef = getToolExecutorRef(
@@ -186,7 +185,16 @@ function writeUserDefinedDatatypes(
     }
     return lines;
   };
+  const metaTypedef: string =
+    metaSchema.namingHints.defaultScope.size <= 0
+      ? "None"
+      : writeType(metaSchema.typeDeclarations["Meta"]!.valueType, metaSchema, {
+          typePrefix: "schema.meta.",
+        });
   const lines = [
+    "# Metadata associated with a prompt.",
+    `type Meta = ${metaTypedef}`,
+    "",
     "@final",
     "class schema(_StaticClass):",
     ' """Contains the user-defined datatypes organized by namespace."""',
@@ -240,12 +248,15 @@ function writeToolExecutorProtocols(
         );
         for (const [toolName, tool] of Object.entries(template.tools)) {
           const methodName = toPyName(toolName, "field_name");
-          const typePrefix = getTypePrefix(tool.tool.tool, compilationResult);
+          const { input, output } = writeInputOutputTypes(
+            tool.tool,
+            compilationResult,
+          );
           lines.push(
             `   async def ${methodName}(`,
             "    self,",
-            `    input: ${typePrefix}Input,`,
-            `   ) -> ${typePrefix}Output:`,
+            `    input: ${input},`,
+            `   ) -> ${output}:`,
             "    ...",
           );
         }
@@ -315,21 +326,24 @@ function writePydanticTypeAdapters(
 ): string {
   const { templates, tools } = validationResult;
   const lines = ["_type_adapters: Final = {"];
-  const writeEntry = (input: Template | Tool): void => {
-    const id = getId(input);
-    const typePrefix = getTypePrefix(input, validationResult);
+  const writeEntry = (input: ValidTemplate | ValidatedTool): void => {
+    const id = getId(input.kind === "template" ? input.template : input.tool);
+    const { input: inputType, output: outputType } = writeInputOutputTypes(
+      input,
+      validationResult,
+    );
     lines.push(
       ` "${id}": (`,
-      `  pydantic.TypeAdapter(${typePrefix}Input),`,
-      `  pydantic.TypeAdapter(${typePrefix}Output),`,
+      `  pydantic.TypeAdapter(${inputType}),`,
+      `  pydantic.TypeAdapter(${outputType}),`,
       " ),",
     );
   };
   for (const template of Object.values(templates)) {
-    writeEntry(template.template);
+    writeEntry(template);
   }
   for (const tool of Object.values(tools)) {
-    writeEntry(tool.tool);
+    writeEntry(tool);
   }
   lines.push("}");
   return lines.join("\n");
@@ -355,6 +369,9 @@ function writeSchema(
     readonly sharedTypePrefix?: string;
   },
 ): readonly string[] {
+  if (schema.namingHints.defaultScope.size <= 0) {
+    return ["pass", ""];
+  }
   const { typePrefix } = options;
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
@@ -568,6 +585,49 @@ function writeType(
   }
 }
 
+function writeInputOutputTypes(
+  input: ValidTemplate | ValidatedTool,
+  compilationResult: ValidCompilationResult,
+): {
+  readonly input: string;
+  readonly output: string;
+} {
+  const { schema } = input;
+
+  const options: {
+    readonly typePrefix: string;
+    readonly sharedTypePrefix: string;
+  } = (() => {
+    const { singleNamespace } = compilationResult;
+    const rawNamespace =
+      (input.kind === "template"
+        ? input.template.namespace?.text
+        : input.tool.namespace?.text) ?? DEFAULT_NAMESPACE;
+    const namespaceName = toPyName(rawNamespace, "snake_case_class_name");
+    const typePrefixBase = singleNamespace
+      ? "schema."
+      : "schema.".concat(namespaceName, ".");
+    const rawName =
+      input.kind === "template"
+        ? input.template.name.text
+        : input.tool.name.text;
+    const name = toPyName(rawName, "snake_case_class_name");
+    return {
+      typePrefix: typePrefixBase.concat(name, "."),
+      sharedTypePrefix: typePrefixBase.concat("shared."),
+    };
+  })();
+
+  const write = (name: string): string => {
+    const declaration = schema.typeDeclarations[name]!;
+    return writeType(declaration.valueType, schema, options);
+  };
+  return {
+    input: write("Input"),
+    output: write("Output"),
+  };
+}
+
 function makeNameFromHint(hint: NamingHint): string {
   const name = hint.namePieces
     .map((piece) => {
@@ -596,26 +656,6 @@ function makeNameFromHint(hint: NamingHint): string {
   } else {
     return name;
   }
-}
-
-function getTypePrefix(
-  input: Template | Tool,
-  compilationResult: ValidCompilationResult,
-): string {
-  const { singleNamespace } = compilationResult;
-  return [
-    "schema",
-    ...(singleNamespace
-      ? []
-      : [
-          toPyName(
-            input.namespace?.text ?? DEFAULT_NAMESPACE,
-            "snake_case_class_name",
-          ),
-        ]),
-    toPyName(input.name.text, "snake_case_class_name"),
-    "",
-  ].join(".");
 }
 
 function getToolExecutorRef(

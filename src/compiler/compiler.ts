@@ -384,9 +384,9 @@ class CompilationResultImpl implements CompilationResult {
         if (namespace !== cachedNamespace) return null;
         const cached = cache.templates[id]!;
         const templateTools =
-          cached.kind === "success" ? cached.tools : cachedNamespace.tools;
+          cached.kind === "template" ? cached.tools : cachedNamespace.tools;
         let toolsOkay: boolean;
-        if (cached.kind === "success") {
+        if (cached.kind === "template") {
           // Check if the template's tools have changed.
           toolsOkay = Object.entries(templateTools).every(
             ([name, templateTool]) =>
@@ -414,7 +414,7 @@ class CompilationResultImpl implements CompilationResult {
 
       this.templates[id] = validationResult;
 
-      if (validationResult.kind === "success") {
+      if (validationResult.kind === "template") {
         namespace.templates.push(validationResult);
       } else if (validationResult.kind === "error") {
         this.finalErrors[template.sourceFile.path]!.push(
