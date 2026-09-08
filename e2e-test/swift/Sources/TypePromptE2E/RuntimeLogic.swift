@@ -29,7 +29,7 @@ public enum TypePromptRuntime {
       examples: [FewShotExample],
       tools: [String: Tool],
       outputFormat: OutputFormat,
-      templateId: TemplateId
+      templateId: TemplateId,
     ) {
       self.meta = meta
       self.systemMessage = systemMessage
@@ -127,7 +127,7 @@ public enum TypePromptRuntime {
     public init(
       userMessage: String,
       intermediateSteps: [IntermediateStepExample],
-      response: String
+      response: String,
     ) {
       self.userMessage = userMessage
       self.intermediateSteps = intermediateSteps
@@ -156,7 +156,7 @@ public enum TypePromptRuntime {
       callId: String,
       toolName: String,
       stringifiedInput: String,
-      stringifiedOutput: String
+      stringifiedOutput: String,
     ) {
       self.callId = callId
       self.toolName = toolName

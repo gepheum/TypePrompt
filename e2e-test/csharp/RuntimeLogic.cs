@@ -44,16 +44,16 @@ namespace TypePromptRuntime
                 {
                     return JsonSerializer.Deserialize<TOutput>(response)!;
                 }
-                catch (System.Exception e)
+                catch (Exception e)
                 {
-                    throw new System.Exception($"Template '{TemplateId.GetId()}': {e.Message}", e);
+                    throw new Exception($"Template '{TemplateId.GetId()}': {e.Message}", e);
                 }
             }
             else if (OutputFormat is TextOutputFormat)
             {
                 return (TOutput)(object)response;
             }
-            throw new System.InvalidOperationException($"Unsupported output format: {OutputFormat}");
+            throw new InvalidOperationException($"Unsupported output format: {OutputFormat}");
         }
     }
 
@@ -120,7 +120,7 @@ namespace TypePromptRuntime
             templateId switch
             {
                 TemplateId.Todo => "Main:Todo",
-                _ => throw new System.ArgumentOutOfRangeException(nameof(templateId)),
+                _ => throw new ArgumentOutOfRangeException(nameof(templateId)),
             };
     }
 }

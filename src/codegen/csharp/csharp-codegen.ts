@@ -111,7 +111,7 @@ function writeTemplateIdEnum(
     lines.push(`TemplateId.${memberName} => "${templateId}",`);
   }
   lines.push(
-    "_ => throw new System.ArgumentOutOfRangeException(nameof(templateId)),",
+    "_ => throw new ArgumentOutOfRangeException(nameof(templateId)),",
     "};",
     "}",
     "}",
@@ -603,14 +603,14 @@ function writeExecuteToolCall(
     "break;",
     "}",
     "}",
-    "catch (System.Exception e)",
+    "catch (Exception e)",
     "{",
     'var callInfo = $"{{\\"callId\\": \\"{toolCall.CallId}\\", \\"toolName\\": \\"{toolCall.ToolName}\\"}}";',
-    'throw new System.Exception($"Tool call failed: {callInfo} — {e.Message}", e);',
+    'throw new Exception($"Tool call failed: {callInfo} — {e.Message}", e);',
     "}",
     "if (string.IsNullOrEmpty(stringifiedOutput))",
     "{",
-    'throw new System.ArgumentException($"Tool not found: {toolCall.ToolName}");',
+    'throw new ArgumentException($"Tool not found: {toolCall.ToolName}");',
     "}",
     "return new ToolCallResponse(toolCall.CallId, stringifiedOutput);",
     "}",
