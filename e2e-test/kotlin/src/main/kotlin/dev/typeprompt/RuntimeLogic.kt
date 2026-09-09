@@ -940,7 +940,7 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
  * When using overrides, inject the resulting [Prompts] instance as a
  * dependency rather than relying on the global [prompts] variable.
  */
-class TemplateOverrider internal constructor() {
+object templateOverrider {
     fun templatesData(): JsonElement {
         return JsonConfig.lenient.encodeToJsonElement(Spec.Templates.serializer(), templatesData)
     }
@@ -974,17 +974,8 @@ class TemplateOverrider internal constructor() {
     }
 }
 
-/**
- * Use this with external frameworks that support template override injection
- * for experimentation or A/B testing.
- *
- * When using overrides, inject the resulting [Prompts] instance as a
- * dependency rather than relying on the global [prompts] variable.
- */
-val templateOverrider: TemplateOverrider = TemplateOverrider()
-
 /** Entry point for building prompts. */
-val prompts: Prompts = Prompts(templatesData)
+val prompts = Prompts(templatesData)
 // </static:kotlin-logic>
 
 fun getGreeting(): String {
