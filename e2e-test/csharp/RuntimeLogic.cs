@@ -1,7 +1,11 @@
 // <static:csharp-imports>
+using System.Collections;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using ToonFormat;
+using YamlDotNet.Serialization;
 // </static:csharp-imports>
 
 namespace TypePromptRuntime
@@ -143,12 +147,14 @@ namespace TypePromptRuntime
 
     public static class TemplateIdExtensions
     {
-        public static string GetId(this TemplateId templateId) =>
-            templateId switch
+        public static string GetId(this TemplateId templateId)
+        {
+            return templateId switch
             {
                 TemplateId.Todo => "Main:Todo",
                 _ => throw new ArgumentOutOfRangeException(nameof(templateId)),
             };
+        }
     }
 
     file static class ToolExecution
@@ -162,10 +168,23 @@ namespace TypePromptRuntime
 
     file static class MetaParser
     {
-        public static object Parse(JsonElement? meta)
+        public static object? Parse(JsonElement? meta)
         {
-            return meta!.Value;
+            return meta;
         }
+    }
+
+    file static class RuntimeData
+    {
+        public static readonly Spec.Templates TemplatesData = new()
+        {
+            Edition = 0,
+            Signature = "",
+            templates = new Dictionary<string, Spec.Template>(),
+            Tools = new Dictionary<string, Spec.Tool>(),
+            SingleNamespace = true,
+            SourceFiles = new Dictionary<string, string>(),
+        };
     }
     // </generated>
 
@@ -179,8 +198,452 @@ namespace TypePromptRuntime
     {
         public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {
-            _ = spec;
-            throw new NotImplementedException();
+            if (!spec.templates.TryGetValue(templateId, out var template))
+            {
+                throw new KeyNotFoundException($"Template not found: {templateId}");
+            }
+
+            var inputElement = JsonSerializer.SerializeToElement(input);
+            var inputObj = JsonElementToObject(inputElement);
+
+            var snippets = template.Snippets;
+            var contents = template.Contents;
+
+            JsonElement? metaElement;
+            string systemMessage;
+            string userMessage;
+            IReadOnlyList<FewShotExample> examples;
+
+            if (contents is Spec.TemplateContents_KindNoVariants noVariants)
+            {
+                var content = noVariants.Content;
+                metaElement = content.Meta;
+                systemMessage = RenderBody(content.System, inputObj, snippets);
+                var userBody = content.User ?? Array.Empty<Spec.BodyPiece>();
+                userMessage = RenderBody(userBody, inputObj, snippets);
+                examples = RenderExamples(content.Examples, userBody, template);
+            }
+            else if (contents is Spec.TemplateContents_KindVariants variants)
+            {
+                if (inputObj is not IDictionary<string, object?> inputDict ||
+                    !inputDict.TryGetValue("variant", out var variantObj) ||
+                    variantObj == null)
+                {
+                    throw new InvalidOperationException("Input must contain a 'variant' property for variant templates");
+                }
+                var variant = variantObj.ToString()!;
+                if (!variants.Variants.TryGetValue(variant, out var variantContent))
+                {
+                    throw new KeyNotFoundException($"Variant '{variant}' not found");
+                }
+                var defaultContent = variants.DefaultContent;
+
+                metaElement = variantContent.Meta ?? defaultContent.Meta;
+                var systemBody = variantContent.System ?? defaultContent.System ?? Array.Empty<Spec.BodyPiece>();
+                var userBody = variantContent.User ?? defaultContent.User ?? Array.Empty<Spec.BodyPiece>();
+                systemMessage = RenderBody(systemBody, inputObj, snippets);
+                userMessage = RenderBody(userBody, inputObj, snippets);
+                var rawExamples = variantContent.Examples ?? defaultContent.Examples;
+                examples = RenderExamples(rawExamples, userBody, template);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unsupported template contents kind: {contents.GetType().Name}");
+            }
+
+            var meta = MetaParser.Parse(metaElement);
+
+            var tools = new Dictionary<string, Tool>();
+            foreach (var templateTool in template.Tools)
+            {
+                var toolSpec = spec.Tools[templateTool.Id];
+                tools[templateTool.Name] = new Tool(
+                    Name: templateTool.Name,
+                    Description: toolSpec.Description
+                );
+            }
+
+            OutputFormat outputFormat = template.OutputFormat switch
+            {
+                Spec.OutputFormat.Json => new JsonOutputFormat(
+                    template.OutputJsonSchema?.GetRawText() ?? "{}"
+                ),
+                Spec.OutputFormat.Text => new TextOutputFormat(),
+                _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),
+            };
+
+            var resolvedTemplateId = Enum.GetValues<TemplateId>()
+                .First(t => t.GetId() == templateId);
+
+            return new Prompt<Output, ToolExecutor>(
+                Meta: meta!,
+                SystemMessage: systemMessage,
+                UserMessage: userMessage,
+                Examples: examples,
+                Tools: tools,
+                OutputFormat: outputFormat,
+                TemplateId: resolvedTemplateId
+            );
+        }
+
+        private static object? JsonElementToObject(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    {
+                        var dict = new Dictionary<string, object?>();
+                        foreach (var prop in element.EnumerateObject())
+                        {
+                            dict[prop.Name] = JsonElementToObject(prop.Value);
+                        }
+                        return dict;
+                    }
+                case JsonValueKind.Array:
+                    {
+                        var list = new List<object?>();
+                        foreach (var item in element.EnumerateArray())
+                        {
+                            list.Add(JsonElementToObject(item));
+                        }
+                        return list;
+                    }
+                case JsonValueKind.String:
+                    {
+                        return element.GetString();
+                    }
+                case JsonValueKind.Number:
+                    {
+                        if (element.TryGetInt64(out var l))
+                        {
+                            if (l >= int.MinValue && l <= int.MaxValue)
+                                return (int)l;
+                            return l;
+                        }
+                        if (element.TryGetDecimal(out var d))
+                        {
+                            return d;
+                        }
+                        return element.GetDouble();
+                    }
+                case JsonValueKind.True:
+                    {
+                        return true;
+                    }
+                case JsonValueKind.False:
+                    {
+                        return false;
+                    }
+                case JsonValueKind.Null:
+                case JsonValueKind.Undefined:
+                default:
+                    {
+                        return null;
+                    }
+            }
+        }
+
+        private static object? Evaluate(Spec.Expression expression, object? val)
+        {
+            switch (expression)
+            {
+                case Spec.Expression_KindInput:
+                    {
+                        return val;
+                    }
+                case Spec.Expression_KindProperty propExpr:
+                    {
+                        var obj = Evaluate(propExpr.Left, val);
+                        if (obj is IDictionary<string, object?> dict)
+                        {
+                            return dict[propExpr.Property];
+                        }
+                        throw new InvalidOperationException($"Cannot access property '{propExpr.Property}' on non-dictionary: {obj?.GetType().Name ?? "null"}");
+                    }
+                default:
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(expression));
+                    }
+            }
+        }
+
+        private static string Indent(string text, string spaces)
+        {
+            if (string.IsNullOrEmpty(spaces))
+            {
+                return text;
+            }
+            return text.Replace("\n", "\n" + spaces);
+        }
+
+        private static string FormatTable(object? v, Spec.InsertFormat fmt)
+        {
+            if (v is not IList<object?> list || list.Count == 0)
+            {
+                return "";
+            }
+            var separator = fmt == Spec.InsertFormat.Csv ? "," : "\t";
+            if (list[0] is not IDictionary<string, object?> firstRow)
+            {
+                return "";
+            }
+            var headers = firstRow.Keys.ToList();
+            var lines = new List<string>
+            {
+                string.Join(separator, headers)
+            };
+            foreach (var item in list)
+            {
+                if (item is IDictionary<string, object?> row)
+                {
+                    var cells = new List<string>();
+                    foreach (var key in headers)
+                    {
+                        row.TryGetValue(key, out var cellVal);
+                        var str = cellVal?.ToString() ?? "";
+                        if (fmt == Spec.InsertFormat.Csv)
+                        {
+                            if (str.Contains('"') || str.Contains(',') || str.Contains('\n') || str.Contains('\r'))
+                            {
+                                cells.Add("\"" + str.Replace("\"", "\"\"") + "\"");
+                            }
+                            else
+                            {
+                                cells.Add(str);
+                            }
+                        }
+                        else
+                        {
+                            cells.Add(str
+                                .Replace("\\", "\\\\")
+                                .Replace("\t", "\\t")
+                                .Replace("\n", "\\n")
+                                .Replace("\r", "\\r"));
+                        }
+                    }
+                    lines.Add(string.Join(separator, cells));
+                }
+            }
+            return string.Join("\n", lines);
+        }
+
+        private static string FormatValue(object? v, Spec.InsertFormat? fmt)
+        {
+            switch (fmt)
+            {
+                case null:
+                case Spec.InsertFormat.Text:
+                    {
+                        return v?.ToString() ?? "";
+                    }
+                case Spec.InsertFormat.Json:
+                    {
+                        var json = JsonSerializer.Serialize(v, new JsonSerializerOptions { WriteIndented = true });
+                        return json.Replace("\r\n", "\n");
+                    }
+                case Spec.InsertFormat.Yaml:
+                    {
+                        var yamlSerializer = new SerializerBuilder().Build();
+                        return yamlSerializer.Serialize(v).TrimEnd('\r', '\n').Replace("\r\n", "\n");
+                    }
+                case Spec.InsertFormat.Toon:
+                    {
+                        return ToonFormat.Toon.Encode(v, new ToonFormat.EncodeOptions()).Replace("\r\n", "\n");
+                    }
+                case Spec.InsertFormat.Csv:
+                case Spec.InsertFormat.Tsv:
+                    {
+                        return FormatTable(v, fmt.Value);
+                    }
+                default:
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(fmt));
+                    }
+            }
+        }
+
+        private static string RenderBody(
+            IReadOnlyList<Spec.BodyPiece>? body,
+            object? inp,
+            IReadOnlyDictionary<string, Spec.Snippet> snippets
+        )
+        {
+            if (body == null || body.Count == 0)
+            {
+                return "";
+            }
+            var sb = new StringBuilder();
+            foreach (var piece in body)
+            {
+                switch (piece)
+                {
+                    case Spec.BodyPiece_KindText textPiece:
+                        {
+                            sb.Append(textPiece.Text);
+                            break;
+                        }
+                    case Spec.BodyPiece_KindInsertVal insertValPiece:
+                        {
+                            var val = Evaluate(insertValPiece.Val, inp);
+                            var formatted = FormatValue(val, insertValPiece.Format);
+                            sb.Append(Indent(formatted, insertValPiece.Indent));
+                            break;
+                        }
+                    case Spec.BodyPiece_KindInsertSnippet insertSnippetPiece:
+                        {
+                            if (!snippets.TryGetValue(insertSnippetPiece.Snippet, out var snippet))
+                            {
+                                throw new KeyNotFoundException($"Snippet not found: {insertSnippetPiece.Snippet}");
+                            }
+                            var renderedSnippet = RenderSnippet(snippet, inp, snippets);
+                            sb.Append(Indent(renderedSnippet, insertSnippetPiece.Indent));
+                            break;
+                        }
+                    default:
+                        {
+                            throw new ArgumentOutOfRangeException(nameof(piece));
+                        }
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static string RenderSnippet(
+            Spec.Snippet snippet,
+            object? inp,
+            IReadOnlyDictionary<string, Spec.Snippet> snippets
+        )
+        {
+            switch (snippet)
+            {
+                case Spec.Snippet_KindSnippet kindSnippet:
+                    {
+                        return RenderBody(kindSnippet.Body, inp, snippets);
+                    }
+                case Spec.Snippet_KindSnippetIf snippetIf:
+                    {
+                        var evalResult = Evaluate(snippetIf.Expression, inp);
+                        bool condition;
+                        switch (snippetIf.Is)
+                        {
+                            case Spec.Snippet_KindSnippetIf_Is.NotEmpty:
+                                {
+                                    if (evalResult is ICollection col)
+                                    {
+                                        condition = col.Count > 0;
+                                    }
+                                    else if (evalResult is string s)
+                                    {
+                                        condition = s.Length > 0;
+                                    }
+                                    else if (evalResult != null)
+                                    {
+                                        condition = true;
+                                    }
+                                    else
+                                    {
+                                        condition = false;
+                                    }
+                                    break;
+                                }
+                            case Spec.Snippet_KindSnippetIf_Is.NotNull:
+                                {
+                                    condition = evalResult != null;
+                                    break;
+                                }
+                            case Spec.Snippet_KindSnippetIf_Is.True:
+                                {
+                                    if (evalResult is bool b)
+                                    {
+                                        condition = b;
+                                    }
+                                    else if (evalResult is string str)
+                                    {
+                                        condition = str.Length > 0;
+                                    }
+                                    else if (evalResult is int i)
+                                    {
+                                        condition = i != 0;
+                                    }
+                                    else
+                                    {
+                                        condition = evalResult != null;
+                                    }
+                                    break;
+                                }
+                            default:
+                                {
+                                    throw new ArgumentOutOfRangeException();
+                                }
+                        }
+                        return RenderBody(condition ? snippetIf.Then : snippetIf.Else, inp, snippets);
+                    }
+                case Spec.Snippet_KindSnippetSwitch snippetSwitch:
+                    {
+                        var switchVal = Evaluate(snippetSwitch.Expression, inp);
+                        var switchKey = switchVal?.ToString() ?? "";
+                        if (switchVal is bool boolVal)
+                        {
+                            switchKey = boolVal ? "true" : "false";
+                        }
+                        if (!snippetSwitch.Branches.TryGetValue(switchKey, out var branch))
+                        {
+                            throw new KeyNotFoundException($"Branch not found: {switchVal}");
+                        }
+                        return RenderBody(branch, inp, snippets);
+                    }
+                default:
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(snippet));
+                    }
+            }
+        }
+
+        private static IReadOnlyList<FewShotExample> RenderExamples(
+            IReadOnlyList<Spec.FewShotExample>? examples,
+            IReadOnlyList<Spec.BodyPiece>? userBody,
+            Spec.Template tmpl
+        )
+        {
+            if (examples == null || examples.Count == 0)
+            {
+                return Array.Empty<FewShotExample>();
+            }
+            var result = new List<FewShotExample>();
+            foreach (var ex in examples)
+            {
+                var exInputObj = JsonElementToObject(ex.Input);
+                var exOutputObj = JsonElementToObject(ex.Output);
+                var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets);
+
+                var intermediateSteps = new List<IntermediateStepExample>();
+                foreach (var step in ex.IntermediateSteps)
+                {
+                    var toolCalls = new List<ToolCallExample>();
+                    foreach (var tc in step.ToolCalls)
+                    {
+                        toolCalls.Add(new ToolCallExample(
+                            CallId: tc.CallId,
+                            ToolName: tc.ToolName,
+                            StringifiedInput: JsonSerializer.Serialize(tc.Input),
+                            StringifiedOutput: JsonSerializer.Serialize(tc.Output)
+                        ));
+                    }
+                    intermediateSteps.Add(new IntermediateStepExample(toolCalls));
+                }
+
+                var outputFormat = tmpl.OutputFormat == Spec.OutputFormat.Json
+                    ? Spec.InsertFormat.Json
+                    : Spec.InsertFormat.Text;
+                var response = FormatValue(exOutputObj, outputFormat);
+
+                result.Add(new FewShotExample(
+                    UserMessage: userMessage,
+                    IntermediateSteps: intermediateSteps,
+                    Response: response
+                ));
+            }
+            return result;
         }
     }
     // </static:csharp-logic>
@@ -196,14 +659,14 @@ namespace Spec
         [JsonPropertyName("signature")]
         public required string Signature { get; init; }
         [JsonPropertyName("templates")]
-        public required Dictionary<string, Template> templates { get; init; }
+        public required IReadOnlyDictionary<string, Template> templates { get; init; }
         [JsonPropertyName("tools")]
-        public required Dictionary<string, Tool> Tools { get; init; }
+        public required IReadOnlyDictionary<string, Tool> Tools { get; init; }
         [JsonPropertyName("singleNamespace")]
         public required bool SingleNamespace { get; init; }
         /// <summary>The key is a relative path to a .xml file. The value is the file content.</summary>
         [JsonPropertyName("sourceFiles")]
-        public required Dictionary<string, string> SourceFiles { get; init; }
+        public required IReadOnlyDictionary<string, string> SourceFiles { get; init; }
     }
 
     file record Template
@@ -215,11 +678,11 @@ namespace Spec
         [JsonPropertyName("outputFormat")]
         public required OutputFormat OutputFormat { get; init; }
         [JsonPropertyName("tools")]
-        public required List<TemplateTool> Tools { get; init; }
+        public required IReadOnlyList<TemplateTool> Tools { get; init; }
         [JsonPropertyName("contents")]
         public required TemplateContents Contents { get; init; }
         [JsonPropertyName("snippets")]
-        public required Dictionary<string, Snippet> Snippets { get; init; }
+        public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
         [JsonPropertyName("outputJsonSchema")]
         public JsonElement? OutputJsonSchema { get; init; }
     }
@@ -285,7 +748,7 @@ namespace Spec
         [JsonPropertyName("kind")]
         private readonly string Kind = "variants";
         [JsonPropertyName("variants")]
-        public required Dictionary<string, TemplateContent> Variants { get; init; }
+        public required IReadOnlyDictionary<string, TemplateContent> Variants { get; init; }
         [JsonPropertyName("defaultContent")]
         public required TemplateContent DefaultContent { get; init; }
     }
@@ -295,11 +758,11 @@ namespace Spec
         [JsonPropertyName("meta")]
         public JsonElement? Meta { get; init; }
         [JsonPropertyName("system")]
-        public List<BodyPiece>? System_ { get; init; }
+        public IReadOnlyList<BodyPiece>? System { get; init; }
         [JsonPropertyName("user")]
-        public List<BodyPiece>? User { get; init; }
+        public IReadOnlyList<BodyPiece>? User { get; init; }
         [JsonPropertyName("examples")]
-        public List<FewShotExample>? Examples { get; init; }
+        public IReadOnlyList<FewShotExample>? Examples { get; init; }
     }
 
     file record FewShotExample
@@ -309,13 +772,13 @@ namespace Spec
         [JsonPropertyName("output")]
         public required JsonElement Output { get; init; }
         [JsonPropertyName("intermediateSteps")]
-        public required List<FewShotExample_IntermediateSteps> IntermediateSteps { get; init; }
+        public required IReadOnlyList<FewShotExample_IntermediateSteps> IntermediateSteps { get; init; }
     }
 
     file record FewShotExample_IntermediateSteps
     {
         [JsonPropertyName("toolCalls")]
-        public required List<ToolCallExample> ToolCalls { get; init; }
+        public required IReadOnlyList<ToolCallExample> ToolCalls { get; init; }
     }
 
     file record ToolCallExample
@@ -497,7 +960,7 @@ namespace Spec
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet";
         [JsonPropertyName("body")]
-        public required List<BodyPiece> Body { get; init; }
+        public required IReadOnlyList<BodyPiece> Body { get; init; }
     }
 
     file record Snippet_KindSnippetIf : Snippet
@@ -510,9 +973,9 @@ namespace Spec
         [JsonPropertyName("is")]
         public required Snippet_KindSnippetIf_Is Is { get; init; }
         [JsonPropertyName("then")]
-        public required List<BodyPiece> Then { get; init; }
+        public required IReadOnlyList<BodyPiece> Then { get; init; }
         [JsonPropertyName("else")]
-        public required List<BodyPiece> Else { get; init; }
+        public required IReadOnlyList<BodyPiece> Else { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -534,7 +997,7 @@ namespace Spec
         [JsonPropertyName("expression")]
         public required Expression Expression { get; init; }
         [JsonPropertyName("branches")]
-        public required Dictionary<string, List<BodyPiece>> Branches { get; init; }
+        public required IReadOnlyDictionary<string, IReadOnlyList<BodyPiece>> Branches { get; init; }
     }
 
     file record Tool

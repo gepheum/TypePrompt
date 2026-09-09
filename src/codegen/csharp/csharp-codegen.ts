@@ -344,6 +344,10 @@ function writePromptsClass(
     lines.push(
       "private readonly IRenderer _renderer;",
       "",
+      "public Prompts() : this(new SpecRenderer(RuntimeData.TemplatesData))",
+      "{",
+      "}",
+      "",
       "internal Prompts(IRenderer renderer)",
       "{",
       "_renderer = renderer;",
@@ -365,7 +369,15 @@ function writePromptsClass(
       const propertyName = toCSharpName(ns.name);
       lines.push(`public ${namespaceClassName} ${propertyName} { get; }`);
     }
-    lines.push("", "internal Prompts(IRenderer renderer)", "{");
+    lines.push(
+      "",
+      "public Prompts() : this(new SpecRenderer(RuntimeData.TemplatesData))",
+      "{",
+      "}",
+      "",
+      "internal Prompts(IRenderer renderer)",
+      "{",
+    );
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toCSharpName(ns.name);
