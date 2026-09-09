@@ -173,10 +173,6 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "class Prompts internal constructor(",
       "private val spec: Spec.Templates,",
       ") {",
-      "companion object {",
-      "val default: Prompts = Prompts(templatesData)",
-      "}",
-      "",
     );
     const renderMethods = writeTemplateRenderMethods(singleNamespace);
     if (renderMethods.length > 0) {
@@ -189,10 +185,6 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "class Prompts internal constructor(",
       "private val spec: Spec.Templates,",
       ") {",
-      "companion object {",
-      "val default: Prompts = Prompts(templatesData)",
-      "}",
-      "",
     );
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");

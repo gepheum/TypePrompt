@@ -16,7 +16,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class Test01Basics_Translate {
-    private val prompt = com.example.prompts01.Prompts.default.renderTranslate(
+    private val prompt = com.example.prompts01.prompts.renderTranslate(
         com.example.prompts01.Schema.Translate.Input(
             text = "Hello world",
             targetLanguage = "French",
@@ -76,7 +76,7 @@ class Test01Basics_Translate {
 }
 
 class Test02StructuredOutput_TriageTicket {
-    private val prompt = com.example.prompts02.Prompts.default.renderTriageTicket(
+    private val prompt = com.example.prompts02.prompts.renderTriageTicket(
         com.example.prompts02.Schema.TriageTicket.Input(
             subject = "App crashes on login",
             body = "It crashes every time.",
@@ -149,7 +149,7 @@ class Test02StructuredOutput_TriageTicket {
 
     @Test
     fun testUserMessageContainsYamlRenderedRecentTickets() {
-        val p = com.example.prompts02.Prompts.default.renderTriageTicket(
+        val p = com.example.prompts02.prompts.renderTriageTicket(
             com.example.prompts02.Schema.TriageTicket.Input(
                 subject = "X",
                 body = "Y",
@@ -188,7 +188,7 @@ class Test02StructuredOutput_TriageTicket {
 }
 
 class Test03Tools_ResearchQuestion {
-    private val prompt = com.example.prompts03.Prompts.default.renderResearchQuestion(
+    private val prompt = com.example.prompts03.prompts.renderResearchQuestion(
         com.example.prompts03.Schema.ResearchQuestion.Input(
             question = "Tokyo population?",
         ),
@@ -269,7 +269,7 @@ class Test03Tools_ResearchQuestion {
 class Test04Snippets_SummarizeDocument {
     @Test
     fun testSwitchSnippetSelectsExecutiveInstruction() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -281,7 +281,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testSwitchSnippetSelectsTechnicalInstruction() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -293,7 +293,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testSwitchSnippetSelectsGeneralInstruction() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -305,7 +305,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testSwitchSnippetDoesNotBleedIntoOtherVariant() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -317,7 +317,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testConditionalSnippetFocusInstructionWhenFocusTopicSet() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -330,7 +330,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testConditionalSnippetNoFocusInstructionWhenAbsent() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "T",
                 content = "C",
@@ -342,7 +342,7 @@ class Test04Snippets_SummarizeDocument {
 
     @Test
     fun testUserMessageWrapsTitleInEnclosedTag() {
-        val p = com.example.prompts05.Prompts.default.renderSummarizeDocument(
+        val p = com.example.prompts05.prompts.renderSummarizeDocument(
             com.example.prompts05.Schema.SummarizeDocument.Input(
                 title = "AI Report",
                 content = "...",
@@ -355,21 +355,21 @@ class Test04Snippets_SummarizeDocument {
 
 class Test05Variants_WriteProductDescription {
     private val features = listOf("removes 99.9% of contaminants", "lasts 6 months")
-    private val marketing = com.example.prompts04.Prompts.default.renderWriteProductDescription(
+    private val marketing = com.example.prompts04.prompts.renderWriteProductDescription(
         com.example.prompts04.Schema.WriteProductDescription.Input(
             productName = "AquaFilter Pro",
             features = features,
             variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Marketing,
         ),
     )
-    private val technical = com.example.prompts04.Prompts.default.renderWriteProductDescription(
+    private val technical = com.example.prompts04.prompts.renderWriteProductDescription(
         com.example.prompts04.Schema.WriteProductDescription.Input(
             productName = "AquaFilter Pro",
             features = features,
             variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Technical,
         ),
     )
-    private val brief = com.example.prompts04.Prompts.default.renderWriteProductDescription(
+    private val brief = com.example.prompts04.prompts.renderWriteProductDescription(
         com.example.prompts04.Schema.WriteProductDescription.Input(
             productName = "AquaFilter Pro",
             features = features,
@@ -458,7 +458,7 @@ class Test06ToonFormat_WriteComparisonArticle {
         cons = listOf("pricey"),
     )
 
-    private val prompt = com.example.prompts06.Prompts.default.renderWriteComparisonArticle(
+    private val prompt = com.example.prompts06.prompts.renderWriteComparisonArticle(
         com.example.prompts06.Schema.WriteComparisonArticle.Input(
             providers = listOf(provider),
             useCase = "serving ML inference workloads",
@@ -519,7 +519,7 @@ class Test07SharedTypes {
 
     @Test
     fun testShippingConfirmation() {
-        val prompt = com.example.prompts07.Prompts.default.renderShippingConfirmation(
+        val prompt = com.example.prompts07.prompts.renderShippingConfirmation(
             com.example.prompts07.Schema.ShippingConfirmation.Input(
                 recipient = contact,
                 orderNumber = "ORD-1234",
@@ -539,7 +539,7 @@ class Test07SharedTypes {
 
     @Test
     fun testReturnSlip() {
-        val prompt = com.example.prompts07.Prompts.default.renderReturnSlip(
+        val prompt = com.example.prompts07.prompts.renderReturnSlip(
             com.example.prompts07.Schema.ReturnSlip.Input(
                 customer = contact,
                 returnReason = com.example.prompts07.Schema.ReturnSlip.Input_ReturnReason.Defective,
@@ -557,7 +557,7 @@ class Test07SharedTypes {
 class Test08Namespaces {
     @Test
     fun testFinanceSummarizeTransaction() {
-        val prompt = com.example.prompts08.Prompts.default.finance.renderSummarizeTransaction(
+        val prompt = com.example.prompts08.prompts.finance.renderSummarizeTransaction(
             com.example.prompts08.Schema.Finance.SummarizeTransaction.Input(
                 description = "AWS monthly bill",
                 amount = com.example.prompts08.Schema.Finance.Shared.MoneyAmount(
@@ -570,14 +570,14 @@ class Test08Namespaces {
         )
 
         assertEquals("Finance:SummarizeTransaction", prompt.templateId.toString())
-        assertNotNull(com.example.prompts08.Prompts.default.finance)
+        assertNotNull(com.example.prompts08.prompts.finance)
         assertIs<com.example.prompts08.JsonOutputFormat>(prompt.outputFormat)
         assertTrue(prompt.userMessage.contains("AWS monthly bill"))
     }
 
     @Test
     fun testFinanceDetectAnomaly() {
-        val prompt = com.example.prompts08.Prompts.default.finance.renderDetectAnomaly(
+        val prompt = com.example.prompts08.prompts.finance.renderDetectAnomaly(
             com.example.prompts08.Schema.Finance.DetectAnomaly.Input(
                 recentTransactions = emptyList(),
                 newTransaction = com.example.prompts08.Schema.Finance.DetectAnomaly.Input_NewTransaction(
@@ -598,7 +598,7 @@ class Test08Namespaces {
 
     @Test
     fun testLegalDraftNda() {
-        val prompt = com.example.prompts08.Prompts.default.legal.renderDraftNda(
+        val prompt = com.example.prompts08.prompts.legal.renderDraftNda(
             com.example.prompts08.Schema.Legal.DraftNda.Input(
                 disclosingParty = com.example.prompts08.Schema.Legal.Shared.Party(
                     name = "Acme Corp",
@@ -617,7 +617,7 @@ class Test08Namespaces {
 
         assertEquals("Legal:DraftNda", prompt.templateId.toString())
         assertIs<com.example.prompts08.TextOutputFormat>(prompt.outputFormat)
-        assertNotNull(com.example.prompts08.Prompts.default.legal)
+        assertNotNull(com.example.prompts08.prompts.legal)
         assertTrue(prompt.userMessage.contains("Acme Corp"))
         assertTrue(prompt.userMessage.contains("Beta LLC"))
         assertTrue(prompt.systemMessage.contains("non-disclosure agreement"))
@@ -625,7 +625,7 @@ class Test08Namespaces {
 
     @Test
     fun testLegalSummarizeClause() {
-        val prompt = com.example.prompts08.Prompts.default.legal.renderSummarizeClause(
+        val prompt = com.example.prompts08.prompts.legal.renderSummarizeClause(
             com.example.prompts08.Schema.Legal.SummarizeClause.Input(
                 clauseText = "The party shall indemnify and hold harmless...",
                 reviewingParty = com.example.prompts08.Schema.Legal.Shared.Party(
@@ -660,7 +660,7 @@ class TestE01_AnalyzeSalesData {
         ),
     )
 
-    private val csv = com.example.prompts_e01.Prompts.default.renderAnalyzeSalesData(
+    private val csv = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
         com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
             rows = rows,
             question = "Top product?",
@@ -668,7 +668,7 @@ class TestE01_AnalyzeSalesData {
         ),
     )
 
-    private val tsv = com.example.prompts_e01.Prompts.default.renderAnalyzeSalesData(
+    private val tsv = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
         com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
             rows = rows,
             question = "Top product?",
@@ -705,7 +705,7 @@ class TestE01_AnalyzeSalesData {
 
     @Test
     fun testEmptyRowsRendersNoTableContent() {
-        val empty = com.example.prompts_e01.Prompts.default.renderAnalyzeSalesData(
+        val empty = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
             com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
                 rows = emptyList(),
                 question = "Any data?",
@@ -787,7 +787,7 @@ class TestE01_AnalyzeSalesData {
 }
 
 class TestCrossCutting_ParseResponse {
-    private fun p02Render() = com.example.prompts02.Prompts.default.renderTriageTicket(
+    private fun p02Render() = com.example.prompts02.prompts.renderTriageTicket(
         com.example.prompts02.Schema.TriageTicket.Input(
             subject = "X",
             body = "Y",
@@ -822,7 +822,7 @@ class TestCrossCutting_ParseResponse {
 
     @Test
     fun testReturnsRawStringForTextOutputFormat() {
-        val prompt = com.example.prompts01.Prompts.default.renderTranslate(
+        val prompt = com.example.prompts01.prompts.renderTranslate(
             com.example.prompts01.Schema.Translate.Input(
                 text = "hi",
                 targetLanguage = "Spanish",
@@ -928,7 +928,7 @@ class TestE01_JsonSerialization {
 class TestTemplateOverrider {
     @Test
     fun testSignatureCheckAndOverrides() {
-        val data = com.example.prompts01.TemplateOverrider.instance.templatesData()
+        val data = com.example.prompts01.templateOverrider.templatesData()
         val sig = data.jsonObject["signature"]?.jsonPrimitive?.content
         assertNotNull(sig)
         assertTrue(sig.isNotEmpty())
@@ -936,11 +936,11 @@ class TestTemplateOverrider {
         // Test signature mismatch throws IllegalArgumentException
         val wrongDoc = Json.parseToJsonElement("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}")
         assertFailsWith<IllegalArgumentException> {
-            com.example.prompts01.TemplateOverrider.instance.applyOverrides(wrongDoc)
+            com.example.prompts01.templateOverrider.applyOverrides(wrongDoc)
         }
 
         // Test valid overrides
-        val prompts = com.example.prompts01.TemplateOverrider.instance.applyOverrides(data)
+        val prompts = com.example.prompts01.templateOverrider.applyOverrides(data)
         assertNotNull(prompts)
         val prompt = prompts.renderTranslate(
             com.example.prompts01.Schema.Translate.Input(
