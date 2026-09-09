@@ -14,8 +14,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
@@ -47,6 +49,7 @@ data class Prompt<out Output, in ToolExecutor>(
                     throw SerializationException("Template '$templateId': ${e.message}", e)
                 }
             }
+
             is TextOutputFormat -> {
                 @Suppress("UNCHECKED_CAST")
                 return response as Output
@@ -78,6 +81,7 @@ data class Tool(
     val name: String,
     val description: String,
 )
+
 /**
  * A single few-shot example consisting of a user message, optional intermediate
  * tool-call steps, and the expected response.
@@ -137,6 +141,10 @@ private suspend fun executeToolCall(
 }
 
 // <static:kotlin-logic>
+private fun parseMeta(element: JsonElement?): Meta {
+    if (element == null) return null as Meta
+    return Json.decodeFromJsonElement<Meta>(element)
+}
 // </static:kotlin-logic>
 
 // <generated:spec>
@@ -172,6 +180,7 @@ internal object Spec {
     enum class OutputFormat {
         @SerialName("json")
         Json,
+
         @SerialName("text")
         Text,
     }
@@ -188,7 +197,8 @@ internal object Spec {
     @Serializable(with = TemplateContents_Serializer::class)
     sealed interface TemplateContents {}
 
-    private object TemplateContents_Serializer : JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
+    private object TemplateContents_Serializer :
+        JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<TemplateContents> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "no-variants" -> TemplateContents_KindNoVariants.serializer()
@@ -351,14 +361,19 @@ internal object Spec {
     enum class InsertFormat {
         @SerialName("text")
         Text,
+
         @SerialName("json")
         Json,
+
         @SerialName("yaml")
         Yaml,
+
         @SerialName("toon")
         Toon,
+
         @SerialName("csv")
         Csv,
+
         @SerialName("tsv")
         Tsv,
     }
@@ -469,8 +484,10 @@ internal object Spec {
     enum class Snippet_KindSnippetIf_Is {
         @SerialName("not-null")
         NotNull,
+
         @SerialName("not-empty")
         NotEmpty,
+
         @SerialName("true")
         True,
     }
