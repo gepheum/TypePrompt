@@ -323,7 +323,7 @@ function writePromptsClass(
       const templateId = getId(t.template);
       let toolExecutorRef: string;
       if (Object.keys(t.tools).length <= 0) {
-        toolExecutorRef = "Never";
+        toolExecutorRef = "NoTools";
       } else {
         toolExecutorRef = getToolExecutorRef(t, compilationResult, config);
       }
@@ -678,25 +678,33 @@ function writeExecuteToolCall(
 
 function writeMetaParser(compilationResult: ValidCompilationResult): string {
   const metaType = getMetaType(compilationResult);
-  const lines = ["file static class MetaParser", "{"];
   if (metaType === "Never?") {
-    lines.push(
+    return [
+      "public sealed class Never",
+      "{",
+      "private Never() { }",
+      "}",
+      "",
+      "file static class MetaParser",
+      "{",
       "public static Never? Parse(JsonElement? meta)",
       "{",
       "_ = meta;",
       "return null;",
       "}",
-    );
+      "}",
+    ].join("\n");
   } else {
-    lines.push(
+    return [
+      "file static class MetaParser",
+      "{",
       `public static ${metaType} Parse(JsonElement? meta)`,
       "{",
       `return JsonSerializer.Deserialize<${metaType}>(meta!.Value)!;`,
       "}",
-    );
+      "}",
+    ].join("\n");
   }
-  lines.push("}");
-  return lines.join("\n");
 }
 
 type WriteSchemaOptions = {

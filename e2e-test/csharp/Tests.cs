@@ -1,7 +1,4 @@
-using Xunit;
 using System.Text.Json;
-using ToonFormat;
-using YamlDotNet.Serialization;
 using TypePrompt03;
 using TypePrompt03.ToolExecutor;
 using WebSearch = TypePrompt03.Schema.WebSearch;
@@ -255,7 +252,7 @@ public class PromptTests
         });
     }
 
-    private class MockRenderer : IRenderer, TypePrompt08.Intenral.IRenderer
+    private class MockRenderer : TypePrompt03.Internal.IRenderer, TypePrompt08.Internal.IRenderer
     {
         public string? LastTemplateId { get; private set; }
         public object? LastInput { get; private set; }
