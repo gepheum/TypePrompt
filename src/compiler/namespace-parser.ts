@@ -29,11 +29,11 @@ export function parseNamespace(
 
   const nameText = name.value.text;
   for (const reserved of ["Meta", "Schema"]) {
-    if (nameText.toLowerCase() === "meta") {
-      const caseNote = nameText === "Meta" ? "" : " (case-insensitive)";
+    if (nameText.toLowerCase() === reserved.toLowerCase()) {
+      const caseNote = nameText === reserved ? "" : " (case-insensitive)";
       errors.push({
         span: name.nameSpan,
-        message: "Namespace name cannot be 'Meta'".concat(caseNote),
+        message: `Namespace name cannot be '${reserved}'${caseNote}`,
       });
     }
   }

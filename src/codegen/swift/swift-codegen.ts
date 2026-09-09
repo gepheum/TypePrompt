@@ -55,7 +55,7 @@ function writeAll(
       [
         STATIC_SNIPPETS["swift-imports"],
         `enum ${rootNamespace} {`,
-        writePromptsStruct(compilationResult, config),
+        writePromptsStruct(compilationResult),
         STATIC_SNIPPETS["swift-public-types"],
         writeTemplateIdEnum(compilationResult),
         writeToolExecutorProtocols(compilationResult, config),
@@ -73,7 +73,6 @@ function writeAll(
 function getTemplateTypes(
   template: ValidTemplate,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
   const templateName = toSwiftName(template.template.name.text);
@@ -109,7 +108,6 @@ function getTemplateTypes(
 function getToolExecutorRef(
   template: ValidTemplate,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   const { singleNamespace } = compilationResult;
   const toolEntries = Object.values(template.tools);
@@ -132,10 +130,7 @@ function getToolExecutorRef(
   return `any ${traitNames.join(" & ")}`;
 }
 
-function writePromptsStruct(
-  compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
-): string {
+function writePromptsStruct(compilationResult: ValidCompilationResult): string {
   const { singleNamespace, namespaces } = compilationResult;
 
   const writeNamespaceMembers = (
@@ -149,15 +144,11 @@ function writePromptsStruct(
 
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
-      const { inputType, outputType } = getTemplateTypes(
-        t,
-        compilationResult,
-        config,
-      );
+      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
       const propertyName = toSwiftName(uncapitalize(t.template.name.text));
       const toolExecutorRef =
         Object.keys(t.tools).length >= 1
-          ? getToolExecutorRef(t, compilationResult, config)
+          ? getToolExecutorRef(t, compilationResult)
           : "Void";
       const fullType = `any Template<${inputType}, ${outputType}, ${toolExecutorRef}>`;
       templateProps.push({ name: propertyName, type: fullType });

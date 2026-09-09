@@ -311,9 +311,10 @@ function writeToolExecutorClasses(
       const toolInfoList = toolEntries.map((t) => {
         const { interfaceName, methodName, inputType, outputType } =
           getToolInfo(t.tool, compilationResult);
-        const paramName = toDartName(t.tool.tool.name.text);
+        const rawToolName = t.tool.tool.name.text;
+        const paramName = toDartName(rawToolName);
         return {
-          rawToolName: t.tool.tool.name.text,
+          rawToolName,
           interfaceName,
           paramName,
           methodName,
@@ -668,13 +669,13 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
-    const name = toDartName(field.name.text);
+    const dartName = toDartName(field.name.text);
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapDocComment(field.doc));
     if (unionContext.overrideFields.has(field)) {
       lines.push("@override");
     }
-    lines.push(`final ${fieldType} ${name};`);
+    lines.push(`final ${fieldType} ${dartName};`);
   }
   lines.push("");
   if (hasNonLiteralFields) {
@@ -682,10 +683,10 @@ function writeTypepromptInterface(
     for (const field of fields) {
       const type = resolveType(field.type, schema);
       if (isLiteralType(type)) continue;
-      const name = toDartName(field.name.text);
+      const dartName = toDartName(field.name.text);
       const isOptional = type.kind === "optional";
       const required = isOptional ? "" : "required ";
-      lines.push(`${required}this.${name},`);
+      lines.push(`${required}this.${dartName},`);
     }
     lines.push("});");
   } else {
@@ -698,14 +699,14 @@ function writeTypepromptInterface(
   lines.push("Map<String, dynamic> toJson() {");
   lines.push("return {");
   for (const field of fields) {
-    const name = field.name.text;
-    const dartName = toDartName(name);
+    const rawName = field.name.text;
+    const dartName = toDartName(rawName);
     const resolvedFieldType = resolveType(field.type, schema);
     if (isLiteralType(resolvedFieldType)) {
       const value = JSON.stringify(
         resolvedFieldType.value satisfies string | boolean,
       );
-      lines.push(`"${name}": ${value},`);
+      lines.push(`"${rawName}": ${value},`);
     } else {
       const toJsonExpr = writeToJsonExpr(
         resolvedFieldType,
@@ -713,7 +714,7 @@ function writeTypepromptInterface(
         schema,
         options,
       );
-      lines.push(`"${name}": ${toJsonExpr},`);
+      lines.push(`"${rawName}": ${toJsonExpr},`);
     }
   }
   lines.push(
@@ -735,9 +736,9 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
-    const name = field.name.text;
-    const dartName = toDartName(name);
-    const valueExpr = `json["${field.name.text}"]`;
+    const rawName = field.name.text;
+    const dartName = toDartName(rawName);
+    const valueExpr = `json["${rawName}"]`;
     const valueFromJsonExpr = writeFromJsonExpr(
       type,
       valueExpr,

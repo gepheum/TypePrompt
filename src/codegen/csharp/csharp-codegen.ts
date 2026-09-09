@@ -45,23 +45,23 @@ function writeAll(
   config: { rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
-  const unionContext = makeUnionContext(compilationResult, config);
+  const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
     reformat(
       [
         STATIC_SNIPPETS["csharp-imports"],
         `namespace ${rootNamespace}\n{`,
-        writePromptsClass(compilationResult, config),
+        writePromptsClass(compilationResult),
         writePublicTypes(compilationResult),
-        writeTemplateIdEnum(compilationResult, config),
+        writeTemplateIdEnum(compilationResult),
         `}  // namespace ${rootNamespace}`,
         writeToolExecutorInterfaces(compilationResult, config),
         writeUserDefinedDatatypes(compilationResult, unionContext, config),
         writeSpecDatatypes(unionContext, config),
         `namespace ${rootNamespace}\n{`,
         writeTemplatesData(compilationResult),
-        writeExecuteToolCall(compilationResult, config),
+        writeExecuteToolCall(compilationResult),
         writeMetaParser(compilationResult),
         STATIC_SNIPPETS["csharp-logic"],
         `}  // namespace ${rootNamespace}`,
@@ -72,10 +72,8 @@ function writeAll(
 
 function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   const { singleNamespace, templates } = compilationResult;
-  const { rootNamespace } = config;
   const lines = [
     "/// <summary>",
     "/// Uniquely identifies a prompt template.",
@@ -234,7 +232,6 @@ function writeToolExecutorInterfaces(
 function getTemplateTypes(
   template: ValidTemplate,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
   const templateName = toCSharpName(template.template.name.text);
@@ -269,9 +266,7 @@ function getTemplateTypes(
 function getToolExecutorRef(
   template: ValidTemplate,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
-  const { rootNamespace } = config;
   const { singleNamespace } = compilationResult;
   const toolEntries = Object.values(template.tools);
   const [firstToolEntry] = toolEntries;
@@ -294,12 +289,8 @@ function getToolExecutorRef(
   }
 }
 
-function writePromptsClass(
-  compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
-): string {
+function writePromptsClass(compilationResult: ValidCompilationResult): string {
   const { singleNamespace, namespaces } = compilationResult;
-
   const lines = [
     "/// <summary>",
     "/// Entry point for building prompts.",
@@ -313,18 +304,14 @@ function writePromptsClass(
     const templateCount = namespace.templates.length;
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
-      const { inputType, outputType } = getTemplateTypes(
-        t,
-        compilationResult,
-        config,
-      );
+      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
       const methodName = "Render".concat(capitalize(t.template.name.text));
       const templateId = getId(t.template);
       let toolExecutorRef: string;
       if (Object.keys(t.tools).length <= 0) {
         toolExecutorRef = "NoTools";
       } else {
-        toolExecutorRef = getToolExecutorRef(t, compilationResult, config);
+        toolExecutorRef = getToolExecutorRef(t, compilationResult);
       }
       methodLines.push(
         `// Defined in '${t.template.sourcePath}'`,
@@ -604,7 +591,6 @@ function getToolTypes(
 
 function writeExecuteToolCall(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
@@ -1022,7 +1008,6 @@ type UnionContext = {
 
 function makeUnionContext(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): UnionContext {
   const { singleNamespace } = compilationResult;
 
