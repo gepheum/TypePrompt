@@ -9,6 +9,18 @@ namespace TypePromptRuntime
     using Meta = object;
 
     // <static:csharp-public-types>
+    /// <summary>
+    /// A fully resolved prompt ready to be sent to an LLM.
+    /// </summary>
+    /// <remarks>
+    /// The <typeparamref name="TOutput"/> type is the parsed response type for the template.
+    /// The <typeparamref name="TToolExecutor"/> type is the object whose methods implement the
+    /// template's tools.
+    /// Build and send the API request using <see cref="SystemMessage"/>, <see cref="UserMessage"/>,
+    /// <see cref="Examples"/>, and <see cref="Tools"/>. If the model requests tool calls, dispatch
+    /// them via <see cref="ExecuteTools(IEnumerable{ToolCall}, object)"/> and then parse the final
+    /// response with <see cref="ParseResponse(string)"/>.
+    /// </remarks>
     public record Prompt<TOutput, TToolExecutor>(
         Meta Meta,
         string SystemMessage,
