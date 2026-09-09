@@ -236,7 +236,6 @@ function getTemplateTypes(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
-  const { rootNamespace } = config;
   const { singleNamespace } = compilationResult;
   const templateName = toCSharpName(template.template.name.text);
   const templateNamespace =
@@ -516,13 +515,13 @@ function writeUserDefinedDatatypes(
       );
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = toCSharpName(capitalize(tool.tool.name.text));
+      const toolName = tool.tool.name.text;
       sections.push(
         writeSchema(
           tool.schema,
           unionContext,
           {
-            namespace: namespaceBase.concat(toolName),
+            namespace: namespaceBase.concat(toCSharpName(capitalize(toolName))),
             sharedNamespace,
           },
           config,
@@ -627,15 +626,15 @@ function writeExecuteToolCall(
   ];
 
   for (const tool of toolList) {
-    const toolName = tool.tool.name.text;
+    const rawToolName = tool.tool.name.text;
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const toolId = getId(tool.tool);
     const { inputType } = getToolTypes(tool, compilationResult);
 
     const interfaceName = singleNamespace
-      ? `ToolExecutor.I${capitalize(toolName)}`
-      : `ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}`;
-    const methodName = toCSharpName(capitalize(toolName));
+      ? `ToolExecutor.I${capitalize(rawToolName)}`
+      : `ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(rawToolName)}`;
+    const methodName = toCSharpName(capitalize(rawToolName));
 
     lines.push(
       `case "${toolId}":`,
@@ -787,35 +786,37 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const { type } = field;
     const fieldType = writeType(type, schema, options);
-    const name = field.name.text;
-    let csharpName = toCSharpName(capitalize(name));
-    if (csharpName === typeName) {
+    const rawFieldName = field.name.text;
+    let propertyName = toCSharpName(capitalize(rawFieldName));
+    if (propertyName === typeName) {
       // In C#, a record (like a class or struct) cannot contain a member—including a
       // field, property, or method—that shares the exact same name as its enclosing
       // type.
       // Just use camelCase for the field name.
-      const camelCaseName = toCSharpName(name);
+      const camelCaseName = toCSharpName(rawFieldName);
       if (unionContext.overrideFields.has(field)) {
         for (const int of interfaces!) {
-          lines.push(`${fieldType} ${int}.${csharpName} => ${camelCaseName};`);
+          lines.push(
+            `${fieldType} ${int}.${propertyName} => ${camelCaseName};`,
+          );
         }
       }
-      csharpName = camelCaseName;
+      propertyName = camelCaseName;
     }
     lines.push(...wrapXmlDoc(field.doc));
     if (isLiteralType(type)) {
       const quotedValue = JSON.stringify(type.value);
       lines.push(
         "[JsonInclude]",
-        `[JsonPropertyName("${name}")]`,
-        `private readonly ${fieldType} ${csharpName} = ${quotedValue};`,
+        `[JsonPropertyName("${rawFieldName}")]`,
+        `private readonly ${fieldType} ${propertyName} = ${quotedValue};`,
       );
     } else {
       const isOptional = resolveType(type, schema).kind === "optional";
       const required = isOptional ? "" : "required ";
       lines.push(
-        `[JsonPropertyName("${name}")]`,
-        `public ${required}${fieldType} ${csharpName} { get; init; }`,
+        `[JsonPropertyName("${rawFieldName}")]`,
+        `public ${required}${fieldType} ${propertyName} { get; init; }`,
       );
     }
   }
@@ -854,12 +855,12 @@ function writeTypepromptUnion(
       lines.push(`${visibility} interface ${typeName}`, "{");
 
       for (const commonField of members.commonFields) {
-        const csharpName = toCSharpName(capitalize(commonField.name));
+        const propertyName = toCSharpName(capitalize(commonField.name));
         if (isLiteralType(commonField.type)) continue;
         const type = writeType(commonField.type, schema, options);
         lines.push(
           ...wrapXmlDoc(commonField.doc ?? ""),
-          `public ${type} ${csharpName} { get; }`,
+          `public ${type} ${propertyName} { get; }`,
         );
       }
       lines.push("}");
