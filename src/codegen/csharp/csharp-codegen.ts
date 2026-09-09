@@ -303,10 +303,11 @@ function writePromptsClass(
     "/// Entry point for building prompts.",
     "/// </summary>",
   ];
-  const writeTemplatesParameters = (
+
+  const writeTemplateRenderMethods = (
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
-    const propLines: string[] = [];
+    const methodLines: string[] = [];
     const templateCount = namespace.templates.length;
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
@@ -315,58 +316,84 @@ function writePromptsClass(
         compilationResult,
         config,
       );
-      const propertyName = toCSharpName(capitalize(t.template.name.text));
-      const typeArgs = [inputType, outputType];
+      const methodName = "Render".concat(capitalize(t.template.name.text));
+      const templateId = getId(t.template);
+      let toolExecutorRef: string;
       if (Object.keys(t.tools).length <= 0) {
-        typeArgs.push("Never");
+        toolExecutorRef = "Never";
       } else {
-        const toolExecutorRef = getToolExecutorRef(
-          t,
-          compilationResult,
-          config,
-        );
-        typeArgs.push(toolExecutorRef);
+        toolExecutorRef = getToolExecutorRef(t, compilationResult, config);
       }
-      const comma = i < templateCount - 1 ? "," : "";
-      propLines.push(
+      methodLines.push(
         `// Defined in '${t.template.sourcePath}'`,
-        `Template<${typeArgs.join(", ")}> ${propertyName}${comma}`,
+        `public Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input)`,
+        "{",
+        `return _renderer.Render<${inputType}, ${outputType}, ${toolExecutorRef}>("${templateId}", input);`,
+        "}",
+        "",
       );
     }
-    return propLines;
+    return methodLines;
   };
 
   if (singleNamespace) {
-    const params = writeTemplatesParameters(singleNamespace);
-    if (params.length <= 0) {
-      lines.push("public record Prompts();");
-    } else {
-      lines.push("public record Prompts(", ...params, ");");
+    lines.push("public class Prompts", "{");
+    lines.push(
+      "private readonly IRenderer _renderer;",
+      "",
+      "internal Prompts(IRenderer renderer)",
+      "{",
+      "_renderer = renderer;",
+    );
+    if (singleNamespace.templates.length <= 0) {
+      lines.push("_ = _renderer;");
     }
+    lines.push("}");
+    const renderMethods = writeTemplateRenderMethods(singleNamespace);
+    if (renderMethods.length > 0) {
+      lines.push("", ...renderMethods);
+    }
+    lines.push("}");
   } else {
     const nsList = Object.values(namespaces);
-    lines.push("public record Prompts(");
-    for (let i = 0; i < nsList.length; i++) {
-      const ns = nsList[i]!;
-      const namespaceRecordName = ns.name.concat("Namespace");
+    lines.push("public class Prompts", "{");
+    for (const ns of nsList) {
+      const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toCSharpName(ns.name);
-      const comma = i < nsList.length - 1 ? "," : "";
-      lines.push(`Prompts.${namespaceRecordName} ${propertyName}${comma}`);
+      lines.push(`public ${namespaceClassName} ${propertyName} { get; }`);
     }
-    lines.push(")", "{");
+    lines.push("", "internal Prompts(IRenderer renderer)", "{");
+    for (const ns of nsList) {
+      const namespaceClassName = ns.name.concat("Prompts");
+      const propertyName = toCSharpName(ns.name);
+      lines.push(`${propertyName} = new ${namespaceClassName}(renderer);`);
+    }
+    lines.push("}");
+
     for (const namespace of nsList) {
-      const namespaceRecordName = namespace.name.concat("Namespace");
-      const params = writeTemplatesParameters(namespace);
-      if (params.length <= 0) {
-        lines.push(`public record ${namespaceRecordName}();`, "");
-      } else {
-        lines.push(
-          `public record ${namespaceRecordName}(`,
-          ...params,
-          ");",
-          "",
-        );
+      const namespaceClassName = namespace.name.concat("Prompts");
+      lines.push(
+        "",
+        "/// <summary>",
+        `/// Prompts in the '${namespace.name}' namespace.`,
+        "/// </summary>",
+        `public class ${namespaceClassName}`,
+        "{",
+        "private readonly IRenderer _renderer;",
+        "",
+        `internal ${namespaceClassName}(IRenderer renderer)`,
+        "{",
+        "_renderer = renderer;",
+      );
+      if (namespace.templates.length <= 0) {
+        lines.push("_ = _renderer;");
       }
+      lines.push("}");
+      const renderMethods = writeTemplateRenderMethods(namespace);
+      if (renderMethods.length > 0) {
+        lines.push("", ...renderMethods);
+      }
+      lines.push("}");
     }
     lines.push("}");
   }
@@ -597,7 +624,7 @@ function writeExecuteToolCall(
     const interfaceName = singleNamespace
       ? `ToolExecutor.I${capitalize(toolName)}`
       : `ToolExecutor.${toCSharpName(toolNamespace)}.I${capitalize(toolName)}`;
-    const methodName = capitalize(toolName);
+    const methodName = toCSharpName(capitalize(toolName));
 
     lines.push(
       `case "${toolId}":`,

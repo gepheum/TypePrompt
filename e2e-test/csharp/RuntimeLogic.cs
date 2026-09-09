@@ -9,11 +9,6 @@ namespace TypePromptRuntime
     using Meta = object;
 
     // <static:csharp-public-types>
-    public interface Template<TInput, TOutput, TToolExecutor>
-    {
-        Prompt<TOutput, TToolExecutor> Render(TInput input);
-    }
-
     public record Prompt<TOutput, TToolExecutor>(
         Meta Meta,
         string SystemMessage,
@@ -157,10 +152,16 @@ namespace TypePromptRuntime
     // </generated>
 
     // <static:csharp-logic>
-    file static class Rendering
+    internal interface IRenderer
     {
-        public static Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(Input input, Spec.Templates spec)
+        Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
+    }
+
+    file class SpecRenderer(Spec.Templates spec) : IRenderer
+    {
+        public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {
+            _ = spec;
             // Correct implementation will be produced by C# code generator.
             throw new NotImplementedException();
         }
