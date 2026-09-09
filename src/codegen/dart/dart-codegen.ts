@@ -167,17 +167,25 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         options,
       );
       const isJsonOutput = (t.template.outputFormat?.text ?? "json") === "json";
-      const fromJsonArg = isJsonOutput
-        ? `, fromJson: (json) => ${fromJsonExpr}`
-        : "";
 
-      lines.push(
-        `  // Defined in '${t.template.sourcePath}'`,
-        `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
-        `    return _doRender(_spec, "${templateId}", input${fromJsonArg});`,
-        "  }",
-        "",
-      );
+      if (isJsonOutput) {
+        lines.push(
+          `  // Defined in '${t.template.sourcePath}'`,
+          `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
+          `    final fromJson = (json) => ${fromJsonExpr};`,
+          `    return _doRender(_spec, "${templateId}", input, fromJson);`,
+          "  }",
+          "",
+        );
+      } else {
+        lines.push(
+          `  // Defined in '${t.template.sourcePath}'`,
+          `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
+          `    return _doRender(_spec, "${templateId}", input);`,
+          "  }",
+          "",
+        );
+      }
     }
     lines.push("}");
     return lines;

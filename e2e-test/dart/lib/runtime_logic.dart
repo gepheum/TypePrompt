@@ -1263,9 +1263,9 @@ TemplateId _parseTemplateId(String id) {
 Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   _Spec_Templates spec,
   String templateId,
-  dynamic rawInput, {
-  Output Function(dynamic json)? fromJson,
-}) {
+  dynamic rawInput, [
+  dynamic Function(dynamic json)? fromJson,
+]) {
   final template = spec.templates[templateId];
   if (template == null) {
     throw ArgumentError('Template not found: $templateId');
