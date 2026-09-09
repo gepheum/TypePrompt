@@ -105,11 +105,11 @@ sealed class OutputFormat {
 
 final class JsonOutputFormat extends OutputFormat {
   final String stringifiedJsonSchema;
-  final dynamic Function(dynamic json)? _fromJson;
+  final dynamic Function(dynamic json) _fromJson;
 
-  const JsonOutputFormat({
+  const JsonOutputFormat._({
     required this.stringifiedJsonSchema,
-    dynamic Function(dynamic json)? fromJson,
+    required dynamic Function(dynamic json) fromJson,
   }) : _fromJson = fromJson;
 }
 
@@ -1324,9 +1324,9 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
 
   final OutputFormat outputFormat;
   if (template.outputFormat == _Spec_OutputFormat.json) {
-    outputFormat = JsonOutputFormat(
+    outputFormat = JsonOutputFormat._(
       stringifiedJsonSchema: jsonEncode(template.outputJsonSchema),
-      fromJson: fromJson,
+      fromJson: fromJson!,
     );
   } else {
     outputFormat = const TextOutputFormat();
@@ -1364,11 +1364,7 @@ Output _doParseResponse<Output>(
       }
       try {
         final decoded = jsonDecode(cleaned);
-        final fromJson = outputFormat._fromJson;
-        if (fromJson != null) {
-          return fromJson(decoded) as Output;
-        }
-        return decoded as Output;
+        return outputFormat._fromJson(decoded) as Output;
       } catch (e) {
         throw FormatException("Template '$templateId': $e");
       }

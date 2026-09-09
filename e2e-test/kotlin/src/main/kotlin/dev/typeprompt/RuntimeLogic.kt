@@ -127,9 +127,9 @@ data class Prompt<out Output, in ToolExecutor>(
  */
 sealed class OutputFormat
 
-data class JsonOutputFormat(
+data class JsonOutputFormat internal constructor(
     val stringifiedJsonSchema: String,
-    internal val parseJson: ((String) -> Any?)? = null,
+    internal val parseJson: (String) -> Any?,
 ) : OutputFormat()
 
 class TextOutputFormat : OutputFormat()
@@ -981,13 +981,8 @@ private fun <Output> doParseResponse(
                 cleaned = cleaned.trim()
             }
             try {
-                val parseJson = outputFormat.parseJson
-                if (parseJson != null) {
-                    @Suppress("UNCHECKED_CAST")
-                    return parseJson.invoke(cleaned) as Output
-                }
                 @Suppress("UNCHECKED_CAST")
-                return Json.parseToJsonElement(cleaned) as Output
+                return outputFormat.parseJson.invoke(cleaned) as Output
             } catch (e: SerializationException) {
                 throw SerializationException("Template '$templateId': ${e.message}", e)
             } catch (e: IllegalArgumentException) {
@@ -1046,12 +1041,4 @@ object TemplateOverrider {
 /** Entry point for building prompts. */
 val prompts = Prompts(templatesData)
 // </static:kotlin-logic>
-
-fun getGreeting(): String {
-    return "Hello, World!"
-}
-
-fun main() {
-    println(getGreeting())
-}
 

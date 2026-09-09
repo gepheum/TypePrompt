@@ -166,10 +166,10 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         t.schema,
         options,
       );
-      const fromJsonArg =
-        outputType === "String" && fromJsonExpr === "json"
-          ? ""
-          : `, fromJson: (json) => ${fromJsonExpr}`;
+      const isJsonOutput = (t.template.outputFormat?.text ?? "json") === "json";
+      const fromJsonArg = isJsonOutput
+        ? `, fromJson: (json) => ${fromJsonExpr}`
+        : "";
 
       lines.push(
         `  // Defined in '${t.template.sourcePath}'`,
