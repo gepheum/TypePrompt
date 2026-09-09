@@ -1012,7 +1012,6 @@ function makeUnionContext(
   config: { readonly rootNamespace: string },
 ): UnionContext {
   const { singleNamespace } = compilationResult;
-  const { rootNamespace } = config;
 
   const intMemberToUnionRefs = new Map<Interface, string[]>();
   const intMemberToStringDiscriminant = new Map<Interface, string>();
