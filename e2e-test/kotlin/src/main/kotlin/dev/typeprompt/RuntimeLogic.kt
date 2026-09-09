@@ -47,40 +47,7 @@ data class Prompt<out Output, in ToolExecutor>(
     val templateId: TemplateId,
 ) {
     fun parseResponse(response: String): Output {
-        when (outputFormat) {
-            is JsonOutputFormat -> {
-                var cleaned = response.trim()
-                if (cleaned.startsWith("```")) {
-                    if (cleaned.startsWith("```json")) {
-                        cleaned = cleaned.substring("```json".length)
-                    } else {
-                        cleaned = cleaned.substring("```".length)
-                    }
-                    if (cleaned.endsWith("```")) {
-                        cleaned = cleaned.substring(0, cleaned.length - "```".length)
-                    }
-                    cleaned = cleaned.trim()
-                }
-                try {
-                    val parseJson = outputFormat.parseJson
-                    if (parseJson != null) {
-                        @Suppress("UNCHECKED_CAST")
-                        return parseJson.invoke(cleaned) as Output
-                    }
-                    @Suppress("UNCHECKED_CAST")
-                    return Json.parseToJsonElement(cleaned) as Output
-                } catch (e: SerializationException) {
-                    throw SerializationException("Template '$templateId': ${e.message}", e)
-                } catch (e: IllegalArgumentException) {
-                    throw SerializationException("Template '$templateId': ${e.message}", e)
-                }
-            }
-
-            is TextOutputFormat -> {
-                @Suppress("UNCHECKED_CAST")
-                return response as Output
-            }
-        }
+        return doParseResponse(response, outputFormat, templateId)
     }
 
     suspend fun executeTools(
@@ -931,6 +898,48 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
         outputFormat = outputFormat,
         templateId = resolvedTemplateId,
     )
+}
+
+@Suppress("unused")
+private fun <Output> doParseResponse(
+    response: String,
+    outputFormat: OutputFormat,
+    templateId: TemplateId,
+): Output {
+    when (outputFormat) {
+        is JsonOutputFormat -> {
+            var cleaned = response.trim()
+            if (cleaned.startsWith("```")) {
+                if (cleaned.startsWith("```json")) {
+                    cleaned = cleaned.substring("```json".length)
+                } else {
+                    cleaned = cleaned.substring("```".length)
+                }
+                if (cleaned.endsWith("```")) {
+                    cleaned = cleaned.substring(0, cleaned.length - "```".length)
+                }
+                cleaned = cleaned.trim()
+            }
+            try {
+                val parseJson = outputFormat.parseJson
+                if (parseJson != null) {
+                    @Suppress("UNCHECKED_CAST")
+                    return parseJson.invoke(cleaned) as Output
+                }
+                @Suppress("UNCHECKED_CAST")
+                return Json.parseToJsonElement(cleaned) as Output
+            } catch (e: SerializationException) {
+                throw SerializationException("Template '$templateId': ${e.message}", e)
+            } catch (e: IllegalArgumentException) {
+                throw SerializationException("Template '$templateId': ${e.message}", e)
+            }
+        }
+
+        is TextOutputFormat -> {
+            @Suppress("UNCHECKED_CAST")
+            return response as Output
+        }
+    }
 }
 
 /**

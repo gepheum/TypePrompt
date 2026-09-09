@@ -77,39 +77,7 @@ namespace TypePromptRuntime
         /// </summary>
         public TOutput ParseResponse(string response)
         {
-            if (OutputFormat is JsonOutputFormat)
-            {
-                response = response.Trim();
-                if (response.StartsWith("```"))
-                {
-                    if (response.StartsWith("```json"))
-                    {
-                        response = response["```json".Length..];
-                    }
-                    else
-                    {
-                        response = response["```".Length..];
-                    }
-                    if (response.EndsWith("```"))
-                    {
-                        response = response[..^"```".Length];
-                    }
-                    response = response.Trim();
-                }
-                try
-                {
-                    return JsonSerializer.Deserialize<TOutput>(response)!;
-                }
-                catch (JsonException e)
-                {
-                    throw new JsonException($"Template '{TemplateId.GetId()}': {e.Message}", e);
-                }
-            }
-            else if (OutputFormat is TextOutputFormat)
-            {
-                return (TOutput)(object)response;
-            }
-            throw new InvalidOperationException($"Unsupported output format: {OutputFormat}");
+            return ResponseParser.DoParseResponse<TOutput>(response, OutputFormat, TemplateId);
         }
 
         /// <summary>
@@ -257,6 +225,50 @@ namespace TypePromptRuntime
             Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
         }
     }  // namespace Internal
+
+    file static class ResponseParser
+    {
+        public static TOutput DoParseResponse<TOutput>(
+            string response,
+            OutputFormat outputFormat,
+            TemplateId templateId
+        )
+        {
+            if (outputFormat is JsonOutputFormat)
+            {
+                response = response.Trim();
+                if (response.StartsWith("```"))
+                {
+                    if (response.StartsWith("```json"))
+                    {
+                        response = response["```json".Length..];
+                    }
+                    else
+                    {
+                        response = response["```".Length..];
+                    }
+                    if (response.EndsWith("```"))
+                    {
+                        response = response[..^"```".Length];
+                    }
+                    response = response.Trim();
+                }
+                try
+                {
+                    return JsonSerializer.Deserialize<TOutput>(response)!;
+                }
+                catch (JsonException e)
+                {
+                    throw new JsonException($"Template '{templateId.GetId()}': {e.Message}", e);
+                }
+            }
+            else if (outputFormat is TextOutputFormat)
+            {
+                return (TOutput)(object)response;
+            }
+            throw new InvalidOperationException($"Unsupported output format: {outputFormat}");
+        }
+    }
 
     file class SpecRenderer(Spec.Templates spec) : Internal.IRenderer
     {
