@@ -342,11 +342,9 @@ function writePromptsClass(
   if (singleNamespace) {
     lines.push("public class Prompts", "{");
     lines.push(
-      "private readonly IRenderer _renderer;",
+      "public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));",
       "",
-      "public Prompts() : this(new SpecRenderer(RuntimeData.TemplatesData))",
-      "{",
-      "}",
+      "private readonly IRenderer _renderer;",
       "",
       "internal Prompts(IRenderer renderer)",
       "{",
@@ -364,20 +362,16 @@ function writePromptsClass(
   } else {
     const nsList = Object.values(namespaces);
     lines.push("public class Prompts", "{");
+    lines.push(
+      "public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));",
+      "",
+    );
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toCSharpName(ns.name);
       lines.push(`public ${namespaceClassName} ${propertyName} { get; }`);
     }
-    lines.push(
-      "",
-      "public Prompts() : this(new SpecRenderer(RuntimeData.TemplatesData))",
-      "{",
-      "}",
-      "",
-      "internal Prompts(IRenderer renderer)",
-      "{",
-    );
+    lines.push("", "internal Prompts(IRenderer renderer)", "{");
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toCSharpName(ns.name);

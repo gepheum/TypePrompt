@@ -186,6 +186,13 @@ namespace TypePromptRuntime
             SourceFiles = new Dictionary<string, string>(),
         };
     }
+
+    public class Prompts
+    {
+        public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));
+
+        internal Prompts(IRenderer renderer) { _ = renderer; }
+    }
     // </generated>
 
     // <static:csharp-logic>
@@ -615,6 +622,69 @@ namespace TypePromptRuntime
                 ));
             }
             return result;
+        }
+    }
+
+    /// <summary>
+    /// Use this with external frameworks that support template override injection
+    /// for experimentation or A/B testing.
+    /// <para>
+    /// When using overrides, inject the resulting <see cref="Prompts"/> instance as a dependency
+    /// rather than relying on <see cref="Prompts.Default"/>.
+    /// </para>
+    /// </summary>
+    public class TemplateOverrider
+    {
+        public static TemplateOverrider Instance { get; } = new();
+
+        private TemplateOverrider()
+        {
+        }
+
+        public JsonElement TemplatesData()
+        {
+            return JsonSerializer.SerializeToElement(RuntimeData.TemplatesData);
+        }
+
+        public Prompts ApplyOverrides(JsonElement overrides)
+        {
+            if (overrides.ValueKind != JsonValueKind.Object)
+            {
+                throw new ArgumentException("Overrides must be an object");
+            }
+            if (!overrides.TryGetProperty("signature", out var sigProp) ||
+                sigProp.GetString() != RuntimeData.TemplatesData.Signature)
+            {
+                throw new ArgumentException("Signature mismatch");
+            }
+            var mergedTemplates = new Dictionary<string, Spec.Template>(RuntimeData.TemplatesData.templates);
+            if (overrides.TryGetProperty("templates", out var templatesProp))
+            {
+                var overrideTemplates = JsonSerializer.Deserialize<Dictionary<string, Spec.Template>>(templatesProp)!;
+                foreach (var kv in overrideTemplates)
+                {
+                    mergedTemplates[kv.Key] = kv.Value;
+                }
+            }
+            var mergedTools = new Dictionary<string, Spec.Tool>(RuntimeData.TemplatesData.Tools);
+            if (overrides.TryGetProperty("tools", out var toolsProp))
+            {
+                var overrideTools = JsonSerializer.Deserialize<Dictionary<string, Spec.Tool>>(toolsProp)!;
+                foreach (var kv in overrideTools)
+                {
+                    mergedTools[kv.Key] = kv.Value;
+                }
+            }
+            var mergedData = new Spec.Templates
+            {
+                Edition = RuntimeData.TemplatesData.Edition,
+                Signature = RuntimeData.TemplatesData.Signature,
+                templates = mergedTemplates,
+                Tools = mergedTools,
+                SingleNamespace = RuntimeData.TemplatesData.SingleNamespace,
+                SourceFiles = RuntimeData.TemplatesData.SourceFiles,
+            };
+            return new Prompts(new SpecRenderer(mergedData));
         }
     }
     // </static:csharp-logic>

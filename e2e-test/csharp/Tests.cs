@@ -1,4 +1,5 @@
 using Xunit;
+using System.Text.Json;
 using ToonFormat;
 using YamlDotNet.Serialization;
 using TypePrompt03;
@@ -10,7 +11,7 @@ public class PromptTests
     [Fact]
     public void TestRender01Basics()
     {
-        var prompts = new TypePrompt01.Prompts();
+        var prompts = TypePrompt01.Prompts.Default;
         var prompt = prompts.RenderTranslate(new TypePrompt01.Schema.Translate.Input
         {
             Text = "The meeting is scheduled for Monday at 3 PM.",
@@ -29,7 +30,7 @@ public class PromptTests
     [Fact]
     public void TestRender03Tools()
     {
-        var prompts = new TypePrompt03.Prompts();
+        var prompts = TypePrompt03.Prompts.Default;
         var prompt = prompts.RenderResearchQuestion(new TypePrompt03.Schema.ResearchQuestion.Input
         {
             Question = "What are the latest discoveries in quantum computing?"
@@ -46,7 +47,7 @@ public class PromptTests
     [Fact]
     public void TestRender06ToonFormat()
     {
-        var prompts = new TypePrompt06.Prompts();
+        var prompts = TypePrompt06.Prompts.Default;
         var prompt = prompts.RenderWriteComparisonArticle(new TypePrompt06.Schema.WriteComparisonArticle.Input
         {
             Providers = new List<TypePrompt06.Schema.WriteComparisonArticle.Provider>
@@ -83,7 +84,7 @@ public class PromptTests
     [Fact]
     public void TestRender08MultiNamespace()
     {
-        var prompts = new TypePrompt08.Prompts();
+        var prompts = TypePrompt08.Prompts.Default;
         var party = new TypePrompt08.Schema.Legal.Shared.Party
         {
             Name = "Acme Corp",
@@ -106,7 +107,7 @@ public class PromptTests
     [Fact]
     public void TestRender02TriageTicket()
     {
-        var prompts = new TypePrompt02.Prompts();
+        var prompts = TypePrompt02.Prompts.Default;
         var prompt = prompts.RenderTriageTicket(new TypePrompt02.Schema.TriageTicket.Input
         {
             Subject = "App crashes",
@@ -126,7 +127,7 @@ public class PromptTests
     [Fact]
     public void TestRenderE01SalesData()
     {
-        var prompts = new TypePrompt.Prompts();
+        var prompts = TypePrompt.Prompts.Default;
         var rows = new List<TypePrompt.Schema.AnalyzeSalesData.SalesRow>
         {
             new() { Product = "Widget A", Units = 120, RevenueCents = 240000, Region = "north" },
@@ -158,6 +159,32 @@ public class PromptTests
         Assert.Contains("product\tunits\trevenueCents\tregion", tsvPrompt.UserMessage);
         Assert.Contains("Widget A\t120\t240000\tnorth", tsvPrompt.UserMessage);
         Assert.NotEqual(csvPrompt.UserMessage, tsvPrompt.UserMessage);
+    }
+
+    [Fact]
+    public void TestTemplateOverrider()
+    {
+        var data = TypePrompt01.TemplateOverrider.Instance.TemplatesData();
+        Assert.True(data.TryGetProperty("signature", out var sig));
+        var signature = sig.GetString();
+        Assert.False(string.IsNullOrEmpty(signature));
+
+        // Test signature mismatch
+        using var wrongDoc = JsonDocument.Parse("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}");
+        Assert.Throws<ArgumentException>(() =>
+        {
+            TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(wrongDoc.RootElement);
+        });
+
+        // Test valid overrides
+        var prompts = TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(data);
+        Assert.NotNull(prompts);
+        var prompt = prompts.RenderTranslate(new TypePrompt01.Schema.Translate.Input
+        {
+            Text = "Hello",
+            TargetLanguage = "French"
+        });
+        Assert.Contains("French", prompt.UserMessage);
     }
     private class TestWebSearchExecutor : IWebSearch
     {
