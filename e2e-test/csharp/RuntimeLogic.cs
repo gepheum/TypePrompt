@@ -790,7 +790,9 @@ namespace Spec
         public required string Name { get; init; }
     }
 
-    // Discriminated union of: TemplateContents_KindNoVariants, TemplateContents_KindVariants
+    /// <summary>
+    /// Implementations: <see cref="TemplateContents_KindNoVariants"/>, <see cref="TemplateContents_KindVariants"/>.
+    /// </summary>
     [JsonConverter(typeof(TemplateContents__Converter))]
     file interface TemplateContents
     { }
@@ -882,7 +884,9 @@ namespace Spec
         public required JsonElement Output { get; init; }
     }
 
-    // Discriminated union of: BodyPiece_KindText, BodyPiece_KindInsertVal, BodyPiece_KindInsertSnippet
+    /// <summary>
+    /// Implementations: <see cref="BodyPiece_KindText"/>, <see cref="BodyPiece_KindInsertVal"/>, <see cref="BodyPiece_KindInsertSnippet"/>.
+    /// </summary>
     [JsonConverter(typeof(BodyPiece__Converter))]
     file interface BodyPiece
     { }
@@ -965,7 +969,9 @@ namespace Spec
         Tsv,
     }
 
-    // Discriminated union of: Expression_KindInput, Expression_KindProperty
+    /// <summary>
+    /// Implementations: <see cref="Expression_KindInput"/>, <see cref="Expression_KindProperty"/>.
+    /// </summary>
     [JsonConverter(typeof(Expression__Converter))]
     file interface Expression
     { }
@@ -1013,7 +1019,9 @@ namespace Spec
         public required string Property { get; init; }
     }
 
-    // Discriminated union of: Snippet_KindSnippet, Snippet_KindSnippetIf, Snippet_KindSnippetSwitch
+    /// <summary>
+    /// Implementations: <see cref="Snippet_KindSnippet"/>, <see cref="Snippet_KindSnippetIf"/>, <see cref="Snippet_KindSnippetSwitch"/>.
+    /// </summary>
     [JsonConverter(typeof(Snippet__Converter))]
     file interface Snippet
     { }

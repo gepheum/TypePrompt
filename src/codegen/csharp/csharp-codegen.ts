@@ -727,7 +727,16 @@ function writeSchema(
   lines.push("{");
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
-    lines.push(...wrapXmlDoc(namingHint.doc));
+    let implementations: readonly string[] | undefined;
+    if (type.kind === "union") {
+      const members = schema.unionToMembers.get(type);
+      if (members?.kind === "interfaces") {
+        implementations = Object.values(members.members).map((member) =>
+          writeType(member.resolved, schema, options),
+        );
+      }
+    }
+    lines.push(...wrapXmlDoc(namingHint.doc, implementations));
     switch (type.kind) {
       case "interface": {
         lines.push(
@@ -841,10 +850,6 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminator, discriminants } = members;
-      const memberInterfaces = Object.values(members.members).map((member) =>
-        writeType(member.resolved, schema, options),
-      );
-      lines.push(`// Discriminated union of: ${memberInterfaces.join(", ")}`);
       lines.push(`[JsonConverter(typeof(${typeName}__Converter))]`);
       lines.push(`${visibility} interface ${typeName}`, "{");
 
@@ -1089,25 +1094,45 @@ function toCSharpName(name: string): string {
 
 /**
  * Formats doc text as XML documentation comment lines. Returns an array of strings
- * (one per line) ready to be pushed to this.lines. Returns empty array if doc is empty.
+ * (one per line) ready to be pushed to this.lines. Returns empty array if doc is empty
+ * and no implementations are provided.
  */
-function wrapXmlDoc(doc: string): readonly string[] {
-  if (!doc) {
+function wrapXmlDoc(
+  doc: string,
+  implementations?: readonly string[],
+): readonly string[] {
+  if (!doc && (!implementations || implementations.length === 0)) {
     return [];
   }
 
-  // Split into lines and escape XML special characters
-  const escaped = doc
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+  const contentLines: string[] = [];
+  if (doc) {
+    // Split into lines and escape XML special characters
+    const escaped = doc
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
 
-  const lines = escaped.split("\n");
+    contentLines.push(...escaped.split("\n"));
+  }
+
+  if (implementations && implementations.length > 0) {
+    const uniqueImplementations = [...new Set(implementations)];
+    const impls = uniqueImplementations
+      .map((i) => `<see cref="${i}"/>`)
+      .join(", ");
+    if (contentLines.length > 0) {
+      contentLines.push("<para>", `Implementations: ${impls}.`, "</para>");
+    } else {
+      contentLines.push(`Implementations: ${impls}.`);
+    }
+  }
+
   return [
     " /// <summary>",
-    ...lines.map((line) => ` /// ${line}`),
+    ...contentLines.map((line) => ` /// ${line}`),
     " /// </summary>",
   ];
 }
