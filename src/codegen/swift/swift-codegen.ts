@@ -542,10 +542,6 @@ function writeExecuteToolCall(
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
 
-  if (toolList.length <= 0) {
-    return "";
-  }
-
   const lines = [
     "fileprivate struct ToolExecutionError: Error, CustomStringConvertible {",
     "let description: String",
