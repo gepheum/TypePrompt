@@ -113,7 +113,7 @@ type Tool = {
   id: string;
   name: string;
   description: string;
-  outputJsonSchema?: any;
+  inputJsonSchema?: any;
 };
 `;
 

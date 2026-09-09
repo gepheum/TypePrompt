@@ -64,7 +64,7 @@ function splitIntoWords(identifier: string): string[] {
 }
 
 /**
- * Converts an identifier into lower_snake_case.
+ * Converts an identifier into snake_case.
  * Symbols are treated as word breaks and stripped.
  *
  * Examples:
@@ -73,6 +73,20 @@ function splitIntoWords(identifier: string): string[] {
  */
 export function toSnakeCase(identifier: string): string {
   return splitIntoWords(identifier).join("_");
+}
+
+/**
+ * Converts an identifier into SCREAM_CASE.
+ * Symbols are treated as word breaks and stripped.
+ *
+ * Examples:
+ *   `parseHTMLDocument` -> `PARSE_HTML_DOCUMENT`
+ *   `foo-bar.baz_qux`  -> `FOO_BAR_BAZ_QUX`
+ */
+export function toScreamCase(identifier: string): string {
+  return splitIntoWords(identifier)
+    .map((w) => w.toUpperCase())
+    .join("_");
 }
 
 /**

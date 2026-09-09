@@ -24,7 +24,7 @@ import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import {
   capitalize,
   toPascalCase,
-  toSnakeCase,
+  toScreamCase,
   uncapitalize,
 } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
@@ -77,18 +77,18 @@ function getTemplateTypes(
   compilationResult: ValidCompilationResult,
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
-  const templateName = toKotlinName(template.template.name.text);
+  const templateKtName = toKotlinName(template.template.name.text);
   const templateNamespace =
     template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toKotlinName(templateNamespace);
+  const namespaceKtName = toKotlinName(templateNamespace);
   const sharedTypePrefix = singleNamespace
     ? "Schema.Shared."
-    : `Schema.${namespaceName}.Shared.`;
+    : `Schema.${namespaceKtName}.Shared.`;
   const typePrefixBase = singleNamespace
     ? "Schema."
-    : `Schema.${namespaceName}.`;
+    : `Schema.${namespaceKtName}.`;
 
-  const templateTypePrefix = typePrefixBase.concat(templateName, ".");
+  const templateTypePrefix = typePrefixBase.concat(templateKtName, ".");
   const options: WriteSchemaOptions = {
     typePrefix: templateTypePrefix,
     sharedTypePrefix,
@@ -118,20 +118,20 @@ function getToolExecutorRef(
   const [firstToolEntry] = toolEntries;
   if (toolEntries.length === 1 && firstToolEntry) {
     const tool = firstToolEntry.tool;
-    const toolName = capitalize(tool.tool.name.text);
+    const toolKtName = toKotlinName(capitalize(tool.tool.name.text));
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const namespaceBase = singleNamespace
       ? "ToolExecutor"
       : `ToolExecutor.${toKotlinName(toolNamespace)}`;
-    return `${namespaceBase}.${toolName}`;
+    return `${namespaceBase}.${toolKtName}`;
   } else {
-    const templateName = template.template.name.text;
+    const templateKtName = toKotlinName(template.template.name.text);
     const templateNamespace =
       template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const namespaceBase = singleNamespace
       ? "ToolExecutor"
       : `ToolExecutor.${toKotlinName(templateNamespace)}`;
-    return `${namespaceBase}.${templateName}`;
+    return `${namespaceBase}.${templateKtName}`;
   }
 }
 
@@ -157,7 +157,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       methodLines.push(
         `// Defined in '${t.template.sourcePath}'`,
         `fun ${methodName}(input: ${inputType}): Prompt<${outputType}, ${toolExecutorRef}> {`,
-        `return renderImpl(spec, "${templateId}", input)`,
+        `return doRender(spec, "${templateId}", input)`,
         "}",
         "",
       );
@@ -172,6 +172,10 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "class Prompts internal constructor(",
       "private val spec: Spec.Templates,",
       ") {",
+      "companion object {",
+      "val default: Prompts = Prompts(templatesData)",
+      "}",
+      "",
     );
     const renderMethods = writeTemplateRenderMethods(singleNamespace);
     if (renderMethods.length > 0) {
@@ -184,6 +188,10 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "class Prompts internal constructor(",
       "private val spec: Spec.Templates,",
       ") {",
+      "companion object {",
+      "val default: Prompts = Prompts(templatesData)",
+      "}",
+      "",
     );
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
@@ -235,8 +243,8 @@ function writeTemplateIdEnum(
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateName = template.template.name.text;
     const rawMemberName = singleNamespace
-      ? toSnakeCase(templateName).toUpperCase()
-      : `${toSnakeCase(namespace).toUpperCase()}__${toSnakeCase(templateName).toUpperCase()}`;
+      ? toKotlinName(toScreamCase(templateName))
+      : `${toScreamCase(namespace)}__${toScreamCase(templateName)}`;
     const entryName = toKotlinName(rawMemberName);
     const templateId = getId(template.template);
     const comma = isLast ? ";" : ",";
@@ -256,14 +264,15 @@ function writeToolExecutorInterfaces(
   ): readonly string[] => {
     const lines: string[] = [];
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      const interfaceName = capitalize(toolName);
+      const rawToolName = tool.tool.name.text;
+      const interfaceName = toKotlinName(capitalize(rawToolName));
+      const methodName = toKotlinName(rawToolName);
       const { inputType, outputType } = getToolTypes(tool, compilationResult);
 
       lines.push(
-        `/** Tool executor interface for the '${toolName}' tool. */`,
+        `/** Tool executor interface for the '${rawToolName}' tool. */`,
         `interface ${interfaceName} {`,
-        `suspend fun ${toKotlinName(toolName)}(`,
+        `suspend fun ${methodName}(`,
         `input: ${inputType},`,
         `): ${outputType}`,
         "}",
@@ -273,19 +282,18 @@ function writeToolExecutorInterfaces(
     for (const template of namespace.templates) {
       const toolEntries = Object.values(template.tools);
       if (toolEntries.length < 2) continue;
-      const templateName = template.template.name.text;
+      const rawTemplateName = template.template.name.text;
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
-        const toolName = capitalize(tool.tool.name.text);
-        const interfaceRef = toolName;
-        const paramName = toKotlinName(tool.tool.name.text);
-        const methodName = toKotlinName(tool.tool.name.text);
+        const rawToolName = tool.tool.name.text;
+        const interfaceRef = toKotlinName(capitalize(rawToolName));
+        const paramName = toKotlinName(rawToolName);
         const { inputType, outputType } = getToolTypes(tool, compilationResult);
         return {
-          rawToolName: tool.tool.name.text,
+          rawToolName,
           interfaceRef,
           paramName,
-          methodName,
+          methodName: paramName,
           inputType,
           outputType,
         };
@@ -299,24 +307,24 @@ function writeToolExecutorInterfaces(
 
       lines.push(
         "/**",
-        ` * Composite executor interface for the '${templateName}' prompt template.`,
+        ` * Composite executor interface for the '${rawTemplateName}' prompt template.`,
         ` * Requires implementations for tools: ${toolNamesList}.`,
         " */",
-        `interface ${templateName} : ${inherited} {`,
+        `interface ${rawTemplateName} : ${inherited} {`,
         "companion object {",
         "/**",
-        ` * Creates a composite executor for the '${templateName}' prompt template from individual tool implementations.`,
+        ` * Creates a composite executor for the '${rawTemplateName}' prompt template from individual tool implementations.`,
         " */",
         "fun create(",
         ...toolInfoList.map((t) => `${t.paramName}: ${t.interfaceRef},`),
-        `): ${templateName} = Forwarding(${callArgs})`,
+        `): ${rawTemplateName} = Forwarding(${callArgs})`,
         "}",
         "",
         "private class Forwarding(",
         ...toolInfoList.map(
           (t) => `private val ${t.paramName}: ${t.interfaceRef},`,
         ),
-        `) : ${templateName} {`,
+        `) : ${rawTemplateName} {`,
       );
 
       for (const t of toolInfoList) {
@@ -406,28 +414,30 @@ function writeUserDefinedDatatypes(
       lines.push("}  // object Shared\n");
     }
     for (const template of namespace.templates) {
-      const templateName = toKotlinName(template.template.name.text);
-      const typePrefix = typePrefixBase.concat(templateName, ".");
-      lines.push(`object ${templateName} {`);
+      const rawTemplateName = template.template.name.text;
+      const templateKtName = toKotlinName(rawTemplateName);
+      const typePrefix = typePrefixBase.concat(templateKtName, ".");
+      lines.push(`object ${templateKtName} {`);
       lines.push(
         writeSchema(template.schema, unionContext, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // object ${templateName}\n`);
+      lines.push(`}  // object ${templateKtName}\n`);
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = toKotlinName(capitalize(tool.tool.name.text));
-      const typePrefix = typePrefixBase.concat(toolName, ".");
-      lines.push(`object ${toolName} {\n`);
+      const rawToolName = tool.tool.name.text;
+      const toolKtName = toKotlinName(capitalize(rawToolName));
+      const typePrefix = typePrefixBase.concat(toolKtName, ".");
+      lines.push(`object ${toolKtName} {\n`);
       lines.push(
         writeSchema(tool.schema, unionContext, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // object ${toolName}\n`);
+      lines.push(`}  // object ${toolKtName}\n`);
     }
   };
 
@@ -478,18 +488,18 @@ function getToolTypes(
   compilationResult: ValidCompilationResult,
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
-  const toolName = tool.tool.name.text;
+  const rawToolName = tool.tool.name.text;
   const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toKotlinName(toolNamespace);
+  const namespaceKtName = toKotlinName(toolNamespace);
   const sharedTypePrefix = singleNamespace
     ? "Schema.Shared."
-    : `Schema.${namespaceName}.Shared.`;
+    : `Schema.${namespaceKtName}.Shared.`;
   const typePrefixBase = singleNamespace
     ? "Schema."
-    : `Schema.${namespaceName}.`;
+    : `Schema.${namespaceKtName}.`;
 
-  const toolTypeName = toKotlinName(capitalize(toolName));
-  const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
+  const toolKtName = toKotlinName(capitalize(rawToolName));
+  const toolTypePrefix = typePrefixBase.concat(toolKtName, ".");
   const options: WriteSchemaOptions = {
     typePrefix: toolTypePrefix,
     sharedTypePrefix,
@@ -529,15 +539,16 @@ function writeExecuteToolCall(
   ];
 
   for (const tool of toolList) {
-    const toolName = tool.tool.name.text;
+    const rawToolName = tool.tool.name.text;
+    const toolKtName = toKotlinName(capitalize(rawToolName));
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const toolId = getId(tool.tool);
     const { inputType } = getToolTypes(tool, compilationResult);
 
     const toolInterface = singleNamespace
-      ? `ToolExecutor.${capitalize(toolName)}`
-      : `ToolExecutor.${toKotlinName(toolNamespace)}.${capitalize(toolName)}`;
-    const methodName = toKotlinName(toolName);
+      ? `ToolExecutor.${toolKtName}`
+      : `ToolExecutor.${toKotlinName(toolNamespace)}.${toolKtName}`;
+    const methodName = toKotlinName(rawToolName);
 
     lines.push(
       `"${toolId}" -> {`,
@@ -633,7 +644,7 @@ function writeTypepromptInterface(
     for (const field of fields) {
       const type = resolveType(field.type, schema);
       if (isLiteralType(type) && !primary) continue;
-      const name = toKotlinName(field.name.text);
+      const ktName = toKotlinName(field.name.text);
       const fieldType = writeType(type, schema, options);
       const override =
         primary && unionContext.overrideFields.has(field) ? "override " : "";
@@ -644,7 +655,7 @@ function writeTypepromptInterface(
       const defaultVal = isOptional ? " = null" : "";
       lines.push(...wrapKDoc(field.doc));
       lines.push(
-        `${encodeDefault}${override}${val}${name}: ${fieldType}${defaultVal},`,
+        `${encodeDefault}${override}${val}${ktName}: ${fieldType}${defaultVal},`,
       );
     }
   };
@@ -668,12 +679,12 @@ function writeTypepromptInterface(
     lines.push(") : this(");
     for (const field of fields) {
       const type = resolveType(field.type, schema);
-      const name = toKotlinName(field.name.text);
+      const ktName = toKotlinName(field.name.text);
       if (isLiteralType(type)) {
         const literal = JSON.stringify(type.value);
-        lines.push(`${name} = ${literal},`);
+        lines.push(`${ktName} = ${literal},`);
       } else {
-        lines.push(`${name} = ${name},`);
+        lines.push(`${ktName} = ${ktName},`);
       }
     }
     lines.push(")");
@@ -889,12 +900,15 @@ function makeUnionContext(
       : "Schema.".concat(namespace.name, ".");
     processSchema(namespace.schema, typePrefixBase.concat("Shared."));
     for (const template of namespace.templates) {
-      const templateName = toKotlinName(template.template.name.text);
-      processSchema(template.schema, typePrefixBase.concat(templateName, "."));
+      const templateKtName = toKotlinName(template.template.name.text);
+      processSchema(
+        template.schema,
+        typePrefixBase.concat(templateKtName, "."),
+      );
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = toKotlinName(capitalize(tool.tool.name.text));
-      processSchema(tool.schema, typePrefixBase.concat(toolName, "."));
+      const toolKtName = toKotlinName(capitalize(tool.tool.name.text));
+      processSchema(tool.schema, typePrefixBase.concat(toolKtName, "."));
     }
   }
 
