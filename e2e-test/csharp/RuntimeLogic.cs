@@ -72,6 +72,9 @@ namespace TypePromptRuntime
         TemplateId TemplateId
     )
     {
+        /// <summary>
+        /// Parse an LLM response into the expected output type.
+        /// </summary>
         public TOutput ParseResponse(string response)
         {
             if (OutputFormat is JsonOutputFormat)
