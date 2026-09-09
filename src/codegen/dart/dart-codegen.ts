@@ -196,7 +196,6 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     const promptsLines: string[] = [
       "/// Entry point for building prompts.",
       "final class Prompts {",
-      "  final _Spec_Templates _spec;",
     ];
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
@@ -204,15 +203,15 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       promptsLines.push(`  final ${namespaceClassName} ${propertyName};`);
     }
     promptsLines.push("");
-    promptsLines.push("  Prompts._(this._spec)");
+    promptsLines.push("  Prompts._(_Spec_Templates spec)");
     const initializers = nsList.map(
       (ns) =>
-        `      ${toDartName(uncapitalize(ns.name))} = ${ns.name}Prompts._(_spec)`,
+        `${toDartName(uncapitalize(ns.name))} = ${ns.name}Prompts._(spec)`,
     );
     if (initializers.length > 0) {
-      promptsLines.push(`    : ${initializers.join(",\n      ")};`);
+      promptsLines.push(`: ${initializers.join(",\n")};`);
     } else {
-      promptsLines.push("    ;");
+      promptsLines.push(";");
     }
     promptsLines.push("}");
     sections.push(promptsLines.join("\n"));
@@ -738,7 +737,7 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const rawName = field.name.text;
     const dartName = toDartName(rawName);
-    const valueExpr = `json["${rawName}"]`;
+    const valueExpr = `json["${field.name.text}"]`;
     const valueFromJsonExpr = writeFromJsonExpr(
       type,
       valueExpr,
