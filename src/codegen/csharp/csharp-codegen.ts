@@ -96,7 +96,8 @@ function writeTemplateIdEnum(
     "",
     "public static class TemplateIdExtensions",
     "{",
-    "public static string GetId(this TemplateId templateId) =>",
+    "public static string GetId(this TemplateId templateId)",
+    "{",
     "templateId switch",
     "{",
   );
@@ -113,6 +114,7 @@ function writeTemplateIdEnum(
   lines.push(
     "_ => throw new ArgumentOutOfRangeException(nameof(templateId)),",
     "};",
+    "}",
     "}",
   );
   return lines.join("\n");
@@ -717,14 +719,14 @@ function writeTypepromptInterface(
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
-        interfaces
-          .map((i) =>
-            i.startsWith(options.namespace.concat("."))
-              ? i.slice(options.namespace.length + 1)
-              : i,
-          )
-          .join(", "),
-      )
+      interfaces
+        .map((i) =>
+          i.startsWith(options.namespace.concat("."))
+            ? i.slice(options.namespace.length + 1)
+            : i,
+        )
+        .join(", "),
+    )
     : "";
 
   const visibility = options.file ? "file" : "public";

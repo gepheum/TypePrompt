@@ -121,7 +121,6 @@ namespace TypePromptRuntime
     // </static:csharp-public-types>
 
     // <generated>
-
     /// <summary>
     /// Uniquely identifies a prompt template.
     /// </summary>
@@ -149,6 +148,13 @@ namespace TypePromptRuntime
         }
     }
 
+    file static class MetaParser
+    {
+        object Parse(JsonElement meta)
+        {
+            return meta;
+        }
+    }
     // </generated>
 
     // <static:csharp-logic>
