@@ -48,26 +48,24 @@ function writeAll(
   const unionContext = makeUnionContext(compilationResult, config);
 
   return coalesceEmptyLines(
-    [
-      STATIC_SNIPPETS["csharp-imports"],
-      reformat(
-        [
-          `namespace ${rootNamespace}\n{`,
-          writePromptsClass(compilationResult, config),
-          STATIC_SNIPPETS["csharp-public-types"],
-          writeTemplateIdEnum(compilationResult, config),
-          `}  // namespace ${rootNamespace}`,
-          writeToolExecutorInterfaces(compilationResult, config),
-          writeUserDefinedDatatypes(compilationResult, unionContext, config),
-          writeSpecDatatypes(unionContext, config),
-          `namespace ${rootNamespace}\n{`,
-          writeTemplatesData(compilationResult),
-          writeExecuteToolCall(compilationResult, config),
-          `}  // namespace ${rootNamespace}`,
-        ].join("\n\n"),
-      ),
-      STATIC_SNIPPETS["csharp-logic"],
-    ].join("\n\n"),
+    reformat(
+      [
+        STATIC_SNIPPETS["csharp-imports"],
+        `namespace ${rootNamespace}\n{`,
+        writePromptsClass(compilationResult, config),
+        writePublicTypes(compilationResult),
+        writeTemplateIdEnum(compilationResult, config),
+        `}  // namespace ${rootNamespace}`,
+        writeToolExecutorInterfaces(compilationResult, config),
+        writeUserDefinedDatatypes(compilationResult, unionContext, config),
+        writeSpecDatatypes(unionContext, config),
+        `namespace ${rootNamespace}\n{`,
+        writeTemplatesData(compilationResult),
+        writeExecuteToolCall(compilationResult, config),
+        STATIC_SNIPPETS["csharp-logic"],
+        `}  // namespace ${rootNamespace}`,
+      ].join("\n\n"),
+    ),
   ).concat("\n");
 }
 
@@ -319,7 +317,9 @@ function writePromptsClass(
       );
       const propertyName = toCSharpName(capitalize(t.template.name.text));
       const typeArgs = [inputType, outputType];
-      if (Object.keys(t.tools).length >= 1) {
+      if (Object.keys(t.tools).length <= 0) {
+        typeArgs.push("Never");
+      } else {
         const toolExecutorRef = getToolExecutorRef(
           t,
           compilationResult,
@@ -372,6 +372,30 @@ function writePromptsClass(
   }
 
   return lines.join("\n");
+}
+
+function writePublicTypes(compilationResult: ValidCompilationResult): string {
+  const { metaSchema } = compilationResult;
+  let metaType: string;
+  if (metaSchema.namingHints.defaultScope.size <= 0) {
+    metaType = "Never?";
+  } else {
+    metaType = writeType(
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        namespace: "Schema.Meta",
+      },
+    );
+  }
+  return STATIC_SNIPPETS["csharp-public-types"].replace(
+    /Meta Meta,/g,
+    `${metaType} Meta,`,
+  );
 }
 
 function writeUserDefinedDatatypes(

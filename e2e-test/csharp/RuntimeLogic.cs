@@ -6,19 +6,16 @@ using System.Text.RegularExpressions;
 
 namespace TypePromptRuntime
 {
-    // <static:csharp-public-types>
-    public interface Template<TInput, TOutput>
-    {
-        Prompt<TOutput, object?> Render(TInput input);
-    }
+    using Meta = object;
 
+    // <static:csharp-public-types>
     public interface Template<TInput, TOutput, TToolExecutor>
     {
         Prompt<TOutput, TToolExecutor> Render(TInput input);
     }
 
     public record Prompt<TOutput, TToolExecutor>(
-        object? Meta,
+        Meta Meta,
         string SystemMessage,
         string UserMessage,
         IReadOnlyList<FewShotExample> Examples,
@@ -121,6 +118,11 @@ namespace TypePromptRuntime
         string CallId,
         string StringifiedOutput
     );
+
+    public sealed class Never
+    {
+        private Never() { }
+    }
     // </static:csharp-public-types>
 
     // <generated>
@@ -153,10 +155,18 @@ namespace TypePromptRuntime
     }
 
     // </generated>
-}
 
-// <static:csharp-logic>
-// </static:csharp-logic>
+    // <static:csharp-logic>
+    file static class Rendering
+    {
+        public static Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(Input input, Spec.Templates spec)
+        {
+            // Correct implementation will be produced by C# code generator.
+            throw new NotImplementedException();
+        }
+    }
+    // </static:csharp-logic>
+}
 
 // <generated:spec>
 namespace Spec
