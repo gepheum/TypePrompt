@@ -34,7 +34,7 @@
 //
 // Then call it:
 //
-//   var output = await CallModel(prompt, NoTools.Instance);
+//   var output = await CallModel(prompt, NoTools.NoTools);
 
 using System.Collections;
 using System.Text;
@@ -174,7 +174,7 @@ namespace TypePromptRuntime
 
     public enum NoTools
     {
-        Instance,
+        NoTools,
     }
     // </static:csharp-public-types>
 
