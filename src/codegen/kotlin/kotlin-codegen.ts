@@ -53,6 +53,7 @@ function writeAll(
 
   return coalesceEmptyLines(
     [
+      "@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)",
       `package ${kotlinConfig.package};`,
       STATIC_SNIPPETS["kotlin-imports"],
       reformat(writePromptsClass(compilationResult)),
@@ -476,7 +477,7 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     "\\$",
   );
   const lines = [
-    "private val templatesData: Spec.Templates = kotlinx.serialization.json.Json.decodeFromString(",
+    "private val templatesData: Spec.Templates = JsonConfig.lenient.decodeFromString(",
     `${stringifiedJson},`,
     ")",
   ];

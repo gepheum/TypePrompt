@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package dev.typeprompt
 
 // <static:kotlin-imports>
@@ -168,10 +170,24 @@ private suspend fun executeToolCall(
 }
 
 // <static:kotlin-logic>
+private object JsonConfig {
+    @OptIn(ExperimentalSerializationApi::class)
+    val lenient: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        explicitNulls = false
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    val pretty: Json = Json {
+        prettyPrint = true
+        prettyPrintIndent = "  "
+    }
+}
+
 private fun parseMeta(element: JsonElement?): Meta {
     if (element == null) return null as Meta
-    val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
-    return json.decodeFromJsonElement<Meta>(element)
+    return JsonConfig.lenient.decodeFromJsonElement<Meta>(element)
 }
 
 private fun jsonElementToObject(element: JsonElement): Any? {
@@ -281,12 +297,8 @@ private fun formatValue(v: Any?, fmt: Spec.InsertFormat?): String {
     return when (fmt) {
         null, Spec.InsertFormat.Text -> v?.toString() ?: ""
         Spec.InsertFormat.Json -> {
-            val json = Json {
-                prettyPrint = true
-                prettyPrintIndent = "  "
-            }
             val element = objectToJsonElement(v)
-            json.encodeToString(JsonElement.serializer(), element).replace("\r\n", "\n")
+            JsonConfig.pretty.encodeToString(JsonElement.serializer(), element).replace("\r\n", "\n")
         }
         Spec.InsertFormat.Yaml -> {
             val dumperOptions = DumperOptions().apply {
@@ -528,8 +540,7 @@ class TemplateOverrider private constructor() {
     }
 
     fun templatesData(): JsonElement {
-        val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
-        return json.encodeToJsonElement(Spec.Templates.serializer(), templatesData)
+        return JsonConfig.lenient.encodeToJsonElement(Spec.Templates.serializer(), templatesData)
     }
 
     fun applyOverrides(overrides: JsonElement): Prompts {
@@ -539,15 +550,14 @@ class TemplateOverrider private constructor() {
         if (sig != templatesData.signature) {
             throw IllegalArgumentException("Signature mismatch")
         }
-        val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
         val mergedTemplates = templatesData.templates.toMutableMap()
         obj["templates"]?.let { tmplsElement ->
-            val overrideTemplates = json.decodeFromJsonElement<Map<String, Spec.Template>>(tmplsElement)
+            val overrideTemplates = JsonConfig.lenient.decodeFromJsonElement<Map<String, Spec.Template>>(tmplsElement)
             mergedTemplates.putAll(overrideTemplates)
         }
         val mergedTools = templatesData.tools.toMutableMap()
         obj["tools"]?.let { toolsElement ->
-            val overrideTools = json.decodeFromJsonElement<Map<String, Spec.Tool>>(toolsElement)
+            val overrideTools = JsonConfig.lenient.decodeFromJsonElement<Map<String, Spec.Tool>>(toolsElement)
             mergedTools.putAll(overrideTools)
         }
         val mergedData = Spec.Templates(
