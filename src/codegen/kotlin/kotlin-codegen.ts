@@ -138,54 +138,76 @@ function getToolExecutorRef(
 function writePromptsClass(compilationResult: ValidCompilationResult): string {
   const { singleNamespace, namespaces } = compilationResult;
 
-  const writeTemplatesParameters = (
+  const writeTemplateRenderMethods = (
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
-    const propLines: string[] = [];
+    const methodLines: string[] = [];
     const templateCount = namespace.templates.length;
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
       const { inputType, outputType } = getTemplateTypes(t, compilationResult);
-      const propertyName = toKotlinName(uncapitalize(t.template.name.text));
-      const toolExecutorRef =
-        Object.keys(t.tools).length >= 1
-          ? getToolExecutorRef(t, compilationResult)
-          : "Unit";
-      propLines.push(
+      const methodName = "render".concat(capitalize(t.template.name.text));
+      const templateId = getId(t.template);
+      let toolExecutorRef: string;
+      if (Object.keys(t.tools).length <= 0) {
+        toolExecutorRef = "NoTools";
+      } else {
+        toolExecutorRef = getToolExecutorRef(t, compilationResult);
+      }
+      methodLines.push(
         `// Defined in '${t.template.sourcePath}'`,
-        `val ${propertyName}: Template<${inputType}, ${outputType}, ${toolExecutorRef}>,`,
+        `fun ${methodName}(input: ${inputType}): Prompt<${outputType}, ${toolExecutorRef}> {`,
+        `return renderImpl(spec, "${templateId}", input)`,
+        "}",
+        "",
       );
     }
-    return propLines;
+    return methodLines;
   };
 
   const lines = ["/** Entry point for building prompts. */"];
 
   if (singleNamespace) {
-    const params = writeTemplatesParameters(singleNamespace);
-    if (params.length <= 0) {
-      lines.push("class Prompts()");
-    } else {
-      lines.push("data class Prompts(", ...params, ")");
+    lines.push(
+      "class Prompts internal constructor(",
+      "private val spec: Spec.Templates,",
+      ") {",
+    );
+    const renderMethods = writeTemplateRenderMethods(singleNamespace);
+    if (renderMethods.length > 0) {
+      lines.push(...renderMethods);
     }
+    lines.push("}");
   } else {
     const nsList = Object.values(namespaces);
-    lines.push("data class Prompts(");
-    for (let i = 0; i < nsList.length; i++) {
-      const ns = nsList[i]!;
-      const namespaceRecordName = ns.name.concat("Namespace");
+    lines.push(
+      "class Prompts internal constructor(",
+      "private val spec: Spec.Templates,",
+      ") {",
+    );
+    for (const ns of nsList) {
+      const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toKotlinName(uncapitalize(ns.name));
-      lines.push(`val ${propertyName}: ${namespaceRecordName},`);
+      lines.push(
+        `val ${propertyName}: ${namespaceClassName} = ${namespaceClassName}(spec)`,
+      );
     }
-    lines.push(") {");
+    lines.push("");
     for (const namespace of nsList) {
-      const namespaceRecordName = namespace.name.concat("Namespace");
-      const params = writeTemplatesParameters(namespace);
-      if (params.length <= 0) {
-        lines.push(`class ${namespaceRecordName}()`, "");
-      } else {
-        lines.push(`data class ${namespaceRecordName}(`, ...params, ")", "");
+      const namespaceClassName = namespace.name.concat("Prompts");
+      lines.push(
+        "/**",
+        ` * Prompts in the '${namespace.name}' namespace.`,
+        " */",
+        `class ${namespaceClassName} internal constructor(`,
+        "private val spec: Spec.Templates,",
+        ") {",
+      );
+      const renderMethods = writeTemplateRenderMethods(namespace);
+      if (renderMethods.length > 0) {
+        lines.push(...renderMethods);
       }
+      lines.push("}", "");
     }
     lines.push("}");
   }

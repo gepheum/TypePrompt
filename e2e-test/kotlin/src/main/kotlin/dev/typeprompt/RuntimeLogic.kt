@@ -21,10 +21,6 @@ import kotlinx.serialization.json.jsonPrimitive
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
-interface Template<in Input, out Output, in ToolExecutor> {
-    fun render(input: Input): Prompt<Output, ToolExecutor>
-}
-
 data class Prompt<out Output, in ToolExecutor>(
     val meta: Meta,
     val systemMessage: String,
@@ -144,6 +140,15 @@ private suspend fun executeToolCall(
 private fun parseMeta(element: JsonElement?): Meta {
     if (element == null) return null as Meta
     return Json.decodeFromJsonElement<Meta>(element)
+}
+
+@Suppress("unused")
+private fun <Input, Output, ToolExecutor> renderImpl(
+    spec: Spec.Templates,
+    templateId: String,
+    input: Input,
+): Prompt<Output, ToolExecutor> {
+    throw NotImplementedError()
 }
 // </static:kotlin-logic>
 
