@@ -191,17 +191,20 @@ namespace TypePromptRuntime
     {
         public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));
 
-        internal Prompts(IRenderer renderer) { _ = renderer; }
+        internal Prompts(Internal.IRenderer renderer) { _ = renderer; }
     }
     // </generated>
 
     // <static:csharp-logic>
-    internal interface IRenderer
+    namespace Internal
     {
-        Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
-    }
+        internal interface IRenderer
+        {
+            Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
+        }
+    }  // namespace Internal
 
-    file class SpecRenderer(Spec.Templates spec) : IRenderer
+    file class SpecRenderer(Spec.Templates spec) : Internal.IRenderer
     {
         public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {

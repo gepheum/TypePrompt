@@ -255,7 +255,7 @@ public class PromptTests
         });
     }
 
-    private class MockRenderer : IRenderer, TypePrompt08.IRenderer
+    private class MockRenderer : IRenderer, TypePrompt08.Intenral.IRenderer
     {
         public string? LastTemplateId { get; private set; }
         public object? LastInput { get; private set; }
@@ -275,7 +275,7 @@ public class PromptTests
             );
         }
 
-        TypePrompt08.Prompt<Output, ToolExecutor> TypePrompt08.IRenderer.Render<Input, Output, ToolExecutor>(string templateId, Input input)
+        TypePrompt08.Prompt<Output, ToolExecutor> TypePrompt08.Internal.IRenderer.Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {
             LastTemplateId = templateId;
             LastInput = input;
