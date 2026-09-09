@@ -180,7 +180,6 @@ namespace TypePromptRuntime
         public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {
             _ = spec;
-            // Correct implementation will be produced by C# code generator.
             throw new NotImplementedException();
         }
     }
