@@ -62,6 +62,7 @@ function writeAll(
         `namespace ${rootNamespace}\n{`,
         writeTemplatesData(compilationResult),
         writeExecuteToolCall(compilationResult, config),
+        writeMetaParser(compilationResult),
         STATIC_SNIPPETS["csharp-logic"],
         `}  // namespace ${rootNamespace}`,
       ].join("\n\n"),
@@ -98,7 +99,7 @@ function writeTemplateIdEnum(
     "{",
     "public static string GetId(this TemplateId templateId)",
     "{",
-    "templateId switch",
+    "return templateId switch",
     "{",
   );
   for (const template of Object.values(templates)) {
@@ -403,24 +404,26 @@ function writePromptsClass(
   return lines.join("\n");
 }
 
-function writePublicTypes(compilationResult: ValidCompilationResult): string {
+function getMetaType(compilationResult: ValidCompilationResult): string {
   const { metaSchema } = compilationResult;
-  let metaType: string;
   if (metaSchema.namingHints.defaultScope.size <= 0) {
-    metaType = "Never?";
-  } else {
-    metaType = writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        namespace: "Schema.Meta",
-      },
-    );
+    return "Never?";
   }
+  return writeType(
+    {
+      kind: "type-name",
+      name: { text: "Meta" },
+    },
+    metaSchema,
+    {
+      topLevel: true,
+      namespace: "Schema.Meta",
+    },
+  );
+}
+
+function writePublicTypes(compilationResult: ValidCompilationResult): string {
+  const metaType = getMetaType(compilationResult);
   return STATIC_SNIPPETS["csharp-public-types"].replace(
     /Meta Meta,/g,
     `${metaType} Meta,`,
@@ -667,6 +670,29 @@ function writeExecuteToolCall(
   return lines.join("\n");
 }
 
+function writeMetaParser(compilationResult: ValidCompilationResult): string {
+  const metaType = getMetaType(compilationResult);
+  const lines = ["file static class MetaParser", "{"];
+  if (metaType === "Never?") {
+    lines.push(
+      "public static Never? Parse(JsonElement? meta)",
+      "{",
+      "_ = meta;",
+      "return null;",
+      "}",
+    );
+  } else {
+    lines.push(
+      `public static ${metaType} Parse(JsonElement? meta)`,
+      "{",
+      `return JsonSerializer.Deserialize<${metaType}>(meta!.Value)!;`,
+      "}",
+    );
+  }
+  lines.push("}");
+  return lines.join("\n");
+}
+
 type WriteSchemaOptions = {
   readonly topLevel?: true;
   readonly namespace: string;
@@ -719,14 +745,14 @@ function writeTypepromptInterface(
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
-      interfaces
-        .map((i) =>
-          i.startsWith(options.namespace.concat("."))
-            ? i.slice(options.namespace.length + 1)
-            : i,
-        )
-        .join(", "),
-    )
+        interfaces
+          .map((i) =>
+            i.startsWith(options.namespace.concat("."))
+              ? i.slice(options.namespace.length + 1)
+              : i,
+          )
+          .join(", "),
+      )
     : "";
 
   const visibility = options.file ? "file" : "public";

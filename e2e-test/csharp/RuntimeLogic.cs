@@ -150,9 +150,9 @@ namespace TypePromptRuntime
 
     file static class MetaParser
     {
-        object Parse(JsonElement meta)
+        public static object Parse(JsonElement? meta)
         {
-            return meta;
+            return meta!.Value;
         }
     }
     // </generated>
