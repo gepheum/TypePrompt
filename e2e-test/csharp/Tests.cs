@@ -329,5 +329,23 @@ public class PromptTests
         Assert.Same(input, mock.LastInput);
         Assert.Equal("MockSystem08", prompt.SystemMessage);
     }
+
+    [Fact]
+    public void TestParseResponseWithCodeFences()
+    {
+        var prompts = TypePrompt03.Prompts.Default;
+        var prompt = prompts.RenderResearchQuestion(new TypePrompt03.Schema.ResearchQuestion.Input
+        {
+            Question = "test"
+        });
+
+        var fencedJson = "```json\n{\"answer\": \"quantum\", \"sources\": []}\n```";
+        var parsed = prompt.ParseResponse(fencedJson);
+        Assert.Equal("quantum", parsed.Answer);
+
+        var plainFenced = "```\n{\"answer\": \"classical\", \"sources\": []}\n```";
+        var parsed2 = prompt.ParseResponse(plainFenced);
+        Assert.Equal("classical", parsed2.Answer);
+    }
 }
 

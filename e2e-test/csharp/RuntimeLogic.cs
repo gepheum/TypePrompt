@@ -40,7 +40,6 @@ using System.Collections;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 // </static:csharp-imports>
 
@@ -78,11 +77,19 @@ namespace TypePromptRuntime
                 response = response.Trim();
                 if (response.StartsWith("```"))
                 {
-                    response = Regex.Replace(
-                        response,
-                        @"^```(?:json)?\s*\n?([\s\S]*?)\n?```$",
-                        "$1"
-                    ).Trim();
+                    if (response.StartsWith("```json"))
+                    {
+                        response = response["```json".Length..];
+                    }
+                    else
+                    {
+                        response = response["```".Length..];
+                    }
+                    if (response.EndsWith("```"))
+                    {
+                        response = response[..^"```".Length];
+                    }
+                    response = response.Trim();
                 }
                 try
                 {
