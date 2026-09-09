@@ -51,6 +51,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 
   return coalesceEmptyLines(
     [
+      STATIC_SNIPPETS["dart-top-level"],
       STATIC_SNIPPETS["dart-imports"],
       reformat(writePromptsClass(compilationResult)),
       STATIC_SNIPPETS["dart-public-types"],
@@ -72,7 +73,13 @@ function writeAll(compilationResult: ValidCompilationResult): string {
 function getTemplateTypes(
   template: ValidTemplate,
   compilationResult: ValidCompilationResult,
-): { readonly inputType: string; readonly outputType: string } {
+): {
+  readonly inputType: string;
+  readonly outputType: string;
+  readonly inputTypeNode: Type | Optional;
+  readonly outputTypeNode: Type | Optional;
+  readonly options: WriteSchemaOptions;
+} {
   const { singleNamespace } = compilationResult;
   const templateName = template.template.name.text;
   const templateNamespace =
@@ -98,7 +105,7 @@ function getTemplateTypes(
   const inputType = writeType(inputTypeNode, template.schema, options);
   const outputType = writeType(outputTypeNode, template.schema, options);
 
-  return { inputType, outputType };
+  return { inputType, outputType, inputTypeNode, outputTypeNode, options };
 }
 
 function getToolExecutorRef(
@@ -133,32 +140,44 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     className: string,
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
-    const lines: string[] = [`final class ${className} {`];
+    const lines: string[] = [
+      `final class ${className} {`,
+      "  final _Spec_Templates _spec;",
+      "",
+      `  const ${className}._(this._spec);`,
+      "",
+    ];
     const templateCount = namespace.templates.length;
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
-      const { inputType, outputType } = getTemplateTypes(t, compilationResult);
-      const propertyName = toDartName(uncapitalize(t.template.name.text));
-      const toolExecutorRef =
-        Object.keys(t.tools).length >= 1
-          ? getToolExecutorRef(t, compilationResult)
-          : "void";
+      const { inputType, outputType, outputTypeNode, options } =
+        getTemplateTypes(t, compilationResult);
+      const methodName = "render".concat(capitalize(t.template.name.text));
+      const templateId = getId(t.template);
+      let toolExecutorRef: string;
+      if (Object.keys(t.tools).length <= 0) {
+        toolExecutorRef = "NoTools";
+      } else {
+        toolExecutorRef = getToolExecutorRef(t, compilationResult);
+      }
+      const fromJsonExpr = writeFromJsonExpr(
+        outputTypeNode,
+        "json",
+        t.schema,
+        options,
+      );
+      const fromJsonArg =
+        outputType === "String" && fromJsonExpr === "json"
+          ? ""
+          : `, fromJson: (json) => ${fromJsonExpr}`;
+
       lines.push(
-        `// Defined in '${t.template.sourcePath}'`,
-        `final Template<${inputType}, ${outputType}, ${toolExecutorRef}> ${propertyName};`,
+        `  // Defined in '${t.template.sourcePath}'`,
+        `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
+        `    return _doRender(_spec, "${templateId}", input${fromJsonArg});`,
+        "  }",
         "",
       );
-    }
-
-    if (templateCount <= 0) {
-      lines.push(`const ${className}._();`);
-    } else {
-      lines.push(`const ${className}._({`);
-      for (const t of namespace.templates) {
-        const propertyName = toDartName(uncapitalize(t.template.name.text));
-        lines.push(`required this.${propertyName},`);
-      }
-      lines.push("});");
     }
     lines.push("}");
     return lines;
@@ -177,22 +196,23 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     const promptsLines: string[] = [
       "/// Entry point for building prompts.",
       "final class Prompts {",
+      "  final _Spec_Templates _spec;",
     ];
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toDartName(uncapitalize(ns.name));
-      promptsLines.push(`final ${namespaceClassName} ${propertyName};`);
+      promptsLines.push(`  final ${namespaceClassName} ${propertyName};`);
     }
     promptsLines.push("");
-    if (nsList.length <= 0) {
-      promptsLines.push("const Prompts._();");
+    promptsLines.push("  Prompts._(this._spec)");
+    const initializers = nsList.map(
+      (ns) =>
+        `      ${toDartName(uncapitalize(ns.name))} = ${ns.name}Prompts._(_spec)`,
+    );
+    if (initializers.length > 0) {
+      promptsLines.push(`    : ${initializers.join(",\n      ")};`);
     } else {
-      promptsLines.push("const Prompts._({");
-      for (const ns of nsList) {
-        const propertyName = toDartName(uncapitalize(ns.name));
-        promptsLines.push(`required this.${propertyName},`);
-      }
-      promptsLines.push("});");
+      promptsLines.push("    ;");
     }
     promptsLines.push("}");
     sections.push(promptsLines.join("\n"));
@@ -219,8 +239,14 @@ function writeTemplateIdEnum(
   if (templateList.length <= 0) {
     return [
       "/// Uniquely identifies a prompt template.",
-      "abstract final class TemplateId {",
-      "  const TemplateId._();",
+      "enum TemplateId {",
+      '  none("");',
+      "",
+      "  final String _id;",
+      "  const TemplateId(this._id);",
+      "",
+      "  @override",
+      "  String toString() => _id;",
       "}",
     ].join("\n");
   }
@@ -237,15 +263,15 @@ function writeTemplateIdEnum(
       : `${uncapitalize(namespace)}_${templateName}`;
     const caseName = toDartName(rawMemberName);
     const templateId = getId(template.template);
-    lines.push(`${caseName}("${templateId}")${isLast ? ";" : ","}`);
+    lines.push(`  ${caseName}("${templateId}")${isLast ? ";" : ","}`);
   }
   lines.push(
     "",
-    "final String _id;",
-    "const TemplateId(this._id);",
+    "  final String _id;",
+    "  const TemplateId(this._id);",
     "",
-    "@override",
-    "String toString() => _id;",
+    "  @override",
+    "  String toString() => _id;",
     "}",
   );
   return lines.join("\n");
@@ -370,6 +396,9 @@ function writeUserDefinedDatatypes(
   lines.push(
     "/// Metadata associated with a prompt.",
     `typedef Meta = ${metaType};`,
+    anyTypes(metaSchema)
+      ? "Meta _parseMeta(dynamic meta) => meta == null ? null as Meta : Meta.fromJson(meta as Map<String, dynamic>);"
+      : "Meta _parseMeta(dynamic meta) => null;",
     "",
     "// ".concat("-".repeat(77)),
     "// User-defined datatypes",
@@ -507,7 +536,15 @@ function writeExecuteToolCall(
   const toolList = Object.values(tools);
 
   if (toolList.length <= 0) {
-    return "";
+    return [
+      "Future<ToolCallResponse> _executeToolCall(",
+      "  ToolCall toolCall,",
+      "  String namespace,",
+      "  Object executor,",
+      ") async {",
+      "  throw UnimplementedError();",
+      "}",
+    ].join("\n");
   }
 
   const lines = [
@@ -940,6 +977,7 @@ function writeFromJsonExpr(
       return inputExpr;
     }
     case "array": {
+      const elementTypeName = writeType(type.elementType, schema, options);
       const elementFromJsonExpr = writeFromJsonExpr(
         type.elementType,
         "e",
@@ -947,11 +985,9 @@ function writeFromJsonExpr(
         options,
       );
       if (elementFromJsonExpr === "e") {
-        return inputExpr;
-      } else if (elementFromJsonExpr.endsWith("(e)")) {
-        return `${inputExpr}.map(${elementFromJsonExpr.slice(0, -3)}).toList()`;
+        return `(${inputExpr} as List).cast<${elementTypeName}>()`;
       } else {
-        return `${inputExpr}.map((e) => ${elementFromJsonExpr}).toList()`;
+        return `(${inputExpr} as List).map<${elementTypeName}>((e) => ${elementFromJsonExpr}).toList()`;
       }
     }
     case "interface":
@@ -988,15 +1024,14 @@ function writeFromJsonExpr(
       }
     }
     case "record": {
+      const valueTypeName = writeType(type.valueType, schema, options);
       const valueFromJsonExpr = writeFromJsonExpr(
         type.valueType,
         "v",
         schema,
         options,
       );
-      return inputExpr.concat(
-        `.map((k, v) => MapEntry(k, ${valueFromJsonExpr}))`,
-      );
+      return `(${inputExpr} as Map).map<String, ${valueTypeName}>((k, v) => MapEntry(k.toString(), ${valueFromJsonExpr}))`;
     }
     case "shared-type-name":
     case "type-name": {
