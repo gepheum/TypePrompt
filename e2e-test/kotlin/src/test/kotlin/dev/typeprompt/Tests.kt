@@ -872,7 +872,8 @@ class TestE01_JsonSerialization {
             com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
             jsonNotSuccess,
         )
-        val notSuccessTyped = assertIs<com.example.prompts_e01.Schema.Shared.EnumWithCommonFields_NotSuccess>(parsedNotSuccess)
+        val notSuccessTyped =
+            assertIs<com.example.prompts_e01.Schema.Shared.EnumWithCommonFields_NotSuccess>(parsedNotSuccess)
         assertEquals(10, notSuccessTyped.x)
         assertEquals(20.5, notSuccessTyped.y)
         assertEquals("error", notSuccessTyped.z)
@@ -928,19 +929,20 @@ class TestE01_JsonSerialization {
 class TestTemplateOverrider {
     @Test
     fun testSignatureCheckAndOverrides() {
-        val data = com.example.prompts01.templateOverrider.templatesData()
+        val data = com.example.prompts01.TemplateOverrider.templatesData()
         val sig = data.jsonObject["signature"]?.jsonPrimitive?.content
         assertNotNull(sig)
         assertTrue(sig.isNotEmpty())
 
         // Test signature mismatch throws IllegalArgumentException
-        val wrongDoc = Json.parseToJsonElement("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}")
+        val wrongDoc =
+            Json.parseToJsonElement("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}")
         assertFailsWith<IllegalArgumentException> {
-            com.example.prompts01.templateOverrider.applyOverrides(wrongDoc)
+            com.example.prompts01.TemplateOverrider.applyOverrides(wrongDoc)
         }
 
         // Test valid overrides
-        val prompts = com.example.prompts01.templateOverrider.applyOverrides(data)
+        val prompts = com.example.prompts01.TemplateOverrider.applyOverrides(data)
         assertNotNull(prompts)
         val prompt = prompts.renderTranslate(
             com.example.prompts01.Schema.Translate.Input(
