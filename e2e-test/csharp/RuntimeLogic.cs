@@ -52,9 +52,9 @@ namespace TypePromptRuntime
                 {
                     return JsonSerializer.Deserialize<TOutput>(response)!;
                 }
-                catch (Exception e)
+                catch (JsonException e)
                 {
-                    throw new Exception($"Template '{TemplateId.GetId()}': {e.Message}", e);
+                    throw new JsonException($"Template '{TemplateId.GetId()}': {e.Message}", e);
                 }
             }
             else if (OutputFormat is TextOutputFormat)
