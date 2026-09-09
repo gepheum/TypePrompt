@@ -397,7 +397,7 @@ function writeUserDefinedDatatypes(
     "/// Metadata associated with a prompt.",
     `typedef Meta = ${metaType};`,
     anyTypes(metaSchema)
-      ? "Meta _parseMeta(dynamic meta) => meta == null ? null as Meta : Meta.fromJson(meta as Map<String, dynamic>);"
+      ? "Meta _parseMeta(dynamic meta) => Meta.fromJson(meta as Map<String, dynamic>);"
       : "Meta _parseMeta(dynamic meta) => null;",
     "",
     "// ".concat("-".repeat(77)),

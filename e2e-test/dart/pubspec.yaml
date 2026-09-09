@@ -1,6 +1,7 @@
 name: typeprompt_e2e_test
 description: TypePrompt E2E tests in Dart
 version: 1.0.0
+publish_to: none
 
 environment:
   sdk: ^3.0.0
