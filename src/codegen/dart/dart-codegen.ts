@@ -142,9 +142,9 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
   ): readonly string[] => {
     const lines: string[] = [
       `final class ${className} {`,
-      "  final _Spec_Templates _spec;",
+      "final _Spec_Templates _spec;",
       "",
-      `  const ${className}._(this._spec);`,
+      `const ${className}._(this._spec);`,
       "",
     ];
     const templateCount = namespace.templates.length;
@@ -170,19 +170,19 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
 
       if (isJsonOutput) {
         lines.push(
-          `  // Defined in '${t.template.sourcePath}'`,
-          `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
-          `    final fromJson = (json) => ${fromJsonExpr};`,
-          `    return _doRender(_spec, "${templateId}", input, fromJson);`,
-          "  }",
+          `// Defined in '${t.template.sourcePath}'`,
+          `Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
+          `final fromJson = (json) => ${fromJsonExpr};`,
+          `return _doRender(_spec, "${templateId}", input, fromJson);`,
+          "}",
           "",
         );
       } else {
         lines.push(
-          `  // Defined in '${t.template.sourcePath}'`,
-          `  Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
-          `    return _doRender(_spec, "${templateId}", input);`,
-          "  }",
+          `// Defined in '${t.template.sourcePath}'`,
+          `Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
+          `return _doRender(_spec, "${templateId}", input);`,
+          "}",
           "",
         );
       }
@@ -204,22 +204,17 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     const promptsLines: string[] = [
       "/// Entry point for building prompts.",
       "final class Prompts {",
+      "final _Spec_Templates _spec;",
+      "",
+      "const Prompts._(this._spec);",
+      "",
     ];
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toDartName(uncapitalize(ns.name));
-      promptsLines.push(`  final ${namespaceClassName} ${propertyName};`);
-    }
-    promptsLines.push("");
-    promptsLines.push("  Prompts._(_Spec_Templates spec)");
-    const initializers = nsList.map(
-      (ns) =>
-        `${toDartName(uncapitalize(ns.name))} = ${ns.name}Prompts._(spec)`,
-    );
-    if (initializers.length > 0) {
-      promptsLines.push(`: ${initializers.join(",\n")};`);
-    } else {
-      promptsLines.push(";");
+      promptsLines.push(
+        `${namespaceClassName} get ${propertyName} => ${namespaceClassName}._(_spec);`,
+      );
     }
     promptsLines.push("}");
     sections.push(promptsLines.join("\n"));
@@ -247,13 +242,13 @@ function writeTemplateIdEnum(
     return [
       "/// Uniquely identifies a prompt template.",
       "enum TemplateId {",
-      '  none("");',
+      'none("");',
       "",
-      "  final String _id;",
-      "  const TemplateId(this._id);",
+      "final String _id;",
+      "const TemplateId(this._id);",
       "",
-      "  @override",
-      "  String toString() => _id;",
+      "@override",
+      "String toString() => _id;",
       "}",
     ].join("\n");
   }
@@ -270,15 +265,15 @@ function writeTemplateIdEnum(
       : `${uncapitalize(namespace)}_${templateName}`;
     const caseName = toDartName(rawMemberName);
     const templateId = getId(template.template);
-    lines.push(`  ${caseName}("${templateId}")${isLast ? ";" : ","}`);
+    lines.push(`${caseName}("${templateId}")${isLast ? ";" : ","}`);
   }
   lines.push(
     "",
-    "  final String _id;",
-    "  const TemplateId(this._id);",
+    "final String _id;",
+    "const TemplateId(this._id);",
     "",
-    "  @override",
-    "  String toString() => _id;",
+    "@override",
+    "String toString() => _id;",
     "}",
   );
   return lines.join("\n");
@@ -542,18 +537,6 @@ function writeExecuteToolCall(
 ): string {
   const { tools } = compilationResult;
   const toolList = Object.values(tools);
-
-  if (toolList.length <= 0) {
-    return [
-      "Future<ToolCallResponse> _executeToolCall(",
-      "  ToolCall toolCall,",
-      "  String namespace,",
-      "  Object executor,",
-      ") async {",
-      "  throw UnimplementedError();",
-      "}",
-    ].join("\n");
-  }
 
   const lines = [
     "Future<ToolCallResponse> _executeToolCall(",
