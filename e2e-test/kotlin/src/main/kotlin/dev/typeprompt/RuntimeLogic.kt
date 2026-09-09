@@ -52,6 +52,16 @@ data class Prompt<out Output, in ToolExecutor>(
             }
         }
     }
+
+    suspend fun executeTools(
+        toolCalls: List<ToolCall>,
+        toolExecutor: ToolExecutor,
+    ): List<ToolCallResponse> {
+        val namespace = templateId.toString().split(':')[0]
+        return toolCalls.map { call ->
+            executeToolCall(call, namespace, toolExecutor as Any)
+        }
+    }
 }
 
 
@@ -103,6 +113,8 @@ data class ToolCallResponse(
     val callId: String,
     val stringifiedOutput: String,
 )
+
+object NoTools
 // </static:kotlin-public-types>
 
 /** Uniquely identifies a prompt template. */
@@ -113,6 +125,15 @@ enum class TemplateId(private val id: String) {
 }
 
 enum class Meta { Default }
+
+@Suppress("unused")
+private suspend fun executeToolCall(
+    toolCall: ToolCall,
+    namespace: String,
+    executor: Any,
+): ToolCallResponse {
+    throw NotImplementedError()
+}
 
 // <static:kotlin-logic>
 // </static:kotlin-logic>

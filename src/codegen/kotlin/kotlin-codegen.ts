@@ -494,10 +494,6 @@ function writeExecuteToolCall(
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
 
-  if (toolList.length <= 0) {
-    return "";
-  }
-
   const lines = [
     '@Suppress("unused")',
     "private suspend fun executeToolCall(",
