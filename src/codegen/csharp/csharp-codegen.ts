@@ -361,7 +361,7 @@ function writePromptsClass(
     lines.push("}");
   } else {
     const nsList = Object.values(namespaces);
-    lines.push("public class Prompts", "{");
+    lines.push("public sealed class Prompts", "{");
     lines.push(
       "public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));",
       "",
@@ -770,7 +770,10 @@ function writeTypepromptInterface(
     : "";
 
   const visibility = options.file ? "file" : "public";
-  const lines = [`${visibility} record ${typeName}${implementsClause}`, "{"];
+  const lines = [
+    `${visibility} sealed record ${typeName}${implementsClause}`,
+    "{",
+  ];
 
   for (const field of fields) {
     const { type } = field;
@@ -838,6 +841,10 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminator, discriminants } = members;
+      const memberInterfaces = Object.values(members.members).map((member) =>
+        writeType(member.resolved, schema, options),
+      );
+      lines.push(`// Discriminated union of: ${memberInterfaces.join(", ")}`);
       lines.push(`[JsonConverter(typeof(${typeName}__Converter))]`);
       lines.push(`${visibility} interface ${typeName}`, "{");
 
@@ -1122,10 +1129,11 @@ function reformat(code: string): string {
     const starPrefix = line.startsWith("*") ? " " : "";
     outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
     if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
+      (line.endsWith("{") ||
+        line.endsWith("(") ||
+        line.endsWith("[") ||
+        line.endsWith("<")) &&
+      !line.startsWith("//")
     ) {
       indent = indent + "    ";
     }
