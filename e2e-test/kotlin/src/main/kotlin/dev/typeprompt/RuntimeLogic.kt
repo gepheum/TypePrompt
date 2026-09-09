@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -42,8 +43,8 @@ data class Prompt<out Output, in ToolExecutor>(
                     val jsonElement = Json.parseToJsonElement(cleaned)
                     @Suppress("UNCHECKED_CAST")
                     return jsonElement as Output
-                } catch (e: Exception) {
-                    throw Exception("Template '$templateId': ${e.message}", e)
+                } catch (e: SerializationException) {
+                    throw SerializationException("Template '$templateId': ${e.message}", e)
                 }
             }
             is TextOutputFormat -> {
