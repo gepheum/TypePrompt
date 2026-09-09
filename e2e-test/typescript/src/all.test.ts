@@ -822,10 +822,10 @@ describe("e01 / JSON serialization & deserialization", () => {
   });
 
   it("serializes and deserializes string enum variant", () => {
-    const variant: $e01.AnalyzeSalesData.Input_Variant = "csv";
+    const variant: $e01.AnalyzeSalesData.Input["variant"] = "csv";
     const jsonVariant = JSON.stringify(variant);
     expect(jsonVariant).toMatch('"csv"');
-    const parsedVariant: $e01.AnalyzeSalesData.Input_Variant =
+    const parsedVariant: $e01.AnalyzeSalesData.Input["variant"] =
       JSON.parse(jsonVariant);
     expect(parsedVariant).toMatch("csv");
   });

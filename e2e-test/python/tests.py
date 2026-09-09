@@ -7,6 +7,7 @@ import os
 import re
 import pydantic
 import pytest
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -713,8 +714,9 @@ class TestE01JsonSerialization:
         json_add = adapter.dump_json(expr_add).decode("utf-8")
         decoded_add = adapter.validate_json(json_add)
         assert isinstance(decoded_add, s_e01.shared.Expr_KindAdd)
-        assert decoded_add.left.value == 1.0
-        assert decoded_add.right.value == 2.0
+        any_decoded_add: Any = decoded_add
+        assert any_decoded_add.left.value == 1.0
+        assert any_decoded_add.right.value == 2.0
 
     def test_enum_with_common_fields_serialization(self):
         adapter = pydantic.TypeAdapter(s_e01.shared.EnumWithCommonFields)

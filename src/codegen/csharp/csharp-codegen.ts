@@ -340,7 +340,7 @@ function writePromptsClass(
   };
 
   if (singleNamespace) {
-    lines.push("public class Prompts", "{");
+    lines.push("public sealed class Prompts", "{");
     lines.push(
       "public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));",
       "",
@@ -386,7 +386,7 @@ function writePromptsClass(
         "/// <summary>",
         `/// Prompts in the '${namespace.name}' namespace.`,
         "/// </summary>",
-        `public class ${namespaceClassName}`,
+        `public sealed class ${namespaceClassName}`,
         "{",
         "private readonly Internal.IRenderer _renderer;",
         "",
@@ -866,7 +866,7 @@ function writeTypepromptUnion(
 
       lines.push(
         "",
-        `${converterVisibility} class ${typeName}__Converter : JsonConverter<${typeName}>`,
+        `${converterVisibility} sealed class ${typeName}__Converter : JsonConverter<${typeName}>`,
         "{",
         `public override ${typeName}? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {`,
         "using var doc = JsonDocument.ParseValue(ref reader);",
