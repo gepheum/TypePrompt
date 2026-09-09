@@ -198,10 +198,7 @@ namespace TypePromptRuntime
     {
         public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
         {
-            if (!spec.templates.TryGetValue(templateId, out var template))
-            {
-                throw new KeyNotFoundException($"Template not found: {templateId}");
-            }
+            var template = spec.templates[templateId];
 
             var inputElement = JsonSerializer.SerializeToElement(input);
             var inputObj = JsonElementToObject(inputElement);
@@ -223,19 +220,12 @@ namespace TypePromptRuntime
                 userMessage = RenderBody(userBody, inputObj, snippets);
                 examples = RenderExamples(content.Examples, userBody, template);
             }
-            else if (contents is Spec.TemplateContents_KindVariants variants)
+            else
             {
-                if (inputObj is not IDictionary<string, object?> inputDict ||
-                    !inputDict.TryGetValue("variant", out var variantObj) ||
-                    variantObj == null)
-                {
-                    throw new InvalidOperationException("Input must contain a 'variant' property for variant templates");
-                }
-                var variant = variantObj.ToString()!;
-                if (!variants.Variants.TryGetValue(variant, out var variantContent))
-                {
-                    throw new KeyNotFoundException($"Variant '{variant}' not found");
-                }
+                var variants = (Spec.TemplateContents_KindVariants)contents;
+                var inputDict = (IDictionary<string, object?>)inputObj!;
+                var variant = inputDict["variant"]!.ToString()!;
+                var variantContent = variants.Variants[variant];
                 var defaultContent = variants.DefaultContent;
 
                 metaElement = variantContent.Meta ?? defaultContent.Meta;
@@ -245,10 +235,6 @@ namespace TypePromptRuntime
                 userMessage = RenderBody(userBody, inputObj, snippets);
                 var rawExamples = variantContent.Examples ?? defaultContent.Examples;
                 examples = RenderExamples(rawExamples, userBody, template);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Unsupported template contents kind: {contents.GetType().Name}");
             }
 
             var meta = MetaParser.Parse(metaElement);
@@ -353,16 +339,12 @@ namespace TypePromptRuntime
                     }
                 case Spec.Expression_KindProperty propExpr:
                     {
-                        var obj = Evaluate(propExpr.Left, val);
-                        if (obj is IDictionary<string, object?> dict)
-                        {
-                            return dict[propExpr.Property];
-                        }
-                        throw new InvalidOperationException($"Cannot access property '{propExpr.Property}' on non-dictionary: {obj?.GetType().Name ?? "null"}");
+                        var obj = (IDictionary<string, object?>)Evaluate(propExpr.Left, val)!;
+                        return obj[propExpr.Property];
                     }
                 default:
                     {
-                        throw new ArgumentOutOfRangeException(nameof(expression));
+                        return null;
                     }
             }
         }
@@ -491,10 +473,7 @@ namespace TypePromptRuntime
                         }
                     case Spec.BodyPiece_KindInsertSnippet insertSnippetPiece:
                         {
-                            if (!snippets.TryGetValue(insertSnippetPiece.Snippet, out var snippet))
-                            {
-                                throw new KeyNotFoundException($"Snippet not found: {insertSnippetPiece.Snippet}");
-                            }
+                            var snippet = snippets[insertSnippetPiece.Snippet];
                             var renderedSnippet = RenderSnippet(snippet, inp, snippets);
                             sb.Append(Indent(renderedSnippet, insertSnippetPiece.Indent));
                             break;
@@ -581,16 +560,8 @@ namespace TypePromptRuntime
                 case Spec.Snippet_KindSnippetSwitch snippetSwitch:
                     {
                         var switchVal = Evaluate(snippetSwitch.Expression, inp);
-                        var switchKey = switchVal?.ToString() ?? "";
-                        if (switchVal is bool boolVal)
-                        {
-                            switchKey = boolVal ? "true" : "false";
-                        }
-                        if (!snippetSwitch.Branches.TryGetValue(switchKey, out var branch))
-                        {
-                            throw new KeyNotFoundException($"Branch not found: {switchVal}");
-                        }
-                        return RenderBody(branch, inp, snippets);
+                        var switchKey = switchVal is bool boolVal ? (boolVal ? "true" : "false") : switchVal?.ToString() ?? "";
+                        return RenderBody(snippetSwitch.Branches[switchKey], inp, snippets);
                     }
                 default:
                     {
