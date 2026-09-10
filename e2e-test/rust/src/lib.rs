@@ -211,6 +211,30 @@ mod tests {
             .stringified_output
             .contains("Tokyo Population 2024"));
 
+        // execute_tools with empty list returns Ok(vec![])
+        let empty_results = block_on(prompt.execute_tools(&[], &MockWebSearchExecutor)).unwrap();
+        assert!(empty_results.is_empty());
+
+        // execute_tools on prompt with no tools returns Ok(vec![]) if empty, Err if not empty
+        let prompt_01 =
+            gen::prompts_01::prompts.render_translate(&gen::prompts_01::schema::translate::Input {
+                text: "test".to_string(),
+                target_language: "French".to_string(),
+            });
+        let no_tools_empty =
+            block_on(prompt_01.execute_tools(&[], &gen::prompts_01::NO_TOOLS)).unwrap();
+        assert!(no_tools_empty.is_empty());
+
+        let bad_no_tools_call = vec![gen::prompts_01::ToolCall {
+            call_id: "c1".to_string(),
+            tool_name: "anyTool".to_string(),
+            stringified_input: "{}".to_string(),
+        }];
+        assert!(
+            block_on(prompt_01.execute_tools(&bad_no_tools_call, &gen::prompts_01::NO_TOOLS))
+                .is_err()
+        );
+
         // execute_tools errors for unknown tool
         let bad_calls = vec![gen::prompts_03::ToolCall {
             call_id: "c1".to_string(),

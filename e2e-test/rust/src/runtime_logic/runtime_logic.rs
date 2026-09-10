@@ -92,8 +92,8 @@ pub struct Prompt<Output, ToolExecutor: ?Sized = NoTools> {
   pub output_format: OutputFormat,
   /// The identifier of the template from which this prompt was rendered.
   pub template_id: TemplateId,
-  pub(crate) execute_tool_call: Option<ExecuteToolCallFn<ToolExecutor>>,
-  pub(crate) _phantom: std::marker::PhantomData<fn() -> (Output, ToolExecutor)>,
+  execute_tool_call: Option<ExecuteToolCallFn<ToolExecutor>>,
+  _phantom: std::marker::PhantomData<fn() -> (Output, ToolExecutor)>,
 }
 
 impl<Output, ToolExecutor: ?Sized> Prompt<Output, ToolExecutor> {
@@ -114,6 +114,9 @@ impl<Output, ToolExecutor: ?Sized> Prompt<Output, ToolExecutor> {
     tool_calls: &[ToolCall],
     tool_executor: &ToolExecutor,
   ) -> Result<Vec<ToolCallResponse>, Box<dyn std::error::Error + Send + Sync>> {
+    if tool_calls.is_empty() {
+      return Ok(Vec::new());
+    }
     let execute_fn = self.execute_tool_call.ok_or_else(|| {
       Box::<dyn std::error::Error + Send + Sync>::from("This prompt has no tools")
     })?;
