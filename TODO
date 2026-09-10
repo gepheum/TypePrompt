@@ -1,10 +1,8 @@
 CODEGEN:
   - ALL:
-    - TemplateOverrider.template_data should be a getter...
     - I need to add inputJsonSchema to Tool!!!
     - update all the schemas...
     - always output the JSON schema in Spec...
-  - add comment to static and generated types
   - Python, Typescript:
     - add stringifiedJsonSchema to OutputFormat?
     - add a 'NoTools' param?
