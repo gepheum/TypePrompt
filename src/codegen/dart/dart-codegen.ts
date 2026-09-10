@@ -204,6 +204,9 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       [
         "/// Entry point for building prompts.",
         ...writeNamespaceMembers("Prompts", singleNamespace),
+        "",
+        "/// Entry point for building prompts.",
+        "final prompts = Prompts._(_templatesData);",
       ].join("\n"),
     );
   } else {
@@ -223,7 +226,12 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         `${namespaceClassName} get ${propertyName} => ${namespaceClassName}._(_spec);`,
       );
     }
-    promptsLines.push("}");
+    promptsLines.push(
+      "}",
+      "",
+      "/// Entry point for building prompts.",
+      "final prompts = Prompts._(_templatesData);",
+    );
     sections.push(promptsLines.join("\n"));
 
     for (const namespace of nsList) {

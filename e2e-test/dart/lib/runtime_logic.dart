@@ -1044,6 +1044,9 @@ final class Prompts {
   const Prompts._(this._spec);
 }
 
+/// Entry point for building prompts.
+final prompts = Prompts._(_templatesData);
+
 // <static:dart-logic>
 dynamic _evaluate(_Spec_Expression expression, dynamic val) {
   switch (expression) {
@@ -1401,7 +1404,4 @@ abstract final class TemplateOverrider {
     return Prompts._(mergedData);
   }
 }
-
-/// Entry point for building prompts.
-final prompts = Prompts._(_templatesData);
 // </static:dart-logic>

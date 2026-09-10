@@ -1,13 +1,10 @@
 CODEGEN:
   - ALL:
     - TemplateOverrider.template_data should be a getter...
-    - try define 'prompts' right after Prompts
     - I need to add inputJsonSchema to Tool!!!
     - update all the schemas...
     - always output the JSON schema in Spec...
   - add comment to static and generated types
-  - RUST:
-    - SHOULD NOT BE OPTIONAL: execute_tool_call: Option<ExecuteToolCallFn<ToolExecutor>>
   - Python, Typescript:
     - add stringifiedJsonSchema to OutputFormat?
     - add a 'NoTools' param?
