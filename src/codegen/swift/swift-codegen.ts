@@ -412,16 +412,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+      },
+    )
     : "Never?";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -660,7 +660,7 @@ function writeExecuteToolCall(
     "fileprivate static func executeToolCall(",
     "toolCall: ToolCall,",
     "namespace: String,",
-    "executor: any Any",
+    "executor: any Any,",
     ") async throws -> ToolCallResponse {",
   ];
 
