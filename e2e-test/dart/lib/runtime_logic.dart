@@ -65,6 +65,7 @@ final class Prompt<Output, ToolExecutor> {
   final Map<String, Tool> tools;
   final OutputFormat outputFormat;
   final TemplateId templateId;
+  final Output Function(dynamic json) _fromJson;
 
   const Prompt({
     required this.meta,
@@ -74,7 +75,8 @@ final class Prompt<Output, ToolExecutor> {
     required this.tools,
     required this.outputFormat,
     required this.templateId,
-  });
+    required Output Function(dynamic json) fromJson,
+  }) : _fromJson = fromJson;
 
   /// Parse an LLM response into the expected output type.
   Output parseResponse(String response) {
@@ -82,6 +84,7 @@ final class Prompt<Output, ToolExecutor> {
       response,
       outputFormat,
       templateId,
+      _fromJson,
     );
   }
 
@@ -106,12 +109,10 @@ sealed class OutputFormat {
 
 final class JsonOutputFormat extends OutputFormat {
   final String stringifiedJsonSchema;
-  final dynamic Function(dynamic json) _fromJson;
 
   const JsonOutputFormat._({
     required this.stringifiedJsonSchema,
-    required dynamic Function(dynamic json) fromJson,
-  }) : _fromJson = fromJson;
+  });
 }
 
 final class TextOutputFormat extends OutputFormat {
@@ -1202,9 +1203,7 @@ List<FewShotExample> _renderExamples(
   if (examples == null || examples.isEmpty) return const [];
   final result = <FewShotExample>[];
   for (final ex in examples) {
-    final exInputObj = _inputToObject(ex.input);
-    final exOutputObj = _inputToObject(ex.output);
-    final userMessage = _renderBody(userBody, exInputObj, tmpl.snippets);
+    final userMessage = _renderBody(userBody, ex.input, tmpl.snippets);
 
     final intermediateSteps = <IntermediateStepExample>[];
     for (final step in ex.intermediateSteps) {
@@ -1225,7 +1224,7 @@ List<FewShotExample> _renderExamples(
     final outputFormat = tmpl.outputFormat == _Spec_OutputFormat.json
         ? _Spec_InsertFormat.json
         : _Spec_InsertFormat.text;
-    final response = _formatValue(exOutputObj, outputFormat);
+    final response = _formatValue(ex.output, outputFormat);
 
     result.add(
       FewShotExample(
@@ -1238,21 +1237,6 @@ List<FewShotExample> _renderExamples(
   return result;
 }
 
-dynamic _inputToObject(dynamic input) {
-  if (input == null) return null;
-  if (input is num || input is bool || input is String) return input;
-  if (input is List) return input.map(_inputToObject).toList();
-  if (input is Map) {
-    return input.map((k, v) => MapEntry(k.toString(), _inputToObject(v)));
-  }
-  try {
-    final json = (input as dynamic).toJson();
-    return _inputToObject(json);
-  } catch (_) {
-    return input.toString();
-  }
-}
-
 TemplateId _parseTemplateId(String id) {
   for (final t in TemplateId.values) {
     if (t.toString() == id) return t;
@@ -1263,15 +1247,14 @@ TemplateId _parseTemplateId(String id) {
 Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   _Spec_Templates spec,
   String templateId,
-  dynamic rawInput, [
-  dynamic Function(dynamic json)? fromJson,
-]) {
+  dynamic input,
+  Output Function(dynamic json) fromJson,
+) {
   final template = spec.templates[templateId];
   if (template == null) {
     throw ArgumentError('Template not found: $templateId');
   }
 
-  final inputObj = _inputToObject(rawInput);
   final snippets = template.snippets;
   final contents = template.contents;
 
@@ -1284,15 +1267,15 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
     case _Spec_TemplateContents_KindNoVariants():
       final content = contents.content;
       metaElement = content.meta;
-      systemMessage = _renderBody(content.system, inputObj, snippets);
+      systemMessage = _renderBody(content.system, input, snippets);
       final userBody = content.user ?? const [];
-      userMessage = _renderBody(userBody, inputObj, snippets);
+      userMessage = _renderBody(userBody, input, snippets);
       examples = _renderExamples(content.examples, userBody, template);
     case _Spec_TemplateContents_KindVariants():
-      if (inputObj is! Map) {
+      if (input is! Map) {
         throw ArgumentError('Input for template with variants must be a map');
       }
-      final variant = inputObj['variant']?.toString();
+      final variant = input['variant']?.toString();
       if (variant == null) {
         throw ArgumentError("Missing 'variant' field in input");
       }
@@ -1306,8 +1289,8 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
       final systemBody =
           variantContent.system ?? defaultContent.system ?? const [];
       final userBody = variantContent.user ?? defaultContent.user ?? const [];
-      systemMessage = _renderBody(systemBody, inputObj, snippets);
-      userMessage = _renderBody(userBody, inputObj, snippets);
+      systemMessage = _renderBody(systemBody, input, snippets);
+      userMessage = _renderBody(userBody, input, snippets);
       final rawExamples = variantContent.examples ?? defaultContent.examples;
       examples = _renderExamples(rawExamples, userBody, template);
   }
@@ -1327,7 +1310,6 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   if (template.outputFormat == _Spec_OutputFormat.json) {
     outputFormat = JsonOutputFormat._(
       stringifiedJsonSchema: jsonEncode(template.outputJsonSchema),
-      fromJson: fromJson!,
     );
   } else {
     outputFormat = const TextOutputFormat();
@@ -1341,6 +1323,7 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
     tools: tools,
     outputFormat: outputFormat,
     templateId: _parseTemplateId(templateId),
+    fromJson: fromJson,
   );
 }
 
@@ -1348,6 +1331,7 @@ Output _doParseResponse<Output>(
   String response,
   OutputFormat outputFormat,
   TemplateId templateId,
+  Output Function(dynamic json) fromJson,
 ) {
   switch (outputFormat) {
     case JsonOutputFormat():
@@ -1365,12 +1349,12 @@ Output _doParseResponse<Output>(
       }
       try {
         final decoded = jsonDecode(cleaned);
-        return outputFormat._fromJson(decoded) as Output;
+        return fromJson(decoded);
       } catch (e) {
         throw FormatException("Template '$templateId': $e");
       }
     case TextOutputFormat():
-      return response as Output;
+      return fromJson(response);
   }
 }
 

@@ -150,7 +150,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     const templateCount = namespace.templates.length;
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
-      const { inputType, outputType, outputTypeNode, options } =
+      const { inputType, outputType, inputTypeNode, outputTypeNode, options } =
         getTemplateTypes(t, compilationResult);
       const methodName = "render".concat(capitalize(t.template.name.text));
       const templateId = getId(t.template);
@@ -160,6 +160,12 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       } else {
         toolExecutorRef = getToolExecutorRef(t, compilationResult);
       }
+      const inputToJsonExpr = writeToJsonExpr(
+        inputTypeNode,
+        "input",
+        t.schema,
+        options,
+      );
       const fromJsonExpr = writeFromJsonExpr(
         outputTypeNode,
         "json",
@@ -173,7 +179,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
           `// Defined in '${t.template.sourcePath}'`,
           `Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
           `final fromJson = (json) => ${fromJsonExpr};`,
-          `return _doRender(_spec, "${templateId}", input, fromJson);`,
+          `return _doRender(_spec, "${templateId}", ${inputToJsonExpr}, fromJson);`,
           "}",
           "",
         );
@@ -181,7 +187,8 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         lines.push(
           `// Defined in '${t.template.sourcePath}'`,
           `Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
-          `return _doRender(_spec, "${templateId}", input);`,
+          `final fromJson = (str) => str as String;`,
+          `return _doRender(_spec, "${templateId}", ${inputToJsonExpr}, fromJson);`,
           "}",
           "",
         );
