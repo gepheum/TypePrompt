@@ -65,10 +65,10 @@ function writeAll(
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
           writeExecuteToolCall(compilationResult, config),
-          STATIC_SNIPPETS["swift-logic"],
-          "}",
         ].join("\n\n"),
       ),
+      STATIC_SNIPPETS["swift-logic"],
+      `}  // enum ${rootNamespace}`,
     ].join("\n\n"),
   ).concat("\n");
 }

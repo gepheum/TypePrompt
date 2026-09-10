@@ -1493,18 +1493,22 @@ public enum TypePromptRuntime {
       else {
         throw NSError(
           domain: "TemplateOverrider", code: 1,
-          userInfo: [NSLocalizedDescriptionKey: "Invalid overrides format"])
+          userInfo: [NSLocalizedDescriptionKey: "Invalid overrides format"],
+        )
       }
       if sig != _templatesData.signature {
         throw NSError(
           domain: "TemplateOverrider", code: 2,
-          userInfo: [NSLocalizedDescriptionKey: "Signature mismatch"])
+          userInfo: [NSLocalizedDescriptionKey: "Signature mismatch"],
+        )
       }
       var mergedTemplates = _templatesData.templates
       if let templatesObj = json["templates"] as? [String: Any] {
         let templatesDataRaw = try JSONSerialization.data(withJSONObject: templatesObj)
         let overrideTemplates = try decoder.decode(
-          [String: Spec.Template].self, from: templatesDataRaw)
+          [String: Spec.Template].self,
+          from: templatesDataRaw,
+        )
         for (k, v) in overrideTemplates {
           mergedTemplates[k] = v
         }

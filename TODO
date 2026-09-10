@@ -13,9 +13,6 @@ CODEGEN:
   - Python:
     - switch to TOON published on pypu
   - add PromptTools namespace with enums
-  - make Prompt not publicly instantiable
-  - in Dart:
-    - make static data classes toString-able
   - in Kotlin, try to remove trailing `{ }`
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
   - exception thrown from tool executor: create a specific exception type?
