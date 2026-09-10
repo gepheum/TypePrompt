@@ -412,16 +412,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+        },
+      )
     : "Never?";
   lines.push(
     "/// Metadata associated with a prompt.",

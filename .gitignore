@@ -25,6 +25,7 @@ e2e-test/python/.venv
 e2e-test/python/__pycache/
 e2e-test/python/gen/
 e2e-test/python/**/*.pyc
+*.egg-info/
 
 e2e-test/rust/src/gen/
 e2e-test/rust/target/
