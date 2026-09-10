@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal, Optional, Union, final
 import pydantic
 
 
+# <generated:spec>
 @final
 class _internal:
     class Templates(pydantic.BaseModel):
@@ -218,3 +219,4 @@ class _internal:
             ),
             serialization_alias="outputJsonSchema",
         )
+# </generated:spec>
