@@ -192,7 +192,10 @@ class CompilationResultImpl implements CompilationResult {
 
     const namespaceResults = Object.values(this.namespaces);
     if (namespaceResults.length === 1) {
-      this.singleNamespace = namespaceResults[0]!;
+      const singleNamespace = namespaceResults[0]!;
+      if (singleNamespace.name === DEFAULT_NAMESPACE) {
+        this.singleNamespace = singleNamespace;
+      }
     }
 
     this.anyErrors = Object.values(this.finalErrors).some(
