@@ -482,9 +482,7 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult, {
-    includeJsonSchemas: true,
-  });
+  const templatesData = makeTemplates(compilationResult);
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
     /\$/g,
     "\\$",

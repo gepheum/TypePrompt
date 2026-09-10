@@ -345,7 +345,7 @@ public enum TypePromptRuntime {
       let tools: [TemplateTool]
       let contents: TemplateContents
       let snippets: [String: Snippet]
-      let outputJsonSchema: JsonElement?
+      let outputJsonSchema: JsonElement
 
       init(
         name: String,
@@ -354,7 +354,7 @@ public enum TypePromptRuntime {
         tools: [TemplateTool],
         contents: TemplateContents,
         snippets: [String: Snippet],
-        outputJsonSchema: JsonElement? = nil,
+        outputJsonSchema: JsonElement,
       ) {
         self.name = name
         self.namespace = namespace
@@ -773,13 +773,13 @@ public enum TypePromptRuntime {
       let id: String
       let name: String
       let description: String
-      let inputJsonSchema: JsonElement?
+      let inputJsonSchema: JsonElement
 
       init(
         id: String,
         name: String,
         description: String,
-        inputJsonSchema: JsonElement? = nil,
+        inputJsonSchema: JsonElement,
       ) {
         self.id = id
         self.name = name
@@ -1373,8 +1373,7 @@ public enum TypePromptRuntime {
     let fromJson: @Sendable (Data) throws -> Output
     if template.outputFormat == .json {
       let schemaJson: String
-      if let outputJsonSchema = template.outputJsonSchema,
-        let obj = jsonElementToObject(outputJsonSchema),
+      if let obj = jsonElementToObject(template.outputJsonSchema),
         let data = try? JSONSerialization.data(
           withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
         let str = String(data: data, encoding: .utf8)

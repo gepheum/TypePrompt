@@ -469,9 +469,7 @@ function indentLine(line: string, indent: " " | "  " | "   "): string {
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult, {
-    includeJsonSchemas: false,
-  });
+  const templatesData = makeTemplates(compilationResult);
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   return [
     "_templates_data: Final = _internal.Templates.model_validate_json(",

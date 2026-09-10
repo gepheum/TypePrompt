@@ -285,9 +285,7 @@ function writeSpecDatatypes(): string {
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult, {
-    includeJsonSchemas: false,
-  });
+  const templatesData = makeTemplates(compilationResult);
   return (
     "const TEMPLATES_DATA: Spec.Templates = " +
     JSON.stringify(templatesData, undefined, 2) +

@@ -20,17 +20,14 @@ import { toJsonSchema } from "../schema/json-schema-org.js";
 import { Schema } from "../schema/schema-types.js";
 import * as Spec from "./runtime-types.js";
 
-export function makeTemplates(
-  input: ValidCompilationResult,
-  options: Options,
-): Spec.Templates {
+export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
   const tools: { [id: string]: Spec.Tool } = {};
   for (const [id, tool] of Object.entries(input.tools)) {
-    tools[id] = makeTool(tool, id, options);
+    tools[id] = makeTool(tool, id);
   }
   const templates: { [id: string]: Spec.Template } = {};
   for (const [id, result] of Object.entries(input.templates)) {
-    templates[id] = makeTemplate(result, options);
+    templates[id] = makeTemplate(result);
   }
   const sourceFiles = Object.fromEntries(
     Object.entries(input.sourceFiles).map(([path, result]) => [
@@ -44,12 +41,8 @@ export function makeTemplates(
   return { edition, signature, tools, templates, singleNamespace, sourceFiles };
 }
 
-function makeTool(
-  input: ValidatedTool,
-  id: string,
-  options: Options,
-): Spec.Tool {
-  const { inputJsonSchema } = makeJsonSchemas(input.schema, options);
+function makeTool(input: ValidatedTool, id: string): Spec.Tool {
+  const { inputJsonSchema } = makeJsonSchemas(input.schema);
   const { tool } = input;
   return {
     id,
@@ -59,10 +52,10 @@ function makeTool(
   };
 }
 
-function makeTemplate(input: ValidTemplate, options: Options): Spec.Template {
+function makeTemplate(input: ValidTemplate): Spec.Template {
   const { template } = input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const { outputJsonSchema } = makeJsonSchemas(input.schema, options);
+  const { outputJsonSchema } = makeJsonSchemas(input.schema);
   return {
     name: template.name.text,
     namespace: namespace,
@@ -282,28 +275,12 @@ function makeSnippet(input: Snippet): Spec.Snippet {
   }
 }
 
-function makeJsonSchemas(
-  schema: Schema,
-  options: {
-    readonly includeJsonSchemas: boolean;
-  },
-): {
+function makeJsonSchemas(schema: Schema): {
   readonly inputJsonSchema: unknown;
   readonly outputJsonSchema: unknown;
 } {
-  if (options.includeJsonSchemas) {
-    return {
-      inputJsonSchema: toJsonSchema("Input", schema, schema.unionToMembers),
-      outputJsonSchema: toJsonSchema("Output", schema, schema.unionToMembers),
-    };
-  } else {
-    return {
-      inputJsonSchema: undefined,
-      outputJsonSchema: undefined,
-    };
-  }
+  return {
+    inputJsonSchema: toJsonSchema("Input", schema, schema.unionToMembers),
+    outputJsonSchema: toJsonSchema("Output", schema, schema.unionToMembers),
+  };
 }
-
-type Options = {
-  readonly includeJsonSchemas: boolean;
-};

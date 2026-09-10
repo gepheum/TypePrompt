@@ -279,7 +279,7 @@ final class _Spec_Template {
     required this.tools,
     required this.contents,
     required this.snippets,
-    this.outputJsonSchema,
+    required this.outputJsonSchema,
   });
 
   Map<String, dynamic> toJson() {
@@ -993,7 +993,7 @@ final class _Spec_Tool {
     required this.id,
     required this.name,
     required this.description,
-    this.inputJsonSchema,
+    required this.inputJsonSchema,
   });
 
   Map<String, dynamic> toJson() {

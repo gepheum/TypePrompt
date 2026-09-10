@@ -9,6 +9,7 @@ import type {
 import type { Expression } from "../expression/expression-types.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { parseSchema } from "../schema/schema-parser.js";
+import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type { TextSpan } from "../util/shared-types.js";
 import { makeTemplates } from "./spec-maker.js";
@@ -54,8 +55,18 @@ function jsonArr(elements: unknown[]): unknown {
   };
 }
 
-const NO_JSON_SCHEMAS = { includeJsonSchemas: false };
-const WITH_JSON_SCHEMAS = { includeJsonSchemas: true };
+const TEST_SCHEMA: Schema = ((): Schema => {
+  const parsed = parseSchema({
+    text: "type Input = string\ntype Output = string",
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  });
+  if (parsed.kind !== "success") throw new Error("parse failed");
+  const schema = validateSchema(parsed, {
+    kind: "namespace",
+  });
+  if (schema.kind !== "success") throw new Error("validation failed");
+  return schema;
+})();
 
 /** Minimal valid compilation result with no templates, tools, or source files. */
 function emptyResult(): ValidCompilationResult {
@@ -79,7 +90,7 @@ function emptyBody(): Body {
 
 describe("makeTemplates - empty result", () => {
   it("produces empty templates, tools, and sourceFiles maps", () => {
-    expect(makeTemplates(emptyResult(), NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(emptyResult())).toMatch({
       templates: {},
       tools: {},
       sourceFiles: {},
@@ -100,7 +111,7 @@ describe("makeTemplates - source files", () => {
         "b.xml": { content: "<tool/>" },
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       sourceFiles: { "a.xml": "<template/>", "b.xml": "<tool/>" },
     });
   });
@@ -114,7 +125,7 @@ describe("makeTemplates - tool", () => {
   function makeToolResult(name: string, descriptionText: string): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tool: {
         kind: "success" as const,
         name: span(name),
@@ -130,7 +141,7 @@ describe("makeTemplates - tool", () => {
       ...emptyResult(),
       tools: { "Main:search": makeToolResult("search", "Search the web") },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       tools: {
         "Main:search": {
           id: "Main:search",
@@ -144,7 +155,7 @@ describe("makeTemplates - tool", () => {
   it("concatenates multi-piece descriptions", () => {
     const toolResult = {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tool: {
         kind: "success" as const,
         name: span("tool"),
@@ -160,18 +171,20 @@ describe("makeTemplates - tool", () => {
       ...emptyResult(),
       tools: { "Main:tool": toolResult },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       tools: { "Main:tool": { description: "Hello world" } },
     });
   });
 
-  it("leaves inputJsonSchema undefined when includeJsonSchemas is false", () => {
+  it("includes inputJsonSchema for tools", () => {
     const result = {
       ...emptyResult(),
       tools: { "Main:search": makeToolResult("search", "") },
     } as unknown as ValidCompilationResult;
-    const spec = makeTemplates(result, NO_JSON_SCHEMAS);
-    expect(spec.tools["Main:search"]!.inputJsonSchema).toBe(undefined);
+    const spec = makeTemplates(result);
+    expect(spec.tools["Main:search"]!.inputJsonSchema).toMatch({
+      type: "string",
+    });
   });
 });
 
@@ -187,7 +200,7 @@ describe("makeTemplates - template basic fields", () => {
   ): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -218,7 +231,7 @@ describe("makeTemplates - template basic fields", () => {
       ...emptyResult(),
       templates: { "Geo:Greet": minimalTemplate("Greet", "Geo", null) },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Geo:Greet": { name: "Greet", namespace: "Geo" } },
     });
   });
@@ -228,7 +241,7 @@ describe("makeTemplates - template basic fields", () => {
       ...emptyResult(),
       templates: { "Main:Hello": minimalTemplate("Hello", null, null) },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Main:Hello": { namespace: "Main" } },
     });
   });
@@ -238,7 +251,7 @@ describe("makeTemplates - template basic fields", () => {
       ...emptyResult(),
       templates: { "Main:T": minimalTemplate("T", null, "text") },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { outputFormat: "text" } },
     });
   });
@@ -248,7 +261,7 @@ describe("makeTemplates - template basic fields", () => {
       ...emptyResult(),
       templates: { "Main:T": minimalTemplate("T", null, null) },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { outputFormat: "json" } },
     });
   });
@@ -259,12 +272,12 @@ describe("makeTemplates - template basic fields", () => {
       templates: {
         "Geo:T": {
           kind: "success" as const,
-          schema: EMPTY_SCHEMA,
+          schema: TEST_SCHEMA,
           tools: {
             myTool: {
               tool: {
                 kind: "success" as const,
-                schema: EMPTY_SCHEMA,
+                schema: TEST_SCHEMA,
                 tool: {
                   kind: "success" as const,
                   name: span("search"),
@@ -297,7 +310,7 @@ describe("makeTemplates - template basic fields", () => {
         },
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Geo:T": { tools: [{ id: "Geo:search", name: "myTool" }] },
       },
@@ -313,7 +326,7 @@ describe("makeTemplates - contents", () => {
   function templateWithContents(contents: unknown): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -344,7 +357,7 @@ describe("makeTemplates - contents", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { contents: { kind: "no-variants" } } },
     });
   });
@@ -375,7 +388,7 @@ describe("makeTemplates - contents", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -397,7 +410,7 @@ describe("makeTemplates - body pieces", () => {
   function templateWithUserBody(pieces: Body): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -428,7 +441,7 @@ describe("makeTemplates - body pieces", () => {
         "Main:T": templateWithUserBody([{ kind: "text", text: "Hello!" }]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: { content: { user: [{ kind: "text", text: "Hello!" }] } },
@@ -450,7 +463,7 @@ describe("makeTemplates - body pieces", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: { content: { user: [{ kind: "text", text: "myTag" }] } },
@@ -478,7 +491,7 @@ describe("makeTemplates - body pieces", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -517,7 +530,7 @@ describe("makeTemplates - body pieces", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -544,7 +557,7 @@ describe("makeTemplates - body pieces", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -568,7 +581,7 @@ describe("makeTemplates - expressions", () => {
   function templateWithExprPiece(val: Expression<false>): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -610,7 +623,7 @@ describe("makeTemplates - expressions", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
+    expect(getVal(makeTemplates(result))).toMatch({
       kind: "input",
     });
   });
@@ -626,7 +639,7 @@ describe("makeTemplates - expressions", () => {
       ...emptyResult(),
       templates: { "Main:T": templateWithExprPiece(expr) },
     } as unknown as ValidCompilationResult;
-    expect(getVal(makeTemplates(result, NO_JSON_SCHEMAS))).toMatch({
+    expect(getVal(makeTemplates(result))).toMatch({
       kind: "property",
       left: { kind: "input" },
       property: "name",
@@ -642,7 +655,7 @@ describe("makeTemplates - snippets", () => {
   function templateWithSnippets(snippets: readonly Snippet[]): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -679,7 +692,7 @@ describe("makeTemplates - snippets", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           snippets: {
@@ -706,7 +719,7 @@ describe("makeTemplates - snippets", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           snippets: {
@@ -738,7 +751,7 @@ describe("makeTemplates - snippets", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": { snippets: { s: { kind: "snippet-if", is: "not-null" } } },
       },
@@ -769,7 +782,7 @@ describe("makeTemplates - snippets", () => {
         ]),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           snippets: {
@@ -795,7 +808,7 @@ describe("makeTemplates - meta and examples", () => {
   function templateWithContent(content: unknown): unknown {
     return {
       kind: "success" as const,
-      schema: EMPTY_SCHEMA,
+      schema: TEST_SCHEMA,
       tools: {},
       template: {
         kind: "success" as const,
@@ -831,7 +844,7 @@ describe("makeTemplates - meta and examples", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": { contents: { content: { meta: { temperature: 0.5 } } } },
       },
@@ -850,7 +863,7 @@ describe("makeTemplates - meta and examples", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    const spec = makeTemplates(result, NO_JSON_SCHEMAS);
+    const spec = makeTemplates(result);
     expect(spec.templates["Main:T"]!.contents).toMatch({ content: {} });
     expect((spec.templates["Main:T"]!.contents as any).content.meta).toBe(
       undefined,
@@ -876,7 +889,7 @@ describe("makeTemplates - meta and examples", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -925,7 +938,7 @@ describe("makeTemplates - meta and examples", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: {
         "Main:T": {
           contents: {
@@ -968,7 +981,7 @@ describe("makeTemplates - meta and examples", () => {
         }),
       },
     } as unknown as ValidCompilationResult;
-    expect(makeTemplates(result, NO_JSON_SCHEMAS)).toMatch({
+    expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { contents: { content: { examples: [] } } } },
     });
   });
@@ -979,7 +992,7 @@ describe("makeTemplates - meta and examples", () => {
 // ---------------------------------------------------------------------------
 
 describe("makeTemplates - JSON schemas", () => {
-  it("includes JSON schemas when includeJsonSchemas is true", () => {
+  it("includes JSON schemas", () => {
     const schemaSource = "type Input = string\ntype Output = number";
     const sourceSpan = {
       text: schemaSource,
@@ -1022,7 +1035,7 @@ describe("makeTemplates - JSON schemas", () => {
       },
     } as unknown as ValidCompilationResult;
 
-    const spec = makeTemplates(result, WITH_JSON_SCHEMAS);
+    const spec = makeTemplates(result);
     expect(spec.templates["Main:T"]!.outputJsonSchema).toMatch({
       type: "number",
     });

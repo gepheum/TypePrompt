@@ -38,7 +38,6 @@ class _internal:
         contents: _internal.TemplateContents
         snippets: dict[str, _internal.Snippet]
         output_json_schema: Any = pydantic.Field(
-            default=None,
             validation_alias=pydantic.AliasChoices(
                 "outputJsonSchema", "output_json_schema"
             ),
@@ -213,7 +212,6 @@ class _internal:
         name: str
         description: str
         input_json_schema: Any = pydantic.Field(
-            default=None,
             validation_alias=pydantic.AliasChoices(
                 "inputJsonSchema", "input_json_schema"
             ),

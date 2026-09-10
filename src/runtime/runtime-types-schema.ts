@@ -20,7 +20,7 @@ type Template = {
   tools: TemplateTool[];
   contents: TemplateContents;
   snippets: { [name: string]: Snippet };
-  outputJsonSchema?: any;
+  outputJsonSchema: any;
 };
 
 type OutputFormat = "json" | "text";
@@ -113,7 +113,7 @@ type Tool = {
   id: string;
   name: string;
   description: string;
-  inputJsonSchema?: any;
+  inputJsonSchema: any;
 };
 `;
 

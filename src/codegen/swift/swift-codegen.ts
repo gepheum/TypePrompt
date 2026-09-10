@@ -592,9 +592,7 @@ function addKeysToExamples(templatesData: unknown): unknown {
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult, {
-    includeJsonSchemas: true,
-  });
+  const templatesData = makeTemplates(compilationResult);
   const dataWithKeys = addKeysToExamples(templatesData);
   const stringifiedJson = JSON.stringify(JSON.stringify(dataWithKeys));
   const lines = [

@@ -213,7 +213,7 @@ internal object Spec {
         val tools: List<TemplateTool>,
         val contents: TemplateContents,
         val snippets: Map<String, Snippet>,
-        @kotlinx.serialization.EncodeDefault val outputJsonSchema: JsonElement? = null,
+        val outputJsonSchema: JsonElement,
     ) {}
 
     // Exported as 'Spec.OutputFormat'
@@ -550,7 +550,7 @@ internal object Spec {
         val id: String,
         val name: String,
         val description: String,
-        @kotlinx.serialization.EncodeDefault val inputJsonSchema: JsonElement? = null,
+        val inputJsonSchema: JsonElement,
     ) {}
 }  // object Spec
 // </generated:spec>
@@ -930,9 +930,10 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
     when (template.outputFormat) {
         Spec.OutputFormat.Json -> {
             outputFormat = JsonOutputFormat(
-                stringifiedJsonSchema = template.outputJsonSchema?.let {
-                    Json.encodeToString(JsonElement.serializer(), it)
-                } ?: "{}",
+                stringifiedJsonSchema = Json.encodeToString(
+                    JsonElement.serializer(),
+                    template.outputJsonSchema,
+                ),
             )
             fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)

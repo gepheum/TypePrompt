@@ -573,9 +573,7 @@ function writeSpecDatatypes(): string {
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult, {
-    includeJsonSchemas: true,
-  });
+  const templatesData = makeTemplates(compilationResult);
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
     `static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {`,

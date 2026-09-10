@@ -594,11 +594,8 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
   let mut tools = std::collections::HashMap::new();
   for t in &template.tools {
     if let Some(tool_spec) = spec.tools.get(&t.id) {
-      let stringified_schema = tool_spec
-        .input_json_schema
-        .as_ref()
-        .map(|s| serde_json::to_string_pretty(s).unwrap_or_default())
-        .unwrap_or_else(|| "{}".to_string());
+      let stringified_schema =
+        serde_json::to_string_pretty(&tool_spec.input_json_schema).unwrap_or_default();
       tools.insert(
         t.name.clone(),
         Tool {
@@ -613,11 +610,8 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
 
   let output_format = match template.output_format {
     spec::OutputFormat::Json => {
-      let schema_str = template
-        .output_json_schema
-        .as_ref()
-        .map(|s| serde_json::to_string_pretty(s).unwrap_or_default())
-        .unwrap_or_else(|| "{}".to_string());
+      let schema_str =
+        serde_json::to_string_pretty(&template.output_json_schema).unwrap_or_default();
       OutputFormat::Json(JsonOutputFormat {
         stringified_json_schema: schema_str,
       })
@@ -708,8 +702,8 @@ mod spec {
     pub(super) tools: Vec<TemplateTool>,
     pub(super) contents: TemplateContents,
     pub(super) snippets: std::collections::HashMap<String, Snippet>,
-    #[serde(rename = "outputJsonSchema", default)]
-    pub(super) output_json_schema: Option<serde_json::Value>,
+    #[serde(rename = "outputJsonSchema")]
+    pub(super) output_json_schema: serde_json::Value,
   }
 
   #[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
@@ -1106,8 +1100,8 @@ mod spec {
     pub(super) id: String,
     pub(super) name: String,
     pub(super) description: String,
-    #[serde(rename = "inputJsonSchema", default)]
-    pub(super) input_json_schema: Option<serde_json::Value>,
+    #[serde(rename = "inputJsonSchema")]
+    pub(super) input_json_schema: serde_json::Value,
   }
 } // mod spec
 // </generated:spec>
