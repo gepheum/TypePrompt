@@ -68,9 +68,9 @@ function writeAll(
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["swift-logic"],
-      `}  // enum ${rootNamespace}`,
+      `}  // enum ${rootNamespace}\n`,
     ].join("\n\n"),
-  ).concat("\n");
+  );
 }
 
 function getTemplateTypes(
@@ -1083,7 +1083,8 @@ function coalesceEmptyLines(code: string): string {
       // Remove empty line following an open curly bracket.
       .replace(/(\{\n *)\n/g, "$1")
       // Remove empty line preceding a closed curly bracket.
-      .replace(/\n(\n *\})/g, "$1")
+      .replace(/\n(\n *\})/g, "$1") // 1/2
+      .replace(/\n(\n *\})/g, "$1") // 2/2
       // Coalesce consecutive empty lines.
       .replace(/\n\n\n+/g, "\n\n")
       .replace(/\n\n$/g, "\n")

@@ -6,8 +6,8 @@ CODEGEN:
     - update all the schemas...
     - always output the JSON schema in Spec...
   - add comment to static and generated types
-  - SWIFT:
-    - formatting error, in the template overrides
+  - RUST:
+    - formatting completely broken with continuation lines...
   - Python, Typescript:
     - add stringifiedJsonSchema to OutputFormat?
     - add a 'NoTools' param?
