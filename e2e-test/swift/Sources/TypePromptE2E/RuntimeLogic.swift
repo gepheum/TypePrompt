@@ -63,6 +63,7 @@ public enum TypePromptRuntime {
     public let tools: [String: Tool]
     public let outputFormat: OutputFormat
     public let templateId: TemplateId
+    private let fromJson: @Sendable (Data) throws -> Output
 
     public init(
       meta: Meta,
@@ -72,6 +73,7 @@ public enum TypePromptRuntime {
       tools: [String: Tool],
       outputFormat: OutputFormat,
       templateId: TemplateId,
+      fromJson: @escaping @Sendable (Data) throws -> Output
     ) {
       self.meta = meta
       self.systemMessage = systemMessage
@@ -80,11 +82,17 @@ public enum TypePromptRuntime {
       self.tools = tools
       self.outputFormat = outputFormat
       self.templateId = templateId
+      self.fromJson = fromJson
     }
 
     /// Parse an LLM response into the expected output type.
     public func parseResponse(_ response: String) throws -> Output {
-      return try doParseResponse(response, outputFormat: outputFormat, templateId: templateId)
+      return try doParseResponse(
+        response,
+        outputFormat: outputFormat,
+        templateId: templateId,
+        fromJson: fromJson
+      )
     }
 
     /// Execute the given tool calls in parallel.
@@ -148,17 +156,14 @@ public enum TypePromptRuntime {
   }
 
   /// JSON output format specification.
-  public struct JsonOutputFormat: Sendable {
+  public struct JsonOutputFormat: Sendable, Equatable {
     /// The JSON schema against which model outputs are validated.
     public let stringifiedJsonSchema: String
-    internal let parseJson: @Sendable (Data) throws -> Any
 
     fileprivate init(
-      stringifiedJsonSchema: String,
-      parseJson: @escaping @Sendable (Data) throws -> Any,
+      stringifiedJsonSchema: String
     ) {
       self.stringifiedJsonSchema = stringifiedJsonSchema
-      self.parseJson = parseJson
     }
   }
 
@@ -1378,6 +1383,7 @@ public enum TypePromptRuntime {
     }
 
     let outputFormat: OutputFormat
+    let fromJson: @Sendable (Data) throws -> Output
     if template.outputFormat == .json {
       let schemaJson: String
       if let outputJsonSchema = template.outputJsonSchema,
@@ -1390,19 +1396,26 @@ public enum TypePromptRuntime {
       } else {
         schemaJson = "{}"
       }
-      let parseJson: @Sendable (Data) throws -> Any = { data in
+      fromJson = { data in
         if let decodableType = (outputType ?? Output.self) as? any Decodable.Type {
-          return try Foundation.JSONDecoder().decode(decodableType, from: data)
+          return try Foundation.JSONDecoder().decode(decodableType, from: data) as! Output
         }
         fatalError("Expected Decodable output type for JSON template: \(templateId)")
       }
       outputFormat = .json(
         JsonOutputFormat(
-          stringifiedJsonSchema: schemaJson,
-          parseJson: parseJson
+          stringifiedJsonSchema: schemaJson
         )
       )
     } else {
+      fromJson = { data in
+        if let str = (String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self))
+          as? Output
+        {
+          return str
+        }
+        fatalError("Expected String output type for text template: \(templateId)")
+      }
       outputFormat = .text
     }
 
@@ -1415,17 +1428,19 @@ public enum TypePromptRuntime {
       examples: examples,
       tools: tools,
       outputFormat: outputFormat,
-      templateId: resolvedTemplateId
+      templateId: resolvedTemplateId,
+      fromJson: fromJson
     )
   }
 
   fileprivate static func doParseResponse<Output>(
     _ response: String,
     outputFormat: OutputFormat,
-    templateId: TemplateId
+    templateId: TemplateId,
+    fromJson: @Sendable (Data) throws -> Output
   ) throws -> Output {
     switch outputFormat {
-    case .json(let jsonFormat):
+    case .json:
       var cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
       if cleaned.hasPrefix("```") {
         if cleaned.hasPrefix("```json") {
@@ -1440,8 +1455,7 @@ public enum TypePromptRuntime {
       }
       let data = Data(cleaned.utf8)
       do {
-        let parsed = try jsonFormat.parseJson(data)
-        return parsed as! Output
+        return try fromJson(data)
       } catch {
         throw DecodingError.dataCorrupted(
           DecodingError.Context(
@@ -1454,12 +1468,8 @@ public enum TypePromptRuntime {
       if let res = response as? Output {
         return res
       }
-      throw DecodingError.dataCorrupted(
-        DecodingError.Context(
-          codingPath: [],
-          debugDescription: "Template '\(templateId)': Expected String output for text format"
-        )
-      )
+      let data = Data(response.utf8)
+      return try fromJson(data)
     }
   }
 

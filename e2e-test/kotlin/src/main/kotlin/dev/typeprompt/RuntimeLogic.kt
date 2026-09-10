@@ -95,12 +95,13 @@ data class Prompt<out Output, in ToolExecutor>(
     val tools: Map<String, Tool>,
     val outputFormat: OutputFormat,
     val templateId: TemplateId,
+    private val fromJson: (String) -> Output,
 ) {
     /**
      * Parse an LLM response into the expected output type.
      */
     fun parseResponse(response: String): Output {
-        return doParseResponse(response, outputFormat, templateId)
+        return doParseResponse(response, outputFormat, templateId, fromJson)
     }
 
     /**
@@ -129,7 +130,6 @@ sealed class OutputFormat
 
 data class JsonOutputFormat internal constructor(
     val stringifiedJsonSchema: String,
-    internal val parseJson: (String) -> Any?,
 ) : OutputFormat()
 
 class TextOutputFormat : OutputFormat()
@@ -925,17 +925,25 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
         )
     }
 
-    val outputFormat: OutputFormat = when (template.outputFormat) {
-        Spec.OutputFormat.Json -> JsonOutputFormat(
-            stringifiedJsonSchema = template.outputJsonSchema?.let {
-                Json.encodeToString(JsonElement.serializer(), it)
-            } ?: "{}",
-            parseJson = { text: String ->
+    val outputFormat: OutputFormat
+    val fromJson: (String) -> Output
+    when (template.outputFormat) {
+        Spec.OutputFormat.Json -> {
+            outputFormat = JsonOutputFormat(
+                stringifiedJsonSchema = template.outputJsonSchema?.let {
+                    Json.encodeToString(JsonElement.serializer(), it)
+                } ?: "{}",
+            )
+            fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)
-            },
-        )
+            }
+        }
 
-        Spec.OutputFormat.Text -> TextOutputFormat()
+        Spec.OutputFormat.Text -> {
+            outputFormat = TextOutputFormat()
+            @Suppress("UNCHECKED_CAST")
+            fromJson = { text: String -> text as Output }
+        }
     }
 
     val resolvedTemplateId = TemplateId.entries.first { it.toString() == templateId }
@@ -948,6 +956,7 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
         tools = tools,
         outputFormat = outputFormat,
         templateId = resolvedTemplateId,
+        fromJson = fromJson,
     )
 }
 
@@ -956,6 +965,7 @@ private fun <Output> doParseResponse(
     response: String,
     outputFormat: OutputFormat,
     templateId: TemplateId,
+    fromJson: (String) -> Output,
 ): Output {
     when (outputFormat) {
         is JsonOutputFormat -> {
@@ -972,8 +982,7 @@ private fun <Output> doParseResponse(
                 cleaned = cleaned.trim()
             }
             try {
-                @Suppress("UNCHECKED_CAST")
-                return outputFormat.parseJson.invoke(cleaned) as Output
+                return fromJson(cleaned)
             } catch (e: SerializationException) {
                 throw SerializationException("Template '$templateId': ${e.message}", e)
             } catch (e: IllegalArgumentException) {
@@ -982,8 +991,7 @@ private fun <Output> doParseResponse(
         }
 
         is TextOutputFormat -> {
-            @Suppress("UNCHECKED_CAST")
-            return response as Output
+            return fromJson(response)
         }
     }
 }
