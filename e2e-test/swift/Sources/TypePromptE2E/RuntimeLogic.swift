@@ -100,25 +100,11 @@ public enum TypePromptRuntime {
       _ toolCalls: [ToolCall],
       toolExecutor: ToolExecutor,
     ) async throws -> [ToolCallResponse] {
-      let namespace = templateId.description.split(separator: ":").first.map(String.init) ?? ""
-      return try await withThrowingTaskGroup(of: (Int, ToolCallResponse).self) {
-        group in
-        for (index, call) in toolCalls.enumerated() {
-          group.addTask {
-            let result = try await executeToolCall(
-              toolCall: call,
-              namespace: namespace,
-              executor: toolExecutor,
-            )
-            return (index, result)
-          }
-        }
-        var results = [(Int, ToolCallResponse)]()
-        for try await item in group {
-          results.append(item)
-        }
-        return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }
-      }
+      return try await doExecuteTools(
+        toolCalls,
+        templateId: templateId,
+        toolExecutor: toolExecutor,
+      )
     }
   }
 
@@ -162,7 +148,7 @@ public enum TypePromptRuntime {
     public let stringifiedJsonSchema: String
 
     fileprivate init(
-      stringifiedJsonSchema: String
+      stringifiedJsonSchema: String,
     ) {
       self.stringifiedJsonSchema = stringifiedJsonSchema
     }
@@ -428,8 +414,8 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)"
-            )
+              debugDescription: "Unknown discriminator: \(discriminator)",
+            ),
           )
         }
       }
@@ -564,8 +550,8 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)"
-            )
+              debugDescription: "Unknown discriminator: \(discriminator)",
+            ),
           )
         }
       }
@@ -657,8 +643,8 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)"
-            )
+              debugDescription: "Unknown discriminator: \(discriminator)",
+            ),
           )
         }
       }
@@ -722,8 +708,8 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)"
-            )
+              debugDescription: "Unknown discriminator: \(discriminator)",
+            ),
           )
         }
       }
@@ -810,7 +796,7 @@ public enum TypePromptRuntime {
     templates: [:],
     tools: [:],
     singleNamespace: true,
-    sourceFiles: [:]
+    sourceFiles: [:],
   )
 
   // <static:swift-logic>
@@ -866,7 +852,7 @@ public enum TypePromptRuntime {
       } else {
         throw DecodingError.dataCorruptedError(
           in: container,
-          debugDescription: "Unsupported JSON value"
+          debugDescription: "Unsupported JSON value",
         )
       }
     }
@@ -1197,7 +1183,7 @@ public enum TypePromptRuntime {
   fileprivate static func renderBody(
     _ body: [Spec.BodyPiece]?,
     _ inp: Any?,
-    _ snippets: [String: Spec.Snippet]
+    _ snippets: [String: Spec.Snippet],
   ) -> String {
     guard let body = body, !body.isEmpty else { return "" }
     var result = ""
@@ -1223,7 +1209,7 @@ public enum TypePromptRuntime {
   fileprivate static func renderSnippet(
     _ snippet: Spec.Snippet,
     _ inp: Any?,
-    _ snippets: [String: Spec.Snippet]
+    _ snippets: [String: Spec.Snippet],
   ) -> String {
     switch snippet {
     case .kindSnippet(let s):
@@ -1278,7 +1264,7 @@ public enum TypePromptRuntime {
   fileprivate static func renderExamples(
     _ examples: [Spec.FewShotExample]?,
     _ userBody: [Spec.BodyPiece]?,
-    _ tmpl: Spec.Template
+    _ tmpl: Spec.Template,
   ) -> [FewShotExample] {
     guard let examples = examples, !examples.isEmpty else { return [] }
     var result = [FewShotExample]()
@@ -1298,7 +1284,7 @@ public enum TypePromptRuntime {
               callId: tc.callId,
               toolName: tc.toolName,
               stringifiedInput: stringifiedInput,
-              stringifiedOutput: stringifiedOutput
+              stringifiedOutput: stringifiedOutput,
             )
           )
         }
@@ -1312,7 +1298,7 @@ public enum TypePromptRuntime {
         FewShotExample(
           userMessage: userMessage,
           intermediateSteps: intermediateSteps,
-          response: response
+          response: response,
         )
       )
     }
@@ -1323,7 +1309,7 @@ public enum TypePromptRuntime {
     _ spec: Spec.Templates,
     _ templateId: String,
     _ input: Any,
-    _ outputType: Output.Type? = nil
+    _ outputType: Output.Type? = nil,
   ) -> Prompt<Output, ToolExecutor> {
     guard let template = spec.templates[templateId] else {
       fatalError("Template not found: \(templateId)")
@@ -1378,7 +1364,7 @@ public enum TypePromptRuntime {
       if let specTool = spec.tools[templateTool.id] {
         tools[templateTool.name] = Tool(
           name: templateTool.name,
-          description: specTool.description
+          description: specTool.description,
         )
       }
     }
@@ -1405,7 +1391,7 @@ public enum TypePromptRuntime {
       }
       outputFormat = .json(
         JsonOutputFormat(
-          stringifiedJsonSchema: schemaJson
+          stringifiedJsonSchema: schemaJson,
         )
       )
     } else {
@@ -1430,7 +1416,7 @@ public enum TypePromptRuntime {
       tools: tools,
       outputFormat: outputFormat,
       templateId: resolvedTemplateId,
-      fromJson: fromJson
+      fromJson: fromJson,
     )
   }
 
@@ -1438,7 +1424,7 @@ public enum TypePromptRuntime {
     _ response: String,
     outputFormat: OutputFormat,
     templateId: TemplateId,
-    fromJson: @Sendable (Data) throws -> Output
+    fromJson: @Sendable (Data) throws -> Output,
   ) throws -> Output {
     switch outputFormat {
     case .json:
@@ -1461,8 +1447,8 @@ public enum TypePromptRuntime {
         throw DecodingError.dataCorrupted(
           DecodingError.Context(
             codingPath: [],
-            debugDescription: "Template '\(templateId)': \(error)"
-          )
+            debugDescription: "Template '\(templateId)': \(error)",
+          ),
         )
       }
     case .text:
@@ -1471,6 +1457,32 @@ public enum TypePromptRuntime {
       }
       let data = Data(response.utf8)
       return try fromJson(data)
+    }
+  }
+
+  fileprivate static func doExecuteTools<ToolExecutor: Sendable>(
+    _ toolCalls: [ToolCall],
+    templateId: TemplateId,
+    toolExecutor: ToolExecutor,
+  ) async throws -> [ToolCallResponse] {
+    let namespace = templateId.description.split(separator: ":").first.map(String.init) ?? ""
+    return try await withThrowingTaskGroup(of: (Int, ToolCallResponse).self) {
+      group in
+      for (index, call) in toolCalls.enumerated() {
+        group.addTask {
+          let result = try await executeToolCall(
+            toolCall: call,
+            namespace: namespace,
+            executor: toolExecutor,
+          )
+          return (index, result)
+        }
+      }
+      var results = [(Int, ToolCallResponse)]()
+      for try await item in group {
+        results.append(item)
+      }
+      return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }
     }
   }
 
@@ -1528,7 +1540,7 @@ public enum TypePromptRuntime {
         templates: mergedTemplates,
         tools: mergedTools,
         singleNamespace: _templatesData.singleNamespace,
-        sourceFiles: _templatesData.sourceFiles
+        sourceFiles: _templatesData.sourceFiles,
       )
       return Prompts(mergedData)
     }
