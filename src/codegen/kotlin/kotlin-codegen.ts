@@ -81,13 +81,11 @@ function getTemplateTypes(
   const templateKtName = toKotlinName(template.template.name.text);
   const templateNamespace =
     template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceKtName = toKotlinName(templateNamespace);
+  const ktNamespace = toKotlinName(templateNamespace);
   const sharedTypePrefix = singleNamespace
     ? "Schema.Shared."
-    : `Schema.${namespaceKtName}.Shared.`;
-  const typePrefixBase = singleNamespace
-    ? "Schema."
-    : `Schema.${namespaceKtName}.`;
+    : `Schema.${ktNamespace}.Shared.`;
+  const typePrefixBase = singleNamespace ? "Schema." : `Schema.${ktNamespace}.`;
 
   const templateTypePrefix = typePrefixBase.concat(templateKtName, ".");
   const options: WriteSchemaOptions = {
@@ -371,16 +369,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "Schema.Meta.",
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "Schema.Meta.",
+        },
+      )
     : "Nothing?";
   lines.push(
     "/** Metadata associated with a prompt. */",
@@ -490,13 +488,11 @@ function getToolTypes(
   const { singleNamespace } = compilationResult;
   const rawToolName = tool.tool.name.text;
   const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceKtName = toKotlinName(toolNamespace);
+  const ktNamespace = toKotlinName(toolNamespace);
   const sharedTypePrefix = singleNamespace
     ? "Schema.Shared."
-    : `Schema.${namespaceKtName}.Shared.`;
-  const typePrefixBase = singleNamespace
-    ? "Schema."
-    : `Schema.${namespaceKtName}.`;
+    : `Schema.${ktNamespace}.Shared.`;
+  const typePrefixBase = singleNamespace ? "Schema." : `Schema.${ktNamespace}.`;
 
   const toolKtName = toKotlinName(capitalize(rawToolName));
   const toolTypePrefix = typePrefixBase.concat(toolKtName, ".");
@@ -663,14 +659,14 @@ function writeTypepromptInterface(
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
-      interfaces
-        .map((i) =>
-          i.startsWith(options.typePrefix)
-            ? i.slice(options.typePrefix.length)
-            : i,
-        )
-        .join(", "),
-    )
+        interfaces
+          .map((i) =>
+            i.startsWith(options.typePrefix)
+              ? i.slice(options.typePrefix.length)
+              : i,
+          )
+          .join(", "),
+      )
     : "";
   lines.push(`)${implementsClause} {`);
   if (hasLiteralField) {

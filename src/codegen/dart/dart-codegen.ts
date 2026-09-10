@@ -386,15 +386,15 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        typePrefix: "Meta_",
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          typePrefix: "Meta_",
+        },
+      )
     : "Null";
   lines.push(
     "/// Metadata associated with a prompt.",

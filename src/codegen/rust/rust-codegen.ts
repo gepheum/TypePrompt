@@ -66,15 +66,15 @@ function getTemplateTypes(
   compilationResult: ValidCompilationResult,
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
-  const templateName = toRustName(template.template.name.text);
-  const templateNamespace =
-    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const rustNamespace = toRustName(templateNamespace);
+  const templateRustName = toRustName(toSnakeCase(template.template.name.text));
+  const rustNamespace = toRustName(
+    toSnakeCase(template.template.namespace?.text ?? DEFAULT_NAMESPACE),
+  );
   const typePrefixBase = singleNamespace
     ? "schema::"
     : `schema::${rustNamespace}::`;
   const sharedTypePrefix = typePrefixBase.concat("shared::");
-  const templateTypePrefix = typePrefixBase.concat(templateName, "::");
+  const templateTypePrefix = typePrefixBase.concat(templateRustName, "::");
 
   const options: WriteSchemaOptions = {
     typePrefix: templateTypePrefix,
@@ -91,10 +91,10 @@ function getTemplateTypes(
     template.template.outputFormat?.text === "text"
       ? "String"
       : writeType(
-        { kind: "type-name", name: { text: "Output" } },
-        template.schema,
-        options,
-      );
+          { kind: "type-name", name: { text: "Output" } },
+          template.schema,
+          options,
+        );
 
   return { inputType, outputType };
 }
@@ -110,20 +110,22 @@ function getToolExecutorRef(
   }
   if (toolEntries.length === 1) {
     const tool = toolEntries[0]!.tool;
-    const toolName = toRustName(capitalize(tool.tool.name.text));
-    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const toolRustName = toRustName(capitalize(tool.tool.name.text));
+    const rustNamespace = toRustName(
+      toSnakeCase(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE),
+    );
     const traitPath = singleNamespace
-      ? `tool_executor::${toolName}`
-      : `tool_executor::${toRustName(toolNamespace)}::${toolName}`;
+      ? `tool_executor::${toolRustName}`
+      : `tool_executor::${toRustName(rustNamespace)}::${toolRustName}`;
     return traitPath;
   }
-  const rawTemplateName = template.template.name.text;
-  const templateName = toRustName(rawTemplateName);
-  const templateNamespace =
-    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+  const templateName = toRustName(toSnakeCase(template.template.name.text));
+  const rustNamespace = toRustName(
+    toSnakeCase(template.template.namespace?.text ?? DEFAULT_NAMESPACE),
+  );
   const traitPath = singleNamespace
     ? `tool_executor::${templateName}`
-    : `tool_executor::${toRustName(templateNamespace)}::${templateName}`;
+    : `tool_executor::${rustNamespace}::${templateName}`;
   return traitPath;
 }
 
@@ -158,13 +160,12 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
         );
       } else {
         const rawTemplateName = t.template.name.text;
-        const templateNamespace =
-          t.template.namespace?.text ?? DEFAULT_NAMESPACE;
+        const rawNamespace = t.template.namespace?.text ?? DEFAULT_NAMESPACE;
         const executeFunctionName = singleNamespace
           ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
           : toRustName(
-            `execute_${toSnakeCase(templateNamespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-          );
+              `execute_${toSnakeCase(rawNamespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+            );
 
         const traitBound = getToolExecutorRef(t, compilationResult);
 
@@ -281,10 +282,10 @@ function writeTemplateIdEnum(
   } else {
     for (const template of templateList) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-      const templateName = template.template.name.text;
+      const rawTemplateName = template.template.name.text;
       const rawMemberName = singleNamespace
-        ? templateName
-        : `${namespace}_${templateName}`;
+        ? rawTemplateName
+        : `${namespace}_${rawTemplateName}`;
       const variantName = toRustName(toPascalCase(rawMemberName));
       lines.push(`  ${variantName},`);
     }
@@ -297,10 +298,10 @@ function writeTemplateIdEnum(
     );
     for (const template of templateList) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-      const templateName = template.template.name.text;
+      const rawTemplateName = template.template.name.text;
       const rawMemberName = singleNamespace
-        ? templateName
-        : `${namespace}_${templateName}`;
+        ? rawTemplateName
+        : `${namespace}_${rawTemplateName}`;
       const variantName = toRustName(toPascalCase(rawMemberName));
       const templateId = getId(template.template);
       lines.push(`      TemplateId::${variantName} => "${templateId}",`);
@@ -314,10 +315,10 @@ function writeTemplateIdEnum(
     );
     for (const template of templateList) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-      const templateName = template.template.name.text;
+      const rawTemplateName = template.template.name.text;
       const rawMemberName = singleNamespace
-        ? templateName
-        : `${namespace}_${templateName}`;
+        ? rawTemplateName
+        : `${namespace}_${rawTemplateName}`;
       const variantName = toRustName(toPascalCase(rawMemberName));
       const templateId = getId(template.template);
       lines.push(`      "${templateId}" => Some(TemplateId::${variantName}),`);
@@ -350,9 +351,9 @@ function writeToolExecutorTraits(
     const sharedTypePrefix = typePrefixBase.concat("shared::");
 
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      const interfaceName = toRustName(capitalize(toolName));
-      const toolTypeName = toRustName(capitalize(toolName));
+      const rawToolName = tool.tool.name.text;
+      const interfaceName = toRustName(capitalize(rawToolName));
+      const toolTypeName = toRustName(capitalize(rawToolName));
       const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
       const options: WriteSchemaOptions = {
         typePrefix: toolTypePrefix,
@@ -370,9 +371,9 @@ function writeToolExecutorTraits(
         options,
       );
 
-      const methodName = toRustName(toSnakeCase(toolName));
+      const methodName = toRustName(toSnakeCase(rawToolName));
       lines.push(
-        `/// Tool executor interface for the '${toolName}' tool.`,
+        `/// Tool executor interface for the '${rawToolName}' tool.`,
         `pub trait ${interfaceName} {`,
         `fn ${methodName}(`,
         "&self,",
@@ -415,15 +416,12 @@ function writeToolExecutorTraits(
       const toolEntries = Object.values(template.tools);
       if (toolEntries.length < 2) continue;
       const rawTemplateName = template.template.name.text;
-      const templateName = toRustName(rawTemplateName);
+      const traitName = toRustName(rawTemplateName);
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
-        const toolName = tool.tool.name.text;
-        const interfaceRef = toRustName(capitalize(toolName));
-        return {
-          rawToolName: toolName,
-          interfaceRef,
-        };
+        const rawToolName = tool.tool.name.text;
+        const interfaceRef = toRustName(capitalize(rawToolName));
+        return { rawToolName, interfaceRef };
       });
 
       const toolNamesList = toolInfoList
@@ -436,8 +434,8 @@ function writeToolExecutorTraits(
       lines.push(
         `/// Composite tool executor trait for the '${rawTemplateName}' prompt template.`,
         `/// Requires implementations of tools: ${toolNamesList}.`,
-        `pub trait ${templateName}: ${inheritedTraits} {}`,
-        `impl<T: ?Sized + ${inheritedTraits}> ${templateName} for T {}`,
+        `pub trait ${traitName}: ${inheritedTraits} {}`,
+        `impl<T: ?Sized + ${inheritedTraits}> ${traitName} for T {}`,
         "",
       );
     }
@@ -473,16 +471,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+        },
+      )
     : "()";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -518,28 +516,30 @@ function writeUserDefinedDatatypes(
       lines.push(`}  // mod shared`, "");
     }
     for (const template of namespace.templates) {
-      const templateName = toRustName(template.template.name.text);
-      const typePrefix = typePrefixBase.concat(templateName, "::");
-      lines.push(`pub mod ${templateName} {`);
+      const templateRustName = toRustName(
+        toSnakeCase(template.template.name.text),
+      );
+      const typePrefix = typePrefixBase.concat(templateRustName, "::");
+      lines.push(`pub mod ${templateRustName} {`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // mod ${templateName}`, "");
+      lines.push(`}  // mod ${templateRustName}`, "");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = toRustName(capitalize(tool.tool.name.text));
-      const typePrefix = typePrefixBase.concat(toolName, "::");
-      lines.push(`pub mod ${toolName} {\n`);
+      const toolRustName = toRustName(capitalize(tool.tool.name.text));
+      const typePrefix = typePrefixBase.concat(toolRustName, "::");
+      lines.push(`pub mod ${toolRustName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // mod ${toolName}`, "");
+      lines.push(`}  // mod ${toolRustName}`, "");
     }
   };
 
@@ -595,19 +595,21 @@ function getToolInfo(
   readonly outputType: string;
 } {
   const { singleNamespace } = compilationResult;
-  const toolName = tool.tool.name.text;
-  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-  const rustNamespace = toRustName(toolNamespace);
+  const rawToolName = tool.tool.name.text;
+  const toolRustName = toRustName(capitalize(rawToolName));
+  const rustNamespace = toRustName(
+    toSnakeCase(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE),
+  );
 
   const traitName = singleNamespace
-    ? `tool_executor::${toRustName(capitalize(toolName))}`
-    : `tool_executor::${rustNamespace}::${toRustName(capitalize(toolName))}`;
+    ? `tool_executor::${toolRustName}`
+    : `tool_executor::${rustNamespace}::${toolRustName}`;
 
   const typePrefixBase = singleNamespace
     ? "schema::"
     : `schema::${rustNamespace}::`;
   const sharedTypePrefix = typePrefixBase.concat("shared::");
-  const toolTypeName = toRustName(capitalize(toolName));
+  const toolTypeName = toRustName(capitalize(rawToolName));
   const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
   const options: WriteSchemaOptions = {
     typePrefix: toolTypePrefix,
@@ -626,7 +628,7 @@ function getToolInfo(
     options,
   );
 
-  const methodName = toRustName(toSnakeCase(toolName));
+  const methodName = toRustName(toSnakeCase(rawToolName));
 
   return {
     traitName,
@@ -656,8 +658,8 @@ function writeExecuteToolCall(
     const functionName = singleNamespace
       ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
       : toRustName(
-        `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-      );
+          `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+        );
 
     const uniqueTraits = Array.from(
       new Set(
@@ -675,11 +677,11 @@ function writeExecuteToolCall(
     ];
 
     for (const tool of templateTools) {
-      const toolName = tool.tool.name.text;
+      const rawToolName = tool.tool.name.text;
       const { methodName, inputType } = getToolInfo(tool, compilationResult);
 
       lines.push(
-        `"${toolName}" => {`,
+        `"${rawToolName}" => {`,
         `let input: ${inputType} = serde_json::from_str(&tool_call.stringified_input).map_err(|e| {`,
         'let call_info = format!(r#"{{"callId": "{}", "toolName": "{}"}}"#, tool_call.call_id, tool_call.tool_name);',
         'format!("Tool call failed: {} — {}", call_info, e)',
@@ -760,13 +762,13 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const { type } = field;
     if (isLiteralType(type)) continue;
-    const name = field.name.text;
-    const rustName = toRustName(toSnakeCase(name));
+    const rawFieldName = field.name.text;
+    const rustName = toRustName(toSnakeCase(rawFieldName));
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapRustDoc(field.doc));
     const serdeAttrs: string[] = [];
-    if (name !== rustName) {
-      serdeAttrs.push(`rename = "${name}"`);
+    if (rawFieldName !== rustName) {
+      serdeAttrs.push(`rename = "${rawFieldName}"`);
     }
     if (type.kind === "optional") {
       serdeAttrs.push("default");
@@ -787,15 +789,15 @@ function writeTypepromptInterface(
     );
     for (const field of fields) {
       const { type } = field;
-      const name = field.name.text;
+      const rawFieldName = field.name.text;
       if (isLiteralType(type)) {
         lines.push(
-          `serde::ser::SerializeStruct::serialize_field(&mut state, "${name}", &${JSON.stringify(type.value)})?;`,
+          `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &${JSON.stringify(type.value)})?;`,
         );
       } else {
-        const rustName = toRustName(toSnakeCase(name));
+        const rustName = toRustName(toSnakeCase(rawFieldName));
         lines.push(
-          `serde::ser::SerializeStruct::serialize_field(&mut state, "${name}", &self.${rustName})?;`,
+          `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
         );
       }
     }

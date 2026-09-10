@@ -278,8 +278,8 @@ function writeSpecDatatypes(): string {
     "}",
     "",
     "const templatesSchema = " +
-    writeZodType(runtimeTypesSchema, "Templates", options) +
-    ";",
+      writeZodType(runtimeTypesSchema, "Templates", options) +
+      ";",
   ];
   return lines.join("\n");
 }

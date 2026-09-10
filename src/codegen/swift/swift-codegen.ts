@@ -79,10 +79,12 @@ function getTemplateTypes(
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
   const templateSwiftName = toSwiftName(template.template.name.text);
-  const namespaceSwiftName = toSwiftName(template.template.namespace?.text ?? DEFAULT_NAMESPACE);
+  const swiftNamespace = toSwiftName(
+    template.template.namespace?.text ?? DEFAULT_NAMESPACE,
+  );
   const typePrefixBase = singleNamespace
     ? "Schema."
-    : `Schema.${namespaceSwiftName}.`;
+    : `Schema.${swiftNamespace}.`;
   const sharedTypePrefix = typePrefixBase.concat("Shared.");
   const templateTypePrefix = typePrefixBase.concat(templateSwiftName, ".");
 
@@ -120,7 +122,9 @@ function getToolExecutorRef(
       toolEntries.map((entry) => {
         const tool = entry.tool;
         const toolSwiftName = toSwiftName(capitalize(tool.tool.name.text));
-        const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
+        const toolSwiftNamespace = toSwiftName(
+          tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
+        );
         const namespaceBase = singleNamespace
           ? "ToolExecutor"
           : `ToolExecutor.${toolSwiftNamespace}`;
@@ -247,18 +251,22 @@ function writeTemplateIdEnum(
   for (const template of templateList) {
     const rawNamespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const rawTemplateName = template.template.name.text;
-    const caseName = toSwiftName(singleNamespace
-      ? uncapitalize(rawTemplateName)
-      : `${uncapitalize(rawNamespace)}_${rawTemplateName}`);
+    const caseName = toSwiftName(
+      singleNamespace
+        ? uncapitalize(rawTemplateName)
+        : `${uncapitalize(rawNamespace)}_${rawTemplateName}`,
+    );
     lines.push(`case ${caseName}`);
   }
   lines.push("", "private var id: String {", "switch self {");
   for (const template of Object.values(templates)) {
     const rawNamespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const rawTemplateName = template.template.name.text;
-    const caseName = toSwiftName(singleNamespace
-      ? uncapitalize(rawTemplateName)
-      : `${uncapitalize(rawNamespace)}_${rawTemplateName}`);
+    const caseName = toSwiftName(
+      singleNamespace
+        ? uncapitalize(rawTemplateName)
+        : `${uncapitalize(rawNamespace)}_${rawTemplateName}`,
+    );
     const templateId = getId(template.template);
     lines.push(`case .${caseName}:`, `return "${templateId}"`);
   }
@@ -399,16 +407,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+        },
+      )
     : "Never?";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -600,7 +608,9 @@ function getToolTypes(
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
   const rawToolName = tool.tool.name.text;
-  const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
+  const toolSwiftNamespace = toSwiftName(
+    tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
+  );
   const typePrefixBase = singleNamespace
     ? `${config.rootNamespace}.Schema.`
     : `${config.rootNamespace}.Schema.${toolSwiftNamespace}.`;
@@ -668,7 +678,9 @@ function writeExecuteToolCall(
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
     const toolSwiftName = toSwiftName(capitalize(rawToolName));
-    const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
+    const toolSwiftNamespace = toSwiftName(
+      tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
+    );
     const toolId = getId(tool.tool);
     const { inputType } = getToolTypes(tool, compilationResult, config);
 

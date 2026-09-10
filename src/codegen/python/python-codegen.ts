@@ -146,9 +146,7 @@ function writeUserDefinedDatatypes(
     }
     const lines = [];
     const pyNamespace = toPyName(namespace.name, "snake_case_class_name");
-    const schemaPrefix = singleNamespace
-      ? "schema."
-      : `schema.${pyNamespace}.`;
+    const schemaPrefix = singleNamespace ? "schema." : `schema.${pyNamespace}.`;
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
       lines.push(" @final");
       lines.push(" class shared(_StaticClass):");
@@ -189,8 +187,8 @@ function writeUserDefinedDatatypes(
     metaSchema.namingHints.defaultScope.size <= 0
       ? "None"
       : writeType(metaSchema.typeDeclarations["Meta"]!.valueType, metaSchema, {
-        typePrefix: "schema.meta.",
-      });
+          typePrefix: "schema.meta.",
+        });
   const lines = [
     "# Metadata associated with a prompt.",
     `type Meta = ${metaTypedef}`,
@@ -668,11 +666,11 @@ function getToolExecutorRef(
     ...(singleNamespace
       ? []
       : [
-        toPyName(
-          input.namespace?.text ?? DEFAULT_NAMESPACE,
-          "snake_case_class_name",
-        ),
-      ]),
+          toPyName(
+            input.namespace?.text ?? DEFAULT_NAMESPACE,
+            "snake_case_class_name",
+          ),
+        ]),
     toPyName(input.name.text, "snake_case_class_name"),
     "ToolExecutor",
   ].join(".");
