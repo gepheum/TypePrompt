@@ -71,7 +71,7 @@ public enum TypePromptRuntime {
       examples: [FewShotExample],
       tools: [String: Tool],
       outputFormat: OutputFormat,
-      templateId: TemplateId
+      templateId: TemplateId,
     ) {
       self.meta = meta
       self.systemMessage = systemMessage
@@ -155,7 +155,7 @@ public enum TypePromptRuntime {
 
     fileprivate init(
       stringifiedJsonSchema: String,
-      parseJson: @escaping @Sendable (Data) throws -> Any
+      parseJson: @escaping @Sendable (Data) throws -> Any,
     ) {
       self.stringifiedJsonSchema = stringifiedJsonSchema
       self.parseJson = parseJson
@@ -193,7 +193,7 @@ public enum TypePromptRuntime {
     public init(
       userMessage: String,
       intermediateSteps: [IntermediateStepExample],
-      response: String
+      response: String,
     ) {
       self.userMessage = userMessage
       self.intermediateSteps = intermediateSteps
@@ -227,7 +227,7 @@ public enum TypePromptRuntime {
       callId: String,
       toolName: String,
       stringifiedInput: String,
-      stringifiedOutput: String
+      stringifiedOutput: String,
     ) {
       self.callId = callId
       self.toolName = toolName
@@ -346,7 +346,7 @@ public enum TypePromptRuntime {
         tools: [TemplateTool],
         contents: TemplateContents,
         snippets: [String: Snippet],
-        outputJsonSchema: JsonElement? = nil
+        outputJsonSchema: JsonElement? = nil,
       ) {
         self.name = name
         self.namespace = namespace
@@ -410,7 +410,7 @@ public enum TypePromptRuntime {
       let content: TemplateContent
 
       init(
-        content: TemplateContent
+        content: TemplateContent,
       ) {
         self.kind = "no-variants"
         self.content = content
@@ -424,7 +424,7 @@ public enum TypePromptRuntime {
 
       init(
         variants: [String: TemplateContent],
-        defaultContent: TemplateContent
+        defaultContent: TemplateContent,
       ) {
         self.kind = "variants"
         self.variants = variants

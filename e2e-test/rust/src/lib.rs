@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn test_01_basics_translate() {
         let prompt =
-            gen::prompts_01::prompts.render_translate(&gen::prompts_01::schema::Translate::Input {
+            gen::prompts_01::prompts.render_translate(&gen::prompts_01::schema::translate::Input {
                 text: "Hello world".to_string(),
                 target_language: "French".to_string(),
             });
@@ -62,10 +62,10 @@ mod tests {
     #[test]
     fn test_02_structured_output_triage_ticket() {
         let prompt = gen::prompts_02::prompts.render_triage_ticket(
-            &gen::prompts_02::schema::TriageTicket::Input {
+            &gen::prompts_02::schema::triage_ticket::Input {
                 subject: "App crashes on login".to_string(),
                 body: "It crashes every time.".to_string(),
-                customer_tier: gen::prompts_02::schema::TriageTicket::Input_CustomerTier::Pro,
+                customer_tier: gen::prompts_02::schema::triage_ticket::Input_CustomerTier::Pro,
                 recent_tickets: vec![],
             },
         );
@@ -86,11 +86,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             result.category,
-            gen::prompts_02::schema::TriageTicket::TicketCategory::Billing
+            gen::prompts_02::schema::triage_ticket::TicketCategory::Billing
         );
         assert_eq!(
             result.urgency,
-            gen::prompts_02::schema::TriageTicket::Output_Urgency::Low
+            gen::prompts_02::schema::triage_ticket::Output_Urgency::Low
         );
         assert_eq!(result.summary, "Invoice question");
 
@@ -102,7 +102,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             result_json_fences.category,
-            gen::prompts_02::schema::TriageTicket::TicketCategory::Other
+            gen::prompts_02::schema::triage_ticket::TicketCategory::Other
         );
 
         // Strips ``` plain fences
@@ -113,7 +113,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             result_plain_fences.category,
-            gen::prompts_02::schema::TriageTicket::TicketCategory::Other
+            gen::prompts_02::schema::triage_ticket::TicketCategory::Other
         );
 
         // Optional field suggested_reply is None when omitted
@@ -124,21 +124,24 @@ mod tests {
             .unwrap();
         assert_eq!(
             result_opt.category,
-            gen::prompts_02::schema::TriageTicket::TicketCategory::FeatureRequest
+            gen::prompts_02::schema::triage_ticket::TicketCategory::FeatureRequest
         );
         assert_eq!(result_opt.suggested_reply, None);
 
         // user_message contains YAML-rendered recent_tickets
         let p = gen::prompts_02::prompts.render_triage_ticket(
-            &gen::prompts_02::schema::TriageTicket::Input {
+            &gen::prompts_02::schema::triage_ticket::Input {
                 subject: "X".to_string(),
                 body: "Y".to_string(),
-                customer_tier: gen::prompts_02::schema::TriageTicket::Input_CustomerTier::Pro,
-                recent_tickets: vec![gen::prompts_02::schema::TriageTicket::Input_RecentTickets {
-                    id: "T-1".to_string(),
-                    summary: "Login bug".to_string(),
-                    category: gen::prompts_02::schema::TriageTicket::TicketCategory::TechnicalIssue,
-                }],
+                customer_tier: gen::prompts_02::schema::triage_ticket::Input_CustomerTier::Pro,
+                recent_tickets: vec![
+                    gen::prompts_02::schema::triage_ticket::Input_RecentTickets {
+                        id: "T-1".to_string(),
+                        summary: "Login bug".to_string(),
+                        category:
+                            gen::prompts_02::schema::triage_ticket::TicketCategory::TechnicalIssue,
+                    },
+                ],
             },
         );
         assert!(p.user_message.contains("T-1"));
@@ -174,7 +177,7 @@ mod tests {
     #[test]
     fn test_03_tools_research_question() {
         let prompt = gen::prompts_03::prompts.render_research_question(
-            &gen::prompts_03::schema::ResearchQuestion::Input {
+            &gen::prompts_03::schema::research_question::Input {
                 question: "Tokyo population?".to_string(),
             },
         );
@@ -227,26 +230,28 @@ mod tests {
         ];
 
         let marketing = gen::prompts_04::prompts.render_write_product_description(
-            &gen::prompts_04::schema::WriteProductDescription::Input {
+            &gen::prompts_04::schema::write_product_description::Input {
                 product_name: "AquaFilter Pro".to_string(),
                 features: features.clone(),
-                variant: gen::prompts_04::schema::WriteProductDescription::Input_Variant::Marketing,
+                variant:
+                    gen::prompts_04::schema::write_product_description::Input_Variant::Marketing,
             },
         );
 
         let technical = gen::prompts_04::prompts.render_write_product_description(
-            &gen::prompts_04::schema::WriteProductDescription::Input {
+            &gen::prompts_04::schema::write_product_description::Input {
                 product_name: "AquaFilter Pro".to_string(),
                 features: features.clone(),
-                variant: gen::prompts_04::schema::WriteProductDescription::Input_Variant::Technical,
+                variant:
+                    gen::prompts_04::schema::write_product_description::Input_Variant::Technical,
             },
         );
 
         let brief = gen::prompts_04::prompts.render_write_product_description(
-            &gen::prompts_04::schema::WriteProductDescription::Input {
+            &gen::prompts_04::schema::write_product_description::Input {
                 product_name: "AquaFilter Pro".to_string(),
                 features: features.clone(),
-                variant: gen::prompts_04::schema::WriteProductDescription::Input_Variant::Brief,
+                variant: gen::prompts_04::schema::write_product_description::Input_Variant::Brief,
             },
         );
 
@@ -285,10 +290,10 @@ mod tests {
     #[test]
     fn test_05_snippets_summarize_document() {
         let p_exec = gen::prompts_05::prompts.render_summarize_document(
-            &gen::prompts_05::schema::SummarizeDocument::Input {
+            &gen::prompts_05::schema::summarize_document::Input {
                 title: "T".to_string(),
                 content: "C".to_string(),
-                audience: gen::prompts_05::schema::SummarizeDocument::Input_Audience::Executive,
+                audience: gen::prompts_05::schema::summarize_document::Input_Audience::Executive,
                 focus_topic: None,
             },
         );
@@ -297,30 +302,30 @@ mod tests {
             .contains("non-technical executive audience"));
 
         let p_tech = gen::prompts_05::prompts.render_summarize_document(
-            &gen::prompts_05::schema::SummarizeDocument::Input {
+            &gen::prompts_05::schema::summarize_document::Input {
                 title: "T".to_string(),
                 content: "C".to_string(),
-                audience: gen::prompts_05::schema::SummarizeDocument::Input_Audience::Technical,
+                audience: gen::prompts_05::schema::summarize_document::Input_Audience::Technical,
                 focus_topic: None,
             },
         );
         assert!(p_tech.system_message.contains("technical audience"));
 
         let p_gen = gen::prompts_05::prompts.render_summarize_document(
-            &gen::prompts_05::schema::SummarizeDocument::Input {
+            &gen::prompts_05::schema::summarize_document::Input {
                 title: "T".to_string(),
                 content: "C".to_string(),
-                audience: gen::prompts_05::schema::SummarizeDocument::Input_Audience::General,
+                audience: gen::prompts_05::schema::summarize_document::Input_Audience::General,
                 focus_topic: None,
             },
         );
         assert!(p_gen.system_message.contains("general audience"));
 
         let p_focus = gen::prompts_05::prompts.render_summarize_document(
-            &gen::prompts_05::schema::SummarizeDocument::Input {
+            &gen::prompts_05::schema::summarize_document::Input {
                 title: "T".to_string(),
                 content: "C".to_string(),
-                audience: gen::prompts_05::schema::SummarizeDocument::Input_Audience::General,
+                audience: gen::prompts_05::schema::summarize_document::Input_Audience::General,
                 focus_topic: Some("climate change".to_string()),
             },
         );
@@ -333,30 +338,32 @@ mod tests {
 
     #[test]
     fn test_06_toon_format_write_comparison_article() {
-        let provider = gen::prompts_06::schema::WriteComparisonArticle::Provider {
+        let provider = gen::prompts_06::schema::write_comparison_article::Provider {
             name: "CloudX".to_string(),
             region: "us-east".to_string(),
-            category: gen::prompts_06::schema::WriteComparisonArticle::ProductCategory::Compute,
-            pricing: gen::prompts_06::schema::WriteComparisonArticle::Pricing {
-                model: gen::prompts_06::schema::WriteComparisonArticle::Pricing_Model::PerHour,
+            category: gen::prompts_06::schema::write_comparison_article::ProductCategory::Compute,
+            pricing: gen::prompts_06::schema::write_comparison_article::Pricing {
+                model: gen::prompts_06::schema::write_comparison_article::Pricing_Model::PerHour,
                 base_price: 0.1,
                 overage: None,
             },
-            benchmarks: vec![gen::prompts_06::schema::WriteComparisonArticle::Benchmark {
-                name: "throughput".to_string(),
-                score: 1000.0,
-                unit: "rps".to_string(),
-            }],
+            benchmarks: vec![
+                gen::prompts_06::schema::write_comparison_article::Benchmark {
+                    name: "throughput".to_string(),
+                    score: 1000.0,
+                    unit: "rps".to_string(),
+                },
+            ],
             pros: vec!["fast".to_string(), "reliable".to_string()],
             cons: vec!["pricey".to_string()],
         };
 
         let prompt = gen::prompts_06::prompts.render_write_comparison_article(
-            &gen::prompts_06::schema::WriteComparisonArticle::Input {
+            &gen::prompts_06::schema::write_comparison_article::Input {
                 providers: vec![provider],
                 use_case: "serving ML inference workloads".to_string(),
                 audience:
-                    gen::prompts_06::schema::WriteComparisonArticle::Input_Audience::Architect,
+                    gen::prompts_06::schema::write_comparison_article::Input_Audience::Architect,
             },
         );
 
@@ -394,14 +401,16 @@ mod tests {
         };
 
         let ship_prompt = gen::prompts_07::prompts.render_shipping_confirmation(
-            &gen::prompts_07::schema::ShippingConfirmation::Input {
+            &gen::prompts_07::schema::shipping_confirmation::Input {
                 recipient: contact.clone(),
                 order_number: "ORD-1234".to_string(),
                 estimated_delivery: "2026-08-20".to_string(),
-                items: vec![gen::prompts_07::schema::ShippingConfirmation::Input_Items {
-                    name: "Laptop".to_string(),
-                    quantity: 1,
-                }],
+                items: vec![
+                    gen::prompts_07::schema::shipping_confirmation::Input_Items {
+                        name: "Laptop".to_string(),
+                        quantity: 1,
+                    },
+                ],
             },
         );
 
@@ -418,9 +427,9 @@ mod tests {
         assert!(ship_prompt.system_message.contains("confirmation email"));
 
         let return_prompt = gen::prompts_07::prompts.render_return_slip(
-            &gen::prompts_07::schema::ReturnSlip::Input {
+            &gen::prompts_07::schema::return_slip::Input {
                 customer: contact,
-                return_reason: gen::prompts_07::schema::ReturnSlip::Input_ReturnReason::Defective,
+                return_reason: gen::prompts_07::schema::return_slip::Input_ReturnReason::Defective,
                 order_number: "ORD-1234".to_string(),
             },
         );
@@ -441,14 +450,14 @@ mod tests {
         let fin_summary = gen::prompts_08::prompts
             .finance
             .render_summarize_transaction(
-            &gen::prompts_08::schema::Finance::SummarizeTransaction::Input {
+            &gen::prompts_08::schema::finance::summarize_transaction::Input {
                 description: "AWS monthly bill".to_string(),
-                amount: gen::prompts_08::schema::Finance::shared::MoneyAmount {
+                amount: gen::prompts_08::schema::finance::shared::MoneyAmount {
                     value: 450.0,
-                    currency: gen::prompts_08::schema::Finance::shared::Currency::Usd,
+                    currency: gen::prompts_08::schema::finance::shared::Currency::Usd,
                 },
                 category:
-                    gen::prompts_08::schema::Finance::SummarizeTransaction::Input_Category::Expense,
+                    gen::prompts_08::schema::finance::summarize_transaction::Input_Category::Expense,
                 date: "2026-08-01".to_string(),
             },
         );
@@ -460,14 +469,14 @@ mod tests {
         assert!(fin_summary.user_message.contains("AWS monthly bill"));
 
         let fin_anomaly = gen::prompts_08::prompts.finance.render_detect_anomaly(
-            &gen::prompts_08::schema::Finance::DetectAnomaly::Input {
+            &gen::prompts_08::schema::finance::detect_anomaly::Input {
                 recent_transactions: vec![],
                 new_transaction:
-                    gen::prompts_08::schema::Finance::DetectAnomaly::Input_NewTransaction {
+                    gen::prompts_08::schema::finance::detect_anomaly::Input_NewTransaction {
                         description: "Casino chips".to_string(),
-                        amount: gen::prompts_08::schema::Finance::shared::MoneyAmount {
+                        amount: gen::prompts_08::schema::finance::shared::MoneyAmount {
                             value: 5000.0,
-                            currency: gen::prompts_08::schema::Finance::shared::Currency::Usd,
+                            currency: gen::prompts_08::schema::finance::shared::Currency::Usd,
                         },
                         date: "2026-08-17".to_string(),
                     },
@@ -481,15 +490,15 @@ mod tests {
         assert!(fin_anomaly.tools.is_empty());
 
         let legal_nda = gen::prompts_08::prompts.legal.render_draft_nda(
-            &gen::prompts_08::schema::Legal::DraftNda::Input {
-                disclosing_party: gen::prompts_08::schema::Legal::shared::Party {
+            &gen::prompts_08::schema::legal::draft_nda::Input {
+                disclosing_party: gen::prompts_08::schema::legal::shared::Party {
                     name: "Acme Corp".to_string(),
-                    role: gen::prompts_08::schema::Legal::shared::Party_Role::Client,
+                    role: gen::prompts_08::schema::legal::shared::Party_Role::Client,
                     jurisdiction: "California".to_string(),
                 },
-                receiving_party: gen::prompts_08::schema::Legal::shared::Party {
+                receiving_party: gen::prompts_08::schema::legal::shared::Party {
                     name: "Beta LLC".to_string(),
-                    role: gen::prompts_08::schema::Legal::shared::Party_Role::Counterparty,
+                    role: gen::prompts_08::schema::legal::shared::Party_Role::Counterparty,
                     jurisdiction: "Delaware".to_string(),
                 },
                 purpose_of_disclosure: "Evaluating a potential acquisition".to_string(),
@@ -505,11 +514,11 @@ mod tests {
             .contains("non-disclosure agreement"));
 
         let legal_clause = gen::prompts_08::prompts.legal.render_summarize_clause(
-            &gen::prompts_08::schema::Legal::SummarizeClause::Input {
+            &gen::prompts_08::schema::legal::summarize_clause::Input {
                 clause_text: "The party shall indemnify and hold harmless...".to_string(),
-                reviewing_party: gen::prompts_08::schema::Legal::shared::Party {
+                reviewing_party: gen::prompts_08::schema::legal::shared::Party {
                     name: "Alice".to_string(),
-                    role: gen::prompts_08::schema::Legal::shared::Party_Role::Client,
+                    role: gen::prompts_08::schema::legal::shared::Party_Role::Client,
                     jurisdiction: "NY".to_string(),
                 },
             },
@@ -529,13 +538,13 @@ mod tests {
     #[test]
     fn test_e01_analyze_sales_data_csv_and_tsv() {
         let rows = vec![
-            gen::prompts_e01::schema::AnalyzeSalesData::SalesRow {
+            gen::prompts_e01::schema::analyze_sales_data::SalesRow {
                 product: "Widget A".to_string(),
                 units: 120,
                 revenue_cents: 240000,
                 region: "north".to_string(),
             },
-            gen::prompts_e01::schema::AnalyzeSalesData::SalesRow {
+            gen::prompts_e01::schema::analyze_sales_data::SalesRow {
                 product: "Widget B".to_string(),
                 units: 85,
                 revenue_cents: 340000,
@@ -544,18 +553,18 @@ mod tests {
         ];
 
         let csv = gen::prompts_e01::prompts.render_analyze_sales_data(
-            &gen::prompts_e01::schema::AnalyzeSalesData::Input {
+            &gen::prompts_e01::schema::analyze_sales_data::Input {
                 rows: rows.clone(),
                 question: "Top product?".to_string(),
-                variant: gen::prompts_e01::schema::AnalyzeSalesData::Input_Variant::Csv,
+                variant: gen::prompts_e01::schema::analyze_sales_data::Input_Variant::Csv,
             },
         );
 
         let tsv = gen::prompts_e01::prompts.render_analyze_sales_data(
-            &gen::prompts_e01::schema::AnalyzeSalesData::Input {
+            &gen::prompts_e01::schema::analyze_sales_data::Input {
                 rows,
                 question: "Top product?".to_string(),
-                variant: gen::prompts_e01::schema::AnalyzeSalesData::Input_Variant::Tsv,
+                variant: gen::prompts_e01::schema::analyze_sales_data::Input_Variant::Tsv,
             },
         );
 
@@ -589,11 +598,11 @@ mod tests {
 
     // ─── E01 Spec Serialization ─────────────────────────────────────────────────
 
+    use gen::prompts_e01::schema::analyze_sales_data::Input_Variant;
     use gen::prompts_e01::schema::shared::{
         EnumWithCommonFields, EnumWithCommonFields_NotSuccess, EnumWithCommonFields_Success, Expr,
         Expr_KindAdd, Expr_KindNumber, Matrix,
     };
-    use gen::prompts_e01::schema::AnalyzeSalesData::Input_Variant;
 
     #[test]
     fn test_string_enum_serialization() {
@@ -677,7 +686,7 @@ mod tests {
         assert!(gen::prompts_01::TemplateOverrider::apply_overrides(&wrong_str).is_err());
 
         let prompts = gen::prompts_01::TemplateOverrider::apply_overrides(&data).unwrap();
-        let prompt = prompts.render_translate(&gen::prompts_01::schema::Translate::Input {
+        let prompt = prompts.render_translate(&gen::prompts_01::schema::translate::Input {
             text: "Hello".to_string(),
             target_language: "French".to_string(),
         });

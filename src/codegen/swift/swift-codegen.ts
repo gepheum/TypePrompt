@@ -354,7 +354,7 @@ function writeToolExecutorProtocols(
         "public init(",
         ...toolInfoList.map(
           (t, i) =>
-            `${t.paramName}: any ${t.interfaceRef}${i < toolInfoList.length - 1 ? "," : ""}`,
+            `${t.paramName}: any ${t.interfaceRef},`,
         ),
         ") {",
         ...toolInfoList.map((t) => `self.${t.paramName} = ${t.paramName}`),
@@ -407,16 +407,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+      },
+    )
     : "Never?";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -688,13 +688,15 @@ function writeExecuteToolCall(
       ? `ToolExecutor.${toolSwiftName}`
       : `ToolExecutor.${toolSwiftNamespace}.${capitalize(rawToolName)}`;
 
+    const methodName = toSwiftName(rawToolName);
+
     lines.push(
       `case "${toolId}":`,
       `guard let toolExecutor = executor as? ${interfaceName} else {`,
       "break",
       "}",
       `let input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
-      `let rawOutput = try await toolExecutor.${toolSwiftName}(input: input)`,
+      `let rawOutput = try await toolExecutor.${methodName}(input: input)`,
       "let outputData = try Foundation.JSONEncoder().encode(rawOutput)",
       "stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
     );

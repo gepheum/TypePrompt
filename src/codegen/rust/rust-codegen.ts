@@ -116,16 +116,16 @@ function getToolExecutorRef(
     );
     const traitPath = singleNamespace
       ? `tool_executor::${toolRustName}`
-      : `tool_executor::${toRustName(rustNamespace)}::${toolRustName}`;
+      : `tool_executor::${rustNamespace}::${toolRustName}`;
     return traitPath;
   }
-  const templateName = toRustName(toSnakeCase(template.template.name.text));
+  const traitName = toRustName(template.template.name.text);
   const rustNamespace = toRustName(
     toSnakeCase(template.template.namespace?.text ?? DEFAULT_NAMESPACE),
   );
   const traitPath = singleNamespace
-    ? `tool_executor::${templateName}`
-    : `tool_executor::${rustNamespace}::${templateName}`;
+    ? `tool_executor::${traitName}`
+    : `tool_executor::${rustNamespace}::${traitName}`;
   return traitPath;
 }
 
@@ -344,7 +344,7 @@ function writeToolExecutorTraits(
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
     const lines: string[] = [];
-    const rustNamespace = toRustName(namespace.name);
+    const rustNamespace = toRustName(toSnakeCase(namespace.name));
     const typePrefixBase = singleNamespace
       ? "super::schema::"
       : `super::super::schema::${rustNamespace}::`;
@@ -451,7 +451,7 @@ function writeToolExecutorTraits(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const rustNamespace = toRustName(namespace.name);
+      const rustNamespace = toRustName(toSnakeCase(namespace.name));
       lines.push(`pub mod ${rustNamespace} {`);
       lines.push(...writeNamespace(namespace));
       lines.push(`}  // mod ${rustNamespace}`, "");
@@ -501,7 +501,7 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const rustNamespace = toRustName(namespace.name);
+    const rustNamespace = toRustName(toSnakeCase(namespace.name));
     const typePrefixBase = singleNamespace
       ? "schema::"
       : `schema::${rustNamespace}::`;
@@ -547,7 +547,7 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const rustNamespace = toRustName(namespace.name);
+      const rustNamespace = toRustName(toSnakeCase(namespace.name));
       lines.push(`pub mod ${rustNamespace} {`);
       writeNamespace(namespace);
       lines.push(`}  // mod ${rustNamespace}`, "");
