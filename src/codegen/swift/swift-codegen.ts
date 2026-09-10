@@ -190,6 +190,9 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
     return [
       "/// Entry point for building prompts.",
       ...writeNamespaceMembers("Prompts", singleNamespace),
+      "",
+      "/// Entry point for building prompts.",
+      "public static let prompts = Prompts(_templatesData)",
     ].join("\n");
   } else {
     const nsList = Object.values(namespaces);
@@ -213,7 +216,12 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
         "",
       );
     }
-    lines.push("}");
+    lines.push(
+      "}",
+      "",
+      "/// Entry point for building prompts.",
+      "public static let prompts = Prompts(_templatesData)",
+    );
     lines.push("");
     for (const namespace of nsList) {
       const namespaceStructName = namespace.name.concat("Prompts");

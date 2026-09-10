@@ -73,7 +73,7 @@ public enum TypePromptRuntime {
       tools: [String: Tool],
       outputFormat: OutputFormat,
       templateId: TemplateId,
-      fromJson: @escaping @Sendable (Data) throws -> Output
+      fromJson: @escaping @Sendable (Data) throws -> Output,
     ) {
       self.meta = meta
       self.systemMessage = systemMessage
@@ -91,23 +91,24 @@ public enum TypePromptRuntime {
         response,
         outputFormat: outputFormat,
         templateId: templateId,
-        fromJson: fromJson
+        fromJson: fromJson,
       )
     }
 
     /// Execute the given tool calls in parallel.
     public func executeTools(
       _ toolCalls: [ToolCall],
-      toolExecutor: ToolExecutor
+      toolExecutor: ToolExecutor,
     ) async throws -> [ToolCallResponse] {
       let namespace = templateId.description.split(separator: ":").first.map(String.init) ?? ""
-      return try await withThrowingTaskGroup(of: (Int, ToolCallResponse).self) { group in
+      return try await withThrowingTaskGroup(of: (Int, ToolCallResponse).self) {
+        group in
         for (index, call) in toolCalls.enumerated() {
           group.addTask {
             let result = try await executeToolCall(
               toolCall: call,
               namespace: namespace,
-              executor: toolExecutor
+              executor: toolExecutor,
             )
             return (index, result)
           }
@@ -288,7 +289,7 @@ public enum TypePromptRuntime {
   fileprivate static func executeToolCall(
     toolCall: ToolCall,
     namespace: String,
-    executor: any Any
+    executor: any Any,
   ) async throws -> ToolCallResponse {
     throw ToolNotFoundError(description: "Tool not found: \(toolCall.toolName)")
   }
@@ -1533,7 +1534,5 @@ public enum TypePromptRuntime {
     }
   }
 
-  /// Entry point for building prompts.
-  public static let prompts = Prompts(_templatesData)
   // </static:swift-logic>
 }
