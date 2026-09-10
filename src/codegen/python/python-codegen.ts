@@ -145,10 +145,10 @@ function writeUserDefinedDatatypes(
       return [" pass"];
     }
     const lines = [];
-    const namespaceName = toPyName(namespace.name, "snake_case_class_name");
+    const pyNamespace = toPyName(namespace.name, "snake_case_class_name");
     const schemaPrefix = singleNamespace
       ? "schema."
-      : `schema.${namespaceName}.`;
+      : `schema.${pyNamespace}.`;
     if (namespace.schema.namingHints.defaultScope.size >= 1) {
       lines.push(" @final");
       lines.push(" class shared(_StaticClass):");
@@ -189,8 +189,8 @@ function writeUserDefinedDatatypes(
     metaSchema.namingHints.defaultScope.size <= 0
       ? "None"
       : writeType(metaSchema.typeDeclarations["Meta"]!.valueType, metaSchema, {
-          typePrefix: "schema.meta.",
-        });
+        typePrefix: "schema.meta.",
+      });
   const lines = [
     "# Metadata associated with a prompt.",
     `type Meta = ${metaTypedef}`,
@@ -288,9 +288,9 @@ function writeToolExecutorProtocols(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toPyName(namespace.name, "snake_case_class_name");
+      const pyNamespace = toPyName(namespace.name, "snake_case_class_name");
       lines.push(" @final");
-      lines.push(` class ${namespaceName}(_StaticClass):`);
+      lines.push(` class ${pyNamespace}(_StaticClass):`);
       lines.push(
         ...writeNamespace(namespace).map((line) => indentLine(line, " ")),
       );
@@ -603,10 +603,10 @@ function writeInputOutputTypes(
       (input.kind === "template"
         ? input.template.namespace?.text
         : input.tool.namespace?.text) ?? DEFAULT_NAMESPACE;
-    const namespaceName = toPyName(rawNamespace, "snake_case_class_name");
+    const pyNamespace = toPyName(rawNamespace, "snake_case_class_name");
     const typePrefixBase = singleNamespace
       ? "schema."
-      : "schema.".concat(namespaceName, ".");
+      : "schema.".concat(pyNamespace, ".");
     const rawName =
       input.kind === "template"
         ? input.template.name.text
@@ -668,11 +668,11 @@ function getToolExecutorRef(
     ...(singleNamespace
       ? []
       : [
-          toPyName(
-            input.namespace?.text ?? DEFAULT_NAMESPACE,
-            "snake_case_class_name",
-          ),
-        ]),
+        toPyName(
+          input.namespace?.text ?? DEFAULT_NAMESPACE,
+          "snake_case_class_name",
+        ),
+      ]),
     toPyName(input.name.text, "snake_case_class_name"),
     "ToolExecutor",
   ].join(".");

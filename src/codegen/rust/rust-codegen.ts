@@ -69,10 +69,10 @@ function getTemplateTypes(
   const templateName = toRustName(template.template.name.text);
   const templateNamespace =
     template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toRustName(templateNamespace);
+  const rustNamespace = toRustName(templateNamespace);
   const typePrefixBase = singleNamespace
     ? "schema::"
-    : `schema::${namespaceName}::`;
+    : `schema::${rustNamespace}::`;
   const sharedTypePrefix = typePrefixBase.concat("shared::");
   const templateTypePrefix = typePrefixBase.concat(templateName, "::");
 
@@ -91,10 +91,10 @@ function getTemplateTypes(
     template.template.outputFormat?.text === "text"
       ? "String"
       : writeType(
-          { kind: "type-name", name: { text: "Output" } },
-          template.schema,
-          options,
-        );
+        { kind: "type-name", name: { text: "Output" } },
+        template.schema,
+        options,
+      );
 
   return { inputType, outputType };
 }
@@ -163,8 +163,8 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
         const executeFunctionName = singleNamespace
           ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
           : toRustName(
-              `execute_${toSnakeCase(templateNamespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-            );
+            `execute_${toSnakeCase(templateNamespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+          );
 
         const traitBound = getToolExecutorRef(t, compilationResult);
 
@@ -343,10 +343,10 @@ function writeToolExecutorTraits(
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
     const lines: string[] = [];
-    const namespaceName = toRustName(namespace.name);
+    const rustNamespace = toRustName(namespace.name);
     const typePrefixBase = singleNamespace
       ? "super::schema::"
-      : `super::super::schema::${namespaceName}::`;
+      : `super::super::schema::${rustNamespace}::`;
     const sharedTypePrefix = typePrefixBase.concat("shared::");
 
     for (const tool of Object.values(namespace.tools)) {
@@ -453,10 +453,10 @@ function writeToolExecutorTraits(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toRustName(namespace.name);
-      lines.push(`pub mod ${namespaceName} {`);
+      const rustNamespace = toRustName(namespace.name);
+      lines.push(`pub mod ${rustNamespace} {`);
       lines.push(...writeNamespace(namespace));
-      lines.push(`}  // mod ${namespaceName}`, "");
+      lines.push(`}  // mod ${rustNamespace}`, "");
     }
   }
   lines.push("}  // mod tool_executor");
@@ -473,16 +473,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+      },
+    )
     : "()";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -503,10 +503,10 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = toRustName(namespace.name);
+    const rustNamespace = toRustName(namespace.name);
     const typePrefixBase = singleNamespace
       ? "schema::"
-      : `schema::${namespaceName}::`;
+      : `schema::${rustNamespace}::`;
     const sharedTypePrefix = "super::shared::";
     if (anyTypes(namespace.schema)) {
       lines.push("pub mod shared {");
@@ -547,10 +547,10 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toRustName(namespace.name);
-      lines.push(`pub mod ${namespaceName} {`);
+      const rustNamespace = toRustName(namespace.name);
+      lines.push(`pub mod ${rustNamespace} {`);
       writeNamespace(namespace);
-      lines.push(`}  // mod ${namespaceName}`, "");
+      lines.push(`}  // mod ${rustNamespace}`, "");
     }
   }
   lines.push("}  // mod schema\n");
@@ -597,15 +597,15 @@ function getToolInfo(
   const { singleNamespace } = compilationResult;
   const toolName = tool.tool.name.text;
   const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toRustName(toolNamespace);
+  const rustNamespace = toRustName(toolNamespace);
 
   const traitName = singleNamespace
     ? `tool_executor::${toRustName(capitalize(toolName))}`
-    : `tool_executor::${namespaceName}::${toRustName(capitalize(toolName))}`;
+    : `tool_executor::${rustNamespace}::${toRustName(capitalize(toolName))}`;
 
   const typePrefixBase = singleNamespace
     ? "schema::"
-    : `schema::${namespaceName}::`;
+    : `schema::${rustNamespace}::`;
   const sharedTypePrefix = typePrefixBase.concat("shared::");
   const toolTypeName = toRustName(capitalize(toolName));
   const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
@@ -656,8 +656,8 @@ function writeExecuteToolCall(
     const functionName = singleNamespace
       ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
       : toRustName(
-          `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
-        );
+        `execute_${toSnakeCase(namespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+      );
 
     const uniqueTraits = Array.from(
       new Set(

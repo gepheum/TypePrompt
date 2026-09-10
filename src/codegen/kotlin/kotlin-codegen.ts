@@ -350,11 +350,10 @@ function writeToolExecutorInterfaces(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toKotlinName(namespace.name);
-      lines.push(`object ${namespaceName} {
-          `);
+      const ktNamespace = toKotlinName(namespace.name);
+      lines.push(`object ${ktNamespace} {`);
       lines.push(...writeNamespace(namespace));
-      lines.push(`}  // object ${namespaceName}`, "");
+      lines.push(`}  // object ${ktNamespace}`, "");
     }
   }
   lines.push("}  // object ToolExecutor");
@@ -372,16 +371,16 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "Schema.Meta.",
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "Schema.Meta.",
+      },
+    )
     : "Nothing?";
   lines.push(
     "/** Metadata associated with a prompt. */",
@@ -400,10 +399,10 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = toKotlinName(namespace.name);
+    const ktNamespace = toKotlinName(namespace.name);
     const typePrefixBase = singleNamespace
       ? "Schema."
-      : `Schema.${namespaceName}.`;
+      : `Schema.${ktNamespace}.`;
     const sharedTypePrefix = typePrefixBase.concat("Shared.");
     if (anyTypes(namespace.schema)) {
       lines.push("object Shared {");
@@ -446,10 +445,10 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toKotlinName(namespace.name);
-      lines.push(`object ${namespaceName} {`);
+      const ktNamespace = toKotlinName(namespace.name);
+      lines.push(`object ${ktNamespace} {`);
       writeNamespace(namespace);
-      lines.push(`}  // object ${namespaceName}\n`);
+      lines.push(`}  // object ${ktNamespace}\n`);
     }
   }
   lines.push("}\n");
@@ -664,14 +663,14 @@ function writeTypepromptInterface(
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
-        interfaces
-          .map((i) =>
-            i.startsWith(options.typePrefix)
-              ? i.slice(options.typePrefix.length)
-              : i,
-          )
-          .join(", "),
-      )
+      interfaces
+        .map((i) =>
+          i.startsWith(options.typePrefix)
+            ? i.slice(options.typePrefix.length)
+            : i,
+        )
+        .join(", "),
+    )
     : "";
   lines.push(`)${implementsClause} {`);
   if (hasLiteralField) {

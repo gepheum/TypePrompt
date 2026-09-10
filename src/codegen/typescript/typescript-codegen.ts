@@ -101,9 +101,9 @@ function writePromptsInterface(
   } else {
     lines.push("export type Prompts = {");
     for (const namespace of Object.values(compilationResult.namespaces)) {
-      const namespaceName = uncapitalize(namespace.name);
+      const tsNamespace = uncapitalize(namespace.name);
       const templates = writeTemplates(namespace);
-      lines.push(`readonly ${namespaceName}: ${templates};`);
+      lines.push(`readonly ${tsNamespace}: ${templates};`);
     }
     lines.push("};");
   }
@@ -278,8 +278,8 @@ function writeSpecDatatypes(): string {
     "}",
     "",
     "const templatesSchema = " +
-      writeZodType(runtimeTypesSchema, "Templates", options) +
-      ";",
+    writeZodType(runtimeTypesSchema, "Templates", options) +
+    ";",
   ];
   return lines.join("\n");
 }

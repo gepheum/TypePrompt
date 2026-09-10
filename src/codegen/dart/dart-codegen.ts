@@ -386,15 +386,15 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          typePrefix: "Meta_",
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        typePrefix: "Meta_",
+      },
+    )
     : "Null";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -417,8 +417,8 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = namespace.name;
-    const typePrefixBase = singleNamespace ? "" : namespaceName.concat("_");
+    const rawNamespace = namespace.name;
+    const typePrefixBase = singleNamespace ? "" : rawNamespace.concat("_");
     const sharedTypePrefix = typePrefixBase.concat("Shared_");
     if (anyTypes(namespace.schema)) {
       lines.push(

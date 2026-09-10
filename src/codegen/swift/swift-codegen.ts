@@ -378,10 +378,10 @@ function writeToolExecutorProtocols(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toSwiftName(namespace.name);
-      lines.push(`public enum ${namespaceName} {`);
+      const swiftNamespace = toSwiftName(namespace.name);
+      lines.push(`public enum ${swiftNamespace} {`);
       lines.push(...writeNamespace(namespace));
-      lines.push(`}  // enum ${namespaceName}`, "");
+      lines.push(`}  // enum ${swiftNamespace}`, "");
     }
   }
   lines.push("}  // enum ToolExecutor");
@@ -451,10 +451,10 @@ function writeUserDefinedDatatypes(
   }
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceName = toSwiftName(namespace.name);
+    const swiftNamespace = toSwiftName(namespace.name);
     const typePrefixBase = singleNamespace
       ? `${config.rootNamespace}.Schema.`
-      : `${config.rootNamespace}.Schema.${namespaceName}.`;
+      : `${config.rootNamespace}.Schema.${swiftNamespace}.`;
     const sharedTypePrefix = `${config.rootNamespace}.Schema.Shared.`;
     if (anyTypes(namespace.schema)) {
       lines.push("enum Shared {");
@@ -495,8 +495,8 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace);
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceName = toSwiftName(namespace.name);
-      lines.push(`enum ${namespaceName} {`);
+      const swiftNamespace = toSwiftName(namespace.name);
+      lines.push(`enum ${swiftNamespace} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
