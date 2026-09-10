@@ -595,7 +595,10 @@ function writeInputOutputTypes(
   const options: {
     readonly typePrefix: string;
     readonly sharedTypePrefix: string;
-  } = (() => {
+  } = ((): {
+    readonly typePrefix: string;
+    readonly sharedTypePrefix: string;
+  } => {
     const { singleNamespace } = compilationResult;
     const rawNamespace =
       (input.kind === "template"

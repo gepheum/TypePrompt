@@ -774,7 +774,9 @@ namespace Spec
         public required IReadOnlyDictionary<string, Tool> Tools { get; init; }
         [JsonPropertyName("singleNamespace")]
         public required bool SingleNamespace { get; init; }
-        /// <summary>The key is a relative path to a .xml file. The value is the file content.</summary>
+        /// <summary>
+        /// The key is a relative path to a .xml file. The value is the file content.
+        /// </summary>
         [JsonPropertyName("sourceFiles")]
         public required IReadOnlyDictionary<string, string> SourceFiles { get; init; }
     }
@@ -798,8 +800,7 @@ namespace Spec
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum OutputFormat
-    {
+    file enum OutputFormat {
         [JsonStringEnumMemberName("json")]
         Json,
         [JsonStringEnumMemberName("text")]
@@ -821,10 +822,9 @@ namespace Spec
     file interface TemplateContents
     { }
 
-    file class TemplateContents__Converter : JsonConverter<TemplateContents>
+    file sealed class TemplateContents__Converter : JsonConverter<TemplateContents>
     {
-        public override TemplateContents? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override TemplateContents? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
@@ -840,8 +840,7 @@ namespace Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, TemplateContents value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, TemplateContents value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
@@ -915,10 +914,9 @@ namespace Spec
     file interface BodyPiece
     { }
 
-    file class BodyPiece__Converter : JsonConverter<BodyPiece>
+    file sealed class BodyPiece__Converter : JsonConverter<BodyPiece>
     {
-        public override BodyPiece? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override BodyPiece? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
@@ -935,8 +933,7 @@ namespace Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, BodyPiece value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, BodyPiece value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
@@ -968,17 +965,20 @@ namespace Spec
         [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "insert-snippet";
-        /// <summary>Snippet name.</summary>
+        /// <summary>
+        /// Snippet name.
+        /// </summary>
         [JsonPropertyName("snippet")]
         public required string Snippet { get; init; }
-        /// <summary>Only contains whitespace characters.</summary>
+        /// <summary>
+        /// Only contains whitespace characters.
+        /// </summary>
         [JsonPropertyName("indent")]
         public required string Indent { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum InsertFormat
-    {
+    file enum InsertFormat {
         [JsonStringEnumMemberName("text")]
         Text,
         [JsonStringEnumMemberName("json")]
@@ -1000,10 +1000,9 @@ namespace Spec
     file interface Expression
     { }
 
-    file class Expression__Converter : JsonConverter<Expression>
+    file sealed class Expression__Converter : JsonConverter<Expression>
     {
-        public override Expression? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override Expression? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
@@ -1019,8 +1018,7 @@ namespace Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, Expression value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, Expression value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
@@ -1050,10 +1048,9 @@ namespace Spec
     file interface Snippet
     { }
 
-    file class Snippet__Converter : JsonConverter<Snippet>
+    file sealed class Snippet__Converter : JsonConverter<Snippet>
     {
-        public override Snippet? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override Snippet? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
@@ -1070,8 +1067,7 @@ namespace Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, Snippet value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, Snippet value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
@@ -1101,8 +1097,7 @@ namespace Spec
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum Snippet_KindSnippetIf_Is
-    {
+    file enum Snippet_KindSnippetIf_Is {
         [JsonStringEnumMemberName("not-null")]
         NotNull,
         [JsonStringEnumMemberName("not-empty")]
@@ -1130,8 +1125,8 @@ namespace Spec
         public required string Name { get; init; }
         [JsonPropertyName("description")]
         public required string Description { get; init; }
-        [JsonPropertyName("outputJsonSchema")]
-        public JsonElement? OutputJsonSchema { get; init; }
+        [JsonPropertyName("inputJsonSchema")]
+        public JsonElement? InputJsonSchema { get; init; }
     }
 }  // namespace Spec
 // </generated:spec>

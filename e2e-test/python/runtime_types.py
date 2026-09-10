@@ -212,11 +212,13 @@ class _internal:
         id: str
         name: str
         description: str
-        output_json_schema: Any = pydantic.Field(
+        input_json_schema: Any = pydantic.Field(
             default=None,
             validation_alias=pydantic.AliasChoices(
-                "outputJsonSchema", "output_json_schema"
+                "inputJsonSchema", "input_json_schema"
             ),
-            serialization_alias="outputJsonSchema",
+            serialization_alias="inputJsonSchema",
         )
+
+
 # </generated:spec>

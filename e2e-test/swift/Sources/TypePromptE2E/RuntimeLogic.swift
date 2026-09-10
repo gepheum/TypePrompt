@@ -328,6 +328,22 @@ public enum TypePromptRuntime {
       let singleNamespace: Bool
       /// The key is a relative path to a .xml file. The value is the file content.
       let sourceFiles: [String: String]
+
+      init(
+        edition: Int32,
+        signature: String,
+        templates: [String: Template],
+        tools: [String: Tool],
+        singleNamespace: Bool,
+        sourceFiles: [String: String],
+      ) {
+        self.edition = edition
+        self.signature = signature
+        self.templates = templates
+        self.tools = tools
+        self.singleNamespace = singleNamespace
+        self.sourceFiles = sourceFiles
+      }
     }
 
     struct Template: Codable, Sendable {
@@ -366,6 +382,14 @@ public enum TypePromptRuntime {
     struct TemplateTool: Codable, Sendable {
       let id: String
       let name: String
+
+      init(
+        id: String,
+        name: String,
+      ) {
+        self.id = id
+        self.name = name
+      }
     }
 
     enum TemplateContents: Codable, Sendable {
@@ -442,7 +466,7 @@ public enum TypePromptRuntime {
         meta: JsonElement? = nil,
         system: [BodyPiece]? = nil,
         user: [BodyPiece]? = nil,
-        examples: [FewShotExample]? = nil
+        examples: [FewShotExample]? = nil,
       ) {
         self.meta = meta
         self.system = system
@@ -455,10 +479,26 @@ public enum TypePromptRuntime {
       let input: JsonElement
       let output: JsonElement
       let intermediateSteps: [FewShotExample_IntermediateSteps]
+
+      init(
+        input: JsonElement,
+        output: JsonElement,
+        intermediateSteps: [FewShotExample_IntermediateSteps],
+      ) {
+        self.input = input
+        self.output = output
+        self.intermediateSteps = intermediateSteps
+      }
     }
 
     struct FewShotExample_IntermediateSteps: Codable, Sendable {
       let toolCalls: [ToolCallExample]
+
+      init(
+        toolCalls: [ToolCallExample],
+      ) {
+        self.toolCalls = toolCalls
+      }
     }
 
     struct ToolCallExample: Codable, Sendable {
@@ -467,6 +507,20 @@ public enum TypePromptRuntime {
       let toolName: String
       let input: JsonElement
       let output: JsonElement
+
+      init(
+        callId: String,
+        toolId: String,
+        toolName: String,
+        input: JsonElement,
+        output: JsonElement,
+      ) {
+        self.callId = callId
+        self.toolId = toolId
+        self.toolName = toolName
+        self.input = input
+        self.output = output
+      }
     }
 
     enum BodyPiece: Codable, Sendable {
@@ -516,7 +570,7 @@ public enum TypePromptRuntime {
       let text: String
 
       init(
-        text: String
+        text: String,
       ) {
         self.kind = "text"
         self.text = text
@@ -532,7 +586,7 @@ public enum TypePromptRuntime {
       init(
         val: Expression,
         format: InsertFormat,
-        indent: String
+        indent: String,
       ) {
         self.kind = "insert-val"
         self.val = val
@@ -550,7 +604,7 @@ public enum TypePromptRuntime {
 
       init(
         snippet: String,
-        indent: String
+        indent: String,
       ) {
         self.kind = "insert-snippet"
         self.snippet = snippet
@@ -619,7 +673,7 @@ public enum TypePromptRuntime {
 
       init(
         `left`: Expression,
-        property: String
+        property: String,
       ) {
         self.kind = "property"
         self.`left` = `left`
@@ -674,7 +728,7 @@ public enum TypePromptRuntime {
       let body: [BodyPiece]
 
       init(
-        body: [BodyPiece]
+        body: [BodyPiece],
       ) {
         self.kind = "snippet"
         self.body = body
@@ -692,7 +746,7 @@ public enum TypePromptRuntime {
         expression: Expression,
         `is`: Snippet_KindSnippetIf_Is,
         then: [BodyPiece],
-        `else`: [BodyPiece]
+        `else`: [BodyPiece],
       ) {
         self.kind = "snippet-if"
         self.expression = expression
@@ -715,7 +769,7 @@ public enum TypePromptRuntime {
 
       init(
         expression: Expression,
-        branches: [String: [BodyPiece]]
+        branches: [String: [BodyPiece]],
       ) {
         self.kind = "snippet-switch"
         self.expression = expression
@@ -727,18 +781,18 @@ public enum TypePromptRuntime {
       let id: String
       let name: String
       let description: String
-      let outputJsonSchema: JsonElement?
+      let inputJsonSchema: JsonElement?
 
       init(
         id: String,
         name: String,
         description: String,
-        outputJsonSchema: JsonElement? = nil
+        inputJsonSchema: JsonElement? = nil,
       ) {
         self.id = id
         self.name = name
         self.description = description
-        self.outputJsonSchema = outputJsonSchema
+        self.inputJsonSchema = inputJsonSchema
       }
     }
   }  // enum Spec

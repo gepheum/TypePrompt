@@ -221,7 +221,6 @@ internal object Spec {
     enum class OutputFormat {
         @SerialName("json")
         Json,
-
         @SerialName("text")
         Text,
     }
@@ -238,8 +237,7 @@ internal object Spec {
     @Serializable(with = TemplateContents_Serializer::class)
     sealed interface TemplateContents {}
 
-    private object TemplateContents_Serializer :
-        JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
+    private object TemplateContents_Serializer : JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<TemplateContents> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "no-variants" -> TemplateContents_KindNoVariants.serializer()
@@ -402,19 +400,14 @@ internal object Spec {
     enum class InsertFormat {
         @SerialName("text")
         Text,
-
         @SerialName("json")
         Json,
-
         @SerialName("yaml")
         Yaml,
-
         @SerialName("toon")
         Toon,
-
         @SerialName("csv")
         Csv,
-
         @SerialName("tsv")
         Tsv,
     }
@@ -525,10 +518,8 @@ internal object Spec {
     enum class Snippet_KindSnippetIf_Is {
         @SerialName("not-null")
         NotNull,
-
         @SerialName("not-empty")
         NotEmpty,
-
         @SerialName("true")
         True,
     }
@@ -559,7 +550,7 @@ internal object Spec {
         val id: String,
         val name: String,
         val description: String,
-        @kotlinx.serialization.EncodeDefault val outputJsonSchema: JsonElement? = null,
+        @kotlinx.serialization.EncodeDefault val inputJsonSchema: JsonElement? = null,
     ) {}
 }  // object Spec
 // </generated:spec>
