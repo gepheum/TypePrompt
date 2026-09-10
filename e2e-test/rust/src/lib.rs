@@ -162,10 +162,10 @@ mod tests {
     impl gen::prompts_03::tool_executor::WebSearch for MockWebSearchExecutor {
         async fn web_search(
             &self,
-            _input: gen::prompts_03::schema::WebSearch::Input,
-        ) -> gen::prompts_03::schema::WebSearch::Output {
-            gen::prompts_03::schema::WebSearch::Output {
-                results: vec![gen::prompts_03::schema::WebSearch::Output_Results {
+            _input: gen::prompts_03::schema::web_search::Input,
+        ) -> gen::prompts_03::schema::web_search::Output {
+            gen::prompts_03::schema::web_search::Output {
+                results: vec![gen::prompts_03::schema::web_search::Output_Results {
                     title: "Tokyo Population 2024".to_string(),
                     url: "https://example.com/tokyo".to_string(),
                     snippet: "14 million".to_string(),
@@ -700,9 +700,9 @@ mod tests {
         async fn my_tool(
             &self,
             input: gen::prompts_e01::schema::shared::Square,
-        ) -> gen::prompts_e01::schema::MyTool::Output {
-            gen::prompts_e01::schema::MyTool::Output {
-                shared: gen::prompts_e01::schema::MyTool::Shared {
+        ) -> gen::prompts_e01::schema::my_tool::Output {
+            gen::prompts_e01::schema::my_tool::Output {
+                shared: gen::prompts_e01::schema::my_tool::Shared {
                     value: "hello".to_string(),
                     square: input,
                 },
@@ -715,9 +715,9 @@ mod tests {
         async fn my_other_tool(
             &self,
             input: gen::prompts_e01::schema::shared::Square,
-        ) -> Vec<gen::prompts_e01::schema::MyOtherTool::Output> {
-            vec![gen::prompts_e01::schema::MyOtherTool::Output {
-                shared: gen::prompts_e01::schema::MyOtherTool::Shared {
+        ) -> Vec<gen::prompts_e01::schema::my_other_tool::Output> {
+            vec![gen::prompts_e01::schema::my_other_tool::Output {
+                shared: gen::prompts_e01::schema::my_other_tool::Shared {
                     value: "world".to_string(),
                     square: input,
                 },
@@ -730,7 +730,7 @@ mod tests {
         async fn my_tool(
             &self,
             input: gen::prompts_e01::schema::shared::Square,
-        ) -> gen::prompts_e01::schema::MyTool::Output {
+        ) -> gen::prompts_e01::schema::my_tool::Output {
             TestMyTool.my_tool(input).await
         }
     }
@@ -738,7 +738,7 @@ mod tests {
         async fn my_other_tool(
             &self,
             input: gen::prompts_e01::schema::shared::Square,
-        ) -> Vec<gen::prompts_e01::schema::MyOtherTool::Output> {
+        ) -> Vec<gen::prompts_e01::schema::my_other_tool::Output> {
             TestMyOtherTool.my_other_tool(input).await
         }
     }

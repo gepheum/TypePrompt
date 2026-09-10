@@ -353,8 +353,10 @@ function writeToolExecutorTraits(
     for (const tool of Object.values(namespace.tools)) {
       const rawToolName = tool.tool.name.text;
       const interfaceName = toRustName(capitalize(rawToolName));
-      const toolTypeName = toRustName(capitalize(rawToolName));
-      const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
+      const toolTypePrefix = typePrefixBase.concat(
+        toRustName(toSnakeCase(rawToolName)),
+        "::",
+      );
       const options: WriteSchemaOptions = {
         typePrefix: toolTypePrefix,
         sharedTypePrefix,
@@ -516,30 +518,30 @@ function writeUserDefinedDatatypes(
       lines.push(`}  // mod shared`, "");
     }
     for (const template of namespace.templates) {
-      const templateRustName = toRustName(
+      const templateModName = toRustName(
         toSnakeCase(template.template.name.text),
       );
-      const typePrefix = typePrefixBase.concat(templateRustName, "::");
-      lines.push(`pub mod ${templateRustName} {`);
+      const typePrefix = typePrefixBase.concat(templateModName, "::");
+      lines.push(`pub mod ${templateModName} {`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // mod ${templateRustName}`, "");
+      lines.push(`}  // mod ${templateModName}`, "");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolRustName = toRustName(capitalize(tool.tool.name.text));
-      const typePrefix = typePrefixBase.concat(toolRustName, "::");
-      lines.push(`pub mod ${toolRustName} {\n`);
+      const toolModName = toRustName(toSnakeCase(tool.tool.name.text));
+      const typePrefix = typePrefixBase.concat(toolModName, "::");
+      lines.push(`pub mod ${toolModName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // mod ${toolRustName}`, "");
+      lines.push(`}  // mod ${toolModName}`, "");
     }
   };
 
@@ -596,21 +598,23 @@ function getToolInfo(
 } {
   const { singleNamespace } = compilationResult;
   const rawToolName = tool.tool.name.text;
-  const toolRustName = toRustName(capitalize(rawToolName));
+  const traitName = toRustName(capitalize(rawToolName));
   const rustNamespace = toRustName(
     toSnakeCase(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE),
   );
 
-  const traitName = singleNamespace
-    ? `tool_executor::${toolRustName}`
-    : `tool_executor::${rustNamespace}::${toolRustName}`;
+  const traitRef = singleNamespace
+    ? `tool_executor::${traitName}`
+    : `tool_executor::${rustNamespace}::${traitName}`;
 
   const typePrefixBase = singleNamespace
     ? "schema::"
     : `schema::${rustNamespace}::`;
   const sharedTypePrefix = typePrefixBase.concat("shared::");
-  const toolTypeName = toRustName(capitalize(rawToolName));
-  const toolTypePrefix = typePrefixBase.concat(toolTypeName, "::");
+  const toolTypePrefix = typePrefixBase.concat(
+    toRustName(toSnakeCase(rawToolName)),
+    "::",
+  );
   const options: WriteSchemaOptions = {
     typePrefix: toolTypePrefix,
     sharedTypePrefix,
@@ -631,7 +635,7 @@ function getToolInfo(
   const methodName = toRustName(toSnakeCase(rawToolName));
 
   return {
-    traitName,
+    traitName: traitRef,
     methodName,
     inputType,
     outputType,

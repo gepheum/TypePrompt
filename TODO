@@ -7,7 +7,6 @@ CODEGEN:
     - always output the JSON schema in Spec...
   - add comment to static and generated types
   - RUST:
-    - formatting completely broken with continuation lines...
     - SHOULD NOT BE OPTIONAL: execute_tool_call: Option<ExecuteToolCallFn<ToolExecutor>>
   - Python, Typescript:
     - add stringifiedJsonSchema to OutputFormat?

@@ -12,7 +12,7 @@
 //
 // Build a typed prompt from one of your templates:
 //
-//   let prompt = PROMPTS.render_greet(&schema::Greet::Input { name: "Luke".to_string() });
+//   let prompt = PROMPTS.render_greet(&schema::greet::Input { name: "Luke".to_string() });
 //
 // A Prompt bundles everything your LLM request needs: the resolved system
 // message, user message, few-shot examples, available tools, and output format.
