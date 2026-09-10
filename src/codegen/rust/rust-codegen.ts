@@ -1063,37 +1063,88 @@ function wrapRustDoc(doc: string): readonly string[] {
 function reformat(code: string): string {
   const inputLines: readonly string[] = code.split("\n");
   const outputLines: string[] = [];
-  let indent = "";
-  let continuationIndent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -2);
+
+  const indentUnit = "  ";
+  // The indent at every line is obtained by repeating indentUnit N times,
+  // where N is the length of this array.
+  const contextStack: Array<"{" | "(" | "[" | "<" | ":" | "."> = [];
+  // Returns the last element in `contextStack`.
+  const peakTop = (): string => contextStack.at(-1)!;
+  const getMatchingLeftBracket = (r: "}" | ")" | "]" | ">"): string => {
+    switch (r) {
+      case "}":
+        return "{";
+      case ")":
+        return "(";
+      case "]":
+        return "[";
+      case ">":
+        return "<";
     }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(
-      line.length <= 0
-        ? line
-        : [indent, continuationIndent, starPrefix, line].join(""),
-    );
-    if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
-    ) {
-      indent = indent + "  ";
-    } else if (line.endsWith(":")) {
-      continuationIndent = "  ";
-    } else if (!line.endsWith(",")) {
-      continuationIndent = "";
+  };
+  for (let line of inputLines) {
+    line = line.trim();
+    if (line.length <= 0) {
+      // Don't indent empty lines.
+      outputLines.push("");
+      continue;
+    }
+
+    const firstChar = line[0];
+    switch (firstChar) {
+      case "}":
+      case ")":
+      case "]":
+      case ">": {
+        const left = getMatchingLeftBracket(firstChar);
+        while (contextStack.pop() !== left) {
+          if (contextStack.length <= 0) {
+            throw Error();
+          }
+        }
+        break;
+      }
+      case ".": {
+        if (peakTop() !== ".") {
+          contextStack.push(".");
+        }
+        break;
+      }
+    }
+    const indent =
+      indentUnit.repeat(contextStack.length) +
+      (line.startsWith("*") ? " " : "");
+    outputLines.push(`${indent}${line.trimEnd()}`);
+    if (line.startsWith("/") || line.startsWith("*")) {
+      // A comment.
+      continue;
+    }
+    const lastChar = line.slice(-1);
+    switch (lastChar) {
+      case "{":
+      case "(":
+      case "[":
+      case "<": {
+        // The next line will be indented
+        contextStack.push(lastChar);
+        break;
+      }
+      case ":":
+      case "=": {
+        if (peakTop() !== ":") {
+          contextStack.push(":");
+        }
+        break;
+      }
+      case ";":
+      case ",": {
+        if (peakTop() === "." || peakTop() === ":") {
+          contextStack.pop();
+        }
+      }
     }
   }
+
   return outputLines.join("\n");
 }
 
