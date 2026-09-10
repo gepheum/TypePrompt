@@ -1,11 +1,11 @@
 <template name="MyOtherTemplate" namespace="Bar">
   <schema>
-    type Input = shared.Square;
+    type Input = shared.Square[];
 
-    interface Output {
+    type Output = {
       reversedText: string;
       shape: shared.Square | { kind: "circle"; radius: number };
-    }
+    }[];
   </schema>
 
   <tools>- tool: myOtherTool</tools>

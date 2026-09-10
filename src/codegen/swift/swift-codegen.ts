@@ -51,22 +51,25 @@ function writeAll(
   const { rootNamespace } = config;
 
   return coalesceEmptyLines(
-    reformat(
-      [
-        STATIC_SNIPPETS["swift-imports"],
-        `enum ${rootNamespace} {`,
-        writePromptsStruct(compilationResult),
-        STATIC_SNIPPETS["swift-public-types"],
-        writeTemplateIdEnum(compilationResult),
-        writeToolExecutorProtocols(compilationResult, config),
-        writeUserDefinedDatatypes(compilationResult, config),
-        writeSpecDatatypes(),
-        writeTemplatesData(compilationResult),
-        writeExecuteToolCall(compilationResult, config),
-        STATIC_SNIPPETS["swift-logic"],
-        "}",
-      ].join("\n\n"),
-    ),
+    [
+      STATIC_SNIPPETS["swift-top-level"],
+      STATIC_SNIPPETS["swift-imports"],
+      reformat(
+        [
+          `enum ${rootNamespace} {`,
+          writePromptsStruct(compilationResult),
+          STATIC_SNIPPETS["swift-public-types"],
+          writeTemplateIdEnum(compilationResult),
+          writeToolExecutorProtocols(compilationResult, config),
+          writeUserDefinedDatatypes(compilationResult, config),
+          writeSpecDatatypes(),
+          writeTemplatesData(compilationResult),
+          writeExecuteToolCall(compilationResult, config),
+          STATIC_SNIPPETS["swift-logic"],
+          "}",
+        ].join("\n\n"),
+      ),
+    ].join("\n\n"),
   ).concat("\n");
 }
 
@@ -75,15 +78,13 @@ function getTemplateTypes(
   compilationResult: ValidCompilationResult,
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
-  const templateName = toSwiftName(template.template.name.text);
-  const templateNamespace =
-    template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toSwiftName(templateNamespace);
+  const templateSwiftName = toSwiftName(template.template.name.text);
+  const namespaceSwiftName = toSwiftName(template.template.namespace?.text ?? DEFAULT_NAMESPACE);
   const typePrefixBase = singleNamespace
     ? "Schema."
-    : `Schema.${namespaceName}.`;
+    : `Schema.${namespaceSwiftName}.`;
   const sharedTypePrefix = typePrefixBase.concat("Shared.");
-  const templateTypePrefix = typePrefixBase.concat(templateName, ".");
+  const templateTypePrefix = typePrefixBase.concat(templateSwiftName, ".");
 
   const options: WriteSchemaOptions = {
     typePrefix: templateTypePrefix,
@@ -112,18 +113,18 @@ function getToolExecutorRef(
   const { singleNamespace } = compilationResult;
   const toolEntries = Object.values(template.tools);
   if (toolEntries.length <= 0) {
-    return "Void";
+    return "NoTools";
   }
   const traitNames = Array.from(
     new Set(
       toolEntries.map((entry) => {
         const tool = entry.tool;
-        const toolName = capitalize(tool.tool.name.text);
-        const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+        const toolSwiftName = toSwiftName(capitalize(tool.tool.name.text));
+        const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
         const namespaceBase = singleNamespace
           ? "ToolExecutor"
-          : `ToolExecutor.${toSwiftName(toolNamespace)}`;
-        return `${namespaceBase}.${toolName}`;
+          : `ToolExecutor.${toolSwiftNamespace}`;
+        return `${namespaceBase}.${toolSwiftName}`;
       }),
     ),
   );
@@ -137,42 +138,46 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
     structName: string,
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
-    const lines: string[] = [`public struct ${structName}: Sendable {`];
+    const lines: string[] = [
+      `public struct ${structName}: Sendable {`,
+      "private let _spec: Spec.Templates",
+      "",
+      "fileprivate init(_ spec: Spec.Templates) {",
+      "self._spec = spec",
+      "}",
+      "",
+    ];
     const templateCount = namespace.templates.length;
-    const templateProps: { readonly name: string; readonly type: string }[] =
-      [];
 
     for (let i = 0; i < templateCount; i++) {
       const t = namespace.templates[i]!;
       const { inputType, outputType } = getTemplateTypes(t, compilationResult);
-      const propertyName = toSwiftName(uncapitalize(t.template.name.text));
+      const methodName = "render".concat(capitalize(t.template.name.text));
+      const templateId = getId(t.template);
       const toolExecutorRef =
         Object.keys(t.tools).length >= 1
           ? getToolExecutorRef(t, compilationResult)
-          : "Void";
-      const fullType = `any Template<${inputType}, ${outputType}, ${toolExecutorRef}>`;
-      templateProps.push({ name: propertyName, type: fullType });
-      lines.push(
-        `// Defined in '${t.template.sourcePath}'`,
-        `public let ${propertyName}: ${fullType}`,
-        "",
-      );
+          : "NoTools";
+      const isJsonOutput = (t.template.outputFormat?.text ?? "json") === "json";
+
+      lines.push(`// Defined in '${t.template.sourcePath}'`);
+      if (isJsonOutput) {
+        lines.push(
+          `public func ${methodName}(_ input: ${inputType}) -> Prompt<${outputType}, ${toolExecutorRef}> {`,
+          `return doRender(_spec, "${templateId}", input, ${outputType}.self)`,
+          "}",
+          "",
+        );
+      } else {
+        lines.push(
+          `public func ${methodName}(_ input: ${inputType}) -> Prompt<${outputType}, ${toolExecutorRef}> {`,
+          `return doRender(_spec, "${templateId}", input)`,
+          "}",
+          "",
+        );
+      }
     }
 
-    if (templateCount <= 0) {
-      lines.push("fileprivate init() {}");
-    } else {
-      lines.push("fileprivate init(");
-      for (let i = 0; i < templateProps.length; i++) {
-        const prop = templateProps[i]!;
-        lines.push(`${prop.name}: ${prop.type},`);
-      }
-      lines.push(") {");
-      for (const prop of templateProps) {
-        lines.push(`self.${prop.name} = ${prop.name}`);
-      }
-      lines.push("}");
-    }
     lines.push("}");
     return lines;
   };
@@ -187,30 +192,24 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
     const lines: string[] = [
       "/// Entry point for building prompts.",
       "public struct Prompts: Sendable {",
+      "private let _spec: Spec.Templates",
+      "",
+      "fileprivate init(_ spec: Spec.Templates) {",
+      "self._spec = spec",
+      "}",
+      "",
     ];
     for (const ns of nsList) {
       const namespaceStructName = ns.name.concat("Prompts");
       const propertyName = toSwiftName(uncapitalize(ns.name));
-      lines.push(`public let ${propertyName}: ${namespaceStructName}`);
+      lines.push(
+        `public var ${propertyName}: ${namespaceStructName} {`,
+        `${namespaceStructName}(_spec)`,
+        "}",
+        "",
+      );
     }
-    lines.push("");
-    if (nsList.length <= 0) {
-      lines.push("fileprivate init() {}");
-    } else {
-      lines.push("fileprivate init(");
-      for (let i = 0; i < nsList.length; i++) {
-        const ns = nsList[i]!;
-        const namespaceStructName = ns.name.concat("Prompts");
-        const propertyName = toSwiftName(uncapitalize(ns.name));
-        lines.push(`${propertyName}: ${namespaceStructName},`);
-      }
-      lines.push(") {");
-      for (const ns of nsList) {
-        const propertyName = toSwiftName(uncapitalize(ns.name));
-        lines.push(`self.${propertyName} = ${propertyName}`);
-      }
-      lines.push("}");
-    }
+    lines.push("}");
     lines.push("");
     for (const namespace of nsList) {
       const namespaceStructName = namespace.name.concat("Prompts");
@@ -220,7 +219,6 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
         "",
       );
     }
-    lines.push("}");
     return lines.join("\n");
   }
 }
@@ -229,27 +227,38 @@ function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
 ): string {
   const { singleNamespace, templates } = compilationResult;
+  const templateList = Object.values(templates);
+  if (templateList.length <= 0) {
+    return [
+      "/// Uniquely identifies a prompt template.",
+      "public enum TemplateId: Sendable, CaseIterable, CustomStringConvertible {",
+      "case none",
+      "",
+      "public var description: String {",
+      'return ""',
+      "}",
+      "}",
+    ].join("\n");
+  }
   const lines = [
     "/// Uniquely identifies a prompt template.",
     "public enum TemplateId: Sendable, CaseIterable, CustomStringConvertible {",
   ];
-  for (const template of Object.values(templates)) {
-    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateName = template.template.name.text;
-    const rawMemberName = singleNamespace
-      ? uncapitalize(templateName)
-      : `${uncapitalize(namespace)}_${templateName}`;
-    const caseName = toSwiftName(rawMemberName);
+  for (const template of templateList) {
+    const rawNamespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const rawTemplateName = template.template.name.text;
+    const caseName = toSwiftName(singleNamespace
+      ? uncapitalize(rawTemplateName)
+      : `${uncapitalize(rawNamespace)}_${rawTemplateName}`);
     lines.push(`case ${caseName}`);
   }
   lines.push("", "private var id: String {", "switch self {");
   for (const template of Object.values(templates)) {
-    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateName = template.template.name.text;
-    const rawMemberName = singleNamespace
-      ? uncapitalize(templateName)
-      : `${uncapitalize(namespace)}_${templateName}`;
-    const caseName = toSwiftName(rawMemberName);
+    const rawNamespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+    const rawTemplateName = template.template.name.text;
+    const caseName = toSwiftName(singleNamespace
+      ? uncapitalize(rawTemplateName)
+      : `${uncapitalize(rawNamespace)}_${rawTemplateName}`);
     const templateId = getId(template.template);
     lines.push(`case .${caseName}:`, `return "${templateId}"`);
   }
@@ -276,8 +285,8 @@ function writeToolExecutorProtocols(
   ): readonly string[] => {
     const lines: string[] = [];
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      const interfaceName = capitalize(toolName);
+      const rawToolName = tool.tool.name.text;
+      const interfaceName = capitalize(rawToolName);
       const { inputType, outputType } = getToolTypes(
         tool,
         compilationResult,
@@ -285,9 +294,9 @@ function writeToolExecutorProtocols(
       );
 
       lines.push(
-        `/// Tool executor interface for the '${toolName}' tool.`,
+        `/// Tool executor interface for the '${rawToolName}' tool.`,
         `public protocol ${interfaceName}: Sendable {`,
-        `func ${toSwiftName(toolName)}(`,
+        `func ${toSwiftName(rawToolName)}(`,
         `input: ${inputType}`,
         `) async throws -> ${outputType}`,
         "}",
@@ -297,7 +306,7 @@ function writeToolExecutorProtocols(
     for (const template of namespace.templates) {
       const toolEntries = Object.values(template.tools);
       if (toolEntries.length < 2) continue;
-      const templateName = template.template.name.text;
+      const rawTemplateName = template.template.name.text;
       const toolInfoList = toolEntries.map((t) => {
         const tool = t.tool;
         const rawToolName = tool.tool.name.text;
@@ -327,9 +336,9 @@ function writeToolExecutorProtocols(
         .join(", ");
 
       lines.push(
-        `/// Composite tool executor for the '${templateName}' prompt template.`,
+        `/// Composite tool executor for the '${rawTemplateName}' prompt template.`,
         `/// Forwards to implementations of tools: ${toolNamesList}.`,
-        `public struct ${toSwiftName(templateName)}: ${inherited}, Sendable {`,
+        `public struct ${toSwiftName(rawTemplateName)}: ${inherited}, Sendable {`,
         ...toolInfoList.map(
           (t) => `public let ${t.paramName}: any ${t.interfaceRef}`,
         ),
@@ -390,21 +399,44 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+      },
+    )
     : "Never?";
   lines.push(
     "/// Metadata associated with a prompt.",
     `public typealias Meta = ${metaType}`,
     "",
+  );
+  if (anyTypes(metaSchema)) {
+    lines.push(
+      "fileprivate static func parseMeta(_ meta: Any?) -> Meta {",
+      "guard let meta = meta,",
+      "let data = try? Foundation.JSONEncoder().encode(AnyEncodableValue(meta)),",
+      "let decoded = try? Foundation.JSONDecoder().decode(Meta.self, from: data) else {",
+      'fatalError("Failed to parse metadata")',
+      "}",
+      "return decoded",
+      "}",
+      "",
+    );
+  } else {
+    lines.push(
+      "fileprivate static func parseMeta(_ meta: Any?) -> Meta {",
+      "return nil",
+      "}",
+      "",
+    );
+  }
+
+  lines.push(
     "/// Namespace containing the user-defined datatypes.",
     "public enum Schema {",
   );
@@ -434,28 +466,28 @@ function writeUserDefinedDatatypes(
       lines.push("}  // enum Shared", "");
     }
     for (const template of namespace.templates) {
-      const templateName = toSwiftName(template.template.name.text);
-      const typePrefix = typePrefixBase.concat(templateName, ".");
-      lines.push(`enum ${templateName} {`);
+      const templateSwiftName = toSwiftName(template.template.name.text);
+      const typePrefix = typePrefixBase.concat(templateSwiftName, ".");
+      lines.push(`enum ${templateSwiftName} {`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // enum ${templateName}`, "");
+      lines.push(`}  // enum ${templateSwiftName}`, "");
     }
     for (const tool of Object.values(namespace.tools)) {
-      const toolName = toSwiftName(capitalize(tool.tool.name.text));
-      const typePrefix = typePrefixBase.concat(toolName, ".");
-      lines.push(`enum ${toolName} {\n`);
+      const toolSwiftName = toSwiftName(capitalize(tool.tool.name.text));
+      const typePrefix = typePrefixBase.concat(toolSwiftName, ".");
+      lines.push(`enum ${toolSwiftName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
         }),
       );
-      lines.push(`}  // enum ${toolName}`, "");
+      lines.push(`}  // enum ${toolSwiftName}`, "");
     }
   };
 
@@ -485,13 +517,75 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
+function addKeysMetadata(val: unknown): unknown {
+  if (Array.isArray(val)) {
+    return val.map(addKeysMetadata);
+  }
+  if (val !== null && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const keys = Object.keys(obj);
+    const result: Record<string, unknown> = {
+      __keys__: keys,
+    };
+    for (const k of keys) {
+      result[k] = addKeysMetadata(obj[k]);
+    }
+    return result;
+  }
+  return val;
+}
+
+function addKeysToExamples(templatesData: unknown): unknown {
+  const clone = JSON.parse(JSON.stringify(templatesData));
+  if (clone && typeof clone === "object" && clone.templates) {
+    for (const tmpl of Object.values(clone.templates as Record<string, any>)) {
+      if (tmpl.contents) {
+        if (
+          tmpl.contents.kind === "no-variants" &&
+          tmpl.contents.content?.examples
+        ) {
+          for (const ex of tmpl.contents.content.examples) {
+            if (ex.input) {
+              ex.input = addKeysMetadata(ex.input);
+            }
+          }
+        } else if (
+          tmpl.contents.kind === "variants" &&
+          tmpl.contents.variants
+        ) {
+          for (const v of Object.values(
+            tmpl.contents.variants as Record<string, any>,
+          )) {
+            if (v.examples) {
+              for (const ex of v.examples) {
+                if (ex.input) {
+                  ex.input = addKeysMetadata(ex.input);
+                }
+              }
+            }
+          }
+        }
+        if (tmpl.contents.defaultContent?.examples) {
+          for (const ex of tmpl.contents.defaultContent.examples) {
+            if (ex.input) {
+              ex.input = addKeysMetadata(ex.input);
+            }
+          }
+        }
+      }
+    }
+  }
+  return clone;
+}
+
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const templatesData = makeTemplates(compilationResult, {
     includeJsonSchemas: true,
   });
-  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  const dataWithKeys = addKeysToExamples(templatesData);
+  const stringifiedJson = JSON.stringify(JSON.stringify(dataWithKeys));
   const lines = [
-    "private static let templatesData: Spec.Templates = try! Foundation.JSONDecoder().decode(",
+    "private static let _templatesData: Spec.Templates = try! Foundation.JSONDecoder().decode(",
     "Spec.Templates.self,",
     `from: Foundation.Data(${stringifiedJson}.utf8)`,
     ")",
@@ -505,15 +599,14 @@ function getToolTypes(
   config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
-  const toolName = tool.tool.name.text;
-  const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-  const namespaceName = toSwiftName(toolNamespace);
+  const rawToolName = tool.tool.name.text;
+  const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
   const typePrefixBase = singleNamespace
     ? `${config.rootNamespace}.Schema.`
-    : `${config.rootNamespace}.Schema.${namespaceName}.`;
+    : `${config.rootNamespace}.Schema.${toolSwiftNamespace}.`;
   const sharedTypePrefix = typePrefixBase.concat("Shared.");
 
-  const toolTypeName = toSwiftName(capitalize(toolName));
+  const toolTypeName = toSwiftName(capitalize(rawToolName));
   const toolTypePrefix = typePrefixBase.concat(toolTypeName, ".");
   const options: WriteSchemaOptions = {
     typePrefix: toolTypePrefix,
@@ -556,21 +649,32 @@ function writeExecuteToolCall(
     "namespace: String,",
     "executor: any Any",
     ") async throws -> ToolCallResponse {",
+  ];
+
+  if (toolList.length === 0) {
+    lines.push(
+      'throw ToolNotFoundError(description: "Tool not found: \\(toolCall.toolName)")',
+      "}",
+    );
+    return lines.join("\n");
+  }
+
+  lines.push(
     'var stringifiedOutput = ""',
     "do {",
     'switch "\\(namespace):\\(toolCall.toolName)" {',
-  ];
+  );
 
   for (const tool of toolList) {
-    const toolName = tool.tool.name.text;
-    const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
+    const rawToolName = tool.tool.name.text;
+    const toolSwiftName = toSwiftName(capitalize(rawToolName));
+    const toolSwiftNamespace = toSwiftName(tool.tool.namespace?.text ?? DEFAULT_NAMESPACE);
     const toolId = getId(tool.tool);
     const { inputType } = getToolTypes(tool, compilationResult, config);
 
     const interfaceName = singleNamespace
-      ? `ToolExecutor.${capitalize(toolName)}`
-      : `ToolExecutor.${toSwiftName(toolNamespace)}.${capitalize(toolName)}`;
-    const methodName = toSwiftName(toolName);
+      ? `ToolExecutor.${toolSwiftName}`
+      : `ToolExecutor.${toolSwiftNamespace}.${capitalize(rawToolName)}`;
 
     lines.push(
       `case "${toolId}":`,
@@ -578,7 +682,7 @@ function writeExecuteToolCall(
       "break",
       "}",
       `let input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
-      `let rawOutput = try await toolExecutor.${methodName}(input: input)`,
+      `let rawOutput = try await toolExecutor.${toolSwiftName}(input: input)`,
       "let outputData = try Foundation.JSONEncoder().encode(rawOutput)",
       "stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
     );
@@ -645,29 +749,29 @@ function writeTypepromptInterface(
 
   for (const field of fields) {
     const { type } = field;
-    const name = toSwiftName(field.name.text);
+    const swiftName = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapDocComment(field.doc));
-    lines.push(`let ${name}: ${fieldType}`);
+    lines.push(`let ${swiftName}: ${fieldType}`);
   }
 
   lines.push("", "init(");
   for (const field of fields) {
     const { type } = field;
     if (isLiteralType(type)) continue;
-    const name = toSwiftName(field.name.text);
+    const swiftName = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
     const defaultVal = type.kind === "optional" ? " = nil" : "";
-    lines.push(`${name}: ${fieldType}${defaultVal},`);
+    lines.push(`${swiftName}: ${fieldType}${defaultVal},`);
   }
   lines.push(") {");
   for (const field of fields) {
-    const name = toSwiftName(field.name.text);
+    const swiftName = toSwiftName(field.name.text);
     const { type } = field;
     if (isLiteralType(type)) {
-      lines.push(`self.${name} = ${JSON.stringify(type.value)}`);
+      lines.push(`self.${swiftName} = ${JSON.stringify(type.value)}`);
     } else {
-      lines.push(`self.${name} = ${name}`);
+      lines.push(`self.${swiftName} = ${swiftName}`);
     }
   }
   lines.push("}", "}");

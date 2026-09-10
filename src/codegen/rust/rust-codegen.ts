@@ -41,20 +41,23 @@ export function generateRustCode(
 
 function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
-    reformat(
-      [
-        STATIC_SNIPPETS["rust-imports"],
-        writePromptsStruct(compilationResult),
-        STATIC_SNIPPETS["rust-public-types"],
-        writeTemplateIdEnum(compilationResult),
-        writeToolExecutorTraits(compilationResult),
-        writeUserDefinedDatatypes(compilationResult),
-        writeSpecDatatypes(),
-        writeTemplatesData(compilationResult),
-        writeExecuteToolCall(compilationResult),
-        STATIC_SNIPPETS["rust-logic"],
-      ].join("\n\n"),
-    ),
+    [
+      STATIC_SNIPPETS["rust-top-level"],
+      STATIC_SNIPPETS["rust-imports"],
+      reformat(
+        [
+          STATIC_SNIPPETS["rust-public-types"],
+          writePromptsStruct(compilationResult),
+          writeTemplateIdEnum(compilationResult),
+          writeToolExecutorTraits(compilationResult),
+          writeUserDefinedDatatypes(compilationResult),
+          writeSpecDatatypes(),
+          writeTemplatesData(compilationResult),
+          writeExecuteToolCall(compilationResult),
+          STATIC_SNIPPETS["rust-logic"],
+        ].join("\n\n"),
+      ),
+    ].join("\n\n"),
   ).concat("\n");
 }
 
@@ -84,11 +87,14 @@ function getTemplateTypes(
     template.schema,
     options,
   );
-  const outputType = writeType(
-    { kind: "type-name", name: { text: "Output" } },
-    template.schema,
-    options,
-  );
+  const outputType =
+    template.template.outputFormat?.text === "text"
+      ? "String"
+      : writeType(
+          { kind: "type-name", name: { text: "Output" } },
+          template.schema,
+          options,
+        );
 
   return { inputType, outputType };
 }
@@ -100,7 +106,7 @@ function getToolExecutorRef(
   const { singleNamespace } = compilationResult;
   const toolEntries = Object.values(template.tools);
   if (toolEntries.length <= 0) {
-    return "()";
+    return "NoTools";
   }
   if (toolEntries.length === 1) {
     const tool = toolEntries[0]!.tool;
@@ -109,7 +115,7 @@ function getToolExecutorRef(
     const traitPath = singleNamespace
       ? `tool_executor::${toolName}`
       : `tool_executor::${toRustName(toolNamespace)}::${toolName}`;
-    return `dyn ${traitPath}`;
+    return traitPath;
   }
   const rawTemplateName = template.template.name.text;
   const templateName = toRustName(rawTemplateName);
@@ -118,7 +124,7 @@ function getToolExecutorRef(
   const traitPath = singleNamespace
     ? `tool_executor::${templateName}`
     : `tool_executor::${toRustName(templateNamespace)}::${templateName}`;
-  return `dyn ${traitPath}`;
+  return traitPath;
 }
 
 function writePromptsStruct(compilationResult: ValidCompilationResult): string {
@@ -128,16 +134,50 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
     structName: string,
     namespace: ValidNamespaceResult,
   ): readonly string[] => {
-    const lines: string[] = [`pub struct ${structName} {`];
+    const lines: string[] = [
+      "#[derive(Clone)]",
+      `pub struct ${structName} {`,
+      "  spec: std::sync::Arc<spec::Templates>,",
+      "}",
+      "",
+      `impl ${structName} {`,
+    ];
     for (const t of namespace.templates) {
       const { inputType, outputType } = getTemplateTypes(t, compilationResult);
       const propertyName = toRustName(toSnakeCase(t.template.name.text));
-      const toolExecutorRef = getToolExecutorRef(t, compilationResult);
-      lines.push(
-        `// Defined in '${t.template.sourcePath}'`,
-        `pub ${propertyName}: Box<dyn Template<${inputType}, ${outputType}, ${toolExecutorRef}> + Send + Sync>,`,
-        "",
-      );
+      const templateId = getId(t.template);
+      const toolEntries = Object.values(t.tools);
+
+      lines.push(`// Defined in '${t.template.sourcePath}'`);
+      if (toolEntries.length === 0) {
+        lines.push(
+          `pub fn render_${propertyName}(&self, input: &${inputType}) -> Prompt<${outputType}, NoTools> {`,
+          `  do_render(self.spec.as_ref(), "${templateId}", input, None)`,
+          "}",
+          "",
+        );
+      } else {
+        const rawTemplateName = t.template.name.text;
+        const templateNamespace =
+          t.template.namespace?.text ?? DEFAULT_NAMESPACE;
+        const executeFunctionName = singleNamespace
+          ? toRustName(`execute_${toSnakeCase(rawTemplateName)}_tool_call`)
+          : toRustName(
+              `execute_${toSnakeCase(templateNamespace)}__${toSnakeCase(rawTemplateName)}_tool_call`,
+            );
+
+        const traitBound = getToolExecutorRef(t, compilationResult);
+
+        lines.push(
+          `pub fn render_${propertyName}<E: ${traitBound} + Send + Sync + 'static>(&self, input: &${inputType}) -> Prompt<${outputType}, E> {`,
+          `  let execute_fn: ExecuteToolCallFn<E> = |call, exec| {`,
+          `    Box::pin(${executeFunctionName}(call, exec))`,
+          `  };`,
+          `  do_render(self.spec.as_ref(), "${templateId}", input, Some(execute_fn))`,
+          "}",
+          "",
+        );
+      }
     }
     lines.push("}");
     return lines;
@@ -147,28 +187,67 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
     return [
       "/// Entry point for building prompts.",
       ...writeTemplatesMembers("Prompts", singleNamespace),
+      "",
+      "impl Prompts {",
+      "  fn new(spec: std::sync::Arc<spec::Templates>) -> Self {",
+      "    Self { spec }",
+      "  }",
+      "}",
+      "",
+      "/// Entry point for building prompts.",
+      "pub static PROMPTS: std::sync::LazyLock<Prompts> = std::sync::LazyLock::new(|| {",
+      "  Prompts::new(std::sync::Arc::new(TEMPLATES_DATA.clone()))",
+      "});",
+      "/// Entry point for building prompts.",
+      "pub static prompts: &std::sync::LazyLock<Prompts> = &PROMPTS;",
     ].join("\n");
   } else {
     const nsList = Object.values(namespaces);
     const lines: string[] = [
       "/// Entry point for building prompts.",
+      "#[derive(Clone)]",
       "pub struct Prompts {",
     ];
     for (const ns of nsList) {
-      const namespaceStructName = ns.name.concat("Prompts");
+      const namespaceStructName = toPascalCase(ns.name).concat("Prompts");
       const propertyName = toRustName(toSnakeCase(ns.name));
       lines.push(`pub ${propertyName}: ${namespaceStructName},`);
     }
-    lines.push("}", "");
+    lines.push(
+      "}",
+      "",
+      "impl Prompts {",
+      "  fn new(spec: std::sync::Arc<spec::Templates>) -> Self {",
+      "    Self {",
+    );
+    for (const ns of nsList) {
+      const namespaceStructName = toPascalCase(ns.name).concat("Prompts");
+      const propertyName = toRustName(toSnakeCase(ns.name));
+      lines.push(
+        `      ${propertyName}: ${namespaceStructName} { spec: std::sync::Arc::clone(&spec) },`,
+      );
+    }
+    lines.push("    }", "  }", "}", "");
 
     for (const namespace of nsList) {
-      const namespaceStructName = namespace.name.concat("Prompts");
+      const namespaceStructName = toPascalCase(namespace.name).concat(
+        "Prompts",
+      );
       lines.push(
         `/// Prompts in the '${namespace.name}' namespace.`,
         ...writeTemplatesMembers(namespaceStructName, namespace),
         "",
       );
     }
+
+    lines.push(
+      "/// Entry point for building prompts.",
+      "pub static PROMPTS: std::sync::LazyLock<Prompts> = std::sync::LazyLock::new(|| {",
+      "  Prompts::new(std::sync::Arc::new(TEMPLATES_DATA.clone()))",
+      "});",
+      "/// Entry point for building prompts.",
+      "pub static prompts: &std::sync::LazyLock<Prompts> = &PROMPTS;",
+    );
     return lines.join("\n");
   }
 }
@@ -177,39 +256,44 @@ function writeTemplateIdEnum(
   compilationResult: ValidCompilationResult,
 ): string {
   const { singleNamespace, templates } = compilationResult;
+  const templateList = Object.values(templates);
   const lines = [
     "/// Uniquely identifies a prompt template.",
     "#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]",
     "pub enum TemplateId {",
   ];
-  for (const template of Object.values(templates)) {
-    const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-    const templateName = template.template.name.text;
-    const rawMemberName = singleNamespace
-      ? templateName
-      : `${namespace}_${templateName}`;
-    const variantName = toRustName(rawMemberName);
-    lines.push(`${variantName},`);
-  }
-  const templateList = Object.values(templates);
-  if (templateList.length <= 0) {
+  if (templateList.length === 0) {
     lines.push(
+      "  None,",
       "}",
       "",
       "impl TemplateId {",
-      "pub const fn as_str(&self) -> &'static str {",
-      "match *self {}",
-      "}",
+      "  pub const fn as_str(&self) -> &'static str {",
+      '    "None"',
+      "  }",
+      "",
+      "  pub fn from_id(_s: &str) -> Option<Self> {",
+      "    None",
+      "  }",
       "}",
       "",
     );
   } else {
+    for (const template of templateList) {
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateName = template.template.name.text;
+      const rawMemberName = singleNamespace
+        ? templateName
+        : `${namespace}_${templateName}`;
+      const variantName = toRustName(toPascalCase(rawMemberName));
+      lines.push(`  ${variantName},`);
+    }
     lines.push(
       "}",
       "",
       "impl TemplateId {",
-      "pub const fn as_str(&self) -> &'static str {",
-      "match self {",
+      "  pub const fn as_str(&self) -> &'static str {",
+      "    match self {",
     );
     for (const template of templateList) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
@@ -217,17 +301,34 @@ function writeTemplateIdEnum(
       const rawMemberName = singleNamespace
         ? templateName
         : `${namespace}_${templateName}`;
-      const variantName = toRustName(rawMemberName);
+      const variantName = toRustName(toPascalCase(rawMemberName));
       const templateId = getId(template.template);
-      lines.push(`TemplateId::${variantName} => "${templateId}",`);
+      lines.push(`      TemplateId::${variantName} => "${templateId}",`);
     }
-    lines.push("}", "}", "}", "");
+    lines.push(
+      "    }",
+      "  }",
+      "",
+      "  pub fn from_id(s: &str) -> Option<Self> {",
+      "    match s {",
+    );
+    for (const template of templateList) {
+      const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
+      const templateName = template.template.name.text;
+      const rawMemberName = singleNamespace
+        ? templateName
+        : `${namespace}_${templateName}`;
+      const variantName = toRustName(toPascalCase(rawMemberName));
+      const templateId = getId(template.template);
+      lines.push(`      "${templateId}" => Some(TemplateId::${variantName}),`);
+    }
+    lines.push("      _ => None,", "    }", "  }", "}", "");
   }
   lines.push(
     "impl std::fmt::Display for TemplateId {",
-    "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
-    'write!(f, "{}", self.as_str())',
-    "}",
+    "  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
+    '    write!(f, "{}", self.as_str())',
+    "  }",
     "}",
   );
   return lines.join("\n");
@@ -273,38 +374,38 @@ function writeToolExecutorTraits(
       lines.push(
         `/// Tool executor interface for the '${toolName}' tool.`,
         `pub trait ${interfaceName} {`,
-        `async fn ${methodName}(`,
+        `fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
-        `) -> ${outputType}`,
+        `) -> impl std::future::Future<Output = ${outputType}> + Send`,
         "where",
         "Self: Sized;",
         "}",
         "",
         `impl<T: ${interfaceName}> ${interfaceName} for &T {`,
-        `async fn ${methodName}(`,
+        `fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
-        `) -> ${outputType} {`,
-        `(**self).${methodName}(input).await`,
+        `) -> impl std::future::Future<Output = ${outputType}> + Send {`,
+        `(**self).${methodName}(input)`,
         "}",
         "}",
         "",
         `impl<T: ${interfaceName}> ${interfaceName} for Box<T> {`,
-        `async fn ${methodName}(`,
+        `fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
-        `) -> ${outputType} {`,
-        `(**self).${methodName}(input).await`,
+        `) -> impl std::future::Future<Output = ${outputType}> + Send {`,
+        `(**self).${methodName}(input)`,
         "}",
         "}",
         "",
         `impl<T: ${interfaceName}> ${interfaceName} for std::sync::Arc<T> {`,
-        `async fn ${methodName}(`,
+        `fn ${methodName}(`,
         "&self,",
         `input: ${inputType},`,
-        `) -> ${outputType} {`,
-        `(**self).${methodName}(input).await`,
+        `) -> impl std::future::Future<Output = ${outputType}> + Send {`,
+        `(**self).${methodName}(input)`,
         "}",
         "}",
         "",
@@ -652,8 +753,8 @@ function writeTypepromptInterface(
 
   const vis = options.file ? "pub(super) " : "pub ";
   const derives = hasLiteralField
-    ? "serde::Deserialize, Debug, PartialEq"
-    : "serde::Serialize, serde::Deserialize, Debug, PartialEq";
+    ? "Clone, serde::Deserialize, Debug, PartialEq"
+    : "Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq";
   lines.push(`#[derive(${derives})]`);
   lines.push(`${vis}struct ${typeName} {`);
   for (const field of fields) {
@@ -663,8 +764,15 @@ function writeTypepromptInterface(
     const rustName = toRustName(toSnakeCase(name));
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapRustDoc(field.doc));
-    if (name !== rustName && !hasLiteralField) {
-      lines.push(`#[serde(rename = "${name}")]`);
+    const serdeAttrs: string[] = [];
+    if (name !== rustName) {
+      serdeAttrs.push(`rename = "${name}"`);
+    }
+    if (type.kind === "optional") {
+      serdeAttrs.push("default");
+    }
+    if (serdeAttrs.length > 0) {
+      lines.push(`#[serde(${serdeAttrs.join(", ")})]`);
     }
     lines.push(`${vis}${rustName}: ${fieldType},`);
   }
@@ -711,7 +819,7 @@ function writeTypepromptUnion(
   switch (members.kind) {
     case "strings": {
       lines.push(
-        "#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]",
+        "#[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]",
       );
       lines.push(`${vis}enum ${typeName} {\n`);
       for (const member of members.members) {
@@ -723,7 +831,7 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      lines.push("#[derive(Debug, PartialEq)]");
+      lines.push("#[derive(Clone, Debug, PartialEq)]");
       lines.push(`${vis}enum ${typeName} {\n`);
       const { discriminator } = members;
       const caseEntries = Object.values(members.members).map(
@@ -1015,7 +1123,6 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Prompts",
   "Result",
   "String",
-  "Template",
   "ToolExecutor",
   "Vec",
   "derive",
