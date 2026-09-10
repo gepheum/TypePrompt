@@ -67,7 +67,7 @@ function writeAll(
         `}  // namespace ${rootNamespace}`,
       ].join("\n\n"),
     ),
-  ).concat("\n");
+  );
 }
 
 function writeTemplateIdEnum(
@@ -1167,7 +1167,7 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n(\n *\})/g, "$1")
       // Coalesce consecutive empty lines.
       .replace(/\n\n\n+/g, "\n\n")
-      .replace(/\n\n$/g, "\n")
+      .replace(/\n*$/g, "\n")
   );
 }
 
