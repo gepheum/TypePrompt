@@ -43,9 +43,7 @@
   non_snake_case,
   non_camel_case_types,
   non_upper_case_globals,
-  async_fn_in_trait,
-  unused_imports,
-  dead_code
+  dead_code,
 )]
 // </static:rust-imports>
 
