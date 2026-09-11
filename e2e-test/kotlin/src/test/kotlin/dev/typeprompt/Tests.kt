@@ -87,7 +87,8 @@ class Test02StructuredOutput_TriageTicket {
 
     @Test
     fun testJsonOutputFormat() {
-        assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+        val format = assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+        assertNotNull(format.jsonSchema)
     }
 
     @Test
@@ -223,6 +224,11 @@ class Test03Tools_ResearchQuestion {
     @Test
     fun testWebSearchToolDescription() {
         assertTrue(prompt.tools["webSearch"]?.description?.contains("Search the web") == true)
+    }
+
+    @Test
+    fun testWebSearchToolInputJsonSchema() {
+        assertNotNull(prompt.tools["webSearch"]?.inputJsonSchema)
     }
 
     @Test

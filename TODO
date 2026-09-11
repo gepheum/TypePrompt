@@ -1,21 +1,19 @@
+COMPILER:
+  - THINK ABOUT EDITIONS...
+
 CODEGEN:
+  - add PromptTools namespace with enums
   - ALL:
     - I need to add inputJsonSchema to Tool!!!
-    - update all the schemas...
     - always output the JSON schema in Spec...
+  - Dart: expose types as unmodifiable
   - Python, Typescript:
-    - add stringifiedJsonSchema to OutputFormat?
     - add a 'NoTools' param?
-  - Python:
-    - switch to TOON published on pypu
-  - add PromptTools namespace with enums
   - in Kotlin, try to remove trailing `{ }`
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
   - exception thrown from tool executor: create a specific exception type?
   - function to handle template tool
-  - Add comments in generated code to disable formatting lints on generated files
   - Add the top-level comments
-  - Formatting: make sure does not start with extra "\n\n" or ends with extra "\n"
 
 TEST:
   - make sure that I have one example with tools and with single namespace, and one example with tools and with multiple namespaces

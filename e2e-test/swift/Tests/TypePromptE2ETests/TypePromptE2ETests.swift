@@ -83,6 +83,9 @@ struct StructuredOutputTests {
 
   @Test func jsonOutputFormat() {
     #expect(prompt.outputFormat.isJson)
+    if case .json(let format) = prompt.outputFormat {
+      #expect(format.jsonSchema != .null)
+    }
   }
 
   @Test func cContentStrippedToPlainText() {
@@ -181,6 +184,10 @@ struct ToolsResearchQuestionTests {
 
   @Test func webSearchToolDescription() {
     #expect(prompt.tools["webSearch"]?.description.contains("Search the web") == true)
+  }
+
+  @Test func webSearchToolInputJsonSchema() {
+    #expect(prompt.tools["webSearch"]?.inputJsonSchema != nil)
   }
 
   @Test func producesOneExampleWithOneIntermediateStep() {

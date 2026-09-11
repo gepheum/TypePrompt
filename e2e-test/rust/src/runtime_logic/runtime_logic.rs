@@ -161,6 +161,7 @@ impl OutputFormat {
 pub struct JsonOutputFormat {
   /// The JSON schema against which model outputs are validated.
   pub stringified_json_schema: String,
+  pub json_schema: serde_json::Value,
 }
 
 /// Free-form text output format specification.
@@ -178,6 +179,7 @@ pub struct Tool {
   pub description: String,
   /// JSON schema for the tool input.
   pub stringified_input_json_schema: String,
+  pub input_json_schema: serde_json::Value,
 }
 
 /// A single few-shot example consisting of a user message, optional intermediate
@@ -603,6 +605,7 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
           name: tool_spec.name.clone(),
           description: tool_spec.description.clone(),
           stringified_input_json_schema: stringified_schema,
+          input_json_schema: tool_spec.input_json_schema.clone(),
         },
       );
     }
@@ -614,6 +617,7 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
         serde_json::to_string_pretty(&template.output_json_schema).unwrap_or_default();
       OutputFormat::Json(JsonOutputFormat {
         stringified_json_schema: schema_str,
+        json_schema: template.output_json_schema.clone(),
       })
     }
     spec::OutputFormat::Text => OutputFormat::Text(TextOutputFormat),

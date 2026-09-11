@@ -133,7 +133,7 @@ public enum TypePromptRuntime {
     public static func == (lhs: OutputFormat, rhs: OutputFormat) -> Bool {
       switch (lhs, rhs) {
       case (.json(let l), .json(let r)):
-        return l.stringifiedJsonSchema == r.stringifiedJsonSchema
+        return l == r
       case (.text, .text):
         return true
       default:
@@ -146,11 +146,14 @@ public enum TypePromptRuntime {
   public struct JsonOutputFormat: Sendable, Equatable {
     /// The JSON schema against which model outputs are validated.
     public let stringifiedJsonSchema: String
+    public let jsonSchema: JsonElement
 
     fileprivate init(
       stringifiedJsonSchema: String,
+      jsonSchema: JsonElement,
     ) {
       self.stringifiedJsonSchema = stringifiedJsonSchema
+      self.jsonSchema = jsonSchema
     }
   }
 
@@ -165,10 +168,12 @@ public enum TypePromptRuntime {
     public let name: String
     /// Description of the tool's capabilities.
     public let description: String
+    public let inputJsonSchema: JsonElement
 
-    public init(name: String, description: String) {
+    public init(name: String, description: String, inputJsonSchema: JsonElement) {
       self.name = name
       self.description = description
+      self.inputJsonSchema = inputJsonSchema
     }
   }
 
@@ -1365,6 +1370,7 @@ public enum TypePromptRuntime {
         tools[templateTool.name] = Tool(
           name: templateTool.name,
           description: specTool.description,
+          inputJsonSchema: specTool.inputJsonSchema,
         )
       }
     }
@@ -1391,6 +1397,7 @@ public enum TypePromptRuntime {
       outputFormat = .json(
         JsonOutputFormat(
           stringifiedJsonSchema: schemaJson,
+          jsonSchema: template.outputJsonSchema,
         )
       )
     } else {

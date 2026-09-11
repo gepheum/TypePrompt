@@ -87,7 +87,8 @@ public class Test02StructuredOutput_TriageTicket
     [Fact]
     public void TestJsonOutputFormat()
     {
-        Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+        var format = Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, format.JsonSchema.ValueKind);
     }
 
     [Fact]
@@ -243,6 +244,12 @@ public class Test03Tools_ResearchQuestion
     public void TestWebSearchToolDescription()
     {
         Assert.Contains("Search the web", _prompt.Tools["webSearch"].Description);
+    }
+
+    [Fact]
+    public void TestWebSearchToolInputJsonSchema()
+    {
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, _prompt.Tools["webSearch"].InputJsonSchema.ValueKind);
     }
 
     [Fact]

@@ -71,6 +71,11 @@ mod tests {
         );
 
         assert!(prompt.output_format.is_json());
+        if let gen::prompts_02::OutputFormat::Json(json_fmt) = &prompt.output_format {
+            assert!(json_fmt.json_schema.is_object());
+        } else {
+            panic!("Expected JsonOutputFormat");
+        }
         assert!(prompt.system_message.contains("urgency"));
         assert!(prompt.system_message.contains("\"critical\""));
         assert!(!prompt.system_message.contains("<c>"));
@@ -190,6 +195,12 @@ mod tests {
             .unwrap()
             .description
             .contains("Search the web"));
+        assert!(prompt
+            .tools
+            .get("webSearch")
+            .unwrap()
+            .input_json_schema
+            .is_object());
 
         assert_eq!(prompt.examples.len(), 1);
         assert_eq!(prompt.examples[0].intermediate_steps.len(), 1);

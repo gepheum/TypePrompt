@@ -199,6 +199,7 @@ class TestTriageTicket:
 
     def test_json_output_format(self):
         assert self.prompt.output_format.format == "json"
+        assert self.prompt.output_format.json_schema is not None
 
     def test_c_content_stripped_to_plain_text(self):
         assert "urgency" in self.prompt.system_message
@@ -285,6 +286,9 @@ class TestResearchQuestion:
 
     def test_web_search_tool_description(self):
         assert re.search(r"Search the web", self.prompt.tools["webSearch"].description)
+
+    def test_web_search_tool_input_json_schema(self):
+        assert self.prompt.tools["webSearch"].input_json_schema is not None
 
     def test_produces_one_example_with_one_intermediate_step(self):
         assert len(self.prompt.examples) == 1

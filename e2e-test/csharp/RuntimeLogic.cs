@@ -106,13 +106,17 @@ namespace TypePromptRuntime
     /// </summary>
     public abstract record OutputFormat;
 
-    public sealed record JsonOutputFormat(string StringifiedJsonSchema) : OutputFormat;
+    public sealed record JsonOutputFormat(
+        string StringifiedJsonSchema,
+        JsonElement JsonSchema
+    ) : OutputFormat;
 
     public sealed record TextOutputFormat : OutputFormat;
 
     public sealed record Tool(
         string Name,
-        string Description
+        string Description,
+        JsonElement InputJsonSchema
     );
 
     /// <summary>
@@ -321,14 +325,16 @@ namespace TypePromptRuntime
                 var toolSpec = spec.Tools[templateTool.Id];
                 tools[templateTool.Name] = new Tool(
                     Name: templateTool.Name,
-                    Description: toolSpec.Description
+                    Description: toolSpec.Description,
+                    InputJsonSchema: toolSpec.InputJsonSchema
                 );
             }
 
             OutputFormat outputFormat = template.OutputFormat switch
             {
                 Spec.OutputFormat.Json => new JsonOutputFormat(
-                    template.OutputJsonSchema.GetRawText()
+                    template.OutputJsonSchema.GetRawText(),
+                    template.OutputJsonSchema
                 ),
                 Spec.OutputFormat.Text => new TextOutputFormat(),
                 _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),

@@ -148,6 +148,7 @@ class ToolCallExample:
 class Tool[Input, Output]:
     name: str
     description: str
+    input_json_schema: dict[str, Any]
     input_adapter: pydantic.TypeAdapter[Input]
     output_adapter: pydantic.TypeAdapter[Output]
 
@@ -155,6 +156,7 @@ class Tool[Input, Output]:
 @dataclass(frozen=True)
 class JsonOutputFormat[Output]:
     format: Literal["json"]
+    json_schema: dict[str, Any]
     type_adapter: pydantic.TypeAdapter[Output]
 
 
@@ -532,6 +534,9 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             return Tool(
                 name=tool_spec.name,
                 description=self._data.tools[tool_spec.id].description,
+                input_json_schema=cast(
+                    dict[str, Any], self._data.tools[tool_spec.id].input_json_schema
+                ),
                 input_adapter=input_adapter,
                 output_adapter=output_adapter,
             )
@@ -541,7 +546,11 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
         if template.output_format == "json":
             output_format = cast(
                 OutputFormat[Output],
-                JsonOutputFormat(format="json", type_adapter=output_adapter),
+                JsonOutputFormat(
+                    format="json",
+                    json_schema=cast(dict[str, Any], template.output_json_schema),
+                    type_adapter=output_adapter,
+                ),
             )
         else:
             output_format = cast(OutputFormat[Output], TextOutputFormat(format="text"))

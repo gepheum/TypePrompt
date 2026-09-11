@@ -95,6 +95,8 @@ void main() {
 
     test('json output format', () {
       expect(prompt.outputFormat, isA<p02.JsonOutputFormat>());
+      final format = prompt.outputFormat as p02.JsonOutputFormat;
+      expect(format.jsonSchema, isNotNull);
     });
 
     test('c content stripped to plain text', () {
@@ -198,6 +200,10 @@ void main() {
         prompt.tools["webSearch"]?.description,
         contains("Search the web"),
       );
+    });
+
+    test('webSearch tool inputJsonSchema', () {
+      expect(prompt.tools["webSearch"]?.inputJsonSchema, isNotNull);
     });
 
     test('produces one example with one intermediate step', () {

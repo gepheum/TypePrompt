@@ -37,6 +37,7 @@
 // </static:dart-top-level>
 
 // <static:dart-imports>
+import 'dart:collection';
 import 'dart:convert';
 import 'package:toon_format/toon_format.dart' as toon;
 import 'package:yaml_writer/yaml_writer.dart';
@@ -51,7 +52,8 @@ import 'package:yaml_writer/yaml_writer.dart';
 ///
 /// Build and send the API request using [systemMessage], [userMessage],
 /// [examples], and [tools]. If the model requests tool calls, dispatch
-/// them with [executeTools] and then parse the final response with [parseResponse].
+/// them with [executeTools] and then parse the final response with
+/// [parseResponse].
 final class Prompt<Output, ToolExecutor> {
   /// Metadata for this prompt.
   final Meta meta;
@@ -103,15 +105,18 @@ final class Prompt<Output, ToolExecutor> {
 }
 
 /// The expected format of the model output.
+/// One of [JsonOutputFormat] or [TextOutputFormat].
 sealed class OutputFormat {
   const OutputFormat();
 }
 
 final class JsonOutputFormat extends OutputFormat {
   final String stringifiedJsonSchema;
+  final Map<String, dynamic> jsonSchema;
 
   const JsonOutputFormat._({
     required this.stringifiedJsonSchema,
+    required this.jsonSchema,
   });
 }
 
@@ -122,10 +127,12 @@ final class TextOutputFormat extends OutputFormat {
 final class Tool {
   final String name;
   final String description;
+  final Map<String, dynamic> inputJsonSchema;
 
   const Tool({
     required this.name,
     required this.description,
+    required this.inputJsonSchema,
   });
 }
 
@@ -1305,6 +1312,8 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
       tools[templateTool.name] = Tool(
         name: templateTool.name,
         description: specTool.description,
+        inputJsonSchema:
+            UnmodifiableMapView<String, dynamic>(specTool.inputJsonSchema),
       );
     }
   }
@@ -1313,6 +1322,8 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   if (template.outputFormat == _Spec_OutputFormat.json) {
     outputFormat = JsonOutputFormat._(
       stringifiedJsonSchema: jsonEncode(template.outputJsonSchema),
+      jsonSchema:
+          UnmodifiableMapView<String, dynamic>(template.outputJsonSchema),
     );
   } else {
     outputFormat = const TextOutputFormat();

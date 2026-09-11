@@ -112,6 +112,7 @@ export type ToolCallExample = {
 export type Tool<Input, Output> = {
   readonly name: string;
   readonly description: string;
+  readonly inputJsonSchema: { readonly [key: string]: unknown };
   readonly inputSchema: z.ZodType<Input>;
   readonly outputSchema: z.ZodType<Output>;
 };
@@ -124,6 +125,7 @@ export type OutputFormat<Id extends TemplateId> =
   | {
       readonly kind: "json";
       readonly schema: z.ZodType<Output<Id>>;
+      readonly jsonSchema: { readonly [key: string]: unknown };
     }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
@@ -354,6 +356,7 @@ function renderTemplate<Id extends TemplateId>(
         const tool: Tool<unknown, unknown> = {
           name: name,
           description: toolData.description,
+          inputJsonSchema: toolData.inputJsonSchema as Record<string, unknown>,
           inputSchema: toolSchemas["input"],
           outputSchema: toolSchemas["output"],
         };
@@ -371,7 +374,11 @@ function renderTemplate<Id extends TemplateId>(
     executeToolsImpl(calls, tools, executor);
   const outputFormat = (
     template.outputFormat === "json"
-      ? { kind: "json", schema: outputSchema }
+      ? {
+          kind: "json",
+          schema: outputSchema,
+          jsonSchema: template.outputJsonSchema as Record<string, unknown>,
+        }
       : { kind: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>

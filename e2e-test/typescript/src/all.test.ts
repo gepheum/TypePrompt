@@ -89,6 +89,9 @@ describe("02-structured-output / TriageTicket", () => {
 
   it("has json output format", () => {
     expect(prompt.outputFormat).toMatch({ kind: "json" });
+    if (prompt.outputFormat.kind === "json") {
+      expect(prompt.outputFormat.jsonSchema != null).toMatch(true);
+    }
   });
 
   it("<c> content is rendered as plain text (XML tags stripped)", () => {
@@ -186,6 +189,10 @@ describe("03-tools / ResearchQuestion", () => {
 
   it("webSearch tool description mentions searching the web", () => {
     expect(prompt.tools.webSearch.description).toMatch(/Search the web/);
+  });
+
+  it("webSearch tool has inputJsonSchema", () => {
+    expect(prompt.tools.webSearch.inputJsonSchema != null).toMatch(true);
   });
 
   it("isToolName returns true for a registered tool", () => {
