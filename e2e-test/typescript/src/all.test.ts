@@ -90,7 +90,16 @@ describe("02-structured-output / TriageTicket", () => {
   it("has json output format", () => {
     expect(prompt.outputFormat).toMatch({ kind: "json" });
     if (prompt.outputFormat.kind === "json") {
-      expect(prompt.outputFormat.jsonSchema != null).toMatch(true);
+      expect(prompt.outputFormat.jsonSchema).toMatch({
+        type: "object",
+        properties: {
+          category: { $ref: "#/$defs/TicketCategory" },
+          urgency: {
+            enum: ["low", "medium", "high", "critical"],
+          },
+        },
+        required: ["category", "urgency", "summary", "suggestedActions"],
+      });
     }
   });
 
@@ -192,7 +201,13 @@ describe("03-tools / ResearchQuestion", () => {
   });
 
   it("webSearch tool has inputJsonSchema", () => {
-    expect(prompt.tools.webSearch.inputJsonSchema != null).toMatch(true);
+    expect(prompt.tools.webSearch.inputJsonSchema).toMatch({
+      type: "object",
+      properties: {
+        query: { type: "string" },
+      },
+      required: ["query"],
+    });
   });
 
   it("isToolName returns true for a registered tool", () => {

@@ -84,7 +84,13 @@ struct StructuredOutputTests {
   @Test func jsonOutputFormat() {
     #expect(prompt.outputFormat.isJson)
     if case .json(let format) = prompt.outputFormat {
-      #expect(format.jsonSchema != .null)
+      if case .object(let dict, _) = format.jsonSchema {
+        #expect(dict["type"] == .string("object"))
+        #expect(dict["properties"] != nil)
+        #expect(dict["required"] != nil)
+      } else {
+        #expect(Bool(false), "Expected JsonElement.object")
+      }
     }
   }
 
@@ -187,7 +193,17 @@ struct ToolsResearchQuestionTests {
   }
 
   @Test func webSearchToolInputJsonSchema() {
-    #expect(prompt.tools["webSearch"]?.inputJsonSchema != nil)
+    if let schema = prompt.tools["webSearch"]?.inputJsonSchema, case .object(let dict, _) = schema {
+      #expect(dict["type"] == .string("object"))
+      #expect(dict["required"] == .array([.string("query")]))
+      if case .object(let propDict, _) = dict["properties"] {
+        #expect(propDict["query"] == .object(["type": .string("string")], ["type"]))
+      } else {
+        #expect(Bool(false), "Expected properties object")
+      }
+    } else {
+      #expect(Bool(false), "Expected webSearch inputJsonSchema object")
+    }
   }
 
   @Test func producesOneExampleWithOneIntermediateStep() {

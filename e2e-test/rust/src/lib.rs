@@ -72,7 +72,17 @@ mod tests {
 
         assert!(prompt.output_format.is_json());
         if let gen::prompts_02::OutputFormat::Json(json_fmt) = &prompt.output_format {
-            assert!(json_fmt.json_schema.is_object());
+            assert_eq!(json_fmt.json_schema["type"], "object");
+            assert!(json_fmt.json_schema["properties"]["category"].is_object());
+            assert!(json_fmt.json_schema["properties"]["urgency"].is_object());
+            assert!(json_fmt.json_schema["required"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::json!("category")));
+            assert!(json_fmt.json_schema["required"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::json!("urgency")));
         } else {
             panic!("Expected JsonOutputFormat");
         }
@@ -195,12 +205,16 @@ mod tests {
             .unwrap()
             .description
             .contains("Search the web"));
-        assert!(prompt
-            .tools
-            .get("webSearch")
-            .unwrap()
-            .input_json_schema
-            .is_object());
+        let ws_tool = prompt.tools.get("webSearch").unwrap();
+        assert_eq!(ws_tool.input_json_schema["type"], "object");
+        assert_eq!(
+            ws_tool.input_json_schema["properties"]["query"]["type"],
+            "string"
+        );
+        assert_eq!(
+            ws_tool.input_json_schema["required"],
+            serde_json::json!(["query"])
+        );
 
         assert_eq!(prompt.examples.len(), 1);
         assert_eq!(prompt.examples[0].intermediate_steps.len(), 1);

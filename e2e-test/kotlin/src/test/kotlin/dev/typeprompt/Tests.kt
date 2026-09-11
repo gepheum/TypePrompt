@@ -12,6 +12,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -71,7 +72,7 @@ class Test01Basics_Translate {
 
     @Test
     fun testHasNoTools() {
-        assertTrue(prompt.tools.isEmpty())
+        assertEquals(0, prompt.tools.size)
     }
 }
 
@@ -88,7 +89,13 @@ class Test02StructuredOutput_TriageTicket {
     @Test
     fun testJsonOutputFormat() {
         val format = assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
-        assertNotNull(format.jsonSchema)
+        val schema = format.jsonSchema.jsonObject
+        assertEquals("object", schema["type"]?.jsonPrimitive?.content)
+        assertTrue(schema["properties"]?.jsonObject?.containsKey("category") == true)
+        assertTrue(schema["properties"]?.jsonObject?.containsKey("urgency") == true)
+        val required = schema["required"]?.jsonArray?.map { it.jsonPrimitive.content }
+        assertTrue(required?.contains("category") == true)
+        assertTrue(required?.contains("urgency") == true)
     }
 
     @Test
@@ -228,7 +235,11 @@ class Test03Tools_ResearchQuestion {
 
     @Test
     fun testWebSearchToolInputJsonSchema() {
-        assertNotNull(prompt.tools["webSearch"]?.inputJsonSchema)
+        val schema = prompt.tools["webSearch"]?.inputJsonSchema?.jsonObject
+        assertNotNull(schema)
+        assertEquals("object", schema["type"]?.jsonPrimitive?.content)
+        assertEquals(listOf("query"), schema["required"]?.jsonArray?.map { it.jsonPrimitive.content })
+        assertEquals("string", schema["properties"]?.jsonObject?.get("query")?.jsonObject?.get("type")?.jsonPrimitive?.content)
     }
 
     @Test

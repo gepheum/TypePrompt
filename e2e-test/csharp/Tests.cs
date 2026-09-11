@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TypePrompt03.PromptTools;
 using Xunit;
 
 public class Test01Basics_Translate
@@ -89,6 +90,11 @@ public class Test02StructuredOutput_TriageTicket
     {
         var format = Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
         Assert.Equal(System.Text.Json.JsonValueKind.Object, format.JsonSchema.ValueKind);
+        Assert.Equal("object", format.JsonSchema.GetProperty("type").GetString());
+        Assert.True(format.JsonSchema.GetProperty("properties").TryGetProperty("category", out _));
+        Assert.True(format.JsonSchema.GetProperty("properties").TryGetProperty("urgency", out _));
+        Assert.Contains(format.JsonSchema.GetProperty("required").EnumerateArray(), e => e.GetString() == "category");
+        Assert.Contains(format.JsonSchema.GetProperty("required").EnumerateArray(), e => e.GetString() == "urgency");
     }
 
     [Fact]
@@ -249,7 +255,17 @@ public class Test03Tools_ResearchQuestion
     [Fact]
     public void TestWebSearchToolInputJsonSchema()
     {
-        Assert.Equal(System.Text.Json.JsonValueKind.Object, _prompt.Tools["webSearch"].InputJsonSchema.ValueKind);
+        var schema = _prompt.Tools["webSearch"].InputJsonSchema;
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, schema.ValueKind);
+        Assert.Equal("object", schema.GetProperty("type").GetString());
+        Assert.Equal("string", schema.GetProperty("properties").GetProperty("query").GetProperty("type").GetString());
+        Assert.Contains(schema.GetProperty("required").EnumerateArray(), e => e.GetString() == "query");
+    }
+
+    [Fact]
+    public void TestPromptToolsEnum()
+    {
+        Assert.Equal("webSearch", TypePrompt03.PromptTools.ResearchQuestion.WebSearch.GetName());
     }
 
     [Fact]

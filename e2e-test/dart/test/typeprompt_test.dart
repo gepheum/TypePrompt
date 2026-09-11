@@ -96,7 +96,11 @@ void main() {
     test('json output format', () {
       expect(prompt.outputFormat, isA<p02.JsonOutputFormat>());
       final format = prompt.outputFormat as p02.JsonOutputFormat;
-      expect(format.jsonSchema, isNotNull);
+      expect(format.jsonSchema['type'], equals('object'));
+      expect(format.jsonSchema['required'], contains('category'));
+      expect(format.jsonSchema['required'], contains('urgency'));
+      expect(format.jsonSchema['properties'], isA<Map>());
+      expect((format.jsonSchema['properties'] as Map)['category'], isNotNull);
     });
 
     test('c content stripped to plain text', () {
@@ -203,7 +207,12 @@ void main() {
     });
 
     test('webSearch tool inputJsonSchema', () {
-      expect(prompt.tools["webSearch"]?.inputJsonSchema, isNotNull);
+      final schema = prompt.tools["webSearch"]?.inputJsonSchema;
+      expect(schema, isNotNull);
+      expect(schema?['type'], equals('object'));
+      expect(schema?['required'], equals(['query']));
+      expect(
+          (schema?['properties'] as Map?)?['query']?['type'], equals('string'));
     });
 
     test('produces one example with one intermediate step', () {
