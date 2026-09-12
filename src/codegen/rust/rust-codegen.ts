@@ -483,7 +483,7 @@ function writePromptToolsEnums(
         "/// Tools available for the '" +
           rawTemplateName +
           "' prompt template.",
-        "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]",
+        "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]",
         "#[allow(non_camel_case_types)]",
         `pub enum ${enumName} {`,
       );
@@ -532,7 +532,6 @@ function writePromptToolsEnums(
     "/// Namespace containing tools available for prompt templates.",
     "#[allow(non_camel_case_types)]",
     "pub mod prompt_tools {",
-    "use serde::{Deserialize, Serialize};",
   ];
   if (singleNamespace) {
     lines.push(...writeNamespace(singleNamespace));
@@ -540,7 +539,6 @@ function writePromptToolsEnums(
     for (const namespace of Object.values(namespaces)) {
       const rustNamespace = toRustName(toSnakeCase(namespace.name));
       lines.push(`pub mod ${rustNamespace} {`);
-      lines.push("use serde::{Deserialize, Serialize};");
       lines.push(...writeNamespace(namespace));
       lines.push(`}  // mod ${rustNamespace}`, "");
     }
