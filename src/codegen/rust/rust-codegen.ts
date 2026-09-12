@@ -339,6 +339,7 @@ function writeTemplateIdEnum(
 function writeToolExecutorTraits(
   compilationResult: ValidCompilationResult,
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
 
   const writeNamespace = (
@@ -454,6 +455,10 @@ function writeToolExecutorTraits(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
+      const hasTools =
+        Object.keys(namespace.tools).length > 0 ||
+        namespace.templates.some((t) => Object.keys(t.tools).length > 0);
+      if (!hasTools) continue;
       const rustNamespace = toRustName(toSnakeCase(namespace.name));
       lines.push(`pub mod ${rustNamespace} {`);
       lines.push(...writeNamespace(namespace));
@@ -468,6 +473,12 @@ function writePromptToolsEnums(
   compilationResult: ValidCompilationResult,
 ): string {
   const { singleNamespace, namespaces } = compilationResult;
+  const anyTools = singleNamespace
+    ? singleNamespace.templates.some((t) => Object.keys(t.tools).length > 0)
+    : Object.values(namespaces).some((ns) =>
+        ns.templates.some((t) => Object.keys(t.tools).length > 0),
+      );
+  if (!anyTools) return "";
 
   const writeNamespace = (
     namespace: ValidNamespaceResult,
@@ -537,6 +548,10 @@ function writePromptToolsEnums(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
+      const templatesWithTools = namespace.templates.filter(
+        (t) => Object.keys(t.tools).length > 0,
+      );
+      if (templatesWithTools.length <= 0) continue;
       const rustNamespace = toRustName(toSnakeCase(namespace.name));
       lines.push(`pub mod ${rustNamespace} {`);
       lines.push(...writeNamespace(namespace));

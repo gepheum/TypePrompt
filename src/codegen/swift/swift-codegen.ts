@@ -295,6 +295,7 @@ function writeToolExecutorProtocols(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
 
   const writeNamespace = (
@@ -392,6 +393,7 @@ function writeToolExecutorProtocols(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
+      if (Object.keys(namespace.tools).length <= 0) continue;
       const swiftNamespace = toSwiftName(namespace.name);
       lines.push(`public enum ${swiftNamespace} {`);
       lines.push(...writeNamespace(namespace));
@@ -405,6 +407,7 @@ function writeToolExecutorProtocols(
 function writePromptToolsEnums(
   compilationResult: ValidCompilationResult,
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
 
   const writeNamespace = (
@@ -460,6 +463,10 @@ function writePromptToolsEnums(
     lines.push(...writeNamespace(singleNamespace));
   } else {
     for (const namespace of Object.values(namespaces)) {
+      const templatesWithTools = namespace.templates.filter(
+        (t) => Object.keys(t.tools).length > 0,
+      );
+      if (templatesWithTools.length <= 0) continue;
       const swiftNamespace = toSwiftName(namespace.name);
       lines.push(`public enum ${swiftNamespace} {`);
       lines.push(...writeNamespace(namespace));

@@ -124,11 +124,13 @@ function writeToolExecutorInterfaces(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { rootNamespace } = config;
   const { singleNamespace, namespaces } = compilationResult;
   const sections: string[] = [];
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    if (Object.keys(namespace.tools).length <= 0) return;
     const namespaceBase = singleNamespace
       ? "ToolExecutor"
       : `ToolExecutor.${toCSharpName(namespace.name)}`;
@@ -234,11 +236,16 @@ function writePromptToolsEnums(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { rootNamespace } = config;
   const { singleNamespace, namespaces } = compilationResult;
   const sections: string[] = [];
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const templatesWithTools = namespace.templates.filter(
+      (t) => Object.keys(t.tools).length > 0,
+    );
+    if (templatesWithTools.length <= 0) return;
     const namespaceBase = singleNamespace
       ? "PromptTools"
       : `PromptTools.${toCSharpName(namespace.name)}`;

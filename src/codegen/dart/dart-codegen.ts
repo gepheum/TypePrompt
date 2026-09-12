@@ -298,6 +298,7 @@ function writeTemplateIdEnum(
 function writeToolExecutorClasses(
   compilationResult: ValidCompilationResult,
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
   const lines: string[] = [];
 
@@ -394,6 +395,7 @@ function writeToolExecutorClasses(
 function writePromptToolsEnums(
   compilationResult: ValidCompilationResult,
 ): string {
+  if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
   const lines: string[] = [];
 
