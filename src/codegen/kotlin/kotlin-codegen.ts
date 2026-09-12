@@ -575,16 +575,25 @@ function writeExecuteToolCall(
   const toolList = Object.values(tools);
 
   const lines = [
-    '@Suppress("unused")',
     "private suspend fun executeToolCall(",
     "toolCall: ToolCall,",
     "namespace: String,",
     "executor: Any,",
     "): ToolCallResponse {",
+  ];
+
+  const throwLine =
+    'throw IllegalArgumentException("Tool not found: ${toolCall.toolName}")';
+  if (toolList.length <= 0) {
+    lines.push(throwLine, "}");
+    return lines.join("\n");
+  }
+
+  lines.push(
     'var stringifiedOutput = ""',
     "try {",
     'when ("$namespace:${toolCall.toolName}") {',
-  ];
+  );
 
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
@@ -617,7 +626,7 @@ function writeExecuteToolCall(
     'throw RuntimeException("Tool call failed: $callInfo — ${e.message ?: e.toString()}", e)',
     "}",
     "if (stringifiedOutput.isEmpty()) {",
-    'throw IllegalArgumentException("Tool not found: ${toolCall.toolName}")',
+    throwLine,
     "}",
     "return ToolCallResponse(toolCall.callId, stringifiedOutput)",
     "}",
@@ -1018,8 +1027,8 @@ function reformat(code: string): string {
 function coalesceEmptyLines(code: string): string {
   return (
     code
-      // Remove spaces enclosed within curly brackets if that's all there is.
-      .replace(/\{\s+\}/g, "{}")
+      // Remove spaces followed by empty curly brackets.
+      .replace(/\s*\{\s+\}/g, "")
       // Remove spaces enclosed within round brackets if that's all there is.
       .replace(/\(\s+\)/g, "()")
       // Remove spaces enclosed within square brackets if that's all there is.
