@@ -3,9 +3,6 @@ COMPILER:
 
 CODEGEN:
   - add PromptTools namespace with enums
-  - ALL:
-    - I need to add inputJsonSchema to Tool!!!
-    - always output the JSON schema in Spec...
   - Dart: expose types as unmodifiable
   - Python, Typescript:
     - add a 'NoTools' param?

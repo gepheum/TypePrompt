@@ -57,6 +57,7 @@ function writeAll(
         writeTemplateIdEnum(compilationResult),
         `}  // namespace ${rootNamespace}`,
         writeToolExecutorInterfaces(compilationResult, config),
+        writePromptToolsEnums(compilationResult, config),
         writeUserDefinedDatatypes(compilationResult, unionContext, config),
         writeSpecDatatypes(unionContext, config),
         `namespace ${rootNamespace}\n{`,
@@ -213,6 +214,81 @@ function writeToolExecutorInterfaces(
       }
 
       lines.push("}", "}", "");
+    }
+    lines.push(`}  // namespace ${rootNamespace}.${namespaceBase}`);
+    sections.push(lines.join("\n"));
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      writeNamespace(namespace);
+    }
+  }
+
+  return sections.join("\n\n");
+}
+
+function writePromptToolsEnums(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { rootNamespace } = config;
+  const { singleNamespace, namespaces } = compilationResult;
+  const sections: string[] = [];
+
+  const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    const namespaceBase = singleNamespace
+      ? "PromptTools"
+      : `PromptTools.${toCSharpName(namespace.name)}`;
+
+    const lines = [`namespace ${rootNamespace}.${namespaceBase}`, "{"];
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length <= 0) continue;
+      const rawTemplateName = template.template.name.text;
+      const enumName = toCSharpName(rawTemplateName);
+      const extensionClassName = `${rawTemplateName}_Extensions`;
+
+      lines.push(
+        "/// <summary>",
+        `/// Tools available for the '${rawTemplateName}' prompt template.`,
+        "/// </summary>",
+        `public enum ${enumName}`,
+        "{",
+      );
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const memberName = toCSharpName(capitalize(rawToolName));
+        lines.push(`${memberName},`);
+      }
+
+      lines.push(
+        "}",
+        "",
+        `public static class ${extensionClassName}`,
+        "{",
+        `public static string GetName(this ${enumName} tool)`,
+        "{",
+        "return tool switch",
+        "{",
+      );
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const memberName = toCSharpName(capitalize(rawToolName));
+        lines.push(`${enumName}.${memberName} => "${rawToolName}",`);
+      }
+
+      lines.push(
+        "_ => throw new ArgumentOutOfRangeException(nameof(tool)),",
+        "};",
+        "}",
+        "}",
+        "",
+      );
     }
     lines.push(`}  // namespace ${rootNamespace}.${namespaceBase}`);
     sections.push(lines.join("\n"));
