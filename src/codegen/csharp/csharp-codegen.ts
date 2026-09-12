@@ -270,7 +270,7 @@ function writePromptToolsEnums(
         "",
         `public static class ${extensionClassName}`,
         "{",
-        `public static string GetName(this ${enumName} tool)`,
+        `public static string GetToolName(this ${enumName} tool)`,
         "{",
         "return tool switch",
         "{",

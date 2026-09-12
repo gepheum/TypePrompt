@@ -59,6 +59,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         [
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorClasses(compilationResult),
+          writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
           writeTemplatesData(compilationResult),
@@ -376,6 +377,69 @@ function writeToolExecutorClasses(
       }
 
       lines.push("}", "");
+    }
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      writeNamespace(namespace);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function writePromptToolsEnums(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+  const lines: string[] = [];
+
+  const writeNamespace = (namespace: ValidNamespaceResult): void => {
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length <= 0) continue;
+      const rawTemplateName = template.template.name.text;
+      const enumName = singleNamespace
+        ? `PromptTools_${rawTemplateName}`
+        : `PromptTools_${namespace.name}_${rawTemplateName}`;
+
+      lines.push(
+        "/// Tools available for the '" +
+          rawTemplateName +
+          "' prompt template.",
+        `enum ${enumName} {`,
+      );
+
+      for (const t of toolEntries) {
+        const isLast = t === toolEntries.at(-1);
+        const rawToolName = t.tool.tool.name.text;
+        const entryName = toDartName(toCamelCase(rawToolName));
+        lines.push(`${entryName}${isLast ? ";" : ","}`);
+      }
+
+      lines.push("", "String get toolName {", "switch (this) {");
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const entryName = toDartName(toCamelCase(rawToolName));
+        lines.push(
+          `case ${enumName}.${entryName}:`,
+          `return "${rawToolName}";`,
+        );
+      }
+
+      lines.push(
+        "}",
+        "}",
+        "",
+        "@override",
+        "String toString() => toolName;",
+        "}",
+        "",
+      );
     }
   };
 

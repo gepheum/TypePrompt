@@ -9,8 +9,7 @@ CODEGEN:
   - in Kotlin, try to remove trailing `{ }`
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
   - exception thrown from tool executor: create a specific exception type?
-  - function to handle template tool
-  - Add the top-level comments
+  - In the top-level comments, add the 'import'?
 
 TEST:
   - make sure that I have one example with tools and with single namespace, and one example with tools and with multiple namespaces

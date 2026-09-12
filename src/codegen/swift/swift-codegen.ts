@@ -61,6 +61,7 @@ function writeAll(
           STATIC_SNIPPETS["swift-public-types"],
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorProtocols(compilationResult, config),
+          writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, config),
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
@@ -398,6 +399,74 @@ function writeToolExecutorProtocols(
     }
   }
   lines.push("}  // enum ToolExecutor");
+  return lines.join("\n");
+}
+
+function writePromptToolsEnums(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length <= 0) continue;
+      const rawTemplateName = template.template.name.text;
+      const enumName = toSwiftName(rawTemplateName);
+
+      lines.push(
+        "/// Tools available for the '" +
+          rawTemplateName +
+          "' prompt template.",
+        `public enum ${enumName}: Sendable, CaseIterable, CustomStringConvertible {`,
+      );
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const caseName = toSwiftName(toCamelCase(rawToolName));
+        lines.push(`case ${caseName}`);
+      }
+
+      lines.push("", "public var toolName: String {", "switch self {");
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const caseName = toSwiftName(toCamelCase(rawToolName));
+        lines.push(`case .${caseName}:`, `return "${rawToolName}"`);
+      }
+
+      lines.push(
+        "}",
+        "}",
+        "",
+        "public var description: String {",
+        "return toolName",
+        "}",
+        "}",
+        "",
+      );
+    }
+    return lines;
+  };
+
+  const lines = [
+    "/// Namespace containing tools available for prompt templates.",
+    "public enum PromptTools {",
+  ];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const swiftNamespace = toSwiftName(namespace.name);
+      lines.push(`public enum ${swiftNamespace} {`);
+      lines.push(...writeNamespace(namespace));
+      lines.push(`}  // enum ${swiftNamespace}`, "");
+    }
+  }
+  lines.push("}  // enum PromptTools");
   return lines.join("\n");
 }
 

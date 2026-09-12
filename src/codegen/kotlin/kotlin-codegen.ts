@@ -62,6 +62,7 @@ function writeAll(
         [
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorInterfaces(compilationResult),
+          writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
           writeTemplatesData(compilationResult),
@@ -355,6 +356,59 @@ function writeToolExecutorInterfaces(
     }
   }
   lines.push("}  // object ToolExecutor");
+  return lines.join("\n");
+}
+
+function writePromptToolsEnums(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length <= 0) continue;
+      const rawTemplateName = template.template.name.text;
+      const enumName = toKotlinName(rawTemplateName);
+
+      lines.push(
+        "/**",
+        ` * Tools available for the '${rawTemplateName}' prompt template.`,
+        " */",
+        `enum class ${enumName}(val toolName: String) {`,
+      );
+
+      for (const t of toolEntries) {
+        const isLast = t === toolEntries.at(-1);
+        const rawToolName = t.tool.tool.name.text;
+        const entryName = toKotlinName(rawToolName);
+        const comma = isLast ? ";" : ",";
+        lines.push(`${entryName}("${rawToolName}")${comma}`);
+      }
+
+      lines.push("", "override fun toString(): String = toolName", "}", "");
+    }
+    return lines;
+  };
+
+  const lines = [
+    "/** Namespace containing tools available for prompt templates. */",
+    "object PromptTools {",
+  ];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const ktNamespace = toKotlinName(namespace.name);
+      lines.push(`object ${ktNamespace} {`);
+      lines.push(...writeNamespace(namespace));
+      lines.push(`}  // object ${ktNamespace}`, "");
+    }
+  }
+  lines.push("}  // object PromptTools");
   return lines.join("\n");
 }
 

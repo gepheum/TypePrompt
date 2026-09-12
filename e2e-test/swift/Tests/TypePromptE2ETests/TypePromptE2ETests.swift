@@ -206,6 +206,13 @@ struct ToolsResearchQuestionTests {
     }
   }
 
+  @Test func promptToolsEnum() {
+    #expect(TypePrompt03.PromptTools.ResearchQuestion.webSearch.toolName == "webSearch")
+    #expect(TypePrompt03.PromptTools.ResearchQuestion.webSearch.description == "webSearch")
+    #expect(String(describing: TypePrompt03.PromptTools.ResearchQuestion.webSearch) == "webSearch")
+    #expect(TypePrompt03.PromptTools.ResearchQuestion.allCases == [.webSearch])
+  }
+
   @Test func producesOneExampleWithOneIntermediateStep() {
     #expect(prompt.examples.count == 1)
     #expect(prompt.examples[0].intermediateSteps.count == 1)

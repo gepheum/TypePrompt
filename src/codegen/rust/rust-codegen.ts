@@ -50,6 +50,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           writePromptsStruct(compilationResult),
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorTraits(compilationResult),
+          writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult),
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
@@ -460,6 +461,91 @@ function writeToolExecutorTraits(
     }
   }
   lines.push("}  // mod tool_executor");
+  return lines.join("\n");
+}
+
+function writePromptToolsEnums(
+  compilationResult: ValidCompilationResult,
+): string {
+  const { singleNamespace, namespaces } = compilationResult;
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+  ): readonly string[] => {
+    const lines: string[] = [];
+    for (const template of namespace.templates) {
+      const toolEntries = Object.values(template.tools);
+      if (toolEntries.length <= 0) continue;
+      const rawTemplateName = template.template.name.text;
+      const enumName = toRustName(rawTemplateName);
+
+      lines.push(
+        "/// Tools available for the '" +
+          rawTemplateName +
+          "' prompt template.",
+        "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]",
+        "#[allow(non_camel_case_types)]",
+        `pub enum ${enumName} {`,
+      );
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const memberName = toRustName(capitalize(rawToolName));
+        lines.push(`#[serde(rename = "${rawToolName}")]`, `${memberName},`);
+      }
+
+      lines.push(
+        "}",
+        "",
+        `impl ${enumName} {`,
+        "pub fn tool_name(&self) -> &'static str {",
+        "match self {",
+      );
+
+      for (const t of toolEntries) {
+        const rawToolName = t.tool.tool.name.text;
+        const memberName = toRustName(capitalize(rawToolName));
+        lines.push(`${enumName}::${memberName} => "${rawToolName}",`);
+      }
+
+      lines.push(
+        "}",
+        "}",
+        "",
+        "pub fn as_str(&self) -> &'static str {",
+        "self.tool_name()",
+        "}",
+        "}",
+        "",
+        `impl std::fmt::Display for ${enumName} {`,
+        "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
+        'write!(f, "{}", self.as_str())',
+        "}",
+        "}",
+        "",
+      );
+    }
+    return lines;
+  };
+
+  const lines = [
+    "/// Namespace containing tools available for prompt templates.",
+    "#[allow(non_camel_case_types)]",
+    "pub mod prompt_tools {",
+    "use serde::{Deserialize, Serialize};",
+  ];
+  if (singleNamespace) {
+    lines.push(...writeNamespace(singleNamespace));
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const rustNamespace = toRustName(toSnakeCase(namespace.name));
+      lines.push(`pub mod ${rustNamespace} {`);
+      lines.push("use serde::{Deserialize, Serialize};");
+      lines.push(...writeNamespace(namespace));
+      lines.push(`}  // mod ${rustNamespace}`, "");
+    }
+  }
+  lines.push("}  // mod prompt_tools");
   return lines.join("\n");
 }
 

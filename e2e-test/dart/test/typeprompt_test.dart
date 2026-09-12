@@ -215,6 +215,13 @@ void main() {
           (schema?['properties'] as Map?)?['query']?['type'], equals('string'));
     });
 
+    test('PromptTools enum', () {
+      expect(p03.PromptTools_ResearchQuestion.webSearch.toolName,
+          equals('webSearch'));
+      expect(p03.PromptTools_ResearchQuestion.webSearch.toString(),
+          equals('webSearch'));
+    });
+
     test('produces one example with one intermediate step', () {
       expect(prompt.examples.length, equals(1));
       expect(prompt.examples[0].intermediateSteps.length, equals(1));

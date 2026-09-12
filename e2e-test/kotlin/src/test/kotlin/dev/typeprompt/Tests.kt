@@ -243,6 +243,12 @@ class Test03Tools_ResearchQuestion {
     }
 
     @Test
+    fun testPromptToolsEnum() {
+        assertEquals("webSearch", com.example.prompts03.PromptTools.ResearchQuestion.webSearch.toolName)
+        assertEquals("webSearch", com.example.prompts03.PromptTools.ResearchQuestion.webSearch.toString())
+    }
+
+    @Test
     fun testProducesOneExampleWithOneIntermediateStep() {
         assertEquals(1, prompt.examples.size)
         assertEquals(1, prompt.examples[0].intermediateSteps.size)

@@ -215,6 +215,18 @@ mod tests {
             ws_tool.input_json_schema["required"],
             serde_json::json!(["query"])
         );
+        assert_eq!(
+            gen::prompts_03::prompt_tools::ResearchQuestion::WebSearch.tool_name(),
+            "webSearch"
+        );
+        assert_eq!(
+            gen::prompts_03::prompt_tools::ResearchQuestion::WebSearch.as_str(),
+            "webSearch"
+        );
+        assert_eq!(
+            gen::prompts_03::prompt_tools::ResearchQuestion::WebSearch.to_string(),
+            "webSearch"
+        );
 
         assert_eq!(prompt.examples.len(), 1);
         assert_eq!(prompt.examples[0].intermediate_steps.len(), 1);

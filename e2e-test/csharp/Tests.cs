@@ -265,7 +265,7 @@ public class Test03Tools_ResearchQuestion
     [Fact]
     public void TestPromptToolsEnum()
     {
-        Assert.Equal("webSearch", TypePrompt03.PromptTools.ResearchQuestion.WebSearch.GetName());
+        Assert.Equal("webSearch", TypePrompt03.PromptTools.ResearchQuestion.WebSearch.GetToolName());
     }
 
     [Fact]
