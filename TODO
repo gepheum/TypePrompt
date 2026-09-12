@@ -2,8 +2,8 @@ COMPILER:
   - THINK ABOUT EDITIONS...
 
 CODEGEN:
+  - Codegen guide in each language
   - Ask AI to review all the generated code...
-  - Dart: expose types as unmodifiable
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
   - exception thrown from tool executor: create a specific exception type?
   - In the top-level comments, add the 'import'?

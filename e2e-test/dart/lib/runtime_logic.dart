@@ -61,10 +61,10 @@ final class Prompt<Output, ToolExecutor> {
   final String userMessage;
 
   /// Few-shot examples.
-  final List<FewShotExample> examples;
+  final UnmodifiableListView<FewShotExample> examples;
 
   /// The tools which can be called by the LLM, keyed by tool name.
-  final Map<String, Tool> tools;
+  final UnmodifiableMapView<String, Tool> tools;
   final OutputFormat outputFormat;
   final TemplateId templateId;
   final Output Function(dynamic json) _fromJson;
@@ -112,7 +112,7 @@ sealed class OutputFormat {
 
 final class JsonOutputFormat extends OutputFormat {
   final String stringifiedJsonSchema;
-  final Map<String, dynamic> jsonSchema;
+  final UnmodifiableMapView<String, dynamic> jsonSchema;
 
   const JsonOutputFormat._({
     required this.stringifiedJsonSchema,
@@ -127,7 +127,7 @@ final class TextOutputFormat extends OutputFormat {
 final class Tool {
   final String name;
   final String description;
-  final Map<String, dynamic> inputJsonSchema;
+  final UnmodifiableMapView<String, dynamic> inputJsonSchema;
 
   const Tool({
     required this.name,
@@ -140,7 +140,7 @@ final class Tool {
 /// tool-call steps, and the expected response.
 final class FewShotExample {
   final String userMessage;
-  final List<IntermediateStepExample> intermediateSteps;
+  final UnmodifiableListView<IntermediateStepExample> intermediateSteps;
   final String response;
 
   const FewShotExample({
@@ -154,7 +154,7 @@ final class FewShotExample {
 /// calls made at that step.
 final class IntermediateStepExample {
   /// Tool calls made in parallel at this step.
-  final List<ToolCallExample> toolCalls;
+  final UnmodifiableListView<ToolCallExample> toolCalls;
 
   const IntermediateStepExample({
     required this.toolCalls,
@@ -1205,12 +1205,14 @@ String _renderSnippet(
   }
 }
 
-List<FewShotExample> _renderExamples(
+UnmodifiableListView<FewShotExample> _renderExamples(
   List<_Spec_FewShotExample>? examples,
   List<_Spec_BodyPiece>? userBody,
   _Spec_Template tmpl,
 ) {
-  if (examples == null || examples.isEmpty) return const [];
+  if (examples == null || examples.isEmpty) {
+    return UnmodifiableListView<FewShotExample>(const []);
+  }
   final result = <FewShotExample>[];
   for (final ex in examples) {
     final userMessage = _renderBody(userBody, ex.input, tmpl.snippets);
@@ -1228,7 +1230,9 @@ List<FewShotExample> _renderExamples(
           ),
         );
       }
-      intermediateSteps.add(IntermediateStepExample(toolCalls: toolCalls));
+      intermediateSteps.add(IntermediateStepExample(
+        toolCalls: UnmodifiableListView<ToolCallExample>(toolCalls),
+      ));
     }
 
     final outputFormat = tmpl.outputFormat == _Spec_OutputFormat.json
@@ -1239,12 +1243,13 @@ List<FewShotExample> _renderExamples(
     result.add(
       FewShotExample(
         userMessage: userMessage,
-        intermediateSteps: intermediateSteps,
+        intermediateSteps:
+            UnmodifiableListView<IntermediateStepExample>(intermediateSteps),
         response: response,
       ),
     );
   }
-  return result;
+  return UnmodifiableListView<FewShotExample>(result);
 }
 
 TemplateId _parseTemplateId(String id) {
@@ -1271,7 +1276,7 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   dynamic metaElement;
   String systemMessage;
   String userMessage;
-  List<FewShotExample> examples;
+  UnmodifiableListView<FewShotExample> examples;
 
   switch (contents) {
     case _Spec_TemplateContents_KindNoVariants():
@@ -1334,7 +1339,7 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
     systemMessage: systemMessage,
     userMessage: userMessage,
     examples: examples,
-    tools: tools,
+    tools: UnmodifiableMapView<String, Tool>(tools),
     outputFormat: outputFormat,
     templateId: _parseTemplateId(templateId),
     fromJson: fromJson,
@@ -1378,8 +1383,8 @@ Output _doParseResponse<Output>(
 /// When using overrides, inject the resulting [Prompts] instance as a
 /// dependency rather than relying on the global [prompts] variable.
 abstract final class TemplateOverrider {
-  static Map<String, dynamic> templatesData() {
-    return _templatesData.toJson();
+  static UnmodifiableMapView<String, dynamic> templatesData() {
+    return UnmodifiableMapView<String, dynamic>(_templatesData.toJson());
   }
 
   static Prompts applyOverrides(Map<String, dynamic> overrides) {
