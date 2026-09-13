@@ -248,6 +248,25 @@ mod tests {
             .stringified_output
             .contains("Tokyo Population 2024"));
 
+        // execute_tools with multiple tool calls runs concurrently and preserves order
+        let multi_tool_calls = vec![
+            gen::prompts_03::ToolCall {
+                call_id: "call_1".to_string(),
+                tool_name: "webSearch".to_string(),
+                stringified_input: "{\"query\":\"Tokyo population\"}".to_string(),
+            },
+            gen::prompts_03::ToolCall {
+                call_id: "call_2".to_string(),
+                tool_name: "webSearch".to_string(),
+                stringified_input: "{\"query\":\"Kyoto population\"}".to_string(),
+            },
+        ];
+        let multi_results =
+            block_on(prompt.execute_tools(&multi_tool_calls, &MockWebSearchExecutor)).unwrap();
+        assert_eq!(multi_results.len(), 2);
+        assert_eq!(multi_results[0].call_id, "call_1");
+        assert_eq!(multi_results[1].call_id, "call_2");
+
         // execute_tools with empty list returns Ok(vec![])
         let empty_results = block_on(prompt.execute_tools(&[], &MockWebSearchExecutor)).unwrap();
         assert!(empty_results.is_empty());

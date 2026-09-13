@@ -3,6 +3,7 @@
 //
 // To install dependencies (in Cargo.toml):
 //   [dependencies]
+//   futures = "0.3"  # or latest version
 //   serde = { version = "1.0", features = ["derive"] }
 //   serde_json = { version = "1.0", features = ["preserve_order"] }
 //   serde_yaml = "0.9"  # or latest version
@@ -124,11 +125,7 @@ impl<Output, ToolExecutor: ?Sized> Prompt<Output, ToolExecutor> {
     for tool_call in tool_calls {
       futures.push(execute_fn(tool_call, tool_executor));
     }
-    let mut responses = Vec::with_capacity(futures.len());
-    for fut in futures {
-      responses.push(fut.await?);
-    }
-    Ok(responses)
+    futures::future::try_join_all(futures).await
   }
 }
 
