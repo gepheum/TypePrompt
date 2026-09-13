@@ -44,7 +44,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         writeTemplateIdEnum(Object.values(templates)),
         writeUserDefinedDatatypes(compilationResult),
         writeToolExecutorProtocols(compilationResult),
-        writeToolNameToMethodName(Object.values(tools)),
+        writeToolIdToMethodName(Object.values(tools)),
         writePydanticTypeAdapters(compilationResult),
         writeSpecDatatypes(),
         writeTemplatesData(compilationResult),
@@ -297,25 +297,17 @@ function writeToolExecutorProtocols(
   return lines.join("\n");
 }
 
-function writeToolNameToMethodName(tools: readonly ValidatedTool[]): string {
-  const seenToolNames = new Set<string>();
-  const lines = ["_TOOL_NAME_TO_METHOD_NAME: Final[Mapping[str, str]] = {"];
+function writeToolIdToMethodName(tools: readonly ValidatedTool[]): string {
+  const seenToolIds = new Set<string>();
+  const lines = ["_TOOL_ID_TO_METHOD_NAME: Final[Mapping[str, str]] = {"];
   for (const tool of tools) {
-    const toolName = tool.tool.name.text;
-    if (seenToolNames.has(toolName)) continue;
-    seenToolNames.add(toolName);
-    const methodName = toPyName(toolName, "field_name");
-    lines.push(` '${toolName}': '${methodName}',`);
+    const toolId = getId(tool.tool);
+    if (seenToolIds.has(toolId)) continue;
+    seenToolIds.add(toolId);
+    const methodName = toPyName(tool.tool.name.text, "field_name");
+    lines.push(` '${toolId}': '${methodName}',`);
   }
   lines.push("}");
-  if (tools.length >= 1) {
-    lines.push(
-      "",
-      "",
-      "def tool_name_to_method_name(tool_name: str) -> str:",
-      " return _TOOL_NAME_TO_METHOD_NAME[tool_name]",
-    );
-  }
   return lines.join("\n");
 }
 

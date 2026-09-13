@@ -112,7 +112,9 @@ class Prompt[Output, ToolExecutor = None]:
         tool_executor: ToolExecutor,
     ) -> Sequence[ToolCallResponse]:
         """Execute the given tool calls in parallel."""
-        return await _execute_tools_impl(tool_calls, tool_executor, self)
+        return await _execute_tools_impl(
+            tool_calls, self.template_id.split(":")[0], tool_executor, self
+        )
 
 
 @dataclass(frozen=True)
@@ -235,13 +237,9 @@ _templates_data: Final = _internal.Templates(
 )
 
 
-_TOOL_NAME_TO_METHOD_NAME: Mapping[str, str] = {
-    "myTool": "my_tool",
+_TOOL_ID_TO_METHOD_NAME: Mapping[str, str] = {
+    "Main:myTool": "my_tool",
 }
-
-
-def tool_name_to_method_name(tool_name: str) -> str:
-    return _TOOL_NAME_TO_METHOD_NAME[tool_name]
 
 
 _type_adapters = {
@@ -295,6 +293,7 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
 
 async def _execute_tools_impl[ToolExecutor](
     tool_calls: Iterable[ToolCall],
+    namespace: str,
     executor: ToolExecutor,
     prompt: Prompt[Any, ToolExecutor],
 ) -> Sequence[ToolCallResponse]:
@@ -304,7 +303,8 @@ async def _execute_tools_impl[ToolExecutor](
         tool = prompt.tools.get(call.tool_name)
         if tool is None:
             raise ValueError(f"Tool not found: {call.tool_name}")
-        method_name = _TOOL_NAME_TO_METHOD_NAME[call.tool_name]
+        tool_id = f"{namespace}:{call.tool_name}"
+        method_name = _TOOL_ID_TO_METHOD_NAME[tool_id]
         impl = getattr(executor, method_name, None) if executor is not None else None
         if impl is None:
             raise ValueError(f"Tool implementation not found: {call.tool_name}")
