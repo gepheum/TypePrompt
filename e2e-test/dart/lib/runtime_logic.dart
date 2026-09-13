@@ -92,7 +92,7 @@ final class Prompt<Output, ToolExecutor> {
 
   /// Execute the given tool calls in parallel.
   Future<List<ToolCallResponse>> executeTools(
-    List<ToolCall> toolCalls,
+    Iterable<ToolCall> toolCalls,
     ToolExecutor toolExecutor,
   ) async {
     final namespace = templateId.toString().split(':')[0];

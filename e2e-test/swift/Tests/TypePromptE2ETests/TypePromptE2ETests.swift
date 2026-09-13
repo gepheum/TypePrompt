@@ -246,6 +246,22 @@ struct ToolsResearchQuestionTests {
     #expect(results[0].stringifiedOutput.contains("Tokyo Population 2024"))
   }
 
+  @Test func executeToolsAcceptsSequence() async throws {
+    let toolCalls = [
+      TypePrompt03.ToolCall(
+        callId: "call_1",
+        toolName: "webSearch",
+        stringifiedInput: "{\"query\":\"Tokyo population\"}"
+      )
+    ]
+    let results = try await prompt.executeTools(
+      toolCalls.dropFirst(0),
+      toolExecutor: MockWebSearchExecutor()
+    )
+    #expect(results.count == 1)
+    #expect(results[0].callId == "call_1")
+  }
+
   @Test func executeToolsThrowsForUnknownTool() async throws {
     let toolCalls = [
       TypePrompt03.ToolCall(

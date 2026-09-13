@@ -38,7 +38,7 @@ from runtime_types import _internal
 #   output = await call_model(prompt, None)
 
 from dataclasses import dataclass
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from typing import (
     Annotated,
@@ -108,7 +108,7 @@ class Prompt[Output, ToolExecutor = None]:
 
     async def execute_tools(
         self,
-        tool_calls: Sequence[ToolCall],
+        tool_calls: Iterable[ToolCall],
         tool_executor: ToolExecutor,
     ) -> Sequence[ToolCallResponse]:
         """Execute the given tool calls in parallel."""
@@ -294,7 +294,7 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
 
 
 async def _execute_tools_impl[ToolExecutor](
-    tool_calls: Sequence[ToolCall],
+    tool_calls: Iterable[ToolCall],
     executor: ToolExecutor,
     prompt: Prompt[Any, ToolExecutor],
 ) -> Sequence[ToolCallResponse]:

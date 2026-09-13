@@ -255,6 +255,22 @@ void main() {
       expect(results[0].stringifiedOutput, contains("Tokyo Population 2024"));
     });
 
+    test('executeTools accepts Set (Iterable)', () async {
+      final toolCalls = {
+        p03.ToolCall(
+          callId: "call_1",
+          toolName: "webSearch",
+          stringifiedInput: '{"query":"Tokyo population"}',
+        ),
+      };
+      final results = await prompt.executeTools(
+        toolCalls,
+        MockWebSearchExecutor(),
+      );
+      expect(results.length, equals(1));
+      expect(results[0].callId, equals("call_1"));
+    });
+
     test('executeTools throws for unknown tool', () async {
       final toolCalls = [
         p03.ToolCall(

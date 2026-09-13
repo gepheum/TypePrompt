@@ -68,7 +68,7 @@ export type Prompt<Id extends TemplateId> = {
   readonly isToolName: (name: string) => name is ToolNames<Id>;
   /** Executes the given tool calls in parallel. */
   readonly executeTools: (
-    calls: readonly ToolCall[],
+    calls: Iterable<ToolCall>,
     executor: ToolExecutor<Id>,
   ) => Promise<ReadonlyArray<ToolCallResponse>>;
   readonly outputFormat: OutputFormat<Id>;
@@ -224,12 +224,12 @@ const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 
 // <static:typescript-logic>
 async function executeToolsImpl<Id extends TemplateId>(
-  calls: readonly ToolCall[],
+  calls: Iterable<ToolCall>,
   tools: Tools<Id>,
   executor: ToolExecutor<Id>,
 ): Promise<ReadonlyArray<ToolCallResponse>> {
   return Promise.all(
-    calls.map(async (call) => {
+    Array.from(calls).map(async (call) => {
       const { callId, toolName, stringifiedInput } = call;
       const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
       if (!tool) {
@@ -368,7 +368,7 @@ function renderTemplate<Id extends TemplateId>(
     return name in tools;
   };
   const callTools = (
-    calls: readonly ToolCall[],
+    calls: Iterable<ToolCall>,
     executor: ToolExecutor<Id>,
   ): Promise<ReadonlyArray<ToolCallResponse>> =>
     executeToolsImpl(calls, tools, executor);

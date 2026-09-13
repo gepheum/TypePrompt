@@ -108,7 +108,7 @@ data class Prompt<out Output, in ToolExecutor>(
      * Execute the given tool calls in parallel.
      */
     suspend fun executeTools(
-        toolCalls: List<ToolCall>,
+        toolCalls: Iterable<ToolCall>,
         toolExecutor: ToolExecutor,
     ): List<ToolCallResponse> {
         val namespace = templateId.toString().split(':')[0]

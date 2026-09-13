@@ -9,7 +9,7 @@
 //
 // Build a typed prompt from one of your templates:
 //
-//   using TypePromptRuntime;
+//   using TypePrompt;
 //   var prompt = Prompts.Default.RenderGreet(new Schema.Greet.Input
 //   {
 //       Name = "Luke"

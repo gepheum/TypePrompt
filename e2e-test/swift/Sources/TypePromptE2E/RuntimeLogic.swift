@@ -97,7 +97,7 @@ public enum TypePromptRuntime {
 
     /// Execute the given tool calls in parallel.
     public func executeTools(
-      _ toolCalls: [ToolCall],
+      _ toolCalls: some Sequence<ToolCall>,
       toolExecutor: ToolExecutor,
     ) async throws -> [ToolCallResponse] {
       return try await doExecuteTools(
@@ -1456,7 +1456,7 @@ public enum TypePromptRuntime {
   }
 
   fileprivate static func doExecuteTools<ToolExecutor: Sendable>(
-    _ toolCalls: [ToolCall],
+    _ toolCalls: some Sequence<ToolCall>,
     templateId: TemplateId,
     toolExecutor: ToolExecutor,
   ) async throws -> [ToolCallResponse] {

@@ -259,6 +259,27 @@ describe("03-tools / ResearchQuestion", () => {
     expect(result[0]!.stringifiedOutput).toMatch(/"T"/);
   });
 
+  it("executeTools accepts Set (Iterable)", async () => {
+    const executor = {
+      webSearch: async (_input: Schema03.WebSearch.Input) => ({
+        results: [{ title: "T", url: "http://example.com", snippet: "42M" }],
+      }),
+    } satisfies ToolExecutor03<"Main:ResearchQuestion">;
+
+    const result = await prompt.executeTools(
+      new Set([
+        {
+          callId: "c1",
+          toolName: "webSearch",
+          stringifiedInput: '{"query":"test"}',
+        },
+      ]),
+      executor,
+    );
+    expect(result.length).toMatch(1);
+    expect(result[0]!.callId).toMatch("c1");
+  });
+
   it("executeTools throws for an unknown tool name", async () => {
     let threw = false;
     try {

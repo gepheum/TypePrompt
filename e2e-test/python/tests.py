@@ -338,6 +338,32 @@ class TestResearchQuestion:
         assert result[0].call_id == "c1"
         assert '"T"' in result[0].stringified_output
 
+    async def test_execute_tools_accepts_iterable(self):
+        class Executor:
+            async def web_search(
+                self, input: s03.web_search.Input
+            ) -> s03.web_search.Output:
+                return s03.web_search.Output(
+                    results=[
+                        s03.web_search.Output_Results(
+                            title="T", url="http://example.com", snippet="42M"
+                        ),
+                    ]
+                )
+
+        # Pass a generator (Iterable) instead of a list
+        calls = (
+            ToolCall(
+                call_id="c1",
+                tool_name="webSearch",
+                stringified_input='{"query":"test"}',
+            )
+            for _ in range(1)
+        )
+        result = await self.prompt.execute_tools(calls, Executor())
+        assert len(result) == 1
+        assert result[0].call_id == "c1"
+
     async def test_execute_tools_throws_for_unknown_tool(self):
         class Executor:
             async def web_search(

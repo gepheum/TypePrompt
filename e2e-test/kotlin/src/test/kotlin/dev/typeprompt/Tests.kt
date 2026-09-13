@@ -279,6 +279,16 @@ class Test03Tools_ResearchQuestion {
     }
 
     @Test
+    fun testExecuteToolsAcceptsSet() = runTest {
+        val toolCalls = setOf(
+            com.example.prompts03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}"),
+        )
+        val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
+        assertEquals(1, results.size)
+        assertEquals("call_1", results[0].callId)
+    }
+
+    @Test
     fun testExecuteToolsThrowsForUnknownTool() = runTest {
         val toolCalls = listOf(
             com.example.prompts03.ToolCall("c1", "noSuchTool", "{}"),
