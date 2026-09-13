@@ -2,14 +2,19 @@ COMPILER:
   - THINK ABOUT EDITIONS...
 
 CODEGEN:
+  - TypeScript:
+    - disable lints
+  - Python:
+    - disable lints
+    - _TOOL_NAME_TO_METHOD_NAME: the key should actually be an ID
+  - C#:
+    - file-scoped namespace and static classes???
+    - Cancelation token
   - Codegen guide in each language
   - Ask AI to review all the generated code...
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
   - exception thrown from tool executor: create a specific exception type?
   - In the top-level comments, add the 'import'?
-
-TEST:
-  - make sure that I have one example with tools and with single namespace, and one example with tools and with multiple namespaces
 
 TEST:
   - check nullable values and expressions

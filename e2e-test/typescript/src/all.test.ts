@@ -9,15 +9,18 @@ import { prompts as p01 } from "./gen/prompts-01.js";
 import { prompts as p02 } from "./gen/prompts-02.js";
 import {
   prompts as p03,
-  type $ as $03,
+  type Schema as Schema03,
   type ToolExecutor as ToolExecutor03,
 } from "./gen/prompts-03.js";
 import { prompts as p04 } from "./gen/prompts-04.js";
 import { prompts as p05 } from "./gen/prompts-05.js";
-import { prompts as p06, type $ as $06 } from "./gen/prompts-06.js";
-import { prompts as p07, type $ as $07 } from "./gen/prompts-07.js";
+import { prompts as p06, type Schema as Schema06 } from "./gen/prompts-06.js";
+import { prompts as p07, type Schema as Schema07 } from "./gen/prompts-07.js";
 import { prompts as p08 } from "./gen/prompts-08.js";
-import { prompts as pe01, type $ as $e01 } from "./gen/prompts-e01.js";
+import {
+  prompts as pe01,
+  type Schema as SchemaE01,
+} from "./gen/prompts-e01.js";
 
 // ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
@@ -236,7 +239,7 @@ describe("03-tools / ResearchQuestion", () => {
 
   it("executeTools calls the executor and returns stringified output", async () => {
     const executor = {
-      webSearch: async (_input: $03.WebSearch.Input) => ({
+      webSearch: async (_input: Schema03.WebSearch.Input) => ({
         results: [{ title: "T", url: "http://example.com", snippet: "42M" }],
       }),
     } satisfies ToolExecutor03<"Main:ResearchQuestion">;
@@ -411,7 +414,7 @@ describe("05-variants / WriteProductDescription", () => {
 // ─── 06 Toon format: complex nested input types, format="toon" ───────────────
 
 describe("06-toon-format / WriteComparisonArticle", () => {
-  const provider: $06.WriteComparisonArticle.Provider = {
+  const provider: Schema06.WriteComparisonArticle.Provider = {
     name: "CloudX",
     region: "us-east",
     category: "compute",
@@ -462,12 +465,12 @@ describe("06-toon-format / WriteComparisonArticle", () => {
 // ─── 07 Shared types: two templates sharing Main namespace types ───────────────
 
 describe("07-shared-types", () => {
-  const address: $07.Shared.Address = {
+  const address: Schema07.Shared.Address = {
     street: "1 Main St",
     city: "Paris",
     country: "France",
   };
-  const contact: $07.Shared.ContactInfo = {
+  const contact: Schema07.Shared.ContactInfo = {
     name: "Alice Dupont",
     email: "alice@example.com",
     address,
@@ -803,57 +806,57 @@ describe("parseResponse", () => {
 
 describe("e01 / JSON serialization & deserialization", () => {
   it("serializes and deserializes Expr (number, add, if)", () => {
-    const num: $e01.Shared.Expr = { kind: "number", value: 42.0 };
+    const num: SchemaE01.Shared.Expr = { kind: "number", value: 42.0 };
     const jsonNum = JSON.stringify(num);
     expect(jsonNum).toMatch('{"kind":"number","value":42}');
-    const parsedNum: $e01.Shared.Expr = JSON.parse(jsonNum);
+    const parsedNum: SchemaE01.Shared.Expr = JSON.parse(jsonNum);
     expect(parsedNum).toMatch({ kind: "number", value: 42 });
 
-    const add: $e01.Shared.Expr = {
+    const add: SchemaE01.Shared.Expr = {
       kind: "add",
       left: { kind: "number", value: 1.0 },
       right: { kind: "number", value: 2.0 },
     };
     const jsonAdd = JSON.stringify(add);
-    const parsedAdd: $e01.Shared.Expr = JSON.parse(jsonAdd);
+    const parsedAdd: SchemaE01.Shared.Expr = JSON.parse(jsonAdd);
     expect(parsedAdd).toMatch(add);
   });
 
   it("serializes and deserializes EnumWithCommonFields (boolean discriminant)", () => {
-    const notSuccess: $e01.Shared.EnumWithCommonFields = {
+    const notSuccess: SchemaE01.Shared.EnumWithCommonFields = {
       success: false,
       x: 10,
       y: 20.5,
       z: "error",
     };
     const jsonNotSuccess = JSON.stringify(notSuccess);
-    const parsedNotSuccess: $e01.Shared.EnumWithCommonFields =
+    const parsedNotSuccess: SchemaE01.Shared.EnumWithCommonFields =
       JSON.parse(jsonNotSuccess);
     expect(parsedNotSuccess).toMatch(notSuccess);
 
-    const success: $e01.Shared.EnumWithCommonFields = {
+    const success: SchemaE01.Shared.EnumWithCommonFields = {
       success: true,
       x: 42,
       y: 84.0,
       z: 99,
     };
     const jsonSuccess = JSON.stringify(success);
-    const parsedSuccess: $e01.Shared.EnumWithCommonFields =
+    const parsedSuccess: SchemaE01.Shared.EnumWithCommonFields =
       JSON.parse(jsonSuccess);
     expect(parsedSuccess).toMatch(success);
   });
 
   it("serializes and deserializes string enum variant", () => {
-    const variant: $e01.AnalyzeSalesData.Input["variant"] = "csv";
+    const variant: SchemaE01.AnalyzeSalesData.Input["variant"] = "csv";
     const jsonVariant = JSON.stringify(variant);
     expect(jsonVariant).toMatch('"csv"');
-    const parsedVariant: $e01.AnalyzeSalesData.Input["variant"] =
+    const parsedVariant: SchemaE01.AnalyzeSalesData.Input["variant"] =
       JSON.parse(jsonVariant);
     expect(parsedVariant).toMatch("csv");
   });
 
   it("allows omitting optional fields in Matrix", () => {
-    const matrix: $e01.Shared.Matrix = {
+    const matrix: SchemaE01.Shared.Matrix = {
       kind: "matrix",
       matrix: [],
       ints: [1, 2, 3],

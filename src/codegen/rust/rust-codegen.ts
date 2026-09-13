@@ -200,8 +200,6 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
       "pub static PROMPTS: std::sync::LazyLock<Prompts> = std::sync::LazyLock::new(|| {",
       "  Prompts::new(std::sync::Arc::new(TEMPLATES_DATA.clone()))",
       "});",
-      "/// Entry point for building prompts.",
-      "pub static prompts: &std::sync::LazyLock<Prompts> = &PROMPTS;",
     ].join("\n");
   } else {
     const nsList = Object.values(namespaces);
@@ -247,8 +245,6 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
       "pub static PROMPTS: std::sync::LazyLock<Prompts> = std::sync::LazyLock::new(|| {",
       "  Prompts::new(std::sync::Arc::new(TEMPLATES_DATA.clone()))",
       "});",
-      "/// Entry point for building prompts.",
-      "pub static prompts: &std::sync::LazyLock<Prompts> = &PROMPTS;",
     );
     return lines.join("\n");
   }

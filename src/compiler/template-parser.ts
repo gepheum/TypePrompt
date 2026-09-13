@@ -63,14 +63,14 @@ class TemplateParser {
     const attrs = checkXmlAttributes(this.templateNode, {
       name: {
         schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
-        expected: "an PascalCase identifier",
+        expected: "a PascalCase identifier",
       },
       namespace: {
         schema: z
           .string()
           .regex(/^[A-Z][A-Za-z0-9]*$/)
           .optional(),
-        expected: "an PascalCase identifier",
+        expected: "a PascalCase identifier",
       },
     });
     if (attrs.kind === "error") {
@@ -79,7 +79,7 @@ class TemplateParser {
 
     const { name, namespace } = attrs.attributes;
 
-    for (const reservedName of ["Shared", "Meta"]) {
+    for (const reservedName of ["Schema", "Shared", "Meta"]) {
       if (name.value.text.toLowerCase() === reservedName.toLowerCase()) {
         const caseNote =
           name.value.text === reservedName ? "" : " (case-insensitive)";

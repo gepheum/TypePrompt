@@ -129,17 +129,6 @@ public enum TypePromptRuntime {
     public static var text: OutputFormat {
       .text(TextOutputFormat())
     }
-
-    public static func == (lhs: OutputFormat, rhs: OutputFormat) -> Bool {
-      switch (lhs, rhs) {
-      case (.json(let l), .json(let r)):
-        return l == r
-      case (.text, .text):
-        return true
-      default:
-        return false
-      }
-    }
   }
 
   /// JSON output format specification.

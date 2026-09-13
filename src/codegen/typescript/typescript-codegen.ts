@@ -140,8 +140,8 @@ function writeToolsType(compilationResult: ValidCompilationResult): string {
     for (const tool of Object.values(template.tools)) {
       const toolName = tool.tool.tool.name.text;
       const typePrefix = singleNamespace
-        ? `$.${capitalize(toolName)}.`
-        : `$.${namespace}.${capitalize(toolName)}.`;
+        ? `Schema.${capitalize(toolName)}.`
+        : `Schema.${namespace}.${capitalize(toolName)}.`;
       lines.push(`${toolName}: Tool<`);
       lines.push(`${typePrefix}Input,`);
       lines.push(`${typePrefix}Output`);
@@ -167,8 +167,8 @@ function writeInputOutputTypes(
       const templateId = `${namespace}:${templateName}`;
       lines.push(
         singleNamespace
-          ? `"${templateId}": $.${templateName}.${what};`
-          : `"${templateId}": $.${namespace}.${templateName}.${what};`,
+          ? `"${templateId}": Schema.${templateName}.${what};`
+          : `"${templateId}": Schema.${namespace}.${templateName}.${what};`,
       );
     }
     lines.push("}[Id];");
@@ -186,9 +186,9 @@ function writeUserDefinedDatatypes(
     Object.keys(schema.typeDeclarations).length >= 1;
   const lines = [
     "/** Metadata associated with a prompt. */",
-    "export type Meta = $.Meta.Meta;\n",
+    "export type Meta = Schema.Meta.Meta;\n",
     "/** Namespace containing the user-defined datatypes. */",
-    "export namespace $ {",
+    "export namespace Schema {",
     "export namespace Meta {",
   ];
   if (anyTypes(metaSchema)) {
@@ -205,8 +205,8 @@ function writeUserDefinedDatatypes(
       lines.push("}\n");
     }
     const sharedTypePrefix = singleNamespace
-      ? "$.Shared."
-      : `$.${namespace.name}.Shared.`;
+      ? "Schema.Shared."
+      : `Schema.${namespace.name}.Shared.`;
     for (const template of namespace.templates) {
       const templateName = template.template.name.text;
       lines.push(`export namespace ${templateName} {`);
@@ -243,7 +243,7 @@ function writeZodSchemas(compilationResult: ValidCompilationResult): string {
     named: Template | Tool,
   ): void => {
     const namespace = named.namespace?.text ?? DEFAULT_NAMESPACE;
-    const typePrefixBase = singleNamespace ? "$." : `$.${namespace}.`;
+    const typePrefixBase = singleNamespace ? "Schema." : `Schema.${namespace}.`;
     const name = named.name.text;
     const options = {
       defaultScopeTypePrefix: `${typePrefixBase}${capitalize(name)}.`,
