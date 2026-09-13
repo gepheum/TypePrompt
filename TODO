@@ -9,7 +9,6 @@ CODEGEN:
     - _TOOL_NAME_TO_METHOD_NAME: the key should actually be an ID
   - C#:
     - file-scoped namespace and static classes???
-    - Cancelation token
   - Codegen guide in each language
   - Ask AI to review all the generated code...
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed

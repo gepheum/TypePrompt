@@ -217,8 +217,12 @@ public class Test03Tools_ResearchQuestion
 
     private class MockWebSearchExecutor : TypePrompt03.ToolExecutor.IWebSearch
     {
-        public Task<TypePrompt03.Schema.WebSearch.Output> WebSearch(TypePrompt03.Schema.WebSearch.Input input)
+        public Task<TypePrompt03.Schema.WebSearch.Output> WebSearch(
+            TypePrompt03.Schema.WebSearch.Input input,
+            CancellationToken cancellationToken = default
+        )
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(new TypePrompt03.Schema.WebSearch.Output
             {
                 Results = new List<TypePrompt03.Schema.WebSearch.Output_Results>
@@ -316,6 +320,25 @@ public class Test03Tools_ResearchQuestion
         await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await _prompt.ExecuteTools(toolCalls, new MockWebSearchExecutor());
+        });
+    }
+
+    [Fact]
+    public async Task TestExecuteToolsWithCancellationToken()
+    {
+        var toolCalls = new[]
+        {
+            new TypePrompt03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}")
+        };
+
+        using var cts = new CancellationTokenSource();
+        var results = await _prompt.ExecuteTools(toolCalls, new MockWebSearchExecutor(), cts.Token);
+        Assert.Single(results);
+
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        {
+            await _prompt.ExecuteTools(toolCalls, new MockWebSearchExecutor(), cts.Token);
         });
     }
 }

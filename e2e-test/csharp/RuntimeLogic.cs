@@ -21,13 +21,14 @@
 //
 //   async Task<Output> CallModel<Output, ToolExecutor>(
 //       Prompt<Output, ToolExecutor> prompt,
-//       ToolExecutor toolExecutor
+//       ToolExecutor toolExecutor,
+//       CancellationToken cancellationToken = default
 //   )
 //   {
 //       // Build and send the API request using prompt.SystemMessage,
 //       // prompt.UserMessage, prompt.Examples, and prompt.Tools.
 //       // If the model requests tool calls, dispatch them:
-//       //   var results = await prompt.ExecuteTools(toolCalls, toolExecutor);
+//       //   var results = await prompt.ExecuteTools(toolCalls, toolExecutor, cancellationToken);
 //       // Repeat until the model produces a final response, then parse it:
 //       return prompt.ParseResponse(modelResponse);
 //   }
@@ -42,6 +43,8 @@ using System.Collections;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 // </static:csharp-imports>
 
@@ -85,14 +88,15 @@ namespace TypePromptRuntime
         /// </summary>
         public async Task<IReadOnlyList<ToolCallResponse>> ExecuteTools(
             IEnumerable<ToolCall> toolCalls,
-            TToolExecutor toolExecutor
+            TToolExecutor toolExecutor,
+            CancellationToken cancellationToken = default
         )
         {
             var @namespace = TemplateId.GetId().Split(':')[0];
             var tasks = new List<Task<ToolCallResponse>>();
             foreach (var call in toolCalls)
             {
-                tasks.Add(ToolExecution.ExecuteToolCall(call, @namespace, toolExecutor!));
+                tasks.Add(ToolExecution.ExecuteToolCall(call, @namespace, toolExecutor!, cancellationToken));
             }
             return await Task.WhenAll(tasks);
         }
@@ -185,7 +189,12 @@ namespace TypePromptRuntime
 
     file static class ToolExecution
     {
-        public static async Task<ToolCallResponse> ExecuteToolCall(ToolCall toolCall, string @namespace, object executor)
+        public static async Task<ToolCallResponse> ExecuteToolCall(
+            ToolCall toolCall,
+            string @namespace,
+            object executor,
+            CancellationToken cancellationToken = default
+        )
         {
             // Correct implementation will be produced by C# code generator.
             throw new NotImplementedException();
@@ -385,7 +394,9 @@ namespace TypePromptRuntime
                         if (element.TryGetInt64(out var l))
                         {
                             if (l >= int.MinValue && l <= int.MaxValue)
+                            {
                                 return (int)l;
+                            }
                             return l;
                         }
                         if (element.TryGetDecimal(out var d))

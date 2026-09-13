@@ -148,7 +148,7 @@ function writeToolExecutorInterfaces(
         "/// </summary>",
         `public interface ${interfaceName}`,
         "{",
-        `Task<${outputType}> ${methodName}(${inputType} input);`,
+        `Task<${outputType}> ${methodName}(${inputType} input, CancellationToken cancellationToken = default);`,
         "}",
         "",
       );
@@ -209,8 +209,9 @@ function writeToolExecutorInterfaces(
       for (const t of toolInfoList) {
         lines.push(
           `public Task<${t.outputType}> ${t.methodName}(`,
-          `${t.inputType} input`,
-          `) => ${t.paramName}.${t.methodName}(input);`,
+          `${t.inputType} input,`,
+          `CancellationToken cancellationToken = default`,
+          `) => ${t.paramName}.${t.methodName}(input, cancellationToken);`,
           "",
         );
       }
@@ -682,7 +683,8 @@ function writeExecuteToolCall(
     "public static async Task<ToolCallResponse> ExecuteToolCall(",
     "ToolCall toolCall,",
     "string @namespace,",
-    "object executor",
+    "object executor,",
+    "CancellationToken cancellationToken = default",
     ")",
     "{",
     'var stringifiedOutput = "";',
@@ -711,7 +713,7 @@ function writeExecuteToolCall(
       "break;",
       "}",
       `var input = JsonSerializer.Deserialize<${inputType}>(toolCall.StringifiedInput)!;`,
-      `var rawOutput = await toolExecutor.${methodName}(input);`,
+      `var rawOutput = await toolExecutor.${methodName}(input, cancellationToken);`,
       "stringifiedOutput = JsonSerializer.Serialize(rawOutput);",
       "break;",
       "}",
