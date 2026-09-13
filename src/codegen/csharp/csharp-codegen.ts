@@ -48,26 +48,27 @@ function writeAll(
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
-    reformat(
-      [
-        STATIC_SNIPPETS["csharp-imports"],
-        `namespace ${rootNamespace}\n{`,
-        writePromptsClass(compilationResult),
-        writePublicTypes(compilationResult),
-        writeTemplateIdEnum(compilationResult),
-        `}  // namespace ${rootNamespace}`,
-        writeToolExecutorInterfaces(compilationResult, config),
-        writePromptToolsEnums(compilationResult, config),
-        writeUserDefinedDatatypes(compilationResult, unionContext, config),
-        writeSpecDatatypes(unionContext, config),
-        `namespace ${rootNamespace}\n{`,
-        writeTemplatesData(compilationResult),
-        writeExecuteToolCall(compilationResult),
-        writeMetaParser(compilationResult),
-        STATIC_SNIPPETS["csharp-logic"],
-        `}  // namespace ${rootNamespace}`,
-      ].join("\n\n"),
-    ),
+    [
+      STATIC_SNIPPETS["csharp-imports"],
+      `namespace ${rootNamespace};`,
+      reformat(
+        [
+          writePromptsClass(compilationResult),
+          writePublicTypes(compilationResult),
+          writeTemplateIdEnum(compilationResult),
+          writeToolExecutorInterfaces(compilationResult),
+          writePromptToolsEnums(compilationResult),
+          writeUserDefinedDatatypes(compilationResult, unionContext),
+          writeSpecDatatypes(unionContext),
+          writeTemplatesData(compilationResult),
+          writeExecuteToolCall(compilationResult),
+          writeMetaParser(compilationResult),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      ),
+      STATIC_SNIPPETS["csharp-logic"],
+    ].join("\n\n"),
   );
 }
 
@@ -122,20 +123,14 @@ function writeTemplateIdEnum(
 
 function writeToolExecutorInterfaces(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   if (Object.keys(compilationResult.tools).length <= 0) return "";
-  const { rootNamespace } = config;
   const { singleNamespace, namespaces } = compilationResult;
-  const sections: string[] = [];
 
-  const writeNamespace = (namespace: ValidNamespaceResult): void => {
-    if (Object.keys(namespace.tools).length <= 0) return;
-    const namespaceBase = singleNamespace
-      ? "ToolExecutor"
-      : `ToolExecutor.${toCSharpName(namespace.name)}`;
+  const writeNamespaceBody = (namespace: ValidNamespaceResult): string => {
+    if (Object.keys(namespace.tools).length <= 0) return "";
+    const lines: string[] = [];
 
-    const lines = [`namespace ${rootNamespace}.${namespaceBase}`, "{"];
     for (const tool of Object.values(namespace.tools)) {
       const toolName = tool.tool.name.text;
       const interfaceName = `I${capitalize(toolName)}`;
@@ -218,48 +213,63 @@ function writeToolExecutorInterfaces(
 
       lines.push("}", "}", "");
     }
-    lines.push(`}  // namespace ${rootNamespace}.${namespaceBase}`);
-    sections.push(lines.join("\n"));
+    return lines.join("\n");
   };
 
   if (singleNamespace) {
-    writeNamespace(singleNamespace);
+    const body = writeNamespaceBody(singleNamespace);
+    if (!body.trim()) return "";
+    return ["public static class ToolExecutor", "{", body, "}"].join("\n");
   } else {
+    const nsSections: string[] = [];
     for (const namespace of Object.values(namespaces)) {
-      writeNamespace(namespace);
+      const body = writeNamespaceBody(namespace);
+      if (body.trim()) {
+        nsSections.push(
+          `public static class ${toCSharpName(namespace.name)}\n{\n${body}\n}`,
+        );
+      }
     }
+    if (nsSections.length <= 0) return "";
+    return [
+      "public static class ToolExecutor",
+      "{",
+      nsSections.join("\n\n"),
+      "}",
+    ].join("\n");
   }
-
-  return sections.join("\n\n");
 }
 
 function writePromptToolsEnums(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   if (Object.keys(compilationResult.tools).length <= 0) return "";
-  const { rootNamespace } = config;
   const { singleNamespace, namespaces } = compilationResult;
-  const sections: string[] = [];
+
+  const enumClasses: string[] = [];
+  const extensionClasses: string[] = [];
 
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const templatesWithTools = namespace.templates.filter(
       (t) => Object.keys(t.tools).length > 0,
     );
     if (templatesWithTools.length <= 0) return;
-    const namespaceBase = singleNamespace
-      ? "PromptTools"
-      : `PromptTools.${toCSharpName(namespace.name)}`;
 
-    const lines = [`namespace ${rootNamespace}.${namespaceBase}`, "{"];
+    const nsEnumLines: string[] = [];
+    const nsPrefix = singleNamespace ? "" : `${toCSharpName(namespace.name)}.`;
+    const extensionPrefix = singleNamespace
+      ? ""
+      : `${toCSharpName(namespace.name)}_`;
+
     for (const template of namespace.templates) {
       const toolEntries = Object.values(template.tools);
       if (toolEntries.length <= 0) continue;
       const rawTemplateName = template.template.name.text;
       const enumName = toCSharpName(rawTemplateName);
-      const extensionClassName = `${rawTemplateName}_Extensions`;
+      const extensionClassName = `${extensionPrefix}${rawTemplateName}_Extensions`;
+      const fullEnumRef = `PromptTools.${nsPrefix}${enumName}`;
 
-      lines.push(
+      nsEnumLines.push(
         "/// <summary>",
         `/// Tools available for the '${rawTemplateName}' prompt template.`,
         "/// </summary>",
@@ -270,36 +280,41 @@ function writePromptToolsEnums(
       for (const t of toolEntries) {
         const rawToolName = t.tool.tool.name.text;
         const memberName = toCSharpName(capitalize(rawToolName));
-        lines.push(`${memberName},`);
+        nsEnumLines.push(`${memberName},`);
       }
 
-      lines.push(
-        "}",
-        "",
-        `public static class ${extensionClassName}`,
-        "{",
-        `public static string GetToolName(this ${enumName} tool)`,
-        "{",
-        "return tool switch",
-        "{",
-      );
+      nsEnumLines.push("}", "");
 
-      for (const t of toolEntries) {
-        const rawToolName = t.tool.tool.name.text;
-        const memberName = toCSharpName(capitalize(rawToolName));
-        lines.push(`${enumName}.${memberName} => "${rawToolName}",`);
-      }
-
-      lines.push(
-        "_ => throw new ArgumentOutOfRangeException(nameof(tool)),",
-        "};",
-        "}",
-        "}",
-        "",
+      extensionClasses.push(
+        [
+          `public static class ${extensionClassName}`,
+          "{",
+          `public static string GetToolName(this ${fullEnumRef} tool)`,
+          "{",
+          "return tool switch",
+          "{",
+          ...toolEntries.map((t) => {
+            const rawToolName = t.tool.tool.name.text;
+            const memberName = toCSharpName(capitalize(rawToolName));
+            return `${fullEnumRef}.${memberName} => "${rawToolName}",`;
+          }),
+          "_ => throw new ArgumentOutOfRangeException(nameof(tool)),",
+          "};",
+          "}",
+          "}",
+        ].join("\n"),
       );
     }
-    lines.push(`}  // namespace ${rootNamespace}.${namespaceBase}`);
-    sections.push(lines.join("\n"));
+
+    if (nsEnumLines.length > 0) {
+      if (singleNamespace) {
+        enumClasses.push(nsEnumLines.join("\n"));
+      } else {
+        enumClasses.push(
+          `public static class ${toCSharpName(namespace.name)}\n{\n${nsEnumLines.join("\n")}\n}`,
+        );
+      }
+    }
   };
 
   if (singleNamespace) {
@@ -310,7 +325,16 @@ function writePromptToolsEnums(
     }
   }
 
-  return sections.join("\n\n");
+  if (enumClasses.length <= 0) return "";
+
+  const promptToolsClass = [
+    "public static class PromptTools",
+    "{",
+    enumClasses.join("\n\n"),
+    "}",
+  ].join("\n");
+
+  return [promptToolsClass, ...extensionClasses].join("\n\n");
 }
 
 function getTemplateTypes(
@@ -414,9 +438,9 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
     lines.push(
       "public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));",
       "",
-      "private readonly Internal.IRenderer _renderer;",
+      "private readonly IRenderer _renderer;",
       "",
-      "internal Prompts(Internal.IRenderer renderer)",
+      "internal Prompts(IRenderer renderer)",
       "{",
       "_renderer = renderer;",
     );
@@ -441,7 +465,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       const propertyName = toCSharpName(ns.name);
       lines.push(`public ${namespaceClassName} ${propertyName} { get; }`);
     }
-    lines.push("", "internal Prompts(Internal.IRenderer renderer)", "{");
+    lines.push("", "internal Prompts(IRenderer renderer)", "{");
     for (const ns of nsList) {
       const namespaceClassName = ns.name.concat("Prompts");
       const propertyName = toCSharpName(ns.name);
@@ -458,9 +482,9 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         "/// </summary>",
         `public sealed class ${namespaceClassName}`,
         "{",
-        "private readonly Internal.IRenderer _renderer;",
+        "private readonly IRenderer _renderer;",
         "",
-        `internal ${namespaceClassName}(Internal.IRenderer renderer)`,
+        `internal ${namespaceClassName}(IRenderer renderer)`,
         "{",
         "_renderer = renderer;",
       );
@@ -493,7 +517,7 @@ function getMetaType(compilationResult: ValidCompilationResult): string {
     metaSchema,
     {
       topLevel: true,
-      namespace: "Schema.Meta",
+      namespace: "Schema",
     },
   );
 }
@@ -509,118 +533,166 @@ function writePublicTypes(compilationResult: ValidCompilationResult): string {
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
   unionContext: UnionContext,
-  config: { readonly rootNamespace: string },
 ): string {
-  const { rootNamespace } = config;
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length >= 1;
-  const sections: string[] = [];
 
-  // Define Meta type alias
-  {
-    const lines = [`namespace ${rootNamespace}`, "{"];
-    if (anyTypes(metaSchema)) {
-      const metaType = writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          namespace: rootNamespace.concat(".Schema.Meta"),
-        },
-      );
-      lines.push("/// <summary>Metadata associated with a prompt.</summary>");
-      lines.push(`using Meta = ${metaType};`);
-    } else {
-      lines.push("public enum Meta", "{", "Default = 0", "}");
+  const schemaInnerLines: string[] = [];
+
+  // Meta types
+  if (anyTypes(metaSchema)) {
+    const metaTypesCode = writeSchemaTypes(metaSchema, unionContext, {
+      namespace: "Schema",
+    });
+    if (metaTypesCode.trim()) {
+      schemaInnerLines.push(metaTypesCode);
     }
-    lines.push(`}  // namespace ${rootNamespace}`);
-    sections.push(lines.join("\n"));
   }
 
-  if (anyTypes(metaSchema)) {
-    sections.push(
-      writeSchema(
-        metaSchema,
+  if (singleNamespace) {
+    const sharedNamespace = "Schema.Shared";
+    if (anyTypes(singleNamespace.schema)) {
+      const sharedTypesCode = writeSchemaTypes(
+        singleNamespace.schema,
         unionContext,
         {
-          namespace: "Schema.Meta",
+          namespace: sharedNamespace,
         },
-        config,
-      ),
-    );
-  }
+      );
+      if (sharedTypesCode.trim()) {
+        schemaInnerLines.push(
+          ["public static class Shared", "{", sharedTypesCode, "}"].join("\n"),
+        );
+      }
+    }
+    for (const template of singleNamespace.templates) {
+      const templateName = toCSharpName(template.template.name.text);
+      const templateTypesCode = writeSchemaTypes(
+        template.schema,
+        unionContext,
+        {
+          namespace: `Schema.${templateName}`,
+          sharedNamespace,
+        },
+      );
+      if (templateTypesCode.trim()) {
+        schemaInnerLines.push(
+          [
+            `public static class ${templateName}`,
+            "{",
+            templateTypesCode,
+            "}",
+          ].join("\n"),
+        );
+      }
+    }
+    for (const tool of Object.values(singleNamespace.tools)) {
+      const toolName = toCSharpName(capitalize(tool.tool.name.text));
+      const toolTypesCode = writeSchemaTypes(tool.schema, unionContext, {
+        namespace: `Schema.${toolName}`,
+        sharedNamespace,
+      });
+      if (toolTypesCode.trim()) {
+        schemaInnerLines.push(
+          [`public static class ${toolName}`, "{", toolTypesCode, "}"].join(
+            "\n",
+          ),
+        );
+      }
+    }
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const nsName = toCSharpName(namespace.name);
+      const namespaceBase = `Schema.${nsName}.`;
+      const sharedNamespace = namespaceBase.concat("Shared");
+      const nsInnerLines: string[] = [];
 
-  const writeTypepromptNamespace = (namespace: ValidNamespaceResult): void => {
-    const namespaceBase = singleNamespace
-      ? "Schema."
-      : `Schema.${toCSharpName(namespace.name)}.`;
-    const sharedNamespace = namespaceBase.concat("Shared");
-    if (anyTypes(namespace.schema)) {
-      sections.push(
-        writeSchema(
+      if (anyTypes(namespace.schema)) {
+        const sharedTypesCode = writeSchemaTypes(
           namespace.schema,
           unionContext,
           {
             namespace: sharedNamespace,
           },
-          config,
-        ),
-      );
-    }
-    for (const template of namespace.templates) {
-      const templateName = toCSharpName(template.template.name.text);
-      sections.push(
-        writeSchema(
+        );
+        if (sharedTypesCode.trim()) {
+          nsInnerLines.push(
+            ["public static class Shared", "{", sharedTypesCode, "}"].join(
+              "\n",
+            ),
+          );
+        }
+      }
+      for (const template of namespace.templates) {
+        const templateName = toCSharpName(template.template.name.text);
+        const templateTypesCode = writeSchemaTypes(
           template.schema,
           unionContext,
           {
             namespace: namespaceBase.concat(templateName),
             sharedNamespace,
           },
-          config,
-        ),
-      );
-    }
-    for (const tool of Object.values(namespace.tools)) {
-      const toolName = tool.tool.name.text;
-      sections.push(
-        writeSchema(
-          tool.schema,
-          unionContext,
-          {
-            namespace: namespaceBase.concat(toCSharpName(capitalize(toolName))),
-            sharedNamespace,
-          },
-          config,
-        ),
-      );
-    }
-  };
+        );
+        if (templateTypesCode.trim()) {
+          nsInnerLines.push(
+            [
+              `public static class ${templateName}`,
+              "{",
+              templateTypesCode,
+              "}",
+            ].join("\n"),
+          );
+        }
+      }
+      for (const tool of Object.values(namespace.tools)) {
+        const toolName = toCSharpName(capitalize(tool.tool.name.text));
+        const toolTypesCode = writeSchemaTypes(tool.schema, unionContext, {
+          namespace: namespaceBase.concat(toolName),
+          sharedNamespace,
+        });
+        if (toolTypesCode.trim()) {
+          nsInnerLines.push(
+            [`public static class ${toolName}`, "{", toolTypesCode, "}"].join(
+              "\n",
+            ),
+          );
+        }
+      }
 
-  if (singleNamespace) {
-    writeTypepromptNamespace(singleNamespace);
-  } else {
-    for (const namespace of Object.values(namespaces)) {
-      writeTypepromptNamespace(namespace);
+      if (nsInnerLines.length > 0) {
+        schemaInnerLines.push(
+          [
+            `public static class ${nsName}`,
+            "{",
+            nsInnerLines.join("\n\n"),
+            "}",
+          ].join("\n"),
+        );
+      }
     }
   }
 
-  return sections.join("\n\n");
+  if (schemaInnerLines.length <= 0) return "";
+
+  return [
+    "public static class Schema",
+    "{",
+    schemaInnerLines.join("\n\n"),
+    "}",
+  ].join("\n");
 }
 
-function writeSpecDatatypes(
-  unionContext: UnionContext,
-  config: { readonly rootNamespace: string },
-): string {
+function writeSpecDatatypes(unionContext: UnionContext): string {
   const options = {
     namespace: "Spec",
-    file: true,
   } as const;
-  return writeSchema(runtimeTypesSchema, unionContext, options, config);
+  const specTypesCode = writeSchemaTypes(
+    runtimeTypesSchema,
+    unionContext,
+    options,
+  );
+  return ["file static class Spec", "{", specTypesCode, "}"].join("\n");
 }
 
 function writeTemplatesData(compilationResult: ValidCompilationResult): string {
@@ -779,20 +851,14 @@ type WriteSchemaOptions = {
   readonly topLevel?: true;
   readonly namespace: string;
   readonly sharedNamespace?: string;
-  readonly file?: true;
 };
 
-function writeSchema(
+function writeSchemaTypes(
   schema: Schema,
   unionContext: UnionContext,
   options: WriteSchemaOptions,
-  config: { readonly rootNamespace: string },
 ): string {
-  const { namespace } = options;
-  const { rootNamespace } = config;
   const lines: string[] = [];
-  lines.push(`namespace ${rootNamespace}.${namespace}`);
-  lines.push("{");
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
     let implementations: readonly string[] | undefined;
@@ -819,7 +885,6 @@ function writeSchema(
     }
     lines.push("");
   }
-  lines.push(`}  // namespace ${rootNamespace}.${namespace}`);
 
   return lines.join("\n");
 }
@@ -846,11 +911,7 @@ function writeTypepromptInterface(
       )
     : "";
 
-  const visibility = options.file ? "file" : "public";
-  const lines = [
-    `${visibility} sealed record ${typeName}${implementsClause}`,
-    "{",
-  ];
+  const lines = [`public sealed record ${typeName}${implementsClause}`, "{"];
 
   for (const field of fields) {
     const { type } = field;
@@ -902,13 +963,11 @@ function writeTypepromptUnion(
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
-  const visibility = options.file ? "file" : "public";
-  const converterVisibility = options.file ? "file" : "internal";
   switch (members.kind) {
     case "strings": {
       lines.push(
         "[JsonConverter(typeof(JsonStringEnumConverter))]",
-        `${visibility} enum ${typeName} {\n`,
+        `public enum ${typeName} {\n`,
       );
       for (const member of members.members) {
         const csharpName = toCSharpName(toPascalCase(member.value));
@@ -921,7 +980,7 @@ function writeTypepromptUnion(
     case "interfaces": {
       const { discriminator, discriminants } = members;
       lines.push(`[JsonConverter(typeof(${typeName}__Converter))]`);
-      lines.push(`${visibility} interface ${typeName}`, "{");
+      lines.push(`public interface ${typeName}`, "{");
 
       for (const commonField of members.commonFields) {
         const propertyName = toCSharpName(capitalize(commonField.name));
@@ -936,7 +995,7 @@ function writeTypepromptUnion(
 
       lines.push(
         "",
-        `${converterVisibility} sealed class ${typeName}__Converter : JsonConverter<${typeName}>`,
+        `internal sealed class ${typeName}__Converter : JsonConverter<${typeName}>`,
         "{",
         `public override ${typeName}? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {`,
         "using var doc = JsonDocument.ParseValue(ref reader);",
@@ -1128,7 +1187,7 @@ function makeUnionContext(
     }
   };
 
-  processSchema(compilationResult.metaSchema, "Schema.Meta.");
+  processSchema(compilationResult.metaSchema, "Schema");
   for (const namespace of Object.values(compilationResult.namespaces)) {
     const namespaceBase = singleNamespace
       ? "Schema."

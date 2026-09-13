@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using TypePrompt03.PromptTools;
+using TypePrompt03;
 using Xunit;
 
 public class Test01Basics_Translate
@@ -202,7 +202,7 @@ public class Test02StructuredOutput_TriageTicket
     [Fact]
     public void TestMetaContainsDeclaredModelAndTemperature()
     {
-        Assert.Equal(TypePrompt02.Schema.Meta.Meta_Model.Gpt4o, _prompt.Meta.Model);
+        Assert.Equal(TypePrompt02.Schema.Meta_Model.Gpt4o, _prompt.Meta.Model);
         Assert.Equal(0.2, _prompt.Meta.Temperature);
     }
 }

@@ -7,7 +7,10 @@ CODEGEN:
   - Python:
     - disable lints
     - _TOOL_NAME_TO_METHOD_NAME: the key should actually be an ID
+  - Kotlin, Dart?
+    - executeTools should expect an Iterable...
   - C#:
+    - No longer add systematic '{' after 'if' in RuntimeLogic
     - file-scoped namespace and static classes???
   - Codegen guide in each language
   - Ask AI to review all the generated code...

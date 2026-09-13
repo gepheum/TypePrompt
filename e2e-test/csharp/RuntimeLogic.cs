@@ -48,738 +48,662 @@ using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 // </static:csharp-imports>
 
-namespace TypePromptRuntime
-{
-    using Meta = object;
+namespace TypePromptRuntime;
 
-    // <static:csharp-public-types>
+using Meta = object;
+
+// <static:csharp-public-types>
+/// <summary>
+/// A fully resolved prompt ready to be sent to an LLM.
+/// </summary>
+/// <remarks>
+/// The <typeparamref name="TOutput"/> type is the parsed response type for the template.
+/// The <typeparamref name="TToolExecutor"/> type is the object whose methods implement the
+/// template's tools, or <c>NoTools</c> when no tools are available.
+/// Build and send the API request using <see cref="SystemMessage"/>, <see cref="UserMessage"/>,
+/// <see cref="Examples"/>, and <see cref="Tools"/>. If the model requests tool calls, dispatch
+/// them with <see cref="ExecuteTools(IEnumerable{ToolCall}, object)"/> and then parse the final
+/// response with <see cref="ParseResponse(string)"/>.
+/// </remarks>
+public sealed record Prompt<TOutput, TToolExecutor>(
+    Meta Meta,
+    string SystemMessage,
+    string UserMessage,
+    IReadOnlyList<FewShotExample> Examples,
+    IReadOnlyDictionary<string, Tool> Tools,
+    OutputFormat OutputFormat,
+    TemplateId TemplateId
+)
+{
     /// <summary>
-    /// A fully resolved prompt ready to be sent to an LLM.
+    /// Parse an LLM response into the expected output type.
     /// </summary>
-    /// <remarks>
-    /// The <typeparamref name="TOutput"/> type is the parsed response type for the template.
-    /// The <typeparamref name="TToolExecutor"/> type is the object whose methods implement the
-    /// template's tools, or <c>NoTools</c> when no tools are available.
-    /// Build and send the API request using <see cref="SystemMessage"/>, <see cref="UserMessage"/>,
-    /// <see cref="Examples"/>, and <see cref="Tools"/>. If the model requests tool calls, dispatch
-    /// them with <see cref="ExecuteTools(IEnumerable{ToolCall}, object)"/> and then parse the final
-    /// response with <see cref="ParseResponse(string)"/>.
-    /// </remarks>
-    public sealed record Prompt<TOutput, TToolExecutor>(
-        Meta Meta,
-        string SystemMessage,
-        string UserMessage,
-        IReadOnlyList<FewShotExample> Examples,
-        IReadOnlyDictionary<string, Tool> Tools,
-        OutputFormat OutputFormat,
-        TemplateId TemplateId
+    public TOutput ParseResponse(string response)
+    {
+        return ResponseParser.DoParseResponse<TOutput>(response, OutputFormat, TemplateId);
+    }
+
+    /// <summary>
+    /// Execute the given tool calls in parallel.
+    /// </summary>
+    public async Task<IReadOnlyList<ToolCallResponse>> ExecuteTools(
+        IEnumerable<ToolCall> toolCalls,
+        TToolExecutor toolExecutor,
+        CancellationToken cancellationToken = default
     )
     {
-        /// <summary>
-        /// Parse an LLM response into the expected output type.
-        /// </summary>
-        public TOutput ParseResponse(string response)
+        var @namespace = TemplateId.GetId().Split(':')[0];
+        var tasks = new List<Task<ToolCallResponse>>();
+        foreach (var call in toolCalls)
         {
-            return ResponseParser.DoParseResponse<TOutput>(response, OutputFormat, TemplateId);
+            tasks.Add(ToolExecution.ExecuteToolCall(call, @namespace, toolExecutor!, cancellationToken));
         }
+        return await Task.WhenAll(tasks);
+    }
+}
 
-        /// <summary>
-        /// Execute the given tool calls in parallel.
-        /// </summary>
-        public async Task<IReadOnlyList<ToolCallResponse>> ExecuteTools(
-            IEnumerable<ToolCall> toolCalls,
-            TToolExecutor toolExecutor,
-            CancellationToken cancellationToken = default
-        )
+/// <summary>
+/// The expected format of the model output.
+/// <para>
+/// Implementations: <see cref="JsonOutputFormat"/>, <see cref="TextOutputFormat"/>.
+/// </para>
+/// </summary>
+public abstract record OutputFormat;
+
+public sealed record JsonOutputFormat(
+    string StringifiedJsonSchema,
+    JsonElement JsonSchema
+) : OutputFormat;
+
+public sealed record TextOutputFormat : OutputFormat;
+
+public sealed record Tool(
+    string Name,
+    string Description,
+    JsonElement InputJsonSchema
+);
+
+/// <summary>
+/// A single few-shot example consisting of a user message, optional intermediate
+/// tool-call steps, and the expected response.
+/// </summary>
+public sealed record FewShotExample(
+    string UserMessage,
+    IReadOnlyList<IntermediateStepExample> IntermediateSteps,
+    string Response
+);
+
+/// <summary>
+/// One intermediate step within a few-shot example, containing the tool
+/// calls made at that step.
+/// </summary>
+public sealed record IntermediateStepExample(
+    IReadOnlyList<ToolCallExample> ToolCalls
+);
+
+/// <summary>A single tool call recorded inside an intermediate step.</summary>
+public sealed record ToolCallExample(
+    string CallId,
+    string ToolName,
+    string StringifiedInput,
+    string StringifiedOutput
+);
+
+public sealed record ToolCall(
+    string CallId,
+    string ToolName,
+    string StringifiedInput
+);
+
+public sealed record ToolCallResponse(
+    string CallId,
+    string StringifiedOutput
+);
+
+public enum NoTools
+{
+    NoTools,
+}
+// </static:csharp-public-types>
+
+// <generated>
+/// <summary>
+/// Uniquely identifies a prompt template.
+/// </summary>
+public enum TemplateId
+{
+    Todo,
+}
+
+public static class TemplateIdExtensions
+{
+    public static string GetId(this TemplateId templateId)
+    {
+        return templateId switch
         {
-            var @namespace = TemplateId.GetId().Split(':')[0];
-            var tasks = new List<Task<ToolCallResponse>>();
-            foreach (var call in toolCalls)
-            {
-                tasks.Add(ToolExecution.ExecuteToolCall(call, @namespace, toolExecutor!, cancellationToken));
-            }
-            return await Task.WhenAll(tasks);
-        }
-    }
-
-    /// <summary>
-    /// The expected format of the model output.
-    /// <para>
-    /// Implementations: <see cref="JsonOutputFormat"/>, <see cref="TextOutputFormat"/>.
-    /// </para>
-    /// </summary>
-    public abstract record OutputFormat;
-
-    public sealed record JsonOutputFormat(
-        string StringifiedJsonSchema,
-        JsonElement JsonSchema
-    ) : OutputFormat;
-
-    public sealed record TextOutputFormat : OutputFormat;
-
-    public sealed record Tool(
-        string Name,
-        string Description,
-        JsonElement InputJsonSchema
-    );
-
-    /// <summary>
-    /// A single few-shot example consisting of a user message, optional intermediate
-    /// tool-call steps, and the expected response.
-    /// </summary>
-    public sealed record FewShotExample(
-        string UserMessage,
-        IReadOnlyList<IntermediateStepExample> IntermediateSteps,
-        string Response
-    );
-
-    /// <summary>
-    /// One intermediate step within a few-shot example, containing the tool
-    /// calls made at that step.
-    /// </summary>
-    public sealed record IntermediateStepExample(
-        IReadOnlyList<ToolCallExample> ToolCalls
-    );
-
-    /// <summary>A single tool call recorded inside an intermediate step.</summary>
-    public sealed record ToolCallExample(
-        string CallId,
-        string ToolName,
-        string StringifiedInput,
-        string StringifiedOutput
-    );
-
-    public sealed record ToolCall(
-        string CallId,
-        string ToolName,
-        string StringifiedInput
-    );
-
-    public sealed record ToolCallResponse(
-        string CallId,
-        string StringifiedOutput
-    );
-
-    public enum NoTools
-    {
-        NoTools,
-    }
-    // </static:csharp-public-types>
-
-    // <generated>
-    /// <summary>
-    /// Uniquely identifies a prompt template.
-    /// </summary>
-    public enum TemplateId
-    {
-        Todo,
-    }
-
-    public static class TemplateIdExtensions
-    {
-        public static string GetId(this TemplateId templateId)
-        {
-            return templateId switch
-            {
-                TemplateId.Todo => "Main:Todo",
-                _ => throw new ArgumentOutOfRangeException(nameof(templateId)),
-            };
-        }
-    }
-
-    file static class ToolExecution
-    {
-        public static async Task<ToolCallResponse> ExecuteToolCall(
-            ToolCall toolCall,
-            string @namespace,
-            object executor,
-            CancellationToken cancellationToken = default
-        )
-        {
-            // Correct implementation will be produced by C# code generator.
-            throw new NotImplementedException();
-        }
-    }
-
-    file static class MetaParser
-    {
-        public static object? Parse(JsonElement? meta)
-        {
-            return meta;
-        }
-    }
-
-    file static class RuntimeData
-    {
-        public static readonly Spec.Templates TemplatesData = new()
-        {
-            Edition = 0,
-            Signature = "",
-            templates = new Dictionary<string, Spec.Template>(),
-            Tools = new Dictionary<string, Spec.Tool>(),
-            SingleNamespace = true,
-            SourceFiles = new Dictionary<string, string>(),
+            TemplateId.Todo => "Main:Todo",
+            _ => throw new ArgumentOutOfRangeException(nameof(templateId)),
         };
     }
+}
 
-    public class Prompts
+file static class ToolExecution
+{
+    public static async Task<ToolCallResponse> ExecuteToolCall(
+        ToolCall toolCall,
+        string @namespace,
+        object executor,
+        CancellationToken cancellationToken = default
+    )
     {
-        public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));
-
-        internal Prompts(Internal.IRenderer renderer) { _ = renderer; }
+        // Correct implementation will be produced by C# code generator.
+        throw new NotImplementedException();
     }
-    // </generated>
+}
 
-    // <static:csharp-logic>
-    namespace Internal
+file static class MetaParser
+{
+    public static object? Parse(JsonElement? meta)
     {
-        internal interface IRenderer
-        {
-            Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
-        }
-    }  // namespace Internal
+        return meta;
+    }
+}
 
-    file static class ResponseParser
+file static class RuntimeData
+{
+    public static readonly Spec.Templates TemplatesData = new()
     {
-        public static TOutput DoParseResponse<TOutput>(
-            string response,
-            OutputFormat outputFormat,
-            TemplateId templateId
-        )
+        Edition = 0,
+        Signature = "",
+        templates = new Dictionary<string, Spec.Template>(),
+        Tools = new Dictionary<string, Spec.Tool>(),
+        SingleNamespace = true,
+        SourceFiles = new Dictionary<string, string>(),
+    };
+}
+
+public class Prompts
+{
+    public static Prompts Default { get; } = new(new SpecRenderer(RuntimeData.TemplatesData));
+
+    internal Prompts(IRenderer renderer) { _ = renderer; }
+}
+// </generated>
+
+// <static:csharp-logic>
+internal interface IRenderer
+{
+    Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input);
+}
+
+file static class ResponseParser
+{
+    public static TOutput DoParseResponse<TOutput>(
+        string response,
+        OutputFormat outputFormat,
+        TemplateId templateId
+    )
+    {
+        if (outputFormat is JsonOutputFormat)
         {
-            if (outputFormat is JsonOutputFormat)
+            response = response.Trim();
+            if (response.StartsWith("```"))
             {
+                if (response.StartsWith("```json"))
+                    response = response["```json".Length..];
+                else
+                    response = response["```".Length..];
+                if (response.EndsWith("```"))
+                    response = response[..^"```".Length];
                 response = response.Trim();
-                if (response.StartsWith("```"))
-                {
-                    if (response.StartsWith("```json"))
-                    {
-                        response = response["```json".Length..];
-                    }
-                    else
-                    {
-                        response = response["```".Length..];
-                    }
-                    if (response.EndsWith("```"))
-                    {
-                        response = response[..^"```".Length];
-                    }
-                    response = response.Trim();
-                }
-                try
-                {
-                    return JsonSerializer.Deserialize<TOutput>(response)!;
-                }
-                catch (JsonException e)
-                {
-                    throw new JsonException($"Template '{templateId.GetId()}': {e.Message}", e);
-                }
             }
-            else if (outputFormat is TextOutputFormat)
+            try
             {
-                return (TOutput)(object)response;
+                return JsonSerializer.Deserialize<TOutput>(response)!;
             }
-            throw new InvalidOperationException($"Unsupported output format: {outputFormat}");
+            catch (JsonException e)
+            {
+                throw new JsonException($"Template '{templateId.GetId()}': {e.Message}", e);
+            }
         }
+        else if (outputFormat is TextOutputFormat)
+            return (TOutput)(object)response;
+        throw new InvalidOperationException($"Unsupported output format: {outputFormat}");
     }
+}
 
-    file class SpecRenderer(Spec.Templates spec) : Internal.IRenderer
+file class SpecRenderer(Spec.Templates spec) : IRenderer
+{
+    public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
     {
-        public Prompt<Output, ToolExecutor> Render<Input, Output, ToolExecutor>(string templateId, Input input)
+        var template = spec.templates[templateId];
+
+        var inputElement = JsonSerializer.SerializeToElement(input);
+        var inputObj = JsonElementToObject(inputElement);
+
+        var snippets = template.Snippets;
+        var contents = template.Contents;
+
+        JsonElement? metaElement;
+        string systemMessage;
+        string userMessage;
+        IReadOnlyList<FewShotExample> examples;
+
+        if (contents is Spec.TemplateContents_KindNoVariants noVariants)
         {
-            var template = spec.templates[templateId];
+            var content = noVariants.Content;
+            metaElement = content.Meta;
+            systemMessage = RenderBody(content.System, inputObj, snippets);
+            var userBody = content.User ?? Array.Empty<Spec.BodyPiece>();
+            userMessage = RenderBody(userBody, inputObj, snippets);
+            examples = RenderExamples(content.Examples, userBody, template);
+        }
+        else
+        {
+            var variants = (Spec.TemplateContents_KindVariants)contents;
+            var inputDict = (IDictionary<string, object?>)inputObj!;
+            var variant = inputDict["variant"]!.ToString()!;
+            var variantContent = variants.Variants[variant];
+            var defaultContent = variants.DefaultContent;
 
-            var inputElement = JsonSerializer.SerializeToElement(input);
-            var inputObj = JsonElementToObject(inputElement);
+            metaElement = variantContent.Meta ?? defaultContent.Meta;
+            var systemBody = variantContent.System ?? defaultContent.System ?? Array.Empty<Spec.BodyPiece>();
+            var userBody = variantContent.User ?? defaultContent.User ?? Array.Empty<Spec.BodyPiece>();
+            systemMessage = RenderBody(systemBody, inputObj, snippets);
+            userMessage = RenderBody(userBody, inputObj, snippets);
+            var rawExamples = variantContent.Examples ?? defaultContent.Examples;
+            examples = RenderExamples(rawExamples, userBody, template);
+        }
 
-            var snippets = template.Snippets;
-            var contents = template.Contents;
+        var meta = MetaParser.Parse(metaElement);
 
-            JsonElement? metaElement;
-            string systemMessage;
-            string userMessage;
-            IReadOnlyList<FewShotExample> examples;
-
-            if (contents is Spec.TemplateContents_KindNoVariants noVariants)
-            {
-                var content = noVariants.Content;
-                metaElement = content.Meta;
-                systemMessage = RenderBody(content.System, inputObj, snippets);
-                var userBody = content.User ?? Array.Empty<Spec.BodyPiece>();
-                userMessage = RenderBody(userBody, inputObj, snippets);
-                examples = RenderExamples(content.Examples, userBody, template);
-            }
-            else
-            {
-                var variants = (Spec.TemplateContents_KindVariants)contents;
-                var inputDict = (IDictionary<string, object?>)inputObj!;
-                var variant = inputDict["variant"]!.ToString()!;
-                var variantContent = variants.Variants[variant];
-                var defaultContent = variants.DefaultContent;
-
-                metaElement = variantContent.Meta ?? defaultContent.Meta;
-                var systemBody = variantContent.System ?? defaultContent.System ?? Array.Empty<Spec.BodyPiece>();
-                var userBody = variantContent.User ?? defaultContent.User ?? Array.Empty<Spec.BodyPiece>();
-                systemMessage = RenderBody(systemBody, inputObj, snippets);
-                userMessage = RenderBody(userBody, inputObj, snippets);
-                var rawExamples = variantContent.Examples ?? defaultContent.Examples;
-                examples = RenderExamples(rawExamples, userBody, template);
-            }
-
-            var meta = MetaParser.Parse(metaElement);
-
-            var tools = new Dictionary<string, Tool>();
-            foreach (var templateTool in template.Tools)
-            {
-                var toolSpec = spec.Tools[templateTool.Id];
-                tools[templateTool.Name] = new Tool(
-                    Name: templateTool.Name,
-                    Description: toolSpec.Description,
-                    InputJsonSchema: toolSpec.InputJsonSchema
-                );
-            }
-
-            OutputFormat outputFormat = template.OutputFormat switch
-            {
-                Spec.OutputFormat.Json => new JsonOutputFormat(
-                    template.OutputJsonSchema.GetRawText(),
-                    template.OutputJsonSchema
-                ),
-                Spec.OutputFormat.Text => new TextOutputFormat(),
-                _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),
-            };
-
-            var resolvedTemplateId = Enum.GetValues<TemplateId>()
-                .First(t => t.GetId() == templateId);
-
-            return new Prompt<Output, ToolExecutor>(
-                Meta: meta!,
-                SystemMessage: systemMessage,
-                UserMessage: userMessage,
-                Examples: examples,
-                Tools: tools,
-                OutputFormat: outputFormat,
-                TemplateId: resolvedTemplateId
+        var tools = new Dictionary<string, Tool>();
+        foreach (var templateTool in template.Tools)
+        {
+            var toolSpec = spec.Tools[templateTool.Id];
+            tools[templateTool.Name] = new Tool(
+                Name: templateTool.Name,
+                Description: toolSpec.Description,
+                InputJsonSchema: toolSpec.InputJsonSchema
             );
         }
 
-        private static object? JsonElementToObject(JsonElement element)
+        OutputFormat outputFormat = template.OutputFormat switch
         {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    {
-                        var dict = new Dictionary<string, object?>();
-                        foreach (var prop in element.EnumerateObject())
-                        {
-                            dict[prop.Name] = JsonElementToObject(prop.Value);
-                        }
-                        return dict;
-                    }
-                case JsonValueKind.Array:
-                    {
-                        var list = new List<object?>();
-                        foreach (var item in element.EnumerateArray())
-                        {
-                            list.Add(JsonElementToObject(item));
-                        }
-                        return list;
-                    }
-                case JsonValueKind.String:
-                    {
-                        return element.GetString();
-                    }
-                case JsonValueKind.Number:
-                    {
-                        if (element.TryGetInt64(out var l))
-                        {
-                            if (l >= int.MinValue && l <= int.MaxValue)
-                            {
-                                return (int)l;
-                            }
-                            return l;
-                        }
-                        if (element.TryGetDecimal(out var d))
-                        {
-                            return d;
-                        }
-                        return element.GetDouble();
-                    }
-                case JsonValueKind.True:
-                    {
-                        return true;
-                    }
-                case JsonValueKind.False:
-                    {
-                        return false;
-                    }
-                case JsonValueKind.Null:
-                case JsonValueKind.Undefined:
-                default:
-                    {
-                        return null;
-                    }
-            }
-        }
+            Spec.OutputFormat.Json => new JsonOutputFormat(
+                template.OutputJsonSchema.GetRawText(),
+                template.OutputJsonSchema
+            ),
+            Spec.OutputFormat.Text => new TextOutputFormat(),
+            _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),
+        };
 
-        private static object? Evaluate(Spec.Expression expression, object? val)
-        {
-            switch (expression)
-            {
-                case Spec.Expression_KindInput:
-                    {
-                        return val;
-                    }
-                case Spec.Expression_KindProperty propExpr:
-                    {
-                        var obj = (IDictionary<string, object?>)Evaluate(propExpr.Left, val)!;
-                        return obj[propExpr.Property];
-                    }
-                default:
-                    {
-                        return null;
-                    }
-            }
-        }
+        var resolvedTemplateId = Enum.GetValues<TemplateId>()
+            .First(t => t.GetId() == templateId);
 
-        private static string Indent(string text, string spaces)
-        {
-            if (string.IsNullOrEmpty(spaces))
-            {
-                return text;
-            }
-            return text.Replace("\n", "\n" + spaces);
-        }
+        return new Prompt<Output, ToolExecutor>(
+            Meta: meta!,
+            SystemMessage: systemMessage,
+            UserMessage: userMessage,
+            Examples: examples,
+            Tools: tools,
+            OutputFormat: outputFormat,
+            TemplateId: resolvedTemplateId
+        );
+    }
 
-        private static string FormatTable(object? v, Spec.InsertFormat fmt)
+    private static object? JsonElementToObject(JsonElement element)
+    {
+        switch (element.ValueKind)
         {
-            if (v is not IList<object?> list || list.Count == 0)
-            {
-                return "";
-            }
-            var separator = fmt == Spec.InsertFormat.Csv ? "," : "\t";
-            if (list[0] is not IDictionary<string, object?> firstRow)
-            {
-                return "";
-            }
-            var headers = firstRow.Keys.ToList();
-            var lines = new List<string>
+            case JsonValueKind.Object:
+                {
+                    var dict = new Dictionary<string, object?>();
+                    foreach (var prop in element.EnumerateObject())
+                    {
+                        dict[prop.Name] = JsonElementToObject(prop.Value);
+                    }
+                    return dict;
+                }
+            case JsonValueKind.Array:
+                {
+                    var list = new List<object?>();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        list.Add(JsonElementToObject(item));
+                    }
+                    return list;
+                }
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                {
+                    if (element.TryGetInt64(out var l))
+                    {
+                        if (l >= int.MinValue && l <= int.MaxValue)
+                            return (int)l;
+                        return l;
+                    }
+                    if (element.TryGetDecimal(out var d))
+                        return d;
+                    return element.GetDouble();
+                }
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            case JsonValueKind.Null:
+            case JsonValueKind.Undefined:
+            default:
+                return null;
+        }
+    }
+
+    private static object? Evaluate(Spec.Expression expression, object? val)
+    {
+        switch (expression)
+        {
+            case Spec.Expression_KindInput:
+                return val;
+            case Spec.Expression_KindProperty propExpr:
+                {
+                    var obj = (IDictionary<string, object?>)Evaluate(propExpr.Left, val)!;
+                    return obj[propExpr.Property];
+                }
+            default:
+                {
+                    return null;
+                }
+        }
+    }
+
+    private static string Indent(string text, string spaces)
+    {
+        if (string.IsNullOrEmpty(spaces))
+            return text;
+        return text.Replace("\n", "\n" + spaces);
+    }
+
+    private static string FormatTable(object? v, Spec.InsertFormat fmt)
+    {
+        if (v is not IList<object?> list || list.Count == 0)
+            return "";
+        var separator = fmt == Spec.InsertFormat.Csv ? "," : "\t";
+        if (list[0] is not IDictionary<string, object?> firstRow)
+            return "";
+        var headers = firstRow.Keys.ToList();
+        var lines = new List<string>
             {
                 string.Join(separator, headers)
             };
-            foreach (var item in list)
+        foreach (var item in list)
+        {
+            if (item is IDictionary<string, object?> row)
             {
-                if (item is IDictionary<string, object?> row)
+                var cells = new List<string>();
+                foreach (var key in headers)
                 {
-                    var cells = new List<string>();
-                    foreach (var key in headers)
+                    row.TryGetValue(key, out var cellVal);
+                    var str = cellVal?.ToString() ?? "";
+                    if (fmt == Spec.InsertFormat.Csv)
                     {
-                        row.TryGetValue(key, out var cellVal);
-                        var str = cellVal?.ToString() ?? "";
-                        if (fmt == Spec.InsertFormat.Csv)
-                        {
-                            if (str.Contains('"') || str.Contains(',') || str.Contains('\n') || str.Contains('\r'))
-                            {
-                                cells.Add("\"" + str.Replace("\"", "\"\"") + "\"");
-                            }
-                            else
-                            {
-                                cells.Add(str);
-                            }
-                        }
+                        if (str.Contains('"') || str.Contains(',') || str.Contains('\n') || str.Contains('\r'))
+                            cells.Add("\"" + str.Replace("\"", "\"\"") + "\"");
                         else
-                        {
-                            cells.Add(str
-                                .Replace("\\", "\\\\")
-                                .Replace("\t", "\\t")
-                                .Replace("\n", "\\n")
-                                .Replace("\r", "\\r"));
-                        }
+                            cells.Add(str);
                     }
-                    lines.Add(string.Join(separator, cells));
+                    else
+                    {
+                        cells.Add(str
+                            .Replace("\\", "\\\\")
+                            .Replace("\t", "\\t")
+                            .Replace("\n", "\\n")
+                            .Replace("\r", "\\r"));
+                    }
                 }
-            }
-            return string.Join("\n", lines);
-        }
-
-        private static string FormatValue(object? v, Spec.InsertFormat? fmt)
-        {
-            switch (fmt)
-            {
-                case null:
-                case Spec.InsertFormat.Text:
-                    {
-                        return v?.ToString() ?? "";
-                    }
-                case Spec.InsertFormat.Json:
-                    {
-                        var json = JsonSerializer.Serialize(v, new JsonSerializerOptions { WriteIndented = true });
-                        return json.Replace("\r\n", "\n");
-                    }
-                case Spec.InsertFormat.Yaml:
-                    {
-                        var yamlSerializer = new SerializerBuilder().Build();
-                        return yamlSerializer.Serialize(v).TrimEnd('\r', '\n').Replace("\r\n", "\n");
-                    }
-                case Spec.InsertFormat.Toon:
-                    {
-                        return ToonFormat.Toon.Encode(v, new ToonFormat.EncodeOptions()).Replace("\r\n", "\n");
-                    }
-                case Spec.InsertFormat.Csv:
-                case Spec.InsertFormat.Tsv:
-                    {
-                        return FormatTable(v, fmt.Value);
-                    }
-                default:
-                    {
-                        throw new ArgumentOutOfRangeException(nameof(fmt));
-                    }
+                lines.Add(string.Join(separator, cells));
             }
         }
-
-        private static string RenderBody(
-            IReadOnlyList<Spec.BodyPiece>? body,
-            object? inp,
-            IReadOnlyDictionary<string, Spec.Snippet> snippets
-        )
-        {
-            if (body == null || body.Count == 0)
-            {
-                return "";
-            }
-            var sb = new StringBuilder();
-            foreach (var piece in body)
-            {
-                switch (piece)
-                {
-                    case Spec.BodyPiece_KindText textPiece:
-                        {
-                            sb.Append(textPiece.Text);
-                            break;
-                        }
-                    case Spec.BodyPiece_KindInsertVal insertValPiece:
-                        {
-                            var val = Evaluate(insertValPiece.Val, inp);
-                            var formatted = FormatValue(val, insertValPiece.Format);
-                            sb.Append(Indent(formatted, insertValPiece.Indent));
-                            break;
-                        }
-                    case Spec.BodyPiece_KindInsertSnippet insertSnippetPiece:
-                        {
-                            var snippet = snippets[insertSnippetPiece.Snippet];
-                            var renderedSnippet = RenderSnippet(snippet, inp, snippets);
-                            sb.Append(Indent(renderedSnippet, insertSnippetPiece.Indent));
-                            break;
-                        }
-                    default:
-                        {
-                            throw new ArgumentOutOfRangeException(nameof(piece));
-                        }
-                }
-            }
-            return sb.ToString();
-        }
-
-        private static string RenderSnippet(
-            Spec.Snippet snippet,
-            object? inp,
-            IReadOnlyDictionary<string, Spec.Snippet> snippets
-        )
-        {
-            switch (snippet)
-            {
-                case Spec.Snippet_KindSnippet kindSnippet:
-                    {
-                        return RenderBody(kindSnippet.Body, inp, snippets);
-                    }
-                case Spec.Snippet_KindSnippetIf snippetIf:
-                    {
-                        var evalResult = Evaluate(snippetIf.Expression, inp);
-                        bool condition;
-                        switch (snippetIf.Is)
-                        {
-                            case Spec.Snippet_KindSnippetIf_Is.NotEmpty:
-                                {
-                                    if (evalResult is ICollection col)
-                                    {
-                                        condition = col.Count > 0;
-                                    }
-                                    else if (evalResult is string s)
-                                    {
-                                        condition = s.Length > 0;
-                                    }
-                                    else if (evalResult != null)
-                                    {
-                                        condition = true;
-                                    }
-                                    else
-                                    {
-                                        condition = false;
-                                    }
-                                    break;
-                                }
-                            case Spec.Snippet_KindSnippetIf_Is.NotNull:
-                                {
-                                    condition = evalResult != null;
-                                    break;
-                                }
-                            case Spec.Snippet_KindSnippetIf_Is.True:
-                                {
-                                    if (evalResult is bool b)
-                                    {
-                                        condition = b;
-                                    }
-                                    else if (evalResult is string str)
-                                    {
-                                        condition = str.Length > 0;
-                                    }
-                                    else if (evalResult is int i)
-                                    {
-                                        condition = i != 0;
-                                    }
-                                    else
-                                    {
-                                        condition = evalResult != null;
-                                    }
-                                    break;
-                                }
-                            default:
-                                {
-                                    throw new ArgumentOutOfRangeException();
-                                }
-                        }
-                        return RenderBody(condition ? snippetIf.Then : snippetIf.Else, inp, snippets);
-                    }
-                case Spec.Snippet_KindSnippetSwitch snippetSwitch:
-                    {
-                        var switchVal = Evaluate(snippetSwitch.Expression, inp);
-                        var switchKey = switchVal is bool boolVal ? (boolVal ? "true" : "false") : switchVal?.ToString() ?? "";
-                        return RenderBody(snippetSwitch.Branches[switchKey], inp, snippets);
-                    }
-                default:
-                    {
-                        throw new ArgumentOutOfRangeException(nameof(snippet));
-                    }
-            }
-        }
-
-        private static IReadOnlyList<FewShotExample> RenderExamples(
-            IReadOnlyList<Spec.FewShotExample>? examples,
-            IReadOnlyList<Spec.BodyPiece>? userBody,
-            Spec.Template tmpl
-        )
-        {
-            if (examples == null || examples.Count == 0)
-            {
-                return Array.Empty<FewShotExample>();
-            }
-            var result = new List<FewShotExample>();
-            foreach (var ex in examples)
-            {
-                var exInputObj = JsonElementToObject(ex.Input);
-                var exOutputObj = JsonElementToObject(ex.Output);
-                var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets);
-
-                var intermediateSteps = new List<IntermediateStepExample>();
-                foreach (var step in ex.IntermediateSteps)
-                {
-                    var toolCalls = new List<ToolCallExample>();
-                    foreach (var tc in step.ToolCalls)
-                    {
-                        toolCalls.Add(new ToolCallExample(
-                            CallId: tc.CallId,
-                            ToolName: tc.ToolName,
-                            StringifiedInput: JsonSerializer.Serialize(tc.Input),
-                            StringifiedOutput: JsonSerializer.Serialize(tc.Output)
-                        ));
-                    }
-                    intermediateSteps.Add(new IntermediateStepExample(toolCalls));
-                }
-
-                var outputFormat = tmpl.OutputFormat == Spec.OutputFormat.Json
-                    ? Spec.InsertFormat.Json
-                    : Spec.InsertFormat.Text;
-                var response = FormatValue(exOutputObj, outputFormat);
-
-                result.Add(new FewShotExample(
-                    UserMessage: userMessage,
-                    IntermediateSteps: intermediateSteps,
-                    Response: response
-                ));
-            }
-            return result;
-        }
+        return string.Join("\n", lines);
     }
 
-    /// <summary>
-    /// Use this with external frameworks that support template override injection
-    /// for experimentation or A/B testing.
-    /// <para>
-    /// When using overrides, inject the resulting <see cref="Prompts"/> instance as a dependency
-    /// rather than relying on <see cref="Prompts.Default"/>.
-    /// </para>
-    /// </summary>
-    public class TemplateOverrider
+    private static string FormatValue(object? v, Spec.InsertFormat? fmt)
     {
-        public static TemplateOverrider Instance { get; } = new();
-
-        private TemplateOverrider()
+        switch (fmt)
         {
-        }
-
-        public JsonElement TemplatesData()
-        {
-            return JsonSerializer.SerializeToElement(RuntimeData.TemplatesData);
-        }
-
-        public Prompts ApplyOverrides(JsonElement overrides)
-        {
-            if (overrides.ValueKind != JsonValueKind.Object)
-            {
-                throw new ArgumentException("Overrides must be an object");
-            }
-            if (!overrides.TryGetProperty("signature", out var sigProp) ||
-                sigProp.GetString() != RuntimeData.TemplatesData.Signature)
-            {
-                throw new ArgumentException("Signature mismatch");
-            }
-            var mergedTemplates = new Dictionary<string, Spec.Template>(RuntimeData.TemplatesData.templates);
-            if (overrides.TryGetProperty("templates", out var templatesProp))
-            {
-                var overrideTemplates = JsonSerializer.Deserialize<Dictionary<string, Spec.Template>>(templatesProp)!;
-                foreach (var kv in overrideTemplates)
-                {
-                    mergedTemplates[kv.Key] = kv.Value;
-                }
-            }
-            var mergedTools = new Dictionary<string, Spec.Tool>(RuntimeData.TemplatesData.Tools);
-            if (overrides.TryGetProperty("tools", out var toolsProp))
-            {
-                var overrideTools = JsonSerializer.Deserialize<Dictionary<string, Spec.Tool>>(toolsProp)!;
-                foreach (var kv in overrideTools)
-                {
-                    mergedTools[kv.Key] = kv.Value;
-                }
-            }
-            var mergedData = new Spec.Templates
-            {
-                Edition = RuntimeData.TemplatesData.Edition,
-                Signature = RuntimeData.TemplatesData.Signature,
-                templates = mergedTemplates,
-                Tools = mergedTools,
-                SingleNamespace = RuntimeData.TemplatesData.SingleNamespace,
-                SourceFiles = RuntimeData.TemplatesData.SourceFiles,
-            };
-            return new Prompts(new SpecRenderer(mergedData));
+            case null:
+            case Spec.InsertFormat.Text:
+                return v?.ToString() ?? "";
+            case Spec.InsertFormat.Json:
+                var json = JsonSerializer.Serialize(v, new JsonSerializerOptions { WriteIndented = true });
+                return json.Replace("\r\n", "\n");
+            case Spec.InsertFormat.Yaml:
+                var yamlSerializer = new SerializerBuilder().Build();
+                return yamlSerializer.Serialize(v).TrimEnd('\r', '\n').Replace("\r\n", "\n");
+            case Spec.InsertFormat.Toon:
+                return ToonFormat.Toon.Encode(v, new ToonFormat.EncodeOptions()).Replace("\r\n", "\n");
+            case Spec.InsertFormat.Csv:
+            case Spec.InsertFormat.Tsv:
+                return FormatTable(v, fmt.Value);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(fmt));
         }
     }
-    // </static:csharp-logic>
+
+    private static string RenderBody(
+        IReadOnlyList<Spec.BodyPiece>? body,
+        object? inp,
+        IReadOnlyDictionary<string, Spec.Snippet> snippets
+    )
+    {
+        if (body == null || body.Count == 0)
+            return "";
+        var sb = new StringBuilder();
+        foreach (var piece in body)
+        {
+            switch (piece)
+            {
+                case Spec.BodyPiece_KindText textPiece:
+                    {
+                        sb.Append(textPiece.Text);
+                        break;
+                    }
+                case Spec.BodyPiece_KindInsertVal insertValPiece:
+                    {
+                        var val = Evaluate(insertValPiece.Val, inp);
+                        var formatted = FormatValue(val, insertValPiece.Format);
+                        sb.Append(Indent(formatted, insertValPiece.Indent));
+                        break;
+                    }
+                case Spec.BodyPiece_KindInsertSnippet insertSnippetPiece:
+                    {
+                        var snippet = snippets[insertSnippetPiece.Snippet];
+                        var renderedSnippet = RenderSnippet(snippet, inp, snippets);
+                        sb.Append(Indent(renderedSnippet, insertSnippetPiece.Indent));
+                        break;
+                    }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(piece));
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static string RenderSnippet(
+        Spec.Snippet snippet,
+        object? inp,
+        IReadOnlyDictionary<string, Spec.Snippet> snippets
+    )
+    {
+        switch (snippet)
+        {
+            case Spec.Snippet_KindSnippet kindSnippet:
+                return RenderBody(kindSnippet.Body, inp, snippets);
+            case Spec.Snippet_KindSnippetIf snippetIf:
+                {
+                    var evalResult = Evaluate(snippetIf.Expression, inp);
+                    bool condition;
+                    switch (snippetIf.Is)
+                    {
+                        case Spec.Snippet_KindSnippetIf_Is.NotEmpty:
+                            {
+                                if (evalResult is ICollection col)
+                                    condition = col.Count > 0;
+                                else if (evalResult is string s)
+                                    condition = s.Length > 0;
+                                else if (evalResult != null)
+                                    condition = true;
+                                else
+                                    condition = false;
+                                break;
+                            }
+                        case Spec.Snippet_KindSnippetIf_Is.NotNull:
+                            {
+                                condition = evalResult != null;
+                                break;
+                            }
+                        case Spec.Snippet_KindSnippetIf_Is.True:
+                            {
+                                if (evalResult is bool b)
+                                    condition = b;
+                                else if (evalResult is string str)
+                                    condition = str.Length > 0;
+                                else if (evalResult is int i)
+                                    condition = i != 0;
+                                else
+                                    condition = evalResult != null;
+                                break;
+                            }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                    return RenderBody(condition ? snippetIf.Then : snippetIf.Else, inp, snippets);
+                }
+            case Spec.Snippet_KindSnippetSwitch snippetSwitch:
+                {
+                    var switchVal = Evaluate(snippetSwitch.Expression, inp);
+                    var switchKey = switchVal is bool boolVal ? (boolVal ? "true" : "false") : switchVal?.ToString() ?? "";
+                    return RenderBody(snippetSwitch.Branches[switchKey], inp, snippets);
+                }
+            default:
+                {
+                    throw new ArgumentOutOfRangeException(nameof(snippet));
+                }
+        }
+    }
+
+    private static IReadOnlyList<FewShotExample> RenderExamples(
+        IReadOnlyList<Spec.FewShotExample>? examples,
+        IReadOnlyList<Spec.BodyPiece>? userBody,
+        Spec.Template tmpl
+    )
+    {
+        if (examples == null || examples.Count == 0)
+            return Array.Empty<FewShotExample>();
+        var result = new List<FewShotExample>();
+        foreach (var ex in examples)
+        {
+            var exInputObj = JsonElementToObject(ex.Input);
+            var exOutputObj = JsonElementToObject(ex.Output);
+            var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets);
+
+            var intermediateSteps = new List<IntermediateStepExample>();
+            foreach (var step in ex.IntermediateSteps)
+            {
+                var toolCalls = new List<ToolCallExample>();
+                foreach (var tc in step.ToolCalls)
+                {
+                    toolCalls.Add(new ToolCallExample(
+                        CallId: tc.CallId,
+                        ToolName: tc.ToolName,
+                        StringifiedInput: JsonSerializer.Serialize(tc.Input),
+                        StringifiedOutput: JsonSerializer.Serialize(tc.Output)
+                    ));
+                }
+                intermediateSteps.Add(new IntermediateStepExample(toolCalls));
+            }
+
+            var outputFormat = tmpl.OutputFormat == Spec.OutputFormat.Json
+                ? Spec.InsertFormat.Json
+                : Spec.InsertFormat.Text;
+            var response = FormatValue(exOutputObj, outputFormat);
+
+            result.Add(new FewShotExample(
+                UserMessage: userMessage,
+                IntermediateSteps: intermediateSteps,
+                Response: response
+            ));
+        }
+        return result;
+    }
 }
 
-// <generated:spec>
-namespace Spec
+/// <summary>
+/// Use this with external frameworks that support template override injection
+/// for experimentation or A/B testing.
+/// <para>
+/// When using overrides, inject the resulting <see cref="Prompts"/> instance as a dependency
+/// rather than relying on <see cref="Prompts.Default"/>.
+/// </para>
+/// </summary>
+public class TemplateOverrider
 {
-    file sealed record Templates
+    public static TemplateOverrider Instance { get; } = new();
+
+    private TemplateOverrider()
+    {
+    }
+
+    public JsonElement TemplatesData()
+    {
+        return JsonSerializer.SerializeToElement(RuntimeData.TemplatesData);
+    }
+
+    public Prompts ApplyOverrides(JsonElement overrides)
+    {
+        if (overrides.ValueKind != JsonValueKind.Object)
+            throw new ArgumentException("Overrides must be an object");
+        if (!overrides.TryGetProperty("signature", out var sigProp) ||
+            sigProp.GetString() != RuntimeData.TemplatesData.Signature)
+        {
+            throw new ArgumentException("Signature mismatch");
+        }
+        var mergedTemplates = new Dictionary<string, Spec.Template>(RuntimeData.TemplatesData.templates);
+        if (overrides.TryGetProperty("templates", out var templatesProp))
+        {
+            var overrideTemplates = JsonSerializer.Deserialize<Dictionary<string, Spec.Template>>(templatesProp)!;
+            foreach (var kv in overrideTemplates)
+            {
+                mergedTemplates[kv.Key] = kv.Value;
+            }
+        }
+        var mergedTools = new Dictionary<string, Spec.Tool>(RuntimeData.TemplatesData.Tools);
+        if (overrides.TryGetProperty("tools", out var toolsProp))
+        {
+            var overrideTools = JsonSerializer.Deserialize<Dictionary<string, Spec.Tool>>(toolsProp)!;
+            foreach (var kv in overrideTools)
+            {
+                mergedTools[kv.Key] = kv.Value;
+            }
+        }
+        var mergedData = new Spec.Templates
+        {
+            Edition = RuntimeData.TemplatesData.Edition,
+            Signature = RuntimeData.TemplatesData.Signature,
+            templates = mergedTemplates,
+            Tools = mergedTools,
+            SingleNamespace = RuntimeData.TemplatesData.SingleNamespace,
+            SourceFiles = RuntimeData.TemplatesData.SourceFiles,
+        };
+        return new Prompts(new SpecRenderer(mergedData));
+    }
+}
+// </static:csharp-logic>
+
+// <generated:spec>
+file static class Spec
+{
+    public sealed record Templates
     {
         [JsonPropertyName("edition")]
         public required int Edition { get; init; }
@@ -798,26 +722,24 @@ namespace Spec
         public required IReadOnlyDictionary<string, string> SourceFiles { get; init; }
     }
 
-    file sealed record Template
+    public sealed record Template
     {
-        [JsonPropertyName("name")]
-        public required string Name { get; init; }
-        [JsonPropertyName("namespace")]
-        public required string Namespace { get; init; }
+        [JsonPropertyName("id")]
+        public required string Id { get; init; }
         [JsonPropertyName("outputFormat")]
         public required OutputFormat OutputFormat { get; init; }
-        [JsonPropertyName("tools")]
-        public required IReadOnlyList<TemplateTool> Tools { get; init; }
-        [JsonPropertyName("contents")]
-        public required TemplateContents Contents { get; init; }
-        [JsonPropertyName("snippets")]
-        public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
         [JsonPropertyName("outputJsonSchema")]
         public required JsonElement OutputJsonSchema { get; init; }
+        [JsonPropertyName("tools")]
+        public required IReadOnlyList<TemplateTool> Tools { get; init; }
+        [JsonPropertyName("snippets")]
+        public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
+        [JsonPropertyName("contents")]
+        public required TemplateContents Contents { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum OutputFormat
+    public enum OutputFormat
     {
         [JsonStringEnumMemberName("json")]
         Json,
@@ -825,31 +747,31 @@ namespace Spec
         Text,
     }
 
-    file sealed record TemplateTool
+    public sealed record TemplateTool
     {
         [JsonPropertyName("id")]
         public required string Id { get; init; }
         [JsonPropertyName("name")]
         public required string Name { get; init; }
+        [JsonPropertyName("description")]
+        public required string Description { get; init; }
+        [JsonPropertyName("inputJsonSchema")]
+        public required JsonElement InputJsonSchema { get; init; }
     }
 
-    /// <summary>
-    /// Implementations: <see cref="TemplateContents_KindNoVariants"/>, <see cref="TemplateContents_KindVariants"/>.
-    /// </summary>
     [JsonConverter(typeof(TemplateContents__Converter))]
-    file interface TemplateContents
-    { }
+    public interface TemplateContents
+    {
+    }
 
-    file sealed class TemplateContents__Converter : JsonConverter<TemplateContents>
+    internal sealed class TemplateContents__Converter : JsonConverter<TemplateContents>
     {
         public override TemplateContents? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
-            {
                 throw new JsonException("Missing discriminator property 'kind'");
-            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -865,18 +787,16 @@ namespace Spec
         }
     }
 
-    file sealed record TemplateContents_KindNoVariants : TemplateContents
+    public sealed record TemplateContents_KindNoVariants : TemplateContents
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "no-variants";
         [JsonPropertyName("content")]
         public required TemplateContent Content { get; init; }
     }
 
-    file sealed record TemplateContents_KindVariants : TemplateContents
+    public sealed record TemplateContents_KindVariants : TemplateContents
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "variants";
         [JsonPropertyName("variants")]
@@ -885,7 +805,7 @@ namespace Spec
         public required TemplateContent DefaultContent { get; init; }
     }
 
-    file sealed record TemplateContent
+    public sealed record TemplateContent
     {
         [JsonPropertyName("meta")]
         public JsonElement? Meta { get; init; }
@@ -897,28 +817,26 @@ namespace Spec
         public IReadOnlyList<FewShotExample>? Examples { get; init; }
     }
 
-    file sealed record FewShotExample
+    public sealed record FewShotExample
     {
         [JsonPropertyName("input")]
         public required JsonElement Input { get; init; }
-        [JsonPropertyName("output")]
-        public required JsonElement Output { get; init; }
         [JsonPropertyName("intermediateSteps")]
         public required IReadOnlyList<FewShotExample_IntermediateSteps> IntermediateSteps { get; init; }
+        [JsonPropertyName("output")]
+        public required JsonElement Output { get; init; }
     }
 
-    file sealed record FewShotExample_IntermediateSteps
+    public sealed record FewShotExample_IntermediateSteps
     {
         [JsonPropertyName("toolCalls")]
         public required IReadOnlyList<ToolCallExample> ToolCalls { get; init; }
     }
 
-    file sealed record ToolCallExample
+    public sealed record ToolCallExample
     {
         [JsonPropertyName("callId")]
         public required string CallId { get; init; }
-        [JsonPropertyName("toolId")]
-        public required string ToolId { get; init; }
         [JsonPropertyName("toolName")]
         public required string ToolName { get; init; }
         [JsonPropertyName("input")]
@@ -928,22 +846,24 @@ namespace Spec
     }
 
     /// <summary>
+    /// A single piece of a system, user, or snippet body template.
+    /// <para>
     /// Implementations: <see cref="BodyPiece_KindText"/>, <see cref="BodyPiece_KindInsertVal"/>, <see cref="BodyPiece_KindInsertSnippet"/>.
+    /// </para>
     /// </summary>
     [JsonConverter(typeof(BodyPiece__Converter))]
-    file interface BodyPiece
-    { }
+    public interface BodyPiece
+    {
+    }
 
-    file sealed class BodyPiece__Converter : JsonConverter<BodyPiece>
+    internal sealed class BodyPiece__Converter : JsonConverter<BodyPiece>
     {
         public override BodyPiece? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
-            {
                 throw new JsonException("Missing discriminator property 'kind'");
-            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -960,47 +880,41 @@ namespace Spec
         }
     }
 
-    file sealed record BodyPiece_KindText : BodyPiece
+    public sealed record BodyPiece_KindText : BodyPiece
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "text";
         [JsonPropertyName("text")]
         public required string Text { get; init; }
     }
 
-    file sealed record BodyPiece_KindInsertVal : BodyPiece
+    public sealed record BodyPiece_KindInsertVal : BodyPiece
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "insert-val";
         [JsonPropertyName("val")]
         public required Expression Val { get; init; }
-        [JsonPropertyName("format")]
-        public required InsertFormat Format { get; init; }
         [JsonPropertyName("indent")]
         public required string Indent { get; init; }
+        [JsonPropertyName("format")]
+        public InsertFormat? Format { get; init; }
     }
 
-    file sealed record BodyPiece_KindInsertSnippet : BodyPiece
+    public sealed record BodyPiece_KindInsertSnippet : BodyPiece
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "insert-snippet";
-        /// <summary>
-        /// Snippet name.
-        /// </summary>
         [JsonPropertyName("snippet")]
         public required string Snippet { get; init; }
-        /// <summary>
-        /// Only contains whitespace characters.
-        /// </summary>
         [JsonPropertyName("indent")]
         public required string Indent { get; init; }
     }
 
+    /// <summary>
+    /// Format specification for inserting a variable into a template body.
+    /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum InsertFormat
+    public enum InsertFormat
     {
         [JsonStringEnumMemberName("text")]
         Text,
@@ -1017,22 +931,24 @@ namespace Spec
     }
 
     /// <summary>
+    /// An expression that evaluates to a value given the template input.
+    /// <para>
     /// Implementations: <see cref="Expression_KindInput"/>, <see cref="Expression_KindProperty"/>.
+    /// </para>
     /// </summary>
     [JsonConverter(typeof(Expression__Converter))]
-    file interface Expression
-    { }
+    public interface Expression
+    {
+    }
 
-    file sealed class Expression__Converter : JsonConverter<Expression>
+    internal sealed class Expression__Converter : JsonConverter<Expression>
     {
         public override Expression? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
-            {
                 throw new JsonException("Missing discriminator property 'kind'");
-            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -1048,16 +964,14 @@ namespace Spec
         }
     }
 
-    file sealed record Expression_KindInput : Expression
+    public sealed record Expression_KindInput : Expression
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "input";
     }
 
-    file sealed record Expression_KindProperty : Expression
+    public sealed record Expression_KindProperty : Expression
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "property";
         [JsonPropertyName("left")]
@@ -1067,22 +981,24 @@ namespace Spec
     }
 
     /// <summary>
+    /// A reusable body snippet, optionally with conditional or switch-based variants.
+    /// <para>
     /// Implementations: <see cref="Snippet_KindSnippet"/>, <see cref="Snippet_KindSnippetIf"/>, <see cref="Snippet_KindSnippetSwitch"/>.
+    /// </para>
     /// </summary>
     [JsonConverter(typeof(Snippet__Converter))]
-    file interface Snippet
-    { }
+    public interface Snippet
+    {
+    }
 
-    file sealed class Snippet__Converter : JsonConverter<Snippet>
+    internal sealed class Snippet__Converter : JsonConverter<Snippet>
     {
         public override Snippet? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
-            {
                 throw new JsonException("Missing discriminator property 'kind'");
-            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -1099,18 +1015,16 @@ namespace Spec
         }
     }
 
-    file sealed record Snippet_KindSnippet : Snippet
+    public sealed record Snippet_KindSnippet : Snippet
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet";
         [JsonPropertyName("body")]
         public required IReadOnlyList<BodyPiece> Body { get; init; }
     }
 
-    file sealed record Snippet_KindSnippetIf : Snippet
+    public sealed record Snippet_KindSnippetIf : Snippet
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet-if";
         [JsonPropertyName("expression")]
@@ -1124,19 +1038,18 @@ namespace Spec
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    file enum Snippet_KindSnippetIf_Is
+    public enum Snippet_KindSnippetIf_Is
     {
-        [JsonStringEnumMemberName("not-null")]
-        NotNull,
         [JsonStringEnumMemberName("not-empty")]
         NotEmpty,
+        [JsonStringEnumMemberName("not-null")]
+        NotNull,
         [JsonStringEnumMemberName("true")]
         True,
     }
 
-    file sealed record Snippet_KindSnippetSwitch : Snippet
+    public sealed record Snippet_KindSnippetSwitch : Snippet
     {
-        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet-switch";
         [JsonPropertyName("expression")]
@@ -1145,7 +1058,7 @@ namespace Spec
         public required IReadOnlyDictionary<string, IReadOnlyList<BodyPiece>> Branches { get; init; }
     }
 
-    file sealed record Tool
+    public sealed record Tool
     {
         [JsonPropertyName("id")]
         public required string Id { get; init; }
@@ -1156,5 +1069,5 @@ namespace Spec
         [JsonPropertyName("inputJsonSchema")]
         public required JsonElement InputJsonSchema { get; init; }
     }
-}  // namespace Spec
+}  // class Spec
 // </generated:spec>
