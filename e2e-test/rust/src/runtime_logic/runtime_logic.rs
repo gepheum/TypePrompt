@@ -19,7 +19,7 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   async fn call_model<Output, ToolExecutor>(
+//   async fn execute_prompt<Output, ToolExecutor>(
 //       prompt: &Prompt<Output, ToolExecutor>,
 //       tool_executor: &ToolExecutor,
 //   ) -> Result<Output, Box<dyn std::error::Error + Send + Sync>>
@@ -36,7 +36,7 @@
 //
 // Then call it:
 //
-//   let output = call_model(&prompt, &NO_TOOLS).await?;
+//   let output = execute_prompt(&prompt, &NO_TOOLS).await?;
 // </static:rust-top-level>
 
 // <static:rust-imports>

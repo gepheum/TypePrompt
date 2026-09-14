@@ -19,7 +19,7 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   async Task<Output> CallModel<Output, ToolExecutor>(
+//   async Task<Output> ExecutePrompt<Output, ToolExecutor>(
 //       Prompt<Output, ToolExecutor> prompt,
 //       ToolExecutor toolExecutor,
 //       CancellationToken cancellationToken = default
@@ -35,7 +35,7 @@
 //
 // Then call it:
 //
-//   var output = await CallModel(prompt, NoTools.NoTools);
+//   var output = await ExecutePrompt(prompt, NoTools.NoTools);
 
 #pragma warning disable
 

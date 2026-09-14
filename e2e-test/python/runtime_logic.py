@@ -22,7 +22,7 @@ from runtime_types import _internal
 # message, user message, few-shot examples, available tools, and output format.
 # Wire it to your LLM API with a helper such as:
 #
-#   async def call_model[Output, ToolExecutor](
+#   async def execute_prompt[Output, ToolExecutor](
 #       prompt: Prompt[Output, ToolExecutor],
 #       tool_executor: ToolExecutor,
 #   ) -> Output:
@@ -35,7 +35,7 @@ from runtime_types import _internal
 #
 # Then call it:
 #
-#   output = await call_model(prompt, None)
+#   output = await execute_prompt(prompt, None)
 
 from dataclasses import dataclass
 from collections.abc import Iterable, Mapping, Sequence

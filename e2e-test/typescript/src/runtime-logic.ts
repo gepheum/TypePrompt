@@ -24,7 +24,7 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * Wire it to your LLM API with a helper such as:
  *
  * ```ts
- *   async function callModel<Id extends TemplateId>(
+ *   async function executePrompt<Id extends TemplateId>(
  *     prompt: Prompt<Id>,
  *     toolExecutor: ToolExecutor<Id>,
  *   ): Promise<Output<Id>> {
@@ -40,7 +40,7 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * Then call it:
  *
  * ```ts
- *   const output = await callModel(prompt, {});
+ *   const output = await executePrompt(prompt, {});
  * ```
  */
 

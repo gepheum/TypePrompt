@@ -17,7 +17,7 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   suspend fun <Output, ToolExecutor> callModel(
+//   suspend fun <Output, ToolExecutor> executePrompt(
 //       prompt: Prompt<Output, ToolExecutor>,
 //       toolExecutor: ToolExecutor,
 //   ): Output {
@@ -31,7 +31,7 @@
 //
 // Then call it:
 //
-//   val output = callModel(prompt, NoTools)
+//   val output = executePrompt(prompt, NoTools)
 
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 // </static:kotlin-top-level>

@@ -17,7 +17,7 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   func callModel<Output, ToolExecutor>(
+//   func executePrompt<Output, ToolExecutor>(
 //       prompt: Prompt<Output, ToolExecutor>,
 //       toolExecutor: ToolExecutor
 //   ) async throws -> Output {
@@ -31,7 +31,7 @@
 //
 // Then call it:
 //
-//   let output = try await callModel(prompt: prompt, toolExecutor: noTools)
+//   let output = try await executePrompt(prompt: prompt, toolExecutor: noTools)
 // </static:swift-top-level>
 
 // <static:swift-imports>

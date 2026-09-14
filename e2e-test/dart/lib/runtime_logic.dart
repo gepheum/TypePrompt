@@ -19,7 +19,7 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   Future<Output> callModel<Output, ToolExecutor>(
+//   Future<Output> executePrompt<Output, ToolExecutor>(
 //     Prompt<Output, ToolExecutor> prompt,
 //     ToolExecutor toolExecutor,
 //   ) async {
@@ -33,7 +33,7 @@
 //
 // Then call it:
 //
-//   final output = await callModel(prompt, noTools);
+//   final output = await executePrompt(prompt, noTools);
 // </static:dart-top-level>
 
 // <static:dart-imports>
