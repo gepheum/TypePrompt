@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated Rust code in your applicatio
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone Rust code that relies on standard ecosystem crates:
+TypePrompt generates clean, standalone Rust code that relies on these lightweight dependencies:
 
 In your `Cargo.toml`:
 

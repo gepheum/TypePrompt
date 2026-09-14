@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated Kotlin code in your applicat
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone Kotlin code that relies on standard lightweight libraries:
+TypePrompt generates clean, standalone Kotlin code that relies on these lightweight runtime dependencies:
 
 In your `build.gradle.kts`:
 
