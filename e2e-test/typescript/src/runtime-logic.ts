@@ -123,10 +123,10 @@ export type Tool<Input, Output> = {
  */
 export type OutputFormat<Id extends TemplateId> =
   | {
-      readonly kind: "json";
-      readonly schema: z.ZodType<Output<Id>>;
-      readonly jsonSchema: { readonly [key: string]: unknown };
-    }
+    readonly kind: "json";
+    readonly schema: z.ZodType<Output<Id>>;
+    readonly jsonSchema: { readonly [key: string]: unknown };
+  }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
 /** Names of the tools available from the given template. */
@@ -141,8 +141,8 @@ export type ToolExecutor<Id extends TemplateId> = {
     infer Input,
     infer Output
   >
-    ? (input: Input) => Promise<Output>
-    : never;
+  ? (input: Input) => Promise<Output>
+  : never;
 };
 
 export type ToolCall = {
@@ -233,13 +233,13 @@ async function executeToolsImpl<Id extends TemplateId>(
       const { callId, toolName, stringifiedInput } = call;
       const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
       if (!tool) {
-        throw new Error("Tool not found: ".concat(toolName));
+        throw new Error(`Tool not found: ${toolName}`);
       }
       const impl = (
         executor as Record<string, (input: unknown) => Promise<unknown>>
       )[toolName];
       if (!impl) {
-        throw new Error("Tool implementation not found: ".concat(toolName));
+        throw new Error(`Tool implementation not found: ${toolName}`);
       }
       let stringifiedOutput: string;
       try {
@@ -312,7 +312,7 @@ function renderTemplate<Id extends TemplateId>(
 ): Prompt<Id> {
   const template = templates.templates[templateId];
   if (!template) {
-    throw new Error("Template not found: ".concat(templateId));
+    throw new Error(`Template not found: ${templateId}`);
   }
   const { input: inputSchema, output: outputSchema } = zodSchemas[templateId]!;
   input = (inputSchema as z.ZodType<Input<Id>>).parse(input);
@@ -375,10 +375,10 @@ function renderTemplate<Id extends TemplateId>(
   const outputFormat = (
     template.outputFormat === "json"
       ? {
-          kind: "json",
-          schema: outputSchema,
-          jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-        }
+        kind: "json",
+        schema: outputSchema,
+        jsonSchema: template.outputJsonSchema as Record<string, unknown>,
+      }
       : { kind: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>
@@ -411,7 +411,7 @@ function renderBody<Input>(
       case "insert-snippet": {
         const snippet = snippets[piece.snippet];
         if (!snippet) {
-          throw new Error("Snippet not found: ".concat(piece.snippet));
+          throw new Error(`Snippet not found: ${piece.snippet}`);
         }
         return indent(renderSnippet(snippet, input, snippets), piece.indent);
       }
@@ -457,7 +457,7 @@ function renderSnippet<Input>(
       const evalResult = evaluate(input, expression);
       const branch = branches[evalResult as string];
       if (!branch) {
-        throw new Error("Branch not found: ".concat(evalResult as string));
+        throw new Error(`Branch not found: ${evalResult as string}`);
       }
       return renderBody(branch, input, snippets);
     }
