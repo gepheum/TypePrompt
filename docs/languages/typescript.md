@@ -72,7 +72,7 @@ Calling `.render()` returns a `prompt` object with everything needed to interact
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
 ```ts
-const rawModelOutput = response.choices[0].message.content ?? "";
+const rawModelOutput = response.choices[0]?.message.content ?? "";
 
 const result = prompt.parseResponse(rawModelOutput);
 // result is fully typed according to the template's output schema

@@ -75,7 +75,7 @@ Calling a `Render*` method returns a `Prompt<TOutput, TToolExecutor>` object wit
 Pass the LLM's response string to `prompt.ParseResponse()` to validate and parse it into your typed output:
 
 ```csharp
-var rawModelOutput = response.Value.Content[0].Text ?? "";
+var rawModelOutput = response.Value.Content.FirstOrDefault()?.Text ?? "";
 
 var result = prompt.ParseResponse(rawModelOutput);
 // result is fully typed according to the template's output schema

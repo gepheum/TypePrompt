@@ -79,7 +79,7 @@ Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
 ```dart
-final rawModelOutput = response.choices.first.message.content ?? "";
+final rawModelOutput = response.choices.firstOrNull?.message.content ?? "";
 
 final result = prompt.parseResponse(rawModelOutput);
 // result is fully typed according to the template's output schema
@@ -256,7 +256,11 @@ Future<Output> executePrompt<Output, ToolExecutor>(
     );
 
     final data = jsonDecode(httpResponse.body) as Map<String, dynamic>;
-    final choice = (data["choices"] as List).first as Map<String, dynamic>;
+    final choices = data["choices"] as List?;
+    if (choices == null || choices.isEmpty) {
+      throw Exception("No choices returned: ${httpResponse.body}");
+    }
+    final choice = choices.first as Map<String, dynamic>;
     final message = choice["message"] as Map<String, dynamic>;
     messages.add(message);
 

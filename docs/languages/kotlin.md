@@ -83,7 +83,7 @@ Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
 ```kotlin
-val rawModelOutput = response.choices.first().message.content ?: ""
+val rawModelOutput = response.choices.firstOrNull()?.message?.content ?: ""
 
 val result = prompt.parseResponse(rawModelOutput)
 // result is fully typed according to the template's output schema
@@ -269,7 +269,7 @@ suspend fun <Output, ToolExecutor> executePrompt(
             .build()
 
         val response = client.chat().completions().create(params)
-        val choice = response.choices().first()
+        val choice = response.choices().firstOrNull() ?: error("No choices returned by OpenAI")
         val message = choice.message()
 
         // If the model requested tool calls, execute them with prompt.executeTools()

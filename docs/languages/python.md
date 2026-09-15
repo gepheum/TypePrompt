@@ -74,7 +74,7 @@ Calling `.render()` returns a `Prompt` object with everything needed to interact
 Pass the LLM's response string to `prompt.parse_response()` to validate and parse it into your typed output:
 
 ```python
-raw_model_output = response.choices[0].message.content or ""
+raw_model_output = (response.choices[0].message.content or "") if response.choices else ""
 
 result = prompt.parse_response(raw_model_output)
 # result is fully typed according to the template's output schema
@@ -253,6 +253,9 @@ async def execute_prompt[Output, ToolExecutor](
                 else None
             ),
         )
+
+        if not response.choices:
+            raise RuntimeError("No choices returned by OpenAI")
 
         message = response.choices[0].message
         messages.append(message)

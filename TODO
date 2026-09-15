@@ -3,6 +3,7 @@ COMPILER:
 
 DOCUMENTATION:
   - Document the commands...
+  - Document disciminated unions
 
 CODEGEN:
   - Ask AI to compile all the examples I have...
