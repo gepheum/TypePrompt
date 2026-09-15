@@ -37,7 +37,7 @@
 //
 //   var output = await ExecutePrompt(prompt, NoTools.NoTools);
 
-#pragma warning disable
+#pragma warning disable CS0108, CS0162, CS0219, CS0414, CS0649, CS1591, CS8600, CS8601, CS8602, CS8603, CS8604, CS8618, CS8625, CS8669
 
 using System.Collections;
 using System.Text;
