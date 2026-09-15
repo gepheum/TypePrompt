@@ -126,7 +126,7 @@ class ResearchExecutor : ToolExecutor.WebSearch {
 
 ### 2. Dispatch Tool Calls
 
-Pass tool calls returned by the LLM (as a List, Set, or any `Iterable<ToolCall>`) to `prompt.executeTools()`:
+Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
 ```kotlin
 import com.example.prompts.ToolCall

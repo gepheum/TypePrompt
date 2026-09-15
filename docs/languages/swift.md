@@ -122,7 +122,7 @@ struct ResearchExecutor: ToolExecutor.WebSearch {
 
 ### 2. Dispatch Tool Calls
 
-Pass tool calls returned by the LLM (as an Array or any `Sequence<ToolCall>`) to `prompt.executeTools()`:
+Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
 ```swift
 import MyPrompts

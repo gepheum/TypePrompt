@@ -120,7 +120,7 @@ public class ResearchExecutor : ToolExecutor.IWebSearch
 
 ### 2. Dispatch Tool Calls
 
-Pass tool calls returned by the LLM (as an array, list, or any `IEnumerable<ToolCall>`) to `prompt.ExecuteTools()`:
+Pass tool calls returned by the LLM to `prompt.ExecuteTools()`:
 
 ```csharp
 using System.Text.Json;

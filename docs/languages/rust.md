@@ -125,7 +125,7 @@ impl tool_executor::WebSearch for ResearchExecutor {
 
 ### 2. Dispatch Tool Calls
 
-Pass tool calls returned by the LLM (as a slice or vector of `ToolCall`) to `prompt.execute_tools()`:
+Pass tool calls returned by the LLM to `prompt.execute_tools()`:
 
 ```rust
 use crate::gen::prompts::ToolCall;
