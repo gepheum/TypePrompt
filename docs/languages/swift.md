@@ -209,13 +209,13 @@ func executePrompt<Output, ToolExecutor>(
     apiKey: String = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
 ) async throws -> Output {
     // 1. Prepare tools for OpenAI from prompt.tools
-    let tools: [[String: Any]] = prompt.tools.values.map { t in
+    let tools: [[String: Any]] = try prompt.tools.values.map { t in
         [
             "type": "function",
             "function": [
                 "name": t.name,
                 "description": t.description,
-                "parameters": t.inputJsonSchema
+                "parameters": try jsonElementToAny(t.inputJsonSchema)
             ]
         ]
     }
@@ -249,7 +249,7 @@ func executePrompt<Output, ToolExecutor>(
                 "json_schema": [
                     "name": "output",
                     "strict": true,
-                    "schema": format.jsonSchema
+                    "schema": try jsonElementToAny(format.jsonSchema)
                 ]
             ]
         }
@@ -296,6 +296,11 @@ func executePrompt<Output, ToolExecutor>(
         let content = message["content"] as? String ?? ""
         return try prompt.parseResponse(content)
     }
+}
+
+func jsonElementToAny(_ elem: Prompts.JsonElement) throws -> Any {
+    let data = try JSONEncoder().encode(elem)
+    return try JSONSerialization.jsonObject(with: data)
 }
 
 // --- Usage ---

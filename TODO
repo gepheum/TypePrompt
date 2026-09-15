@@ -3,9 +3,11 @@ COMPILER:
 
 DOCUMENTATION:
   - Document the commands...
-  - Document disciminated unions
+  - In each language: document the PromptTools enum?
+  - Document disciminated unions?
 
 CODEGEN:
+  - Add template_input to Prompt?
   - Ask AI to compile all the examples I have...
   - Ask AI to review all the generated code...
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
@@ -19,7 +21,7 @@ GENDOC
 
 COMPILER:
   - if there is an error in the namespace schema, it seems like we also get an error for all the template/tool schemas which use 'shared.'
-  - verify no duplicate in tool names
+  - verify no duplicate in tool names in a prompt
 
 DOCUMENTATION:
   - write generated code language guide

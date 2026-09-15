@@ -1350,7 +1350,7 @@ public enum TypePromptRuntime {
     if let metaElement = metaElement, let metaObj = jsonElementToObject(metaElement) {
       meta = parseMeta(metaObj)
     } else {
-      meta = parseMeta(nil)
+      meta = parseMeta(nil as Any?)
     }
 
     var tools = [String: Tool]()

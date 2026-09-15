@@ -56,16 +56,16 @@ function writeAll(
       STATIC_SNIPPETS["swift-imports"],
       reformat(
         [
-          `enum ${rootNamespace} {`,
+          `public enum ${rootNamespace} {`,
           writePromptsStruct(compilationResult),
           STATIC_SNIPPETS["swift-public-types"],
           writeTemplateIdEnum(compilationResult),
-          writeToolExecutorProtocols(compilationResult, config),
+          writeToolExecutorProtocols(compilationResult),
           writePromptToolsEnums(compilationResult),
-          writeUserDefinedDatatypes(compilationResult, config),
+          writeUserDefinedDatatypes(compilationResult),
           writeSpecDatatypes(),
           writeTemplatesData(compilationResult),
-          writeExecuteToolCall(compilationResult, config),
+          writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["swift-logic"],
@@ -293,7 +293,6 @@ function writeTemplateIdEnum(
 
 function writeToolExecutorProtocols(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   if (Object.keys(compilationResult.tools).length <= 0) return "";
   const { singleNamespace, namespaces } = compilationResult;
@@ -305,11 +304,7 @@ function writeToolExecutorProtocols(
     for (const tool of Object.values(namespace.tools)) {
       const rawToolName = tool.tool.name.text;
       const interfaceName = capitalize(rawToolName);
-      const { inputType, outputType } = getToolTypes(
-        tool,
-        compilationResult,
-        config,
-      );
+      const { inputType, outputType } = getToolTypes(tool, compilationResult);
 
       lines.push(
         `/// Tool executor interface for the '${rawToolName}' tool.`,
@@ -331,11 +326,7 @@ function writeToolExecutorProtocols(
         const interfaceRef = toSwiftName(capitalize(rawToolName));
         const paramName = toSwiftName(rawToolName);
         const methodName = toSwiftName(rawToolName);
-        const { inputType, outputType } = getToolTypes(
-          tool,
-          compilationResult,
-          config,
-        );
+        const { inputType, outputType } = getToolTypes(tool, compilationResult);
         return {
           rawToolName,
           interfaceRef,
@@ -479,7 +470,6 @@ function writePromptToolsEnums(
 
 function writeUserDefinedDatatypes(
   compilationResult: ValidCompilationResult,
-  config: { rootNamespace: string },
 ): string {
   const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
@@ -495,7 +485,7 @@ function writeUserDefinedDatatypes(
         metaSchema,
         {
           topLevel: true,
-          typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+          typePrefix: "Schema.Meta.",
         },
       )
     : "Never?";
@@ -531,9 +521,9 @@ function writeUserDefinedDatatypes(
   );
   if (anyTypes(metaSchema)) {
     lines.push(
-      "enum Meta {",
+      "public enum Meta {",
       writeSchema(metaSchema, {
-        typePrefix: `${config.rootNamespace}.Schema.Meta.`,
+        typePrefix: "Schema.Meta.",
       }),
       "}\n",
     );
@@ -542,11 +532,11 @@ function writeUserDefinedDatatypes(
   const writeNamespace = (namespace: ValidNamespaceResult): void => {
     const swiftNamespace = toSwiftName(namespace.name);
     const typePrefixBase = singleNamespace
-      ? `${config.rootNamespace}.Schema.`
-      : `${config.rootNamespace}.Schema.${swiftNamespace}.`;
-    const sharedTypePrefix = `${config.rootNamespace}.Schema.Shared.`;
+      ? "Schema."
+      : `Schema.${swiftNamespace}.`;
+    const sharedTypePrefix = "Schema.Shared.";
     if (anyTypes(namespace.schema)) {
-      lines.push("enum Shared {");
+      lines.push("public enum Shared {");
       lines.push(
         writeSchema(namespace.schema, {
           typePrefix: sharedTypePrefix,
@@ -557,7 +547,7 @@ function writeUserDefinedDatatypes(
     for (const template of namespace.templates) {
       const templateSwiftName = toSwiftName(template.template.name.text);
       const typePrefix = typePrefixBase.concat(templateSwiftName, ".");
-      lines.push(`enum ${templateSwiftName} {`);
+      lines.push(`public enum ${templateSwiftName} {`);
       lines.push(
         writeSchema(template.schema, {
           typePrefix,
@@ -569,7 +559,7 @@ function writeUserDefinedDatatypes(
     for (const tool of Object.values(namespace.tools)) {
       const toolSwiftName = toSwiftName(capitalize(tool.tool.name.text));
       const typePrefix = typePrefixBase.concat(toolSwiftName, ".");
-      lines.push(`enum ${toolSwiftName} {\n`);
+      lines.push(`public enum ${toolSwiftName} {\n`);
       lines.push(
         writeSchema(tool.schema, {
           typePrefix,
@@ -585,7 +575,7 @@ function writeUserDefinedDatatypes(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const swiftNamespace = toSwiftName(namespace.name);
-      lines.push(`enum ${swiftNamespace} {`);
+      lines.push(`public enum ${swiftNamespace} {`);
       writeNamespace(namespace);
       lines.push("}\n");
     }
@@ -683,7 +673,6 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
 function getToolTypes(
   tool: ValidatedTool,
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): { readonly inputType: string; readonly outputType: string } {
   const { singleNamespace } = compilationResult;
   const rawToolName = tool.tool.name.text;
@@ -691,8 +680,8 @@ function getToolTypes(
     tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
   );
   const typePrefixBase = singleNamespace
-    ? `${config.rootNamespace}.Schema.`
-    : `${config.rootNamespace}.Schema.${toolSwiftNamespace}.`;
+    ? "Schema."
+    : `Schema.${toolSwiftNamespace}.`;
   const sharedTypePrefix = typePrefixBase.concat("Shared.");
 
   const toolTypeName = toSwiftName(capitalize(rawToolName));
@@ -719,7 +708,6 @@ function getToolTypes(
 
 function writeExecuteToolCall(
   compilationResult: ValidCompilationResult,
-  config: { readonly rootNamespace: string },
 ): string {
   const { singleNamespace, tools } = compilationResult;
   const toolList = Object.values(tools);
@@ -761,7 +749,7 @@ function writeExecuteToolCall(
       tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
     );
     const toolId = getId(tool.tool);
-    const { inputType } = getToolTypes(tool, compilationResult, config);
+    const { inputType } = getToolTypes(tool, compilationResult);
 
     const interfaceName = singleNamespace
       ? `ToolExecutor.${toolSwiftName}`
@@ -838,17 +826,17 @@ function writeTypepromptInterface(
 ): string {
   const fields = Object.values(type.fields);
   const lines: string[] = [];
-  lines.push(`struct ${typeName} : Codable, Sendable {`);
+  lines.push(`public struct ${typeName} : Codable, Sendable {`);
 
   for (const field of fields) {
     const { type } = field;
     const swiftName = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
     lines.push(...wrapDocComment(field.doc));
-    lines.push(`let ${swiftName}: ${fieldType}`);
+    lines.push(`public let ${swiftName}: ${fieldType}`);
   }
 
-  lines.push("", "init(");
+  lines.push("", "public init(");
   for (const field of fields) {
     const { type } = field;
     if (isLiteralType(type)) continue;
@@ -881,7 +869,7 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum ${typeName} : String, Codable, Sendable {\n`);
+      lines.push(`public enum ${typeName} : String, Codable, Sendable {\n`);
       for (const member of members.members) {
         const swiftName = toSwiftName(toCamelCase(member.value));
         lines.push(`case ${swiftName} = ${JSON.stringify(member.value)}`);
@@ -894,7 +882,7 @@ function writeTypepromptUnion(
       const indirect = Object.values(members.members).some((m) => m.isRecursive)
         ? "indirect "
         : "";
-      lines.push(`${indirect}enum ${typeName} : Codable, Sendable {`);
+      lines.push(`${indirect}public enum ${typeName} : Codable, Sendable {`);
       const caseEntries = Object.values(members.members).map((member) => {
         const { discriminant } = member;
         const caseName = toSwiftName(
@@ -925,7 +913,7 @@ function writeTypepromptUnion(
         lines.push("");
         lines.push(
           ...wrapDocComment(commonField.doc ?? ""),
-          `var ${name}: ${type} {`,
+          `public var ${name}: ${type} {`,
           "switch self {",
         );
         for (const { caseName } of caseEntries) {
@@ -936,7 +924,7 @@ function writeTypepromptUnion(
 
       lines.push(
         "",
-        "func encode(to encoder: any Encoder) throws {",
+        "public func encode(to encoder: any Encoder) throws {",
         "var container = encoder.singleValueContainer()",
         "switch self {",
       );
@@ -954,7 +942,7 @@ function writeTypepromptUnion(
         `case discriminator = "${discriminator}"`,
         "}",
         "",
-        "init(from decoder: any Decoder) throws {",
+        "public init(from decoder: any Decoder) throws {",
         "let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)",
       );
 
