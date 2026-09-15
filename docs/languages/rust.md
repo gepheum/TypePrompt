@@ -207,7 +207,7 @@ use serde_json::json;
 use crate::gen::prompts::{schema, tool_executor, Prompt, ToolCall, PROMPTS};
 
 /**
- * Generic helper to execute any TypePrompt template with OpenAI.
+ * Generic helper to execute any TypePrompt prompt with OpenAI.
  */
 async fn execute_prompt<Output, ToolExecutor>(
     client: &Client,

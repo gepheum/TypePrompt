@@ -212,7 +212,7 @@ import com.openai.models.*
 import kotlinx.serialization.json.*
 
 /**
- * Generic helper to execute any TypePrompt template with OpenAI.
+ * Generic helper to execute any TypePrompt prompt with OpenAI.
  */
 suspend fun <Output, ToolExecutor> executePrompt(
     client: OpenAIClient,

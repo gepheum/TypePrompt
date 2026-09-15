@@ -196,7 +196,7 @@ import {
 const openai = new OpenAI();
 
 /**
- * Generic helper to execute any TypePrompt template with OpenAI.
+ * Generic helper to execute any TypePrompt prompt with OpenAI.
  */
 async function executePrompt<Id extends TemplateId>(
   prompt: Prompt<Id>,

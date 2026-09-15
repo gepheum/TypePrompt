@@ -204,7 +204,7 @@ async def execute_prompt[Output, ToolExecutor](
     prompt: Prompt[Output, ToolExecutor],
     tool_executor: ToolExecutor,
 ) -> Output:
-    """Generic helper to execute any TypePrompt template with OpenAI."""
+    """Generic helper to execute any TypePrompt prompt with OpenAI."""
     # 1. Prepare tools for OpenAI from prompt.tools
     tools = [
         {

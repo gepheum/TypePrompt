@@ -199,7 +199,7 @@ using MyCompany.Prompts;
 public static class LlmHelper
 {
     /// <summary>
-    /// Generic helper to execute any TypePrompt template with OpenAI.
+    /// Generic helper to execute any TypePrompt prompt with OpenAI.
     /// </summary>
     public static async Task<TOutput> ExecutePrompt<TOutput, TToolExecutor>(
         ChatClient chatClient,

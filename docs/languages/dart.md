@@ -199,7 +199,7 @@ import 'package:http/http.dart' as http;
 import 'package:my_app/gen/prompts.dart';
 
 /**
- * Generic helper to execute any TypePrompt template with OpenAI.
+ * Generic helper to execute any TypePrompt prompt with OpenAI.
  */
 Future<Output> executePrompt<Output, ToolExecutor>(
   Prompt<Output, ToolExecutor> prompt,

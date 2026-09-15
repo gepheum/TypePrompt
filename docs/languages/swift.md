@@ -201,7 +201,7 @@ import Foundation
 import MyPrompts
 
 /**
- * Generic helper to execute any TypePrompt template with OpenAI.
+ * Generic helper to execute any TypePrompt prompt with OpenAI.
  */
 func executePrompt<Output, ToolExecutor>(
     prompt: Prompt<Output, ToolExecutor>,

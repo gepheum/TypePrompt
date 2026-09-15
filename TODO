@@ -1,12 +1,13 @@
 COMPILER:
   - THINK ABOUT EDITIONS...
 
+DOCUMENTATION:
+  - Document the commands...
+
 CODEGEN:
-  - Codegen guide in each language
   - Ask AI to compile all the examples I have...
   - Ask AI to review all the generated code...
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
-  - In the top-level comments, add the 'import'?
 
 TEST:
   - check nullable values and expressions
