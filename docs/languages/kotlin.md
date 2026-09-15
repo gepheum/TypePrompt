@@ -149,6 +149,14 @@ for (resp in responses) {
 
 `executeTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `NoTools` as the executor.
 
+### 3. Type-Safe Tool Names
+
+TypePrompt generates a `PromptTools` object with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
+
+```kotlin
+val toolName = PromptTools.ResearchQuestion.webSearch.toolName  // "webSearch"
+```
+
 ---
 
 ## Type Definitions and `Schema`

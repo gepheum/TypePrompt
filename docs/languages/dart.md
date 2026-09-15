@@ -142,6 +142,14 @@ for (final resp in responses) {
 
 `executeTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `noTools` as the executor.
 
+### 3. Type-Safe Tool Names
+
+TypePrompt generates `PromptTools` enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
+
+```dart
+final toolName = PromptTools_ResearchQuestion.webSearch.toolName;  // "webSearch"
+```
+
 ---
 
 ## Type Definitions

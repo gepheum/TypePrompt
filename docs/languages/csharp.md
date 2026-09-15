@@ -142,6 +142,14 @@ for (var resp in responses)
 
 `ExecuteTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `NoTools.NoTools` as the executor.
 
+### 3. Type-Safe Tool Names
+
+TypePrompt generates a `PromptTools` class with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
+
+```csharp
+var toolName = PromptTools.ResearchQuestion.WebSearch.GetToolName();  // "webSearch"
+```
+
 ---
 
 ## Type Definitions and `Schema`

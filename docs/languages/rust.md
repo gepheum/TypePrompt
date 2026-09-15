@@ -150,6 +150,14 @@ for resp in responses {
 
 `execute_tools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `&NO_TOOLS` as the executor.
 
+### 3. Type-Safe Tool Names
+
+TypePrompt generates a `prompt_tools` module with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
+
+```rust
+let tool_name = prompt_tools::ResearchQuestion::WebSearch.tool_name();  // "webSearch"
+```
+
 ---
 
 ## Type Definitions and `schema`

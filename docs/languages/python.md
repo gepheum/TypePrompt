@@ -138,6 +138,15 @@ for resp in responses:
 
 `execute_tools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM.
 
+### 3. Type-Safe Tool Names
+
+TypePrompt generates a `tools` class containing `ToolName` string literal unions for each template, allowing static type-checkers (e.g., mypy, pyright) to verify tool names at compile time:
+
+```python
+# Static type check ensures "webSearch" is a valid tool for this template:
+tool_name: tools.research_question.ToolName = "webSearch"
+```
+
 ---
 
 ## Type Definitions and `schema`
