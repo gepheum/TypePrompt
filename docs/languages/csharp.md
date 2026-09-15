@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated C# code in your application.
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone C# (C# 10+) code that relies on two lightweight NuGet packages:
+TypePrompt generates clean, standalone C# (C# 10+) code that relies on these lightweight NuGet packages:
 
 ```bash
 dotnet add package YamlDotNet

@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated Swift code in your applicati
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone Swift (Swift 5.9+) code that relies on two lightweight Swift package dependencies:
+TypePrompt generates clean, standalone Swift (Swift 5.9+) code that relies on these lightweight Swift package dependencies:
 
 In your `Package.swift`:
 

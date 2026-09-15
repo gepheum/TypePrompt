@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated Dart code in your applicatio
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone Dart code that relies on two lightweight dependencies:
+TypePrompt generates clean, standalone Dart code that relies on these lightweight dependencies:
 
 In your `pubspec.yaml`:
 

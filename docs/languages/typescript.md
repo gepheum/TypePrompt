@@ -6,7 +6,7 @@ This guide explains how to use TypePrompt-generated TypeScript code in your appl
 
 ## Installation & Setup
 
-TypePrompt generates clean, standalone TypeScript code that relies on three lightweight runtime dependencies:
+TypePrompt generates clean, standalone TypeScript code that relies on these lightweight runtime dependencies:
 
 ```bash
 npm install @toon-format/toon yaml zod
