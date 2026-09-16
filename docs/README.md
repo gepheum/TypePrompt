@@ -7,7 +7,7 @@ You write prompt templates in a simple XML format, along with few-shot examples,
 ### End-to-End Type Safety
 
 - **At template resolution time**: TypePrompt guarantees that the values you pass match the input placeholders expected by the template.
-- **At response processing time**: TypePrompt validates the LLM's response, ensuring the typed objects your application uses match the schema passed to the model.
+- **At response processing time**: TypePrompt guarantees that the typed objects your application uses to represent the LLM's response match the schema passed to the model.
 
 ### Supported Languages
 
