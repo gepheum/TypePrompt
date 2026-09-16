@@ -15,7 +15,7 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
 ---
 
-## Example Template
+## Example Prompt Template
 
 ```xml
 <template name="DecodeCatMood">
