@@ -1,11 +1,11 @@
 COMPILER:
   - THINK ABOUT EDITIONS...
-  - Rename all the XML files to PascalCase
+  - Under "E2E type safety": the string is too pompeous
 
 DOCUMENTATION:
   - Use Title Case in spec.md
   - Rename spec.md
-  
+
   - Example: discriminated union in result type
   - Document the commands...
   - Document disciminated unions?

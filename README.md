@@ -95,7 +95,7 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
 ## Comparison with Other Tools
 
-TypePrompt is conceptually inspired by tools like [DotPrompt](https://github.com/google/dotprompt), but solves a critical gap in production systems: **end-to-end type safety**.
+TypePrompt is conceptually inspired by tools like [DotPrompt](https://github.com/google/dotprompt), but introduces **end-to-end type safety**.
 
 In DotPrompt, LangChain, Semantic Kernel, and Promptfoo, prompt templates are parsed dynamically at runtime. There is no compile-time guarantee that the parameters you pass match the placeholders in your template, or that the response types in your application match the schema sent to the LLM.
 
