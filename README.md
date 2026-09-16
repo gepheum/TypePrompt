@@ -105,15 +105,13 @@ TypePrompt eliminates this class of runtime errors by generating native code at 
 
 ## Documentation
 
-### Core Reference
-- **[Template Syntax](docs/spec.md)** — XML syntax for `<template>`, `<tool>`, `<meta>`, `<namespace>`.
-- **[Schema Language](docs/schema.md)** — TypeScript-subset SDL used to define input and output types for templates and tools.
-
-### Language Guides
-- [TypeScript](docs/languages/typescript.md)
-- [Python](docs/languages/python.md)
-- [Kotlin](docs/languages/kotlin.md)
-- [Rust](docs/languages/rust.md)
-- [Swift](docs/languages/swift.md)
-- [Dart](docs/languages/dart.md)
-- [C#](docs/languages/csharp.md)
+- **[Specification](docs/spec.md)** — Full reference for templates, tools, metadata and namespaces.
+- **[Schema Language](docs/schema.md)** — Type system reference for defining `Input` and `Output` schemas.
+- **Language Guides**:
+  - [TypeScript](docs/languages/typescript.md)
+  - [Python](docs/languages/python.md)
+  - [Kotlin](docs/languages/kotlin.md)
+  - [Rust](docs/languages/rust.md)
+  - [Swift](docs/languages/swift.md)
+  - [Dart](docs/languages/dart.md)
+  - [C#](docs/languages/csharp.md)
