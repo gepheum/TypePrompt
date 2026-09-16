@@ -21,6 +21,10 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
 3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
 
+### Competitors
+
+DotPrompt, FooPrompt
+
 ---
 
 ## Quick Example
