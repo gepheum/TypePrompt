@@ -74,10 +74,10 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 - **End-to-End Type Safety**: Compile-time validation for template input placeholders and strongly-typed LLM response parsing.
 - **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
 - **Strict JSON Schema Generation**: Automatically generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
-- **Flexible Input Formatting**: Format complex input types within prompt templates using JSON, YAML, or [TOON](https://toonformat.dev).
-- **Compile-Time Instruction Checks (`<c>`)**: Keeps system and user instructions in sync with schema types by validating referenced fields and inline JSON.
-- **Typed Tool Calling (`<tool>`)**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers and tool schemas.
-- **Validated Few-Shot Examples (`<examples>`)**: Author few-shot examples in YAML that are checked against template schemas at compile time.
+- **Flexible Input Formatting**: Format complex input types within prompt templates using JSON, YAML, or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
+- **Schema-Checked Instructions (`<c>`)**: Verifies that fields, enums, and sample JSON referenced in your prompt instructions actually exist in your schema.
+- **Typed Tool Calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
+- **Validated Few-Shot Examples**: Author few-shot examples in YAML that are checked against template schemas at compile time.
 - **Prompt Variants (`<variant>`)**: Maintain prompt variations under a single strongly-typed interface.
 - **Custom Structured Metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
 - **Zero Framework Lock-in**: Generates lightweight native code that integrates with any LLM SDK or custom client.
