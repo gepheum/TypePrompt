@@ -1,4 +1,4 @@
-# TypePrompt Documentation
+# TypePrompt
 
 **TypePrompt** is a tool for managing LLM prompts in your codebase. It brings end-to-end type safety to your AI workflow through code generation, and integrates seamlessly with any LLM SDK.
 
@@ -103,17 +103,17 @@ TypePrompt eliminates this class of runtime errors by generating native code at 
 
 ---
 
-## Documentation Index
+## Documentation
 
-### Core Concepts & Reference
-- **[Specification Reference](spec.md)** — Complete XML syntax for `<template>`, `<tool>`, `<meta>`, `<snippets>`, `<variant>`, and `<examples>`.
-- **[Schema Reference](schema.md)** — Schema definitions, interfaces, unions, primitives, shared types, and JSON Schema generation.
+### Core Reference
+- **[Template Syntax](docs/spec.md)** — XML syntax for `<template>`, `<tool>`, `<meta>`, `<namespace>`.
+- **[Schema Language](docs/schema.md)** — TypeScript-subset SDL used to define input and output types for templates and tools.
 
-### Target Language Guides
-- **[TypeScript Integration Guide](languages/typescript.md)** — Node.js, Web, Bun, Deno (Zod validation).
-- **[Python Integration Guide](languages/python.md)** — Python 3.10+ (Pydantic validation, AsyncOpenAI).
-- **[Kotlin Integration Guide](languages/kotlin.md)** — JVM & Android (Kotlinx Serialization, Coroutines).
-- **[Dart Integration Guide](languages/dart.md)** — Flutter & Dart standalone.
-- **[C# Integration Guide](languages/csharp.md)** — .NET 8 / 9 / 10 (`System.Text.Json`, official OpenAI SDK).
-- **[Swift Integration Guide](languages/swift.md)** — Swift Package Manager, iOS, macOS (Foundation `Codable`).
-- **[Rust Integration Guide](languages/rust.md)** — Tokio, `serde`, `serde_json`, `reqwest`.
+### Language Guides
+- [TypeScript](docs/languages/typescript.md)
+- [Python](docs/languages/python.md)
+- [Kotlin](docs/languages/kotlin.md)
+- [Rust](docs/languages/rust.md)
+- [Swift](docs/languages/swift.md)
+- [Dart](docs/languages/dart.md)
+- [C#](docs/languages/csharp.md)

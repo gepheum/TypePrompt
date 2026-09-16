@@ -1,7 +1,3 @@
-DOC TODOS:
-  - Detect oopsies at compile-time
-  - 
-
 COMPILER:
   - THINK ABOUT EDITIONS...
   - Rename all the XML files to PascalCase
