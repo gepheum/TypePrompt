@@ -35,6 +35,16 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
   const errors: InternalError[] = [];
   const warnings: InternalError[] = [];
 
+  const nameText = name.value.text;
+  for (const reserved of ["shared", "meta"]) {
+    if (nameText === reserved) {
+      errors.push({
+        span: name.nameSpan,
+        message: `Tool name cannot be '${reserved}`,
+      });
+    }
+  }
+
   let schema: SchemaParseResult | null = null;
   let description: ToolDescription | null = null;
 
