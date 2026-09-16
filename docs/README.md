@@ -91,6 +91,18 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
 3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
 
+---
+
+## Comparison with Other Tools
+
+TypePrompt is conceptually inspired by tools like [DotPrompt](https://github.com/google/dotprompt), but solves a critical gap in production systems: **end-to-end type safety**.
+
+In DotPrompt, LangChain, Semantic Kernel, and Promptfoo, prompt templates are parsed and resolved dynamically at runtime. There is no compile-time guarantee that the parameters you pass match the placeholders in your template, or that the response types in your application match the schema sent to the LLM.
+
+TypePrompt eliminates this class of runtime errors by generating native code at build time. Your compiler ensures complete type safety from template inputs to structured LLM outputs, without locking you into a heavyweight framework.
+
+---
+
 ## Documentation Index
 
 ### Core Concepts & Reference
