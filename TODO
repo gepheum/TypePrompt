@@ -1,10 +1,14 @@
+DOC TODOS:
+  - Detect oopsies at compile-time
+  - 
+
 COMPILER:
   - THINK ABOUT EDITIONS...
 
 DOCUMENTATION:
   - Document the commands...
-  - In each language: document the PromptTools enum?
   - Document disciminated unions?
+  - Naming convention: FooBar.xml, Zoo.xml
 
 CODEGEN:
   - Add template_input to Prompt?
