@@ -23,6 +23,14 @@ You write prompt templates in a simple XML format, along with few-shot examples,
 
 ---
 
+## Getting Started
+
+1. **Initialize your project**: Run `npx typeprompt init` in your project root.
+2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
+3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
+
+---
+
 ## Quick Example
 
 ### 1. Define your prompt in XML
