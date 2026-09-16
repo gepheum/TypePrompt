@@ -6,6 +6,7 @@ COMPILER:
   - THINK ABOUT EDITIONS...
 
 DOCUMENTATION:
+  - Example: discriminated union in result type
   - Document the commands...
   - Document disciminated unions?
   - Naming convention: FooBar.xml, Zoo.xml
