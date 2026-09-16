@@ -4,6 +4,7 @@ DOC TODOS:
 
 COMPILER:
   - THINK ABOUT EDITIONS...
+  - Rename all the XML files to PascalCase
 
 DOCUMENTATION:
   - Example: discriminated union in result type

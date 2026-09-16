@@ -71,8 +71,8 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
 ## Features
 
-- **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
 - **End-to-End Type Safety**: Compile-time validation for template input placeholders and strongly-typed LLM response parsing.
+- **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
 - **Strict JSON Schema Generation**: Automatically generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
 - **Flexible Input Formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
 - **Schema-Checked Instructions (`<c>`)**: Verifies that fields, enums, and sample JSON referenced in your prompt instructions actually exist in your schema.
@@ -90,10 +90,6 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 1. **Initialize your project**: Run `npx typeprompt init` in your project root.
 2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
 3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
-
-### Competitors
-
-DotPrompt, FooPrompt
 
 ## Documentation Index
 
