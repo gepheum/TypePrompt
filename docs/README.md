@@ -11,15 +11,7 @@ You write prompt templates in a simple XML format, along with few-shot examples,
 
 ### Supported Languages
 
-- TypeScript
-- Python
-- Kotlin
-- Rust
-- Swift
-- Dart
-- C#
-
-*More languages to come.*
+TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
 ---
 
