@@ -15,6 +15,60 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
 ---
 
+## Example Template
+
+```xml
+<template name="DecodeCatMood">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema>
+    interface Input {
+      action: "stare" | "yowl-at-3am" | "knock-glass";
+      bowlStatus: "empty" | "half-full";
+    }
+
+    interface Output {
+      demand: "feed-me" | "kneel" | "chaos";
+      urgency: "chill" | "crisis";
+      humanAction: string;
+    }
+  </schema>
+
+  <system>
+    You are an expert feline behavior interpreter.
+    Decode cat actions into their true demands.
+  </system>
+
+  <user>
+    Action: <insert val="input.action" />
+    Food bowl: <insert val="input.bowlStatus" />
+  </user>
+
+  <examples>
+    - input:
+        action: yowl-at-3am
+        bowlStatus: half-full
+      output:
+        demand: feed-me
+        urgency: crisis
+        humanAction: "Shake the bowl to cover the bottom."
+
+    - input:
+        action: knock-glass
+        bowlStatus: empty
+      output:
+        demand: kneel
+        urgency: crisis
+        humanAction: "Apologize and refill the bowl."
+  </examples>
+</template>
+```
+
+---
+
 ## Getting Started
 
 1. **Initialize your project**: Run `npx typeprompt init` in your project root.
@@ -24,93 +78,6 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 ### Competitors
 
 DotPrompt, FooPrompt
-
----
-
-## Quick Example
-
-### 1. Define your prompt in XML
-
-```xml
-<!-- prompts/triage-ticket.xml -->
-<template name="TriageTicket">
-  <schema>
-    interface Input {
-      ticketText: string;
-      customerTier: "free" | "pro" | "enterprise";
-    }
-
-    interface Output {
-      category: "billing" | "technical" | "general";
-      priority: "low" | "medium" | "high" | "urgent";
-      summary: string;
-    }
-  </schema>
-
-  <system>
-    You are an automated support ticket triage assistant.
-  </system>
-
-  <user>
-    Customer Tier: <insert val="input.customerTier" />
-    Ticket: <insert val="input.ticketText" />
-  </user>
-</template>
-```
-
-### 2. Use the generated code
-
-```ts
-import { prompts } from "./gen/prompts.js";
-
-// 1. Template resolution: inputs are checked at compile time
-const prompt = prompts.renderTriageTicket({
-  ticketText: "Cannot access billing dashboard",
-  customerTier: "enterprise",
-});
-
-// 2. Pass resolved prompt and JSON schema to your LLM of choice
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  messages: [
-    { role: "system", content: prompt.systemMessage },
-    { role: "user", content: prompt.userMessage },
-  ],
-  response_format: {
-    type: "json_schema",
-    json_schema: { name: "output", strict: true, schema: prompt.outputFormat.jsonSchema },
-  },
-});
-
-// 3. Response processing: parsed output is strongly typed
-const result = prompt.parseResponse(response.choices[0].message.content ?? "");
-console.log(result.category, result.priority); // Typed as "billing" | "technical" | "general"
-```
-
----
-
-## CLI Commands
-
-Install and run TypePrompt via `npx`:
-
-```bash
-npx typeprompt <command> [options]
-```
-
-| Command | Description | Options |
-|---|---|---|
-| `init` | Initialize a new TypePrompt project with configuration and starter templates. | `-p, --project <path>` |
-| `gen` | Compile prompt templates and generate strongly-typed code for configured languages. | `-w, --watch`<br>`-p, --project <path>` |
-| `format` | Format all XML template files. | `--ci` (fail if unformatted)<br>`-p, --project <path>` |
-| `help` | Display CLI help and command options (`-h`, `--help`). | |
-| `version` | Display the installed TypePrompt version (`-v`, `--version`). | |
-
-### Common CLI Options
-- `-p, --project <path>`: Path to directory containing `typeprompt.yml` (defaults to current directory).
-- `-w, --watch`: Automatically regenerate code when prompt files change (`gen` only).
-- `--ci`: CI verification mode that exits with code 1 if files are not properly formatted (`format` only).
-
----
 
 ## Documentation Index
 
