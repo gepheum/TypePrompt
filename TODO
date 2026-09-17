@@ -1,10 +1,11 @@
 COMPILER:
   - THINK ABOUT EDITIONS...
-  - Under "E2E type safety": the string is too pompeous
 
 DOCUMENTATION:
-  - Use Title Case in spec.md
-  - Rename spec.md
+  - README:
+    - Redo the example
+    - Add example application code
+  - Under "E2E type safety": the string is too pompeous
 
   - Example: discriminated union in result type
   - Document the commands...
