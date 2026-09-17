@@ -12,6 +12,9 @@ DOCUMENTATION:
   - Document disciminated unions?
   - Naming convention: FooBar.xml, Zoo.xml
 
+COMPILER:
+  - Add warnings if naming conventions are not respected...
+
 CODEGEN:
   - Add template_input to Prompt?
   - Ask AI to review all the generated code...

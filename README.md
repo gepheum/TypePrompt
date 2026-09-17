@@ -26,8 +26,8 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
   <schema>
     interface Input {
-      action: "stare" | "yowl-at-3am" | "knock-glass";
-      bowlStatus: "empty" | "half-full";
+      action: string;
+      bowlStatus: "empty" | "half-empty";
     }
 
     interface Output {
@@ -49,7 +49,7 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 
   <examples>
     - input:
-        action: yowl-at-3am
+        action: "Yowl at 3am"
         bowlStatus: half-full
       output:
         demand: feed-me
@@ -57,7 +57,7 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
         humanAction: "Shake the bowl to cover the bottom."
 
     - input:
-        action: knock-glass
+        action: "Knock glass"
         bowlStatus: empty
       output:
         demand: kneel
