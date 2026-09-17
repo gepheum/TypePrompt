@@ -1,9 +1,7 @@
-COMPILER:
-  - THINK ABOUT EDITIONS...
-
 DOCUMENTATION:
   - Example: discriminated union in result type
   - E2E Kotlin example...
+  - Add README under 'examples', remove each README in each example project
   - Document the commands...
   - Document disciminated unions?
 

@@ -1,0 +1,82 @@
+<template name="GeneratePageTree">
+  <meta>
+    model: gpt-4o
+    temperature: 0.2
+  </meta>
+
+  <schema>
+    /** A node in the rendered page tree. */
+    type PageNode =
+      | {
+          kind: "heading";
+          level: "h1" | "h2" | "h3";
+          text: string;
+        }
+      | {
+          kind: "paragraph";
+          text: string;
+        }
+      | {
+          kind: "button";
+          label: string;
+          /** Destination URL or action target. */
+          url: string;
+        }
+      | {
+          kind: "section";
+          title?: string;
+          children: PageNode[];
+        };
+
+    interface Input {
+      /** The topic or purpose of the page to generate. */
+      topic: string;
+      /** Key points or content sections to include in the layout. */
+      keyPoints: string[];
+    }
+
+    type Output = PageNode;
+  </schema>
+
+  <system>
+    You are a UI layout generator. Given a topic and key points, generate a
+    hierarchical page tree.
+
+    - Use <c
+      >"section"</c> nodes to group related elements under a logical container.
+    - Start with a top-level <c>"heading"</c> with <c>level</c> <c
+      >"h1"</c> or wrap the page in a root <c>"section"</c>.
+    - Use <c>"paragraph"</c> nodes for descriptive body copy.
+    - Add <c>"button"</c> nodes for relevant calls to action.
+  </system>
+
+  <user>
+    <insert val="input" format="yaml" />
+  </user>
+
+  <examples>
+    - input:
+        topic: "Landing page for an interactive astronomy workshop"
+        keyPoints:
+          - "Stargazing for beginners: learn telescope basics and constellation mapping"
+          - "Live session on Saturday with expert astronomers"
+          - "Reserve your spot with early bird pricing"
+      output:
+        kind: section
+        title: "Astronomy Workshop"
+        children:
+          - kind: heading
+            level: h1
+            text: "Discover the Night Sky"
+          - kind: paragraph
+            text: "Join our hands-on workshop to learn telescope fundamentals, identify major constellations, and observe deep-sky objects."
+          - kind: section
+            title: "Event Details"
+            children:
+              - kind: paragraph
+                text: "Live interactive session this Saturday from 8:00 PM to 10:00 PM UTC."
+              - kind: button
+                label: "Reserve Your Spot"
+                url: "https://example.com/register"
+  </examples>
+</template>
