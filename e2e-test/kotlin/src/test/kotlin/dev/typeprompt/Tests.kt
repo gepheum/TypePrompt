@@ -1,5 +1,11 @@
 package dev.typeprompt
 
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -9,20 +15,15 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 class Test01Basics_Translate {
-    private val prompt = com.example.prompts01.prompts.renderTranslate(
-        com.example.prompts01.Schema.Translate.Input(
-            text = "Hello world",
-            targetLanguage = "French",
-        ),
-    )
+    private val prompt =
+        com.example.prompts01.prompts.renderTranslate(
+            com.example.prompts01.Schema.Translate.Input(
+                text = "Hello world",
+                targetLanguage = "French",
+            ),
+        )
 
     @Test
     fun testTextOutputFormat() {
@@ -77,14 +78,15 @@ class Test01Basics_Translate {
 }
 
 class Test02StructuredOutput_TriageTicket {
-    private val prompt = com.example.prompts02.prompts.renderTriageTicket(
-        com.example.prompts02.Schema.TriageTicket.Input(
-            subject = "App crashes on login",
-            body = "It crashes every time.",
-            customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
-            recentTickets = emptyList(),
-        ),
-    )
+    private val prompt =
+        com.example.prompts02.prompts.renderTriageTicket(
+            com.example.prompts02.Schema.TriageTicket.Input(
+                subject = "App crashes on login",
+                body = "It crashes every time.",
+                customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
+                recentTickets = emptyList(),
+            ),
+        )
 
     @Test
     fun testJsonOutputFormat() {
@@ -122,9 +124,10 @@ class Test02StructuredOutput_TriageTicket {
 
     @Test
     fun testParseResponseParsesJson() {
-        val result = prompt.parseResponse(
-            "{\"category\":\"billing\",\"urgency\":\"low\",\"summary\":\"Invoice question\",\"suggestedActions\":[]}",
-        )
+        val result =
+            prompt.parseResponse(
+                "{\"category\":\"billing\",\"urgency\":\"low\",\"summary\":\"Invoice question\",\"suggestedActions\":[]}",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Billing, result.category)
         assertEquals(com.example.prompts02.Schema.TriageTicket.Output_Urgency.Low, result.urgency)
         assertEquals("Invoice question", result.summary)
@@ -132,45 +135,50 @@ class Test02StructuredOutput_TriageTicket {
 
     @Test
     fun testParseResponseStripsJsonCodeFences() {
-        val result = prompt.parseResponse(
-            "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
-        )
+        val result =
+            prompt.parseResponse(
+                "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Other, result.category)
     }
 
     @Test
     fun testParseResponseStripsPlainCodeFences() {
-        val result = prompt.parseResponse(
-            "```\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
-        )
+        val result =
+            prompt.parseResponse(
+                "```\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Other, result.category)
     }
 
     @Test
     fun testOptionalFieldAbsentWhenOmitted() {
-        val result = prompt.parseResponse(
-            "{\"category\":\"feature-request\",\"urgency\":\"low\",\"summary\":\"Dark mode\",\"suggestedActions\":[\"Log request\"]}",
-        )
+        val result =
+            prompt.parseResponse(
+                "{\"category\":\"feature-request\",\"urgency\":\"low\",\"summary\":\"Dark mode\",\"suggestedActions\":[\"Log request\"]}",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.FeatureRequest, result.category)
         assertNull(result.suggestedReply)
     }
 
     @Test
     fun testUserMessageContainsYamlRenderedRecentTickets() {
-        val p = com.example.prompts02.prompts.renderTriageTicket(
-            com.example.prompts02.Schema.TriageTicket.Input(
-                subject = "X",
-                body = "Y",
-                customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
-                recentTickets = listOf(
-                    com.example.prompts02.Schema.TriageTicket.Input_RecentTickets(
-                        id = "T-1",
-                        summary = "Login bug",
-                        category = com.example.prompts02.Schema.TriageTicket.TicketCategory.TechnicalIssue,
-                    ),
+        val p =
+            com.example.prompts02.prompts.renderTriageTicket(
+                com.example.prompts02.Schema.TriageTicket.Input(
+                    subject = "X",
+                    body = "Y",
+                    customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
+                    recentTickets =
+                        listOf(
+                            com.example.prompts02.Schema.TriageTicket.Input_RecentTickets(
+                                id = "T-1",
+                                summary = "Login bug",
+                                category = com.example.prompts02.Schema.TriageTicket.TicketCategory.TechnicalIssue,
+                            ),
+                        ),
                 ),
-            ),
-        )
+            )
         assertTrue(p.userMessage.contains("id: T-1"))
     }
 
@@ -196,32 +204,36 @@ class Test02StructuredOutput_TriageTicket {
 }
 
 class Test02_GeneratePageTree {
-    private val provider = com.example.prompts02.Schema.GeneratePageTree.Provider(
-        name = "CloudX",
-        region = "us-east",
-        category = com.example.prompts02.Schema.GeneratePageTree.ProductCategory.Compute,
-        pricing = com.example.prompts02.Schema.GeneratePageTree.Pricing(
-            model = com.example.prompts02.Schema.GeneratePageTree.Pricing_Model.PerHour,
-            basePrice = 0.1,
-        ),
-        benchmarks = listOf(
-            com.example.prompts02.Schema.GeneratePageTree.Benchmark(
-                name = "throughput",
-                score = 1000.0,
-                unit = "rps",
-            ),
-        ),
-        pros = listOf("fast", "reliable"),
-        cons = listOf("pricey"),
-    )
+    private val provider =
+        com.example.prompts02.Schema.GeneratePageTree.Provider(
+            name = "CloudX",
+            region = "us-east",
+            category = com.example.prompts02.Schema.GeneratePageTree.ProductCategory.Compute,
+            pricing =
+                com.example.prompts02.Schema.GeneratePageTree.Pricing(
+                    model = com.example.prompts02.Schema.GeneratePageTree.Pricing_Model.PerHour,
+                    basePrice = 0.1,
+                ),
+            benchmarks =
+                listOf(
+                    com.example.prompts02.Schema.GeneratePageTree.Benchmark(
+                        name = "throughput",
+                        score = 1000.0,
+                        unit = "rps",
+                    ),
+                ),
+            pros = listOf("fast", "reliable"),
+            cons = listOf("pricey"),
+        )
 
-    private val prompt = com.example.prompts02.prompts.renderGeneratePageTree(
-        com.example.prompts02.Schema.GeneratePageTree.Input(
-            providers = listOf(provider),
-            useCase = "serving ML inference workloads",
-            audience = com.example.prompts02.Schema.GeneratePageTree.Input_Audience.Architect,
-        ),
-    )
+    private val prompt =
+        com.example.prompts02.prompts.renderGeneratePageTree(
+            com.example.prompts02.Schema.GeneratePageTree.Input(
+                providers = listOf(provider),
+                useCase = "serving ML inference workloads",
+                audience = com.example.prompts02.Schema.GeneratePageTree.Input_Audience.Architect,
+            ),
+        )
 
     @Test
     fun testJsonOutputFormat() {
@@ -255,16 +267,19 @@ class Test02_GeneratePageTree {
 
     @Test
     fun testToonExactUserMessage() {
-        assertTrue(prompt.userMessage.contains("Generate a comparison page layout framed around this use case: serving ML inference workloads"))
+        assertTrue(
+            prompt.userMessage.contains("Generate a comparison page layout framed around this use case: serving ML inference workloads"),
+        )
         assertTrue(prompt.userMessage.contains("name: CloudX"))
         assertTrue(prompt.userMessage.contains("Target audience: architect"))
     }
 
     @Test
     fun testParseResponse() {
-        val result = prompt.parseResponse(
-            """{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}""",
-        )
+        val result =
+            prompt.parseResponse(
+                """{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}""",
+            )
         val section = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindSection>(result)
         assertEquals("Overview", section.title)
         assertEquals(3, section.children.size)
@@ -274,24 +289,26 @@ class Test02_GeneratePageTree {
 }
 
 class Test03Tools_ResearchQuestion {
-    private val prompt = com.example.prompts03.prompts.renderResearchQuestion(
-        com.example.prompts03.Schema.ResearchQuestion.Input(
-            question = "Tokyo population?",
-        ),
-    )
+    private val prompt =
+        com.example.prompts03.prompts.renderResearchQuestion(
+            com.example.prompts03.Schema.ResearchQuestion.Input(
+                question = "Tokyo population?",
+            ),
+        )
 
     private class MockWebSearchExecutor : com.example.prompts03.ToolExecutor.WebSearch {
         override suspend fun webSearch(
             input: com.example.prompts03.Schema.WebSearch.Input,
         ): com.example.prompts03.Schema.WebSearch.Output {
             return com.example.prompts03.Schema.WebSearch.Output(
-                results = listOf(
-                    com.example.prompts03.Schema.WebSearch.Output_Results(
-                        title = "Tokyo Population 2024",
-                        url = "https://example.com/tokyo",
-                        snippet = "14 million",
+                results =
+                    listOf(
+                        com.example.prompts03.Schema.WebSearch.Output_Results(
+                            title = "Tokyo Population 2024",
+                            url = "https://example.com/tokyo",
+                            snippet = "14 million",
+                        ),
                     ),
-                ),
             )
         }
     }
@@ -346,147 +363,163 @@ class Test03Tools_ResearchQuestion {
     }
 
     @Test
-    fun testExecuteToolsCallsExecutorAndReturnsOutput() = runTest {
-        val toolCalls = listOf(
-            com.example.prompts03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}"),
-        )
-        val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
-        assertEquals(1, results.size)
-        assertEquals("call_1", results[0].callId)
-        assertTrue(results[0].stringifiedOutput.contains("Tokyo Population 2024"))
-    }
-
-    @Test
-    fun testExecuteToolsAcceptsSet() = runTest {
-        val toolCalls = setOf(
-            com.example.prompts03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}"),
-        )
-        val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
-        assertEquals(1, results.size)
-        assertEquals("call_1", results[0].callId)
-    }
-
-    @Test
-    fun testExecuteToolsThrowsForUnknownTool() = runTest {
-        val toolCalls = listOf(
-            com.example.prompts03.ToolCall("c1", "noSuchTool", "{}"),
-        )
-        assertFailsWith<Throwable> {
-            prompt.executeTools(toolCalls, MockWebSearchExecutor())
+    fun testExecuteToolsCallsExecutorAndReturnsOutput() =
+        runTest {
+            val toolCalls =
+                listOf(
+                    com.example.prompts03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}"),
+                )
+            val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
+            assertEquals(1, results.size)
+            assertEquals("call_1", results[0].callId)
+            assertTrue(results[0].stringifiedOutput.contains("Tokyo Population 2024"))
         }
-    }
+
+    @Test
+    fun testExecuteToolsAcceptsSet() =
+        runTest {
+            val toolCalls =
+                setOf(
+                    com.example.prompts03.ToolCall("call_1", "webSearch", "{\"query\":\"Tokyo population\"}"),
+                )
+            val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
+            assertEquals(1, results.size)
+            assertEquals("call_1", results[0].callId)
+        }
+
+    @Test
+    fun testExecuteToolsThrowsForUnknownTool() =
+        runTest {
+            val toolCalls =
+                listOf(
+                    com.example.prompts03.ToolCall("c1", "noSuchTool", "{}"),
+                )
+            assertFailsWith<Throwable> {
+                prompt.executeTools(toolCalls, MockWebSearchExecutor())
+            }
+        }
 }
 
 class Test04Snippets_SummarizeDocument {
     @Test
     fun testSwitchSnippetSelectsExecutiveInstruction() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Executive,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Executive,
+                ),
+            )
         assertTrue(p.systemMessage.contains("non-technical executive audience"))
     }
 
     @Test
     fun testSwitchSnippetSelectsTechnicalInstruction() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
+                ),
+            )
         assertTrue(p.systemMessage.contains("technical audience"))
     }
 
     @Test
     fun testSwitchSnippetSelectsGeneralInstruction() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.General,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.General,
+                ),
+            )
         assertTrue(p.systemMessage.contains("general audience"))
     }
 
     @Test
     fun testSwitchSnippetDoesNotBleedIntoOtherVariant() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
+                ),
+            )
         assertFalse(p.systemMessage.contains("business impact"))
     }
 
     @Test
     fun testConditionalSnippetFocusInstructionWhenFocusTopicSet() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                focusTopic = "climate change",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.General,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    focusTopic = "climate change",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.General,
+                ),
+            )
         assertTrue(p.systemMessage.contains("climate change"))
     }
 
     @Test
     fun testConditionalSnippetNoFocusInstructionWhenAbsent() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "T",
-                content = "C",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Executive,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "T",
+                    content = "C",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Executive,
+                ),
+            )
         assertFalse(p.systemMessage.contains("Focus the summary"))
     }
 
     @Test
     fun testUserMessageWrapsTitleInEnclosedTag() {
-        val p = com.example.prompts05.prompts.renderSummarizeDocument(
-            com.example.prompts05.Schema.SummarizeDocument.Input(
-                title = "AI Report",
-                content = "...",
-                audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
-            ),
-        )
+        val p =
+            com.example.prompts05.prompts.renderSummarizeDocument(
+                com.example.prompts05.Schema.SummarizeDocument.Input(
+                    title = "AI Report",
+                    content = "...",
+                    audience = com.example.prompts05.Schema.SummarizeDocument.Input_Audience.Technical,
+                ),
+            )
         assertTrue(p.userMessage.contains("<Title>"))
     }
 }
 
 class Test05Variants_WriteProductDescription {
     private val features = listOf("removes 99.9% of contaminants", "lasts 6 months")
-    private val marketing = com.example.prompts04.prompts.renderWriteProductDescription(
-        com.example.prompts04.Schema.WriteProductDescription.Input(
-            productName = "AquaFilter Pro",
-            features = features,
-            variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Marketing,
-        ),
-    )
-    private val technical = com.example.prompts04.prompts.renderWriteProductDescription(
-        com.example.prompts04.Schema.WriteProductDescription.Input(
-            productName = "AquaFilter Pro",
-            features = features,
-            variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Technical,
-        ),
-    )
-    private val brief = com.example.prompts04.prompts.renderWriteProductDescription(
-        com.example.prompts04.Schema.WriteProductDescription.Input(
-            productName = "AquaFilter Pro",
-            features = features,
-            variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Brief,
-        ),
-    )
+    private val marketing =
+        com.example.prompts04.prompts.renderWriteProductDescription(
+            com.example.prompts04.Schema.WriteProductDescription.Input(
+                productName = "AquaFilter Pro",
+                features = features,
+                variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Marketing,
+            ),
+        )
+    private val technical =
+        com.example.prompts04.prompts.renderWriteProductDescription(
+            com.example.prompts04.Schema.WriteProductDescription.Input(
+                productName = "AquaFilter Pro",
+                features = features,
+                variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Technical,
+            ),
+        )
+    private val brief =
+        com.example.prompts04.prompts.renderWriteProductDescription(
+            com.example.prompts04.Schema.WriteProductDescription.Input(
+                productName = "AquaFilter Pro",
+                features = features,
+                variant = com.example.prompts04.Schema.WriteProductDescription.Input_Variant.Brief,
+            ),
+        )
 
     @Test
     fun testMarketingSystemPrompt() {
@@ -550,30 +583,34 @@ class Test05Variants_WriteProductDescription {
 }
 
 class Test06SharedTypes {
-    private val address = com.example.prompts06.Schema.Shared.Address(
-        street = "1 Main St",
-        city = "Paris",
-        country = "France",
-    )
+    private val address =
+        com.example.prompts06.Schema.Shared.Address(
+            street = "1 Main St",
+            city = "Paris",
+            country = "France",
+        )
 
-    private val contact = com.example.prompts06.Schema.Shared.ContactInfo(
-        name = "Alice Dupont",
-        email = "alice@example.com",
-        address = address,
-    )
+    private val contact =
+        com.example.prompts06.Schema.Shared.ContactInfo(
+            name = "Alice Dupont",
+            email = "alice@example.com",
+            address = address,
+        )
 
     @Test
     fun testShippingConfirmation() {
-        val prompt = com.example.prompts06.prompts.renderShippingConfirmation(
-            com.example.prompts06.Schema.ShippingConfirmation.Input(
-                recipient = contact,
-                orderNumber = "ORD-1234",
-                estimatedDelivery = "2026-08-20",
-                items = listOf(
-                    com.example.prompts06.Schema.ShippingConfirmation.Input_Items(name = "Laptop", quantity = 1),
+        val prompt =
+            com.example.prompts06.prompts.renderShippingConfirmation(
+                com.example.prompts06.Schema.ShippingConfirmation.Input(
+                    recipient = contact,
+                    orderNumber = "ORD-1234",
+                    estimatedDelivery = "2026-08-20",
+                    items =
+                        listOf(
+                            com.example.prompts06.Schema.ShippingConfirmation.Input_Items(name = "Laptop", quantity = 1),
+                        ),
                 ),
-            ),
-        )
+            )
 
         assertIs<com.example.prompts06.TextOutputFormat>(prompt.outputFormat)
         assertEquals("Main:ShippingConfirmation", prompt.templateId.toString())
@@ -584,13 +621,14 @@ class Test06SharedTypes {
 
     @Test
     fun testReturnSlip() {
-        val prompt = com.example.prompts06.prompts.renderReturnSlip(
-            com.example.prompts06.Schema.ReturnSlip.Input(
-                customer = contact,
-                returnReason = com.example.prompts06.Schema.ReturnSlip.Input_ReturnReason.Defective,
-                orderNumber = "ORD-1234",
-            ),
-        )
+        val prompt =
+            com.example.prompts06.prompts.renderReturnSlip(
+                com.example.prompts06.Schema.ReturnSlip.Input(
+                    customer = contact,
+                    returnReason = com.example.prompts06.Schema.ReturnSlip.Input_ReturnReason.Defective,
+                    orderNumber = "ORD-1234",
+                ),
+            )
 
         assertIs<com.example.prompts06.TextOutputFormat>(prompt.outputFormat)
         assertEquals("Main:ReturnSlip", prompt.templateId.toString())
@@ -602,17 +640,19 @@ class Test06SharedTypes {
 class Test07Namespaces {
     @Test
     fun testFinanceSummarizeTransaction() {
-        val prompt = com.example.prompts07.prompts.finance.renderSummarizeTransaction(
-            com.example.prompts07.Schema.Finance.SummarizeTransaction.Input(
-                description = "AWS monthly bill",
-                amount = com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
-                    value = 450.0,
-                    currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
+        val prompt =
+            com.example.prompts07.prompts.finance.renderSummarizeTransaction(
+                com.example.prompts07.Schema.Finance.SummarizeTransaction.Input(
+                    description = "AWS monthly bill",
+                    amount =
+                        com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
+                            value = 450.0,
+                            currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
+                        ),
+                    category = com.example.prompts07.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
+                    date = "2026-08-01",
                 ),
-                category = com.example.prompts07.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
-                date = "2026-08-01",
-            ),
-        )
+            )
 
         assertEquals("Finance:SummarizeTransaction", prompt.templateId.toString())
         assertNotNull(com.example.prompts07.prompts.finance)
@@ -622,19 +662,22 @@ class Test07Namespaces {
 
     @Test
     fun testFinanceDetectAnomaly() {
-        val prompt = com.example.prompts07.prompts.finance.renderDetectAnomaly(
-            com.example.prompts07.Schema.Finance.DetectAnomaly.Input(
-                recentTransactions = emptyList(),
-                newTransaction = com.example.prompts07.Schema.Finance.DetectAnomaly.Input_NewTransaction(
-                    description = "Casino chips",
-                    amount = com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
-                        value = 5000.0,
-                        currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
-                    ),
-                    date = "2026-08-17",
+        val prompt =
+            com.example.prompts07.prompts.finance.renderDetectAnomaly(
+                com.example.prompts07.Schema.Finance.DetectAnomaly.Input(
+                    recentTransactions = emptyList(),
+                    newTransaction =
+                        com.example.prompts07.Schema.Finance.DetectAnomaly.Input_NewTransaction(
+                            description = "Casino chips",
+                            amount =
+                                com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
+                                    value = 5000.0,
+                                    currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
+                                ),
+                            date = "2026-08-17",
+                        ),
                 ),
-            ),
-        )
+            )
 
         assertEquals("Finance:DetectAnomaly", prompt.templateId.toString())
         assertTrue(prompt.userMessage.contains("Casino chips"))
@@ -643,22 +686,25 @@ class Test07Namespaces {
 
     @Test
     fun testLegalDraftNda() {
-        val prompt = com.example.prompts07.prompts.legal.renderDraftNda(
-            com.example.prompts07.Schema.Legal.DraftNda.Input(
-                disclosingParty = com.example.prompts07.Schema.Legal.Shared.Party(
-                    name = "Acme Corp",
-                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
-                    jurisdiction = "California",
+        val prompt =
+            com.example.prompts07.prompts.legal.renderDraftNda(
+                com.example.prompts07.Schema.Legal.DraftNda.Input(
+                    disclosingParty =
+                        com.example.prompts07.Schema.Legal.Shared.Party(
+                            name = "Acme Corp",
+                            role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
+                            jurisdiction = "California",
+                        ),
+                    receivingParty =
+                        com.example.prompts07.Schema.Legal.Shared.Party(
+                            name = "Beta LLC",
+                            role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Counterparty,
+                            jurisdiction = "Delaware",
+                        ),
+                    purposeOfDisclosure = "Evaluating a potential acquisition",
+                    durationYears = 3,
                 ),
-                receivingParty = com.example.prompts07.Schema.Legal.Shared.Party(
-                    name = "Beta LLC",
-                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Counterparty,
-                    jurisdiction = "Delaware",
-                ),
-                purposeOfDisclosure = "Evaluating a potential acquisition",
-                durationYears = 3,
-            ),
-        )
+            )
 
         assertEquals("Legal:DraftNda", prompt.templateId.toString())
         assertIs<com.example.prompts07.TextOutputFormat>(prompt.outputFormat)
@@ -670,16 +716,18 @@ class Test07Namespaces {
 
     @Test
     fun testLegalSummarizeClause() {
-        val prompt = com.example.prompts07.prompts.legal.renderSummarizeClause(
-            com.example.prompts07.Schema.Legal.SummarizeClause.Input(
-                clauseText = "The party shall indemnify and hold harmless...",
-                reviewingParty = com.example.prompts07.Schema.Legal.Shared.Party(
-                    name = "Alice",
-                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
-                    jurisdiction = "NY",
+        val prompt =
+            com.example.prompts07.prompts.legal.renderSummarizeClause(
+                com.example.prompts07.Schema.Legal.SummarizeClause.Input(
+                    clauseText = "The party shall indemnify and hold harmless...",
+                    reviewingParty =
+                        com.example.prompts07.Schema.Legal.Shared.Party(
+                            name = "Alice",
+                            role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
+                            jurisdiction = "NY",
+                        ),
                 ),
-            ),
-        )
+            )
 
         assertEquals("Legal:SummarizeClause", prompt.templateId.toString())
         assertIs<com.example.prompts07.JsonOutputFormat>(prompt.outputFormat)
@@ -690,36 +738,39 @@ class Test07Namespaces {
 }
 
 class TestE01_AnalyzeSalesData {
-    private val rows = listOf(
-        com.example.prompts_e01.Schema.AnalyzeSalesData.SalesRow(
-            product = "Widget A",
-            units = 120,
-            revenueCents = 240000,
-            region = "north",
-        ),
-        com.example.prompts_e01.Schema.AnalyzeSalesData.SalesRow(
-            product = "Widget B",
-            units = 85,
-            revenueCents = 340000,
-            region = "south",
-        ),
-    )
+    private val rows =
+        listOf(
+            com.example.prompts_e01.Schema.AnalyzeSalesData.SalesRow(
+                product = "Widget A",
+                units = 120,
+                revenueCents = 240000,
+                region = "north",
+            ),
+            com.example.prompts_e01.Schema.AnalyzeSalesData.SalesRow(
+                product = "Widget B",
+                units = 85,
+                revenueCents = 340000,
+                region = "south",
+            ),
+        )
 
-    private val csv = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
-        com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
-            rows = rows,
-            question = "Top product?",
-            variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv,
-        ),
-    )
+    private val csv =
+        com.example.prompts_e01.prompts.renderAnalyzeSalesData(
+            com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
+                rows = rows,
+                question = "Top product?",
+                variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv,
+            ),
+        )
 
-    private val tsv = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
-        com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
-            rows = rows,
-            question = "Top product?",
-            variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Tsv,
-        ),
-    )
+    private val tsv =
+        com.example.prompts_e01.prompts.renderAnalyzeSalesData(
+            com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
+                rows = rows,
+                question = "Top product?",
+                variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Tsv,
+            ),
+        )
 
     @Test
     fun testCsvUserMessageHasCommaSeparatedHeader() {
@@ -750,13 +801,14 @@ class TestE01_AnalyzeSalesData {
 
     @Test
     fun testEmptyRowsRendersNoTableContent() {
-        val empty = com.example.prompts_e01.prompts.renderAnalyzeSalesData(
-            com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
-                rows = emptyList(),
-                question = "Any data?",
-                variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv,
-            ),
-        )
+        val empty =
+            com.example.prompts_e01.prompts.renderAnalyzeSalesData(
+                com.example.prompts_e01.Schema.AnalyzeSalesData.Input(
+                    rows = emptyList(),
+                    question = "Any data?",
+                    variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv,
+                ),
+            )
         assertFalse(empty.userMessage.contains("product,units"))
     }
 
@@ -832,47 +884,52 @@ class TestE01_AnalyzeSalesData {
 }
 
 class TestCrossCutting_ParseResponse {
-    private fun p02Render() = com.example.prompts02.prompts.renderTriageTicket(
-        com.example.prompts02.Schema.TriageTicket.Input(
-            subject = "X",
-            body = "Y",
-            customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
-            recentTickets = emptyList(),
-        ),
-    )
+    private fun p02Render() =
+        com.example.prompts02.prompts.renderTriageTicket(
+            com.example.prompts02.Schema.TriageTicket.Input(
+                subject = "X",
+                body = "Y",
+                customerTier = com.example.prompts02.Schema.TriageTicket.Input_CustomerTier.Pro,
+                recentTickets = emptyList(),
+            ),
+        )
 
     @Test
     fun testParsesPlainJsonWithoutFences() {
-        val res = p02Render().parseResponse(
-            "{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}",
-        )
+        val res =
+            p02Render().parseResponse(
+                "{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Other, res.category)
     }
 
     @Test
     fun testStripsPlainCodeFences() {
-        val res = p02Render().parseResponse(
-            "```\n{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}\n```",
-        )
+        val res =
+            p02Render().parseResponse(
+                "```\n{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}\n```",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Other, res.category)
     }
 
     @Test
     fun testStripsJsonCodeFences() {
-        val res = p02Render().parseResponse(
-            "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
-        )
+        val res =
+            p02Render().parseResponse(
+                "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\",\"suggestedActions\":[]}\n```",
+            )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Other, res.category)
     }
 
     @Test
     fun testReturnsRawStringForTextOutputFormat() {
-        val prompt = com.example.prompts01.prompts.renderTranslate(
-            com.example.prompts01.Schema.Translate.Input(
-                text = "hi",
-                targetLanguage = "Spanish",
-            ),
-        )
+        val prompt =
+            com.example.prompts01.prompts.renderTranslate(
+                com.example.prompts01.Schema.Translate.Input(
+                    text = "hi",
+                    targetLanguage = "Spanish",
+                ),
+            )
         assertEquals("Hola", prompt.parseResponse("Hola"))
     }
 }
@@ -909,14 +966,16 @@ class TestE01_JsonSerialization {
                 y = 20.5,
                 z = "error",
             )
-        val jsonNotSuccess = Json.encodeToString(
-            com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
-            notSuccess,
-        )
-        val parsedNotSuccess = Json.decodeFromString(
-            com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
-            jsonNotSuccess,
-        )
+        val jsonNotSuccess =
+            Json.encodeToString(
+                com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
+                notSuccess,
+            )
+        val parsedNotSuccess =
+            Json.decodeFromString(
+                com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
+                jsonNotSuccess,
+            )
         val notSuccessTyped =
             assertIs<com.example.prompts_e01.Schema.Shared.EnumWithCommonFields_NotSuccess>(parsedNotSuccess)
         assertEquals(10, notSuccessTyped.x)
@@ -929,14 +988,16 @@ class TestE01_JsonSerialization {
                 y = 84.0,
                 z = 99,
             )
-        val jsonSuccess = Json.encodeToString(
-            com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
-            success,
-        )
-        val parsedSuccess = Json.decodeFromString(
-            com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
-            jsonSuccess,
-        )
+        val jsonSuccess =
+            Json.encodeToString(
+                com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
+                success,
+            )
+        val parsedSuccess =
+            Json.decodeFromString(
+                com.example.prompts_e01.Schema.Shared.EnumWithCommonFields.serializer(),
+                jsonSuccess,
+            )
         val successTyped = assertIs<com.example.prompts_e01.Schema.Shared.EnumWithCommonFields_Success>(parsedSuccess)
         assertEquals(42, successTyped.x)
         assertEquals(84.0, successTyped.y)
@@ -946,26 +1007,29 @@ class TestE01_JsonSerialization {
     @Test
     fun testStringEnumVariantSerialization() {
         val variant = com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv
-        val jsonVariant = Json.encodeToString(
-            com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.serializer(),
-            variant,
-        )
+        val jsonVariant =
+            Json.encodeToString(
+                com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.serializer(),
+                variant,
+            )
         assertEquals("\"csv\"", jsonVariant)
-        val parsedVariant = Json.decodeFromString(
-            com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.serializer(),
-            jsonVariant,
-        )
+        val parsedVariant =
+            Json.decodeFromString(
+                com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.serializer(),
+                jsonVariant,
+            )
         assertEquals(com.example.prompts_e01.Schema.AnalyzeSalesData.Input_Variant.Csv, parsedVariant)
     }
 
     @Test
     fun testMatrixWithOmittedOptionalFields() {
-        val matrix = com.example.prompts_e01.Schema.Shared.Matrix(
-            matrix = emptyList(),
-            ints = listOf(1, 2, 3),
-            init = true,
-            encode = false,
-        )
+        val matrix =
+            com.example.prompts_e01.Schema.Shared.Matrix(
+                matrix = emptyList(),
+                ints = listOf(1, 2, 3),
+                init = true,
+                encode = false,
+            )
         assertNull(matrix.otherMatrix)
         assertNull(matrix.foo)
     }
@@ -989,12 +1053,13 @@ class TestTemplateOverrider {
         // Test valid overrides
         val prompts = com.example.prompts01.TemplateOverrider.applyOverrides(data)
         assertNotNull(prompts)
-        val prompt = prompts.renderTranslate(
-            com.example.prompts01.Schema.Translate.Input(
-                text = "Hello",
-                targetLanguage = "French",
-            ),
-        )
+        val prompt =
+            prompts.renderTranslate(
+                com.example.prompts01.Schema.Translate.Input(
+                    text = "Hello",
+                    targetLanguage = "French",
+                ),
+            )
         assertTrue(prompt.userMessage.contains("French"))
     }
 }

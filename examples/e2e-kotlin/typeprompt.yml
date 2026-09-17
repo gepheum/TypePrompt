@@ -1,0 +1,5 @@
+include: prompts/**/*.xml
+gen:
+  kotlin:
+    file: src/main/kotlin/gen/Prompts.kt
+    package: com.example.prompts

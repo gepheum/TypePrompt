@@ -15,3 +15,11 @@ This directory contains self-contained TypePrompt examples demonstrating various
 | **[05-conditional-logic](05-conditional-logic)** | Modular text composition and conditional logic | `<snippet>`, conditional snippets (`if`/`then`/`else`), `switch` snippets, `<insert snippet="...">` |
 | **[06-shared-types](06-shared-types)** | Reusable types in the default namespace | `<namespace name="Main">`, shared types referenced via `shared.TypeName` |
 | **[07-namespaces](07-namespaces)** | Multi-namespace project organization | Named namespaces (`Finance`, `Legal`), isolated shared types, domain-specific tools and templates |
+
+---
+
+## End-to-End Applications
+
+| Directory | Description | Stack |
+|---|---|---|
+| **[e2e-kotlin](e2e-kotlin)** | Runnable CLI translation tool calling OpenAI | Kotlin, Gradle, OpenAI Java SDK |

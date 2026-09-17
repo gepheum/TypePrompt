@@ -43,36 +43,36 @@ import dev.toonformat.jtoon.JToon
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonContentPolymorphicSerializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonClassDiscriminator
-import kotlinx.serialization.json.JsonContentPolymorphicSerializer
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 // </static:kotlin-imports>
 
 // <static:kotlin-public-types>
+
 /**
  * A fully resolved prompt ready to be sent to an LLM.
  *
@@ -121,7 +121,6 @@ data class Prompt<out Output, in ToolExecutor>(
         }
     }
 }
-
 
 /**
  * The expected format of the model output.
@@ -183,7 +182,8 @@ object NoTools
 
 /** Uniquely identifies a prompt template. */
 enum class TemplateId(private val id: String) {
-    TODO("Main:Todo");
+    TODO("Main:Todo"),
+    ;
 
     override fun toString(): String = id
 }
@@ -203,7 +203,7 @@ internal object Spec {
         val singleNamespace: Boolean,
         /** The key is a relative path to a .xml file. The value is the file content. */
         val sourceFiles: Map<String, String>,
-    ) {}
+    )
 
     // Exported as 'Spec.Template'
     @OptIn(ExperimentalSerializationApi::class)
@@ -216,13 +216,14 @@ internal object Spec {
         val contents: TemplateContents,
         val snippets: Map<String, Snippet>,
         val outputJsonSchema: JsonElement,
-    ) {}
+    )
 
     // Exported as 'Spec.OutputFormat'
     @Serializable
     enum class OutputFormat {
         @SerialName("json")
         Json,
+
         @SerialName("text")
         Text,
     }
@@ -233,18 +234,18 @@ internal object Spec {
     data class TemplateTool(
         val id: String,
         val name: String,
-    ) {}
+    )
 
     // Exported as 'Spec.TemplateContents'
     @Serializable(with = TemplateContents_Serializer::class)
-    sealed interface TemplateContents {}
+    sealed interface TemplateContents
 
     private object TemplateContents_Serializer : JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<TemplateContents> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "no-variants" -> TemplateContents_KindNoVariants.serializer()
                 "variants" -> TemplateContents_KindVariants.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
             }
         }
     }
@@ -292,7 +293,7 @@ internal object Spec {
         @kotlinx.serialization.EncodeDefault val system: List<BodyPiece>? = null,
         @kotlinx.serialization.EncodeDefault val user: List<BodyPiece>? = null,
         @kotlinx.serialization.EncodeDefault val examples: List<FewShotExample>? = null,
-    ) {}
+    )
 
     // Exported as 'Spec.FewShotExample'
     @OptIn(ExperimentalSerializationApi::class)
@@ -301,14 +302,14 @@ internal object Spec {
         val input: JsonElement,
         val output: JsonElement,
         val intermediateSteps: List<FewShotExample_IntermediateSteps>,
-    ) {}
+    )
 
     // Exported as 'Spec.FewShotExample_IntermediateSteps'
     @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     data class FewShotExample_IntermediateSteps(
         val toolCalls: List<ToolCallExample>,
-    ) {}
+    )
 
     // Exported as 'Spec.ToolCallExample'
     @OptIn(ExperimentalSerializationApi::class)
@@ -319,11 +320,11 @@ internal object Spec {
         val toolName: String,
         val input: JsonElement,
         val output: JsonElement,
-    ) {}
+    )
 
     // Exported as 'Spec.BodyPiece'
     @Serializable(with = BodyPiece_Serializer::class)
-    sealed interface BodyPiece {}
+    sealed interface BodyPiece
 
     private object BodyPiece_Serializer : JsonContentPolymorphicSerializer<BodyPiece>(BodyPiece::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<BodyPiece> {
@@ -331,7 +332,7 @@ internal object Spec {
                 "text" -> BodyPiece_KindText.serializer()
                 "insert-val" -> BodyPiece_KindInsertVal.serializer()
                 "insert-snippet" -> BodyPiece_KindInsertSnippet.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
             }
         }
     }
@@ -402,28 +403,33 @@ internal object Spec {
     enum class InsertFormat {
         @SerialName("text")
         Text,
+
         @SerialName("json")
         Json,
+
         @SerialName("yaml")
         Yaml,
+
         @SerialName("toon")
         Toon,
+
         @SerialName("csv")
         Csv,
+
         @SerialName("tsv")
         Tsv,
     }
 
     // Exported as 'Spec.Expression'
     @Serializable(with = Expression_Serializer::class)
-    sealed interface Expression {}
+    sealed interface Expression
 
     private object Expression_Serializer : JsonContentPolymorphicSerializer<Expression>(Expression::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Expression> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "input" -> Expression_KindInput.serializer()
                 "property" -> Expression_KindProperty.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
             }
         }
     }
@@ -461,7 +467,7 @@ internal object Spec {
 
     // Exported as 'Spec.Snippet'
     @Serializable(with = Snippet_Serializer::class)
-    sealed interface Snippet {}
+    sealed interface Snippet
 
     private object Snippet_Serializer : JsonContentPolymorphicSerializer<Snippet>(Snippet::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Snippet> {
@@ -469,7 +475,7 @@ internal object Spec {
                 "snippet" -> Snippet_KindSnippet.serializer()
                 "snippet-if" -> Snippet_KindSnippetIf.serializer()
                 "snippet-switch" -> Snippet_KindSnippetSwitch.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
             }
         }
     }
@@ -520,8 +526,10 @@ internal object Spec {
     enum class Snippet_KindSnippetIf_Is {
         @SerialName("not-null")
         NotNull,
+
         @SerialName("not-empty")
         NotEmpty,
+
         @SerialName("true")
         True,
     }
@@ -553,8 +561,8 @@ internal object Spec {
         val name: String,
         val description: String,
         val inputJsonSchema: JsonElement,
-    ) {}
-}  // object Spec
+    )
+} // object Spec
 // </generated:spec>
 
 /** Entry point for building prompts. */
@@ -562,14 +570,15 @@ class Prompts internal constructor(
     private val spec: Spec.Templates,
 )
 
-private val templatesData: Spec.Templates = Spec.Templates(
-    edition = 0,
-    signature = "",
-    templates = emptyMap(),
-    tools = emptyMap(),
-    singleNamespace = true,
-    sourceFiles = emptyMap(),
-)
+private val templatesData: Spec.Templates =
+    Spec.Templates(
+        edition = 0,
+        signature = "",
+        templates = emptyMap(),
+        tools = emptyMap(),
+        singleNamespace = true,
+        sourceFiles = emptyMap(),
+    )
 
 @Suppress("unused")
 private suspend fun executeToolCall(
@@ -583,17 +592,19 @@ private suspend fun executeToolCall(
 // <static:kotlin-logic>
 private object JsonConfig {
     @OptIn(ExperimentalSerializationApi::class)
-    val lenient: Json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        explicitNulls = false
-    }
+    val lenient: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            explicitNulls = false
+        }
 
     @OptIn(ExperimentalSerializationApi::class)
-    val pretty: Json = Json {
-        prettyPrint = true
-        prettyPrintIndent = "  "
-    }
+    val pretty: Json =
+        Json {
+            prettyPrint = true
+            prettyPrintIndent = "  "
+        }
 }
 
 private fun parseMeta(element: JsonElement?): Meta {
@@ -655,7 +666,10 @@ private fun objectToJsonElement(v: Any?): JsonElement {
     }
 }
 
-private fun evaluate(expression: Spec.Expression, `val`: Any?): Any? {
+private fun evaluate(
+    expression: Spec.Expression,
+    `val`: Any?,
+): Any? {
     return when (expression) {
         is Spec.Expression_KindInput -> `val`
         is Spec.Expression_KindProperty -> {
@@ -666,11 +680,17 @@ private fun evaluate(expression: Spec.Expression, `val`: Any?): Any? {
     }
 }
 
-private fun indent(text: String, spaces: String): String {
+private fun indent(
+    text: String,
+    spaces: String,
+): String {
     return if (spaces.isEmpty()) text else text.replace("\n", "\n$spaces")
 }
 
-private fun formatTable(v: Any?, fmt: Spec.InsertFormat): String {
+private fun formatTable(
+    v: Any?,
+    fmt: Spec.InsertFormat,
+): String {
     val list = v as? List<*> ?: return ""
     if (list.isEmpty()) return ""
     val separator = if (fmt == Spec.InsertFormat.Csv) "," else "\t"
@@ -695,7 +715,7 @@ private fun formatTable(v: Any?, fmt: Spec.InsertFormat): String {
                         str.replace("\\", "\\\\")
                             .replace("\t", "\\t")
                             .replace("\n", "\\n")
-                            .replace("\r", "\\r")
+                            .replace("\r", "\\r"),
                     )
                 }
             }
@@ -705,7 +725,10 @@ private fun formatTable(v: Any?, fmt: Spec.InsertFormat): String {
     return lines.joinToString("\n")
 }
 
-private fun formatValue(v: Any?, fmt: Spec.InsertFormat?): String {
+private fun formatValue(
+    v: Any?,
+    fmt: Spec.InsertFormat?,
+): String {
     return when (fmt) {
         null, Spec.InsertFormat.Text -> v?.toString() ?: ""
         Spec.InsertFormat.Json -> {
@@ -714,10 +737,11 @@ private fun formatValue(v: Any?, fmt: Spec.InsertFormat?): String {
         }
 
         Spec.InsertFormat.Yaml -> {
-            val dumperOptions = DumperOptions().apply {
-                defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
-                isPrettyFlow = false
-            }
+            val dumperOptions =
+                DumperOptions().apply {
+                    defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+                    isPrettyFlow = false
+                }
             val yaml = Yaml(dumperOptions)
             yaml.dump(v).trimEnd('\r', '\n').replace("\r\n", "\n")
         }
@@ -754,8 +778,9 @@ private fun renderBody(
             }
 
             is Spec.BodyPiece_KindInsertSnippet -> {
-                val snippet = snippets[piece.snippet]
-                    ?: throw IllegalArgumentException("Snippet not found: ${piece.snippet}")
+                val snippet =
+                    snippets[piece.snippet]
+                        ?: throw IllegalArgumentException("Snippet not found: ${piece.snippet}")
                 val renderedSnippet = renderSnippet(snippet, inp, snippets)
                 sb.append(indent(renderedSnippet, piece.indent))
             }
@@ -776,42 +801,45 @@ private fun renderSnippet(
 
         is Spec.Snippet_KindSnippetIf -> {
             val evalResult = evaluate(snippet.expression, inp)
-            val condition = when (snippet.`is`) {
-                Spec.Snippet_KindSnippetIf_Is.NotEmpty -> {
-                    when (evalResult) {
-                        is Collection<*> -> evalResult.isNotEmpty()
-                        is Map<*, *> -> evalResult.isNotEmpty()
-                        is String -> evalResult.isNotEmpty()
-                        null -> false
-                        else -> true
+            val condition =
+                when (snippet.`is`) {
+                    Spec.Snippet_KindSnippetIf_Is.NotEmpty -> {
+                        when (evalResult) {
+                            is Collection<*> -> evalResult.isNotEmpty()
+                            is Map<*, *> -> evalResult.isNotEmpty()
+                            is String -> evalResult.isNotEmpty()
+                            null -> false
+                            else -> true
+                        }
+                    }
+
+                    Spec.Snippet_KindSnippetIf_Is.NotNull -> {
+                        evalResult != null
+                    }
+
+                    Spec.Snippet_KindSnippetIf_Is.True -> {
+                        when (evalResult) {
+                            is Boolean -> evalResult
+                            is String -> evalResult.isNotEmpty()
+                            is Number -> evalResult.toLong() != 0L
+                            null -> false
+                            else -> true
+                        }
                     }
                 }
-
-                Spec.Snippet_KindSnippetIf_Is.NotNull -> {
-                    evalResult != null
-                }
-
-                Spec.Snippet_KindSnippetIf_Is.True -> {
-                    when (evalResult) {
-                        is Boolean -> evalResult
-                        is String -> evalResult.isNotEmpty()
-                        is Number -> evalResult.toLong() != 0L
-                        null -> false
-                        else -> true
-                    }
-                }
-            }
             return renderBody(if (condition) snippet.then else snippet.`else`, inp, snippets)
         }
 
         is Spec.Snippet_KindSnippetSwitch -> {
             val switchVal = evaluate(snippet.expression, inp)
-            val switchKey = when (switchVal) {
-                is Boolean -> if (switchVal) "true" else "false"
-                else -> switchVal?.toString() ?: ""
-            }
-            val branch = snippet.branches[switchKey]
-                ?: throw IllegalArgumentException("Branch not found: $switchKey")
+            val switchKey =
+                when (switchVal) {
+                    is Boolean -> if (switchVal) "true" else "false"
+                    else -> switchVal?.toString() ?: ""
+                }
+            val branch =
+                snippet.branches[switchKey]
+                    ?: throw IllegalArgumentException("Branch not found: $switchKey")
             return renderBody(branch, inp, snippets)
         }
     }
@@ -841,17 +869,18 @@ private fun renderExamples(
                         toolName = tc.toolName,
                         stringifiedInput = Json.encodeToString(JsonElement.serializer(), tc.input),
                         stringifiedOutput = Json.encodeToString(JsonElement.serializer(), tc.output),
-                    )
+                    ),
                 )
             }
             intermediateSteps.add(IntermediateStepExample(toolCalls))
         }
 
-        val outputFormat = if (tmpl.outputFormat == Spec.OutputFormat.Json) {
-            Spec.InsertFormat.Json
-        } else {
-            Spec.InsertFormat.Text
-        }
+        val outputFormat =
+            if (tmpl.outputFormat == Spec.OutputFormat.Json) {
+                Spec.InsertFormat.Json
+            } else {
+                Spec.InsertFormat.Text
+            }
         val response = formatValue(exOutputObj, outputFormat)
 
         result.add(
@@ -859,7 +888,7 @@ private fun renderExamples(
                 userMessage = userMessage,
                 intermediateSteps = intermediateSteps,
                 response = response,
-            )
+            ),
         )
     }
     return result
@@ -871,8 +900,9 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
     templateId: String,
     input: Input,
 ): Prompt<Output, ToolExecutor> {
-    val template = spec.templates[templateId]
-        ?: throw IllegalArgumentException("Template not found: $templateId")
+    val template =
+        spec.templates[templateId]
+            ?: throw IllegalArgumentException("Template not found: $templateId")
 
     val inputElement = Json.encodeToJsonElement(input)
     val inputObj = jsonElementToObject(inputElement)
@@ -897,12 +927,15 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
 
         is Spec.TemplateContents_KindVariants -> {
             @Suppress("UNCHECKED_CAST")
-            val inputDict = inputObj as? Map<String, Any?>
-                ?: throw IllegalArgumentException("Input for template with variants must be an object")
-            val variant = inputDict["variant"]?.toString()
-                ?: throw IllegalArgumentException("Missing 'variant' field in input")
-            val variantContent = contents.variants[variant]
-                ?: throw IllegalArgumentException("Unknown variant: $variant")
+            val inputDict =
+                inputObj as? Map<String, Any?>
+                    ?: throw IllegalArgumentException("Input for template with variants must be an object")
+            val variant =
+                inputDict["variant"]?.toString()
+                    ?: throw IllegalArgumentException("Missing 'variant' field in input")
+            val variantContent =
+                contents.variants[variant]
+                    ?: throw IllegalArgumentException("Unknown variant: $variant")
             val defaultContent = contents.defaultContent
 
             metaElement = variantContent.meta ?: defaultContent.meta
@@ -919,26 +952,30 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
 
     val tools = mutableMapOf<String, Tool>()
     for (templateTool in template.tools) {
-        val toolSpec = spec.tools[templateTool.id]
-            ?: throw IllegalArgumentException("Tool spec not found: ${templateTool.id}")
-        tools[templateTool.name] = Tool(
-            name = templateTool.name,
-            description = toolSpec.description,
-            inputJsonSchema = toolSpec.inputJsonSchema,
-        )
+        val toolSpec =
+            spec.tools[templateTool.id]
+                ?: throw IllegalArgumentException("Tool spec not found: ${templateTool.id}")
+        tools[templateTool.name] =
+            Tool(
+                name = templateTool.name,
+                description = toolSpec.description,
+                inputJsonSchema = toolSpec.inputJsonSchema,
+            )
     }
 
     val outputFormat: OutputFormat
     val fromJson: (String) -> Output
     when (template.outputFormat) {
         Spec.OutputFormat.Json -> {
-            outputFormat = JsonOutputFormat(
-                stringifiedJsonSchema = Json.encodeToString(
-                    JsonElement.serializer(),
-                    template.outputJsonSchema,
-                ),
-                jsonSchema = template.outputJsonSchema,
-            )
+            outputFormat =
+                JsonOutputFormat(
+                    stringifiedJsonSchema =
+                        Json.encodeToString(
+                            JsonElement.serializer(),
+                            template.outputJsonSchema,
+                        ),
+                    jsonSchema = template.outputJsonSchema,
+                )
             fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)
             }
@@ -1014,8 +1051,9 @@ object TemplateOverrider {
     }
 
     fun applyOverrides(overrides: JsonElement): Prompts {
-        val obj = overrides as? JsonObject
-            ?: throw IllegalArgumentException("Overrides must be an object")
+        val obj =
+            overrides as? JsonObject
+                ?: throw IllegalArgumentException("Overrides must be an object")
         val sig = obj["signature"]?.jsonPrimitive?.contentOrNull
         if (sig != templatesData.signature) {
             throw IllegalArgumentException("Signature mismatch")
@@ -1030,14 +1068,15 @@ object TemplateOverrider {
             val overrideTools = JsonConfig.lenient.decodeFromJsonElement<Map<String, Spec.Tool>>(toolsElement)
             mergedTools.putAll(overrideTools)
         }
-        val mergedData = Spec.Templates(
-            edition = templatesData.edition,
-            signature = templatesData.signature,
-            templates = mergedTemplates,
-            tools = mergedTools,
-            singleNamespace = templatesData.singleNamespace,
-            sourceFiles = templatesData.sourceFiles,
-        )
+        val mergedData =
+            Spec.Templates(
+                edition = templatesData.edition,
+                signature = templatesData.signature,
+                templates = mergedTemplates,
+                tools = mergedTools,
+                singleNamespace = templatesData.singleNamespace,
+                sourceFiles = templatesData.sourceFiles,
+            )
         return Prompts(mergedData)
     }
 }
@@ -1045,4 +1084,3 @@ object TemplateOverrider {
 /** Entry point for building prompts. */
 val prompts = Prompts(templatesData)
 // </static:kotlin-logic>
-

@@ -20,6 +20,18 @@ e2e-test/kotlin/src/main/kotlin/gen/
 e2e-test/kotlin/.idea/
 e2e-test/kotlin/**/*.iml
 
+examples/e2e-kotlin/.gradle/
+examples/e2e-kotlin/.kotlin/
+examples/e2e-kotlin/build/
+examples/e2e-kotlin/src/main/kotlin/gen/
+examples/e2e-kotlin/.idea/
+examples/e2e-kotlin/**/*.iml
+
+.gradle/
+.kotlin/
+*.iml
+
+
 e2e-test/python/.ruff_cache
 e2e-test/python/.venv
 e2e-test/python/__pycache/
