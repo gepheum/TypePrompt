@@ -3,13 +3,13 @@ import type {
   MappedText,
   Span,
   TextSpan,
-} from "../util/shared-types.js";
+} from "@typeprompt/core/util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
   oneOf,
-} from "../xml/xml-attributes-checker.js";
-import type { ElementNode, XmlNode } from "../xml/xml-types.js";
+} from "@typeprompt/core/xml/xml-attributes-checker.js";
+import type { ElementNode, XmlNode } from "@typeprompt/core/xml/xml-types.js";
 import type {
   Body,
   BodyPiece,
@@ -17,13 +17,13 @@ import type {
   ToolDescription,
 } from "./compiler-types.js";
 
+import { parseCTag } from "@typeprompt/core/ctag/ctag-parser.js";
+import type { CTag } from "@typeprompt/core/ctag/ctag-types.js";
+import { parseExpression } from "@typeprompt/core/expression/expression-parser.js";
+import type { Expression } from "@typeprompt/core/expression/expression-types.js";
+import { textToSourcePosition } from "@typeprompt/core/util/position-mapper.js";
+import { checkTag } from "@typeprompt/core/xml/xml-node-checker.js";
 import * as z from "zod";
-import { parseCTag } from "../ctag/ctag-parser.js";
-import type { CTag } from "../ctag/ctag-types.js";
-import { parseExpression } from "../expression/expression-parser.js";
-import type { Expression } from "../expression/expression-types.js";
-import { textToSourcePosition } from "../util/position-mapper.js";
-import { checkTag } from "../xml/xml-node-checker.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseBody<HasValContext extends boolean>(

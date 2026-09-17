@@ -2,8 +2,8 @@ import {
   findLine,
   type LineFinderData,
   type LineMatch,
-} from "../util/line-finder.js";
-import type { InternalError } from "../util/shared-types.js";
+} from "@typeprompt/core/util/line-finder.js";
+import type { InternalError } from "@typeprompt/core/util/shared-types.js";
 
 export type RenderableError = {
   readonly path: string;

@@ -1,4 +1,4 @@
-import type { LineMatch } from "../util/line-finder.js";
+import type { LineMatch } from "@typeprompt/core/util/line-finder.js";
 import type { RenderableError } from "./renderable-error.js";
 
 export function renderErrors(

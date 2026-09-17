@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_DIR = path.join(__dirname, "../..");
+const PROJECT_DIR = path.join(__dirname, "../../../..");
 const OUT_FILE = path.join(__dirname, "static-snippets.gen.ts");
 
 const snippets: Record<string, string> = {};

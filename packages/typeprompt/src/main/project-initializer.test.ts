@@ -1,7 +1,7 @@
 import { describe, it } from "mocha";
 
+import { parseConfigYaml } from "@typeprompt/core/config/config-parser.js";
 import { compile } from "../compiler/compiler.js";
-import { parseConfigYaml } from "../config/config-parser.js";
 import {
   DEFAULT_CONFIG_YAML,
   HELLO_WORLD_TEMPLATE,

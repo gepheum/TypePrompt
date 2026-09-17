@@ -1,3 +1,15 @@
+import type { Config } from "@typeprompt/core/config/config-parser.js";
+import {
+  FieldType,
+  NamingHint,
+  Schema,
+} from "@typeprompt/core/schema/schema-types.js";
+import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  capitalize,
+  toPascalCase,
+  toSnakeCase,
+} from "@typeprompt/core/util/casing.js";
 import type {
   Template,
   ValidatedTool,
@@ -7,13 +19,9 @@ import type {
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
-import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
-import { FieldType, NamingHint, Schema } from "../../schema/schema-types.js";
-import { resolveType } from "../../schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, toPascalCase, toSnakeCase } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(

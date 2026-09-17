@@ -1,8 +1,12 @@
 import plugin from "@prettier/plugin-xml";
 
+import { parseXmlDocument } from "@typeprompt/core/xml/xml-parser.js";
+import {
+  XmlComment,
+  XmlDocument,
+  XmlNode,
+} from "@typeprompt/core/xml/xml-types.js";
 import { format as prettierFormat } from "prettier";
-import { parseXmlDocument } from "../xml/xml-parser.js";
-import { XmlComment, XmlDocument, XmlNode } from "../xml/xml-types.js";
 
 export async function formatTemplateFile(content: string): Promise<string> {
   const xmlDocument = parseXmlDocument(content) as XmlDocument;

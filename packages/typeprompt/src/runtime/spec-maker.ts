@@ -1,3 +1,13 @@
+import type { Expression } from "@typeprompt/core/expression/expression-types.js";
+import type {
+  JsonString,
+  StrictJsonArray,
+  StrictJsonObject,
+  StrictJsonValue,
+} from "@typeprompt/core/json/json-types.js";
+import { unwrapJsonValue } from "@typeprompt/core/json/unwrapper.js";
+import { toJsonSchema } from "@typeprompt/core/schema/json-schema-org.js";
+import { Schema } from "@typeprompt/core/schema/schema-types.js";
 import type {
   Body,
   Snippet,
@@ -8,16 +18,6 @@ import type {
   ValidTemplate,
 } from "../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
-import type { Expression } from "../expression/expression-types.js";
-import type {
-  JsonString,
-  StrictJsonArray,
-  StrictJsonObject,
-  StrictJsonValue,
-} from "../json/json-types.js";
-import { unwrapJsonValue } from "../json/unwrapper.js";
-import { toJsonSchema } from "../schema/json-schema-org.js";
-import { Schema } from "../schema/schema-types.js";
 import * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: ValidCompilationResult): Spec.Templates {

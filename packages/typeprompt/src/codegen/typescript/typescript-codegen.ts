@@ -1,3 +1,17 @@
+import type { Config } from "@typeprompt/core/config/config-parser.js";
+import type {
+  Literal,
+  Schema,
+  Type,
+  TypeDeclarations,
+} from "@typeprompt/core/schema/schema-types.js";
+import {
+  getNameDependencies,
+  NAME_SCOPES,
+  NameScope,
+  unwrapNullable as unwrapOptional,
+} from "@typeprompt/core/schema/schema-utils.js";
+import { capitalize, uncapitalize } from "@typeprompt/core/util/casing.js";
 import type {
   Template,
   Tool,
@@ -8,23 +22,9 @@ import type {
 } from "../../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
 import { getId } from "../../compiler/ids.js";
-import type { Config } from "../../config/config-parser.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
-import type {
-  Literal,
-  Schema,
-  Type,
-  TypeDeclarations,
-} from "../../schema/schema-types.js";
-import {
-  getNameDependencies,
-  NAME_SCOPES,
-  NameScope,
-  unwrapNullable as unwrapOptional,
-} from "../../schema/schema-utils.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { capitalize, uncapitalize } from "../../util/casing.js";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generateTypescriptCode(

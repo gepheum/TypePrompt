@@ -1,6 +1,6 @@
+import { Config } from "@typeprompt/core/config/config-parser.js";
 import { glob } from "glob/raw";
 import * as Paths from "path";
-import { Config } from "../config/config-parser.js";
 import { ExitError } from "./exit-error.js";
 import { REAL_FILE_SYSTEM } from "./io.js";
 

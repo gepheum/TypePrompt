@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": ".",
     "lib": ["ES2020"],
     "target": "ES2020",
     "sourceMap": true,
@@ -12,13 +12,12 @@
     "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "outDir": "dist",
     "allowUnreachableCode": false,
     "noImplicitOverride": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "mocha"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext"
   },
-  "include": ["src/**/*"]
+  "include": ["packages/*/src/**/*"]
 }

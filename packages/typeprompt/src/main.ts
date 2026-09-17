@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+import {
+  parseConfigYaml,
+  type Config,
+} from "@typeprompt/core/config/config-parser.js";
+import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import * as FileSystem from "fs/promises";
 import globParent from "glob-parent";
 import { minimatch } from "minimatch";
@@ -11,7 +16,6 @@ import {
   ValidCompilationResult,
 } from "./compiler/compiler-types.js";
 import { compile } from "./compiler/compiler.js";
-import { parseConfigYaml, type Config } from "./config/config-parser.js";
 import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import {
@@ -29,7 +33,6 @@ import {
   RenderableError,
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
-import { createLineFinder } from "./util/line-finder.js";
 
 class WatchModeMainLoop {
   constructor(

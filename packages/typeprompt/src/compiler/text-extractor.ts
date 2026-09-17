@@ -2,9 +2,9 @@ import {
   InternalError,
   InternalErrors,
   MappedText,
-} from "../util/shared-types.js";
-import { joinTextNodes } from "../util/text-node-joiner.js";
-import { ElementNode } from "../xml/xml-types.js";
+} from "@typeprompt/core/util/shared-types.js";
+import { joinTextNodes } from "@typeprompt/core/util/text-node-joiner.js";
+import { ElementNode } from "@typeprompt/core/xml/xml-types.js";
 
 export function extractTextContent(
   node: ElementNode,

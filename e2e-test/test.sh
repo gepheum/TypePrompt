@@ -6,42 +6,42 @@ npm run build
 cd e2e-test
 
 # Format xml files
-node ../dist/main.js format -p projects/01
-node ../dist/main.js format -p projects/02
-node ../dist/main.js format -p projects/03
-node ../dist/main.js format -p projects/04
-node ../dist/main.js format -p projects/05
-node ../dist/main.js format -p projects/06
-node ../dist/main.js format -p projects/07
-node ../dist/main.js format -p projects/e01
-node ../dist/main.js format -p projects/e02
-node ../dist/main.js format -p projects/e03
-node ../dist/main.js format -p ../examples/e2e-kotlin
+node ../packages/typeprompt/dist/main.js format -p projects/01
+node ../packages/typeprompt/dist/main.js format -p projects/02
+node ../packages/typeprompt/dist/main.js format -p projects/03
+node ../packages/typeprompt/dist/main.js format -p projects/04
+node ../packages/typeprompt/dist/main.js format -p projects/05
+node ../packages/typeprompt/dist/main.js format -p projects/06
+node ../packages/typeprompt/dist/main.js format -p projects/07
+node ../packages/typeprompt/dist/main.js format -p projects/e01
+node ../packages/typeprompt/dist/main.js format -p projects/e02
+node ../packages/typeprompt/dist/main.js format -p projects/e03
+node ../packages/typeprompt/dist/main.js format -p ../examples/e2e-kotlin
 
-node ../dist/main.js format --ci -p projects/01
-node ../dist/main.js format --ci -p projects/02
-node ../dist/main.js format --ci -p projects/03
-node ../dist/main.js format --ci -p projects/04
-node ../dist/main.js format --ci -p projects/05
-node ../dist/main.js format --ci -p projects/06
-node ../dist/main.js format --ci -p projects/07
-node ../dist/main.js format --ci -p projects/e01
-node ../dist/main.js format --ci -p projects/e02
-node ../dist/main.js format --ci -p projects/e03
-node ../dist/main.js format --ci -p ../examples/e2e-kotlin
+node ../packages/typeprompt/dist/main.js format --ci -p projects/01
+node ../packages/typeprompt/dist/main.js format --ci -p projects/02
+node ../packages/typeprompt/dist/main.js format --ci -p projects/03
+node ../packages/typeprompt/dist/main.js format --ci -p projects/04
+node ../packages/typeprompt/dist/main.js format --ci -p projects/05
+node ../packages/typeprompt/dist/main.js format --ci -p projects/06
+node ../packages/typeprompt/dist/main.js format --ci -p projects/07
+node ../packages/typeprompt/dist/main.js format --ci -p projects/e01
+node ../packages/typeprompt/dist/main.js format --ci -p projects/e02
+node ../packages/typeprompt/dist/main.js format --ci -p projects/e03
+node ../packages/typeprompt/dist/main.js format --ci -p ../examples/e2e-kotlin
 
 # Run codegen
-node ../dist/main.js gen -p projects/01
-node ../dist/main.js gen -p projects/02
-node ../dist/main.js gen -p projects/03
-node ../dist/main.js gen -p projects/04
-node ../dist/main.js gen -p projects/05
-node ../dist/main.js gen -p projects/06
-node ../dist/main.js gen -p projects/07
-node ../dist/main.js gen -p projects/e01
-node ../dist/main.js gen -p projects/e02
-node ../dist/main.js gen -p projects/e03
-node ../dist/main.js gen -p ../examples/e2e-kotlin
+node ../packages/typeprompt/dist/main.js gen -p projects/01
+node ../packages/typeprompt/dist/main.js gen -p projects/02
+node ../packages/typeprompt/dist/main.js gen -p projects/03
+node ../packages/typeprompt/dist/main.js gen -p projects/04
+node ../packages/typeprompt/dist/main.js gen -p projects/05
+node ../packages/typeprompt/dist/main.js gen -p projects/06
+node ../packages/typeprompt/dist/main.js gen -p projects/07
+node ../packages/typeprompt/dist/main.js gen -p projects/e01
+node ../packages/typeprompt/dist/main.js gen -p projects/e02
+node ../packages/typeprompt/dist/main.js gen -p projects/e03
+node ../packages/typeprompt/dist/main.js gen -p ../examples/e2e-kotlin
 
 # Run Python unit tests
 cd python

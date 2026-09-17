@@ -1,10 +1,10 @@
-import { InternalErrors } from "../util/shared-types.js";
-import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
-import { ElementNode } from "../xml/xml-types.js";
+import { InternalErrors } from "@typeprompt/core/util/shared-types.js";
+import { checkXmlAttributes } from "@typeprompt/core/xml/xml-attributes-checker.js";
+import { ElementNode } from "@typeprompt/core/xml/xml-types.js";
 import { Meta } from "./compiler-types.js";
 
-import { parseSchema } from "../schema/schema-parser.js";
-import { validateSchema } from "../schema/schema-validator.js";
+import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
+import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a top-level <meta> element. The result is already validated. */

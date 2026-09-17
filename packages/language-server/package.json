@@ -1,0 +1,21 @@
+{
+  "name": "@typeprompt/language-server",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "typeprompt-language-server": "dist/main.js"
+  },
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@typeprompt/core": "*",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  }
+}

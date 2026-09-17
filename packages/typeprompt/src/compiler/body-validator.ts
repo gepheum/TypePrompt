@@ -1,13 +1,13 @@
-import { validateCTag } from "../ctag/ctag-validator.js";
-import { resolveExpressionType } from "../expression/expression-type-resolver.js";
-import { ExpressionContext } from "../expression/expression-types.js";
+import { validateCTag } from "@typeprompt/core/ctag/ctag-validator.js";
+import { resolveExpressionType } from "@typeprompt/core/expression/expression-type-resolver.js";
+import { ExpressionContext } from "@typeprompt/core/expression/expression-types.js";
 import {
   ResolvedFieldType,
   Schema,
   SyntheticType,
-} from "../schema/schema-types.js";
-import { resolveType } from "../schema/type-resolver.js";
-import { InternalError } from "../util/shared-types.js";
+} from "@typeprompt/core/schema/schema-types.js";
+import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import { InternalError } from "@typeprompt/core/util/shared-types.js";
 import {
   Body,
   InsertFormat,
