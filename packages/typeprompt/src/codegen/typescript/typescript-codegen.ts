@@ -455,9 +455,7 @@ function writeZodType(
     const def = [
       "const ",
       getVarName(typeName, scope),
-      ": z.ZodType<",
-      getQualifiedTypeName(typeName, scope),
-      "> = ",
+      " = ",
       write(valueType, scope),
       doc ? `.describe(${JSON.stringify(doc)})` : "",
       ";",
