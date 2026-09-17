@@ -1,12 +1,9 @@
-DOCUMENTATION:
-  - E2E Kotlin example...
-
 COMPILER:
   - Add warnings if naming conventions are not respected...
 
 CODEGEN:
   - Add template_input to Prompt?
-  - Ask AI to review all the generated code...
+  - Add things for formatting a Prompt output to JSON
   - investigate in each language the name conflicts... I feel like AI added more reserved keywords than needed
 
 TEST:
@@ -18,7 +15,6 @@ GENDOC
 
 COMPILER:
   - if there is an error in the namespace schema, it seems like we also get an error for all the template/tool schemas which use 'shared.'
-  - verify no duplicate in tool names in a prompt
 
 DOCUMENTATION:
   - write generated code language guide
@@ -73,6 +69,3 @@ MISC:
   - See:
     - https://developers.openai.com/api/docs/guides/prompting
     - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
-
-COMPETITORS:
-  - Dotprompt
