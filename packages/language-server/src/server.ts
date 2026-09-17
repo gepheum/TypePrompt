@@ -35,8 +35,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => { },
-  error: () => { },
+  log: () => {},
+  error: () => {},
 };
 
 export function getFileType(uri: string): FileType {
@@ -124,7 +124,7 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) { }
+  ) {}
 
   public get config(): Config {
     return this.configBundle.config;
@@ -538,8 +538,10 @@ export function createLanguageServer(
   );
 
   connection.onInitialize((params: InitializeParams): InitializeResult => {
+    const folders =
+      params.workspaceFolders?.map((f) => f.uri).join(", ") ?? "none";
     logger.log(
-      `[TypePrompt LSP] connection.onInitialize: rootUri=${params.rootUri ?? params.workspaceFolders?.[0]?.uri}`,
+      `[TypePrompt LSP] connection.onInitialize: workspaceFolders=${folders}`,
     );
     return {
       capabilities: {
