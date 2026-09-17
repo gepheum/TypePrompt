@@ -73,7 +73,7 @@ function writePromptsInterface(
   const writeTemplates = (namespace: ValidNamespaceResult): string => {
     const { templates } = namespace;
     if (templates.length <= 0) {
-      return "ReadonlyRecord<string, never>";
+      return "{ [_: string]: never }";
     } else {
       return [
         "{",
@@ -320,10 +320,10 @@ function writeType(
     case "array": {
       const { elementType } = type;
       const writtenElement = writeType(elementType, options);
-      if (elementType.kind === "union") {
-        return `readonly (${writtenElement})[]`;
-      } else {
+      if (/^[a-z0-9]+$/i.test(writtenElement)) {
         return `readonly ${writtenElement}[]`;
+      } else {
+        return `readonly (${writtenElement})[]`;
       }
     }
     case "boolean-literal": {
@@ -332,7 +332,7 @@ function writeType(
     case "interface": {
       const fields = Object.entries(type.fields);
       if (fields.length <= 0) {
-        return "ReadonlyRecord<string, never>";
+        return "Record<string, never>";
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
