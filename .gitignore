@@ -27,11 +27,6 @@ examples/e2e-kotlin/src/main/kotlin/gen/
 examples/e2e-kotlin/.idea/
 examples/e2e-kotlin/**/*.iml
 
-.gradle/
-.kotlin/
-*.iml
-
-
 e2e-test/python/.ruff_cache
 e2e-test/python/.venv
 e2e-test/python/__pycache/
@@ -50,4 +45,7 @@ e2e-test/typescript/src/gen
 TODO
 node_modules
 playground
+.gradle/
+.kotlin/
+*.iml
 *.tsbuildinfo
