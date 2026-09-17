@@ -1,4 +1,4 @@
-# TypePrompt Language Specification
+# TypePrompt Language Reference
 
 TypePrompt projects are made up of `.xml` files matching the `include` pattern in `typeprompt.yml` (by default, `prompts/**/*.xml`). Every file has one of the following root elements:
 

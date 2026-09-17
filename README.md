@@ -107,7 +107,7 @@ TypePrompt eliminates this class of runtime errors by generating native code at 
 
 ## Documentation
 
-- **[Specification](docs/spec.md)** — Full reference for templates, tools, metadata and namespaces.
+- **[Language Reference](docs/reference.md)** — Syntax reference for TypePrompt XML files.
 - **[Schema Language](docs/schema.md)** — Type system reference for defining `Input` and `Output` schemas.
 - **Language Guides**:
   - [TypeScript](docs/languages/typescript.md)
