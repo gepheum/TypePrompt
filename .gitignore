@@ -47,6 +47,7 @@ e2e-test/swift/Sources/TypePromptE2E/Gen/
 
 e2e-test/typescript/src/gen
 
+TODO
 node_modules
 playground
 *.tsbuildinfo
