@@ -16,6 +16,7 @@ node ../dist/main.js format -p projects/07
 node ../dist/main.js format -p projects/e01
 node ../dist/main.js format -p projects/e02
 node ../dist/main.js format -p projects/e03
+node ../dist/main.js format -p ../examples/e2e-kotlin
 
 node ../dist/main.js format --ci -p projects/01
 node ../dist/main.js format --ci -p projects/02
@@ -27,6 +28,7 @@ node ../dist/main.js format --ci -p projects/07
 node ../dist/main.js format --ci -p projects/e01
 node ../dist/main.js format --ci -p projects/e02
 node ../dist/main.js format --ci -p projects/e03
+node ../dist/main.js format --ci -p ../examples/e2e-kotlin
 
 # Run codegen
 node ../dist/main.js gen -p projects/01
@@ -39,6 +41,7 @@ node ../dist/main.js gen -p projects/07
 node ../dist/main.js gen -p projects/e01
 node ../dist/main.js gen -p projects/e02
 node ../dist/main.js gen -p projects/e03
+node ../dist/main.js gen -p ../examples/e2e-kotlin
 
 # Run Python unit tests
 cd python
@@ -55,6 +58,11 @@ cd ..
 cd kotlin
 ./gradlew test
 cd ..
+
+# Build Kotlin e2e example
+cd ../examples/e2e-kotlin
+./gradlew build
+cd ../../e2e-test
 
 # Run C# unit tests
 cd csharp
