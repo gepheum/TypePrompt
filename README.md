@@ -67,6 +67,8 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 </template>
 ```
 
+[See more examples →](examples)
+
 ---
 
 ## Features
