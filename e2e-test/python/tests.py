@@ -5,6 +5,7 @@ Comprehensive tests covering all spec features across all example projects.
 import sys
 import os
 import re
+import json
 import pydantic
 import pytest
 from typing import Any
@@ -18,7 +19,6 @@ from gen.prompts_04 import prompts as p04, schema as s04
 from gen.prompts_05 import prompts as p05, schema as s05
 from gen.prompts_06 import prompts as p06, schema as s06
 from gen.prompts_07 import prompts as p07, schema as s07
-from gen.prompts_08 import prompts as p08, schema as s08
 from gen.prompts_e01 import prompts as pe01, schema as s_e01
 from gen.prompts_e02 import prompts as _pe02, schema as _s_e02
 from gen.prompts_e03 import prompts as _pe03, schema as _s_e03
@@ -275,6 +275,96 @@ class TestTriageTicket:
         assert self.prompt.meta.temperature == 0.2
 
 
+_page_tree_prompt = p02.generate_page_tree.render(
+    s02.generate_page_tree.Input(
+        providers=[
+            s02.generate_page_tree.Provider(
+                name="CloudX",
+                region="us-east",
+                category="compute",
+                pricing=s02.generate_page_tree.Pricing(model="perHour", base_price=0.1),
+                benchmarks=[
+                    s02.generate_page_tree.Benchmark(
+                        name="throughput", score=1000, unit="rps"
+                    )
+                ],
+                pros=["fast", "reliable"],
+                cons=["pricey"],
+            )
+        ],
+        use_case="serving ML inference workloads",
+        audience="architect",
+    )
+)
+
+
+class TestGeneratePageTree:
+    def test_json_output_format(self):
+        assert _page_tree_prompt.output_format.format == "json"
+
+    def test_template_id(self):
+        assert _page_tree_prompt.template_id == "Main:GeneratePageTree"
+
+    def test_user_message_contains_use_case(self):
+        assert re.search(
+            r"serving ML inference workloads", _page_tree_prompt.user_message
+        )
+
+    def test_user_message_contains_provider_name_from_toon_data(self):
+        assert re.search(r"CloudX", _page_tree_prompt.user_message)
+
+    def test_user_message_mentions_audience(self):
+        assert re.search(r"architect", _page_tree_prompt.user_message)
+
+    def test_has_no_tools(self):
+        assert len(_page_tree_prompt.tools) == 0
+
+    def test_toon_exact_user_message(self):
+        assert _page_tree_prompt.user_message == (
+            "Generate a comparison page layout framed around this use case: serving ML inference workloads\n"
+            "\nTarget audience: architect\n"
+            "\nHere is the data for each provider:\n"
+            "\n[1]:\n"
+            "  - name: CloudX\n"
+            "    region: us-east\n"
+            "    category: compute\n"
+            "    pricing:\n"
+            "      model: perHour\n"
+            "      basePrice: 0.1\n"
+            "      overage: null\n"
+            "    benchmarks[1]{name,score,unit}:\n"
+            "      throughput,1000.0,rps\n"
+            "    pros[2]: fast,reliable\n"
+            "    cons[1]: pricey"
+        )
+
+    def test_parse_response_parses_page_node_tree(self):
+        result = _page_tree_prompt.parse_response(
+            json.dumps(
+                {
+                    "kind": "section",
+                    "title": "Overview",
+                    "children": [
+                        {"kind": "heading", "level": "h1", "text": "CloudX"},
+                        {"kind": "paragraph", "text": "Fast compute provider."},
+                        {
+                            "kind": "button",
+                            "label": "Sign Up",
+                            "url": "https://cloudx.example.com",
+                        },
+                    ],
+                }
+            )
+        )
+        assert isinstance(result, s02.generate_page_tree.PageNode_KindSection)
+        assert result.title == "Overview"
+        assert len(result.children) == 3
+        assert isinstance(
+            result.children[0], s02.generate_page_tree.PageNode_KindHeading
+        )
+        assert result.children[0].text == "CloudX"
+
+
 # ─── 03 Tools: tool registration, execute_tools, example with intermediate steps
 
 
@@ -496,89 +586,21 @@ class TestWriteProductDescription:
         assert self.technical.system_message != self.brief.system_message
 
 
-# ─── 06 Toon format: complex nested input types, format="toon" ───────────────
+# ─── 06 Shared types: two templates sharing Main namespace types ───────────────
 
-_toon_prompt = p06.write_comparison_article.render(
-    s06.write_comparison_article.Input(
-        providers=[
-            s06.write_comparison_article.Provider(
-                name="CloudX",
-                region="us-east",
-                category="compute",
-                pricing=s06.write_comparison_article.Pricing(
-                    model="perHour", base_price=0.1
-                ),
-                benchmarks=[
-                    s06.write_comparison_article.Benchmark(
-                        name="throughput", score=1000, unit="rps"
-                    )
-                ],
-                pros=["fast"],
-                cons=["pricey"],
-            )
-        ],
-        use_case="serving ML inference workloads",
-        audience="architect",
-    )
-)
-
-
-class TestWriteComparisonArticle:
-    def test_json_output_format(self):
-        assert _toon_prompt.output_format.format == "json"
-
-    def test_template_id(self):
-        assert _toon_prompt.template_id == "Main:WriteComparisonArticle"
-
-    def test_user_message_contains_use_case(self):
-        assert re.search(r"serving ML inference workloads", _toon_prompt.user_message)
-
-    def test_user_message_contains_provider_name_from_toon_data(self):
-        assert re.search(r"CloudX", _toon_prompt.user_message)
-
-    def test_user_message_mentions_audience(self):
-        assert re.search(r"architect", _toon_prompt.user_message)
-
-    def test_has_no_tools(self):
-        assert len(_toon_prompt.tools) == 0
-
-    # Python renders integer scores as floats (1000.0) and emits null optional fields (e.g. overage: null).
-    # TypeScript omits null optional fields and renders integers as integers.
-    def test_toon_exact_user_message(self):
-        assert _toon_prompt.user_message == (
-            "Write a comparison article framed around this use case: serving ML inference workloads\n"
-            "\nHere is the data for each provider:\n"
-            "\n[1]:\n"
-            "  - name: CloudX\n"
-            "    region: us-east\n"
-            "    category: compute\n"
-            "    pricing:\n"
-            "      model: perHour\n"
-            "      basePrice: 0.1\n"
-            "      overage: null\n"
-            "    benchmarks[1]{name,score,unit}:\n"
-            "      throughput,1000.0,rps\n"
-            "    pros[1]: fast\n"
-            "    cons[1]: pricey\n"
-            "\nTarget audience: architect"
-        )
-
-
-# ─── 07 Shared types: two templates sharing Main namespace types ───────────────
-
-_address = s07.shared.Address(street="1 Main St", city="Paris", country="France")
-_contact = s07.shared.ContactInfo(
+_address = s06.shared.Address(street="1 Main St", city="Paris", country="France")
+_contact = s06.shared.ContactInfo(
     name="Alice Dupont", email="alice@example.com", address=_address
 )
 
 
 class TestShippingConfirmation:
-    prompt = p07.shipping_confirmation.render(
-        s07.shipping_confirmation.Input(
+    prompt = p06.shipping_confirmation.render(
+        s06.shipping_confirmation.Input(
             recipient=_contact,
             order_number="ORD-1234",
             estimated_delivery="2026-08-20",
-            items=[s07.shipping_confirmation.Input_Items(name="Laptop", quantity=1)],
+            items=[s06.shipping_confirmation.Input_Items(name="Laptop", quantity=1)],
         )
     )
 
@@ -599,8 +621,8 @@ class TestShippingConfirmation:
 
 
 class TestReturnSlip:
-    prompt = p07.return_slip.render(
-        s07.return_slip.Input(
+    prompt = p06.return_slip.render(
+        s06.return_slip.Input(
             customer=_contact,
             return_reason="defective",
             order_number="ORD-1234",
@@ -620,14 +642,14 @@ class TestReturnSlip:
         assert re.search(r"defective", self.prompt.user_message)
 
 
-# ─── 08 Namespaces: two named namespaces, four templates ─────────────────────
+# ─── 07 Namespaces: two named namespaces, four templates ─────────────────────
 
 
 class TestFinanceSummarizeTransaction:
-    prompt = p08.finance.summarize_transaction.render(
-        s08.finance.summarize_transaction.Input(
+    prompt = p07.finance.summarize_transaction.render(
+        s07.finance.summarize_transaction.Input(
             description="AWS monthly bill",
-            amount=s08.finance.shared.MoneyAmount(value=450, currency="USD"),
+            amount=s07.finance.shared.MoneyAmount(value=450, currency="USD"),
             category="expense",
             date="2026-08-01",
         )
@@ -637,7 +659,7 @@ class TestFinanceSummarizeTransaction:
         assert self.prompt.template_id == "Finance:SummarizeTransaction"
 
     def test_accessible_via_prompts_finance(self):
-        assert callable(p08.finance.summarize_transaction.render)
+        assert callable(p07.finance.summarize_transaction.render)
 
     def test_json_output_format(self):
         assert self.prompt.output_format.format == "json"
@@ -646,10 +668,10 @@ class TestFinanceSummarizeTransaction:
         assert re.search(r"AWS monthly bill", self.prompt.user_message)
 
     def test_currency_literal_lowercase_is_accepted(self):
-        p08.finance.summarize_transaction.render(
-            s08.finance.summarize_transaction.Input(
+        p07.finance.summarize_transaction.render(
+            s07.finance.summarize_transaction.Input(
                 description="Test",
-                amount=s08.finance.shared.MoneyAmount(value=1, currency="USD"),
+                amount=s07.finance.shared.MoneyAmount(value=1, currency="USD"),
                 category="expense",
                 date="2026-08-17",
             )
@@ -657,12 +679,12 @@ class TestFinanceSummarizeTransaction:
 
 
 class TestFinanceDetectAnomaly:
-    prompt = p08.finance.detect_anomaly.render(
-        s08.finance.detect_anomaly.Input(
+    prompt = p07.finance.detect_anomaly.render(
+        s07.finance.detect_anomaly.Input(
             recent_transactions=[],
-            new_transaction=s08.finance.detect_anomaly.Input_NewTransaction(
+            new_transaction=s07.finance.detect_anomaly.Input_NewTransaction(
                 description="Casino chips",
-                amount=s08.finance.shared.MoneyAmount(value=5000, currency="USD"),
+                amount=s07.finance.shared.MoneyAmount(value=5000, currency="USD"),
                 date="2026-08-17",
             ),
         )
@@ -679,12 +701,12 @@ class TestFinanceDetectAnomaly:
 
 
 class TestLegalDraftNda:
-    prompt = p08.legal.draft_nda.render(
-        s08.legal.draft_nda.Input(
-            disclosing_party=s08.legal.shared.Party(
+    prompt = p07.legal.draft_nda.render(
+        s07.legal.draft_nda.Input(
+            disclosing_party=s07.legal.shared.Party(
                 name="Acme Corp", role="client", jurisdiction="California"
             ),
-            receiving_party=s08.legal.shared.Party(
+            receiving_party=s07.legal.shared.Party(
                 name="Beta LLC", role="counterparty", jurisdiction="Delaware"
             ),
             purpose_of_disclosure="Evaluating a potential acquisition",
@@ -699,7 +721,7 @@ class TestLegalDraftNda:
         assert self.prompt.output_format.format == "text"
 
     def test_accessible_via_prompts_legal(self):
-        assert callable(p08.legal.draft_nda.render)
+        assert callable(p07.legal.draft_nda.render)
 
     def test_user_message_contains_party_names(self):
         assert re.search(r"Acme Corp", self.prompt.user_message)
@@ -710,10 +732,10 @@ class TestLegalDraftNda:
 
 
 class TestLegalSummarizeClause:
-    prompt = p08.legal.summarize_clause.render(
-        s08.legal.summarize_clause.Input(
+    prompt = p07.legal.summarize_clause.render(
+        s07.legal.summarize_clause.Input(
             clause_text="The party shall indemnify and hold harmless...",
-            reviewing_party=s08.legal.shared.Party(
+            reviewing_party=s07.legal.shared.Party(
                 name="Alice", role="client", jurisdiction="NY"
             ),
         )

@@ -172,6 +172,72 @@ struct StructuredOutputTests {
   }
 }
 
+@Suite("02 Complex Schemas: GeneratePageTree")
+struct GeneratePageTreeTests {
+  static let provider = TypePrompt02.Schema.GeneratePageTree.Provider(
+    name: "CloudX",
+    region: "us-east",
+    category: .compute,
+    pricing: TypePrompt02.Schema.GeneratePageTree.Pricing(
+      model: .perHour,
+      basePrice: 0.1
+    ),
+    benchmarks: [
+      TypePrompt02.Schema.GeneratePageTree.Benchmark(
+        name: "throughput",
+        score: 1000.0,
+        unit: "rps"
+      )
+    ],
+    pros: ["fast", "reliable"],
+    cons: ["pricey"]
+  )
+
+  let prompt = TypePrompt02.prompts.renderGeneratePageTree(
+    TypePrompt02.Schema.GeneratePageTree.Input(
+      providers: [provider],
+      useCase: "serving ML inference workloads",
+      audience: .architect
+    )
+  )
+
+  @Test func jsonOutputFormat() {
+    #expect(prompt.outputFormat.isJson)
+  }
+
+  @Test func templateId() {
+    #expect(prompt.templateId.description == "Main:GeneratePageTree")
+  }
+
+  @Test func userMessageContainsUseCase() {
+    #expect(prompt.userMessage.contains("serving ML inference workloads"))
+  }
+
+  @Test func userMessageContainsProviderNameFromToonData() {
+    #expect(prompt.userMessage.contains("CloudX"))
+  }
+
+  @Test func userMessageMentionsAudience() {
+    #expect(prompt.userMessage.contains("architect"))
+  }
+
+  @Test func hasNoTools() {
+    #expect(prompt.tools.isEmpty)
+  }
+
+  @Test func parseResponse() throws {
+    let result = try prompt.parseResponse(
+      #"{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}"#
+    )
+    if case .kindSection(let s) = result {
+      #expect(s.title == "Overview")
+      #expect(s.children.count == 3)
+    } else {
+      #expect(Bool(false), "Expected section")
+    }
+  }
+}
+
 @Suite("03 Tools: ResearchQuestion")
 struct ToolsResearchQuestionTests {
   let prompt = TypePrompt03.prompts.renderResearchQuestion(
@@ -402,82 +468,28 @@ struct SnippetsSummarizeDocumentTests {
   }
 }
 
-@Suite("06 TOON Format: WriteComparisonArticle")
-struct ToonFormatTests {
-  static let provider = TypePrompt06.Schema.WriteComparisonArticle.Provider(
-    name: "CloudX",
-    region: "us-east",
-    category: .compute,
-    pricing: TypePrompt06.Schema.WriteComparisonArticle.Pricing(
-      model: .perHour,
-      basePrice: 0.1
-    ),
-    benchmarks: [
-      TypePrompt06.Schema.WriteComparisonArticle.Benchmark(
-        name: "throughput",
-        score: 1000.0,
-        unit: "rps"
-      )
-    ],
-    pros: ["fast", "reliable"],
-    cons: ["pricey"]
-  )
-
-  let prompt = TypePrompt06.prompts.renderWriteComparisonArticle(
-    TypePrompt06.Schema.WriteComparisonArticle.Input(
-      providers: [provider],
-      useCase: "serving ML inference workloads",
-      audience: .architect
-    )
-  )
-
-  @Test func jsonOutputFormat() {
-    #expect(prompt.outputFormat.isJson)
-  }
-
-  @Test func templateId() {
-    #expect(prompt.templateId.description == "Main:WriteComparisonArticle")
-  }
-
-  @Test func userMessageContainsUseCase() {
-    #expect(prompt.userMessage.contains("serving ML inference workloads"))
-  }
-
-  @Test func userMessageContainsProviderNameFromToonData() {
-    #expect(prompt.userMessage.contains("CloudX"))
-  }
-
-  @Test func userMessageMentionsAudience() {
-    #expect(prompt.userMessage.contains("architect"))
-  }
-
-  @Test func hasNoTools() {
-    #expect(prompt.tools.isEmpty)
-  }
-}
-
-@Suite("07 Shared Types: ShippingConfirmation & ReturnSlip")
+@Suite("06 Shared Types: ShippingConfirmation & ReturnSlip")
 struct SharedTypesTests {
-  static let address = TypePrompt07.Schema.Shared.Address(
+  static let address = TypePrompt06.Schema.Shared.Address(
     street: "1 Main St",
     city: "Paris",
     country: "France"
   )
 
-  static let contact = TypePrompt07.Schema.Shared.ContactInfo(
+  static let contact = TypePrompt06.Schema.Shared.ContactInfo(
     name: "Alice Dupont",
     email: "alice@example.com",
     address: address
   )
 
   @Test func shippingConfirmation() {
-    let prompt = TypePrompt07.prompts.renderShippingConfirmation(
-      TypePrompt07.Schema.ShippingConfirmation.Input(
+    let prompt = TypePrompt06.prompts.renderShippingConfirmation(
+      TypePrompt06.Schema.ShippingConfirmation.Input(
         recipient: Self.contact,
         orderNumber: "ORD-1234",
         estimatedDelivery: "2026-08-20",
         items: [
-          TypePrompt07.Schema.ShippingConfirmation.Input_Items(
+          TypePrompt06.Schema.ShippingConfirmation.Input_Items(
             name: "Laptop",
             quantity: 1
           )
@@ -493,8 +505,8 @@ struct SharedTypesTests {
   }
 
   @Test func returnSlip() {
-    let prompt = TypePrompt07.prompts.renderReturnSlip(
-      TypePrompt07.Schema.ReturnSlip.Input(
+    let prompt = TypePrompt06.prompts.renderReturnSlip(
+      TypePrompt06.Schema.ReturnSlip.Input(
         customer: Self.contact,
         returnReason: .defective,
         orderNumber: "ORD-1234"
@@ -508,13 +520,13 @@ struct SharedTypesTests {
   }
 }
 
-@Suite("08 Namespaces: Finance & Legal")
+@Suite("07 Namespaces: Finance & Legal")
 struct NamespacesTests {
   @Test func financeSummarizeTransaction() {
-    let prompt = TypePrompt08.prompts.finance.renderSummarizeTransaction(
-      TypePrompt08.Schema.Finance.SummarizeTransaction.Input(
+    let prompt = TypePrompt07.prompts.finance.renderSummarizeTransaction(
+      TypePrompt07.Schema.Finance.SummarizeTransaction.Input(
         description: "AWS monthly bill",
-        amount: TypePrompt08.Schema.Finance.Shared.MoneyAmount(
+        amount: TypePrompt07.Schema.Finance.Shared.MoneyAmount(
           value: 450.0,
           currency: .usd
         ),
@@ -529,12 +541,12 @@ struct NamespacesTests {
   }
 
   @Test func financeDetectAnomaly() {
-    let prompt = TypePrompt08.prompts.finance.renderDetectAnomaly(
-      TypePrompt08.Schema.Finance.DetectAnomaly.Input(
+    let prompt = TypePrompt07.prompts.finance.renderDetectAnomaly(
+      TypePrompt07.Schema.Finance.DetectAnomaly.Input(
         recentTransactions: [],
-        newTransaction: TypePrompt08.Schema.Finance.DetectAnomaly.Input_NewTransaction(
+        newTransaction: TypePrompt07.Schema.Finance.DetectAnomaly.Input_NewTransaction(
           description: "Casino chips",
-          amount: TypePrompt08.Schema.Finance.Shared.MoneyAmount(
+          amount: TypePrompt07.Schema.Finance.Shared.MoneyAmount(
             value: 5000.0,
             currency: .usd
           ),
@@ -549,14 +561,14 @@ struct NamespacesTests {
   }
 
   @Test func legalDraftNda() {
-    let prompt = TypePrompt08.prompts.legal.renderDraftNda(
-      TypePrompt08.Schema.Legal.DraftNda.Input(
-        disclosingParty: TypePrompt08.Schema.Legal.Shared.Party(
+    let prompt = TypePrompt07.prompts.legal.renderDraftNda(
+      TypePrompt07.Schema.Legal.DraftNda.Input(
+        disclosingParty: TypePrompt07.Schema.Legal.Shared.Party(
           name: "Acme Corp",
           role: .client,
           jurisdiction: "California"
         ),
-        receivingParty: TypePrompt08.Schema.Legal.Shared.Party(
+        receivingParty: TypePrompt07.Schema.Legal.Shared.Party(
           name: "Beta LLC",
           role: .counterparty,
           jurisdiction: "Delaware"
@@ -574,10 +586,10 @@ struct NamespacesTests {
   }
 
   @Test func legalSummarizeClause() {
-    let prompt = TypePrompt08.prompts.legal.renderSummarizeClause(
-      TypePrompt08.Schema.Legal.SummarizeClause.Input(
+    let prompt = TypePrompt07.prompts.legal.renderSummarizeClause(
+      TypePrompt07.Schema.Legal.SummarizeClause.Input(
         clauseText: "The party shall indemnify and hold harmless...",
-        reviewingParty: TypePrompt08.Schema.Legal.Shared.Party(
+        reviewingParty: TypePrompt07.Schema.Legal.Shared.Party(
           name: "Alice",
           role: .client,
           jurisdiction: "NY"

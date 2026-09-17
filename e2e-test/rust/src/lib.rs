@@ -6,7 +6,6 @@ pub mod gen {
     pub mod prompts_05;
     pub mod prompts_06;
     pub mod prompts_07;
-    pub mod prompts_08;
     pub mod prompts_e01;
     pub mod prompts_e02;
     pub mod prompts_e03;
@@ -169,6 +168,59 @@ mod tests {
             gen::prompts_02::schema::meta::Meta_Model::Gpt4o
         );
         assert_eq!(prompt.meta.temperature, Some(0.2));
+    }
+
+    #[test]
+    fn test_02_complex_schemas_generate_page_tree() {
+        let provider = gen::prompts_02::schema::generate_page_tree::Provider {
+            name: "CloudX".to_string(),
+            region: "us-east".to_string(),
+            category: gen::prompts_02::schema::generate_page_tree::ProductCategory::Compute,
+            pricing: gen::prompts_02::schema::generate_page_tree::Pricing {
+                model: gen::prompts_02::schema::generate_page_tree::Pricing_Model::PerHour,
+                base_price: 0.1,
+                overage: None,
+            },
+            benchmarks: vec![gen::prompts_02::schema::generate_page_tree::Benchmark {
+                name: "throughput".to_string(),
+                score: 1000.0,
+                unit: "rps".to_string(),
+            }],
+            pros: vec!["fast".to_string(), "reliable".to_string()],
+            cons: vec!["pricey".to_string()],
+        };
+
+        let prompt = gen::prompts_02::PROMPTS.render_generate_page_tree(
+            &gen::prompts_02::schema::generate_page_tree::Input {
+                providers: vec![provider],
+                use_case: "serving ML inference workloads".to_string(),
+                audience: gen::prompts_02::schema::generate_page_tree::Input_Audience::Architect,
+            },
+        );
+
+        assert!(prompt.output_format.is_json());
+        assert_eq!(format!("{}", prompt.template_id), "Main:GeneratePageTree");
+        assert_eq!(
+            prompt.template_id,
+            gen::prompts_02::TemplateId::GeneratePageTree
+        );
+        assert!(prompt
+            .user_message
+            .contains("serving ML inference workloads"));
+        assert!(prompt.user_message.contains("CloudX"));
+        assert!(prompt.user_message.contains("architect"));
+        assert!(prompt.tools.is_empty());
+
+        let result = prompt.parse_response(
+            r#"{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}"#,
+        ).unwrap();
+        match result {
+            gen::prompts_02::schema::generate_page_tree::PageNode::KindSection(section) => {
+                assert_eq!(section.title, Some("Overview".to_string()));
+                assert_eq!(section.children.len(), 3);
+            }
+            _ => panic!("Expected KindSection"),
+        }
     }
 
     // ─── 03 Tools: ResearchQuestion ─────────────────────────────────────────────
@@ -414,79 +466,29 @@ mod tests {
         assert!(!p_exec.system_message.contains("Focus the summary"));
     }
 
-    // ─── 06 TOON Format: WriteComparisonArticle ─────────────────────────────────
+    // ─── 06 Shared Types: ShippingConfirmation & ReturnSlip ─────────────────────
 
     #[test]
-    fn test_06_toon_format_write_comparison_article() {
-        let provider = gen::prompts_06::schema::write_comparison_article::Provider {
-            name: "CloudX".to_string(),
-            region: "us-east".to_string(),
-            category: gen::prompts_06::schema::write_comparison_article::ProductCategory::Compute,
-            pricing: gen::prompts_06::schema::write_comparison_article::Pricing {
-                model: gen::prompts_06::schema::write_comparison_article::Pricing_Model::PerHour,
-                base_price: 0.1,
-                overage: None,
-            },
-            benchmarks: vec![
-                gen::prompts_06::schema::write_comparison_article::Benchmark {
-                    name: "throughput".to_string(),
-                    score: 1000.0,
-                    unit: "rps".to_string(),
-                },
-            ],
-            pros: vec!["fast".to_string(), "reliable".to_string()],
-            cons: vec!["pricey".to_string()],
-        };
-
-        let prompt = gen::prompts_06::PROMPTS.render_write_comparison_article(
-            &gen::prompts_06::schema::write_comparison_article::Input {
-                providers: vec![provider],
-                use_case: "serving ML inference workloads".to_string(),
-                audience:
-                    gen::prompts_06::schema::write_comparison_article::Input_Audience::Architect,
-            },
-        );
-
-        assert!(prompt.output_format.is_json());
-        assert_eq!(
-            format!("{}", prompt.template_id),
-            "Main:WriteComparisonArticle"
-        );
-        assert_eq!(
-            prompt.template_id,
-            gen::prompts_06::TemplateId::WriteComparisonArticle
-        );
-        assert!(prompt
-            .user_message
-            .contains("serving ML inference workloads"));
-        assert!(prompt.user_message.contains("CloudX"));
-        assert!(prompt.user_message.contains("architect"));
-        assert!(prompt.tools.is_empty());
-    }
-
-    // ─── 07 Shared Types: ShippingConfirmation & ReturnSlip ─────────────────────
-
-    #[test]
-    fn test_07_shared_types() {
-        let address = gen::prompts_07::schema::shared::Address {
+    fn test_06_shared_types() {
+        let address = gen::prompts_06::schema::shared::Address {
             street: "1 Main St".to_string(),
             city: "Paris".to_string(),
             country: "France".to_string(),
             postal_code: None,
         };
-        let contact = gen::prompts_07::schema::shared::ContactInfo {
+        let contact = gen::prompts_06::schema::shared::ContactInfo {
             name: "Alice Dupont".to_string(),
             email: "alice@example.com".to_string(),
             address,
         };
 
-        let ship_prompt = gen::prompts_07::PROMPTS.render_shipping_confirmation(
-            &gen::prompts_07::schema::shipping_confirmation::Input {
+        let ship_prompt = gen::prompts_06::PROMPTS.render_shipping_confirmation(
+            &gen::prompts_06::schema::shipping_confirmation::Input {
                 recipient: contact.clone(),
                 order_number: "ORD-1234".to_string(),
                 estimated_delivery: "2026-08-20".to_string(),
                 items: vec![
-                    gen::prompts_07::schema::shipping_confirmation::Input_Items {
+                    gen::prompts_06::schema::shipping_confirmation::Input_Items {
                         name: "Laptop".to_string(),
                         quantity: 1,
                     },
@@ -496,7 +498,7 @@ mod tests {
 
         assert_eq!(
             ship_prompt.output_format,
-            gen::prompts_07::OutputFormat::TEXT
+            gen::prompts_06::OutputFormat::TEXT
         );
         assert_eq!(
             format!("{}", ship_prompt.template_id),
@@ -506,38 +508,38 @@ mod tests {
         assert!(ship_prompt.user_message.contains("ORD-1234"));
         assert!(ship_prompt.system_message.contains("confirmation email"));
 
-        let return_prompt = gen::prompts_07::PROMPTS.render_return_slip(
-            &gen::prompts_07::schema::return_slip::Input {
+        let return_prompt = gen::prompts_06::PROMPTS.render_return_slip(
+            &gen::prompts_06::schema::return_slip::Input {
                 customer: contact,
-                return_reason: gen::prompts_07::schema::return_slip::Input_ReturnReason::Defective,
+                return_reason: gen::prompts_06::schema::return_slip::Input_ReturnReason::Defective,
                 order_number: "ORD-1234".to_string(),
             },
         );
 
         assert_eq!(
             return_prompt.output_format,
-            gen::prompts_07::OutputFormat::TEXT
+            gen::prompts_06::OutputFormat::TEXT
         );
         assert_eq!(format!("{}", return_prompt.template_id), "Main:ReturnSlip");
         assert!(return_prompt.user_message.contains("Alice Dupont"));
         assert!(return_prompt.user_message.contains("defective"));
     }
 
-    // ─── 08 Namespaces: Finance & Legal ─────────────────────────────────────────
+    // ─── 07 Namespaces: Finance & Legal ─────────────────────────────────────────
 
     #[test]
-    fn test_08_namespaces() {
-        let fin_summary = gen::prompts_08::PROMPTS
+    fn test_07_namespaces() {
+        let fin_summary = gen::prompts_07::PROMPTS
             .finance
             .render_summarize_transaction(
-            &gen::prompts_08::schema::finance::summarize_transaction::Input {
+            &gen::prompts_07::schema::finance::summarize_transaction::Input {
                 description: "AWS monthly bill".to_string(),
-                amount: gen::prompts_08::schema::finance::shared::MoneyAmount {
+                amount: gen::prompts_07::schema::finance::shared::MoneyAmount {
                     value: 450.0,
-                    currency: gen::prompts_08::schema::finance::shared::Currency::Usd,
+                    currency: gen::prompts_07::schema::finance::shared::Currency::Usd,
                 },
                 category:
-                    gen::prompts_08::schema::finance::summarize_transaction::Input_Category::Expense,
+                    gen::prompts_07::schema::finance::summarize_transaction::Input_Category::Expense,
                 date: "2026-08-01".to_string(),
             },
         );
@@ -548,15 +550,15 @@ mod tests {
         assert!(fin_summary.output_format.is_json());
         assert!(fin_summary.user_message.contains("AWS monthly bill"));
 
-        let fin_anomaly = gen::prompts_08::PROMPTS.finance.render_detect_anomaly(
-            &gen::prompts_08::schema::finance::detect_anomaly::Input {
+        let fin_anomaly = gen::prompts_07::PROMPTS.finance.render_detect_anomaly(
+            &gen::prompts_07::schema::finance::detect_anomaly::Input {
                 recent_transactions: vec![],
                 new_transaction:
-                    gen::prompts_08::schema::finance::detect_anomaly::Input_NewTransaction {
+                    gen::prompts_07::schema::finance::detect_anomaly::Input_NewTransaction {
                         description: "Casino chips".to_string(),
-                        amount: gen::prompts_08::schema::finance::shared::MoneyAmount {
+                        amount: gen::prompts_07::schema::finance::shared::MoneyAmount {
                             value: 5000.0,
-                            currency: gen::prompts_08::schema::finance::shared::Currency::Usd,
+                            currency: gen::prompts_07::schema::finance::shared::Currency::Usd,
                         },
                         date: "2026-08-17".to_string(),
                     },
@@ -569,16 +571,16 @@ mod tests {
         assert!(fin_anomaly.user_message.contains("Casino chips"));
         assert!(fin_anomaly.tools.is_empty());
 
-        let legal_nda = gen::prompts_08::PROMPTS.legal.render_draft_nda(
-            &gen::prompts_08::schema::legal::draft_nda::Input {
-                disclosing_party: gen::prompts_08::schema::legal::shared::Party {
+        let legal_nda = gen::prompts_07::PROMPTS.legal.render_draft_nda(
+            &gen::prompts_07::schema::legal::draft_nda::Input {
+                disclosing_party: gen::prompts_07::schema::legal::shared::Party {
                     name: "Acme Corp".to_string(),
-                    role: gen::prompts_08::schema::legal::shared::Party_Role::Client,
+                    role: gen::prompts_07::schema::legal::shared::Party_Role::Client,
                     jurisdiction: "California".to_string(),
                 },
-                receiving_party: gen::prompts_08::schema::legal::shared::Party {
+                receiving_party: gen::prompts_07::schema::legal::shared::Party {
                     name: "Beta LLC".to_string(),
-                    role: gen::prompts_08::schema::legal::shared::Party_Role::Counterparty,
+                    role: gen::prompts_07::schema::legal::shared::Party_Role::Counterparty,
                     jurisdiction: "Delaware".to_string(),
                 },
                 purpose_of_disclosure: "Evaluating a potential acquisition".to_string(),
@@ -586,19 +588,19 @@ mod tests {
             },
         );
         assert_eq!(format!("{}", legal_nda.template_id), "Legal:DraftNda");
-        assert_eq!(legal_nda.output_format, gen::prompts_08::OutputFormat::TEXT);
+        assert_eq!(legal_nda.output_format, gen::prompts_07::OutputFormat::TEXT);
         assert!(legal_nda.user_message.contains("Acme Corp"));
         assert!(legal_nda.user_message.contains("Beta LLC"));
         assert!(legal_nda
             .system_message
             .contains("non-disclosure agreement"));
 
-        let legal_clause = gen::prompts_08::PROMPTS.legal.render_summarize_clause(
-            &gen::prompts_08::schema::legal::summarize_clause::Input {
+        let legal_clause = gen::prompts_07::PROMPTS.legal.render_summarize_clause(
+            &gen::prompts_07::schema::legal::summarize_clause::Input {
                 clause_text: "The party shall indemnify and hold harmless...".to_string(),
-                reviewing_party: gen::prompts_08::schema::legal::shared::Party {
+                reviewing_party: gen::prompts_07::schema::legal::shared::Party {
                     name: "Alice".to_string(),
-                    role: gen::prompts_08::schema::legal::shared::Party_Role::Client,
+                    role: gen::prompts_07::schema::legal::shared::Party_Role::Client,
                     jurisdiction: "NY".to_string(),
                 },
             },
@@ -884,7 +886,7 @@ mod tests {
     fn test_prompts_send_sync() {
         fn assert_send_sync<T: Send + Sync>(_: &T) {}
         assert_send_sync(&*gen::prompts_01::PROMPTS);
-        assert_send_sync(&*gen::prompts_08::PROMPTS);
+        assert_send_sync(&*gen::prompts_07::PROMPTS);
         assert_send_sync(&*gen::prompts_e02::PROMPTS);
         assert_send_sync(&*gen::prompts_e03::PROMPTS);
     }

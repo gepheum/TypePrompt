@@ -1,4 +1,4 @@
-include: ../../../examples/02-structured-output/**/*.xml
+include: ../../../examples/02-complex-schemas/**/*.xml
 gen:
   csharp:
     file: ../../csharp/Gen/Prompts02.cs

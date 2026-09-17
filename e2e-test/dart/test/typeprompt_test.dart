@@ -6,7 +6,6 @@ import 'package:typeprompt_e2e_test/gen/prompts_04.dart' as p04;
 import 'package:typeprompt_e2e_test/gen/prompts_05.dart' as p05;
 import 'package:typeprompt_e2e_test/gen/prompts_06.dart' as p06;
 import 'package:typeprompt_e2e_test/gen/prompts_07.dart' as p07;
-import 'package:typeprompt_e2e_test/gen/prompts_08.dart' as p08;
 import 'package:typeprompt_e2e_test/gen/prompts_e01.dart' as pe01;
 import 'package:typeprompt_e2e_test/gen/prompts_e02.dart' as pe02;
 import 'package:typeprompt_e2e_test/gen/prompts_e03.dart' as pe03;
@@ -181,6 +180,72 @@ void main() {
     test('meta contains declared model and temperature', () {
       expect(prompt.meta.model, equals(p02.Meta_Meta_Model.gpt4o));
       expect(prompt.meta.temperature, equals(0.2));
+    });
+  });
+
+  group('02 Complex Schemas: GeneratePageTree', () {
+    final provider = p02.GeneratePageTree_Provider(
+      name: "CloudX",
+      region: "us-east",
+      category: p02.GeneratePageTree_ProductCategory.compute,
+      pricing: p02.GeneratePageTree_Pricing(
+        model: p02.GeneratePageTree_Pricing_Model.perHour,
+        basePrice: 0.1,
+      ),
+      benchmarks: [
+        p02.GeneratePageTree_Benchmark(
+          name: "throughput",
+          score: 1000.0,
+          unit: "rps",
+        ),
+      ],
+      pros: ["fast", "reliable"],
+      cons: ["pricey"],
+    );
+
+    final prompt = p02.prompts.renderGeneratePageTree(
+      p02.GeneratePageTree_Input(
+        providers: [provider],
+        useCase: "serving ML inference workloads",
+        audience: p02.GeneratePageTree_Input_Audience.architect,
+      ),
+    );
+
+    test('json output format', () {
+      expect(prompt.outputFormat, isA<p02.JsonOutputFormat>());
+    });
+
+    test('templateId', () {
+      expect(
+        prompt.templateId.toString(),
+        equals("Main:GeneratePageTree"),
+      );
+    });
+
+    test('userMessage contains useCase', () {
+      expect(prompt.userMessage, contains("serving ML inference workloads"));
+    });
+
+    test('userMessage contains provider name from TOON data', () {
+      expect(prompt.userMessage, contains("CloudX"));
+    });
+
+    test('userMessage mentions audience', () {
+      expect(prompt.userMessage, contains("architect"));
+    });
+
+    test('has no tools', () {
+      expect(prompt.tools.isEmpty, isTrue);
+    });
+
+    test('parseResponse parses PageNode', () {
+      final result = prompt.parseResponse(
+        '{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}',
+      );
+      expect(result, isA<p02.GeneratePageTree_PageNode_KindSection>());
+      final section = result as p02.GeneratePageTree_PageNode_KindSection;
+      expect(section.title, equals("Overview"));
+      expect(section.children.length, equals(3));
     });
   });
 
@@ -418,88 +483,32 @@ void main() {
     });
   });
 
-  group('06 TOON Format: WriteComparisonArticle', () {
-    final provider = p06.WriteComparisonArticle_Provider(
-      name: "CloudX",
-      region: "us-east",
-      category: p06.WriteComparisonArticle_ProductCategory.compute,
-      pricing: p06.WriteComparisonArticle_Pricing(
-        model: p06.WriteComparisonArticle_Pricing_Model.perHour,
-        basePrice: 0.1,
-      ),
-      benchmarks: [
-        p06.WriteComparisonArticle_Benchmark(
-          name: "throughput",
-          score: 1000.0,
-          unit: "rps",
-        ),
-      ],
-      pros: ["fast", "reliable"],
-      cons: ["pricey"],
-    );
-
-    final prompt = p06.prompts.renderWriteComparisonArticle(
-      p06.WriteComparisonArticle_Input(
-        providers: [provider],
-        useCase: "serving ML inference workloads",
-        audience: p06.WriteComparisonArticle_Input_Audience.architect,
-      ),
-    );
-
-    test('json output format', () {
-      expect(prompt.outputFormat, isA<p06.JsonOutputFormat>());
-    });
-
-    test('templateId', () {
-      expect(
-        prompt.templateId.toString(),
-        equals("Main:WriteComparisonArticle"),
-      );
-    });
-
-    test('userMessage contains useCase', () {
-      expect(prompt.userMessage, contains("serving ML inference workloads"));
-    });
-
-    test('userMessage contains provider name from TOON data', () {
-      expect(prompt.userMessage, contains("CloudX"));
-    });
-
-    test('userMessage mentions audience', () {
-      expect(prompt.userMessage, contains("architect"));
-    });
-
-    test('has no tools', () {
-      expect(prompt.tools.isEmpty, isTrue);
-    });
-  });
-
-  group('07 Shared Types: ShippingConfirmation & ReturnSlip', () {
-    final address = p07.Shared_Address(
+  group('06 Shared Types: ShippingConfirmation & ReturnSlip', () {
+    final address = p06.Shared_Address(
       street: "1 Main St",
       city: "Paris",
       country: "France",
     );
 
-    final contact = p07.Shared_ContactInfo(
+    final contact = p06.Shared_ContactInfo(
       name: "Alice Dupont",
       email: "alice@example.com",
       address: address,
     );
 
     test('shipping confirmation', () {
-      final prompt = p07.prompts.renderShippingConfirmation(
-        p07.ShippingConfirmation_Input(
+      final prompt = p06.prompts.renderShippingConfirmation(
+        p06.ShippingConfirmation_Input(
           recipient: contact,
           orderNumber: "ORD-1234",
           estimatedDelivery: "2026-08-20",
           items: [
-            p07.ShippingConfirmation_Input_Items(name: "Laptop", quantity: 1),
+            p06.ShippingConfirmation_Input_Items(name: "Laptop", quantity: 1),
           ],
         ),
       );
 
-      expect(prompt.outputFormat, isA<p07.TextOutputFormat>());
+      expect(prompt.outputFormat, isA<p06.TextOutputFormat>());
       expect(prompt.templateId.toString(), equals("Main:ShippingConfirmation"));
       expect(prompt.userMessage, contains("Alice Dupont"));
       expect(prompt.userMessage, contains("ORD-1234"));
@@ -507,31 +516,31 @@ void main() {
     });
 
     test('return slip', () {
-      final prompt = p07.prompts.renderReturnSlip(
-        p07.ReturnSlip_Input(
+      final prompt = p06.prompts.renderReturnSlip(
+        p06.ReturnSlip_Input(
           customer: contact,
-          returnReason: p07.ReturnSlip_Input_ReturnReason.defective,
+          returnReason: p06.ReturnSlip_Input_ReturnReason.defective,
           orderNumber: "ORD-1234",
         ),
       );
 
-      expect(prompt.outputFormat, isA<p07.TextOutputFormat>());
+      expect(prompt.outputFormat, isA<p06.TextOutputFormat>());
       expect(prompt.templateId.toString(), equals("Main:ReturnSlip"));
       expect(prompt.userMessage, contains("Alice Dupont"));
       expect(prompt.userMessage, contains("defective"));
     });
   });
 
-  group('08 Namespaces: Finance & Legal', () {
+  group('07 Namespaces: Finance & Legal', () {
     test('finance summarize transaction', () {
-      final prompt = p08.prompts.finance.renderSummarizeTransaction(
-        p08.Finance_SummarizeTransaction_Input(
+      final prompt = p07.prompts.finance.renderSummarizeTransaction(
+        p07.Finance_SummarizeTransaction_Input(
           description: "AWS monthly bill",
-          amount: p08.Finance_Shared_MoneyAmount(
+          amount: p07.Finance_Shared_MoneyAmount(
             value: 450.0,
-            currency: p08.Finance_Shared_Currency.usd,
+            currency: p07.Finance_Shared_Currency.usd,
           ),
-          category: p08.Finance_SummarizeTransaction_Input_Category.expense,
+          category: p07.Finance_SummarizeTransaction_Input_Category.expense,
           date: "2026-08-01",
         ),
       );
@@ -540,19 +549,19 @@ void main() {
         prompt.templateId.toString(),
         equals("Finance:SummarizeTransaction"),
       );
-      expect(prompt.outputFormat, isA<p08.JsonOutputFormat>());
+      expect(prompt.outputFormat, isA<p07.JsonOutputFormat>());
       expect(prompt.userMessage, contains("AWS monthly bill"));
     });
 
     test('finance detect anomaly', () {
-      final prompt = p08.prompts.finance.renderDetectAnomaly(
-        p08.Finance_DetectAnomaly_Input(
+      final prompt = p07.prompts.finance.renderDetectAnomaly(
+        p07.Finance_DetectAnomaly_Input(
           recentTransactions: const [],
-          newTransaction: p08.Finance_DetectAnomaly_Input_NewTransaction(
+          newTransaction: p07.Finance_DetectAnomaly_Input_NewTransaction(
             description: "Casino chips",
-            amount: p08.Finance_Shared_MoneyAmount(
+            amount: p07.Finance_Shared_MoneyAmount(
               value: 5000.0,
-              currency: p08.Finance_Shared_Currency.usd,
+              currency: p07.Finance_Shared_Currency.usd,
             ),
             date: "2026-08-17",
           ),
@@ -565,16 +574,16 @@ void main() {
     });
 
     test('legal draft NDA', () {
-      final prompt = p08.prompts.legal.renderDraftNda(
-        p08.Legal_DraftNda_Input(
-          disclosingParty: p08.Legal_Shared_Party(
+      final prompt = p07.prompts.legal.renderDraftNda(
+        p07.Legal_DraftNda_Input(
+          disclosingParty: p07.Legal_Shared_Party(
             name: "Acme Corp",
-            role: p08.Legal_Shared_Party_Role.client,
+            role: p07.Legal_Shared_Party_Role.client,
             jurisdiction: "California",
           ),
-          receivingParty: p08.Legal_Shared_Party(
+          receivingParty: p07.Legal_Shared_Party(
             name: "Beta LLC",
-            role: p08.Legal_Shared_Party_Role.counterparty,
+            role: p07.Legal_Shared_Party_Role.counterparty,
             jurisdiction: "Delaware",
           ),
           purposeOfDisclosure: "Evaluating a potential acquisition",
@@ -583,26 +592,26 @@ void main() {
       );
 
       expect(prompt.templateId.toString(), equals("Legal:DraftNda"));
-      expect(prompt.outputFormat, isA<p08.TextOutputFormat>());
+      expect(prompt.outputFormat, isA<p07.TextOutputFormat>());
       expect(prompt.userMessage, contains("Acme Corp"));
       expect(prompt.userMessage, contains("Beta LLC"));
       expect(prompt.systemMessage, contains("non-disclosure agreement"));
     });
 
     test('legal summarize clause', () {
-      final prompt = p08.prompts.legal.renderSummarizeClause(
-        p08.Legal_SummarizeClause_Input(
+      final prompt = p07.prompts.legal.renderSummarizeClause(
+        p07.Legal_SummarizeClause_Input(
           clauseText: "The party shall indemnify and hold harmless...",
-          reviewingParty: p08.Legal_Shared_Party(
+          reviewingParty: p07.Legal_Shared_Party(
             name: "Alice",
-            role: p08.Legal_Shared_Party_Role.client,
+            role: p07.Legal_Shared_Party_Role.client,
             jurisdiction: "NY",
           ),
         ),
       );
 
       expect(prompt.templateId.toString(), equals("Legal:SummarizeClause"));
-      expect(prompt.outputFormat, isA<p08.JsonOutputFormat>());
+      expect(prompt.outputFormat, isA<p07.JsonOutputFormat>());
       expect(prompt.userMessage, contains("Alice"));
       expect(prompt.userMessage, contains("indemnify"));
       expect(prompt.userMessage, contains("<Clause>"));

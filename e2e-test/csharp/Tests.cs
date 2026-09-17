@@ -207,6 +207,93 @@ public class Test02StructuredOutput_TriageTicket
     }
 }
 
+public class Test02ComplexSchemas_GeneratePageTree
+{
+    private readonly TypePrompt02.Prompt<TypePrompt02.Schema.GeneratePageTree.PageNode, TypePrompt02.NoTools> _prompt;
+
+    public Test02ComplexSchemas_GeneratePageTree()
+    {
+        var provider = new TypePrompt02.Schema.GeneratePageTree.Provider
+        {
+            Name = "CloudX",
+            Region = "us-east",
+            Category = TypePrompt02.Schema.GeneratePageTree.ProductCategory.Compute,
+            Pricing = new TypePrompt02.Schema.GeneratePageTree.Pricing
+            {
+                Model = TypePrompt02.Schema.GeneratePageTree.Pricing_Model.PerHour,
+                BasePrice = 0.1
+            },
+            Benchmarks = new[]
+            {
+                new TypePrompt02.Schema.GeneratePageTree.Benchmark
+                {
+                    Name = "throughput",
+                    Score = 1000,
+                    Unit = "rps"
+                }
+            },
+            Pros = new[] { "fast", "reliable" },
+            Cons = new[] { "pricey" }
+        };
+
+        _prompt = TypePrompt02.Prompts.Default.RenderGeneratePageTree(new TypePrompt02.Schema.GeneratePageTree.Input
+        {
+            Providers = new[] { provider },
+            UseCase = "serving ML inference workloads",
+            Audience = TypePrompt02.Schema.GeneratePageTree.Input_Audience.Architect
+        });
+    }
+
+    [Fact]
+    public void TestJsonOutputFormat()
+    {
+        Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+    }
+
+    [Fact]
+    public void TestTemplateId()
+    {
+        Assert.Equal("Main:GeneratePageTree", TypePrompt02.TemplateIdExtensions.GetId(_prompt.TemplateId));
+    }
+
+    [Fact]
+    public void TestUserMessageContainsUseCase()
+    {
+        Assert.Contains("serving ML inference workloads", _prompt.UserMessage);
+    }
+
+    [Fact]
+    public void TestUserMessageContainsProviderNameFromToonData()
+    {
+        Assert.Contains("CloudX", _prompt.UserMessage);
+    }
+
+    [Fact]
+    public void TestUserMessageMentionsAudience()
+    {
+        Assert.Contains("architect", _prompt.UserMessage);
+    }
+
+    [Fact]
+    public void TestHasNoTools()
+    {
+        Assert.Empty(_prompt.Tools);
+    }
+
+    [Fact]
+    public void TestParseResponseParsesPageNode()
+    {
+        var json = "{\"kind\":\"section\",\"title\":\"Overview\",\"children\":[{\"kind\":\"heading\",\"level\":\"h1\",\"text\":\"Cloud Comparison\"},{\"kind\":\"paragraph\",\"text\":\"Summary here\"},{\"kind\":\"button\",\"label\":\"Get Started\",\"url\":\"https://example.com\"}]}";
+        var result = _prompt.ParseResponse(json);
+        var section = Assert.IsType<TypePrompt02.Schema.GeneratePageTree.PageNode_KindSection>(result);
+        Assert.Equal("Overview", section.Title);
+        Assert.Equal(3, section.Children.Count);
+        var heading = Assert.IsType<TypePrompt02.Schema.GeneratePageTree.PageNode_KindHeading>(section.Children[0]);
+        Assert.Equal(TypePrompt02.Schema.GeneratePageTree.PageNode_KindHeading_Level.H1, heading.Level);
+        Assert.Equal("Cloud Comparison", heading.Text);
+    }
+}
+
 public class Test03Tools_ResearchQuestion
 {
     private readonly TypePrompt03.Prompt<TypePrompt03.Schema.ResearchQuestion.Output, TypePrompt03.ToolExecutor.IWebSearch> _prompt =
@@ -532,99 +619,16 @@ public class Test05Variants_WriteProductDescription
     }
 }
 
-public class Test06ToonFormat_WriteComparisonArticle
+public class Test06SharedTypes
 {
-    private readonly TypePrompt06.Prompt<TypePrompt06.Schema.WriteComparisonArticle.Output, TypePrompt06.NoTools> _prompt;
-
-    public Test06ToonFormat_WriteComparisonArticle()
-    {
-        var provider = new TypePrompt06.Schema.WriteComparisonArticle.Provider
-        {
-            Name = "CloudX",
-            Region = "us-east",
-            Category = TypePrompt06.Schema.WriteComparisonArticle.ProductCategory.Compute,
-            Pricing = new TypePrompt06.Schema.WriteComparisonArticle.Pricing
-            {
-                Model = TypePrompt06.Schema.WriteComparisonArticle.Pricing_Model.PerHour,
-                BasePrice = 0.1
-            },
-            Benchmarks = new[]
-            {
-                new TypePrompt06.Schema.WriteComparisonArticle.Benchmark
-                {
-                    Name = "throughput",
-                    Score = 1000,
-                    Unit = "rps"
-                }
-            },
-            Pros = new[] { "fast", "reliable" },
-            Cons = new[] { "pricey" }
-        };
-
-        _prompt = TypePrompt06.Prompts.Default.RenderWriteComparisonArticle(new TypePrompt06.Schema.WriteComparisonArticle.Input
-        {
-            Providers = new[] { provider },
-            UseCase = "serving ML inference workloads",
-            Audience = TypePrompt06.Schema.WriteComparisonArticle.Input_Audience.Architect
-        });
-    }
-
-    [Fact]
-    public void TestJsonOutputFormat()
-    {
-        Assert.IsType<TypePrompt06.JsonOutputFormat>(_prompt.OutputFormat);
-    }
-
-    [Fact]
-    public void TestTemplateId()
-    {
-        Assert.Equal("Main:WriteComparisonArticle", TypePrompt06.TemplateIdExtensions.GetId(_prompt.TemplateId));
-    }
-
-    [Fact]
-    public void TestUserMessageContainsUseCase()
-    {
-        Assert.Contains("serving ML inference workloads", _prompt.UserMessage);
-    }
-
-    [Fact]
-    public void TestUserMessageContainsProviderNameFromToonData()
-    {
-        Assert.Contains("CloudX", _prompt.UserMessage);
-    }
-
-    [Fact]
-    public void TestUserMessageMentionsAudience()
-    {
-        Assert.Contains("architect", _prompt.UserMessage);
-    }
-
-    [Fact]
-    public void TestHasNoTools()
-    {
-        Assert.Empty(_prompt.Tools);
-    }
-
-    [Fact]
-    public void TestToonExactUserMessage()
-    {
-        Assert.Equal(
-            "Write a comparison article framed around this use case: serving ML inference workloads\n\nHere is the data for each provider:\n\n[1]:\n  - name: CloudX\n    region: us-east\n    category: compute\n    pricing:\n      model: perHour\n      basePrice: 0.10000000000000001\n      overage: null\n    benchmarks[1]{name,score,unit}:\n      throughput,1000,rps\n    pros[2]: fast,reliable\n    cons[1]: pricey\n\nTarget audience: architect",
-            _prompt.UserMessage
-        );
-    }
-}
-
-public class Test07SharedTypes
-{
-    private static readonly TypePrompt07.Schema.Shared.Address Address = new()
+    private static readonly TypePrompt06.Schema.Shared.Address Address = new()
     {
         Street = "1 Main St",
         City = "Paris",
         Country = "France"
     };
 
-    private static readonly TypePrompt07.Schema.Shared.ContactInfo Contact = new()
+    private static readonly TypePrompt06.Schema.Shared.ContactInfo Contact = new()
     {
         Name = "Alice Dupont",
         Email = "alice@example.com",
@@ -634,19 +638,19 @@ public class Test07SharedTypes
     [Fact]
     public void TestShippingConfirmation()
     {
-        var prompt = TypePrompt07.Prompts.Default.RenderShippingConfirmation(new TypePrompt07.Schema.ShippingConfirmation.Input
+        var prompt = TypePrompt06.Prompts.Default.RenderShippingConfirmation(new TypePrompt06.Schema.ShippingConfirmation.Input
         {
             Recipient = Contact,
             OrderNumber = "ORD-1234",
             EstimatedDelivery = "2026-08-20",
             Items = new[]
             {
-                new TypePrompt07.Schema.ShippingConfirmation.Input_Items { Name = "Laptop", Quantity = 1 }
+                new TypePrompt06.Schema.ShippingConfirmation.Input_Items { Name = "Laptop", Quantity = 1 }
             }
         });
 
-        Assert.IsType<TypePrompt07.TextOutputFormat>(prompt.OutputFormat);
-        Assert.Equal("Main:ShippingConfirmation", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.IsType<TypePrompt06.TextOutputFormat>(prompt.OutputFormat);
+        Assert.Equal("Main:ShippingConfirmation", TypePrompt06.TemplateIdExtensions.GetId(prompt.TemplateId));
         Assert.Contains("Alice Dupont", prompt.UserMessage);
         Assert.Contains("ORD-1234", prompt.UserMessage);
         Assert.Contains("confirmation email", prompt.SystemMessage);
@@ -655,62 +659,62 @@ public class Test07SharedTypes
     [Fact]
     public void TestReturnSlip()
     {
-        var prompt = TypePrompt07.Prompts.Default.RenderReturnSlip(new TypePrompt07.Schema.ReturnSlip.Input
+        var prompt = TypePrompt06.Prompts.Default.RenderReturnSlip(new TypePrompt06.Schema.ReturnSlip.Input
         {
             Customer = Contact,
-            ReturnReason = TypePrompt07.Schema.ReturnSlip.Input_ReturnReason.Defective,
+            ReturnReason = TypePrompt06.Schema.ReturnSlip.Input_ReturnReason.Defective,
             OrderNumber = "ORD-1234"
         });
 
-        Assert.IsType<TypePrompt07.TextOutputFormat>(prompt.OutputFormat);
-        Assert.Equal("Main:ReturnSlip", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.IsType<TypePrompt06.TextOutputFormat>(prompt.OutputFormat);
+        Assert.Equal("Main:ReturnSlip", TypePrompt06.TemplateIdExtensions.GetId(prompt.TemplateId));
         Assert.Contains("Alice Dupont", prompt.UserMessage);
         Assert.Contains("defective", prompt.UserMessage);
     }
 }
 
-public class Test08Namespaces
+public class Test07Namespaces
 {
     [Fact]
     public void TestFinanceSummarizeTransaction()
     {
-        var prompt = TypePrompt08.Prompts.Default.Finance.RenderSummarizeTransaction(new TypePrompt08.Schema.Finance.SummarizeTransaction.Input
+        var prompt = TypePrompt07.Prompts.Default.Finance.RenderSummarizeTransaction(new TypePrompt07.Schema.Finance.SummarizeTransaction.Input
         {
             Description = "AWS monthly bill",
-            Amount = new TypePrompt08.Schema.Finance.Shared.MoneyAmount
+            Amount = new TypePrompt07.Schema.Finance.Shared.MoneyAmount
             {
                 Value = 450,
-                Currency = TypePrompt08.Schema.Finance.Shared.Currency.Usd
+                Currency = TypePrompt07.Schema.Finance.Shared.Currency.Usd
             },
-            Category = TypePrompt08.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
+            Category = TypePrompt07.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
             Date = "2026-08-01"
         });
 
-        Assert.Equal("Finance:SummarizeTransaction", TypePrompt08.TemplateIdExtensions.GetId(prompt.TemplateId));
-        Assert.NotNull(TypePrompt08.Prompts.Default.Finance);
-        Assert.IsType<TypePrompt08.JsonOutputFormat>(prompt.OutputFormat);
+        Assert.Equal("Finance:SummarizeTransaction", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.NotNull(TypePrompt07.Prompts.Default.Finance);
+        Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat);
         Assert.Contains("AWS monthly bill", prompt.UserMessage);
     }
 
     [Fact]
     public void TestFinanceDetectAnomaly()
     {
-        var prompt = TypePrompt08.Prompts.Default.Finance.RenderDetectAnomaly(new TypePrompt08.Schema.Finance.DetectAnomaly.Input
+        var prompt = TypePrompt07.Prompts.Default.Finance.RenderDetectAnomaly(new TypePrompt07.Schema.Finance.DetectAnomaly.Input
         {
-            RecentTransactions = Array.Empty<TypePrompt08.Schema.Finance.DetectAnomaly.Input_RecentTransactions>(),
-            NewTransaction = new TypePrompt08.Schema.Finance.DetectAnomaly.Input_NewTransaction
+            RecentTransactions = Array.Empty<TypePrompt07.Schema.Finance.DetectAnomaly.Input_RecentTransactions>(),
+            NewTransaction = new TypePrompt07.Schema.Finance.DetectAnomaly.Input_NewTransaction
             {
                 Description = "Casino chips",
-                Amount = new TypePrompt08.Schema.Finance.Shared.MoneyAmount
+                Amount = new TypePrompt07.Schema.Finance.Shared.MoneyAmount
                 {
                     Value = 5000,
-                    Currency = TypePrompt08.Schema.Finance.Shared.Currency.Usd
+                    Currency = TypePrompt07.Schema.Finance.Shared.Currency.Usd
                 },
                 Date = "2026-08-17"
             }
         });
 
-        Assert.Equal("Finance:DetectAnomaly", TypePrompt08.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.Equal("Finance:DetectAnomaly", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
         Assert.Contains("Casino chips", prompt.UserMessage);
         Assert.Empty(prompt.Tools);
     }
@@ -718,27 +722,27 @@ public class Test08Namespaces
     [Fact]
     public void TestLegalDraftNda()
     {
-        var prompt = TypePrompt08.Prompts.Default.Legal.RenderDraftNda(new TypePrompt08.Schema.Legal.DraftNda.Input
+        var prompt = TypePrompt07.Prompts.Default.Legal.RenderDraftNda(new TypePrompt07.Schema.Legal.DraftNda.Input
         {
-            DisclosingParty = new TypePrompt08.Schema.Legal.Shared.Party
+            DisclosingParty = new TypePrompt07.Schema.Legal.Shared.Party
             {
                 Name = "Acme Corp",
-                Role = TypePrompt08.Schema.Legal.Shared.Party_Role.Client,
+                Role = TypePrompt07.Schema.Legal.Shared.Party_Role.Client,
                 Jurisdiction = "California"
             },
-            ReceivingParty = new TypePrompt08.Schema.Legal.Shared.Party
+            ReceivingParty = new TypePrompt07.Schema.Legal.Shared.Party
             {
                 Name = "Beta LLC",
-                Role = TypePrompt08.Schema.Legal.Shared.Party_Role.Counterparty,
+                Role = TypePrompt07.Schema.Legal.Shared.Party_Role.Counterparty,
                 Jurisdiction = "Delaware"
             },
             PurposeOfDisclosure = "Evaluating a potential acquisition",
             DurationYears = 3
         });
 
-        Assert.Equal("Legal:DraftNda", TypePrompt08.TemplateIdExtensions.GetId(prompt.TemplateId));
-        Assert.IsType<TypePrompt08.TextOutputFormat>(prompt.OutputFormat);
-        Assert.NotNull(TypePrompt08.Prompts.Default.Legal);
+        Assert.Equal("Legal:DraftNda", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.IsType<TypePrompt07.TextOutputFormat>(prompt.OutputFormat);
+        Assert.NotNull(TypePrompt07.Prompts.Default.Legal);
         Assert.Contains("Acme Corp", prompt.UserMessage);
         Assert.Contains("Beta LLC", prompt.UserMessage);
         Assert.Contains("non-disclosure agreement", prompt.SystemMessage);
@@ -747,19 +751,19 @@ public class Test08Namespaces
     [Fact]
     public void TestLegalSummarizeClause()
     {
-        var prompt = TypePrompt08.Prompts.Default.Legal.RenderSummarizeClause(new TypePrompt08.Schema.Legal.SummarizeClause.Input
+        var prompt = TypePrompt07.Prompts.Default.Legal.RenderSummarizeClause(new TypePrompt07.Schema.Legal.SummarizeClause.Input
         {
             ClauseText = "The party shall indemnify and hold harmless...",
-            ReviewingParty = new TypePrompt08.Schema.Legal.Shared.Party
+            ReviewingParty = new TypePrompt07.Schema.Legal.Shared.Party
             {
                 Name = "Alice",
-                Role = TypePrompt08.Schema.Legal.Shared.Party_Role.Client,
+                Role = TypePrompt07.Schema.Legal.Shared.Party_Role.Client,
                 Jurisdiction = "NY"
             }
         });
 
-        Assert.Equal("Legal:SummarizeClause", TypePrompt08.TemplateIdExtensions.GetId(prompt.TemplateId));
-        Assert.IsType<TypePrompt08.JsonOutputFormat>(prompt.OutputFormat);
+        Assert.Equal("Legal:SummarizeClause", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
+        Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat);
         Assert.Contains("Alice", prompt.UserMessage);
         Assert.Contains("indemnify", prompt.UserMessage);
         Assert.Contains("<Clause>", prompt.UserMessage);

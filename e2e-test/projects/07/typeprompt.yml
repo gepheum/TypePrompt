@@ -1,4 +1,4 @@
-include: ../../../examples/07-shared-types/**/*.xml
+include: ../../../examples/07-namespaces/**/*.xml
 gen:
   csharp:
     file: ../../csharp/Gen/Prompts07.cs

@@ -1,4 +1,4 @@
-include: ../../../examples/06-toon-format/**/*.xml
+include: ../../../examples/06-shared-types/**/*.xml
 gen:
   csharp:
     file: ../../csharp/Gen/Prompts06.cs

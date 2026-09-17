@@ -195,6 +195,84 @@ class Test02StructuredOutput_TriageTicket {
     }
 }
 
+class Test02_GeneratePageTree {
+    private val provider = com.example.prompts02.Schema.GeneratePageTree.Provider(
+        name = "CloudX",
+        region = "us-east",
+        category = com.example.prompts02.Schema.GeneratePageTree.ProductCategory.Compute,
+        pricing = com.example.prompts02.Schema.GeneratePageTree.Pricing(
+            model = com.example.prompts02.Schema.GeneratePageTree.Pricing_Model.PerHour,
+            basePrice = 0.1,
+        ),
+        benchmarks = listOf(
+            com.example.prompts02.Schema.GeneratePageTree.Benchmark(
+                name = "throughput",
+                score = 1000.0,
+                unit = "rps",
+            ),
+        ),
+        pros = listOf("fast", "reliable"),
+        cons = listOf("pricey"),
+    )
+
+    private val prompt = com.example.prompts02.prompts.renderGeneratePageTree(
+        com.example.prompts02.Schema.GeneratePageTree.Input(
+            providers = listOf(provider),
+            useCase = "serving ML inference workloads",
+            audience = com.example.prompts02.Schema.GeneratePageTree.Input_Audience.Architect,
+        ),
+    )
+
+    @Test
+    fun testJsonOutputFormat() {
+        assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+    }
+
+    @Test
+    fun testTemplateId() {
+        assertEquals("Main:GeneratePageTree", prompt.templateId.toString())
+    }
+
+    @Test
+    fun testUserMessageContainsUseCase() {
+        assertTrue(prompt.userMessage.contains("serving ML inference workloads"))
+    }
+
+    @Test
+    fun testUserMessageContainsProviderNameFromToonData() {
+        assertTrue(prompt.userMessage.contains("CloudX"))
+    }
+
+    @Test
+    fun testUserMessageMentionsAudience() {
+        assertTrue(prompt.userMessage.contains("architect"))
+    }
+
+    @Test
+    fun testHasNoTools() {
+        assertTrue(prompt.tools.isEmpty())
+    }
+
+    @Test
+    fun testToonExactUserMessage() {
+        assertTrue(prompt.userMessage.contains("Generate a comparison page layout framed around this use case: serving ML inference workloads"))
+        assertTrue(prompt.userMessage.contains("name: CloudX"))
+        assertTrue(prompt.userMessage.contains("Target audience: architect"))
+    }
+
+    @Test
+    fun testParseResponse() {
+        val result = prompt.parseResponse(
+            """{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}""",
+        )
+        val section = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindSection>(result)
+        assertEquals("Overview", section.title)
+        assertEquals(3, section.children.size)
+        val heading = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindHeading>(section.children[0])
+        assertEquals("CloudX", heading.text)
+    }
+}
+
 class Test03Tools_ResearchQuestion {
     private val prompt = com.example.prompts03.prompts.renderResearchQuestion(
         com.example.prompts03.Schema.ResearchQuestion.Input(
@@ -471,80 +549,14 @@ class Test05Variants_WriteProductDescription {
     }
 }
 
-class Test06ToonFormat_WriteComparisonArticle {
-    private val provider = com.example.prompts06.Schema.WriteComparisonArticle.Provider(
-        name = "CloudX",
-        region = "us-east",
-        category = com.example.prompts06.Schema.WriteComparisonArticle.ProductCategory.Compute,
-        pricing = com.example.prompts06.Schema.WriteComparisonArticle.Pricing(
-            model = com.example.prompts06.Schema.WriteComparisonArticle.Pricing_Model.PerHour,
-            basePrice = 0.1,
-        ),
-        benchmarks = listOf(
-            com.example.prompts06.Schema.WriteComparisonArticle.Benchmark(
-                name = "throughput",
-                score = 1000.0,
-                unit = "rps",
-            ),
-        ),
-        pros = listOf("fast", "reliable"),
-        cons = listOf("pricey"),
-    )
-
-    private val prompt = com.example.prompts06.prompts.renderWriteComparisonArticle(
-        com.example.prompts06.Schema.WriteComparisonArticle.Input(
-            providers = listOf(provider),
-            useCase = "serving ML inference workloads",
-            audience = com.example.prompts06.Schema.WriteComparisonArticle.Input_Audience.Architect,
-        ),
-    )
-
-    @Test
-    fun testJsonOutputFormat() {
-        assertIs<com.example.prompts06.JsonOutputFormat>(prompt.outputFormat)
-    }
-
-    @Test
-    fun testTemplateId() {
-        assertEquals("Main:WriteComparisonArticle", prompt.templateId.toString())
-    }
-
-    @Test
-    fun testUserMessageContainsUseCase() {
-        assertTrue(prompt.userMessage.contains("serving ML inference workloads"))
-    }
-
-    @Test
-    fun testUserMessageContainsProviderNameFromToonData() {
-        assertTrue(prompt.userMessage.contains("CloudX"))
-    }
-
-    @Test
-    fun testUserMessageMentionsAudience() {
-        assertTrue(prompt.userMessage.contains("architect"))
-    }
-
-    @Test
-    fun testHasNoTools() {
-        assertTrue(prompt.tools.isEmpty())
-    }
-
-    @Test
-    fun testToonExactUserMessage() {
-        assertTrue(prompt.userMessage.contains("Write a comparison article framed around this use case: serving ML inference workloads"))
-        assertTrue(prompt.userMessage.contains("name: CloudX"))
-        assertTrue(prompt.userMessage.contains("Target audience: architect"))
-    }
-}
-
-class Test07SharedTypes {
-    private val address = com.example.prompts07.Schema.Shared.Address(
+class Test06SharedTypes {
+    private val address = com.example.prompts06.Schema.Shared.Address(
         street = "1 Main St",
         city = "Paris",
         country = "France",
     )
 
-    private val contact = com.example.prompts07.Schema.Shared.ContactInfo(
+    private val contact = com.example.prompts06.Schema.Shared.ContactInfo(
         name = "Alice Dupont",
         email = "alice@example.com",
         address = address,
@@ -552,18 +564,18 @@ class Test07SharedTypes {
 
     @Test
     fun testShippingConfirmation() {
-        val prompt = com.example.prompts07.prompts.renderShippingConfirmation(
-            com.example.prompts07.Schema.ShippingConfirmation.Input(
+        val prompt = com.example.prompts06.prompts.renderShippingConfirmation(
+            com.example.prompts06.Schema.ShippingConfirmation.Input(
                 recipient = contact,
                 orderNumber = "ORD-1234",
                 estimatedDelivery = "2026-08-20",
                 items = listOf(
-                    com.example.prompts07.Schema.ShippingConfirmation.Input_Items(name = "Laptop", quantity = 1),
+                    com.example.prompts06.Schema.ShippingConfirmation.Input_Items(name = "Laptop", quantity = 1),
                 ),
             ),
         )
 
-        assertIs<com.example.prompts07.TextOutputFormat>(prompt.outputFormat)
+        assertIs<com.example.prompts06.TextOutputFormat>(prompt.outputFormat)
         assertEquals("Main:ShippingConfirmation", prompt.templateId.toString())
         assertTrue(prompt.userMessage.contains("Alice Dupont"))
         assertTrue(prompt.userMessage.contains("ORD-1234"))
@@ -572,52 +584,52 @@ class Test07SharedTypes {
 
     @Test
     fun testReturnSlip() {
-        val prompt = com.example.prompts07.prompts.renderReturnSlip(
-            com.example.prompts07.Schema.ReturnSlip.Input(
+        val prompt = com.example.prompts06.prompts.renderReturnSlip(
+            com.example.prompts06.Schema.ReturnSlip.Input(
                 customer = contact,
-                returnReason = com.example.prompts07.Schema.ReturnSlip.Input_ReturnReason.Defective,
+                returnReason = com.example.prompts06.Schema.ReturnSlip.Input_ReturnReason.Defective,
                 orderNumber = "ORD-1234",
             ),
         )
 
-        assertIs<com.example.prompts07.TextOutputFormat>(prompt.outputFormat)
+        assertIs<com.example.prompts06.TextOutputFormat>(prompt.outputFormat)
         assertEquals("Main:ReturnSlip", prompt.templateId.toString())
         assertTrue(prompt.userMessage.contains("Alice Dupont"))
         assertTrue(prompt.userMessage.contains("defective"))
     }
 }
 
-class Test08Namespaces {
+class Test07Namespaces {
     @Test
     fun testFinanceSummarizeTransaction() {
-        val prompt = com.example.prompts08.prompts.finance.renderSummarizeTransaction(
-            com.example.prompts08.Schema.Finance.SummarizeTransaction.Input(
+        val prompt = com.example.prompts07.prompts.finance.renderSummarizeTransaction(
+            com.example.prompts07.Schema.Finance.SummarizeTransaction.Input(
                 description = "AWS monthly bill",
-                amount = com.example.prompts08.Schema.Finance.Shared.MoneyAmount(
+                amount = com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
                     value = 450.0,
-                    currency = com.example.prompts08.Schema.Finance.Shared.Currency.Usd,
+                    currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
                 ),
-                category = com.example.prompts08.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
+                category = com.example.prompts07.Schema.Finance.SummarizeTransaction.Input_Category.Expense,
                 date = "2026-08-01",
             ),
         )
 
         assertEquals("Finance:SummarizeTransaction", prompt.templateId.toString())
-        assertNotNull(com.example.prompts08.prompts.finance)
-        assertIs<com.example.prompts08.JsonOutputFormat>(prompt.outputFormat)
+        assertNotNull(com.example.prompts07.prompts.finance)
+        assertIs<com.example.prompts07.JsonOutputFormat>(prompt.outputFormat)
         assertTrue(prompt.userMessage.contains("AWS monthly bill"))
     }
 
     @Test
     fun testFinanceDetectAnomaly() {
-        val prompt = com.example.prompts08.prompts.finance.renderDetectAnomaly(
-            com.example.prompts08.Schema.Finance.DetectAnomaly.Input(
+        val prompt = com.example.prompts07.prompts.finance.renderDetectAnomaly(
+            com.example.prompts07.Schema.Finance.DetectAnomaly.Input(
                 recentTransactions = emptyList(),
-                newTransaction = com.example.prompts08.Schema.Finance.DetectAnomaly.Input_NewTransaction(
+                newTransaction = com.example.prompts07.Schema.Finance.DetectAnomaly.Input_NewTransaction(
                     description = "Casino chips",
-                    amount = com.example.prompts08.Schema.Finance.Shared.MoneyAmount(
+                    amount = com.example.prompts07.Schema.Finance.Shared.MoneyAmount(
                         value = 5000.0,
-                        currency = com.example.prompts08.Schema.Finance.Shared.Currency.Usd,
+                        currency = com.example.prompts07.Schema.Finance.Shared.Currency.Usd,
                     ),
                     date = "2026-08-17",
                 ),
@@ -631,16 +643,16 @@ class Test08Namespaces {
 
     @Test
     fun testLegalDraftNda() {
-        val prompt = com.example.prompts08.prompts.legal.renderDraftNda(
-            com.example.prompts08.Schema.Legal.DraftNda.Input(
-                disclosingParty = com.example.prompts08.Schema.Legal.Shared.Party(
+        val prompt = com.example.prompts07.prompts.legal.renderDraftNda(
+            com.example.prompts07.Schema.Legal.DraftNda.Input(
+                disclosingParty = com.example.prompts07.Schema.Legal.Shared.Party(
                     name = "Acme Corp",
-                    role = com.example.prompts08.Schema.Legal.Shared.Party_Role.Client,
+                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
                     jurisdiction = "California",
                 ),
-                receivingParty = com.example.prompts08.Schema.Legal.Shared.Party(
+                receivingParty = com.example.prompts07.Schema.Legal.Shared.Party(
                     name = "Beta LLC",
-                    role = com.example.prompts08.Schema.Legal.Shared.Party_Role.Counterparty,
+                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Counterparty,
                     jurisdiction = "Delaware",
                 ),
                 purposeOfDisclosure = "Evaluating a potential acquisition",
@@ -649,8 +661,8 @@ class Test08Namespaces {
         )
 
         assertEquals("Legal:DraftNda", prompt.templateId.toString())
-        assertIs<com.example.prompts08.TextOutputFormat>(prompt.outputFormat)
-        assertNotNull(com.example.prompts08.prompts.legal)
+        assertIs<com.example.prompts07.TextOutputFormat>(prompt.outputFormat)
+        assertNotNull(com.example.prompts07.prompts.legal)
         assertTrue(prompt.userMessage.contains("Acme Corp"))
         assertTrue(prompt.userMessage.contains("Beta LLC"))
         assertTrue(prompt.systemMessage.contains("non-disclosure agreement"))
@@ -658,19 +670,19 @@ class Test08Namespaces {
 
     @Test
     fun testLegalSummarizeClause() {
-        val prompt = com.example.prompts08.prompts.legal.renderSummarizeClause(
-            com.example.prompts08.Schema.Legal.SummarizeClause.Input(
+        val prompt = com.example.prompts07.prompts.legal.renderSummarizeClause(
+            com.example.prompts07.Schema.Legal.SummarizeClause.Input(
                 clauseText = "The party shall indemnify and hold harmless...",
-                reviewingParty = com.example.prompts08.Schema.Legal.Shared.Party(
+                reviewingParty = com.example.prompts07.Schema.Legal.Shared.Party(
                     name = "Alice",
-                    role = com.example.prompts08.Schema.Legal.Shared.Party_Role.Client,
+                    role = com.example.prompts07.Schema.Legal.Shared.Party_Role.Client,
                     jurisdiction = "NY",
                 ),
             ),
         )
 
         assertEquals("Legal:SummarizeClause", prompt.templateId.toString())
-        assertIs<com.example.prompts08.JsonOutputFormat>(prompt.outputFormat)
+        assertIs<com.example.prompts07.JsonOutputFormat>(prompt.outputFormat)
         assertTrue(prompt.userMessage.contains("Alice"))
         assertTrue(prompt.userMessage.contains("indemnify"))
         assertTrue(prompt.userMessage.contains("<Clause>"))

@@ -13,7 +13,6 @@ node ../dist/main.js format -p projects/04
 node ../dist/main.js format -p projects/05
 node ../dist/main.js format -p projects/06
 node ../dist/main.js format -p projects/07
-node ../dist/main.js format -p projects/08
 node ../dist/main.js format -p projects/e01
 node ../dist/main.js format -p projects/e02
 node ../dist/main.js format -p projects/e03
@@ -25,7 +24,6 @@ node ../dist/main.js format --ci -p projects/04
 node ../dist/main.js format --ci -p projects/05
 node ../dist/main.js format --ci -p projects/06
 node ../dist/main.js format --ci -p projects/07
-node ../dist/main.js format --ci -p projects/08
 node ../dist/main.js format --ci -p projects/e01
 node ../dist/main.js format --ci -p projects/e02
 node ../dist/main.js format --ci -p projects/e03
@@ -38,7 +36,6 @@ node ../dist/main.js gen -p projects/04
 node ../dist/main.js gen -p projects/05
 node ../dist/main.js gen -p projects/06
 node ../dist/main.js gen -p projects/07
-node ../dist/main.js gen -p projects/08
 node ../dist/main.js gen -p projects/e01
 node ../dist/main.js gen -p projects/e02
 node ../dist/main.js gen -p projects/e03
