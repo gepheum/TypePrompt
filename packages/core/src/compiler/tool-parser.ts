@@ -1,16 +1,13 @@
-import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import { SchemaParseResult } from "@typeprompt/core/schema/schema-types.js";
-import {
-  InternalError,
-  InternalErrors,
-} from "@typeprompt/core/util/shared-types.js";
+import * as z from "zod";
+import { parseSchema } from "../schema/schema-parser.js";
+import { SchemaParseResult } from "../schema/schema-types.js";
+import { InternalError, InternalErrors } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
-} from "@typeprompt/core/xml/xml-attributes-checker.js";
-import { checkAllAreElements } from "@typeprompt/core/xml/xml-node-checker.js";
-import { ElementNode } from "@typeprompt/core/xml/xml-types.js";
-import * as z from "zod";
+} from "../xml/xml-attributes-checker.js";
+import { checkAllAreElements } from "../xml/xml-node-checker.js";
+import { ElementNode } from "../xml/xml-types.js";
 import { parseToolDescription } from "./body-parser.js";
 import { Tool, ToolDescription } from "./compiler-types.js";
 import { extractTextContent } from "./text-extractor.js";

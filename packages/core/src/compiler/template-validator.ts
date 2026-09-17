@@ -1,13 +1,13 @@
-import { resolveExpressionType } from "@typeprompt/core/expression/expression-type-resolver.js";
-import { resolveIfExpression } from "@typeprompt/core/expression/if-expression-resolver.js";
-import { resolveSwitchExpression } from "@typeprompt/core/expression/switch-expression-resolver.js";
+import { resolveExpressionType } from "../expression/expression-type-resolver.js";
+import { resolveIfExpression } from "../expression/if-expression-resolver.js";
+import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import {
   JsonString,
   StrictJsonArray,
   StrictJsonObject,
   StrictJsonValue,
-} from "@typeprompt/core/json/json-types.js";
-import { validateJson } from "@typeprompt/core/json/json-validator.js";
+} from "../json/json-types.js";
+import { validateJson } from "../json/json-validator.js";
 import {
   HasName,
   Schema,
@@ -16,15 +16,11 @@ import {
   SyntheticField,
   SyntheticInterface,
   Type,
-} from "@typeprompt/core/schema/schema-types.js";
-import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
-import {
-  InternalError,
-  InternalErrors,
-  Span,
-} from "@typeprompt/core/util/shared-types.js";
+} from "../schema/schema-types.js";
+import { isLiteralType } from "../schema/schema-utils.js";
+import { validateSchema } from "../schema/schema-validator.js";
+import { resolveType } from "../schema/type-resolver.js";
+import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { validateTemplateBody } from "./body-validator.js";
 import {
   Snippet,

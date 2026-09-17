@@ -1,17 +1,17 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type {
+  Body,
+  Snippet,
+  ValidCompilationResult,
+} from "@typeprompt/core/compiler/compiler-types.js";
 import type { Expression } from "@typeprompt/core/expression/expression-types.js";
 import { EMPTY_SCHEMA } from "@typeprompt/core/schema/empty-schema.js";
 import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
 import type { Schema } from "@typeprompt/core/schema/schema-types.js";
 import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
 import type { TextSpan } from "@typeprompt/core/util/shared-types.js";
-import type {
-  Body,
-  Snippet,
-  ValidCompilationResult,
-} from "../compiler/compiler-types.js";
 import { makeTemplates } from "./spec-maker.js";
 
 // ---------------------------------------------------------------------------

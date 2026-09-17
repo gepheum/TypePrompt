@@ -1,14 +1,11 @@
-import {
-  InternalError,
-  InternalErrors,
-} from "@typeprompt/core/util/shared-types.js";
-import { checkXmlAttributes } from "@typeprompt/core/xml/xml-attributes-checker.js";
-import { ElementNode } from "@typeprompt/core/xml/xml-types.js";
+import { InternalError, InternalErrors } from "../util/shared-types.js";
+import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
+import { ElementNode } from "../xml/xml-types.js";
 import { Namespace } from "./compiler-types.js";
 
-import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
 import * as z from "zod";
+import { parseSchema } from "../schema/schema-parser.js";
+import { validateSchema } from "../schema/schema-validator.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import { extractTextContent } from "./text-extractor.js";
 

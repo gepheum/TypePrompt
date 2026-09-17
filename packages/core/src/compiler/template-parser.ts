@@ -1,21 +1,21 @@
-import { StrictJsonValue } from "@typeprompt/core/json/json-types.js";
-import { parseYaml } from "@typeprompt/core/json/yaml-parser.js";
-import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import { SchemaParseResult } from "@typeprompt/core/schema/schema-types.js";
+import { StrictJsonValue } from "../json/json-types.js";
+import { parseYaml } from "../json/yaml-parser.js";
+import { parseSchema } from "../schema/schema-parser.js";
+import { SchemaParseResult } from "../schema/schema-types.js";
 import {
   ErrorSink,
   InternalError,
   InternalErrors,
   Span,
   TextSpan,
-} from "@typeprompt/core/util/shared-types.js";
+} from "../util/shared-types.js";
 import {
   AttributeValue,
   checkNoXmlAttributes,
   checkXmlAttributes,
   oneOf,
-} from "@typeprompt/core/xml/xml-attributes-checker.js";
-import type { ElementNode } from "@typeprompt/core/xml/xml-types.js";
+} from "../xml/xml-attributes-checker.js";
+import type { ElementNode } from "../xml/xml-types.js";
 import {
   Body,
   BodyInContext,
@@ -29,10 +29,10 @@ import {
   TemplateVariant,
 } from "./compiler-types.js";
 
-import { parseExpression } from "@typeprompt/core/expression/expression-parser.js";
-import { checkNameConflicts } from "@typeprompt/core/util/casing.js";
-import { checkAllAreElements } from "@typeprompt/core/xml/xml-node-checker.js";
 import * as z from "zod";
+import { parseExpression } from "../expression/expression-parser.js";
+import { checkNameConflicts } from "../util/casing.js";
+import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
 import { extractTextContent } from "./text-extractor.js";
 

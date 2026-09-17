@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 import {
+  CompilationResult,
+  ValidCompilationResult,
+} from "@typeprompt/core/compiler/compiler-types.js";
+import { compile } from "@typeprompt/core/compiler/compiler.js";
+import {
   parseConfigYaml,
   type Config,
 } from "@typeprompt/core/config/config-parser.js";
@@ -11,11 +16,6 @@ import * as Paths from "path";
 import Watcher from "watcher";
 import { OutputFile } from "./codegen/codegen-types.js";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
-import {
-  CompilationResult,
-  ValidCompilationResult,
-} from "./compiler/compiler-types.js";
-import { compile } from "./compiler/compiler.js";
 import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import {

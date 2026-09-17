@@ -1,3 +1,12 @@
+import type {
+  Template,
+  ValidatedTool,
+  ValidCompilationResult,
+  ValidNamespaceResult,
+  ValidTemplate,
+} from "@typeprompt/core/compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.js";
+import { getId } from "@typeprompt/core/compiler/ids.js";
 import type { Config } from "@typeprompt/core/config/config-parser.js";
 import {
   FieldType,
@@ -10,15 +19,6 @@ import {
   toPascalCase,
   toSnakeCase,
 } from "@typeprompt/core/util/casing.js";
-import type {
-  Template,
-  ValidatedTool,
-  ValidCompilationResult,
-  ValidNamespaceResult,
-  ValidTemplate,
-} from "../../compiler/compiler-types.js";
-import { DEFAULT_NAMESPACE } from "../../compiler/default-namespace.js";
-import { getId } from "../../compiler/ids.js";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";

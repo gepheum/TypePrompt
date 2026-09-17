@@ -1,5 +1,5 @@
+import { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
 import type { Config } from "@typeprompt/core/config/config-parser.js";
-import { ValidCompilationResult } from "../compiler/compiler-types.js";
 
 export type OutputFile = {
   readonly path: string;

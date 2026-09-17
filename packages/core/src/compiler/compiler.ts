@@ -1,16 +1,9 @@
-import { EMPTY_SCHEMA } from "@typeprompt/core/schema/empty-schema.js";
-import { checkNameConflicts } from "@typeprompt/core/util/casing.js";
-import {
-  createLineFinder,
-  LineFinderData,
-} from "@typeprompt/core/util/line-finder.js";
-import type {
-  HasPath,
-  InternalError,
-  TextSpan,
-} from "@typeprompt/core/util/shared-types.js";
-import { checkAllAreElements } from "@typeprompt/core/xml/xml-node-checker.js";
-import { parseXmlDocument } from "@typeprompt/core/xml/xml-parser.js";
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
+import { checkNameConflicts } from "../util/casing.js";
+import { createLineFinder, LineFinderData } from "../util/line-finder.js";
+import type { HasPath, InternalError, TextSpan } from "../util/shared-types.js";
+import { checkAllAreElements } from "../xml/xml-node-checker.js";
+import { parseXmlDocument } from "../xml/xml-parser.js";
 import type {
   CompilationResult,
   Meta,

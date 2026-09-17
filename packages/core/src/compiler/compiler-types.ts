@@ -1,17 +1,14 @@
-import { CTag } from "@typeprompt/core/ctag/ctag-types.js";
-import type { Expression } from "@typeprompt/core/expression/expression-types.js";
-import type { StrictJsonValue } from "@typeprompt/core/json/json-types.js";
-import type {
-  Schema,
-  SchemaParseResult,
-} from "@typeprompt/core/schema/schema-types.js";
-import { LineFinderData } from "@typeprompt/core/util/line-finder.js";
+import { CTag } from "../ctag/ctag-types.js";
+import type { Expression } from "../expression/expression-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
+import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
+import { LineFinderData } from "../util/line-finder.js";
 import type {
   InternalError,
   InternalErrors,
   Span,
   TextSpan,
-} from "@typeprompt/core/util/shared-types.js";
+} from "../util/shared-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
