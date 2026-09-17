@@ -98,9 +98,9 @@ println(result.humanAction)
 
 - **End-to-End Type Safety**: Compile-time validation for template input placeholders and strongly-typed LLM response parsing.
 - **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
-- **Strict JSON Schema Generation**: Automatically generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
+- **Strict JSON Schema Generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
 - **Flexible Input Formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
-- **Schema-Checked Instructions (`<c>`)**: Verifies that fields, enums, and sample JSON referenced in your prompt instructions actually match your schema.
+- **Schema-Checked Instructions (`<c>`)**: Verifies that fields and sample JSON referenced in your prompt instructions actually match your schema.
 - **Validated Few-Shot Examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
 - **Prompt Variants**: Author multiple versions of a prompt with identical input and output types, and easily pick the desired variant at runtime.
 - **Typed Tool Calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
