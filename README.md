@@ -107,7 +107,7 @@ TypePrompt eliminates this class of runtime errors by generating native code at 
 
 ## Documentation
 
-- **[Language Reference](docs/reference.md)** — Syntax reference for TypePrompt XML files.
+- **[Language Reference](docs/reference.md)** — XML syntax for defining prompt templates, tools, metadata.
 - **[Schema Language](docs/schema.md)** — TypeScript subset for defining `Input` and `Output` types.
 - **Language Guides**:
   - [TypeScript](docs/languages/typescript.md)
