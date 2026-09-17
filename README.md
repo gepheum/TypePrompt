@@ -96,6 +96,7 @@ println(result.humanAction)
 
 ## Features
 
+- **Lightweight Prompt Management**: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
 - **End-to-End Type Safety**: Compile-time validation for template input placeholders and strongly-typed LLM response parsing.
 - **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
 - **Strict JSON Schema Generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
@@ -105,7 +106,6 @@ println(result.humanAction)
 - **Prompt Variants**: Author multiple versions of a prompt with identical input and output types, and easily pick the desired variant at runtime.
 - **Typed Tool Calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
 - **Custom Structured Metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
-- **Zero Framework Lock-in**: Generates lightweight native code that integrates with any LLM SDK or custom client.
 - **Fast Developer Workflow**: CLI with watch mode (`npx typeprompt gen --watch`) and built-in template formatter (`npx typeprompt format`).
 
 ---
