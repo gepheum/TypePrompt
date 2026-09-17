@@ -1,9 +1,9 @@
 import {
+  compile,
   parseConfigYaml,
-  parseXmlDocument,
+  type CompilationResult,
   type Config,
-  type ElementNode,
-  type XmlDocument,
+  type InternalError,
 } from "@typeprompt/core";
 import { minimatch } from "minimatch";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -13,6 +13,7 @@ import {
   DiagnosticSeverity,
   InitializeParams,
   InitializeResult,
+  Position,
   ProposedFeatures,
   TextDocuments,
   TextDocumentSyncKind,
@@ -58,12 +59,63 @@ export interface TemplateWorkspace {
 export interface TemplateBundle {
   uri: string;
   content: FileContent;
-  parsed?: XmlDocument;
   templateWorkspace?: TemplateWorkspace;
+}
+
+export function offsetToPosition(offset: number, content: string): Position {
+  let line = 0;
+  let character = 0;
+  const max = Math.min(Math.max(0, offset), content.length);
+  for (let i = 0; i < max; i++) {
+    if (content[i] === "\n") {
+      line++;
+      character = 0;
+    } else {
+      character++;
+    }
+  }
+  return { line, character };
+}
+
+export function internalErrorToDiagnostic(
+  err: InternalError,
+  severity: DiagnosticSeverity,
+  doc: TextDocument | undefined,
+  content?: string,
+): Diagnostic {
+  let start: Position;
+  let end: Position;
+
+  if (doc) {
+    start = doc.positionAt(err.span.start);
+    end = doc.positionAt(err.span.end);
+  } else if (content !== undefined) {
+    start = offsetToPosition(err.span.start, content);
+    end = offsetToPosition(err.span.end, content);
+  } else {
+    start = { line: 0, character: 0 };
+    end = { line: 0, character: 0 };
+  }
+
+  let message = err.message;
+  if (err.hint) {
+    message += ` (${err.hint})`;
+  }
+  if (err.suggestions && err.suggestions.length > 0) {
+    message += ` Did you mean: ${err.suggestions.join(", ")}?`;
+  }
+
+  return {
+    severity,
+    range: { start, end },
+    message,
+    source: "typeprompt",
+  };
 }
 
 export class Workspace {
   public readonly templates = new Map<string, TemplateBundle>();
+  public compilationResult: CompilationResult | null = null;
 
   constructor(
     public readonly folderUri: string,
@@ -87,6 +139,17 @@ export class Workspace {
     return rel.startsWith("/") ? rel.slice(1) : rel;
   }
 
+  public compile(): CompilationResult {
+    const pathToContent: { [path: string]: string } = {};
+    for (const [uri, template] of this.templates) {
+      pathToContent[uri] = template.content.content;
+    }
+    this.compilationResult = compile(pathToContent, {
+      cache: this.compilationResult,
+    });
+    return this.compilationResult;
+  }
+
   public static addTemplate(
     template: TemplateBundle,
     workspace: Workspace,
@@ -108,7 +171,6 @@ export class TypePromptLanguageExtension {
   public readonly workspaces = new Map<string, Workspace>();
   public readonly templateBundles = new Map<string, TemplateBundle>();
   private readonly uriToTimeout = new Map<string, NodeJS.Timeout>();
-  private reassignTemplatesTimeout: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly sendDiagnostics: (
@@ -136,23 +198,22 @@ export class TypePromptLanguageExtension {
             const oldWorkspace = this.workspaces.get(uri);
             if (oldWorkspace) {
               oldWorkspace.configBundle = configBundle;
-              this.reassignTemplatesToWorkspaces();
             } else {
               const folderUri = uri.replace(/typeprompt\.(yml|yaml)$/, "");
               const workspace = new Workspace(folderUri, configBundle);
               this.workspaces.set(uri, workspace);
-              this.reassignTemplatesToWorkspaces();
             }
             this.sendDiagnostics(uri, []);
+            this.reassignTemplatesToWorkspaces();
           } else {
             const doc = this.getDocument(uri);
             const diagnostics = configResult.errors.map((err): Diagnostic => {
               const start = doc
                 ? doc.positionAt(err.span.start)
-                : { line: 0, character: 0 };
+                : offsetToPosition(err.span.start, content.content);
               const end = doc
                 ? doc.positionAt(err.span.end)
-                : { line: 0, character: 0 };
+                : offsetToPosition(err.span.end, content.content);
               return {
                 severity: DiagnosticSeverity.Error,
                 range: { start, end },
@@ -175,27 +236,55 @@ export class TypePromptLanguageExtension {
           clearTimeout(timeout);
           this.uriToTimeout.delete(uri);
         }
-        const existingBundle = this.templateBundles.get(uri);
-        if (existingBundle) {
-          Workspace.removeTemplate(existingBundle);
-          this.templateBundles.delete(uri);
-        }
+
         if (content) {
-          const templateBundle: TemplateBundle = {
-            uri,
-            content,
-          };
-          const templateWorkspace = this.findTemplateWorkspace(templateBundle);
-          this.templateBundles.set(uri, templateBundle);
-          if (templateWorkspace) {
-            Workspace.addTemplate(
-              templateBundle,
-              templateWorkspace.workspace,
-              templateWorkspace.relativePath,
-            );
+          let templateBundle = this.templateBundles.get(uri);
+          const oldWorkspace = templateBundle?.templateWorkspace?.workspace;
+
+          if (templateBundle) {
+            templateBundle.content = content;
+          } else {
+            templateBundle = { uri, content };
+            this.templateBundles.set(uri, templateBundle);
           }
-          const diagnostics = this.validateTemplate(templateBundle);
-          this.sendDiagnostics(uri, diagnostics);
+
+          const match = this.findTemplateWorkspace(templateBundle);
+          if (match) {
+            if (
+              templateBundle.templateWorkspace?.workspace !== match.workspace
+            ) {
+              Workspace.removeTemplate(templateBundle);
+              Workspace.addTemplate(
+                templateBundle,
+                match.workspace,
+                match.relativePath,
+              );
+              if (oldWorkspace && oldWorkspace !== match.workspace) {
+                this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+              }
+            } else {
+              templateBundle.templateWorkspace.relativePath =
+                match.relativePath;
+            }
+            this.compileAndSendDiagnosticsForWorkspace(match.workspace);
+          } else {
+            if (oldWorkspace) {
+              Workspace.removeTemplate(templateBundle);
+              this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+            }
+            this.sendDiagnostics(uri, []);
+          }
+        } else {
+          const existingBundle = this.templateBundles.get(uri);
+          if (existingBundle) {
+            const oldWorkspace = existingBundle.templateWorkspace?.workspace;
+            Workspace.removeTemplate(existingBundle);
+            this.templateBundles.delete(uri);
+            this.sendDiagnostics(uri, []);
+            if (oldWorkspace) {
+              this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+            }
+          }
         }
         break;
       }
@@ -264,163 +353,100 @@ export class TypePromptLanguageExtension {
     return this.templateBundles.get(uri);
   }
 
-  private reassignTemplatesToWorkspaces(): void {
-    if (this.reassignTemplatesTimeout) {
-      return;
-    }
-    this.reassignTemplatesTimeout = setTimeout(() => {
-      this.reassignTemplatesTimeout = undefined;
-      for (const templateBundle of this.templateBundles.values()) {
-        Workspace.removeTemplate(templateBundle);
-        const match = this.findTemplateWorkspace(templateBundle);
-        if (match) {
+  public reassignTemplatesToWorkspaces(): void {
+    const affectedWorkspaces = new Set<Workspace>();
+
+    for (const templateBundle of this.templateBundles.values()) {
+      const oldWorkspace = templateBundle.templateWorkspace?.workspace;
+      const match = this.findTemplateWorkspace(templateBundle);
+
+      if (match) {
+        if (
+          templateBundle.templateWorkspace?.workspace !== match.workspace ||
+          templateBundle.templateWorkspace?.relativePath !== match.relativePath
+        ) {
+          Workspace.removeTemplate(templateBundle);
           Workspace.addTemplate(
             templateBundle,
             match.workspace,
             match.relativePath,
           );
+          if (oldWorkspace) {
+            affectedWorkspaces.add(oldWorkspace);
+          }
+          affectedWorkspaces.add(match.workspace);
+        } else {
+          affectedWorkspaces.add(match.workspace);
         }
+      } else {
+        if (oldWorkspace) {
+          Workspace.removeTemplate(templateBundle);
+          affectedWorkspaces.add(oldWorkspace);
+        }
+        this.sendDiagnostics(templateBundle.uri, []);
       }
-    }, 100);
-  }
-
-  public validateTemplate(template: TemplateBundle): Diagnostic[] {
-    const text = template.content.content;
-    const doc = this.getDocument(template.uri);
-    const diagnostics: Diagnostic[] = [];
-
-    const parsed = parseXmlDocument(text);
-    if (parsed.kind === "error") {
-      for (const err of parsed.errors) {
-        const start = doc
-          ? doc.positionAt(err.span.start)
-          : { line: 0, character: 0 };
-        const end = doc
-          ? doc.positionAt(err.span.end)
-          : { line: 0, character: 0 };
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: { start, end },
-          message: err.message,
-          source: "typeprompt",
-        });
-      }
-      return diagnostics;
     }
 
-    template.parsed = parsed;
-    validateXmlDocument(parsed, doc, diagnostics);
-    return diagnostics;
+    for (const ws of affectedWorkspaces) {
+      this.compileAndSendDiagnosticsForWorkspace(ws);
+    }
+  }
+
+  public compileAndSendDiagnosticsForWorkspace(workspace: Workspace): void {
+    const result = workspace.compile();
+    for (const [uri, template] of workspace.templates) {
+      const errors = result.finalErrors[uri] ?? [];
+      const warnings = result.warnings[uri] ?? [];
+      const doc = this.getDocument(uri);
+      const diagnostics: Diagnostic[] = [
+        ...errors.map((err) =>
+          internalErrorToDiagnostic(
+            err,
+            DiagnosticSeverity.Error,
+            doc,
+            template.content.content,
+          ),
+        ),
+        ...warnings.map((warn) =>
+          internalErrorToDiagnostic(
+            warn,
+            DiagnosticSeverity.Warning,
+            doc,
+            template.content.content,
+          ),
+        ),
+      ];
+      this.sendDiagnostics(uri, diagnostics);
+    }
   }
 }
 
 export function validateTypePromptDocument(
   textDocument: TextDocument,
 ): Diagnostic[] {
-  const text = textDocument.getText();
-  const diagnostics: Diagnostic[] = [];
-
-  const parsed = parseXmlDocument(text);
-
-  if (parsed.kind === "error") {
-    for (const err of parsed.errors) {
-      const start = textDocument.positionAt(err.span.start);
-      const end = textDocument.positionAt(err.span.end);
-      diagnostics.push({
-        severity: DiagnosticSeverity.Error,
-        range: { start, end },
-        message: err.message,
-        source: "typeprompt",
-      });
-    }
-    return diagnostics;
-  }
-
-  validateXmlDocument(parsed, textDocument, diagnostics);
-
-  return diagnostics;
-}
-
-function validateXmlDocument(
-  doc: XmlDocument,
-  textDocument: TextDocument | undefined,
-  diagnostics: Diagnostic[],
-): void {
-  const root = doc.root;
-  const validRootTags = new Set([
-    "prompt",
-    "template",
-    "tool",
-    "namespace",
-    "meta",
-    "schema",
-  ]);
-
-  if (!validRootTags.has(root.tag.text)) {
-    const start = textDocument
-      ? textDocument.positionAt(root.tag.start)
-      : { line: 0, character: 0 };
-    const end = textDocument
-      ? textDocument.positionAt(root.tag.end)
-      : { line: 0, character: 0 };
-    diagnostics.push({
-      severity: DiagnosticSeverity.Warning,
-      range: { start, end },
-      message: `Unknown top-level tag '<${root.tag.text}>'. Expected one of: ${Array.from(validRootTags).join(", ")}.`,
-      source: "typeprompt",
-    });
-  }
-
-  for (const child of root.children) {
-    if (child.kind === "element") {
-      validateChildElement(child, textDocument, diagnostics);
-    }
-  }
-}
-
-function validateChildElement(
-  element: ElementNode,
-  textDocument: TextDocument | undefined,
-  diagnostics: Diagnostic[],
-): void {
-  const validChildTags = new Set([
-    "template",
-    "tool",
-    "namespace",
-    "meta",
-    "schema",
-    "system",
-    "user",
-    "assistant",
-    "c:if",
-    "c:switch",
-    "c:case",
-    "c:default",
-  ]);
-
-  if (
-    !validChildTags.has(element.tag.text) &&
-    !element.tag.text.startsWith("c:")
-  ) {
-    const start = textDocument
-      ? textDocument.positionAt(element.tag.start)
-      : { line: 0, character: 0 };
-    const end = textDocument
-      ? textDocument.positionAt(element.tag.end)
-      : { line: 0, character: 0 };
-    diagnostics.push({
-      severity: DiagnosticSeverity.Warning,
-      range: { start, end },
-      message: `Unrecognized element '<${element.tag.text}>'.`,
-      source: "typeprompt",
-    });
-  }
-
-  for (const child of element.children) {
-    if (child.kind === "element") {
-      validateChildElement(child, textDocument, diagnostics);
-    }
-  }
+  const uri = textDocument.uri;
+  const content = textDocument.getText();
+  const compilationResult = compile({ [uri]: content }, { cache: null });
+  const errors = compilationResult.finalErrors[uri] ?? [];
+  const warnings = compilationResult.warnings[uri] ?? [];
+  return [
+    ...errors.map((err) =>
+      internalErrorToDiagnostic(
+        err,
+        DiagnosticSeverity.Error,
+        textDocument,
+        content,
+      ),
+    ),
+    ...warnings.map((warn) =>
+      internalErrorToDiagnostic(
+        warn,
+        DiagnosticSeverity.Warning,
+        textDocument,
+        content,
+      ),
+    ),
+  ];
 }
 
 export interface ServerOptions {
