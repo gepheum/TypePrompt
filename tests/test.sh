@@ -3,7 +3,7 @@ set -e
 
 cd ..
 npm run build
-cd e2e-test
+cd tests
 
 # Format xml files
 node ../packages/typeprompt/dist/main.js format -p projects/01
@@ -62,7 +62,7 @@ cd ..
 # Build Kotlin e2e example
 cd ../examples/e2e-kotlin
 ./gradlew build
-cd ../../e2e-test
+cd ../../tests
 
 # Run C# unit tests
 cd csharp

@@ -1,24 +1,24 @@
 .DS_Store
 dist
 
-e2e-test/csharp/Gen
-e2e-test/csharp/bin/
-e2e-test/csharp/obj/
-e2e-test/csharp/.vs/
-e2e-test/csharp/**/*.user
-e2e-test/csharp/**/*.suo
+tests/csharp/Gen
+tests/csharp/bin/
+tests/csharp/obj/
+tests/csharp/.vs/
+tests/csharp/**/*.user
+tests/csharp/**/*.suo
 
-e2e-test/dart/.dart_tool/
-e2e-test/dart/.packages
-e2e-test/dart/build/
-e2e-test/dart/lib/gen/
+tests/dart/.dart_tool/
+tests/dart/.packages
+tests/dart/build/
+tests/dart/lib/gen/
 
-e2e-test/kotlin/.gradle/
-e2e-test/kotlin/.kotlin/
-e2e-test/kotlin/build/
-e2e-test/kotlin/src/main/kotlin/gen/
-e2e-test/kotlin/.idea/
-e2e-test/kotlin/**/*.iml
+tests/kotlin/.gradle/
+tests/kotlin/.kotlin/
+tests/kotlin/build/
+tests/kotlin/src/main/kotlin/gen/
+tests/kotlin/.idea/
+tests/kotlin/**/*.iml
 
 examples/e2e-kotlin/.gradle/
 examples/e2e-kotlin/.kotlin/
@@ -27,20 +27,20 @@ examples/e2e-kotlin/src/main/kotlin/gen/
 examples/e2e-kotlin/.idea/
 examples/e2e-kotlin/**/*.iml
 
-e2e-test/python/.ruff_cache
-e2e-test/python/.venv
-e2e-test/python/__pycache/
-e2e-test/python/gen/
-e2e-test/python/**/*.pyc
+tests/python/.ruff_cache
+tests/python/.venv
+tests/python/__pycache/
+tests/python/gen/
+tests/python/**/*.pyc
 *.egg-info/
 
-e2e-test/rust/src/gen/
-e2e-test/rust/target/
+tests/rust/src/gen/
+tests/rust/target/
 
-e2e-test/swift/.build/
-e2e-test/swift/Sources/TypePromptE2E/Gen/
+tests/swift/.build/
+tests/swift/Sources/TypePromptE2E/Gen/
 
-e2e-test/typescript/src/gen
+tests/typescript/src/gen
 
 TODO
 node_modules

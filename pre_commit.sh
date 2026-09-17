@@ -11,7 +11,7 @@ npm run build
 npm run typecheck
 npm run test
 
-cd e2e-test
+cd tests
 ./format-all.sh
 ./test.sh
 cd ..

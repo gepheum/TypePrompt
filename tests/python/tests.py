@@ -332,7 +332,7 @@ class TestGeneratePageTree:
             "      model: perHour\n"
             "      basePrice: 0.1\n"
             "      overage: null\n"
-            "    benchmarks[1]{name,score,unit}:\n"
+            "    benchmarks[1,]{name,score,unit}:\n"
             "      throughput,1000.0,rps\n"
             "    pros[2]: fast,reliable\n"
             "    cons[1]: pricey"

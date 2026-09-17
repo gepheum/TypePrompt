@@ -57,7 +57,7 @@ import json
 
 import pydantic
 import yaml
-import toon_format
+import toon as toon_format
 # </static:python-imports>
 
 

@@ -32,5 +32,5 @@ cd ..
 
 cd ../examples/e2e-kotlin
 ./format.sh
-cd ../../e2e-test
+cd ../../tests
 
