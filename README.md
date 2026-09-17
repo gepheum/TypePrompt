@@ -97,9 +97,9 @@ println(result.humanAction)
 ## Features
 
 - **Lightweight Prompt Management**: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
-- **End-to-End Type Safety**: Compile-time validation for template input placeholders and strongly-typed LLM response parsing.
+- **End-to-End Type Safety**: Guarantees application types never drift from prompt schemas.
 - **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
-- **Strict JSON Schema Generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
+- **JSON Schema Generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
 - **Flexible Input Formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
 - **Schema-Checked Instructions (`<c>`)**: Verifies that fields and sample JSON referenced in your prompt instructions actually match your schema.
 - **Validated Few-Shot Examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
