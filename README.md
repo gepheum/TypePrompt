@@ -120,11 +120,7 @@ println(result.humanAction)
 
 ## Comparison with Other Tools
 
-TypePrompt is conceptually inspired by tools like [DotPrompt](https://github.com/google/dotprompt), but introduces **end-to-end type safety**.
-
-In DotPrompt, LangChain, Semantic Kernel, and Promptfoo, prompt templates are parsed dynamically at runtime. There is no compile-time guarantee that the parameters you pass match the placeholders in your template, or that the response types in your application match the JSON schema sent to the LLM.
-
-TypePrompt eliminates this class of runtime errors by generating native code at build time. Your compiler ensures complete type safety from template inputs to structured LLM outputs, without locking you into a heavyweight framework.
+TypePrompt shares many similarities with [DotPrompt](https://github.com/google/dotprompt), but introduces **end-to-end type safety**. While tools like DotPrompt, LangChain, Semantic Kernel, and Promptfoo parse templates dynamically at runtime, TypePrompt treats the schemas in your prompt templates as the source of truth and transpiles them into native code at build time. This ensures complete compile-time type safety—from template inputs to structured LLM outputs—without locking you into a heavyweight framework.
 
 ---
 
