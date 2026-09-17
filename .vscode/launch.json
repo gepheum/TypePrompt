@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Launch TypePrompt VS Code Extension",
-      "type": "extensionDevelopmentHost",
+      "type": "extensionHost",
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"

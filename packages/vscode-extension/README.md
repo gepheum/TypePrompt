@@ -1,8 +1,8 @@
 # TypePrompt VS Code Extension
 
-VS Code extension for editing TypePrompt templates (`.xml`, `.prompt`, `.prompt.xml`).
+VS Code extension for editing TypePrompt templates.
 
-Powered by `@typeprompt/language-server` and `@typeprompt/core`.
+Powered by `@typeprompt/language-server`.
 
 ## Features
 - Real-time syntax and structural error diagnostics.
@@ -21,7 +21,3 @@ Powered by `@typeprompt/language-server` and `@typeprompt/core`.
    - Switch to the **Run and Debug** panel (<kbd>Cmd+Shift+D</kbd> / <kbd>Ctrl+Shift+D</kbd>).
    - Select **"Launch TypePrompt VS Code Extension"** and press <kbd>F5</kbd>.
    - A new VS Code window (Extension Development Host) will open.
-
-3. **Try it out**:
-   - In the new VS Code window, open any TypePrompt XML/prompt file.
-   - Modify tags, introduce syntax or schema errors to see live diagnostics reported in the Problems panel.
