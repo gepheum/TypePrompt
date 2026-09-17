@@ -91,7 +91,7 @@ class TemplateParser {
       }
     }
 
-    // Raise a warning if the .xml file doesn't match the file naming conventions.
+    // Raise a warning if the file path doesn't match the file naming conventions.
     this.warnings.push(
       ...checkTemplateOrToolSourcePath(name, namespace, this.sourcePath),
     );

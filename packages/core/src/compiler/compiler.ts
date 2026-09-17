@@ -83,7 +83,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
       break;
     }
     case "namespace": {
-      const namespace = parseNamespace(topLevelNode);
+      const namespace = parseNamespace(topLevelNode, path);
       if (namespace.kind === "error") {
         result.parseErrors.push(...namespace.errors);
       } else {
@@ -93,7 +93,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
       break;
     }
     case "meta": {
-      const meta = parseMeta(topLevelNode);
+      const meta = parseMeta(topLevelNode, path);
       if (meta.kind === "error") {
         result.parseErrors.push(...meta.errors);
       } else {

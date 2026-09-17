@@ -7,11 +7,13 @@ import * as z from "zod";
 import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
+import { checkNamespaceSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a top-level <namespace> element. The result is already validated. */
 export function parseNamespace(
   namespaceNode: ElementNode,
+  sourcePath: string,
 ): Namespace | InternalErrors {
   const attrs = checkXmlAttributes(namespaceNode, {
     name: {
@@ -46,6 +48,9 @@ export function parseNamespace(
       message: `Use proper casing: '${DEFAULT_NAMESPACE}' instead of '${nameText}'`,
     });
   }
+
+  // Raise a warning if the file path doesn't match the file naming conventions.
+  warnings.push(...checkNamespaceSourcePath(name, sourcePath));
 
   const textContent = extractTextContent(namespaceNode, "typescript");
   if (textContent.kind === "error") {

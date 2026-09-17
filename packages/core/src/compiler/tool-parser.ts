@@ -49,7 +49,7 @@ export function parseTool(
     }
   }
 
-  // Raise a warning if the .xml file doesn't match the file naming conventions.
+  // Raise a warning if the file path doesn't match the file naming conventions.
   warnings.push(...checkTemplateOrToolSourcePath(name, namespace, sourcePath));
 
   let schema: SchemaParseResult | null = null;
