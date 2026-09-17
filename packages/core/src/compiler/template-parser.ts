@@ -34,6 +34,7 @@ import { parseExpression } from "../expression/expression-parser.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
+import { checkTemplateOrToolSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a <template> element. The result has yet to be validated. */
@@ -89,6 +90,11 @@ class TemplateParser {
         });
       }
     }
+
+    // Raise a warning if the .xml file doesn't match the file naming conventions.
+    this.warnings.push(
+      ...checkTemplateOrToolSourcePath(name, namespace, this.sourcePath),
+    );
 
     this.parseChildren();
     const contents = this.buildContents();

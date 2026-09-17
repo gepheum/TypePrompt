@@ -591,6 +591,17 @@ By convention, `.xml` files and directories within your prompts directory follow
 | `<meta>` | `meta.xml` | `prompts/meta.xml` | `prompts/meta.xml` |
 | `<namespace>` | `shared.xml` | `prompts/shared.xml` | `prompts/MyNamespace/shared.xml` |
 
+### Single-Namespace Project Layout
+
+```
+prompts/
+├── meta.xml
+├── shared.xml
+├── Translate.xml
+├── TriageTicket.xml
+└── webSearch.xml
+```
+
 ### Multi-Namespace Project Layout
 
 ```
@@ -604,15 +615,4 @@ prompts/
     ├── shared.xml
     ├── DraftNda.xml
     └── SummarizeClause.xml
-```
-
-### Single-Namespace Project Layout
-
-```
-prompts/
-├── meta.xml
-├── shared.xml
-├── Translate.xml
-├── TriageTicket.xml
-└── webSearch.xml
 ```

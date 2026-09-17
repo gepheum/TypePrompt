@@ -10,10 +10,14 @@ import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
 import { parseToolDescription } from "./body-parser.js";
 import { Tool, ToolDescription } from "./compiler-types.js";
+import { checkTemplateOrToolSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a <tool> element. The result has yet to be validated. */
-export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
+export function parseTool(
+  toolNode: ElementNode,
+  sourcePath: string,
+): Tool | InternalErrors {
   const attrs = checkXmlAttributes(toolNode, {
     name: {
       schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
@@ -44,6 +48,9 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
       });
     }
   }
+
+  // Raise a warning if the .xml file doesn't match the file naming conventions.
+  warnings.push(...checkTemplateOrToolSourcePath(name, namespace, sourcePath));
 
   let schema: SchemaParseResult | null = null;
   let description: ToolDescription | null = null;

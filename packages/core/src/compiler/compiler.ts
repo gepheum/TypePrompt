@@ -73,7 +73,7 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
       break;
     }
     case "tool": {
-      const tool = parseTool(topLevelNode);
+      const tool = parseTool(topLevelNode, path);
       if (tool.kind === "error") {
         result.parseErrors.push(...tool.errors);
       } else {
