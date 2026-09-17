@@ -10,11 +10,11 @@
   "types": "dist/server.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@typeprompt/core": "*",
+    "minimatch": "^10.2.6",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12"
   }
