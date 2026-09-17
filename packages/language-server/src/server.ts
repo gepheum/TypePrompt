@@ -28,22 +28,13 @@ export interface FileContent {
 }
 
 export function getFileType(uri: string): FileType {
-  if (
-    uri.endsWith("typeprompt.yml") ||
-    uri.endsWith("typeprompt.yaml") ||
-    uri.endsWith("/typeprompt.yml") ||
-    uri.endsWith("/typeprompt.yaml")
-  ) {
+  if (uri === "typeprompt.yml" || uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
-  }
-  if (
-    uri.endsWith(".xml") ||
-    uri.endsWith(".prompt") ||
-    uri.endsWith(".prompt.xml")
-  ) {
+  } else if (uri.endsWith(".xml")) {
     return "*.xml";
+  } else {
+    return null;
   }
-  return null;
 }
 
 export interface TypePromptConfigBundle {
@@ -62,6 +53,7 @@ export interface TemplateBundle {
   templateWorkspace?: TemplateWorkspace;
 }
 
+// Use LineFinder?
 export function offsetToPosition(offset: number, content: string): Position {
   let line = 0;
   let character = 0;
@@ -120,7 +112,7 @@ export class Workspace {
   constructor(
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
-  ) {}
+  ) { }
 
   public get config(): Config {
     return this.configBundle.config;
@@ -178,7 +170,7 @@ export class TypePromptLanguageExtension {
       diagnostics: Diagnostic[],
     ) => void,
     private readonly getDocument: (uri: string) => TextDocument | undefined,
-  ) {}
+  ) { }
 
   public setFileContent(uri: string, content: FileContent | undefined): void {
     const fileType = getFileType(uri);
