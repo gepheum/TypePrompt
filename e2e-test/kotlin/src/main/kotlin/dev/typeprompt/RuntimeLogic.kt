@@ -34,6 +34,7 @@
 //   val output = executePrompt(prompt, NoTools)
 
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+@file:Suppress("ktlint")
 // </static:kotlin-top-level>
 
 package dev.typeprompt

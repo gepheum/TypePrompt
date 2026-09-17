@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:class-naming", "ktlint:standard:max-line-length")
+
 package dev.typeprompt
 
 import kotlinx.coroutines.test.runTest

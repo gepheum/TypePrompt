@@ -11,7 +11,7 @@ npm run format
 cd ..
 
 cd kotlin
-# ./gradlew ktlintFormat
+./format.sh
 cd ..
 
 cd csharp
