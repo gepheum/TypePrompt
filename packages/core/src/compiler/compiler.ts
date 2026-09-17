@@ -293,7 +293,7 @@ class CompilationResultImpl implements CompilationResult {
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[tool.sourceFile.path]!.push({
-          span: name,
+          span: tool.element.namespace!,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaces),
         });
@@ -359,7 +359,7 @@ class CompilationResultImpl implements CompilationResult {
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
         this.finalErrors[template.sourceFile.path]!.push({
-          span: template.element.name,
+          span: template.element.namespace!,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaces),
         });
@@ -402,7 +402,7 @@ class CompilationResultImpl implements CompilationResult {
               ([name, tool]) => tool === cachedNamespace.tools[name],
             ) &&
             Object.keys(namespace.tools).length ===
-              Object.keys(cachedNamespace.tools).length;
+            Object.keys(cachedNamespace.tools).length;
         }
         return toolsOkay ? cached : null;
       };
