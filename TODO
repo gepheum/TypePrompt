@@ -2,15 +2,10 @@ COMPILER:
   - THINK ABOUT EDITIONS...
 
 DOCUMENTATION:
-  - README:
-    - Redo the example
-    - Add example application code
-  - Under "E2E type safety": the string is too pompeous
-
   - Example: discriminated union in result type
+  - E2E Kotlin example...
   - Document the commands...
   - Document disciminated unions?
-  - Naming convention: FooBar.xml, Zoo.xml
 
 COMPILER:
   - Add warnings if naming conventions are not respected...

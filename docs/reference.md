@@ -149,6 +149,14 @@ Each `tool` value must match a `<tool>` element defined at the top level (in the
 
 These elements contain the system and user messages. Each may contain a mix of plain text and the inline elements described below: [`<insert>`](#insert), [`<enclosed>`](#enclosed), and [`<c>`](#c).
 
+It is very common for the `<user>` message to simply render the `input` value in JSON, YAML, or [TOON](https://toonformat.dev) format:
+
+```xml
+<user>
+  <insert val="input" format="yaml" />
+</user>
+```
+
 #### Indentation
 
 TypePrompt automatically strips leading indentation so you can format your XML neatly without it affecting the resolved text.
