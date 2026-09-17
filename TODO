@@ -1,7 +1,5 @@
 DOCUMENTATION:
-  - Example: discriminated union in result type
   - E2E Kotlin example...
-  - Add README under 'examples', remove each README in each example project
 
 COMPILER:
   - Add warnings if naming conventions are not respected...

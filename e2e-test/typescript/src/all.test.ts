@@ -451,9 +451,9 @@ describe("04-variants / WriteProductDescription", () => {
   });
 });
 
-// ─── 05 Snippets: reusable, conditional, switch ──────────────────────────────
+// ─── 05 Conditional Logic: reusable, conditional, switch ────────────────────────
 
-describe("05-snippets / SummarizeDocument", () => {
+describe("05-conditional-logic / SummarizeDocument", () => {
   it("switch snippet: executive audience instruction is selected", () => {
     const p = p05.summarizeDocument.render({
       title: "Q3 Report",

@@ -1,4 +1,4 @@
-include: ../../../examples/05-snippets/**/*.xml
+include: ../../../examples/05-conditional-logic/**/*.xml
 gen:
   csharp:
     file: ../../csharp/Gen/Prompts05.cs
