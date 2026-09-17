@@ -25,18 +25,18 @@ const DEBUG = false;
 export type FileType = "typeprompt.yml" | "*.xml" | null;
 
 export interface FileContent {
-  content: string;
-  lastModified: number;
+  readonly content: string;
+  readonly lastModified: number;
 }
 
 export interface Logger {
-  log: (message: string) => void;
-  error: (message: string, ...args: unknown[]) => void;
+  readonly log: (message: string) => void;
+  readonly error: (message: string, ...args: unknown[]) => void;
 }
 
 const noopLogger: Logger = {
-  log: () => {},
-  error: () => {},
+  log: () => { },
+  error: () => { },
 };
 
 export function getFileType(uri: string): FileType {
@@ -50,17 +50,17 @@ export function getFileType(uri: string): FileType {
 }
 
 export interface TypePromptConfigBundle {
-  config: Config;
-  yamlContent: FileContent;
+  readonly config: Config;
+  readonly yamlContent: FileContent;
 }
 
 export interface TemplateWorkspace {
-  workspace: Workspace;
+  readonly workspace: Workspace;
   relativePath: string;
 }
 
 export interface TemplateBundle {
-  uri: string;
+  readonly uri: string;
   content: FileContent;
   templateWorkspace?: TemplateWorkspace;
 }
@@ -124,7 +124,7 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) {}
+  ) { }
 
   public get config(): Config {
     return this.configBundle.config;
