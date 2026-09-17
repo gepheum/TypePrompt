@@ -67,6 +67,29 @@ TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
 </template>
 ```
 
+And in your application code:
+
+```kotlin
+// MyApp.kt
+
+import ai.my_app.generated.prompts.prompts
+import ai.my_app.generated.prompts.Schema
+
+// 1. Resolve the prompt template with typed input
+val prompt = prompts.renderDecodeCatMood(
+    Schema.DecodeCatMood.Input(
+        action = "Knock glass",
+        bowlStatus = Schema.DecodeCatMood.Input_BowlStatus.Empty,
+    )
+)
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+val result = prompt.parseResponse(rawModelOutput)
+println(result.humanAction)
+```
+
 [See more examples →](examples)
 
 ---
