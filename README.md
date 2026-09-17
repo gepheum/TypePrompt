@@ -72,8 +72,8 @@ In your application code:
 ```kotlin
 // MyApp.kt
 
-import ai.my_app.generated.prompts.prompts
-import ai.my_app.generated.prompts.Schema
+import ai.myapp.generated.prompts.prompts
+import ai.myapp.generated.prompts.Schema
 
 // 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
