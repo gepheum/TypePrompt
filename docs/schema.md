@@ -116,8 +116,7 @@ Union types follow strict rules. Every union must be **homogeneous**: all member
 type Color = "red" | "green" | "blue";
 ```
 
-- Each member must be a quoted string starting with a letter (see [String literals](#string-literals)).
-- Members must be case-insensitively unique — `"Red"` and `"red"` cannot coexist.
+Each member must be a quoted string starting with a letter (see [String literals](#string-literals)).
 
 ### Interface Unions (Discriminated Unions)
 
