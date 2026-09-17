@@ -25,12 +25,13 @@ export function activate(context: ExtensionContext): void {
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
-      { scheme: "file", language: "xml" },
-      { scheme: "file", pattern: "**/*.prompt" },
-      { scheme: "file", pattern: "**/*.prompt.xml" },
+      { scheme: "file", pattern: "**/*.xml" },
+      { scheme: "file", pattern: "**/typeprompt.yml" },
     ],
     synchronize: {
-      fileEvents: workspace.createFileSystemWatcher("**/*.{xml,prompt}"),
+      fileEvents: workspace.createFileSystemWatcher(
+        "**/{*.xml,typeprompt.yml}",
+      ),
     },
   };
 

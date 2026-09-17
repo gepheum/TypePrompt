@@ -20,12 +20,24 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
+const DEBUG = false;
+
 export type FileType = "typeprompt.yml" | "*.xml" | null;
 
 export interface FileContent {
   content: string;
   lastModified: number;
 }
+
+export interface Logger {
+  log: (message: string) => void;
+  error: (message: string, ...args: unknown[]) => void;
+}
+
+const noopLogger: Logger = {
+  log: () => { },
+  error: () => { },
+};
 
 export function getFileType(uri: string): FileType {
   if (uri === "typeprompt.yml" || uri.endsWith("/typeprompt.yml")) {
@@ -53,7 +65,6 @@ export interface TemplateBundle {
   templateWorkspace?: TemplateWorkspace;
 }
 
-// Use LineFinder?
 export function offsetToPosition(offset: number, content: string): Position {
   let line = 0;
   let character = 0;
@@ -112,6 +123,7 @@ export class Workspace {
   constructor(
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
+    public readonly logger: Logger = noopLogger,
   ) { }
 
   public get config(): Config {
@@ -132,6 +144,9 @@ export class Workspace {
   }
 
   public compile(): CompilationResult {
+    this.logger.log(
+      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compiling ${this.templates.size} template(s) (cache=${Boolean(this.compilationResult)})...`,
+    );
     const pathToContent: { [path: string]: string } = {};
     for (const [uri, template] of this.templates) {
       pathToContent[uri] = template.content.content;
@@ -139,6 +154,9 @@ export class Workspace {
     this.compilationResult = compile(pathToContent, {
       cache: this.compilationResult,
     });
+    this.logger.log(
+      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
+    );
     return this.compilationResult;
   }
 
@@ -147,12 +165,18 @@ export class Workspace {
     workspace: Workspace,
     relativePath: string,
   ): void {
+    workspace.logger.log(
+      `[TypePrompt LSP] Adding template ${template.uri} to workspace ${workspace.folderUri} as '${relativePath}'`,
+    );
     template.templateWorkspace = { workspace, relativePath };
     workspace.templates.set(template.uri, template);
   }
 
   public static removeTemplate(template: TemplateBundle): void {
     if (template.templateWorkspace) {
+      template.templateWorkspace.workspace.logger.log(
+        `[TypePrompt LSP] Removing template ${template.uri} from workspace ${template.templateWorkspace.workspace.folderUri}`,
+      );
       template.templateWorkspace.workspace.templates.delete(template.uri);
       template.templateWorkspace = undefined;
     }
@@ -163,6 +187,7 @@ export class TypePromptLanguageExtension {
   public readonly workspaces = new Map<string, Workspace>();
   public readonly templateBundles = new Map<string, TemplateBundle>();
   private readonly uriToTimeout = new Map<string, NodeJS.Timeout>();
+  public readonly logger: Logger;
 
   constructor(
     private readonly sendDiagnostics: (
@@ -170,10 +195,17 @@ export class TypePromptLanguageExtension {
       diagnostics: Diagnostic[],
     ) => void,
     private readonly getDocument: (uri: string) => TextDocument | undefined,
-  ) { }
+    logger: Logger = noopLogger,
+  ) {
+    this.logger = logger;
+  }
 
   public setFileContent(uri: string, content: FileContent | undefined): void {
     const fileType = getFileType(uri);
+    this.logger.log(
+      `[TypePrompt LSP] setFileContent: uri=${uri}, fileType=${fileType}, hasContent=${Boolean(content)}`,
+    );
+
     if (fileType && !content) {
       this.sendDiagnostics(uri, []);
     }
@@ -181,6 +213,7 @@ export class TypePromptLanguageExtension {
     switch (fileType) {
       case "typeprompt.yml": {
         if (content) {
+          this.logger.log(`[TypePrompt LSP] Parsing config for ${uri}...`);
           const configResult = parseConfigYaml(content.content);
           if (configResult.kind === "success") {
             const configBundle: TypePromptConfigBundle = {
@@ -189,15 +222,29 @@ export class TypePromptLanguageExtension {
             };
             const oldWorkspace = this.workspaces.get(uri);
             if (oldWorkspace) {
+              this.logger.log(
+                `[TypePrompt LSP] Updating config for existing workspace ${uri}`,
+              );
               oldWorkspace.configBundle = configBundle;
             } else {
               const folderUri = uri.replace(/typeprompt\.(yml|yaml)$/, "");
-              const workspace = new Workspace(folderUri, configBundle);
+              this.logger.log(
+                `[TypePrompt LSP] Creating new workspace for ${folderUri}`,
+              );
+              const workspace = new Workspace(
+                folderUri,
+                configBundle,
+                this.logger,
+              );
               this.workspaces.set(uri, workspace);
             }
             this.sendDiagnostics(uri, []);
             this.reassignTemplatesToWorkspaces();
           } else {
+            this.logger.error(
+              `[TypePrompt LSP] Config errors in ${uri}:`,
+              configResult.errors,
+            );
             const doc = this.getDocument(uri);
             const diagnostics = configResult.errors.map((err): Diagnostic => {
               const start = doc
@@ -216,6 +263,9 @@ export class TypePromptLanguageExtension {
             this.sendDiagnostics(uri, diagnostics);
           }
         } else {
+          this.logger.log(
+            `[TypePrompt LSP] Workspace config deleted at ${uri}`,
+          );
           if (this.workspaces.delete(uri)) {
             this.reassignTemplatesToWorkspaces();
           }
@@ -260,6 +310,9 @@ export class TypePromptLanguageExtension {
             }
             this.compileAndSendDiagnosticsForWorkspace(match.workspace);
           } else {
+            this.logger.log(
+              `[TypePrompt LSP] XML file ${uri} does not belong to any workspace.`,
+            );
             if (oldWorkspace) {
               Workspace.removeTemplate(templateBundle);
               this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
@@ -317,7 +370,10 @@ export class TypePromptLanguageExtension {
           lastModified: Date.now(),
         });
       } catch (error) {
-        console.error(`Error setting file content for ${uri}:`, error);
+        this.logger.error(
+          `[TypePrompt LSP] Error setting file content for ${uri}:`,
+          error,
+        );
       }
     }, delayMilliseconds);
     this.uriToTimeout.set(uri, timeout);
@@ -346,6 +402,9 @@ export class TypePromptLanguageExtension {
   }
 
   public reassignTemplatesToWorkspaces(): void {
+    this.logger.log(
+      `[TypePrompt LSP] Reassigning templates (workspaces=${this.workspaces.size}, templates=${this.templateBundles.size})...`,
+    );
     const affectedWorkspaces = new Set<Workspace>();
 
     for (const templateBundle of this.templateBundles.values()) {
@@ -408,6 +467,9 @@ export class TypePromptLanguageExtension {
           ),
         ),
       ];
+      this.logger.log(
+        `[TypePrompt LSP] Diagnostics for ${uri}: ${diagnostics.length} item(s) (${errors.length} error(s), ${warnings.length} warning(s))`,
+      );
       this.sendDiagnostics(uri, diagnostics);
     }
   }
@@ -461,12 +523,24 @@ export function createLanguageServer(
     TextDocument,
   );
 
+  const logger: Logger = {
+    log: (msg) => connection.console.log(msg),
+    error: (msg, ...args) => {
+      const extra = args.length > 0 ? " " + JSON.stringify(args) : "";
+      connection.console.error(`${msg}${extra}`);
+    },
+  };
+
   const extension = new TypePromptLanguageExtension(
     (uri, diagnostics) => connection.sendDiagnostics({ uri, diagnostics }),
     (uri) => documents.get(uri),
+    DEBUG ? logger : noopLogger,
   );
 
-  connection.onInitialize((_params: InitializeParams): InitializeResult => {
+  connection.onInitialize((params: InitializeParams): InitializeResult => {
+    logger.log(
+      `[TypePrompt LSP] connection.onInitialize: rootUri=${params.rootUri ?? params.workspaceFolders?.[0]?.uri}`,
+    );
     return {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
@@ -479,6 +553,7 @@ export function createLanguageServer(
   });
 
   documents.onDidChangeContent((change) => {
+    logger.log(`[TypePrompt LSP] onDidChangeContent: ${change.document.uri}`);
     extension.setFileContent(change.document.uri, {
       content: change.document.getText(),
       lastModified: Date.now(),
@@ -486,6 +561,7 @@ export function createLanguageServer(
   });
 
   documents.onDidClose((event) => {
+    logger.log(`[TypePrompt LSP] onDidClose: ${event.document.uri}`);
     extension.setFileContent(event.document.uri, undefined);
   });
 
@@ -496,6 +572,7 @@ export function createLanguageServer(
     documents,
     extension,
     listen: (): void => {
+      logger.log("[TypePrompt LSP] Language server connection listening.");
       connection.listen();
     },
   };
