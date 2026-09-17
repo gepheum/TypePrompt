@@ -1,9 +1,12 @@
 import {
   compile,
+  createLineFinder,
+  findLine,
   parseConfigYaml,
   type CompilationResult,
   type Config,
   type InternalError,
+  type LineFinderData,
 } from "@typeprompt/core";
 import { minimatch } from "minimatch";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -35,8 +38,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => { },
-  error: () => { },
+  log: () => {},
+  error: () => {},
 };
 
 export function getFileType(uri: string): FileType {
@@ -54,37 +57,19 @@ export interface TypePromptConfigBundle {
   readonly yamlContent: FileContent;
 }
 
-export interface TemplateWorkspace {
-  readonly workspace: Workspace;
-  relativePath: string;
-}
-
-export interface TemplateBundle {
+export interface XmlBundle {
   readonly uri: string;
   content: FileContent;
-  templateWorkspace?: TemplateWorkspace;
-}
-
-export function offsetToPosition(offset: number, content: string): Position {
-  let line = 0;
-  let character = 0;
-  const max = Math.min(Math.max(0, offset), content.length);
-  for (let i = 0; i < max; i++) {
-    if (content[i] === "\n") {
-      line++;
-      character = 0;
-    } else {
-      character++;
-    }
-  }
-  return { line, character };
+  lineFinder: LineFinderData;
+  workspace?: Workspace;
+  relativePath?: string;
 }
 
 export function internalErrorToDiagnostic(
   err: InternalError,
   severity: DiagnosticSeverity,
   doc: TextDocument | undefined,
-  content?: string,
+  lineFinder?: LineFinderData,
 ): Diagnostic {
   let start: Position;
   let end: Position;
@@ -92,9 +77,17 @@ export function internalErrorToDiagnostic(
   if (doc) {
     start = doc.positionAt(err.span.start);
     end = doc.positionAt(err.span.end);
-  } else if (content !== undefined) {
-    start = offsetToPosition(err.span.start, content);
-    end = offsetToPosition(err.span.end, content);
+  } else if (lineFinder !== undefined) {
+    const startMatch = findLine(err.span.start, lineFinder);
+    const endMatch = findLine(err.span.end, lineFinder);
+    start = {
+      line: startMatch.line.zeroBasedLineNumber,
+      character: startMatch.zeroBasedColNumber,
+    };
+    end = {
+      line: endMatch.line.zeroBasedLineNumber,
+      character: endMatch.zeroBasedColNumber,
+    };
   } else {
     start = { line: 0, character: 0 };
     end = { line: 0, character: 0 };
@@ -117,14 +110,14 @@ export function internalErrorToDiagnostic(
 }
 
 export class Workspace {
-  public readonly templates = new Map<string, TemplateBundle>();
+  public readonly xmls = new Map<string, XmlBundle>();
   public compilationResult: CompilationResult | null = null;
 
   constructor(
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) { }
+  ) {}
 
   public get config(): Config {
     return this.configBundle.config;
@@ -145,11 +138,11 @@ export class Workspace {
 
   public compile(): CompilationResult {
     this.logger.log(
-      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compiling ${this.templates.size} template(s) (cache=${Boolean(this.compilationResult)})...`,
+      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compiling ${this.xmls.size} XML file(s) (cache=${Boolean(this.compilationResult)})...`,
     );
     const pathToContent: { [path: string]: string } = {};
-    for (const [uri, template] of this.templates) {
-      pathToContent[uri] = template.content.content;
+    for (const [uri, xml] of this.xmls) {
+      pathToContent[uri] = xml.content.content;
     }
     this.compilationResult = compile(pathToContent, {
       cache: this.compilationResult,
@@ -160,32 +153,34 @@ export class Workspace {
     return this.compilationResult;
   }
 
-  public static addTemplate(
-    template: TemplateBundle,
+  public static addXml(
+    xml: XmlBundle,
     workspace: Workspace,
     relativePath: string,
   ): void {
     workspace.logger.log(
-      `[TypePrompt LSP] Adding template ${template.uri} to workspace ${workspace.folderUri} as '${relativePath}'`,
+      `[TypePrompt LSP] Adding XML ${xml.uri} to workspace ${workspace.folderUri} as '${relativePath}'`,
     );
-    template.templateWorkspace = { workspace, relativePath };
-    workspace.templates.set(template.uri, template);
+    xml.workspace = workspace;
+    xml.relativePath = relativePath;
+    workspace.xmls.set(xml.uri, xml);
   }
 
-  public static removeTemplate(template: TemplateBundle): void {
-    if (template.templateWorkspace) {
-      template.templateWorkspace.workspace.logger.log(
-        `[TypePrompt LSP] Removing template ${template.uri} from workspace ${template.templateWorkspace.workspace.folderUri}`,
+  public static removeXml(xml: XmlBundle): void {
+    if (xml.workspace) {
+      xml.workspace.logger.log(
+        `[TypePrompt LSP] Removing XML ${xml.uri} from workspace ${xml.workspace.folderUri}`,
       );
-      template.templateWorkspace.workspace.templates.delete(template.uri);
-      template.templateWorkspace = undefined;
+      xml.workspace.xmls.delete(xml.uri);
+      xml.workspace = undefined;
+      xml.relativePath = undefined;
     }
   }
 }
 
 export class TypePromptLanguageExtension {
   public readonly workspaces = new Map<string, Workspace>();
-  public readonly templateBundles = new Map<string, TemplateBundle>();
+  public readonly xmlBundles = new Map<string, XmlBundle>();
   private readonly uriToTimeout = new Map<string, NodeJS.Timeout>();
   public readonly logger: Logger;
 
@@ -239,20 +234,32 @@ export class TypePromptLanguageExtension {
               this.workspaces.set(uri, workspace);
             }
             this.sendDiagnostics(uri, []);
-            this.reassignTemplatesToWorkspaces();
+            this.reassignXmlsToWorkspaces();
           } else {
             this.logger.error(
               `[TypePrompt LSP] Config errors in ${uri}:`,
               configResult.errors,
             );
             const doc = this.getDocument(uri);
+            const lineFinder = createLineFinder(content.content);
             const diagnostics = configResult.errors.map((err): Diagnostic => {
-              const start = doc
-                ? doc.positionAt(err.span.start)
-                : offsetToPosition(err.span.start, content.content);
-              const end = doc
-                ? doc.positionAt(err.span.end)
-                : offsetToPosition(err.span.end, content.content);
+              let start: Position;
+              let end: Position;
+              if (doc) {
+                start = doc.positionAt(err.span.start);
+                end = doc.positionAt(err.span.end);
+              } else {
+                const startMatch = findLine(err.span.start, lineFinder);
+                const endMatch = findLine(err.span.end, lineFinder);
+                start = {
+                  line: startMatch.line.zeroBasedLineNumber,
+                  character: startMatch.zeroBasedColNumber,
+                };
+                end = {
+                  line: endMatch.line.zeroBasedLineNumber,
+                  character: endMatch.zeroBasedColNumber,
+                };
+              }
               return {
                 severity: DiagnosticSeverity.Error,
                 range: { start, end },
@@ -267,7 +274,7 @@ export class TypePromptLanguageExtension {
             `[TypePrompt LSP] Workspace config deleted at ${uri}`,
           );
           if (this.workspaces.delete(uri)) {
-            this.reassignTemplatesToWorkspaces();
+            this.reassignXmlsToWorkspaces();
           }
         }
         break;
@@ -280,33 +287,31 @@ export class TypePromptLanguageExtension {
         }
 
         if (content) {
-          let templateBundle = this.templateBundles.get(uri);
-          const oldWorkspace = templateBundle?.templateWorkspace?.workspace;
+          let xmlBundle = this.xmlBundles.get(uri);
+          const oldWorkspace = xmlBundle?.workspace;
 
-          if (templateBundle) {
-            templateBundle.content = content;
+          if (xmlBundle) {
+            xmlBundle.content = content;
+            xmlBundle.lineFinder = createLineFinder(content.content);
           } else {
-            templateBundle = { uri, content };
-            this.templateBundles.set(uri, templateBundle);
+            xmlBundle = {
+              uri,
+              content,
+              lineFinder: createLineFinder(content.content),
+            };
+            this.xmlBundles.set(uri, xmlBundle);
           }
 
-          const match = this.findTemplateWorkspace(templateBundle);
+          const match = this.findWorkspace(xmlBundle);
           if (match) {
-            if (
-              templateBundle.templateWorkspace?.workspace !== match.workspace
-            ) {
-              Workspace.removeTemplate(templateBundle);
-              Workspace.addTemplate(
-                templateBundle,
-                match.workspace,
-                match.relativePath,
-              );
+            if (xmlBundle.workspace !== match.workspace) {
+              Workspace.removeXml(xmlBundle);
+              Workspace.addXml(xmlBundle, match.workspace, match.relativePath);
               if (oldWorkspace && oldWorkspace !== match.workspace) {
                 this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
               }
             } else {
-              templateBundle.templateWorkspace.relativePath =
-                match.relativePath;
+              xmlBundle.relativePath = match.relativePath;
             }
             this.compileAndSendDiagnosticsForWorkspace(match.workspace);
           } else {
@@ -314,17 +319,17 @@ export class TypePromptLanguageExtension {
               `[TypePrompt LSP] XML file ${uri} does not belong to any workspace.`,
             );
             if (oldWorkspace) {
-              Workspace.removeTemplate(templateBundle);
+              Workspace.removeXml(xmlBundle);
               this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
             }
             this.sendDiagnostics(uri, []);
           }
         } else {
-          const existingBundle = this.templateBundles.get(uri);
+          const existingBundle = this.xmlBundles.get(uri);
           if (existingBundle) {
-            const oldWorkspace = existingBundle.templateWorkspace?.workspace;
-            Workspace.removeTemplate(existingBundle);
-            this.templateBundles.delete(uri);
+            const oldWorkspace = existingBundle.workspace;
+            Workspace.removeXml(existingBundle);
+            this.xmlBundles.delete(uri);
             this.sendDiagnostics(uri, []);
             if (oldWorkspace) {
               this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
@@ -344,7 +349,7 @@ export class TypePromptLanguageExtension {
     const fileType = getFileType(uri);
     switch (fileType) {
       case "*.xml":
-        return this.templateBundles.get(uri)?.content;
+        return this.xmlBundles.get(uri)?.content;
       case "typeprompt.yml":
         return this.workspaces.get(uri)?.configBundle.yamlContent;
       case null:
@@ -379,12 +384,12 @@ export class TypePromptLanguageExtension {
     this.uriToTimeout.set(uri, timeout);
   }
 
-  public findTemplateWorkspace(
-    template: TemplateBundle,
+  public findWorkspace(
+    xml: XmlBundle,
   ): { workspace: Workspace; relativePath: string } | undefined {
     let bestMatch: { workspace: Workspace; relativePath: string } | undefined;
     for (const workspace of this.workspaces.values()) {
-      const relPath = workspace.getRelativePath(template.uri);
+      const relPath = workspace.getRelativePath(xml.uri);
       if (relPath !== null && workspace.matchesInclude(relPath)) {
         if (
           !bestMatch ||
@@ -397,31 +402,27 @@ export class TypePromptLanguageExtension {
     return bestMatch;
   }
 
-  public getTemplateBundle(uri: string): TemplateBundle | undefined {
-    return this.templateBundles.get(uri);
+  public getXmlBundle(uri: string): XmlBundle | undefined {
+    return this.xmlBundles.get(uri);
   }
 
-  public reassignTemplatesToWorkspaces(): void {
+  public reassignXmlsToWorkspaces(): void {
     this.logger.log(
-      `[TypePrompt LSP] Reassigning templates (workspaces=${this.workspaces.size}, templates=${this.templateBundles.size})...`,
+      `[TypePrompt LSP] Reassigning XMLs (workspaces=${this.workspaces.size}, xmls=${this.xmlBundles.size})...`,
     );
     const affectedWorkspaces = new Set<Workspace>();
 
-    for (const templateBundle of this.templateBundles.values()) {
-      const oldWorkspace = templateBundle.templateWorkspace?.workspace;
-      const match = this.findTemplateWorkspace(templateBundle);
+    for (const xmlBundle of this.xmlBundles.values()) {
+      const oldWorkspace = xmlBundle.workspace;
+      const match = this.findWorkspace(xmlBundle);
 
       if (match) {
         if (
-          templateBundle.templateWorkspace?.workspace !== match.workspace ||
-          templateBundle.templateWorkspace?.relativePath !== match.relativePath
+          xmlBundle.workspace !== match.workspace ||
+          xmlBundle.relativePath !== match.relativePath
         ) {
-          Workspace.removeTemplate(templateBundle);
-          Workspace.addTemplate(
-            templateBundle,
-            match.workspace,
-            match.relativePath,
-          );
+          Workspace.removeXml(xmlBundle);
+          Workspace.addXml(xmlBundle, match.workspace, match.relativePath);
           if (oldWorkspace) {
             affectedWorkspaces.add(oldWorkspace);
           }
@@ -431,10 +432,10 @@ export class TypePromptLanguageExtension {
         }
       } else {
         if (oldWorkspace) {
-          Workspace.removeTemplate(templateBundle);
+          Workspace.removeXml(xmlBundle);
           affectedWorkspaces.add(oldWorkspace);
         }
-        this.sendDiagnostics(templateBundle.uri, []);
+        this.sendDiagnostics(xmlBundle.uri, []);
       }
     }
 
@@ -445,7 +446,7 @@ export class TypePromptLanguageExtension {
 
   public compileAndSendDiagnosticsForWorkspace(workspace: Workspace): void {
     const result = workspace.compile();
-    for (const [uri, template] of workspace.templates) {
+    for (const [uri, xml] of workspace.xmls) {
       const errors = result.finalErrors[uri] ?? [];
       const warnings = result.warnings[uri] ?? [];
       const doc = this.getDocument(uri);
@@ -455,7 +456,7 @@ export class TypePromptLanguageExtension {
             err,
             DiagnosticSeverity.Error,
             doc,
-            template.content.content,
+            xml.lineFinder,
           ),
         ),
         ...warnings.map((warn) =>
@@ -463,7 +464,7 @@ export class TypePromptLanguageExtension {
             warn,
             DiagnosticSeverity.Warning,
             doc,
-            template.content.content,
+            xml.lineFinder,
           ),
         ),
       ];
@@ -480,6 +481,7 @@ export function validateTypePromptDocument(
 ): Diagnostic[] {
   const uri = textDocument.uri;
   const content = textDocument.getText();
+  const lineFinder = createLineFinder(content);
   const compilationResult = compile({ [uri]: content }, { cache: null });
   const errors = compilationResult.finalErrors[uri] ?? [];
   const warnings = compilationResult.warnings[uri] ?? [];
@@ -489,7 +491,7 @@ export function validateTypePromptDocument(
         err,
         DiagnosticSeverity.Error,
         textDocument,
-        content,
+        lineFinder,
       ),
     ),
     ...warnings.map((warn) =>
@@ -497,7 +499,7 @@ export function validateTypePromptDocument(
         warn,
         DiagnosticSeverity.Warning,
         textDocument,
-        content,
+        lineFinder,
       ),
     ),
   ];

@@ -36,7 +36,7 @@ gen:
     strictEqual(workspace !== undefined, true);
     strictEqual(workspace?.config.include, "prompts/*.xml");
 
-    // Add matching template
+    // Add matching XML template
     const templateUri = "file:///project/prompts/Translate.xml";
     const templateContent = `<template name="Translate">
   <schema>
@@ -54,15 +54,13 @@ gen:
       lastModified: Date.now(),
     });
 
-    strictEqual(extension.templateBundles.size, 1);
-    const bundle = extension.templateBundles.get(templateUri);
+    strictEqual(extension.xmlBundles.size, 1);
+    const bundle = extension.xmlBundles.get(templateUri);
     strictEqual(bundle !== undefined, true);
-    strictEqual(bundle?.templateWorkspace?.workspace, workspace);
-    strictEqual(
-      bundle?.templateWorkspace?.relativePath,
-      "prompts/Translate.xml",
-    );
-    strictEqual(workspace?.templates.has(templateUri), true);
+    strictEqual(bundle?.workspace, workspace);
+    strictEqual(bundle?.relativePath, "prompts/Translate.xml");
+    strictEqual(bundle?.lineFinder !== undefined, true);
+    strictEqual(workspace?.xmls.has(templateUri), true);
     strictEqual(workspace?.compilationResult !== null, true);
     strictEqual(workspace?.compilationResult?.anyErrors, false);
 
