@@ -28,7 +28,7 @@ export function parseTool(
         .string()
         .regex(/^[A-Z][A-Za-z0-9]*$/)
         .optional(),
-      expected: "an PascalCase identifier",
+      expected: "a PascalCase identifier",
     },
   });
   if (attrs.kind === "error") {
