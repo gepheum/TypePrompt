@@ -390,23 +390,23 @@ class CompilationResultImpl implements CompilationResult {
         const cached = cache.templates[id]!;
         const templateTools =
           cached.kind === "template" ? cached.tools : cachedNamespace.tools;
-        let toolsOkay: boolean;
+        let sameTools: boolean;
         if (cached.kind === "template") {
           // Check if the template's tools have changed.
-          toolsOkay = Object.entries(templateTools).every(
+          sameTools = Object.entries(templateTools).every(
             ([name, templateTool]) =>
               templateTool.tool === namespace.tools[name],
           );
         } else {
           // Check if the namespace tools have changed.
-          toolsOkay =
+          sameTools =
             Object.entries(namespace.tools).every(
               ([name, tool]) => tool === cachedNamespace.tools[name],
             ) &&
             Object.keys(namespace.tools).length ===
-              Object.keys(cachedNamespace.tools).length;
+            Object.keys(cachedNamespace.tools).length;
         }
-        return toolsOkay ? cached : null;
+        return sameTools ? cached : null;
       };
       const validationResult =
         tryGetFromCache() ??
