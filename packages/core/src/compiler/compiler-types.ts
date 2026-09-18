@@ -173,7 +173,7 @@ export type Namespace = {
 export type Meta = {
   readonly kind: "meta";
   readonly tag: Span;
-  readonly schema: Schema;
+  readonly schema: SchemaOrError;
   readonly warnings: readonly InternalError[];
 };
 

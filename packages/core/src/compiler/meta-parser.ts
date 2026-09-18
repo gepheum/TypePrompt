@@ -1,7 +1,7 @@
 import { InternalError, InternalErrors } from "../util/shared-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
-import { Meta } from "./compiler-types.js";
+import { Meta, SchemaOrError } from "./compiler-types.js";
 
 import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
@@ -27,17 +27,15 @@ export function parseMeta(
   }
   warnings.push(...textContent.warnings);
 
-  const schemaParseResult = parseSchema(textContent.text);
-  if (schemaParseResult.kind === "error") {
-    return schemaParseResult;
-  }
-
-  const schema = validateSchema(schemaParseResult, {
-    kind: "meta",
-  });
-  if (schema.kind === "error") {
-    return schema;
-  }
+  const schema = ((): SchemaOrError => {
+    const schemaParseResult = parseSchema(textContent.text);
+    if (schemaParseResult.kind === "error") {
+      return schemaParseResult;
+    }
+    return validateSchema(schemaParseResult, {
+      kind: "meta",
+    });
+  })();
 
   return {
     kind: "meta",

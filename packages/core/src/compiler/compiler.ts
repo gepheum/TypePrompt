@@ -101,6 +101,9 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...meta.errors);
       } else {
         result.metas.push(meta);
+        if (meta.schema.kind === "error") {
+          result.parseErrors.push(...meta.schema.errors);
+        }
         result.warnings.push(...meta.warnings);
       }
       break;
@@ -348,10 +351,6 @@ class CompilationResultImpl implements CompilationResult {
       (namespaceToTemplates[namespace] ??= []).push(template);
       const id = `${namespace}:${template.element.name.text}`;
       (idToTemplates[id] ??= []).push(template);
-    }
-
-    if (this.metaSchema.kind !== "success") {
-      return;
     }
 
     for (const [id, templates] of Object.entries(idToTemplates)) {

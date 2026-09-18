@@ -23,6 +23,7 @@ import { resolveType } from "../schema/type-resolver.js";
 import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
 import { validateTemplateBody } from "./body-validator.js";
 import {
+  SchemaOrError,
   Snippet,
   Template,
   TemplateContent,
@@ -33,7 +34,7 @@ import {
 
 export function validateTemplate(args: {
   readonly template: Template;
-  readonly metaSchema: Schema;
+  readonly metaSchema: SchemaOrError;
   readonly namespaceSchema: Schema;
   readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
 }): TemplateValidationResult {
@@ -41,7 +42,9 @@ export function validateTemplate(args: {
 
   const errors: InternalError[] = [];
 
-  errors.push(...validateMeta(metaSchema, template));
+  if (metaSchema.kind === "success") {
+    errors.push(...validateMeta(metaSchema, template));
+  }
 
   const validationContext: SchemaValidationContext = {
     kind: "template",
