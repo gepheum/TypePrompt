@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "make-static-snippets": "tsx packages/typeprompt/src/static-snippets/make-static-snippets.ts",
-    "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode",
+    "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode && npm run build --workspace=@typeprompt/prompt-viewer",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "start": "node packages/typeprompt/dist/main.js",
     "dev": "tsx packages/typeprompt/src/main.ts",

@@ -8,6 +8,7 @@ export default [
     languageOptions: {
       parserOptions: {
         project: './tsconfig.eslint.json',
+        tsconfigRootDir: import.meta.dirname,
         ecmaVersion: 2022,
         sourceType: 'module',
       },
