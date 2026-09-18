@@ -8,7 +8,10 @@ import {
   type InternalError,
   type LineFinderData,
 } from "@typeprompt/core";
+import { glob } from "glob";
 import { minimatch } from "minimatch";
+import * as fs from "node:fs/promises";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   createConnection,
@@ -23,7 +26,7 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
-const DEBUG = false;
+const DEBUG = true;
 
 export type FileType = "typeprompt.yml" | "*.xml" | null;
 
@@ -51,6 +54,21 @@ export function getFileType(uri: string): FileType {
   } else {
     return null;
   }
+}
+
+export function uriToFsPath(uri: string): string | null {
+  try {
+    if (uri.startsWith("file://")) {
+      return fileURLToPath(uri);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function fsPathToUri(fsPath: string): string {
+  return pathToFileURL(fsPath).toString();
 }
 
 export interface TypePromptConfigBundle {
@@ -124,7 +142,7 @@ export class Workspace {
   }
 
   public matchesInclude(relativePath: string): boolean {
-    const pattern = this.config.include || "prompts/*.xml";
+    const pattern = this.config.include || "prompts/**/*.xml";
     return minimatch(relativePath, pattern);
   }
 
@@ -181,7 +199,10 @@ export class Workspace {
 export class TypePromptLanguageExtension {
   public readonly workspaces = new Map<string, Workspace>();
   public readonly xmlBundles = new Map<string, XmlBundle>();
+  private readonly workspaceFolders = new Set<string>();
   private readonly uriToTimeout = new Map<string, NodeJS.Timeout>();
+  private scanLoopTimeout?: NodeJS.Timeout;
+  private disposed = false;
   public readonly logger: Logger;
 
   constructor(
@@ -193,6 +214,181 @@ export class TypePromptLanguageExtension {
     logger: Logger = noopLogger,
   ) {
     this.logger = logger;
+  }
+
+  public setWorkspaceFolders(uris: string[]): void {
+    this.workspaceFolders.clear();
+    for (const uri of uris) {
+      this.workspaceFolders.add(uri);
+    }
+  }
+
+  public addWorkspaceFolder(uri: string): void {
+    this.workspaceFolders.add(uri);
+  }
+
+  public removeWorkspaceFolder(uri: string): void {
+    this.workspaceFolders.delete(uri);
+  }
+
+  public async runScan(): Promise<void> {
+    if (this.disposed) return;
+    this.logger.log(
+      `[TypePrompt LSP] Running scan across ${this.workspaceFolders.size} workspace folder(s)...`,
+    );
+
+    for (const folderUri of this.workspaceFolders) {
+      const folderPath = uriToFsPath(folderUri);
+      if (!folderPath) {
+        continue;
+      }
+
+      let files: string[];
+      try {
+        files = await glob("**/{typeprompt.yml,typeprompt.yaml,*.xml}", {
+          cwd: folderPath,
+          nodir: true,
+          absolute: true,
+        });
+      } catch (error) {
+        this.logger.error(
+          `[TypePrompt LSP] Glob scan failed in ${folderPath}:`,
+          error,
+        );
+        continue;
+      }
+
+      // Prioritize config files first so workspaces are created before XMLs.
+      const uriToTier = (u: string): number => {
+        if (
+          u.endsWith("/typeprompt.yml") ||
+          u.endsWith("/typeprompt.yaml") ||
+          u === "typeprompt.yml"
+        ) {
+          return 1;
+        }
+        return 2;
+      };
+
+      files.sort((a, b) => uriToTier(a) - uriToTier(b));
+
+      for (const filePath of files) {
+        const fileUri = fsPathToUri(filePath);
+        // If document is open in editor, let open document take precedence
+        if (this.getDocument(fileUri)) {
+          continue;
+        }
+
+        let mtime: number;
+        try {
+          const stat = await fs.stat(filePath);
+          mtime = stat.mtimeMs;
+        } catch (error) {
+          this.logger.error(
+            `[TypePrompt LSP] Failed to stat file ${filePath}:`,
+            error,
+          );
+          continue;
+        }
+
+        const oldContent = this.getFileContent(fileUri);
+        if (oldContent && oldContent.lastModified >= mtime) {
+          continue;
+        }
+
+        let contentText: string;
+        try {
+          contentText = await fs.readFile(filePath, "utf-8");
+        } catch (error) {
+          this.logger.error(
+            `[TypePrompt LSP] Failed to read file ${filePath}:`,
+            error,
+          );
+          continue;
+        }
+
+        if (oldContent && oldContent.content === contentText) {
+          continue;
+        }
+
+        this.setFileContent(fileUri, {
+          content: contentText,
+          lineFinder: createLineFinder(contentText),
+          lastModified: mtime,
+        });
+      }
+    }
+  }
+
+  public async runGarbageCollection(): Promise<void> {
+    if (this.disposed) return;
+    const uris = new Set<string>();
+    for (const uri of this.xmlBundles.keys()) {
+      uris.add(uri);
+    }
+    for (const uri of this.workspaces.keys()) {
+      uris.add(uri);
+    }
+
+    for (const uri of uris) {
+      if (this.getDocument(uri)) {
+        continue;
+      }
+
+      const fsPath = uriToFsPath(uri);
+      if (!fsPath) {
+        continue;
+      }
+
+      let exists: boolean;
+      try {
+        const stat = await fs.stat(fsPath);
+        exists = stat.isFile();
+      } catch {
+        exists = false;
+      }
+
+      if (!exists) {
+        this.logger.log(
+          `[TypePrompt LSP] File no longer exists on disk, removing: ${uri}`,
+        );
+        this.setFileContent(uri, undefined);
+      }
+    }
+  }
+
+  public scheduleScanLoop(delayMilliseconds = 5000): void {
+    if (this.disposed) return;
+    if (this.scanLoopTimeout) {
+      clearTimeout(this.scanLoopTimeout);
+    }
+    this.scanLoopTimeout = setTimeout(
+      () => void this.runScanLoopIteration(delayMilliseconds),
+      delayMilliseconds,
+    );
+  }
+
+  private async runScanLoopIteration(delayMilliseconds: number): Promise<void> {
+    if (this.disposed) return;
+    try {
+      await this.runGarbageCollection();
+      await this.runScan();
+    } catch (error) {
+      this.logger.error("[TypePrompt LSP] Error during scheduled scan:", error);
+    }
+    this.scheduleScanLoop(delayMilliseconds);
+  }
+
+  public dispose(): void {
+    this.disposed = true;
+    if (this.scanLoopTimeout) {
+      clearTimeout(this.scanLoopTimeout);
+      this.scanLoopTimeout = undefined;
+    }
+    for (const timeout of this.uriToTimeout.values()) {
+      clearTimeout(timeout);
+    }
+    this.uriToTimeout.clear();
   }
 
   public setFileContent(uri: string, content: FileContent | undefined): void {
@@ -522,20 +718,61 @@ export function createLanguageServer(
   );
 
   connection.onInitialize((params: InitializeParams): InitializeResult => {
-    const folders =
-      params.workspaceFolders?.map((f) => f.uri).join(", ") ?? "none";
+    const folders = params.workspaceFolders?.map((f) => f.uri) ?? [];
+    if (folders.length > 0) {
+      extension.setWorkspaceFolders(folders);
+    }
     logger.log(
-      `[TypePrompt LSP] connection.onInitialize: workspaceFolders=${folders}`,
+      `[TypePrompt LSP] connection.onInitialize: workspaceFolders=${folders.join(", ") || "none"}`,
     );
     return {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
+        workspace: {
+          workspaceFolders: {
+            supported: true,
+            changeNotifications: true,
+          },
+        },
       },
       serverInfo: {
         name: "typeprompt-language-server",
         version: "0.1.0",
       },
     };
+  });
+
+  connection.onInitialized(async () => {
+    logger.log(
+      "[TypePrompt LSP] connection.onInitialized: starting initial scan and loop.",
+    );
+    try {
+      await extension.runScan();
+    } catch (err) {
+      logger.error("[TypePrompt LSP] Error during initial scan:", err);
+    }
+    extension.scheduleScanLoop();
+  });
+
+  connection.workspace?.onDidChangeWorkspaceFolders((event) => {
+    logger.log(
+      `[TypePrompt LSP] onDidChangeWorkspaceFolders: added=${event.added.length}, removed=${event.removed.length}`,
+    );
+    for (const folder of event.added) {
+      extension.addWorkspaceFolder(folder.uri);
+    }
+    for (const folder of event.removed) {
+      extension.removeWorkspaceFolder(folder.uri);
+    }
+    void extension.runScan();
+  });
+
+  connection.onDidChangeWatchedFiles(async (params) => {
+    logger.log(
+      `[TypePrompt LSP] onDidChangeWatchedFiles: ${params.changes.length} change(s)`,
+    );
+    await extension.runGarbageCollection();
+    await extension.runScan();
   });
 
   documents.onDidChangeContent((change) => {
@@ -548,9 +785,32 @@ export function createLanguageServer(
     });
   });
 
-  documents.onDidClose((event) => {
+  documents.onDidClose(async (event) => {
     logger.log(`[TypePrompt LSP] onDidClose: ${event.document.uri}`);
-    extension.setFileContent(event.document.uri, undefined);
+    const uri = event.document.uri;
+    const fsPath = uriToFsPath(uri);
+    if (fsPath) {
+      try {
+        const stat = await fs.stat(fsPath);
+        if (stat.isFile()) {
+          const content = await fs.readFile(fsPath, "utf-8");
+          extension.setFileContent(uri, {
+            content,
+            lineFinder: createLineFinder(content),
+            lastModified: stat.mtimeMs,
+          });
+          return;
+        }
+      } catch {
+        // File does not exist on disk
+      }
+    }
+    extension.setFileContent(uri, undefined);
+  });
+
+  connection.onShutdown(() => {
+    logger.log("[TypePrompt LSP] connection.onShutdown: disposing extension.");
+    extension.dispose();
   });
 
   documents.listen(connection);

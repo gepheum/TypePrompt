@@ -6,13 +6,15 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
     "./*": {
+      "types": "./dist/*",
       "import": "./dist/*",
-      "types": "./dist/*"
+      "default": "./dist/*"
     }
   },
   "scripts": {
