@@ -26,7 +26,7 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
-const DEBUG = true;
+const DEBUG = false;
 
 export type FileType = "typeprompt.yml" | "*.xml" | null;
 
@@ -42,8 +42,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => {},
-  error: () => {},
+  log: () => { },
+  error: () => { },
 };
 
 export function getFileType(uri: string): FileType {
@@ -113,10 +113,10 @@ export function internalErrorToDiagnostic(
 
   let message = err.message;
   if (err.hint) {
-    message += ` (${err.hint})`;
+    message += `\n(${err.hint})`;
   }
   if (err.suggestions && err.suggestions.length > 0) {
-    message += ` Did you mean: ${err.suggestions.join(", ")}?`;
+    message += `\nDid you mean: ${err.suggestions.join(", ")}?`;
   }
 
   return {
@@ -135,14 +135,14 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) {}
+  ) { }
 
   public get config(): Config {
     return this.configBundle.config;
   }
 
   public matchesInclude(relativePath: string): boolean {
-    const pattern = this.config.include || "prompts/**/*.xml";
+    const pattern = this.config.include;
     return minimatch(relativePath, pattern);
   }
 

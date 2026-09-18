@@ -4,7 +4,7 @@ import { InternalError, InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
   /// Glob pattern to match template files to be processed.
-  /// Defaults to `prompts/*.xml`.
+  /// Usually: 'prompts/**/*.xml'.
   readonly include: string;
 
   readonly gen?: {
