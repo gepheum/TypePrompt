@@ -42,8 +42,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => { },
-  error: () => { },
+  log: () => {},
+  error: () => {},
 };
 
 export function getFileType(uri: string): FileType {
@@ -135,7 +135,7 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) { }
+  ) {}
 
   public get config(): Config {
     return this.configBundle.config;
