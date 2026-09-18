@@ -42,8 +42,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => { },
-  error: () => { },
+  log: () => {},
+  error: () => {},
 };
 
 export function getFileType(uri: string): FileType {
@@ -135,7 +135,7 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) { }
+  ) {}
 
   public get config(): Config {
     return this.configBundle.config;
@@ -717,7 +717,12 @@ export function createLanguageServer(
     DEBUG ? logger : noopLogger,
   );
 
+  let hasWorkspaceFolderCapability = false;
+
   connection.onInitialize((params: InitializeParams): InitializeResult => {
+    const capabilities = params.capabilities;
+    hasWorkspaceFolderCapability = !!capabilities.workspace?.workspaceFolders;
+
     const folders = params.workspaceFolders?.map((f) => f.uri) ?? [];
     if (folders.length > 0) {
       extension.setWorkspaceFolders(folders);
@@ -743,6 +748,21 @@ export function createLanguageServer(
   });
 
   connection.onInitialized(async () => {
+    if (hasWorkspaceFolderCapability) {
+      connection.workspace.onDidChangeWorkspaceFolders((event) => {
+        logger.log(
+          `[TypePrompt LSP] onDidChangeWorkspaceFolders: added=${event.added.length}, removed=${event.removed.length}`,
+        );
+        for (const folder of event.added) {
+          extension.addWorkspaceFolder(folder.uri);
+        }
+        for (const folder of event.removed) {
+          extension.removeWorkspaceFolder(folder.uri);
+        }
+        void extension.runScan();
+      });
+    }
+
     logger.log(
       "[TypePrompt LSP] connection.onInitialized: starting initial scan and loop.",
     );
@@ -752,19 +772,6 @@ export function createLanguageServer(
       logger.error("[TypePrompt LSP] Error during initial scan:", err);
     }
     extension.scheduleScanLoop();
-  });
-
-  connection.workspace?.onDidChangeWorkspaceFolders((event) => {
-    logger.log(
-      `[TypePrompt LSP] onDidChangeWorkspaceFolders: added=${event.added.length}, removed=${event.removed.length}`,
-    );
-    for (const folder of event.added) {
-      extension.addWorkspaceFolder(folder.uri);
-    }
-    for (const folder of event.removed) {
-      extension.removeWorkspaceFolder(folder.uri);
-    }
-    void extension.runScan();
   });
 
   connection.onDidChangeWatchedFiles(async (params) => {
