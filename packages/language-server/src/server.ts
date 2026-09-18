@@ -29,6 +29,7 @@ export type FileType = "typeprompt.yml" | "*.xml" | null;
 
 export interface FileContent {
   readonly content: string;
+  readonly lineFinder: LineFinderData;
   readonly lastModified: number;
 }
 
@@ -38,8 +39,8 @@ export interface Logger {
 }
 
 const noopLogger: Logger = {
-  log: () => {},
-  error: () => {},
+  log: () => { },
+  error: () => { },
 };
 
 export function getFileType(uri: string): FileType {
@@ -60,7 +61,6 @@ export interface TypePromptConfigBundle {
 export interface XmlBundle {
   readonly uri: string;
   content: FileContent;
-  lineFinder: LineFinderData;
   workspace?: Workspace;
   relativePath?: string;
 }
@@ -117,7 +117,7 @@ export class Workspace {
     public readonly folderUri: string,
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
-  ) {}
+  ) { }
 
   public get config(): Config {
     return this.configBundle.config;
@@ -241,32 +241,14 @@ export class TypePromptLanguageExtension {
               configResult.errors,
             );
             const doc = this.getDocument(uri);
-            const lineFinder = createLineFinder(content.content);
-            const diagnostics = configResult.errors.map((err): Diagnostic => {
-              let start: Position;
-              let end: Position;
-              if (doc) {
-                start = doc.positionAt(err.span.start);
-                end = doc.positionAt(err.span.end);
-              } else {
-                const startMatch = findLine(err.span.start, lineFinder);
-                const endMatch = findLine(err.span.end, lineFinder);
-                start = {
-                  line: startMatch.line.zeroBasedLineNumber,
-                  character: startMatch.zeroBasedColNumber,
-                };
-                end = {
-                  line: endMatch.line.zeroBasedLineNumber,
-                  character: endMatch.zeroBasedColNumber,
-                };
-              }
-              return {
-                severity: DiagnosticSeverity.Error,
-                range: { start, end },
-                message: err.message,
-                source: "typeprompt",
-              };
-            });
+            const diagnostics = configResult.errors.map((err): Diagnostic =>
+              internalErrorToDiagnostic(
+                err,
+                DiagnosticSeverity.Error,
+                doc,
+                content.lineFinder,
+              ),
+            );
             this.sendDiagnostics(uri, diagnostics);
           }
         } else {
@@ -292,12 +274,10 @@ export class TypePromptLanguageExtension {
 
           if (xmlBundle) {
             xmlBundle.content = content;
-            xmlBundle.lineFinder = createLineFinder(content.content);
           } else {
             xmlBundle = {
               uri,
               content,
-              lineFinder: createLineFinder(content.content),
             };
             this.xmlBundles.set(uri, xmlBundle);
           }
@@ -370,8 +350,10 @@ export class TypePromptLanguageExtension {
     const timeout = setTimeout(() => {
       this.uriToTimeout.delete(uri);
       try {
+        const text = document.getText();
         this.setFileContent(uri, {
-          content: document.getText(),
+          content: text,
+          lineFinder: createLineFinder(text),
           lastModified: Date.now(),
         });
       } catch (error) {
@@ -456,7 +438,7 @@ export class TypePromptLanguageExtension {
             err,
             DiagnosticSeverity.Error,
             doc,
-            xml.lineFinder,
+            xml.content.lineFinder,
           ),
         ),
         ...warnings.map((warn) =>
@@ -464,7 +446,7 @@ export class TypePromptLanguageExtension {
             warn,
             DiagnosticSeverity.Warning,
             doc,
-            xml.lineFinder,
+            xml.content.lineFinder,
           ),
         ),
       ];
@@ -558,8 +540,10 @@ export function createLanguageServer(
 
   documents.onDidChangeContent((change) => {
     logger.log(`[TypePrompt LSP] onDidChangeContent: ${change.document.uri}`);
+    const text = change.document.getText();
     extension.setFileContent(change.document.uri, {
-      content: change.document.getText(),
+      content: text,
+      lineFinder: createLineFinder(text),
       lastModified: Date.now(),
     });
   });
