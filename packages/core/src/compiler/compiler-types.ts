@@ -165,7 +165,7 @@ export type ToolDescriptionPiece =
 export type Namespace = {
   readonly kind: "namespace";
   readonly name: TextSpan;
-  readonly schema: Schema;
+  readonly schema: SchemaOrError;
   readonly warnings: readonly InternalError[];
 };
 

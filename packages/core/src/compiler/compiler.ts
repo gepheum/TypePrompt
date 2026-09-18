@@ -88,6 +88,9 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
         result.parseErrors.push(...namespace.errors);
       } else {
         result.namespaces.push(namespace);
+        if (namespace.schema.kind === "error") {
+          result.parseErrors.push(...namespace.schema.errors);
+        }
         result.warnings.push(...namespace.warnings);
       }
       break;

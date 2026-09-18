@@ -1,7 +1,7 @@
 import { InternalError, InternalErrors } from "../util/shared-types.js";
 import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
-import { Namespace } from "./compiler-types.js";
+import { Namespace, SchemaOrError } from "./compiler-types.js";
 
 import * as z from "zod";
 import { parseSchema } from "../schema/schema-parser.js";
@@ -59,19 +59,16 @@ export function parseNamespace(
   }
 
   warnings.push(...textContent.warnings);
-  const schemaParseResult = parseSchema(textContent.text);
-  if (schemaParseResult.kind === "error") {
-    errors.push(...schemaParseResult.errors);
-    return { kind: "error", errors };
-  }
 
-  const schema = validateSchema(schemaParseResult, {
-    kind: "namespace",
-  });
-  if (schema.kind === "error") {
-    errors.push(...schema.errors);
-    return { kind: "error", errors };
-  }
+  const schema = ((): SchemaOrError => {
+    const schemaParseResult = parseSchema(textContent.text);
+    if (schemaParseResult.kind === "error") {
+      return schemaParseResult;
+    }
+    return validateSchema(schemaParseResult, {
+      kind: "namespace",
+    });
+  })();
 
   if (errors.length >= 1) {
     return { kind: "error", errors };
