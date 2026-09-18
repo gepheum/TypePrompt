@@ -404,7 +404,7 @@ class CompilationResultImpl implements CompilationResult {
               ([name, tool]) => tool === cachedNamespace.tools[name],
             ) &&
             Object.keys(namespace.tools).length ===
-            Object.keys(cachedNamespace.tools).length;
+              Object.keys(cachedNamespace.tools).length;
         }
         return sameTools ? cached : null;
       };

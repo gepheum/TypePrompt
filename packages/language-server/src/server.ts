@@ -111,13 +111,7 @@ export function internalErrorToDiagnostic(
     end = { line: 0, character: 0 };
   }
 
-  let message = err.message;
-  if (err.hint) {
-    message += `\n(${err.hint})`;
-  }
-  if (err.suggestions && err.suggestions.length > 0) {
-    message += `\nDid you mean: ${err.suggestions.join(", ")}?`;
-  }
+  const { message } = err;
 
   return {
     severity,
