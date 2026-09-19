@@ -25,6 +25,8 @@
     "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.1",
     "@typeprompt/core": "*",
     "lit": "^3.2.0"
   },
