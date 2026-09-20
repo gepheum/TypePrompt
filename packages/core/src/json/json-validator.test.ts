@@ -3,7 +3,7 @@ import { describe, it } from "mocha";
 
 import { parseSchema } from "../schema/schema-parser.js";
 import type {
-  Array,
+  Array as ArrayType,
   BooleanLiteral,
   Interface,
   PrimitiveType,
@@ -13,12 +13,14 @@ import type {
   SyntheticType,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
+import { resolveType } from "../schema/type-resolver.js";
 import type { MappedText, Span } from "../util/shared-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
 import type {
   JsonArray,
   JsonBoolean,
   JsonEllipsis,
+  JsonNull,
   JsonNumber,
   JsonObject,
   JsonString,
@@ -66,7 +68,7 @@ function span(text: string): Span {
 }
 
 function str(value: string): JsonString {
-  return { kind: "string", firstToken: span(`"${value};"`), value };
+  return { kind: "string", firstToken: span(`"${value}"`), value };
 }
 
 function num(value: number): JsonNumber {
@@ -75,6 +77,10 @@ function num(value: number): JsonNumber {
 
 function bool(value: boolean): JsonBoolean {
   return { kind: "boolean", firstToken: span(String(value)), value };
+}
+
+function nullVal(): JsonNull {
+  return { kind: "null", firstToken: span("null") };
 }
 
 function objStrict(entries: [string, StrictJsonValue][]): JsonObject<"strict"> {
@@ -93,6 +99,78 @@ function arrStrict(elements: StrictJsonValue[]): JsonArray<"strict"> {
 
 function safeCast(strictValue: StrictJsonValue): LooseJsonValue {
   return strictValue as LooseJsonValue;
+}
+
+const EMPTY_VIEW = {
+  typeDeclarations: {},
+  sharedDeclarations: {},
+  unionToMembers: new Map(),
+} as unknown as Schema;
+
+const ELLIPSIS: LooseJsonValue = {
+  kind: "ellipsis",
+  firstToken: { start: 0, end: 3 },
+};
+
+function primType(
+  text: "string" | "number" | "boolean" | "integer",
+): PrimitiveType {
+  return {
+    kind: "primitive",
+    primitive: { text, start: 0, end: text.length },
+  };
+}
+
+function litType(value: string): StringLiteral {
+  return {
+    kind: "string-literal",
+    value,
+    quotedName: { text: `"${value}"`, start: 0, end: value.length + 2 },
+  };
+}
+
+function boolLitType(value: boolean): BooleanLiteral {
+  const text = String(value) as "true" | "false";
+  return {
+    kind: "boolean-literal",
+    span: { text, start: 0, end: text.length },
+    value,
+  };
+}
+
+function ifaceType(
+  fields: Record<
+    string,
+    { optional?: boolean; text: "string" | "number" | "boolean" | "integer" }
+  >,
+): Interface {
+  return {
+    kind: "interface",
+    leftCurlyBracket: { start: 0, end: 1 },
+    fields: Object.fromEntries(
+      Object.entries(fields).map(([name, { optional = false, text }]) => [
+        name,
+        {
+          name: { text: name, start: 0, end: name.length },
+          type: optional
+            ? { kind: "optional", innerType: primType(text) }
+            : primType(text),
+          doc: "",
+        },
+      ]),
+    ),
+  };
+}
+
+function recordType(
+  valueText: "string" | "number" | "boolean" | "integer",
+): RecordType {
+  return {
+    kind: "record",
+    leftCurlyBracket: { start: 0, end: 1 },
+    keyName: "key",
+    valueType: primType(valueText),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -140,11 +218,21 @@ describe("validateJson - exact match", () => {
     expect(validateJson(num(42), type, schema)).toMatch([]);
   });
 
-  it("accepts a value of any type for an any type", () => {
+  it("accepts a number for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(1), type, schema)).toMatch([]);
+  });
+
+  it("accepts a string for an any type", () => {
+    const schema = parseSchemaOrThrow("type Response = any");
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("x"), type, schema)).toMatch([]);
+  });
+
+  it("accepts an object for an any type", () => {
+    const schema = parseSchemaOrThrow("type Response = any");
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([]), type, schema)).toMatch([]);
   });
 
@@ -309,7 +397,10 @@ describe("validateJson - mismatch", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("c"), type, schema)).toMatch([
       { message: "Does not match type 'Response'" },
-      { message: 'Expected one of ["a","b"]' },
+      {
+        message: 'Expected one of ["a","b"]',
+        suggestions: ['"a"', '"b"'],
+      },
     ]);
   });
 
@@ -322,7 +413,10 @@ describe("validateJson - mismatch", () => {
       validateJson(objStrict([["kind", str("fish")]]), type, schema),
     ).toMatch([
       { message: "Does not match type 'Response'" },
-      { message: 'Expected one of ["cat","dog"]' },
+      {
+        message: 'Expected one of ["cat","dog"]',
+        suggestions: ['"cat"', '"dog"'],
+      },
     ]);
   });
 
@@ -351,10 +445,15 @@ describe("validateJson - integer type", () => {
     expect(validateJson(num(42), type, schema)).toMatch([]);
   });
 
-  it("accepts the boundary values -2147483648 and 2147483647", () => {
+  it("accepts lower boundary -2147483648", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(-2147483648), type, schema)).toMatch([]);
+  });
+
+  it("accepts upper boundary 2147483647", () => {
+    const schema = parseSchemaOrThrow("type Response = integer");
+    const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(2147483647), type, schema)).toMatch([]);
   });
 
@@ -390,14 +489,14 @@ describe("validateJson - boolean-literal type", () => {
     ).toMatch([]);
   });
 
-  it("rejects the opposite boolean value with a close-match error", () => {
+  it("rejects the opposite boolean value with suggestions", () => {
     const schema = parseSchemaOrThrow("type Response = { status: true }");
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
     ).toMatch([
       { message: "Does not match type 'Response'" },
-      { message: "Expected true" },
+      { message: "Expected true", suggestions: ["true"] },
     ]);
   });
 
@@ -407,7 +506,7 @@ describe("validateJson - boolean-literal type", () => {
     expect(validateJson(objStrict([["status", num(1)]]), type, schema)).toMatch(
       [
         { message: "Does not match type 'Response'" },
-        { message: "Expected true" },
+        { message: "Expected true", suggestions: ["true"] },
       ],
     );
   });
@@ -521,86 +620,13 @@ describe("validateJson - boolean-discriminated union", () => {
       validateJson(objStrict([["success", str("yes")]]), type, schema),
     ).toMatch([
       { message: "Does not match type 'Response'" },
-      { message: "Expected boolean but got string" },
+      {
+        message: "Expected boolean but got string",
+        suggestions: ["true", "false"],
+      },
     ]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// jsonMatchesType - helpers
-// ---------------------------------------------------------------------------
-
-// Minimal SchemaView (no named types, no unions).
-const EMPTY_VIEW = {
-  typeDeclarations: {},
-  sharedDeclarations: {},
-  unionToMembers: new Map(),
-} as unknown as Schema;
-
-const ELLIPSIS: LooseJsonValue = {
-  kind: "ellipsis",
-  firstToken: { start: 0, end: 3 },
-};
-
-function primType(
-  text: "string" | "number" | "boolean" | "integer",
-): PrimitiveType {
-  return {
-    kind: "primitive",
-    primitive: { text, start: 0, end: text.length },
-  };
-}
-
-function litType(value: string): StringLiteral {
-  return {
-    kind: "string-literal",
-    value,
-    quotedName: { text: `"${value}"`, start: 0, end: value.length + 2 },
-  };
-}
-
-function boolLitType(value: boolean): BooleanLiteral {
-  const text = String(value) as "true" | "false";
-  return {
-    kind: "boolean-literal",
-    span: { text, start: 0, end: text.length },
-    value,
-  };
-}
-
-function ifaceType(
-  fields: Record<
-    string,
-    { optional?: boolean; text: "string" | "number" | "boolean" | "integer" }
-  >,
-): Interface {
-  return {
-    kind: "interface",
-    leftCurlyBracket: { start: 0, end: 1 },
-    fields: Object.fromEntries(
-      Object.entries(fields).map(([name, { optional = false, text }]) => [
-        name,
-        {
-          name: { text: name, start: 0, end: name.length },
-          optional,
-          type: primType(text),
-          doc: "",
-        },
-      ]),
-    ),
-  };
-}
-
-function recordType(
-  valueText: "string" | "number" | "boolean" | "integer",
-): RecordType {
-  return {
-    kind: "record",
-    leftCurlyBracket: { start: 0, end: 1 },
-    keyName: "key",
-    valueType: primType(valueText),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // jsonMatchesType - result shape and mode
@@ -613,15 +639,10 @@ describe("jsonMatchesType - result shape and mode", () => {
     ).toMatch({ kind: "match" });
   });
 
-  it("fast mode: mismatch returns no details", () => {
-    const result = jsonMatchesType(
-      num(1),
-      primType("string"),
-      "fast",
-      EMPTY_VIEW,
-    );
-    expect(result).toMatch({ kind: "mismatch" });
-    expect((result as any).details).toBe(undefined);
+  it("fast mode: mismatch returns { kind: 'mismatch' } without details", () => {
+    expect(
+      jsonMatchesType(num(1), primType("string"), "fast", EMPTY_VIEW),
+    ).toMatch({ kind: "mismatch" });
   });
 
   it("thorough mode: mismatch includes reason and matchScore", () => {
@@ -642,13 +663,19 @@ describe("jsonMatchesType - result shape and mode", () => {
 // ---------------------------------------------------------------------------
 
 describe("jsonMatchesType - ellipsis value", () => {
-  it("ellipsis matches any type in thorough mode", () => {
+  it("ellipsis matches primitive string in thorough mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+  });
+
+  it("ellipsis matches literal in thorough mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, litType("ok"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+  });
+
+  it("ellipsis matches interface in thorough mode", () => {
     expect(
       jsonMatchesType(
         ELLIPSIS,
@@ -659,7 +686,7 @@ describe("jsonMatchesType - ellipsis value", () => {
     ).toMatch({ kind: "match" });
   });
 
-  it("ellipsis matches any type in fast mode too", () => {
+  it("ellipsis matches primitive number in fast mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
@@ -684,34 +711,117 @@ describe("jsonMatchesType - ellipsis value", () => {
 });
 
 // ---------------------------------------------------------------------------
-// jsonMatchesType - matchScore
+// jsonMatchesType - matchScore: Primitives and Literals
 // ---------------------------------------------------------------------------
 
-describe("jsonMatchesType - matchScore", () => {
+describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
   it("string-literal: wrong string value → matchScore 0.5", () => {
     expect(
       jsonMatchesType(str("bad"), litType("ok"), "thorough", EMPTY_VIEW),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0.5 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: 'Expected "ok"', suggestions: ['"ok"'] },
+        matchScore: 0.5,
+      },
+    });
   });
 
   it("string-literal: wrong kind → matchScore 0", () => {
     expect(
       jsonMatchesType(num(1), litType("ok"), "thorough", EMPTY_VIEW),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: 'Expected "ok"', suggestions: ['"ok"'] },
+        matchScore: 0,
+      },
+    });
   });
 
   it("boolean-literal: opposite value → matchScore 0.5", () => {
     expect(
       jsonMatchesType(bool(false), boolLitType(true), "thorough", EMPTY_VIEW),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0.5 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected true", suggestions: ["true"] },
+        matchScore: 0.5,
+      },
+    });
   });
 
   it("boolean-literal: wrong kind → matchScore 0", () => {
     expect(
       jsonMatchesType(num(1), boolLitType(true), "thorough", EMPTY_VIEW),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected true", suggestions: ["true"] },
+        matchScore: 0,
+      },
+    });
   });
 
+  it("primitive integer: float value → matchScore 0.5", () => {
+    expect(
+      jsonMatchesType(num(3.14), primType("integer"), "thorough", EMPTY_VIEW),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected int but got float" },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("primitive integer: out-of-range integer → matchScore 0.5", () => {
+    expect(
+      jsonMatchesType(
+        num(2147483648),
+        primType("integer"),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected int but got float" },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("primitive integer: string value → matchScore 0", () => {
+    expect(
+      jsonMatchesType(str("123"), primType("integer"), "thorough", EMPTY_VIEW),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected integer but got string" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("primitive string: wrong kind → matchScore 0", () => {
+    expect(
+      jsonMatchesType(num(42), primType("string"), "thorough", EMPTY_VIEW),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 0,
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// jsonMatchesType - matchScore: Unions
+// ---------------------------------------------------------------------------
+
+describe("jsonMatchesType - matchScore: Unions", () => {
   it("string union: non-matching string → matchScore 0.5", () => {
     const schema = parseSchemaOrThrow('type S = "a" | "b"');
     const unionType = schema.typeDeclarations["S"]!.valueType;
@@ -719,13 +829,425 @@ describe("jsonMatchesType - matchScore", () => {
       jsonMatchesType(str("c"), unionType as SyntheticType, "thorough", schema),
     ).toMatch({
       kind: "mismatch",
-      details: { matchScore: 0.5 },
+      details: {
+        reason: {
+          message: 'Expected one of ["a","b"]',
+          suggestions: ['"a"', '"b"'],
+        },
+        matchScore: 0.5,
+      },
     });
   });
 
-  it("array: first element matches, second fails → matchScore 0.5", () => {
-    // matchScoreTotal = 1 after first, += mismatch score 0 → 1 / 2 = 0.5
-    const arrT: Array = { kind: "array", elementType: primType("number") };
+  it("string union: wrong kind (number) → matchScore 0", () => {
+    const schema = parseSchemaOrThrow('type S = "a" | "b"');
+    const unionType = schema.typeDeclarations["S"]!.valueType;
+    expect(
+      jsonMatchesType(num(1), unionType as SyntheticType, "thorough", schema),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("discriminated union: missing discriminator field → matchScore 0", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat"; name: string }; type Dog = { kind: "dog"; name: string }; type Pet = Cat | Dog',
+    );
+    const petType = schema.typeDeclarations["Pet"]!.valueType;
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["name", str("Felix")]])),
+        petType as SyntheticType,
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Missing required field 'kind'" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("discriminated union: wrong discriminator type → matchScore 0", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat" }; type Dog = { kind: "dog" }; type Pet = Cat | Dog',
+    );
+    const petType = schema.typeDeclarations["Pet"]!.valueType;
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["kind", num(123)]])),
+        petType as SyntheticType,
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: {
+          message: "Expected string but got number",
+          suggestions: ['"cat"', '"dog"'],
+        },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("discriminated union: unknown discriminant string → matchScore 0.5", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat" }; type Dog = { kind: "dog" }; type Pet = Cat | Dog',
+    );
+    const petType = schema.typeDeclarations["Pet"]!.valueType;
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["kind", str("bird")]])),
+        petType as SyntheticType,
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: {
+          message: 'Expected one of ["cat","dog"]',
+          suggestions: ['"cat"', '"dog"'],
+        },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("discriminated union: valid discriminant with child mismatch propagates member interface score", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat"; name: string; age: number }; type Dog = { kind: "dog"; breed: string }; type Pet = Cat | Dog',
+    );
+    const petType = schema.typeDeclarations["Pet"]!.valueType;
+    // Cat has 3 required fields (kind, name, age).
+    // Given { kind: "cat", name: "Felix", age: "bad" }:
+    // Loop 1: kind matches (1), name matches (1), age mismatches (0) -> total = 2.
+    // Loop 2: kind present (1), name present (1), age present (1) -> total = 2 + 3 = 5.
+    // Divisor: 3 required + 3 entries = 6.
+    // matchScore: 5 / 6 = 0.8333333333333334.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["kind", str("cat")],
+            ["name", str("Felix")],
+            ["age", str("bad")],
+          ]),
+        ),
+        petType as SyntheticType,
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 5 / 6,
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// jsonMatchesType - matchScore: Interfaces
+// ---------------------------------------------------------------------------
+
+describe("jsonMatchesType - matchScore: Interfaces", () => {
+  it("interface: 1 of 2 required fields has wrong type → matchScore 0.75", () => {
+    // 2 required fields (name, age). JSON has both present: name matches (1), age fails (0).
+    // Seen required fields: name (1), age (1).
+    // Total = 1 + 0 + 1 + 1 = 3. Divisor = 2 + 2 = 4. Score = 3/4 = 0.75.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["age", str("bad")],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 0.75,
+      },
+    });
+  });
+
+  it("interface: 1 of 2 required fields is missing → matchScore 2/3", () => {
+    // 2 required fields (name, age). JSON has only { name: "Alice" }.
+    // Loop 1: name matches (1). Loop 2: name present (1), age missing (0).
+    // Total = 1 + 1 = 2. Divisor = 2 required + 1 entry = 3. Score = 2/3.
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["name", str("Alice")]])),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Missing required field 'age'" },
+        matchScore: 2 / 3,
+      },
+    });
+  });
+
+  it("interface: empty object with missing required fields → matchScore 0", () => {
+    // 2 required fields. JSON is {}.
+    // Total = 0. Divisor = 2 + 0 = 2. Score = 0/2 = 0.
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([])),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Missing required field 'name'" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("interface: valid required field plus unknown field → matchScore 2/3", () => {
+    // 1 required field (name). JSON has { name: "Alice", extra: 1 }.
+    // Loop 1: name matches (1), extra unknown (0).
+    // Loop 2: name present (1).
+    // Total = 1 + 0 + 1 = 2. Divisor = 1 required + 2 entries = 3. Score = 2/3.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["extra", num(1)],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" } }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Unknown field 'extra'" },
+        matchScore: 2 / 3,
+      },
+    });
+  });
+
+  it("interface: 1 required and 1 optional field with wrong optional type → matchScore 2/3", () => {
+    // 1 required (name), 1 optional (nickname). JSON has { name: "Alice", nickname: 123 }.
+    // Loop 1: name matches (1), nickname fails (0).
+    // Loop 2: name present (1).
+    // Total = 1 + 0 + 1 = 2. Divisor = 1 required + 2 entries = 3. Score = 2/3.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["nickname", num(123)],
+          ]),
+        ),
+        ifaceType({
+          name: { text: "string" },
+          nickname: { text: "string", optional: true },
+        }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 2 / 3,
+      },
+    });
+  });
+
+  it("interface: only optional fields with 1 valid and 1 invalid → matchScore 0.5", () => {
+    // 0 required fields. JSON has { a: "ok", b: 123 } for { a?: string, b?: string }.
+    // Loop 1: a matches (1), b fails (0). Loop 2: 0 required fields.
+    // Total = 1 + 0 = 1. Divisor = 0 required + 2 entries = 2. Score = 1/2 = 0.5.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["a", str("ok")],
+            ["b", num(123)],
+          ]),
+        ),
+        ifaceType({
+          a: { text: "string", optional: true },
+          b: { text: "string", optional: true },
+        }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("interface: nested interface failure propagates partial score", () => {
+    const schema = parseSchemaOrThrow(
+      "type User = { name: string; age: number; }; type Wrapper = { user: User; };",
+    );
+    const wrapperType = schema.typeDeclarations["Wrapper"]!.valueType;
+    // Inner User has matchScore = 0.75 (name valid, age invalid).
+    // Outer Wrapper has 1 required field (user).
+    // Outer Loop 1: user has matchScore 0.75.
+    // Outer Loop 2: user is present (+1.0) -> total = 1.75.
+    // Outer Divisor = 1 required + 1 entry = 2.
+    // Outer score = 1.75 / 2 = 0.875.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            [
+              "user",
+              objStrict([
+                ["name", str("Alice")],
+                ["age", str("bad")],
+              ]),
+            ],
+          ]),
+        ),
+        resolveType(wrapperType, schema),
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 0.875,
+      },
+    });
+  });
+
+  it("interface: non-object value → matchScore 0", () => {
+    expect(
+      jsonMatchesType(
+        str("not an object"),
+        ifaceType({ name: { text: "string" } }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected object but got string" },
+        matchScore: 0,
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// jsonMatchesType - matchScore: Records
+// ---------------------------------------------------------------------------
+
+describe("jsonMatchesType - matchScore: Records", () => {
+  it("record: 2 entries, 1 match and 1 mismatch → matchScore 0.5", () => {
+    // Record of string. Given { a: "hello", b: 123 }:
+    // Entry 'a': match (+1.0)
+    // Entry 'b': fails with matchScore 0.0 (+0.0)
+    // Divisor = 2. Score = 1.0 / 2 = 0.5.
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["a", str("hello")],
+            ["b", num(123)],
+          ]),
+        ),
+        recordType("string"),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("record: 1 entry with nested partial score 0.5 → matchScore 0.5", () => {
+    // Record of union of string literals ("ok" | "done"). Given { a: "wrong" }:
+    // "wrong" matches union with score 0.5. Divisor = 1. Score = 0.5 / 1 = 0.5.
+    const schema = parseSchemaOrThrow(
+      'type Status = "ok" | "done"; type MyRec = {[key: string]: Status};',
+    );
+    const recType = schema.typeDeclarations["MyRec"]!.valueType;
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["a", str("wrong")]])),
+        resolveType(recType, schema),
+        "thorough",
+        schema,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: {
+          message: 'Expected one of ["ok","done"]',
+          suggestions: ['"ok"', '"done"'],
+        },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("record: non-object value → matchScore 0", () => {
+    expect(
+      jsonMatchesType(
+        safeCast(arrStrict([])),
+        recordType("number"),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected object but got array" },
+        matchScore: 0,
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// jsonMatchesType - matchScore: Arrays
+// ---------------------------------------------------------------------------
+
+describe("jsonMatchesType - matchScore: Arrays", () => {
+  it("array: 1 of 2 elements matches, second fails → matchScore 0.5", () => {
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: primType("number"),
+    };
     expect(
       jsonMatchesType(
         arrStrict([num(1), str("bad")]) as LooseJsonValue,
@@ -733,11 +1255,41 @@ describe("jsonMatchesType - matchScore", () => {
         "thorough",
         EMPTY_VIEW,
       ),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0.5 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 0.5,
+      },
+    });
+  });
+
+  it("array: 1 of 3 elements matches, second fails → matchScore 1/3", () => {
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: primType("number"),
+    };
+    expect(
+      jsonMatchesType(
+        arrStrict([num(1), str("bad"), num(3)]) as LooseJsonValue,
+        arrT,
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 1 / 3,
+      },
+    });
   });
 
   it("array: first element fails → matchScore 0", () => {
-    const arrT: Array = { kind: "array", elementType: primType("number") };
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: primType("number"),
+    };
     expect(
       jsonMatchesType(
         arrStrict([str("bad"), num(1)]) as LooseJsonValue,
@@ -745,7 +1297,124 @@ describe("jsonMatchesType - matchScore", () => {
         "thorough",
         EMPTY_VIEW,
       ),
-    ).toMatch({ kind: "mismatch", details: { matchScore: 0 } });
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("array of interfaces: partial score from failing element propagates", () => {
+    // Array of { name: string, age: number }.
+    // Element 0 matches (1.0). Element 1 has interface matchScore = 0.75.
+    // Total array score = (1.0 + 0.75) / 2 = 0.875.
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: ifaceType({
+        name: { text: "string" },
+        age: { text: "number" },
+      }),
+    };
+    expect(
+      jsonMatchesType(
+        arrStrict([
+          objStrict([
+            ["name", str("Alice")],
+            ["age", num(30)],
+          ]),
+          objStrict([
+            ["name", str("Bob")],
+            ["age", str("bad")],
+          ]),
+        ]) as LooseJsonValue,
+        arrT,
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected number but got string" },
+        matchScore: 0.875,
+      },
+    });
+  });
+
+  it("array: non-array value → matchScore 0", () => {
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: primType("number"),
+    };
+    expect(
+      jsonMatchesType(safeCast(objStrict([])), arrT, "thorough", EMPTY_VIEW),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected array but got object" },
+        matchScore: 0,
+      },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// jsonMatchesType - Optionals and Any
+// ---------------------------------------------------------------------------
+
+describe("jsonMatchesType - Optionals and Any", () => {
+  it("optional matches null value", () => {
+    const optType: SyntheticType = {
+      kind: "optional",
+      innerType: primType("string"),
+    };
+    expect(jsonMatchesType(nullVal(), optType, "thorough", EMPTY_VIEW)).toMatch(
+      { kind: "match" },
+    );
+  });
+
+  it("optional matches inner type when non-null", () => {
+    const optType: SyntheticType = {
+      kind: "optional",
+      innerType: primType("string"),
+    };
+    expect(
+      jsonMatchesType(str("hello"), optType, "thorough", EMPTY_VIEW),
+    ).toMatch({ kind: "match" });
+  });
+
+  it("optional propagates mismatch details when non-null", () => {
+    const optType: SyntheticType = {
+      kind: "optional",
+      innerType: primType("string"),
+    };
+    expect(jsonMatchesType(num(42), optType, "thorough", EMPTY_VIEW)).toMatch({
+      kind: "mismatch",
+      details: {
+        reason: { message: "Expected string but got number" },
+        matchScore: 0,
+      },
+    });
+  });
+
+  it("any type matches in fast mode", () => {
+    const anyType: SyntheticType = { kind: "any" };
+    expect(jsonMatchesType(num(42), anyType, "fast", EMPTY_VIEW)).toMatch({
+      kind: "match",
+    });
+  });
+
+  it("any type matches in thorough mode", () => {
+    const anyType: SyntheticType = { kind: "any" };
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["x", str("y")]])),
+        anyType,
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({ kind: "match" });
   });
 });
 
@@ -755,52 +1424,96 @@ describe("jsonMatchesType - matchScore", () => {
 
 describe("jsonMatchesType - fast mode short-circuit", () => {
   it("array: stops at first element mismatch", () => {
-    const arrT: Array = { kind: "array", elementType: primType("number") };
-    const result = jsonMatchesType(
-      arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
-      arrT,
-      "fast",
-      EMPTY_VIEW,
-    );
-    expect(result).toMatch({ kind: "mismatch" });
-    expect((result as any).details).toBe(undefined);
+    const arrT: ArrayType = {
+      kind: "array",
+      elementType: primType("number"),
+    };
+    expect(
+      jsonMatchesType(
+        arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
+        arrT,
+        "fast",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({ kind: "mismatch" });
   });
 
   it("interface: stops at first field type mismatch", () => {
-    const result = jsonMatchesType(
-      safeCast(
-        objStrict([
-          ["name", num(42)],
-          ["age", num(30)],
-        ]),
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["name", num(42)],
+            ["age", num(30)],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        "fast",
+        EMPTY_VIEW,
       ),
-      ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-      "fast",
-      EMPTY_VIEW,
-    );
-    expect(result).toMatch({ kind: "mismatch" });
-    expect((result as any).details).toBe(undefined);
+    ).toMatch({ kind: "mismatch" });
   });
 
   it("interface: stops on unknown field", () => {
-    const result = jsonMatchesType(
-      safeCast(objStrict([["extra", str("x")]])),
-      ifaceType({ name: { text: "string" } }),
-      "fast",
-      EMPTY_VIEW,
-    );
-    expect(result).toMatch({ kind: "mismatch" });
-    expect((result as any).details).toBe(undefined);
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["extra", str("x")]])),
+        ifaceType({ name: { text: "string" } }),
+        "fast",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({ kind: "mismatch" });
   });
 
   it("record: stops at first value type mismatch", () => {
-    const result = jsonMatchesType(
-      safeCast(objStrict([["x", str("bad")]])),
-      recordType("number"),
-      "fast",
-      EMPTY_VIEW,
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["x", str("bad")]])),
+        recordType("number"),
+        "fast",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({ kind: "mismatch" });
+  });
+
+  it("boolean-literal: returns mismatch in fast mode", () => {
+    expect(
+      jsonMatchesType(bool(false), boolLitType(true), "fast", EMPTY_VIEW),
+    ).toMatch({ kind: "mismatch" });
+  });
+
+  it("string-literal: returns mismatch in fast mode", () => {
+    expect(
+      jsonMatchesType(str("no"), litType("yes"), "fast", EMPTY_VIEW),
+    ).toMatch({ kind: "mismatch" });
+  });
+
+  it("primitive: returns mismatch in fast mode", () => {
+    expect(
+      jsonMatchesType(str("no"), primType("number"), "fast", EMPTY_VIEW),
+    ).toMatch({ kind: "mismatch" });
+  });
+
+  it("string union: returns mismatch in fast mode", () => {
+    const schema = parseSchemaOrThrow('type S = "a" | "b"');
+    const unionType = schema.typeDeclarations["S"]!.valueType;
+    expect(
+      jsonMatchesType(str("c"), unionType as SyntheticType, "fast", schema),
+    ).toMatch({ kind: "mismatch" });
+  });
+
+  it("interface union: returns mismatch in fast mode", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat" }; type Dog = { kind: "dog" }; type Pet = Cat | Dog',
     );
-    expect(result).toMatch({ kind: "mismatch" });
-    expect((result as any).details).toBe(undefined);
+    const petType = schema.typeDeclarations["Pet"]!.valueType;
+    expect(
+      jsonMatchesType(
+        safeCast(objStrict([["kind", str("bird")]])),
+        petType as SyntheticType,
+        "fast",
+        schema,
+      ),
+    ).toMatch({ kind: "mismatch" });
   });
 });

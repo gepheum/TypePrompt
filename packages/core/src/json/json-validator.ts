@@ -19,6 +19,17 @@ type SchemaView = {
   readonly unionToMembers: Schema["unionToMembers"];
 };
 
+/**
+ * Validates a parsed JSON AST against a schema type declaration or synthetic type.
+ *
+ * Runs {@link jsonMatchesType} in "thorough" mode to generate descriptive errors
+ * when validation fails, including the root type mismatch error and any nested failure reason.
+ *
+ * @param json The strict JSON AST value to validate.
+ * @param type The target type declaration or named synthetic type.
+ * @param schema The schema view providing type and union resolution tables.
+ * @returns An array of {@link InternalError} diagnostics (empty on successful validation).
+ */
 export function validateJson(
   json: StrictJsonValue,
   type: TypeDeclaration | (SyntheticType & HasName),
@@ -49,6 +60,28 @@ export function validateJson(
   return errors;
 }
 
+/**
+ * Checks whether a JSON value matches a schema type, supporting both fast pruning
+ * and thorough error diagnostic/scoring modes.
+ *
+ * - In `"fast"` mode: Short-circuits immediately on the first failure without computing
+ *   error diagnostics or similarity scores (returns `{ kind: "mismatch" }`).
+ * - In `"thorough"` mode: Computes the first mismatch {@link InternalError} `reason`
+ *   and a normalized `matchScore` in `[0, 1]`.
+ *
+ * Scoring algorithm:
+ * - **Primitives & Literals**: Exact match = `1.0`. Close scalar mismatches (wrong string/bool
+ *   literal or float for int) = `0.5`. Kind mismatches = `0.0`.
+ * - **Interfaces**: Score weights both value type-correctness (up to 1.0 per entry) and
+ *   the presence of required fields (1.0 per seen required field), divided by
+ *   `(requiredFields.length + entries.length)`.
+ * - **Records & Arrays**: Average match score of elements/entries up to the first mismatch
+ *   divided by the total element/entry count.
+ * - **Discriminated Unions**: Matches discriminant to member type. Unknown discriminant
+ *   value of expected kind = `0.5`, wrong kind = `0.0`. Valid member discriminant delegates
+ *   to member's interface scoring.
+ * - **Wildcards**: `ellipsis` and `any` types always return a full match.
+ */
 export function jsonMatchesType(
   value: LooseJsonValue,
   type: ResolvedFieldType | SyntheticType,
