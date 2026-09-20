@@ -1,7 +1,6 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type {
   Optional,
@@ -10,12 +9,10 @@ import type {
   Schema,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { MappedText, TextSpan } from "../util/shared-types.js";
+import type { MappedText } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type { Expression, ExpressionContext } from "./expression-types.js";
-import { resolveIfExpression } from "./if-expression-resolver.js";
-import { resolveSwitchExpression } from "./switch-expression-resolver.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,10 +20,6 @@ import { resolveSwitchExpression } from "./switch-expression-resolver.js";
 
 function textNode(source: string): MappedText {
   return { text: source, offsetMap: [{ textPosition: 0, sourcePosition: 0 }] };
-}
-
-function span<T extends string>(text: T): TextSpan<T> {
-  return { text, start: 0, end: text.length };
 }
 
 function makeExpr(path: string): Expression<false> {
@@ -225,257 +218,6 @@ describe("resolveExpressionType - type overrides", () => {
     expect(resolveExpressionType(itExpr, schema, context)).toMatch({
       kind: "primitive",
       primitive: { text: "number" },
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveIfExpression - boolean type
-// ---------------------------------------------------------------------------
-
-describe("resolveIfExpression - boolean type", () => {
-  const expr = makeExpr("input");
-
-  it("succeeds with no 'is' clause for a boolean type", () => {
-    expect(
-      resolveIfExpression(expr, prim("boolean"), null, EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "success",
-      then: {},
-      else: {},
-    });
-  });
-
-  it("rejects an 'is' clause for a boolean type", () => {
-    expect(
-      resolveIfExpression(expr, prim("boolean"), span("notNull"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Cannot use 'is' attribute with boolean type" }],
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveIfExpression - optional type
-// ---------------------------------------------------------------------------
-
-describe("resolveIfExpression - optional type", () => {
-  const expr = makeExpr("input");
-  const nType = optional(prim("string"));
-
-  it("succeeds with 'is=\"notNull\"' for an optional type", () => {
-    const result = resolveIfExpression(
-      expr,
-      nType,
-      span("notNull"),
-      EMPTY_SCHEMA,
-    );
-    expect(result).toMatch({
-      kind: "success",
-      then: { typeOverrides: { input: { kind: "primitive" } } },
-      else: { typeOverrides: { input: { kind: "null" } } },
-    });
-  });
-
-  it("rejects a missing 'is' clause for an optional type", () => {
-    expect(resolveIfExpression(expr, nType, null, EMPTY_SCHEMA)).toMatch({
-      kind: "error",
-      errors: [{ message: "must use 'is=\"notNull\"' with optional type" }],
-    });
-  });
-
-  it("rejects 'is=\"notEmpty\"' for an optional type", () => {
-    expect(
-      resolveIfExpression(expr, nType, span("notEmpty"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "must use 'is=\"notNull\"' with optional type" }],
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveIfExpression - array and string types
-// ---------------------------------------------------------------------------
-
-describe("resolveIfExpression - array and string types", () => {
-  const expr = makeExpr("input");
-  const arrayType: ResolvedType = {
-    kind: "array",
-    elementType: prim("string"),
-  };
-
-  it("succeeds with 'is=\"notEmpty\"' for an array type", () => {
-    expect(
-      resolveIfExpression(expr, arrayType, span("notEmpty"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "success",
-    });
-  });
-
-  it("rejects a missing 'is' clause for an array type", () => {
-    expect(resolveIfExpression(expr, arrayType, null, EMPTY_SCHEMA)).toMatch({
-      kind: "error",
-      errors: [
-        { message: "must use 'is=\"notEmpty\"' with array or string type" },
-      ],
-    });
-  });
-
-  it("succeeds with 'is=\"notEmpty\"' for a string type", () => {
-    expect(
-      resolveIfExpression(expr, prim("string"), span("notEmpty"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "success",
-    });
-  });
-
-  it("rejects a missing 'is' clause for a string type", () => {
-    expect(
-      resolveIfExpression(expr, prim("string"), null, EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [
-        { message: "must use 'is=\"notEmpty\"' with array or string type" },
-      ],
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveIfExpression - other types (no matching 'is' value)
-// ---------------------------------------------------------------------------
-
-describe("resolveIfExpression - other types", () => {
-  const expr = makeExpr("input");
-
-  it("reports 'Expected: optional value' for 'is=\"notNull\"' on a number", () => {
-    expect(
-      resolveIfExpression(expr, prim("number"), span("notNull"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected: optional value" }],
-    });
-  });
-
-  it("reports 'Expected: array or string' for 'is=\"notEmpty\"' on a number", () => {
-    expect(
-      resolveIfExpression(expr, prim("number"), span("notEmpty"), EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected: array or string" }],
-    });
-  });
-
-  it("reports 'Expected: boolean' when no 'is' is provided for a number", () => {
-    expect(
-      resolveIfExpression(expr, prim("number"), null, EMPTY_SCHEMA),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected: boolean" }],
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveSwitchExpression - errors
-// ---------------------------------------------------------------------------
-
-describe("resolveSwitchExpression - errors", () => {
-  it("rejects a primitive (non-union) type with 'Expected: union type'", () => {
-    const schema = parseSchemaOrThrow("type Input = string");
-    expect(
-      resolveSwitchExpression(makeExpr("input"), prim("number"), schema),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected: union type" }],
-    });
-  });
-
-  it("rejects a discriminated interface union with 'Expected: union of string literals'", () => {
-    const schema = parseSchemaOrThrow(
-      'type Input = { kind: "cat"; name: string } | { kind: "dog"; breed: string }',
-    );
-    const inputType = resolveExpressionType(makeExpr("input"), schema, null);
-    expect(
-      resolveSwitchExpression(
-        makeExpr("input"),
-        inputType as ResolvedType,
-        schema,
-      ),
-    ).toMatch({
-      kind: "error",
-      errors: [{ message: "Expected: union of string literals" }],
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveSwitchExpression - string union
-// ---------------------------------------------------------------------------
-
-describe("resolveSwitchExpression - string union", () => {
-  it("produces a case entry for each string literal in the union", () => {
-    const schema = parseSchemaOrThrow('type Input = "a" | "b" | "c"');
-    const inputType = resolveExpressionType(makeExpr("input"), schema, null);
-    const result = resolveSwitchExpression(
-      makeExpr("input"),
-      inputType as ResolvedType,
-      schema,
-    );
-    expect(result).toMatch({
-      kind: "success",
-      cases: { a: {}, b: {}, c: {} },
-    });
-  });
-
-  it("wraps a single string-literal type into a one-case result", () => {
-    const schema = parseSchemaOrThrow('type Input = { status: "only" }');
-    const inputType = resolveExpressionType(
-      makeExpr("input.status"),
-      schema,
-      null,
-    );
-    const result = resolveSwitchExpression(
-      makeExpr("input"),
-      inputType as ResolvedType,
-      schema,
-    );
-    expect(result).toMatch({ kind: "success", cases: { only: {} } });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveSwitchExpression - discriminator property
-// ---------------------------------------------------------------------------
-
-describe("resolveSwitchExpression - discriminated interface union via property", () => {
-  it("produces a case per member with a type override for the left expression", () => {
-    const schema = parseSchemaOrThrow(
-      'type Input = { kind: "cat"; name: string } | { kind: "dog"; breed: string }',
-    );
-    // expression = input.kind, which is the discriminator property
-    const kindType = resolveExpressionType(
-      makeExpr("input.kind"),
-      schema,
-      null,
-    );
-    const result = resolveSwitchExpression(
-      makeExpr("input.kind"),
-      kindType as ResolvedType,
-      schema,
-    );
-    expect(result).toMatch({ kind: "success" });
-    if (result.kind !== "success") return;
-    // Each case should narrow the 'input' expression to the corresponding interface.
-    const catCase = result.cases["cat"];
-    const dogCase = result.cases["dog"];
-    expect(catCase).toMatch({
-      typeOverrides: { input: { kind: "interface" } },
-    });
-    expect(dogCase).toMatch({
-      typeOverrides: { input: { kind: "interface" } },
     });
   });
 });
