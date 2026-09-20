@@ -466,7 +466,7 @@ class TemplateParser {
           if (seenOptions.has(caseSpan.text)) {
             this.errors.push({
               span: attrs.attributes.case.value,
-              message: `Duplicate case '${caseSpan}'`,
+              message: `Duplicate case '${caseSpan.text}'`,
             });
           }
           seenOptions.add(caseSpan.text);
