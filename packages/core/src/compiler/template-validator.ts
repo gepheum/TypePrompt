@@ -427,13 +427,16 @@ function verifyVariantFieldNotSet(
 ): readonly InternalError[] {
   const errors: InternalError[] = [];
   for (const example of (examples as StrictJsonArray).elements) {
-    const variantEntry = (example as StrictJsonObject).entries["variant"];
-    if (variantEntry) {
-      errors.push({
-        span: variantEntry.key.firstToken,
-        message:
-          "Examples must not specify 'variant' when within a <variant> element",
-      });
+    const inputEntry = (example as StrictJsonObject).entries["input"];
+    if (inputEntry && inputEntry.value.kind === "object") {
+      const variantEntry = inputEntry.value.entries["variant"];
+      if (variantEntry) {
+        errors.push({
+          span: variantEntry.key.firstToken,
+          message:
+            "Examples must not specify 'variant' when within a <variant> element",
+        });
+      }
     }
   }
   return errors;

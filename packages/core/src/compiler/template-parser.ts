@@ -249,6 +249,7 @@ class TemplateParser {
     );
     for (const [tag, child] of children) {
       switch (tag) {
+        case "meta":
         case "system":
         case "user":
         case "examples": {

@@ -55,7 +55,6 @@
               revenueCents: 180000
               region: east
           question: "Which product generated the most revenue?"
-          variant: csv
         output:
           analysis: Widget B leads in revenue at $3,400 despite lower unit volume.
           topProduct: Widget B
@@ -92,7 +91,6 @@
               revenueCents: 180000
               region: east
           question: "Which product generated the most revenue?"
-          variant: tsv
         output:
           analysis: Widget B leads in revenue at $3,400 despite lower unit volume.
           topProduct: Widget B

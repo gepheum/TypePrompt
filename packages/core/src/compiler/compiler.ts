@@ -60,6 +60,9 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
     " at the top level",
     result.parseErrors,
   );
+  if (topLevelNodes.length <= 0) {
+    return result;
+  }
   const [tag, topLevelNode] = topLevelNodes[0]!;
   switch (tag) {
     case "template": {
