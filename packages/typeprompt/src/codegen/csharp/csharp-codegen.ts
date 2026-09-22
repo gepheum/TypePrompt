@@ -1259,9 +1259,9 @@ function wrapXmlDoc(
   }
 
   return [
-    " /// <summary>",
-    ...contentLines.map((line) => ` /// ${line}`),
-    " /// </summary>",
+    "/// <summary>",
+    ...contentLines.map((line) => (line ? `/// ${line}` : "///")),
+    "/// </summary>",
   ];
 }
 

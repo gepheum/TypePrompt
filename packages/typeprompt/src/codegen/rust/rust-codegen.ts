@@ -827,7 +827,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     if (!options.file) {
       lines.push(`// Exported as '${typePrefix}${name}'`);
     }
-    lines.push(...wrapRustDoc(namingHint.doc));
+    lines.push(...commentify(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(writeTypepromptInterface(type, name, schema, options));
@@ -866,7 +866,7 @@ function writeTypepromptInterface(
     const rawFieldName = field.name.text;
     const rustName = toRustName(toSnakeCase(rawFieldName));
     const fieldType = writeType(type, schema, options);
-    lines.push(...wrapRustDoc(field.doc));
+    lines.push(...commentify(field.doc));
     const serdeAttrs: string[] = [];
     if (rawFieldName !== rustName) {
       serdeAttrs.push(`rename = "${rawFieldName}"`);
@@ -1034,7 +1034,7 @@ function writeTypepromptUnion(
           const rustName = toRustName(toSnakeCase(member.name));
           const type = writeType(member.type, schema, options);
           if (member.doc) {
-            lines.push(...wrapRustDoc(member.doc));
+            lines.push(...commentify(member.doc));
           }
           lines.push(`${vis}fn ${rustName}(&self) -> &${type} {`);
           lines.push("match self {");
@@ -1155,10 +1155,10 @@ function toRustName(name: string): string {
     : name;
 }
 
-function wrapRustDoc(doc: string): readonly string[] {
+function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  return lines.map((l) => `/// ${l}`);
+  return lines.map((l) => (l ? `/// ${l}` : "///"));
 }
 
 function reformat(code: string): string {

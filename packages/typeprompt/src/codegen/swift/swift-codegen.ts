@@ -801,7 +801,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     if (typePrefix !== "Spec.") {
       lines.push(`// Exported as '${typePrefix}${name}'`);
     }
-    lines.push(...wrapDocComment(namingHint.doc));
+    lines.push(...commentify(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(writeTypepromptInterface(type, name, schema, options));
@@ -832,7 +832,7 @@ function writeTypepromptInterface(
     const { type } = field;
     const swiftName = toSwiftName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    lines.push(...wrapDocComment(field.doc));
+    lines.push(...commentify(field.doc));
     lines.push(`public let ${swiftName}: ${fieldType}`);
   }
 
@@ -912,7 +912,7 @@ function writeTypepromptUnion(
         const type = writeType(commonField.type, schema, options);
         lines.push("");
         lines.push(
-          ...wrapDocComment(commonField.doc ?? ""),
+          ...commentify(commonField.doc ?? ""),
           `public var ${name}: ${type} {`,
           "switch self {",
         );
@@ -1090,10 +1090,10 @@ function toSwiftName(name: string): string {
       : name;
 }
 
-function wrapDocComment(doc: string): readonly string[] {
+function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  return lines.map((l) => `/// ${l}`);
+  return lines.map((l) => (l ? `/// ${l}` : "///"));
 }
 
 function reformat(code: string): string {

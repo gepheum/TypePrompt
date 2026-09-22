@@ -695,7 +695,7 @@ function writeSchema(
   const lines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
-    lines.push(...wrapDocComment(namingHint.doc));
+    lines.push(...commentify(namingHint.doc));
     switch (type.kind) {
       case "interface": {
         lines.push(
@@ -740,7 +740,7 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const dartName = toDartName(field.name.text);
     const fieldType = writeType(type, schema, options);
-    lines.push(...wrapDocComment(field.doc));
+    lines.push(...commentify(field.doc));
     if (unionContext.overrideFields.has(field)) {
       lines.push("@override");
     }
@@ -879,7 +879,7 @@ function writeTypepromptUnion(
         if (isLiteralType(commonField.type)) continue;
         const type = writeType(commonField.type, schema, options);
         lines.push(
-          ...wrapDocComment(commonField.doc ?? ""),
+          ...commentify(commonField.doc ?? ""),
           `${type} get ${name};`,
         );
       }
@@ -1209,10 +1209,10 @@ function toDartName(name: string): string {
   return RESERVED_NAMES.has(name) ? name.concat("_") : name;
 }
 
-function wrapDocComment(doc: string): readonly string[] {
+function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  return lines.map((l) => `/// ${l}`);
+  return lines.map((l) => (l ? `/// ${l}` : "///"));
 }
 
 function reformat(code: string): string {
