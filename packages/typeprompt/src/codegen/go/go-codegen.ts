@@ -49,16 +49,20 @@ export function generateGoCode(
   return [
     {
       path: goConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, goConfig),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  config: { readonly package: string },
+): string {
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
     [
+      `package ${config.package}`,
       // STATIC_SNIPPETS["go-top-level"],
       // STATIC_SNIPPETS["go-imports"],
       // reformat(writePromptsClass(compilationResult)),
@@ -727,23 +731,21 @@ function writeTypepromptInterface(
   typeName: string,
   schema: Schema,
   options: WriteSchemaOptions,
-  unionContext: UnionContext,
+  _unionContext: UnionContext,
 ): string {
   const { typePrefix } = options;
   const className = typePrefix.concat(typeName);
 
-  const interfaces = unionContext.intMemberToUnionRefs.get(type);
-  const implementsClause = interfaces
-    ? " implements ".concat(interfaces.join(", "))
-    : "";
-
-  const lines = [`final class ${className}${implementsClause} {`];
+  const lines = [`type ${className} struct {`];
   const fields = Object.values(type.fields);
-  const hasNonLiteralFields = fields.some(
+  const nonLiteralFields = fields.filter(
     (f) => !isLiteralType(resolveType(f.type, schema)),
   );
 
-  for (const _field of fields) {
+  for (const field of nonLiteralFields) {
+    const rawName = field.name.text;
+    const goFieldName = toGoFieldName(rawName);
+    lines.push(`${goFieldName} string`);
     // const type = resolveType(field.type, schema);
     // if (isLiteralType(type)) continue;
     // const dartName = toDartName(field.name.text);
@@ -755,78 +757,8 @@ function writeTypepromptInterface(
     // lines.push(`final ${fieldType} ${dartName};`);
   }
   lines.push("");
-  if (hasNonLiteralFields) {
-    lines.push(`${className}({`);
-    for (const _field of fields) {
-      // const type = resolveType(field.type, schema);
-      // if (isLiteralType(type)) continue;
-      // const dartName = toDartName(field.name.text);
-      // const isOptional = type.kind === "optional";
-      // const required = isOptional ? "" : "required ";
-      // lines.push(`${required}this.${dartName},`);
-    }
-    lines.push("});");
-  } else {
-    lines.push(`${className}();`);
-  }
-  lines.push("");
-  if (interfaces) {
-    lines.push("@override");
-  }
-  lines.push("Map<String, dynamic> toJson() {");
-  lines.push("return {");
-  for (const _field of fields) {
-    // const rawName = field.name.text;
-    // const dartName = toDartName(rawName);
-    // const resolvedFieldType = resolveType(field.type, schema);
-    // if (isLiteralType(resolvedFieldType)) {
-    //   const value = JSON.stringify(
-    //     resolvedFieldType.value satisfies string | boolean,
-    //   );
-    //   lines.push(`"${rawName}": ${value},`);
-    // } else {
-    //   const toJsonExpr = writeToJsonExpr(
-    //     resolvedFieldType,
-    //     dartName,
-    //     schema,
-    //     options,
-    //   );
-    //   lines.push(`"${rawName}": ${toJsonExpr},`);
-    // }
-  }
-  lines.push(
-    "};", // Map literal
-    "}", // toJson()
-    "",
-  );
-  lines.push(
-    "@override",
-    "String toString() {",
-    'return JsonEncoder.withIndent("  ").convert(toJson());',
-    "}",
-    "",
-  );
-  lines.push(
-    `factory ${className}.fromJson(Map<String, dynamic> json) {`,
-    `return ${className}(`,
-  );
-  for (const _field of fields) {
-    // const type = resolveType(field.type, schema);
-    // if (isLiteralType(type)) continue;
-    // const rawName = field.name.text;
-    // const dartName = toDartName(rawName);
-    // const valueExpr = `json["${field.name.text}"]`;
-    // const valueFromJsonExpr = writeFromJsonExpr(
-    //   type,
-    //   valueExpr,
-    //   schema,
-    //   options,
-    // );
-    // lines.push(`${dartName}: ${valueFromJsonExpr},`);
-  }
-  lines.push(`);`, `}`);
 
-  lines.push("}"); // class
+  lines.push("}"); // struct
 
   return lines.join("\n");
 }
@@ -1211,6 +1143,13 @@ function makeUnionContext(
     intMemberToStringDiscriminant,
     overrideFields,
   };
+}
+
+function toGoFieldName(rawName: string): string {
+  const capitalized = capitalize(rawName);
+  return capitalized === "MarshalJSON" || capitalized === "UnmarshalJSON"
+    ? capitalized.concat("_")
+    : capitalized;
 }
 
 function commentify(doc: string): readonly string[] {

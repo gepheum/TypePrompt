@@ -4,6 +4,9 @@ gen:
     file: ../../csharp/Gen/PromptsE01.cs
   dart:
     file: ../../dart/lib/gen/prompts_e01.dart
+  go:
+    file: ../../go/prompts_gen.go
+    package: typeprompt
   kotlin:
     file: ../../kotlin/src/main/kotlin/gen/PromptsE01.kt
     package: com.example.prompts_e01
