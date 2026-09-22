@@ -32,9 +32,12 @@ import {
   Interface,
   isLiteralType,
   NamingHint,
+  Optional,
   resolveType,
   Schema,
   toPascalCase,
+  Type,
+  TypeNameView,
   Union,
 } from "@typeprompt/core";
 import type { OutputFile } from "../codegen-types.js";
@@ -739,19 +742,18 @@ function writeTypepromptInterface(
 
   const lines = [`type ${className} struct {`];
   const fields = Object.values(type.fields);
-  const nonLiteralFields = fields.filter(
-    (f) => !isLiteralType(resolveType(f.type, schema)),
-  );
 
-  for (const field of nonLiteralFields) {
+  for (const field of fields) {
+    const { type } = field;
+    if (isLiteralType(type)) continue;
     const rawName = field.name.text;
     const goFieldName = toGoFieldName(rawName);
     lines.push(...commentify(field.doc));
-    lines.push(`${goFieldName} string`);
+    const fieldType = writeType(type, schema, options);
+    lines.push(`${goFieldName} ${fieldType}`);
     // const type = resolveType(field.type, schema);
     // if (isLiteralType(type)) continue;
     // const dartName = toDartName(field.name.text);
-    // const fieldType = writeType(type, schema, options);
     // lines.push(...commentify(field.doc));
     // if (unionContext.overrideFields.has(field)) {
     //   lines.push("@override");
@@ -830,62 +832,61 @@ function writeTypepromptUnion(
   return lines.join("\n");
 }
 
-// function writeType(
-//     type: Type | TypeNameView | Optional,
-//     schema: Schema,
-//     options: WriteSchemaOptions,
-// ): string {
-//     switch (type.kind) {
-//         case "any": {
-//             return "dynamic";
-//         }
-//         case "array": {
-//             const { elementType } = type;
-//             const writtenElement = writeType(elementType, schema, options);
-//             return `List<${writtenElement}>`;
-//         }
-//         case "interface":
-//         case "union": {
-//             let namingHint = schema.namingHints.defaultScope.get(type);
-//             let { typePrefix } = options;
-//             if (!namingHint) {
-//                 namingHint = schema.namingHints.shared.get(type)!;
-//                 typePrefix = options.sharedTypePrefix!;
-//             }
-//             return typePrefix.concat(makeNameFromHint(namingHint));
-//         }
-//         case "optional": {
-//             const innerType = resolveType(type.innerType, schema);
-//             return innerType.kind === "any"
-//                 ? "dynamic"
-//                 : writeType(innerType, schema, options).concat("?");
-//         }
-//         case "primitive": {
-//             if (type.primitive.text === "integer") {
-//                 return "int";
-//             } else {
-//                 switch (type.primitive.text) {
-//                     case "boolean":
-//                         return "bool";
-//                     case "string":
-//                         return "String";
-//                     case "number":
-//                         return "double";
-//                     default:
-//                         throw new Error(type.primitive.text satisfies never);
-//                 }
-//             }
-//         }
-//         case "record": {
-//             return `Map<String, ${writeType(type.valueType, schema, options)}>`;
-//         }
-//         case "shared-type-name":
-//         case "type-name": {
-//             const resolvedType = resolveType(type, schema);
-//             return writeType(resolvedType, schema, options);
-//         }
-//     }
-// }
+function writeType(
+  type: Type | TypeNameView | Optional,
+  schema: Schema,
+  options: WriteSchemaOptions,
+): string {
+  switch (type.kind) {
+    case "any": {
+      return "any";
+    }
+    case "array": {
+      const { elementType } = type;
+      return "[]".concat(writeType(elementType, schema, options));
+    }
+    case "interface":
+    case "union": {
+      let namingHint = schema.namingHints.defaultScope.get(type);
+      let { typePrefix } = options;
+      if (!namingHint) {
+        namingHint = schema.namingHints.shared.get(type)!;
+        typePrefix = options.sharedTypePrefix!;
+      }
+      return typePrefix.concat(makeNameFromHint(namingHint));
+    }
+    case "optional": {
+      const innerType = resolveType(type.innerType, schema);
+      return (innerType.kind === "any" || innerType.kind === "array")
+        ? writeType(innerType, schema, options)
+        : "*".concat(writeType(innerType, schema, options));
+    }
+    case "primitive": {
+      if (type.primitive.text === "integer") {
+        return "int";
+      } else {
+        switch (type.primitive.text) {
+          case "boolean":
+            return "bool";
+          case "string":
+            return "string";
+          case "number":
+            return "float64";
+          default:
+            throw new Error(type.primitive.text satisfies never);
+        }
+      }
+    }
+    case "record": {
+      return "map[string]".concat(writeType(type.valueType, schema, options));
+    }
+    case "shared-type-name":
+    case "type-name": {
+      const resolvedType = resolveType(type, schema);
+      return writeType(resolvedType, schema, options);
+    }
+  }
+}
 
 // function writeToJsonExpr(
 //     type: Type | Optional,
