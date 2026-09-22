@@ -1,6 +1,7 @@
 package typeprompt
 
 // An expression
+type Shared_Expr struct {}
 
 type Shared_Expr_KindNumber struct {
   Value string
@@ -17,13 +18,19 @@ type Shared_Expr_KindIf struct {
   Else string
 }
 
+type Shared_EnumWithCommonFields struct {}
+
 type Shared_EnumWithCommonFields_NotSuccess struct {
+  // x coordinate
   X string
+  // y coordinate
   Y string
+  // z coordinate
   Z string
 }
 
 type Shared_EnumWithCommonFields_Success struct {
+  // x coordinate
   X string
   Y string
   Z string
@@ -61,6 +68,14 @@ type Shared_Square struct {
   Self string
 }
 
+type Shared_E string
+
+const (
+  Shared_E_Class Shared_E = "class"
+  Shared_E_If Shared_E = "if"
+  Shared_E_FooBar Shared_E = "foo-BAR"
+)
+
 type Shared_Matrix struct {
   Matrix string
   OtherMatrix string
@@ -69,6 +84,8 @@ type Shared_Matrix struct {
   Init string
   Encode string
 }
+
+type Shared_MatrixUnion struct {}
 
 type Shared_MatrixUnion_KindEmpty struct {
   Init string
@@ -88,6 +105,8 @@ type MyTemplate_Output struct {
   Shape string
 }
 
+type MyTemplate_Output_Shape struct {}
+
 type MyTemplate_Output_Shape_KindCircle struct {
   Radius string
 }
@@ -96,6 +115,8 @@ type MyOtherTemplate_Output struct {
   ReversedText string
   Shape string
 }
+
+type MyOtherTemplate_Output_Shape struct {}
 
 type MyOtherTemplate_Output_Shape_KindCircle struct {
   Radius string
@@ -113,6 +134,13 @@ type AnalyzeSalesData_Input struct {
   Question string
   Variant string
 }
+
+type AnalyzeSalesData_Input_Variant string
+
+const (
+  AnalyzeSalesData_Input_Variant_Csv AnalyzeSalesData_Input_Variant = "csv"
+  AnalyzeSalesData_Input_Variant_Tsv AnalyzeSalesData_Input_Variant = "tsv"
+)
 
 type AnalyzeSalesData_Output struct {
   Analysis string

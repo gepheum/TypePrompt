@@ -873,7 +873,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const discriminator = members.discriminator;
-      lines.push(`sealed class ${typePrefix}${typeName} {`);
+      lines.push(`sealed class ${className} {`);
       for (const commonField of members.commonFields) {
         const name = toDartName(commonField.name);
         if (isLiteralType(commonField.type)) continue;
