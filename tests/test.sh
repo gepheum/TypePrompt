@@ -83,3 +83,9 @@ cd ..
 cd dart
 dart test
 cd ..
+
+# Run Go unit tests
+cd go
+go test ./...
+cd ..
+

@@ -6,6 +6,8 @@ import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { parseBody, parseToolDescription } from "./body-parser.js";
 
+import type { Body, ToolDescription } from "./compiler-types.js";
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -23,14 +25,17 @@ function parseElement(xml: string): ElementNode {
 function testParseBody(
   xml: string,
   options: { hasValContext: boolean } = { hasValContext: false },
-) {
+): { body: Body<boolean>; errors: InternalError[] } {
   const root = parseElement(xml);
   const errors: InternalError[] = [];
   const body = parseBody(root, errors, options);
   return { body, errors };
 }
 
-function testParseToolDescription(xml: string) {
+function testParseToolDescription(xml: string): {
+  description: ToolDescription;
+  errors: InternalError[];
+} {
   const root = parseElement(xml);
   const errors: InternalError[] = [];
   const description = parseToolDescription(root, errors);

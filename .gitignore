@@ -13,6 +13,8 @@ tests/dart/.packages
 tests/dart/build/
 tests/dart/lib/gen/
 
+tests/go/gen/
+
 tests/kotlin/.gradle/
 tests/kotlin/.kotlin/
 tests/kotlin/build/

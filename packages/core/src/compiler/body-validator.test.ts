@@ -80,7 +80,7 @@ function testValidateBody(args: {
   readonly tools?: { readonly [name: string]: TemplateTool };
   readonly context?: ExpressionContext | null;
   readonly hasValContext?: boolean;
-}) {
+}): { errors: readonly InternalError[] } {
   const hasValContext = args.hasValContext ?? false;
   const root = parseElement(args.bodyXml);
   const parseErrors: InternalError[] = [];
@@ -103,7 +103,7 @@ function testValidateBody(args: {
 function testValidateToolDescription(args: {
   readonly descXml: string;
   readonly schemaSource: string;
-}) {
+}): { errors: readonly InternalError[] } {
   const root = parseElement(args.descXml);
   const parseErrors: InternalError[] = [];
   const description = parseToolDescription(root, parseErrors);

@@ -10,6 +10,7 @@ import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import type {
   SchemaOrError,
+  TemplateValidationResult,
   Tool,
   ToolValidationResult,
 } from "./compiler-types.js";
@@ -73,7 +74,7 @@ function testValidateTemplate(args: {
   readonly namespaceSchemaSource?: string;
   readonly namespaceTools?: { readonly [name: string]: ToolValidationResult };
   readonly path?: string;
-}) {
+}): TemplateValidationResult {
   const path = args.path ?? "prompts/Translate.xml";
   const root = parseElement(args.templateXml);
   const parsedTemplate = parseTemplate(root, path);
