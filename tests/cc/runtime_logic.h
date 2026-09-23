@@ -373,6 +373,17 @@ class JsonNode {
   }
 };
 
+template <typename T>
+ParseResult<T> ParseJsonNode(const JsonNode& node) {
+  T result{};
+  ParseStatus status = ParseJsonNode(node, result);
+  if (status.ok()) {
+    return std::move(result);
+  } else {
+    return std::move(status).error();
+  }
+}
+
 inline JsonNode ToJsonNode(const JsonNode& node) { return node; }
 inline JsonNode ToJsonNode(bool value) { return JsonNode(value); }
 inline JsonNode ToJsonNode(int value) { return JsonNode(value); }

@@ -1,6 +1,5 @@
 #include "runtime_logic.h"
 
-#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
