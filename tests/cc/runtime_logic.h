@@ -20,7 +20,6 @@ namespace typeprompt {
 
 struct ParseError {
   std::string message;
-  size_t pos = 0;
 };
 
 template <typename T>
@@ -1493,6 +1492,12 @@ class JsonParser {
   std::string_view input_;
   size_t pos_ = 0;
 
+  static ParseError Error(std::string msg, size_t pos) {
+    return ParseError{std::move(msg) + " at position " + std::to_string(pos)};
+  }
+
+  static ParseError Error(std::string msg) { return ParseError{std::move(msg)}; }
+
   void SkipWhitespace() {
     while (pos_ < input_.size()) {
       char c = input_[pos_];
@@ -1532,7 +1537,7 @@ class JsonParser {
   ParseResult<JsonNode> ParseRoot() {
     SkipWhitespace();
     if (pos_ >= input_.size()) {
-      return ParseError{"Empty input", 0};
+      return Error("Empty input");
     }
     auto res = ParseValue();
     if (std::holds_alternative<ParseError>(res)) {
@@ -1540,7 +1545,7 @@ class JsonParser {
     }
     SkipWhitespace();
     if (pos_ < input_.size()) {
-      return ParseError{"Unexpected trailing content after JSON value", pos_};
+      return Error("Unexpected trailing content after JSON value", pos_);
     }
     return res;
   }
@@ -1548,7 +1553,7 @@ class JsonParser {
   ParseResult<JsonNode> ParseValue() {
     SkipWhitespace();
     if (pos_ >= input_.size()) {
-      return ParseError{"Unexpected end of input", pos_};
+      return Error("Unexpected end of input");
     }
     char c = input_[pos_];
     switch (c) {
@@ -1577,7 +1582,7 @@ class JsonParser {
       case '9':
         return ParseNumber();
       default:
-        return ParseError{std::string("Unexpected character: '") + c + "'", pos_};
+        return Error(std::string("Unexpected character: '") + c + "'", pos_);
     }
   }
 
@@ -1587,7 +1592,7 @@ class JsonParser {
       pos_ += 4;
       return JsonNode(std::nullopt);
     }
-    return ParseError{"Expected 'null'", start};
+    return Error("Expected 'null'", start);
   }
 
   ParseResult<JsonNode> ParseTrue() {
@@ -1596,7 +1601,7 @@ class JsonParser {
       pos_ += 4;
       return JsonNode(true);
     }
-    return ParseError{"Expected 'true'", start};
+    return Error("Expected 'true'", start);
   }
 
   ParseResult<JsonNode> ParseFalse() {
@@ -1605,7 +1610,7 @@ class JsonParser {
       pos_ += 5;
       return JsonNode(false);
     }
-    return ParseError{"Expected 'false'", start};
+    return Error("Expected 'false'", start);
   }
 
   ParseResult<JsonNode> ParseNumber() {
@@ -1614,25 +1619,25 @@ class JsonParser {
       ++pos_;
     }
     if (pos_ >= input_.size()) {
-      return ParseError{"Expected digit after '-'", start};
+      return Error("Expected digit after '-'", start);
     }
     if (input_[pos_] == '0') {
       ++pos_;
       if (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
-        return ParseError{"Invalid leading zero in number", start};
+        return Error("Invalid leading zero in number", start);
       }
     } else if (input_[pos_] >= '1' && input_[pos_] <= '9') {
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
       }
     } else {
-      return ParseError{"Expected digit for number", start};
+      return Error("Expected digit for number", start);
     }
 
     if (pos_ < input_.size() && input_[pos_] == '.') {
       ++pos_;
       if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
-        return ParseError{"Expected digit after '.'", start};
+        return Error("Expected digit after '.'", start);
       }
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
@@ -1645,7 +1650,7 @@ class JsonParser {
         ++pos_;
       }
       if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
-        return ParseError{"Expected digit for exponent", start};
+        return Error("Expected digit for exponent", start);
       }
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
@@ -1656,7 +1661,7 @@ class JsonParser {
     char* end_ptr = nullptr;
     double val = std::strtod(s.c_str(), &end_ptr);
     if (end_ptr != s.c_str() + s.size()) {
-      return ParseError{"Invalid number format", start};
+      return Error("Invalid number format", start);
     }
     return JsonNode(val);
   }
@@ -1664,7 +1669,7 @@ class JsonParser {
   ParseResult<std::string> ParseRawString() {
     size_t start = pos_;
     if (pos_ >= input_.size() || input_[pos_] != '"') {
-      return ParseError{"Expected '\"'", start};
+      return Error("Expected '\"'", start);
     }
     ++pos_;
     std::string result;
@@ -1675,7 +1680,7 @@ class JsonParser {
       }
       if (c == '\\') {
         if (pos_ >= input_.size()) {
-          return ParseError{"Unterminated escape sequence in string", pos_ - 1};
+          return Error("Unterminated escape sequence in string", pos_ - 1);
         }
         char esc = input_[pos_++];
         switch (esc) {
@@ -1705,49 +1710,49 @@ class JsonParser {
             break;
           case 'u': {
             if (pos_ + 4 > input_.size()) {
-              return ParseError{"Incomplete unicode escape sequence", pos_ - 2};
+              return Error("Incomplete unicode escape sequence", pos_ - 2);
             }
             uint32_t cp = 0;
             for (int i = 0; i < 4; ++i) {
               int h = HexDigit(input_[pos_++]);
               if (h < 0) {
-                return ParseError{"Invalid hex digit in unicode escape", pos_ - 1};
+                return Error("Invalid hex digit in unicode escape", pos_ - 1);
               }
               cp = (cp << 4) | static_cast<uint32_t>(h);
             }
             if (cp >= 0xD800 && cp <= 0xDBFF) {
               if (pos_ + 6 > input_.size() || input_[pos_] != '\\' || input_[pos_ + 1] != 'u') {
-                return ParseError{"Expected low surrogate after high surrogate", pos_};
+                return Error("Expected low surrogate after high surrogate", pos_);
               }
               pos_ += 2;
               uint32_t lo = 0;
               for (int i = 0; i < 4; ++i) {
                 int h = HexDigit(input_[pos_++]);
                 if (h < 0) {
-                  return ParseError{"Invalid hex digit in unicode escape", pos_ - 1};
+                  return Error("Invalid hex digit in unicode escape", pos_ - 1);
                 }
                 lo = (lo << 4) | static_cast<uint32_t>(h);
               }
               if (lo < 0xDC00 || lo > 0xDFFF) {
-                return ParseError{"Invalid low surrogate in unicode escape", pos_ - 4};
+                return Error("Invalid low surrogate in unicode escape", pos_ - 4);
               }
               cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
             } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
-              return ParseError{"Unpaired low surrogate in unicode escape", pos_ - 4};
+              return Error("Unpaired low surrogate in unicode escape", pos_ - 4);
             }
             AppendUtf8(cp, result);
             break;
           }
           default:
-            return ParseError{std::string("Invalid escape character: '\\") + esc + "'", pos_ - 2};
+            return Error(std::string("Invalid escape character: '\\") + esc + "'", pos_ - 2);
         }
       } else if (c < 0x20) {
-        return ParseError{"Unescaped control character in string", pos_ - 1};
+        return Error("Unescaped control character in string", pos_ - 1);
       } else {
         result += static_cast<char>(c);
       }
     }
-    return ParseError{"Unterminated string", start};
+    return Error("Unterminated string", start);
   }
 
   ParseResult<JsonNode> ParseStringNode() {
@@ -1771,7 +1776,7 @@ class JsonParser {
     while (true) {
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return ParseError{"Unterminated array", start};
+        return Error("Unterminated array", start);
       }
       auto val_res = ParseValue();
       if (std::holds_alternative<ParseError>(val_res)) {
@@ -1781,7 +1786,7 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return ParseError{"Unterminated array", start};
+        return Error("Unterminated array", start);
       }
       char c = input_[pos_++];
       if (c == ']') {
@@ -1789,10 +1794,10 @@ class JsonParser {
       } else if (c == ',') {
         SkipWhitespace();
         if (pos_ < input_.size() && input_[pos_] == ']') {
-          return ParseError{"Trailing comma in array", pos_ - 1};
+          return Error("Trailing comma in array", pos_ - 1);
         }
       } else {
-        return ParseError{std::string("Expected ',' or ']' in array, got '") + c + "'", pos_ - 1};
+        return Error(std::string("Expected ',' or ']' in array, got '") + c + "'", pos_ - 1);
       }
     }
     return JsonNode(std::move(elements));
@@ -1811,10 +1816,10 @@ class JsonParser {
     while (true) {
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return ParseError{"Unterminated object", start};
+        return Error("Unterminated object", start);
       }
       if (input_[pos_] != '"') {
-        return ParseError{"Expected string key in object", pos_};
+        return Error("Expected string key in object", pos_);
       }
       auto key_res = ParseRawString();
       if (std::holds_alternative<ParseError>(key_res)) {
@@ -1824,7 +1829,7 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size() || input_[pos_] != ':') {
-        return ParseError{"Expected ':' after key in object", pos_};
+        return Error("Expected ':' after key in object", pos_);
       }
       ++pos_;  // consume ':'
 
@@ -1837,7 +1842,7 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return ParseError{"Unterminated object", start};
+        return Error("Unterminated object", start);
       }
       char c = input_[pos_++];
       if (c == '}') {
@@ -1845,10 +1850,10 @@ class JsonParser {
       } else if (c == ',') {
         SkipWhitespace();
         if (pos_ < input_.size() && input_[pos_] == '}') {
-          return ParseError{"Trailing comma in object", pos_ - 1};
+          return Error("Trailing comma in object", pos_ - 1);
         }
       } else {
-        return ParseError{std::string("Expected ',' or '}' in object, got '") + c + "'", pos_ - 1};
+        return Error(std::string("Expected ',' or '}' in object, got '") + c + "'", pos_ - 1);
       }
     }
     return JsonNode(std::move(entries));

@@ -1495,16 +1495,23 @@ void TestParseJsonErrors() {
   auto assert_error = [](std::string_view json) {
     auto r = JsonNode::ParseJson(json);
     ASSERT_TRUE(std::holds_alternative<ParseError>(r));
+    ASSERT_FALSE(std::get<ParseError>(r).message.empty());
+  };
+
+  auto assert_error_msg = [](std::string_view json, std::string_view expected_msg) {
+    auto r = JsonNode::ParseJson(json);
+    ASSERT_TRUE(std::holds_alternative<ParseError>(r));
+    ASSERT_EQ(std::get<ParseError>(r).message, expected_msg);
   };
 
   // Empty / whitespace only
-  assert_error("");
-  assert_error("   \t\n\r");
+  assert_error_msg("", "Empty input");
+  assert_error_msg("   \t\n\r", "Empty input");
 
   // Trailing garbage
-  assert_error("123 abc");
-  assert_error("[1] trailing");
-  assert_error("true false");
+  assert_error_msg("123 abc", "Unexpected trailing content after JSON value at position 4");
+  assert_error_msg("[1] trailing", "Unexpected trailing content after JSON value at position 4");
+  assert_error_msg("true false", "Unexpected trailing content after JSON value at position 5");
   assert_error("{} {}");
 
   // Invalid numbers
