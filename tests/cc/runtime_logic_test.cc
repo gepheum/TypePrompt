@@ -1606,6 +1606,207 @@ void TestParseJsonRoundtrip() {
   ASSERT_TRUE(!yaml.empty());
 }
 
+void TestNonZeroTerminatedStringViews() {
+  // Construct a buffer without null terminators at slice boundaries
+  std::string buffer = "AAAAhelloBBBB\"world\"CCCC12345DDDDtrueEEEE";
+
+  // Slice 1: "hello"
+  std::string_view sv_hello(buffer.data() + 4, 5);
+  JsonNode node_hello(sv_hello);
+  ASSERT_EQ(node_hello.AsString(), "hello");
+  ASSERT_EQ(node_hello.ToJson(), "\"hello\"");
+  ASSERT_EQ(node_hello.ToToon(), "hello");
+  ASSERT_EQ(node_hello.ToYaml(), "hello");
+
+  // Slice 2: "\"world\"" parsed as JSON
+  std::string_view sv_world(buffer.data() + 13, 7);
+  auto parse_res = JsonNode::ParseJson(sv_world);
+  ASSERT_TRUE(std::holds_alternative<JsonNode>(parse_res));
+  ASSERT_EQ(std::get<JsonNode>(parse_res).AsString(), "world");
+
+  // Slice 3: "12345" parsed as JSON
+  std::string_view sv_num(buffer.data() + 24, 5);
+  auto num_res = JsonNode::ParseJson(sv_num);
+  ASSERT_TRUE(std::holds_alternative<JsonNode>(num_res));
+  ASSERT_EQ(std::get<JsonNode>(num_res).AsNumber(), 12345.0);
+
+  // Escaping in non-null-terminated slices with control chars
+  char raw_ctrl[] = {'X', 'Y', '\n', '\t', '"', '\\', 'Z', 'W'};
+  std::string_view sv_ctrl(raw_ctrl + 2, 4);  // "\n\t\"\\"
+  JsonNode node_ctrl(sv_ctrl);
+  ASSERT_EQ(node_ctrl.ToJson(), "\"\\n\\t\\\"\\\\\"");
+  ASSERT_EQ(node_ctrl.ToToon(), "\"\\n\\t\\\"\\\\\"");
+  ASSERT_EQ(node_ctrl.ToYaml(), "\"\\n\\t\\\"\\\\\"");
+}
+
+void TestDeepNestingProtection() {
+  // Test deeply nested arrays (e.g. 1500 levels) to verify no stack overflow
+  std::string deep_arr;
+  for (int i = 0; i < 1500; ++i) deep_arr += '[';
+  for (int i = 0; i < 1500; ++i) deep_arr += ']';
+
+  auto res_arr = JsonNode::ParseJson(deep_arr);
+  ASSERT_TRUE(std::holds_alternative<ParseError>(res_arr));
+  ASSERT_TRUE(std::get<ParseError>(res_arr).message.find("maximum nesting depth") !=
+              std::string::npos);
+
+  // Deeply nested objects
+  std::string deep_obj;
+  for (int i = 0; i < 1500; ++i) deep_obj += "{\"k\":";
+  deep_obj += "1";
+  for (int i = 0; i < 1500; ++i) deep_obj += "}";
+
+  auto res_obj = JsonNode::ParseJson(deep_obj);
+  ASSERT_TRUE(std::holds_alternative<ParseError>(res_obj));
+  ASSERT_TRUE(std::get<ParseError>(res_obj).message.find("maximum nesting depth") !=
+              std::string::npos);
+}
+
+void TestMalformedUtf8AndUnicodeSurrogates() {
+  // Truncated multi-byte UTF-8
+  ASSERT_EQ(JsonNode(std::string_view("\xC0")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\xA0")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x90\x80")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xFF")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\x80")).AsString(), "\xEF\xBF\xBD");
+
+  // Overlong UTF-8
+  ASSERT_EQ(JsonNode(std::string_view("\xC0\xAF")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\x80\xAF")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x80\x80\xAF")).AsString(), "\xEF\xBF\xBD");
+
+  // UTF-8 encoded surrogates (U+D800 .. U+DFFF)
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xA0\x80")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xBF\xBF")).AsString(), "\xEF\xBF\xBD");
+
+  // Codepoints > U+10FFFF
+  ASSERT_EQ(JsonNode(std::string_view("\xF4\x90\x80\x80")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF5\x80\x80\x80")).AsString(), "\xEF\xBF\xBD");
+
+  // JSON unicode surrogate pairs
+  // Valid surrogate pair for musical symbol G clef U+1D11E (\uD834\uDD1E)
+  auto res_clef = JsonNode::ParseJson("\"\\uD834\\uDD1E\"");
+  ASSERT_TRUE(std::holds_alternative<JsonNode>(res_clef));
+  ASSERT_EQ(std::get<JsonNode>(res_clef).AsString(), "\xF0\x9D\x84\x9E");
+
+  // Invalid: High surrogate followed by non-surrogate or EOF
+  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\"")));
+  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\\u0020\"")));
+  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\\uD834\"")));
+
+  // Invalid: Unpaired low surrogate
+  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uDD1E\"")));
+}
+
+void TestExtremeNumbersAndSpecialValues() {
+  // Very small and very large floating point numbers
+  JsonNode small_num(1e-15);
+  ASSERT_TRUE(!small_num.ToToon().empty());
+  ASSERT_TRUE(!small_num.ToYaml().empty());
+
+  JsonNode large_num(1e25);
+  ASSERT_TRUE(!large_num.ToToon().empty());
+  ASSERT_TRUE(!large_num.ToYaml().empty());
+
+  JsonNode max_num(std::numeric_limits<double>::max());
+  ASSERT_TRUE(!max_num.ToToon().empty());
+  ASSERT_TRUE(!max_num.ToYaml().empty());
+
+  JsonNode min_num(std::numeric_limits<double>::lowest());
+  ASSERT_TRUE(!min_num.ToToon().empty());
+  ASSERT_TRUE(!min_num.ToYaml().empty());
+
+  JsonNode denorm(std::numeric_limits<double>::denorm_min());
+  ASSERT_TRUE(!denorm.ToToon().empty());
+  ASSERT_TRUE(!denorm.ToYaml().empty());
+
+  // Negative zero
+  JsonNode neg_zero(-0.0);
+  ASSERT_EQ(neg_zero.ToToon(), "0");
+  ASSERT_EQ(neg_zero.ToYaml(), "0");
+
+  // Parsing numbers with exponents
+  auto exp1 = JsonNode::ParseJson("1e-5");
+  ASSERT_TRUE(std::holds_alternative<JsonNode>(exp1));
+  ASSERT_EQ(std::get<JsonNode>(exp1).AsNumber(), 1e-5);
+
+  auto exp2 = JsonNode::ParseJson("-0.123e+4");
+  ASSERT_TRUE(std::holds_alternative<JsonNode>(exp2));
+  ASSERT_EQ(std::get<JsonNode>(exp2).AsNumber(), -1230.0);
+}
+
+void TestRobustnessAndEdgeCases() {
+  // Tabular with empty sub-objects
+  JsonNode tabular_with_empty_sub(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"a", JsonNode(std::vector<std::pair<std::string, JsonNode>>{})},
+      }),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"a", JsonNode(std::vector<std::pair<std::string, JsonNode>>{})},
+      }),
+  });
+  // Empty sub-objects cannot form tabular format; fallback to standard list format
+  std::string toon_res = tabular_with_empty_sub.ToToon();
+  ASSERT_TRUE(!toon_res.empty());
+
+  // Object with duplicate keys
+  JsonNode dup_keys(std::vector<std::pair<std::string, JsonNode>>{
+      {"x", JsonNode(1.0)},
+      {"x", JsonNode(2.0)},
+  });
+  ASSERT_TRUE(!dup_keys.ToJson().empty());
+  ASSERT_TRUE(!dup_keys.ToToon().empty());
+  ASSERT_TRUE(!dup_keys.ToYaml().empty());
+
+  // Stress / Fuzz-like variations of JSON syntax to ensure no crash / UB
+  const std::string bad_inputs[] = {
+      "",
+      " ",
+      "   \t\r\n",
+      "\\",
+      "\"",
+      "\x00",
+      "\xFF",
+      "1.",
+      "1.e",
+      "1e",
+      "1e+",
+      "1e-",
+      "-",
+      "+1",
+      "00",
+      "01",
+      "-01",
+      "{\"a\":}",
+      "{:1}",
+      "[,]",
+      "[1,,2]",
+      "[1,2,]",
+      "\"\\u\"",
+      "\"\\u0\"",
+      "\"\\u00\"",
+      "\"\\u000\"",
+      "\"\\u000G\"",
+      "\"\\uD800\\u\"",
+      "\"\\x00\"",
+      "\"\\",
+      "\"hello",
+      "{\"key\"",
+      "{\"key\":",
+      "{\"key\": \"val\"",
+      "truefalse",
+      "null0",
+      "[1] 2",
+      "{\"a\": 1} 3",
+  };
+
+  for (const auto& bad : bad_inputs) {
+    auto res = JsonNode::ParseJson(bad);
+    // Must be ParseError and must not crash/segfault
+    ASSERT_TRUE(std::holds_alternative<ParseError>(res));
+  }
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -1657,6 +1858,12 @@ void TestRuntimeLogic() {
   TestParseJsonObjects();
   TestParseJsonErrors();
   TestParseJsonRoundtrip();
+
+  TestNonZeroTerminatedStringViews();
+  TestDeepNestingProtection();
+  TestMalformedUtf8AndUnicodeSurrogates();
+  TestExtremeNumbersAndSpecialValues();
+  TestRobustnessAndEdgeCases();
 }
 
 int main() {

@@ -249,7 +249,7 @@ class JsonNode {
         break;
       }
       case Type::kObject: {
-        const auto& object = AsObject();
+        const JsonObjectVariant& object = AsObject();
         if (object.empty()) {
           out += "{}";
         } else if (eolIndent.empty()) {
@@ -286,69 +286,43 @@ class JsonNode {
     }
   }
 
-  static void AppendJsonString(const std::string& value, std::string& out) {
+  static void AppendJsonString(std::string_view value, std::string& out) {
     static constexpr char kHexDigits[] = "0123456789ABCDEF";
     out += '"';
-    const char* pos = value.data();
-    const char* const end = pos + value.size();
-    while (true) {
-      const uint8_t byte = static_cast<uint8_t>(*pos++);
+    for (const char c : value) {
+      const uint8_t byte = static_cast<uint8_t>(c);
       if (byte < 0x20) {
-        // A non-printable character.
         switch (byte) {
-          case '\0': {
-            // \0 may indicate the end of the string, but it can also be part of
-            // the string's contents.
-            if (pos > end) {
-              // The end of the input string was reached.
-              out += '"';
-              return;
-            } else {
-              out += {'\\', 'u', '0', '0', '0', '0'};
-              break;
-            }
-          }
-          case '\b': {
-            out += {'\\', 'b'};
+          case '\b':
+            out += "\\b";
             break;
-          }
-          case '\f': {
-            out += {'\\', 'f'};
+          case '\f':
+            out += "\\f";
             break;
-          }
-          case '\n': {
-            out += {'\\', 'n'};
+          case '\n':
+            out += "\\n";
             break;
-          }
-          case '\r': {
-            out += {'\\', 'r'};
+          case '\r':
+            out += "\\r";
             break;
-          }
-          case '\t': {
-            out += {'\\', 't'};
+          case '\t':
+            out += "\\t";
             break;
-          }
-          default: {
-            out += {'\\', 'u', '0', '0', kHexDigits[(byte >> 4) & 0x0F], kHexDigits[byte & 0x0F]};
-          }
+          default:
+            out += "\\u00";
+            out += kHexDigits[(byte >> 4) & 0x0F];
+            out += kHexDigits[byte & 0x0F];
+            break;
         }
+      } else if (byte == '"') {
+        out += "\\\"";
+      } else if (byte == '\\') {
+        out += "\\\\";
       } else {
-        // A printable character.
-        switch (byte) {
-          case '"': {
-            out += {'\\', '"'};
-            break;
-          }
-          case '\\': {
-            out += {'\\', '\\'};
-            break;
-          }
-          default: {
-            out += byte;
-          }
-        }
+        out += c;
       }
     }
+    out += '"';
   }
 };
 
@@ -359,7 +333,7 @@ class ToonFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const auto& obj = root.AsObject();
+        const std::vector<std::pair<std::string, JsonNode>>& obj = root.AsObject();
         if (obj.empty()) {
           return "";
         }
@@ -398,7 +372,7 @@ class ToonFormatter {
         }
       }
       case JsonNode::Type::kArray: {
-        const auto& arr = root.AsArray();
+        const std::vector<JsonNode>& arr = root.AsArray();
         if (arr.empty()) {
           return "[]";
         }
@@ -409,7 +383,7 @@ class ToonFormatter {
           header += ':';
           std::vector<std::string> lines;
           lines.push_back(header);
-          for (const auto& el : arr) {
+          for (const JsonNode& el : arr) {
             std::vector<const JsonNode*> cells;
             ExtractLeafCells(el, fields, cells);
             std::string row = "  ";
@@ -473,10 +447,10 @@ class ToonFormatter {
         s = buffer;
         size_t dot = s.find('.');
         if (dot != std::string::npos) {
-          while (s.back() == '0') {
+          while (!s.empty() && s.back() == '0') {
             s.pop_back();
           }
-          if (s.back() == '.') {
+          if (!s.empty() && s.back() == '.') {
             s.pop_back();
           }
         }
@@ -574,48 +548,34 @@ class ToonFormatter {
   static void AppendEscapedString(std::string_view s, std::string& out) {
     static constexpr char kHexDigitsLower[] = "0123456789abcdef";
     out += '"';
-    const char* pos = s.data();
-    const char* const end = pos + s.size();
-    while (true) {
-      const uint8_t byte = static_cast<uint8_t>(*pos++);
+    for (const char c : s) {
+      const uint8_t byte = static_cast<uint8_t>(c);
       if (byte < 0x20) {
         switch (byte) {
-          case '\0': {
-            if (pos > end) {
-              out += '"';
-              return;
-            } else {
-              out += "\\u0000";
-              break;
-            }
-          }
-          case '\n': {
+          case '\n':
             out += "\\n";
             break;
-          }
-          case '\r': {
+          case '\r':
             out += "\\r";
             break;
-          }
-          case '\t': {
+          case '\t':
             out += "\\t";
             break;
-          }
-          default: {
+          default:
             out += "\\u00";
             out += kHexDigitsLower[(byte >> 4) & 0x0F];
             out += kHexDigitsLower[byte & 0x0F];
             break;
-          }
         }
       } else if (byte == '"') {
         out += "\\\"";
       } else if (byte == '\\') {
         out += "\\\\";
       } else {
-        out += static_cast<char>(byte);
+        out += c;
       }
     }
+    out += '"';
   }
 
   static std::string FormatKey(std::string_view key) {
@@ -656,7 +616,7 @@ class ToonFormatter {
                                   std::vector<TabularField>& fields) {
     if (elements.empty()) return false;
 
-    auto get_node = [](const auto& el) -> const JsonNode& {
+    const auto get_node = [](const auto& el) -> const JsonNode& {
       if constexpr (std::is_pointer_v<std::decay_t<decltype(el)>>) {
         return *el;
       } else {
@@ -763,7 +723,7 @@ class ToonFormatter {
 
   static bool CheckKeyedTabular(const JsonNode& node, std::vector<TabularField>& fields) {
     if (node.type() != JsonNode::Type::kObject) return false;
-    const auto& entries = node.AsObject();
+    const std::vector<std::pair<std::string, JsonNode>>& entries = node.AsObject();
     if (entries.size() < 2) return false;
     std::vector<const JsonNode*> entry_values;
     entry_values.reserve(entries.size());
@@ -778,7 +738,8 @@ class ToonFormatter {
 
   static void ExtractLeafCells(const JsonNode& node, const std::vector<TabularField>& fields,
                                std::vector<const JsonNode*>& cells) {
-    const auto& obj = node.AsObject();
+    if (node.type() != JsonNode::Type::kObject) return;
+    const std::vector<std::pair<std::string, JsonNode>>& obj = node.AsObject();
     const size_t field_count = fields.size();
     if (obj.size() != field_count) return;
 
@@ -811,6 +772,7 @@ class ToonFormatter {
     // 3. Map sorted entries directly to their column positions.
     std::vector<const JsonNode*> row_values(field_count, nullptr);
     for (size_t s = 0; s < field_count; ++s) {
+      if (obj_sorted[s].key != fields_sorted[s].key) return;
       row_values[fields_sorted[s].field_idx] = obj_sorted[s].val;
     }
 
@@ -843,7 +805,7 @@ class ToonFormatter {
   }
 
   static bool IsPrimitiveArray(const std::vector<JsonNode>& arr) {
-    for (const auto& item : arr) {
+    for (const JsonNode& item : arr) {
       if (item.type() == JsonNode::Type::kArray || item.type() == JsonNode::Type::kObject) {
         return false;
       }
@@ -910,7 +872,7 @@ class ToonFormatter {
       AppendFieldList(fields, header);
       header += ':';
       lines.push_back(header);
-      for (const auto& el : arr) {
+      for (const JsonNode& el : arr) {
         std::vector<const JsonNode*> cells;
         ExtractLeafCells(el, fields, cells);
         std::string row = Indent(depth + 1);
@@ -933,7 +895,7 @@ class ToonFormatter {
 
   static void AppendListItems(const std::vector<JsonNode>& arr, int depth,
                               std::vector<std::string>& lines) {
-    for (const auto& item : arr) {
+    for (const JsonNode& item : arr) {
       if (item.type() == JsonNode::Type::kArray) {
         if (item.AsArray().empty()) {
           lines.push_back(Indent(depth) + "- [0]:");
@@ -973,7 +935,7 @@ class ToonFormatter {
       AppendFieldList(fields, header);
       header += ':';
       lines.push_back(header);
-      for (const auto& el : first_v.AsArray()) {
+      for (const JsonNode& el : first_v.AsArray()) {
         std::vector<const JsonNode*> cells;
         ExtractLeafCells(el, fields, cells);
         std::string row = Indent(depth + 2);
@@ -1036,7 +998,7 @@ class YamlFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const auto& obj = root.AsObject();
+        const std::vector<std::pair<std::string, JsonNode>>& obj = root.AsObject();
         if (obj.empty()) {
           return "{}";
         }
@@ -1050,7 +1012,7 @@ class YamlFormatter {
         return res;
       }
       case JsonNode::Type::kArray: {
-        const auto& arr = root.AsArray();
+        const std::vector<JsonNode>& arr = root.AsArray();
         if (arr.empty()) {
           return "[]";
         }
@@ -1092,10 +1054,10 @@ class YamlFormatter {
         s = buffer;
         size_t dot = s.find('.');
         if (dot != std::string::npos) {
-          while (s.back() == '0') {
+          while (!s.empty() && s.back() == '0') {
             s.pop_back();
           }
-          if (s.back() == '.') {
+          if (!s.empty() && s.back() == '.') {
             s.pop_back();
           }
         }
@@ -1112,7 +1074,7 @@ class YamlFormatter {
     }
   }
 
-  static bool EqualsIgnoreCase(const std::string& s, std::string_view target) {
+  static bool EqualsIgnoreCase(std::string_view s, std::string_view target) {
     if (s.size() != target.size()) return false;
     for (size_t i = 0; i < s.size(); ++i) {
       if (std::tolower(static_cast<unsigned char>(s[i])) !=
@@ -1123,14 +1085,14 @@ class YamlFormatter {
     return true;
   }
 
-  static bool IsYamlKeyword(const std::string& s) {
+  static bool IsYamlKeyword(std::string_view s) {
     return s == "~" || EqualsIgnoreCase(s, "null") || EqualsIgnoreCase(s, "true") ||
            EqualsIgnoreCase(s, "false") || EqualsIgnoreCase(s, "yes") ||
            EqualsIgnoreCase(s, "no") || EqualsIgnoreCase(s, "on") || EqualsIgnoreCase(s, "off") ||
            EqualsIgnoreCase(s, "y") || EqualsIgnoreCase(s, "n");
   }
 
-  static bool IsNumericOrSpecialScalar(const std::string& s) {
+  static bool IsNumericOrSpecialScalar(std::string_view s) {
     if (s.empty()) return false;
     if (EqualsIgnoreCase(s, ".nan") || EqualsIgnoreCase(s, ".inf") ||
         EqualsIgnoreCase(s, "+.inf") || EqualsIgnoreCase(s, "-.inf")) {
@@ -1195,7 +1157,7 @@ class YamlFormatter {
     return false;
   }
 
-  static bool NeedsQuoting(const std::string& s) {
+  static bool NeedsQuoting(std::string_view s) {
     if (s.empty()) return true;
     if (s.front() == ' ' || s.front() == '\t' || s.back() == ' ' || s.back() == '\t') {
       return true;
@@ -1227,7 +1189,7 @@ class YamlFormatter {
     return false;
   }
 
-  static bool IsSafeKey(const std::string& key) {
+  static bool IsSafeKey(std::string_view key) {
     if (key.empty()) return false;
     if (IsYamlKeyword(key)) return false;
     unsigned char first = static_cast<unsigned char>(key[0]);
@@ -1244,23 +1206,16 @@ class YamlFormatter {
     return true;
   }
 
-  static void AppendEscapedString(const std::string& s, std::string& out) {
+  static void AppendEscapedString(std::string_view s, std::string& out) {
     static constexpr char kHexDigitsLower[] = "0123456789abcdef";
     out += '"';
-    const char* pos = s.data();
-    const char* const end = pos + s.size();
-    while (true) {
-      const uint8_t byte = static_cast<uint8_t>(*pos++);
+    for (const char c : s) {
+      const uint8_t byte = static_cast<uint8_t>(c);
       if (byte < 0x20 || byte == 0x7F) {
         switch (byte) {
           case '\0': {
-            if (pos > end) {
-              out += '"';
-              return;
-            } else {
-              out += "\\0";
-              break;
-            }
+            out += "\\0";
+            break;
           }
           case '\a': {
             out += "\\a";
@@ -1309,20 +1264,21 @@ class YamlFormatter {
         out += static_cast<char>(byte);
       }
     }
+    out += '"';
   }
 
-  static std::string FormatKey(const std::string& key) {
+  static std::string FormatKey(std::string_view key) {
     if (IsSafeKey(key)) {
-      return key;
+      return std::string(key);
     }
     std::string out;
     AppendEscapedString(key, out);
     return out;
   }
 
-  static std::string FormatString(const std::string& s) {
+  static std::string FormatString(std::string_view s) {
     if (!NeedsQuoting(s)) {
-      return s;
+      return std::string(s);
     }
     std::string out;
     AppendEscapedString(s, out);
@@ -1369,7 +1325,7 @@ class YamlFormatter {
 
   static void AppendArrayItems(const std::vector<JsonNode>& arr, int depth,
                                std::vector<std::string>& lines) {
-    for (const auto& item : arr) {
+    for (const JsonNode& item : arr) {
       if (item.type() == JsonNode::Type::kObject) {
         if (item.AsObject().empty()) {
           lines.push_back(Indent(depth) + "- {}");
@@ -1441,7 +1397,7 @@ class YamlFormatter {
       lines.push_back(Indent(depth) + "- []");
       return;
     }
-    const auto& first = arr[0];
+    const JsonNode& first = arr[0];
     if (first.type() == JsonNode::Type::kObject) {
       if (first.AsObject().empty()) {
         lines.push_back(Indent(depth) + "- - {}");
@@ -1459,7 +1415,7 @@ class YamlFormatter {
     }
 
     for (size_t i = 1; i < arr.size(); ++i) {
-      const auto& item = arr[i];
+      const JsonNode& item = arr[i];
       if (item.type() == JsonNode::Type::kObject) {
         if (item.AsObject().empty()) {
           lines.push_back(Indent(depth + 1) + "- {}");
@@ -1491,6 +1447,14 @@ class JsonParser {
 
   std::string_view input_;
   size_t pos_ = 0;
+  size_t depth_ = 0;
+  static constexpr size_t kMaxDepth = 1000;
+
+  struct DepthGuard {
+    size_t& d;
+    explicit DepthGuard(size_t& depth) : d(depth) { ++d; }
+    ~DepthGuard() { --d; }
+  };
 
   static ParseError Error(std::string msg, size_t pos) {
     return ParseError{std::move(msg) + " at position " + std::to_string(pos)};
@@ -1539,7 +1503,7 @@ class JsonParser {
     if (pos_ >= input_.size()) {
       return Error("Empty input");
     }
-    auto res = ParseValue();
+    ParseResult<JsonNode> res = ParseValue();
     if (std::holds_alternative<ParseError>(res)) {
       return res;
     }
@@ -1551,6 +1515,10 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseValue() {
+    if (depth_ >= kMaxDepth) {
+      return Error("Exceeded maximum nesting depth", pos_);
+    }
+    DepthGuard guard(depth_);
     SkipWhitespace();
     if (pos_ >= input_.size()) {
       return Error("Unexpected end of input");
@@ -1756,7 +1724,7 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseStringNode() {
-    auto str_res = ParseRawString();
+    ParseResult<std::string> str_res = ParseRawString();
     if (std::holds_alternative<ParseError>(str_res)) {
       return std::get<ParseError>(str_res);
     }
@@ -1778,7 +1746,7 @@ class JsonParser {
       if (pos_ >= input_.size()) {
         return Error("Unterminated array", start);
       }
-      auto val_res = ParseValue();
+      ParseResult<JsonNode> val_res = ParseValue();
       if (std::holds_alternative<ParseError>(val_res)) {
         return val_res;
       }
@@ -1821,7 +1789,7 @@ class JsonParser {
       if (input_[pos_] != '"') {
         return Error("Expected string key in object", pos_);
       }
-      auto key_res = ParseRawString();
+      ParseResult<std::string> key_res = ParseRawString();
       if (std::holds_alternative<ParseError>(key_res)) {
         return std::get<ParseError>(key_res);
       }
@@ -1834,7 +1802,7 @@ class JsonParser {
       ++pos_;  // consume ':'
 
       SkipWhitespace();
-      auto val_res = ParseValue();
+      ParseResult<JsonNode> val_res = ParseValue();
       if (std::holds_alternative<ParseError>(val_res)) {
         return val_res;
       }
