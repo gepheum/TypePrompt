@@ -74,7 +74,9 @@ class JsonNode {
   JsonNode() : data_(std::nullopt) {}
   explicit JsonNode(std::nullopt_t value) : data_(value) {}
   explicit JsonNode(bool value) : data_(value) {}
+  explicit JsonNode(int value) : data_(static_cast<double>(value)) {}
   explicit JsonNode(double value) : data_(value) {}
+  explicit JsonNode(const char* value) : data_(NormalizeUtf8(value)) {}
   explicit JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
   explicit JsonNode(std::vector<JsonNode> value) : data_(std::move(value)) {}
   explicit JsonNode(std::vector<std::pair<std::string, JsonNode>> value)
@@ -365,6 +367,27 @@ class JsonNode {
     out += '"';
   }
 };
+
+inline JsonNode ToJsonNode(const JsonNode& node) { return node; }
+inline JsonNode ToJsonNode(bool value) { return JsonNode(value); }
+inline JsonNode ToJsonNode(int value) { return JsonNode(value); }
+inline JsonNode ToJsonNode(double value) { return JsonNode(value); }
+inline JsonNode ToJsonNode(std::string_view value) { return JsonNode(value); }
+
+template <typename T>
+JsonNode ToJsonNode(const std::optional<T>& value) {
+  return value.has_value() ? ToJsonNode(*value) : JsonNode(std::nullopt);
+}
+
+template <typename T>
+JsonNode ToJsonNode(const std::vector<T>& values) {
+  std::vector<JsonNode> elements;
+  elements.reserve(values.size());
+  for (const auto& item : values) {
+    elements.push_back(ToJsonNode(item));
+  }
+  return JsonNode(std::move(elements));
+}
 
 namespace internal {
 
