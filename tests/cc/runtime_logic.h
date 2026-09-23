@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -94,12 +96,102 @@ class JsonNode {
     return json;
   }
 
+  inline std::string StringifyToon() const;
+
  private:
+  // ─── Data Representation & UTF-8 Normalization ──────────────────────────────
+
   using JsonArrayVariant = std::vector<JsonNode>;
   using JsonObjectVariant = std::vector<std::pair<std::string, JsonNode>>;
 
   std::variant<std::nullopt_t, bool, double, std::string, JsonArrayVariant, JsonObjectVariant>
       data_;
+
+  static std::string NormalizeUtf8(const std::string& input) {
+    std::string out;
+    out.reserve(input.size());
+    const char* input_pos = input.c_str();
+    const char* input_end = input_pos + input.length();
+    while (true) {
+      const int8_t c = static_cast<int8_t>(*(input_pos++));
+      if (c <= 0) {
+        if (c == 0) {
+          // The input string is guaranteed to end with \0, but \0 can also be
+          // found within the string.
+          if (input_pos > input_end) {
+            break;
+          } else {
+            out += '\0';
+          }
+        } else {
+          CopyUtf8Codepoint(c, input_pos, input_end, out);
+        }
+      } else {
+        out += c;
+      }
+    }
+    return out;
+  }
+
+  static void CopyUtf8Codepoint(uint8_t first_byte, const char*& pos, const char* end,
+                                std::string& out) {
+    // Push byte and all the continuation bytes that follow. If the input
+    // string happens to not be a well-formed UTF-8 string, we'll remove the
+    // chars we have pushed.
+    out += first_byte;
+
+    // Total number of continuation bytes actually read.
+    size_t continuation_bytes = 0;
+
+    // From https://github.com/chansen/c-utf8-valid/blob/master/utf8_valid.h
+    uint32_t v = first_byte;
+
+    for (;;) {
+      const uint8_t continuation_byte = static_cast<uint8_t>(*pos);
+      if ((continuation_byte & 0xC0) == 0x80) {
+        out += continuation_byte;
+        ++continuation_bytes;
+        v = (v << 8) | continuation_byte;
+        ++pos;
+      } else {
+        // Not a continuation byte.
+        break;
+      }
+    }
+
+    // Validate the UTF-8 sequence we just read.
+    if ((first_byte & 0xE0) == 0xC0) {
+      // 1 continuation byte expected
+      if (continuation_bytes != 1) goto utf8_error;
+      // Ensure that the top 4 bits is not zero
+      v = v & 0x1E00;
+      if (v == 0) goto utf8_error;
+    } else if ((first_byte & 0xF0) == 0xE0) {
+      // 2 continuation bytes expected
+      if (continuation_bytes != 2) goto utf8_error;
+      // Ensure that the top 5 bits is not zero and not a surrogate
+      v = v & 0x0F2000;
+      if (v == 0 || v == 0x0D2000) goto utf8_error;
+    } else if ((first_byte & 0xF8) == 0xF0) {
+      // 3 continuation bytes expected
+      if (continuation_bytes != 3) goto utf8_error;
+      // Ensure that the top 5 bits is not zero and not out of range
+      v = v & 0x07300000;
+      if (v == 0 || v > 0x04000000) goto utf8_error;
+    } else {
+      goto utf8_error;
+    }
+
+    return;
+
+  utf8_error:
+    // Remove the last (continuation_bytes + 1) chars from the output.
+    out.resize(out.size() - continuation_bytes - 1);
+    // Push the replacement character: \uFFFD (\xEF\xBF\xBD in UTF-8)
+    out += "\xEF\xBF\xBD";
+  }
+
+  // ─── JSON Formatting Logic ──────────────────────────────────────────────────
 
   void AppendJson(std::string& out, std::string& eolIndent) const {
     switch (type()) {
@@ -196,90 +288,6 @@ class JsonNode {
     }
   }
 
-  static std::string NormalizeUtf8(const std::string& input) {
-    std::string out;
-    out.reserve(input.size());
-    const char* input_pos = input.c_str();
-    const char* input_end = input_pos + input.length();
-    while (true) {
-      const int8_t c = static_cast<int8_t>(*(input_pos++));
-      if (c <= 0) {
-        if (c == 0) {
-          // The input string is guaranteed to end with \0, but \0 can also be
-          // found within the string.
-          if (input_pos > input_end) {
-            break;
-          } else {
-            out += '\0';
-          }
-        } else {
-          CopyUtf8Codepoint(c, input_pos, input_end, out);
-        }
-      } else {
-        out += c;
-      }
-    }
-    return out;
-  }
-
-  static void CopyUtf8Codepoint(uint8_t first_byte, const char*& pos, const char* end,
-                                std::string& out) {
-    // Push byte and all the continuation bytes that follow. If the input
-    // string happens to not be a well-formed UTF-8 string, we'll remove the
-    // chars we have pushed.
-    out += first_byte;
-
-    // Total number of continuation bytes actually read.
-    size_t continuation_bytes = 0;
-
-    // From https://github.com/chansen/c-utf8-valid/blob/master/utf8_valid.h
-    uint32_t v = first_byte;
-
-    for (;;) {
-      const uint8_t continuation_byte = static_cast<uint8_t>(*pos);
-      if ((continuation_byte & 0xC0) == 0x80) {
-        out += continuation_byte;
-        ++continuation_bytes;
-        v = (v << 8) | continuation_byte;
-        ++pos;
-      } else {
-        // Not a continuation byte.
-        break;
-      }
-    }
-
-    // Validate the UTF-8 sequence we just read.
-    if ((first_byte & 0xE0) == 0xC0) {
-      // 1 continuation byte expected
-      if (continuation_bytes != 1) goto utf8_error;
-      // Ensure that the top 4 bits is not zero
-      v = v & 0x1E00;
-      if (v == 0) goto utf8_error;
-    } else if ((first_byte & 0xF0) == 0xE0) {
-      // 2 continuation bytes expected
-      if (continuation_bytes != 2) goto utf8_error;
-      // Ensure that the top 5 bits is not zero and not a surrogate
-      v = v & 0x0F2000;
-      if (v == 0 || v == 0x0D2000) goto utf8_error;
-    } else if ((first_byte & 0xF8) == 0xF0) {
-      // 3 continuation bytes expected
-      if (continuation_bytes != 3) goto utf8_error;
-      // Ensure that the top 5 bits is not zero and not out of range
-      v = v & 0x07300000;
-      if (v == 0 || v > 0x04000000) goto utf8_error;
-    } else {
-      goto utf8_error;
-    }
-
-    return;
-
-  utf8_error:
-    // Remove the last (continuation_bytes + 1) chars from the output.
-    out.resize(out.size() - continuation_bytes - 1);
-    // Push the replacement character: � (u+FFFD)
-    out += "�";
-  }
-
   static void AppendJsonString(const std::string& value, std::string& out) {
     out += '"';
     const char* pos = value.data();
@@ -339,5 +347,599 @@ class JsonNode {
     }
   }
 };
+
+namespace internal {
+
+class ToonFormatter {
+ public:
+  static std::string Format(const JsonNode& root) {
+    switch (root.type()) {
+      case JsonNode::Type::kObject: {
+        const auto& obj = root.AsObject();
+        if (obj.empty()) {
+          return "";
+        }
+        std::vector<TabularField> fields;
+        if (CheckKeyedTabular(root, fields)) {
+          std::string header = "[" + std::to_string(obj.size()) + ":]";
+          AppendFieldList(fields, header);
+          header += ':';
+          std::vector<std::string> lines;
+          lines.push_back(header);
+          for (const auto& [ek, ev] : obj) {
+            std::vector<const JsonNode*> cells;
+            ExtractLeafCells(ev, fields, cells);
+            std::string row = "  " + FormatKey(ek) + ": ";
+            for (size_t c = 0; c < cells.size(); ++c) {
+              if (c != 0) row += ',';
+              row += FormatPrimitive(*cells[c], ',');
+            }
+            lines.push_back(row);
+          }
+          std::string res;
+          for (size_t i = 0; i < lines.size(); ++i) {
+            if (i != 0) res += '\n';
+            res += lines[i];
+          }
+          return res;
+        } else {
+          std::vector<std::string> lines;
+          AppendObjectFields(obj, 0, lines);
+          std::string res;
+          for (size_t i = 0; i < lines.size(); ++i) {
+            if (i != 0) res += '\n';
+            res += lines[i];
+          }
+          return res;
+        }
+      }
+      case JsonNode::Type::kArray: {
+        const auto& arr = root.AsArray();
+        if (arr.empty()) {
+          return "[]";
+        }
+        std::vector<TabularField> fields;
+        if (CheckTabularUniform(arr, fields)) {
+          std::string header = "[" + std::to_string(arr.size()) + "]";
+          AppendFieldList(fields, header);
+          header += ':';
+          std::vector<std::string> lines;
+          lines.push_back(header);
+          for (const auto& el : arr) {
+            std::vector<const JsonNode*> cells;
+            ExtractLeafCells(el, fields, cells);
+            std::string row = "  ";
+            for (size_t c = 0; c < cells.size(); ++c) {
+              if (c != 0) row += ',';
+              row += FormatPrimitive(*cells[c], ',');
+            }
+            lines.push_back(row);
+          }
+          std::string res;
+          for (size_t i = 0; i < lines.size(); ++i) {
+            if (i != 0) res += '\n';
+            res += lines[i];
+          }
+          return res;
+        } else if (IsPrimitiveArray(arr)) {
+          std::string line = "[" + std::to_string(arr.size()) + "]: ";
+          AppendInlineArrayValues(arr, line);
+          return line;
+        } else {
+          std::vector<std::string> lines;
+          lines.push_back("[" + std::to_string(arr.size()) + "]:");
+          AppendListItems(arr, 1, lines);
+          std::string res;
+          for (size_t i = 0; i < lines.size(); ++i) {
+            if (i != 0) res += '\n';
+            res += lines[i];
+          }
+          return res;
+        }
+      }
+      default:
+        return FormatPrimitive(root, ',');
+    }
+  }
+
+ private:
+  struct TabularField {
+    std::string name;
+    bool is_nested = false;
+    std::vector<TabularField> subfields;
+  };
+
+  static std::string Indent(int depth) { return std::string(depth * 2, ' '); }
+
+  static std::string FormatNumber(double number) {
+    if (!std::isfinite(number)) {
+      return "null";
+    }
+    if (number == 0.0 || number == -0.0) {
+      return "0";
+    }
+    double abs_val = std::abs(number);
+    if (abs_val >= 1e-6 && abs_val < 1e21) {
+      char buffer[128];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
+        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
+        s = buffer;
+        size_t dot = s.find('.');
+        if (dot != std::string::npos) {
+          while (s.back() == '0') {
+            s.pop_back();
+          }
+          if (s.back() == '.') {
+            s.pop_back();
+          }
+        }
+      }
+      return s;
+    } else {
+      char buffer[64];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      for (char& c : s) {
+        if (c == 'E') c = 'e';
+      }
+      return s;
+    }
+  }
+
+  static bool IsNumericLike(const std::string& s) {
+    if (s.empty()) return false;
+    size_t i = 0;
+    if (s[i] == '+' || s[i] == '-') {
+      ++i;
+    }
+    if (i >= s.size() || !std::isdigit(static_cast<unsigned char>(s[i]))) {
+      return false;
+    }
+    while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+      ++i;
+    }
+    if (i < s.size() && s[i] == '.') {
+      ++i;
+      if (i >= s.size() || !std::isdigit(static_cast<unsigned char>(s[i]))) {
+        return false;
+      }
+      while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+        ++i;
+      }
+    }
+    if (i < s.size() && (s[i] == 'e' || s[i] == 'E')) {
+      ++i;
+      if (i < s.size() && (s[i] == '+' || s[i] == '-')) {
+        ++i;
+      }
+      if (i >= s.size() || !std::isdigit(static_cast<unsigned char>(s[i]))) {
+        return false;
+      }
+      while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+        ++i;
+      }
+    }
+    return i == s.size();
+  }
+
+  static bool NeedsQuoting(const std::string& s, char delim = ',') {
+    if (s.empty()) return true;
+    if (s.front() == ' ' || s.front() == '\t' || s.back() == ' ' || s.back() == '\t') {
+      return true;
+    }
+    if (s == "true" || s == "false" || s == "null") {
+      return true;
+    }
+    if (IsNumericLike(s)) {
+      return true;
+    }
+    if (s.front() == '-' || s.front() == '#') {
+      return true;
+    }
+    for (unsigned char c : s) {
+      if (c < 0x20) return true;
+      if (c == ':' || c == '"' || c == '\\' || c == '[' || c == ']' || c == '{' || c == '}') {
+        return true;
+      }
+      if (delim != '\0' && c == static_cast<unsigned char>(delim)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool IsSafeKey(const std::string& key) {
+    if (key.empty()) return false;
+    unsigned char first = static_cast<unsigned char>(key[0]);
+    if (!((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first == '_')) {
+      return false;
+    }
+    for (size_t i = 1; i < key.size(); ++i) {
+      unsigned char c = static_cast<unsigned char>(key[i]);
+      if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+            c == '_' || c == '.')) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static void AppendEscapedString(const std::string& s, std::string& out) {
+    static constexpr char kHexDigitsLower[] = "0123456789abcdef";
+    out += '"';
+    const char* pos = s.data();
+    const char* const end = pos + s.size();
+    while (true) {
+      const uint8_t byte = static_cast<uint8_t>(*pos++);
+      if (byte < 0x20) {
+        switch (byte) {
+          case '\0':
+            if (pos > end) {
+              out += '"';
+              return;
+            } else {
+              out += "\\u0000";
+              break;
+            }
+          case '\n':
+            out += "\\n";
+            break;
+          case '\r':
+            out += "\\r";
+            break;
+          case '\t':
+            out += "\\t";
+            break;
+          default:
+            out += "\\u00";
+            out += kHexDigitsLower[(byte >> 4) & 0x0F];
+            out += kHexDigitsLower[byte & 0x0F];
+            break;
+        }
+      } else if (byte == '"') {
+        out += "\\\"";
+      } else if (byte == '\\') {
+        out += "\\\\";
+      } else {
+        out += static_cast<char>(byte);
+      }
+    }
+  }
+
+  static std::string FormatKey(const std::string& key) {
+    if (IsSafeKey(key)) {
+      return key;
+    }
+    std::string out;
+    AppendEscapedString(key, out);
+    return out;
+  }
+
+  static std::string FormatString(const std::string& s, char delim = ',') {
+    if (!NeedsQuoting(s, delim)) {
+      return s;
+    }
+    std::string out;
+    AppendEscapedString(s, out);
+    return out;
+  }
+
+  static std::string FormatPrimitive(const JsonNode& node, char delim = ',') {
+    switch (node.type()) {
+      case JsonNode::Type::kNull:
+        return "null";
+      case JsonNode::Type::kBool:
+        return node.AsBool() ? "true" : "false";
+      case JsonNode::Type::kNumber:
+        return FormatNumber(node.AsNumber());
+      case JsonNode::Type::kString:
+        return FormatString(node.AsString(), delim);
+      default:
+        return "";
+    }
+  }
+
+  static const JsonNode* FindObjectField(const std::vector<std::pair<std::string, JsonNode>>& obj,
+                                         const std::string& key) {
+    for (const auto& [k, v] : obj) {
+      if (k == key) return &v;
+    }
+    return nullptr;
+  }
+
+  static bool CheckTabularUniform(const std::vector<JsonNode>& elements,
+                                  std::vector<TabularField>& fields) {
+    if (elements.empty()) return false;
+    for (const auto& el : elements) {
+      if (el.type() != JsonNode::Type::kObject) return false;
+      if (el.AsObject().empty()) return false;
+    }
+    const auto& first_obj = elements[0].AsObject();
+    size_t field_count = first_obj.size();
+    for (const auto& el : elements) {
+      if (el.AsObject().size() != field_count) return false;
+      for (const auto& [k, v] : first_obj) {
+        if (!FindObjectField(el.AsObject(), k)) return false;
+      }
+    }
+    fields.clear();
+    for (const auto& [field_name, _] : first_obj) {
+      bool all_primitive = true;
+      bool all_objects = true;
+      std::vector<JsonNode> sub_elements;
+      sub_elements.reserve(elements.size());
+      for (const auto& el : elements) {
+        const JsonNode* val = FindObjectField(el.AsObject(), field_name);
+        if (!val) return false;
+        if (val->type() == JsonNode::Type::kObject) {
+          all_primitive = false;
+          if (val->AsObject().empty()) {
+            all_objects = false;
+          } else {
+            sub_elements.push_back(*val);
+          }
+        } else if (val->type() == JsonNode::Type::kArray) {
+          all_primitive = false;
+          all_objects = false;
+        } else {
+          all_objects = false;
+        }
+      }
+      if (all_primitive) {
+        fields.push_back(TabularField{field_name, false, {}});
+      } else if (all_objects && !sub_elements.empty()) {
+        std::vector<TabularField> sub_fields;
+        if (!CheckTabularUniform(sub_elements, sub_fields)) {
+          return false;
+        }
+        fields.push_back(TabularField{field_name, true, std::move(sub_fields)});
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static bool CheckKeyedTabular(const JsonNode& node, std::vector<TabularField>& fields) {
+    if (node.type() != JsonNode::Type::kObject) return false;
+    const auto& entries = node.AsObject();
+    if (entries.size() < 2) return false;
+    std::vector<JsonNode> entry_values;
+    entry_values.reserve(entries.size());
+    for (const auto& [k, v] : entries) {
+      if (v.type() != JsonNode::Type::kObject || v.AsObject().empty()) {
+        return false;
+      }
+      entry_values.push_back(v);
+    }
+    return CheckTabularUniform(entry_values, fields);
+  }
+
+  static void ExtractLeafCells(const JsonNode& node, const std::vector<TabularField>& fields,
+                               std::vector<const JsonNode*>& cells) {
+    const auto& obj = node.AsObject();
+    for (const auto& field : fields) {
+      const JsonNode* val = FindObjectField(obj, field.name);
+      if (!val) continue;
+      if (field.is_nested) {
+        if (val->type() == JsonNode::Type::kObject) {
+          ExtractLeafCells(*val, field.subfields, cells);
+        }
+      } else {
+        cells.push_back(val);
+      }
+    }
+  }
+
+  static void AppendFieldList(const std::vector<TabularField>& fields, std::string& out) {
+    out += '{';
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (i != 0) {
+        out += ',';
+      }
+      out += FormatKey(fields[i].name);
+      if (fields[i].is_nested) {
+        AppendFieldList(fields[i].subfields, out);
+      }
+    }
+    out += '}';
+  }
+
+  static bool IsPrimitiveArray(const std::vector<JsonNode>& arr) {
+    for (const auto& item : arr) {
+      if (item.type() == JsonNode::Type::kArray || item.type() == JsonNode::Type::kObject) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static void AppendInlineArrayValues(const std::vector<JsonNode>& arr, std::string& out) {
+    for (size_t i = 0; i < arr.size(); ++i) {
+      if (i != 0) {
+        out += ',';
+      }
+      out += FormatPrimitive(arr[i], ',');
+    }
+  }
+
+  static void AppendSingleObjectField(const std::string& key, const JsonNode& val, int depth,
+                                      std::vector<std::string>& lines) {
+    std::vector<TabularField> fields;
+    if (val.type() == JsonNode::Type::kArray) {
+      AppendArrayField(key, val.AsArray(), depth, lines);
+    } else if (val.type() == JsonNode::Type::kObject) {
+      if (val.AsObject().empty()) {
+        lines.push_back(Indent(depth) + FormatKey(key) + ":");
+      } else if (CheckKeyedTabular(val, fields)) {
+        std::string header =
+            Indent(depth) + FormatKey(key) + "[" + std::to_string(val.AsObject().size()) + ":]";
+        AppendFieldList(fields, header);
+        header += ':';
+        lines.push_back(header);
+        for (const auto& [ek, ev] : val.AsObject()) {
+          std::vector<const JsonNode*> cells;
+          ExtractLeafCells(ev, fields, cells);
+          std::string row = Indent(depth + 1) + FormatKey(ek) + ": ";
+          for (size_t c = 0; c < cells.size(); ++c) {
+            if (c != 0) row += ',';
+            row += FormatPrimitive(*cells[c], ',');
+          }
+          lines.push_back(row);
+        }
+      } else {
+        lines.push_back(Indent(depth) + FormatKey(key) + ":");
+        AppendObjectFields(val.AsObject(), depth + 1, lines);
+      }
+    } else {
+      lines.push_back(Indent(depth) + FormatKey(key) + ": " + FormatPrimitive(val, ','));
+    }
+  }
+
+  static void AppendObjectFields(const std::vector<std::pair<std::string, JsonNode>>& entries,
+                                 int depth, std::vector<std::string>& lines) {
+    for (const auto& [k, v] : entries) {
+      AppendSingleObjectField(k, v, depth, lines);
+    }
+  }
+
+  static void AppendArrayField(const std::string& key, const std::vector<JsonNode>& arr, int depth,
+                               std::vector<std::string>& lines) {
+    std::vector<TabularField> fields;
+    if (arr.empty()) {
+      lines.push_back(Indent(depth) + FormatKey(key) + ": []");
+    } else if (CheckTabularUniform(arr, fields)) {
+      std::string header = Indent(depth) + FormatKey(key) + "[" + std::to_string(arr.size()) + "]";
+      AppendFieldList(fields, header);
+      header += ':';
+      lines.push_back(header);
+      for (const auto& el : arr) {
+        std::vector<const JsonNode*> cells;
+        ExtractLeafCells(el, fields, cells);
+        std::string row = Indent(depth + 1);
+        for (size_t c = 0; c < cells.size(); ++c) {
+          if (c != 0) row += ',';
+          row += FormatPrimitive(*cells[c], ',');
+        }
+        lines.push_back(row);
+      }
+    } else if (IsPrimitiveArray(arr)) {
+      std::string line = Indent(depth) + FormatKey(key) + "[" + std::to_string(arr.size()) + "]: ";
+      AppendInlineArrayValues(arr, line);
+      lines.push_back(line);
+    } else {
+      std::string header = Indent(depth) + FormatKey(key) + "[" + std::to_string(arr.size()) + "]:";
+      lines.push_back(header);
+      AppendListItems(arr, depth + 1, lines);
+    }
+  }
+
+  static void AppendListItems(const std::vector<JsonNode>& arr, int depth,
+                              std::vector<std::string>& lines) {
+    for (const auto& item : arr) {
+      if (item.type() == JsonNode::Type::kArray) {
+        if (item.AsArray().empty()) {
+          lines.push_back(Indent(depth) + "- [0]:");
+        } else if (IsPrimitiveArray(item.AsArray())) {
+          std::string line = Indent(depth) + "- [" + std::to_string(item.AsArray().size()) + "]: ";
+          AppendInlineArrayValues(item.AsArray(), line);
+          lines.push_back(line);
+        } else {
+          std::string header = Indent(depth) + "- [" + std::to_string(item.AsArray().size()) + "]:";
+          lines.push_back(header);
+          AppendListItems(item.AsArray(), depth + 1, lines);
+        }
+      } else if (item.type() == JsonNode::Type::kObject) {
+        if (item.AsObject().empty()) {
+          lines.push_back(Indent(depth) + "-");
+        } else {
+          AppendObjectAsListItem(item.AsObject(), depth, lines);
+        }
+      } else {
+        lines.push_back(Indent(depth) + "- " + FormatPrimitive(item, ','));
+      }
+    }
+  }
+
+  static void AppendObjectAsListItem(const std::vector<std::pair<std::string, JsonNode>>& obj,
+                                     int depth, std::vector<std::string>& lines) {
+    if (obj.empty()) {
+      lines.push_back(Indent(depth) + "-");
+      return;
+    }
+    const auto& [first_k, first_v] = obj[0];
+    std::vector<TabularField> fields;
+    if (first_v.type() == JsonNode::Type::kArray &&
+        CheckTabularUniform(first_v.AsArray(), fields)) {
+      std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
+                           std::to_string(first_v.AsArray().size()) + "]";
+      AppendFieldList(fields, header);
+      header += ':';
+      lines.push_back(header);
+      for (const auto& el : first_v.AsArray()) {
+        std::vector<const JsonNode*> cells;
+        ExtractLeafCells(el, fields, cells);
+        std::string row = Indent(depth + 2);
+        for (size_t c = 0; c < cells.size(); ++c) {
+          if (c != 0) row += ',';
+          row += FormatPrimitive(*cells[c], ',');
+        }
+        lines.push_back(row);
+      }
+    } else if (first_v.type() == JsonNode::Type::kObject && CheckKeyedTabular(first_v, fields)) {
+      std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
+                           std::to_string(first_v.AsObject().size()) + ":]";
+      AppendFieldList(fields, header);
+      header += ':';
+      lines.push_back(header);
+      for (const auto& [ek, ev] : first_v.AsObject()) {
+        std::vector<const JsonNode*> cells;
+        ExtractLeafCells(ev, fields, cells);
+        std::string row = Indent(depth + 2) + FormatKey(ek) + ": ";
+        for (size_t c = 0; c < cells.size(); ++c) {
+          if (c != 0) row += ',';
+          row += FormatPrimitive(*cells[c], ',');
+        }
+        lines.push_back(row);
+      }
+    } else if (first_v.type() == JsonNode::Type::kArray) {
+      if (first_v.AsArray().empty()) {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": []");
+      } else if (IsPrimitiveArray(first_v.AsArray())) {
+        std::string line = Indent(depth) + "- " + FormatKey(first_k) + "[" +
+                           std::to_string(first_v.AsArray().size()) + "]: ";
+        AppendInlineArrayValues(first_v.AsArray(), line);
+        lines.push_back(line);
+      } else {
+        std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
+                             std::to_string(first_v.AsArray().size()) + "]:";
+        lines.push_back(header);
+        AppendListItems(first_v.AsArray(), depth + 2, lines);
+      }
+    } else if (first_v.type() == JsonNode::Type::kObject) {
+      if (first_v.AsObject().empty()) {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
+      } else {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
+        AppendObjectFields(first_v.AsObject(), depth + 2, lines);
+      }
+    } else {
+      lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": " +
+                      FormatPrimitive(first_v, ','));
+    }
+
+    for (size_t i = 1; i < obj.size(); ++i) {
+      AppendSingleObjectField(obj[i].first, obj[i].second, depth + 1, lines);
+    }
+  }
+};
+
+}  // namespace internal
+
+inline std::string JsonNode::StringifyToon() const {
+  return internal::ToonFormatter::Format(*this);
+}
 
 }  // namespace typeprompt
