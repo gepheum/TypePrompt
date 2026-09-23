@@ -373,17 +373,6 @@ class JsonNode {
   }
 };
 
-template <typename T>
-ParseResult<T> ParseJsonNode(const JsonNode& node) {
-  T result{};
-  ParseStatus status = ParseJsonNode(node, result);
-  if (status.ok()) {
-    return std::move(result);
-  } else {
-    return std::move(status).error();
-  }
-}
-
 inline JsonNode ToJsonNode(const JsonNode& node) { return node; }
 inline JsonNode ToJsonNode(bool value) { return JsonNode(value); }
 inline JsonNode ToJsonNode(int value) { return JsonNode(value); }
@@ -475,6 +464,27 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
   }
   out = std::move(elements);
   return kOkStatus;
+}
+
+template <typename T>
+ParseResult<T> ParseJsonNode(const JsonNode& node) {
+  T result{};
+  ParseStatus status = ParseJsonNode(node, result);
+  if (status.ok()) {
+    return std::move(result);
+  } else {
+    return std::move(status).error();
+  }
+}
+
+template <typename T>
+ParseResult<T> ParseJsonNode(std::string_view json) {
+  ParseResult<JsonNode> node_result = JsonNode::ParseJson(json);
+  if (node_result.ok()) {
+    return ParseJsonNode<T>(*node_result);
+  } else {
+    return std::move(node_result).error();
+  }
 }
 
 namespace internal {
