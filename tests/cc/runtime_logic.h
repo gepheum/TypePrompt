@@ -44,7 +44,7 @@ class JsonNode {
   explicit JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
   explicit JsonNode(std::vector<JsonNode> value) : data_(std::move(value)) {}
   explicit JsonNode(std::vector<std::pair<std::string, JsonNode>> value)
-      : data_(std::move(value)) {}
+      : data_(NormalizeUtf8(std::move(value))) {}
 
   JsonNode(const JsonNode&) = default;
   JsonNode(JsonNode&&) = default;
@@ -129,6 +129,14 @@ class JsonNode {
       }
     }
     return out;
+  }
+
+  static std::vector<std::pair<std::string, JsonNode>> NormalizeUtf8(
+      std::vector<std::pair<std::string, JsonNode>> value) {
+    for (auto& entry : value) {
+      entry.first = NormalizeUtf8(entry.first);
+    }
+    return value;
   }
 
   static void CopyUtf8Codepoint(uint8_t first_byte, const char*& pos, const char* end,
