@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -97,6 +98,7 @@ class JsonNode {
   }
 
   inline std::string StringifyToon() const;
+  inline std::string StringifyYaml() const;
 
  private:
   // ─── Data Representation & UTF-8 Normalization ──────────────────────────────
@@ -297,7 +299,7 @@ class JsonNode {
       if (byte < 0x20) {
         // A non-printable character.
         switch (byte) {
-          case '\0':
+          case '\0': {
             // \0 may indicate the end of the string, but it can also be part of
             // the string's contents.
             if (pos > end) {
@@ -308,40 +310,50 @@ class JsonNode {
               out += {'\\', 'u', '0', '0', '0', '0'};
               break;
             }
-          case '\b':
+          }
+          case '\b': {
             out += {'\\', 'b'};
             break;
-          case '\f':
+          }
+          case '\f': {
             out += {'\\', 'f'};
             break;
-          case '\n':
+          }
+          case '\n': {
             out += {'\\', 'n'};
             break;
-          case '\r':
+          }
+          case '\r': {
             out += {'\\', 'r'};
             break;
-          case '\t':
+          }
+          case '\t': {
             out += {'\\', 't'};
             break;
-          default:
+          }
+          default: {
             out += {'\\',
                     'u',
                     '0',
                     '0',
                     internal::kHexDigits[(byte >> 4) & 0x0F],
                     internal::kHexDigits[byte & 0x0F]};
+          }
         }
       } else {
         // A printable character.
         switch (byte) {
-          case '"':
+          case '"': {
             out += {'\\', '"'};
             break;
-          case '\\':
+          }
+          case '\\': {
             out += {'\\', '\\'};
             break;
-          default:
+          }
+          default: {
             out += byte;
+          }
         }
       }
     }
@@ -575,7 +587,7 @@ class ToonFormatter {
       const uint8_t byte = static_cast<uint8_t>(*pos++);
       if (byte < 0x20) {
         switch (byte) {
-          case '\0':
+          case '\0': {
             if (pos > end) {
               out += '"';
               return;
@@ -583,20 +595,25 @@ class ToonFormatter {
               out += "\\u0000";
               break;
             }
-          case '\n':
+          }
+          case '\n': {
             out += "\\n";
             break;
-          case '\r':
+          }
+          case '\r': {
             out += "\\r";
             break;
-          case '\t':
+          }
+          case '\t': {
             out += "\\t";
             break;
-          default:
+          }
+          default: {
             out += "\\u00";
             out += kHexDigitsLower[(byte >> 4) & 0x0F];
             out += kHexDigitsLower[byte & 0x0F];
             break;
+          }
         }
       } else if (byte == '"') {
         out += "\\\"";
@@ -936,10 +953,462 @@ class ToonFormatter {
   }
 };
 
+class YamlFormatter {
+ public:
+  static std::string Format(const JsonNode& root) {
+    switch (root.type()) {
+      case JsonNode::Type::kObject: {
+        const auto& obj = root.AsObject();
+        if (obj.empty()) {
+          return "{}";
+        }
+        std::vector<std::string> lines;
+        AppendObjectFields(obj, 0, lines);
+        std::string res;
+        for (size_t i = 0; i < lines.size(); ++i) {
+          if (i != 0) res += '\n';
+          res += lines[i];
+        }
+        return res;
+      }
+      case JsonNode::Type::kArray: {
+        const auto& arr = root.AsArray();
+        if (arr.empty()) {
+          return "[]";
+        }
+        std::vector<std::string> lines;
+        AppendArrayItems(arr, 0, lines);
+        std::string res;
+        for (size_t i = 0; i < lines.size(); ++i) {
+          if (i != 0) res += '\n';
+          res += lines[i];
+        }
+        return res;
+      }
+      default: {
+        return FormatPrimitive(root);
+      }
+    }
+  }
+
+ private:
+  static std::string Indent(int depth) { return std::string(depth * 2, ' '); }
+
+  static std::string FormatNumber(double number) {
+    if (std::isnan(number)) {
+      return ".nan";
+    }
+    if (std::isinf(number)) {
+      return number > 0 ? ".inf" : "-.inf";
+    }
+    if (number == 0.0 || number == -0.0) {
+      return "0";
+    }
+    double abs_val = std::abs(number);
+    if (abs_val >= 1e-6 && abs_val < 1e21) {
+      char buffer[128];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
+        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
+        s = buffer;
+        size_t dot = s.find('.');
+        if (dot != std::string::npos) {
+          while (s.back() == '0') {
+            s.pop_back();
+          }
+          if (s.back() == '.') {
+            s.pop_back();
+          }
+        }
+      }
+      return s;
+    } else {
+      char buffer[64];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      for (char& c : s) {
+        if (c == 'E') c = 'e';
+      }
+      return s;
+    }
+  }
+
+  static bool EqualsIgnoreCase(const std::string& s, std::string_view target) {
+    if (s.size() != target.size()) return false;
+    for (size_t i = 0; i < s.size(); ++i) {
+      if (std::tolower(static_cast<unsigned char>(s[i])) !=
+          std::tolower(static_cast<unsigned char>(target[i]))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static bool IsYamlKeyword(const std::string& s) {
+    return s == "~" || EqualsIgnoreCase(s, "null") || EqualsIgnoreCase(s, "true") ||
+           EqualsIgnoreCase(s, "false") || EqualsIgnoreCase(s, "yes") ||
+           EqualsIgnoreCase(s, "no") || EqualsIgnoreCase(s, "on") || EqualsIgnoreCase(s, "off") ||
+           EqualsIgnoreCase(s, "y") || EqualsIgnoreCase(s, "n");
+  }
+
+  static bool IsNumericOrSpecialScalar(const std::string& s) {
+    if (s.empty()) return false;
+    if (EqualsIgnoreCase(s, ".nan") || EqualsIgnoreCase(s, ".inf") ||
+        EqualsIgnoreCase(s, "+.inf") || EqualsIgnoreCase(s, "-.inf")) {
+      return true;
+    }
+    // Check hex, octal, binary
+    if (s.size() >= 3 && s[0] == '0') {
+      char p = std::tolower(static_cast<unsigned char>(s[1]));
+      if (p == 'x' || p == 'o' || p == 'b') {
+        return true;
+      }
+    }
+    // Check date pattern YYYY-MM-DD
+    if (s.size() >= 10 && std::isdigit(static_cast<unsigned char>(s[0])) &&
+        std::isdigit(static_cast<unsigned char>(s[1])) &&
+        std::isdigit(static_cast<unsigned char>(s[2])) &&
+        std::isdigit(static_cast<unsigned char>(s[3])) && s[4] == '-' &&
+        std::isdigit(static_cast<unsigned char>(s[5])) &&
+        std::isdigit(static_cast<unsigned char>(s[6])) && s[7] == '-' &&
+        std::isdigit(static_cast<unsigned char>(s[8])) &&
+        std::isdigit(static_cast<unsigned char>(s[9]))) {
+      return true;
+    }
+    // Check numeric
+    size_t i = 0;
+    if (s[i] == '+' || s[i] == '-') {
+      ++i;
+    }
+    if (i < s.size() && s[i] == '.') {
+      ++i;
+      if (i == s.size()) return false;
+      while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+        ++i;
+      }
+      if (i == s.size()) return true;
+      if (s[i] == 'e' || s[i] == 'E') {
+        ++i;
+        if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
+        if (i == s.size()) return false;
+        while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) ++i;
+        return i == s.size();
+      }
+      return false;
+    }
+    if (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+      while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+        ++i;
+      }
+      if (i == s.size()) return true;
+      if (s[i] == '.') {
+        ++i;
+        while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) ++i;
+      }
+      if (i < s.size() && (s[i] == 'e' || s[i] == 'E')) {
+        ++i;
+        if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
+        if (i == s.size()) return false;
+        while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) ++i;
+      }
+      return i == s.size();
+    }
+    return false;
+  }
+
+  static bool NeedsQuoting(const std::string& s) {
+    if (s.empty()) return true;
+    if (s.front() == ' ' || s.front() == '\t' || s.back() == ' ' || s.back() == '\t') {
+      return true;
+    }
+    if (IsYamlKeyword(s)) {
+      return true;
+    }
+    if (IsNumericOrSpecialScalar(s)) {
+      return true;
+    }
+    char first = s.front();
+    if (first == '-' || first == '?' || first == ':' || first == ',' || first == '[' ||
+        first == ']' || first == '{' || first == '}' || first == '#' || first == '&' ||
+        first == '*' || first == '!' || first == '|' || first == '>' || first == '\'' ||
+        first == '"' || first == '%' || first == '@' || first == '`') {
+      return true;
+    }
+    if (s.back() == ':') {
+      return true;
+    }
+    for (size_t i = 0; i < s.size(); ++i) {
+      unsigned char c = static_cast<unsigned char>(s[i]);
+      if (c < 0x20 || c == 0x7F) return true;
+      if (c == '"' || c == '\\') return true;
+      if (c == '[' || c == ']' || c == '{' || c == '}' || c == ',') return true;
+      if (c == ':' && i + 1 < s.size() && s[i + 1] == ' ') return true;
+      if (c == '#' && (i == 0 || s[i - 1] == ' ')) return true;
+    }
+    return false;
+  }
+
+  static bool IsSafeKey(const std::string& key) {
+    if (key.empty()) return false;
+    if (IsYamlKeyword(key)) return false;
+    unsigned char first = static_cast<unsigned char>(key[0]);
+    if (!((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first == '_')) {
+      return false;
+    }
+    for (size_t i = 1; i < key.size(); ++i) {
+      unsigned char c = static_cast<unsigned char>(key[i]);
+      if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+            c == '_')) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static void AppendEscapedString(const std::string& s, std::string& out) {
+    static constexpr char kHexDigitsLower[] = "0123456789abcdef";
+    out += '"';
+    const char* pos = s.data();
+    const char* const end = pos + s.size();
+    while (true) {
+      const uint8_t byte = static_cast<uint8_t>(*pos++);
+      if (byte < 0x20 || byte == 0x7F) {
+        switch (byte) {
+          case '\0': {
+            if (pos > end) {
+              out += '"';
+              return;
+            } else {
+              out += "\\0";
+              break;
+            }
+          }
+          case '\a': {
+            out += "\\a";
+            break;
+          }
+          case '\b': {
+            out += "\\b";
+            break;
+          }
+          case '\t': {
+            out += "\\t";
+            break;
+          }
+          case '\n': {
+            out += "\\n";
+            break;
+          }
+          case '\v': {
+            out += "\\v";
+            break;
+          }
+          case '\f': {
+            out += "\\f";
+            break;
+          }
+          case '\r': {
+            out += "\\r";
+            break;
+          }
+          case '\x1b': {
+            out += "\\e";
+            break;
+          }
+          default: {
+            out += "\\u00";
+            out += kHexDigitsLower[(byte >> 4) & 0x0F];
+            out += kHexDigitsLower[byte & 0x0F];
+            break;
+          }
+        }
+      } else if (byte == '"') {
+        out += "\\\"";
+      } else if (byte == '\\') {
+        out += "\\\\";
+      } else {
+        out += static_cast<char>(byte);
+      }
+    }
+  }
+
+  static std::string FormatKey(const std::string& key) {
+    if (IsSafeKey(key)) {
+      return key;
+    }
+    std::string out;
+    AppendEscapedString(key, out);
+    return out;
+  }
+
+  static std::string FormatString(const std::string& s) {
+    if (!NeedsQuoting(s)) {
+      return s;
+    }
+    std::string out;
+    AppendEscapedString(s, out);
+    return out;
+  }
+
+  static std::string FormatPrimitive(const JsonNode& node) {
+    switch (node.type()) {
+      case JsonNode::Type::kNull:
+        return "null";
+      case JsonNode::Type::kBool:
+        return node.AsBool() ? "true" : "false";
+      case JsonNode::Type::kNumber:
+        return FormatNumber(node.AsNumber());
+      case JsonNode::Type::kString:
+        return FormatString(node.AsString());
+      default:
+        return "";
+    }
+  }
+
+  static void AppendObjectFields(const std::vector<std::pair<std::string, JsonNode>>& entries,
+                                 int depth, std::vector<std::string>& lines) {
+    for (const auto& [k, v] : entries) {
+      if (v.type() == JsonNode::Type::kObject) {
+        if (v.AsObject().empty()) {
+          lines.push_back(Indent(depth) + FormatKey(k) + ": {}");
+        } else {
+          lines.push_back(Indent(depth) + FormatKey(k) + ":");
+          AppendObjectFields(v.AsObject(), depth + 1, lines);
+        }
+      } else if (v.type() == JsonNode::Type::kArray) {
+        if (v.AsArray().empty()) {
+          lines.push_back(Indent(depth) + FormatKey(k) + ": []");
+        } else {
+          lines.push_back(Indent(depth) + FormatKey(k) + ":");
+          AppendArrayItems(v.AsArray(), depth + 1, lines);
+        }
+      } else {
+        lines.push_back(Indent(depth) + FormatKey(k) + ": " + FormatPrimitive(v));
+      }
+    }
+  }
+
+  static void AppendArrayItems(const std::vector<JsonNode>& arr, int depth,
+                               std::vector<std::string>& lines) {
+    for (const auto& item : arr) {
+      if (item.type() == JsonNode::Type::kObject) {
+        if (item.AsObject().empty()) {
+          lines.push_back(Indent(depth) + "- {}");
+        } else {
+          AppendObjectAsListItem(item.AsObject(), depth, lines);
+        }
+      } else if (item.type() == JsonNode::Type::kArray) {
+        if (item.AsArray().empty()) {
+          lines.push_back(Indent(depth) + "- []");
+        } else {
+          AppendArrayAsListItem(item.AsArray(), depth, lines);
+        }
+      } else {
+        lines.push_back(Indent(depth) + "- " + FormatPrimitive(item));
+      }
+    }
+  }
+
+  static void AppendObjectAsListItem(const std::vector<std::pair<std::string, JsonNode>>& obj,
+                                     int depth, std::vector<std::string>& lines) {
+    if (obj.empty()) {
+      lines.push_back(Indent(depth) + "- {}");
+      return;
+    }
+    const auto& [first_k, first_v] = obj[0];
+    if (first_v.type() == JsonNode::Type::kObject) {
+      if (first_v.AsObject().empty()) {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": {}");
+      } else {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
+        AppendObjectFields(first_v.AsObject(), depth + 2, lines);
+      }
+    } else if (first_v.type() == JsonNode::Type::kArray) {
+      if (first_v.AsArray().empty()) {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": []");
+      } else {
+        lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
+        AppendArrayItems(first_v.AsArray(), depth + 2, lines);
+      }
+    } else {
+      lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": " + FormatPrimitive(first_v));
+    }
+
+    for (size_t i = 1; i < obj.size(); ++i) {
+      const auto& [k, v] = obj[i];
+      if (v.type() == JsonNode::Type::kObject) {
+        if (v.AsObject().empty()) {
+          lines.push_back(Indent(depth + 1) + FormatKey(k) + ": {}");
+        } else {
+          lines.push_back(Indent(depth + 1) + FormatKey(k) + ":");
+          AppendObjectFields(v.AsObject(), depth + 2, lines);
+        }
+      } else if (v.type() == JsonNode::Type::kArray) {
+        if (v.AsArray().empty()) {
+          lines.push_back(Indent(depth + 1) + FormatKey(k) + ": []");
+        } else {
+          lines.push_back(Indent(depth + 1) + FormatKey(k) + ":");
+          AppendArrayItems(v.AsArray(), depth + 2, lines);
+        }
+      } else {
+        lines.push_back(Indent(depth + 1) + FormatKey(k) + ": " + FormatPrimitive(v));
+      }
+    }
+  }
+
+  static void AppendArrayAsListItem(const std::vector<JsonNode>& arr, int depth,
+                                    std::vector<std::string>& lines) {
+    if (arr.empty()) {
+      lines.push_back(Indent(depth) + "- []");
+      return;
+    }
+    const auto& first = arr[0];
+    if (first.type() == JsonNode::Type::kObject) {
+      if (first.AsObject().empty()) {
+        lines.push_back(Indent(depth) + "- - {}");
+      } else {
+        lines.push_back(Indent(depth) + "-");
+        AppendArrayItems(arr, depth + 1, lines);
+        return;
+      }
+    } else if (first.type() == JsonNode::Type::kArray) {
+      lines.push_back(Indent(depth) + "-");
+      AppendArrayItems(arr, depth + 1, lines);
+      return;
+    } else {
+      lines.push_back(Indent(depth) + "- - " + FormatPrimitive(first));
+    }
+
+    for (size_t i = 1; i < arr.size(); ++i) {
+      const auto& item = arr[i];
+      if (item.type() == JsonNode::Type::kObject) {
+        if (item.AsObject().empty()) {
+          lines.push_back(Indent(depth + 1) + "- {}");
+        } else {
+          AppendObjectAsListItem(item.AsObject(), depth + 1, lines);
+        }
+      } else if (item.type() == JsonNode::Type::kArray) {
+        if (item.AsArray().empty()) {
+          lines.push_back(Indent(depth + 1) + "- []");
+        } else {
+          AppendArrayAsListItem(item.AsArray(), depth + 1, lines);
+        }
+      } else {
+        lines.push_back(Indent(depth + 1) + "- " + FormatPrimitive(item));
+      }
+    }
+  }
+};
+
 }  // namespace internal
 
 inline std::string JsonNode::StringifyToon() const {
   return internal::ToonFormatter::Format(*this);
+}
+
+inline std::string JsonNode::StringifyYaml() const {
+  return internal::YamlFormatter::Format(*this);
 }
 
 }  // namespace typeprompt

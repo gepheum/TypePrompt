@@ -818,6 +818,470 @@ void TestStringifyToonGeneralObjects() {
             "  name: Ada");
 }
 
+void TestStringifyYamlPrimitives() {
+  JsonNode default_null;
+  ASSERT_EQ(default_null.StringifyYaml(), "null");
+
+  JsonNode explicit_null(std::nullopt);
+  ASSERT_EQ(explicit_null.StringifyYaml(), "null");
+
+  JsonNode bool_true(true);
+  ASSERT_EQ(bool_true.StringifyYaml(), "true");
+
+  JsonNode bool_false(false);
+  ASSERT_EQ(bool_false.StringifyYaml(), "false");
+
+  JsonNode str_plain(std::string("hello world"));
+  ASSERT_EQ(str_plain.StringifyYaml(), "hello world");
+
+  JsonNode str_with_colon(std::string("hello: world"));
+  ASSERT_EQ(str_with_colon.StringifyYaml(), "\"hello: world\"");
+
+  JsonNode str_with_hash(std::string("hello # world"));
+  ASSERT_EQ(str_with_hash.StringifyYaml(), "\"hello # world\"");
+}
+
+void TestStringifyYamlNumbers() {
+  JsonNode num_zero(0.0);
+  ASSERT_EQ(num_zero.StringifyYaml(), "0");
+
+  JsonNode num_neg_zero(-0.0);
+  ASSERT_EQ(num_neg_zero.StringifyYaml(), "0");
+
+  JsonNode num_int(1.0);
+  ASSERT_EQ(num_int.StringifyYaml(), "1");
+
+  JsonNode num_pos(42.5);
+  ASSERT_EQ(num_pos.StringifyYaml(), "42.5");
+
+  JsonNode num_neg(-17.25);
+  ASSERT_EQ(num_neg.StringifyYaml(), "-17.25");
+
+  JsonNode num_million(1000000.0);
+  ASSERT_EQ(num_million.StringifyYaml(), "1000000");
+
+  JsonNode num_micro(0.000001);
+  ASSERT_EQ(num_micro.StringifyYaml(), "0.000001");
+
+  JsonNode num_nan(std::numeric_limits<double>::quiet_NaN());
+  ASSERT_EQ(num_nan.StringifyYaml(), ".nan");
+
+  JsonNode num_pos_inf(std::numeric_limits<double>::infinity());
+  ASSERT_EQ(num_pos_inf.StringifyYaml(), ".inf");
+
+  JsonNode num_neg_inf(-std::numeric_limits<double>::infinity());
+  ASSERT_EQ(num_neg_inf.StringifyYaml(), "-.inf");
+}
+
+void TestStringifyYamlStringsAndEscapes() {
+  JsonNode empty_str(std::string(""));
+  ASSERT_EQ(empty_str.StringifyYaml(), "\"\"");
+
+  JsonNode lead_space(std::string(" leading"));
+  ASSERT_EQ(lead_space.StringifyYaml(), "\" leading\"");
+
+  JsonNode trail_space(std::string("trailing "));
+  ASSERT_EQ(trail_space.StringifyYaml(), "\"trailing \"");
+
+  JsonNode lead_tab(std::string("\tleading tab"));
+  ASSERT_EQ(lead_tab.StringifyYaml(), "\"\\tleading tab\"");
+
+  JsonNode kw_true(std::string("true"));
+  ASSERT_EQ(kw_true.StringifyYaml(), "\"true\"");
+
+  JsonNode kw_false(std::string("false"));
+  ASSERT_EQ(kw_false.StringifyYaml(), "\"false\"");
+
+  JsonNode kw_null(std::string("null"));
+  ASSERT_EQ(kw_null.StringifyYaml(), "\"null\"");
+
+  JsonNode kw_tilde(std::string("~"));
+  ASSERT_EQ(kw_tilde.StringifyYaml(), "\"~\"");
+
+  JsonNode kw_yes(std::string("yes"));
+  ASSERT_EQ(kw_yes.StringifyYaml(), "\"yes\"");
+
+  JsonNode kw_no(std::string("no"));
+  ASSERT_EQ(kw_no.StringifyYaml(), "\"no\"");
+
+  JsonNode kw_on(std::string("on"));
+  ASSERT_EQ(kw_on.StringifyYaml(), "\"on\"");
+
+  JsonNode kw_off(std::string("off"));
+  ASSERT_EQ(kw_off.StringifyYaml(), "\"off\"");
+
+  JsonNode num_str_42(std::string("42"));
+  ASSERT_EQ(num_str_42.StringifyYaml(), "\"42\"");
+
+  JsonNode num_str_neg(std::string("-3.14"));
+  ASSERT_EQ(num_str_neg.StringifyYaml(), "\"-3.14\"");
+
+  JsonNode num_str_lead_zero(std::string("05"));
+  ASSERT_EQ(num_str_lead_zero.StringifyYaml(), "\"05\"");
+
+  JsonNode num_str_plus(std::string("+1"));
+  ASSERT_EQ(num_str_plus.StringifyYaml(), "\"+1\"");
+
+  JsonNode num_str_exp(std::string("1e-6"));
+  ASSERT_EQ(num_str_exp.StringifyYaml(), "\"1e-6\"");
+
+  JsonNode str_dot5(std::string(".5"));
+  ASSERT_EQ(str_dot5.StringifyYaml(), "\".5\"");
+
+  JsonNode str_nan(std::string(".nan"));
+  ASSERT_EQ(str_nan.StringifyYaml(), "\".nan\"");
+
+  JsonNode str_inf(std::string(".inf"));
+  ASSERT_EQ(str_inf.StringifyYaml(), "\".inf\"");
+
+  JsonNode str_date(std::string("2026-09-23"));
+  ASSERT_EQ(str_date.StringifyYaml(), "\"2026-09-23\"");
+
+  JsonNode quotes_and_bs(std::string("quote: \", backslash: \\"));
+  ASSERT_EQ(quotes_and_bs.StringifyYaml(), "\"quote: \\\", backslash: \\\\\"");
+
+  JsonNode escapes(std::string("line1\nline2\ttab\rcarriage"));
+  ASSERT_EQ(escapes.StringifyYaml(), "\"line1\\nline2\\ttab\\rcarriage\"");
+
+  JsonNode bs_ctrl(std::string("\b", 1));
+  ASSERT_EQ(bs_ctrl.StringifyYaml(), "\"\\b\"");
+
+  JsonNode ff_ctrl(std::string("\f", 1));
+  ASSERT_EQ(ff_ctrl.StringifyYaml(), "\"\\f\"");
+
+  JsonNode hex_ctrl(std::string("\x01\x1f", 2));
+  ASSERT_EQ(hex_ctrl.StringifyYaml(), "\"\\u0001\\u001f\"");
+
+  std::string with_null("null\0byte", 9);
+  JsonNode null_char_str(with_null);
+  ASSERT_EQ(null_char_str.StringifyYaml(), "\"null\\0byte\"");
+
+  JsonNode unicode_plain(std::string("Hello 世界! 🌍"));
+  ASSERT_EQ(unicode_plain.StringifyYaml(), "Hello 世界! 🌍");
+
+  JsonNode lead_hyphen(std::string("-foo"));
+  ASSERT_EQ(lead_hyphen.StringifyYaml(), "\"-foo\"");
+
+  JsonNode bare_hyphen(std::string("-"));
+  ASSERT_EQ(bare_hyphen.StringifyYaml(), "\"-\"");
+
+  JsonNode lead_hash(std::string("#comment"));
+  ASSERT_EQ(lead_hash.StringifyYaml(), "\"#comment\"");
+
+  JsonNode bare_hash(std::string("#"));
+  ASSERT_EQ(bare_hash.StringifyYaml(), "\"#\"");
+
+  JsonNode hex_str(std::string("0x1F"));
+  ASSERT_EQ(hex_str.StringifyYaml(), "\"0x1F\"");
+
+  JsonNode oct_str(std::string("0o77"));
+  ASSERT_EQ(oct_str.StringifyYaml(), "\"0o77\"");
+
+  JsonNode bin_str(std::string("0b101"));
+  ASSERT_EQ(bin_str.StringifyYaml(), "\"0b101\"");
+
+  JsonNode at_str(std::string("@admin"));
+  ASSERT_EQ(at_str.StringifyYaml(), "\"@admin\"");
+
+  JsonNode pct_str(std::string("%percent"));
+  ASSERT_EQ(pct_str.StringifyYaml(), "\"%percent\"");
+
+  JsonNode pipe_str(std::string("|pipe"));
+  ASSERT_EQ(pipe_str.StringifyYaml(), "\"|pipe\"");
+
+  JsonNode gt_str(std::string(">greater"));
+  ASSERT_EQ(gt_str.StringifyYaml(), "\">greater\"");
+
+  JsonNode sq_str(std::string("'single'"));
+  ASSERT_EQ(sq_str.StringifyYaml(), "\"'single'\"");
+
+  JsonNode bt_str(std::string("`backtick`"));
+  ASSERT_EQ(bt_str.StringifyYaml(), "\"`backtick`\"");
+
+  JsonNode and_str(std::string("&anchor"));
+  ASSERT_EQ(and_str.StringifyYaml(), "\"&anchor\"");
+
+  JsonNode star_str(std::string("*alias"));
+  ASSERT_EQ(star_str.StringifyYaml(), "\"*alias\"");
+
+  JsonNode excl_str(std::string("!tag"));
+  ASSERT_EQ(excl_str.StringifyYaml(), "\"!tag\"");
+
+  JsonNode qmark_str(std::string("?question"));
+  ASSERT_EQ(qmark_str.StringifyYaml(), "\"?question\"");
+
+  JsonNode colon_end(std::string("end:"));
+  ASSERT_EQ(colon_end.StringifyYaml(), "\"end:\"");
+
+  JsonNode case_kw1(std::string("True"));
+  ASSERT_EQ(case_kw1.StringifyYaml(), "\"True\"");
+
+  JsonNode case_kw2(std::string("FALSE"));
+  ASSERT_EQ(case_kw2.StringifyYaml(), "\"FALSE\"");
+
+  JsonNode case_kw3(std::string("NULL"));
+  ASSERT_EQ(case_kw3.StringifyYaml(), "\"NULL\"");
+
+  JsonNode case_kw4(std::string("Yes"));
+  ASSERT_EQ(case_kw4.StringifyYaml(), "\"Yes\"");
+
+  JsonNode case_kw5(std::string("NO"));
+  ASSERT_EQ(case_kw5.StringifyYaml(), "\"NO\"");
+
+  JsonNode case_kw6(std::string("ON"));
+  ASSERT_EQ(case_kw6.StringifyYaml(), "\"ON\"");
+
+  JsonNode case_kw7(std::string("Off"));
+  ASSERT_EQ(case_kw7.StringifyYaml(), "\"Off\"");
+
+  JsonNode case_kw8(std::string("y"));
+  ASSERT_EQ(case_kw8.StringifyYaml(), "\"y\"");
+
+  JsonNode case_kw9(std::string("N"));
+  ASSERT_EQ(case_kw9.StringifyYaml(), "\"N\"");
+}
+
+void TestStringifyYamlKeys() {
+  JsonNode safe_keys(std::vector<std::pair<std::string, JsonNode>>{
+      {"id", JsonNode(1.0)},
+      {"user_name", JsonNode(std::string("Ada"))},
+  });
+  ASSERT_EQ(safe_keys.StringifyYaml(),
+            "id: 1\n"
+            "user_name: Ada");
+
+  JsonNode quoted_keys(std::vector<std::pair<std::string, JsonNode>>{
+      {"my-key", JsonNode(1.0)},
+      {"123", JsonNode(2.0)},
+      {"key:with:colon", JsonNode(3.0)},
+      {"key with spaces", JsonNode(4.0)},
+      {"true", JsonNode(5.0)},
+  });
+  ASSERT_EQ(quoted_keys.StringifyYaml(),
+            "\"my-key\": 1\n"
+            "\"123\": 2\n"
+            "\"key:with:colon\": 3\n"
+            "\"key with spaces\": 4\n"
+            "\"true\": 5");
+}
+
+void TestStringifyYamlEmptyStructures() {
+  JsonNode empty_obj(std::vector<std::pair<std::string, JsonNode>>{});
+  ASSERT_EQ(empty_obj.StringifyYaml(), "{}");
+
+  JsonNode empty_arr(std::vector<JsonNode>{});
+  ASSERT_EQ(empty_arr.StringifyYaml(), "[]");
+
+  JsonNode obj_with_empty(std::vector<std::pair<std::string, JsonNode>>{
+      {"empty", JsonNode(std::vector<std::pair<std::string, JsonNode>>{})},
+      {"items", JsonNode(std::vector<JsonNode>{})},
+  });
+  ASSERT_EQ(obj_with_empty.StringifyYaml(),
+            "empty: {}\n"
+            "items: []");
+
+  JsonNode arr_of_empty_objs(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{}),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{}),
+  });
+  ASSERT_EQ(arr_of_empty_objs.StringifyYaml(),
+            "- {}\n"
+            "- {}");
+
+  JsonNode arr_of_empty_arrs(std::vector<JsonNode>{
+      JsonNode(std::vector<JsonNode>{}),
+      JsonNode(std::vector<JsonNode>{}),
+  });
+  ASSERT_EQ(arr_of_empty_arrs.StringifyYaml(),
+            "- []\n"
+            "- []");
+}
+
+void TestStringifyYamlArrays() {
+  JsonNode root_arr(std::vector<JsonNode>{
+      JsonNode(1.0),
+      JsonNode(2.0),
+      JsonNode(3.0),
+  });
+  ASSERT_EQ(root_arr.StringifyYaml(),
+            "- 1\n"
+            "- 2\n"
+            "- 3");
+
+  JsonNode mixed_arr(std::vector<JsonNode>{
+      JsonNode(std::nullopt),
+      JsonNode(true),
+      JsonNode(12.0),
+      JsonNode(std::string("text")),
+  });
+  ASSERT_EQ(mixed_arr.StringifyYaml(),
+            "- null\n"
+            "- true\n"
+            "- 12\n"
+            "- text");
+
+  JsonNode pairs(std::vector<JsonNode>{
+      JsonNode(std::vector<JsonNode>{JsonNode(1.0), JsonNode(2.0)}),
+      JsonNode(std::vector<JsonNode>{JsonNode(3.0), JsonNode(4.0)}),
+  });
+  ASSERT_EQ(pairs.StringifyYaml(),
+            "- - 1\n"
+            "  - 2\n"
+            "- - 3\n"
+            "  - 4");
+
+  JsonNode with_empty_inner(std::vector<JsonNode>{
+      JsonNode(std::vector<JsonNode>{JsonNode(1.0), JsonNode(2.0)}),
+      JsonNode(std::vector<JsonNode>{}),
+  });
+  ASSERT_EQ(with_empty_inner.StringifyYaml(),
+            "- - 1\n"
+            "  - 2\n"
+            "- []");
+}
+
+void TestStringifyYamlObjects() {
+  JsonNode obj(std::vector<std::pair<std::string, JsonNode>>{
+      {"id", JsonNode(123.0)},
+      {"name", JsonNode(std::string("Ada"))},
+      {"active", JsonNode(true)},
+  });
+  ASSERT_EQ(obj.StringifyYaml(),
+            "id: 123\n"
+            "name: Ada\n"
+            "active: true");
+
+  JsonNode nested(std::vector<std::pair<std::string, JsonNode>>{
+      {"user", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                   {"id", JsonNode(123.0)},
+                   {"name", JsonNode(std::string("Ada"))},
+               })},
+      {"empty", JsonNode(std::vector<std::pair<std::string, JsonNode>>{})},
+  });
+  ASSERT_EQ(nested.StringifyYaml(),
+            "user:\n"
+            "  id: 123\n"
+            "  name: Ada\n"
+            "empty: {}");
+
+  JsonNode with_array(std::vector<std::pair<std::string, JsonNode>>{
+      {"tags", JsonNode(std::vector<JsonNode>{
+                   JsonNode(std::string("admin")),
+                   JsonNode(std::string("ops")),
+               })},
+      {"empty_list", JsonNode(std::vector<JsonNode>{})},
+  });
+  ASSERT_EQ(with_array.StringifyYaml(),
+            "tags:\n"
+            "  - admin\n"
+            "  - ops\n"
+            "empty_list: []");
+
+  JsonNode deeply_nested(std::vector<std::pair<std::string, JsonNode>>{
+      {"l1", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                 {"l2", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                            {"l3", JsonNode(std::string("value"))},
+                        })},
+             })},
+  });
+  ASSERT_EQ(deeply_nested.StringifyYaml(),
+            "l1:\n"
+            "  l2:\n"
+            "    l3: value");
+}
+
+void TestStringifyYamlObjectsAsListItems() {
+  JsonNode list_objs(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"id", JsonNode(1.0)},
+          {"name", JsonNode(std::string("First"))},
+      }),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"id", JsonNode(2.0)},
+          {"name", JsonNode(std::string("Second"))},
+          {"extra", JsonNode(true)},
+      }),
+  });
+  ASSERT_EQ(list_objs.StringifyYaml(),
+            "- id: 1\n"
+            "  name: First\n"
+            "- id: 2\n"
+            "  name: Second\n"
+            "  extra: true");
+
+  JsonNode list_with_nested_obj(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"address", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                          {"city", JsonNode(std::string("Paris"))},
+                          {"zip", JsonNode(std::string("75001"))},
+                      })},
+          {"country", JsonNode(std::string("FR"))},
+      }),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"name", JsonNode(std::string("Alice"))},
+      }),
+  });
+  ASSERT_EQ(list_with_nested_obj.StringifyYaml(),
+            "- address:\n"
+            "    city: Paris\n"
+            "    zip: \"75001\"\n"
+            "  country: FR\n"
+            "- name: Alice");
+
+  JsonNode list_with_nested_arr(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"id", JsonNode(1.0)},
+          {"tags", JsonNode(std::vector<JsonNode>{
+                       JsonNode(std::string("c++")),
+                       JsonNode(std::string("json")),
+                   })},
+      }),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+          {"id", JsonNode(2.0)},
+          {"tags", JsonNode(std::vector<JsonNode>{})},
+      }),
+  });
+  ASSERT_EQ(list_with_nested_arr.StringifyYaml(),
+            "- id: 1\n"
+            "  tags:\n"
+            "    - c++\n"
+            "    - json\n"
+            "- id: 2\n"
+            "  tags: []");
+}
+
+void TestStringifyYamlComplexNested() {
+  JsonNode complex_node(std::vector<std::pair<std::string, JsonNode>>{
+      {"title", JsonNode(std::string("Task List"))},
+      {"tasks", JsonNode(std::vector<JsonNode>{
+                    JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                        {"id", JsonNode(1.0)},
+                        {"tags", JsonNode(std::vector<JsonNode>{
+                                     JsonNode(std::string("c++")),
+                                     JsonNode(std::string("json")),
+                                 })},
+                    }),
+                    JsonNode(std::vector<std::pair<std::string, JsonNode>>{
+                        {"id", JsonNode(2.0)},
+                        {"tags", JsonNode(std::vector<JsonNode>{})},
+                    }),
+                })},
+      {"completed", JsonNode(false)},
+  });
+
+  std::string expected =
+      "title: Task List\n"
+      "tasks:\n"
+      "  - id: 1\n"
+      "    tags:\n"
+      "      - c++\n"
+      "      - json\n"
+      "  - id: 2\n"
+      "    tags: []\n"
+      "completed: false";
+  ASSERT_EQ(complex_node.StringifyYaml(), expected);
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -851,6 +1315,16 @@ void TestRuntimeLogic() {
   TestStringifyToonObjectsAsListItems();
   TestStringifyToonObjectsAsListItemsWithTabular();
   TestStringifyToonGeneralObjects();
+
+  TestStringifyYamlPrimitives();
+  TestStringifyYamlNumbers();
+  TestStringifyYamlStringsAndEscapes();
+  TestStringifyYamlKeys();
+  TestStringifyYamlEmptyStructures();
+  TestStringifyYamlArrays();
+  TestStringifyYamlObjects();
+  TestStringifyYamlObjectsAsListItems();
+  TestStringifyYamlComplexNested();
 }
 
 int main() {
