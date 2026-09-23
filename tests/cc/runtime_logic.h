@@ -76,7 +76,9 @@ class JsonNode {
     kObject,
   };
 
+  // Represents a JSON array.
   using Array = std::vector<JsonNode>;
+  // Represents a JSON object as an ordered list of key-value pairs.
   using Object = std::vector<std::pair<std::string, JsonNode>>;
 
   JsonNode() : data_(std::nullopt) {}
@@ -97,6 +99,7 @@ class JsonNode {
 
   static ParseResult<JsonNode> ParseJson(std::string_view json);
 
+  // Returns the JSON type of this node.
   Type type() const {
     return std::visit(
         [](const auto& value) -> Type {
@@ -118,18 +121,25 @@ class JsonNode {
         data_);
   }
 
+  // Returns the boolean value. Precondition: type() == Type::kBool.
   bool bool_value() const { return std::get<bool>(data_); }
+
+  // Returns the numeric value. Precondition: type() == Type::kNumber.
   double number_value() const { return std::get<double>(data_); }
 
+  // Returns the string value. Precondition: type() == Type::kString.
   const std::string& string_value() const& { return std::get<std::string>(data_); }
   std::string string_value() && { return std::get<std::string>(std::move(data_)); }
 
+  // Returns the array elements. Precondition: type() == Type::kArray.
   const Array& array_value() const& { return std::get<Array>(data_); }
   Array array_value() && { return std::get<Array>(std::move(data_)); }
 
+  // Returns the object key-value pairs. Precondition: type() == Type::kObject.
   const Object& object_value() const& { return std::get<Object>(data_); }
   Object object_value() && { return std::get<Object>(std::move(data_)); }
 
+  // Formats this node as a compact JSON string.
   std::string ToJson() const {
     std::string json;
     std::string eolIndent;
@@ -137,6 +147,7 @@ class JsonNode {
     return json;
   }
 
+  // Formats this node as an indented, multi-line JSON string.
   std::string ToJsonWithIndent() const {
     std::string json;
     std::string eolIndent = "\n";
@@ -144,7 +155,10 @@ class JsonNode {
     return json;
   }
 
+  // Formats this node in TOON (Token-Oriented Object Notation) format.
   inline std::string ToToon() const;
+
+  // Formats this node in YAML format.
   inline std::string ToYaml() const;
 
  private:
