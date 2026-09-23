@@ -76,6 +76,9 @@ class JsonNode {
     kObject,
   };
 
+  using Array = std::vector<JsonNode>;
+  using Object = std::vector<std::pair<std::string, JsonNode>>;
+
   JsonNode() : data_(std::nullopt) {}
   explicit JsonNode(std::nullopt_t value) : data_(value) {}
   explicit JsonNode(bool value) : data_(value) {}
@@ -83,9 +86,8 @@ class JsonNode {
   explicit JsonNode(double value) : data_(value) {}
   explicit JsonNode(const char* value) : data_(NormalizeUtf8(value)) {}
   explicit JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
-  explicit JsonNode(std::vector<JsonNode> value) : data_(std::move(value)) {}
-  explicit JsonNode(std::vector<std::pair<std::string, JsonNode>> value)
-      : data_(NormalizeUtf8(std::move(value))) {}
+  explicit JsonNode(Array value) : data_(std::move(value)) {}
+  explicit JsonNode(Object value) : data_(NormalizeUtf8(std::move(value))) {}
 
   JsonNode(const JsonNode&) = default;
   JsonNode(JsonNode&&) = default;
@@ -107,9 +109,9 @@ class JsonNode {
             return Type::kNumber;
           } else if constexpr (std::is_same_v<T, std::string>) {
             return Type::kString;
-          } else if constexpr (std::is_same_v<T, JsonArrayVariant>) {
+          } else if constexpr (std::is_same_v<T, Array>) {
             return Type::kArray;
-          } else if constexpr (std::is_same_v<T, JsonObjectVariant>) {
+          } else if constexpr (std::is_same_v<T, Object>) {
             return Type::kObject;
           }
         },
@@ -122,15 +124,11 @@ class JsonNode {
   const std::string& string_value() const& { return std::get<std::string>(data_); }
   std::string string_value() && { return std::get<std::string>(std::move(data_)); }
 
-  const std::vector<JsonNode>& array_value() const& { return std::get<JsonArrayVariant>(data_); }
-  std::vector<JsonNode> array_value() && { return std::get<JsonArrayVariant>(std::move(data_)); }
+  const Array& array_value() const& { return std::get<Array>(data_); }
+  Array array_value() && { return std::get<Array>(std::move(data_)); }
 
-  const std::vector<std::pair<std::string, JsonNode>>& object_value() const& {
-    return std::get<JsonObjectVariant>(data_);
-  }
-  std::vector<std::pair<std::string, JsonNode>> object_value() && {
-    return std::get<JsonObjectVariant>(std::move(data_));
-  }
+  const Object& object_value() const& { return std::get<Object>(data_); }
+  Object object_value() && { return std::get<Object>(std::move(data_)); }
 
   std::string ToJson() const {
     std::string json;
@@ -150,11 +148,7 @@ class JsonNode {
   inline std::string ToYaml() const;
 
  private:
-  using JsonArrayVariant = std::vector<JsonNode>;
-  using JsonObjectVariant = std::vector<std::pair<std::string, JsonNode>>;
-
-  std::variant<std::nullopt_t, bool, double, std::string, JsonArrayVariant, JsonObjectVariant>
-      data_;
+  std::variant<std::nullopt_t, bool, double, std::string, Array, Object> data_;
 
   static std::string NormalizeUtf8(std::string_view input) {
     std::string out;
@@ -172,8 +166,7 @@ class JsonNode {
     return out;
   }
 
-  static std::vector<std::pair<std::string, JsonNode>> NormalizeUtf8(
-      std::vector<std::pair<std::string, JsonNode>> value) {
+  static Object NormalizeUtf8(Object value) {
     for (auto& entry : value) {
       entry.first = NormalizeUtf8(entry.first);
     }
@@ -267,7 +260,7 @@ class JsonNode {
         break;
       }
       case Type::kArray: {
-        const std::vector<JsonNode>& array = array_value();
+        const Array& array = array_value();
         if (array.empty()) {
           out += "[]";
         } else if (eolIndent.empty()) {
@@ -296,7 +289,7 @@ class JsonNode {
         break;
       }
       case Type::kObject: {
-        const JsonObjectVariant& object = object_value();
+        const Object& object = object_value();
         if (object.empty()) {
           out += "{}";
         } else if (eolIndent.empty()) {
@@ -494,7 +487,7 @@ class ToonFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const std::vector<std::pair<std::string, JsonNode>>& obj = root.object_value();
+        const JsonNode::Object& obj = root.object_value();
         if (obj.empty()) {
           return "";
         }
@@ -884,7 +877,7 @@ class ToonFormatter {
 
   static bool CheckKeyedTabular(const JsonNode& node, std::vector<TabularField>& fields) {
     if (node.type() != JsonNode::Type::kObject) return false;
-    const std::vector<std::pair<std::string, JsonNode>>& entries = node.object_value();
+    const JsonNode::Object& entries = node.object_value();
     if (entries.size() < 2) return false;
     std::vector<const JsonNode*> entry_values;
     entry_values.reserve(entries.size());
@@ -900,7 +893,7 @@ class ToonFormatter {
   static void ExtractLeafCells(const JsonNode& node, const std::vector<TabularField>& fields,
                                std::vector<const JsonNode*>& cells) {
     if (node.type() != JsonNode::Type::kObject) return;
-    const std::vector<std::pair<std::string, JsonNode>>& obj = node.object_value();
+    const JsonNode::Object& obj = node.object_value();
     const size_t field_count = fields.size();
     if (obj.size() != field_count) return;
 
@@ -1016,8 +1009,8 @@ class ToonFormatter {
     }
   }
 
-  static void AppendObjectFields(const std::vector<std::pair<std::string, JsonNode>>& entries,
-                                 int depth, std::vector<std::string>& lines) {
+  static void AppendObjectFields(const JsonNode::Object& entries, int depth,
+                                 std::vector<std::string>& lines) {
     for (const auto& [k, v] : entries) {
       AppendSingleObjectField(k, v, depth, lines);
     }
@@ -1083,8 +1076,8 @@ class ToonFormatter {
     }
   }
 
-  static void AppendObjectAsListItem(const std::vector<std::pair<std::string, JsonNode>>& obj,
-                                     int depth, std::vector<std::string>& lines) {
+  static void AppendObjectAsListItem(const JsonNode::Object& obj, int depth,
+                                     std::vector<std::string>& lines) {
     if (obj.empty()) {
       lines.push_back(Indent(depth) + "-");
       return;
@@ -1161,7 +1154,7 @@ class YamlFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const std::vector<std::pair<std::string, JsonNode>>& obj = root.object_value();
+        const JsonNode::Object& obj = root.object_value();
         if (obj.empty()) {
           return "{}";
         }
@@ -1463,8 +1456,8 @@ class YamlFormatter {
     }
   }
 
-  static void AppendObjectFields(const std::vector<std::pair<std::string, JsonNode>>& entries,
-                                 int depth, std::vector<std::string>& lines) {
+  static void AppendObjectFields(const JsonNode::Object& entries, int depth,
+                                 std::vector<std::string>& lines) {
     for (const auto& [k, v] : entries) {
       if (v.type() == JsonNode::Type::kObject) {
         if (v.object_value().empty()) {
@@ -1507,8 +1500,8 @@ class YamlFormatter {
     }
   }
 
-  static void AppendObjectAsListItem(const std::vector<std::pair<std::string, JsonNode>>& obj,
-                                     int depth, std::vector<std::string>& lines) {
+  static void AppendObjectAsListItem(const JsonNode::Object& obj, int depth,
+                                     std::vector<std::string>& lines) {
     if (obj.empty()) {
       lines.push_back(Indent(depth) + "- {}");
       return;
@@ -1940,10 +1933,10 @@ class JsonParser {
     SkipWhitespace();
     if (pos_ < input_.size() && input_[pos_] == '}') {
       ++pos_;
-      return JsonNode(std::vector<std::pair<std::string, JsonNode>>{});
+      return JsonNode(JsonNode::Object{});
     }
 
-    std::vector<std::pair<std::string, JsonNode>> entries;
+    JsonNode::Object entries;
     while (true) {
       SkipWhitespace();
       if (pos_ >= input_.size()) {
