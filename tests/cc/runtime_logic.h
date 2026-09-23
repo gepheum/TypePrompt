@@ -294,6 +294,7 @@ class JsonNode {
             // the string's contents.
             if (pos > end) {
               // The end of the input string was reached.
+              out += '"';
               return;
             } else {
               out += {'\\', 'u', '0', '0', '0', '0'};
@@ -336,7 +337,6 @@ class JsonNode {
         }
       }
     }
-    out += '"';
   }
 };
 
