@@ -80,22 +80,22 @@ class JsonNode {
     return std::get<JsonObjectVariant>(std::move(data_));
   }
 
-  std::string Stringify() const {
+  std::string ToJson() const {
     std::string json;
     std::string eolIndent;
     AppendJson(json, eolIndent);
     return json;
   }
 
-  std::string StringifyWithIndent() const {
+  std::string ToJsonWithIndent() const {
     std::string json;
     std::string eolIndent = "\n";
     AppendJson(json, eolIndent);
     return json;
   }
 
-  inline std::string StringifyToon() const;
-  inline std::string StringifyYaml() const;
+  inline std::string ToToon() const;
+  inline std::string ToYaml() const;
 
  private:
   using JsonArrayVariant = std::vector<JsonNode>;
@@ -650,18 +650,11 @@ class ToonFormatter {
     }
   }
 
-  static const JsonNode* FindObjectField(const std::vector<std::pair<std::string, JsonNode>>& obj,
-                                         std::string_view key) {
-    for (const auto& [k, v] : obj) {
-      if (k == key) return &v;
-    }
-    return nullptr;
-  }
-
   template <typename ElementContainer>
   static bool CheckTabularUniform(const ElementContainer& elements,
                                   std::vector<TabularField>& fields) {
     if (elements.empty()) return false;
+
     auto get_node = [](const auto& el) -> const JsonNode& {
       if constexpr (std::is_pointer_v<std::decay_t<decltype(el)>>) {
         return *el;
@@ -669,62 +662,74 @@ class ToonFormatter {
         return el;
       }
     };
+
+    // 1. Verify all elements are non-empty objects.
     for (const auto& el : elements) {
       const auto& node = get_node(el);
-      if (node.type() != JsonNode::Type::kObject) return false;
-      if (node.AsObject().empty()) return false;
+      if (node.type() != JsonNode::Type::kObject || node.AsObject().empty()) {
+        return false;
+      }
     }
+
     const auto& first_obj = get_node(elements[0]).AsObject();
     const size_t field_count = first_obj.size();
 
-    std::vector<std::string_view> first_keys_sorted;
-    bool sorted_initialized = false;
-    bool all_same_order = true;
+    // 2. Sort first object keys and record mapping from sorted position to column index.
+    struct KeyIndex {
+      std::string_view key;
+      size_t orig_idx = 0;
+    };
+    std::vector<KeyIndex> first_sorted;
+    first_sorted.reserve(field_count);
+    for (size_t i = 0; i < field_count; ++i) {
+      first_sorted.push_back({first_obj[i].first, i});
+    }
+    std::sort(first_sorted.begin(), first_sorted.end(),
+              [](const KeyIndex& a, const KeyIndex& b) { return a.key < b.key; });
 
-    for (size_t e = 1; e < elements.size(); ++e) {
-      const auto& el_obj = get_node(elements[e]).AsObject();
+    // 3. Bucket values into columns using sorted key mapping without searching.
+    std::vector<std::vector<const JsonNode*>> column_nodes(field_count);
+    for (auto& col : column_nodes) {
+      col.reserve(elements.size());
+    }
+
+    struct EntryRef {
+      std::string_view key;
+      const JsonNode* val = nullptr;
+    };
+    std::vector<EntryRef> el_sorted;
+    el_sorted.reserve(field_count);
+
+    for (const auto& el : elements) {
+      const auto& el_obj = get_node(el).AsObject();
       if (el_obj.size() != field_count) return false;
-      bool same_keys = true;
-      for (size_t i = 0; i < field_count; ++i) {
-        if (el_obj[i].first != first_obj[i].first) {
-          same_keys = false;
-          break;
-        }
+
+      el_sorted.clear();
+      for (const auto& [k, v] : el_obj) {
+        el_sorted.push_back({k, &v});
       }
-      if (!same_keys) {
-        if (!sorted_initialized) {
-          first_keys_sorted.reserve(field_count);
-          for (const auto& [k, v] : first_obj) {
-            first_keys_sorted.push_back(k);
-          }
-          std::sort(first_keys_sorted.begin(), first_keys_sorted.end());
-          sorted_initialized = true;
-        }
-        std::vector<std::string_view> el_keys;
-        el_keys.reserve(field_count);
-        for (const auto& [k, v] : el_obj) {
-          el_keys.push_back(k);
-        }
-        std::sort(el_keys.begin(), el_keys.end());
-        if (el_keys != first_keys_sorted) {
+      std::sort(el_sorted.begin(), el_sorted.end(),
+                [](const EntryRef& a, const EntryRef& b) { return a.key < b.key; });
+
+      for (size_t s = 0; s < field_count; ++s) {
+        if (el_sorted[s].key != first_sorted[s].key) {
           return false;
         }
-        all_same_order = false;
+        column_nodes[first_sorted[s].orig_idx].push_back(el_sorted[s].val);
       }
     }
 
+    // 4. Validate column uniformity across all objects (all primitive or all uniform objects).
     fields.clear();
+    fields.reserve(field_count);
     for (size_t field_idx = 0; field_idx < field_count; ++field_idx) {
       std::string_view field_name = first_obj[field_idx].first;
       bool all_primitive = true;
       bool all_objects = true;
       std::vector<const JsonNode*> sub_elements;
       sub_elements.reserve(elements.size());
-      for (const auto& el : elements) {
-        const auto& el_obj = get_node(el).AsObject();
-        const JsonNode* val =
-            all_same_order ? &el_obj[field_idx].second : FindObjectField(el_obj, field_name);
-        if (!val) return false;
+
+      for (const JsonNode* val : column_nodes[field_idx]) {
         if (val->type() == JsonNode::Type::kObject) {
           all_primitive = false;
           if (val->AsObject().empty()) {
@@ -739,6 +744,7 @@ class ToonFormatter {
           all_objects = false;
         }
       }
+
       if (all_primitive) {
         fields.push_back(TabularField{field_name, false, {}});
       } else if (all_objects && !sub_elements.empty()) {
@@ -772,12 +778,48 @@ class ToonFormatter {
   static void ExtractLeafCells(const JsonNode& node, const std::vector<TabularField>& fields,
                                std::vector<const JsonNode*>& cells) {
     const auto& obj = node.AsObject();
-    for (const auto& field : fields) {
-      const JsonNode* val = FindObjectField(obj, field.name);
+    const size_t field_count = fields.size();
+    if (obj.size() != field_count) return;
+
+    // 1. Sort fields by name to determine sorted position to column index mapping.
+    struct KeyIndex {
+      std::string_view key;
+      size_t field_idx = 0;
+    };
+    std::vector<KeyIndex> fields_sorted;
+    fields_sorted.reserve(field_count);
+    for (size_t i = 0; i < field_count; ++i) {
+      fields_sorted.push_back({fields[i].name, i});
+    }
+    std::sort(fields_sorted.begin(), fields_sorted.end(),
+              [](const KeyIndex& a, const KeyIndex& b) { return a.key < b.key; });
+
+    // 2. Sort current object entries by key.
+    struct EntryRef {
+      std::string_view key;
+      const JsonNode* val = nullptr;
+    };
+    std::vector<EntryRef> obj_sorted;
+    obj_sorted.reserve(field_count);
+    for (const auto& [k, v] : obj) {
+      obj_sorted.push_back({k, &v});
+    }
+    std::sort(obj_sorted.begin(), obj_sorted.end(),
+              [](const EntryRef& a, const EntryRef& b) { return a.key < b.key; });
+
+    // 3. Map sorted entries directly to their column positions.
+    std::vector<const JsonNode*> row_values(field_count, nullptr);
+    for (size_t s = 0; s < field_count; ++s) {
+      row_values[fields_sorted[s].field_idx] = obj_sorted[s].val;
+    }
+
+    // 4. Extract leaf cells in field order.
+    for (size_t i = 0; i < field_count; ++i) {
+      const JsonNode* val = row_values[i];
       if (!val) continue;
-      if (field.is_nested) {
+      if (fields[i].is_nested) {
         if (val->type() == JsonNode::Type::kObject) {
-          ExtractLeafCells(*val, field.subfields, cells);
+          ExtractLeafCells(*val, fields[i].subfields, cells);
         }
       } else {
         cells.push_back(val);
@@ -1438,12 +1480,8 @@ class YamlFormatter {
 
 }  // namespace internal
 
-inline std::string JsonNode::StringifyToon() const {
-  return internal::ToonFormatter::Format(*this);
-}
+inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Format(*this); }
 
-inline std::string JsonNode::StringifyYaml() const {
-  return internal::YamlFormatter::Format(*this);
-}
+inline std::string JsonNode::ToYaml() const { return internal::YamlFormatter::Format(*this); }
 
 }  // namespace typeprompt
