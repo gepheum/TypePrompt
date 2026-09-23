@@ -42,7 +42,7 @@ class JsonNode {
   explicit JsonNode(std::nullopt_t value) : data_(value) {}
   explicit JsonNode(bool value) : data_(value) {}
   explicit JsonNode(double value) : data_(value) {}
-  explicit JsonNode(const std::string& value) : data_(NormalizeUtf8(value)) {}
+  explicit JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
   explicit JsonNode(std::vector<JsonNode> value) : data_(std::move(value)) {}
   explicit JsonNode(std::vector<std::pair<std::string, JsonNode>> value)
       : data_(std::move(value)) {}
@@ -116,27 +116,17 @@ class JsonNode {
   std::variant<std::nullopt_t, bool, double, std::string, JsonArrayVariant, JsonObjectVariant>
       data_;
 
-  static std::string NormalizeUtf8(const std::string& input) {
+  static std::string NormalizeUtf8(std::string_view input) {
     std::string out;
     out.reserve(input.size());
-    const char* input_pos = input.c_str();
-    const char* input_end = input_pos + input.length();
-    while (true) {
-      const int8_t c = static_cast<int8_t>(*(input_pos++));
-      if (c <= 0) {
-        if (c == 0) {
-          // The input string is guaranteed to end with \0, but \0 can also be
-          // found within the string.
-          if (input_pos > input_end) {
-            break;
-          } else {
-            out += '\0';
-          }
-        } else {
-          CopyUtf8Codepoint(c, input_pos, input_end, out);
-        }
+    const char* input_pos = input.data();
+    const char* input_end = input_pos + input.size();
+    while (input_pos < input_end) {
+      const uint8_t byte = static_cast<uint8_t>(*(input_pos++));
+      if (byte < 0x80) {
+        out += static_cast<char>(byte);
       } else {
-        out += c;
+        CopyUtf8Codepoint(byte, input_pos, input_end, out);
       }
     }
     return out;
@@ -147,7 +137,7 @@ class JsonNode {
     // Push byte and all the continuation bytes that follow. If the input
     // string happens to not be a well-formed UTF-8 string, we'll remove the
     // chars we have pushed.
-    out += first_byte;
+    out += static_cast<char>(first_byte);
 
     // Total number of continuation bytes actually read.
     size_t continuation_bytes = 0;
@@ -155,10 +145,10 @@ class JsonNode {
     // From https://github.com/chansen/c-utf8-valid/blob/master/utf8_valid.h
     uint32_t v = first_byte;
 
-    for (;;) {
+    while (pos < end) {
       const uint8_t continuation_byte = static_cast<uint8_t>(*pos);
       if ((continuation_byte & 0xC0) == 0x80) {
-        out += continuation_byte;
+        out += static_cast<char>(continuation_byte);
         ++continuation_bytes;
         v = (v << 8) | continuation_byte;
         ++pos;

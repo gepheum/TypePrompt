@@ -125,6 +125,21 @@ void TestToJsonString() {
   ASSERT_EQ(invalid_utf8.ToJson(),
             "\"abc\xEF\xBF\xBD"
             "def\"");
+
+  // Direct std::string_view construction
+  JsonNode sv_node(std::string_view("sv_test"));
+  ASSERT_EQ(sv_node.AsString(), "sv_test");
+
+  std::string full = "prefix_target_suffix";
+  std::string_view sub(full.data() + 7, 6);
+  JsonNode sub_node(sub);
+  ASSERT_EQ(sub_node.AsString(), "target");
+
+  // Non-null-terminated string_view with incomplete multi-byte at boundary
+  char raw_bytes[] = {'h', 'e', 'l', 'l', 'o', static_cast<char>(0xC0), 'x'};
+  std::string_view partial_sv(raw_bytes, 6);
+  JsonNode partial_node(partial_sv);
+  ASSERT_EQ(partial_node.AsString(), "hello\xEF\xBF\xBD");
 }
 
 void TestToJsonArray() {
