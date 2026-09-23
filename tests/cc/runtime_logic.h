@@ -27,7 +27,7 @@ template <typename T>
 class ParseResult {
  public:
   // Constructs a successful ParseResult containing ok_value.
-  ParseResult(T ok_value) : data_(std::in_place_index<0>, std::move(ok_value)) {}
+  constexpr ParseResult(T ok_value) : data_(std::in_place_index<0>, std::move(ok_value)) {}
 
   // Constructs a failed ParseResult containing error.
   ParseResult(ParseError error) : data_(std::in_place_index<1>, std::move(error)) {}
@@ -39,16 +39,16 @@ class ParseResult {
   ParseResult& operator=(ParseResult&& other) = default;
 
   // Returns true if the result contains a parsed value, false if it contains a ParseError.
-  bool ok() const { return data_.index() == 0; }
+  constexpr bool ok() const { return data_.index() == 0; }
 
   // Returns a reference to the parsed value. Precondition: ok() must be true.
-  const T& operator*() const& { return std::get<0>(data_); }
-  T& operator*() & { return std::get<0>(data_); }
-  T&& operator*() && { return std::get<0>(std::move(data_)); }
+  constexpr const T& operator*() const& { return std::get<0>(data_); }
+  constexpr T& operator*() & { return std::get<0>(data_); }
+  constexpr T&& operator*() && { return std::get<0>(std::move(data_)); }
 
   // Member access operator for the parsed value. Precondition: ok() must be true.
-  const T* operator->() const { return &std::get<0>(data_); }
-  T* operator->() { return &std::get<0>(data_); }
+  constexpr const T* operator->() const { return &std::get<0>(data_); }
+  constexpr T* operator->() { return &std::get<0>(data_); }
 
   // Returns a reference to the error. Precondition: ok() must be false.
   const ParseError& error() const& { return std::get<1>(data_); }
@@ -58,6 +58,11 @@ class ParseResult {
  private:
   std::variant<T, ParseError> data_;
 };
+
+// Represents either a successful parsing operation or a ParseError.
+using ParseStatus = ParseResult<std::nullopt_t>;
+
+inline constexpr ParseStatus kOkStatus = std::nullopt;
 
 // A composable JSON value. Can be formatted to JSON, YAML or TOON format.
 class JsonNode {
@@ -387,6 +392,78 @@ JsonNode ToJsonNode(const std::vector<T>& values) {
     elements.push_back(ToJsonNode(item));
   }
   return JsonNode(std::move(elements));
+}
+
+inline ParseStatus ParseJsonNode(const JsonNode& node, JsonNode& out) {
+  out = node;
+  return kOkStatus;
+}
+
+inline ParseStatus ParseJsonNode(const JsonNode& node, bool& out) {
+  if (node.type() != JsonNode::Type::kBool) {
+    return ParseError{"Expected boolean"};
+  }
+  out = node.bool_value();
+  return kOkStatus;
+}
+
+inline ParseStatus ParseJsonNode(const JsonNode& node, int& out) {
+  if (node.type() != JsonNode::Type::kNumber) {
+    return ParseError{"Expected number"};
+  }
+  out = static_cast<int>(node.number_value());
+  return kOkStatus;
+}
+
+inline ParseStatus ParseJsonNode(const JsonNode& node, double& out) {
+  if (node.type() != JsonNode::Type::kNumber) {
+    return ParseError{"Expected number"};
+  }
+  out = node.number_value();
+  return kOkStatus;
+}
+
+inline ParseStatus ParseJsonNode(const JsonNode& node, std::string& out) {
+  if (node.type() != JsonNode::Type::kString) {
+    return ParseError{"Expected string"};
+  }
+  out = node.string_value();
+  return kOkStatus;
+}
+
+template <typename T>
+ParseStatus ParseJsonNode(const JsonNode& node, std::optional<T>& out) {
+  if (node.type() == JsonNode::Type::kNull) {
+    out = std::nullopt;
+    return kOkStatus;
+  }
+  T val{};
+  ParseStatus status = ParseJsonNode(node, val);
+  if (!status.ok()) {
+    return status;
+  }
+  out = std::move(val);
+  return kOkStatus;
+}
+
+template <typename T>
+ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
+  if (node.type() != JsonNode::Type::kArray) {
+    return ParseError{"Expected array"};
+  }
+  const auto& arr = node.array_value();
+  std::vector<T> elements;
+  elements.reserve(arr.size());
+  for (const auto& item : arr) {
+    T val{};
+    ParseStatus status = ParseJsonNode(item, val);
+    if (!status.ok()) {
+      return status;
+    }
+    elements.push_back(std::move(val));
+  }
+  out = std::move(elements);
+  return kOkStatus;
 }
 
 namespace internal {

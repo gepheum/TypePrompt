@@ -1859,14 +1859,18 @@ void TestParseResultApi() {
   ASSERT_FALSE(err_moved.ok());
   ParseError extracted_err = std::move(err_moved).error();
   ASSERT_EQ(extracted_err.message, "moved err");
+
+  // Test kOkStatus
+  static_assert(typeprompt::kOkStatus.ok());
+  ASSERT_TRUE(typeprompt::kOkStatus.ok());
 }
 
 }  // namespace
 
 namespace test_custom_adl {
 struct Point {
-  double x;
-  double y;
+  double x = 0.0;
+  double y = 0.0;
 };
 
 inline typeprompt::JsonNode ToJsonNode(const Point& p) {
@@ -1874,6 +1878,20 @@ inline typeprompt::JsonNode ToJsonNode(const Point& p) {
       {"x", typeprompt::ToJsonNode(p.x)},
       {"y", typeprompt::ToJsonNode(p.y)},
   });
+}
+
+inline typeprompt::ParseStatus ParseJsonNode(const typeprompt::JsonNode& node, Point& p) {
+  if (node.type() != typeprompt::JsonNode::Type::kObject) {
+    return typeprompt::ParseError{"Expected object for Point"};
+  }
+  for (const auto& [k, v] : node.object_value()) {
+    if (k == "x") {
+      if (auto status = typeprompt::ParseJsonNode(v, p.x); !status.ok()) return status;
+    } else if (k == "y") {
+      if (auto status = typeprompt::ParseJsonNode(v, p.y); !status.ok()) return status;
+    }
+  }
+  return typeprompt::kOkStatus;
 }
 }  // namespace test_custom_adl
 
@@ -2014,6 +2032,108 @@ void TestToJsonNodeOverloads() {
   ASSERT_EQ(opt_pt_null_res.type(), JsonNode::Type::kNull);
 }
 
+void TestParseJsonNodeOverloads() {
+  using typeprompt::ParseJsonNode;
+
+  // 1. JsonNode
+  JsonNode in_node(42.0);
+  JsonNode out_node;
+  auto status_node = ParseJsonNode(in_node, out_node);
+  ASSERT_TRUE(status_node.ok());
+  ASSERT_EQ(out_node.number_value(), 42.0);
+
+  // 2. bool
+  bool out_b = false;
+  ASSERT_TRUE(ParseJsonNode(JsonNode(true), out_b).ok());
+  ASSERT_EQ(out_b, true);
+  ASSERT_TRUE(ParseJsonNode(JsonNode(false), out_b).ok());
+  ASSERT_EQ(out_b, false);
+  ASSERT_FALSE(ParseJsonNode(JsonNode(123.0), out_b).ok());
+
+  // 3. int
+  int out_int = 0;
+  ASSERT_TRUE(ParseJsonNode(JsonNode(42.0), out_int).ok());
+  ASSERT_EQ(out_int, 42);
+  ASSERT_FALSE(ParseJsonNode(JsonNode("not a number"), out_int).ok());
+
+  // 4. double
+  double out_d = 0.0;
+  ASSERT_TRUE(ParseJsonNode(JsonNode(3.14159), out_d).ok());
+  ASSERT_EQ(out_d, 3.14159);
+  ASSERT_FALSE(ParseJsonNode(JsonNode(true), out_d).ok());
+
+  // 5. std::string
+  std::string out_str;
+  ASSERT_TRUE(ParseJsonNode(JsonNode("hello"), out_str).ok());
+  ASSERT_EQ(out_str, "hello");
+  ASSERT_FALSE(ParseJsonNode(JsonNode(123.0), out_str).ok());
+
+  // 6. std::optional<T>
+  std::optional<int> out_opt_int;
+  ASSERT_TRUE(ParseJsonNode(JsonNode(100.0), out_opt_int).ok());
+  ASSERT_TRUE(out_opt_int.has_value());
+  ASSERT_EQ(*out_opt_int, 100);
+
+  ASSERT_TRUE(ParseJsonNode(JsonNode(std::nullopt), out_opt_int).ok());
+  ASSERT_FALSE(out_opt_int.has_value());
+
+  std::optional<std::string> out_opt_str;
+  ASSERT_TRUE(ParseJsonNode(JsonNode("optional text"), out_opt_str).ok());
+  ASSERT_TRUE(out_opt_str.has_value());
+  ASSERT_EQ(*out_opt_str, "optional text");
+
+  ASSERT_FALSE(ParseJsonNode(JsonNode(42.0), out_opt_str).ok());
+
+  // 7. std::vector<T>
+  std::vector<int> out_vec_int;
+  JsonNode arr_int(std::vector<JsonNode>{JsonNode(1.0), JsonNode(2.0), JsonNode(3.0)});
+  ASSERT_TRUE(ParseJsonNode(arr_int, out_vec_int).ok());
+  ASSERT_EQ(out_vec_int.size(), 3);
+  ASSERT_EQ(out_vec_int[0], 1);
+  ASSERT_EQ(out_vec_int[1], 2);
+  ASSERT_EQ(out_vec_int[2], 3);
+
+  std::vector<std::string> out_vec_str;
+  JsonNode arr_str(std::vector<JsonNode>{JsonNode("a"), JsonNode("b")});
+  ASSERT_TRUE(ParseJsonNode(arr_str, out_vec_str).ok());
+  ASSERT_EQ(out_vec_str.size(), 2);
+  ASSERT_EQ(out_vec_str[0], "a");
+  ASSERT_EQ(out_vec_str[1], "b");
+
+  ASSERT_FALSE(ParseJsonNode(JsonNode("not an array"), out_vec_str).ok());
+
+  JsonNode arr_bad(std::vector<JsonNode>{JsonNode("a"), JsonNode(123.0)});
+  ASSERT_FALSE(ParseJsonNode(arr_bad, out_vec_str).ok());
+
+  // 8. ADL custom type
+  test_custom_adl::Point pt;
+  JsonNode pt_node(
+      std::vector<std::pair<std::string, JsonNode>>{{"x", JsonNode(5.0)}, {"y", JsonNode(6.0)}});
+  ASSERT_TRUE(ParseJsonNode(pt_node, pt).ok());
+  ASSERT_EQ(pt.x, 5.0);
+  ASSERT_EQ(pt.y, 6.0);
+
+  std::vector<test_custom_adl::Point> pts;
+  JsonNode pts_node(std::vector<JsonNode>{
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{{"x", JsonNode(1.0)},
+                                                             {"y", JsonNode(2.0)}}),
+      JsonNode(std::vector<std::pair<std::string, JsonNode>>{{"x", JsonNode(3.0)},
+                                                             {"y", JsonNode(4.0)}}),
+  });
+  ASSERT_TRUE(ParseJsonNode(pts_node, pts).ok());
+  ASSERT_EQ(pts.size(), 2);
+  ASSERT_EQ(pts[0].x, 1.0);
+  ASSERT_EQ(pts[1].y, 4.0);
+
+  std::optional<test_custom_adl::Point> opt_pt;
+  ASSERT_TRUE(ParseJsonNode(pt_node, opt_pt).ok());
+  ASSERT_TRUE(opt_pt.has_value());
+  ASSERT_EQ(opt_pt->x, 5.0);
+
+  ASSERT_TRUE(ParseJsonNode(JsonNode(std::nullopt), opt_pt).ok());
+  ASSERT_FALSE(opt_pt.has_value());
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -2073,6 +2193,7 @@ void TestRuntimeLogic() {
   TestRobustnessAndEdgeCases();
   TestParseResultApi();
   TestToJsonNodeOverloads();
+  TestParseJsonNodeOverloads();
 }
 
 int main() {
