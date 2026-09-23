@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -17,6 +18,15 @@
 
 namespace typeprompt {
 
+struct ParseError {
+  std::string message;
+  size_t pos = 0;
+};
+
+template <typename T>
+using ParseResult = std::variant<T, ParseError>;
+
+// A composable JSON value. Can be formatted to JSON, YAML or TOON format.
 class JsonNode {
  public:
   enum class Type {
@@ -42,6 +52,8 @@ class JsonNode {
 
   JsonNode& operator=(const JsonNode&) = default;
   JsonNode& operator=(JsonNode&&) = default;
+
+  static ParseResult<JsonNode> ParseJson(std::string_view json);
 
   Type type() const {
     return std::visit(
@@ -1478,7 +1490,386 @@ class YamlFormatter {
   }
 };
 
+class JsonParser {
+ public:
+  static ParseResult<JsonNode> Parse(std::string_view input) {
+    JsonParser parser(input);
+    return parser.ParseRoot();
+  }
+
+ private:
+  explicit JsonParser(std::string_view input) : input_(input) {}
+
+  std::string_view input_;
+  size_t pos_ = 0;
+
+  void SkipWhitespace() {
+    while (pos_ < input_.size()) {
+      char c = input_[pos_];
+      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+        ++pos_;
+      } else {
+        break;
+      }
+    }
+  }
+
+  static int HexDigit(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+  }
+
+  static void AppendUtf8(uint32_t cp, std::string& out) {
+    if (cp <= 0x7F) {
+      out += static_cast<char>(cp);
+    } else if (cp <= 0x7FF) {
+      out += static_cast<char>(0xC0 | (cp >> 6));
+      out += static_cast<char>(0x80 | (cp & 0x3F));
+    } else if (cp <= 0xFFFF) {
+      out += static_cast<char>(0xE0 | (cp >> 12));
+      out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+      out += static_cast<char>(0x80 | (cp & 0x3F));
+    } else {
+      out += static_cast<char>(0xF0 | (cp >> 18));
+      out += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+      out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+      out += static_cast<char>(0x80 | (cp & 0x3F));
+    }
+  }
+
+  ParseResult<JsonNode> ParseRoot() {
+    SkipWhitespace();
+    if (pos_ >= input_.size()) {
+      return ParseError{"Empty input", 0};
+    }
+    auto res = ParseValue();
+    if (std::holds_alternative<ParseError>(res)) {
+      return res;
+    }
+    SkipWhitespace();
+    if (pos_ < input_.size()) {
+      return ParseError{"Unexpected trailing content after JSON value", pos_};
+    }
+    return res;
+  }
+
+  ParseResult<JsonNode> ParseValue() {
+    SkipWhitespace();
+    if (pos_ >= input_.size()) {
+      return ParseError{"Unexpected end of input", pos_};
+    }
+    char c = input_[pos_];
+    switch (c) {
+      case 'n':
+        return ParseNull();
+      case 't':
+        return ParseTrue();
+      case 'f':
+        return ParseFalse();
+      case '"':
+        return ParseStringNode();
+      case '[':
+        return ParseArray();
+      case '{':
+        return ParseObject();
+      case '-':
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        return ParseNumber();
+      default:
+        return ParseError{std::string("Unexpected character: '") + c + "'", pos_};
+    }
+  }
+
+  ParseResult<JsonNode> ParseNull() {
+    size_t start = pos_;
+    if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "null") {
+      pos_ += 4;
+      return JsonNode(std::nullopt);
+    }
+    return ParseError{"Expected 'null'", start};
+  }
+
+  ParseResult<JsonNode> ParseTrue() {
+    size_t start = pos_;
+    if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "true") {
+      pos_ += 4;
+      return JsonNode(true);
+    }
+    return ParseError{"Expected 'true'", start};
+  }
+
+  ParseResult<JsonNode> ParseFalse() {
+    size_t start = pos_;
+    if (pos_ + 5 <= input_.size() && input_.substr(pos_, 5) == "false") {
+      pos_ += 5;
+      return JsonNode(false);
+    }
+    return ParseError{"Expected 'false'", start};
+  }
+
+  ParseResult<JsonNode> ParseNumber() {
+    size_t start = pos_;
+    if (pos_ < input_.size() && input_[pos_] == '-') {
+      ++pos_;
+    }
+    if (pos_ >= input_.size()) {
+      return ParseError{"Expected digit after '-'", start};
+    }
+    if (input_[pos_] == '0') {
+      ++pos_;
+      if (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
+        return ParseError{"Invalid leading zero in number", start};
+      }
+    } else if (input_[pos_] >= '1' && input_[pos_] <= '9') {
+      while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
+        ++pos_;
+      }
+    } else {
+      return ParseError{"Expected digit for number", start};
+    }
+
+    if (pos_ < input_.size() && input_[pos_] == '.') {
+      ++pos_;
+      if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
+        return ParseError{"Expected digit after '.'", start};
+      }
+      while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
+        ++pos_;
+      }
+    }
+
+    if (pos_ < input_.size() && (input_[pos_] == 'e' || input_[pos_] == 'E')) {
+      ++pos_;
+      if (pos_ < input_.size() && (input_[pos_] == '+' || input_[pos_] == '-')) {
+        ++pos_;
+      }
+      if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
+        return ParseError{"Expected digit for exponent", start};
+      }
+      while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
+        ++pos_;
+      }
+    }
+
+    std::string s(input_.substr(start, pos_ - start));
+    char* end_ptr = nullptr;
+    double val = std::strtod(s.c_str(), &end_ptr);
+    if (end_ptr != s.c_str() + s.size()) {
+      return ParseError{"Invalid number format", start};
+    }
+    return JsonNode(val);
+  }
+
+  ParseResult<std::string> ParseRawString() {
+    size_t start = pos_;
+    if (pos_ >= input_.size() || input_[pos_] != '"') {
+      return ParseError{"Expected '\"'", start};
+    }
+    ++pos_;
+    std::string result;
+    while (pos_ < input_.size()) {
+      unsigned char c = static_cast<unsigned char>(input_[pos_++]);
+      if (c == '"') {
+        return result;
+      }
+      if (c == '\\') {
+        if (pos_ >= input_.size()) {
+          return ParseError{"Unterminated escape sequence in string", pos_ - 1};
+        }
+        char esc = input_[pos_++];
+        switch (esc) {
+          case '"':
+            result += '"';
+            break;
+          case '\\':
+            result += '\\';
+            break;
+          case '/':
+            result += '/';
+            break;
+          case 'b':
+            result += '\b';
+            break;
+          case 'f':
+            result += '\f';
+            break;
+          case 'n':
+            result += '\n';
+            break;
+          case 'r':
+            result += '\r';
+            break;
+          case 't':
+            result += '\t';
+            break;
+          case 'u': {
+            if (pos_ + 4 > input_.size()) {
+              return ParseError{"Incomplete unicode escape sequence", pos_ - 2};
+            }
+            uint32_t cp = 0;
+            for (int i = 0; i < 4; ++i) {
+              int h = HexDigit(input_[pos_++]);
+              if (h < 0) {
+                return ParseError{"Invalid hex digit in unicode escape", pos_ - 1};
+              }
+              cp = (cp << 4) | static_cast<uint32_t>(h);
+            }
+            if (cp >= 0xD800 && cp <= 0xDBFF) {
+              if (pos_ + 6 > input_.size() || input_[pos_] != '\\' || input_[pos_ + 1] != 'u') {
+                return ParseError{"Expected low surrogate after high surrogate", pos_};
+              }
+              pos_ += 2;
+              uint32_t lo = 0;
+              for (int i = 0; i < 4; ++i) {
+                int h = HexDigit(input_[pos_++]);
+                if (h < 0) {
+                  return ParseError{"Invalid hex digit in unicode escape", pos_ - 1};
+                }
+                lo = (lo << 4) | static_cast<uint32_t>(h);
+              }
+              if (lo < 0xDC00 || lo > 0xDFFF) {
+                return ParseError{"Invalid low surrogate in unicode escape", pos_ - 4};
+              }
+              cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+            } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
+              return ParseError{"Unpaired low surrogate in unicode escape", pos_ - 4};
+            }
+            AppendUtf8(cp, result);
+            break;
+          }
+          default:
+            return ParseError{std::string("Invalid escape character: '\\") + esc + "'", pos_ - 2};
+        }
+      } else if (c < 0x20) {
+        return ParseError{"Unescaped control character in string", pos_ - 1};
+      } else {
+        result += static_cast<char>(c);
+      }
+    }
+    return ParseError{"Unterminated string", start};
+  }
+
+  ParseResult<JsonNode> ParseStringNode() {
+    auto str_res = ParseRawString();
+    if (std::holds_alternative<ParseError>(str_res)) {
+      return std::get<ParseError>(str_res);
+    }
+    return JsonNode(std::get<std::string>(str_res));
+  }
+
+  ParseResult<JsonNode> ParseArray() {
+    size_t start = pos_;
+    ++pos_;  // consume '['
+    SkipWhitespace();
+    if (pos_ < input_.size() && input_[pos_] == ']') {
+      ++pos_;
+      return JsonNode(std::vector<JsonNode>{});
+    }
+
+    std::vector<JsonNode> elements;
+    while (true) {
+      SkipWhitespace();
+      if (pos_ >= input_.size()) {
+        return ParseError{"Unterminated array", start};
+      }
+      auto val_res = ParseValue();
+      if (std::holds_alternative<ParseError>(val_res)) {
+        return val_res;
+      }
+      elements.push_back(std::move(std::get<JsonNode>(val_res)));
+
+      SkipWhitespace();
+      if (pos_ >= input_.size()) {
+        return ParseError{"Unterminated array", start};
+      }
+      char c = input_[pos_++];
+      if (c == ']') {
+        break;
+      } else if (c == ',') {
+        SkipWhitespace();
+        if (pos_ < input_.size() && input_[pos_] == ']') {
+          return ParseError{"Trailing comma in array", pos_ - 1};
+        }
+      } else {
+        return ParseError{std::string("Expected ',' or ']' in array, got '") + c + "'", pos_ - 1};
+      }
+    }
+    return JsonNode(std::move(elements));
+  }
+
+  ParseResult<JsonNode> ParseObject() {
+    size_t start = pos_;
+    ++pos_;  // consume '{'
+    SkipWhitespace();
+    if (pos_ < input_.size() && input_[pos_] == '}') {
+      ++pos_;
+      return JsonNode(std::vector<std::pair<std::string, JsonNode>>{});
+    }
+
+    std::vector<std::pair<std::string, JsonNode>> entries;
+    while (true) {
+      SkipWhitespace();
+      if (pos_ >= input_.size()) {
+        return ParseError{"Unterminated object", start};
+      }
+      if (input_[pos_] != '"') {
+        return ParseError{"Expected string key in object", pos_};
+      }
+      auto key_res = ParseRawString();
+      if (std::holds_alternative<ParseError>(key_res)) {
+        return std::get<ParseError>(key_res);
+      }
+      std::string key = std::move(std::get<std::string>(key_res));
+
+      SkipWhitespace();
+      if (pos_ >= input_.size() || input_[pos_] != ':') {
+        return ParseError{"Expected ':' after key in object", pos_};
+      }
+      ++pos_;  // consume ':'
+
+      SkipWhitespace();
+      auto val_res = ParseValue();
+      if (std::holds_alternative<ParseError>(val_res)) {
+        return val_res;
+      }
+      entries.emplace_back(std::move(key), std::move(std::get<JsonNode>(val_res)));
+
+      SkipWhitespace();
+      if (pos_ >= input_.size()) {
+        return ParseError{"Unterminated object", start};
+      }
+      char c = input_[pos_++];
+      if (c == '}') {
+        break;
+      } else if (c == ',') {
+        SkipWhitespace();
+        if (pos_ < input_.size() && input_[pos_] == '}') {
+          return ParseError{"Trailing comma in object", pos_ - 1};
+        }
+      } else {
+        return ParseError{std::string("Expected ',' or '}' in object, got '") + c + "'", pos_ - 1};
+      }
+    }
+    return JsonNode(std::move(entries));
+  }
+};
+
 }  // namespace internal
+
+inline ParseResult<JsonNode> JsonNode::ParseJson(std::string_view json) {
+  return internal::JsonParser::Parse(json);
+}
 
 inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Format(*this); }
 
