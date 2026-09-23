@@ -83,3 +83,10 @@ cd ..
 cd dart
 dart test
 cd ..
+
+# Run C++ unit tests
+cd cc
+./test.sh
+cd ..
+
+

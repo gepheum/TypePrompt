@@ -1,6 +1,9 @@
 .DS_Store
 dist
 
+tests/cc/build/
+tests/cc/gen/
+
 tests/csharp/Gen
 tests/csharp/bin/
 tests/csharp/obj/

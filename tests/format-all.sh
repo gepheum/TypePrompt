@@ -30,6 +30,10 @@ cd dart
 ./format.sh
 cd ..
 
+cd cc
+./format.sh
+cd ..
+
 cd ../examples/e2e-kotlin
 ./format.sh
 cd ../../tests
