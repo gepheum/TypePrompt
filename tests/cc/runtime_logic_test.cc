@@ -128,18 +128,18 @@ void TestToJsonString() {
 
   // Direct std::string_view construction
   JsonNode sv_node(std::string_view("sv_test"));
-  ASSERT_EQ(sv_node.AsString(), "sv_test");
+  ASSERT_EQ(sv_node.string_value(), "sv_test");
 
   std::string full = "prefix_target_suffix";
   std::string_view sub(full.data() + 7, 6);
   JsonNode sub_node(sub);
-  ASSERT_EQ(sub_node.AsString(), "target");
+  ASSERT_EQ(sub_node.string_value(), "target");
 
   // Non-null-terminated string_view with incomplete multi-byte at boundary
   char raw_bytes[] = {'h', 'e', 'l', 'l', 'o', static_cast<char>(0xC0), 'x'};
   std::string_view partial_sv(raw_bytes, 6);
   JsonNode partial_node(partial_sv);
-  ASSERT_EQ(partial_node.AsString(), "hello\xEF\xBF\xBD");
+  ASSERT_EQ(partial_node.string_value(), "hello\xEF\xBF\xBD");
 }
 
 void TestToJsonArray() {
@@ -1337,33 +1337,33 @@ void TestToYamlComplexNested() {
 
 void TestParseJsonPrimitives() {
   auto r_null = JsonNode::ParseJson("null");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_null));
-  ASSERT_EQ(std::get<JsonNode>(r_null).type(), JsonNode::Type::kNull);
-  ASSERT_EQ(std::get<JsonNode>(r_null).ToJson(), "null");
+  ASSERT_TRUE(r_null.ok());
+  ASSERT_EQ(r_null->type(), JsonNode::Type::kNull);
+  ASSERT_EQ(r_null->ToJson(), "null");
 
   auto r_null_ws = JsonNode::ParseJson("  \t\r\nnull \n ");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_null_ws));
-  ASSERT_EQ(std::get<JsonNode>(r_null_ws).type(), JsonNode::Type::kNull);
+  ASSERT_TRUE(r_null_ws.ok());
+  ASSERT_EQ(r_null_ws->type(), JsonNode::Type::kNull);
 
   auto r_true = JsonNode::ParseJson("true");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_true));
-  ASSERT_EQ(std::get<JsonNode>(r_true).type(), JsonNode::Type::kBool);
-  ASSERT_EQ(std::get<JsonNode>(r_true).AsBool(), true);
-  ASSERT_EQ(std::get<JsonNode>(r_true).ToJson(), "true");
+  ASSERT_TRUE(r_true.ok());
+  ASSERT_EQ(r_true->type(), JsonNode::Type::kBool);
+  ASSERT_EQ(r_true->bool_value(), true);
+  ASSERT_EQ(r_true->ToJson(), "true");
 
   auto r_false = JsonNode::ParseJson(" \nfalse\t ");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_false));
-  ASSERT_EQ(std::get<JsonNode>(r_false).type(), JsonNode::Type::kBool);
-  ASSERT_EQ(std::get<JsonNode>(r_false).AsBool(), false);
-  ASSERT_EQ(std::get<JsonNode>(r_false).ToJson(), "false");
+  ASSERT_TRUE(r_false.ok());
+  ASSERT_EQ(r_false->type(), JsonNode::Type::kBool);
+  ASSERT_EQ(r_false->bool_value(), false);
+  ASSERT_EQ(r_false->ToJson(), "false");
 }
 
 void TestParseJsonNumbers() {
   auto parse_num = [](std::string_view s) -> double {
     auto r = JsonNode::ParseJson(s);
-    ASSERT_TRUE(std::holds_alternative<JsonNode>(r));
-    ASSERT_EQ(std::get<JsonNode>(r).type(), JsonNode::Type::kNumber);
-    return std::get<JsonNode>(r).AsNumber();
+    ASSERT_TRUE(r.ok());
+    ASSERT_EQ(r->type(), JsonNode::Type::kNumber);
+    return r->number_value();
   };
 
   ASSERT_EQ(parse_num("0"), 0.0);
@@ -1384,9 +1384,9 @@ void TestParseJsonNumbers() {
 void TestParseJsonStrings() {
   auto parse_str = [](std::string_view s) -> std::string {
     auto r = JsonNode::ParseJson(s);
-    ASSERT_TRUE(std::holds_alternative<JsonNode>(r));
-    ASSERT_EQ(std::get<JsonNode>(r).type(), JsonNode::Type::kString);
-    return std::get<JsonNode>(r).AsString();
+    ASSERT_TRUE(r.ok());
+    ASSERT_EQ(r->type(), JsonNode::Type::kString);
+    return r->string_value();
   };
 
   ASSERT_EQ(parse_str("\"\""), "");
@@ -1409,61 +1409,61 @@ void TestParseJsonStrings() {
 
 void TestParseJsonArrays() {
   auto r_empty = JsonNode::ParseJson("[]");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_empty));
-  ASSERT_EQ(std::get<JsonNode>(r_empty).type(), JsonNode::Type::kArray);
-  ASSERT_EQ(std::get<JsonNode>(r_empty).AsArray().size(), 0);
+  ASSERT_TRUE(r_empty.ok());
+  ASSERT_EQ(r_empty->type(), JsonNode::Type::kArray);
+  ASSERT_EQ(r_empty->array_value().size(), 0);
 
   auto r_empty_ws = JsonNode::ParseJson(" [ \n\t\r ] ");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_empty_ws));
-  ASSERT_EQ(std::get<JsonNode>(r_empty_ws).AsArray().size(), 0);
+  ASSERT_TRUE(r_empty_ws.ok());
+  ASSERT_EQ(r_empty_ws->array_value().size(), 0);
 
   auto r_nums = JsonNode::ParseJson("[1, 2, 3]");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_nums));
-  const auto& arr_nums = std::get<JsonNode>(r_nums).AsArray();
+  ASSERT_TRUE(r_nums.ok());
+  const auto& arr_nums = r_nums->array_value();
   ASSERT_EQ(arr_nums.size(), 3);
-  ASSERT_EQ(arr_nums[0].AsNumber(), 1.0);
-  ASSERT_EQ(arr_nums[1].AsNumber(), 2.0);
-  ASSERT_EQ(arr_nums[2].AsNumber(), 3.0);
+  ASSERT_EQ(arr_nums[0].number_value(), 1.0);
+  ASSERT_EQ(arr_nums[1].number_value(), 2.0);
+  ASSERT_EQ(arr_nums[2].number_value(), 3.0);
 
   auto r_mixed = JsonNode::ParseJson("[null, true, false, \"text\", 42.5]");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_mixed));
-  const auto& arr_mixed = std::get<JsonNode>(r_mixed).AsArray();
+  ASSERT_TRUE(r_mixed.ok());
+  const auto& arr_mixed = r_mixed->array_value();
   ASSERT_EQ(arr_mixed.size(), 5);
   ASSERT_EQ(arr_mixed[0].type(), JsonNode::Type::kNull);
-  ASSERT_EQ(arr_mixed[1].AsBool(), true);
-  ASSERT_EQ(arr_mixed[2].AsBool(), false);
-  ASSERT_EQ(arr_mixed[3].AsString(), "text");
-  ASSERT_EQ(arr_mixed[4].AsNumber(), 42.5);
+  ASSERT_EQ(arr_mixed[1].bool_value(), true);
+  ASSERT_EQ(arr_mixed[2].bool_value(), false);
+  ASSERT_EQ(arr_mixed[3].string_value(), "text");
+  ASSERT_EQ(arr_mixed[4].number_value(), 42.5);
 
   auto r_nested = JsonNode::ParseJson("[[], [1, [2, [3]]]]");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_nested));
-  const auto& arr_nested = std::get<JsonNode>(r_nested).AsArray();
+  ASSERT_TRUE(r_nested.ok());
+  const auto& arr_nested = r_nested->array_value();
   ASSERT_EQ(arr_nested.size(), 2);
-  ASSERT_EQ(arr_nested[0].AsArray().size(), 0);
-  ASSERT_EQ(arr_nested[1].AsArray()[1].AsArray()[1].AsArray()[0].AsNumber(), 3.0);
+  ASSERT_EQ(arr_nested[0].array_value().size(), 0);
+  ASSERT_EQ(arr_nested[1].array_value()[1].array_value()[1].array_value()[0].number_value(), 3.0);
 }
 
 void TestParseJsonObjects() {
   auto r_empty = JsonNode::ParseJson("{}");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_empty));
-  ASSERT_EQ(std::get<JsonNode>(r_empty).type(), JsonNode::Type::kObject);
-  ASSERT_EQ(std::get<JsonNode>(r_empty).AsObject().size(), 0);
+  ASSERT_TRUE(r_empty.ok());
+  ASSERT_EQ(r_empty->type(), JsonNode::Type::kObject);
+  ASSERT_EQ(r_empty->object_value().size(), 0);
 
   auto r_empty_ws = JsonNode::ParseJson(" { \n\t\r } ");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_empty_ws));
-  ASSERT_EQ(std::get<JsonNode>(r_empty_ws).AsObject().size(), 0);
+  ASSERT_TRUE(r_empty_ws.ok());
+  ASSERT_EQ(r_empty_ws->object_value().size(), 0);
 
   auto r_single = JsonNode::ParseJson("{\"key\": \"value\"}");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_single));
-  const auto& obj_single = std::get<JsonNode>(r_single).AsObject();
+  ASSERT_TRUE(r_single.ok());
+  const auto& obj_single = r_single->object_value();
   ASSERT_EQ(obj_single.size(), 1);
   ASSERT_EQ(obj_single[0].first, "key");
-  ASSERT_EQ(obj_single[0].second.AsString(), "value");
+  ASSERT_EQ(obj_single[0].second.string_value(), "value");
 
   auto r_escaped_keys =
       JsonNode::ParseJson("{\"a/b\": 1, \"c\\\\d\": 2, \"e\\\"f\": 3, \"\\u006b\": 4}");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_escaped_keys));
-  const auto& obj_esc = std::get<JsonNode>(r_escaped_keys).AsObject();
+  ASSERT_TRUE(r_escaped_keys.ok());
+  const auto& obj_esc = r_escaped_keys->object_value();
   ASSERT_EQ(obj_esc.size(), 4);
   ASSERT_EQ(obj_esc[0].first, "a/b");
   ASSERT_EQ(obj_esc[1].first, "c\\d");
@@ -1472,36 +1472,35 @@ void TestParseJsonObjects() {
 
   auto r_multi =
       JsonNode::ParseJson("{\"name\": \"Alice\", \"age\": 30, \"active\": true, \"extra\": null}");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_multi));
-  const auto& obj_multi = std::get<JsonNode>(r_multi).AsObject();
+  ASSERT_TRUE(r_multi.ok());
+  const auto& obj_multi = r_multi->object_value();
   ASSERT_EQ(obj_multi.size(), 4);
   ASSERT_EQ(obj_multi[0].first, "name");
-  ASSERT_EQ(obj_multi[0].second.AsString(), "Alice");
+  ASSERT_EQ(obj_multi[0].second.string_value(), "Alice");
   ASSERT_EQ(obj_multi[1].first, "age");
-  ASSERT_EQ(obj_multi[1].second.AsNumber(), 30.0);
+  ASSERT_EQ(obj_multi[1].second.number_value(), 30.0);
   ASSERT_EQ(obj_multi[2].first, "active");
-  ASSERT_EQ(obj_multi[2].second.AsBool(), true);
+  ASSERT_EQ(obj_multi[2].second.bool_value(), true);
   ASSERT_EQ(obj_multi[3].first, "extra");
   ASSERT_EQ(obj_multi[3].second.type(), JsonNode::Type::kNull);
 
   auto r_nested = JsonNode::ParseJson("{\"outer\": {\"inner\": [1, 2, {\"deep\": true}]}}");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(r_nested));
-  ASSERT_EQ(std::get<JsonNode>(r_nested).ToJson(),
-            "{\"outer\": {\"inner\": [" + std::to_string(1.0) + "," + std::to_string(2.0) +
-                ",{\"deep\": true}]}}");
+  ASSERT_TRUE(r_nested.ok());
+  ASSERT_EQ(r_nested->ToJson(), "{\"outer\": {\"inner\": [" + std::to_string(1.0) + "," +
+                                    std::to_string(2.0) + ",{\"deep\": true}]}}");
 }
 
 void TestParseJsonErrors() {
   auto assert_error = [](std::string_view json) {
     auto r = JsonNode::ParseJson(json);
-    ASSERT_TRUE(std::holds_alternative<ParseError>(r));
-    ASSERT_FALSE(std::get<ParseError>(r).message.empty());
+    ASSERT_FALSE(r.ok());
+    ASSERT_FALSE(r.error().message.empty());
   };
 
   auto assert_error_msg = [](std::string_view json, std::string_view expected_msg) {
     auto r = JsonNode::ParseJson(json);
-    ASSERT_TRUE(std::holds_alternative<ParseError>(r));
-    ASSERT_EQ(std::get<ParseError>(r).message, expected_msg);
+    ASSERT_FALSE(r.ok());
+    ASSERT_EQ(r.error().message, expected_msg);
   };
 
   // Empty / whitespace only
@@ -1584,8 +1583,8 @@ void TestParseJsonRoundtrip() {
       "\"completed\": false}";
 
   auto res = JsonNode::ParseJson(json_sample);
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(res));
-  const auto& node = std::get<JsonNode>(res);
+  ASSERT_TRUE(res.ok());
+  const auto& node = *res;
 
   ASSERT_EQ(node.ToJson(),
             "{\"title\": \"Task List\","
@@ -1613,7 +1612,7 @@ void TestNonZeroTerminatedStringViews() {
   // Slice 1: "hello"
   std::string_view sv_hello(buffer.data() + 4, 5);
   JsonNode node_hello(sv_hello);
-  ASSERT_EQ(node_hello.AsString(), "hello");
+  ASSERT_EQ(node_hello.string_value(), "hello");
   ASSERT_EQ(node_hello.ToJson(), "\"hello\"");
   ASSERT_EQ(node_hello.ToToon(), "hello");
   ASSERT_EQ(node_hello.ToYaml(), "hello");
@@ -1621,14 +1620,14 @@ void TestNonZeroTerminatedStringViews() {
   // Slice 2: "\"world\"" parsed as JSON
   std::string_view sv_world(buffer.data() + 13, 7);
   auto parse_res = JsonNode::ParseJson(sv_world);
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(parse_res));
-  ASSERT_EQ(std::get<JsonNode>(parse_res).AsString(), "world");
+  ASSERT_TRUE(parse_res.ok());
+  ASSERT_EQ(parse_res->string_value(), "world");
 
   // Slice 3: "12345" parsed as JSON
   std::string_view sv_num(buffer.data() + 24, 5);
   auto num_res = JsonNode::ParseJson(sv_num);
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(num_res));
-  ASSERT_EQ(std::get<JsonNode>(num_res).AsNumber(), 12345.0);
+  ASSERT_TRUE(num_res.ok());
+  ASSERT_EQ(num_res->number_value(), 12345.0);
 
   // Escaping in non-null-terminated slices with control chars
   char raw_ctrl[] = {'X', 'Y', '\n', '\t', '"', '\\', 'Z', 'W'};
@@ -1646,9 +1645,8 @@ void TestDeepNestingProtection() {
   for (int i = 0; i < 1500; ++i) deep_arr += ']';
 
   auto res_arr = JsonNode::ParseJson(deep_arr);
-  ASSERT_TRUE(std::holds_alternative<ParseError>(res_arr));
-  ASSERT_TRUE(std::get<ParseError>(res_arr).message.find("maximum nesting depth") !=
-              std::string::npos);
+  ASSERT_FALSE(res_arr.ok());
+  ASSERT_TRUE(res_arr.error().message.find("maximum nesting depth") != std::string::npos);
 
   // Deeply nested objects
   std::string deep_obj;
@@ -1657,45 +1655,44 @@ void TestDeepNestingProtection() {
   for (int i = 0; i < 1500; ++i) deep_obj += "}";
 
   auto res_obj = JsonNode::ParseJson(deep_obj);
-  ASSERT_TRUE(std::holds_alternative<ParseError>(res_obj));
-  ASSERT_TRUE(std::get<ParseError>(res_obj).message.find("maximum nesting depth") !=
-              std::string::npos);
+  ASSERT_FALSE(res_obj.ok());
+  ASSERT_TRUE(res_obj.error().message.find("maximum nesting depth") != std::string::npos);
 }
 
 void TestMalformedUtf8AndUnicodeSurrogates() {
   // Truncated multi-byte UTF-8
-  ASSERT_EQ(JsonNode(std::string_view("\xC0")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xE0\xA0")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF0\x90\x80")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xFF")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\x80")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xC0")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\xA0")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x90\x80")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xFF")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\x80")).string_value(), "\xEF\xBF\xBD");
 
   // Overlong UTF-8
-  ASSERT_EQ(JsonNode(std::string_view("\xC0\xAF")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xE0\x80\xAF")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF0\x80\x80\xAF")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xC0\xAF")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\x80\xAF")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x80\x80\xAF")).string_value(), "\xEF\xBF\xBD");
 
   // UTF-8 encoded surrogates (U+D800 .. U+DFFF)
-  ASSERT_EQ(JsonNode(std::string_view("\xED\xA0\x80")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xED\xBF\xBF")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xA0\x80")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xBF\xBF")).string_value(), "\xEF\xBF\xBD");
 
   // Codepoints > U+10FFFF
-  ASSERT_EQ(JsonNode(std::string_view("\xF4\x90\x80\x80")).AsString(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF5\x80\x80\x80")).AsString(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF4\x90\x80\x80")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF5\x80\x80\x80")).string_value(), "\xEF\xBF\xBD");
 
   // JSON unicode surrogate pairs
   // Valid surrogate pair for musical symbol G clef U+1D11E (\uD834\uDD1E)
   auto res_clef = JsonNode::ParseJson("\"\\uD834\\uDD1E\"");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(res_clef));
-  ASSERT_EQ(std::get<JsonNode>(res_clef).AsString(), "\xF0\x9D\x84\x9E");
+  ASSERT_TRUE(res_clef.ok());
+  ASSERT_EQ(res_clef->string_value(), "\xF0\x9D\x84\x9E");
 
   // Invalid: High surrogate followed by non-surrogate or EOF
-  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\"")));
-  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\\u0020\"")));
-  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uD834\\uD834\"")));
+  ASSERT_FALSE(JsonNode::ParseJson("\"\\uD834\"").ok());
+  ASSERT_FALSE(JsonNode::ParseJson("\"\\uD834\\u0020\"").ok());
+  ASSERT_FALSE(JsonNode::ParseJson("\"\\uD834\\uD834\"").ok());
 
   // Invalid: Unpaired low surrogate
-  ASSERT_TRUE(std::holds_alternative<ParseError>(JsonNode::ParseJson("\"\\uDD1E\"")));
+  ASSERT_FALSE(JsonNode::ParseJson("\"\\uDD1E\"").ok());
 }
 
 void TestExtremeNumbersAndSpecialValues() {
@@ -1727,12 +1724,12 @@ void TestExtremeNumbersAndSpecialValues() {
 
   // Parsing numbers with exponents
   auto exp1 = JsonNode::ParseJson("1e-5");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(exp1));
-  ASSERT_EQ(std::get<JsonNode>(exp1).AsNumber(), 1e-5);
+  ASSERT_TRUE(exp1.ok());
+  ASSERT_EQ(exp1->number_value(), 1e-5);
 
   auto exp2 = JsonNode::ParseJson("-0.123e+4");
-  ASSERT_TRUE(std::holds_alternative<JsonNode>(exp2));
-  ASSERT_EQ(std::get<JsonNode>(exp2).AsNumber(), -1230.0);
+  ASSERT_TRUE(exp2.ok());
+  ASSERT_EQ(exp2->number_value(), -1230.0);
 }
 
 void TestRobustnessAndEdgeCases() {
@@ -1803,8 +1800,65 @@ void TestRobustnessAndEdgeCases() {
   for (const auto& bad : bad_inputs) {
     auto res = JsonNode::ParseJson(bad);
     // Must be ParseError and must not crash/segfault
-    ASSERT_TRUE(std::holds_alternative<ParseError>(res));
+    ASSERT_FALSE(res.ok());
   }
+}
+
+void TestParseResultApi() {
+  // Test value construction and accessors
+  ParseResult<int> int_ok(42);
+  ASSERT_TRUE(int_ok.ok());
+  ASSERT_EQ(*int_ok, 42);
+
+  // Test error construction and accessors
+  ParseResult<int> int_err(ParseError{"test error"});
+  ASSERT_FALSE(int_err.ok());
+  ASSERT_EQ(int_err.error().message, "test error");
+
+  // Test member access operator->()
+  struct Data {
+    std::string name;
+    int count = 0;
+  };
+  ParseResult<Data> data_ok(Data{"test_name", 7});
+  ASSERT_TRUE(data_ok.ok());
+  ASSERT_EQ(data_ok->name, "test_name");
+  ASSERT_EQ(data_ok->count, 7);
+  data_ok->count = 10;
+  ASSERT_EQ(data_ok->count, 10);
+  const auto& const_data = data_ok;
+  ASSERT_EQ(const_data->name, "test_name");
+  ASSERT_EQ(const_data->count, 10);
+
+  // Test copy construction and copy assignment
+  ParseResult<std::string> str_ok(std::string("hello world"));
+  ParseResult<std::string> str_copied(str_ok);
+  ASSERT_TRUE(str_copied.ok());
+  ASSERT_EQ(*str_copied, "hello world");
+  ParseResult<std::string> str_assigned(std::string("initial"));
+  str_assigned = str_ok;
+  ASSERT_TRUE(str_assigned.ok());
+  ASSERT_EQ(*str_assigned, "hello world");
+
+  // Test move construction and move assignment
+  ParseResult<std::string> to_move(std::string("moving"));
+  ParseResult<std::string> moved(std::move(to_move));
+  ASSERT_TRUE(moved.ok());
+  ASSERT_EQ(*moved, "moving");
+  ParseResult<std::string> moved_target(std::string("target"));
+  moved_target = std::move(moved);
+  ASSERT_TRUE(moved_target.ok());
+  ASSERT_EQ(*moved_target, "moving");
+
+  // Test rvalue extraction with std::move
+  std::string extracted = *std::move(moved_target);
+  ASSERT_EQ(extracted, "moving");
+
+  ParseResult<std::string> err_to_move(ParseError{"moved err"});
+  ParseResult<std::string> err_moved(std::move(err_to_move));
+  ASSERT_FALSE(err_moved.ok());
+  ParseError extracted_err = std::move(err_moved).error();
+  ASSERT_EQ(extracted_err.message, "moved err");
 }
 
 }  // namespace
@@ -1864,6 +1918,7 @@ void TestRuntimeLogic() {
   TestMalformedUtf8AndUnicodeSurrogates();
   TestExtremeNumbersAndSpecialValues();
   TestRobustnessAndEdgeCases();
+  TestParseResultApi();
 }
 
 int main() {
