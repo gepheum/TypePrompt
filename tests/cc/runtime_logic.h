@@ -16,10 +16,6 @@
 
 namespace typeprompt {
 
-namespace internal {
-static constexpr char kHexDigits[] = "0123456789ABCDEF";
-}  // namespace internal
-
 class JsonNode {
  public:
   enum class Type {
@@ -101,8 +97,6 @@ class JsonNode {
   inline std::string StringifyYaml() const;
 
  private:
-  // ─── Data Representation & UTF-8 Normalization ──────────────────────────────
-
   using JsonArrayVariant = std::vector<JsonNode>;
   using JsonObjectVariant = std::vector<std::pair<std::string, JsonNode>>;
 
@@ -291,6 +285,7 @@ class JsonNode {
   }
 
   static void AppendJsonString(const std::string& value, std::string& out) {
+    static constexpr char kHexDigits[] = "0123456789ABCDEF";
     out += '"';
     const char* pos = value.data();
     const char* const end = pos + value.size();
@@ -332,12 +327,7 @@ class JsonNode {
             break;
           }
           default: {
-            out += {'\\',
-                    'u',
-                    '0',
-                    '0',
-                    internal::kHexDigits[(byte >> 4) & 0x0F],
-                    internal::kHexDigits[byte & 0x0F]};
+            out += {'\\', 'u', '0', '0', kHexDigits[(byte >> 4) & 0x0F], kHexDigits[byte & 0x0F]};
           }
         }
       } else {
