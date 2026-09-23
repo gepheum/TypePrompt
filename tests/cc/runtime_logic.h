@@ -27,10 +27,10 @@ template <typename T>
 class ParseResult {
  public:
   // Constructs a successful ParseResult containing ok_value.
-  constexpr ParseResult(T ok_value) : data_(std::in_place_index<0>, std::move(ok_value)) {}
+  constexpr ParseResult(T ok_value) : data_(std::move(ok_value)) {}
 
   // Constructs a failed ParseResult containing error.
-  ParseResult(ParseError error) : data_(std::in_place_index<1>, std::move(error)) {}
+  ParseResult(ParseError error) : data_(std::move(error)) {}
 
   ParseResult(const ParseResult& other) = default;
   ParseResult(ParseResult&& other) = default;
