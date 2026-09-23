@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
@@ -439,14 +440,15 @@ class ToonFormatter {
           return res;
         }
       }
-      default:
+      default: {
         return FormatPrimitive(root, ',');
+      }
     }
   }
 
  private:
   struct TabularField {
-    std::string name;
+    std::string_view name;
     bool is_nested = false;
     std::vector<TabularField> subfields;
   };
@@ -490,7 +492,7 @@ class ToonFormatter {
     }
   }
 
-  static bool IsNumericLike(const std::string& s) {
+  static bool IsNumericLike(std::string_view s) {
     if (s.empty()) return false;
     size_t i = 0;
     if (s[i] == '+' || s[i] == '-') {
@@ -526,7 +528,7 @@ class ToonFormatter {
     return i == s.size();
   }
 
-  static bool NeedsQuoting(const std::string& s, char delim = ',') {
+  static bool NeedsQuoting(std::string_view s, char delim = ',') {
     if (s.empty()) return true;
     if (s.front() == ' ' || s.front() == '\t' || s.back() == ' ' || s.back() == '\t') {
       return true;
@@ -552,7 +554,7 @@ class ToonFormatter {
     return false;
   }
 
-  static bool IsSafeKey(const std::string& key) {
+  static bool IsSafeKey(std::string_view key) {
     if (key.empty()) return false;
     unsigned char first = static_cast<unsigned char>(key[0]);
     if (!((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first == '_')) {
@@ -568,7 +570,7 @@ class ToonFormatter {
     return true;
   }
 
-  static void AppendEscapedString(const std::string& s, std::string& out) {
+  static void AppendEscapedString(std::string_view s, std::string& out) {
     static constexpr char kHexDigitsLower[] = "0123456789abcdef";
     out += '"';
     const char* pos = s.data();
@@ -615,18 +617,18 @@ class ToonFormatter {
     }
   }
 
-  static std::string FormatKey(const std::string& key) {
+  static std::string FormatKey(std::string_view key) {
     if (IsSafeKey(key)) {
-      return key;
+      return std::string(key);
     }
     std::string out;
     AppendEscapedString(key, out);
     return out;
   }
 
-  static std::string FormatString(const std::string& s, char delim = ',') {
+  static std::string FormatString(std::string_view s, char delim = ',') {
     if (!NeedsQuoting(s, delim)) {
-      return s;
+      return std::string(s);
     }
     std::string out;
     AppendEscapedString(s, out);
@@ -649,43 +651,86 @@ class ToonFormatter {
   }
 
   static const JsonNode* FindObjectField(const std::vector<std::pair<std::string, JsonNode>>& obj,
-                                         const std::string& key) {
+                                         std::string_view key) {
     for (const auto& [k, v] : obj) {
       if (k == key) return &v;
     }
     return nullptr;
   }
 
-  static bool CheckTabularUniform(const std::vector<JsonNode>& elements,
+  template <typename ElementContainer>
+  static bool CheckTabularUniform(const ElementContainer& elements,
                                   std::vector<TabularField>& fields) {
     if (elements.empty()) return false;
+    auto get_node = [](const auto& el) -> const JsonNode& {
+      if constexpr (std::is_pointer_v<std::decay_t<decltype(el)>>) {
+        return *el;
+      } else {
+        return el;
+      }
+    };
     for (const auto& el : elements) {
-      if (el.type() != JsonNode::Type::kObject) return false;
-      if (el.AsObject().empty()) return false;
+      const auto& node = get_node(el);
+      if (node.type() != JsonNode::Type::kObject) return false;
+      if (node.AsObject().empty()) return false;
     }
-    const auto& first_obj = elements[0].AsObject();
-    size_t field_count = first_obj.size();
-    for (const auto& el : elements) {
-      if (el.AsObject().size() != field_count) return false;
-      for (const auto& [k, v] : first_obj) {
-        if (!FindObjectField(el.AsObject(), k)) return false;
+    const auto& first_obj = get_node(elements[0]).AsObject();
+    const size_t field_count = first_obj.size();
+
+    std::vector<std::string_view> first_keys_sorted;
+    bool sorted_initialized = false;
+    bool all_same_order = true;
+
+    for (size_t e = 1; e < elements.size(); ++e) {
+      const auto& el_obj = get_node(elements[e]).AsObject();
+      if (el_obj.size() != field_count) return false;
+      bool same_keys = true;
+      for (size_t i = 0; i < field_count; ++i) {
+        if (el_obj[i].first != first_obj[i].first) {
+          same_keys = false;
+          break;
+        }
+      }
+      if (!same_keys) {
+        if (!sorted_initialized) {
+          first_keys_sorted.reserve(field_count);
+          for (const auto& [k, v] : first_obj) {
+            first_keys_sorted.push_back(k);
+          }
+          std::sort(first_keys_sorted.begin(), first_keys_sorted.end());
+          sorted_initialized = true;
+        }
+        std::vector<std::string_view> el_keys;
+        el_keys.reserve(field_count);
+        for (const auto& [k, v] : el_obj) {
+          el_keys.push_back(k);
+        }
+        std::sort(el_keys.begin(), el_keys.end());
+        if (el_keys != first_keys_sorted) {
+          return false;
+        }
+        all_same_order = false;
       }
     }
+
     fields.clear();
-    for (const auto& [field_name, _] : first_obj) {
+    for (size_t field_idx = 0; field_idx < field_count; ++field_idx) {
+      std::string_view field_name = first_obj[field_idx].first;
       bool all_primitive = true;
       bool all_objects = true;
-      std::vector<JsonNode> sub_elements;
+      std::vector<const JsonNode*> sub_elements;
       sub_elements.reserve(elements.size());
       for (const auto& el : elements) {
-        const JsonNode* val = FindObjectField(el.AsObject(), field_name);
+        const auto& el_obj = get_node(el).AsObject();
+        const JsonNode* val =
+            all_same_order ? &el_obj[field_idx].second : FindObjectField(el_obj, field_name);
         if (!val) return false;
         if (val->type() == JsonNode::Type::kObject) {
           all_primitive = false;
           if (val->AsObject().empty()) {
             all_objects = false;
           } else {
-            sub_elements.push_back(*val);
+            sub_elements.push_back(val);
           }
         } else if (val->type() == JsonNode::Type::kArray) {
           all_primitive = false;
@@ -713,13 +758,13 @@ class ToonFormatter {
     if (node.type() != JsonNode::Type::kObject) return false;
     const auto& entries = node.AsObject();
     if (entries.size() < 2) return false;
-    std::vector<JsonNode> entry_values;
+    std::vector<const JsonNode*> entry_values;
     entry_values.reserve(entries.size());
     for (const auto& [k, v] : entries) {
       if (v.type() != JsonNode::Type::kObject || v.AsObject().empty()) {
         return false;
       }
-      entry_values.push_back(v);
+      entry_values.push_back(&v);
     }
     return CheckTabularUniform(entry_values, fields);
   }
