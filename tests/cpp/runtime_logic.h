@@ -416,11 +416,6 @@ JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map) {
   return JsonNode(std::move(entries));
 }
 
-template <typename... Ts>
-JsonNode ToJsonNode(const std::variant<Ts...>& value) {
-  return std::visit([](const auto& val) { return ToJsonNode(val); }, value);
-}
-
 inline ParseStatus ParseJsonNode(const JsonNode& node, JsonNode& out) {
   out = node;
   return kOkStatus;
