@@ -1,5 +1,8 @@
 include: prompts/**/*.xml
 gen:
+  cpp:
+    file: ../../cpp/gen/prompts_e01.gen.h
+    rootNamespace: typeprompt_e01
   csharp:
     file: ../../csharp/Gen/PromptsE01.cs
   dart:

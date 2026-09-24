@@ -1,75 +1,44 @@
-// import type {
-//   ValidCompilationResult,
-//   ValidNamespaceResult,
-//   ValidTemplate,
-//   ValidatedTool,
-// } from "@typeprompt/core/compiler/compiler-types.js";
-// import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.js";
-// import { getId } from "@typeprompt/core/compiler/ids.js";
-// import type { Config } from "@typeprompt/core/config/config-parser.js";
-// import type {
-//   Field,
-//   Interface,
-//   NamingHint,
-//   Optional,
-//   Schema,
-//   Type,
-//   TypeNameView,
-//   Union,
-// } from "@typeprompt/core/schema/schema-types.js";
-// import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-// import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
-// import {
-//   capitalize,
-//   toCamelCase,
-//   toPascalCase,
-//   uncapitalize,
-// } from "@typeprompt/core/util/casing.js";
-// import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
-// import { makeTemplates } from "../../runtime/spec-maker.js";
-// import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-// import type { OutputFile } from "../codegen-types.js";
+import { Config, ValidCompilationResult } from "@typeprompt/core";
+import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
+import { OutputFile } from "../codegen-types.js";
 
-// export function generateDartCode(
-//   compilationResult: ValidCompilationResult,
-//   config: Config,
-// ): readonly OutputFile[] {
-//   const dartConfig = config.gen?.dart;
-//   if (!dartConfig) {
-//     return [];
-//   }
-//   return [
-//     {
-//       path: dartConfig.file,
-//       content: writeAll(compilationResult),
-//     },
-//   ];
-// }
+export function generateCppCode(
+  compilationResult: ValidCompilationResult,
+  config: Config,
+): readonly OutputFile[] {
+  const cppConfig = config.gen?.cpp;
+  if (!cppConfig) {
+    return [];
+  }
+  return [
+    {
+      path: cppConfig.file,
+      content: writeAll(compilationResult, cppConfig),
+    },
+  ];
+}
 
-// function writeAll(compilationResult: ValidCompilationResult): string {
-//   const unionContext = makeUnionContext(compilationResult);
-
-//   return coalesceEmptyLines(
-//     [
-//       STATIC_SNIPPETS["dart-top-level"],
-//       STATIC_SNIPPETS["dart-imports"],
-//       reformat(writePromptsClass(compilationResult)),
-//       STATIC_SNIPPETS["dart-public-types"],
-//       reformat(
-//         [
-//           writeTemplateIdEnum(compilationResult),
-//           writeToolExecutorClasses(compilationResult),
-//           writePromptToolsEnums(compilationResult),
-//           writeUserDefinedDatatypes(compilationResult, unionContext),
-//           writeSpecDatatypes(unionContext),
-//           writeTemplatesData(compilationResult),
-//           writeExecuteToolCall(compilationResult),
-//         ].join("\n\n"),
-//       ),
-//       STATIC_SNIPPETS["dart-logic"],
-//     ].join("\n\n"),
-//   );
-// }
+function writeAll(
+  _compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  return coalesceEmptyLines(
+    [
+      STATIC_SNIPPETS["cpp-top-level"],
+      // reformat(writePromptsClass(compilationResult)),
+      `namespace ${config.rootNamespace} {`,
+      STATIC_SNIPPETS["cpp-public-types"],
+      // writeTemplateIdEnum(compilationResult),
+      // writeToolExecutorClasses(compilationResult),
+      // writePromptToolsEnums(compilationResult),
+      // writeUserDefinedDatatypes(compilationResult, unionContext),
+      // writeSpecDatatypes(unionContext),
+      // writeTemplatesData(compilationResult),
+      // writeExecuteToolCall(compilationResult),
+      `}  // namespace ${config.rootNamespace}`,
+    ].join("\n\n"),
+  );
+}
 
 // function getTemplateTypes(
 //   template: ValidTemplate,
@@ -1143,68 +1112,6 @@
 //   readonly overrideFields: Set<Field>;
 // };
 
-// function makeUnionContext(
-//   compilationResult: ValidCompilationResult,
-// ): UnionContext {
-//   const intMemberToUnionRefs = new Map<Interface, string[]>();
-//   const intMemberToStringDiscriminant = new Map<Interface, string>();
-//   const overrideFields = new Set<Field>();
-
-//   const processSchema = (schema: Schema, typePrefix: string): void => {
-//     for (const [
-//       type,
-//       namingHint,
-//     ] of schema.namingHints.defaultScope.entries()) {
-//       if (type.kind !== "union") continue;
-//       const members = schema.unionToMembers.get(type)!;
-//       if (members.kind !== "interfaces") continue;
-//       const unionRef = typePrefix.concat(makeNameFromHint(namingHint));
-//       for (const member of Object.values(members.members)) {
-//         const { discriminant, resolved } = member;
-//         const unionRefs = intMemberToUnionRefs.get(resolved) ?? [];
-//         if (unionRefs.length <= 0) {
-//           intMemberToUnionRefs.set(resolved, unionRefs);
-//         }
-//         unionRefs.push(unionRef);
-
-//         if (discriminant.kind === "string-literal") {
-//           intMemberToStringDiscriminant.set(resolved, discriminant.value);
-//         }
-
-//         for (const commonField of members.commonFields) {
-//           for (const memberField of commonField.memberFields) {
-//             overrideFields.add(memberField);
-//           }
-//         }
-//       }
-//     }
-//   };
-
-//   processSchema(compilationResult.metaSchema, "Meta_");
-//   for (const namespace of Object.values(compilationResult.namespaces)) {
-//     const typePrefixBase = compilationResult.singleNamespace
-//       ? ""
-//       : namespace.name.concat("_");
-//     processSchema(namespace.schema, typePrefixBase.concat("Shared_"));
-//     for (const template of namespace.templates) {
-//       const templateName = template.template.name.text;
-//       processSchema(template.schema, typePrefixBase.concat(templateName, "_"));
-//     }
-//     for (const tool of Object.values(namespace.tools)) {
-//       const toolName = capitalize(tool.tool.name.text);
-//       processSchema(tool.schema, typePrefixBase.concat(toolName, "_"));
-//     }
-//   }
-
-//   processSchema(runtimeTypesSchema, "_Spec_");
-
-//   return {
-//     intMemberToUnionRefs,
-//     intMemberToStringDiscriminant,
-//     overrideFields,
-//   };
-// }
-
 // function toDartName(name: string): string {
 //   return RESERVED_NAMES.has(name) ? name.concat("_") : name;
 // }
@@ -1252,24 +1159,20 @@
 //   return outputLines.join("\n");
 // }
 
-// function coalesceEmptyLines(code: string): string {
-//   return (
-//     code
-//       // Remove spaces enclosed within curly brackets if that's all there is.
-//       .replace(/\{\s+\}/g, "{}")
-//       // Remove spaces enclosed within round brackets if that's all there is.
-//       .replace(/\(\s+\)/g, "()")
-//       // Remove spaces enclosed within square brackets if that's all there is.
-//       .replace(/\[\s+\]/g, "[]")
-//       // Remove empty line following an open curly bracket.
-//       .replace(/(\{\n *)\n/g, "$1")
-//       // Remove empty line preceding a closed curly bracket.
-//       .replace(/\n(\n *\})/g, "$1")
-//       // Coalesce consecutive empty lines.
-//       .replace(/\n\n\n+/g, "\n\n")
-//       .replace(/\n*$/g, "\n")
-//   );
-// }
+function coalesceEmptyLines(code: string): string {
+  return (
+    code
+      // Remove spaces enclosed within curly brackets if that's all there is.
+      .replace(/\{\s+\}/g, "{}")
+      // Remove spaces enclosed within round brackets if that's all there is.
+      .replace(/\(\s+\)/g, "()")
+      // Remove spaces enclosed within square brackets if that's all there is.
+      .replace(/\[\s+\]/g, "[]")
+      // Coalesce consecutive empty lines.
+      .replace(/\n\n\n+/g, "\n\n")
+      .replace(/\n*$/g, "\n")
+  );
+}
 
 // const RESERVED_NAMES: ReadonlySet<string> = new Set([
 //   "abstract",
