@@ -19,11 +19,12 @@
 
 namespace typeprompt {
 
+// An error that occurred during JSON parsing.
 struct ParseError {
   std::string message;
 };
 
-// Represents either a successfully parsed value of type T or a ParseError.
+// Either a successfully parsed value of type T or a ParseError.
 template <typename T>
 class ParseResult {
  public:
@@ -60,7 +61,7 @@ class ParseResult {
   std::variant<T, ParseError> data_;
 };
 
-// Represents either a successful parsing operation or a ParseError.
+// Either a successful parsing operation or a ParseError.
 using ParseStatus = ParseResult<std::nullopt_t>;
 
 inline constexpr ParseStatus kOkStatus = std::nullopt;
@@ -77,9 +78,9 @@ class JsonNode {
     kObject,
   };
 
-  // Represents a JSON array.
+  // A JSON array.
   using Array = std::vector<JsonNode>;
-  // Represents a JSON object as an ordered list of key-value pairs.
+  // A JSON object as an ordered list of key-value pairs.
   using Object = std::vector<std::pair<std::string, JsonNode>>;
 
   JsonNode() : data_(std::nullopt) {}
