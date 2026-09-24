@@ -701,21 +701,59 @@ type WriteSchemaOptions = {
 function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const { rootNamespace, typePrefix } = options;
   const lines: string[] = [];
+
+  // First, declare all the types in the schema.
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
-    const name = makeNameFromHint(namingHint);
+    const cName = makeNameFromHint(namingHint);
+    const what =
+      type.kind === "union" &&
+      schema.unionToMembers.get(type)!.kind === "strings"
+        ? "enum class"
+        : "struct";
+    lines.push(`${what} ${cName};`);
+  }
+  lines.push("");
+
+  // Second, define all the types in the schema.
+  // Make sure define each type *after* all its dependencies have been defined.
+  const definedTypes = new Set<Interface | Union>();
+  const defineType = (type: Interface | Union): void => {
+    if (definedTypes.has(type)) return;
+    definedTypes.add(type);
+
+    // Define dependencies first.
+    if (type.kind === "interface") {
+      for (const field of Object.values(type.fields)) {
+        let type = resolveType(field.type, schema);
+        if (type.kind === "optional") {
+          type = resolveType(type.innerType, schema);
+        }
+        if (type.kind === "interface" || type.kind === "union") {
+          defineType(type);
+        }
+      }
+    }
+
+    const namingHint = schema.namingHints.defaultScope.get(type);
+    if (!namingHint) return;
+    const typeCName = makeNameFromHint(namingHint);
     lines.push(...commentify(namingHint.doc));
-    lines.push(`// Exported as '${rootNamespace}::${typePrefix}${name}'`);
+    lines.push(`// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`);
     switch (type.kind) {
       case "interface": {
-        lines.push(writeTypepromptInterface(type, name, schema, options));
+        lines.push(writeTypepromptInterface(type, typeCName, schema, options));
         break;
       }
       case "union": {
-        lines.push(writeTypepromptUnion(type, name, schema, options));
+        lines.push(writeTypepromptUnion(type, typeCName, schema, options));
         break;
       }
     }
     lines.push("", "");
+  };
+
+  for (const type of schema.namingHints.defaultScope.keys()) {
+    defineType(type);
   }
 
   return lines.join("\n");
@@ -723,13 +761,13 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
 
 function writeTypepromptInterface(
   type: Interface,
-  typeName: string,
+  typeCName: string,
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
   // const { typePrefix } = options;
 
-  const lines = [`struct ${typeName} {`];
+  const lines = [`struct ${typeCName} {`];
   const fields = Object.values(type.fields);
 
   for (const field of fields) {
@@ -819,7 +857,7 @@ function writeTypepromptInterface(
 
 function writeTypepromptUnion(
   type: Union,
-  typeName: string,
+  typeCName: string,
   schema: Schema,
   _options: WriteSchemaOptions,
 ): string {
@@ -827,7 +865,7 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum class ${typeName} {\n`);
+      lines.push(`enum class ${typeCName} {\n`);
       // for (const member of members.members) {
       //   const isLast = member === members.members.at(-1);
       //   const dartName = toDartName(toCamelCase(member.value));
@@ -865,7 +903,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       // const discriminator = members.discriminator;
-      lines.push(`struct ${typeName} {`);
+      lines.push(`struct ${typeCName} {`);
       // for (const commonField of members.commonFields) {
       //   const name = toDartName(commonField.name);
       //   if (isLiteralType(commonField.type)) continue;
