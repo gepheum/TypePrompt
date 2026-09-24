@@ -1,8 +1,8 @@
 .DS_Store
 dist
 
-tests/cc/build/
-tests/cc/gen/
+tests/cpp/build/
+tests/cpp/gen/
 
 tests/csharp/Gen
 tests/csharp/bin/

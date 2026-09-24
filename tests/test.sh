@@ -85,7 +85,7 @@ dart test
 cd ..
 
 # Run C++ unit tests
-cd cc
+cd cpp
 ./test.sh
 cd ..
 

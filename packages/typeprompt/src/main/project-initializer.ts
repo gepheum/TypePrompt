@@ -40,6 +40,8 @@ include: prompts/**/*.xml
 
 # Uncomment and configure the generators for your target language(s).
 gen:
+  # cpp:
+  #   file: ./prompts.gen.h
   # csharp:
   #   file: ./Prompts.generated.cs
   # dart:

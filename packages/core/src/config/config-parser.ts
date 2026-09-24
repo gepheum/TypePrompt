@@ -8,6 +8,11 @@ export type Config = {
   readonly include: string;
 
   readonly gen?: {
+    readonly cpp?: {
+      /** Path to the generated .h file. */
+      readonly file: string;
+      readonly rootNamespace: string;
+    };
     readonly csharp?: {
       /** Path to the generated .cs file. */
       readonly file: string;
@@ -16,11 +21,6 @@ export type Config = {
     readonly dart?: {
       /** Path to the generated .dart file. */
       readonly file: string;
-    };
-    readonly go?: {
-      /** Path to the generated .go file. */
-      readonly file: string;
-      readonly package: string;
     };
     readonly kotlin?: {
       /** Path to the generated .kt file. */
@@ -86,6 +86,19 @@ const RawConfigSchema = z
     include: z.string().min(1, "must be a non-empty string"),
     gen: z
       .object({
+        cpp: z
+          .object({
+            file: z
+              .string()
+              .refine((f) => f.endsWith(".h"), `must end with '.h'`),
+            rootNamespace: z
+              .string()
+              .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "must be a valid identifier")
+              .optional()
+              .default("typeprompt"),
+          })
+          .strict()
+          .optional(),
         csharp: z
           .object({
             file: z
@@ -117,18 +130,10 @@ const RawConfigSchema = z
               .refine((f) => f.endsWith(".kt"), `must end with '.kt'`),
             package: z
               .string()
-              .regex(/^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/),
-          })
-          .strict()
-          .optional(),
-        go: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".go"), `must end with '.go'`),
-            package: z
-              .string()
-              .regex(/^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/),
+              .regex(
+                /^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/,
+                "must be a valid lower_case identifier",
+              ),
           })
           .strict()
           .optional(),

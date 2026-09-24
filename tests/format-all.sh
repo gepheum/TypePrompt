@@ -30,7 +30,7 @@ cd dart
 ./format.sh
 cd ..
 
-cd cc
+cd cpp
 ./format.sh
 cd ..
 
