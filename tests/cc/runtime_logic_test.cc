@@ -2036,6 +2036,23 @@ void TestToJsonNodeOverloads() {
   JsonNode map_ints_res = ToJsonNode(map_ints);
   ASSERT_EQ(map_ints_res.type(), JsonNode::Type::kObject);
   ASSERT_EQ(map_ints_res.object_value().size(), 2);
+
+  // 9. std::variant<Ts...> overload
+  std::variant<int, std::string, test_custom_adl::Point> var_int = 42;
+  JsonNode var_int_res = ToJsonNode(var_int);
+  ASSERT_EQ(var_int_res.type(), JsonNode::Type::kNumber);
+  ASSERT_EQ(var_int_res.number_value(), 42.0);
+
+  std::variant<int, std::string, test_custom_adl::Point> var_str = std::string("hello variant");
+  JsonNode var_str_res = ToJsonNode(var_str);
+  ASSERT_EQ(var_str_res.type(), JsonNode::Type::kString);
+  ASSERT_EQ(var_str_res.string_value(), "hello variant");
+
+  std::variant<int, std::string, test_custom_adl::Point> var_pt = test_custom_adl::Point{7.0, 8.0};
+  JsonNode var_pt_res = ToJsonNode(var_pt);
+  ASSERT_EQ(var_pt_res.type(), JsonNode::Type::kObject);
+  ASSERT_EQ(var_pt_res.object_value()[0].second.number_value(), 7.0);
+  ASSERT_EQ(var_pt_res.object_value()[1].second.number_value(), 8.0);
 }
 
 void TestParseJsonNodeOverloads() {
