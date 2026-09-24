@@ -464,7 +464,7 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
   elements.reserve(arr.size());
   for (const auto& item : arr) {
     T val{};
-    ParseStatus status = ParseJsonNode(item, val);
+    const ParseStatus status = ParseJsonNode(item, val);
     if (!status.ok()) {
       return status;
     }
@@ -606,7 +606,7 @@ class ToonFormatter {
     if (number == 0.0 || number == -0.0) {
       return "0";
     }
-    double abs_val = std::abs(number);
+    const double abs_val = std::abs(number);
     if (abs_val >= 1e-6 && abs_val < 1e21) {
       char buffer[128];
       std::snprintf(buffer, sizeof(buffer), "%.15g", number);
@@ -614,7 +614,7 @@ class ToonFormatter {
       if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
         std::snprintf(buffer, sizeof(buffer), "%.10f", number);
         s = buffer;
-        size_t dot = s.find('.');
+        const size_t dot = s.find('.');
         if (dot != std::string::npos) {
           while (!s.empty() && s.back() == '0') {
             s.pop_back();
@@ -700,12 +700,12 @@ class ToonFormatter {
 
   static bool IsSafeKey(std::string_view key) {
     if (key.empty()) return false;
-    unsigned char first = static_cast<unsigned char>(key[0]);
+    const unsigned char first = static_cast<unsigned char>(key[0]);
     if (!((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first == '_')) {
       return false;
     }
     for (size_t i = 1; i < key.size(); ++i) {
-      unsigned char c = static_cast<unsigned char>(key[i]);
+      const unsigned char c = static_cast<unsigned char>(key[i]);
       if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
             c == '_' || c == '.')) {
         return false;
@@ -853,7 +853,7 @@ class ToonFormatter {
     fields.clear();
     fields.reserve(field_count);
     for (size_t field_idx = 0; field_idx < field_count; ++field_idx) {
-      std::string_view field_name = first_obj[field_idx].first;
+      const std::string_view field_name = first_obj[field_idx].first;
       bool all_primitive = true;
       bool all_objects = true;
       std::vector<const JsonNode*> sub_elements;
@@ -1056,7 +1056,8 @@ class ToonFormatter {
       AppendInlineArrayValues(arr, line);
       lines.push_back(line);
     } else {
-      std::string header = Indent(depth) + FormatKey(key) + "[" + std::to_string(arr.size()) + "]:";
+      const std::string header =
+          Indent(depth) + FormatKey(key) + "[" + std::to_string(arr.size()) + "]:";
       lines.push_back(header);
       AppendListItems(arr, depth + 1, lines);
     }
@@ -1074,7 +1075,7 @@ class ToonFormatter {
           AppendInlineArrayValues(item.array_value(), line);
           lines.push_back(line);
         } else {
-          std::string header =
+          const std::string header =
               Indent(depth) + "- [" + std::to_string(item.array_value().size()) + "]:";
           lines.push_back(header);
           AppendListItems(item.array_value(), depth + 1, lines);
@@ -1141,8 +1142,8 @@ class ToonFormatter {
         AppendInlineArrayValues(first_v.array_value(), line);
         lines.push_back(line);
       } else {
-        std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
-                             std::to_string(first_v.array_value().size()) + "]:";
+        const std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
+                                   std::to_string(first_v.array_value().size()) + "]:";
         lines.push_back(header);
         AppendListItems(first_v.array_value(), depth + 2, lines);
       }
@@ -1215,7 +1216,7 @@ class YamlFormatter {
     if (number == 0.0 || number == -0.0) {
       return "0";
     }
-    double abs_val = std::abs(number);
+    const double abs_val = std::abs(number);
     if (abs_val >= 1e-6 && abs_val < 1e21) {
       char buffer[128];
       std::snprintf(buffer, sizeof(buffer), "%.15g", number);
@@ -1223,7 +1224,7 @@ class YamlFormatter {
       if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
         std::snprintf(buffer, sizeof(buffer), "%.10f", number);
         s = buffer;
-        size_t dot = s.find('.');
+        const size_t dot = s.find('.');
         if (dot != std::string::npos) {
           while (!s.empty() && s.back() == '0') {
             s.pop_back();
@@ -1271,7 +1272,7 @@ class YamlFormatter {
     }
     // Check hex, octal, binary
     if (s.size() >= 3 && s[0] == '0') {
-      char p = std::tolower(static_cast<unsigned char>(s[1]));
+      const char p = std::tolower(static_cast<unsigned char>(s[1]));
       if (p == 'x' || p == 'o' || p == 'b') {
         return true;
       }
@@ -1339,7 +1340,7 @@ class YamlFormatter {
     if (IsNumericOrSpecialScalar(s)) {
       return true;
     }
-    char first = s.front();
+    const char first = s.front();
     if (first == '-' || first == '?' || first == ':' || first == ',' || first == '[' ||
         first == ']' || first == '{' || first == '}' || first == '#' || first == '&' ||
         first == '*' || first == '!' || first == '|' || first == '>' || first == '\'' ||
@@ -1350,7 +1351,7 @@ class YamlFormatter {
       return true;
     }
     for (size_t i = 0; i < s.size(); ++i) {
-      unsigned char c = static_cast<unsigned char>(s[i]);
+      const unsigned char c = static_cast<unsigned char>(s[i]);
       if (c < 0x20 || c == 0x7F) return true;
       if (c == '"' || c == '\\') return true;
       if (c == '[' || c == ']' || c == '{' || c == '}' || c == ',') return true;
@@ -1363,12 +1364,12 @@ class YamlFormatter {
   static bool IsSafeKey(std::string_view key) {
     if (key.empty()) return false;
     if (IsYamlKeyword(key)) return false;
-    unsigned char first = static_cast<unsigned char>(key[0]);
+    const unsigned char first = static_cast<unsigned char>(key[0]);
     if (!((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first == '_')) {
       return false;
     }
     for (size_t i = 1; i < key.size(); ++i) {
-      unsigned char c = static_cast<unsigned char>(key[i]);
+      const unsigned char c = static_cast<unsigned char>(key[i]);
       if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
             c == '_')) {
         return false;
@@ -1628,14 +1629,14 @@ class JsonParser {
   };
 
   static ParseError Error(const std::string& msg, size_t pos) {
-    return ParseError{msg + " at position " + std::to_string(pos)};
+    return ParseError{std::format("{} at position {}", msg, pos)};
   }
 
   static ParseError Error(std::string msg) { return ParseError{std::move(msg)}; }
 
   void SkipWhitespace() {
     while (pos_ < input_.size()) {
-      char c = input_[pos_];
+      const char c = input_[pos_];
       if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
         ++pos_;
       } else {
@@ -1694,7 +1695,7 @@ class JsonParser {
     if (pos_ >= input_.size()) {
       return Error("Unexpected end of input");
     }
-    char c = input_[pos_];
+    const char c = input_[pos_];
     switch (c) {
       case 'n':
         return ParseNull();
@@ -1721,12 +1722,12 @@ class JsonParser {
       case '9':
         return ParseNumber();
       default:
-        return Error(std::string("Unexpected character: '") + c + "'", pos_);
+        return Error(std::format("Unexpected character: '{}'", c), pos_);
     }
   }
 
   ParseResult<JsonNode> ParseNull() {
-    size_t start = pos_;
+    const size_t start = pos_;
     if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "null") {
       pos_ += 4;
       return JsonNode(std::nullopt);
@@ -1735,7 +1736,7 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseTrue() {
-    size_t start = pos_;
+    const size_t start = pos_;
     if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "true") {
       pos_ += 4;
       return JsonNode(true);
@@ -1744,7 +1745,7 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseFalse() {
-    size_t start = pos_;
+    const size_t start = pos_;
     if (pos_ + 5 <= input_.size() && input_.substr(pos_, 5) == "false") {
       pos_ += 5;
       return JsonNode(false);
@@ -1753,7 +1754,7 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseNumber() {
-    size_t start = pos_;
+    const size_t start = pos_;
     if (pos_ < input_.size() && input_[pos_] == '-') {
       ++pos_;
     }
@@ -1796,9 +1797,9 @@ class JsonParser {
       }
     }
 
-    std::string s(input_.substr(start, pos_ - start));
+    const std::string s(input_.substr(start, pos_ - start));
     char* end_ptr = nullptr;
-    double val = std::strtod(s.c_str(), &end_ptr);
+    const double val = std::strtod(s.c_str(), &end_ptr);
     if (end_ptr != s.c_str() + s.size()) {
       return Error("Invalid number format", start);
     }
@@ -1806,14 +1807,14 @@ class JsonParser {
   }
 
   ParseResult<std::string> ParseRawString() {
-    size_t start = pos_;
+    const size_t start = pos_;
     if (pos_ >= input_.size() || input_[pos_] != '"') {
       return Error("Expected '\"'", start);
     }
     ++pos_;
     std::string result;
     while (pos_ < input_.size()) {
-      unsigned char c = static_cast<unsigned char>(input_[pos_++]);
+      const unsigned char c = static_cast<unsigned char>(input_[pos_++]);
       if (c == '"') {
         return result;
       }
@@ -1821,7 +1822,7 @@ class JsonParser {
         if (pos_ >= input_.size()) {
           return Error("Unterminated escape sequence in string", pos_ - 1);
         }
-        char esc = input_[pos_++];
+        const char esc = input_[pos_++];
         switch (esc) {
           case '"':
             result += '"';
@@ -1853,7 +1854,7 @@ class JsonParser {
             }
             uint32_t cp = 0;
             for (int i = 0; i < 4; ++i) {
-              int h = HexDigit(input_[pos_++]);
+              const int h = HexDigit(input_[pos_++]);
               if (h < 0) {
                 return Error("Invalid hex digit in unicode escape", pos_ - 1);
               }
@@ -1866,7 +1867,7 @@ class JsonParser {
               pos_ += 2;
               uint32_t lo = 0;
               for (int i = 0; i < 4; ++i) {
-                int h = HexDigit(input_[pos_++]);
+                const int h = HexDigit(input_[pos_++]);
                 if (h < 0) {
                   return Error("Invalid hex digit in unicode escape", pos_ - 1);
                 }
@@ -1883,7 +1884,7 @@ class JsonParser {
             break;
           }
           default:
-            return Error(std::string("Invalid escape character: '\\") + esc + "'", pos_ - 2);
+            return Error(std::format("Invalid escape character: '\\{}'", esc), pos_ - 2);
         }
       } else if (c < 0x20) {
         return Error("Unescaped control character in string", pos_ - 1);
@@ -1903,7 +1904,7 @@ class JsonParser {
   }
 
   ParseResult<JsonNode> ParseArray() {
-    size_t start = pos_;
+    const size_t start = pos_;
     ++pos_;  // consume '['
     SkipWhitespace();
     if (pos_ < input_.size() && input_[pos_] == ']') {
@@ -1927,7 +1928,7 @@ class JsonParser {
       if (pos_ >= input_.size()) {
         return Error("Unterminated array", start);
       }
-      char c = input_[pos_++];
+      const char c = input_[pos_++];
       if (c == ']') {
         break;
       } else if (c == ',') {
@@ -1936,14 +1937,14 @@ class JsonParser {
           return Error("Trailing comma in array", pos_ - 1);
         }
       } else {
-        return Error(std::string("Expected ',' or ']' in array, got '") + c + "'", pos_ - 1);
+        return Error(std::format("Expected ',' or ']' in array, got '{}'", c), pos_ - 1);
       }
     }
     return JsonNode(std::move(elements));
   }
 
   ParseResult<JsonNode> ParseObject() {
-    size_t start = pos_;
+    const size_t start = pos_;
     ++pos_;  // consume '{'
     SkipWhitespace();
     if (pos_ < input_.size() && input_[pos_] == '}') {
@@ -1983,7 +1984,7 @@ class JsonParser {
       if (pos_ >= input_.size()) {
         return Error("Unterminated object", start);
       }
-      char c = input_[pos_++];
+      const char c = input_[pos_++];
       if (c == '}') {
         break;
       } else if (c == ',') {
@@ -1992,7 +1993,7 @@ class JsonParser {
           return Error("Trailing comma in object", pos_ - 1);
         }
       } else {
-        return Error(std::string("Expected ',' or '}' in object, got '") + c + "'", pos_ - 1);
+        return Error(std::format("Expected ',' or '}}' in object, got '{}'", c), pos_ - 1);
       }
     }
     return JsonNode(std::move(entries));
@@ -2037,7 +2038,7 @@ class JsonObjectParser {
     if (!status_.ok()) return;
     while (index_ < sorted_entries_.size()) {
       const auto& entry = *sorted_entries_[index_];
-      int cmp_result = key.compare(entry.first);
+      const int cmp_result = key.compare(entry.first);
       if (cmp_result == 0) {
         ++index_;
         status_ = ParseJsonNode(entry.second, out);
