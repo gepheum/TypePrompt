@@ -11,6 +11,7 @@ import {
   toSnakeCase,
   Type,
   TypeNameView,
+  Union,
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "@typeprompt/core";
@@ -710,7 +711,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
         break;
       }
       case "union": {
-        // lines.push(writeTypepromptUnion(type, name, schema, options));
+        lines.push(writeTypepromptUnion(type, name, schema, options));
         break;
       }
     }
@@ -816,97 +817,95 @@ function writeTypepromptInterface(
   return lines.join("\n");
 }
 
-// function writeTypepromptUnion(
-//   type: Union,
-//   typeName: string,
-//   schema: Schema,
-//   options: WriteSchemaOptions,
-// ): string {
-//   const { typePrefix } = options;
-//   const className = typePrefix.concat(typeName);
-//   const members = schema.unionToMembers.get(type)!;
-//   const lines: string[] = [];
-//   switch (members.kind) {
-//     case "strings": {
-//       lines.push(`enum ${className} {\n`);
-//       for (const member of members.members) {
-//         const isLast = member === members.members.at(-1);
-//         const dartName = toDartName(toCamelCase(member.value));
-//         lines.push(dartName.concat(isLast ? ";" : ","));
-//       }
-//       lines.push("String toJson() {");
-//       lines.push("switch (this) {");
-//       for (const member of members.members) {
-//         const name = member.value;
-//         const dartName = toDartName(toCamelCase(name));
-//         lines.push(`case ${dartName}:`, `return "${name}";`);
-//       }
-//       lines.push(
-//         "}", // switch
-//         "}", // toJson()
-//         "",
-//       );
-//       lines.push(`factory ${className}.fromJson(String value) {`);
-//       lines.push("switch (value) {");
-//       for (const member of members.members) {
-//         const name = member.value;
-//         const dartName = toDartName(toCamelCase(name));
-//         lines.push(`case "${name}":`, `return ${className}.${dartName};`);
-//       }
-//       lines.push(
-//         "default:",
-//         'throw FormatException("Unknown json value: $value");',
-//       );
-//       lines.push(
-//         "}", // switch
-//         "}", // fromJson()
-//         "}",
-//       ); // enum
-//       break;
-//     }
-//     case "interfaces": {
-//       const discriminator = members.discriminator;
-//       lines.push(`sealed class ${className} {`);
-//       for (const commonField of members.commonFields) {
-//         const name = toDartName(commonField.name);
-//         if (isLiteralType(commonField.type)) continue;
-//         const type = writeType(commonField.type, schema, options);
-//         lines.push(
-//           ...commentify(commonField.doc ?? ""),
-//           `${type} get ${name};`,
-//         );
-//       }
-//       lines.push("", "Map<String, dynamic> toJson();");
-//       lines.push(
-//         "",
-//         `factory ${className}.fromJson(Map<String, dynamic> json) {`,
-//         `switch (json['${discriminator}']) {`,
-//       );
-//       for (const member of Object.values(members.members)) {
-//         const quotedDiscriminant = JSON.stringify(member.discriminant.value);
-//         const memberType = resolveType(member.resolved, schema);
-//         lines.push(
-//           `case ${quotedDiscriminant}:`,
-//           [
-//             "return ",
-//             writeType(memberType, schema, options),
-//             ".fromJson(json);",
-//           ].join(""),
-//         );
-//       }
-//       lines.push(
-//         "default:",
-//         `throw FormatException("Unknown discriminator: \${json['${discriminator}']}");`,
-//       );
-//       lines.push(
-//         "}", // switch
-//         "}", // fromJson
-//         "}",
-//       ); // sealed class
-//     }
-//   }
-//   return lines.join("\n");
-// }
+function writeTypepromptUnion(
+  type: Union,
+  typeName: string,
+  schema: Schema,
+  _options: WriteSchemaOptions,
+): string {
+  const members = schema.unionToMembers.get(type)!;
+  const lines: string[] = [];
+  switch (members.kind) {
+    case "strings": {
+      lines.push(`enum class ${typeName} {\n`);
+      // for (const member of members.members) {
+      //   const isLast = member === members.members.at(-1);
+      //   const dartName = toDartName(toCamelCase(member.value));
+      //   lines.push(dartName.concat(isLast ? ";" : ","));
+      // }
+      // lines.push("String toJson() {");
+      // lines.push("switch (this) {");
+      // for (const member of members.members) {
+      //   const name = member.value;
+      //   const dartName = toDartName(toCamelCase(name));
+      //   lines.push(`case ${dartName}:`, `return "${name}";`);
+      // }
+      // lines.push(
+      //   "}", // switch
+      //   "}", // toJson()
+      //   "",
+      // );
+      // lines.push(`factory ${className}.fromJson(String value) {`);
+      // lines.push("switch (value) {");
+      // for (const member of members.members) {
+      //   const name = member.value;
+      //   const dartName = toDartName(toCamelCase(name));
+      //   lines.push(`case "${name}":`, `return ${className}.${dartName};`);
+      // }
+      // lines.push(
+      //   "default:",
+      //   'throw FormatException("Unknown json value: $value");',
+      // );
+      lines.push(
+        // "}", // switch
+        // "}", // fromJson()
+        "};",
+      ); // enum class
+      break;
+    }
+    case "interfaces": {
+      // const discriminator = members.discriminator;
+      lines.push(`struct ${typeName} {`);
+      // for (const commonField of members.commonFields) {
+      //   const name = toDartName(commonField.name);
+      //   if (isLiteralType(commonField.type)) continue;
+      //   const type = writeType(commonField.type, schema, options);
+      //   lines.push(
+      //     ...commentify(commonField.doc ?? ""),
+      //     `${type} get ${name};`,
+      //   );
+      // }
+      // lines.push("", "Map<String, dynamic> toJson();");
+      // lines.push(
+      //   "",
+      //   `factory ${className}.fromJson(Map<String, dynamic> json) {`,
+      //   `switch (json['${discriminator}']) {`,
+      // );
+      // for (const member of Object.values(members.members)) {
+      //   const quotedDiscriminant = JSON.stringify(member.discriminant.value);
+      //   const memberType = resolveType(member.resolved, schema);
+      //   lines.push(
+      //     `case ${quotedDiscriminant}:`,
+      //     [
+      //       "return ",
+      //       writeType(memberType, schema, options),
+      //       ".fromJson(json);",
+      //     ].join(""),
+      //   );
+      // }
+      // lines.push(
+      //   "default:",
+      //   `throw FormatException("Unknown discriminator: \${json['${discriminator}']}");`,
+      // );
+      lines.push(
+        // "}", // switch
+        // "}", // fromJson
+        "};",
+      ); // struct
+    }
+  }
+  return lines.join("\n");
+}
 
 function writeType(
   type: Type | TypeNameView | Optional,
