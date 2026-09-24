@@ -735,7 +735,7 @@ function writeTypepromptInterface(
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
-    const cName = toCName(field.name.text);
+    const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
     lines.push(...commentify(field.doc, "  "));
     lines.push(`  ${fieldType} ${cName}{};`);
