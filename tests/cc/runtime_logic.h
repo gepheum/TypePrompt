@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -1995,6 +1996,63 @@ class JsonParser {
       }
     }
     return JsonNode(std::move(entries));
+  }
+};
+
+class JsonObjectParser {
+ public:
+  explicit JsonObjectParser(const JsonNode::Object* object) {
+    sorted_entries_.reserve(object->size());
+    for (const auto& pair : *object) {
+      sorted_entries_.push_back(&pair);
+    }
+    std::sort(sorted_entries_.begin(), sorted_entries_.end(),
+              [](const auto& a, const auto& b) { return a->first < b->first; });
+  }
+
+  // Parses the value for key into out.
+  // Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
+  template <typename T>
+  void Parse(std::string_view key, T& out) {
+    return ParseImpl(key, out, false);
+  }
+
+  // Parses the optional value for key into out.
+  // Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
+  template <typename T>
+  void ParseOptional(std::string_view key, T& out) {
+    return ParseImpl(key, out, true);
+  }
+
+  ParseStatus status() && { return std::move(status_); }
+  ParseStatus status() const& = delete;
+
+ private:
+  std::vector<const std::pair<std::string, JsonNode>*> sorted_entries_;
+  size_t index_ = 0;
+  ParseStatus status_ = kOkStatus;
+
+  template <typename T>
+  void ParseImpl(std::string_view key, T& out, bool optional) {
+    if (!status_.ok()) return;
+    while (index_ < sorted_entries_.size()) {
+      const auto& entry = *sorted_entries_[index_];
+      int cmp_result = key.compare(entry.first);
+      if (cmp_result == 0) {
+        ++index_;
+        status_ = ParseJsonNode(entry.second, out);
+        return;
+      } else if (cmp_result < 0) {
+        // Current entry is greater than key
+        break;
+      } else {
+        // Current entry comes before key; extra/unrequested field, skip it
+        ++index_;
+      }
+    }
+    if (!optional) {
+      status_ = ParseError(std::format("Missing key: {}", key));
+    }
   }
 };
 
