@@ -34,7 +34,7 @@ export function initializeProject(projectDir: string): void {
 }
 
 export const DEFAULT_CONFIG_YAML = `
-# TypePrompt configuration. Run 'npx typeprompt gen' to generate code.",
+# TypePrompt configuration. Run 'npx typeprompt gen' to generate code.
 
 include: prompts/**/*.xml
 
@@ -48,6 +48,7 @@ gen:
   #   file: ../lib/prompts.g.dart
   # kotlin:
   #   file: ./src/main/kotlin/Prompts_Generated.kt
+  #   package: com.example.prompts
   # python:
   #   file: ./prompts_gen.py
   # rust:
@@ -83,7 +84,7 @@ export const HELLO_WORLD_TEMPLATE = `
   </system>
 
   <user>
-    Say hello to <insert val="input.name"/> in <insert val="input.language"/>.
+    Say hello to <insert val="input.name" /> in <insert val="input.language" />.
   </user>
 
   <examples>

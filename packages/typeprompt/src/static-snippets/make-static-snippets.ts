@@ -2,6 +2,7 @@
 
 // From the project directory.
 const SOURCE_FILES = [
+  "tests/cpp/runtime_logic.h",
   "tests/csharp/RuntimeLogic.cs",
   "tests/dart/lib/runtime_logic.dart",
   "tests/kotlin/src/main/kotlin/dev/typeprompt/RuntimeLogic.kt",

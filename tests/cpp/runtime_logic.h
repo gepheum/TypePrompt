@@ -1,5 +1,6 @@
 #pragma once
 
+// <static:cpp-top-level>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -17,9 +18,10 @@
 #include <utility>
 #include <variant>
 #include <vector>
+// </static:cpp-top-level>
 
 namespace typeprompt {
-
+// <static:cpp-public-types>
 // An error that occurred during JSON parsing.
 struct ParseError {
   std::string message;
@@ -2136,5 +2138,5 @@ inline ParseResult<JsonNode> JsonNode::ParseJson(std::string_view json) {
 inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Format(*this); }
 
 inline std::string JsonNode::ToYaml() const { return internal::YamlFormatter::Format(*this); }
-
+// </static:cpp-public-types>
 }  // namespace typeprompt
