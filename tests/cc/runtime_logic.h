@@ -2094,8 +2094,8 @@ class StructParser {
 
 class Unions {
  public:
-  static ParseResult<std::string_view> FindStringDiscriminant(const JsonNode& json_node,
-                                                              std::string_view discriminator) {
+  static ParseResult<std::string> FindStringDiscriminant(const JsonNode& json_node,
+                                                         std::string_view discriminator) {
     if (json_node.type() != JsonNode::Type::kObject) {
       return ParseError{"Expected object"};
     }
@@ -2104,7 +2104,7 @@ class Unions {
         if (v.type() != JsonNode::Type::kString) {
           return ParseError{"Expected string"};
         }
-        return std::string_view(v.string_value());
+        return v.string_value();
       }
     }
     return ParseError(std::format("Missing key: {}", discriminator));
