@@ -68,8 +68,8 @@ function splitIntoWords(identifier: string): string[] {
  * Symbols are treated as word breaks and stripped.
  *
  * Examples:
- *   `parseHTMLDocument` -> `parse_html_document`
- *   `foo-bar.baz_qux`  -> `foo_bar_baz_qux`
+ *   `parseHTMLDocument` -> `parse-html-document`
+ *   `foo-bar.baz_qux`  -> `foo-bar-baz-qux`
  */
 export function toSnakeCase(identifier: string): string {
   return splitIntoWords(identifier).join("_");

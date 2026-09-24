@@ -132,7 +132,7 @@ const RawConfigSchema = z
               .string()
               .regex(
                 /^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/,
-                "must be a valid lower_case identifier",
+                "must be a valid snake_case identifier",
               ),
           })
           .strict()
