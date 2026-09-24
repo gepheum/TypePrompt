@@ -236,16 +236,9 @@ function makeInterfaceUnionMembers(
   return {
     kind: "interfaces",
     members: Object.fromEntries(
-      memberInfos.map((info) => [
-        String(info.discriminant.value),
-        {
-          resolved: info.resolved,
-          unresolved: info.unresolved,
-          discriminant: info.discriminant,
-          isRecursive: info.isRecursive,
-        },
-      ]),
+      memberInfos.map((info) => [String(info.discriminant.value), info]),
     ),
+    first: first.resolved,
     discriminator: first.discriminator,
     discriminants,
     includes,

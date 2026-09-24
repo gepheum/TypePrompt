@@ -892,6 +892,9 @@ function writeTypepromptUnion(
       }
       lines.push(lines.pop()!.slice(0, -1).concat(">;"));
       lines.push("");
+      const firstMember = members.first;
+      const firstType = writeType(firstMember, schema, options);
+      lines.push(`  ${typeCName}() : data_(${firstType}()) {}`);
       lines.push(
         `  ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
       );

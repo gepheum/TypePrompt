@@ -259,6 +259,7 @@ export type DiscriminatedUnionMembers = {
       readonly isRecursive: boolean;
     };
   };
+  readonly first: Interface;
   /** Name of the discriminator field, e.g. 'kind'. */
   readonly discriminator: string;
   readonly discriminants: Discriminants;
