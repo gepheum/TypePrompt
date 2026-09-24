@@ -2355,6 +2355,71 @@ void TestStructParser() {
   ASSERT_EQ(status6.error().message, "Missing key: b");
 }
 
+void TestUnions() {
+  using typeprompt::internal::Unions;
+
+  // 1. FindStringDiscriminant - success
+  JsonNode valid_str_disc(JsonNode::Object{
+      {"type", JsonNode("circle")},
+      {"radius", JsonNode(5.0)},
+  });
+  auto str_disc_res = Unions::FindStringDiscriminant(valid_str_disc, "type");
+  ASSERT_TRUE(str_disc_res.ok());
+  ASSERT_EQ(*str_disc_res, "circle");
+
+  // 2. FindStringDiscriminant - not a string
+  JsonNode num_str_disc(JsonNode::Object{
+      {"type", JsonNode(123.0)},
+  });
+  auto num_disc_res = Unions::FindStringDiscriminant(num_str_disc, "type");
+  ASSERT_FALSE(num_disc_res.ok());
+  ASSERT_EQ(num_disc_res.error().message, "Expected string");
+
+  // 3. FindStringDiscriminant - missing key
+  auto missing_str_res = Unions::FindStringDiscriminant(valid_str_disc, "kind");
+  ASSERT_FALSE(missing_str_res.ok());
+  ASSERT_EQ(missing_str_res.error().message, "Missing key: kind");
+
+  // 4. FindStringDiscriminant - not an object
+  auto not_obj_str_res = Unions::FindStringDiscriminant(JsonNode("string"), "type");
+  ASSERT_FALSE(not_obj_str_res.ok());
+  ASSERT_EQ(not_obj_str_res.error().message, "Expected object");
+
+  // 5. FindBoolDiscriminant - success (true and false)
+  JsonNode valid_bool_disc(JsonNode::Object{
+      {"active", JsonNode(true)},
+      {"score", JsonNode(100.0)},
+  });
+  auto bool_disc_res = Unions::FindBoolDiscriminant(valid_bool_disc, "active");
+  ASSERT_TRUE(bool_disc_res.ok());
+  ASSERT_EQ(*bool_disc_res, true);
+
+  JsonNode valid_bool_false(JsonNode::Object{
+      {"active", JsonNode(false)},
+  });
+  auto bool_false_res = Unions::FindBoolDiscriminant(valid_bool_false, "active");
+  ASSERT_TRUE(bool_false_res.ok());
+  ASSERT_EQ(*bool_false_res, false);
+
+  // 6. FindBoolDiscriminant - not a bool
+  JsonNode str_bool_disc(JsonNode::Object{
+      {"active", JsonNode("yes")},
+  });
+  auto str_bool_res = Unions::FindBoolDiscriminant(str_bool_disc, "active");
+  ASSERT_FALSE(str_bool_res.ok());
+  ASSERT_EQ(str_bool_res.error().message, "Expected boolean");
+
+  // 7. FindBoolDiscriminant - missing key
+  auto missing_bool_res = Unions::FindBoolDiscriminant(valid_bool_disc, "enabled");
+  ASSERT_FALSE(missing_bool_res.ok());
+  ASSERT_EQ(missing_bool_res.error().message, "Missing key: enabled");
+
+  // 8. FindBoolDiscriminant - not an object
+  auto not_obj_bool_res = Unions::FindBoolDiscriminant(JsonNode(true), "active");
+  ASSERT_FALSE(not_obj_bool_res.ok());
+  ASSERT_EQ(not_obj_bool_res.error().message, "Expected object");
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -2417,6 +2482,7 @@ void TestRuntimeLogic() {
   TestParseJsonNodeOverloads();
   TestParseJsonNodeSingleArgOverloads();
   TestStructParser();
+  TestUnions();
 }
 
 int main() {

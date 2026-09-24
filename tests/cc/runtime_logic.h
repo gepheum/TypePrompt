@@ -2092,6 +2092,41 @@ class StructParser {
   }
 };
 
+class Unions {
+ public:
+  static ParseResult<std::string_view> FindStringDiscriminant(const JsonNode& json_node,
+                                                              std::string_view discriminator) {
+    if (json_node.type() != JsonNode::Type::kObject) {
+      return ParseError{"Expected object"};
+    }
+    for (const auto& [k, v] : json_node.object_value()) {
+      if (k == discriminator) {
+        if (v.type() != JsonNode::Type::kString) {
+          return ParseError{"Expected string"};
+        }
+        return std::string_view(v.string_value());
+      }
+    }
+    return ParseError(std::format("Missing key: {}", discriminator));
+  }
+
+  static ParseResult<bool> FindBoolDiscriminant(const JsonNode& json_node,
+                                                std::string_view discriminator) {
+    if (json_node.type() != JsonNode::Type::kObject) {
+      return ParseError{"Expected object"};
+    }
+    for (const auto& [k, v] : json_node.object_value()) {
+      if (k == discriminator) {
+        if (v.type() != JsonNode::Type::kBool) {
+          return ParseError{"Expected boolean"};
+        }
+        return v.bool_value();
+      }
+    }
+    return ParseError(std::format("Missing key: {}", discriminator));
+  }
+};
+
 }  // namespace internal
 
 inline ParseResult<JsonNode> JsonNode::ParseJson(std::string_view json) {
