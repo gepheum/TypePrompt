@@ -456,18 +456,17 @@ function writeUserDefinedDatatypes(
     "// User-defined datatypes",
     "// ".concat("-".repeat(77)),
     "",
-    "namespace schema {",
-    "",
   );
   if (anyTypes(metaSchema)) {
     lines.push(
-      "namespace meta {",
+      "namespace schema::meta {",
       "",
       writeSchema(metaSchema, {
         typePrefix: "meta::",
         rootNamespace,
       }),
-      "}  // namespace meta",
+      "}  // namespace schema::meta",
+      "",
     );
   }
 
@@ -478,45 +477,49 @@ function writeUserDefinedDatatypes(
     const sharedTypePrefix = typePrefixBase.concat("shared::");
     if (anyTypes(namespace.schema)) {
       lines.push(
-        "namespace shared {",
+        `namespace ${typePrefixBase}shared {`,
         "",
         writeSchema(namespace.schema, {
           typePrefix: sharedTypePrefix,
           rootNamespace,
         }),
-        "}  // namespace shared",
+        `}  // namespace ${typePrefixBase}shared`,
         "",
       );
     }
     for (const template of namespace.templates) {
       const rawTemplateName = template.template.name.text;
-      const namespaceCName = toCName(toSnakeCase(rawTemplateName));
-      const typePrefix = typePrefixBase.concat(namespaceCName, "::");
+      const cNamespace = typePrefixBase.concat(
+        toCName(toSnakeCase(rawTemplateName)),
+      );
+      const typePrefix = cNamespace.concat("::");
       lines.push(
-        `namespace ${namespaceCName} {`,
+        `namespace ${cNamespace} {`,
         "",
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
           rootNamespace,
         }),
-        `}  // namespace ${namespaceCName}`,
+        `}  // namespace ${cNamespace}`,
         "",
       );
     }
     for (const tool of Object.values(namespace.tools)) {
       const rawToolName = tool.tool.name.text;
-      const namespaceCName = toCName(toSnakeCase(rawToolName));
-      const typePrefix = typePrefixBase.concat(namespaceCName, "::");
+      const cNamespace = typePrefixBase.concat(
+        toCName(toSnakeCase(rawToolName)),
+      );
+      const typePrefix = cNamespace.concat("::");
       lines.push(
-        `namespace ${namespaceCName} {`,
+        `namespace ${cNamespace} {`,
         "",
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
           rootNamespace,
         }),
-        `}  // namespace ${namespaceCName}`,
+        `}  // namespace ${cNamespace}`,
         "",
       );
     }
@@ -526,13 +529,10 @@ function writeUserDefinedDatatypes(
     writeNamespace(singleNamespace, "schema::");
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const namespaceCName = toCName(namespace.name);
-      lines.push(`namespace ${namespaceCName} {`, "");
-      writeNamespace(namespace, `schema::${namespaceCName}::`);
-      lines.push(`}  // namespace ${namespaceCName}`, "");
+      const typePrefix = ["schema", toCName(namespace.name), ""].join("::");
+      writeNamespace(namespace, typePrefix);
     }
   }
-  lines.push("", "}  // namespace schema");
 
   // const metaType = anyTypes(metaSchema)
   //   ? writeType(
