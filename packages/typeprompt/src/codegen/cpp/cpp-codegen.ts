@@ -1,6 +1,7 @@
 import {
   capitalize,
   Config,
+  FieldType,
   Interface,
   isLiteralType,
   NamingHint,
@@ -718,7 +719,15 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   // Second, define all the types in the schema.
   // Make sure define each type *after* all its dependencies have been defined.
   const definedTypes = new Set<Interface | Union>();
-  const defineType = (type: Interface | Union): void => {
+  const defineType = (type: FieldType): void => {
+    type = resolveType(type, schema);
+    if (type.kind === "optional") {
+      type = type.innerType;
+    }
+    if (type.kind !== "interface" && type.kind !== "union") {
+      return;
+    }
+
     if (definedTypes.has(type)) return;
     definedTypes.add(type);
 
@@ -728,14 +737,11 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     // Define dependencies first.
     if (type.kind === "interface") {
       for (const field of Object.values(type.fields)) {
-        let fieldType = resolveType(field.type, schema);
-        if (fieldType.kind === "optional") {
-          fieldType = resolveType(fieldType.innerType, schema);
-        }
-        if (fieldType.kind === "interface" || fieldType.kind === "union") {
-          defineType(fieldType);
-        }
+        defineType(field.type);
       }
+    } else {
+      const firstMember = type.members[0]!;
+      defineType(firstMember);
     }
 
     const typeCName = makeNameFromHint(namingHint);
@@ -861,7 +867,7 @@ function writeTypepromptUnion(
   type: Union,
   typeCName: string,
   schema: Schema,
-  _options: WriteSchemaOptions,
+  options: WriteSchemaOptions,
 ): string {
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
@@ -878,42 +884,21 @@ function writeTypepromptUnion(
     case "interfaces": {
       // const discriminator = members.discriminator;
       lines.push(`struct ${typeCName} {`);
-      // for (const commonField of members.commonFields) {
-      //   const name = toDartName(commonField.name);
-      //   if (isLiteralType(commonField.type)) continue;
-      //   const type = writeType(commonField.type, schema, options);
-      //   lines.push(
-      //     ...commentify(commonField.doc ?? ""),
-      //     `${type} get ${name};`,
-      //   );
-      // }
-      // lines.push("", "Map<String, dynamic> toJson();");
-      // lines.push(
-      //   "",
-      //   `factory ${className}.fromJson(Map<String, dynamic> json) {`,
-      //   `switch (json['${discriminator}']) {`,
-      // );
-      // for (const member of Object.values(members.members)) {
-      //   const quotedDiscriminant = JSON.stringify(member.discriminant.value);
-      //   const memberType = resolveType(member.resolved, schema);
-      //   lines.push(
-      //     `case ${quotedDiscriminant}:`,
-      //     [
-      //       "return ",
-      //       writeType(memberType, schema, options),
-      //       ".fromJson(json);",
-      //     ].join(""),
-      //   );
-      // }
-      // lines.push(
-      //   "default:",
-      //   `throw FormatException("Unknown discriminator: \${json['${discriminator}']}");`,
-      // );
+      lines.push(" public:");
+      lines.push("  using variant_type = std::variant<");
+      for (const member of Object.values(members.members)) {
+        const memberType = writeType(member.resolved, schema, options);
+        lines.push(`      internal::box<${memberType}>,`);
+      }
+      lines.push(lines.pop()!.slice(0, -1).concat(">;"));
+      lines.push("");
       lines.push(
-        // "}", // switch
-        // "}", // fromJson
-        "};",
-      ); // struct
+        `  ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
+      );
+      lines.push("");
+      lines.push(" private:");
+      lines.push("  variant_type data_;");
+      lines.push("};"); // struct
     }
   }
   return lines.join("\n");

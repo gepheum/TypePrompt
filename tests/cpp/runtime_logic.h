@@ -2032,6 +2032,46 @@ class JsonParser {
   }
 };
 
+template <typename T>
+class box {
+ public:
+  box(T value = T()) : ptr_(std::make_unique<T>(std::move(value))) {}
+  box(const box& other) : ptr_(*other) {}
+  box(box&&) = default;
+
+  ~box() = default;
+
+  box& operator=(const box& other) {
+    ptr_ = std::make_unique<T>(std::move(other));
+    return *this;
+  }
+  box& operator=(box&&) = default;
+
+  const T& operator*() const& { return *ptr_; }
+  T& operator*() & { return *ptr_; }
+  T&& operator*() && { return *ptr_; }
+
+ private:
+  std::unique_ptr<T> ptr_;
+};
+
+template <typename T>
+class must_init {
+ public:
+  using value_type = T;
+
+  template <typename Value>
+  must_init(Value value) {
+    value_ = std::move(value);
+  }
+
+  T operator*() && { return std::move(value_); }
+  T operator*() const& = delete;
+
+ private:
+  T value_;
+};
+
 class StructParser {
  public:
   explicit StructParser(const JsonNode::Object* object) {
