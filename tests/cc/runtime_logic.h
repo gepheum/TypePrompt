@@ -2035,9 +2035,9 @@ class JsonParser {
   }
 };
 
-class JsonObjectParser {
+class StructParser {
  public:
-  explicit JsonObjectParser(const JsonNode::Object* object) {
+  explicit StructParser(const JsonNode::Object* object) {
     sorted_entries_.reserve(object->size());
     for (const auto& pair : *object) {
       sorted_entries_.push_back(&pair);

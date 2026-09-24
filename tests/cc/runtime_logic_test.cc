@@ -2257,6 +2257,104 @@ void TestParseJsonNodeSingleArgOverloads() {
   ASSERT_FALSE(res_json_pt_mismatch.ok());
 }
 
+void TestStructParser() {
+  using typeprompt::internal::StructParser;
+
+  // 1. Successful parse of required and optional fields (in alphabetical order)
+  JsonNode::Object obj1 = {
+      {"name", JsonNode("Alice")},
+      {"age", JsonNode(30.0)},
+      {"email", JsonNode("alice@example.com")},
+  };
+  StructParser parser1(&obj1);
+  int age = 0;
+  std::optional<std::string> email;
+  std::string name;
+  parser1.Parse("age", age);
+  parser1.ParseOptional("email", email);
+  parser1.Parse("name", name);
+
+  auto status1 = std::move(parser1).status();
+  ASSERT_TRUE(status1.ok());
+  ASSERT_EQ(age, 30);
+  ASSERT_TRUE(email.has_value());
+  ASSERT_EQ(*email, "alice@example.com");
+  ASSERT_EQ(name, "Alice");
+
+  // 2. Omitted optional fields
+  JsonNode::Object obj2 = {
+      {"name", JsonNode("Bob")},
+  };
+  StructParser parser2(&obj2);
+  std::optional<int> opt_age;
+  std::optional<std::string> opt_email;
+  std::string name2;
+  parser2.ParseOptional("age", opt_age);
+  parser2.ParseOptional("email", opt_email);
+  parser2.Parse("name", name2);
+
+  auto status2 = std::move(parser2).status();
+  ASSERT_TRUE(status2.ok());
+  ASSERT_FALSE(opt_age.has_value());
+  ASSERT_FALSE(opt_email.has_value());
+  ASSERT_EQ(name2, "Bob");
+
+  // 3. Extra unrequested fields in object are ignored
+  JsonNode::Object obj3 = {
+      {"extra1", JsonNode(true)},
+      {"name", JsonNode("Charlie")},
+      {"extra2", JsonNode(99.0)},
+  };
+  StructParser parser3(&obj3);
+  std::string name3;
+  parser3.Parse("name", name3);
+
+  auto status3 = std::move(parser3).status();
+  ASSERT_TRUE(status3.ok());
+  ASSERT_EQ(name3, "Charlie");
+
+  // 4. Missing required field
+  JsonNode::Object obj4 = {
+      {"email", JsonNode("dave@example.com")},
+  };
+  StructParser parser4(&obj4);
+  std::optional<std::string> email4;
+  std::string name4;
+  parser4.ParseOptional("email", email4);
+  parser4.Parse("name", name4);
+
+  auto status4 = std::move(parser4).status();
+  ASSERT_FALSE(status4.ok());
+  ASSERT_EQ(status4.error().message, "Missing key: name");
+
+  // 5. Type mismatch error on field
+  JsonNode::Object obj5 = {
+      {"age", JsonNode("not_a_number")},
+      {"name", JsonNode("Eve")},
+  };
+  StructParser parser5(&obj5);
+  int age5 = 0;
+  std::string name5;
+  parser5.Parse("age", age5);
+  parser5.Parse("name", name5);
+
+  auto status5 = std::move(parser5).status();
+  ASSERT_FALSE(status5.ok());
+  ASSERT_EQ(status5.error().message, "Expected number");
+
+  // 6. Empty object
+  JsonNode::Object empty_obj;
+  StructParser parser6(&empty_obj);
+  std::optional<int> empty_opt;
+  std::string req_str;
+  parser6.ParseOptional("a", empty_opt);
+  parser6.Parse("b", req_str);
+
+  auto status6 = std::move(parser6).status();
+  ASSERT_FALSE(status6.ok());
+  ASSERT_EQ(status6.error().message, "Missing key: b");
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -2318,6 +2416,7 @@ void TestRuntimeLogic() {
   TestToJsonNodeOverloads();
   TestParseJsonNodeOverloads();
   TestParseJsonNodeSingleArgOverloads();
+  TestStructParser();
 }
 
 int main() {
