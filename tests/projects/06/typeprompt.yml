@@ -1,5 +1,8 @@
 include: ../../../examples/06-shared-types/**/*.xml
 gen:
+  cpp:
+    file: ../../cpp/gen/prompts_06.gen.h
+    rootNamespace: typeprompt_06
   csharp:
     file: ../../csharp/Gen/Prompts06.cs
     rootNamespace: TypePrompt06

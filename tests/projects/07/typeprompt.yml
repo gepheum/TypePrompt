@@ -1,5 +1,8 @@
 include: ../../../examples/07-namespaces/**/*.xml
 gen:
+  cpp:
+    file: ../../cpp/gen/prompts_07.gen.h
+    rootNamespace: typeprompt_07
   csharp:
     file: ../../csharp/Gen/Prompts07.cs
     rootNamespace: TypePrompt07

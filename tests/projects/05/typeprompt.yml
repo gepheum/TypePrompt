@@ -1,5 +1,8 @@
 include: ../../../examples/05-conditional-logic/**/*.xml
 gen:
+  cpp:
+    file: ../../cpp/gen/prompts_05.gen.h
+    rootNamespace: typeprompt_05
   csharp:
     file: ../../csharp/Gen/Prompts05.cs
     rootNamespace: TypePrompt05

@@ -1,5 +1,8 @@
 include: prompts/**/*.xml
 gen:
+  cpp:
+    file: ../../cpp/gen/prompts_e02.gen.h
+    rootNamespace: typeprompt_e02
   csharp:
     file: ../../csharp/Gen/PromptsE02.cs
     rootNamespace: TypePromptE02

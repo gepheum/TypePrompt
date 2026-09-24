@@ -446,30 +446,12 @@ function writeUserDefinedDatatypes(
   config: { readonly rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
-  const { namespaces, singleNamespace } = compilationResult;
+  const { metaSchema, namespaces, singleNamespace } = compilationResult;
   const anyTypes = (schema: Schema): boolean =>
     Object.keys(schema.typeDeclarations).length >= 1;
 
-  // const metaType = anyTypes(metaSchema)
-  //   ? writeType(
-  //     {
-  //       kind: "type-name",
-  //       name: { text: "Meta" },
-  //     },
-  //     metaSchema,
-  //     {
-  //       typePrefix: "Meta_",
-  //     },
-  //   )
-  //   : "Null";
   const lines: string[] = [];
   lines.push(
-    // "/// Metadata associated with a prompt.",
-    // `typedef Meta = ${metaType};`,
-    // anyTypes(metaSchema)
-    //   ? "Meta _parseMeta(dynamic meta) => Meta.fromJson(meta as Map<String, dynamic>);"
-    //   : "Meta _parseMeta(dynamic meta) => null;",
-    "",
     "// ".concat("-".repeat(77)),
     "// User-defined datatypes",
     "// ".concat("-".repeat(77)),
@@ -477,13 +459,17 @@ function writeUserDefinedDatatypes(
     "namespace schema {",
     "",
   );
-  // if (anyTypes(metaSchema)) {
-  //   lines.push(
-  //     writeSchema(metaSchema, {
-  //       typePrefix: "Meta_",
-  //     }),
-  //   );
-  // }
+  if (anyTypes(metaSchema)) {
+    lines.push(
+      "namespace meta {",
+      "",
+      writeSchema(metaSchema, {
+        typePrefix: "meta::",
+        rootNamespace,
+      }),
+      "}  // namespace meta",
+    );
+  }
 
   const writeNamespace = (
     namespace: ValidNamespaceResult,
@@ -547,6 +533,21 @@ function writeUserDefinedDatatypes(
     }
   }
   lines.push("", "}  // namespace schema");
+
+  // const metaType = anyTypes(metaSchema)
+  //   ? writeType(
+  //     {
+  //       kind: "type-name",
+  //       name: { text: "Meta" },
+  //     },
+  //     metaSchema,
+  //     {
+  //       typePrefix: "meta::",
+  //       rootNamespace
+  //     },
+  //   )
+  //   : "std::nullopt_t";
+
   return lines.join("\n");
 }
 
@@ -721,21 +722,22 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     if (definedTypes.has(type)) return;
     definedTypes.add(type);
 
+    const namingHint = schema.namingHints.defaultScope.get(type);
+    if (!namingHint) return;
+
     // Define dependencies first.
     if (type.kind === "interface") {
       for (const field of Object.values(type.fields)) {
-        let type = resolveType(field.type, schema);
-        if (type.kind === "optional") {
-          type = resolveType(type.innerType, schema);
+        let fieldType = resolveType(field.type, schema);
+        if (fieldType.kind === "optional") {
+          fieldType = resolveType(fieldType.innerType, schema);
         }
-        if (type.kind === "interface" || type.kind === "union") {
-          defineType(type);
+        if (fieldType.kind === "interface" || fieldType.kind === "union") {
+          defineType(fieldType);
         }
       }
     }
 
-    const namingHint = schema.namingHints.defaultScope.get(type);
-    if (!namingHint) return;
     const typeCName = makeNameFromHint(namingHint);
     lines.push(...commentify(namingHint.doc));
     lines.push(`// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`);
