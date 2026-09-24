@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -403,6 +404,16 @@ JsonNode ToJsonNode(const std::vector<T>& values) {
   return JsonNode(std::move(elements));
 }
 
+template <typename T>
+JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map) {
+  JsonNode::Object entries;
+  entries.reserve(map.size());
+  for (const auto& [key, value] : map) {
+    entries.emplace_back(key, ToJsonNode(value));
+  }
+  return JsonNode(std::move(entries));
+}
+
 inline ParseStatus ParseJsonNode(const JsonNode& node, JsonNode& out) {
   out = node;
   return kOkStatus;
@@ -461,17 +472,35 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
     return ParseError{"Expected array"};
   }
   const auto& arr = node.array_value();
-  std::vector<T> elements;
-  elements.reserve(arr.size());
+  out.clear();
+  out.reserve(arr.size());
   for (const auto& item : arr) {
     T val{};
     const ParseStatus status = ParseJsonNode(item, val);
     if (!status.ok()) {
       return status;
     }
-    elements.push_back(std::move(val));
+    out.push_back(std::move(val));
   }
-  out = std::move(elements);
+  return kOkStatus;
+}
+
+template <typename T>
+ParseStatus ParseJsonNode(const JsonNode& node, std::unordered_map<std::string, T>& out) {
+  if (node.type() != JsonNode::Type::kObject) {
+    return ParseError{"Expected object"};
+  }
+  const JsonNode::Object& obj = node.object_value();
+  out.clear();
+  out.reserve(obj.size());
+  for (const auto& [key, val_node] : obj) {
+    T val{};
+    const ParseStatus status = ParseJsonNode(val_node, val);
+    if (!status.ok()) {
+      return status;
+    }
+    out.emplace(key, std::move(val));
+  }
   return kOkStatus;
 }
 

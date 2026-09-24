@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -2029,6 +2030,12 @@ void TestToJsonNodeOverloads() {
   std::optional<test_custom_adl::Point> opt_pt_null = std::nullopt;
   JsonNode opt_pt_null_res = ToJsonNode(opt_pt_null);
   ASSERT_EQ(opt_pt_null_res.type(), JsonNode::Type::kNull);
+
+  // 8. std::unordered_map<std::string, T> overload
+  std::unordered_map<std::string, int> map_ints = {{"a", 1}, {"b", 2}};
+  JsonNode map_ints_res = ToJsonNode(map_ints);
+  ASSERT_EQ(map_ints_res.type(), JsonNode::Type::kObject);
+  ASSERT_EQ(map_ints_res.object_value().size(), 2);
 }
 
 void TestParseJsonNodeOverloads() {
@@ -2131,6 +2138,18 @@ void TestParseJsonNodeOverloads() {
 
   ASSERT_TRUE(ParseJsonNode(JsonNode(std::nullopt), opt_pt).ok());
   ASSERT_FALSE(opt_pt.has_value());
+
+  // 9. std::unordered_map<std::string, T>
+  std::unordered_map<std::string, int> out_map_int;
+  JsonNode map_node(JsonNode::Object{{"x", JsonNode(10.0)}, {"y", JsonNode(20.0)}});
+  ASSERT_TRUE(ParseJsonNode(map_node, out_map_int).ok());
+  ASSERT_EQ(out_map_int.size(), 2);
+  ASSERT_EQ(out_map_int["x"], 10);
+  ASSERT_EQ(out_map_int["y"], 20);
+
+  ASSERT_FALSE(ParseJsonNode(JsonNode(123.0), out_map_int).ok());
+  JsonNode map_node_bad(JsonNode::Object{{"x", JsonNode("not an int")}});
+  ASSERT_FALSE(ParseJsonNode(map_node_bad, out_map_int).ok());
 }
 
 void TestParseJsonNodeSingleArgOverloads() {
