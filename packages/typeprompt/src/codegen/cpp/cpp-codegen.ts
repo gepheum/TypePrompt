@@ -867,40 +867,12 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      lines.push(`enum class ${typeCName} {\n`);
-      // for (const member of members.members) {
-      //   const isLast = member === members.members.at(-1);
-      //   const dartName = toDartName(toCamelCase(member.value));
-      //   lines.push(dartName.concat(isLast ? ";" : ","));
-      // }
-      // lines.push("String toJson() {");
-      // lines.push("switch (this) {");
-      // for (const member of members.members) {
-      //   const name = member.value;
-      //   const dartName = toDartName(toCamelCase(name));
-      //   lines.push(`case ${dartName}:`, `return "${name}";`);
-      // }
-      // lines.push(
-      //   "}", // switch
-      //   "}", // toJson()
-      //   "",
-      // );
-      // lines.push(`factory ${className}.fromJson(String value) {`);
-      // lines.push("switch (value) {");
-      // for (const member of members.members) {
-      //   const name = member.value;
-      //   const dartName = toDartName(toCamelCase(name));
-      //   lines.push(`case "${name}":`, `return ${className}.${dartName};`);
-      // }
-      // lines.push(
-      //   "default:",
-      //   'throw FormatException("Unknown json value: $value");',
-      // );
-      lines.push(
-        // "}", // switch
-        // "}", // fromJson()
-        "};",
-      ); // enum class
+      lines.push(`enum class ${typeCName} {`);
+      for (const member of members.members) {
+        const cName = toCName("k".concat(toPascalCase(member.value)));
+        lines.push(`  ${cName},`);
+      }
+      lines.push("};"); // enum class
       break;
     }
     case "interfaces": {
