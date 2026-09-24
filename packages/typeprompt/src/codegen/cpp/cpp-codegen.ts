@@ -962,7 +962,7 @@ function writeType(
     case "interface":
     case "union": {
       let namingHint = schema.namingHints.defaultScope.get(type);
-      let { typePrefix } = options;
+      let typePrefix = "";
       if (!namingHint) {
         namingHint = schema.namingHints.shared.get(type)!;
         typePrefix = options.sharedTypePrefix!;
