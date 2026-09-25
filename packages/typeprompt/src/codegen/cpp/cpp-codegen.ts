@@ -882,7 +882,7 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      // const discriminator = members.discriminator;
+      const { discriminator } = members;
       const memberTypes = Object.values(members.members).map((member) =>
         writeType(member.resolved, schema, options),
       );
@@ -910,6 +910,28 @@ function writeTypepromptUnion(
       lines.push("");
       lines.push(`  ${typeCName}& operator=(const ${typeCName}&) = default;`);
       lines.push(`  ${typeCName}& operator=(${typeCName}&&) = default;`);
+      lines.push("");
+      const discriminatorCName = toCName(toSnakeCase(discriminator));
+      if (members.discriminants.type === "string") {
+        const discriminants = Object.values(members.discriminants.values);
+        lines.push(`  enum class ${discriminatorCName} {`);
+        for (const discriminant of discriminants) {
+          const cName = toCName("k".concat(toPascalCase(discriminant.value)));
+          lines.push(`    ${cName},`);
+        }
+        lines.push("  };");
+        lines.push(`  ${discriminatorCName} ${discriminatorCName}() const {`);
+        lines.push(
+          `    return static_cast<enum ${discriminatorCName}>(data_.index());`,
+        );
+        lines.push("  };");
+      } else {
+        const firstDiscriminant: boolean =
+          members.discriminants.values[0]!.value;
+        lines.push(`  bool ${discriminatorCName}() const {`);
+        lines.push(`    return data_.index() == ${firstDiscriminant ? 1 : 0};`);
+        lines.push("  };");
+      }
       lines.push("");
       lines.push(" private:");
       lines.push("  variant_type data_;");
@@ -997,9 +1019,9 @@ function writeType(
 //       if (elementToJsonExpr === "e") {
 //         return inputExpr;
 //       } else if (elementToJsonExpr.endsWith("(e)")) {
-//         return `${inputExpr}.map(${elementToJsonExpr.slice(0, -3)}).toList()`;
+//         return `${ inputExpr }.map(${ elementToJsonExpr.slice(0, -3) }).toList()`;
 //       } else {
-//         return `${inputExpr}.map((e) => ${elementToJsonExpr}).toList()`;
+//         return `${ inputExpr }.map((e) => ${ elementToJsonExpr }).toList()`;
 //       }
 //     }
 //     case "interface":
@@ -1018,7 +1040,7 @@ function writeType(
 //       } else if (innerToJsonExpr.startsWith(inputExpr.concat("."))) {
 //         return innerToJsonExpr.replace(".", "?.");
 //       } else {
-//         return `${inputExpr} == null ? null : ${innerToJsonExpr}`;
+//         return `${ inputExpr } == null ? null : ${ innerToJsonExpr }`;
 //       }
 //     }
 //     case "record": {
@@ -1029,7 +1051,7 @@ function writeType(
 //         options,
 //       );
 //       return inputExpr.concat(
-//         `.map((k, v) => MapEntry(k, ${valueToJsonExpr}))`,
+//         `.map((k, v) => MapEntry(k, ${ valueToJsonExpr }))`,
 //       );
 //     }
 //     case "shared-type-name":
@@ -1059,15 +1081,15 @@ function writeType(
 //         options,
 //       );
 //       if (elementFromJsonExpr === "e") {
-//         return `(${inputExpr} as List).cast<${elementTypeName}>()`;
+//         return `(${ inputExpr } as List).cast < ${ elementTypeName } > ()`;
 //       } else {
-//         return `(${inputExpr} as List).map<${elementTypeName}>((e) => ${elementFromJsonExpr}).toList()`;
+//         return `(${ inputExpr } as List).map < ${ elementTypeName } > ((e) => ${ elementFromJsonExpr }).toList()`;
 //       }
 //     }
 //     case "interface":
 //     case "union": {
 //       const typeName = writeType(type, schema, options);
-//       return `${typeName}.fromJson(${inputExpr})`;
+//       return `${ typeName }.fromJson(${ inputExpr })`;
 //     }
 //     case "optional": {
 //       const innerFromJsonExpr = writeFromJsonExpr(
@@ -1081,7 +1103,7 @@ function writeType(
 //       } else if (innerFromJsonExpr.startsWith(inputExpr.concat("."))) {
 //         return innerFromJsonExpr.replace(".", "?.");
 //       } else {
-//         return `${inputExpr} == null ? null : ${innerFromJsonExpr}`;
+//         return `${ inputExpr } == null ? null : ${ innerFromJsonExpr } `;
 //       }
 //     }
 //     case "primitive": {
@@ -1090,9 +1112,9 @@ function writeType(
 //         case "string":
 //           return inputExpr;
 //         case "integer":
-//           return `(${inputExpr} as num).toInt()`;
+//           return `(${ inputExpr } as num).toInt()`;
 //         case "number":
-//           return `(${inputExpr} as num).toDouble()`;
+//           return `(${ inputExpr } as num).toDouble()`;
 //         default:
 //           throw new Error(type.primitive.text satisfies never);
 //       }
@@ -1105,7 +1127,7 @@ function writeType(
 //         schema,
 //         options,
 //       );
-//       return `(${inputExpr} as Map).map<String, ${valueTypeName}>((k, v) => MapEntry(k.toString(), ${valueFromJsonExpr}))`;
+//       return `(${ inputExpr } as Map).map < String, ${ valueTypeName }> ((k, v) => MapEntry(k.toString(), ${ valueFromJsonExpr }))`;
 //     }
 //     case "shared-type-name":
 //     case "type-name": {
