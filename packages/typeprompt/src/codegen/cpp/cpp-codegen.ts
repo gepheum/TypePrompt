@@ -709,7 +709,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -910,6 +910,16 @@ function writeTypepromptUnion(
         `  ${typeCName}(const ${typeCName}&) = default;`,
         `  ${typeCName}(${typeCName}&&) = default;`,
         "",
+        "  // The right operand can be one of:",
+      );
+      for (const member of memberTypes) {
+        lines.push(`  //   - a ${member} rvalue`);
+      }
+      lines.push(
+        `  ${typeCName}& operator=(variant_type data) {`,
+        "    data_ = std::move(data);",
+        "    return *this;",
+        "  }",
         `  ${typeCName}& operator=(const ${typeCName}&) = default;`,
         `  ${typeCName}& operator=(${typeCName}&&) = default;`,
         "",
