@@ -1036,8 +1036,15 @@ function writeMethodImplsForUnion(
     lines.push(
       ` static JsonNode ToJsonNodeImpl(${typeCName} input) {`,
       "  switch (input) {",
-      "  }",
     );
+    for (const member of members.members) {
+      const constantCName = "k".concat(toPascalCase(member.value));
+      lines.push(
+        `   case ${typeCName}::${constantCName}:`,
+        `    return JsonNode("${member.value}");`,
+      );
+    }
+    lines.push("  }");
   } else {
     lines.push(
       ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
