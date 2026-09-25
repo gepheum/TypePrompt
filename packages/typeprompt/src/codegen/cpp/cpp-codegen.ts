@@ -721,6 +721,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
       }
     }
     lines.push(
+      "",
       `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
       ` return __internal::${typeCName}Serializer::ToJsonNodeImpl(input);`,
       "}",
@@ -1236,7 +1237,11 @@ function coalesceEmptyLines(code: string): string {
 }
 
 function scaleIndent(input: string): string {
-  return input.replace(/^ +/gm, (match) => match.repeat(2));
+  return input
+    .replace(/^ +/gm, (match) => match.repeat(2))
+    .replace(/^( *)(public:|private:|protected:)/gm, (_, spaces, access) =>
+      spaces.length > 0 ? `${spaces.slice(1)}${access}` : access,
+    );
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
