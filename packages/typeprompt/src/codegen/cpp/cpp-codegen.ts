@@ -709,7 +709,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -773,11 +773,30 @@ function writeTypepromptInterface(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
-  // const { typePrefix } = options;
-
-  const lines = [`struct ${typeCName} {`];
   const fields = Object.values(type.fields);
 
+  const lines: string[] = [];
+  const firstField = fields[0];
+  if (firstField) {
+    const fieldCName = toCName(toSnakeCase(firstField.name.text));
+    lines.push(
+      "//",
+      "// To construct a value:",
+      `//   ${typeCName} v = ${typeCName}::whole{`,
+      `//     .${fieldCName}: ...,`,
+      "//     ...",
+      "//   };",
+      "//",
+      "// Or with 'auto':",
+      `//   auto v = *${typeCName}::whole{`,
+      `//     .${fieldCName}: ...,`,
+      "//     ...",
+      "//   };",
+      "//",
+      "// Using '::whole' forces you to initialize all the fields.",
+    );
+  }
+  lines.push(`struct ${typeCName} {`);
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
@@ -786,7 +805,32 @@ function writeTypepromptInterface(
     lines.push(...commentify(field.doc, " "));
     lines.push(` ${fieldType} ${cName}{};`);
   }
-  lines.push("};"); // struct
+  lines.push(
+    "",
+    ` // Meant to be immediately converted to a ${typeCName}.`,
+    " // All fields must be initialized.",
+    " struct whole {",
+  );
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    if (isLiteralType(type)) continue;
+    const cName = toCName(toSnakeCase(field.name.text));
+    const fieldType = writeType(type, schema, options);
+    lines.push(...commentify(field.doc, "  "));
+    lines.push(`  must_init<${fieldType}> ${cName};`);
+  }
+  lines.push(
+    "",
+    `  operator ${typeCName}() &&;`,
+    `  operator ${typeCName}() const& = delete;`,
+    "",
+    `  ${typeCName} operator*() && { return std::move(*this); }`,
+    `  ${typeCName} operator*() const& = delete;`,
+  );
+  lines.push(
+    " };", // struct whole
+    "};", // struct
+  );
 
   return lines.join("\n");
 }
