@@ -1055,10 +1055,29 @@ function writeMethodImplsForUnion(
   lines.push(
     " }", // ToJsonNodeImpl
     ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
-    "  internal::StructParser parser(&node, context);",
   );
+  if (members.kind === "strings") {
+    lines.push(
+      "  if (node.type() != JsonNode::Type::kString) {",
+      '   return context.MakeParseError("Expected string");',
+    );
+    for (const member of members.members) {
+      const constantCName = toCName("k".concat(toPascalCase(member.value)));
+      lines.push(
+        `  } else if (node.string_value() == "${member.value}") {`,
+        `   out = ${typeCName}::${constantCName};`,
+      );
+    }
+    lines.push(
+      "  } else {",
+      '   return context.MakeParseError("Unknown constant name");',
+      "  }",
+      "  return kOkStatus;",
+    );
+  } else {
+    lines.push();
+  }
   lines.push(
-    "  return std::move(parser).status();",
     " }", // ParseValueImpl
     "};", // class Serializer
     "}  // namespace __internal",
