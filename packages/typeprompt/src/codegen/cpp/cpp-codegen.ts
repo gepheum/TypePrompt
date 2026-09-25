@@ -709,7 +709,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1006,145 +1006,6 @@ function writeType(
   }
 }
 
-// function writeToJsonExpr(
-//   type: Type | Optional,
-//   inputExpr: string,
-//   schema: Schema,
-//   options: WriteSchemaOptions,
-// ): string {
-//   switch (type.kind) {
-//     case "any":
-//     case "primitive": {
-//       return inputExpr;
-//     }
-//     case "array": {
-//       const elementToJsonExpr = writeToJsonExpr(
-//         type.elementType,
-//         "e",
-//         schema,
-//         options,
-//       );
-//       if (elementToJsonExpr === "e") {
-//         return inputExpr;
-//       } else if (elementToJsonExpr.endsWith("(e)")) {
-//         return `${ inputExpr }.map(${ elementToJsonExpr.slice(0, -3) }).toList()`;
-//       } else {
-//         return `${ inputExpr }.map((e) => ${ elementToJsonExpr }).toList()`;
-//       }
-//     }
-//     case "interface":
-//     case "union": {
-//       return inputExpr.concat(".toJson()");
-//     }
-//     case "optional": {
-//       const innerToJsonExpr = writeToJsonExpr(
-//         type.innerType,
-//         inputExpr,
-//         schema,
-//         options,
-//       );
-//       if (innerToJsonExpr === inputExpr) {
-//         return inputExpr;
-//       } else if (innerToJsonExpr.startsWith(inputExpr.concat("."))) {
-//         return innerToJsonExpr.replace(".", "?.");
-//       } else {
-//         return `${ inputExpr } == null ? null : ${ innerToJsonExpr }`;
-//       }
-//     }
-//     case "record": {
-//       const valueToJsonExpr = writeToJsonExpr(
-//         type.valueType,
-//         "v",
-//         schema,
-//         options,
-//       );
-//       return inputExpr.concat(
-//         `.map((k, v) => MapEntry(k, ${ valueToJsonExpr }))`,
-//       );
-//     }
-//     case "shared-type-name":
-//     case "type-name": {
-//       const resolvedType = resolveType(type, schema);
-//       return writeToJsonExpr(resolvedType, inputExpr, schema, options);
-//     }
-//   }
-// }
-
-// function writeFromJsonExpr(
-//   type: Type | Optional,
-//   inputExpr: string,
-//   schema: Schema,
-//   options: WriteSchemaOptions,
-// ): string {
-//   switch (type.kind) {
-//     case "any": {
-//       return inputExpr;
-//     }
-//     case "array": {
-//       const elementTypeName = writeType(type.elementType, schema, options);
-//       const elementFromJsonExpr = writeFromJsonExpr(
-//         type.elementType,
-//         "e",
-//         schema,
-//         options,
-//       );
-//       if (elementFromJsonExpr === "e") {
-//         return `(${ inputExpr } as List).cast < ${ elementTypeName } > ()`;
-//       } else {
-//         return `(${ inputExpr } as List).map < ${ elementTypeName } > ((e) => ${ elementFromJsonExpr }).toList()`;
-//       }
-//     }
-//     case "interface":
-//     case "union": {
-//       const typeName = writeType(type, schema, options);
-//       return `${ typeName }.fromJson(${ inputExpr })`;
-//     }
-//     case "optional": {
-//       const innerFromJsonExpr = writeFromJsonExpr(
-//         type.innerType,
-//         inputExpr,
-//         schema,
-//         options,
-//       );
-//       if (innerFromJsonExpr === inputExpr) {
-//         return inputExpr;
-//       } else if (innerFromJsonExpr.startsWith(inputExpr.concat("."))) {
-//         return innerFromJsonExpr.replace(".", "?.");
-//       } else {
-//         return `${ inputExpr } == null ? null : ${ innerFromJsonExpr } `;
-//       }
-//     }
-//     case "primitive": {
-//       switch (type.primitive.text) {
-//         case "boolean":
-//         case "string":
-//           return inputExpr;
-//         case "integer":
-//           return `(${ inputExpr } as num).toInt()`;
-//         case "number":
-//           return `(${ inputExpr } as num).toDouble()`;
-//         default:
-//           throw new Error(type.primitive.text satisfies never);
-//       }
-//     }
-//     case "record": {
-//       const valueTypeName = writeType(type.valueType, schema, options);
-//       const valueFromJsonExpr = writeFromJsonExpr(
-//         type.valueType,
-//         "v",
-//         schema,
-//         options,
-//       );
-//       return `(${ inputExpr } as Map).map < String, ${ valueTypeName }> ((k, v) => MapEntry(k.toString(), ${ valueFromJsonExpr }))`;
-//     }
-//     case "shared-type-name":
-//     case "type-name": {
-//       const resolvedType = resolveType(type, schema);
-//       return writeFromJsonExpr(resolvedType, inputExpr, schema, options);
-//     }
-//   }
-// }
-
 function makeNameFromHint(hint: NamingHint): string {
   const { namePieces } = hint;
   return namePieces
@@ -1170,12 +1031,6 @@ function makeNameFromHint(hint: NamingHint): string {
     })
     .join("_");
 }
-
-// type UnionContext = {
-//   readonly intMemberToUnionRefs: Map<Interface, readonly string[]>;
-//   readonly intMemberToStringDiscriminant: Map<Interface, string>;
-//   readonly overrideFields: Set<Field>;
-// };
 
 function toCName(name: string): string {
   return RESERVED_NAMES.has(name) ? name.concat("_") : name;
