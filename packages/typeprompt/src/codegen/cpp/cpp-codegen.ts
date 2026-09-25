@@ -1075,7 +1075,31 @@ function writeMethodImplsForUnion(
       "  return kOkStatus;",
     );
   } else {
-    lines.push();
+    const { discriminants, discriminator } = members;
+    const findMethod =
+      discriminants.type === "string"
+        ? "FindStringDiscriminant"
+        : "FindBoolDiscriminant";
+    lines.push(
+      `  using ::${rootNamespace}::ParseValue;`,
+      `  auto discriminant = internal::Unions::${findMethod}(node, context, "${discriminator}");`,
+      "  auto status = kOkStatus;",
+      "  if (!discriminant.ok()) {",
+      "   return std::move(discriminant).error();",
+    );
+    for (const member of Object.values(members.members)) {
+      const discriminant = JSON.stringify(
+        member.discriminant.value satisfies string | boolean,
+      );
+      const type = writeType(member.resolved, schema, options);
+      lines.push(
+        `  } else if (*discriminant == ${discriminant}) {`,
+        `   ${type} v;`,
+        `   status = ParseValue(node, context, v);`,
+        "   out = std::move(v);",
+      );
+    }
+    lines.push("   return status;", "  }");
   }
   lines.push(
     " }", // ParseValueImpl
