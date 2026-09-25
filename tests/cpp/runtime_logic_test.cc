@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "gen/prompts_02.gen.h"
+#include "gen/prompts_e01.gen.h"
 
 #define ASSERT_EQ(actual, expected)                                              \
   do {                                                                           \
@@ -2981,6 +2982,169 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
   ASSERT_EQ(err_recursive_nested.error().message, "Expected string at json.children[0].label");
 }
 
+void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
+  using namespace typeprompt_e01::schema::shared;
+
+  // 1. Default constructor initializes to NotSuccess variant
+  EnumWithCommonFields def_val;
+  ASSERT_FALSE(def_val.success());
+  ASSERT_EQ(def_val.as_not_success().x, 0);
+  ASSERT_EQ(def_val.as_not_success().y, 0.0);
+  ASSERT_EQ(def_val.as_not_success().z, "");
+
+  // 2. Construction of NotSuccess variant via .whole builder
+  EnumWithCommonFields_NotSuccess ns_payload = *EnumWithCommonFields_NotSuccess::whole{
+      .x = 10,
+      .y = 20.5,
+      .z = std::string("failed-state"),
+  };
+  EnumWithCommonFields not_success = EnumWithCommonFields::variant_type(
+      typeprompt_e01::indirect<EnumWithCommonFields_NotSuccess>(ns_payload));
+  ASSERT_FALSE(not_success.success());
+  ASSERT_EQ(not_success.as_not_success().x, 10);
+  ASSERT_EQ(not_success.as_not_success().y, 20.5);
+  ASSERT_EQ(not_success.as_not_success().z, "failed-state");
+
+  // 3. Construction of Success variant via .whole builder
+  EnumWithCommonFields_Success s_payload = *EnumWithCommonFields_Success::whole{
+      .x = 42,
+      .y = 3.14,
+      .z = 100,
+  };
+  EnumWithCommonFields success = EnumWithCommonFields::variant_type(
+      typeprompt_e01::indirect<EnumWithCommonFields_Success>(s_payload));
+  ASSERT_TRUE(success.success());
+  ASSERT_EQ(success.as_success().x, 42);
+  ASSERT_EQ(success.as_success().y, 3.14);
+  ASSERT_EQ(success.as_success().z, 100);
+
+  // 4. Visiting both variants
+  std::string visited_ns;
+  not_success.visit(overloaded{
+      [&visited_ns](const EnumWithCommonFields_NotSuccess& ns) {
+        visited_ns = "not_success:" + ns.z;
+      },
+      [&visited_ns](const EnumWithCommonFields_Success& s) {
+        visited_ns = "success:" + std::to_string(s.z);
+      },
+  });
+  ASSERT_EQ(visited_ns, "not_success:failed-state");
+
+  std::string visited_s;
+  success.visit(overloaded{
+      [&visited_s](const EnumWithCommonFields_NotSuccess& ns) {
+        visited_s = "not_success:" + ns.z;
+      },
+      [&visited_s](const EnumWithCommonFields_Success& s) {
+        visited_s = "success:" + std::to_string(s.z);
+      },
+  });
+  ASSERT_EQ(visited_s, "success:100");
+
+  // 5. Serialization and Deserialization Roundtrip for NotSuccess
+  typeprompt_e01::JsonNode ns_node = ToJsonNode(not_success);
+  auto parsed_ns = typeprompt_e01::Parse<EnumWithCommonFields>(ns_node);
+  ASSERT_TRUE(parsed_ns.ok());
+  ASSERT_FALSE(parsed_ns->success());
+  ASSERT_EQ(parsed_ns->as_not_success().x, 10);
+  ASSERT_EQ(parsed_ns->as_not_success().y, 20.5);
+  ASSERT_EQ(parsed_ns->as_not_success().z, "failed-state");
+
+  // Top-level serialization formats for NotSuccess
+  ASSERT_EQ(typeprompt_e01::ToJson(not_success),
+            "{\"success\": false,\"x\": 10.000000,\"y\": 20.500000,\"z\": \"failed-state\"}");
+  ASSERT_EQ(typeprompt_e01::ToYaml(not_success),
+            "success: false\n"
+            "x: 10\n"
+            "\"y\": 20.5\n"
+            "z: failed-state");
+  ASSERT_EQ(typeprompt_e01::ToToon(not_success),
+            "success: false\n"
+            "x: 10\n"
+            "y: 20.5\n"
+            "z: failed-state");
+
+  // 6. Serialization and Deserialization Roundtrip for Success
+  typeprompt_e01::JsonNode s_node = ToJsonNode(success);
+  auto parsed_s = typeprompt_e01::Parse<EnumWithCommonFields>(s_node);
+  ASSERT_TRUE(parsed_s.ok());
+  ASSERT_TRUE(parsed_s->success());
+  ASSERT_EQ(parsed_s->as_success().x, 42);
+  ASSERT_EQ(parsed_s->as_success().y, 3.14);
+  ASSERT_EQ(parsed_s->as_success().z, 100);
+
+  // Top-level serialization formats for Success
+  ASSERT_EQ(typeprompt_e01::ToJson(success),
+            "{\"success\": true,\"x\": 42.000000,\"y\": 3.140000,\"z\": 100.000000}");
+  ASSERT_EQ(typeprompt_e01::ToYaml(success),
+            "success: true\n"
+            "x: 42\n"
+            "\"y\": 3.14\n"
+            "z: 100");
+  ASSERT_EQ(typeprompt_e01::ToToon(success),
+            "success: true\n"
+            "x: 42\n"
+            "y: 3.14\n"
+            "z: 100");
+
+  // 7. ParseJson direct parsing
+  auto direct_ns = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": false, \"x\": 1, \"y\": 2.0, \"z\": \"err\"}");
+  ASSERT_TRUE(direct_ns.ok());
+  ASSERT_FALSE(direct_ns->success());
+  ASSERT_EQ(direct_ns->as_not_success().x, 1);
+  ASSERT_EQ(direct_ns->as_not_success().y, 2.0);
+  ASSERT_EQ(direct_ns->as_not_success().z, "err");
+
+  auto direct_s = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": true, \"x\": 7, \"y\": 8.5, \"z\": 99}");
+  ASSERT_TRUE(direct_s.ok());
+  ASSERT_TRUE(direct_s->success());
+  ASSERT_EQ(direct_s->as_success().x, 7);
+  ASSERT_EQ(direct_s->as_success().y, 8.5);
+  ASSERT_EQ(direct_s->as_success().z, 99);
+
+  // 8. Error reporting with boolean discriminant and JsonPath context
+  auto err_not_obj = typeprompt_e01::ParseJson<EnumWithCommonFields>("\"not_an_obj\"");
+  ASSERT_FALSE(err_not_obj.ok());
+  ASSERT_EQ(err_not_obj.error().message, "Expected object at json");
+
+  auto err_missing_discriminant =
+      typeprompt_e01::ParseJson<EnumWithCommonFields>("{\"x\": 1, \"y\": 2.0, \"z\": \"err\"}");
+  ASSERT_FALSE(err_missing_discriminant.ok());
+  ASSERT_EQ(err_missing_discriminant.error().message, "Missing key: success at json");
+
+  auto err_discriminant_string = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": \"true\", \"x\": 1, \"y\": 2.0, \"z\": 99}");
+  ASSERT_FALSE(err_discriminant_string.ok());
+  ASSERT_EQ(err_discriminant_string.error().message, "Expected boolean at json.success");
+
+  auto err_discriminant_number = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": 1, \"x\": 1, \"y\": 2.0, \"z\": 99}");
+  ASSERT_FALSE(err_discriminant_number.ok());
+  ASSERT_EQ(err_discriminant_number.error().message, "Expected boolean at json.success");
+
+  auto err_discriminant_null = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": null, \"x\": 1, \"y\": 2.0, \"z\": 99}");
+  ASSERT_FALSE(err_discriminant_null.ok());
+  ASSERT_EQ(err_discriminant_null.error().message, "Expected boolean at json.success");
+
+  auto err_ns_payload_type = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": false, \"x\": 1, \"y\": 2.0, \"z\": 123}");
+  ASSERT_FALSE(err_ns_payload_type.ok());
+  ASSERT_EQ(err_ns_payload_type.error().message, "Expected string at json.z");
+
+  auto err_s_payload_type = typeprompt_e01::ParseJson<EnumWithCommonFields>(
+      "{\"success\": true, \"x\": 1, \"y\": 2.0, \"z\": \"not_a_num\"}");
+  ASSERT_FALSE(err_s_payload_type.ok());
+  ASSERT_EQ(err_s_payload_type.error().message, "Expected number at json.z");
+
+  auto err_payload_missing_field =
+      typeprompt_e01::ParseJson<EnumWithCommonFields>("{\"success\": true, \"x\": 1, \"y\": 2.0}");
+  ASSERT_FALSE(err_payload_missing_field.ok());
+  ASSERT_EQ(err_payload_missing_field.error().message, "Missing key: z at json");
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -3052,6 +3216,7 @@ void TestRuntimeLogic() {
   TestUserDefinedEnums();
   TestUserDefinedStructs();
   TestUserDefinedDiscriminatedUnionPageNode();
+  TestUserDefinedDiscriminatedUnionEnumWithCommonFields();
 }
 
 int main() {

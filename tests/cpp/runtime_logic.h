@@ -394,6 +394,15 @@ inline JsonNode ToJsonNode(std::string value) { return JsonNode(std::move(value)
 inline JsonNode ToJsonNode(std::string_view value) { return JsonNode(value); }
 
 template <typename T>
+JsonNode ToJsonNode(const std::optional<T>& value);
+
+template <typename T>
+JsonNode ToJsonNode(const std::vector<T>& values);
+
+template <typename T>
+JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map);
+
+template <typename T>
 JsonNode ToJsonNode(const std::optional<T>& value) {
   return value.has_value() ? ToJsonNode(*value) : JsonNode(std::nullopt);
 }
@@ -518,6 +527,16 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std
   out = node.string_value();
   return kOkStatus;
 }
+
+template <typename T>
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out);
+
+template <typename T>
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out);
+
+template <typename T>
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
+                       std::unordered_map<std::string, T>& out);
 
 template <typename T>
 ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out) {
