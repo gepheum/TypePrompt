@@ -1056,6 +1056,7 @@ function writeMethodImplsForInterface(
     ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
     `  using ::${rootNamespace}::ToJsonNode;`,
     "  JsonNode::Object object;",
+    `  object.reserve(${fields.length});`,
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
