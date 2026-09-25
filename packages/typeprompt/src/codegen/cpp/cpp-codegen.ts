@@ -720,7 +720,16 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
         break;
       }
     }
-    lines.push("", "");
+    lines.push(
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      ` return __internal::${typeCName}Serializer::ToJsonNodeImpl(input);`,
+      "}",
+      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+      ` return __internal::${typeCName}Serializer::ParseValueImpl(node, context, out);`,
+      "}",
+      "",
+      "",
+    );
   }
 
   return lines.join("\n");
@@ -1099,7 +1108,7 @@ function writeMethodImplsForUnion(
         "   out = std::move(v);",
       );
     }
-    lines.push("   return status;", "  }");
+    lines.push("  }", "  return status;");
   }
   lines.push(
     " }", // ParseValueImpl
