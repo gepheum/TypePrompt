@@ -933,7 +933,7 @@ function writeTypepromptUnion(
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
         lines.push(
           `  bool ${discriminatorCName}() const {`,
-          `    return data_.index() == ${firstDiscriminant ? 1 : 0};`,
+          `    return data_.index() == ${firstDiscriminant ? 0 : 1};`,
           "  };",
         );
       }
@@ -952,6 +952,24 @@ function writeTypepromptUnion(
           const type = memberTypes[i];
           lines.push(
             `  // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
+            `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            `  indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
+            "",
+          );
+        }
+      } else {
+        for (let i = 0; i < 2; i++) {
+          const discriminant = discriminants.values[i]!;
+          const discriminantValue: boolean = discriminant.value;
+          const methodCName = "as_".concat(
+            discriminantValue ? "" : "not_",
+            toSnakeCase(discriminator),
+          );
+          const type = memberTypes[i];
+          const maybeNot = discriminantValue ? "" : "!";
+          lines.push(
+            `  // Precondition: ${maybeNot}${discriminatorCName}()`,
             `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
             `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             `  indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
