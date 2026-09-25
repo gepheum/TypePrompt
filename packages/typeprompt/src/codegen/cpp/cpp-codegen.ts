@@ -1053,6 +1053,7 @@ function writeMethodImplsForInterface(
     "namespace __internal {",
     `struct ${typeCName}Serializer {`,
     ` using JsonNode = ::${rootNamespace}::JsonNode;`,
+    ` using ParseStatus = ::${rootNamespace}::ParseStatus;`,
     ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
     `  using ::${rootNamespace}::ToJsonNode;`,
     "  JsonNode::Object object;",
@@ -1073,7 +1074,13 @@ function writeMethodImplsForInterface(
   }
   lines.push(
     "  return JsonNode(std::move(object));",
-    " }", // ToJsonNode
+    " }", // ToJsonNodeImpl
+    ` static ParseStatus ParseJsonNodeImpl(const JsonNode& node, ${typeCName}& out) {`,
+    "  internal::StructParser parser(&node);",
+  );
+  lines.push(
+    "  return std::move(parser).status();",
+    " }", // ParseJsonNodeImpl
     "};", // class Serializer
     "}  // namespace __internal",
   );

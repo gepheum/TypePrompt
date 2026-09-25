@@ -2086,9 +2086,14 @@ class JsonParser {
 
 class StructParser {
  public:
-  explicit StructParser(const JsonNode::Object* object) {
-    sorted_entries_.reserve(object->size());
-    for (const auto& pair : *object) {
+  explicit StructParser(const JsonNode* node) {
+    if (node->type() != JsonNode::Type::kObject) {
+      status_ = ParseError("Expected object");
+      return;
+    }
+    const auto& object = node->object_value();
+    sorted_entries_.reserve(object.size());
+    for (const auto& pair : object) {
       sorted_entries_.push_back(&pair);
     }
     std::sort(sorted_entries_.begin(), sorted_entries_.end(),
@@ -2135,7 +2140,9 @@ class StructParser {
         ++index_;
       }
     }
-    if (!optional) {
+    if (optional) {
+      out = T{};
+    } else {
       status_ = ParseError(std::format("Missing key: {}", key));
     }
   }
