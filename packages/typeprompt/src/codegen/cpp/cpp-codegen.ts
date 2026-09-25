@@ -55,7 +55,6 @@ function writeAll(
       scaleIndent(writeUserDefinedDatatypes(compilationResult, config)),
       // writeSpecDatatypes(unionContext),
       // writeTemplatesData(compilationResult),
-      // writeExecuteToolCall(compilationResult),
       `}  // namespace ${config.rootNamespace}`,
       "#endif",
     ].join("\n\n"),
@@ -643,7 +642,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -960,13 +959,11 @@ function writeMethodImplsForInterface(
   const { rootNamespace } = options;
   const fields = Object.values(type.fields);
 
-  const lines: string[] = [];
-
   // Struct::whole -> Struct
-  lines.push(
+  const lines: string[] = [
     `inline ${typeCName}::whole::operator ${typeCName}() && {`,
     ` return ${typeCName}{`,
-  );
+  ];
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
@@ -1025,11 +1022,34 @@ function writeMethodImplsForInterface(
 
 function writeMethodImplsForUnion(
   _type: Union,
-  _typeCName: string,
+  typeCName: string,
   _schema: Schema,
-  _options: WriteSchemaOptions,
+  options: WriteSchemaOptions,
 ): string {
+  const { rootNamespace } = options;
   const lines: string[] = [];
+
+  // ToJsonNode() and ParseValue()
+  lines.push(
+    "namespace __internal {",
+    `struct ${typeCName}Serializer {`,
+    ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
+    `  using ::${rootNamespace}::ToJsonNode;`,
+    "  return JsonNode(JsonNode::Object{",
+  );
+  lines.push(
+    "  });", // return JsonNode({...});
+    " }", // ToJsonNodeImpl
+    ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+    "  internal::StructParser parser(&node, context);",
+  );
+  lines.push(
+    "  return std::move(parser).status();",
+    " }", // ParseValueImpl
+    "};", // class Serializer
+    "}  // namespace __internal",
+  );
+
   return lines.join("\n");
 }
 
