@@ -882,7 +882,7 @@ function writeTypepromptUnion(
       break;
     }
     case "interfaces": {
-      const { discriminator } = members;
+      const { discriminants, discriminator } = members;
       const memberTypes = Object.values(members.members).map((member) =>
         writeType(member.resolved, schema, options),
       );
@@ -915,10 +915,9 @@ function writeTypepromptUnion(
         "",
       );
       const discriminatorCName = toCName(toSnakeCase(discriminator));
-      if (members.discriminants.type === "string") {
-        const discriminants = Object.values(members.discriminants.values);
+      if (discriminants.type === "string") {
         lines.push(`  enum class ${discriminatorCName} {`);
-        for (const discriminant of discriminants) {
+        for (const discriminant of Object.values(discriminants.values)) {
           const cName = toCName("k".concat(toPascalCase(discriminant.value)));
           lines.push(`    ${cName},`);
         }
@@ -929,15 +928,32 @@ function writeTypepromptUnion(
           "  };",
         );
       } else {
-        const firstDiscriminant: boolean =
-          members.discriminants.values[0]!.value;
+        const firstDiscriminant: boolean = discriminants.values[0]!.value;
         lines.push(
           `  bool ${discriminatorCName}() const {`,
           `    return data_.index() == ${firstDiscriminant ? 1 : 0};`,
           "  };",
         );
       }
-      lines.push("", " private:", "  variant_type data_;", "};"); // struct
+      lines.push("");
+      if (discriminants.type === "string") {
+        for (let i = 0; i < discriminants.values.length; i++) {
+          const discriminant = discriminants.values[i]!;
+          const methodCName = "as_".concat(
+            toSnakeCase(discriminator),
+            "_",
+            toSnakeCase(discriminant.value),
+          );
+          const type = memberTypes[i];
+          lines.push(
+            `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            `  internal::box<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
+            "",
+          );
+        }
+      }
+      lines.push(" private:", "  variant_type data_;", "};"); // struct
     }
   }
   return lines.join("\n");
