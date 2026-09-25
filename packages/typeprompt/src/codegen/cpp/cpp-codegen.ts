@@ -1055,8 +1055,7 @@ function writeMethodImplsForInterface(
     ` using ParseStatus = ::${rootNamespace}::ParseStatus;`,
     ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
     `  using ::${rootNamespace}::ToJsonNode;`,
-    "  JsonNode::Object object;",
-    `  object.reserve(${fields.length});`,
+    "  return JsonNode(JsonNode::Object{",
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
@@ -1068,12 +1067,10 @@ function writeMethodImplsForInterface(
       const cFieldName = toCName(toSnakeCase(rawFieldName));
       value = `input.${cFieldName}`;
     }
-    lines.push(
-      `  object.emplace_back("${rawFieldName}", ToJsonNode(${value}));`,
-    );
+    lines.push(`    {"${rawFieldName}", ToJsonNode(${value})},`);
   }
   lines.push(
-    "  return JsonNode(std::move(object));",
+    "  });", // return JsonNode({...});
     " }", // ToJsonNodeImpl
     ` static ParseStatus ParseJsonNodeImpl(const JsonNode& node, ${typeCName}& out) {`,
     "  internal::StructParser parser(&node);",
