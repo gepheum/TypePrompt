@@ -757,7 +757,16 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
         break;
       }
     }
-    lines.push("", "");
+    lines.push(
+      "",
+      "",
+      `inline ::${rootNamespace}::JsonNode ToJsonNode(const ${typeCName}&);`,
+      `inline ::${rootNamespace}::ParseStatus ParseJsonNode(`,
+      `  const ::${rootNamespace}::JsonNode&,`,
+      `  ${typeCName}&);`,
+      "",
+      "",
+    );
   };
 
   for (const type of schema.namingHints.defaultScope.keys()) {
@@ -791,8 +800,6 @@ function writeTypepromptInterface(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
-  const { rootNamespace } = options;
-
   const fields = Object.values(type.fields);
 
   const lines: string[] = [];
@@ -850,11 +857,6 @@ function writeTypepromptInterface(
   lines.push(
     " };", // struct whole
     "};", // struct
-    "",
-    `inline ::${rootNamespace}::JsonNode ToJsonNode(const ${typeCName}&);`,
-    `inline ::${rootNamespace}::ParseStatus ParseJsonNode(`,
-    `  const ::${rootNamespace}::JsonNode&,`,
-    `  ${typeCName}&);`,
   );
 
   return lines.join("\n");
@@ -1070,7 +1072,7 @@ function writeMethodImplsForInterface(
     );
   }
   lines.push(
-    "  return std::move(object);",
+    "  return JsonNode(std::move(object));",
     " }", // ToJsonNode
     "};", // class Serializer
     "}  // namespace __internal",
