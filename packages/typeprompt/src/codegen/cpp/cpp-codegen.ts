@@ -791,6 +791,8 @@ function writeTypepromptInterface(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
+  const { rootNamespace } = options;
+
   const fields = Object.values(type.fields);
 
   const lines: string[] = [];
@@ -825,8 +827,8 @@ function writeTypepromptInterface(
   }
   lines.push(
     "",
-    ` // Meant to be immediately converted to a ${typeCName}.`,
     " // All fields must be initialized.",
+    ` // Meant to be immediately converted to a ${typeCName}.`,
     " struct whole {",
   );
   for (const field of fields) {
@@ -848,6 +850,11 @@ function writeTypepromptInterface(
   lines.push(
     " };", // struct whole
     "};", // struct
+    "",
+    `inline ::${rootNamespace}::JsonNode ToJsonNode(const ${typeCName}&);`,
+    `inline ::${rootNamespace}::ParseStatus ParseJsonNode(`,
+    `  const ::${rootNamespace}::JsonNode&,`,
+    `  ${typeCName}&);`,
   );
 
   return lines.join("\n");
@@ -1015,13 +1022,14 @@ function writeMethodImplsForInterface(
   type: Interface,
   typeCName: string,
   schema: Schema,
-  _options: WriteSchemaOptions,
+  options: WriteSchemaOptions,
 ): string {
+  const { rootNamespace } = options;
   const fields = Object.values(type.fields);
 
   const lines: string[] = [];
 
-  // whole::operator()
+  // Struct::whole -> Struct
   lines.push(
     `inline ${typeCName}::whole::operator ${typeCName}() && {`,
     ` return ${typeCName}{`,
@@ -1035,6 +1043,37 @@ function writeMethodImplsForInterface(
   lines.push(
     " };", // return
     "}", // whole::operator
+    "",
+  );
+
+  // ToJsonNode() and ParseJsonNode()
+  lines.push(
+    "namespace __internal {",
+    `struct ${typeCName}Serializer {`,
+    ` using JsonNode = ::${rootNamespace}::JsonNode;`,
+    ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
+    `  using ::${rootNamespace}::ToJsonNode;`,
+    "  JsonNode::Object object;",
+  );
+  for (const field of fields) {
+    const rawFieldName = field.name.text;
+    const type = resolveType(field.type, schema);
+    let value: string;
+    if (isLiteralType(type)) {
+      value = JSON.stringify(type.value satisfies string | boolean);
+    } else {
+      const cFieldName: string = toCName(toSnakeCase(rawFieldName));
+      value = `input.${cFieldName}`;
+    }
+    lines.push(
+      `  object.emplace_back("${rawFieldName}", ToJsonNode(${value}));`,
+    );
+  }
+  lines.push(
+    "  return std::move(object);",
+    " }", // ToJsonNode
+    "};", // class Serializer
+    "}  // namespace __internal",
   );
 
   return lines.join("\n");
