@@ -752,7 +752,7 @@ function writeTypepromptInterface(
       "//       ...",
       "//   };",
       "//",
-      "// Using '::whole' forces you to initialize all the fields.",
+      "// Using '::whole' forces you to set all the fields.",
     );
   }
   lines.push(`struct ${typeCName} {`);
@@ -766,7 +766,7 @@ function writeTypepromptInterface(
   }
   lines.push(
     "",
-    ` // Builder requiring all fields of ${typeCName} to be specified at construction.`,
+    ` // Builder requiring all fields of ${typeCName} to be set at construction.`,
     ` // Converts to ${typeCName} via implicit conversion or '*'.`,
     " struct whole {",
   );
