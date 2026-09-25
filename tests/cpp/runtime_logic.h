@@ -2084,6 +2084,44 @@ class JsonParser {
   }
 };
 
+// Path within a JSON object. Example: 'json.foos[10].bar'
+class JsonPath {
+ public:
+  virtual ~JsonPath() = default;
+  virtual std::string ToString() const = 0;
+};
+
+class RootJsonPath : public JsonPath {
+ public:
+  std::string ToString() const override { return "json"; }
+  ParseError MakeParseError(std::string_view message) {
+    return ParseError(std::format("{} at {}", message, ToString()));
+  }
+};
+
+class AtFieldJsonPath : public JsonPath {
+ public:
+  AtFieldJsonPath(const JsonPath* parent, std::string_view name)
+      : parent_(*parent), field_name_(name) {}
+  std::string ToString() const override {
+    return std::format("{}.{}", parent_.ToString(), field_name_);
+  }
+
+ private:
+  const JsonPath& parent_;
+  const std::string_view field_name_;
+};
+
+class AtIndexJsonPath : public JsonPath {
+ public:
+  AtIndexJsonPath(const JsonPath* parent, size_t index) : parent_(*parent), index_(index) {}
+  std::string ToString() const override { return std::format("{}.{}", parent_.ToString(), index_); }
+
+ private:
+  const JsonPath& parent_;
+  const size_t index_;
+};
+
 class StructParser {
  public:
   explicit StructParser(const JsonNode* node) {
