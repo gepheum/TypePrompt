@@ -2612,9 +2612,325 @@ void TestPageNodeVisit() {
       [](PageNode_KindHeading&& h) { return std::move(h.text); },
       [](PageNode_KindParagraph&&) { return std::string(); },
       [](PageNode_KindButton&&) { return std::string(); },
-      [](PageNode_KindSection&&) { return std::string(); },
-  });
-  ASSERT_EQ(moved_text, "Updated Title");
+      [](PageNode_KindSectivoid TestUserDefinedEnums() {
+  using namespace typeprompt_02::schema::meta;
+  using namespace typeprompt_02::schema::triage_ticket;
+  using namespace typeprompt_02::schema::generate_page_tree;
+
+  // 1. Meta_Model
+  ASSERT_EQ(typeprompt_02::ToJson(Meta_Model::kGpt4o), "\"gpt-4o\"");
+  ASSERT_EQ(typeprompt_02::ToJson(Meta_Model::kGpt4oMini), "\"gpt-4o-mini\"");
+  ASSERT_EQ(typeprompt_02::ToToon(Meta_Model::kGpt4o), "gpt-4o");
+  ASSERT_EQ(typeprompt_02::ToYaml(Meta_Model::kGpt4oMini), "gpt-4o-mini");
+
+  auto parsed_gpt4o = typeprompt_02::ParseJson<Meta_Model>("\"gpt-4o\"");
+  ASSERT_TRUE(parsed_gpt4o.ok());
+  ASSERT_TRUE(*parsed_gpt4o == Meta_Model::kGpt4o);
+
+  auto parsed_gpt4o_mini = typeprompt_02::ParseJson<Meta_Model>("\"gpt-4o-mini\"");
+  ASSERT_TRUE(parsed_gpt4o_mini.ok());
+  ASSERT_TRUE(*parsed_gpt4o_mini == Meta_Model::kGpt4oMini);
+
+  auto parsed_err_type = typeprompt_02::ParseJson<Meta_Model>("123");
+  ASSERT_FALSE(parsed_err_type.ok());
+  ASSERT_EQ(parsed_err_type.error().message, "Expected string at json");
+
+  auto parsed_err_unknown = typeprompt_02::ParseJson<Meta_Model>("\"claude-3\"");
+  ASSERT_FALSE(parsed_err_unknown.ok());
+  ASSERT_EQ(parsed_err_unknown.error().message, "Unknown constant name at json");
+
+  // 2. TicketCategory
+  ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kBilling), "\"billing\"");
+  ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kTechnicalIssue), "\"technical-issue\"");
+  ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kFeatureRequest), "\"feature-request\"");
+  ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kOther), "\"other\"");
+
+  auto parsed_cat = typeprompt_02::ParseJson<TicketCategory>("\"feature-request\"");
+  ASSERT_TRUE(parsed_cat.ok());
+  ASSERT_TRUE(*parsed_cat == TicketCategory::kFeatureRequest);
+
+  // 3. CustomerTier & Output_Urgency
+  ASSERT_EQ(typeprompt_02::ToJson(Input_CustomerTier::kEnterprise), "\"enterprise\"");
+  auto parsed_tier = typeprompt_02::ParseJson<Input_CustomerTier>("\"enterprise\"");
+  ASSERT_TRUE(parsed_tier.ok());
+  ASSERT_TRUE(*parsed_tier == Input_CustomerTier::kEnterprise);
+
+  ASSERT_EQ(typeprompt_02::ToJson(Output_Urgency::kCritical), "\"critical\"");
+  auto parsed_urg = typeprompt_02::ParseJson<Output_Urgency>("\"critical\"");
+  ASSERT_TRUE(parsed_urg.ok());
+  ASSERT_TRUE(*parsed_urg == Output_Urgency::kCritical);
+
+  // 4. ProductCategory, Pricing_Model, PageNode_KindHeading_Level, Input_Audience
+  ASSERT_EQ(typeprompt_02::ToJson(ProductCategory::kDatabase), "\"database\"");
+  auto parsed_prod = typeprompt_02::ParseJson<ProductCategory>("\"database\"");
+  ASSERT_TRUE(parsed_prod.ok());
+  ASSERT_TRUE(*parsed_prod == ProductCategory::kDatabase);
+
+  ASSERT_EQ(typeprompt_02::ToJson(Pricing_Model::kPerHour), "\"perHour\"");
+  auto parsed_pm = typeprompt_02::ParseJson<Pricing_Model>("\"perHour\"");
+  ASSERT_TRUE(parsed_pm.ok());
+  ASSERT_TRUE(*parsed_pm == Pricing_Model::kPerHour);
+
+  ASSERT_EQ(typeprompt_02::ToJson(PageNode_KindHeading_Level::kH2), "\"h2\"");
+  auto parsed_lvl = typeprompt_02::ParseJson<PageNode_KindHeading_Level>("\"h2\"");
+  ASSERT_TRUE(parsed_lvl.ok());
+  ASSERT_TRUE(*parsed_lvl == PageNode_KindHeading_Level::kH2);
+
+  ASSERT_EQ(typeprompt_02::ToJson(Input_Audience::kDeveloper), "\"developer\"");
+  auto parsed_aud = typeprompt_02::ParseJson<Input_Audience>("\"developer\"");
+  ASSERT_TRUE(parsed_aud.ok());
+  ASSERT_TRUE(*parsed_aud == Input_Audience::kDeveloper);
+}
+
+void TestUserDefinedStructs() {
+  using namespace typeprompt_02::schema::meta;
+  using namespace typeprompt_02::schema::triage_ticket;
+  using namespace typeprompt_02::schema::generate_page_tree;
+
+  // 1. Meta struct whole builder & serialization
+  Meta m1 = *Meta::whole{
+      .model = Meta_Model::kGpt4o,
+      .temperature = 0.5,
+  };
+  ASSERT_TRUE(m1.model == Meta_Model::kGpt4o);
+  ASSERT_TRUE(m1.temperature.has_value());
+  ASSERT_EQ(*m1.temperature, 0.5);
+
+  Meta m2 = Meta::whole{
+      .model = Meta_Model::kGpt4oMini,
+      .temperature = std::nullopt,
+  };
+  ASSERT_TRUE(m2.model == Meta_Model::kGpt4oMini);
+  ASSERT_FALSE(m2.temperature.has_value());
+
+  // Serialization & Deserialization
+  typeprompt_02::JsonNode m1_node = ToJsonNode(m1);
+  ASSERT_EQ(m1_node.type(), typeprompt_02::JsonNode::Type::kObject);
+  auto parsed_m1 = typeprompt_02::Parse<Meta>(m1_node);
+  ASSERT_TRUE(parsed_m1.ok());
+  ASSERT_TRUE(parsed_m1->model == Meta_Model::kGpt4o);
+  ASSERT_EQ(parsed_m1->temperature, 0.5);
+
+  auto parsed_m2_json = typeprompt_02::ParseJson<Meta>("{\"model\": \"gpt-4o-mini\"}");
+  ASSERT_TRUE(parsed_m2_json.ok());
+  ASSERT_TRUE(parsed_m2_json->model == Meta_Model::kGpt4oMini);
+  ASSERT_FALSE(parsed_m2_json->temperature.has_value());
+
+  // 2. Struct with nested structs & arrays (Pricing, Benchmark, Provider)
+  Pricing pricing = *Pricing::whole{
+      .model = Pricing_Model::kPerMonth,
+      .base_price = 49.99,
+      .overage = 0.10,
+  };
+
+  Benchmark b1 = *Benchmark::whole{
+      .name = "Latency",
+      .score = 15.2,
+      .unit = "ms",
+  };
+  Benchmark b2 = *Benchmark::whole{
+      .name = "Throughput",
+      .score = 5000.0,
+      .unit = "req/s",
+  };
+
+  Provider provider = *Provider::whole{
+      .name = "AcmeCloud",
+      .region = "us-east-1",
+      .category = ProductCategory::kCompute,
+      .pricing = pricing,
+      .benchmarks = std::vector<Benchmark>{b1, b2},
+      .pros = std::vector<std::string>{"fast", "reliable"},
+      .cons = std::vector<std::string>{"expensive"},
+  };
+
+  typeprompt_02::JsonNode prov_node = ToJsonNode(provider);
+  auto parsed_prov = typeprompt_02::Parse<Provider>(prov_node);
+  ASSERT_TRUE(parsed_prov.ok());
+  ASSERT_EQ(parsed_prov->name, "AcmeCloud");
+  ASSERT_EQ(parsed_prov->region, "us-east-1");
+  ASSERT_TRUE(parsed_prov->category == ProductCategory::kCompute);
+  ASSERT_TRUE(parsed_prov->pricing.model == Pricing_Model::kPerMonth);
+  ASSERT_EQ(parsed_prov->pricing.base_price, 49.99);
+  ASSERT_EQ(parsed_prov->benchmarks.size(), 2);
+  ASSERT_EQ(parsed_prov->benchmarks[0].name, "Latency");
+  ASSERT_EQ(parsed_prov->benchmarks[0].score, 15.2);
+  ASSERT_EQ(parsed_prov->benchmarks[1].unit, "req/s");
+  ASSERT_EQ(parsed_prov->pros.size(), 2);
+  ASSERT_EQ(parsed_prov->cons.size(), 1);
+
+  // 3. Triage ticket Input & Output
+  Input_RecentTickets rt1 = *Input_RecentTickets::whole{
+      .id = "TICKET-1",
+      .summary = "Cannot login",
+      .category = TicketCategory::kTechnicalIssue,
+  };
+  typeprompt_02::schema::triage_ticket::Input ticket_input =
+      *typeprompt_02::schema::triage_ticket::Input::whole{
+          .subject = "Urgent billing inquiry",
+          .body = "Need invoice for March",
+          .customer_tier = Input_CustomerTier::kPro,
+          .recent_tickets = std::vector<Input_RecentTickets>{rt1},
+      };
+
+  typeprompt_02::JsonNode ticket_input_node = ToJsonNode(ticket_input);
+  auto parsed_ticket_input =
+      typeprompt_02::Parse<typeprompt_02::schema::triage_ticket::Input>(ticket_input_node);
+  ASSERT_TRUE(parsed_ticket_input.ok());
+  ASSERT_EQ(parsed_ticket_input->subject, "Urgent billing inquiry");
+  ASSERT_TRUE(parsed_ticket_input->customer_tier == Input_CustomerTier::kPro);
+  ASSERT_EQ(parsed_ticket_input->recent_tickets.size(), 1);
+  ASSERT_EQ(parsed_ticket_input->recent_tickets[0].id, "TICKET-1");
+
+  typeprompt_02::schema::triage_ticket::Output ticket_output =
+      *typeprompt_02::schema::triage_ticket::Output::whole{
+          .category = TicketCategory::kBilling,
+          .urgency = Output_Urgency::kHigh,
+          .suggested_reply = "Here is your invoice.",
+      };
+  typeprompt_02::JsonNode ticket_output_node = ToJsonNode(ticket_output);
+  auto parsed_ticket_output =
+      typeprompt_02::Parse<typeprompt_02::schema::triage_ticket::Output>(ticket_output_node);
+  ASSERT_TRUE(parsed_ticket_output.ok());
+  ASSERT_TRUE(parsed_ticket_output->category == TicketCategory::kBilling);
+  ASSERT_TRUE(parsed_ticket_output->urgency == Output_Urgency::kHigh);
+  ASSERT_EQ(parsed_ticket_output->suggested_reply, "Here is your invoice.");
+
+  // 4. Error reporting with JsonPath context
+  auto missing_field_err =
+      typeprompt_02::ParseJson<Benchmark>("{\"score\": 10.0, \"unit\": \"s\"}");
+  ASSERT_FALSE(missing_field_err.ok());
+  ASSERT_EQ(missing_field_err.error().message, "Missing key: name at json");
+
+  auto field_type_err = typeprompt_02::ParseJson<Benchmark>(
+      "{\"name\": \"test\", \"score\": \"not_a_num\", \"unit\": \"s\"}");
+  ASSERT_FALSE(field_type_err.ok());
+  ASSERT_EQ(field_type_err.error().message, "Expected number at json.score");
+
+  auto nested_err = typeprompt_02::ParseJson<Provider>(
+      "{\"name\": \"A\", \"region\": \"B\", \"category\": \"compute\", "
+      "\"pricing\": {\"model\": \"unknown\", \"basePrice\": 10.0}, "
+      "\"benchmarks\": [], \"pros\": [], \"cons\": []}");
+  ASSERT_FALSE(nested_err.ok());
+  ASSERT_EQ(nested_err.error().message, "Unknown constant name at json.pricing.model");
+
+  auto nested_array_err = typeprompt_02::ParseJson<Provider>(
+      "{\"name\": \"A\", \"region\": \"B\", \"category\": \"compute\", "
+      "\"pricing\": {\"model\": \"perMonth\", \"basePrice\": 10.0}, "
+      "\"benchmarks\": [{\"name\": \"b1\", \"score\": \"invalid\", \"unit\": \"ms\"}], "
+      "\"pros\": [], \"cons\": []}");
+  ASSERT_FALSE(nested_array_err.ok());
+  ASSERT_EQ(nested_array_err.error().message, "Expected number at json.benchmarks[0].score");
+}
+
+void TestUserDefinedDiscriminatedUnionPageNode() {
+  using namespace typeprompt_02::schema::generate_page_tree;
+
+  // 1. Leaf node construction & properties
+  PageNode heading = *PageNode_KindHeading::whole{
+      .level = PageNode_KindHeading_Level::kH1,
+      .text = "Page Title",
+  };
+  ASSERT_TRUE(heading.kind() == PageNode::kind::kHeading);
+  ASSERT_EQ(heading.as_kind_heading().text, "Page Title");
+  ASSERT_TRUE(heading.as_kind_heading().level == PageNode_KindHeading_Level::kH1);
+
+  PageNode paragraph = *PageNode_KindParagraph::whole{
+      .text = "This is a paragraph of content.",
+  };
+  ASSERT_TRUE(paragraph.kind() == PageNode::kind::kParagraph);
+  ASSERT_EQ(paragraph.as_kind_paragraph().text, "This is a paragraph of content.");
+
+  PageNode button = *PageNode_KindButton::whole{
+      .label = "Sign Up",
+      .url = "https://example.com/signup",
+  };
+  ASSERT_TRUE(button.kind() == PageNode::kind::kButton);
+  ASSERT_EQ(button.as_kind_button().label, "Sign Up");
+  ASSERT_EQ(button.as_kind_button().url, "https://example.com/signup");
+
+  // 2. Recursive section containing heading, paragraph, button, and a nested subsection
+  PageNode subsection = *PageNode_KindSection::whole{
+      .title = std::optional<std::string>("Subsection"),
+      .children = std::vector<PageNode>{button},
+  };
+  ASSERT_TRUE(subsection.kind() == PageNode::kind::kSection);
+  ASSERT_EQ(subsection.as_kind_section().title, "Subsection");
+  ASSERT_EQ(subsection.as_kind_section().children.size(), 1);
+
+  PageNode root_section = *PageNode_KindSection::whole{
+      .title = std::optional<std::string>("Main Section"),
+      .children = std::vector<PageNode>{heading, paragraph, subsection},
+  };
+
+  // 3. Serialization and Deserialization roundtrip
+  typeprompt_02::JsonNode section_json = ToJsonNode(root_section);
+  auto parsed_section = typeprompt_02::Parse<PageNode>(section_json);
+  ASSERT_TRUE(parsed_section.ok());
+  ASSERT_TRUE(parsed_section->kind() == PageNode::kind::kSection);
+  ASSERT_EQ(parsed_section->as_kind_section().title, "Main Section");
+  ASSERT_EQ(parsed_section->as_kind_section().children.size(), 3);
+
+  const auto& child0 = parsed_section->as_kind_section().children[0];
+  ASSERT_TRUE(child0.kind() == PageNode::kind::kHeading);
+  ASSERT_EQ(child0.as_kind_heading().text, "Page Title");
+  ASSERT_TRUE(child0.as_kind_heading().level == PageNode_KindHeading_Level::kH1);
+
+  const auto& child1 = parsed_section->as_kind_section().children[1];
+  ASSERT_TRUE(child1.kind() == PageNode::kind::kParagraph);
+  ASSERT_EQ(child1.as_kind_paragraph().text, "This is a paragraph of content.");
+
+  const auto& child2 = parsed_section->as_kind_section().children[2];
+  ASSERT_TRUE(child2.kind() == PageNode::kind::kSection);
+  ASSERT_EQ(child2.as_kind_section().title, "Subsection");
+  ASSERT_EQ(child2.as_kind_section().children.size(), 1);
+  ASSERT_TRUE(child2.as_kind_section().children[0].kind() == PageNode::kind::kButton);
+  ASSERT_EQ(child2.as_kind_section().children[0].as_kind_button().label, "Sign Up");
+
+  // 4. Visiting the tree
+  int node_count = 0;
+  auto count_visitor = [&node_count](const auto& self, const PageNode& n) -> void {
+    ++node_count;
+    n.visit(overloaded{
+        [](const PageNode_KindHeading&) {},
+        [](const PageNode_KindParagraph&) {},
+        [](const PageNode_KindButton&) {},
+        [&self](const PageNode_KindSection& s) {
+          for (const auto& c : s.children) {
+            self(self, c);
+          }
+        },
+    });
+  };
+  count_visitor(count_visitor, root_section);
+  ASSERT_EQ(node_count, 5);  // root section + heading + paragraph + subsection + button
+
+  // 5. Error handling
+  auto err_not_obj = typeprompt_02::ParseJson<PageNode>("\"not an object\"");
+  ASSERT_FALSE(err_not_obj.ok());
+  ASSERT_EQ(err_not_obj.error().message, "Expected object at json");
+
+  auto err_missing_kind = typeprompt_02::ParseJson<PageNode>("{\"text\": \"hello\"}");
+  ASSERT_FALSE(err_missing_kind.ok());
+  ASSERT_EQ(err_missing_kind.error().message, "Missing key: kind at json");
+
+  auto err_unknown_kind =
+      typeprompt_02::ParseJson<PageNode>("{\"kind\": \"image\", \"url\": \"foo.png\"}");
+  ASSERT_FALSE(err_unknown_kind.ok());
+  ASSERT_EQ(err_unknown_kind.error().message, "Unknown discriminant value at json");
+
+  auto err_nested_field =
+      typeprompt_02::ParseJson<PageNode>("{\"kind\": \"heading\", \"level\": \"h1\", \"text\": 123}");
+  ASSERT_FALSE(err_nested_field.ok());
+  ASSERT_EQ(err_nested_field.error().message, "Expected string at json.text");
+
+  auto err_recursive_nested = typeprompt_02::ParseJson<PageNode>(
+      "{\"kind\": \"section\", \"title\": \"sec\", \"children\": ["
+      "{\"kind\": \"button\", \"label\": 456, \"url\": \"https://example.com\"}"
+      "]}");
+  ASSERT_FALSE(err_recursive_nested.ok());
+  ASSERT_EQ(err_recursive_nested.error().message, "Expected string at json.children[0].label");
+}rr_recursive_nested.error().message, "Expected string at json.children[0].label");
 }
 
 }  // namespace
@@ -2685,6 +3001,9 @@ void TestRuntimeLogic() {
   TestIndirect();
   TestMustInit();
   TestPageNodeVisit();
+  TestUserDefinedEnums();
+  TestUserDefinedStructs();
+  TestUserDefinedDiscriminatedUnionPageNode();
 }
 
 int main() {

@@ -643,7 +643,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1053,7 +1053,7 @@ function writeMethodImplsForUnion(
         `    return JsonNode("${member.value}");`,
       );
     }
-    lines.push("  }");
+    lines.push("  }", '  return JsonNode("never");');
   } else {
     lines.push(
       ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
@@ -1108,7 +1108,12 @@ function writeMethodImplsForUnion(
         "   out = std::move(v);",
       );
     }
-    lines.push("  }", "  return status;");
+    lines.push(
+      "  } else {",
+      '   return context.MakeParseError("Unknown discriminant value");',
+      "  }",
+      "  return status;",
+    );
   }
   lines.push(
     " }", // ParseValueImpl
