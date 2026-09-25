@@ -527,6 +527,57 @@ ParseResult<T> ParseJsonNode(std::string_view json) {
   }
 }
 
+// A heap-allocated value wrapper providing deep-copy value semantics.
+template <typename T>
+class indirect {
+ public:
+  // Constructs an indirect wrapper containing a default-constructed or moved value of type T.
+  indirect(T value = T()) : ptr_(std::make_unique<T>(std::move(value))) {}
+
+  // Deep-copies the value from other.
+  indirect(const indirect& other) : ptr_(std::make_unique<T>(*other.ptr_)) {}
+  indirect(indirect&&) = default;
+
+  ~indirect() = default;
+
+  // Deep-copies the value from other.
+  indirect& operator=(const indirect& other) {
+    if (&other != this) {
+      ptr_ = std::make_unique<T>(*other.ptr_);
+    }
+    return *this;
+  }
+  indirect& operator=(indirect&&) = default;
+
+  // Accesses the underlying value.
+  const T& operator*() const& { return *ptr_; }
+  T& operator*() & { return *ptr_; }
+  T&& operator*() && { return std::move(*ptr_); }
+
+  // Accesses members of the underlying value.
+  const T* operator->() const { return ptr_.get(); }
+  T* operator->() { return ptr_.get(); }
+
+ private:
+  std::unique_ptr<T> ptr_;
+};
+
+// A wrapper that requires explicit initialization and enforces move-only consumption.
+template <typename T>
+class must_init {
+ public:
+  using value_type = T;
+
+  template <typename Value>
+  must_init(Value value) : value_(std::move(value)) {}
+
+  T operator*() && { return std::move(value_); }
+  T operator*() const& = delete;
+
+ private:
+  T value_;
+};
+
 namespace internal {
 
 class ToonFormatter {
@@ -2030,48 +2081,6 @@ class JsonParser {
     }
     return JsonNode(std::move(entries));
   }
-};
-
-template <typename T>
-class box {
- public:
-  box(T value = T()) : ptr_(std::make_unique<T>(std::move(value))) {}
-  box(const box& other) : ptr_(*other) {}
-  box(box&&) = default;
-
-  ~box() = default;
-
-  box& operator=(const box& other) {
-    if (other != this) {
-      ptr_ = std::make_unique<T>(*other);
-    }
-    return *this;
-  }
-  box& operator=(box&&) = default;
-
-  const T& operator*() const& { return *ptr_; }
-  T& operator*() & { return *ptr_; }
-  T&& operator*() && { return *ptr_; }
-
- private:
-  std::unique_ptr<T> ptr_;
-};
-
-template <typename T>
-class must_init {
- public:
-  using value_type = T;
-
-  template <typename Value>
-  must_init(Value value) {
-    value_ = std::move(value);
-  }
-
-  T operator*() && { return std::move(value_); }
-  T operator*() const& = delete;
-
- private:
-  T value_;
 };
 
 class StructParser {

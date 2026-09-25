@@ -892,7 +892,7 @@ function writeTypepromptUnion(
         "  using variant_type = std::variant<",
       );
       for (const memberType of memberTypes) {
-        lines.push(`      internal::box<${memberType}>,`);
+        lines.push(`      indirect<${memberType}>,`);
       }
       lines.push(lines.pop()!.slice(0, -1).concat(">;"), "");
       const firstMember = members.first;
@@ -954,7 +954,7 @@ function writeTypepromptUnion(
             `  // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
             `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
             `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
-            `  internal::box<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
+            `  indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
         }

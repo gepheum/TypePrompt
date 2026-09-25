@@ -2403,6 +2403,75 @@ void TestUnions() {
   ASSERT_EQ(not_obj_bool_res.error().message, "Expected object");
 }
 
+void TestIndirect() {
+  using typeprompt::indirect;
+
+  // Default construction
+  indirect<int> ind_default;
+  ASSERT_EQ(*ind_default, 0);
+
+  // Value construction
+  indirect<std::string> ind_str("hello");
+  ASSERT_EQ(*ind_str, "hello");
+  ASSERT_EQ(ind_str->length(), 5);
+
+  // Const accessors
+  const indirect<std::string> const_ind("constant");
+  ASSERT_EQ(*const_ind, "constant");
+  ASSERT_EQ(const_ind->size(), 8);
+
+  // Mutable dereference
+  *ind_str = "modified";
+  ASSERT_EQ(*ind_str, "modified");
+
+  // Copy construction (deep copy)
+  indirect<std::string> ind_copy(ind_str);
+  ASSERT_EQ(*ind_copy, "modified");
+  *ind_copy = "world";
+  ASSERT_EQ(*ind_str, "modified");
+  ASSERT_EQ(*ind_copy, "world");
+
+  // Copy assignment (deep copy & self-assignment)
+  indirect<std::string> ind_assigned;
+  ind_assigned = ind_copy;
+  ASSERT_EQ(*ind_assigned, "world");
+  ind_assigned = ind_assigned;
+  ASSERT_EQ(*ind_assigned, "world");
+
+  // Move construction
+  indirect<std::string> ind_moved(std::move(ind_str));
+  ASSERT_EQ(*ind_moved, "modified");
+
+  // Move assignment
+  indirect<std::string> ind_move_assigned;
+  ind_move_assigned = std::move(ind_copy);
+  ASSERT_EQ(*ind_move_assigned, "world");
+
+  // Rvalue dereference
+  std::string val = *std::move(ind_moved);
+  ASSERT_EQ(val, "modified");
+}
+
+void TestMustInit() {
+  using typeprompt::must_init;
+
+  // Initializing with value
+  must_init<int> mi_int(42);
+  static_assert(std::is_same_v<typename must_init<int>::value_type, int>);
+  int val_int = *std::move(mi_int);
+  ASSERT_EQ(val_int, 42);
+
+  // Initializing with string
+  must_init<std::string> mi_str("test_init");
+  std::string val_str = *std::move(mi_str);
+  ASSERT_EQ(val_str, "test_init");
+
+  // Initializing with move
+  std::string orig = "movable";
+  must_init<std::string> mi_moved(std::move(orig));
+  ASSERT_EQ(*std::move(mi_moved), "movable");
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -2466,6 +2535,8 @@ void TestRuntimeLogic() {
   TestParseJsonNodeSingleArgOverloads();
   TestStructParser();
   TestUnions();
+  TestIndirect();
+  TestMustInit();
 }
 
 int main() {
