@@ -886,31 +886,34 @@ function writeTypepromptUnion(
       const memberTypes = Object.values(members.members).map((member) =>
         writeType(member.resolved, schema, options),
       );
-      lines.push(`struct ${typeCName} {`);
-      lines.push(" public:");
-      lines.push("  using variant_type = std::variant<");
+      lines.push(
+        `struct ${typeCName} {`,
+        " public:",
+        "  using variant_type = std::variant<",
+      );
       for (const memberType of memberTypes) {
         lines.push(`      internal::box<${memberType}>,`);
       }
-      lines.push(lines.pop()!.slice(0, -1).concat(">;"));
-      lines.push("");
+      lines.push(lines.pop()!.slice(0, -1).concat(">;"), "");
       const firstMember = members.first;
       const firstType = writeType(firstMember, schema, options);
-      lines.push(`  ${typeCName}() : data_(${firstType}()) {}`);
-      lines.push("  // Expects one of:");
+      lines.push(
+        `  ${typeCName}() : data_(${firstType}()) {}`,
+        "  // Expects one of:",
+      );
       for (const member of memberTypes) {
         lines.push(`  //   - a ${member} rvalue`);
       }
       lines.push(
         `  ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
+        "",
+        `  ${typeCName}(const ${typeCName}&) = default;`,
+        `  ${typeCName}(${typeCName}&&) = default;`,
+        "",
+        `  ${typeCName}& operator=(const ${typeCName}&) = default;`,
+        `  ${typeCName}& operator=(${typeCName}&&) = default;`,
+        "",
       );
-      lines.push("");
-      lines.push(`  ${typeCName}(const ${typeCName}&) = default;`);
-      lines.push(`  ${typeCName}(${typeCName}&&) = default;`);
-      lines.push("");
-      lines.push(`  ${typeCName}& operator=(const ${typeCName}&) = default;`);
-      lines.push(`  ${typeCName}& operator=(${typeCName}&&) = default;`);
-      lines.push("");
       const discriminatorCName = toCName(toSnakeCase(discriminator));
       if (members.discriminants.type === "string") {
         const discriminants = Object.values(members.discriminants.values);
@@ -919,23 +922,22 @@ function writeTypepromptUnion(
           const cName = toCName("k".concat(toPascalCase(discriminant.value)));
           lines.push(`    ${cName},`);
         }
-        lines.push("  };");
-        lines.push(`  ${discriminatorCName} ${discriminatorCName}() const {`);
         lines.push(
+          "  };",
+          `  ${discriminatorCName} ${discriminatorCName}() const {`,
           `    return static_cast<enum ${discriminatorCName}>(data_.index());`,
+          "  };",
         );
-        lines.push("  };");
       } else {
         const firstDiscriminant: boolean =
           members.discriminants.values[0]!.value;
-        lines.push(`  bool ${discriminatorCName}() const {`);
-        lines.push(`    return data_.index() == ${firstDiscriminant ? 1 : 0};`);
-        lines.push("  };");
+        lines.push(
+          `  bool ${discriminatorCName}() const {`,
+          `    return data_.index() == ${firstDiscriminant ? 1 : 0};`,
+          "  };",
+        );
       }
-      lines.push("");
-      lines.push(" private:");
-      lines.push("  variant_type data_;");
-      lines.push("};"); // struct
+      lines.push("", " private:", "  variant_type data_;", "};"); // struct
     }
   }
   return lines.join("\n");
