@@ -628,77 +628,6 @@ function writeUserDefinedDatatypes(
 //   };
 // }
 
-// function writeExecuteToolCall(
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { tools } = compilationResult;
-//   const toolList = Object.values(tools);
-
-//   const lines = [
-//     "Future<ToolCallResponse> _executeToolCall(",
-//     "ToolCall toolCall,",
-//     "String namespace,",
-//     "Object executor,",
-//     ") async {",
-//     "var stringifiedOutput = '';",
-//     "try {",
-//     'switch ("$namespace:${toolCall.toolName}") {',
-//   ];
-
-//   for (const tool of toolList) {
-//     const toolId = getId(tool.tool);
-//     const {
-//       interfaceName,
-//       methodName,
-//       inputTypeNode,
-//       outputTypeNode,
-//       options,
-//     } = getToolInfo(tool, compilationResult);
-
-//     const inputFromJson = writeFromJsonExpr(
-//       inputTypeNode,
-//       "jsonDecode(toolCall.stringifiedInput)",
-//       tool.schema,
-//       options,
-//     );
-//     const outputToJson = writeToJsonExpr(
-//       outputTypeNode,
-//       "rawOutput",
-//       tool.schema,
-//       options,
-//     );
-
-//     lines.push(
-//       `case "${toolId}": {`,
-//       `if (executor is! ${interfaceName}) break;`,
-//       `final input = ${inputFromJson};`,
-//       `final rawOutput = await executor.${methodName}(input);`,
-//       `final json = ${outputToJson};`,
-//       "stringifiedOutput = jsonEncode(json);",
-//       "break;",
-//       "}",
-//     );
-//   }
-
-//   lines.push(
-//     "default: {",
-//     "break;",
-//     "}",
-//     "}",
-//     "} catch (e) {",
-//     'final callInfo = \'{"callId": "${toolCall.callId}", "toolName": "${toolCall.toolName}"}\';',
-//     "throw Exception('Tool call failed: $callInfo — $e');",
-//     "}",
-//     "if (stringifiedOutput.isEmpty) {",
-//     'throw ArgumentError("Tool not found: ${toolCall.toolName}");',
-//     "}",
-//     "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput);",
-//     "}",
-//   );
-
-//   return lines.join("\n");
-// }
-
 type WriteSchemaOptions = {
   readonly typePrefix: string;
   readonly sharedTypePrefix?: string;
@@ -714,7 +643,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
