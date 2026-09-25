@@ -417,51 +417,95 @@ JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map) {
   return JsonNode(std::move(entries));
 }
 
-inline ParseStatus ParseJsonNode(const JsonNode& node, JsonNode& out) {
+// Path within a JSON object. Example: 'json.foos[10].bar'
+class JsonPath {
+ public:
+  virtual ~JsonPath() = default;
+  virtual std::string ToString() const = 0;
+  ParseError MakeParseError(std::string_view message) const {
+    return ParseError(std::format("{} at {}", message, ToString()));
+  }
+};
+
+namespace internal {
+
+class RootJsonPath : public JsonPath {
+ public:
+  std::string ToString() const override { return "json"; }
+};
+
+class AtFieldJsonPath : public JsonPath {
+ public:
+  AtFieldJsonPath(const JsonPath* parent, std::string_view name)
+      : parent_(*parent), field_name_(name) {}
+  std::string ToString() const override {
+    return std::format("{}.{}", parent_.ToString(), field_name_);
+  }
+
+ private:
+  const JsonPath& parent_;
+  const std::string_view field_name_;
+};
+
+class AtIndexJsonPath : public JsonPath {
+ public:
+  AtIndexJsonPath(const JsonPath* parent, size_t index) : parent_(*parent), index_(index) {}
+  std::string ToString() const override {
+    return std::format("{}[{}]", parent_.ToString(), index_);
+  }
+
+ private:
+  const JsonPath& parent_;
+  const size_t index_;
+};
+
+}  // namespace internal
+
+inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, JsonNode& out) {
   out = node;
   return kOkStatus;
 }
 
-inline ParseStatus ParseJsonNode(const JsonNode& node, bool& out) {
+inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, bool& out) {
   if (node.type() != JsonNode::Type::kBool) {
-    return ParseError{"Expected boolean"};
+    return context.MakeParseError("Expected boolean");
   }
   out = node.bool_value();
   return kOkStatus;
 }
 
-inline ParseStatus ParseJsonNode(const JsonNode& node, int& out) {
+inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, int& out) {
   if (node.type() != JsonNode::Type::kNumber) {
-    return ParseError{"Expected number"};
+    return context.MakeParseError("Expected number");
   }
   out = static_cast<int>(node.number_value());
   return kOkStatus;
 }
 
-inline ParseStatus ParseJsonNode(const JsonNode& node, double& out) {
+inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, double& out) {
   if (node.type() != JsonNode::Type::kNumber) {
-    return ParseError{"Expected number"};
+    return context.MakeParseError("Expected number");
   }
   out = node.number_value();
   return kOkStatus;
 }
 
-inline ParseStatus ParseJsonNode(const JsonNode& node, std::string& out) {
+inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::string& out) {
   if (node.type() != JsonNode::Type::kString) {
-    return ParseError{"Expected string"};
+    return context.MakeParseError("Expected string");
   }
   out = node.string_value();
   return kOkStatus;
 }
 
 template <typename T>
-ParseStatus ParseJsonNode(const JsonNode& node, std::optional<T>& out) {
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out) {
   if (node.type() == JsonNode::Type::kNull) {
     out = std::nullopt;
     return kOkStatus;
   }
   T val{};
-  ParseStatus status = ParseJsonNode(node, val);
+  ParseStatus status = ParseValue(node, context, val);
   if (!status.ok()) {
     return status;
   }
@@ -470,16 +514,17 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::optional<T>& out) {
 }
 
 template <typename T>
-ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out) {
   if (node.type() != JsonNode::Type::kArray) {
-    return ParseError{"Expected array"};
+    return context.MakeParseError("Expected array");
   }
   const auto& arr = node.array_value();
   out.clear();
   out.reserve(arr.size());
-  for (const auto& item : arr) {
+  for (size_t i = 0; i < arr.size(); ++i) {
+    internal::AtIndexJsonPath item_context(&context, i);
     T val{};
-    const ParseStatus status = ParseJsonNode(item, val);
+    const ParseStatus status = ParseValue(arr[i], item_context, val);
     if (!status.ok()) {
       return status;
     }
@@ -489,16 +534,18 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::vector<T>& out) {
 }
 
 template <typename T>
-ParseStatus ParseJsonNode(const JsonNode& node, std::unordered_map<std::string, T>& out) {
+ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
+                       std::unordered_map<std::string, T>& out) {
   if (node.type() != JsonNode::Type::kObject) {
-    return ParseError{"Expected object"};
+    return context.MakeParseError("Expected object");
   }
   const JsonNode::Object& obj = node.object_value();
   out.clear();
   out.reserve(obj.size());
   for (const auto& [key, val_node] : obj) {
+    internal::AtFieldJsonPath field_context(&context, key);
     T val{};
-    const ParseStatus status = ParseJsonNode(val_node, val);
+    const ParseStatus status = ParseValue(val_node, field_context, val);
     if (!status.ok()) {
       return status;
     }
@@ -508,9 +555,10 @@ ParseStatus ParseJsonNode(const JsonNode& node, std::unordered_map<std::string, 
 }
 
 template <typename T>
-ParseResult<T> ParseJsonNode(const JsonNode& node) {
+ParseResult<T> Parse(const JsonNode& node) {
+  internal::RootJsonPath context;
   T result{};
-  ParseStatus status = ParseJsonNode(node, result);
+  ParseStatus status = ParseValue(node, context, result);
   if (status.ok()) {
     return std::move(result);
   } else {
@@ -519,10 +567,10 @@ ParseResult<T> ParseJsonNode(const JsonNode& node) {
 }
 
 template <typename T>
-ParseResult<T> ParseJsonNode(std::string_view json) {
+ParseResult<T> ParseJson(std::string_view json) {
   ParseResult<JsonNode> node_result = JsonNode::ParseJson(json);
   if (node_result.ok()) {
-    return ParseJsonNode<T>(*node_result);
+    return Parse<T>(*node_result);
   } else {
     return std::move(node_result).error();
   }
@@ -2084,49 +2132,11 @@ class JsonParser {
   }
 };
 
-// Path within a JSON object. Example: 'json.foos[10].bar'
-class JsonPath {
- public:
-  virtual ~JsonPath() = default;
-  virtual std::string ToString() const = 0;
-  ParseError MakeParseError(std::string_view message) const {
-    return ParseError(std::format("{} at {}", message, ToString()));
-  }
-};
-
-class RootJsonPath : public JsonPath {
- public:
-  std::string ToString() const override { return "json"; }
-};
-
-class AtFieldJsonPath : public JsonPath {
- public:
-  AtFieldJsonPath(const JsonPath* parent, std::string_view name)
-      : parent_(*parent), field_name_(name) {}
-  std::string ToString() const override {
-    return std::format("{}.{}", parent_.ToString(), field_name_);
-  }
-
- private:
-  const JsonPath& parent_;
-  const std::string_view field_name_;
-};
-
-class AtIndexJsonPath : public JsonPath {
- public:
-  AtIndexJsonPath(const JsonPath* parent, size_t index) : parent_(*parent), index_(index) {}
-  std::string ToString() const override { return std::format("{}.{}", parent_.ToString(), index_); }
-
- private:
-  const JsonPath& parent_;
-  const size_t index_;
-};
-
 class StructParser {
  public:
-  explicit StructParser(const JsonNode* node) {
+  explicit StructParser(const JsonNode* node, const JsonPath& context) : context_(context) {
     if (node->type() != JsonNode::Type::kObject) {
-      status_ = ParseError("Expected object");
+      status_ = context_.MakeParseError("Expected object");
       return;
     }
     const auto& object = node->object_value();
@@ -2156,6 +2166,7 @@ class StructParser {
   ParseStatus status() const& = delete;
 
  private:
+  const JsonPath& context_;
   std::vector<const std::pair<std::string, JsonNode>*> sorted_entries_;
   size_t index_ = 0;
   ParseStatus status_ = kOkStatus;
@@ -2168,7 +2179,8 @@ class StructParser {
       const int cmp_result = key.compare(entry.first);
       if (cmp_result == 0) {
         ++index_;
-        status_ = ParseJsonNode(entry.second, out);
+        AtFieldJsonPath field_context(&context_, key);
+        status_ = ParseValue(entry.second, field_context, out);
         return;
       } else if (cmp_result < 0) {
         // Current entry is greater than key
@@ -2181,7 +2193,7 @@ class StructParser {
     if (optional) {
       out = T{};
     } else {
-      status_ = ParseError(std::format("Missing key: {}", key));
+      status_ = context_.MakeParseError(std::format("Missing key: {}", key));
     }
   }
 };

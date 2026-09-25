@@ -643,7 +643,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -695,7 +695,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
       "",
       "",
       `inline JsonNode ToJsonNode(const ${typeCName}&);`,
-      `inline ParseStatus ParseJsonNode(const JsonNode&, ${typeCName}&);`,
+      `inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, ${typeCName}&);`,
       "",
       "",
     );
@@ -979,7 +979,7 @@ function writeMethodImplsForInterface(
     "",
   );
 
-  // ToJsonNode() and ParseJsonNode()
+  // ToJsonNode() and ParseValue()
   lines.push(
     "namespace __internal {",
     `struct ${typeCName}Serializer {`,
@@ -1002,8 +1002,8 @@ function writeMethodImplsForInterface(
   lines.push(
     "  });", // return JsonNode({...});
     " }", // ToJsonNodeImpl
-    ` static ParseStatus ParseJsonNodeImpl(const JsonNode& node, ${typeCName}& out) {`,
-    "  internal::StructParser parser(&node);",
+    ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+    "  internal::StructParser parser(&node, context);",
   );
   for (const field of fields) {
     const type = resolveType(field.type, schema);
@@ -1015,7 +1015,7 @@ function writeMethodImplsForInterface(
   }
   lines.push(
     "  return std::move(parser).status();",
-    " }", // ParseJsonNodeImpl
+    " }", // ParseValueImpl
     "};", // class Serializer
     "}  // namespace __internal",
   );
@@ -1247,10 +1247,12 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
 
   // RESERVED NAMES
   "JsonNode",
-  "ParseJsonNode",
+  "JsonPath",
   "ParseStatus",
+  "ParseValue",
   "ToJsonNode",
   "indirect",
+  "internal",
   "must_init",
   "std",
 ]);
