@@ -704,7 +704,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const { rootNamespace, typePrefix } = options;
   const lines: string[] = [];
 
-  // First, declare all the types in the schema.
+  // 1. Declare all the types in the schema.
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const cName = makeNameFromHint(namingHint);
     const what =
@@ -716,7 +716,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   }
   lines.push("");
 
-  // Second, define all the types in the schema.
+  // 2. Define all the types in the schema.
   // Make sure define each type *after* all its dependencies have been defined.
   const definedTypes = new Set<Interface | Union>();
   const defineType = (type: FieldType): void => {
@@ -764,6 +764,24 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     defineType(type);
   }
 
+  // 3. Write all the complex method implementations.
+  for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
+    const typeCName = makeNameFromHint(namingHint);
+    switch (type.kind) {
+      case "interface": {
+        lines.push(
+          writeMethodImplsForInterface(type, typeCName, schema, options),
+        );
+        break;
+      }
+      case "union": {
+        lines.push(writeMethodImplsForUnion(type, typeCName, schema, options));
+        break;
+      }
+    }
+    lines.push("", "");
+  }
+
   return lines.join("\n");
 }
 
@@ -783,14 +801,14 @@ function writeTypepromptInterface(
       "//",
       "// To construct a value:",
       `//   ${typeCName} v = ${typeCName}::whole{`,
-      `//     .${fieldCName}: ...,`,
-      "//     ...",
+      `//       .${fieldCName}: ...,`,
+      "//       ...",
       "//   };",
       "//",
       "// Or with 'auto':",
       `//   auto v = *${typeCName}::whole{`,
-      `//     .${fieldCName}: ...,`,
-      "//     ...",
+      `//       .${fieldCName}: ...,`,
+      "//       ...",
       "//   };",
       "//",
       "// Using '::whole' forces you to initialize all the fields.",
@@ -821,7 +839,7 @@ function writeTypepromptInterface(
   }
   lines.push(
     "",
-    `  operator ${typeCName}() &&;`,
+    `  inline operator ${typeCName}() &&;`,
     `  operator ${typeCName}() const& = delete;`,
     "",
     `  ${typeCName} operator*() && { return std::move(*this); }`,
@@ -990,6 +1008,45 @@ function writeTypepromptUnion(
       );
     }
   }
+  return lines.join("\n");
+}
+
+function writeMethodImplsForInterface(
+  type: Interface,
+  typeCName: string,
+  schema: Schema,
+  _options: WriteSchemaOptions,
+): string {
+  const fields = Object.values(type.fields);
+
+  const lines: string[] = [];
+
+  // whole::operator()
+  lines.push(
+    `inline ${typeCName}::whole::operator ${typeCName}() && {`,
+    ` return ${typeCName}{`,
+  );
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    if (isLiteralType(type)) continue;
+    const fieldCName = toCName(toSnakeCase(field.name.text));
+    lines.push(`   *std::move(${fieldCName}),`);
+  }
+  lines.push(
+    " };", // return
+    "}", // whole::operator
+  );
+
+  return lines.join("\n");
+}
+
+function writeMethodImplsForUnion(
+  _type: Union,
+  _typeCName: string,
+  _schema: Schema,
+  _options: WriteSchemaOptions,
+): string {
+  const lines: string[] = [];
   return lines.join("\n");
 }
 
