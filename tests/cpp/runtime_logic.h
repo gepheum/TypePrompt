@@ -417,6 +417,26 @@ JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map) {
   return JsonNode(std::move(entries));
 }
 
+template <typename T>
+std::string ToJson(const T& value) {
+  return ToJsonNode(value).ToJson();
+}
+
+template <typename T>
+std::string ToJsonWithIndent(const T& value) {
+  return ToJsonNode(value).ToJsonWithIndent();
+}
+
+template <typename T>
+std::string ToToon(const T& value) {
+  return ToJsonNode(value).ToToon();
+}
+
+template <typename T>
+std::string ToYaml(const T& value) {
+  return ToJsonNode(value).ToYaml();
+}
+
 // Path within a JSON object. Example: 'json.foos[10].bar'
 class JsonPath {
  public:
@@ -2201,35 +2221,38 @@ class StructParser {
 class Unions {
  public:
   static ParseResult<std::string> FindStringDiscriminant(const JsonNode& json_node,
+                                                         const JsonPath& context,
                                                          std::string_view discriminator) {
     if (json_node.type() != JsonNode::Type::kObject) {
-      return ParseError{"Expected object"};
+      return context.MakeParseError("Expected object");
     }
     for (const auto& [k, v] : json_node.object_value()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kString) {
-          return ParseError{"Expected string"};
+          AtFieldJsonPath field_context(&context, discriminator);
+          return field_context.MakeParseError("Expected string");
         }
         return v.string_value();
       }
     }
-    return ParseError(std::format("Missing key: {}", discriminator));
+    return context.MakeParseError(std::format("Missing key: {}", discriminator));
   }
 
-  static ParseResult<bool> FindBoolDiscriminant(const JsonNode& json_node,
+  static ParseResult<bool> FindBoolDiscriminant(const JsonNode& json_node, const JsonPath& context,
                                                 std::string_view discriminator) {
     if (json_node.type() != JsonNode::Type::kObject) {
-      return ParseError{"Expected object"};
+      return context.MakeParseError("Expected object");
     }
     for (const auto& [k, v] : json_node.object_value()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kBool) {
-          return ParseError{"Expected boolean"};
+          AtFieldJsonPath field_context(&context, discriminator);
+          return field_context.MakeParseError("Expected boolean");
         }
         return v.bool_value();
       }
     }
-    return ParseError(std::format("Missing key: {}", discriminator));
+    return context.MakeParseError(std::format("Missing key: {}", discriminator));
   }
 };
 

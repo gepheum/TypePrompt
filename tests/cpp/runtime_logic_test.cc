@@ -2043,6 +2043,31 @@ void TestToJsonNodeOverloads() {
   ASSERT_EQ(map_ints_res.object_value().size(), 2);
 }
 
+void TestTopLevelSerializers() {
+  using typeprompt::ToJson;
+  using typeprompt::ToJsonWithIndent;
+  using typeprompt::ToToon;
+  using typeprompt::ToYaml;
+
+  // 1. Primitive types
+  ASSERT_EQ(ToJson(42), std::to_string(42.0));
+  ASSERT_EQ(ToJson(true), "true");
+  ASSERT_EQ(ToJson(std::string("hello")), "\"hello\"");
+
+  // 2. Vector
+  std::vector<int> vec = {1, 2, 3};
+  ASSERT_EQ(ToJson(vec), "[" + std::to_string(1.0) + "," + std::to_string(2.0) + "," +
+                             std::to_string(3.0) + "]");
+
+  // 3. Custom ADL type
+  test_custom_adl::Point pt{1.0, 2.0};
+  ASSERT_EQ(ToJson(pt), "{\"x\": " + std::to_string(1.0) + ",\"y\": " + std::to_string(2.0) + "}");
+  ASSERT_EQ(ToJsonWithIndent(pt),
+            "{\n  \"x\": " + std::to_string(1.0) + ",\n  \"y\": " + std::to_string(2.0) + "\n}");
+  ASSERT_EQ(ToToon(pt), "x: 1\ny: 2");
+  ASSERT_EQ(ToYaml(pt), "x: 1\n\"y\": 2");
+}
+
 void TestParseValueOverloads() {
   using typeprompt::ParseValue;
   typeprompt::internal::RootJsonPath context;
@@ -2416,14 +2441,17 @@ void TestJsonPathErrorFormatting() {
 }
 
 void TestUnions() {
+  using typeprompt::internal::RootJsonPath;
   using typeprompt::internal::Unions;
+
+  RootJsonPath context;
 
   // 1. FindStringDiscriminant - success
   JsonNode valid_str_disc(JsonNode::Object{
       {"type", JsonNode("circle")},
       {"radius", JsonNode(5.0)},
   });
-  auto str_disc_res = Unions::FindStringDiscriminant(valid_str_disc, "type");
+  auto str_disc_res = Unions::FindStringDiscriminant(valid_str_disc, context, "type");
   ASSERT_TRUE(str_disc_res.ok());
   ASSERT_EQ(*str_disc_res, "circle");
 
@@ -2431,33 +2459,33 @@ void TestUnions() {
   JsonNode num_str_disc(JsonNode::Object{
       {"type", JsonNode(123.0)},
   });
-  auto num_disc_res = Unions::FindStringDiscriminant(num_str_disc, "type");
+  auto num_disc_res = Unions::FindStringDiscriminant(num_str_disc, context, "type");
   ASSERT_FALSE(num_disc_res.ok());
-  ASSERT_EQ(num_disc_res.error().message, "Expected string");
+  ASSERT_EQ(num_disc_res.error().message, "Expected string at json.type");
 
   // 3. FindStringDiscriminant - missing key
-  auto missing_str_res = Unions::FindStringDiscriminant(valid_str_disc, "kind");
+  auto missing_str_res = Unions::FindStringDiscriminant(valid_str_disc, context, "kind");
   ASSERT_FALSE(missing_str_res.ok());
-  ASSERT_EQ(missing_str_res.error().message, "Missing key: kind");
+  ASSERT_EQ(missing_str_res.error().message, "Missing key: kind at json");
 
   // 4. FindStringDiscriminant - not an object
-  auto not_obj_str_res = Unions::FindStringDiscriminant(JsonNode("string"), "type");
+  auto not_obj_str_res = Unions::FindStringDiscriminant(JsonNode("string"), context, "type");
   ASSERT_FALSE(not_obj_str_res.ok());
-  ASSERT_EQ(not_obj_str_res.error().message, "Expected object");
+  ASSERT_EQ(not_obj_str_res.error().message, "Expected object at json");
 
   // 5. FindBoolDiscriminant - success (true and false)
   JsonNode valid_bool_disc(JsonNode::Object{
       {"active", JsonNode(true)},
       {"score", JsonNode(100.0)},
   });
-  auto bool_disc_res = Unions::FindBoolDiscriminant(valid_bool_disc, "active");
+  auto bool_disc_res = Unions::FindBoolDiscriminant(valid_bool_disc, context, "active");
   ASSERT_TRUE(bool_disc_res.ok());
   ASSERT_EQ(*bool_disc_res, true);
 
   JsonNode valid_bool_false(JsonNode::Object{
       {"active", JsonNode(false)},
   });
-  auto bool_false_res = Unions::FindBoolDiscriminant(valid_bool_false, "active");
+  auto bool_false_res = Unions::FindBoolDiscriminant(valid_bool_false, context, "active");
   ASSERT_TRUE(bool_false_res.ok());
   ASSERT_EQ(*bool_false_res, false);
 
@@ -2465,19 +2493,19 @@ void TestUnions() {
   JsonNode str_bool_disc(JsonNode::Object{
       {"active", JsonNode("yes")},
   });
-  auto str_bool_res = Unions::FindBoolDiscriminant(str_bool_disc, "active");
+  auto str_bool_res = Unions::FindBoolDiscriminant(str_bool_disc, context, "active");
   ASSERT_FALSE(str_bool_res.ok());
-  ASSERT_EQ(str_bool_res.error().message, "Expected boolean");
+  ASSERT_EQ(str_bool_res.error().message, "Expected boolean at json.active");
 
   // 7. FindBoolDiscriminant - missing key
-  auto missing_bool_res = Unions::FindBoolDiscriminant(valid_bool_disc, "enabled");
+  auto missing_bool_res = Unions::FindBoolDiscriminant(valid_bool_disc, context, "enabled");
   ASSERT_FALSE(missing_bool_res.ok());
-  ASSERT_EQ(missing_bool_res.error().message, "Missing key: enabled");
+  ASSERT_EQ(missing_bool_res.error().message, "Missing key: enabled at json");
 
   // 8. FindBoolDiscriminant - not an object
-  auto not_obj_bool_res = Unions::FindBoolDiscriminant(JsonNode(true), "active");
+  auto not_obj_bool_res = Unions::FindBoolDiscriminant(JsonNode(true), context, "active");
   ASSERT_FALSE(not_obj_bool_res.ok());
-  ASSERT_EQ(not_obj_bool_res.error().message, "Expected object");
+  ASSERT_EQ(not_obj_bool_res.error().message, "Expected object at json");
 }
 
 void TestIndirect() {
@@ -2648,6 +2676,7 @@ void TestRuntimeLogic() {
   TestRobustnessAndEdgeCases();
   TestParseResultApi();
   TestToJsonNodeOverloads();
+  TestTopLevelSerializers();
   TestParseValueOverloads();
   TestParseSingleArgOverloads();
   TestStructParser();
