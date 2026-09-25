@@ -1178,7 +1178,7 @@ function makeNameFromHint(hint: NamingHint): string {
 // };
 
 function toCName(name: string): string {
-  return KEYWORDS.has(name) ? name.concat("_") : name;
+  return RESERVED_NAMES.has(name) ? name.concat("_") : name;
 }
 
 function commentify(doc: string, indent = ""): readonly string[] {
@@ -1206,7 +1206,8 @@ function scaleIndent(input: string): string {
   return input.replace(/^ +/gm, (match) => match.repeat(2));
 }
 
-const KEYWORDS: ReadonlySet<string> = new Set([
+const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  // KEYWORDS
   "alignas",
   "alignof",
   "and",
@@ -1304,4 +1305,9 @@ const KEYWORDS: ReadonlySet<string> = new Set([
   "while",
   "xor",
   "xor_eq",
+
+  // RESERVED NAMES
+  "indirect",
+  "must_init",
+  "std",
 ]);
