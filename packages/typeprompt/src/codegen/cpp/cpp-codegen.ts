@@ -918,8 +918,10 @@ function writeTypepromptUnion(
       if (discriminants.type === "string") {
         lines.push(`  enum class ${discriminatorCName} {`);
         for (const discriminant of Object.values(discriminants.values)) {
-          const cName = toCName("k".concat(toPascalCase(discriminant.value)));
-          lines.push(`    ${cName},`);
+          const constantCName = toCName(
+            "k".concat(toPascalCase(discriminant.value)),
+          );
+          lines.push(`    ${constantCName},`);
         }
         lines.push(
           "  };",
@@ -944,8 +946,12 @@ function writeTypepromptUnion(
             "_",
             toSnakeCase(discriminant.value),
           );
+          const constantCName = toCName(
+            "k".concat(toPascalCase(discriminant.value)),
+          );
           const type = memberTypes[i];
           lines.push(
+            `  // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
             `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
             `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             `  internal::box<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
