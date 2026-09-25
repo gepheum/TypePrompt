@@ -709,7 +709,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -986,7 +986,38 @@ function writeTypepromptUnion(
           );
         }
       }
-      lines.push(" private:", "  variant_type data_;", "};"); // struct
+      lines.push(
+        "  template <typename Visitor>",
+        "  decltype(auto) visit(Visitor&& visitor) const& {",
+        "    return std::visit(",
+        "        [&visitor](const auto& boxed) -> decltype(auto) {",
+        "          return visitor(*boxed);",
+        "        },",
+        "        data_);",
+        "  }",
+        "",
+        "  template <typename Visitor>",
+        "  decltype(auto) visit(Visitor&& visitor) & {",
+        "    return std::visit(",
+        "        [&visitor](auto& boxed) -> decltype(auto) {",
+        "          return visitor(*boxed);",
+        "        },",
+        "        data_);",
+        "  }",
+        "",
+        "  template <typename Visitor>",
+        "  decltype(auto) visit(Visitor&& visitor) && {",
+        "    return std::visit(",
+        "        [&visitor](auto&& boxed) -> decltype(auto) {",
+        "          return visitor(*std::forward<decltype(boxed)>(boxed));",
+        "        },",
+        "        std::move(data_));",
+        "  }",
+        "",
+        " private:",
+        "  variant_type data_;",
+        "};", // struct
+      );
     }
   }
   return lines.join("\n");

@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "gen/prompts_02.gen.h"
+
 #define ASSERT_EQ(actual, expected)                                              \
   do {                                                                           \
     if ((actual) != (expected)) {                                                \
@@ -2472,6 +2474,46 @@ void TestMustInit() {
   ASSERT_EQ(*std::move(mi_moved), "movable");
 }
 
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+void TestPageNodeVisit() {
+  using namespace typeprompt_02::schema::generate_page_tree;
+
+  PageNode_KindHeading heading{.level = PageNode_KindHeading_Level::kH1, .text = "Title"};
+  PageNode node = PageNode::variant_type(typeprompt_02::indirect<PageNode_KindHeading>(heading));
+
+  // Test const& visit
+  const PageNode& const_node = node;
+  std::string result = const_node.visit(overloaded{
+      [](const PageNode_KindHeading& h) -> std::string { return "heading: " + h.text; },
+      [](const PageNode_KindParagraph& p) -> std::string { return "paragraph: " + p.text; },
+      [](const PageNode_KindButton& b) -> std::string { return "button: " + b.label; },
+      [](const PageNode_KindSection& s) -> std::string { return "section"; },
+  });
+  ASSERT_EQ(result, "heading: Title");
+
+  // Test & (mutable) visit
+  node.visit(overloaded{
+      [](PageNode_KindHeading& h) { h.text = "Updated Title"; },
+      [](PageNode_KindParagraph&) {},
+      [](PageNode_KindButton&) {},
+      [](PageNode_KindSection&) {},
+  });
+  ASSERT_EQ(node.as_kind_heading().text, "Updated Title");
+
+  // Test && (rvalue) visit
+  std::string moved_text = std::move(node).visit(overloaded{
+      [](PageNode_KindHeading&& h) { return std::move(h.text); },
+      [](PageNode_KindParagraph&&) { return std::string(); },
+      [](PageNode_KindButton&&) { return std::string(); },
+      [](PageNode_KindSection&&) { return std::string(); },
+  });
+  ASSERT_EQ(moved_text, "Updated Title");
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -2537,6 +2579,7 @@ void TestRuntimeLogic() {
   TestUnions();
   TestIndirect();
   TestMustInit();
+  TestPageNodeVisit();
 }
 
 int main() {
