@@ -2089,14 +2089,14 @@ class JsonPath {
  public:
   virtual ~JsonPath() = default;
   virtual std::string ToString() const = 0;
+  ParseError MakeParseError(std::string_view message) const {
+    return ParseError(std::format("{} at {}", message, ToString()));
+  }
 };
 
 class RootJsonPath : public JsonPath {
  public:
   std::string ToString() const override { return "json"; }
-  ParseError MakeParseError(std::string_view message) {
-    return ParseError(std::format("{} at {}", message, ToString()));
-  }
 };
 
 class AtFieldJsonPath : public JsonPath {
