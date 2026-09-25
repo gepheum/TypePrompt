@@ -541,17 +541,18 @@ function writeUserDefinedDatatypes(
 
   // const metaType = anyTypes(metaSchema)
   //   ? writeType(
-  //     {
-  //       kind: "type-name",
-  //       name: { text: "Meta" },
-  //     },
-  //     metaSchema,
-  //     {
-  //       typePrefix: "meta::",
-  //       rootNamespace
-  //     },
-  //   )
+  //       {
+  //         kind: "type-name",
+  //         name: { text: "Meta" },
+  //       },
+  //       metaSchema,
+  //       {
+  //         typePrefix: "meta::",
+  //         rootNamespace,
+  //       },
+  //     )
   //   : "std::nullopt_t";
+  // lines.push(`using Meta = ${metaType};`);
 
   return lines.join("\n");
 }
@@ -642,7 +643,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1021,24 +1022,30 @@ function writeMethodImplsForInterface(
 }
 
 function writeMethodImplsForUnion(
-  _type: Union,
+  type: Union,
   typeCName: string,
-  _schema: Schema,
+  schema: Schema,
   options: WriteSchemaOptions,
 ): string {
   const { rootNamespace } = options;
-  const lines: string[] = [];
+  const members = schema.unionToMembers.get(type)!;
 
   // ToJsonNode() and ParseValue()
+  const lines = ["namespace __internal {", `struct ${typeCName}Serializer {`];
+  if (members.kind === "strings") {
+    lines.push(
+      ` static JsonNode ToJsonNodeImpl(${typeCName} input) {`,
+      "  switch (input) {",
+      "  }",
+    );
+  } else {
+    lines.push(
+      ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
+      `  using ::${rootNamespace}::ToJsonNode;`,
+      "  return input.visit([](const auto& v) { return ToJsonNode(v); });",
+    );
+  }
   lines.push(
-    "namespace __internal {",
-    `struct ${typeCName}Serializer {`,
-    ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
-    `  using ::${rootNamespace}::ToJsonNode;`,
-    "  return JsonNode(JsonNode::Object{",
-  );
-  lines.push(
-    "  });", // return JsonNode({...});
     " }", // ToJsonNodeImpl
     ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     "  internal::StructParser parser(&node, context);",
