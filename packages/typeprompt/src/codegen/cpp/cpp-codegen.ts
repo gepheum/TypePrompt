@@ -931,10 +931,9 @@ function writeTypepromptUnion(
         );
       } else {
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
+        const indexOfTrue = firstDiscriminant ? 0 : 1;
         lines.push(
-          `  bool ${discriminatorCName}() const {`,
-          `    return data_.index() == ${firstDiscriminant ? 0 : 1};`,
-          "  };",
+          `  bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
         );
       }
       lines.push("");
