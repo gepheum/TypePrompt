@@ -2612,7 +2612,12 @@ void TestPageNodeVisit() {
       [](PageNode_KindHeading&& h) { return std::move(h.text); },
       [](PageNode_KindParagraph&&) { return std::string(); },
       [](PageNode_KindButton&&) { return std::string(); },
-      [](PageNode_KindSectivoid TestUserDefinedEnums() {
+      [](PageNode_KindSection&&) { return std::string(); },
+  });
+  ASSERT_EQ(moved_text, "Updated Title");
+}
+
+void TestUserDefinedEnums() {
   using namespace typeprompt_02::schema::meta;
   using namespace typeprompt_02::schema::triage_ticket;
   using namespace typeprompt_02::schema::generate_page_tree;
@@ -2705,11 +2710,12 @@ void TestUserDefinedStructs() {
 
   // Serialization & Deserialization
   typeprompt_02::JsonNode m1_node = ToJsonNode(m1);
-  ASSERT_EQ(m1_node.type(), typeprompt_02::JsonNode::Type::kObject);
+  ASSERT_TRUE(m1_node.type() == typeprompt_02::JsonNode::Type::kObject);
   auto parsed_m1 = typeprompt_02::Parse<Meta>(m1_node);
   ASSERT_TRUE(parsed_m1.ok());
   ASSERT_TRUE(parsed_m1->model == Meta_Model::kGpt4o);
-  ASSERT_EQ(parsed_m1->temperature, 0.5);
+  ASSERT_TRUE(parsed_m1->temperature.has_value());
+  ASSERT_EQ(*parsed_m1->temperature, 0.5);
 
   auto parsed_m2_json = typeprompt_02::ParseJson<Meta>("{\"model\": \"gpt-4o-mini\"}");
   ASSERT_TRUE(parsed_m2_json.ok());
@@ -2752,6 +2758,8 @@ void TestUserDefinedStructs() {
   ASSERT_TRUE(parsed_prov->category == ProductCategory::kCompute);
   ASSERT_TRUE(parsed_prov->pricing.model == Pricing_Model::kPerMonth);
   ASSERT_EQ(parsed_prov->pricing.base_price, 49.99);
+  ASSERT_TRUE(parsed_prov->pricing.overage.has_value());
+  ASSERT_EQ(*parsed_prov->pricing.overage, 0.10);
   ASSERT_EQ(parsed_prov->benchmarks.size(), 2);
   ASSERT_EQ(parsed_prov->benchmarks[0].name, "Latency");
   ASSERT_EQ(parsed_prov->benchmarks[0].score, 15.2);
@@ -2786,7 +2794,9 @@ void TestUserDefinedStructs() {
       *typeprompt_02::schema::triage_ticket::Output::whole{
           .category = TicketCategory::kBilling,
           .urgency = Output_Urgency::kHigh,
-          .suggested_reply = "Here is your invoice.",
+          .summary = "Billing inquiry summary",
+          .suggested_actions = std::vector<std::string>{"Send invoice", "Follow up"},
+          .suggested_reply = std::optional<std::string>("Here is your invoice."),
       };
   typeprompt_02::JsonNode ticket_output_node = ToJsonNode(ticket_output);
   auto parsed_ticket_output =
@@ -2794,7 +2804,38 @@ void TestUserDefinedStructs() {
   ASSERT_TRUE(parsed_ticket_output.ok());
   ASSERT_TRUE(parsed_ticket_output->category == TicketCategory::kBilling);
   ASSERT_TRUE(parsed_ticket_output->urgency == Output_Urgency::kHigh);
-  ASSERT_EQ(parsed_ticket_output->suggested_reply, "Here is your invoice.");
+  ASSERT_EQ(parsed_ticket_output->summary, "Billing inquiry summary");
+  ASSERT_EQ(parsed_ticket_output->suggested_actions.size(), 2);
+  ASSERT_EQ(parsed_ticket_output->suggested_actions[0], "Send invoice");
+  ASSERT_TRUE(parsed_ticket_output->suggested_reply.has_value());
+  ASSERT_EQ(*parsed_ticket_output->suggested_reply, "Here is your invoice.");
+
+  // Top-level serialization formats test
+  ASSERT_EQ(typeprompt_02::ToJson(m2), "{\"model\": \"gpt-4o-mini\",\"temperature\": null}");
+  ASSERT_EQ(typeprompt_02::ToYaml(b1),
+            "name: Latency\n"
+            "score: 15.2\n"
+            "unit: ms");
+  ASSERT_EQ(typeprompt_02::ToToon(b1),
+            "name: Latency\n"
+            "score: 15.2\n"
+            "unit: ms");
+
+  // 4. Generate page tree Input
+  typeprompt_02::schema::generate_page_tree::Input page_input =
+      *typeprompt_02::schema::generate_page_tree::Input::whole{
+          .providers = std::vector<Provider>{provider},
+          .use_case = "Cloud hosting for microservices",
+          .audience = Input_Audience::kDeveloper,
+      };
+  typeprompt_02::JsonNode page_input_node = ToJsonNode(page_input);
+  auto parsed_page_input =
+      typeprompt_02::Parse<typeprompt_02::schema::generate_page_tree::Input>(page_input_node);
+  ASSERT_TRUE(parsed_page_input.ok());
+  ASSERT_EQ(parsed_page_input->providers.size(), 1);
+  ASSERT_EQ(parsed_page_input->providers[0].name, "AcmeCloud");
+  ASSERT_EQ(parsed_page_input->use_case, "Cloud hosting for microservices");
+  ASSERT_TRUE(parsed_page_input->audience == Input_Audience::kDeveloper);
 
   // 4. Error reporting with JsonPath context
   auto missing_field_err =
@@ -2827,48 +2868,55 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
   using namespace typeprompt_02::schema::generate_page_tree;
 
   // 1. Leaf node construction & properties
-  PageNode heading = *PageNode_KindHeading::whole{
-      .level = PageNode_KindHeading_Level::kH1,
-      .text = "Page Title",
-  };
+  PageNode heading = PageNode::variant_type(
+      typeprompt_02::indirect<PageNode_KindHeading>(*PageNode_KindHeading::whole{
+          .level = PageNode_KindHeading_Level::kH1,
+          .text = "Page Title",
+      }));
   ASSERT_TRUE(heading.kind() == PageNode::kind::kHeading);
   ASSERT_EQ(heading.as_kind_heading().text, "Page Title");
   ASSERT_TRUE(heading.as_kind_heading().level == PageNode_KindHeading_Level::kH1);
 
-  PageNode paragraph = *PageNode_KindParagraph::whole{
-      .text = "This is a paragraph of content.",
-  };
+  PageNode paragraph = PageNode::variant_type(
+      typeprompt_02::indirect<PageNode_KindParagraph>(*PageNode_KindParagraph::whole{
+          .text = "This is a paragraph of content.",
+      }));
   ASSERT_TRUE(paragraph.kind() == PageNode::kind::kParagraph);
   ASSERT_EQ(paragraph.as_kind_paragraph().text, "This is a paragraph of content.");
 
-  PageNode button = *PageNode_KindButton::whole{
-      .label = "Sign Up",
-      .url = "https://example.com/signup",
-  };
+  PageNode button = PageNode::variant_type(
+      typeprompt_02::indirect<PageNode_KindButton>(*PageNode_KindButton::whole{
+          .label = "Sign Up",
+          .url = "https://example.com/signup",
+      }));
   ASSERT_TRUE(button.kind() == PageNode::kind::kButton);
   ASSERT_EQ(button.as_kind_button().label, "Sign Up");
   ASSERT_EQ(button.as_kind_button().url, "https://example.com/signup");
 
   // 2. Recursive section containing heading, paragraph, button, and a nested subsection
-  PageNode subsection = *PageNode_KindSection::whole{
-      .title = std::optional<std::string>("Subsection"),
-      .children = std::vector<PageNode>{button},
-  };
+  PageNode subsection = PageNode::variant_type(
+      typeprompt_02::indirect<PageNode_KindSection>(*PageNode_KindSection::whole{
+          .title = std::optional<std::string>("Subsection"),
+          .children = std::vector<PageNode>{button},
+      }));
   ASSERT_TRUE(subsection.kind() == PageNode::kind::kSection);
-  ASSERT_EQ(subsection.as_kind_section().title, "Subsection");
+  ASSERT_TRUE(subsection.as_kind_section().title.has_value());
+  ASSERT_EQ(*subsection.as_kind_section().title, "Subsection");
   ASSERT_EQ(subsection.as_kind_section().children.size(), 1);
 
-  PageNode root_section = *PageNode_KindSection::whole{
-      .title = std::optional<std::string>("Main Section"),
-      .children = std::vector<PageNode>{heading, paragraph, subsection},
-  };
+  PageNode root_section = PageNode::variant_type(
+      typeprompt_02::indirect<PageNode_KindSection>(*PageNode_KindSection::whole{
+          .title = std::optional<std::string>("Main Section"),
+          .children = std::vector<PageNode>{heading, paragraph, subsection},
+      }));
 
   // 3. Serialization and Deserialization roundtrip
   typeprompt_02::JsonNode section_json = ToJsonNode(root_section);
   auto parsed_section = typeprompt_02::Parse<PageNode>(section_json);
   ASSERT_TRUE(parsed_section.ok());
   ASSERT_TRUE(parsed_section->kind() == PageNode::kind::kSection);
-  ASSERT_EQ(parsed_section->as_kind_section().title, "Main Section");
+  ASSERT_TRUE(parsed_section->as_kind_section().title.has_value());
+  ASSERT_EQ(*parsed_section->as_kind_section().title, "Main Section");
   ASSERT_EQ(parsed_section->as_kind_section().children.size(), 3);
 
   const auto& child0 = parsed_section->as_kind_section().children[0];
@@ -2882,7 +2930,8 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
 
   const auto& child2 = parsed_section->as_kind_section().children[2];
   ASSERT_TRUE(child2.kind() == PageNode::kind::kSection);
-  ASSERT_EQ(child2.as_kind_section().title, "Subsection");
+  ASSERT_TRUE(child2.as_kind_section().title.has_value());
+  ASSERT_EQ(*child2.as_kind_section().title, "Subsection");
   ASSERT_EQ(child2.as_kind_section().children.size(), 1);
   ASSERT_TRUE(child2.as_kind_section().children[0].kind() == PageNode::kind::kButton);
   ASSERT_EQ(child2.as_kind_section().children[0].as_kind_button().label, "Sign Up");
@@ -2919,8 +2968,8 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
   ASSERT_FALSE(err_unknown_kind.ok());
   ASSERT_EQ(err_unknown_kind.error().message, "Unknown discriminant value at json");
 
-  auto err_nested_field =
-      typeprompt_02::ParseJson<PageNode>("{\"kind\": \"heading\", \"level\": \"h1\", \"text\": 123}");
+  auto err_nested_field = typeprompt_02::ParseJson<PageNode>(
+      "{\"kind\": \"heading\", \"level\": \"h1\", \"text\": 123}");
   ASSERT_FALSE(err_nested_field.ok());
   ASSERT_EQ(err_nested_field.error().message, "Expected string at json.text");
 
@@ -2930,7 +2979,6 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
       "]}");
   ASSERT_FALSE(err_recursive_nested.ok());
   ASSERT_EQ(err_recursive_nested.error().message, "Expected string at json.children[0].label");
-}rr_recursive_nested.error().message, "Expected string at json.children[0].label");
 }
 
 }  // namespace

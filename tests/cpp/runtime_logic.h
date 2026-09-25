@@ -389,6 +389,7 @@ inline JsonNode ToJsonNode(const JsonNode& node) { return node; }
 inline JsonNode ToJsonNode(bool value) { return JsonNode(value); }
 inline JsonNode ToJsonNode(int value) { return JsonNode(value); }
 inline JsonNode ToJsonNode(double value) { return JsonNode(value); }
+inline JsonNode ToJsonNode(const char* value) { return JsonNode(value); }
 inline JsonNode ToJsonNode(std::string value) { return JsonNode(std::move(value)); }
 inline JsonNode ToJsonNode(std::string_view value) { return JsonNode(value); }
 

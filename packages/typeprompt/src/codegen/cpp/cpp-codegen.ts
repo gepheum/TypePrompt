@@ -643,7 +643,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1012,9 +1012,12 @@ function writeMethodImplsForInterface(
     ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     "  internal::StructParser parser(&node, context);",
   );
-  for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
+  const parseFields = fields
+    .filter((field) => !isLiteralType(resolveType(field.type, schema)))
+    .sort((a, b) =>
+      a.name.text < b.name.text ? -1 : a.name.text > b.name.text ? 1 : 0,
+    );
+  for (const field of parseFields) {
     const rawFieldName = field.name.text;
     const cFieldName = toCName(toSnakeCase(rawFieldName));
     const method = field.type.kind === "optional" ? "ParseOptional" : "Parse";
