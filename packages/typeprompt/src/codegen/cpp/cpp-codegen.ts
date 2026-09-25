@@ -9,6 +9,7 @@ import {
   resolveType,
   Schema,
   toPascalCase,
+  toScreamCase,
   toSnakeCase,
   Type,
   TypeNameView,
@@ -39,11 +40,14 @@ function writeAll(
   compilationResult: ValidCompilationResult,
   config: { readonly rootNamespace: string },
 ): string {
+  const { rootNamespace } = config;
+  const includeGuard = `__${toScreamCase(rootNamespace)}_GEN_H_`;
   return coalesceEmptyLines(
     [
+      [`#ifndef ${includeGuard}`, `#define ${includeGuard}`].join("\n"),
       STATIC_SNIPPETS["cpp-top-level"],
       // reformat(writePromptsClass(compilationResult)),
-      `namespace ${config.rootNamespace} {`,
+      `namespace ${rootNamespace} {`,
       STATIC_SNIPPETS["cpp-public-types"],
       // writeTemplateIdEnum(compilationResult),
       // writeToolExecutorClasses(compilationResult),
@@ -53,6 +57,7 @@ function writeAll(
       // writeTemplatesData(compilationResult),
       // writeExecuteToolCall(compilationResult),
       `}  // namespace ${config.rootNamespace}`,
+      "#endif",
     ].join("\n\n"),
   );
 }
