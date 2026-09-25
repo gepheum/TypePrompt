@@ -48,7 +48,7 @@ function writeAll(
       // writeTemplateIdEnum(compilationResult),
       // writeToolExecutorClasses(compilationResult),
       // writePromptToolsEnums(compilationResult),
-      writeUserDefinedDatatypes(compilationResult, config),
+      scaleIndent(writeUserDefinedDatatypes(compilationResult, config)),
       // writeSpecDatatypes(unionContext),
       // writeTemplatesData(compilationResult),
       // writeExecuteToolCall(compilationResult),
@@ -783,81 +783,9 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
-    lines.push(...commentify(field.doc, "  "));
-    lines.push(`  ${fieldType} ${cName}{};`);
+    lines.push(...commentify(field.doc, " "));
+    lines.push(` ${fieldType} ${cName}{};`);
   }
-  // lines.push("");
-  // if (hasNonLiteralFields) {
-  //   lines.push(`${className}({`);
-  //   for (const field of fields) {
-  //     const type = resolveType(field.type, schema);
-  //     if (isLiteralType(type)) continue;
-  //     const dartName = toDartName(field.name.text);
-  //     const isOptional = type.kind === "optional";
-  //     const required = isOptional ? "" : "required ";
-  //     lines.push(`${required}this.${dartName},`);
-  //   }
-  //   lines.push("});");
-  // } else {
-  //   lines.push(`${className}();`);
-  // }
-  // lines.push("");
-  // if (interfaces) {
-  //   lines.push("@override");
-  // }
-  // lines.push("Map<String, dynamic> toJson() {");
-  // lines.push("return {");
-  // for (const field of fields) {
-  //   const rawName = field.name.text;
-  //   const dartName = toDartName(rawName);
-  //   const resolvedFieldType = resolveType(field.type, schema);
-  //   if (isLiteralType(resolvedFieldType)) {
-  //     const value = JSON.stringify(
-  //       resolvedFieldType.value satisfies string | boolean,
-  //     );
-  //     lines.push(`"${rawName}": ${value},`);
-  //   } else {
-  //     const toJsonExpr = writeToJsonExpr(
-  //       resolvedFieldType,
-  //       dartName,
-  //       schema,
-  //       options,
-  //     );
-  //     lines.push(`"${rawName}": ${toJsonExpr},`);
-  //   }
-  // }
-  // lines.push(
-  //   "};", // Map literal
-  //   "}", // toJson()
-  //   "",
-  // );
-  // lines.push(
-  //   "@override",
-  //   "String toString() {",
-  //   'return JsonEncoder.withIndent("  ").convert(toJson());',
-  //   "}",
-  //   "",
-  // );
-  // lines.push(
-  //   `factory ${className}.fromJson(Map<String, dynamic> json) {`,
-  //   `return ${className}(`,
-  // );
-  // for (const field of fields) {
-  //   const type = resolveType(field.type, schema);
-  //   if (isLiteralType(type)) continue;
-  //   const rawName = field.name.text;
-  //   const dartName = toDartName(rawName);
-  //   const valueExpr = `json["${field.name.text}"]`;
-  //   const valueFromJsonExpr = writeFromJsonExpr(
-  //     type,
-  //     valueExpr,
-  //     schema,
-  //     options,
-  //   );
-  //   lines.push(`${dartName}: ${valueFromJsonExpr},`);
-  // }
-  // lines.push(`);`, `}`);
-
   lines.push("};"); // struct
 
   return lines.join("\n");
@@ -876,7 +804,7 @@ function writeTypepromptUnion(
       lines.push(`enum class ${typeCName} {`);
       for (const member of members.members) {
         const cName = toCName("k".concat(toPascalCase(member.value)));
-        lines.push(`  ${cName},`);
+        lines.push(` ${cName},`);
       }
       lines.push("};"); // enum class
       break;
@@ -889,61 +817,61 @@ function writeTypepromptUnion(
       lines.push(
         `struct ${typeCName} {`,
         " public:",
-        "  using variant_type = std::variant<",
+        " using variant_type = std::variant<",
       );
       for (const memberType of memberTypes) {
-        lines.push(`      indirect<${memberType}>,`);
+        lines.push(`   indirect<${memberType}>,`);
       }
       lines.push(lines.pop()!.slice(0, -1).concat(">;"), "");
       const firstMember = members.first;
       const firstType = writeType(firstMember, schema, options);
       lines.push(
-        `  ${typeCName}() : data_(${firstType}()) {}`,
-        "  // Expects one of:",
+        ` ${typeCName}() : data_(${firstType}()) {}`,
+        " // Expects one of:",
       );
       for (const member of memberTypes) {
-        lines.push(`  //   - a ${member} rvalue`);
+        lines.push(` //   - a ${member} rvalue`);
       }
       lines.push(
-        `  ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
+        ` ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
         "",
-        `  ${typeCName}(const ${typeCName}&) = default;`,
-        `  ${typeCName}(${typeCName}&&) = default;`,
+        ` ${typeCName}(const ${typeCName}&) = default;`,
+        ` ${typeCName}(${typeCName}&&) = default;`,
         "",
-        "  // The right operand can be one of:",
+        " // The right operand can be one of:",
       );
       for (const member of memberTypes) {
-        lines.push(`  //   - a ${member} rvalue`);
+        lines.push(` //   - a ${member} rvalue`);
       }
       lines.push(
-        `  ${typeCName}& operator=(variant_type data) {`,
-        "    data_ = std::move(data);",
-        "    return *this;",
-        "  }",
-        `  ${typeCName}& operator=(const ${typeCName}&) = default;`,
-        `  ${typeCName}& operator=(${typeCName}&&) = default;`,
+        ` ${typeCName}& operator=(variant_type data) {`,
+        "  data_ = std::move(data);",
+        "  return *this;",
+        " }",
+        ` ${typeCName}& operator=(const ${typeCName}&) = default;`,
+        ` ${typeCName}& operator=(${typeCName}&&) = default;`,
         "",
       );
       const discriminatorCName = toCName(toSnakeCase(discriminator));
       if (discriminants.type === "string") {
-        lines.push(`  enum class ${discriminatorCName} {`);
+        lines.push(` enum class ${discriminatorCName} {`);
         for (const discriminant of Object.values(discriminants.values)) {
           const constantCName = toCName(
             "k".concat(toPascalCase(discriminant.value)),
           );
-          lines.push(`    ${constantCName},`);
+          lines.push(`  ${constantCName},`);
         }
         lines.push(
-          "  };",
-          `  ${discriminatorCName} ${discriminatorCName}() const {`,
-          `    return static_cast<enum ${discriminatorCName}>(data_.index());`,
-          "  }",
+          " };",
+          ` ${discriminatorCName} ${discriminatorCName}() const {`,
+          `  return static_cast<enum ${discriminatorCName}>(data_.index());`,
+          " }",
         );
       } else {
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
         const indexOfTrue = firstDiscriminant ? 0 : 1;
         lines.push(
-          `  bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
+          ` bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
         );
       }
       lines.push("");
@@ -960,10 +888,10 @@ function writeTypepromptUnion(
           );
           const type = memberTypes[i];
           lines.push(
-            `  // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
-            `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
-            `  indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
+            ` // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
+            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
         }
@@ -978,44 +906,42 @@ function writeTypepromptUnion(
           const type = memberTypes[i];
           const maybeNot = discriminantValue ? "" : "!";
           lines.push(
-            `  // Precondition: ${maybeNot}${discriminatorCName}()`,
-            `  const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            `  ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
-            `  indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
+            ` // Precondition: ${maybeNot}${discriminatorCName}()`,
+            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
         }
       }
       lines.push(
-        "  template <typename Visitor>",
-        "  decltype(auto) visit(Visitor&& visitor) const& {",
-        "    return std::visit(",
-        "        [&visitor](const auto& boxed) -> decltype(auto) {",
-        "          return visitor(*boxed);",
-        "        },",
-        "        data_);",
-        "  }",
-        "",
-        "  template <typename Visitor>",
-        "  decltype(auto) visit(Visitor&& visitor) & {",
-        "    return std::visit(",
-        "        [&visitor](auto& boxed) -> decltype(auto) {",
-        "          return visitor(*boxed);",
-        "        },",
-        "        data_);",
-        "  }",
-        "",
-        "  template <typename Visitor>",
-        "  decltype(auto) visit(Visitor&& visitor) && {",
-        "    return std::visit(",
-        "        [&visitor](auto&& boxed) -> decltype(auto) {",
-        "          return visitor(*std::forward<decltype(boxed)>(boxed));",
-        "        },",
-        "        std::move(data_));",
-        "  }",
+        " template <typename Visitor>",
+        " decltype(auto) visit(Visitor&& visitor) const& {",
+        "  return std::visit(",
+        "    [&visitor](const auto& boxed) -> decltype(auto) {",
+        "     return visitor(*boxed);",
+        "    },",
+        "    data_);",
+        " }",
+        " template <typename Visitor>",
+        " decltype(auto) visit(Visitor&& visitor) & {",
+        "  return std::visit(",
+        "    [&visitor](auto& boxed) -> decltype(auto) {",
+        "     return visitor(*boxed);",
+        "    },",
+        "    data_);",
+        " }",
+        " template <typename Visitor>",
+        " decltype(auto) visit(Visitor&& visitor) && {",
+        "  return std::visit(",
+        "    [&visitor](auto&& boxed) -> decltype(auto) {",
+        "     return visitor(*std::forward<decltype(boxed)>(boxed));",
+        "    },",
+        "    std::move(data_));",
+        " }",
         "",
         " private:",
-        "  variant_type data_;",
+        " variant_type data_;",
         "};", // struct
       );
     }
@@ -1261,43 +1187,6 @@ function commentify(doc: string, indent = ""): readonly string[] {
   return lines.map((l) => (l ? `${indent}// ${l}` : "//"));
 }
 
-// function reformat(code: string): string {
-//   const inputLines: readonly string[] = code.split("\n");
-//   const outputLines: string[] = [];
-//   let indent = "";
-//   let continuationIndent = "";
-//   for (const inputLine of inputLines) {
-//     const line = inputLine.trim();
-//     if (
-//       line.startsWith("}") ||
-//       line.startsWith(")") ||
-//       line.startsWith("]") ||
-//       line.startsWith(">")
-//     ) {
-//       indent = indent.slice(0, -2);
-//     }
-//     const starPrefix = line.startsWith("*") ? " " : "";
-//     outputLines.push(
-//       line.length <= 0
-//         ? line
-//         : [indent, continuationIndent, starPrefix, line].join(""),
-//     );
-//     if (
-//       line.endsWith("{") ||
-//       line.endsWith("(") ||
-//       line.endsWith("[") ||
-//       line.endsWith("<")
-//     ) {
-//       indent = indent + "  ";
-//     } else if (line.endsWith(":")) {
-//       continuationIndent = "  ";
-//     } else if (line.endsWith(";")) {
-//       continuationIndent = "";
-//     }
-//   }
-//   return outputLines.join("\n");
-// }
-
 function coalesceEmptyLines(code: string): string {
   return (
     code
@@ -1311,6 +1200,10 @@ function coalesceEmptyLines(code: string): string {
       .replace(/\n\n\n+/g, "\n\n")
       .replace(/\n*$/g, "\n")
   );
+}
+
+function scaleIndent(input: string): string {
+  return input.replace(/^ +/gm, (match) => match.repeat(2));
 }
 
 const KEYWORDS: ReadonlySet<string> = new Set([
