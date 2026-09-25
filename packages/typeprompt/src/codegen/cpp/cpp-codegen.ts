@@ -834,8 +834,8 @@ function writeTypepromptInterface(
   }
   lines.push(
     "",
-    " // All fields must be initialized.",
-    ` // Meant to be immediately converted to a ${typeCName}.`,
+    ` // Builder requiring all fields of ${typeCName} to be specified at construction.`,
+    ` // Converts to ${typeCName} via implicit conversion or '*'.`,
     " struct whole {",
   );
   for (const field of fields) {
@@ -843,7 +843,6 @@ function writeTypepromptInterface(
     if (isLiteralType(type)) continue;
     const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
-    lines.push(...commentify(field.doc, "  "));
     lines.push(`  must_init<${fieldType}> ${cName};`);
   }
   lines.push(
@@ -1065,7 +1064,7 @@ function writeMethodImplsForInterface(
     if (isLiteralType(type)) {
       value = JSON.stringify(type.value satisfies string | boolean);
     } else {
-      const cFieldName: string = toCName(toSnakeCase(rawFieldName));
+      const cFieldName = toCName(toSnakeCase(rawFieldName));
       value = `input.${cFieldName}`;
     }
     lines.push(
@@ -1078,6 +1077,14 @@ function writeMethodImplsForInterface(
     ` static ParseStatus ParseJsonNodeImpl(const JsonNode& node, ${typeCName}& out) {`,
     "  internal::StructParser parser(&node);",
   );
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    if (isLiteralType(type)) continue;
+    const rawFieldName = field.name.text;
+    const cFieldName = toCName(toSnakeCase(rawFieldName));
+    const method = field.type.kind === "optional" ? "ParseOptional" : "Parse";
+    lines.push(`  parser.${method}("${rawFieldName}", out.${cFieldName});`);
+  }
   lines.push(
     "  return std::move(parser).status();",
     " }", // ParseJsonNodeImpl

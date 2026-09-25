@@ -2251,7 +2251,8 @@ void TestStructParser() {
       {"age", JsonNode(30.0)},
       {"email", JsonNode("alice@example.com")},
   };
-  StructParser parser1(&obj1);
+  JsonNode node1(obj1);
+  StructParser parser1(&node1);
   int age = 0;
   std::optional<std::string> email;
   std::string name;
@@ -2270,7 +2271,8 @@ void TestStructParser() {
   JsonNode::Object obj2 = {
       {"name", JsonNode("Bob")},
   };
-  StructParser parser2(&obj2);
+  JsonNode node2(obj2);
+  StructParser parser2(&node2);
   std::optional<int> opt_age;
   std::optional<std::string> opt_email;
   std::string name2;
@@ -2290,7 +2292,8 @@ void TestStructParser() {
       {"name", JsonNode("Charlie")},
       {"extra2", JsonNode(99.0)},
   };
-  StructParser parser3(&obj3);
+  JsonNode node3(obj3);
+  StructParser parser3(&node3);
   std::string name3;
   parser3.Parse("name", name3);
 
@@ -2302,7 +2305,8 @@ void TestStructParser() {
   JsonNode::Object obj4 = {
       {"email", JsonNode("dave@example.com")},
   };
-  StructParser parser4(&obj4);
+  JsonNode node4(obj4);
+  StructParser parser4(&node4);
   std::optional<std::string> email4;
   std::string name4;
   parser4.ParseOptional("email", email4);
@@ -2317,7 +2321,8 @@ void TestStructParser() {
       {"age", JsonNode("not_a_number")},
       {"name", JsonNode("Eve")},
   };
-  StructParser parser5(&obj5);
+  JsonNode node5(obj5);
+  StructParser parser5(&node5);
   int age5 = 0;
   std::string name5;
   parser5.Parse("age", age5);
@@ -2329,7 +2334,8 @@ void TestStructParser() {
 
   // 6. Empty object
   JsonNode::Object empty_obj;
-  StructParser parser6(&empty_obj);
+  JsonNode node6(obj1);
+  StructParser parser6(&node6);
   std::optional<int> empty_opt;
   std::string req_str;
   parser6.ParseOptional("a", empty_opt);
@@ -2338,6 +2344,17 @@ void TestStructParser() {
   auto status6 = std::move(parser6).status();
   ASSERT_FALSE(status6.ok());
   ASSERT_EQ(status6.error().message, "Missing key: b");
+
+  // 7. Not an object
+  JsonNode node7(3);
+  StructParser parser7(&node7);
+  std::string foo7;
+  parser6.ParseOptional("a", foo7);
+  parser6.Parse("b", foo7);
+
+  auto status7 = std::move(parser7).status();
+  ASSERT_FALSE(status7.ok());
+  ASSERT_EQ(status7.error().message, "Expected object");
 }
 
 void TestUnions() {
