@@ -2042,7 +2042,9 @@ class box {
   ~box() = default;
 
   box& operator=(const box& other) {
-    ptr_ = std::make_unique<T>(std::move(other));
+    if (other != this) {
+      ptr_ = std::make_unique<T>(*other);
+    }
     return *this;
   }
   box& operator=(box&&) = default;

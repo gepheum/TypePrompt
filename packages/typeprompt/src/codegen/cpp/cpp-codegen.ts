@@ -927,7 +927,7 @@ function writeTypepromptUnion(
           "  };",
           `  ${discriminatorCName} ${discriminatorCName}() const {`,
           `    return static_cast<enum ${discriminatorCName}>(data_.index());`,
-          "  };",
+          "  }",
         );
       } else {
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
