@@ -765,10 +765,8 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     lines.push(
       "",
       "",
-      `inline ::${rootNamespace}::JsonNode ToJsonNode(const ${typeCName}&);`,
-      `inline ::${rootNamespace}::ParseStatus ParseJsonNode(`,
-      `  const ::${rootNamespace}::JsonNode&,`,
-      `  ${typeCName}&);`,
+      `inline JsonNode ToJsonNode(const ${typeCName}&);`,
+      `inline ParseStatus ParseJsonNode(const JsonNode&, ${typeCName}&);`,
       "",
       "",
     );
@@ -1056,8 +1054,6 @@ function writeMethodImplsForInterface(
   lines.push(
     "namespace __internal {",
     `struct ${typeCName}Serializer {`,
-    ` using JsonNode = ::${rootNamespace}::JsonNode;`,
-    ` using ParseStatus = ::${rootNamespace}::ParseStatus;`,
     ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
     `  using ::${rootNamespace}::ToJsonNode;`,
     "  return JsonNode(JsonNode::Object{",
@@ -1115,7 +1111,7 @@ function writeType(
 ): string {
   switch (type.kind) {
     case "any": {
-      return `::${options.rootNamespace}::JsonNode`;
+      return "JsonNode";
     }
     case "array": {
       const { elementType } = type;
@@ -1171,7 +1167,7 @@ function makeNameFromHint(hint: NamingHint): string {
     .map((piece) => {
       switch (piece.kind) {
         case "type":
-          return piece.name;
+          return namePieces.length <= 1 ? toCName(piece.name) : piece.name;
         case "field":
           return capitalize(piece.name);
         case "member": {
@@ -1321,6 +1317,10 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "xor_eq",
 
   // RESERVED NAMES
+  "JsonNode",
+  "ParseJsonNode",
+  "ParseStatus",
+  "ToJsonNode",
   "indirect",
   "must_init",
   "std",
