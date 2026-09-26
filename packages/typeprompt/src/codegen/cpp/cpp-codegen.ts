@@ -56,7 +56,7 @@ function writeAll(
       scaleIndent(
         [
           writeUserDefinedDatatypes(compilationResult, config),
-          writeTemplatesTypes(compilationResult),
+          writeTemplateSignatures(compilationResult, config),
           writeSpecDatatypes(config),
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
@@ -539,11 +539,95 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
-function writeTemplatesTypes(
-  _compilationResult: ValidCompilationResult,
+function writeTemplateSignatures(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
 ): string {
-  const lines = ["namespace templates {"];
-  lines.push("}  // namespace templates");
+  const { namespaces, singleNamespace } = compilationResult;
+  const { rootNamespace } = config;
+  const lines: string[] = [];
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+    cNamespace: string,
+    typePrefixBase: string,
+  ): void => {
+    lines.push(`namespace ${cNamespace} {`, "");
+
+    const sharedTypePrefix = typePrefixBase.concat("shared::");
+    for (const tool of Object.values(namespace.tools)) {
+      const { schema } = tool;
+      const rawToolName = tool.tool.name.text;
+      const structCName = toCName(toPascalCase(rawToolName));
+      const typePrefix = typePrefixBase.concat(
+        toCName(toSnakeCase(rawToolName)),
+        "::",
+      );
+      const options: WriteSchemaOptions = {
+        topLevel: true,
+        typePrefix,
+        sharedTypePrefix,
+        rootNamespace,
+      };
+      const inputType = writeType(
+        {
+          kind: "type-name",
+          name: { text: "Input" },
+        },
+        schema,
+        options,
+      );
+      const outputType = writeType(
+        {
+          kind: "type-name",
+          name: { text: "Output" },
+        },
+        schema,
+        options,
+      );
+      lines.push(
+        `struct ${structCName} {`,
+        ` static constexpr std::string_view kToolName = "${rawToolName}";`,
+        "",
+        ` using input_type = ${inputType};`,
+        ` using output_type = ${outputType};`,
+        "};",
+        "",
+      );
+    }
+    // for (const template of namespace.templates) {
+    //   const rawTemplateName = template.template.name.text;
+    //   const cNamespace = typePrefixBase.concat(
+    //     toCName(toSnakeCase(rawTemplateName)),
+    //   );
+    //   const typePrefix = cNamespace.concat("::");
+    //   lines.push(
+    //     `namespace ${cNamespace} {`,
+    //     "",
+    //     writeSchema(template.schema, {
+    //       typePrefix,
+    //       sharedTypePrefix,
+    //       rootNamespace,
+    //     }),
+    //     `}  // namespace ${cNamespace}`,
+    //     "",
+    //   );
+    // }
+    lines.push(`}  // namespace ${cNamespace}`, "");
+  };
+
+  if (singleNamespace) {
+    const cNamespace = "templates";
+    const typePrefixBase = "schema::";
+    writeNamespace(singleNamespace, cNamespace, typePrefixBase);
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const cNamespace = "templates::".concat(toCName(namespace.name));
+      const typePrefixBase = ["schema", toCName(namespace.name), ""].join("::");
+      writeNamespace(namespace, cNamespace, typePrefixBase);
+    }
+  }
+
   return lines.join("\n");
 }
 
