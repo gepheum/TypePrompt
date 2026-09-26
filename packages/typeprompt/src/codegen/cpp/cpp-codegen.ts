@@ -522,17 +522,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-        rootNamespace,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+          rootNamespace,
+        },
+      )
     : "std::nullopt_t";
   lines.push(
     "// Metadata associated with a prompt.",
@@ -715,7 +715,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
