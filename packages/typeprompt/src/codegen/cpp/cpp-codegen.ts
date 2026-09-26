@@ -17,6 +17,7 @@ import {
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "@typeprompt/core";
+import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { OutputFile } from "../codegen-types.js";
 
@@ -52,8 +53,12 @@ function writeAll(
       // writeTemplateIdEnum(compilationResult),
       // writeToolExecutorClasses(compilationResult),
       // writePromptToolsEnums(compilationResult),
-      scaleIndent(writeUserDefinedDatatypes(compilationResult, config)),
-      // writeSpecDatatypes(unionContext),
+      scaleIndent(
+        [
+          writeSpecDatatypes(config),
+          writeUserDefinedDatatypes(compilationResult, config),
+        ].join("\n\n"),
+      ),
       // writeTemplatesData(compilationResult),
       `}  // namespace ${config.rootNamespace}`,
       "#endif",
@@ -558,12 +563,20 @@ function writeUserDefinedDatatypes(
   return lines.join("\n");
 }
 
-// function writeSpecDatatypes(unionContext: UnionContext): string {
-//   const options = {
-//     typePrefix: "_Spec_",
-//   } as const;
-//   return writeSchema(runtimeTypesSchema, unionContext, options);
-// }
+function writeSpecDatatypes(config: {
+  readonly rootNamespace: string;
+}): string {
+  const { rootNamespace } = config;
+  const options: WriteSchemaOptions = {
+    typePrefix: "internal::spec::",
+    rootNamespace,
+  };
+  return [
+    "namespace internal::spec {",
+    writeSchema(runtimeTypesSchema, options),
+    "}  // namespace internal::spec",
+  ].join("\n\n");
+}
 
 // function writeTemplatesData(compilationResult: ValidCompilationResult): string {
 //   const templatesData = makeTemplates(compilationResult);
@@ -657,8 +670,14 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
   const definedTypes = new Set<Interface | Union>();
   const defineType = (type: FieldType): void => {
     type = resolveType(type, schema);
-    if (type.kind === "optional") {
-      type = type.innerType;
+    while (true) {
+      if (type.kind === "optional") {
+        type = resolveType(type.innerType, schema);
+      } else if (type.kind === "array") {
+        type = resolveType(type.elementType, schema);
+      } else {
+        break;
+      }
     }
     if (type.kind !== "interface" && type.kind !== "union") {
       return;
