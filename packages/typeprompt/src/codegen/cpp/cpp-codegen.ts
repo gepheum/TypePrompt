@@ -569,6 +569,7 @@ function writeSpecDatatypes(config: {
 }): string {
   const { rootNamespace } = config;
   const options: WriteSchemaOptions = {
+    internal: true,
     typePrefix: "internal::spec::",
     rootNamespace,
   };
@@ -646,13 +647,14 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
 
 type WriteSchemaOptions = {
   readonly topLevel?: true;
+  readonly internal?: true;
   readonly typePrefix: string;
   readonly sharedTypePrefix?: string;
   readonly rootNamespace: string;
 };
 
 function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
-  const { rootNamespace, typePrefix } = options;
+  const { internal, rootNamespace, typePrefix } = options;
   const lines: string[] = [];
 
   // 1. Declare all the types in the schema.
@@ -703,7 +705,11 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
 
     const typeCName = makeNameFromHint(namingHint);
     lines.push(...commentify(namingHint.doc));
-    lines.push(`// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`);
+    if (!internal) {
+      lines.push(
+        `// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`,
+      );
+    }
     switch (type.kind) {
       case "interface": {
         lines.push(writeTypepromptInterface(type, typeCName, schema, options));
@@ -765,11 +771,12 @@ function writeTypepromptInterface(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
+  const { internal } = options;
   const fields = Object.values(type.fields);
 
   const lines: string[] = [];
   const firstField = fields[0];
-  if (firstField) {
+  if (firstField && !internal) {
     const fieldCName = toCName(toSnakeCase(firstField.name.text));
     lines.push(
       "//",
@@ -797,31 +804,31 @@ function writeTypepromptInterface(
     lines.push(...commentify(field.doc, " "));
     lines.push(` ${fieldType} ${cName}{};`);
   }
-  lines.push(
-    "",
-    ` // Builder requiring all fields of ${typeCName} to be set at construction.`,
-    ` // Converts to ${typeCName} via implicit conversion or '*'.`,
-    " struct whole {",
-  );
-  for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
-    const cName = toCName(toSnakeCase(field.name.text));
-    const fieldType = writeType(type, schema, options);
-    lines.push(`  must_init<${fieldType}> ${cName};`);
+  if (!internal) {
+    lines.push(
+      "",
+      ` // Builder requiring all fields of ${typeCName} to be set at construction.`,
+      ` // Converts to ${typeCName} via implicit conversion or '*'.`,
+      " struct whole {",
+    );
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type)) continue;
+      const cName = toCName(toSnakeCase(field.name.text));
+      const fieldType = writeType(type, schema, options);
+      lines.push(`  must_init<${fieldType}> ${cName};`);
+    }
+    lines.push(
+      "",
+      `  inline operator ${typeCName}() &&;`,
+      `  operator ${typeCName}() const& = delete;`,
+      "",
+      `  ${typeCName} operator*() && { return std::move(*this); }`,
+      `  ${typeCName} operator*() const& = delete;`,
+    );
+    lines.push(" };"); // struct whole
   }
-  lines.push(
-    "",
-    `  inline operator ${typeCName}() &&;`,
-    `  operator ${typeCName}() const& = delete;`,
-    "",
-    `  ${typeCName} operator*() && { return std::move(*this); }`,
-    `  ${typeCName} operator*() const& = delete;`,
-  );
-  lines.push(
-    " };", // struct whole
-    "};", // struct
-  );
+  lines.push("};"); // struct
 
   return lines.join("\n");
 }
@@ -832,6 +839,7 @@ function writeTypepromptUnion(
   schema: Schema,
   options: WriteSchemaOptions,
 ): string {
+  const { internal } = options;
   const members = schema.unionToMembers.get(type)!;
   const lines: string[] = [];
   switch (members.kind) {
@@ -860,12 +868,12 @@ function writeTypepromptUnion(
       lines.push(lines.pop()!.slice(0, -1).concat(">;"), "");
       const firstMember = members.first;
       const firstType = writeType(firstMember, schema, options);
-      lines.push(
-        ` ${typeCName}() : data_(${firstType}()) {}`,
-        " // Expects one of:",
-      );
-      for (const member of memberTypes) {
-        lines.push(` //   - a ${member} rvalue`);
+      lines.push(` ${typeCName}() : data_(${firstType}()) {}`);
+      if (!internal) {
+        lines.push(" // Expects one of:");
+        for (const member of memberTypes) {
+          lines.push(` //   - a ${member} rvalue`);
+        }
       }
       lines.push(
         ` ${typeCName}(variant_type data) : data_(std::move(data)) {}`,
@@ -873,10 +881,12 @@ function writeTypepromptUnion(
         ` ${typeCName}(const ${typeCName}&) = default;`,
         ` ${typeCName}(${typeCName}&&) = default;`,
         "",
-        " // The right operand can be one of:",
       );
-      for (const member of memberTypes) {
-        lines.push(` //   - a ${member} rvalue`);
+      if (!internal) {
+        lines.push(" // The right operand can be one of:");
+        for (const member of memberTypes) {
+          lines.push(` //   - a ${member} rvalue`);
+        }
       }
       lines.push(
         ` ${typeCName}& operator=(variant_type data) {`,
@@ -993,22 +1003,26 @@ function writeMethodImplsForInterface(
   const { rootNamespace } = options;
   const fields = Object.values(type.fields);
 
-  // Struct::whole -> Struct
-  const lines: string[] = [
-    `inline ${typeCName}::whole::operator ${typeCName}() && {`,
-    ` return ${typeCName}{`,
-  ];
-  for (const field of fields) {
-    const type = resolveType(field.type, schema);
-    if (isLiteralType(type)) continue;
-    const fieldCName = toCName(toSnakeCase(field.name.text));
-    lines.push(`   *std::move(${fieldCName}),`);
+  const lines: string[] = [];
+
+  if (!options.internal) {
+    // Struct::whole -> Struct
+    lines.push(
+      `inline ${typeCName}::whole::operator ${typeCName}() && {`,
+      ` return ${typeCName}{`,
+    );
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      if (isLiteralType(type)) continue;
+      const fieldCName = toCName(toSnakeCase(field.name.text));
+      lines.push(`   *std::move(${fieldCName}),`);
+    }
+    lines.push(
+      " };", // return
+      "}", // whole::operator
+      "",
+    );
   }
-  lines.push(
-    " };", // return
-    "}", // whole::operator
-    "",
-  );
 
   // ToJsonNode() and ParseValue()
   lines.push(
