@@ -127,22 +127,22 @@ class JsonNode {
   }
 
   // Returns the boolean value. Precondition: type() == Type::kBool.
-  bool bool_value() const { return std::get<bool>(data_); }
+  bool as_bool() const { return std::get<bool>(data_); }
 
   // Returns the numeric value. Precondition: type() == Type::kNumber.
-  double number_value() const { return std::get<double>(data_); }
+  double as_number() const { return std::get<double>(data_); }
 
   // Returns the string value. Precondition: type() == Type::kString.
-  const std::string& string_value() const& { return std::get<std::string>(data_); }
-  std::string string_value() && { return std::get<std::string>(std::move(data_)); }
+  const std::string& as_string() const& { return std::get<std::string>(data_); }
+  std::string as_string() && { return std::get<std::string>(std::move(data_)); }
 
   // Returns the array elements. Precondition: type() == Type::kArray.
-  const Array& array_value() const& { return std::get<Array>(data_); }
-  Array array_value() && { return std::get<Array>(std::move(data_)); }
+  const Array& as_array() const& { return std::get<Array>(data_); }
+  Array as_array() && { return std::get<Array>(std::move(data_)); }
 
   // Returns the object key-value pairs. Precondition: type() == Type::kObject.
-  const Object& object_value() const& { return std::get<Object>(data_); }
-  Object object_value() && { return std::get<Object>(std::move(data_)); }
+  const Object& as_object() const& { return std::get<Object>(data_); }
+  Object as_object() && { return std::get<Object>(std::move(data_)); }
 
   // Formats this node as a compact JSON string.
   std::string ToJson() const {
@@ -257,11 +257,11 @@ class JsonNode {
         break;
       }
       case Type::kBool: {
-        out += bool_value() ? "true" : "false";
+        out += as_bool() ? "true" : "false";
         break;
       }
       case Type::kNumber: {
-        double number = number_value();
+        double number = as_number();
         if (!std::isfinite(number)) {
           if (std::isnan(number)) {
             number = 0.0;
@@ -275,11 +275,11 @@ class JsonNode {
         break;
       }
       case Type::kString: {
-        AppendJsonString(string_value(), out);
+        AppendJsonString(as_string(), out);
         break;
       }
       case Type::kArray: {
-        const Array& array = array_value();
+        const Array& array = as_array();
         if (array.empty()) {
           out += "[]";
         } else if (eolIndent.empty()) {
@@ -308,7 +308,7 @@ class JsonNode {
         break;
       }
       case Type::kObject: {
-        const Object& object = object_value();
+        const Object& object = as_object();
         if (object.empty()) {
           out += "{}";
         } else if (eolIndent.empty()) {
@@ -500,7 +500,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, boo
   if (node.type() != JsonNode::Type::kBool) {
     return context.MakeParseError("Expected boolean");
   }
-  out = node.bool_value();
+  out = node.as_bool();
   return kOkStatus;
 }
 
@@ -508,7 +508,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, int
   if (node.type() != JsonNode::Type::kNumber) {
     return context.MakeParseError("Expected number");
   }
-  out = static_cast<int>(node.number_value());
+  out = static_cast<int>(node.as_number());
   return kOkStatus;
 }
 
@@ -516,7 +516,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, dou
   if (node.type() != JsonNode::Type::kNumber) {
     return context.MakeParseError("Expected number");
   }
-  out = node.number_value();
+  out = node.as_number();
   return kOkStatus;
 }
 
@@ -524,7 +524,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std
   if (node.type() != JsonNode::Type::kString) {
     return context.MakeParseError("Expected string");
   }
-  out = node.string_value();
+  out = node.as_string();
   return kOkStatus;
 }
 
@@ -558,7 +558,7 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vecto
   if (node.type() != JsonNode::Type::kArray) {
     return context.MakeParseError("Expected array");
   }
-  const auto& arr = node.array_value();
+  const auto& arr = node.as_array();
   out.clear();
   out.reserve(arr.size());
   for (size_t i = 0; i < arr.size(); ++i) {
@@ -579,7 +579,7 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
   if (node.type() != JsonNode::Type::kObject) {
     return context.MakeParseError("Expected object");
   }
-  const JsonNode::Object& obj = node.object_value();
+  const JsonNode::Object& obj = node.as_object();
   out.clear();
   out.reserve(obj.size());
   for (const auto& [key, val_node] : obj) {
@@ -674,7 +674,7 @@ class ToonFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const JsonNode::Object& obj = root.object_value();
+        const JsonNode::Object& obj = root.as_object();
         if (obj.empty()) {
           return "";
         }
@@ -713,7 +713,7 @@ class ToonFormatter {
         }
       }
       case JsonNode::Type::kArray: {
-        const std::vector<JsonNode>& arr = root.array_value();
+        const std::vector<JsonNode>& arr = root.as_array();
         if (arr.empty()) {
           return "[]";
         }
@@ -942,11 +942,11 @@ class ToonFormatter {
       case JsonNode::Type::kNull:
         return "null";
       case JsonNode::Type::kBool:
-        return node.bool_value() ? "true" : "false";
+        return node.as_bool() ? "true" : "false";
       case JsonNode::Type::kNumber:
-        return FormatNumber(node.number_value());
+        return FormatNumber(node.as_number());
       case JsonNode::Type::kString:
-        return FormatString(node.string_value(), delim);
+        return FormatString(node.as_string(), delim);
       default:
         return "";
     }
@@ -968,12 +968,12 @@ class ToonFormatter {
     // 1. Verify all elements are non-empty objects.
     for (const auto& el : elements) {
       const auto& node = get_node(el);
-      if (node.type() != JsonNode::Type::kObject || node.object_value().empty()) {
+      if (node.type() != JsonNode::Type::kObject || node.as_object().empty()) {
         return false;
       }
     }
 
-    const auto& first_obj = get_node(elements[0]).object_value();
+    const auto& first_obj = get_node(elements[0]).as_object();
     const size_t field_count = first_obj.size();
 
     // 2. Sort first object keys and record mapping from sorted position to column index.
@@ -1003,7 +1003,7 @@ class ToonFormatter {
     el_sorted.reserve(field_count);
 
     for (const auto& el : elements) {
-      const auto& el_obj = get_node(el).object_value();
+      const auto& el_obj = get_node(el).as_object();
       if (el_obj.size() != field_count) return false;
 
       el_sorted.clear();
@@ -1034,7 +1034,7 @@ class ToonFormatter {
       for (const JsonNode* val : column_nodes[field_idx]) {
         if (val->type() == JsonNode::Type::kObject) {
           all_primitive = false;
-          if (val->object_value().empty()) {
+          if (val->as_object().empty()) {
             all_objects = false;
           } else {
             sub_elements.push_back(val);
@@ -1064,12 +1064,12 @@ class ToonFormatter {
 
   static bool CheckKeyedTabular(const JsonNode& node, std::vector<TabularField>& fields) {
     if (node.type() != JsonNode::Type::kObject) return false;
-    const JsonNode::Object& entries = node.object_value();
+    const JsonNode::Object& entries = node.as_object();
     if (entries.size() < 2) return false;
     std::vector<const JsonNode*> entry_values;
     entry_values.reserve(entries.size());
     for (const auto& [k, v] : entries) {
-      if (v.type() != JsonNode::Type::kObject || v.object_value().empty()) {
+      if (v.type() != JsonNode::Type::kObject || v.as_object().empty()) {
         return false;
       }
       entry_values.push_back(&v);
@@ -1080,7 +1080,7 @@ class ToonFormatter {
   static void ExtractLeafCells(const JsonNode& node, const std::vector<TabularField>& fields,
                                std::vector<const JsonNode*>& cells) {
     if (node.type() != JsonNode::Type::kObject) return;
-    const JsonNode::Object& obj = node.object_value();
+    const JsonNode::Object& obj = node.as_object();
     const size_t field_count = fields.size();
     if (obj.size() != field_count) return;
 
@@ -1167,17 +1167,17 @@ class ToonFormatter {
                                       std::vector<std::string>& lines) {
     std::vector<TabularField> fields;
     if (val.type() == JsonNode::Type::kArray) {
-      AppendArrayField(key, val.array_value(), depth, lines);
+      AppendArrayField(key, val.as_array(), depth, lines);
     } else if (val.type() == JsonNode::Type::kObject) {
-      if (val.object_value().empty()) {
+      if (val.as_object().empty()) {
         lines.push_back(Indent(depth) + FormatKey(key) + ":");
       } else if (CheckKeyedTabular(val, fields)) {
         std::string header =
-            Indent(depth) + FormatKey(key) + "[" + std::to_string(val.object_value().size()) + ":]";
+            Indent(depth) + FormatKey(key) + "[" + std::to_string(val.as_object().size()) + ":]";
         AppendFieldList(fields, header);
         header += ':';
         lines.push_back(header);
-        for (const auto& [ek, ev] : val.object_value()) {
+        for (const auto& [ek, ev] : val.as_object()) {
           std::vector<const JsonNode*> cells;
           ExtractLeafCells(ev, fields, cells);
           std::string row = Indent(depth + 1) + FormatKey(ek) + ": ";
@@ -1189,7 +1189,7 @@ class ToonFormatter {
         }
       } else {
         lines.push_back(Indent(depth) + FormatKey(key) + ":");
-        AppendObjectFields(val.object_value(), depth + 1, lines);
+        AppendObjectFields(val.as_object(), depth + 1, lines);
       }
     } else {
       lines.push_back(Indent(depth) + FormatKey(key) + ": " + FormatPrimitive(val, ','));
@@ -1239,24 +1239,23 @@ class ToonFormatter {
                               std::vector<std::string>& lines) {
     for (const JsonNode& item : arr) {
       if (item.type() == JsonNode::Type::kArray) {
-        if (item.array_value().empty()) {
+        if (item.as_array().empty()) {
           lines.push_back(Indent(depth) + "- [0]:");
-        } else if (IsPrimitiveArray(item.array_value())) {
-          std::string line =
-              Indent(depth) + "- [" + std::to_string(item.array_value().size()) + "]: ";
-          AppendInlineArrayValues(item.array_value(), line);
+        } else if (IsPrimitiveArray(item.as_array())) {
+          std::string line = Indent(depth) + "- [" + std::to_string(item.as_array().size()) + "]: ";
+          AppendInlineArrayValues(item.as_array(), line);
           lines.push_back(line);
         } else {
           const std::string header =
-              Indent(depth) + "- [" + std::to_string(item.array_value().size()) + "]:";
+              Indent(depth) + "- [" + std::to_string(item.as_array().size()) + "]:";
           lines.push_back(header);
-          AppendListItems(item.array_value(), depth + 1, lines);
+          AppendListItems(item.as_array(), depth + 1, lines);
         }
       } else if (item.type() == JsonNode::Type::kObject) {
-        if (item.object_value().empty()) {
+        if (item.as_object().empty()) {
           lines.push_back(Indent(depth) + "-");
         } else {
-          AppendObjectAsListItem(item.object_value(), depth, lines);
+          AppendObjectAsListItem(item.as_object(), depth, lines);
         }
       } else {
         lines.push_back(Indent(depth) + "- " + FormatPrimitive(item, ','));
@@ -1273,13 +1272,13 @@ class ToonFormatter {
     const auto& [first_k, first_v] = obj[0];
     std::vector<TabularField> fields;
     if (first_v.type() == JsonNode::Type::kArray &&
-        CheckTabularUniform(first_v.array_value(), fields)) {
+        CheckTabularUniform(first_v.as_array(), fields)) {
       std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
-                           std::to_string(first_v.array_value().size()) + "]";
+                           std::to_string(first_v.as_array().size()) + "]";
       AppendFieldList(fields, header);
       header += ':';
       lines.push_back(header);
-      for (const JsonNode& el : first_v.array_value()) {
+      for (const JsonNode& el : first_v.as_array()) {
         std::vector<const JsonNode*> cells;
         ExtractLeafCells(el, fields, cells);
         std::string row = Indent(depth + 2);
@@ -1291,11 +1290,11 @@ class ToonFormatter {
       }
     } else if (first_v.type() == JsonNode::Type::kObject && CheckKeyedTabular(first_v, fields)) {
       std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
-                           std::to_string(first_v.object_value().size()) + ":]";
+                           std::to_string(first_v.as_object().size()) + ":]";
       AppendFieldList(fields, header);
       header += ':';
       lines.push_back(header);
-      for (const auto& [ek, ev] : first_v.object_value()) {
+      for (const auto& [ek, ev] : first_v.as_object()) {
         std::vector<const JsonNode*> cells;
         ExtractLeafCells(ev, fields, cells);
         std::string row = Indent(depth + 2) + FormatKey(ek) + ": ";
@@ -1306,25 +1305,25 @@ class ToonFormatter {
         lines.push_back(row);
       }
     } else if (first_v.type() == JsonNode::Type::kArray) {
-      if (first_v.array_value().empty()) {
+      if (first_v.as_array().empty()) {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": []");
-      } else if (IsPrimitiveArray(first_v.array_value())) {
+      } else if (IsPrimitiveArray(first_v.as_array())) {
         std::string line = Indent(depth) + "- " + FormatKey(first_k) + "[" +
-                           std::to_string(first_v.array_value().size()) + "]: ";
-        AppendInlineArrayValues(first_v.array_value(), line);
+                           std::to_string(first_v.as_array().size()) + "]: ";
+        AppendInlineArrayValues(first_v.as_array(), line);
         lines.push_back(line);
       } else {
         const std::string header = Indent(depth) + "- " + FormatKey(first_k) + "[" +
-                                   std::to_string(first_v.array_value().size()) + "]:";
+                                   std::to_string(first_v.as_array().size()) + "]:";
         lines.push_back(header);
-        AppendListItems(first_v.array_value(), depth + 2, lines);
+        AppendListItems(first_v.as_array(), depth + 2, lines);
       }
     } else if (first_v.type() == JsonNode::Type::kObject) {
-      if (first_v.object_value().empty()) {
+      if (first_v.as_object().empty()) {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
       } else {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
-        AppendObjectFields(first_v.object_value(), depth + 2, lines);
+        AppendObjectFields(first_v.as_object(), depth + 2, lines);
       }
     } else {
       lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": " +
@@ -1342,7 +1341,7 @@ class YamlFormatter {
   static std::string Format(const JsonNode& root) {
     switch (root.type()) {
       case JsonNode::Type::kObject: {
-        const JsonNode::Object& obj = root.object_value();
+        const JsonNode::Object& obj = root.as_object();
         if (obj.empty()) {
           return "{}";
         }
@@ -1356,7 +1355,7 @@ class YamlFormatter {
         return res;
       }
       case JsonNode::Type::kArray: {
-        const std::vector<JsonNode>& arr = root.array_value();
+        const std::vector<JsonNode>& arr = root.as_array();
         if (arr.empty()) {
           return "[]";
         }
@@ -1634,11 +1633,11 @@ class YamlFormatter {
       case JsonNode::Type::kNull:
         return "null";
       case JsonNode::Type::kBool:
-        return node.bool_value() ? "true" : "false";
+        return node.as_bool() ? "true" : "false";
       case JsonNode::Type::kNumber:
-        return FormatNumber(node.number_value());
+        return FormatNumber(node.as_number());
       case JsonNode::Type::kString:
-        return FormatString(node.string_value());
+        return FormatString(node.as_string());
       default:
         return "";
     }
@@ -1648,18 +1647,18 @@ class YamlFormatter {
                                  std::vector<std::string>& lines) {
     for (const auto& [k, v] : entries) {
       if (v.type() == JsonNode::Type::kObject) {
-        if (v.object_value().empty()) {
+        if (v.as_object().empty()) {
           lines.push_back(Indent(depth) + FormatKey(k) + ": {}");
         } else {
           lines.push_back(Indent(depth) + FormatKey(k) + ":");
-          AppendObjectFields(v.object_value(), depth + 1, lines);
+          AppendObjectFields(v.as_object(), depth + 1, lines);
         }
       } else if (v.type() == JsonNode::Type::kArray) {
-        if (v.array_value().empty()) {
+        if (v.as_array().empty()) {
           lines.push_back(Indent(depth) + FormatKey(k) + ": []");
         } else {
           lines.push_back(Indent(depth) + FormatKey(k) + ":");
-          AppendArrayItems(v.array_value(), depth + 1, lines);
+          AppendArrayItems(v.as_array(), depth + 1, lines);
         }
       } else {
         lines.push_back(Indent(depth) + FormatKey(k) + ": " + FormatPrimitive(v));
@@ -1671,16 +1670,16 @@ class YamlFormatter {
                                std::vector<std::string>& lines) {
     for (const JsonNode& item : arr) {
       if (item.type() == JsonNode::Type::kObject) {
-        if (item.object_value().empty()) {
+        if (item.as_object().empty()) {
           lines.push_back(Indent(depth) + "- {}");
         } else {
-          AppendObjectAsListItem(item.object_value(), depth, lines);
+          AppendObjectAsListItem(item.as_object(), depth, lines);
         }
       } else if (item.type() == JsonNode::Type::kArray) {
-        if (item.array_value().empty()) {
+        if (item.as_array().empty()) {
           lines.push_back(Indent(depth) + "- []");
         } else {
-          AppendArrayAsListItem(item.array_value(), depth, lines);
+          AppendArrayAsListItem(item.as_array(), depth, lines);
         }
       } else {
         lines.push_back(Indent(depth) + "- " + FormatPrimitive(item));
@@ -1696,18 +1695,18 @@ class YamlFormatter {
     }
     const auto& [first_k, first_v] = obj[0];
     if (first_v.type() == JsonNode::Type::kObject) {
-      if (first_v.object_value().empty()) {
+      if (first_v.as_object().empty()) {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": {}");
       } else {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
-        AppendObjectFields(first_v.object_value(), depth + 2, lines);
+        AppendObjectFields(first_v.as_object(), depth + 2, lines);
       }
     } else if (first_v.type() == JsonNode::Type::kArray) {
-      if (first_v.array_value().empty()) {
+      if (first_v.as_array().empty()) {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": []");
       } else {
         lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ":");
-        AppendArrayItems(first_v.array_value(), depth + 2, lines);
+        AppendArrayItems(first_v.as_array(), depth + 2, lines);
       }
     } else {
       lines.push_back(Indent(depth) + "- " + FormatKey(first_k) + ": " + FormatPrimitive(first_v));
@@ -1716,18 +1715,18 @@ class YamlFormatter {
     for (size_t i = 1; i < obj.size(); ++i) {
       const auto& [k, v] = obj[i];
       if (v.type() == JsonNode::Type::kObject) {
-        if (v.object_value().empty()) {
+        if (v.as_object().empty()) {
           lines.push_back(Indent(depth + 1) + FormatKey(k) + ": {}");
         } else {
           lines.push_back(Indent(depth + 1) + FormatKey(k) + ":");
-          AppendObjectFields(v.object_value(), depth + 2, lines);
+          AppendObjectFields(v.as_object(), depth + 2, lines);
         }
       } else if (v.type() == JsonNode::Type::kArray) {
-        if (v.array_value().empty()) {
+        if (v.as_array().empty()) {
           lines.push_back(Indent(depth + 1) + FormatKey(k) + ": []");
         } else {
           lines.push_back(Indent(depth + 1) + FormatKey(k) + ":");
-          AppendArrayItems(v.array_value(), depth + 2, lines);
+          AppendArrayItems(v.as_array(), depth + 2, lines);
         }
       } else {
         lines.push_back(Indent(depth + 1) + FormatKey(k) + ": " + FormatPrimitive(v));
@@ -1743,7 +1742,7 @@ class YamlFormatter {
     }
     const JsonNode& first = arr[0];
     if (first.type() == JsonNode::Type::kObject) {
-      if (first.object_value().empty()) {
+      if (first.as_object().empty()) {
         lines.push_back(Indent(depth) + "- - {}");
       } else {
         lines.push_back(Indent(depth) + "-");
@@ -1761,16 +1760,16 @@ class YamlFormatter {
     for (size_t i = 1; i < arr.size(); ++i) {
       const JsonNode& item = arr[i];
       if (item.type() == JsonNode::Type::kObject) {
-        if (item.object_value().empty()) {
+        if (item.as_object().empty()) {
           lines.push_back(Indent(depth + 1) + "- {}");
         } else {
-          AppendObjectAsListItem(item.object_value(), depth + 1, lines);
+          AppendObjectAsListItem(item.as_object(), depth + 1, lines);
         }
       } else if (item.type() == JsonNode::Type::kArray) {
-        if (item.array_value().empty()) {
+        if (item.as_array().empty()) {
           lines.push_back(Indent(depth + 1) + "- []");
         } else {
-          AppendArrayAsListItem(item.array_value(), depth + 1, lines);
+          AppendArrayAsListItem(item.as_array(), depth + 1, lines);
         }
       } else {
         lines.push_back(Indent(depth + 1) + "- " + FormatPrimitive(item));
@@ -2179,7 +2178,7 @@ class StructParser {
       status_ = context_.MakeParseError("Expected object");
       return;
     }
-    const auto& object = node->object_value();
+    const auto& object = node->as_object();
     sorted_entries_.reserve(object.size());
     for (const auto& pair : object) {
       sorted_entries_.push_back(&pair);
@@ -2246,13 +2245,13 @@ class Unions {
     if (json_node.type() != JsonNode::Type::kObject) {
       return context.MakeParseError("Expected object");
     }
-    for (const auto& [k, v] : json_node.object_value()) {
+    for (const auto& [k, v] : json_node.as_object()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kString) {
           AtFieldJsonPath field_context(&context, discriminator);
           return field_context.MakeParseError("Expected string");
         }
-        return v.string_value();
+        return v.as_string();
       }
     }
     return context.MakeParseError(std::format("Missing key: {}", discriminator));
@@ -2263,13 +2262,13 @@ class Unions {
     if (json_node.type() != JsonNode::Type::kObject) {
       return context.MakeParseError("Expected object");
     }
-    for (const auto& [k, v] : json_node.object_value()) {
+    for (const auto& [k, v] : json_node.as_object()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kBool) {
           AtFieldJsonPath field_context(&context, discriminator);
           return field_context.MakeParseError("Expected boolean");
         }
-        return v.bool_value();
+        return v.as_bool();
       }
     }
     return context.MakeParseError(std::format("Missing key: {}", discriminator));

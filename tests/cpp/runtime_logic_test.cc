@@ -131,18 +131,18 @@ void TestToJsonString() {
 
   // Direct std::string_view construction
   JsonNode sv_node(std::string_view("sv_test"));
-  ASSERT_EQ(sv_node.string_value(), "sv_test");
+  ASSERT_EQ(sv_node.as_string(), "sv_test");
 
   std::string full = "prefix_target_suffix";
   std::string_view sub(full.data() + 7, 6);
   JsonNode sub_node(sub);
-  ASSERT_EQ(sub_node.string_value(), "target");
+  ASSERT_EQ(sub_node.as_string(), "target");
 
   // Non-null-terminated string_view with incomplete multi-byte at boundary
   char raw_bytes[] = {'h', 'e', 'l', 'l', 'o', static_cast<char>(0xC0), 'x'};
   std::string_view partial_sv(raw_bytes, 6);
   JsonNode partial_node(partial_sv);
-  ASSERT_EQ(partial_node.string_value(), "hello\xEF\xBF\xBD");
+  ASSERT_EQ(partial_node.as_string(), "hello\xEF\xBF\xBD");
 }
 
 void TestToJsonArray() {
@@ -1351,13 +1351,13 @@ void TestParseJsonPrimitives() {
   auto r_true = JsonNode::ParseJson("true");
   ASSERT_TRUE(r_true.ok());
   ASSERT_EQ(r_true->type(), JsonNode::Type::kBool);
-  ASSERT_EQ(r_true->bool_value(), true);
+  ASSERT_EQ(r_true->as_bool(), true);
   ASSERT_EQ(r_true->ToJson(), "true");
 
   auto r_false = JsonNode::ParseJson(" \nfalse\t ");
   ASSERT_TRUE(r_false.ok());
   ASSERT_EQ(r_false->type(), JsonNode::Type::kBool);
-  ASSERT_EQ(r_false->bool_value(), false);
+  ASSERT_EQ(r_false->as_bool(), false);
   ASSERT_EQ(r_false->ToJson(), "false");
 }
 
@@ -1366,7 +1366,7 @@ void TestParseJsonNumbers() {
     auto r = JsonNode::ParseJson(s);
     ASSERT_TRUE(r.ok());
     ASSERT_EQ(r->type(), JsonNode::Type::kNumber);
-    return r->number_value();
+    return r->as_number();
   };
 
   ASSERT_EQ(parse_num("0"), 0.0);
@@ -1389,7 +1389,7 @@ void TestParseJsonStrings() {
     auto r = JsonNode::ParseJson(s);
     ASSERT_TRUE(r.ok());
     ASSERT_EQ(r->type(), JsonNode::Type::kString);
-    return r->string_value();
+    return r->as_string();
   };
 
   ASSERT_EQ(parse_str("\"\""), "");
@@ -1414,59 +1414,59 @@ void TestParseJsonArrays() {
   auto r_empty = JsonNode::ParseJson("[]");
   ASSERT_TRUE(r_empty.ok());
   ASSERT_EQ(r_empty->type(), JsonNode::Type::kArray);
-  ASSERT_EQ(r_empty->array_value().size(), 0);
+  ASSERT_EQ(r_empty->as_array().size(), 0);
 
   auto r_empty_ws = JsonNode::ParseJson(" [ \n\t\r ] ");
   ASSERT_TRUE(r_empty_ws.ok());
-  ASSERT_EQ(r_empty_ws->array_value().size(), 0);
+  ASSERT_EQ(r_empty_ws->as_array().size(), 0);
 
   auto r_nums = JsonNode::ParseJson("[1, 2, 3]");
   ASSERT_TRUE(r_nums.ok());
-  const auto& arr_nums = r_nums->array_value();
+  const auto& arr_nums = r_nums->as_array();
   ASSERT_EQ(arr_nums.size(), 3);
-  ASSERT_EQ(arr_nums[0].number_value(), 1.0);
-  ASSERT_EQ(arr_nums[1].number_value(), 2.0);
-  ASSERT_EQ(arr_nums[2].number_value(), 3.0);
+  ASSERT_EQ(arr_nums[0].as_number(), 1.0);
+  ASSERT_EQ(arr_nums[1].as_number(), 2.0);
+  ASSERT_EQ(arr_nums[2].as_number(), 3.0);
 
   auto r_mixed = JsonNode::ParseJson("[null, true, false, \"text\", 42.5]");
   ASSERT_TRUE(r_mixed.ok());
-  const auto& arr_mixed = r_mixed->array_value();
+  const auto& arr_mixed = r_mixed->as_array();
   ASSERT_EQ(arr_mixed.size(), 5);
   ASSERT_EQ(arr_mixed[0].type(), JsonNode::Type::kNull);
-  ASSERT_EQ(arr_mixed[1].bool_value(), true);
-  ASSERT_EQ(arr_mixed[2].bool_value(), false);
-  ASSERT_EQ(arr_mixed[3].string_value(), "text");
-  ASSERT_EQ(arr_mixed[4].number_value(), 42.5);
+  ASSERT_EQ(arr_mixed[1].as_bool(), true);
+  ASSERT_EQ(arr_mixed[2].as_bool(), false);
+  ASSERT_EQ(arr_mixed[3].as_string(), "text");
+  ASSERT_EQ(arr_mixed[4].as_number(), 42.5);
 
   auto r_nested = JsonNode::ParseJson("[[], [1, [2, [3]]]]");
   ASSERT_TRUE(r_nested.ok());
-  const auto& arr_nested = r_nested->array_value();
+  const auto& arr_nested = r_nested->as_array();
   ASSERT_EQ(arr_nested.size(), 2);
-  ASSERT_EQ(arr_nested[0].array_value().size(), 0);
-  ASSERT_EQ(arr_nested[1].array_value()[1].array_value()[1].array_value()[0].number_value(), 3.0);
+  ASSERT_EQ(arr_nested[0].as_array().size(), 0);
+  ASSERT_EQ(arr_nested[1].as_array()[1].as_array()[1].as_array()[0].as_number(), 3.0);
 }
 
 void TestParseJsonObjects() {
   auto r_empty = JsonNode::ParseJson("{}");
   ASSERT_TRUE(r_empty.ok());
   ASSERT_EQ(r_empty->type(), JsonNode::Type::kObject);
-  ASSERT_EQ(r_empty->object_value().size(), 0);
+  ASSERT_EQ(r_empty->as_object().size(), 0);
 
   auto r_empty_ws = JsonNode::ParseJson(" { \n\t\r } ");
   ASSERT_TRUE(r_empty_ws.ok());
-  ASSERT_EQ(r_empty_ws->object_value().size(), 0);
+  ASSERT_EQ(r_empty_ws->as_object().size(), 0);
 
   auto r_single = JsonNode::ParseJson("{\"key\": \"value\"}");
   ASSERT_TRUE(r_single.ok());
-  const auto& obj_single = r_single->object_value();
+  const auto& obj_single = r_single->as_object();
   ASSERT_EQ(obj_single.size(), 1);
   ASSERT_EQ(obj_single[0].first, "key");
-  ASSERT_EQ(obj_single[0].second.string_value(), "value");
+  ASSERT_EQ(obj_single[0].second.as_string(), "value");
 
   auto r_escaped_keys =
       JsonNode::ParseJson("{\"a/b\": 1, \"c\\\\d\": 2, \"e\\\"f\": 3, \"\\u006b\": 4}");
   ASSERT_TRUE(r_escaped_keys.ok());
-  const auto& obj_esc = r_escaped_keys->object_value();
+  const auto& obj_esc = r_escaped_keys->as_object();
   ASSERT_EQ(obj_esc.size(), 4);
   ASSERT_EQ(obj_esc[0].first, "a/b");
   ASSERT_EQ(obj_esc[1].first, "c\\d");
@@ -1476,14 +1476,14 @@ void TestParseJsonObjects() {
   auto r_multi =
       JsonNode::ParseJson("{\"name\": \"Alice\", \"age\": 30, \"active\": true, \"extra\": null}");
   ASSERT_TRUE(r_multi.ok());
-  const auto& obj_multi = r_multi->object_value();
+  const auto& obj_multi = r_multi->as_object();
   ASSERT_EQ(obj_multi.size(), 4);
   ASSERT_EQ(obj_multi[0].first, "name");
-  ASSERT_EQ(obj_multi[0].second.string_value(), "Alice");
+  ASSERT_EQ(obj_multi[0].second.as_string(), "Alice");
   ASSERT_EQ(obj_multi[1].first, "age");
-  ASSERT_EQ(obj_multi[1].second.number_value(), 30.0);
+  ASSERT_EQ(obj_multi[1].second.as_number(), 30.0);
   ASSERT_EQ(obj_multi[2].first, "active");
-  ASSERT_EQ(obj_multi[2].second.bool_value(), true);
+  ASSERT_EQ(obj_multi[2].second.as_bool(), true);
   ASSERT_EQ(obj_multi[3].first, "extra");
   ASSERT_EQ(obj_multi[3].second.type(), JsonNode::Type::kNull);
 
@@ -1615,7 +1615,7 @@ void TestNonZeroTerminatedStringViews() {
   // Slice 1: "hello"
   std::string_view sv_hello(buffer.data() + 4, 5);
   JsonNode node_hello(sv_hello);
-  ASSERT_EQ(node_hello.string_value(), "hello");
+  ASSERT_EQ(node_hello.as_string(), "hello");
   ASSERT_EQ(node_hello.ToJson(), "\"hello\"");
   ASSERT_EQ(node_hello.ToToon(), "hello");
   ASSERT_EQ(node_hello.ToYaml(), "hello");
@@ -1624,13 +1624,13 @@ void TestNonZeroTerminatedStringViews() {
   std::string_view sv_world(buffer.data() + 13, 7);
   auto parse_res = JsonNode::ParseJson(sv_world);
   ASSERT_TRUE(parse_res.ok());
-  ASSERT_EQ(parse_res->string_value(), "world");
+  ASSERT_EQ(parse_res->as_string(), "world");
 
   // Slice 3: "12345" parsed as JSON
   std::string_view sv_num(buffer.data() + 24, 5);
   auto num_res = JsonNode::ParseJson(sv_num);
   ASSERT_TRUE(num_res.ok());
-  ASSERT_EQ(num_res->number_value(), 12345.0);
+  ASSERT_EQ(num_res->as_number(), 12345.0);
 
   // Escaping in non-null-terminated slices with control chars
   char raw_ctrl[] = {'X', 'Y', '\n', '\t', '"', '\\', 'Z', 'W'};
@@ -1664,30 +1664,30 @@ void TestDeepNestingProtection() {
 
 void TestMalformedUtf8AndUnicodeSurrogates() {
   // Truncated multi-byte UTF-8
-  ASSERT_EQ(JsonNode(std::string_view("\xC0")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xE0\xA0")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF0\x90\x80")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xFF")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\x80")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xC0")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\xA0")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x90\x80")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xFF")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\x80")).as_string(), "\xEF\xBF\xBD");
 
   // Overlong UTF-8
-  ASSERT_EQ(JsonNode(std::string_view("\xC0\xAF")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xE0\x80\xAF")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF0\x80\x80\xAF")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xC0\xAF")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xE0\x80\xAF")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF0\x80\x80\xAF")).as_string(), "\xEF\xBF\xBD");
 
   // UTF-8 encoded surrogates (U+D800 .. U+DFFF)
-  ASSERT_EQ(JsonNode(std::string_view("\xED\xA0\x80")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xED\xBF\xBF")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xA0\x80")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xED\xBF\xBF")).as_string(), "\xEF\xBF\xBD");
 
   // Codepoints > U+10FFFF
-  ASSERT_EQ(JsonNode(std::string_view("\xF4\x90\x80\x80")).string_value(), "\xEF\xBF\xBD");
-  ASSERT_EQ(JsonNode(std::string_view("\xF5\x80\x80\x80")).string_value(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF4\x90\x80\x80")).as_string(), "\xEF\xBF\xBD");
+  ASSERT_EQ(JsonNode(std::string_view("\xF5\x80\x80\x80")).as_string(), "\xEF\xBF\xBD");
 
   // JSON unicode surrogate pairs
   // Valid surrogate pair for musical symbol G clef U+1D11E (\uD834\uDD1E)
   auto res_clef = JsonNode::ParseJson("\"\\uD834\\uDD1E\"");
   ASSERT_TRUE(res_clef.ok());
-  ASSERT_EQ(res_clef->string_value(), "\xF0\x9D\x84\x9E");
+  ASSERT_EQ(res_clef->as_string(), "\xF0\x9D\x84\x9E");
 
   // Invalid: High surrogate followed by non-surrogate or EOF
   ASSERT_FALSE(JsonNode::ParseJson("\"\\uD834\"").ok());
@@ -1728,11 +1728,11 @@ void TestExtremeNumbersAndSpecialValues() {
   // Parsing numbers with exponents
   auto exp1 = JsonNode::ParseJson("1e-5");
   ASSERT_TRUE(exp1.ok());
-  ASSERT_EQ(exp1->number_value(), 1e-5);
+  ASSERT_EQ(exp1->as_number(), 1e-5);
 
   auto exp2 = JsonNode::ParseJson("-0.123e+4");
   ASSERT_TRUE(exp2.ok());
-  ASSERT_EQ(exp2->number_value(), -1230.0);
+  ASSERT_EQ(exp2->as_number(), -1230.0);
 }
 
 void TestRobustnessAndEdgeCases() {
@@ -1888,7 +1888,7 @@ inline typeprompt::ParseStatus ParseValue(const typeprompt::JsonNode& node,
   if (node.type() != typeprompt::JsonNode::Type::kObject) {
     return context.MakeParseError("Expected object for Point");
   }
-  for (const auto& [k, v] : node.object_value()) {
+  for (const auto& [k, v] : node.as_object()) {
     if (k == "x") {
       typeprompt::internal::AtFieldJsonPath field_context(&context, "x");
       if (auto status = typeprompt::ParseValue(v, field_context, p.x); !status.ok()) return status;
@@ -1910,60 +1910,60 @@ void TestToJsonNodeOverloads() {
   JsonNode raw_node(42.0);
   JsonNode from_node = ToJsonNode(raw_node);
   ASSERT_EQ(from_node.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(from_node.number_value(), 42.0);
+  ASSERT_EQ(from_node.as_number(), 42.0);
 
   // 2. bool overload
   JsonNode b_true = ToJsonNode(true);
   ASSERT_EQ(b_true.type(), JsonNode::Type::kBool);
-  ASSERT_EQ(b_true.bool_value(), true);
+  ASSERT_EQ(b_true.as_bool(), true);
 
   JsonNode b_false = ToJsonNode(false);
   ASSERT_EQ(b_false.type(), JsonNode::Type::kBool);
-  ASSERT_EQ(b_false.bool_value(), false);
+  ASSERT_EQ(b_false.as_bool(), false);
 
   // 3. double and int overloads
   JsonNode num_double = ToJsonNode(3.14159);
   ASSERT_EQ(num_double.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(num_double.number_value(), 3.14159);
+  ASSERT_EQ(num_double.as_number(), 3.14159);
 
   JsonNode num_double2 = ToJsonNode(100.0);
   ASSERT_EQ(num_double2.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(num_double2.number_value(), 100.0);
+  ASSERT_EQ(num_double2.as_number(), 100.0);
 
   JsonNode num_int = ToJsonNode(100);
   ASSERT_EQ(num_int.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(num_int.number_value(), 100.0);
+  ASSERT_EQ(num_int.as_number(), 100.0);
 
   // 4. std::string_view overload
   std::string_view sv = "sv_hello";
   JsonNode sv_res = ToJsonNode(sv);
   ASSERT_EQ(sv_res.type(), JsonNode::Type::kString);
-  ASSERT_EQ(sv_res.string_value(), "sv_hello");
+  ASSERT_EQ(sv_res.as_string(), "sv_hello");
 
   std::string s = "std_string_val";
   JsonNode str_res = ToJsonNode(s);
   ASSERT_EQ(str_res.type(), JsonNode::Type::kString);
-  ASSERT_EQ(str_res.string_value(), "std_string_val");
+  ASSERT_EQ(str_res.as_string(), "std_string_val");
 
   JsonNode lit_res = ToJsonNode(std::string_view("string_literal"));
   ASSERT_EQ(lit_res.type(), JsonNode::Type::kString);
-  ASSERT_EQ(lit_res.string_value(), "string_literal");
+  ASSERT_EQ(lit_res.as_string(), "string_literal");
 
   // 5. std::optional<T> overload
   std::optional<double> opt_val = 55.0;
   JsonNode opt_res = ToJsonNode(opt_val);
   ASSERT_EQ(opt_res.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(opt_res.number_value(), 55.0);
+  ASSERT_EQ(opt_res.as_number(), 55.0);
 
   std::optional<int> opt_int = 42;
   JsonNode opt_int_res = ToJsonNode(opt_int);
   ASSERT_EQ(opt_int_res.type(), JsonNode::Type::kNumber);
-  ASSERT_EQ(opt_int_res.number_value(), 42.0);
+  ASSERT_EQ(opt_int_res.as_number(), 42.0);
 
   std::optional<std::string> opt_str = "opt_text";
   JsonNode opt_str_res = ToJsonNode(opt_str);
   ASSERT_EQ(opt_str_res.type(), JsonNode::Type::kString);
-  ASSERT_EQ(opt_str_res.string_value(), "opt_text");
+  ASSERT_EQ(opt_str_res.as_string(), "opt_text");
 
   std::optional<double> opt_empty = std::nullopt;
   JsonNode opt_empty_res = ToJsonNode(opt_empty);
@@ -1972,7 +1972,7 @@ void TestToJsonNodeOverloads() {
   std::optional<JsonNode> opt_node = JsonNode("node_inside_opt");
   JsonNode opt_node_res = ToJsonNode(opt_node);
   ASSERT_EQ(opt_node_res.type(), JsonNode::Type::kString);
-  ASSERT_EQ(opt_node_res.string_value(), "node_inside_opt");
+  ASSERT_EQ(opt_node_res.as_string(), "node_inside_opt");
 
   std::optional<JsonNode> opt_node_empty = std::nullopt;
   JsonNode opt_node_empty_res = ToJsonNode(opt_node_empty);
@@ -1982,56 +1982,56 @@ void TestToJsonNodeOverloads() {
   std::vector<double> vec_nums = {1.0, 2.0, 3.0};
   JsonNode vec_nums_res = ToJsonNode(vec_nums);
   ASSERT_EQ(vec_nums_res.type(), JsonNode::Type::kArray);
-  ASSERT_EQ(vec_nums_res.array_value().size(), 3);
-  ASSERT_EQ(vec_nums_res.array_value()[0].number_value(), 1.0);
-  ASSERT_EQ(vec_nums_res.array_value()[1].number_value(), 2.0);
-  ASSERT_EQ(vec_nums_res.array_value()[2].number_value(), 3.0);
+  ASSERT_EQ(vec_nums_res.as_array().size(), 3);
+  ASSERT_EQ(vec_nums_res.as_array()[0].as_number(), 1.0);
+  ASSERT_EQ(vec_nums_res.as_array()[1].as_number(), 2.0);
+  ASSERT_EQ(vec_nums_res.as_array()[2].as_number(), 3.0);
 
   std::vector<int> vec_ints = {10, 20, 30};
   JsonNode vec_ints_res = ToJsonNode(vec_ints);
   ASSERT_EQ(vec_ints_res.type(), JsonNode::Type::kArray);
-  ASSERT_EQ(vec_ints_res.array_value().size(), 3);
-  ASSERT_EQ(vec_ints_res.array_value()[0].number_value(), 10.0);
-  ASSERT_EQ(vec_ints_res.array_value()[1].number_value(), 20.0);
-  ASSERT_EQ(vec_ints_res.array_value()[2].number_value(), 30.0);
+  ASSERT_EQ(vec_ints_res.as_array().size(), 3);
+  ASSERT_EQ(vec_ints_res.as_array()[0].as_number(), 10.0);
+  ASSERT_EQ(vec_ints_res.as_array()[1].as_number(), 20.0);
+  ASSERT_EQ(vec_ints_res.as_array()[2].as_number(), 30.0);
 
   std::vector<std::string> vec_strs = {"alpha", "beta"};
   JsonNode vec_strs_res = ToJsonNode(vec_strs);
   ASSERT_EQ(vec_strs_res.type(), JsonNode::Type::kArray);
-  ASSERT_EQ(vec_strs_res.array_value().size(), 2);
-  ASSERT_EQ(vec_strs_res.array_value()[0].string_value(), "alpha");
-  ASSERT_EQ(vec_strs_res.array_value()[1].string_value(), "beta");
+  ASSERT_EQ(vec_strs_res.as_array().size(), 2);
+  ASSERT_EQ(vec_strs_res.as_array()[0].as_string(), "alpha");
+  ASSERT_EQ(vec_strs_res.as_array()[1].as_string(), "beta");
 
   std::vector<std::optional<double>> vec_opts = {1.5, std::nullopt, 2.5};
   JsonNode vec_opts_res = ToJsonNode(vec_opts);
   ASSERT_EQ(vec_opts_res.type(), JsonNode::Type::kArray);
-  ASSERT_EQ(vec_opts_res.array_value().size(), 3);
-  ASSERT_EQ(vec_opts_res.array_value()[0].number_value(), 1.5);
-  ASSERT_EQ(vec_opts_res.array_value()[1].type(), JsonNode::Type::kNull);
-  ASSERT_EQ(vec_opts_res.array_value()[2].number_value(), 2.5);
+  ASSERT_EQ(vec_opts_res.as_array().size(), 3);
+  ASSERT_EQ(vec_opts_res.as_array()[0].as_number(), 1.5);
+  ASSERT_EQ(vec_opts_res.as_array()[1].type(), JsonNode::Type::kNull);
+  ASSERT_EQ(vec_opts_res.as_array()[2].as_number(), 2.5);
 
   // 7. ADL with custom type
   test_custom_adl::Point pt{10.0, 20.0};
   JsonNode pt_res = ToJsonNode(pt);
   ASSERT_EQ(pt_res.type(), JsonNode::Type::kObject);
-  ASSERT_EQ(pt_res.object_value().size(), 2);
-  ASSERT_EQ(pt_res.object_value()[0].first, "x");
-  ASSERT_EQ(pt_res.object_value()[0].second.number_value(), 10.0);
-  ASSERT_EQ(pt_res.object_value()[1].first, "y");
-  ASSERT_EQ(pt_res.object_value()[1].second.number_value(), 20.0);
+  ASSERT_EQ(pt_res.as_object().size(), 2);
+  ASSERT_EQ(pt_res.as_object()[0].first, "x");
+  ASSERT_EQ(pt_res.as_object()[0].second.as_number(), 10.0);
+  ASSERT_EQ(pt_res.as_object()[1].first, "y");
+  ASSERT_EQ(pt_res.as_object()[1].second.as_number(), 20.0);
 
   std::vector<test_custom_adl::Point> pts = {test_custom_adl::Point{1.0, 2.0},
                                              test_custom_adl::Point{3.0, 4.0}};
   JsonNode pts_res = ToJsonNode(pts);
   ASSERT_EQ(pts_res.type(), JsonNode::Type::kArray);
-  ASSERT_EQ(pts_res.array_value().size(), 2);
-  ASSERT_EQ(pts_res.array_value()[0].type(), JsonNode::Type::kObject);
-  ASSERT_EQ(pts_res.array_value()[1].type(), JsonNode::Type::kObject);
+  ASSERT_EQ(pts_res.as_array().size(), 2);
+  ASSERT_EQ(pts_res.as_array()[0].type(), JsonNode::Type::kObject);
+  ASSERT_EQ(pts_res.as_array()[1].type(), JsonNode::Type::kObject);
 
   std::optional<test_custom_adl::Point> opt_pt = test_custom_adl::Point{5.0, 6.0};
   JsonNode opt_pt_res = ToJsonNode(opt_pt);
   ASSERT_EQ(opt_pt_res.type(), JsonNode::Type::kObject);
-  ASSERT_EQ(opt_pt_res.object_value()[0].second.number_value(), 5.0);
+  ASSERT_EQ(opt_pt_res.as_object()[0].second.as_number(), 5.0);
 
   std::optional<test_custom_adl::Point> opt_pt_null = std::nullopt;
   JsonNode opt_pt_null_res = ToJsonNode(opt_pt_null);
@@ -2041,7 +2041,7 @@ void TestToJsonNodeOverloads() {
   std::unordered_map<std::string, int> map_ints = {{"a", 1}, {"b", 2}};
   JsonNode map_ints_res = ToJsonNode(map_ints);
   ASSERT_EQ(map_ints_res.type(), JsonNode::Type::kObject);
-  ASSERT_EQ(map_ints_res.object_value().size(), 2);
+  ASSERT_EQ(map_ints_res.as_object().size(), 2);
 }
 
 void TestTopLevelSerializers() {
@@ -2078,7 +2078,7 @@ void TestParseValueOverloads() {
   JsonNode out_node;
   auto status_node = ParseValue(in_node, context, out_node);
   ASSERT_TRUE(status_node.ok());
-  ASSERT_EQ(out_node.number_value(), 42.0);
+  ASSERT_EQ(out_node.as_number(), 42.0);
 
   // 2. bool
   bool out_b = false;

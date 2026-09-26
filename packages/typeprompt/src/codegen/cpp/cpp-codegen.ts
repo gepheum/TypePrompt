@@ -1119,13 +1119,13 @@ function writeMethodImplsForUnion(
     for (const member of members.members) {
       const constantCName = toCName("k".concat(toPascalCase(member.value)));
       lines.push(
-        `  } else if (node.string_value() == "${member.value}") {`,
+        `  } else if (node.as_string() == "${member.value}") {`,
         `   out = ${typeCName}::${constantCName};`,
       );
     }
     lines.push(
       "  } else {",
-      `   return context.MakeParseError(std::format("Unknown constant '{}'", node.string_value()));`,
+      `   return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));`,
       "  }",
       "  return kOkStatus;",
     );
