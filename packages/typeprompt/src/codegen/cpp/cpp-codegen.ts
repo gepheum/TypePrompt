@@ -2,6 +2,7 @@ import {
   capitalize,
   Config,
   FieldType,
+  getId,
   Interface,
   isLiteralType,
   NamingHint,
@@ -57,6 +58,7 @@ function writeAll(
         [
           writeUserDefinedDatatypes(compilationResult, config),
           writeToolsSignatures(compilationResult, config),
+          writeTemplatesSignatures(compilationResult, config),
           writeSpecDatatypes(config),
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
@@ -522,17 +524,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-          rootNamespace,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+        rootNamespace,
+      },
+    )
     : "std::nullopt_t";
   lines.push(
     "// Metadata associated with a prompt.",
@@ -552,12 +554,12 @@ function writeToolsSignatures(
 
   const writeNamespace = (
     namespace: ValidNamespaceResult,
-    cNamespace: string,
-    typePrefixBase: string,
+    middleComp: string,
   ): void => {
     const tools = Object.values(namespace.tools);
     if (tools.length <= 0) return;
-    lines.push(`namespace ${cNamespace} {`, "");
+    lines.push(`namespace tools${middleComp} {`, "");
+    const typePrefixBase = `schema${middleComp}::`;
     const sharedTypePrefix = typePrefixBase.concat("shared::");
     for (const tool of tools) {
       const { schema } = tool;
@@ -599,18 +601,89 @@ function writeToolsSignatures(
         "",
       );
     }
-    lines.push(`}  // namespace ${cNamespace}`, "");
+    lines.push(`}  // namespace tools${middleComp}`, "");
   };
 
   if (singleNamespace) {
-    const cNamespace = "tools";
-    const typePrefixBase = "schema::";
-    writeNamespace(singleNamespace, cNamespace, typePrefixBase);
+    writeNamespace(singleNamespace, "");
   } else {
     for (const namespace of Object.values(namespaces)) {
-      const cNamespace = "tools::".concat(toCName(namespace.name));
-      const typePrefixBase = ["schema", toCName(namespace.name), ""].join("::");
-      writeNamespace(namespace, cNamespace, typePrefixBase);
+      const cNamespace = toCName(namespace.name);
+      writeNamespace(namespace, "::".concat(cNamespace));
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function writeTemplatesSignatures(
+  compilationResult: ValidCompilationResult,
+  config: { readonly rootNamespace: string },
+): string {
+  const { namespaces, singleNamespace } = compilationResult;
+  const { rootNamespace } = config;
+  const lines: string[] = [];
+
+  const writeNamespace = (
+    namespace: ValidNamespaceResult,
+    middleComp: string,
+  ): void => {
+    const templates = Object.values(namespace.templates);
+    if (templates.length <= 0) return;
+    lines.push(`namespace templates${middleComp} {`, "");
+    const typePrefixBase = `schema${middleComp}::`;
+    const sharedTypePrefix = typePrefixBase.concat("shared::");
+    for (const template of templates) {
+      const { schema } = template;
+      const rawTemplateName = template.template.name.text;
+      const templateId = getId(template.template);
+      const structCName = toCName(toPascalCase(rawTemplateName));
+      const typePrefix = typePrefixBase.concat(
+        toCName(toSnakeCase(rawTemplateName)),
+        "::",
+      );
+      const options: WriteSchemaOptions = {
+        topLevel: true,
+        typePrefix,
+        sharedTypePrefix,
+        rootNamespace,
+      };
+      const inputType = writeType(
+        {
+          kind: "type-name",
+          name: { text: "Input" },
+        },
+        schema,
+        options,
+      );
+      const outputType = writeType(
+        {
+          kind: "type-name",
+          name: { text: "Output" },
+        },
+        schema,
+        options,
+      );
+      lines.push(
+        `// Defined in '${template.template.sourcePath}'`,
+        `struct ${structCName} {`,
+        ` static constexpr std::string_view kTemplateId = "${templateId}";`,
+        "",
+        ` using input_type = ${inputType};`,
+        ` using output_type = ${outputType};`,
+        "};",
+        "",
+      );
+    }
+    lines.push(`}  // namespace templates${middleComp}`, "");
+  };
+
+  if (singleNamespace) {
+    writeNamespace(singleNamespace, "");
+  } else {
+    for (const namespace of Object.values(namespaces)) {
+      const cNamespace = toCName(namespace.name);
+      writeNamespace(namespace, "::".concat(cNamespace));
     }
   }
 
@@ -715,7 +788,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
