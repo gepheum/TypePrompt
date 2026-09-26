@@ -105,31 +105,6 @@ function writeAll(
 //   return { inputType, outputType, inputTypeNode, outputTypeNode, options };
 // }
 
-// function getToolExecutorRef(
-//   template: ValidTemplate,
-//   compilationResult: ValidCompilationResult,
-// ): string {
-//   const { singleNamespace } = compilationResult;
-//   const toolEntries = Object.values(template.tools);
-//   const [firstToolEntry] = toolEntries;
-//   if (toolEntries.length === 1 && firstToolEntry) {
-//     const tool = firstToolEntry.tool;
-//     const toolName = tool.tool.name.text;
-//     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-//     const capitalizedToolName = capitalize(toolName);
-//     return singleNamespace
-//       ? `ToolExecutor_${capitalizedToolName}`
-//       : `ToolExecutor_${toolNamespace}_${capitalizedToolName}`;
-//   } else {
-//     const templateName = template.template.name.text;
-//     const templateNamespace =
-//       template.template.namespace?.text ?? DEFAULT_NAMESPACE;
-//     return singleNamespace
-//       ? `ToolExecutor_${templateName}`
-//       : `ToolExecutor_${templateNamespace}_${templateName}`;
-//   }
-// }
-
 // function writePromptsClass(compilationResult: ValidCompilationResult): string {
 //   const { singleNamespace, namespaces } = compilationResult;
 
@@ -547,17 +522,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-          rootNamespace,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+        rootNamespace,
+      },
+    )
     : "std::nullopt_t";
   lines.push(`using Meta = ${metaType};`);
 
@@ -662,7 +637,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
