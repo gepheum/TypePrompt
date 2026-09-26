@@ -749,17 +749,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
         break;
       }
     }
-    lines.push(
-      "",
-      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
-      ` return __internal::${typeCName}Serializer::ToJsonNodeImpl(input);`,
-      "}",
-      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
-      ` return __internal::${typeCName}Serializer::ParseValueImpl(node, context, out);`,
-      "}",
-      "",
-      "",
-    );
+    lines.push("", "");
   }
 
   return lines.join("\n");
@@ -1026,11 +1016,9 @@ function writeMethodImplsForInterface(
 
   // ToJsonNode() and ParseValue()
   lines.push(
-    "namespace __internal {",
-    `struct ${typeCName}Serializer {`,
-    ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
-    `  using ::${rootNamespace}::ToJsonNode;`,
-    "  return JsonNode(JsonNode::Object{",
+    `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+    ` using ::${rootNamespace}::ToJsonNode;`,
+    " return JsonNode(JsonNode::Object{",
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
@@ -1042,13 +1030,13 @@ function writeMethodImplsForInterface(
       const cFieldName = toCName(toSnakeCase(rawFieldName));
       value = `input.${cFieldName}`;
     }
-    lines.push(`    {"${rawFieldName}", ToJsonNode(${value})},`);
+    lines.push(`  {"${rawFieldName}", ToJsonNode(${value})},`);
   }
   lines.push(
-    "  });", // return JsonNode({...});
-    " }", // ToJsonNodeImpl
-    ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
-    "  internal::StructParser parser(&node, context);",
+    " });", // return JsonNode({...});
+    "}", // ToJsonNode
+    `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+    " internal::StructParser parser(&node, context);",
   );
   const parseFields = fields
     .filter((field) => !isLiteralType(resolveType(field.type, schema)))
@@ -1059,13 +1047,11 @@ function writeMethodImplsForInterface(
     const rawFieldName = field.name.text;
     const cFieldName = toCName(toSnakeCase(rawFieldName));
     const method = field.type.kind === "optional" ? "ParseOptional" : "Parse";
-    lines.push(`  parser.${method}("${rawFieldName}", out.${cFieldName});`);
+    lines.push(` parser.${method}("${rawFieldName}", out.${cFieldName});`);
   }
   lines.push(
-    "  return std::move(parser).status();",
-    " }", // ParseValueImpl
-    "};", // class Serializer
-    "}  // namespace __internal",
+    " return std::move(parser).status();",
+    "}", // ParseValue
   );
 
   return lines.join("\n");
@@ -1081,53 +1067,42 @@ function writeMethodImplsForUnion(
   const members = schema.unionToMembers.get(type)!;
 
   // ToJsonNode() and ParseValue()
-  const lines = ["namespace __internal {", `struct ${typeCName}Serializer {`];
+  const lines: string[] = [];
   if (members.kind === "strings") {
     lines.push(
-      ` static JsonNode ToJsonNodeImpl(${typeCName} input) {`,
-      "  switch (input) {",
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      " switch (input) {",
     );
     for (const member of members.members.slice(1)) {
       const constantCName = "k".concat(toPascalCase(member.value));
       lines.push(
-        `   case ${typeCName}::${constantCName}:`,
-        `    return JsonNode("${member.value}");`,
+        `  case ${typeCName}::${constantCName}:`,
+        `   return JsonNode("${member.value}");`,
       );
     }
     const first = members.members[0]!;
     lines.push(
-      "   default:",
-      `    return JsonNode("${first.value satisfies string}");`,
-      "  }",
-    );
-  } else {
-    lines.push(
-      ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
-      `  using ::${rootNamespace}::ToJsonNode;`,
-      "  return input.visit([](const auto& v) { return ToJsonNode(v); });",
-    );
-  }
-  lines.push(
-    " }", // ToJsonNodeImpl
-    ` static ParseStatus ParseValueImpl(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
-  );
-  if (members.kind === "strings") {
-    lines.push(
-      "  if (node.type() != JsonNode::Type::kString) {",
-      '   return context.MakeParseError("Expected string");',
+      "  default:",
+      `   return JsonNode("${first.value satisfies string}");`,
+      " }",
+      "}",
+      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+      " if (node.type() != JsonNode::Type::kString) {",
+      '  return context.MakeParseError("Expected string");',
     );
     for (const member of members.members) {
       const constantCName = toCName("k".concat(toPascalCase(member.value)));
       lines.push(
-        `  } else if (node.as_string() == "${member.value}") {`,
-        `   out = ${typeCName}::${constantCName};`,
+        ` } else if (node.as_string() == "${member.value}") {`,
+        `  out = ${typeCName}::${constantCName};`,
       );
     }
     lines.push(
-      "  } else {",
-      `   return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));`,
-      "  }",
-      "  return kOkStatus;",
+      " } else {",
+      `  return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));`,
+      " }",
+      " return kOkStatus;",
+      "}",
     );
   } else {
     const { discriminants, discriminator } = members;
@@ -1136,11 +1111,16 @@ function writeMethodImplsForUnion(
         ? "FindStringDiscriminant"
         : "FindBoolDiscriminant";
     lines.push(
-      `  using ::${rootNamespace}::ParseValue;`,
-      `  auto discriminant = internal::Unions::${findMethod}(node, context, "${discriminator}");`,
-      "  auto status = kOkStatus;",
-      "  if (!discriminant.ok()) {",
-      "   return std::move(discriminant).error();",
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      ` using ::${rootNamespace}::ToJsonNode;`,
+      " return input.visit([](const auto& v) { return ToJsonNode(v); });",
+      "}",
+      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+      ` using ::${rootNamespace}::ParseValue;`,
+      ` auto discriminant = internal::Unions::${findMethod}(node, context, "${discriminator}");`,
+      " auto status = kOkStatus;",
+      " if (!discriminant.ok()) {",
+      "  return std::move(discriminant).error();",
     );
     for (const member of Object.values(members.members)) {
       const discriminant = JSON.stringify(
@@ -1148,24 +1128,20 @@ function writeMethodImplsForUnion(
       );
       const type = writeType(member.resolved, schema, options);
       lines.push(
-        `  } else if (*discriminant == ${discriminant}) {`,
-        `   ${type} v;`,
-        `   status = ParseValue(node, context, v);`,
-        "   out = std::move(v);",
+        ` } else if (*discriminant == ${discriminant}) {`,
+        `  ${type} v;`,
+        `  status = ParseValue(node, context, v);`,
+        "  out = std::move(v);",
       );
     }
     lines.push(
-      "  } else {",
-      `   return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));`,
-      "  }",
-      "  return status;",
+      " } else {",
+      `  return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));`,
+      " }",
+      " return status;",
+      "}",
     );
   }
-  lines.push(
-    " }", // ParseValueImpl
-    "};", // class Serializer
-    "}  // namespace __internal",
-  );
 
   return lines.join("\n");
 }
