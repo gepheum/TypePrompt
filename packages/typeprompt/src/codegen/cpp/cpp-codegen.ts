@@ -467,7 +467,7 @@ function writeUserDefinedDatatypes(
       "namespace schema::meta {",
       "",
       writeSchema(metaSchema, {
-        typePrefix: "meta::",
+        typePrefix: "schema::meta::",
         rootNamespace,
       }),
       "}  // namespace schema::meta",
@@ -539,20 +539,21 @@ function writeUserDefinedDatatypes(
     }
   }
 
-  // const metaType = anyTypes(metaSchema)
-  //   ? writeType(
-  //       {
-  //         kind: "type-name",
-  //         name: { text: "Meta" },
-  //       },
-  //       metaSchema,
-  //       {
-  //         typePrefix: "meta::",
-  //         rootNamespace,
-  //       },
-  //     )
-  //   : "std::nullopt_t";
-  // lines.push(`using Meta = ${metaType};`);
+  const metaType = anyTypes(metaSchema)
+    ? writeType(
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+          rootNamespace,
+        },
+      )
+    : "std::nullopt_t";
+  lines.push(`using Meta = ${metaType};`);
 
   return lines.join("\n");
 }
@@ -629,6 +630,7 @@ function writeUserDefinedDatatypes(
 // }
 
 type WriteSchemaOptions = {
+  readonly topLevel?: true;
   readonly typePrefix: string;
   readonly sharedTypePrefix?: string;
   readonly rootNamespace: string;
@@ -1139,13 +1141,13 @@ function writeType(
     }
     case "array": {
       const { elementType } = type;
-      const writtenElement = writeType(elementType, schema, options);
-      return `std::vector<${writtenElement}>`;
+      const element = writeType(elementType, schema, options);
+      return `std::vector<${element}>`;
     }
     case "interface":
     case "union": {
       let namingHint = schema.namingHints.defaultScope.get(type);
-      let typePrefix = "";
+      let typePrefix = options.topLevel ? options.typePrefix : "";
       if (!namingHint) {
         namingHint = schema.namingHints.shared.get(type)!;
         typePrefix = options.sharedTypePrefix!;
@@ -1154,12 +1156,12 @@ function writeType(
     }
     case "optional": {
       const { innerType } = type;
-      const writtenInner = writeType(innerType, schema, options);
-      return `std::optional<${writtenInner}>`;
+      const inner = writeType(innerType, schema, options);
+      return `std::optional<${inner}>`;
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
-        return "int32_t";
+        return "std::int32_t";
       } else {
         switch (type.primitive.text) {
           case "boolean":
@@ -1174,8 +1176,8 @@ function writeType(
       }
     }
     case "record": {
-      const writtenValue = writeType(type.valueType, schema, options);
-      return `std::unordered_map<std::string, ${writtenValue}>`;
+      const value = writeType(type.valueType, schema, options);
+      return `std::unordered_map<std::string, ${value}>`;
     }
     case "shared-type-name":
     case "type-name": {

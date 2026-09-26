@@ -37,6 +37,11 @@
     fromJson: string;
     self: string;
     foo: "foo";
+    index: any;
+    std: boolean;
+    this: boolean;
+    indirect: boolean;
+    int32T: integer;
   }
 
   type E = "class" | "if" | "foo-BAR";
