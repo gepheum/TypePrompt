@@ -51,13 +51,13 @@ function writeAll(
       // reformat(writePromptsClass(compilationResult)),
       `namespace ${rootNamespace} {`,
       STATIC_SNIPPETS["cpp-public-types"],
-      // writeTemplateIdEnum(compilationResult),
       // writeToolExecutorClasses(compilationResult),
       // writePromptToolsEnums(compilationResult),
       scaleIndent(
         [
-          writeSpecDatatypes(config),
           writeUserDefinedDatatypes(compilationResult, config),
+          writeTemplatesTypes(compilationResult),
+          writeSpecDatatypes(config),
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
@@ -522,20 +522,28 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-        rootNamespace,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+          rootNamespace,
+        },
+      )
     : "std::nullopt_t";
   lines.push(`using Meta = ${metaType};`);
 
+  return lines.join("\n");
+}
+
+function writeTemplatesTypes(
+  _compilationResult: ValidCompilationResult,
+): string {
+  const lines = ["namespace templates {"];
+  lines.push("}  // namespace templates");
   return lines.join("\n");
 }
 
@@ -637,7 +645,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
