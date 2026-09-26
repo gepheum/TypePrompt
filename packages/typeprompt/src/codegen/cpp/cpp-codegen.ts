@@ -18,6 +18,7 @@ import {
   ValidNamespaceResult,
 } from "@typeprompt/core";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
+import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import { OutputFile } from "../codegen-types.js";
 
@@ -57,9 +58,9 @@ function writeAll(
         [
           writeSpecDatatypes(config),
           writeUserDefinedDatatypes(compilationResult, config),
+          writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
-      // writeTemplatesData(compilationResult),
       `}  // namespace ${config.rootNamespace}`,
       "#endif",
     ].join("\n\n"),
@@ -578,19 +579,20 @@ function writeSpecDatatypes(config: {
   ].join("\n\n");
 }
 
-// function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-//   const templatesData = makeTemplates(compilationResult);
-//   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
-//     /\$/g,
-//     "\\$",
-//   );
-//   const lines = [
-//     `final _templatesData = _Spec_Templates.fromJson(`,
-//     `jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
-//     `);`,
-//   ];
-//   return lines.join("\n");
-// }
+function writeTemplatesData(compilationResult: ValidCompilationResult): string {
+  const templatesData = makeTemplates(compilationResult);
+  const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
+  return [
+    "namespace internal {",
+    "struct TemplatesData {",
+    " static const spec::Templates& get() {",
+    `  static const auto* templates = new spec::Templates(*ParseJson<spec::Templates>(${stringifiedJson}));`,
+    "  return *templates;",
+    " }",
+    "};",
+    "}  // namespace internal",
+  ].join("\n");
+}
 
 // function getToolInfo(
 //   tool: ValidatedTool,
