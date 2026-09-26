@@ -555,10 +555,11 @@ function writeToolsSignatures(
     cNamespace: string,
     typePrefixBase: string,
   ): void => {
+    const tools = Object.values(namespace.tools);
+    if (tools.length <= 0) return;
     lines.push(`namespace ${cNamespace} {`, "");
-
     const sharedTypePrefix = typePrefixBase.concat("shared::");
-    for (const tool of Object.values(namespace.tools)) {
+    for (const tool of tools) {
       const { schema } = tool;
       const rawToolName = tool.tool.name.text;
       const structCName = toCName(toPascalCase(rawToolName));
