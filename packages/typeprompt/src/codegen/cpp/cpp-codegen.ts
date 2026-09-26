@@ -1125,7 +1125,7 @@ function writeMethodImplsForUnion(
     }
     lines.push(
       "  } else {",
-      '   return context.MakeParseError("Unknown constant name");',
+      `   return context.MakeParseError(std::format("Unknown constant '{}'", node.string_value()));`,
       "  }",
       "  return kOkStatus;",
     );
@@ -1156,7 +1156,7 @@ function writeMethodImplsForUnion(
     }
     lines.push(
       "  } else {",
-      '   return context.MakeParseError("Unknown discriminant value");',
+      `   return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));`,
       "  }",
       "  return status;",
     );

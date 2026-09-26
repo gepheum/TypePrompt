@@ -2643,7 +2643,7 @@ void TestUserDefinedEnums() {
 
   auto parsed_err_unknown = typeprompt_02::ParseJson<Meta_Model>("\"claude-3\"");
   ASSERT_FALSE(parsed_err_unknown.ok());
-  ASSERT_EQ(parsed_err_unknown.error().message, "Unknown constant name at json");
+  ASSERT_EQ(parsed_err_unknown.error().message, "Unknown constant 'claude-3' at json");
 
   // 2. TicketCategory
   ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kBilling), "\"billing\"");
@@ -2854,7 +2854,7 @@ void TestUserDefinedStructs() {
       "\"pricing\": {\"model\": \"unknown\", \"basePrice\": 10.0}, "
       "\"benchmarks\": [], \"pros\": [], \"cons\": []}");
   ASSERT_FALSE(nested_err.ok());
-  ASSERT_EQ(nested_err.error().message, "Unknown constant name at json.pricing.model");
+  ASSERT_EQ(nested_err.error().message, "Unknown constant 'unknown' at json.pricing.model");
 
   auto nested_array_err = typeprompt_02::ParseJson<Provider>(
       "{\"name\": \"A\", \"region\": \"B\", \"category\": \"compute\", "
@@ -2967,7 +2967,7 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
   auto err_unknown_kind =
       typeprompt_02::ParseJson<PageNode>("{\"kind\": \"image\", \"url\": \"foo.png\"}");
   ASSERT_FALSE(err_unknown_kind.ok());
-  ASSERT_EQ(err_unknown_kind.error().message, "Unknown discriminant value at json");
+  ASSERT_EQ(err_unknown_kind.error().message, "Unknown discriminant 'image' at json");
 
   auto err_nested_field = typeprompt_02::ParseJson<PageNode>(
       "{\"kind\": \"heading\", \"level\": \"h1\", \"text\": 123}");
