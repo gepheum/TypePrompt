@@ -1087,14 +1087,19 @@ function writeMethodImplsForUnion(
       ` static JsonNode ToJsonNodeImpl(${typeCName} input) {`,
       "  switch (input) {",
     );
-    for (const member of members.members) {
+    for (const member of members.members.slice(1)) {
       const constantCName = "k".concat(toPascalCase(member.value));
       lines.push(
         `   case ${typeCName}::${constantCName}:`,
         `    return JsonNode("${member.value}");`,
       );
     }
-    lines.push("  }", '  return JsonNode("never");');
+    const first = members.members[0]!;
+    lines.push(
+      "   default:",
+      `    return JsonNode("${first.value satisfies string}");`,
+      "  }",
+    );
   } else {
     lines.push(
       ` static JsonNode ToJsonNodeImpl(const ${typeCName}& input) {`,
