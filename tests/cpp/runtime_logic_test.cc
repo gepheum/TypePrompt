@@ -231,41 +231,41 @@ void TestToJsonNestedComplex() {
   ASSERT_EQ(complex_node.ToJson(), expected);
 }
 
-void TestToJsonWithIndentNull() {
+void TestToPrettyJsonNull() {
   JsonNode default_null;
-  ASSERT_EQ(default_null.ToJsonWithIndent(), "null");
+  ASSERT_EQ(default_null.ToPrettyJson(), "null");
 
   JsonNode explicit_null(std::nullopt);
-  ASSERT_EQ(explicit_null.ToJsonWithIndent(), "null");
+  ASSERT_EQ(explicit_null.ToPrettyJson(), "null");
 }
 
-void TestToJsonWithIndentBool() {
+void TestToPrettyJsonBool() {
   JsonNode bool_true(true);
-  ASSERT_EQ(bool_true.ToJsonWithIndent(), "true");
+  ASSERT_EQ(bool_true.ToPrettyJson(), "true");
 
   JsonNode bool_false(false);
-  ASSERT_EQ(bool_false.ToJsonWithIndent(), "false");
+  ASSERT_EQ(bool_false.ToPrettyJson(), "false");
 }
 
-void TestToJsonWithIndentNumber() {
+void TestToPrettyJsonNumber() {
   JsonNode num(42.0);
-  ASSERT_EQ(num.ToJsonWithIndent(), std::to_string(42.0));
+  ASSERT_EQ(num.ToPrettyJson(), std::to_string(42.0));
 
   JsonNode num_nan(std::numeric_limits<double>::quiet_NaN());
-  ASSERT_EQ(num_nan.ToJsonWithIndent(), std::to_string(0.0));
+  ASSERT_EQ(num_nan.ToPrettyJson(), std::to_string(0.0));
 }
 
-void TestToJsonWithIndentString() {
+void TestToPrettyJsonString() {
   JsonNode str(std::string("hello\nworld"));
-  ASSERT_EQ(str.ToJsonWithIndent(), "\"hello\\nworld\"");
+  ASSERT_EQ(str.ToPrettyJson(), "\"hello\\nworld\"");
 }
 
-void TestToJsonWithIndentArray() {
+void TestToPrettyJsonArray() {
   JsonNode empty_arr(std::vector<JsonNode>{});
-  ASSERT_EQ(empty_arr.ToJsonWithIndent(), "[]");
+  ASSERT_EQ(empty_arr.ToPrettyJson(), "[]");
 
   JsonNode single_arr(std::vector<JsonNode>{JsonNode(std::string("first"))});
-  ASSERT_EQ(single_arr.ToJsonWithIndent(),
+  ASSERT_EQ(single_arr.ToPrettyJson(),
             "[\n"
             "  \"first\"\n"
             "]");
@@ -283,7 +283,7 @@ void TestToJsonWithIndentArray() {
       "  \"two\",\n"
       "  true\n"
       "]";
-  ASSERT_EQ(multi_arr.ToJsonWithIndent(), expected_multi);
+  ASSERT_EQ(multi_arr.ToPrettyJson(), expected_multi);
 
   JsonNode nested_arr(std::vector<JsonNode>{
       JsonNode(std::vector<JsonNode>{
@@ -316,16 +316,16 @@ void TestToJsonWithIndentArray() {
       "    ]\n"
       "  ]\n"
       "]";
-  ASSERT_EQ(nested_arr.ToJsonWithIndent(), expected_nested);
+  ASSERT_EQ(nested_arr.ToPrettyJson(), expected_nested);
 }
 
-void TestToJsonWithIndentObject() {
+void TestToPrettyJsonObject() {
   JsonNode empty_obj(std::vector<std::pair<std::string, JsonNode>>{});
-  ASSERT_EQ(empty_obj.ToJsonWithIndent(), "{}");
+  ASSERT_EQ(empty_obj.ToPrettyJson(), "{}");
 
   JsonNode single_obj(
       std::vector<std::pair<std::string, JsonNode>>{{"key", JsonNode(std::string("value"))}});
-  ASSERT_EQ(single_obj.ToJsonWithIndent(),
+  ASSERT_EQ(single_obj.ToPrettyJson(),
             "{\n"
             "  \"key\": \"value\"\n"
             "}");
@@ -343,7 +343,7 @@ void TestToJsonWithIndentObject() {
       ",\n"
       "  \"active\": true\n"
       "}";
-  ASSERT_EQ(multi_obj.ToJsonWithIndent(), expected_multi);
+  ASSERT_EQ(multi_obj.ToPrettyJson(), expected_multi);
 
   JsonNode nested_obj(std::vector<std::pair<std::string, JsonNode>>{
       {"outer", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
@@ -357,10 +357,10 @@ void TestToJsonWithIndentObject() {
       "  },\n"
       "  \"empty\": {}\n"
       "}";
-  ASSERT_EQ(nested_obj.ToJsonWithIndent(), expected_nested);
+  ASSERT_EQ(nested_obj.ToPrettyJson(), expected_nested);
 }
 
-void TestToJsonWithIndentNestedComplex() {
+void TestToPrettyJsonNestedComplex() {
   JsonNode complex_node(std::vector<std::pair<std::string, JsonNode>>{
       {"title", JsonNode(std::string("Task List"))},
       {"tasks", JsonNode(std::vector<JsonNode>{
@@ -401,7 +401,7 @@ void TestToJsonWithIndentNestedComplex() {
       "  ],\n"
       "  \"completed\": false\n"
       "}";
-  ASSERT_EQ(complex_node.ToJsonWithIndent(), expected);
+  ASSERT_EQ(complex_node.ToPrettyJson(), expected);
 }
 
 void TestToToonPrimitives() {
@@ -2046,7 +2046,7 @@ void TestToJsonNodeOverloads() {
 
 void TestTopLevelSerializers() {
   using typeprompt::ToJson;
-  using typeprompt::ToJsonWithIndent;
+  using typeprompt::ToPrettyJson;
   using typeprompt::ToToon;
   using typeprompt::ToYaml;
 
@@ -2063,7 +2063,7 @@ void TestTopLevelSerializers() {
   // 3. Custom ADL type
   test_custom_adl::Point pt{1.0, 2.0};
   ASSERT_EQ(ToJson(pt), "{\"x\": " + std::to_string(1.0) + ",\"y\": " + std::to_string(2.0) + "}");
-  ASSERT_EQ(ToJsonWithIndent(pt),
+  ASSERT_EQ(ToPrettyJson(pt),
             "{\n  \"x\": " + std::to_string(1.0) + ",\n  \"y\": " + std::to_string(2.0) + "\n}");
   ASSERT_EQ(ToToon(pt), "x: 1\ny: 2");
   ASSERT_EQ(ToYaml(pt), "x: 1\n\"y\": 2");
@@ -3156,13 +3156,13 @@ void TestRuntimeLogic() {
   TestToJsonObject();
   TestToJsonNestedComplex();
 
-  TestToJsonWithIndentNull();
-  TestToJsonWithIndentBool();
-  TestToJsonWithIndentNumber();
-  TestToJsonWithIndentString();
-  TestToJsonWithIndentArray();
-  TestToJsonWithIndentObject();
-  TestToJsonWithIndentNestedComplex();
+  TestToPrettyJsonNull();
+  TestToPrettyJsonBool();
+  TestToPrettyJsonNumber();
+  TestToPrettyJsonString();
+  TestToPrettyJsonArray();
+  TestToPrettyJsonObject();
+  TestToPrettyJsonNestedComplex();
 
   TestToToonPrimitives();
   TestToToonNumbers();

@@ -154,7 +154,7 @@ class JsonNode {
   }
 
   // Formats this node as an indented, multi-line JSON string.
-  std::string ToJsonWithIndent() const {
+  std::string ToPrettyJson() const {
     std::string json;
     std::string eolIndent = "\n";
     AppendJson(json, eolIndent);
@@ -434,8 +434,8 @@ std::string ToJson(const T& value) {
 }
 
 template <typename T>
-std::string ToJsonWithIndent(const T& value) {
-  return ToJsonNode(value).ToJsonWithIndent();
+std::string ToPrettyJson(const T& value) {
+  return ToJsonNode(value).ToPrettyJson();
 }
 
 template <typename T>
