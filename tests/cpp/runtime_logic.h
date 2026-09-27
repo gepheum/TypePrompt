@@ -2341,5 +2341,14 @@ struct Prompt {
   // Uniquely identifies the prompt template.
   std::string template_id;
 };
+
+template <typename Template>
+ParseResult<typename Template::output_type> ParseResponse(Template tpl, std::string_view response) {
+  if constexpr (Template::kOutputFormat == OutputFormat::kJson) {
+    return JsonNode::ParseJson(response);
+  } else {
+    return std::string(response);
+  }
+}
 // </static:cpp-logic>
 }  // namespace typeprompt
