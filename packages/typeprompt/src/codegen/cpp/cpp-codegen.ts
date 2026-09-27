@@ -321,10 +321,14 @@ function writeTemplatesSignatures(
         }
         lines.push(lines.pop()!.slice(0, -1).concat(">;"));
       }
+      const outputFormat =
+        template.template.outputFormat?.text === "text" ? "kText" : "kJson";
       lines.push(
         "",
         ` using input_type = ${inputType};`,
         ` using output_type = ${outputType};`,
+        "",
+        ` static constexpr auto kOutputFormat = OutputFormat::${outputFormat};`,
         "};",
         "",
       );
@@ -1095,6 +1099,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   // RESERVED NAMES
   "JsonNode",
   "JsonPath",
+  "OutputFormat",
   "ParseStatus",
   "ParseValue",
   "ToJsonNode",

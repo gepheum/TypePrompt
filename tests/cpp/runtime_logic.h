@@ -2333,8 +2333,13 @@ struct Prompt {
   // The tools which can be called by the LLM, keyed by tool name.
   std::map<std::string, Tool> tools;
 
+  // The expected format of the model output.
+  OutputFormat output_format{};
+  // Set if 'output_format' is 'kJson'.
+  std::optional<JsonNode> output_json_schema;
+
   // Uniquely identifies the prompt template.
-  std::string_view template_id;
+  std::string template_id;
 };
 // </static:cpp-logic>
 }  // namespace typeprompt
