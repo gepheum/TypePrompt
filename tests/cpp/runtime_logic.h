@@ -3353,8 +3353,7 @@ struct Prompt {
 };
 
 namespace internal {
-Prompt RenderImpl(std::string_view template_id, const JsonNode& input,
-                  const JsonNode& templates_data) {}
+Prompt RenderImpl(std::string_view template_id, const JsonNode& input, const JsonNode& spec) {}
 }  // namespace internal
 
 template <typename Template>
