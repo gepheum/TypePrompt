@@ -580,7 +580,6 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
   }
   const JsonNode::Object& obj = node.as_object();
   out.clear();
-  out.reserve(obj.size());
   for (const auto& [key, val_node] : obj) {
     internal::AtFieldJsonPath field_context(&context, key);
     T val{};
@@ -2327,8 +2326,15 @@ struct Prompt {
   Meta meta{};
   std::string system_message;
   std::string user_message;
+
+  // Few-shot examples.
   std::vector<FewShotExample> examples;
+
+  // The tools which can be called by the LLM, keyed by tool name.
   std::map<std::string, Tool> tools;
+
+  // Uniquely identifies the prompt template.
+  std::string_view template_id;
 };
 // </static:cpp-logic>
 }  // namespace typeprompt

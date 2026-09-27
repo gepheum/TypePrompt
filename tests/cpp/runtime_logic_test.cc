@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -2037,8 +2037,8 @@ void TestToJsonNodeOverloads() {
   JsonNode opt_pt_null_res = ToJsonNode(opt_pt_null);
   ASSERT_EQ(opt_pt_null_res.type(), JsonNode::Type::kNull);
 
-  // 8. std::unordered_map<std::string, T> overload
-  std::unordered_map<std::string, int> map_ints = {{"a", 1}, {"b", 2}};
+  // 8. std::map<std::string, T> overload
+  std::map<std::string, int> map_ints = {{"a", 1}, {"b", 2}};
   JsonNode map_ints_res = ToJsonNode(map_ints);
   ASSERT_EQ(map_ints_res.type(), JsonNode::Type::kObject);
   ASSERT_EQ(map_ints_res.as_object().size(), 2);
@@ -2171,8 +2171,8 @@ void TestParseValueOverloads() {
   ASSERT_TRUE(ParseValue(JsonNode(std::nullopt), context, opt_pt).ok());
   ASSERT_FALSE(opt_pt.has_value());
 
-  // 9. std::unordered_map<std::string, T>
-  std::unordered_map<std::string, int> out_map_int;
+  // 9. std::map<std::string, T>
+  std::map<std::string, int> out_map_int;
   JsonNode map_node(JsonNode::Object{{"x", JsonNode(10.0)}, {"y", JsonNode(20.0)}});
   ASSERT_TRUE(ParseValue(map_node, context, out_map_int).ok());
   ASSERT_EQ(out_map_int.size(), 2);
@@ -2434,7 +2434,7 @@ void TestJsonPathErrorFormatting() {
   ASSERT_EQ(status_vec.error().message, "Expected number at json[1]");
 
   // Map parse error with nested field
-  std::unordered_map<std::string, int> map_val;
+  std::map<std::string, int> map_val;
   JsonNode bad_map_node(JsonNode::Object{{"good", JsonNode(1.0)}, {"bad", JsonNode(true)}});
   auto status_map = ParseValue(bad_map_node, root, map_val);
   ASSERT_FALSE(status_map.ok());
