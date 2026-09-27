@@ -175,7 +175,7 @@ function writeUserDefinedDatatypes(
       )
     : "internal::NoMeta";
   lines.push(
-    "// Metadata associated with a prompt.",
+    "/// Metadata associated with a prompt.",
     `using Meta = ${metaType};`,
   );
 
@@ -304,7 +304,7 @@ function writeTemplatesSignatures(
         options,
       );
       lines.push(
-        `// Defined in '${template.template.sourcePath}'`,
+        `/// Defined in '${template.template.sourcePath}'`,
         `struct ${structCName} {`,
         ` static constexpr std::string_view kTemplateId = "${templateId}";`,
         "",
@@ -439,7 +439,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     lines.push(...commentify(namingHint.doc));
     if (!internal) {
       lines.push(
-        `// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`,
+        `/// Exported as '${rootNamespace}::${typePrefix}${typeCName}'`,
       );
     }
     switch (type.kind) {
@@ -501,20 +501,20 @@ function writeTypepromptInterface(
   if (firstField && !internal) {
     const fieldCName = toCName(toSnakeCase(firstField.name.text));
     lines.push(
-      "//",
-      "// To construct a value:",
-      `//   ${typeCName} v = ${typeCName}::whole{`,
-      `//       .${fieldCName}: ...,`,
-      "//       ...",
-      "//   };",
-      "//",
-      "// Or with 'auto':",
-      `//   auto v = *${typeCName}::whole{`,
-      `//       .${fieldCName}: ...,`,
-      "//       ...",
-      "//   };",
-      "//",
-      "// Using '::whole' forces you to set all the fields.",
+      "///",
+      "/// To construct a value:",
+      `///   ${typeCName} v = ${typeCName}::whole{`,
+      `///       .${fieldCName}: ...,`,
+      "///       ...",
+      "///   };",
+      "///",
+      "/// Or with 'auto':",
+      `///   auto v = *${typeCName}::whole{`,
+      `///       .${fieldCName}: ...,`,
+      "///       ...",
+      "///   };",
+      "///",
+      "/// Using '::whole' forces you to set all the fields.",
     );
   }
   lines.push(`struct ${typeCName} {`);
@@ -529,8 +529,8 @@ function writeTypepromptInterface(
   if (!internal) {
     lines.push(
       "",
-      ` // Builder requiring all fields of ${typeCName} to be set at construction.`,
-      ` // Converts to ${typeCName} via implicit conversion or '*'.`,
+      ` /// Builder requiring all fields of ${typeCName} to be set at construction.`,
+      ` /// Converts to ${typeCName} via implicit conversion or '*'.`,
       " struct whole {",
     );
     for (const field of fields) {
@@ -592,9 +592,9 @@ function writeTypepromptUnion(
       const firstType = writeType(firstMember, schema, options);
       lines.push(` ${typeCName}() : data_(${firstType}()) {}`);
       if (!internal) {
-        lines.push(" // Expects one of:");
+        lines.push(" /// Expects one of:");
         for (const member of memberTypes) {
-          lines.push(` //   - a ${member} rvalue`);
+          lines.push(` ///   - a ${member} rvalue`);
         }
       }
       lines.push(
@@ -605,9 +605,9 @@ function writeTypepromptUnion(
         "",
       );
       if (!internal) {
-        lines.push(" // The right operand can be one of:");
+        lines.push(" /// The right operand can be one of:");
         for (const member of memberTypes) {
-          lines.push(` //   - a ${member} rvalue`);
+          lines.push(` ///   - a ${member} rvalue`);
         }
       }
       lines.push(
@@ -655,7 +655,7 @@ function writeTypepromptUnion(
           );
           const type = memberTypes[i];
           lines.push(
-            ` // Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
+            ` /// Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
             ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
             ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
@@ -673,7 +673,7 @@ function writeTypepromptUnion(
           const type = memberTypes[i];
           const maybeNot = discriminantValue ? "" : "!";
           lines.push(
-            ` // Precondition: ${maybeNot}${discriminatorCName}()`,
+            ` /// Precondition: ${maybeNot}${discriminatorCName}()`,
             ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
             ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
@@ -968,7 +968,7 @@ function toCName(name: string): string {
 function commentify(doc: string, indent = ""): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
-  return lines.map((l) => (l ? `${indent}// ${l}` : "//"));
+  return lines.map((l) => (l ? `${indent}/// ${l}` : `${indent}///`));
 }
 
 function coalesceEmptyLines(code: string): string {

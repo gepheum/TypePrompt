@@ -3259,6 +3259,56 @@ void TestRenderTabularFormatting() {
   ASSERT_TRUE(prompt_csv.user_message.find("\"Widget, B\"") != std::string::npos);
 }
 
+void TestTemplateOverrider() {
+  // 1. templatesData() returns valid JSON with signature
+  auto data = typeprompt_01::TemplateOverrider::templatesData();
+  ASSERT_TRUE(data.type() == typeprompt_01::JsonNode::Type::kObject);
+  std::string sig;
+  for (const auto& [k, v] : data.as_object()) {
+    if (k == "signature" && v.type() == typeprompt_01::JsonNode::Type::kString) {
+      sig = v.as_string();
+    }
+  }
+  ASSERT_FALSE(sig.empty());
+
+  // 2. Signature mismatch throws std::invalid_argument
+  typeprompt_01::JsonNode wrong_doc(typeprompt_01::JsonNode::Object{
+      {"signature", typeprompt_01::JsonNode("wrong_sig")},
+      {"edition", typeprompt_01::JsonNode(0)},
+      {"templates", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
+      {"tools", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
+  });
+  bool threw = false;
+  try {
+    typeprompt_01::TemplateOverrider::applyOverrides(wrong_doc);
+  } catch (const std::invalid_argument& e) {
+    threw = true;
+    ASSERT_EQ(std::string(e.what()), "Signature mismatch");
+  }
+  ASSERT_TRUE(threw);
+
+  // 3. Non-object throws std::invalid_argument
+  threw = false;
+  try {
+    typeprompt_01::TemplateOverrider::applyOverrides(typeprompt_01::JsonNode("not an object"));
+  } catch (const std::invalid_argument& e) {
+    threw = true;
+    ASSERT_EQ(std::string(e.what()), "Overrides must be an object");
+  }
+  ASSERT_TRUE(threw);
+
+  // 4. Valid overrides return TemplatesData (move-only) and work with Render
+  auto overridden_data = typeprompt_01::TemplateOverrider::applyOverrides(data);
+  auto moved_data = std::move(overridden_data);
+  auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
+      moved_data, typeprompt_01::schema::translate::Input::whole{
+                      .target_language = "Spanish",
+                      .text = "Good morning",
+                  });
+  ASSERT_TRUE(prompt.user_message.find("Spanish") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("Good morning") != std::string::npos);
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -3338,6 +3388,7 @@ void TestRuntimeLogic() {
   TestRenderVariants();
   TestRenderConditionalLogic();
   TestRenderTabularFormatting();
+  TestTemplateOverrider();
 }
 
 int main() {

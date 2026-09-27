@@ -23,19 +23,19 @@
 
 namespace typeprompt {
 // <static:cpp-public-types>
-// An error that occurred during JSON parsing.
+/// An error that occurred during JSON parsing.
 struct ParseError {
   std::string message;
 };
 
-// Either a successfully parsed value of type T or a ParseError.
+/// Either a successfully parsed value of type T or a ParseError.
 template <typename T>
 class ParseResult {
  public:
-  // Constructs a successful ParseResult containing ok_value.
+  /// Constructs a successful ParseResult containing ok_value.
   constexpr ParseResult(T ok_value) : data_(std::move(ok_value)) {}
 
-  // Constructs a failed ParseResult containing error.
+  /// Constructs a failed ParseResult containing error.
   ParseResult(ParseError error) : data_(std::move(error)) {}
 
   ParseResult(const ParseResult& other) = default;
@@ -44,19 +44,19 @@ class ParseResult {
   ParseResult& operator=(const ParseResult& other) = default;
   ParseResult& operator=(ParseResult&& other) = default;
 
-  // Returns true if the result contains a parsed value, false if it contains a ParseError.
+  /// Returns true if the result contains a parsed value, false if it contains a ParseError.
   constexpr bool ok() const { return data_.index() == 0; }
 
-  // Returns a reference to the parsed value. Precondition: ok() must be true.
+  /// Returns a reference to the parsed value. Precondition: ok() must be true.
   constexpr const T& operator*() const& { return std::get<0>(data_); }
   constexpr T& operator*() & { return std::get<0>(data_); }
   constexpr T&& operator*() && { return std::get<0>(std::move(data_)); }
 
-  // Member access operator for the parsed value. Precondition: ok() must be true.
+  /// Member access operator for the parsed value. Precondition: ok() must be true.
   constexpr const T* operator->() const { return &std::get<0>(data_); }
   constexpr T* operator->() { return &std::get<0>(data_); }
 
-  // Returns a reference to the error. Precondition: ok() must be false.
+  /// Returns a reference to the error. Precondition: ok() must be false.
   const ParseError& error() const& { return std::get<1>(data_); }
   ParseError& error() & { return std::get<1>(data_); }
   ParseError&& error() && { return std::get<1>(std::move(data_)); }
@@ -65,7 +65,7 @@ class ParseResult {
   std::variant<T, ParseError> data_;
 };
 
-// Either a successful parsing operation or a ParseError.
+/// Either a successful parsing operation or a ParseError.
 using ParseStatus = ParseResult<std::nullopt_t>;
 
 inline constexpr ParseStatus kOkStatus = std::nullopt;
@@ -74,12 +74,12 @@ namespace internal {
 
 class NumberFormatter {
  public:
-  // Formats a floating-point number in concise decimal or scientific notation.
-  // - Handles 0.0 and -0.0 -> "0"
-  // - Non-finite (NaN, Inf) -> "null"
-  // - In [1e-6, 1e21), uses up to 15 significant digits without scientific notation, stripping
-  // trailing zeros.
-  // - Outside [1e-6, 1e21), uses concise scientific notation with lowercase 'e'.
+  /// Formats a floating-point number in concise decimal or scientific notation.
+  /// - Handles 0.0 and -0.0 -> "0"
+  /// - Non-finite (NaN, Inf) -> "null"
+  /// - In [1e-6, 1e21), uses up to 15 significant digits without scientific notation, stripping
+  /// trailing zeros.
+  /// - Outside [1e-6, 1e21), uses concise scientific notation with lowercase 'e'.
   static std::string Format(double number) {
     if (!std::isfinite(number)) {
       return "null";
@@ -117,7 +117,7 @@ class NumberFormatter {
     }
   }
 
-  // Formats a number for YAML, returning .nan, .inf, or -.inf for non-finite values.
+  /// Formats a number for YAML, returning .nan, .inf, or -.inf for non-finite values.
   static std::string FormatYaml(double number) {
     if (std::isnan(number)) {
       return ".nan";
@@ -131,7 +131,7 @@ class NumberFormatter {
 
 }  // namespace internal
 
-// A composable JSON value. Can be formatted to JSON, YAML or TOON format.
+/// A composable JSON value. Can be formatted to JSON, YAML or TOON format.
 class JsonNode {
  public:
   enum class Type {
@@ -143,9 +143,9 @@ class JsonNode {
     kObject,
   };
 
-  // A JSON array.
+  /// A JSON array.
   using Array = std::vector<JsonNode>;
-  // A JSON object as an ordered list of key-value pairs.
+  /// A JSON object as an ordered list of key-value pairs.
   using Object = std::vector<std::pair<std::string, JsonNode>>;
 
   JsonNode() : data_(std::nullopt) {}
@@ -167,7 +167,7 @@ class JsonNode {
 
   static ParseResult<JsonNode> ParseJson(std::string_view json);
 
-  // Returns the JSON type of this node.
+  /// Returns the JSON type of this node.
   Type type() const {
     return std::visit(
         [](const auto& value) -> Type {
@@ -189,25 +189,25 @@ class JsonNode {
         data_);
   }
 
-  // Returns the boolean value. Precondition: type() == Type::kBool.
+  /// Returns the boolean value. Precondition: type() == Type::kBool.
   bool as_bool() const { return std::get<bool>(data_); }
 
-  // Returns the numeric value. Precondition: type() == Type::kNumber.
+  /// Returns the numeric value. Precondition: type() == Type::kNumber.
   double as_number() const { return std::get<double>(data_); }
 
-  // Returns the string value. Precondition: type() == Type::kString.
+  /// Returns the string value. Precondition: type() == Type::kString.
   const std::string& as_string() const& { return std::get<std::string>(data_); }
   std::string as_string() && { return std::get<std::string>(std::move(data_)); }
 
-  // Returns the array elements. Precondition: type() == Type::kArray.
+  /// Returns the array elements. Precondition: type() == Type::kArray.
   const Array& as_array() const& { return std::get<Array>(data_); }
   Array as_array() && { return std::get<Array>(std::move(data_)); }
 
-  // Returns the object key-value pairs. Precondition: type() == Type::kObject.
+  /// Returns the object key-value pairs. Precondition: type() == Type::kObject.
   const Object& as_object() const& { return std::get<Object>(data_); }
   Object as_object() && { return std::get<Object>(std::move(data_)); }
 
-  // Formats this node as a compact JSON string.
+  /// Formats this node as a compact JSON string.
   std::string ToJson() const {
     std::string json;
     std::string eolIndent;
@@ -215,7 +215,7 @@ class JsonNode {
     return json;
   }
 
-  // Formats this node as an indented, multi-line JSON string.
+  /// Formats this node as an indented, multi-line JSON string.
   std::string ToPrettyJson() const {
     std::string json;
     std::string eolIndent = "\n";
@@ -223,10 +223,10 @@ class JsonNode {
     return json;
   }
 
-  // Formats this node in TOON (Token-Oriented Object Notation) format.
+  /// Formats this node in TOON (Token-Oriented Object Notation) format.
   inline std::string ToToon() const;
 
-  // Formats this node in YAML format.
+  /// Formats this node in YAML format.
   inline std::string ToYaml() const;
 
  private:
@@ -500,7 +500,7 @@ std::string ToYaml(const T& value) {
   return ToJsonNode(value).ToYaml();
 }
 
-// Path within a JSON object. Example: 'json.foos[10].bar'
+/// Path within a JSON object. Example: 'json.foos[10].bar'
 class JsonPath {
  public:
   virtual ~JsonPath() = default;
@@ -666,20 +666,20 @@ ParseResult<T> ParseJson(std::string_view json) {
   }
 }
 
-// A heap-allocated value wrapper providing deep-copy value semantics.
+/// A heap-allocated value wrapper providing deep-copy value semantics.
 template <typename T>
 class indirect {
  public:
-  // Constructs an indirect wrapper containing a default-constructed or moved value of type T.
+  /// Constructs an indirect wrapper containing a default-constructed or moved value of type T.
   indirect(T value = T()) : ptr_(std::make_unique<T>(std::move(value))) {}
 
-  // Deep-copies the value from other.
+  /// Deep-copies the value from other.
   indirect(const indirect& other) : ptr_(std::make_unique<T>(*other.ptr_)) {}
   indirect(indirect&&) = default;
 
   ~indirect() = default;
 
-  // Deep-copies the value from other.
+  /// Deep-copies the value from other.
   indirect& operator=(const indirect& other) {
     if (&other != this) {
       ptr_ = std::make_unique<T>(*other.ptr_);
@@ -688,12 +688,12 @@ class indirect {
   }
   indirect& operator=(indirect&&) = default;
 
-  // Accesses the underlying value.
+  /// Accesses the underlying value.
   const T& operator*() const& { return *ptr_; }
   T& operator*() & { return *ptr_; }
   T&& operator*() && { return std::move(*ptr_); }
 
-  // Accesses members of the underlying value.
+  /// Accesses members of the underlying value.
   const T* operator->() const { return ptr_.get(); }
   T* operator->() { return ptr_.get(); }
 
@@ -701,7 +701,7 @@ class indirect {
   std::unique_ptr<T> ptr_;
 };
 
-// A wrapper that requires explicit initialization and enforces move-only consumption.
+/// A wrapper that requires explicit initialization and enforces move-only consumption.
 template <typename T>
 class must_init {
  public:
@@ -2160,15 +2160,15 @@ class StructParser {
               [](const auto& a, const auto& b) { return a->first < b->first; });
   }
 
-  // Parses the value for key into out.
-  // Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
+  /// Parses the value for key into out.
+  /// Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
   template <typename T>
   void Parse(std::string_view key, T& out) {
     return ParseImpl(key, out, false);
   }
 
-  // Parses the optional value for key into out.
-  // Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
+  /// Parses the optional value for key into out.
+  /// Important: Calls to Parse and ParseOptional must be made in alphabetical order of the keys.
   template <typename T>
   void ParseOptional(std::string_view key, T& out) {
     return ParseImpl(key, out, true);
@@ -2259,13 +2259,13 @@ inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Fo
 inline std::string JsonNode::ToYaml() const { return internal::YamlFormatter::Format(*this); }
 
 namespace internal {
-// Type used for Meta when no <meta> element is defined.
+/// Type used for Meta when no <meta> element is defined.
 struct NoMeta {};
 inline JsonNode ToJsonNode(const NoMeta&) { return JsonNode(std::nullopt); }
 inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, NoMeta&) { return kOkStatus; }
 }  // namespace internal
 
-// The expected format of the model output.
+/// The expected format of the model output.
 enum class OutputFormat { kText, kJson };
 // </static:cpp-public-types>
 
@@ -2306,7 +2306,7 @@ struct Templates {
   std::map<std::string, Template> templates{};
   std::map<std::string, Tool> tools_{};
   bool single_namespace{};
-  // The key is a relative path to a .xml file. The value is the file content.
+  /// The key is a relative path to a .xml file. The value is the file content.
   std::map<std::string, std::string> source_files{};
 };
 
@@ -2361,19 +2361,19 @@ struct BodyPiece {
   };
   kind kind() const { return static_cast<enum kind>(data_.index()); }
 
-  // Precondition: kind() == BodyPiece::kind::kText
+  /// Precondition: kind() == BodyPiece::kind::kText
   const BodyPiece_KindText& as_kind_text() const& { return *std::get<0>(data_); }
   BodyPiece_KindText& as_kind_text() & { return *std::get<0>(data_); }
   indirect<BodyPiece_KindText> as_kind_text() && { return std::move(std::get<0>(data_)); }
 
-  // Precondition: kind() == BodyPiece::kind::kInsertVal
+  /// Precondition: kind() == BodyPiece::kind::kInsertVal
   const BodyPiece_KindInsertVal& as_kind_insert_val() const& { return *std::get<1>(data_); }
   BodyPiece_KindInsertVal& as_kind_insert_val() & { return *std::get<1>(data_); }
   indirect<BodyPiece_KindInsertVal> as_kind_insert_val() && {
     return std::move(std::get<1>(data_));
   }
 
-  // Precondition: kind() == BodyPiece::kind::kInsertSnippet
+  /// Precondition: kind() == BodyPiece::kind::kInsertSnippet
   const BodyPiece_KindInsertSnippet& as_kind_insert_snippet() const& { return *std::get<2>(data_); }
   BodyPiece_KindInsertSnippet& as_kind_insert_snippet() & { return *std::get<2>(data_); }
   indirect<BodyPiece_KindInsertSnippet> as_kind_insert_snippet() && {
@@ -2473,7 +2473,7 @@ struct TemplateContents {
   };
   kind kind() const { return static_cast<enum kind>(data_.index()); }
 
-  // Precondition: kind() == TemplateContents::kind::kNoVariants
+  /// Precondition: kind() == TemplateContents::kind::kNoVariants
   const TemplateContents_KindNoVariants& as_kind_no_variants() const& {
     return *std::get<0>(data_);
   }
@@ -2482,7 +2482,7 @@ struct TemplateContents {
     return std::move(std::get<0>(data_));
   }
 
-  // Precondition: kind() == TemplateContents::kind::kVariants
+  /// Precondition: kind() == TemplateContents::kind::kVariants
   const TemplateContents_KindVariants& as_kind_variants() const& { return *std::get<1>(data_); }
   TemplateContents_KindVariants& as_kind_variants() & { return *std::get<1>(data_); }
   indirect<TemplateContents_KindVariants> as_kind_variants() && {
@@ -2564,12 +2564,12 @@ struct Expression {
   };
   kind kind() const { return static_cast<enum kind>(data_.index()); }
 
-  // Precondition: kind() == Expression::kind::kInput
+  /// Precondition: kind() == Expression::kind::kInput
   const Expression_KindInput& as_kind_input() const& { return *std::get<0>(data_); }
   Expression_KindInput& as_kind_input() & { return *std::get<0>(data_); }
   indirect<Expression_KindInput> as_kind_input() && { return std::move(std::get<0>(data_)); }
 
-  // Precondition: kind() == Expression::kind::kProperty
+  /// Precondition: kind() == Expression::kind::kProperty
   const Expression_KindProperty& as_kind_property() const& { return *std::get<1>(data_); }
   Expression_KindProperty& as_kind_property() & { return *std::get<1>(data_); }
   indirect<Expression_KindProperty> as_kind_property() && { return std::move(std::get<1>(data_)); }
@@ -2621,9 +2621,9 @@ inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal&);
 inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertVal&);
 
 struct BodyPiece_KindInsertSnippet {
-  // Snippet name.
+  /// Snippet name.
   std::string snippet{};
-  // Only contains whitespace characters.
+  /// Only contains whitespace characters.
   std::string indent{};
 };
 
@@ -2670,17 +2670,17 @@ struct Snippet {
   };
   kind kind() const { return static_cast<enum kind>(data_.index()); }
 
-  // Precondition: kind() == Snippet::kind::kSnippet
+  /// Precondition: kind() == Snippet::kind::kSnippet
   const Snippet_KindSnippet& as_kind_snippet() const& { return *std::get<0>(data_); }
   Snippet_KindSnippet& as_kind_snippet() & { return *std::get<0>(data_); }
   indirect<Snippet_KindSnippet> as_kind_snippet() && { return std::move(std::get<0>(data_)); }
 
-  // Precondition: kind() == Snippet::kind::kSnippetIf
+  /// Precondition: kind() == Snippet::kind::kSnippetIf
   const Snippet_KindSnippetIf& as_kind_snippet_if() const& { return *std::get<1>(data_); }
   Snippet_KindSnippetIf& as_kind_snippet_if() & { return *std::get<1>(data_); }
   indirect<Snippet_KindSnippetIf> as_kind_snippet_if() && { return std::move(std::get<1>(data_)); }
 
-  // Precondition: kind() == Snippet::kind::kSnippetSwitch
+  /// Precondition: kind() == Snippet::kind::kSnippetSwitch
   const Snippet_KindSnippetSwitch& as_kind_snippet_switch() const& { return *std::get<2>(data_); }
   Snippet_KindSnippetSwitch& as_kind_snippet_switch() & { return *std::get<2>(data_); }
   indirect<Snippet_KindSnippetSwitch> as_kind_snippet_switch() && {
@@ -3288,8 +3288,8 @@ struct ToolCallExample {
   std::string stringified_output;
 };
 
-// One intermediate step within a few-shot example, containing the tool
-// calls made at that step.
+/// One intermediate step within a few-shot example, containing the tool
+/// calls made at that step.
 struct IntermediateStepExample {
   /// Tool calls made in parallel at this step.
   std::vector<ToolCallExample> tool_calls;
@@ -3308,25 +3308,25 @@ struct Tool {
   JsonNode input_json_schema;
 };
 
-// A fully resolved prompt ready to be sent to an LLM.
+/// A fully resolved prompt ready to be sent to an LLM.
 struct Prompt {
   /// Metadata for this prompt.
   Meta meta{};
   std::string system_message;
   std::string user_message;
 
-  // Few-shot examples.
+  /// Few-shot examples.
   std::vector<FewShotExample> examples;
 
-  // The tools which can be called by the LLM, keyed by tool name.
+  /// The tools which can be called by the LLM, keyed by tool name.
   std::map<std::string, Tool> tools;
 
-  // The expected format of the model output.
+  /// The expected format of the model output.
   OutputFormat output_format{};
-  // Set if 'output_format' is 'kJson'.
+  /// Set if 'output_format' is 'kJson'.
   std::optional<JsonNode> output_json_schema;
 
-  // Uniquely identifies the prompt template.
+  /// Uniquely identifies the prompt template.
   std::string template_id;
 };
 
@@ -3827,6 +3827,90 @@ class Renderer {
 };
 }  // namespace internal
 
+class TemplateOverrider;
+
+/// Encapsulates compiled prompt templates data (including overrides).
+class TemplatesData {
+ public:
+  TemplatesData(const TemplatesData&) = delete;
+  TemplatesData& operator=(const TemplatesData&) = delete;
+  TemplatesData(TemplatesData&&) = default;
+  TemplatesData& operator=(TemplatesData&&) = default;
+
+ private:
+  friend class TemplateOverrider;
+  template <typename Template>
+  friend Prompt Render(const TemplatesData& data, const typename Template::input_type& input);
+
+  explicit TemplatesData(internal::spec::Templates spec) : spec_(std::move(spec)) {}
+
+  const internal::spec::Templates& spec() const { return spec_; }
+
+  internal::spec::Templates spec_;
+};
+
+/// Use this with external frameworks that support template override injection
+/// for experimentation or A/B testing.
+class TemplateOverrider {
+ public:
+  /// Returns the compiled prompt templates serialized as a JsonNode.
+  static JsonNode templatesData() {
+    using internal::spec::ToJsonNode;
+    return ToJsonNode(internal::TemplatesData::get());
+  }
+
+  /// Applies JSON overrides and returns an updated TemplatesData instance.
+  static TemplatesData applyOverrides(const JsonNode& overrides) {
+    if (overrides.type() != JsonNode::Type::kObject) {
+      throw std::invalid_argument("Overrides must be an object");
+    }
+    std::string sig;
+    bool found_sig = false;
+    for (const auto& [key, val] : overrides.as_object()) {
+      if (key == "signature" && val.type() == JsonNode::Type::kString) {
+        sig = val.as_string();
+        found_sig = true;
+        break;
+      }
+    }
+    if (!found_sig || sig != internal::TemplatesData::get().signature) {
+      throw std::invalid_argument("Signature mismatch");
+    }
+
+    internal::spec::Templates merged = internal::TemplatesData::get();
+
+    for (const auto& [key, val] : overrides.as_object()) {
+      if (key == "templates") {
+        if (val.type() != JsonNode::Type::kObject) {
+          throw std::invalid_argument("Templates override must be an object");
+        }
+        for (const auto& [tmpl_key, tmpl_node] : val.as_object()) {
+          auto parsed_tmpl = Parse<internal::spec::Template>(tmpl_node);
+          if (!parsed_tmpl.ok()) {
+            throw std::invalid_argument(std::format("Failed to parse template override '{}': {}",
+                                                    tmpl_key, parsed_tmpl.error().message));
+          }
+          merged.templates[tmpl_key] = std::move(*parsed_tmpl);
+        }
+      } else if (key == "tools") {
+        if (val.type() != JsonNode::Type::kObject) {
+          throw std::invalid_argument("Tools override must be an object");
+        }
+        for (const auto& [tool_key, tool_node] : val.as_object()) {
+          auto parsed_tool = Parse<internal::spec::Tool>(tool_node);
+          if (!parsed_tool.ok()) {
+            throw std::invalid_argument(std::format("Failed to parse tool override '{}': {}",
+                                                    tool_key, parsed_tool.error().message));
+          }
+          merged.tools_[tool_key] = std::move(*parsed_tool);
+        }
+      }
+    }
+
+    return TemplatesData(std::move(merged));
+  }
+};
+
 /// Renders a prompt template with the provided input.
 ///
 /// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
@@ -3837,6 +3921,18 @@ template <typename Template>
 Prompt Render(const typename Template::input_type& input) {
   return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
                                         internal::TemplatesData::get());
+}
+
+/// Renders a prompt template with the provided input and overridden templates data.
+///
+/// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
+/// 'templates::MyTemplate').
+/// \param data The TemplatesData containing template overrides.
+/// \param input The input arguments matching the template's input schema.
+/// \return A fully resolved Prompt ready to be sent to an LLM.
+template <typename Template>
+Prompt Render(const TemplatesData& data, const typename Template::input_type& input) {
+  return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input), data.spec());
 }
 
 /// Parses and validates an LLM response against the template's output schema.
