@@ -3928,6 +3928,8 @@ class TemplateOverrider {
 /// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
 /// 'templates::MyTemplate').
 /// \param input The input arguments matching the template's input schema.
+/// \param templates Optional template definitions, useful when injecting prompt overrides from an
+/// external experimentation or A/B testing framework. Defaults to the compiled templates.
 /// \return A fully resolved Prompt ready to be sent to an LLM.
 template <typename Template>
 Prompt Render(const typename Template::input_type& input,
