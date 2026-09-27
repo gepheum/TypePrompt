@@ -2342,6 +2342,15 @@ struct Prompt {
   std::string template_id;
 };
 
+namespace internal {
+Prompt RenderImpl(std::string_view template_id, JsonNode input) {}
+}  // namespace internal
+
+template <typename Template>
+Prompt Render(Template tpl, const typename Template::input_type& input) {
+  return internal::RenderImpl(Template::kTemplateId, ToJsonNode(input));
+}
+
 template <typename Template>
 ParseResult<typename Template::output_type> ParseResponse(Template tpl, std::string_view response) {
   if constexpr (Template::kOutputFormat == OutputFormat::kJson) {
