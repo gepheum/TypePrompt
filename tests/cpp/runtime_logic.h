@@ -9,13 +9,13 @@
 #include <cstdlib>
 #include <format>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -401,7 +401,7 @@ template <typename T>
 JsonNode ToJsonNode(const std::vector<T>& values);
 
 template <typename T>
-JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map);
+JsonNode ToJsonNode(const std::map<std::string, T>& map);
 
 template <typename T>
 JsonNode ToJsonNode(const std::optional<T>& value) {
@@ -419,7 +419,7 @@ JsonNode ToJsonNode(const std::vector<T>& values) {
 }
 
 template <typename T>
-JsonNode ToJsonNode(const std::unordered_map<std::string, T>& map) {
+JsonNode ToJsonNode(const std::map<std::string, T>& map) {
   JsonNode::Object entries;
   entries.reserve(map.size());
   for (const auto& [key, value] : map) {
@@ -535,7 +535,7 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vecto
 
 template <typename T>
 ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                       std::unordered_map<std::string, T>& out);
+                       std::map<std::string, T>& out);
 
 template <typename T>
 ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out) {
@@ -574,7 +574,7 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vecto
 
 template <typename T>
 ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                       std::unordered_map<std::string, T>& out) {
+                       std::map<std::string, T>& out) {
   if (node.type() != JsonNode::Type::kObject) {
     return context.MakeParseError("Expected object");
   }
@@ -2283,5 +2283,52 @@ inline ParseResult<JsonNode> JsonNode::ParseJson(std::string_view json) {
 inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Format(*this); }
 
 inline std::string JsonNode::ToYaml() const { return internal::YamlFormatter::Format(*this); }
+
+// The expected format of the model output.
+enum class OutputFormat { kText, kJson };
 // </static:cpp-public-types>
+
+// <generated>
+using Meta = double;
+// </generated>
+
+// <static:cpp-logic>
+/// A single tool call recorded inside an intermediate step.
+struct ToolCallExample {
+  std::string call_id;
+  std::string tool_name;
+  std::string stringified_input;
+  std::string stringified_output;
+};
+
+// One intermediate step within a few-shot example, containing the tool
+// calls made at that step.
+struct IntermediateStepExample {
+  /// Tool calls made in parallel at this step.
+  std::vector<ToolCallExample> tool_calls;
+};
+/// A single few-shot example consisting of a user message, optional intermediate
+/// tool-call steps, and the expected response.
+struct FewShotExample {
+  std::string user_message;
+  std::vector<IntermediateStepExample> intermediate_steps;
+  std::string response;
+};
+
+struct Tool {
+  std::string name;
+  std::string description;
+  JsonNode input_json_schema;
+};
+
+// A fully resolved prompt ready to be sent to an LLM.
+struct Prompt {
+  /// Metadata for this prompt.
+  Meta meta{};
+  std::string system_message;
+  std::string user_message;
+  std::vector<FewShotExample> examples;
+  std::map<std::string, Tool> tools;
+};
+// </static:cpp-logic>
 }  // namespace typeprompt

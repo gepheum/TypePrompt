@@ -923,7 +923,7 @@ function writeType(
     }
     case "record": {
       const value = writeType(type.valueType, schema, options);
-      return `std::unordered_map<std::string, ${value}>`;
+      return `std::map<std::string, ${value}>`;
     }
     case "shared-type-name":
     case "type-name": {
