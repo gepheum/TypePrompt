@@ -3240,7 +3240,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Too
 namespace internal {
 struct TemplatesData {
   static const spec::Templates& get() {
-    static const auto* templates = new spec::Templates(*ParseJson<spec::Templates>(
+    return *ParseJson<spec::Templates>(
         "{\"edition\":0,\"signature\":\"1b02f73b-debd-4967-9bd4-8134c5382af9\",\"tools\":{},"
         "\"templates\":{\"Main:Translate\":{\"name\":\"Translate\",\"namespace\":\"Main\","
         "\"outputFormat\":\"text\",\"tools\":[],\"contents\":{\"kind\":\"no-variants\",\"content\":"
@@ -3272,8 +3272,7 @@ struct TemplatesData {
         "targetLanguage: French\\n      output: \\\"La réunion est prévue pour lundi à "
         "15h.\\\"\\n\\n    - input:\\n        text: \\\"Please review the attached "
         "document.\\\"\\n        targetLanguage: Spanish\\n      output: \\\"Por favor, revise el "
-        "documento adjunto.\\\"\\n  </examples>\\n</template>\\n\"}}"));
-    return *templates;
+        "documento adjunto.\\\"\\n  </examples>\\n</template>\\n\"}}");
   }
 };
 }  // namespace internal
@@ -3825,29 +3824,42 @@ class Renderer {
     return result;
   }
 };
+
+class TemplatesSpecAccessor;
 }  // namespace internal
 
 class TemplateOverrider;
 
-/// Encapsulates compiled prompt templates data (including overrides).
-class TemplatesData {
+/// Encapsulates compiled prompt templates data.
+class Templates {
  public:
-  TemplatesData(const TemplatesData&) = delete;
-  TemplatesData& operator=(const TemplatesData&) = delete;
-  TemplatesData(TemplatesData&&) = default;
-  TemplatesData& operator=(TemplatesData&&) = default;
+  Templates(const Templates&) = delete;
+  Templates& operator=(const Templates&) = delete;
+  Templates(Templates&&) = default;
+  Templates& operator=(Templates&&) = default;
+
+  static const Templates& getDefault() {
+    static const Templates* kDefault = new Templates(internal::TemplatesData::get());
+    return *kDefault;
+  }
 
  private:
   friend class TemplateOverrider;
-  template <typename Template>
-  friend Prompt Render(const TemplatesData& data, const typename Template::input_type& input);
+  friend class internal::TemplatesSpecAccessor;
 
-  explicit TemplatesData(internal::spec::Templates spec) : spec_(std::move(spec)) {}
+  explicit Templates(internal::spec::Templates spec) : spec_(std::move(spec)) {}
 
   const internal::spec::Templates& spec() const { return spec_; }
 
   internal::spec::Templates spec_;
 };
+
+namespace internal {
+class TemplatesSpecAccessor {
+ public:
+  static const spec::Templates get(const Templates& input) { return input.spec_; }
+};
+}  // namespace internal
 
 /// Use this with external frameworks that support template override injection
 /// for experimentation or A/B testing.
@@ -3856,11 +3868,11 @@ class TemplateOverrider {
   /// Returns the compiled prompt templates serialized as a JsonNode.
   static JsonNode templatesData() {
     using internal::spec::ToJsonNode;
-    return ToJsonNode(internal::TemplatesData::get());
+    return ToJsonNode(internal::TemplatesSpecAccessor::get(Templates::getDefault()));
   }
 
-  /// Applies JSON overrides and returns an updated TemplatesData instance.
-  static TemplatesData applyOverrides(const JsonNode& overrides) {
+  /// Applies JSON overrides and returns an updated Templates instance.
+  static Templates applyOverrides(const JsonNode& overrides) {
     if (overrides.type() != JsonNode::Type::kObject) {
       throw std::invalid_argument("Overrides must be an object");
     }
@@ -3907,7 +3919,7 @@ class TemplateOverrider {
       }
     }
 
-    return TemplatesData(std::move(merged));
+    return Templates(std::move(merged));
   }
 };
 
@@ -3918,21 +3930,10 @@ class TemplateOverrider {
 /// \param input The input arguments matching the template's input schema.
 /// \return A fully resolved Prompt ready to be sent to an LLM.
 template <typename Template>
-Prompt Render(const typename Template::input_type& input) {
+Prompt Render(const typename Template::input_type& input,
+              const Templates& templates = Templates::getDefault()) {
   return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
-                                        internal::TemplatesData::get());
-}
-
-/// Renders a prompt template with the provided input and overridden templates data.
-///
-/// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
-/// 'templates::MyTemplate').
-/// \param data The TemplatesData containing template overrides.
-/// \param input The input arguments matching the template's input schema.
-/// \return A fully resolved Prompt ready to be sent to an LLM.
-template <typename Template>
-Prompt Render(const TemplatesData& data, const typename Template::input_type& input) {
-  return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input), data.spec());
+                                        internal::TemplatesSpecAccessor::get(templates));
 }
 
 /// Parses and validates an LLM response against the template's output schema.

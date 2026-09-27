@@ -3301,10 +3301,11 @@ void TestTemplateOverrider() {
   auto overridden_data = typeprompt_01::TemplateOverrider::applyOverrides(data);
   auto moved_data = std::move(overridden_data);
   auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
-      moved_data, typeprompt_01::schema::translate::Input::whole{
-                      .target_language = "Spanish",
-                      .text = "Good morning",
-                  });
+      typeprompt_01::schema::translate::Input::whole{
+          .target_language = "Spanish",
+          .text = "Good morning",
+      },
+      moved_data);
   ASSERT_TRUE(prompt.user_message.find("Spanish") != std::string::npos);
   ASSERT_TRUE(prompt.user_message.find("Good morning") != std::string::npos);
 }
