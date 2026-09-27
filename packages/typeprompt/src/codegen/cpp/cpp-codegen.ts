@@ -49,11 +49,8 @@ function writeAll(
     [
       [`#ifndef ${includeGuard}`, `#define ${includeGuard}`].join("\n"),
       STATIC_SNIPPETS["cpp-top-level"],
-      // reformat(writePromptsClass(compilationResult)),
       `namespace ${rootNamespace} {`,
       STATIC_SNIPPETS["cpp-public-types"],
-      // writeToolExecutorClasses(compilationResult),
-      // writePromptToolsEnums(compilationResult),
       scaleIndent(
         [
           writeUserDefinedDatatypes(compilationResult, config),
@@ -63,6 +60,7 @@ function writeAll(
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
+      STATIC_SNIPPETS["cpp-logic"],
       `}  // namespace ${config.rootNamespace}`,
       "#endif",
     ].join("\n\n"),
@@ -175,7 +173,7 @@ function writeUserDefinedDatatypes(
           rootNamespace,
         },
       )
-    : "std::nullopt_t";
+    : "internal::NoMeta";
   lines.push(
     "// Metadata associated with a prompt.",
     `using Meta = ${metaType};`,
@@ -1108,6 +1106,5 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "must_init",
   "schema",
   "std",
-  "templates",
   "tools",
 ]);

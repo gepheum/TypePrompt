@@ -2283,6 +2283,13 @@ inline std::string JsonNode::ToToon() const { return internal::ToonFormatter::Fo
 
 inline std::string JsonNode::ToYaml() const { return internal::YamlFormatter::Format(*this); }
 
+namespace internal {
+// Type used for Meta when no <meta> element is defined.
+struct NoMeta {};
+inline JsonNode ToJsonNode(const NoMeta&) { return JsonNode(std::nullopt); }
+inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, NoMeta&) { return kOkStatus; }
+}  // namespace internal
+
 // The expected format of the model output.
 enum class OutputFormat { kText, kJson };
 // </static:cpp-public-types>
@@ -2321,7 +2328,7 @@ struct Tool;
 struct Templates {
   std::int32_t edition{};
   std::string signature{};
-  std::map<std::string, Template> templates_{};
+  std::map<std::string, Template> templates{};
   std::map<std::string, Tool> tools_{};
   bool single_namespace{};
   // The key is a relative path to a .xml file. The value is the file content.
@@ -2772,7 +2779,7 @@ inline JsonNode ToJsonNode(const Templates& input) {
   return JsonNode(JsonNode::Object{
       {"edition", ToJsonNode(input.edition)},
       {"signature", ToJsonNode(input.signature)},
-      {"templates", ToJsonNode(input.templates_)},
+      {"templates", ToJsonNode(input.templates)},
       {"tools", ToJsonNode(input.tools_)},
       {"singleNamespace", ToJsonNode(input.single_namespace)},
       {"sourceFiles", ToJsonNode(input.source_files)},
@@ -2784,7 +2791,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tem
   parser.Parse("signature", out.signature);
   parser.Parse("singleNamespace", out.single_namespace);
   parser.Parse("sourceFiles", out.source_files);
-  parser.Parse("templates", out.templates_);
+  parser.Parse("templates", out.templates);
   parser.Parse("tools", out.tools_);
   return std::move(parser).status();
 }
@@ -3353,21 +3360,555 @@ struct Prompt {
 };
 
 namespace internal {
-Prompt RenderImpl(std::string_view template_id, const JsonNode& input, const JsonNode& spec) {}
+
+class Renderer {
+ public:
+  static Prompt Render(std::string_view template_id, const JsonNode& input,
+                       const spec::Templates& spec) {
+    return RenderImpl(template_id, input, spec);
+  }
+
+  static Prompt RenderImpl(std::string_view template_id, const JsonNode& input,
+                           const spec::Templates& spec) {
+    auto tmpl_it = spec.templates.find(std::string(template_id));
+    if (tmpl_it == spec.templates.end()) {
+      throw std::invalid_argument(std::format("Template not found: {}", template_id));
+    }
+    const spec::Template& template_val = tmpl_it->second;
+
+    const auto& snippets = template_val.snippets;
+    const auto& contents = template_val.contents;
+
+    std::optional<JsonNode> meta_element;
+    std::string system_message;
+    std::string user_message;
+    std::vector<FewShotExample> examples;
+
+    switch (contents.kind()) {
+      case spec::TemplateContents::kind::kNoVariants: {
+        const auto& content = contents.as_kind_no_variants().content;
+        meta_element = content.meta;
+        const auto& system_body =
+            content.system.has_value() ? *content.system : std::vector<spec::BodyPiece>{};
+        system_message = RenderBody(system_body, input, snippets);
+        const auto& user_body =
+            content.user.has_value() ? *content.user : std::vector<spec::BodyPiece>{};
+        user_message = RenderBody(user_body, input, snippets);
+        examples = RenderExamples(content.examples, user_body, template_val);
+        break;
+      }
+      case spec::TemplateContents::kind::kVariants: {
+        if (input.type() != JsonNode::Type::kObject) {
+          throw std::invalid_argument("Input for template with variants must be an object");
+        }
+        std::string variant_str;
+        bool found_variant = false;
+        for (const auto& [k, v] : input.as_object()) {
+          if (k == "variant") {
+            switch (v.type()) {
+              case JsonNode::Type::kString:
+                variant_str = v.as_string();
+                found_variant = true;
+                break;
+              case JsonNode::Type::kBool:
+                variant_str = v.as_bool() ? "true" : "false";
+                found_variant = true;
+                break;
+              case JsonNode::Type::kNumber:
+                variant_str = FormatNumber(v.as_number());
+                found_variant = true;
+                break;
+              default:
+                break;
+            }
+            break;
+          }
+        }
+        if (!found_variant) {
+          throw std::invalid_argument("Missing 'variant' field in input");
+        }
+        const auto& variants_obj = contents.as_kind_variants();
+        auto var_it = variants_obj.variants.find(variant_str);
+        if (var_it == variants_obj.variants.end()) {
+          throw std::invalid_argument("Unknown variant: " + variant_str);
+        }
+        const auto& variant_content = var_it->second;
+        const auto& default_content = variants_obj.default_content;
+
+        meta_element =
+            variant_content.meta.has_value() ? variant_content.meta : default_content.meta;
+
+        const auto& system_body =
+            variant_content.system.has_value()
+                ? *variant_content.system
+                : (default_content.system.has_value() ? *default_content.system
+                                                      : std::vector<spec::BodyPiece>{});
+        const auto& user_body =
+            variant_content.user.has_value()
+                ? *variant_content.user
+                : (default_content.user.has_value() ? *default_content.user
+                                                    : std::vector<spec::BodyPiece>{});
+        system_message = RenderBody(system_body, input, snippets);
+        user_message = RenderBody(user_body, input, snippets);
+
+        const auto& raw_examples = variant_content.examples.has_value() ? variant_content.examples
+                                                                        : default_content.examples;
+        examples = RenderExamples(raw_examples, user_body, template_val);
+        break;
+      }
+    }
+
+    Meta meta{};
+    if (meta_element.has_value() && meta_element->type() != JsonNode::Type::kNull) {
+      auto res = Parse<Meta>(*meta_element);
+      if (res.ok()) {
+        meta = std::move(*res);
+      }
+    }
+
+    std::map<std::string, Tool> tools;
+    for (const auto& template_tool : template_val.tools_) {
+      auto tool_it = spec.tools_.find(template_tool.id);
+      if (tool_it == spec.tools_.end()) {
+        throw std::invalid_argument("Tool spec not found: " + template_tool.id);
+      }
+      Tool tool;
+      tool.name = template_tool.name;
+      tool.description = tool_it->second.description;
+      tool.input_json_schema = tool_it->second.input_json_schema;
+      tools[template_tool.name] = std::move(tool);
+    }
+
+    OutputFormat output_format = (template_val.output_format == spec::OutputFormat_::kJson)
+                                     ? OutputFormat::kJson
+                                     : OutputFormat::kText;
+    std::optional<JsonNode> output_json_schema;
+    if (output_format == OutputFormat::kJson) {
+      output_json_schema = template_val.output_json_schema;
+    }
+
+    return Prompt{
+        .meta = std::move(meta),
+        .system_message = std::move(system_message),
+        .user_message = std::move(user_message),
+        .examples = std::move(examples),
+        .tools = std::move(tools),
+        .output_format = output_format,
+        .output_json_schema = std::move(output_json_schema),
+        .template_id = std::string(template_id),
+    };
+  }
+
+  template <typename Template>
+  static ParseResult<typename Template::output_type> ParseResponseImpl(std::string_view response) {
+    if constexpr (Template::kOutputFormat == OutputFormat::kJson) {
+      std::string_view cleaned = Trim(response);
+      if (cleaned.starts_with("```")) {
+        if (cleaned.starts_with("```json")) {
+          cleaned.remove_prefix(7);
+        } else {
+          cleaned.remove_prefix(3);
+        }
+        if (cleaned.ends_with("```")) {
+          cleaned.remove_suffix(3);
+        }
+      }
+      auto result = ParseJson<typename Template::output_type>(cleaned);
+      if (!result.ok()) {
+        return ParseError{
+            std::format("Template '{}': {}", Template::kTemplateId, result.error().message)};
+      }
+      return result;
+    } else {
+      return ParseJson<typename Template::output_type>(response);
+    }
+  }
+
+ private:
+  static std::string_view Trim(std::string_view s) {
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      s.remove_prefix(1);
+    }
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+      s.remove_suffix(1);
+    }
+    return s;
+  }
+
+  static std::string FormatNumber(double number) {
+    if (!std::isfinite(number)) {
+      return "null";
+    }
+    if (number == 0.0 || number == -0.0) {
+      return "0";
+    }
+    const double abs_val = std::abs(number);
+    if (abs_val >= 1e-6 && abs_val < 1e21) {
+      char buffer[128];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
+        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
+        s = buffer;
+        const size_t dot = s.find('.');
+        if (dot != std::string::npos) {
+          while (!s.empty() && s.back() == '0') {
+            s.pop_back();
+          }
+          if (!s.empty() && s.back() == '.') {
+            s.pop_back();
+          }
+        }
+      }
+      return s;
+    }
+    char buffer[128];
+    std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+    return buffer;
+  }
+
+  static JsonNode Evaluate(const spec::Expression& expression, const JsonNode& val) {
+    switch (expression.kind()) {
+      case spec::Expression::kind::kInput:
+        return val;
+      case spec::Expression::kind::kProperty: {
+        const auto& prop = expression.as_kind_property();
+        JsonNode left_val = Evaluate(prop.left, val);
+        if (left_val.type() == JsonNode::Type::kObject) {
+          for (const auto& [k, v] : left_val.as_object()) {
+            if (k == prop.property) {
+              return v;
+            }
+          }
+        }
+        return JsonNode(std::nullopt);
+      }
+    }
+    return JsonNode(std::nullopt);
+  }
+
+  static std::string Indent(std::string_view text, std::string_view spaces) {
+    if (spaces.empty()) return std::string(text);
+    std::string result;
+    result.reserve(text.size() + spaces.size() * 4);
+    for (size_t i = 0; i < text.size(); ++i) {
+      result += text[i];
+      if (text[i] == '\n') {
+        result += spaces;
+      }
+    }
+    return result;
+  }
+
+  static std::string FormatTable(const JsonNode& v, spec::InsertFormat fmt) {
+    if (v.type() != JsonNode::Type::kArray) {
+      return "";
+    }
+    const auto& list = v.as_array();
+    if (list.empty()) {
+      return "";
+    }
+    if (list[0].type() != JsonNode::Type::kObject) {
+      return "";
+    }
+    const auto& first_row = list[0].as_object();
+    std::vector<std::string> headers;
+    for (const auto& [key, _] : first_row) {
+      headers.push_back(key);
+    }
+    const char* separator = (fmt == spec::InsertFormat::kCsv) ? "," : "\t";
+    std::string result;
+    // First line: headers
+    for (size_t i = 0; i < headers.size(); ++i) {
+      if (i > 0) result += separator;
+      result += headers[i];
+    }
+    // Data lines
+    for (const auto& item : list) {
+      if (item.type() == JsonNode::Type::kObject) {
+        const auto& obj = item.as_object();
+        result += "\n";
+        for (size_t i = 0; i < headers.size(); ++i) {
+          if (i > 0) result += separator;
+          const std::string& key = headers[i];
+          std::string str;
+          for (const auto& [k, val] : obj) {
+            if (k == key) {
+              switch (val.type()) {
+                case JsonNode::Type::kNull:
+                  str = "";
+                  break;
+                case JsonNode::Type::kBool:
+                  str = val.as_bool() ? "true" : "false";
+                  break;
+                case JsonNode::Type::kNumber:
+                  str = FormatNumber(val.as_number());
+                  break;
+                case JsonNode::Type::kString:
+                  str = val.as_string();
+                  break;
+                default:
+                  str = val.ToJson();
+                  break;
+              }
+              break;
+            }
+          }
+          if (fmt == spec::InsertFormat::kCsv) {
+            if (str.find('"') != std::string::npos || str.find(',') != std::string::npos ||
+                str.find('\n') != std::string::npos || str.find('\r') != std::string::npos) {
+              std::string escaped = "\"";
+              for (char c : str) {
+                if (c == '"') {
+                  escaped += "\"\"";
+                } else {
+                  escaped += c;
+                }
+              }
+              escaped += '"';
+              result += escaped;
+            } else {
+              result += str;
+            }
+          } else {
+            // TSV
+            std::string escaped;
+            for (char c : str) {
+              if (c == '\\') {
+                escaped += "\\\\";
+              } else if (c == '\t') {
+                escaped += "\\t";
+              } else if (c == '\n') {
+                escaped += "\\n";
+              } else if (c == '\r') {
+                escaped += "\\r";
+              } else {
+                escaped += c;
+              }
+            }
+            result += escaped;
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  static std::string FormatValue(const JsonNode& v, spec::InsertFormat fmt) {
+    switch (fmt) {
+      case spec::InsertFormat::kText: {
+        switch (v.type()) {
+          case JsonNode::Type::kNull:
+            return "";
+          case JsonNode::Type::kBool:
+            return v.as_bool() ? "true" : "false";
+          case JsonNode::Type::kNumber:
+            return FormatNumber(v.as_number());
+          case JsonNode::Type::kString:
+            return v.as_string();
+          default:
+            return v.ToJson();
+        }
+      }
+      case spec::InsertFormat::kJson:
+        return v.ToPrettyJson();
+      case spec::InsertFormat::kYaml:
+        return v.ToYaml();
+      case spec::InsertFormat::kToon:
+        return v.ToToon();
+      case spec::InsertFormat::kCsv:
+      case spec::InsertFormat::kTsv:
+        return FormatTable(v, fmt);
+    }
+    return "";
+  }
+
+  static std::string RenderSnippet(const spec::Snippet& snippet, const JsonNode& inp,
+                                   const std::map<std::string, spec::Snippet>& snippets) {
+    switch (snippet.kind()) {
+      case spec::Snippet::kind::kSnippet: {
+        return RenderBody(snippet.as_kind_snippet().body, inp, snippets);
+      }
+      case spec::Snippet::kind::kSnippetIf: {
+        const auto& snip_if = snippet.as_kind_snippet_if();
+        JsonNode eval_result = Evaluate(snip_if.expression, inp);
+        bool condition = false;
+        switch (snip_if.is) {
+          case spec::Snippet_KindSnippetIf_Is::kNotEmpty: {
+            switch (eval_result.type()) {
+              case JsonNode::Type::kArray:
+                condition = !eval_result.as_array().empty();
+                break;
+              case JsonNode::Type::kObject:
+                condition = !eval_result.as_object().empty();
+                break;
+              case JsonNode::Type::kString:
+                condition = !eval_result.as_string().empty();
+                break;
+              case JsonNode::Type::kNull:
+                condition = false;
+                break;
+              default:
+                condition = true;
+                break;
+            }
+            break;
+          }
+          case spec::Snippet_KindSnippetIf_Is::kNotNull: {
+            condition = (eval_result.type() != JsonNode::Type::kNull);
+            break;
+          }
+          case spec::Snippet_KindSnippetIf_Is::kTrue: {
+            switch (eval_result.type()) {
+              case JsonNode::Type::kBool:
+                condition = eval_result.as_bool();
+                break;
+              case JsonNode::Type::kString:
+                condition = !eval_result.as_string().empty();
+                break;
+              case JsonNode::Type::kNumber:
+                condition = (static_cast<int64_t>(eval_result.as_number()) != 0);
+                break;
+              case JsonNode::Type::kNull:
+                condition = false;
+                break;
+              default:
+                condition = true;
+                break;
+            }
+            break;
+          }
+        }
+        return RenderBody(condition ? snip_if.then : snip_if.else_, inp, snippets);
+      }
+      case spec::Snippet::kind::kSnippetSwitch: {
+        const auto& snip_switch = snippet.as_kind_snippet_switch();
+        JsonNode switch_val = Evaluate(snip_switch.expression, inp);
+        std::string switch_key;
+        switch (switch_val.type()) {
+          case JsonNode::Type::kBool:
+            switch_key = switch_val.as_bool() ? "true" : "false";
+            break;
+          case JsonNode::Type::kString:
+            switch_key = switch_val.as_string();
+            break;
+          case JsonNode::Type::kNumber:
+            switch_key = FormatNumber(switch_val.as_number());
+            break;
+          case JsonNode::Type::kNull:
+            switch_key = "";
+            break;
+          default:
+            switch_key = switch_val.ToJson();
+            break;
+        }
+        auto it = snip_switch.branches.find(switch_key);
+        if (it == snip_switch.branches.end()) {
+          throw std::invalid_argument("Branch not found: " + switch_key);
+        }
+        return RenderBody(it->second, inp, snippets);
+      }
+    }
+    return "";
+  }
+
+  static std::string RenderBody(const std::vector<spec::BodyPiece>& body, const JsonNode& inp,
+                                const std::map<std::string, spec::Snippet>& snippets) {
+    if (body.empty()) {
+      return "";
+    }
+    std::string sb;
+    for (const auto& piece : body) {
+      switch (piece.kind()) {
+        case spec::BodyPiece::kind::kText: {
+          sb += piece.as_kind_text().text;
+          break;
+        }
+        case spec::BodyPiece::kind::kInsertVal: {
+          const auto& insert_val = piece.as_kind_insert_val();
+          JsonNode val = Evaluate(insert_val.val, inp);
+          std::string formatted = FormatValue(val, insert_val.format);
+          sb += Indent(formatted, insert_val.indent);
+          break;
+        }
+        case spec::BodyPiece::kind::kInsertSnippet: {
+          const auto& insert_snip = piece.as_kind_insert_snippet();
+          auto it = snippets.find(insert_snip.snippet);
+          if (it == snippets.end()) {
+            throw std::invalid_argument("Snippet not found: " + insert_snip.snippet);
+          }
+          std::string rendered_snippet = RenderSnippet(it->second, inp, snippets);
+          sb += Indent(rendered_snippet, insert_snip.indent);
+          break;
+        }
+      }
+    }
+    return sb;
+  }
+
+  static std::vector<FewShotExample> RenderExamples(
+      const std::optional<std::vector<spec::FewShotExample>>& examples,
+      const std::vector<spec::BodyPiece>& user_body, const spec::Template& tmpl) {
+    if (!examples.has_value() || examples->empty()) {
+      return {};
+    }
+    std::vector<FewShotExample> result;
+    for (const auto& ex : *examples) {
+      std::string user_message = RenderBody(user_body, ex.input, tmpl.snippets);
+
+      std::vector<IntermediateStepExample> intermediate_steps;
+      for (const auto& step : ex.intermediate_steps) {
+        std::vector<ToolCallExample> tool_calls;
+        for (const auto& tc : step.tool_calls) {
+          tool_calls.push_back(ToolCallExample{
+              .call_id = tc.call_id,
+              .tool_name = tc.tool_name,
+              .stringified_input = tc.input.ToJson(),
+              .stringified_output = tc.output.ToJson(),
+          });
+        }
+        intermediate_steps.push_back(IntermediateStepExample{
+            .tool_calls = std::move(tool_calls),
+        });
+      }
+
+      spec::InsertFormat output_format = (tmpl.output_format == spec::OutputFormat_::kJson)
+                                             ? spec::InsertFormat::kJson
+                                             : spec::InsertFormat::kText;
+      std::string response = FormatValue(ex.output, output_format);
+
+      result.push_back(FewShotExample{
+          .user_message = std::move(user_message),
+          .intermediate_steps = std::move(intermediate_steps),
+          .response = std::move(response),
+      });
+    }
+    return result;
+  }
+};
 }  // namespace internal
 
 template <typename Template>
-Prompt Render(Template tpl, const typename Template::input_type& input) {
-  return internal::RenderImpl(Template::kTemplateId, ToJsonNode(input), internal::TemplatesData::);
+Prompt Render(Template /*tpl*/, const typename Template::input_type& input) {
+  return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
+                                        internal::TemplatesData::get());
 }
 
 template <typename Template>
-ParseResult<typename Template::output_type> ParseResponse(Template tpl, std::string_view response) {
-  if constexpr (Template::kOutputFormat == OutputFormat::kJson) {
-    return JsonNode::ParseJson(response);
-  } else {
-    return std::string(response);
-  }
+Prompt Render(const typename Template::input_type& input) {
+  return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
+                                        internal::TemplatesData::get());
+}
+
+template <typename Template>
+ParseResult<typename Template::output_type> ParseResponse(Template /*tpl*/,
+                                                          std::string_view response) {
+  return internal::Renderer::ParseResponseImpl<Template>(response);
+}
+
+template <typename Template>
+ParseResult<typename Template::output_type> ParseResponse(std::string_view response) {
+  return internal::Renderer::ParseResponseImpl<Template>(response);
 }
 // </static:cpp-logic>
 }  // namespace typeprompt

@@ -8,7 +8,13 @@
 #include <utility>
 #include <vector>
 
+#include "gen/prompts_01.gen.h"
 #include "gen/prompts_02.gen.h"
+#include "gen/prompts_03.gen.h"
+#include "gen/prompts_04.gen.h"
+#include "gen/prompts_05.gen.h"
+#include "gen/prompts_06.gen.h"
+#include "gen/prompts_07.gen.h"
 #include "gen/prompts_e01.gen.h"
 
 #define ASSERT_EQ(actual, expected)                                              \
@@ -3145,6 +3151,146 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
   ASSERT_EQ(err_payload_missing_field.error().message, "Missing key: z at json");
 }
 
+void TestRenderBasicsTranslate() {
+  auto prompt = typeprompt_01::Render(typeprompt_01::templates::Translate{},
+                                      typeprompt_01::schema::translate::Input{
+                                          .target_language = "French",
+                                          .text = "Hello world",
+                                      });
+
+  ASSERT_TRUE(prompt.output_format == typeprompt_01::OutputFormat::kText);
+  ASSERT_EQ(prompt.template_id, "Main:Translate");
+  ASSERT_TRUE(prompt.system_message.find("professional translator") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("French") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("<Text>\nHello world\n</Text>") != std::string::npos);
+  ASSERT_EQ(prompt.examples.size(), 2);
+  ASSERT_TRUE(prompt.examples[0].response.find("La réunion") != std::string::npos);
+  ASSERT_TRUE(prompt.examples[0].user_message.find("<Text>") != std::string::npos);
+  ASSERT_EQ(prompt.tools.size(), 0);
+}
+
+void TestRenderComplexSchemas() {
+  auto prompt = typeprompt_02::Render(
+      typeprompt_02::templates::TriageTicket{},
+      typeprompt_02::schema::triage_ticket::Input{
+          .body = "It crashes every time.",
+          .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
+          .recent_tickets = {},
+          .subject = "App crashes on login",
+      });
+
+  ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
+  ASSERT_TRUE(prompt.output_json_schema.has_value());
+  ASSERT_TRUE(prompt.meta.temperature.has_value());
+  ASSERT_EQ(*prompt.meta.temperature, 0.2);
+  ASSERT_TRUE(prompt.meta.model == typeprompt_02::schema::meta::Meta_Model::kGpt4o);
+
+  auto parsed =
+      typeprompt_02::ParseResponse(typeprompt_02::templates::TriageTicket{},
+                                   "```json\n"
+                                   "{\n"
+                                   "  \"category\": \"technical-issue\",\n"
+                                   "  \"urgency\": \"high\",\n"
+                                   "  \"summary\": \"Application crashes when logging in\",\n"
+                                   "  \"suggestedActions\": [\"escalate_to_tier_2\"]\n"
+                                   "}\n"
+                                   "```");
+  ASSERT_TRUE(parsed.ok());
+  ASSERT_TRUE(parsed->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kTechnicalIssue);
+  ASSERT_TRUE(parsed->urgency == typeprompt_02::schema::triage_ticket::Output_Urgency::kHigh);
+  ASSERT_EQ(parsed->summary, "Application crashes when logging in");
+  ASSERT_EQ(parsed->suggested_actions.size(), 1);
+  ASSERT_EQ(parsed->suggested_actions[0], "escalate_to_tier_2");
+}
+
+void TestRenderTools() {
+  auto prompt = typeprompt_03::Render(typeprompt_03::templates::ResearchQuestion{},
+                                      typeprompt_03::schema::research_question::Input{
+                                          .question = "What is quantum computing?",
+                                      });
+
+  ASSERT_EQ(prompt.tools.size(), 1);
+  auto it = prompt.tools.find("webSearch");
+  ASSERT_TRUE(it != prompt.tools.end());
+  ASSERT_EQ(it->second.name, "webSearch");
+  ASSERT_FALSE(it->second.description.empty());
+  ASSERT_TRUE(it->second.input_json_schema.type() == typeprompt_03::JsonNode::Type::kObject);
+}
+
+void TestRenderVariants() {
+  auto marketing = typeprompt_04::Render(
+      typeprompt_04::templates::WriteProductDescription{},
+      typeprompt_04::schema::write_product_description::Input{
+          .product_name = "Acme Widget",
+          .features = {"Fast", "Reliable"},
+          .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
+      });
+  ASSERT_TRUE(marketing.system_message.find("marketing") != std::string::npos ||
+              marketing.system_message.find("compelling") != std::string::npos ||
+              marketing.user_message.find("Acme Widget") != std::string::npos);
+
+  auto technical = typeprompt_04::Render(
+      typeprompt_04::templates::WriteProductDescription{},
+      typeprompt_04::schema::write_product_description::Input{
+          .product_name = "Acme Widget",
+          .features = {"Fast", "Reliable"},
+          .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
+      });
+  ASSERT_TRUE(technical.user_message.find("Acme Widget") != std::string::npos);
+}
+
+void TestRenderConditionalLogic() {
+  auto p_exec = typeprompt_05::Render(
+      typeprompt_05::templates::SummarizeDocument{},
+      typeprompt_05::schema::summarize_document::Input{
+          .title = "Quarterly Report",
+          .content = "Quarterly results are strong.",
+          .focus_topic = "revenue",
+          .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
+      });
+  ASSERT_TRUE(p_exec.system_message.find("executive") != std::string::npos);
+  ASSERT_TRUE(p_exec.system_message.find("revenue") != std::string::npos);
+
+  auto p_tech = typeprompt_05::Render(
+      typeprompt_05::templates::SummarizeDocument{},
+      typeprompt_05::schema::summarize_document::Input{
+          .title = "Tech Specs",
+          .content = "Architecture RFC...",
+          .focus_topic = std::nullopt,
+          .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
+      });
+  ASSERT_TRUE(p_tech.system_message.find("technical") != std::string::npos);
+  ASSERT_TRUE(p_tech.system_message.find("revenue") == std::string::npos);
+}
+
+void TestRenderTabularFormatting() {
+  auto prompt_csv = typeprompt_e01::Render(
+      typeprompt_e01::templates::AnalyzeSalesData{},
+      typeprompt_e01::schema::analyze_sales_data::Input{
+          .rows =
+              {
+                  typeprompt_e01::schema::analyze_sales_data::SalesRow{
+                      .product = "Widget A",
+                      .units = 100,
+                      .revenue_cents = 199900,
+                      .region = "EMEA",
+                  },
+                  typeprompt_e01::schema::analyze_sales_data::SalesRow{
+                      .product = "Widget, B",
+                      .units = 50,
+                      .revenue_cents = 75000,
+                      .region = "APAC",
+                  },
+              },
+          .question = "Total sales?",
+          .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
+      });
+  ASSERT_TRUE(prompt_csv.user_message.find("product,units,revenueCents,region") !=
+              std::string::npos);
+  ASSERT_TRUE(prompt_csv.user_message.find("\"Widget, B\"") != std::string::npos);
+}
+
 }  // namespace
 
 void TestRuntimeLogic() {
@@ -3217,6 +3363,13 @@ void TestRuntimeLogic() {
   TestUserDefinedStructs();
   TestUserDefinedDiscriminatedUnionPageNode();
   TestUserDefinedDiscriminatedUnionEnumWithCommonFields();
+
+  TestRenderBasicsTranslate();
+  TestRenderComplexSchemas();
+  TestRenderTools();
+  TestRenderVariants();
+  TestRenderConditionalLogic();
+  TestRenderTabularFormatting();
 }
 
 int main() {
