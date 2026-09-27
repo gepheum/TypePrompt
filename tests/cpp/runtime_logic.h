@@ -3239,7 +3239,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Too
 
 namespace internal {
 struct TemplatesData {
-  static const spec::Templates& get() {
+  static spec::Templates get() {
     return *ParseJson<spec::Templates>(
         "{\"edition\":0,\"signature\":\"1b02f73b-debd-4967-9bd4-8134c5382af9\",\"tools\":{},"
         "\"templates\":{\"Main:Translate\":{\"name\":\"Translate\",\"namespace\":\"Main\","

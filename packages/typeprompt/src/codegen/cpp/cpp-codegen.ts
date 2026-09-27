@@ -368,7 +368,7 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   return [
     "namespace internal {",
     "struct TemplatesData {",
-    " static const spec::Templates& get() {",
+    " static spec::Templates get() {",
     `  return *ParseJson<spec::Templates>(${stringifiedJson});`,
     " }",
     "};",
