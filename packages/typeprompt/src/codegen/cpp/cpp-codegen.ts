@@ -750,7 +750,7 @@ function writeMethodImplsForInterface(
   lines.push(
     `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
     ` using ::${rootNamespace}::ToJsonNode;`,
-    " return JsonNode(JsonNode::Object{",
+    " return JsonNode::Object{",
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
@@ -765,7 +765,7 @@ function writeMethodImplsForInterface(
     lines.push(`  {"${rawFieldName}", ToJsonNode(${value})},`);
   }
   lines.push(
-    " });", // return JsonNode({...});
+    " };", // return JsonNode::Object({...});
     "}", // ToJsonNode
     `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     " internal::StructParser parser(&node, context);",
@@ -809,13 +809,13 @@ function writeMethodImplsForUnion(
       const constantCName = "k".concat(toPascalCase(member.value));
       lines.push(
         `  case ${typeCName}::${constantCName}:`,
-        `   return JsonNode("${member.value}");`,
+        `   return "${member.value}";`,
       );
     }
     const first = members.members[0]!;
     lines.push(
       "  default:",
-      `   return JsonNode("${first.value satisfies string}");`,
+      `   return "${first.value satisfies string}";`,
       " }",
       "}",
       `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,

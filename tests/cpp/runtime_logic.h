@@ -149,14 +149,15 @@ class JsonNode {
   using Object = std::vector<std::pair<std::string, JsonNode>>;
 
   JsonNode() : data_(std::nullopt) {}
-  explicit JsonNode(std::nullopt_t value) : data_(value) {}
-  explicit JsonNode(bool value) : data_(value) {}
-  explicit JsonNode(int value) : data_(static_cast<double>(value)) {}
-  explicit JsonNode(double value) : data_(value) {}
-  explicit JsonNode(const char* value) : data_(NormalizeUtf8(value)) {}
-  explicit JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
-  explicit JsonNode(Array value) : data_(std::move(value)) {}
-  explicit JsonNode(Object value) : data_(NormalizeUtf8(std::move(value))) {}
+  JsonNode(std::nullopt_t value) : data_(value) {}
+  JsonNode(bool value) : data_(value) {}
+  JsonNode(int value) : data_(static_cast<double>(value)) {}
+  JsonNode(double value) : data_(value) {}
+  JsonNode(const char* value) : data_(NormalizeUtf8(value)) {}
+  JsonNode(const std::string& value) : data_(NormalizeUtf8(value)) {}
+  JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
+  JsonNode(Array value) : data_(std::move(value)) {}
+  JsonNode(Object value) : data_(NormalizeUtf8(std::move(value))) {}
 
   JsonNode(const JsonNode&) = default;
   JsonNode(JsonNode&&) = default;
@@ -438,12 +439,12 @@ class JsonNode {
 };
 
 inline JsonNode ToJsonNode(const JsonNode& node) { return node; }
-inline JsonNode ToJsonNode(bool value) { return JsonNode(value); }
-inline JsonNode ToJsonNode(int value) { return JsonNode(value); }
-inline JsonNode ToJsonNode(double value) { return JsonNode(value); }
-inline JsonNode ToJsonNode(const char* value) { return JsonNode(value); }
-inline JsonNode ToJsonNode(std::string value) { return JsonNode(std::move(value)); }
-inline JsonNode ToJsonNode(std::string_view value) { return JsonNode(value); }
+inline JsonNode ToJsonNode(bool value) { return value; }
+inline JsonNode ToJsonNode(int value) { return value; }
+inline JsonNode ToJsonNode(double value) { return value; }
+inline JsonNode ToJsonNode(const char* value) { return value; }
+inline JsonNode ToJsonNode(std::string value) { return value; }
+inline JsonNode ToJsonNode(std::string_view value) { return value; }
 
 template <typename T>
 JsonNode ToJsonNode(const std::optional<T>& value);
@@ -466,7 +467,7 @@ JsonNode ToJsonNode(const std::vector<T>& values) {
   for (const auto& item : values) {
     elements.push_back(ToJsonNode(item));
   }
-  return JsonNode(std::move(elements));
+  return std::move(elements);
 }
 
 template <typename T>
@@ -476,7 +477,7 @@ JsonNode ToJsonNode(const std::map<std::string, T>& map) {
   for (const auto& [key, value] : map) {
     entries.emplace_back(key, ToJsonNode(value));
   }
-  return JsonNode(std::move(entries));
+  return std::move(entries);
 }
 
 template <typename T>
@@ -2750,14 +2751,14 @@ inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Tool&);
 
 inline JsonNode ToJsonNode(const Templates& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"edition", ToJsonNode(input.edition)},
       {"signature", ToJsonNode(input.signature)},
       {"templates", ToJsonNode(input.templates)},
       {"tools", ToJsonNode(input.tools_)},
       {"singleNamespace", ToJsonNode(input.single_namespace)},
       {"sourceFiles", ToJsonNode(input.source_files)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Templates& out) {
   internal::StructParser parser(&node, context);
@@ -2772,7 +2773,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tem
 
 inline JsonNode ToJsonNode(const Template& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"name", ToJsonNode(input.name)},
       {"namespace", ToJsonNode(input.namespace_)},
       {"outputFormat", ToJsonNode(input.output_format)},
@@ -2780,7 +2781,7 @@ inline JsonNode ToJsonNode(const Template& input) {
       {"contents", ToJsonNode(input.contents)},
       {"snippets", ToJsonNode(input.snippets)},
       {"outputJsonSchema", ToJsonNode(input.output_json_schema)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Template& out) {
   internal::StructParser parser(&node, context);
@@ -2797,9 +2798,9 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tem
 inline JsonNode ToJsonNode(const OutputFormat_& input) {
   switch (input) {
     case OutputFormat_::kText:
-      return JsonNode("text");
+      return "text";
     default:
-      return JsonNode("json");
+      return "json";
   }
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
@@ -2817,10 +2818,10 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Out
 
 inline JsonNode ToJsonNode(const TemplateTool& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"id", ToJsonNode(input.id)},
       {"name", ToJsonNode(input.name)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, TemplateTool& out) {
   internal::StructParser parser(&node, context);
@@ -2856,10 +2857,10 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("no-variants")},
       {"content", ToJsonNode(input.content)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               TemplateContents_KindNoVariants& out) {
@@ -2870,11 +2871,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const TemplateContents_KindVariants& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("variants")},
       {"variants", ToJsonNode(input.variants)},
       {"defaultContent", ToJsonNode(input.default_content)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               TemplateContents_KindVariants& out) {
@@ -2886,12 +2887,12 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const TemplateContent& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"meta", ToJsonNode(input.meta)},
       {"system", ToJsonNode(input.system)},
       {"user", ToJsonNode(input.user)},
       {"examples", ToJsonNode(input.examples)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, TemplateContent& out) {
   internal::StructParser parser(&node, context);
@@ -2904,11 +2905,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tem
 
 inline JsonNode ToJsonNode(const FewShotExample& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"input", ToJsonNode(input.input)},
       {"output", ToJsonNode(input.output)},
       {"intermediateSteps", ToJsonNode(input.intermediate_steps)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample& out) {
   internal::StructParser parser(&node, context);
@@ -2920,9 +2921,9 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Few
 
 inline JsonNode ToJsonNode(const FewShotExample_IntermediateSteps& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"toolCalls", ToJsonNode(input.tool_calls)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               FewShotExample_IntermediateSteps& out) {
@@ -2933,13 +2934,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const ToolCallExample& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
-      {"callId", ToJsonNode(input.call_id)},
-      {"toolId", ToJsonNode(input.tool_id)},
-      {"toolName", ToJsonNode(input.tool_name)},
-      {"input", ToJsonNode(input.input)},
+  return JsonNode::Object{
+      {"callId", ToJsonNode(input.call_id)},     {"toolId", ToJsonNode(input.tool_id)},
+      {"toolName", ToJsonNode(input.tool_name)}, {"input", ToJsonNode(input.input)},
       {"output", ToJsonNode(input.output)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ToolCallExample& out) {
   internal::StructParser parser(&node, context);
@@ -2981,10 +2980,10 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Bod
 
 inline JsonNode ToJsonNode(const BodyPiece_KindText& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("text")},
       {"text", ToJsonNode(input.text)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               BodyPiece_KindText& out) {
@@ -2995,12 +2994,12 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("insert-val")},
       {"val", ToJsonNode(input.val)},
       {"format", ToJsonNode(input.format)},
       {"indent", ToJsonNode(input.indent)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               BodyPiece_KindInsertVal& out) {
@@ -3013,11 +3012,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("insert-snippet")},
       {"snippet", ToJsonNode(input.snippet)},
       {"indent", ToJsonNode(input.indent)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               BodyPiece_KindInsertSnippet& out) {
@@ -3030,17 +3029,17 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 inline JsonNode ToJsonNode(const InsertFormat& input) {
   switch (input) {
     case InsertFormat::kJson:
-      return JsonNode("json");
+      return "json";
     case InsertFormat::kYaml:
-      return JsonNode("yaml");
+      return "yaml";
     case InsertFormat::kToon:
-      return JsonNode("toon");
+      return "toon";
     case InsertFormat::kCsv:
-      return JsonNode("csv");
+      return "csv";
     case InsertFormat::kTsv:
-      return JsonNode("tsv");
+      return "tsv";
     default:
-      return JsonNode("text");
+      return "text";
   }
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, InsertFormat& out) {
@@ -3090,9 +3089,9 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Exp
 
 inline JsonNode ToJsonNode(const Expression_KindInput& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("input")},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               Expression_KindInput& out) {
@@ -3102,11 +3101,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Expression_KindProperty& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("property")},
       {"left", ToJsonNode(input.left)},
       {"property", ToJsonNode(input.property)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               Expression_KindProperty& out) {
@@ -3146,10 +3145,10 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Sni
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippet& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("snippet")},
       {"body", ToJsonNode(input.body)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               Snippet_KindSnippet& out) {
@@ -3160,13 +3159,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
-      {"kind", ToJsonNode("snippet-if")},
-      {"expression", ToJsonNode(input.expression)},
-      {"is", ToJsonNode(input.is)},
-      {"then", ToJsonNode(input.then)},
+  return JsonNode::Object{
+      {"kind", ToJsonNode("snippet-if")}, {"expression", ToJsonNode(input.expression)},
+      {"is", ToJsonNode(input.is)},       {"then", ToJsonNode(input.then)},
       {"else", ToJsonNode(input.else_)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               Snippet_KindSnippetIf& out) {
@@ -3181,11 +3178,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
   switch (input) {
     case Snippet_KindSnippetIf_Is::kNotEmpty:
-      return JsonNode("not-empty");
+      return "not-empty";
     case Snippet_KindSnippetIf_Is::kTrue:
-      return JsonNode("true");
+      return "true";
     default:
-      return JsonNode("not-null");
+      return "not-null";
   }
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3206,11 +3203,11 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"kind", ToJsonNode("snippet-switch")},
       {"expression", ToJsonNode(input.expression)},
       {"branches", ToJsonNode(input.branches)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
                               Snippet_KindSnippetSwitch& out) {
@@ -3222,12 +3219,12 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Tool& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode(JsonNode::Object{
+  return JsonNode::Object{
       {"id", ToJsonNode(input.id)},
       {"name", ToJsonNode(input.name)},
       {"description", ToJsonNode(input.description)},
       {"inputJsonSchema", ToJsonNode(input.input_json_schema)},
-  });
+  };
 }
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tool& out) {
   internal::StructParser parser(&node, context);
@@ -3523,10 +3520,10 @@ class Renderer {
             }
           }
         }
-        return JsonNode(std::nullopt);
+        return std::nullopt;
       }
     }
-    return JsonNode(std::nullopt);
+    return std::nullopt;
   }
 
   static std::string Indent(std::string_view text, std::string_view spaces) {
