@@ -70,6 +70,67 @@ using ParseStatus = ParseResult<std::nullopt_t>;
 
 inline constexpr ParseStatus kOkStatus = std::nullopt;
 
+namespace internal {
+
+class NumberFormatter {
+ public:
+  // Formats a floating-point number in concise decimal or scientific notation.
+  // - Handles 0.0 and -0.0 -> "0"
+  // - Non-finite (NaN, Inf) -> "null"
+  // - In [1e-6, 1e21), uses up to 15 significant digits without scientific notation, stripping
+  // trailing zeros.
+  // - Outside [1e-6, 1e21), uses concise scientific notation with lowercase 'e'.
+  static std::string Format(double number) {
+    if (!std::isfinite(number)) {
+      return "null";
+    }
+    if (number == 0.0 || number == -0.0) {
+      return "0";
+    }
+    const double abs_val = std::abs(number);
+    if (abs_val >= 1e-6 && abs_val < 1e21) {
+      char buffer[128];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
+        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
+        s = buffer;
+        const size_t dot = s.find('.');
+        if (dot != std::string::npos) {
+          while (!s.empty() && s.back() == '0') {
+            s.pop_back();
+          }
+          if (!s.empty() && s.back() == '.') {
+            s.pop_back();
+          }
+        }
+      }
+      return s;
+    } else {
+      char buffer[64];
+      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
+      std::string s(buffer);
+      for (char& c : s) {
+        if (c == 'E') c = 'e';
+      }
+      return s;
+    }
+  }
+
+  // Formats a number for YAML, returning .nan, .inf, or -.inf for non-finite values.
+  static std::string FormatYaml(double number) {
+    if (std::isnan(number)) {
+      return ".nan";
+    }
+    if (std::isinf(number)) {
+      return number > 0 ? ".inf" : "-.inf";
+    }
+    return Format(number);
+  }
+};
+
+}  // namespace internal
+
 // A composable JSON value. Can be formatted to JSON, YAML or TOON format.
 class JsonNode {
  public:
@@ -262,17 +323,7 @@ class JsonNode {
         break;
       }
       case Type::kNumber: {
-        double number = as_number();
-        if (!std::isfinite(number)) {
-          if (std::isnan(number)) {
-            number = 0.0;
-          } else if (number < 0) {
-            number = std::numeric_limits<double>::min();
-          } else {
-            number = std::numeric_limits<double>::max();
-          }
-        }
-        out += std::to_string(number);
+        out += internal::NumberFormatter::Format(as_number());
         break;
       }
       case Type::kString: {
@@ -769,43 +820,6 @@ class ToonFormatter {
 
   static std::string Indent(int depth) { return std::string(depth * 2, ' '); }
 
-  static std::string FormatNumber(double number) {
-    if (!std::isfinite(number)) {
-      return "null";
-    }
-    if (number == 0.0 || number == -0.0) {
-      return "0";
-    }
-    const double abs_val = std::abs(number);
-    if (abs_val >= 1e-6 && abs_val < 1e21) {
-      char buffer[128];
-      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-      std::string s(buffer);
-      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
-        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
-        s = buffer;
-        const size_t dot = s.find('.');
-        if (dot != std::string::npos) {
-          while (!s.empty() && s.back() == '0') {
-            s.pop_back();
-          }
-          if (!s.empty() && s.back() == '.') {
-            s.pop_back();
-          }
-        }
-      }
-      return s;
-    } else {
-      char buffer[64];
-      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-      std::string s(buffer);
-      for (char& c : s) {
-        if (c == 'E') c = 'e';
-      }
-      return s;
-    }
-  }
-
   static bool IsNumericLike(std::string_view s) {
     if (s.empty()) return false;
     size_t i = 0;
@@ -942,7 +956,7 @@ class ToonFormatter {
       case JsonNode::Type::kBool:
         return node.as_bool() ? "true" : "false";
       case JsonNode::Type::kNumber:
-        return FormatNumber(node.as_number());
+        return NumberFormatter::Format(node.as_number());
       case JsonNode::Type::kString:
         return FormatString(node.as_string(), delim);
       default:
@@ -1375,46 +1389,6 @@ class YamlFormatter {
  private:
   static std::string Indent(int depth) { return std::string(depth * 2, ' '); }
 
-  static std::string FormatNumber(double number) {
-    if (std::isnan(number)) {
-      return ".nan";
-    }
-    if (std::isinf(number)) {
-      return number > 0 ? ".inf" : "-.inf";
-    }
-    if (number == 0.0 || number == -0.0) {
-      return "0";
-    }
-    const double abs_val = std::abs(number);
-    if (abs_val >= 1e-6 && abs_val < 1e21) {
-      char buffer[128];
-      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-      std::string s(buffer);
-      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
-        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
-        s = buffer;
-        const size_t dot = s.find('.');
-        if (dot != std::string::npos) {
-          while (!s.empty() && s.back() == '0') {
-            s.pop_back();
-          }
-          if (!s.empty() && s.back() == '.') {
-            s.pop_back();
-          }
-        }
-      }
-      return s;
-    } else {
-      char buffer[64];
-      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-      std::string s(buffer);
-      for (char& c : s) {
-        if (c == 'E') c = 'e';
-      }
-      return s;
-    }
-  }
-
   static bool EqualsIgnoreCase(std::string_view s, std::string_view target) {
     if (s.size() != target.size()) return false;
     for (size_t i = 0; i < s.size(); ++i) {
@@ -1633,7 +1607,7 @@ class YamlFormatter {
       case JsonNode::Type::kBool:
         return node.as_bool() ? "true" : "false";
       case JsonNode::Type::kNumber:
-        return FormatNumber(node.as_number());
+        return NumberFormatter::FormatYaml(node.as_number());
       case JsonNode::Type::kString:
         return FormatString(node.as_string());
       default:
@@ -3415,7 +3389,7 @@ class Renderer {
                 found_variant = true;
                 break;
               case JsonNode::Type::kNumber:
-                variant_str = FormatNumber(v.as_number());
+                variant_str = NumberFormatter::Format(v.as_number());
                 found_variant = true;
                 break;
               default:
@@ -3535,38 +3509,6 @@ class Renderer {
     return s;
   }
 
-  static std::string FormatNumber(double number) {
-    if (!std::isfinite(number)) {
-      return "null";
-    }
-    if (number == 0.0 || number == -0.0) {
-      return "0";
-    }
-    const double abs_val = std::abs(number);
-    if (abs_val >= 1e-6 && abs_val < 1e21) {
-      char buffer[128];
-      std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-      std::string s(buffer);
-      if (s.find('e') != std::string::npos || s.find('E') != std::string::npos) {
-        std::snprintf(buffer, sizeof(buffer), "%.10f", number);
-        s = buffer;
-        const size_t dot = s.find('.');
-        if (dot != std::string::npos) {
-          while (!s.empty() && s.back() == '0') {
-            s.pop_back();
-          }
-          if (!s.empty() && s.back() == '.') {
-            s.pop_back();
-          }
-        }
-      }
-      return s;
-    }
-    char buffer[128];
-    std::snprintf(buffer, sizeof(buffer), "%.15g", number);
-    return buffer;
-  }
-
   static JsonNode Evaluate(const spec::Expression& expression, const JsonNode& val) {
     switch (expression.kind()) {
       case spec::Expression::kind::kInput:
@@ -3642,7 +3584,7 @@ class Renderer {
                   str = val.as_bool() ? "true" : "false";
                   break;
                 case JsonNode::Type::kNumber:
-                  str = FormatNumber(val.as_number());
+                  str = NumberFormatter::Format(val.as_number());
                   break;
                 case JsonNode::Type::kString:
                   str = val.as_string();
@@ -3703,7 +3645,7 @@ class Renderer {
           case JsonNode::Type::kBool:
             return v.as_bool() ? "true" : "false";
           case JsonNode::Type::kNumber:
-            return FormatNumber(v.as_number());
+            return NumberFormatter::Format(v.as_number());
           case JsonNode::Type::kString:
             return v.as_string();
           default:
@@ -3793,7 +3735,7 @@ class Renderer {
             switch_key = switch_val.as_string();
             break;
           case JsonNode::Type::kNumber:
-            switch_key = FormatNumber(switch_val.as_number());
+            switch_key = NumberFormatter::Format(switch_val.as_number());
             break;
           case JsonNode::Type::kNull:
             switch_key = "";

@@ -87,22 +87,22 @@ void TestToJsonBool() {
 
 void TestToJsonNumber() {
   JsonNode num_zero(0.0);
-  ASSERT_EQ(num_zero.ToJson(), std::to_string(0.0));
+  ASSERT_EQ(num_zero.ToJson(), "0");
 
   JsonNode num_pos(42.5);
-  ASSERT_EQ(num_pos.ToJson(), std::to_string(42.5));
+  ASSERT_EQ(num_pos.ToJson(), "42.5");
 
   JsonNode num_neg(-17.25);
-  ASSERT_EQ(num_neg.ToJson(), std::to_string(-17.25));
+  ASSERT_EQ(num_neg.ToJson(), "-17.25");
 
   JsonNode num_nan(std::numeric_limits<double>::quiet_NaN());
-  ASSERT_EQ(num_nan.ToJson(), std::to_string(0.0));
+  ASSERT_EQ(num_nan.ToJson(), "null");
 
   JsonNode num_pos_inf(std::numeric_limits<double>::infinity());
-  ASSERT_EQ(num_pos_inf.ToJson(), std::to_string(std::numeric_limits<double>::max()));
+  ASSERT_EQ(num_pos_inf.ToJson(), "null");
 
   JsonNode num_neg_inf(-std::numeric_limits<double>::infinity());
-  ASSERT_EQ(num_neg_inf.ToJson(), std::to_string(std::numeric_limits<double>::min()));
+  ASSERT_EQ(num_neg_inf.ToJson(), "null");
 }
 
 void TestToJsonString() {
@@ -164,15 +164,14 @@ void TestToJsonArray() {
       JsonNode(12.0),
       JsonNode(std::string("text")),
   });
-  ASSERT_EQ(multi_arr.ToJson(), "[null,true," + std::to_string(12.0) + ",\"text\"]");
+  ASSERT_EQ(multi_arr.ToJson(), "[null,true,12,\"text\"]");
 
   JsonNode nested_arr(std::vector<JsonNode>{
       JsonNode(std::vector<JsonNode>{JsonNode(1.0), JsonNode(2.0)}),
       JsonNode(std::vector<JsonNode>{}),
       JsonNode(std::vector<JsonNode>{JsonNode(std::vector<JsonNode>{JsonNode(3.0)})}),
   });
-  ASSERT_EQ(nested_arr.ToJson(), "[[" + std::to_string(1.0) + "," + std::to_string(2.0) +
-                                     "],[],[[" + std::to_string(3.0) + "]]]");
+  ASSERT_EQ(nested_arr.ToJson(), "[[1,2],[],[[3]]]");
 }
 
 void TestToJsonObject() {
@@ -189,8 +188,8 @@ void TestToJsonObject() {
       {"active", JsonNode(true)},
       {"extra", JsonNode(std::nullopt)},
   });
-  ASSERT_EQ(multi_obj.ToJson(), "{\"name\": \"Alice\",\"age\": " + std::to_string(30.0) +
-                                    ",\"active\": true,\"extra\": null}");
+  ASSERT_EQ(multi_obj.ToJson(),
+            "{\"name\": \"Alice\",\"age\": 30,\"active\": true,\"extra\": null}");
 
   JsonNode special_key(std::vector<std::pair<std::string, JsonNode>>{
       {"key\n\"quoted\"", JsonNode(std::string("val"))}});
@@ -213,6 +212,7 @@ void TestToJsonNestedComplex() {
                         {"tags", JsonNode(std::vector<JsonNode>{
                                      JsonNode(std::string("c++")),
                                      JsonNode(std::string("json")),
+                                     JsonNode(std::string("json")),
                                  })},
                     }),
                     JsonNode(std::vector<std::pair<std::string, JsonNode>>{
@@ -226,12 +226,8 @@ void TestToJsonNestedComplex() {
   std::string expected =
       "{\"title\": \"Task List\","
       "\"tasks\": ["
-      "{\"id\": " +
-      std::to_string(1.0) +
-      ",\"tags\": [\"c++\",\"json\"]},"
-      "{\"id\": " +
-      std::to_string(2.0) +
-      ",\"tags\": []}"
+      "{\"id\": 1,\"tags\": [\"c++\",\"json\",\"json\"]},"
+      "{\"id\": 2,\"tags\": []}"
       "],"
       "\"completed\": false}";
   ASSERT_EQ(complex_node.ToJson(), expected);
@@ -255,10 +251,10 @@ void TestToPrettyJsonBool() {
 
 void TestToPrettyJsonNumber() {
   JsonNode num(42.0);
-  ASSERT_EQ(num.ToPrettyJson(), std::to_string(42.0));
+  ASSERT_EQ(num.ToPrettyJson(), "42");
 
   JsonNode num_nan(std::numeric_limits<double>::quiet_NaN());
-  ASSERT_EQ(num_nan.ToPrettyJson(), std::to_string(0.0));
+  ASSERT_EQ(num_nan.ToPrettyJson(), "null");
 }
 
 void TestToPrettyJsonString() {
@@ -283,9 +279,7 @@ void TestToPrettyJsonArray() {
   });
   std::string expected_multi =
       "[\n"
-      "  " +
-      std::to_string(1.0) +
-      ",\n"
+      "  1,\n"
       "  \"two\",\n"
       "  true\n"
       "]";
@@ -306,19 +300,13 @@ void TestToPrettyJsonArray() {
   std::string expected_nested =
       "[\n"
       "  [\n"
-      "    " +
-      std::to_string(1.0) +
-      ",\n"
-      "    " +
-      std::to_string(2.0) +
-      "\n"
+      "    1,\n"
+      "    2\n"
       "  ],\n"
       "  [],\n"
       "  [\n"
       "    [\n"
-      "      " +
-      std::to_string(3.0) +
-      "\n"
+      "      3\n"
       "    ]\n"
       "  ]\n"
       "]";
@@ -344,9 +332,7 @@ void TestToPrettyJsonObject() {
   std::string expected_multi =
       "{\n"
       "  \"name\": \"Alice\",\n"
-      "  \"age\": " +
-      std::to_string(30.0) +
-      ",\n"
+      "  \"age\": 30,\n"
       "  \"active\": true\n"
       "}";
   ASSERT_EQ(multi_obj.ToPrettyJson(), expected_multi);
@@ -390,18 +376,14 @@ void TestToPrettyJsonNestedComplex() {
       "  \"title\": \"Task List\",\n"
       "  \"tasks\": [\n"
       "    {\n"
-      "      \"id\": " +
-      std::to_string(1.0) +
-      ",\n"
+      "      \"id\": 1,\n"
       "      \"tags\": [\n"
       "        \"c++\",\n"
       "        \"json\"\n"
       "      ]\n"
       "    },\n"
       "    {\n"
-      "      \"id\": " +
-      std::to_string(2.0) +
-      ",\n"
+      "      \"id\": 2,\n"
       "      \"tags\": []\n"
       "    }\n"
       "  ],\n"
@@ -1495,8 +1477,7 @@ void TestParseJsonObjects() {
 
   auto r_nested = JsonNode::ParseJson("{\"outer\": {\"inner\": [1, 2, {\"deep\": true}]}}");
   ASSERT_TRUE(r_nested.ok());
-  ASSERT_EQ(r_nested->ToJson(), "{\"outer\": {\"inner\": [" + std::to_string(1.0) + "," +
-                                    std::to_string(2.0) + ",{\"deep\": true}]}}");
+  ASSERT_EQ(r_nested->ToJson(), "{\"outer\": {\"inner\": [1,2,{\"deep\": true}]}}");
 }
 
 void TestParseJsonErrors() {
@@ -1598,14 +1579,10 @@ void TestParseJsonRoundtrip() {
   ASSERT_EQ(node.ToJson(),
             "{\"title\": \"Task List\","
             "\"tasks\": ["
-            "{\"id\": " +
-                std::to_string(1.0) +
-                ",\"tags\": [\"c++\",\"json\"]},"
-                "{\"id\": " +
-                std::to_string(2.0) +
-                ",\"tags\": []}"
-                "],"
-                "\"completed\": false}");
+            "{\"id\": 1,\"tags\": [\"c++\",\"json\"]},"
+            "{\"id\": 2,\"tags\": []}"
+            "],"
+            "\"completed\": false}");
 
   std::string toon = node.ToToon();
   ASSERT_TRUE(!toon.empty());
@@ -2057,20 +2034,18 @@ void TestTopLevelSerializers() {
   using typeprompt::ToYaml;
 
   // 1. Primitive types
-  ASSERT_EQ(ToJson(42), std::to_string(42.0));
+  ASSERT_EQ(ToJson(42), "42");
   ASSERT_EQ(ToJson(true), "true");
   ASSERT_EQ(ToJson(std::string("hello")), "\"hello\"");
 
   // 2. Vector
   std::vector<int> vec = {1, 2, 3};
-  ASSERT_EQ(ToJson(vec), "[" + std::to_string(1.0) + "," + std::to_string(2.0) + "," +
-                             std::to_string(3.0) + "]");
+  ASSERT_EQ(ToJson(vec), "[1,2,3]");
 
   // 3. Custom ADL type
   test_custom_adl::Point pt{1.0, 2.0};
-  ASSERT_EQ(ToJson(pt), "{\"x\": " + std::to_string(1.0) + ",\"y\": " + std::to_string(2.0) + "}");
-  ASSERT_EQ(ToPrettyJson(pt),
-            "{\n  \"x\": " + std::to_string(1.0) + ",\n  \"y\": " + std::to_string(2.0) + "\n}");
+  ASSERT_EQ(ToJson(pt), "{\"x\": 1,\"y\": 2}");
+  ASSERT_EQ(ToPrettyJson(pt), "{\n  \"x\": 1,\n  \"y\": 2\n}");
   ASSERT_EQ(ToToon(pt), "x: 1\ny: 2");
   ASSERT_EQ(ToYaml(pt), "x: 1\n\"y\": 2");
 }
@@ -3058,7 +3033,7 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
 
   // Top-level serialization formats for NotSuccess
   ASSERT_EQ(typeprompt_e01::ToJson(not_success),
-            "{\"success\": false,\"x\": 10.000000,\"y\": 20.500000,\"z\": \"failed-state\"}");
+            "{\"success\": false,\"x\": 10,\"y\": 20.5,\"z\": \"failed-state\"}");
   ASSERT_EQ(typeprompt_e01::ToYaml(not_success),
             "success: false\n"
             "x: 10\n"
@@ -3081,7 +3056,7 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
 
   // Top-level serialization formats for Success
   ASSERT_EQ(typeprompt_e01::ToJson(success),
-            "{\"success\": true,\"x\": 42.000000,\"y\": 3.140000,\"z\": 100.000000}");
+            "{\"success\": true,\"x\": 42,\"y\": 3.14,\"z\": 100}");
   ASSERT_EQ(typeprompt_e01::ToYaml(success),
             "success: true\n"
             "x: 42\n"
