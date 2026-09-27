@@ -459,7 +459,6 @@ class JsonPath {
 };
 
 namespace internal {
-
 class RootJsonPath : public JsonPath {
  public:
   std::string ToString() const override { return "json"; }
@@ -489,7 +488,6 @@ class AtIndexJsonPath : public JsonPath {
   const JsonPath& parent_;
   const size_t index_;
 };
-
 }  // namespace internal
 
 inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, JsonNode& out) {
@@ -1335,7 +1333,7 @@ class ToonFormatter {
       AppendSingleObjectField(obj[i].first, obj[i].second, depth + 1, lines);
     }
   }
-};
+};  // class ToonFormatter
 
 class YamlFormatter {
  public:
@@ -1777,7 +1775,7 @@ class YamlFormatter {
       }
     }
   }
-};
+};  // class YamlFormatter
 
 class JsonParser {
  public:
@@ -2170,7 +2168,7 @@ class JsonParser {
     }
     return JsonNode(std::move(entries));
   }
-};
+};  // class JsonParser
 
 class StructParser {
  public:
