@@ -164,17 +164,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-        rootNamespace,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+          rootNamespace,
+        },
+      )
     : "std::nullopt_t";
   lines.push(
     "// Metadata associated with a prompt.",
@@ -275,6 +275,7 @@ function writeTemplatesSignatures(
     const sharedTypePrefix = typePrefixBase.concat("shared::");
     for (const template of templates) {
       const { schema } = template;
+      const tools = Object.values(template.tools);
       const rawTemplateName = template.template.name.text;
       const templateId = getId(template.template);
       const structCName = toCName(toPascalCase(rawTemplateName));
@@ -308,6 +309,19 @@ function writeTemplatesSignatures(
         `// Defined in '${template.template.sourcePath}'`,
         `struct ${structCName} {`,
         ` static constexpr std::string_view kTemplateId = "${templateId}";`,
+        "",
+      );
+      if (tools.length <= 0) {
+        lines.push(" using tools_type = std::tuple<>;");
+      } else {
+        lines.push(" using tools_type = std::tuple<");
+        for (const tool of tools) {
+          const toolCName = toCName(toPascalCase(tool.tool.tool.name.text));
+          lines.push(`   tools${middleComp}::${toolCName},`);
+        }
+        lines.push(lines.pop()!.slice(0, -1).concat(">;"));
+      }
+      lines.push(
         "",
         ` using input_type = ${inputType};`,
         ` using output_type = ${outputType};`,
@@ -378,7 +392,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1087,5 +1101,8 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "indirect",
   "internal",
   "must_init",
+  "schema",
   "std",
+  "templates",
+  "tools",
 ]);
