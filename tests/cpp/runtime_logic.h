@@ -3827,24 +3827,24 @@ class Renderer {
 };
 }  // namespace internal
 
-template <typename Template>
-Prompt Render(Template /*tpl*/, const typename Template::input_type& input) {
-  return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
-                                        internal::TemplatesData::get());
-}
-
+/// Renders a prompt template with the provided input.
+///
+/// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
+/// 'templates::MyTemplate').
+/// \param input The input arguments matching the template's input schema.
+/// \return A fully resolved Prompt ready to be sent to an LLM.
 template <typename Template>
 Prompt Render(const typename Template::input_type& input) {
   return internal::Renderer::RenderImpl(Template::kTemplateId, ToJsonNode(input),
                                         internal::TemplatesData::get());
 }
 
-template <typename Template>
-ParseResult<typename Template::output_type> ParseResponse(Template /*tpl*/,
-                                                          std::string_view response) {
-  return internal::Renderer::ParseResponseImpl<Template>(response);
-}
-
+/// Parses and validates an LLM response against the template's output schema.
+///
+/// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
+/// 'templates::MyTemplate').
+/// \param response The raw string response returned by the LLM.
+/// \return A ParseResult containing the structured output or a ParseError.
 template <typename Template>
 ParseResult<typename Template::output_type> ParseResponse(std::string_view response) {
   return internal::Renderer::ParseResponseImpl<Template>(response);

@@ -3127,11 +3127,11 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
 }
 
 void TestRenderBasicsTranslate() {
-  auto prompt = typeprompt_01::Render(typeprompt_01::templates::Translate{},
-                                      typeprompt_01::schema::translate::Input{
-                                          .target_language = "French",
-                                          .text = "Hello world",
-                                      });
+  auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
+      typeprompt_01::schema::translate::Input::whole{
+          .target_language = "French",
+          .text = "Hello world",
+      });
 
   ASSERT_TRUE(prompt.output_format == typeprompt_01::OutputFormat::kText);
   ASSERT_EQ(prompt.template_id, "Main:Translate");
@@ -3145,8 +3145,7 @@ void TestRenderBasicsTranslate() {
 }
 
 void TestRenderComplexSchemas() {
-  auto prompt = typeprompt_02::Render(
-      typeprompt_02::templates::TriageTicket{},
+  auto prompt = typeprompt_02::Render<typeprompt_02::templates::TriageTicket>(
       typeprompt_02::schema::triage_ticket::Input{
           .body = "It crashes every time.",
           .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
@@ -3160,16 +3159,15 @@ void TestRenderComplexSchemas() {
   ASSERT_EQ(*prompt.meta.temperature, 0.2);
   ASSERT_TRUE(prompt.meta.model == typeprompt_02::schema::meta::Meta_Model::kGpt4o);
 
-  auto parsed =
-      typeprompt_02::ParseResponse(typeprompt_02::templates::TriageTicket{},
-                                   "```json\n"
-                                   "{\n"
-                                   "  \"category\": \"technical-issue\",\n"
-                                   "  \"urgency\": \"high\",\n"
-                                   "  \"summary\": \"Application crashes when logging in\",\n"
-                                   "  \"suggestedActions\": [\"escalate_to_tier_2\"]\n"
-                                   "}\n"
-                                   "```");
+  auto parsed = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "```json\n"
+      "{\n"
+      "  \"category\": \"technical-issue\",\n"
+      "  \"urgency\": \"high\",\n"
+      "  \"summary\": \"Application crashes when logging in\",\n"
+      "  \"suggestedActions\": [\"escalate_to_tier_2\"]\n"
+      "}\n"
+      "```");
   ASSERT_TRUE(parsed.ok());
   ASSERT_TRUE(parsed->category ==
               typeprompt_02::schema::triage_ticket::TicketCategory::kTechnicalIssue);
@@ -3180,10 +3178,10 @@ void TestRenderComplexSchemas() {
 }
 
 void TestRenderTools() {
-  auto prompt = typeprompt_03::Render(typeprompt_03::templates::ResearchQuestion{},
-                                      typeprompt_03::schema::research_question::Input{
-                                          .question = "What is quantum computing?",
-                                      });
+  auto prompt = typeprompt_03::Render<typeprompt_03::templates::ResearchQuestion>(
+      typeprompt_03::schema::research_question::Input{
+          .question = "What is quantum computing?",
+      });
 
   ASSERT_EQ(prompt.tools.size(), 1);
   auto it = prompt.tools.find("webSearch");
@@ -3194,8 +3192,7 @@ void TestRenderTools() {
 }
 
 void TestRenderVariants() {
-  auto marketing = typeprompt_04::Render(
-      typeprompt_04::templates::WriteProductDescription{},
+  auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>(
       typeprompt_04::schema::write_product_description::Input{
           .product_name = "Acme Widget",
           .features = {"Fast", "Reliable"},
@@ -3205,8 +3202,7 @@ void TestRenderVariants() {
               marketing.system_message.find("compelling") != std::string::npos ||
               marketing.user_message.find("Acme Widget") != std::string::npos);
 
-  auto technical = typeprompt_04::Render(
-      typeprompt_04::templates::WriteProductDescription{},
+  auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>(
       typeprompt_04::schema::write_product_description::Input{
           .product_name = "Acme Widget",
           .features = {"Fast", "Reliable"},
@@ -3216,8 +3212,7 @@ void TestRenderVariants() {
 }
 
 void TestRenderConditionalLogic() {
-  auto p_exec = typeprompt_05::Render(
-      typeprompt_05::templates::SummarizeDocument{},
+  auto p_exec = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>(
       typeprompt_05::schema::summarize_document::Input{
           .title = "Quarterly Report",
           .content = "Quarterly results are strong.",
@@ -3227,8 +3222,7 @@ void TestRenderConditionalLogic() {
   ASSERT_TRUE(p_exec.system_message.find("executive") != std::string::npos);
   ASSERT_TRUE(p_exec.system_message.find("revenue") != std::string::npos);
 
-  auto p_tech = typeprompt_05::Render(
-      typeprompt_05::templates::SummarizeDocument{},
+  auto p_tech = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>(
       typeprompt_05::schema::summarize_document::Input{
           .title = "Tech Specs",
           .content = "Architecture RFC...",
@@ -3240,8 +3234,7 @@ void TestRenderConditionalLogic() {
 }
 
 void TestRenderTabularFormatting() {
-  auto prompt_csv = typeprompt_e01::Render(
-      typeprompt_e01::templates::AnalyzeSalesData{},
+  auto prompt_csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>(
       typeprompt_e01::schema::analyze_sales_data::Input{
           .rows =
               {
