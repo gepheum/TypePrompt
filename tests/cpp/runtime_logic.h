@@ -3914,6 +3914,34 @@ Prompt Render(const typename Template::input_type& input,
                                         internal::TemplatesSpecAccessor::get(templates));
 }
 
+/// Renders a prompt template using an inline designated initializer list for the input.
+///
+/// This variant allows passing `{ .field = value, ... }` directly without specifying the input
+/// type name. Unlike calling `Render(...)` (where omitted fields silently fall back to default
+/// values), `RenderWhole` enforces at compile time that every field must be explicitly
+/// initialized — omitting any field produces a compilation error.
+///
+/// Example:
+/// \code
+/// auto prompt = RenderWhole<templates::MyTemplate>({
+///     .first = "foo",
+///     .second = "bar",
+/// });
+/// \endcode
+///
+/// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
+/// 'templates::MyTemplate').
+/// \param input The exhaustive input builder (`Input::whole`), typically passed as a braced
+/// designated initializer list.
+/// \param templates Optional template definitions, useful when injecting prompt overrides from an
+/// external experimentation or A/B testing framework. Defaults to the compiled templates.
+/// \return A fully resolved Prompt ready to be sent to an LLM.
+template <typename Template>
+Prompt RenderWhole(typename Template::input_type::whole input,
+                   const Templates& templates = Templates::getDefault()) {
+  return Render<Template>(*std::move(input), templates);
+}
+
 /// Parses and validates an LLM response against the template's output schema.
 ///
 /// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
