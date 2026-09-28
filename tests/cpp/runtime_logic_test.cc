@@ -3127,11 +3127,10 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
 }
 
 void TestRenderBasicsTranslate() {
-  auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
-      typeprompt_01::schema::translate::Input::whole{
-          .target_language = "French",
-          .text = "Hello world",
-      });
+  auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>({
+      .target_language = "French",
+      .text = "Hello world",
+  });
 
   ASSERT_TRUE(prompt.output_format == typeprompt_01::OutputFormat::kText);
   ASSERT_EQ(prompt.template_id, "Main:Translate");
@@ -3145,13 +3144,12 @@ void TestRenderBasicsTranslate() {
 }
 
 void TestRenderComplexSchemas() {
-  auto prompt = typeprompt_02::Render<typeprompt_02::templates::TriageTicket>(
-      typeprompt_02::schema::triage_ticket::Input{
-          .body = "It crashes every time.",
-          .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
-          .recent_tickets = {},
-          .subject = "App crashes on login",
-      });
+  auto prompt = typeprompt_02::Render<typeprompt_02::templates::TriageTicket>({
+      .body = "It crashes every time.",
+      .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
+      .recent_tickets = {{}},
+      .subject = "App crashes on login",
+  });
 
   ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
   ASSERT_TRUE(prompt.output_json_schema.has_value());
@@ -3192,68 +3190,62 @@ void TestRenderTools() {
 }
 
 void TestRenderVariants() {
-  auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>(
-      typeprompt_04::schema::write_product_description::Input{
-          .product_name = "Acme Widget",
-          .features = {"Fast", "Reliable"},
-          .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
-      });
+  auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
+      .product_name = "Acme Widget",
+      .features = {{"Fast", "Reliable"}},
+      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
+  });
   ASSERT_TRUE(marketing.system_message.find("marketing") != std::string::npos ||
               marketing.system_message.find("compelling") != std::string::npos ||
               marketing.user_message.find("Acme Widget") != std::string::npos);
 
-  auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>(
-      typeprompt_04::schema::write_product_description::Input{
-          .product_name = "Acme Widget",
-          .features = {"Fast", "Reliable"},
-          .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
-      });
+  auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
+      .product_name = "Acme Widget",
+      .features = {{"Fast", "Reliable"}},
+      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
+  });
   ASSERT_TRUE(technical.user_message.find("Acme Widget") != std::string::npos);
 }
 
 void TestRenderConditionalLogic() {
-  auto p_exec = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>(
-      typeprompt_05::schema::summarize_document::Input{
-          .title = "Quarterly Report",
-          .content = "Quarterly results are strong.",
-          .focus_topic = "revenue",
-          .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
-      });
+  auto p_exec = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
+      .title = "Quarterly Report",
+      .content = "Quarterly results are strong.",
+      .focus_topic = "revenue",
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
+  });
   ASSERT_TRUE(p_exec.system_message.find("executive") != std::string::npos);
   ASSERT_TRUE(p_exec.system_message.find("revenue") != std::string::npos);
 
-  auto p_tech = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>(
-      typeprompt_05::schema::summarize_document::Input{
-          .title = "Tech Specs",
-          .content = "Architecture RFC...",
-          .focus_topic = std::nullopt,
-          .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
-      });
+  auto p_tech = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
+      .title = "Tech Specs",
+      .content = "Architecture RFC...",
+      .focus_topic = std::nullopt,
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
+  });
   ASSERT_TRUE(p_tech.system_message.find("technical") != std::string::npos);
   ASSERT_TRUE(p_tech.system_message.find("revenue") == std::string::npos);
 }
 
 void TestRenderTabularFormatting() {
-  auto prompt_csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>(
-      typeprompt_e01::schema::analyze_sales_data::Input{
-          .rows =
-              {
-                  typeprompt_e01::schema::analyze_sales_data::SalesRow{
-                      .product = "Widget A",
-                      .units = 100,
-                      .revenue_cents = 199900,
-                      .region = "EMEA",
-                  },
-                  typeprompt_e01::schema::analyze_sales_data::SalesRow{
-                      .product = "Widget, B",
-                      .units = 50,
-                      .revenue_cents = 75000,
-                      .region = "APAC",
-                  },
-              },
-          .question = "Total sales?",
-          .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
-      });
+  auto prompt_csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
+      .rows = {{
+          {
+              .product = "Widget A",
+              .units = 100,
+              .revenue_cents = 199900,
+              .region = "EMEA",
+          },
+          {
+              .product = "Widget, B",
+              .units = 50,
+              .revenue_cents = 75000,
+              .region = "APAC",
+          },
+      }},
+      .question = "Total sales?",
+      .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
+  });
   ASSERT_TRUE(prompt_csv.user_message.find("product,units,revenueCents,region") !=
               std::string::npos);
   ASSERT_TRUE(prompt_csv.user_message.find("\"Widget, B\"") != std::string::npos);
@@ -3295,7 +3287,7 @@ void TestTemplateOverrider() {
   ASSERT_TRUE(overridden_res.ok());
   auto moved_data = std::move(*overridden_res);
   auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
-      typeprompt_01::schema::translate::Input::whole{
+      {
           .target_language = "Spanish",
           .text = "Good morning",
       },
