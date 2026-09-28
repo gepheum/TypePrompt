@@ -494,9 +494,14 @@ function writeTypepromptInterface(
 ): string {
   const { internal } = options;
   const fields = Object.values(type.fields);
+  const sortedFields = [...fields].sort((a, b) => {
+    const nameA = toCName(toSnakeCase(a.name.text));
+    const nameB = toCName(toSnakeCase(b.name.text));
+    return nameA.localeCompare(nameB, "en-US");
+  });
 
   const lines: string[] = [];
-  const firstField = fields[0];
+  const firstField = sortedFields[0];
   if (firstField && !internal) {
     const fieldCName = toCName(toSnakeCase(firstField.name.text));
     lines.push(
@@ -513,41 +518,42 @@ function writeTypepromptInterface(
       "///       ...",
       "///   };",
       "///",
+      "/// When using designated initializer syntax, always specify fields in alphabetical order.",
       "/// Using '::whole' forces you to set all the fields.",
     );
   }
   lines.push(`struct ${typeCName} {`);
-  for (const field of fields) {
+  for (const field of sortedFields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
     const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
-    lines.push(...commentify(field.doc, " "));
-    lines.push(` ${fieldType} ${cName}{};`);
+    lines.push(...commentify(field.doc, "  "));
+    lines.push(`  ${fieldType} ${cName}{};`);
   }
   if (!internal) {
     lines.push(
       "",
-      ` /// Builder requiring all fields of ${typeCName} to be set at construction.`,
-      ` /// Converts to ${typeCName} via implicit conversion or '*'.`,
-      " struct whole {",
+      `  /// Builder requiring all fields of ${typeCName} to be set at construction.`,
+      `  /// Converts to ${typeCName} via implicit conversion or '*'.`,
+      "  struct whole {",
     );
-    for (const field of fields) {
+    for (const field of sortedFields) {
       const type = resolveType(field.type, schema);
       if (isLiteralType(type)) continue;
       const cName = toCName(toSnakeCase(field.name.text));
       const fieldType = writeType(type, schema, options);
-      lines.push(`  must_init<${fieldType}> ${cName};`);
+      lines.push(`    must_init<${fieldType}> ${cName};`);
     }
     lines.push(
       "",
-      `  inline operator ${typeCName}() &&;`,
-      `  operator ${typeCName}() const& = delete;`,
+      `    inline operator ${typeCName}() &&;`,
+      `    operator ${typeCName}() const& = delete;`,
       "",
-      `  ${typeCName} operator*() && { return std::move(*this); }`,
-      `  ${typeCName} operator*() const& = delete;`,
+      `    ${typeCName} operator*() && { return std::move(*this); }`,
+      `    ${typeCName} operator*() const& = delete;`,
     );
-    lines.push(" };"); // struct whole
+    lines.push("  };"); // struct whole
   }
   lines.push("};"); // struct
 
@@ -723,6 +729,11 @@ function writeMethodImplsForInterface(
 ): string {
   const { rootNamespace } = options;
   const fields = Object.values(type.fields);
+  const sortedFields = [...fields].sort((a, b) => {
+    const nameA = toCName(toSnakeCase(a.name.text));
+    const nameB = toCName(toSnakeCase(b.name.text));
+    return nameA.localeCompare(nameB, "en-US");
+  });
 
   const lines: string[] = [];
 
@@ -732,7 +743,7 @@ function writeMethodImplsForInterface(
       `inline ${typeCName}::whole::operator ${typeCName}() && {`,
       ` return ${typeCName}{`,
     );
-    for (const field of fields) {
+    for (const field of sortedFields) {
       const type = resolveType(field.type, schema);
       if (isLiteralType(type)) continue;
       const fieldCName = toCName(toSnakeCase(field.name.text));

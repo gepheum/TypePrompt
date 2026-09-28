@@ -2706,8 +2706,8 @@ void TestUserDefinedStructs() {
 
   // 2. Struct with nested structs & arrays (Pricing, Benchmark, Provider)
   Pricing pricing = *Pricing::whole{
-      .model = Pricing_Model::kPerMonth,
       .base_price = 49.99,
+      .model = Pricing_Model::kPerMonth,
       .overage = 0.10,
   };
 
@@ -2723,13 +2723,13 @@ void TestUserDefinedStructs() {
   };
 
   Provider provider = *Provider::whole{
-      .name = "AcmeCloud",
-      .region = "us-east-1",
+      .benchmarks = {{b1, b2}},
       .category = ProductCategory::kCompute,
+      .cons = {{"expensive"}},
+      .name = "AcmeCloud",
       .pricing = pricing,
-      .benchmarks = std::vector<Benchmark>{b1, b2},
-      .pros = std::vector<std::string>{"fast", "reliable"},
-      .cons = std::vector<std::string>{"expensive"},
+      .pros = {{"fast", "reliable"}},
+      .region = "us-east-1",
   };
 
   typeprompt_02::JsonNode prov_node = ToJsonNode(provider);
@@ -2751,16 +2751,16 @@ void TestUserDefinedStructs() {
 
   // 3. Triage ticket Input & Output
   Input_RecentTickets rt1 = *Input_RecentTickets::whole{
+      .category = TicketCategory::kTechnicalIssue,
       .id = "TICKET-1",
       .summary = "Cannot login",
-      .category = TicketCategory::kTechnicalIssue,
   };
   typeprompt_02::schema::triage_ticket::Input ticket_input =
       *typeprompt_02::schema::triage_ticket::Input::whole{
-          .subject = "Urgent billing inquiry",
           .body = "Need invoice for March",
           .customer_tier = Input_CustomerTier::kPro,
           .recent_tickets = std::vector<Input_RecentTickets>{rt1},
+          .subject = "Urgent billing inquiry",
       };
 
   typeprompt_02::JsonNode ticket_input_node = ToJsonNode(ticket_input);
@@ -2775,10 +2775,10 @@ void TestUserDefinedStructs() {
   typeprompt_02::schema::triage_ticket::Output ticket_output =
       *typeprompt_02::schema::triage_ticket::Output::whole{
           .category = TicketCategory::kBilling,
-          .urgency = Output_Urgency::kHigh,
+          .suggested_actions = {{"Send invoice", "Follow up"}},
+          .suggested_reply = {("Here is your invoice.")},
           .summary = "Billing inquiry summary",
-          .suggested_actions = std::vector<std::string>{"Send invoice", "Follow up"},
-          .suggested_reply = std::optional<std::string>("Here is your invoice."),
+          .urgency = Output_Urgency::kHigh,
       };
   typeprompt_02::JsonNode ticket_output_node = ToJsonNode(ticket_output);
   auto parsed_ticket_output =
@@ -2806,9 +2806,9 @@ void TestUserDefinedStructs() {
   // 4. Generate page tree Input
   typeprompt_02::schema::generate_page_tree::Input page_input =
       *typeprompt_02::schema::generate_page_tree::Input::whole{
+          .audience = Input_Audience::kDeveloper,
           .providers = std::vector<Provider>{provider},
           .use_case = "Cloud hosting for microservices",
-          .audience = Input_Audience::kDeveloper,
       };
   typeprompt_02::JsonNode page_input_node = ToJsonNode(page_input);
   auto parsed_page_input =
@@ -2878,8 +2878,8 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
   // 2. Recursive section containing heading, paragraph, button, and a nested subsection
   PageNode subsection = PageNode::variant_type(
       typeprompt_02::indirect<PageNode_KindSection>(*PageNode_KindSection::whole{
-          .title = std::optional<std::string>("Subsection"),
           .children = std::vector<PageNode>{button},
+          .title = {"Subsection"},
       }));
   ASSERT_TRUE(subsection.kind() == PageNode::kind::kSection);
   ASSERT_TRUE(subsection.as_kind_section().title.has_value());
@@ -2888,8 +2888,8 @@ void TestUserDefinedDiscriminatedUnionPageNode() {
 
   PageNode root_section = PageNode::variant_type(
       typeprompt_02::indirect<PageNode_KindSection>(*PageNode_KindSection::whole{
-          .title = std::optional<std::string>("Main Section"),
-          .children = std::vector<PageNode>{heading, paragraph, subsection},
+          .children = {{heading, paragraph, subsection}},
+          .title = {"Main Section"},
       }));
 
   // 3. Serialization and Deserialization roundtrip
@@ -3191,8 +3191,8 @@ void TestRenderTools() {
 
 void TestRenderVariants() {
   auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
-      .product_name = "Acme Widget",
       .features = {{"Fast", "Reliable"}},
+      .product_name = "Acme Widget",
       .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
   });
   ASSERT_TRUE(marketing.system_message.find("marketing") != std::string::npos ||
@@ -3200,8 +3200,8 @@ void TestRenderVariants() {
               marketing.user_message.find("Acme Widget") != std::string::npos);
 
   auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
-      .product_name = "Acme Widget",
       .features = {{"Fast", "Reliable"}},
+      .product_name = "Acme Widget",
       .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
   });
   ASSERT_TRUE(technical.user_message.find("Acme Widget") != std::string::npos);
@@ -3209,19 +3209,19 @@ void TestRenderVariants() {
 
 void TestRenderConditionalLogic() {
   auto p_exec = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
-      .title = "Quarterly Report",
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
       .content = "Quarterly results are strong.",
       .focus_topic = "revenue",
-      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
+      .title = "Quarterly Report",
   });
   ASSERT_TRUE(p_exec.system_message.find("executive") != std::string::npos);
   ASSERT_TRUE(p_exec.system_message.find("revenue") != std::string::npos);
 
   auto p_tech = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
-      .title = "Tech Specs",
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
       .content = "Architecture RFC...",
       .focus_topic = std::nullopt,
-      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
+      .title = "Tech Specs",
   });
   ASSERT_TRUE(p_tech.system_message.find("technical") != std::string::npos);
   ASSERT_TRUE(p_tech.system_message.find("revenue") == std::string::npos);
@@ -3229,21 +3229,21 @@ void TestRenderConditionalLogic() {
 
 void TestRenderTabularFormatting() {
   auto prompt_csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
+      .question = "Total sales?",
       .rows = {{
           {
               .product = "Widget A",
-              .units = 100,
-              .revenue_cents = 199900,
               .region = "EMEA",
+              .revenue_cents = 199900,
+              .units = 100,
           },
           {
               .product = "Widget, B",
-              .units = 50,
-              .revenue_cents = 75000,
               .region = "APAC",
+              .revenue_cents = 75000,
+              .units = 50,
           },
       }},
-      .question = "Total sales?",
       .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
   });
   ASSERT_TRUE(prompt_csv.user_message.find("product,units,revenueCents,region") !=
