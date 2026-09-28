@@ -592,7 +592,10 @@ class _TemplateOverrider:
                 templates={**_templates_data.templates, **overrides_obj.templates},
                 tools={**_templates_data.tools, **overrides_obj.tools},
                 single_namespace=True,
-                source_files=_templates_data.source_files,
+                source_files={
+                    **_templates_data.source_files,
+                    **overrides_obj.source_files,
+                },
             )
         )
 
