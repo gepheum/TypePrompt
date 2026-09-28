@@ -3871,55 +3871,31 @@ class TemplateOverrider {
     return ToJsonNode(internal::TemplatesSpecAccessor::get(Templates::getDefault()));
   }
 
-  /// Applies JSON overrides and returns an updated Templates instance.
-  static Templates applyOverrides(const JsonNode& overrides) {
-    if (overrides.type() != JsonNode::Type::kObject) {
-      throw std::invalid_argument("Overrides must be an object");
-    }
-    std::string sig;
-    bool found_sig = false;
-    for (const auto& [key, val] : overrides.as_object()) {
-      if (key == "signature" && val.type() == JsonNode::Type::kString) {
-        sig = val.as_string();
-        found_sig = true;
-        break;
-      }
-    }
-    if (!found_sig || sig != internal::TemplatesData::get().signature) {
-      throw std::invalid_argument("Signature mismatch");
+  /// Applies JSON overrides and returns an updated Templates instance, or a ParseError.
+  static ParseResult<Templates> applyOverrides(const JsonNode& overrides) {
+    auto overrides_value = Parse<internal::spec::Templates>(overrides);
+    if (!overrides_value.ok()) {
+      return std::move(overrides_value).error();
     }
 
-    internal::spec::Templates merged = internal::TemplatesData::get();
+    internal::spec::Templates result =
+        internal::TemplatesSpecAccessor::get(Templates::getDefault());
 
-    for (const auto& [key, val] : overrides.as_object()) {
-      if (key == "templates") {
-        if (val.type() != JsonNode::Type::kObject) {
-          throw std::invalid_argument("Templates override must be an object");
-        }
-        for (const auto& [tmpl_key, tmpl_node] : val.as_object()) {
-          auto parsed_tmpl = Parse<internal::spec::Template>(tmpl_node);
-          if (!parsed_tmpl.ok()) {
-            throw std::invalid_argument(std::format("Failed to parse template override '{}': {}",
-                                                    tmpl_key, parsed_tmpl.error().message));
-          }
-          merged.templates[tmpl_key] = std::move(*parsed_tmpl);
-        }
-      } else if (key == "tools") {
-        if (val.type() != JsonNode::Type::kObject) {
-          throw std::invalid_argument("Tools override must be an object");
-        }
-        for (const auto& [tool_key, tool_node] : val.as_object()) {
-          auto parsed_tool = Parse<internal::spec::Tool>(tool_node);
-          if (!parsed_tool.ok()) {
-            throw std::invalid_argument(std::format("Failed to parse tool override '{}': {}",
-                                                    tool_key, parsed_tool.error().message));
-          }
-          merged.tools_[tool_key] = std::move(*parsed_tool);
-        }
-      }
+    if (overrides_value->signature != result.signature) {
+      return ParseError{"Signature mismatch"};
     }
 
-    return Templates(std::move(merged));
+    for (auto& [tpl_id, tpl] : overrides_value->templates) {
+      result.templates[tpl_id] = std::move(tpl);
+    }
+    for (auto& [tool_id, tool] : overrides_value->tools_) {
+      result.tools_[tool_id] = std::move(tool);
+    }
+    for (auto& [path, source_file] : overrides_value->source_files) {
+      result.source_files[path] = std::move(source_file);
+    }
+
+    return Templates(std::move(result));
   }
 };
 

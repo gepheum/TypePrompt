@@ -3271,35 +3271,29 @@ void TestTemplateOverrider() {
   }
   ASSERT_FALSE(sig.empty());
 
-  // 2. Signature mismatch throws std::invalid_argument
+  // 2. Signature mismatch returns error
   typeprompt_01::JsonNode wrong_doc(typeprompt_01::JsonNode::Object{
       {"signature", typeprompt_01::JsonNode("wrong_sig")},
+      {"singleNamespace", typeprompt_01::JsonNode(true)},
       {"edition", typeprompt_01::JsonNode(0)},
       {"templates", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
       {"tools", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
+      {"sourceFiles", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
   });
-  bool threw = false;
-  try {
-    typeprompt_01::TemplateOverrider::applyOverrides(wrong_doc);
-  } catch (const std::invalid_argument& e) {
-    threw = true;
-    ASSERT_EQ(std::string(e.what()), "Signature mismatch");
-  }
-  ASSERT_TRUE(threw);
+  auto mismatch_res = typeprompt_01::TemplateOverrider::applyOverrides(wrong_doc);
+  ASSERT_FALSE(mismatch_res.ok());
+  ASSERT_EQ(mismatch_res.error().message, "Signature mismatch");
 
-  // 3. Non-object throws std::invalid_argument
-  threw = false;
-  try {
-    typeprompt_01::TemplateOverrider::applyOverrides(typeprompt_01::JsonNode("not an object"));
-  } catch (const std::invalid_argument& e) {
-    threw = true;
-    ASSERT_EQ(std::string(e.what()), "Overrides must be an object");
-  }
-  ASSERT_TRUE(threw);
+  // 3. Non-object returns error
+  auto non_obj_res =
+      typeprompt_01::TemplateOverrider::applyOverrides(typeprompt_01::JsonNode("not an object"));
+  ASSERT_FALSE(non_obj_res.ok());
+  ASSERT_EQ(non_obj_res.error().message, "Expected object at json");
 
-  // 4. Valid overrides return TemplatesData (move-only) and work with Render
-  auto overridden_data = typeprompt_01::TemplateOverrider::applyOverrides(data);
-  auto moved_data = std::move(overridden_data);
+  // 4. Valid overrides return Templates (move-only) and work with Render
+  auto overridden_res = typeprompt_01::TemplateOverrider::applyOverrides(data);
+  ASSERT_TRUE(overridden_res.ok());
+  auto moved_data = std::move(*overridden_res);
   auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
       typeprompt_01::schema::translate::Input::whole{
           .target_language = "Spanish",
