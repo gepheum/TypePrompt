@@ -792,8 +792,10 @@ void main() {
       final wrongDoc = {
         "signature": "wrong_sig",
         "edition": 0,
+        "singleNamespace": true,
         "templates": <String, dynamic>{},
         "tools": <String, dynamic>{},
+        "sourceFiles": <String, dynamic>{},
       };
       expect(
         () => p01.TemplateOverrider.applyOverrides(wrongDoc),

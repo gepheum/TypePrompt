@@ -1388,34 +1388,25 @@ abstract final class TemplateOverrider {
   }
 
   static Prompts applyOverrides(Map<String, dynamic> overrides) {
-    final sig = overrides['signature'] as String?;
-    if (sig != _templatesData.signature) {
+    final parsed = _Spec_Templates.fromJson(overrides);
+    if (parsed.signature != _templatesData.signature) {
       throw ArgumentError('Signature mismatch');
     }
     final mergedTemplates =
-        Map<String, _Spec_Template>.from(_templatesData.templates);
-    if (overrides['templates'] is Map) {
-      final overrideTemplates = (overrides['templates'] as Map).map(
-        (k, v) => MapEntry(
-            k.toString(), _Spec_Template.fromJson(v as Map<String, dynamic>)),
-      );
-      mergedTemplates.addAll(overrideTemplates);
-    }
-    final mergedTools = Map<String, _Spec_Tool>.from(_templatesData.tools);
-    if (overrides['tools'] is Map) {
-      final overrideTools = (overrides['tools'] as Map).map(
-        (k, v) => MapEntry(
-            k.toString(), _Spec_Tool.fromJson(v as Map<String, dynamic>)),
-      );
-      mergedTools.addAll(overrideTools);
-    }
+        Map<String, _Spec_Template>.from(_templatesData.templates)
+          ..addAll(parsed.templates);
+    final mergedTools = Map<String, _Spec_Tool>.from(_templatesData.tools)
+      ..addAll(parsed.tools);
+    final mergedSourceFiles =
+        Map<String, String>.from(_templatesData.sourceFiles)
+          ..addAll(parsed.sourceFiles);
     final mergedData = _Spec_Templates(
       edition: _templatesData.edition,
       signature: _templatesData.signature,
       templates: mergedTemplates,
       tools: mergedTools,
       singleNamespace: _templatesData.singleNamespace,
-      sourceFiles: _templatesData.sourceFiles,
+      sourceFiles: mergedSourceFiles,
     );
     return Prompts._(mergedData);
   }

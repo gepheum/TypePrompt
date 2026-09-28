@@ -1052,23 +1052,13 @@ object TemplateOverrider {
     }
 
     fun applyOverrides(overrides: JsonElement): Prompts {
-        val obj =
-            overrides as? JsonObject
-                ?: throw IllegalArgumentException("Overrides must be an object")
-        val sig = obj["signature"]?.jsonPrimitive?.contentOrNull
-        if (sig != templatesData.signature) {
+        val parsed = JsonConfig.lenient.decodeFromJsonElement(Spec.Templates.serializer(), overrides)
+        if (parsed.signature != templatesData.signature) {
             throw IllegalArgumentException("Signature mismatch")
         }
-        val mergedTemplates = templatesData.templates.toMutableMap()
-        obj["templates"]?.let { tmplsElement ->
-            val overrideTemplates = JsonConfig.lenient.decodeFromJsonElement<Map<String, Spec.Template>>(tmplsElement)
-            mergedTemplates.putAll(overrideTemplates)
-        }
-        val mergedTools = templatesData.tools.toMutableMap()
-        obj["tools"]?.let { toolsElement ->
-            val overrideTools = JsonConfig.lenient.decodeFromJsonElement<Map<String, Spec.Tool>>(toolsElement)
-            mergedTools.putAll(overrideTools)
-        }
+        val mergedTemplates = templatesData.templates.toMutableMap().apply { putAll(parsed.templates) }
+        val mergedTools = templatesData.tools.toMutableMap().apply { putAll(parsed.tools) }
+        val mergedSourceFiles = templatesData.sourceFiles.toMutableMap().apply { putAll(parsed.sourceFiles) }
         val mergedData =
             Spec.Templates(
                 edition = templatesData.edition,
@@ -1076,7 +1066,7 @@ object TemplateOverrider {
                 templates = mergedTemplates,
                 tools = mergedTools,
                 singleNamespace = templatesData.singleNamespace,
-                sourceFiles = templatesData.sourceFiles,
+                sourceFiles = mergedSourceFiles,
             )
         return Prompts(mergedData)
     }

@@ -1047,7 +1047,9 @@ class TestTemplateOverrider {
 
         // Test signature mismatch throws IllegalArgumentException
         val wrongDoc =
-            Json.parseToJsonElement("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}")
+            Json.parseToJsonElement(
+                "{\"signature\":\"wrong_sig\",\"edition\":0,\"singleNamespace\":true,\"templates\":{},\"tools\":{},\"sourceFiles\":{}}",
+            )
         assertFailsWith<IllegalArgumentException> {
             com.example.prompts01.TemplateOverrider.applyOverrides(wrongDoc)
         }
