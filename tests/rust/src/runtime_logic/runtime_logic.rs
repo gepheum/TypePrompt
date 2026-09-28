@@ -252,28 +252,19 @@ impl TemplateOverrider {
   pub fn apply_overrides(
     overrides_json: &str,
   ) -> Result<Prompts, Box<dyn std::error::Error + Send + Sync>> {
-    let raw: serde_json::Value = serde_json::from_str(overrides_json)?;
-    let sig = raw
-      .get("signature")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| Box::<dyn std::error::Error + Send + Sync>::from("Invalid overrides format"))?;
-    if sig != TEMPLATES_DATA.signature {
+    let parsed: spec::Templates = serde_json::from_str(overrides_json)?;
+    if parsed.signature != TEMPLATES_DATA.signature {
       return Err(Box::<dyn std::error::Error + Send + Sync>::from("Signature mismatch"));
     }
     let mut merged = (*TEMPLATES_DATA).clone();
-    if let Some(templates_val) = raw.get("templates") {
-      let override_templates: std::collections::HashMap<String, spec::Template> =
-        serde_json::from_value(templates_val.clone())?;
-      for (k, v) in override_templates {
-        merged.templates.insert(k, v);
-      }
+    for (k, v) in parsed.templates {
+      merged.templates.insert(k, v);
     }
-    if let Some(tools_val) = raw.get("tools") {
-      let override_tools: std::collections::HashMap<String, spec::Tool> =
-        serde_json::from_value(tools_val.clone())?;
-      for (k, v) in override_tools {
-        merged.tools.insert(k, v);
-      }
+    for (k, v) in parsed.tools {
+      merged.tools.insert(k, v);
+    }
+    for (k, v) in parsed.source_files {
+      merged.source_files.insert(k, v);
     }
     Ok(Prompts::new(std::sync::Arc::new(merged)))
   }

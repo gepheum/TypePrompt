@@ -761,8 +761,10 @@ mod tests {
         let wrong_doc = serde_json::json!({
             "signature": "wrong_sig",
             "edition": 0,
+            "singleNamespace": true,
             "templates": {},
             "tools": {},
+            "sourceFiles": {},
         });
         let wrong_str = serde_json::to_string(&wrong_doc).unwrap();
         assert!(gen::prompts_01::TemplateOverrider::apply_overrides(&wrong_str).is_err());

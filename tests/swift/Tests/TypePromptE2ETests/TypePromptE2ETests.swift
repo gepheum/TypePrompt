@@ -801,8 +801,10 @@ struct TemplateOverriderTests {
       withJSONObject: [
         "signature": "wrong_sig",
         "edition": 0,
+        "singleNamespace": true,
         "templates": [String: Any](),
         "tools": [String: Any](),
+        "sourceFiles": [String: Any](),
       ]
     )
     #expect(throws: Error.self) {

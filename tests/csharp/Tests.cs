@@ -1060,7 +1060,7 @@ public class TestTemplateOverrider
         Assert.False(string.IsNullOrEmpty(signature));
 
         // Test signature mismatch throws ArgumentException
-        using var wrongDoc = JsonDocument.Parse("{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{}}");
+        using var wrongDoc = JsonDocument.Parse("{\"signature\":\"wrong_sig\",\"edition\":0,\"singleNamespace\":true,\"templates\":{},\"tools\":{},\"sourceFiles\":{}}");
         Assert.Throws<ArgumentException>(() =>
         {
             TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(wrongDoc.RootElement);

@@ -661,30 +661,26 @@ public class TemplateOverrider
 
     public Prompts ApplyOverrides(JsonElement overrides)
     {
-        if (overrides.ValueKind != JsonValueKind.Object)
-            throw new ArgumentException("Overrides must be an object");
-        if (!overrides.TryGetProperty("signature", out var sigProp) ||
-            sigProp.GetString() != RuntimeData.TemplatesData.Signature)
+        var parsed = JsonSerializer.Deserialize<Spec.Templates>(overrides)
+            ?? throw new ArgumentException("Overrides could not be deserialized");
+        if (parsed.Signature != RuntimeData.TemplatesData.Signature)
         {
             throw new ArgumentException("Signature mismatch");
         }
         var mergedTemplates = new Dictionary<string, Spec.Template>(RuntimeData.TemplatesData.templates);
-        if (overrides.TryGetProperty("templates", out var templatesProp))
+        foreach (var kv in parsed.templates)
         {
-            var overrideTemplates = JsonSerializer.Deserialize<Dictionary<string, Spec.Template>>(templatesProp)!;
-            foreach (var kv in overrideTemplates)
-            {
-                mergedTemplates[kv.Key] = kv.Value;
-            }
+            mergedTemplates[kv.Key] = kv.Value;
         }
         var mergedTools = new Dictionary<string, Spec.Tool>(RuntimeData.TemplatesData.Tools);
-        if (overrides.TryGetProperty("tools", out var toolsProp))
+        foreach (var kv in parsed.Tools)
         {
-            var overrideTools = JsonSerializer.Deserialize<Dictionary<string, Spec.Tool>>(toolsProp)!;
-            foreach (var kv in overrideTools)
-            {
-                mergedTools[kv.Key] = kv.Value;
-            }
+            mergedTools[kv.Key] = kv.Value;
+        }
+        var mergedSourceFiles = new Dictionary<string, string>(RuntimeData.TemplatesData.SourceFiles);
+        foreach (var kv in parsed.SourceFiles)
+        {
+            mergedSourceFiles[kv.Key] = kv.Value;
         }
         var mergedData = new Spec.Templates
         {
@@ -693,7 +689,7 @@ public class TemplateOverrider
             templates = mergedTemplates,
             Tools = mergedTools,
             SingleNamespace = RuntimeData.TemplatesData.SingleNamespace,
-            SourceFiles = RuntimeData.TemplatesData.SourceFiles,
+            SourceFiles = mergedSourceFiles,
         };
         return new Prompts(new SpecRenderer(mergedData));
     }

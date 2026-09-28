@@ -1496,38 +1496,24 @@ public enum TypePromptRuntime {
     /// Applies overrides from JSON data and returns a new `Prompts` instance.
     public static func applyOverrides(_ overridesData: Data) throws -> Prompts {
       let decoder = JSONDecoder()
-      guard let json = try JSONSerialization.jsonObject(with: overridesData) as? [String: Any],
-        let sig = json["signature"] as? String
-      else {
-        throw NSError(
-          domain: "TemplateOverrider", code: 1,
-          userInfo: [NSLocalizedDescriptionKey: "Invalid overrides format"],
-        )
-      }
-      if sig != _templatesData.signature {
+      let parsed = try decoder.decode(Spec.Templates.self, from: overridesData)
+      if parsed.signature != _templatesData.signature {
         throw NSError(
           domain: "TemplateOverrider", code: 2,
           userInfo: [NSLocalizedDescriptionKey: "Signature mismatch"],
         )
       }
       var mergedTemplates = _templatesData.templates
-      if let templatesObj = json["templates"] as? [String: Any] {
-        let templatesDataRaw = try JSONSerialization.data(withJSONObject: templatesObj)
-        let overrideTemplates = try decoder.decode(
-          [String: Spec.Template].self,
-          from: templatesDataRaw,
-        )
-        for (k, v) in overrideTemplates {
-          mergedTemplates[k] = v
-        }
+      for (k, v) in parsed.templates {
+        mergedTemplates[k] = v
       }
       var mergedTools = _templatesData.tools
-      if let toolsObj = json["tools"] as? [String: Any] {
-        let toolsDataRaw = try JSONSerialization.data(withJSONObject: toolsObj)
-        let overrideTools = try decoder.decode([String: Spec.Tool].self, from: toolsDataRaw)
-        for (k, v) in overrideTools {
-          mergedTools[k] = v
-        }
+      for (k, v) in parsed.tools {
+        mergedTools[k] = v
+      }
+      var mergedSourceFiles = _templatesData.sourceFiles
+      for (k, v) in parsed.sourceFiles {
+        mergedSourceFiles[k] = v
       }
       let mergedData = Spec.Templates(
         edition: _templatesData.edition,
@@ -1535,7 +1521,7 @@ public enum TypePromptRuntime {
         templates: mergedTemplates,
         tools: mergedTools,
         singleNamespace: _templatesData.singleNamespace,
-        sourceFiles: _templatesData.sourceFiles,
+        sourceFiles: mergedSourceFiles,
       )
       return Prompts(mergedData)
     }
