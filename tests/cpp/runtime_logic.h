@@ -20,15 +20,15 @@
 //
 //   std::string ExecutePrompt(const typeprompt::Prompt& prompt,
 //                             const typeprompt::ToolExecutor& tool_executor) {
-//       // Build and send the API request using prompt.system_message,
-//       // prompt.user_message, prompt.examples, and prompt.tools.
-//       //
-//       // When the model requests tool calls, execute them:
-//       //   typeprompt::ToolCallResponse tool_response =
-//       //       tool_executor.Execute(tool_call);
-//       //
-//       // Repeat until the model produces a final response:
-//       return model_response;
+//     // Build and send the API request using prompt.system_message,
+//     // prompt.user_message, prompt.examples, and prompt.tools.
+//     //
+//     // When the model requests tool calls, execute them:
+//     //   typeprompt::ToolCallResponse tool_response =
+//     //       tool_executor.Execute(tool_call);
+//     //
+//     // Repeat until the model produces a final response:
+//     return model_response;
 //   }
 //
 // Then call it:
@@ -40,9 +40,9 @@
 //   const std::string response = ExecutePrompt(prompt, *tool_executor);
 //   auto result = typeprompt::ParseResponse<Template>(response);
 //   if (result.ok()) {
-//       std::cout << result->greeting;
+//     std::cout << result->greeting;
 //   } else {
-//       throw std::runtime_error(result.error().message);
+//     throw std::runtime_error(result.error().message);
 //   }
 
 #include <algorithm>
