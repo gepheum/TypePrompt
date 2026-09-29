@@ -95,11 +95,14 @@
 namespace typeprompt {
 // <static:cpp-public-types>
 /// A runtime error.
+///
+/// Code in this file does not throw exceptions; fallible operations return
+/// errors as values wrapped in `Result<T>`.
 struct Error {
   std::string message;
 };
 
-/// Either a successfully value of type T or an Error.
+/// Either a successful value of type T or an Error.
 template <typename T>
 class Result {
  public:
