@@ -136,3 +136,4 @@ TypePrompt shares many similarities with [DotPrompt](https://github.com/google/d
   - [Swift](docs/languages/swift.md)
   - [Dart](docs/languages/dart.md)
   - [C#](docs/languages/csharp.md)
+  - [C++](docs/languages/cpp.md)

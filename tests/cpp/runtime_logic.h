@@ -56,12 +56,12 @@
 //   struct MyExecutor {
 //     // Define one overload of operator() for each tool registered in the template
 //
-//     Result<schema::web_search::Output> operator()(
-//         tools::WebSearch,
-//         const schema::web_search::Input& input) {
+//     Result<typeprompt::schema::web_search::Output> operator()(
+//         typeprompt::tools::WebSearch,
+//         const typeprompt::schema::web_search::Input& input) {
 //       const std::string& query = input.query;
 //       // Execute tool logic...
-//       return schema::web_search::Output{ ... };
+//       return typeprompt::schema::web_search::Output{ ... };
 //     }
 //   };
 //
