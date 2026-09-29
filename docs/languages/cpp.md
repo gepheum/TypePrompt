@@ -241,18 +241,36 @@ using SearchOutput = schema::web_search::Output;
 using Meta = schema::meta::Meta;
 ```
 
-### Required Fields & `must_init<T>`
+### Constructing Structs & `::whole`
 
-Structs generated with required fields use `must_init<T>` to prevent uninitialized fields when using designated initializers:
+TypePrompt generates an inner `struct whole` builder for every interface struct. Using `::whole` forces you to set all the fields of the struct at construction:
 
 ```cpp
-auto input = schema::triage_ticket::Input{
+using TriageInput = schema::triage_ticket::Input;
+
+// 1. To construct a value (via implicit conversion):
+TriageInput input = TriageInput::whole{
     .body = "Crashes on startup",
     .customer_tier = schema::triage_ticket::Input_CustomerTier::kPro,
-    .recent_tickets = std::vector<schema::triage_ticket::Input_RecentTickets>{},
+    .recent_tickets = {{}},  // Nested initializer list
+    .subject = "Bug report",
+};
+
+// 2. Or with 'auto' (via operator*):
+auto input = *TriageInput::whole{
+    .body = "Crashes on startup",
+    .customer_tier = schema::triage_ticket::Input_CustomerTier::kPro,
+    .recent_tickets = {{}},
     .subject = "Bug report",
 };
 ```
+
+#### Rules & Behavior
+
+- **Alphabetical order**: When using designated initializer syntax in C++20, fields must always be specified in alphabetical order (the declaration order in TypePrompt-generated structs).
+- **All fields required**: Using `::whole` forces you to set all the fields (including optional fields like `std::optional<T>`, e.g. `.optional_field = std::nullopt` or `.optional_field = value`). Omitting any field in `::whole` results in a compile-time error.
+- **Nested initializer lists**: Because fields inside `::whole` are wrapped in `must_init<T>`, initializing a container or struct via initializer list syntax requires double braces (e.g. `{{}}` for an empty vector, or `{{item1, item2}}`).
+- **Direct initialization in `Render`**: `Render<Template>({ ... })` accepts `Template::input_type::whole` by default, so passing a designated initializer directly to `Render` automatically enforces that all template input fields are initialized in alphabetical order.
 
 ### Discriminated Unions
 
@@ -277,17 +295,28 @@ When your project defines `<namespace>` blocks other than `Main`, templates and 
 ```cpp
 // Render templates from specific namespaces:
 auto fin_prompt = Render<templates::Finance::SummarizeTransaction>({
-    .amount = { .currency = schema::Finance::shared::Currency::kUsd, .value = 150.0 },
+    .amount = {
+        .currency = schema::Finance::shared::Currency::kUsd,
+        .value = 150.0,
+    },
     .category = schema::Finance::summarize_transaction::Input_Category::kExpense,
     .date = "2026-08-01",
     .description = "Cloud server bill",
 });
 
 auto legal_prompt = Render<templates::Legal::DraftNda>({
-    .disclosing_party = { .jurisdiction = "CA", .name = "Acme Corp", .role = ... },
+    .disclosing_party = {
+        .jurisdiction = "CA",
+        .name = "Acme Corp",
+        .role = ...,
+    },
     .duration_years = 3,
     .purpose_of_disclosure = "M&A evaluation",
-    .receiving_party = { .jurisdiction = "DE", .name = "Beta LLC", .role = ... },
+    .receiving_party = {
+        .jurisdiction = "DE",
+        .name = "Beta LLC",
+        .role = ... ,
+    },
 });
 ```
 
