@@ -11,7 +11,7 @@ You write prompt templates in a simple XML format, along with few-shot examples,
 
 ### Supported Languages
 
-TypeScript, Python, Kotlin, Rust, Swift, Dart, C# (*more languages to come*).
+TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*).
 
 ---
 
@@ -133,7 +133,7 @@ TypePrompt shares many similarities with [DotPrompt](https://github.com/google/d
   - [Python](docs/languages/python.md)
   - [Kotlin](docs/languages/kotlin.md)
   - [Rust](docs/languages/rust.md)
+  - [C++](docs/languages/cpp.md)
   - [Swift](docs/languages/swift.md)
   - [Dart](docs/languages/dart.md)
   - [C#](docs/languages/csharp.md)
-  - [C++](docs/languages/cpp.md)

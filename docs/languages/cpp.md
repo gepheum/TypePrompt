@@ -302,6 +302,21 @@ switch (node.kind()) {
 }
 ```
 
+### JSON Serialization & Deserialization
+
+While `Render` and `ParseResponse` handle JSON conversion automatically during prompt execution, you can also serialize or deserialize generated types directly (e.g. for logging, caching, or disk storage) using `ToJson` and `ParseJson<T>`:
+
+```cpp
+// Serialize any generated struct, enum, union, or container to a JSON string:
+std::string json = ToJson(my_value);
+
+// Deserialize and validate a JSON string into a Result<T>:
+Result<schema::triage_ticket::Output> output = ParseJson<schema::triage_ticket::Output>(json);
+if (output.ok()) {
+  // Use *output
+}
+```
+
 ### Multi-Namespace Projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are partitioned by namespace:
