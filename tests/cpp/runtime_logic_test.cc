@@ -3191,7 +3191,7 @@ void TestRenderTools() {
 
 void TestMakeToolExecutor() {
   // Test template with tools
-  struct ResearchHandler {
+  struct ResearchExecutor {
     typeprompt_03::Result<typeprompt_03::schema::web_search::Output> operator()(
         typeprompt_03::tools::WebSearch, const typeprompt_03::schema::web_search::Input& input) {
       if (input.query == "fail") {
@@ -3210,9 +3210,9 @@ void TestMakeToolExecutor() {
     }
   };
 
-  ResearchHandler handler;
+  ResearchExecutor typed_executor;
   auto executor =
-      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(&handler);
+      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(&typed_executor);
   ASSERT_TRUE(executor != nullptr);
 
   // Successful tool call
