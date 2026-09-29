@@ -8,7 +8,7 @@
 //
 // ## Usage
 //
-// Build a typed prompt from one of your templates:
+// Build a prompt from one of your templates:
 //
 //   auto prompt = typeprompt::Render<typeprompt::templates::Greet>({
 //       .name = "Luke",
@@ -18,22 +18,32 @@
 // message, user message, few-shot examples, available tools, and output format.
 // Wire it to your LLM API with a helper such as:
 //
-//   template <typename Template>
-//   typename Template::output_type ExecutePrompt(const typeprompt::Prompt& prompt) {
+//   std::string ExecutePrompt(const typeprompt::Prompt& prompt,
+//                             const typeprompt::ToolExecutor& tool_executor) {
 //       // Build and send the API request using prompt.system_message,
 //       // prompt.user_message, prompt.examples, and prompt.tools.
-//       // Repeat until the model produces a final response, then parse it:
-//       typeprompt::Result<typename Template::output_type> result =
-//           typeprompt::ParseResponse<Template>(model_response);
-//       if (!result.ok()) {
-//           throw std::runtime_error(result.error().message);
-//       }
-//       return *result;
+//       //
+//       // When the model requests tool calls, execute them:
+//       //   typeprompt::ToolCallResponse tool_response =
+//       //       tool_executor.Execute(tool_call);
+//       //
+//       // Repeat until the model produces a final response:
+//       return model_response;
 //   }
 //
 // Then call it:
 //
-//   auto output = ExecutePrompt<typeprompt::templates::Greet>(prompt);
+//   using Template = typeprompt::templates::Greet;
+//
+//   const auto tool_executor =
+//       typeprompt::MakeToolExecutor<Template>(std::make_unique<TypedExecutor>());
+//   const std::string response = ExecutePrompt(prompt, *tool_executor);
+//   auto result = typeprompt::ParseResponse<Template>(response);
+//   if (result.ok()) {
+//       std::cout << result->greeting;
+//   } else {
+//       throw std::runtime_error(result.error().message);
+//   }
 
 #include <algorithm>
 #include <cassert>
