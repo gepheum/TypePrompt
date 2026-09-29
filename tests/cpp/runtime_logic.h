@@ -32,7 +32,9 @@
 //   using ::typeprompt::ParseResponse;
 //   using ::typeprompt::Render;
 //
+//   // The prompt template to render
 //   using Template = ::typeprompt::templates::Greet;
+//
 //   auto prompt = Render<Template>({ .name = "Luke" });
 //   auto tool_executor = MakeToolExecutor<Template>();
 //   auto response = ExecutePrompt(prompt, *tool_executor);
