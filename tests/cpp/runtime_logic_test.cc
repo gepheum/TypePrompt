@@ -47,9 +47,9 @@
 
 namespace {
 
+using typeprompt::Error;
 using typeprompt::JsonNode;
-using typeprompt::ParseError;
-using typeprompt::ParseResult;
+using typeprompt::Result;
 
 inline std::ostream& operator<<(std::ostream& os, JsonNode::Type type) {
   switch (type) {
@@ -1785,19 +1785,19 @@ void TestRobustnessAndEdgeCases() {
 
   for (const auto& bad : bad_inputs) {
     auto res = JsonNode::ParseJson(bad);
-    // Must be ParseError and must not crash/segfault
+    // Must be Error and must not crash/segfault
     ASSERT_FALSE(res.ok());
   }
 }
 
-void TestParseResultApi() {
+void TestResultApi() {
   // Test value construction and accessors
-  ParseResult<int> int_ok(42);
+  Result<int> int_ok(42);
   ASSERT_TRUE(int_ok.ok());
   ASSERT_EQ(*int_ok, 42);
 
   // Test error construction and accessors
-  ParseResult<int> int_err(ParseError{"test error"});
+  Result<int> int_err(Error{"test error"});
   ASSERT_FALSE(int_err.ok());
   ASSERT_EQ(int_err.error().message, "test error");
 
@@ -1806,7 +1806,7 @@ void TestParseResultApi() {
     std::string name;
     int count = 0;
   };
-  ParseResult<Data> data_ok(Data{"test_name", 7});
+  Result<Data> data_ok(Data{"test_name", 7});
   ASSERT_TRUE(data_ok.ok());
   ASSERT_EQ(data_ok->name, "test_name");
   ASSERT_EQ(data_ok->count, 7);
@@ -1817,21 +1817,21 @@ void TestParseResultApi() {
   ASSERT_EQ(const_data->count, 10);
 
   // Test copy construction and copy assignment
-  ParseResult<std::string> str_ok(std::string("hello world"));
-  ParseResult<std::string> str_copied(str_ok);
+  Result<std::string> str_ok(std::string("hello world"));
+  Result<std::string> str_copied(str_ok);
   ASSERT_TRUE(str_copied.ok());
   ASSERT_EQ(*str_copied, "hello world");
-  ParseResult<std::string> str_assigned(std::string("initial"));
+  Result<std::string> str_assigned(std::string("initial"));
   str_assigned = str_ok;
   ASSERT_TRUE(str_assigned.ok());
   ASSERT_EQ(*str_assigned, "hello world");
 
   // Test move construction and move assignment
-  ParseResult<std::string> to_move(std::string("moving"));
-  ParseResult<std::string> moved(std::move(to_move));
+  Result<std::string> to_move(std::string("moving"));
+  Result<std::string> moved(std::move(to_move));
   ASSERT_TRUE(moved.ok());
   ASSERT_EQ(*moved, "moving");
-  ParseResult<std::string> moved_target(std::string("target"));
+  Result<std::string> moved_target(std::string("target"));
   moved_target = std::move(moved);
   ASSERT_TRUE(moved_target.ok());
   ASSERT_EQ(*moved_target, "moving");
@@ -1840,10 +1840,10 @@ void TestParseResultApi() {
   std::string extracted = *std::move(moved_target);
   ASSERT_EQ(extracted, "moving");
 
-  ParseResult<std::string> err_to_move(ParseError{"moved err"});
-  ParseResult<std::string> err_moved(std::move(err_to_move));
+  Result<std::string> err_to_move(Error{"moved err"});
+  Result<std::string> err_moved(std::move(err_to_move));
   ASSERT_FALSE(err_moved.ok());
-  ParseError extracted_err = std::move(err_moved).error();
+  Error extracted_err = std::move(err_moved).error();
   ASSERT_EQ(extracted_err.message, "moved err");
 
   // Test kOkStatus
@@ -1866,10 +1866,10 @@ inline typeprompt::JsonNode ToJsonNode(const Point& p) {
   });
 }
 
-inline typeprompt::ParseStatus ParseValue(const typeprompt::JsonNode& node,
-                                          const typeprompt::JsonPath& context, Point& p) {
+inline typeprompt::Status ParseValue(const typeprompt::JsonNode& node,
+                                     const typeprompt::JsonPath& context, Point& p) {
   if (node.type() != typeprompt::JsonNode::Type::kObject) {
-    return context.MakeParseError("Expected object for Point");
+    return context.MakeError("Expected object for Point");
   }
   for (const auto& [k, v] : node.as_object()) {
     if (k == "x") {
@@ -3353,7 +3353,7 @@ void TestRuntimeLogic() {
   TestMalformedUtf8AndUnicodeSurrogates();
   TestExtremeNumbersAndSpecialValues();
   TestRobustnessAndEdgeCases();
-  TestParseResultApi();
+  TestResultApi();
   TestToJsonNodeOverloads();
   TestTopLevelSerializers();
   TestParseValueOverloads();

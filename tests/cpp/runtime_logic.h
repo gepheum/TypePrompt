@@ -23,7 +23,7 @@
 //       // Build and send the API request using prompt.system_message,
 //       // prompt.user_message, prompt.examples, and prompt.tools.
 //       // Repeat until the model produces a final response, then parse it:
-//       typeprompt::ParseResult<typename Template::output_type> result =
+//       typeprompt::Result<typename Template::output_type> result =
 //           typeprompt::ParseResponse<Template>(model_response);
 //       if (!result.ok()) {
 //           throw std::runtime_error(result.error().message);
@@ -43,6 +43,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
@@ -59,28 +60,28 @@
 
 namespace typeprompt {
 // <static:cpp-public-types>
-/// An error that occurred during JSON parsing.
-struct ParseError {
+/// A runtime error.
+struct Error {
   std::string message;
 };
 
-/// Either a successfully parsed value of type T or a ParseError.
+/// Either a successfully parsed value of type T or an Error.
 template <typename T>
-class ParseResult {
+class Result {
  public:
-  /// Constructs a successful ParseResult containing ok_value.
-  constexpr ParseResult(T ok_value) : data_(std::move(ok_value)) {}
+  /// Constructs a successful Result containing ok_value.
+  constexpr Result(T ok_value) : data_(std::move(ok_value)) {}
 
-  /// Constructs a failed ParseResult containing error.
-  ParseResult(ParseError error) : data_(std::move(error)) {}
+  /// Constructs a failed Result containing error.
+  Result(Error error) : data_(std::move(error)) {}
 
-  ParseResult(const ParseResult& other) = default;
-  ParseResult(ParseResult&& other) = default;
+  Result(const Result& other) = default;
+  Result(Result&& other) = default;
 
-  ParseResult& operator=(const ParseResult& other) = default;
-  ParseResult& operator=(ParseResult&& other) = default;
+  Result& operator=(const Result& other) = default;
+  Result& operator=(Result&& other) = default;
 
-  /// Returns true if the result contains a parsed value, false if it contains a ParseError.
+  /// Returns true if the result contains a parsed value, false if it contains an Error.
   constexpr bool ok() const { return data_.index() == 0; }
 
   /// Returns a reference to the parsed value. Precondition: ok() must be true.
@@ -93,18 +94,18 @@ class ParseResult {
   constexpr T* operator->() { return &std::get<0>(data_); }
 
   /// Returns a reference to the error. Precondition: ok() must be false.
-  const ParseError& error() const& { return std::get<1>(data_); }
-  ParseError& error() & { return std::get<1>(data_); }
-  ParseError&& error() && { return std::get<1>(std::move(data_)); }
+  const Error& error() const& { return std::get<1>(data_); }
+  Error& error() & { return std::get<1>(data_); }
+  Error&& error() && { return std::get<1>(std::move(data_)); }
 
  private:
-  std::variant<T, ParseError> data_;
+  std::variant<T, Error> data_;
 };
 
-/// Either a successful parsing operation or a ParseError.
-using ParseStatus = ParseResult<std::nullopt_t>;
+/// Either a successful parsing operation or an Error.
+using Status = Result<std::nullopt_t>;
 
-inline constexpr ParseStatus kOkStatus = std::nullopt;
+inline constexpr Status kOkStatus = std::nullopt;
 
 namespace internal {
 
@@ -201,7 +202,7 @@ class JsonNode {
   JsonNode& operator=(const JsonNode&) = default;
   JsonNode& operator=(JsonNode&&) = default;
 
-  static ParseResult<JsonNode> ParseJson(std::string_view json);
+  static Result<JsonNode> ParseJson(std::string_view json);
 
   /// Returns the JSON type of this node.
   Type type() const {
@@ -541,8 +542,8 @@ class JsonPath {
  public:
   virtual ~JsonPath() = default;
   virtual std::string ToString() const = 0;
-  ParseError MakeParseError(std::string_view message) const {
-    return ParseError(std::format("{} at {}", message, ToString()));
+  Error MakeError(std::string_view message) const {
+    return Error(std::format("{} at {}", message, ToString()));
   }
 };
 
@@ -578,61 +579,60 @@ class AtIndexJsonPath : public JsonPath {
 };
 }  // namespace internal
 
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, JsonNode& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, JsonNode& out) {
   out = node;
   return kOkStatus;
 }
 
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, bool& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, bool& out) {
   if (node.type() != JsonNode::Type::kBool) {
-    return context.MakeParseError("Expected boolean");
+    return context.MakeError("Expected boolean");
   }
   out = node.as_bool();
   return kOkStatus;
 }
 
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, int& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, int& out) {
   if (node.type() != JsonNode::Type::kNumber) {
-    return context.MakeParseError("Expected number");
+    return context.MakeError("Expected number");
   }
   out = static_cast<int>(node.as_number());
   return kOkStatus;
 }
 
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, double& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, double& out) {
   if (node.type() != JsonNode::Type::kNumber) {
-    return context.MakeParseError("Expected number");
+    return context.MakeError("Expected number");
   }
   out = node.as_number();
   return kOkStatus;
 }
 
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::string& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, std::string& out) {
   if (node.type() != JsonNode::Type::kString) {
-    return context.MakeParseError("Expected string");
+    return context.MakeError("Expected string");
   }
   out = node.as_string();
   return kOkStatus;
 }
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out);
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out);
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out);
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out);
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                       std::map<std::string, T>& out);
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::map<std::string, T>& out);
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out) {
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::optional<T>& out) {
   if (node.type() == JsonNode::Type::kNull) {
     out = std::nullopt;
     return kOkStatus;
   }
   T val{};
-  ParseStatus status = ParseValue(node, context, val);
+  Status status = ParseValue(node, context, val);
   if (!status.ok()) {
     return status;
   }
@@ -641,9 +641,9 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::optio
 }
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out) {
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::vector<T>& out) {
   if (node.type() != JsonNode::Type::kArray) {
-    return context.MakeParseError("Expected array");
+    return context.MakeError("Expected array");
   }
   const auto& arr = node.as_array();
   out.clear();
@@ -651,7 +651,7 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vecto
   for (size_t i = 0; i < arr.size(); ++i) {
     internal::AtIndexJsonPath item_context(&context, i);
     T val{};
-    const ParseStatus status = ParseValue(arr[i], item_context, val);
+    const Status status = ParseValue(arr[i], item_context, val);
     if (!status.ok()) {
       return status;
     }
@@ -661,17 +661,16 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, std::vecto
 }
 
 template <typename T>
-ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                       std::map<std::string, T>& out) {
+Status ParseValue(const JsonNode& node, const JsonPath& context, std::map<std::string, T>& out) {
   if (node.type() != JsonNode::Type::kObject) {
-    return context.MakeParseError("Expected object");
+    return context.MakeError("Expected object");
   }
   const JsonNode::Object& obj = node.as_object();
   out.clear();
   for (const auto& [key, val_node] : obj) {
     internal::AtFieldJsonPath field_context(&context, key);
     T val{};
-    const ParseStatus status = ParseValue(val_node, field_context, val);
+    const Status status = ParseValue(val_node, field_context, val);
     if (!status.ok()) {
       return status;
     }
@@ -681,10 +680,10 @@ ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
 }
 
 template <typename T>
-ParseResult<T> Parse(const JsonNode& node) {
+Result<T> Parse(const JsonNode& node) {
   internal::RootJsonPath context;
   T result{};
-  ParseStatus status = ParseValue(node, context, result);
+  Status status = ParseValue(node, context, result);
   if (status.ok()) {
     return std::move(result);
   } else {
@@ -693,8 +692,8 @@ ParseResult<T> Parse(const JsonNode& node) {
 }
 
 template <typename T>
-ParseResult<T> ParseJson(std::string_view json) {
-  ParseResult<JsonNode> node_result = JsonNode::ParseJson(json);
+Result<T> ParseJson(std::string_view json) {
+  Result<JsonNode> node_result = JsonNode::ParseJson(json);
   if (node_result.ok()) {
     return Parse<T>(*node_result);
   } else {
@@ -1793,7 +1792,7 @@ class YamlFormatter {
 
 class JsonParser {
  public:
-  static ParseResult<JsonNode> Parse(std::string_view input) {
+  static Result<JsonNode> Parse(std::string_view input) {
     JsonParser parser(input);
     return parser.ParseRoot();
   }
@@ -1812,11 +1811,9 @@ class JsonParser {
     ~DepthGuard() { --d; }
   };
 
-  static ParseError Error(const std::string& msg, size_t pos) {
-    return ParseError{std::format("{} at position {}", msg, pos)};
+  static Error MakeError(std::string_view msg, size_t pos) {
+    return Error{std::format("{} at position {}", msg, pos)};
   }
-
-  static ParseError Error(std::string msg) { return ParseError{std::move(msg)}; }
 
   void SkipWhitespace() {
     while (pos_ < input_.size()) {
@@ -1854,25 +1851,25 @@ class JsonParser {
     }
   }
 
-  ParseResult<JsonNode> ParseRoot() {
+  Result<JsonNode> ParseRoot() {
     SkipWhitespace();
     if (pos_ >= input_.size()) {
       return Error("Empty input");
     }
-    ParseResult<JsonNode> res = ParseValue();
+    Result<JsonNode> res = ParseValue();
     if (!res.ok()) {
       return res;
     }
     SkipWhitespace();
     if (pos_ < input_.size()) {
-      return Error("Unexpected trailing content after JSON value", pos_);
+      return MakeError("Unexpected trailing content after JSON value", pos_);
     }
     return res;
   }
 
-  ParseResult<JsonNode> ParseValue() {
+  Result<JsonNode> ParseValue() {
     if (depth_ >= kMaxDepth) {
-      return Error("Exceeded maximum nesting depth", pos_);
+      return MakeError("Exceeded maximum nesting depth", pos_);
     }
     DepthGuard guard(depth_);
     SkipWhitespace();
@@ -1906,62 +1903,62 @@ class JsonParser {
       case '9':
         return ParseNumber();
       default:
-        return Error(std::format("Unexpected character: '{}'", c), pos_);
+        return MakeError(std::format("Unexpected character: '{}'", c), pos_);
     }
   }
 
-  ParseResult<JsonNode> ParseNull() {
+  Result<JsonNode> ParseNull() {
     const size_t start = pos_;
     if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "null") {
       pos_ += 4;
       return JsonNode(std::nullopt);
     }
-    return Error("Expected 'null'", start);
+    return MakeError("Expected 'null'", start);
   }
 
-  ParseResult<JsonNode> ParseTrue() {
+  Result<JsonNode> ParseTrue() {
     const size_t start = pos_;
     if (pos_ + 4 <= input_.size() && input_.substr(pos_, 4) == "true") {
       pos_ += 4;
       return JsonNode(true);
     }
-    return Error("Expected 'true'", start);
+    return MakeError("Expected 'true'", start);
   }
 
-  ParseResult<JsonNode> ParseFalse() {
+  Result<JsonNode> ParseFalse() {
     const size_t start = pos_;
     if (pos_ + 5 <= input_.size() && input_.substr(pos_, 5) == "false") {
       pos_ += 5;
       return JsonNode(false);
     }
-    return Error("Expected 'false'", start);
+    return MakeError("Expected 'false'", start);
   }
 
-  ParseResult<JsonNode> ParseNumber() {
+  Result<JsonNode> ParseNumber() {
     const size_t start = pos_;
     if (pos_ < input_.size() && input_[pos_] == '-') {
       ++pos_;
     }
     if (pos_ >= input_.size()) {
-      return Error("Expected digit after '-'", start);
+      return MakeError("Expected digit after '-'", start);
     }
     if (input_[pos_] == '0') {
       ++pos_;
       if (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
-        return Error("Invalid leading zero in number", start);
+        return MakeError("Invalid leading zero in number", start);
       }
     } else if (input_[pos_] >= '1' && input_[pos_] <= '9') {
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
       }
     } else {
-      return Error("Expected digit for number", start);
+      return MakeError("Expected digit for number", start);
     }
 
     if (pos_ < input_.size() && input_[pos_] == '.') {
       ++pos_;
       if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
-        return Error("Expected digit after '.'", start);
+        return MakeError("Expected digit after '.'", start);
       }
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
@@ -1974,7 +1971,7 @@ class JsonParser {
         ++pos_;
       }
       if (pos_ >= input_.size() || input_[pos_] < '0' || input_[pos_] > '9') {
-        return Error("Expected digit for exponent", start);
+        return MakeError("Expected digit for exponent", start);
       }
       while (pos_ < input_.size() && input_[pos_] >= '0' && input_[pos_] <= '9') {
         ++pos_;
@@ -1985,15 +1982,15 @@ class JsonParser {
     char* end_ptr = nullptr;
     const double val = std::strtod(s.c_str(), &end_ptr);
     if (end_ptr != s.c_str() + s.size()) {
-      return Error("Invalid number format", start);
+      return MakeError("Invalid number format", start);
     }
     return JsonNode(val);
   }
 
-  ParseResult<std::string> ParseRawString() {
+  Result<std::string> ParseRawString() {
     const size_t start = pos_;
     if (pos_ >= input_.size() || input_[pos_] != '"') {
-      return Error("Expected '\"'", start);
+      return MakeError("Expected '\"'", start);
     }
     ++pos_;
     std::string result;
@@ -2004,7 +2001,7 @@ class JsonParser {
       }
       if (c == '\\') {
         if (pos_ >= input_.size()) {
-          return Error("Unterminated escape sequence in string", pos_ - 1);
+          return MakeError("Unterminated escape sequence in string", pos_ - 1);
         }
         const char esc = input_[pos_++];
         switch (esc) {
@@ -2034,60 +2031,60 @@ class JsonParser {
             break;
           case 'u': {
             if (pos_ + 4 > input_.size()) {
-              return Error("Incomplete unicode escape sequence", pos_ - 2);
+              return MakeError("Incomplete unicode escape sequence", pos_ - 2);
             }
             uint32_t cp = 0;
             for (int i = 0; i < 4; ++i) {
               const int h = HexDigit(input_[pos_++]);
               if (h < 0) {
-                return Error("Invalid hex digit in unicode escape", pos_ - 1);
+                return MakeError("Invalid hex digit in unicode escape", pos_ - 1);
               }
               cp = (cp << 4) | static_cast<uint32_t>(h);
             }
             if (cp >= 0xD800 && cp <= 0xDBFF) {
               if (pos_ + 6 > input_.size() || input_[pos_] != '\\' || input_[pos_ + 1] != 'u') {
-                return Error("Expected low surrogate after high surrogate", pos_);
+                return MakeError("Expected low surrogate after high surrogate", pos_);
               }
               pos_ += 2;
               uint32_t lo = 0;
               for (int i = 0; i < 4; ++i) {
                 const int h = HexDigit(input_[pos_++]);
                 if (h < 0) {
-                  return Error("Invalid hex digit in unicode escape", pos_ - 1);
+                  return MakeError("Invalid hex digit in unicode escape", pos_ - 1);
                 }
                 lo = (lo << 4) | static_cast<uint32_t>(h);
               }
               if (lo < 0xDC00 || lo > 0xDFFF) {
-                return Error("Invalid low surrogate in unicode escape", pos_ - 4);
+                return MakeError("Invalid low surrogate in unicode escape", pos_ - 4);
               }
               cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
             } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
-              return Error("Unpaired low surrogate in unicode escape", pos_ - 4);
+              return MakeError("Unpaired low surrogate in unicode escape", pos_ - 4);
             }
             AppendUtf8(cp, result);
             break;
           }
           default:
-            return Error(std::format("Invalid escape character: '\\{}'", esc), pos_ - 2);
+            return MakeError(std::format("Invalid escape character: '\\{}'", esc), pos_ - 2);
         }
       } else if (c < 0x20) {
-        return Error("Unescaped control character in string", pos_ - 1);
+        return MakeError("Unescaped control character in string", pos_ - 1);
       } else {
         result += static_cast<char>(c);
       }
     }
-    return Error("Unterminated string", start);
+    return MakeError("Unterminated string", start);
   }
 
-  ParseResult<JsonNode> ParseStringNode() {
-    ParseResult<std::string> str_res = ParseRawString();
+  Result<JsonNode> ParseStringNode() {
+    Result<std::string> str_res = ParseRawString();
     if (!str_res.ok()) {
       return str_res.error();
     }
     return JsonNode(*std::move(str_res));
   }
 
-  ParseResult<JsonNode> ParseArray() {
+  Result<JsonNode> ParseArray() {
     const size_t start = pos_;
     ++pos_;  // consume '['
     SkipWhitespace();
@@ -2100,9 +2097,9 @@ class JsonParser {
     while (true) {
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return Error("Unterminated array", start);
+        return MakeError("Unterminated array", start);
       }
-      ParseResult<JsonNode> val_res = ParseValue();
+      Result<JsonNode> val_res = ParseValue();
       if (!val_res.ok()) {
         return val_res;
       }
@@ -2110,7 +2107,7 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return Error("Unterminated array", start);
+        return MakeError("Unterminated array", start);
       }
       const char c = input_[pos_++];
       if (c == ']') {
@@ -2118,16 +2115,16 @@ class JsonParser {
       } else if (c == ',') {
         SkipWhitespace();
         if (pos_ < input_.size() && input_[pos_] == ']') {
-          return Error("Trailing comma in array", pos_ - 1);
+          return MakeError("Trailing comma in array", pos_ - 1);
         }
       } else {
-        return Error(std::format("Expected ',' or ']' in array, got '{}'", c), pos_ - 1);
+        return MakeError(std::format("Expected ',' or ']' in array, got '{}'", c), pos_ - 1);
       }
     }
     return JsonNode(std::move(elements));
   }
 
-  ParseResult<JsonNode> ParseObject() {
+  Result<JsonNode> ParseObject() {
     const size_t start = pos_;
     ++pos_;  // consume '{'
     SkipWhitespace();
@@ -2140,12 +2137,12 @@ class JsonParser {
     while (true) {
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return Error("Unterminated object", start);
+        return MakeError("Unterminated object", start);
       }
       if (input_[pos_] != '"') {
-        return Error("Expected string key in object", pos_);
+        return MakeError("Expected string key in object", pos_);
       }
-      ParseResult<std::string> key_res = ParseRawString();
+      Result<std::string> key_res = ParseRawString();
       if (!key_res.ok()) {
         return key_res.error();
       }
@@ -2153,12 +2150,12 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size() || input_[pos_] != ':') {
-        return Error("Expected ':' after key in object", pos_);
+        return MakeError("Expected ':' after key in object", pos_);
       }
       ++pos_;  // consume ':'
 
       SkipWhitespace();
-      ParseResult<JsonNode> val_res = ParseValue();
+      Result<JsonNode> val_res = ParseValue();
       if (!val_res.ok()) {
         return val_res;
       }
@@ -2166,7 +2163,7 @@ class JsonParser {
 
       SkipWhitespace();
       if (pos_ >= input_.size()) {
-        return Error("Unterminated object", start);
+        return MakeError("Unterminated object", start);
       }
       const char c = input_[pos_++];
       if (c == '}') {
@@ -2174,10 +2171,10 @@ class JsonParser {
       } else if (c == ',') {
         SkipWhitespace();
         if (pos_ < input_.size() && input_[pos_] == '}') {
-          return Error("Trailing comma in object", pos_ - 1);
+          return MakeError("Trailing comma in object", pos_ - 1);
         }
       } else {
-        return Error(std::format("Expected ',' or '}}' in object, got '{}'", c), pos_ - 1);
+        return MakeError(std::format("Expected ',' or '}}' in object, got '{}'", c), pos_ - 1);
       }
     }
     return JsonNode(std::move(entries));
@@ -2188,7 +2185,7 @@ class StructParser {
  public:
   explicit StructParser(const JsonNode* node, const JsonPath& context) : context_(context) {
     if (node->type() != JsonNode::Type::kObject) {
-      status_ = context_.MakeParseError("Expected object");
+      status_ = context_.MakeError("Expected object");
       return;
     }
     const auto& object = node->as_object();
@@ -2214,14 +2211,14 @@ class StructParser {
     return ParseImpl(key, out, true);
   }
 
-  ParseStatus status() && { return std::move(status_); }
-  ParseStatus status() const& = delete;
+  Status status() && { return std::move(status_); }
+  Status status() const& = delete;
 
  private:
   const JsonPath& context_;
   std::vector<const std::pair<std::string, JsonNode>*> sorted_entries_;
   size_t index_ = 0;
-  ParseStatus status_ = kOkStatus;
+  Status status_ = kOkStatus;
 
   template <typename T>
   void ParseImpl(std::string_view key, T& out, bool optional) {
@@ -2245,52 +2242,52 @@ class StructParser {
     if (optional) {
       out = T{};
     } else {
-      status_ = context_.MakeParseError(std::format("Missing key: {}", key));
+      status_ = context_.MakeError(std::format("Missing key: {}", key));
     }
   }
 };
 
 class Unions {
  public:
-  static ParseResult<std::string> FindStringDiscriminant(const JsonNode& json_node,
-                                                         const JsonPath& context,
-                                                         std::string_view discriminator) {
+  static Result<std::string> FindStringDiscriminant(const JsonNode& json_node,
+                                                    const JsonPath& context,
+                                                    std::string_view discriminator) {
     if (json_node.type() != JsonNode::Type::kObject) {
-      return context.MakeParseError("Expected object");
+      return context.MakeError("Expected object");
     }
     for (const auto& [k, v] : json_node.as_object()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kString) {
           AtFieldJsonPath field_context(&context, discriminator);
-          return field_context.MakeParseError("Expected string");
+          return field_context.MakeError("Expected string");
         }
         return v.as_string();
       }
     }
-    return context.MakeParseError(std::format("Missing key: {}", discriminator));
+    return context.MakeError(std::format("Missing key: {}", discriminator));
   }
 
-  static ParseResult<bool> FindBoolDiscriminant(const JsonNode& json_node, const JsonPath& context,
-                                                std::string_view discriminator) {
+  static Result<bool> FindBoolDiscriminant(const JsonNode& json_node, const JsonPath& context,
+                                           std::string_view discriminator) {
     if (json_node.type() != JsonNode::Type::kObject) {
-      return context.MakeParseError("Expected object");
+      return context.MakeError("Expected object");
     }
     for (const auto& [k, v] : json_node.as_object()) {
       if (k == discriminator) {
         if (v.type() != JsonNode::Type::kBool) {
           AtFieldJsonPath field_context(&context, discriminator);
-          return field_context.MakeParseError("Expected boolean");
+          return field_context.MakeError("Expected boolean");
         }
         return v.as_bool();
       }
     }
-    return context.MakeParseError(std::format("Missing key: {}", discriminator));
+    return context.MakeError(std::format("Missing key: {}", discriminator));
   }
 };
 
 }  // namespace internal
 
-inline ParseResult<JsonNode> JsonNode::ParseJson(std::string_view json) {
+inline Result<JsonNode> JsonNode::ParseJson(std::string_view json) {
   return internal::JsonParser::Parse(json);
 }
 
@@ -2302,7 +2299,7 @@ namespace internal {
 /// Type used for Meta when no <meta> element is defined.
 struct NoMeta {};
 inline JsonNode ToJsonNode(const NoMeta&) { return JsonNode(std::nullopt); }
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, NoMeta&) { return kOkStatus; }
+inline Status ParseValue(const JsonNode&, const JsonPath&, NoMeta&) { return kOkStatus; }
 }  // namespace internal
 
 /// The expected format of the model output.
@@ -2351,7 +2348,7 @@ struct Templates {
 };
 
 inline JsonNode ToJsonNode(const Templates&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Templates&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Templates&);
 
 enum class OutputFormat_ {
   kJson,
@@ -2359,7 +2356,7 @@ enum class OutputFormat_ {
 };
 
 inline JsonNode ToJsonNode(const OutputFormat_&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, OutputFormat_&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, OutputFormat_&);
 
 struct TemplateTool {
   std::string id{};
@@ -2367,14 +2364,14 @@ struct TemplateTool {
 };
 
 inline JsonNode ToJsonNode(const TemplateTool&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, TemplateTool&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateTool&);
 
 struct BodyPiece_KindText {
   std::string text{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindText&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindText&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindText&);
 
 struct BodyPiece {
  public:
@@ -2443,7 +2440,7 @@ struct BodyPiece {
 };
 
 inline JsonNode ToJsonNode(const BodyPiece&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, BodyPiece&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece&);
 
 struct ToolCallExample {
   std::string call_id{};
@@ -2454,14 +2451,14 @@ struct ToolCallExample {
 };
 
 inline JsonNode ToJsonNode(const ToolCallExample&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, ToolCallExample&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, ToolCallExample&);
 
 struct FewShotExample_IntermediateSteps {
   std::vector<ToolCallExample> tool_calls{};
 };
 
 inline JsonNode ToJsonNode(const FewShotExample_IntermediateSteps&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, FewShotExample_IntermediateSteps&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample_IntermediateSteps&);
 
 struct FewShotExample {
   JsonNode input{};
@@ -2470,7 +2467,7 @@ struct FewShotExample {
 };
 
 inline JsonNode ToJsonNode(const FewShotExample&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, FewShotExample&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample&);
 
 struct TemplateContent {
   std::optional<JsonNode> meta{};
@@ -2480,14 +2477,14 @@ struct TemplateContent {
 };
 
 inline JsonNode ToJsonNode(const TemplateContent&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, TemplateContent&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContent&);
 
 struct TemplateContents_KindNoVariants {
   TemplateContent content{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, TemplateContents_KindNoVariants&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents_KindNoVariants&);
 
 struct TemplateContents {
  public:
@@ -2552,7 +2549,7 @@ struct TemplateContents {
 };
 
 inline JsonNode ToJsonNode(const TemplateContents&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, TemplateContents&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents&);
 
 struct Template {
   std::string name{};
@@ -2565,7 +2562,7 @@ struct Template {
 };
 
 inline JsonNode ToJsonNode(const Template&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Template&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Template&);
 
 struct TemplateContents_KindVariants {
   std::map<std::string, TemplateContent> variants{};
@@ -2573,12 +2570,12 @@ struct TemplateContents_KindVariants {
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindVariants&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, TemplateContents_KindVariants&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents_KindVariants&);
 
 struct Expression_KindInput {};
 
 inline JsonNode ToJsonNode(const Expression_KindInput&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Expression_KindInput&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Expression_KindInput&);
 
 struct Expression {
  public:
@@ -2637,7 +2634,7 @@ struct Expression {
 };
 
 inline JsonNode ToJsonNode(const Expression&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Expression&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Expression&);
 
 enum class InsertFormat {
   kText,
@@ -2649,7 +2646,7 @@ enum class InsertFormat {
 };
 
 inline JsonNode ToJsonNode(const InsertFormat&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, InsertFormat&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, InsertFormat&);
 
 struct BodyPiece_KindInsertVal {
   Expression val{};
@@ -2658,7 +2655,7 @@ struct BodyPiece_KindInsertVal {
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertVal&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertVal&);
 
 struct BodyPiece_KindInsertSnippet {
   /// Snippet name.
@@ -2668,7 +2665,7 @@ struct BodyPiece_KindInsertSnippet {
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSnippet&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSnippet&);
 
 struct Expression_KindProperty {
   Expression left{};
@@ -2676,14 +2673,14 @@ struct Expression_KindProperty {
 };
 
 inline JsonNode ToJsonNode(const Expression_KindProperty&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Expression_KindProperty&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Expression_KindProperty&);
 
 struct Snippet_KindSnippet {
   std::vector<BodyPiece> body{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippet&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippet&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippet&);
 
 struct Snippet {
  public:
@@ -2750,7 +2747,7 @@ struct Snippet {
 };
 
 inline JsonNode ToJsonNode(const Snippet&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Snippet&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet&);
 
 enum class Snippet_KindSnippetIf_Is {
   kNotNull,
@@ -2759,7 +2756,7 @@ enum class Snippet_KindSnippetIf_Is {
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf_Is&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf_Is&);
 
 struct Snippet_KindSnippetIf {
   Expression expression{};
@@ -2769,7 +2766,7 @@ struct Snippet_KindSnippetIf {
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf&);
 
 struct Snippet_KindSnippetSwitch {
   Expression expression{};
@@ -2777,7 +2774,7 @@ struct Snippet_KindSnippetSwitch {
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetSwitch&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetSwitch&);
 
 struct Tool {
   std::string id{};
@@ -2787,7 +2784,7 @@ struct Tool {
 };
 
 inline JsonNode ToJsonNode(const Tool&);
-inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, Tool&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, Tool&);
 
 inline JsonNode ToJsonNode(const Templates& input) {
   using ::typeprompt::ToJsonNode;
@@ -2800,7 +2797,7 @@ inline JsonNode ToJsonNode(const Templates& input) {
       {"sourceFiles", ToJsonNode(input.source_files)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Templates& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Templates& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("edition", out.edition);
   parser.Parse("signature", out.signature);
@@ -2823,7 +2820,7 @@ inline JsonNode ToJsonNode(const Template& input) {
       {"outputJsonSchema", ToJsonNode(input.output_json_schema)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Template& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("contents", out.contents);
   parser.Parse("name", out.name);
@@ -2843,15 +2840,15 @@ inline JsonNode ToJsonNode(const OutputFormat_& input) {
       return "json";
   }
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
   if (node.type() != JsonNode::Type::kString) {
-    return context.MakeParseError("Expected string");
+    return context.MakeError("Expected string");
   } else if (node.as_string() == "json") {
     out = OutputFormat_::kJson;
   } else if (node.as_string() == "text") {
     out = OutputFormat_::kText;
   } else {
-    return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));
+    return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));
   }
   return kOkStatus;
 }
@@ -2863,7 +2860,7 @@ inline JsonNode ToJsonNode(const TemplateTool& input) {
       {"name", ToJsonNode(input.name)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, TemplateTool& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateTool& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("id", out.id);
   parser.Parse("name", out.name);
@@ -2874,8 +2871,7 @@ inline JsonNode ToJsonNode(const TemplateContents& input) {
   using ::typeprompt::ToJsonNode;
   return input.visit([](const auto& v) { return ToJsonNode(v); });
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              TemplateContents& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateContents& out) {
   using ::typeprompt::ParseValue;
   auto discriminant = internal::Unions::FindStringDiscriminant(node, context, "kind");
   auto status = kOkStatus;
@@ -2890,7 +2886,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
     status = ParseValue(node, context, v);
     out = std::move(v);
   } else {
-    return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));
+    return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
   return status;
 }
@@ -2902,8 +2898,8 @@ inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants& input) {
       {"content", ToJsonNode(input.content)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              TemplateContents_KindNoVariants& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         TemplateContents_KindNoVariants& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("content", out.content);
   return std::move(parser).status();
@@ -2917,8 +2913,8 @@ inline JsonNode ToJsonNode(const TemplateContents_KindVariants& input) {
       {"defaultContent", ToJsonNode(input.default_content)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              TemplateContents_KindVariants& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         TemplateContents_KindVariants& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("defaultContent", out.default_content);
   parser.Parse("variants", out.variants);
@@ -2934,7 +2930,7 @@ inline JsonNode ToJsonNode(const TemplateContent& input) {
       {"examples", ToJsonNode(input.examples)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, TemplateContent& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateContent& out) {
   internal::StructParser parser(&node, context);
   parser.ParseOptional("examples", out.examples);
   parser.ParseOptional("meta", out.meta);
@@ -2951,7 +2947,7 @@ inline JsonNode ToJsonNode(const FewShotExample& input) {
       {"intermediateSteps", ToJsonNode(input.intermediate_steps)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("input", out.input);
   parser.Parse("intermediateSteps", out.intermediate_steps);
@@ -2965,8 +2961,8 @@ inline JsonNode ToJsonNode(const FewShotExample_IntermediateSteps& input) {
       {"toolCalls", ToJsonNode(input.tool_calls)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              FewShotExample_IntermediateSteps& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         FewShotExample_IntermediateSteps& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("toolCalls", out.tool_calls);
   return std::move(parser).status();
@@ -2980,7 +2976,7 @@ inline JsonNode ToJsonNode(const ToolCallExample& input) {
       {"output", ToJsonNode(input.output)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ToolCallExample& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, ToolCallExample& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("callId", out.call_id);
   parser.Parse("input", out.input);
@@ -2994,7 +2990,7 @@ inline JsonNode ToJsonNode(const BodyPiece& input) {
   using ::typeprompt::ToJsonNode;
   return input.visit([](const auto& v) { return ToJsonNode(v); });
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece& out) {
   using ::typeprompt::ParseValue;
   auto discriminant = internal::Unions::FindStringDiscriminant(node, context, "kind");
   auto status = kOkStatus;
@@ -3013,7 +3009,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Bod
     status = ParseValue(node, context, v);
     out = std::move(v);
   } else {
-    return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));
+    return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
   return status;
 }
@@ -3025,8 +3021,7 @@ inline JsonNode ToJsonNode(const BodyPiece_KindText& input) {
       {"text", ToJsonNode(input.text)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              BodyPiece_KindText& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece_KindText& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("text", out.text);
   return std::move(parser).status();
@@ -3041,8 +3036,8 @@ inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal& input) {
       {"indent", ToJsonNode(input.indent)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              BodyPiece_KindInsertVal& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         BodyPiece_KindInsertVal& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("format", out.format);
   parser.Parse("indent", out.indent);
@@ -3058,8 +3053,8 @@ inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet& input) {
       {"indent", ToJsonNode(input.indent)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              BodyPiece_KindInsertSnippet& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         BodyPiece_KindInsertSnippet& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("indent", out.indent);
   parser.Parse("snippet", out.snippet);
@@ -3082,9 +3077,9 @@ inline JsonNode ToJsonNode(const InsertFormat& input) {
       return "text";
   }
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, InsertFormat& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, InsertFormat& out) {
   if (node.type() != JsonNode::Type::kString) {
-    return context.MakeParseError("Expected string");
+    return context.MakeError("Expected string");
   } else if (node.as_string() == "text") {
     out = InsertFormat::kText;
   } else if (node.as_string() == "json") {
@@ -3098,7 +3093,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Ins
   } else if (node.as_string() == "tsv") {
     out = InsertFormat::kTsv;
   } else {
-    return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));
+    return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));
   }
   return kOkStatus;
 }
@@ -3107,7 +3102,7 @@ inline JsonNode ToJsonNode(const Expression& input) {
   using ::typeprompt::ToJsonNode;
   return input.visit([](const auto& v) { return ToJsonNode(v); });
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Expression& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expression& out) {
   using ::typeprompt::ParseValue;
   auto discriminant = internal::Unions::FindStringDiscriminant(node, context, "kind");
   auto status = kOkStatus;
@@ -3122,7 +3117,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Exp
     status = ParseValue(node, context, v);
     out = std::move(v);
   } else {
-    return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));
+    return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
   return status;
 }
@@ -3133,8 +3128,7 @@ inline JsonNode ToJsonNode(const Expression_KindInput& input) {
       {"kind", ToJsonNode("input")},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Expression_KindInput& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expression_KindInput& out) {
   internal::StructParser parser(&node, context);
   return std::move(parser).status();
 }
@@ -3147,8 +3141,8 @@ inline JsonNode ToJsonNode(const Expression_KindProperty& input) {
       {"property", ToJsonNode(input.property)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Expression_KindProperty& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Expression_KindProperty& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("left", out.left);
   parser.Parse("property", out.property);
@@ -3159,7 +3153,7 @@ inline JsonNode ToJsonNode(const Snippet& input) {
   using ::typeprompt::ToJsonNode;
   return input.visit([](const auto& v) { return ToJsonNode(v); });
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Snippet& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet& out) {
   using ::typeprompt::ParseValue;
   auto discriminant = internal::Unions::FindStringDiscriminant(node, context, "kind");
   auto status = kOkStatus;
@@ -3178,7 +3172,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Sni
     status = ParseValue(node, context, v);
     out = std::move(v);
   } else {
-    return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));
+    return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
   return status;
 }
@@ -3190,8 +3184,7 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippet& input) {
       {"body", ToJsonNode(input.body)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Snippet_KindSnippet& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_KindSnippet& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("body", out.body);
   return std::move(parser).status();
@@ -3205,8 +3198,8 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf& input) {
       {"else", ToJsonNode(input.else_)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Snippet_KindSnippetIf& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetIf& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("else", out.else_);
   parser.Parse("expression", out.expression);
@@ -3225,10 +3218,10 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
       return "not-null";
   }
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Snippet_KindSnippetIf_Is& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetIf_Is& out) {
   if (node.type() != JsonNode::Type::kString) {
-    return context.MakeParseError("Expected string");
+    return context.MakeError("Expected string");
   } else if (node.as_string() == "not-null") {
     out = Snippet_KindSnippetIf_Is::kNotNull;
   } else if (node.as_string() == "not-empty") {
@@ -3236,7 +3229,7 @@ inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
   } else if (node.as_string() == "true") {
     out = Snippet_KindSnippetIf_Is::kTrue;
   } else {
-    return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));
+    return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));
   }
   return kOkStatus;
 }
@@ -3249,8 +3242,8 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch& input) {
       {"branches", ToJsonNode(input.branches)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context,
-                              Snippet_KindSnippetSwitch& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetSwitch& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("branches", out.branches);
   parser.Parse("expression", out.expression);
@@ -3266,7 +3259,7 @@ inline JsonNode ToJsonNode(const Tool& input) {
       {"inputJsonSchema", ToJsonNode(input.input_json_schema)},
   };
 }
-inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, Tool& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, Tool& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("description", out.description);
   parser.Parse("id", out.id);
@@ -3369,8 +3362,96 @@ struct Prompt {
   std::string template_id;
 };
 
-namespace internal {
+template <typename T>
+class ToolCallback {
+ public:
+  ToolCallback(const ToolCallback&) = default;
+  ToolCallback(ToolCallback&&) = default;
 
+  ToolCallback& operator=(const ToolCallback&) = default;
+  ToolCallback&& operator=(ToolCallback&&) = default;
+
+  void OnSuccess(T output);
+  void OnError(std::string_view message);
+
+ private:
+  ToolCallback(T* output, std::string* error_message, std::function<void()>* callback)
+      : output_(*output), error_message_(*error_message), callback_(*callback) {}
+
+  T& output_;
+  std::string& error_message_;
+  std::function<void()>& callback_;
+};
+
+struct ToolCall {
+  std::string call_id;
+  std::string tool_name;
+  std::string stringified_input;
+};
+
+struct ToolCallResponse {
+  std::string call_id;
+  std::string stringified_output;
+  std::optional<std::string> error;
+};
+
+class ToolExecutor {
+ public:
+  virtual ~ToolExecutor() = default;
+  virtual ToolCallResponse Execute(const ToolCall& tool_call) = 0;
+};
+
+namespace internal {
+template <typename Tuple, typename F>
+constexpr void for_each_type(F&& f) {
+  // Immediately invoke a template lambda to generate the index sequence
+  [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    // Fold expression passes std::type_identity<T> for each type
+    (f(std::type_identity<std::tuple_element_t<Is, Tuple>>{}), ...);
+  }(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+}
+}  // namespace internal
+
+template <typename Template, typename TypedImplPtr>
+class ToolExecutorImpl : public ToolExecutor {
+ public:
+  ToolExecutorImpl(TypedImplPtr typed_impl) : typed_impl_(typed_impl) {}
+
+  ToolCallResponse Execute(const ToolCall& tool_call) override {
+    using tools_type = typename Template::tools_type;
+    std::optional<Result<ToolCallResponse>> result;
+    internal::for_each_type<tools_type>(
+        [this, &tool_call, &result]<typename tool_type>(std::type_identity<tool_type>) {
+          using input_type = typename tool_type::input_type;
+          using output_type = typename tool_type::output_type;
+          if (tool_type::kToolName != tool_call.tool_name) return;
+          auto input_result = ParseJson<input_type>(tool_call.stringified_input);
+          if (!input_result.ok()) {
+            result = Error(std::format("Failed to parse tool input: {}", input_result.error()));
+            return;
+          }
+          constexpr tool_type tool{};
+          Result<output_type> output_result = (*typed_impl_)(tool, *input_result);
+          if (!output_result.ok()) {
+            result = std::move(output_result).error;
+            return;
+          }
+          result = ToolCallResponse{tool_call.call_id, ToJson(*output_result)};
+        });
+    if (!result.has_value()) {
+      result = Error(std::format("Tool not found: {}", tool_call.tool_name));
+    }
+    if (!result->ok()) {
+      return { call_id = tool_call.call_id, }
+    }
+    return **result;
+  }
+
+ private:
+  TypedImplPtr typed_impl_;
+};
+
+namespace internal {
 class Renderer {
  public:
   static Prompt Render(std::string_view template_id, const JsonNode& input,
@@ -3510,7 +3591,7 @@ class Renderer {
   }
 
   template <typename Template>
-  static ParseResult<typename Template::output_type> ParseResponseImpl(std::string_view response) {
+  static Result<typename Template::output_type> ParseResponseImpl(std::string_view response) {
     if constexpr (Template::kOutputFormat == OutputFormat::kJson) {
       std::string_view cleaned = Trim(response);
       if (cleaned.starts_with("```")) {
@@ -3525,7 +3606,7 @@ class Renderer {
       }
       auto result = ParseJson<typename Template::output_type>(cleaned);
       if (!result.ok()) {
-        return ParseError{
+        return Error{
             std::format("Template '{}': {}", Template::kTemplateId, result.error().message)};
       }
       return result;
@@ -3929,8 +4010,8 @@ class TemplateOverrider {
     return ToJsonNode(internal::TemplatesSpecAccessor::get(Templates::getDefault()));
   }
 
-  /// Applies JSON overrides and returns an updated Templates instance, or a ParseError.
-  static ParseResult<Templates> applyOverrides(const JsonNode& overrides) {
+  /// Applies JSON overrides and returns an updated Templates instance, or an Error.
+  static Result<Templates> applyOverrides(const JsonNode& overrides) {
     auto overrides_value = Parse<internal::spec::Templates>(overrides);
     if (!overrides_value.ok()) {
       return std::move(overrides_value).error();
@@ -3940,7 +4021,7 @@ class TemplateOverrider {
         internal::TemplatesSpecAccessor::get(Templates::getDefault());
 
     if (overrides_value->signature != result.signature) {
-      return ParseError{"Signature mismatch"};
+      return Error{"Signature mismatch"};
     }
 
     for (auto& [tpl_id, tpl] : overrides_value->templates) {
@@ -3983,9 +4064,9 @@ Prompt Render(Input input, const Templates& templates = Templates::getDefault())
 /// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
 /// 'templates::MyTemplate').
 /// \param response The raw string response returned by the LLM.
-/// \return A ParseResult containing the structured output or a ParseError.
+/// \return A Result containing the structured output or an Error.
 template <typename Template>
-ParseResult<typename Template::output_type> ParseResponse(std::string_view response) {
+Result<typename Template::output_type> ParseResponse(std::string_view response) {
   return internal::Renderer::ParseResponseImpl<Template>(response);
 }
 // </static:cpp-logic>

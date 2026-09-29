@@ -455,7 +455,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
       "",
       "",
       `inline JsonNode ToJsonNode(const ${typeCName}&);`,
-      `inline ParseStatus ParseValue(const JsonNode&, const JsonPath&, ${typeCName}&);`,
+      `inline Status ParseValue(const JsonNode&, const JsonPath&, ${typeCName}&);`,
       "",
       "",
     );
@@ -777,7 +777,7 @@ function writeMethodImplsForInterface(
   lines.push(
     " };", // return JsonNode::Object({...});
     "}", // ToJsonNode
-    `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+    `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     " internal::StructParser parser(&node, context);",
   );
   const parseFields = fields
@@ -828,9 +828,9 @@ function writeMethodImplsForUnion(
       `   return "${first.value satisfies string}";`,
       " }",
       "}",
-      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+      `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       " if (node.type() != JsonNode::Type::kString) {",
-      '  return context.MakeParseError("Expected string");',
+      '  return context.MakeError("Expected string");',
     );
     for (const member of members.members) {
       const constantCName = toCName("k".concat(toPascalCase(member.value)));
@@ -841,7 +841,7 @@ function writeMethodImplsForUnion(
     }
     lines.push(
       " } else {",
-      `  return context.MakeParseError(std::format("Unknown constant '{}'", node.as_string()));`,
+      `  return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));`,
       " }",
       " return kOkStatus;",
       "}",
@@ -857,7 +857,7 @@ function writeMethodImplsForUnion(
       ` using ::${rootNamespace}::ToJsonNode;`,
       " return input.visit([](const auto& v) { return ToJsonNode(v); });",
       "}",
-      `inline ParseStatus ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
+      `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       ` using ::${rootNamespace}::ParseValue;`,
       ` auto discriminant = internal::Unions::${findMethod}(node, context, "${discriminator}");`,
       " auto status = kOkStatus;",
@@ -878,7 +878,7 @@ function writeMethodImplsForUnion(
     }
     lines.push(
       " } else {",
-      `  return context.MakeParseError(std::format("Unknown discriminant '{}'", *discriminant));`,
+      `  return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));`,
       " }",
       " return status;",
       "}",
@@ -1108,8 +1108,8 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonNode",
   "JsonPath",
   "OutputFormat",
-  "ParseStatus",
   "ParseValue",
+  "Status",
   "ToJsonNode",
   "indirect",
   "internal",
