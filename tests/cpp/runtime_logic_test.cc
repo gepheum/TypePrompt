@@ -3189,6 +3189,84 @@ void TestRenderTools() {
   ASSERT_TRUE(it->second.input_json_schema.type() == typeprompt_03::JsonNode::Type::kObject);
 }
 
+void TestMakeToolExecutor() {
+  // Test template with tools
+  struct ResearchHandler {
+    typeprompt_03::Result<typeprompt_03::schema::web_search::Output> operator()(
+        typeprompt_03::tools::WebSearch, const typeprompt_03::schema::web_search::Input& input) {
+      if (input.query == "fail") {
+        return typeprompt_03::Error{"Search service error"};
+      }
+      return typeprompt_03::schema::web_search::Output{
+          .results =
+              {
+                  typeprompt_03::schema::web_search::Output_Results{
+                      .snippet = "Snippet about " + input.query,
+                      .title = "Result title",
+                      .url = "https://example.com",
+                  },
+              },
+      };
+    }
+  };
+
+  ResearchHandler handler;
+  auto executor =
+      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(&handler);
+  ASSERT_TRUE(executor != nullptr);
+
+  // Successful tool call
+  typeprompt_03::ToolCall call1{
+      .call_id = "c1",
+      .tool_name = "webSearch",
+      .stringified_input = R"({"query":"quantum computing"})",
+  };
+  auto resp1 = executor->Execute(call1);
+  ASSERT_EQ(resp1.call_id, "c1");
+  ASSERT_FALSE(resp1.error.has_value());
+  ASSERT_TRUE(resp1.stringified_output.find("Snippet about quantum computing") !=
+              std::string::npos);
+
+  // Tool handler error
+  typeprompt_03::ToolCall call2{
+      .call_id = "c2",
+      .tool_name = "webSearch",
+      .stringified_input = R"({"query":"fail"})",
+  };
+  auto resp2 = executor->Execute(call2);
+  ASSERT_EQ(resp2.call_id, "c2");
+  ASSERT_TRUE(resp2.error.has_value());
+  ASSERT_EQ(*resp2.error, "Search service error");
+  ASSERT_TRUE(resp2.stringified_output.find(R"("error": "Search service error")") !=
+              std::string::npos);
+
+  // Unknown tool error
+  typeprompt_03::ToolCall call3{
+      .call_id = "c3",
+      .tool_name = "unknownTool",
+      .stringified_input = "{}",
+  };
+  auto resp3 = executor->Execute(call3);
+  ASSERT_EQ(resp3.call_id, "c3");
+  ASSERT_TRUE(resp3.error.has_value());
+  ASSERT_EQ(*resp3.error, "Tool not found: unknownTool");
+
+  // Test template with no tools
+  auto no_tools_executor = typeprompt_01::MakeToolExecutor<typeprompt_01::templates::Translate>();
+  ASSERT_TRUE(no_tools_executor != nullptr);
+  typeprompt_01::ToolCall call4{
+      .call_id = "c4",
+      .tool_name = "anyTool",
+      .stringified_input = "{}",
+  };
+  auto resp4 = no_tools_executor->Execute(call4);
+  ASSERT_EQ(resp4.call_id, "c4");
+  ASSERT_TRUE(resp4.error.has_value());
+  ASSERT_EQ(*resp4.error, "Tool not found: anyTool");
+  ASSERT_TRUE(resp4.stringified_output.find(R"("error": "Tool not found: anyTool")") !=
+              std::string::npos);
+}
+
 void TestRenderVariants() {
   auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
       .features = {{"Fast", "Reliable"}},
@@ -3372,6 +3450,7 @@ void TestRuntimeLogic() {
   TestRenderBasicsTranslate();
   TestRenderComplexSchemas();
   TestRenderTools();
+  TestMakeToolExecutor();
   TestRenderVariants();
   TestRenderConditionalLogic();
   TestRenderTabularFormatting();

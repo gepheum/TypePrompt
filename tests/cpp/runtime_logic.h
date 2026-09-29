@@ -3416,7 +3416,7 @@ constexpr void for_each_type(F&& f) {
   }(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
 }
 
-template <typename Template, typename TypedHandlerPtr>
+template <typename Template, typename TypedHandlerPtr = std::nullptr_t>
 class ToolExecutorImpl : public ToolExecutor {
  public:
   ToolExecutorImpl(TypedHandlerPtr typed_handler) : typed_handler_(std::move(typed_handler)) {}
@@ -3424,28 +3424,32 @@ class ToolExecutorImpl : public ToolExecutor {
   ToolCallResponse Execute(const ToolCall& tool_call) override {
     using tools_type = typename Template::tools_type;
     std::optional<Result<ToolCallResponse>> result;
-    internal::for_each_type<tools_type>([this, &tool_call, &result]<typename tool_type>(
-                                            std::type_identity<tool_type>) {
-      using input_type = typename tool_type::input_type;
-      using output_type = typename tool_type::output_type;
-      if (tool_type::kToolName != tool_call.tool_name) return;
-      auto input_result = ParseJson<input_type>(tool_call.stringified_input);
-      if (!input_result.ok()) {
-        result = Error(std::format("Failed to parse tool input: {}", input_result.error().message));
-        return;
-      }
-      constexpr tool_type tool{};
-      Result<output_type> output_result = (*typed_handler_)(tool, *input_result);
-      if (!output_result.ok()) {
-        result = std::move(output_result).error();
-        return;
-      }
-      result = ToolCallResponse{
-          .call_id = tool_call.call_id,
-          .stringified_output = ToJson(*output_result),
-          .error = std::nullopt,
-      };
-    });
+    if constexpr (std::tuple_size_v<tools_type> > 0 &&
+                  !std::is_same_v<TypedHandlerPtr, std::nullptr_t>) {
+      internal::for_each_type<tools_type>([this, &tool_call, &result]<typename tool_type>(
+                                              std::type_identity<tool_type>) {
+        using input_type = typename tool_type::input_type;
+        using output_type = typename tool_type::output_type;
+        if (tool_type::kToolName != tool_call.tool_name) return;
+        auto input_result = ParseJson<input_type>(tool_call.stringified_input);
+        if (!input_result.ok()) {
+          result =
+              Error(std::format("Failed to parse tool input: {}", input_result.error().message));
+          return;
+        }
+        constexpr tool_type tool{};
+        Result<output_type> output_result = (*typed_handler_)(tool, *input_result);
+        if (!output_result.ok()) {
+          result = std::move(output_result).error();
+          return;
+        }
+        result = ToolCallResponse{
+            .call_id = tool_call.call_id,
+            .stringified_output = ToJson(*output_result),
+            .error = std::nullopt,
+        };
+      });
+    }
     if (!result.has_value()) {
       result = Error(std::format("Tool not found: {}", tool_call.tool_name));
     }
@@ -3492,10 +3496,23 @@ class ToolExecutorImpl : public ToolExecutor {
 /// \param typed_handler Pointer or smart pointer to the typed tool handler. Must not be null.
 /// \return A std::unique_ptr<ToolExecutor> executing tool calls for the template.
 template <typename Template, typename TypedHandlerPtr>
+  requires(std::tuple_size_v<typename Template::tools_type> > 0)
 std::unique_ptr<ToolExecutor> MakeToolExecutor(TypedHandlerPtr typed_handler) {
   assert(typed_handler != nullptr);
   return std::make_unique<internal::ToolExecutorImpl<Template, TypedHandlerPtr>>(
       std::move(typed_handler));
+}
+
+/// Creates a `ToolExecutor` for a prompt template that defines no tools.
+///
+/// Any tool calls dispatched to this executor will fail with a "Tool not found" error.
+///
+/// \tparam Template The template struct generated in the `templates` namespace.
+/// \return A std::unique_ptr<ToolExecutor> that rejects all tool calls.
+template <typename Template>
+  requires(std::tuple_size_v<typename Template::tools_type> == 0)
+std::unique_ptr<ToolExecutor> MakeToolExecutor() {
+  return std::make_unique<internal::ToolExecutorImpl<Template, std::nullptr_t>>(nullptr);
 }
 
 namespace internal {
