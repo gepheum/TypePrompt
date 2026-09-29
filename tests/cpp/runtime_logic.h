@@ -3419,9 +3419,7 @@ constexpr void for_each_type(F&& f) {
 template <typename Template, typename TypedHandlerPtr>
 class ToolExecutorImpl : public ToolExecutor {
  public:
-  ToolExecutorImpl(TypedHandlerPtr typed_handler) : typed_handler_(std::move(typed_handler)) {
-    assert(typed_handler != nullptr);
-  }
+  ToolExecutorImpl(TypedHandlerPtr typed_handler) : typed_handler_(std::move(typed_handler)) {}
 
   ToolCallResponse Execute(const ToolCall& tool_call) override {
     using tools_type = typename Template::tools_type;
@@ -3495,6 +3493,7 @@ class ToolExecutorImpl : public ToolExecutor {
 /// \return A std::unique_ptr<ToolExecutor> executing tool calls for the template.
 template <typename Template, typename TypedHandlerPtr>
 std::unique_ptr<ToolExecutor> MakeToolExecutor(TypedHandlerPtr typed_handler) {
+  assert(typed_handler != nullptr);
   return std::make_unique<internal::ToolExecutorImpl<Template, TypedHandlerPtr>>(
       std::move(typed_handler));
 }
