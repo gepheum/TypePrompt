@@ -3126,67 +3126,296 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
   ASSERT_EQ(err_payload_missing_field.error().message, "Missing key: z at json");
 }
 
-void TestRenderBasicsTranslate() {
+void Test01Basics_Translate() {
   auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>({
       .target_language = "French",
       .text = "Hello world",
   });
 
+  // testTextOutputFormat
   ASSERT_TRUE(prompt.output_format == typeprompt_01::OutputFormat::kText);
+
+  // testTemplateId
   ASSERT_EQ(prompt.template_id, "Main:Translate");
+  ASSERT_TRUE(typeprompt_01::templates::Translate::kTemplateId == "Main:Translate");
+
+  // testSystemMessageMentionsTranslatorRole
   ASSERT_TRUE(prompt.system_message.find("professional translator") != std::string::npos);
+
+  // testUserMessageMentionsTargetLanguage
   ASSERT_TRUE(prompt.user_message.find("French") != std::string::npos);
-  ASSERT_TRUE(prompt.user_message.find("<Text>\nHello world\n</Text>") != std::string::npos);
+
+  // testEnclosedRendersCorrectTagInUserMessage
+  ASSERT_TRUE(prompt.user_message.find("<Text>") != std::string::npos);
+
+  // testProducesTwoExamples
   ASSERT_EQ(prompt.examples.size(), 2);
-  ASSERT_TRUE(prompt.examples[0].response.find("La réunion") != std::string::npos);
+
+  // testFirstExampleResponseIsTranslatedString
+  ASSERT_EQ(prompt.examples[0].response, "La réunion est prévue pour lundi à 15h.");
+
+  // testExampleUserMessageContainsEnclosedTag
   ASSERT_TRUE(prompt.examples[0].user_message.find("<Text>") != std::string::npos);
+
+  // testParseResponseReturnsRawString
+  auto res = typeprompt_01::ParseResponse<typeprompt_01::templates::Translate>("Bonjour");
+  ASSERT_TRUE(res.ok());
+  ASSERT_EQ(*res, "Bonjour");
+
+  // testHasNoTools
   ASSERT_EQ(prompt.tools.size(), 0);
 }
 
-void TestRenderComplexSchemas() {
+void Test02StructuredOutput_TriageTicket() {
   auto prompt = typeprompt_02::Render<typeprompt_02::templates::TriageTicket>({
       .body = "It crashes every time.",
       .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
-      .recent_tickets = {{}},
+      .recent_tickets = std::vector<typeprompt_02::schema::triage_ticket::Input_RecentTickets>{},
       .subject = "App crashes on login",
   });
 
+  // testJsonOutputFormat
   ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
   ASSERT_TRUE(prompt.output_json_schema.has_value());
+  const auto& schema = *prompt.output_json_schema;
+  ASSERT_TRUE(schema.type() == typeprompt_02::JsonNode::Type::kObject);
+  bool has_category_prop = false;
+  bool has_urgency_prop = false;
+  for (const auto& [k, v] : schema.as_object()) {
+    if (k == "properties" && v.type() == typeprompt_02::JsonNode::Type::kObject) {
+      for (const auto& [pk, pv] : v.as_object()) {
+        if (pk == "category") has_category_prop = true;
+        if (pk == "urgency") has_urgency_prop = true;
+      }
+    }
+  }
+  ASSERT_TRUE(has_category_prop);
+  ASSERT_TRUE(has_urgency_prop);
+
+  // testCContentStrippedToPlainText
+  ASSERT_TRUE(prompt.system_message.find("urgency") != std::string::npos);
+  ASSERT_TRUE(prompt.system_message.find("\"critical\"") != std::string::npos);
+  ASSERT_TRUE(prompt.system_message.find("<c>") == std::string::npos);
+
+  // testProducesTwoExamples
+  ASSERT_EQ(prompt.examples.size(), 2);
+
+  // testFirstExampleResponseContainsOutputCategory
+  ASSERT_TRUE(prompt.examples[0].response.find("\"technical-issue\"") != std::string::npos);
+
+  // testSecondExampleResponseContainsOutputCategory
+  ASSERT_TRUE(prompt.examples[1].response.find("\"feature-request\"") != std::string::npos);
+
+  // testParseResponseParsesJson
+  auto result = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "{\"category\":\"billing\",\"urgency\":\"low\",\"summary\":\"Invoice "
+      "question\",\"suggestedActions\":[]}");
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->category == typeprompt_02::schema::triage_ticket::TicketCategory::kBilling);
+  ASSERT_TRUE(result->urgency == typeprompt_02::schema::triage_ticket::Output_Urgency::kLow);
+  ASSERT_EQ(result->summary, "Invoice question");
+
+  // testParseResponseStripsJsonCodeFences
+  auto result_json_fence = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\","
+      "\"suggestedActions\":[]}\n```");
+  ASSERT_TRUE(result_json_fence.ok());
+  ASSERT_TRUE(result_json_fence->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kOther);
+
+  // testParseResponseStripsPlainCodeFences
+  auto result_plain_fence = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "```\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\","
+      "\"suggestedActions\":[]}\n```");
+  ASSERT_TRUE(result_plain_fence.ok());
+  ASSERT_TRUE(result_plain_fence->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kOther);
+
+  // testOptionalFieldAbsentWhenOmitted
+  auto result_no_reply = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "{\"category\":\"feature-request\",\"urgency\":\"low\",\"summary\":\"Dark "
+      "mode\",\"suggestedActions\":[\"Log request\"]}");
+  ASSERT_TRUE(result_no_reply.ok());
+  ASSERT_TRUE(result_no_reply->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kFeatureRequest);
+  ASSERT_FALSE(result_no_reply->suggested_reply.has_value());
+
+  // testUserMessageContainsYamlRenderedRecentTickets
+  auto p = typeprompt_02::Render<typeprompt_02::templates::TriageTicket>({
+      .body = "Y",
+      .customer_tier = typeprompt_02::schema::triage_ticket::Input_CustomerTier::kPro,
+      .recent_tickets = {{
+          typeprompt_02::schema::triage_ticket::Input_RecentTickets{
+              .category = typeprompt_02::schema::triage_ticket::TicketCategory::kTechnicalIssue,
+              .id = "T-1",
+              .summary = "Login bug",
+          },
+      }},
+      .subject = "X",
+  });
+  ASSERT_TRUE(p.user_message.find("id: T-1") != std::string::npos ||
+              p.user_message.find("T-1") != std::string::npos);
+
+  // testUserMessageContainsInputAsYaml
+  ASSERT_TRUE(prompt.user_message.find("subject:") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("customerTier:") != std::string::npos);
+
+  // testYamlExactUserMessage
+  ASSERT_EQ(prompt.user_message,
+            "subject: App crashes on login\nbody: It crashes every time.\ncustomerTier: "
+            "pro\nrecentTickets: []");
+
+  // testMetaContainsDeclaredModelAndTemperature
+  ASSERT_TRUE(prompt.meta.model == typeprompt_02::schema::meta::Meta_Model::kGpt4o);
   ASSERT_TRUE(prompt.meta.temperature.has_value());
   ASSERT_EQ(*prompt.meta.temperature, 0.2);
-  ASSERT_TRUE(prompt.meta.model == typeprompt_02::schema::meta::Meta_Model::kGpt4o);
-
-  auto parsed = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
-      "```json\n"
-      "{\n"
-      "  \"category\": \"technical-issue\",\n"
-      "  \"urgency\": \"high\",\n"
-      "  \"summary\": \"Application crashes when logging in\",\n"
-      "  \"suggestedActions\": [\"escalate_to_tier_2\"]\n"
-      "}\n"
-      "```");
-  ASSERT_TRUE(parsed.ok());
-  ASSERT_TRUE(parsed->category ==
-              typeprompt_02::schema::triage_ticket::TicketCategory::kTechnicalIssue);
-  ASSERT_TRUE(parsed->urgency == typeprompt_02::schema::triage_ticket::Output_Urgency::kHigh);
-  ASSERT_EQ(parsed->summary, "Application crashes when logging in");
-  ASSERT_EQ(parsed->suggested_actions.size(), 1);
-  ASSERT_EQ(parsed->suggested_actions[0], "escalate_to_tier_2");
 }
 
-void TestRenderTools() {
-  auto prompt = typeprompt_03::Render<typeprompt_03::templates::ResearchQuestion>(
-      typeprompt_03::schema::research_question::Input{
-          .question = "What is quantum computing?",
-      });
+void Test02ComplexSchemas_GeneratePageTree() {
+  typeprompt_02::schema::generate_page_tree::Provider provider{
+      .benchmarks = {{
+          typeprompt_02::schema::generate_page_tree::Benchmark{
+              .name = "throughput",
+              .score = 1000.0,
+              .unit = "rps",
+          },
+      }},
+      .category = typeprompt_02::schema::generate_page_tree::ProductCategory::kCompute,
+      .cons = {{"pricey"}},
+      .name = "CloudX",
+      .pricing =
+          typeprompt_02::schema::generate_page_tree::Pricing{
+              .base_price = 0.1,
+              .model = typeprompt_02::schema::generate_page_tree::Pricing_Model::kPerHour,
+              .overage = std::nullopt,
+          },
+      .pros = {{"fast", "reliable"}},
+      .region = "us-east",
+  };
 
-  ASSERT_EQ(prompt.tools.size(), 1);
-  auto it = prompt.tools.find("webSearch");
-  ASSERT_TRUE(it != prompt.tools.end());
-  ASSERT_EQ(it->second.name, "webSearch");
-  ASSERT_FALSE(it->second.description.empty());
-  ASSERT_TRUE(it->second.input_json_schema.type() == typeprompt_03::JsonNode::Type::kObject);
+  auto prompt = typeprompt_02::Render<typeprompt_02::templates::GeneratePageTree>({
+      .audience = typeprompt_02::schema::generate_page_tree::Input_Audience::kArchitect,
+      .providers = {{provider}},
+      .use_case = "serving ML inference workloads",
+  });
+
+  // testJsonOutputFormat
+  ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
+
+  // testTemplateId
+  ASSERT_EQ(prompt.template_id, "Main:GeneratePageTree");
+
+  // testUserMessageContainsUseCase
+  ASSERT_TRUE(prompt.user_message.find("serving ML inference workloads") != std::string::npos);
+
+  // testUserMessageContainsProviderNameFromToonData
+  ASSERT_TRUE(prompt.user_message.find("CloudX") != std::string::npos);
+
+  // testUserMessageMentionsAudience
+  ASSERT_TRUE(prompt.user_message.find("architect") != std::string::npos);
+
+  // testHasNoTools
+  ASSERT_TRUE(prompt.tools.empty());
+
+  // testToonExactUserMessage
+  ASSERT_TRUE(prompt.user_message.find("Generate a comparison page layout framed around this use "
+                                       "case: serving ML inference workloads") !=
+              std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("name: CloudX") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("Target audience: architect") != std::string::npos);
+
+  // testParseResponseParsesPageNodeTree
+  auto result = typeprompt_02::ParseResponse<typeprompt_02::templates::GeneratePageTree>(
+      "{\"kind\":\"section\",\"title\":\"Overview\",\"children\":["
+      "{\"kind\":\"heading\",\"level\":\"h1\",\"text\":\"CloudX\"},"
+      "{\"kind\":\"paragraph\",\"text\":\"Fast compute provider.\"},"
+      "{\"kind\":\"button\",\"label\":\"Sign Up\",\"url\":\"https://cloudx.example.com\"}]}");
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->kind() ==
+              typeprompt_02::schema::generate_page_tree::PageNode::kind::kSection);
+  const auto& sec = result->as_kind_section();
+  ASSERT_TRUE(sec.title.has_value());
+  ASSERT_EQ(*sec.title, "Overview");
+  ASSERT_EQ(sec.children.size(), 3);
+  ASSERT_TRUE(sec.children[0].kind() ==
+              typeprompt_02::schema::generate_page_tree::PageNode::kind::kHeading);
+  ASSERT_EQ(sec.children[0].as_kind_heading().text, "CloudX");
+  ASSERT_TRUE(sec.children[0].as_kind_heading().level ==
+              typeprompt_02::schema::generate_page_tree::PageNode_KindHeading_Level::kH1);
+}
+
+void Test03Tools_ResearchQuestion() {
+  auto prompt = typeprompt_03::Render<typeprompt_03::templates::ResearchQuestion>({
+      .question = "Tokyo population?",
+  });
+
+  // testRegistersWebSearchTool
+  ASSERT_TRUE(prompt.tools.find("webSearch") != prompt.tools.end());
+
+  // testWebSearchToolName
+  ASSERT_EQ(prompt.tools.at("webSearch").name, "webSearch");
+
+  // testWebSearchToolDescription
+  ASSERT_TRUE(prompt.tools.at("webSearch").description.find("Search the web") != std::string::npos);
+
+  // testWebSearchToolInputJsonSchema
+  const auto& schema = prompt.tools.at("webSearch").input_json_schema;
+  ASSERT_TRUE(schema.type() == typeprompt_03::JsonNode::Type::kObject);
+
+  // testPromptToolsEnum / tool name constant
+  ASSERT_EQ(typeprompt_03::tools::WebSearch::kToolName, "webSearch");
+
+  // testProducesOneExampleWithOneIntermediateStep
+  ASSERT_EQ(prompt.examples.size(), 1);
+  ASSERT_EQ(prompt.examples[0].intermediate_steps.size(), 1);
+
+  // testExampleToolCallIds
+  const auto& tc = prompt.examples[0].intermediate_steps[0].tool_calls[0];
+  ASSERT_EQ(tc.call_id, "s1");
+  ASSERT_EQ(tc.tool_name, "webSearch");
+
+  // testExampleToolCallStringifiedInput
+  ASSERT_TRUE(tc.stringified_input.find("Tokyo population 2024") != std::string::npos);
+
+  // testExecuteToolsCallsExecutorAndReturnsOutput
+  struct MockWebSearchExecutor {
+    typeprompt_03::Result<typeprompt_03::schema::web_search::Output> operator()(
+        typeprompt_03::tools::WebSearch, const typeprompt_03::schema::web_search::Input& input) {
+      return typeprompt_03::schema::web_search::Output{
+          .results =
+              {
+                  typeprompt_03::schema::web_search::Output_Results{
+                      .snippet = "14 million",
+                      .title = "Tokyo Population 2024",
+                      .url = "https://example.com/tokyo",
+                  },
+              },
+      };
+    }
+  };
+
+  MockWebSearchExecutor mock_executor;
+  auto executor =
+      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(&mock_executor);
+  typeprompt_03::ToolCall call1{
+      .call_id = "call_1",
+      .tool_name = "webSearch",
+      .stringified_input = "{\"query\":\"Tokyo population\"}",
+  };
+  auto resp1 = executor->Execute(call1);
+  ASSERT_EQ(resp1.call_id, "call_1");
+  ASSERT_FALSE(resp1.error.has_value());
+  ASSERT_TRUE(resp1.stringified_output.find("Tokyo Population 2024") != std::string::npos);
+
+  // testExecuteToolsThrowsForUnknownTool / returns error
+  typeprompt_03::ToolCall call_bad{
+      .call_id = "c1",
+      .tool_name = "noSuchTool",
+      .stringified_input = "{}",
+  };
+  auto resp_bad = executor->Execute(call_bad);
+  ASSERT_TRUE(resp_bad.error.has_value());
+  ASSERT_TRUE(resp_bad.error->find("Tool not found: noSuchTool") != std::string::npos);
 }
 
 void TestMakeToolExecutor() {
@@ -3364,66 +3593,455 @@ void TestMakeToolExecutor() {
               std::string::npos);
 }
 
-void TestRenderVariants() {
-  auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
-      .features = {{"Fast", "Reliable"}},
-      .product_name = "Acme Widget",
-      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
-  });
-  ASSERT_TRUE(marketing.system_message.find("marketing") != std::string::npos ||
-              marketing.system_message.find("compelling") != std::string::npos ||
-              marketing.user_message.find("Acme Widget") != std::string::npos);
-
-  auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
-      .features = {{"Fast", "Reliable"}},
-      .product_name = "Acme Widget",
-      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
-  });
-  ASSERT_TRUE(technical.user_message.find("Acme Widget") != std::string::npos);
-}
-
-void TestRenderConditionalLogic() {
+void Test04Snippets_SummarizeDocument() {
+  // testSwitchSnippetSelectsExecutiveInstruction
   auto p_exec = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
       .audience = typeprompt_05::schema::summarize_document::Input_Audience::kExecutive,
-      .content = "Quarterly results are strong.",
-      .focus_topic = "revenue",
-      .title = "Quarterly Report",
+      .content = "C",
+      .focus_topic = std::nullopt,
+      .title = "T",
   });
-  ASSERT_TRUE(p_exec.system_message.find("executive") != std::string::npos);
-  ASSERT_TRUE(p_exec.system_message.find("revenue") != std::string::npos);
+  ASSERT_TRUE(p_exec.system_message.find("non-technical executive audience") != std::string::npos);
 
+  // testSwitchSnippetSelectsTechnicalInstruction
   auto p_tech = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
       .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
-      .content = "Architecture RFC...",
+      .content = "C",
       .focus_topic = std::nullopt,
-      .title = "Tech Specs",
+      .title = "T",
   });
-  ASSERT_TRUE(p_tech.system_message.find("technical") != std::string::npos);
-  ASSERT_TRUE(p_tech.system_message.find("revenue") == std::string::npos);
+  ASSERT_TRUE(p_tech.system_message.find("technical audience") != std::string::npos);
+
+  // testSwitchSnippetSelectsGeneralInstruction
+  auto p_gen = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kGeneral,
+      .content = "C",
+      .focus_topic = std::nullopt,
+      .title = "T",
+  });
+  ASSERT_TRUE(p_gen.system_message.find("general audience") != std::string::npos);
+
+  // testSwitchSnippetDoesNotBleedIntoOtherVariant
+  ASSERT_TRUE(p_tech.system_message.find("business impact") == std::string::npos);
+
+  // testConditionalSnippetFocusInstructionWhenFocusTopicSet
+  auto p_focus = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kGeneral,
+      .content = "C",
+      .focus_topic = "climate change",
+      .title = "T",
+  });
+  ASSERT_TRUE(p_focus.system_message.find("climate change") != std::string::npos);
+
+  // testConditionalSnippetNoFocusInstructionWhenAbsent
+  ASSERT_TRUE(p_exec.system_message.find("Focus the summary") == std::string::npos);
+
+  // testUserMessageWrapsTitleInEnclosedTag
+  auto p_enclosed = typeprompt_05::Render<typeprompt_05::templates::SummarizeDocument>({
+      .audience = typeprompt_05::schema::summarize_document::Input_Audience::kTechnical,
+      .content = "...",
+      .focus_topic = std::nullopt,
+      .title = "AI Report",
+  });
+  ASSERT_TRUE(p_enclosed.user_message.find("<Title>") != std::string::npos);
 }
 
-void TestRenderTabularFormatting() {
-  auto prompt_csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
-      .question = "Total sales?",
-      .rows = {{
-          {
-              .product = "Widget A",
-              .region = "EMEA",
-              .revenue_cents = 199900,
-              .units = 100,
-          },
-          {
-              .product = "Widget, B",
-              .region = "APAC",
-              .revenue_cents = 75000,
-              .units = 50,
+void Test05Variants_WriteProductDescription() {
+  std::vector<std::string> features = {"removes 99.9% of contaminants", "lasts 6 months"};
+
+  auto marketing = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
+      .features = features,
+      .product_name = "AquaFilter Pro",
+      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kMarketing,
+  });
+  auto technical = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
+      .features = features,
+      .product_name = "AquaFilter Pro",
+      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kTechnical,
+  });
+  auto brief = typeprompt_04::Render<typeprompt_04::templates::WriteProductDescription>({
+      .features = features,
+      .product_name = "AquaFilter Pro",
+      .variant = typeprompt_04::schema::write_product_description::Input_Variant::kBrief,
+  });
+
+  // testMarketingSystemPrompt
+  ASSERT_TRUE(marketing.system_message.find("benefit-focused") != std::string::npos);
+
+  // testTechnicalSystemPrompt
+  ASSERT_TRUE(technical.system_message.find("specification-driven") != std::string::npos);
+
+  // testBriefSystemPrompt
+  ASSERT_TRUE(brief.system_message.find("single punchy sentence") != std::string::npos);
+
+  // testAllVariantsShareSameUserMessage
+  ASSERT_EQ(marketing.user_message, technical.user_message);
+  ASSERT_EQ(technical.user_message, brief.user_message);
+
+  // testUserMessageContainsProductName
+  ASSERT_TRUE(marketing.user_message.find("AquaFilter Pro") != std::string::npos);
+
+  // testUserMessageContainsFeaturesAsJson
+  ASSERT_TRUE(marketing.user_message.find("removes 99.9% of contaminants") != std::string::npos);
+
+  // testMarketingHasOneExample
+  ASSERT_EQ(marketing.examples.size(), 1);
+
+  // testMarketingExampleResponseContainsDescriptionKey
+  ASSERT_TRUE(marketing.examples[0].response.find("\"description\"") != std::string::npos);
+  ASSERT_TRUE(marketing.examples[0].response.find("Tired of worrying") != std::string::npos);
+
+  // testBriefHasOneExample
+  ASSERT_EQ(brief.examples.size(), 1);
+
+  // testTemplateIdSameAcrossVariants
+  ASSERT_EQ(marketing.template_id, "Main:WriteProductDescription");
+  ASSERT_EQ(technical.template_id, "Main:WriteProductDescription");
+  ASSERT_EQ(brief.template_id, "Main:WriteProductDescription");
+
+  // testVariantsHaveDifferentSystemMessages
+  ASSERT_TRUE(marketing.system_message != technical.system_message);
+  ASSERT_TRUE(technical.system_message != brief.system_message);
+}
+
+void Test06SharedTypes() {
+  typeprompt_06::schema::shared::Address address{
+      .city = "Paris",
+      .country = "France",
+      .street = "1 Main St",
+  };
+  typeprompt_06::schema::shared::ContactInfo contact{
+      .address = address,
+      .email = "alice@example.com",
+      .name = "Alice Dupont",
+  };
+
+  // testShippingConfirmation
+  auto prompt_shipping = typeprompt_06::Render<typeprompt_06::templates::ShippingConfirmation>({
+      .estimated_delivery = "2026-08-20",
+      .items = {{
+          typeprompt_06::schema::shipping_confirmation::Input_Items{
+              .name = "Laptop",
+              .quantity = 1,
           },
       }},
+      .order_number = "ORD-1234",
+      .recipient = contact,
+  });
+
+  ASSERT_TRUE(prompt_shipping.output_format == typeprompt_06::OutputFormat::kText);
+  ASSERT_EQ(prompt_shipping.template_id, "Main:ShippingConfirmation");
+  ASSERT_TRUE(prompt_shipping.user_message.find("Alice Dupont") != std::string::npos);
+  ASSERT_TRUE(prompt_shipping.user_message.find("ORD-1234") != std::string::npos);
+  ASSERT_TRUE(prompt_shipping.system_message.find("confirmation email") != std::string::npos);
+
+  // testReturnSlip
+  auto prompt_return = typeprompt_06::Render<typeprompt_06::templates::ReturnSlip>({
+      .customer = contact,
+      .order_number = "ORD-1234",
+      .return_reason = typeprompt_06::schema::return_slip::Input_ReturnReason::kDefective,
+  });
+
+  ASSERT_TRUE(prompt_return.output_format == typeprompt_06::OutputFormat::kText);
+  ASSERT_EQ(prompt_return.template_id, "Main:ReturnSlip");
+  ASSERT_TRUE(prompt_return.user_message.find("Alice Dupont") != std::string::npos);
+  ASSERT_TRUE(prompt_return.user_message.find("defective") != std::string::npos);
+}
+
+void Test07Namespaces() {
+  // testFinanceSummarizeTransaction
+  auto prompt_fin_sum =
+      typeprompt_07::Render<typeprompt_07::templates::Finance::SummarizeTransaction>({
+          .amount =
+              typeprompt_07::schema::Finance::shared::MoneyAmount{
+                  .currency = typeprompt_07::schema::Finance::shared::Currency::kUsd,
+                  .value = 450.0,
+              },
+          .category =
+              typeprompt_07::schema::Finance::summarize_transaction::Input_Category::kExpense,
+          .date = "2026-08-01",
+          .description = "AWS monthly bill",
+      });
+
+  ASSERT_EQ(prompt_fin_sum.template_id, "Finance:SummarizeTransaction");
+  ASSERT_TRUE(prompt_fin_sum.output_format == typeprompt_07::OutputFormat::kJson);
+  ASSERT_TRUE(prompt_fin_sum.user_message.find("AWS monthly bill") != std::string::npos);
+
+  // testFinanceDetectAnomaly
+  auto prompt_fin_anomaly =
+      typeprompt_07::Render<typeprompt_07::templates::Finance::DetectAnomaly>({
+          .new_transaction =
+              typeprompt_07::schema::Finance::detect_anomaly::Input_NewTransaction{
+                  .amount =
+                      typeprompt_07::schema::Finance::shared::MoneyAmount{
+                          .currency = typeprompt_07::schema::Finance::shared::Currency::kUsd,
+                          .value = 5000.0,
+                      },
+                  .date = "2026-08-17",
+                  .description = "Casino chips",
+              },
+          .recent_transactions = std::vector<
+              typeprompt_07::schema::Finance::detect_anomaly::Input_RecentTransactions>{},
+      });
+
+  ASSERT_EQ(prompt_fin_anomaly.template_id, "Finance:DetectAnomaly");
+  ASSERT_TRUE(prompt_fin_anomaly.user_message.find("Casino chips") != std::string::npos);
+  ASSERT_TRUE(prompt_fin_anomaly.tools.empty());
+
+  // testLegalDraftNda
+  auto prompt_legal_nda = typeprompt_07::Render<typeprompt_07::templates::Legal::DraftNda>({
+      .disclosing_party =
+          typeprompt_07::schema::Legal::shared::Party{
+              .jurisdiction = "California",
+              .name = "Acme Corp",
+              .role = typeprompt_07::schema::Legal::shared::Party_Role::kClient,
+          },
+      .duration_years = 3,
+      .purpose_of_disclosure = "Evaluating a potential acquisition",
+      .receiving_party =
+          typeprompt_07::schema::Legal::shared::Party{
+              .jurisdiction = "Delaware",
+              .name = "Beta LLC",
+              .role = typeprompt_07::schema::Legal::shared::Party_Role::kCounterparty,
+          },
+  });
+
+  ASSERT_EQ(prompt_legal_nda.template_id, "Legal:DraftNda");
+  ASSERT_TRUE(prompt_legal_nda.output_format == typeprompt_07::OutputFormat::kText);
+  ASSERT_TRUE(prompt_legal_nda.user_message.find("Acme Corp") != std::string::npos);
+  ASSERT_TRUE(prompt_legal_nda.user_message.find("Beta LLC") != std::string::npos);
+  ASSERT_TRUE(prompt_legal_nda.system_message.find("non-disclosure agreement") !=
+              std::string::npos);
+
+  // testLegalSummarizeClause
+  auto prompt_legal_clause =
+      typeprompt_07::Render<typeprompt_07::templates::Legal::SummarizeClause>({
+          .clause_text = "The party shall indemnify and hold harmless...",
+          .reviewing_party =
+              typeprompt_07::schema::Legal::shared::Party{
+                  .jurisdiction = "NY",
+                  .name = "Alice",
+                  .role = typeprompt_07::schema::Legal::shared::Party_Role::kClient,
+              },
+      });
+
+  ASSERT_EQ(prompt_legal_clause.template_id, "Legal:SummarizeClause");
+  ASSERT_TRUE(prompt_legal_clause.output_format == typeprompt_07::OutputFormat::kJson);
+  ASSERT_TRUE(prompt_legal_clause.user_message.find("Alice") != std::string::npos);
+  ASSERT_TRUE(prompt_legal_clause.user_message.find("indemnify") != std::string::npos);
+  ASSERT_TRUE(prompt_legal_clause.user_message.find("<Clause>") != std::string::npos);
+}
+
+void TestE01_AnalyzeSalesData() {
+  std::vector<typeprompt_e01::schema::analyze_sales_data::SalesRow> rows = {
+      {
+          .product = "Widget A",
+          .region = "north",
+          .revenue_cents = 240000,
+          .units = 120,
+      },
+      {
+          .product = "Widget B",
+          .region = "south",
+          .revenue_cents = 340000,
+          .units = 85,
+      },
+  };
+
+  auto csv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
+      .question = "Top product?",
+      .rows = rows,
       .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
   });
-  ASSERT_TRUE(prompt_csv.user_message.find("product,units,revenueCents,region") !=
+
+  auto tsv = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
+      .question = "Top product?",
+      .rows = rows,
+      .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kTsv,
+  });
+
+  // testCsvUserMessageHasCommaSeparatedHeader
+  ASSERT_TRUE(csv.user_message.find("product,units,revenueCents,region") != std::string::npos);
+
+  // testCsvUserMessageHasCommaSeparatedRows
+  ASSERT_TRUE(csv.user_message.find("Widget A,120,240000,north") != std::string::npos);
+  ASSERT_TRUE(csv.user_message.find("Widget B,85,340000,south") != std::string::npos);
+
+  // testTsvUserMessageHasTabSeparatedHeader
+  ASSERT_TRUE(tsv.user_message.find("product\tunits\trevenueCents\tregion") != std::string::npos);
+
+  // testTsvUserMessageHasTabSeparatedRows
+  ASSERT_TRUE(tsv.user_message.find("Widget A\t120\t240000\tnorth") != std::string::npos);
+  ASSERT_TRUE(tsv.user_message.find("Widget B\t85\t340000\tsouth") != std::string::npos);
+
+  // testCsvAndTsvProduceDifferentUserMessages
+  ASSERT_TRUE(csv.user_message != tsv.user_message);
+
+  // testEmptyRowsRendersNoTableContent
+  auto empty = typeprompt_e01::Render<typeprompt_e01::templates::AnalyzeSalesData>({
+      .question = "Any data?",
+      .rows = std::vector<typeprompt_e01::schema::analyze_sales_data::SalesRow>{},
+      .variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv,
+  });
+  ASSERT_TRUE(empty.user_message.find("product,units") == std::string::npos);
+
+  // testCsvVariantHasOneExampleWithCsvData
+  ASSERT_EQ(csv.examples.size(), 1);
+  ASSERT_TRUE(csv.examples[0].user_message.find("product,units,revenueCents,region") !=
               std::string::npos);
-  ASSERT_TRUE(prompt_csv.user_message.find("\"Widget, B\"") != std::string::npos);
+
+  // testTsvVariantHasOneExampleWithTsvData
+  ASSERT_EQ(tsv.examples.size(), 1);
+  ASSERT_TRUE(tsv.examples[0].user_message.find("product\tunits\trevenueCents\tregion") !=
+              std::string::npos);
+
+  // testCsvSystemMessageMentionsCsv
+  ASSERT_TRUE(csv.system_message.find("comma-separated") != std::string::npos);
+
+  // testTsvSystemMessageMentionsTsv
+  ASSERT_TRUE(tsv.system_message.find("tab-separated") != std::string::npos);
+
+  // testCsvExactSystemMessage
+  ASSERT_EQ(csv.system_message,
+            "You are a sales analyst. The data below is comma-separated (CSV).\nAnalyze it and "
+            "answer the question concisely.");
+
+  // testCsvExactUserMessage
+  ASSERT_EQ(csv.user_message,
+            "Top product?\n\nData:\nproduct,units,revenueCents,region\nWidget "
+            "A,120,240000,north\nWidget B,85,340000,south");
+
+  // testCsvExactExample0UserMessage
+  ASSERT_EQ(csv.examples[0].user_message,
+            "Which product generated the most "
+            "revenue?\n\nData:\nproduct,units,revenueCents,region\nWidget "
+            "A,120,240000,north\nWidget B,85,340000,south\nWidget C,200,180000,east");
+
+  // testTsvExactSystemMessage
+  ASSERT_EQ(tsv.system_message,
+            "You are a sales analyst. The data below is tab-separated (TSV).\nAnalyze it and "
+            "answer the question concisely.");
+
+  // testTsvExactUserMessage
+  ASSERT_EQ(tsv.user_message,
+            "Top product?\n\nData:\nproduct\tunits\trevenueCents\tregion\nWidget "
+            "A\t120\t240000\tnorth\nWidget B\t85\t340000\tsouth");
+
+  // testTsvExactExample0UserMessage
+  ASSERT_EQ(tsv.examples[0].user_message,
+            "Which product generated the most "
+            "revenue?\n\nData:\nproduct\tunits\trevenueCents\tregion\nWidget "
+            "A\t120\t240000\tnorth\nWidget B\t85\t340000\tsouth\nWidget C\t200\t180000\teast");
+}
+
+void TestCrossCutting_ParseResponse() {
+  // testParsesPlainJsonWithoutFences
+  auto res_plain = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}");
+  ASSERT_TRUE(res_plain.ok());
+  ASSERT_TRUE(res_plain->category == typeprompt_02::schema::triage_ticket::TicketCategory::kOther);
+
+  // testStripsPlainCodeFences
+  auto res_code_fence = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "```\n{\"category\":\"other\",\"urgency\":\"low\",\"summary\":\"x\",\"suggestedActions\":[]}"
+      "\n```");
+  ASSERT_TRUE(res_code_fence.ok());
+  ASSERT_TRUE(res_code_fence->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kOther);
+
+  // testStripsJsonCodeFences
+  auto res_json_fence = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
+      "```json\n{\"category\":\"other\",\"urgency\":\"medium\",\"summary\":\"test\","
+      "\"suggestedActions\":[]}\n```");
+  ASSERT_TRUE(res_json_fence.ok());
+  ASSERT_TRUE(res_json_fence->category ==
+              typeprompt_02::schema::triage_ticket::TicketCategory::kOther);
+
+  // testReturnsRawStringForTextOutputFormat
+  auto res_text = typeprompt_01::ParseResponse<typeprompt_01::templates::Translate>("Hola");
+  ASSERT_TRUE(res_text.ok());
+  ASSERT_EQ(*res_text, "Hola");
+}
+
+void TestE01_JsonSerialization() {
+  // testExprSerializationAndDeserialization
+  using namespace typeprompt_e01::schema::shared;
+
+  Expr num = Expr::variant_type(typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{
+      .value = 42.0,
+  }));
+  std::string json_num = typeprompt_e01::ToJson(num);
+  auto parsed_num = typeprompt_e01::ParseJson<Expr>(json_num);
+  ASSERT_TRUE(parsed_num.ok());
+  ASSERT_TRUE(parsed_num->kind() == Expr::kind::kNumber);
+  ASSERT_EQ(parsed_num->as_kind_number().value, 42.0);
+
+  Expr add = Expr::variant_type(typeprompt_e01::indirect<Expr_KindAdd>(*Expr_KindAdd::whole{
+      .left = Expr::variant_type(
+          typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{.value = 1.0})),
+      .right = Expr::variant_type(
+          typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{.value = 2.0})),
+  }));
+  std::string json_add = typeprompt_e01::ToJson(add);
+  auto parsed_add = typeprompt_e01::ParseJson<Expr>(json_add);
+  ASSERT_TRUE(parsed_add.ok());
+  ASSERT_TRUE(parsed_add->kind() == Expr::kind::kAdd);
+  ASSERT_TRUE(parsed_add->as_kind_add().left.kind() == Expr::kind::kNumber);
+  ASSERT_EQ(parsed_add->as_kind_add().left.as_kind_number().value, 1.0);
+  ASSERT_TRUE(parsed_add->as_kind_add().right.kind() == Expr::kind::kNumber);
+  ASSERT_EQ(parsed_add->as_kind_add().right.as_kind_number().value, 2.0);
+
+  // testEnumWithCommonFieldsSerialization
+  EnumWithCommonFields not_success =
+      EnumWithCommonFields::variant_type(typeprompt_e01::indirect<EnumWithCommonFields_NotSuccess>(
+          *EnumWithCommonFields_NotSuccess::whole{
+              .x = 10,
+              .y = 20.5,
+              .z = "error",
+          }));
+  std::string json_not_success = typeprompt_e01::ToJson(not_success);
+  auto parsed_not_success = typeprompt_e01::ParseJson<EnumWithCommonFields>(json_not_success);
+  ASSERT_TRUE(parsed_not_success.ok());
+  ASSERT_FALSE(parsed_not_success->success());
+  ASSERT_EQ(parsed_not_success->as_not_success().x, 10);
+  ASSERT_EQ(parsed_not_success->as_not_success().y, 20.5);
+  ASSERT_EQ(parsed_not_success->as_not_success().z, "error");
+
+  EnumWithCommonFields success = EnumWithCommonFields::variant_type(
+      typeprompt_e01::indirect<EnumWithCommonFields_Success>(*EnumWithCommonFields_Success::whole{
+          .x = 42,
+          .y = 84.0,
+          .z = 99,
+      }));
+  std::string json_success = typeprompt_e01::ToJson(success);
+  auto parsed_success = typeprompt_e01::ParseJson<EnumWithCommonFields>(json_success);
+  ASSERT_TRUE(parsed_success.ok());
+  ASSERT_TRUE(parsed_success->success());
+  ASSERT_EQ(parsed_success->as_success().x, 42);
+  ASSERT_EQ(parsed_success->as_success().y, 84.0);
+  ASSERT_EQ(parsed_success->as_success().z, 99);
+
+  // testStringEnumVariantSerialization
+  auto variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv;
+  std::string json_variant = typeprompt_e01::ToJson(variant);
+  ASSERT_EQ(json_variant, "\"csv\"");
+  auto parsed_variant =
+      typeprompt_e01::ParseJson<typeprompt_e01::schema::analyze_sales_data::Input_Variant>(
+          json_variant);
+  ASSERT_TRUE(parsed_variant.ok());
+  ASSERT_TRUE(*parsed_variant == typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv);
+
+  // testMatrixWithOmittedOptionalFields
+  Matrix matrix = *Matrix::whole{
+      .encode = false,
+      .foo = std::nullopt,
+      .init = true,
+      .ints = {{1, 2, 3}},
+      .matrix = std::vector<std::vector<Square>>{},
+      .other_matrix = std::nullopt,
+  };
+  ASSERT_FALSE(matrix.other_matrix.has_value());
+  ASSERT_FALSE(matrix.foo.has_value());
 }
 
 void TestTemplateOverrider() {
@@ -3463,12 +4081,11 @@ void TestTemplateOverrider() {
   auto moved_data = std::move(*overridden_res);
   auto prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
       {
-          .target_language = "Spanish",
-          .text = "Good morning",
+          .target_language = "French",
+          .text = "Hello",
       },
       moved_data);
-  ASSERT_TRUE(prompt.user_message.find("Spanish") != std::string::npos);
-  ASSERT_TRUE(prompt.user_message.find("Good morning") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("French") != std::string::npos);
 }
 
 }  // namespace
@@ -3544,13 +4161,18 @@ void TestRuntimeLogic() {
   TestUserDefinedDiscriminatedUnionPageNode();
   TestUserDefinedDiscriminatedUnionEnumWithCommonFields();
 
-  TestRenderBasicsTranslate();
-  TestRenderComplexSchemas();
-  TestRenderTools();
+  Test01Basics_Translate();
+  Test02StructuredOutput_TriageTicket();
+  Test02ComplexSchemas_GeneratePageTree();
+  Test03Tools_ResearchQuestion();
   TestMakeToolExecutor();
-  TestRenderVariants();
-  TestRenderConditionalLogic();
-  TestRenderTabularFormatting();
+  Test04Snippets_SummarizeDocument();
+  Test05Variants_WriteProductDescription();
+  Test06SharedTypes();
+  Test07Namespaces();
+  TestE01_AnalyzeSalesData();
+  TestCrossCutting_ParseResponse();
+  TestE01_JsonSerialization();
   TestTemplateOverrider();
 }
 

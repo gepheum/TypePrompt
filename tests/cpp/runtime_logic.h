@@ -3695,7 +3695,7 @@ class Renderer {
       }
       return result;
     } else {
-      return ParseJson<typename Template::output_type>(response);
+      return std::string(response);
     }
   }
 
