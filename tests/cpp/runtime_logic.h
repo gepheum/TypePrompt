@@ -31,27 +31,32 @@
 //   using ::typeprompt::MakeToolExecutor;
 //   using ::typeprompt::ParseResponse;
 //   using ::typeprompt::Render;
-//   using ::typeprompt::templates::Greet;
 //
+//   using Template = ::typeprompt::templates::Greet;
 //   auto prompt = Render<Template>({ .name = "Luke" });
 //   auto tool_executor = MakeToolExecutor<Template>();
 //   auto response = ExecutePrompt(prompt, *tool_executor);
 //
 //   if (response.ok()) {
-//     auto parse_result = ParseResponse<Template>(response);
+//     auto parse_result = ParseResponse<Template>(*response);
 //     if (parse_result.ok()) {
 //       std::cout << parse_result->greeting;
 //     } else {
-//       // Handle parse_result.error();
+//       // Model output failed schema validation.
+//       // Handle 'parse_result.error()'
 //     }
 //   } else {
-//     // Handle response.error();
+//     // LLM invocation or tool execution failed.
+//     // Handle 'response.error()'
 //   }
+//
 //
 // For templates with tools, define a typed executor and pass it to MakeToolExecutor:
 //
 //   struct MyExecutor {
-//     typeprompt::Result<schema::web_search::Output> operator()(
+//     // Define one overload of operator() for each tool registered in the template
+//
+//     Result<schema::web_search::Output> operator()(
 //         tools::WebSearch,
 //         const schema::web_search::Input& input) {
 //       const std::string& query = input.query;
