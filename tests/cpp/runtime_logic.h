@@ -3394,10 +3394,10 @@ struct ToolCallResponse {
 
 /// Type-erased interface for executing LLM-requested tool calls.
 ///
-/// See `ToolExecutor` for the templated implementation.
-class ToolExecutorInterface {
+/// Use `MakeToolExecutor` to construct an instance bound to a specific prompt template.
+class ToolExecutor {
  public:
-  virtual ~ToolExecutorInterface() = default;
+  virtual ~ToolExecutor() = default;
 
   /// Executes a single tool call requested by an LLM.
   ///
@@ -3415,41 +3415,14 @@ constexpr void for_each_type(F&& f) {
     (f(std::type_identity<std::tuple_element_t<Is, Tuple>>{}), ...);
   }(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
 }
-}  // namespace internal
 
-/// A typed tool executor adapter implementing `ToolExecutorInterface`.
-///
-/// Binds a specific prompt template struct (e.g. `templates::ResearchQuestion`)
-/// to a user-provided handler pointer or smart pointer (`TypedHandlerPtr`).
-///
-/// The handler object must implement an overloaded `operator()` for each tool
-/// declared in the template's `tools_type`:
-///
-/// ```cpp
-/// struct MyToolHandler {
-///   typeprompt::Result<schema::web_search::Output> operator()(
-///       tools::WebSearch,
-///       const schema::web_search::Input& input) {
-///     // Implementation...
-///     return schema::web_search::Output{ ... };
-///   }
-/// };
-/// ```
-///
-/// \tparam Template The template struct generated in the `templates` namespace.
-/// \tparam TypedHandlerPtr Pointer or smart pointer (e.g., `MyHandler*`,
-/// `std::shared_ptr<MyHandler>`) to an instance implementing the tool call operator overloads.
 template <typename Template, typename TypedHandlerPtr>
-class ToolExecutor : public ToolExecutorInterface {
+class ToolExecutorImpl : public ToolExecutor {
  public:
-  /// Constructs a tool executor adapter wrapping the given typed handler pointer.
-  ///
-  /// \param typed_handler Pointer or smart pointer to the typed tool handler. Must not be null.
-  ToolExecutor(TypedHandlerPtr typed_handler) : typed_handler_(std::move(typed_handler)) {
+  ToolExecutorImpl(TypedHandlerPtr typed_handler) : typed_handler_(std::move(typed_handler)) {
     assert(typed_handler != nullptr);
   }
 
-  /// Deserializes input arguments, executes the matching tool handler, and returns the response.
   ToolCallResponse Execute(const ToolCall& tool_call) override {
     using tools_type = typename Template::tools_type;
     std::optional<Result<ToolCallResponse>> result;
@@ -3493,6 +3466,38 @@ class ToolExecutor : public ToolExecutorInterface {
  private:
   const TypedHandlerPtr typed_handler_;
 };
+}  // namespace internal
+
+/// Creates a `ToolExecutor` bound to a specific prompt template and typed tool handler.
+///
+/// The handler object must implement an overloaded `operator()` for each tool
+/// declared in the template's `tools_type`:
+///
+/// ```cpp
+/// struct MyToolHandler {
+///   typeprompt::Result<schema::web_search::Output> operator()(
+///       tools::WebSearch,
+///       const schema::web_search::Input& input) {
+///     // Implementation...
+///     return schema::web_search::Output{ ... };
+///   }
+/// };
+///
+/// MyToolHandler handler;
+/// auto executor = MakeToolExecutor<templates::ResearchQuestion>(&handler);
+/// ```
+///
+/// \tparam Template The template struct generated in the `templates` namespace (e.g.
+/// `templates::ResearchQuestion`).
+/// \tparam TypedHandlerPtr Pointer or smart pointer (e.g., `MyHandler*`,
+/// `std::shared_ptr<MyHandler>`) to an instance implementing the tool call operator overloads.
+/// \param typed_handler Pointer or smart pointer to the typed tool handler. Must not be null.
+/// \return A std::unique_ptr<ToolExecutor> executing tool calls for the template.
+template <typename Template, typename TypedHandlerPtr>
+std::unique_ptr<ToolExecutor> MakeToolExecutor(TypedHandlerPtr typed_handler) {
+  return std::make_unique<internal::ToolExecutorImpl<Template, TypedHandlerPtr>>(
+      std::move(typed_handler));
+}
 
 namespace internal {
 class Renderer {
