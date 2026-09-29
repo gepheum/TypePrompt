@@ -8,42 +8,53 @@
 //
 // ## Usage
 //
-// Build a prompt from one of your templates:
-//
-//   auto prompt = typeprompt::Render<typeprompt::templates::Greet>({
-//       .name = "Luke",
-//   });
-//
-// A Prompt bundles everything your LLM request needs: the resolved system
-// message, user message, few-shot examples, available tools, and output format.
-// Wire it to your LLM API with a helper such as:
+// 1. Wire a runner helper to your LLM API:
 //
 //   std::string ExecutePrompt(const typeprompt::Prompt& prompt,
-//                             const typeprompt::ToolExecutor& tool_executor) {
-//     // Build and send the API request using prompt.system_message,
-//     // prompt.user_message, prompt.examples, and prompt.tools.
+//                             typeprompt::ToolExecutor& tool_executor) {
+//     // Send prompt.system_message, prompt.user_message, prompt.examples,
+//     // and prompt.tools to your LLM provider.
 //     //
-//     // When the model requests tool calls, execute them:
-//     //   typeprompt::ToolCallResponse tool_response =
+//     // When the model produces tool calls, execute them:
+//     //   typeprompt::ToolCallResponse response =
 //     //       tool_executor.Execute(tool_call);
 //     //
-//     // Repeat until the model produces a final response:
+//     // Repeat until the model finishes and returns a text response:
 //     return model_response;
 //   }
 //
-// Then call it:
+// 2. Render, execute, and parse:
 //
 //   using Template = typeprompt::templates::Greet;
 //
-//   const auto tool_executor =
-//       typeprompt::MakeToolExecutor<Template>(std::make_unique<TypedExecutor>());
-//   const std::string response = ExecutePrompt(prompt, *tool_executor);
+//   auto prompt = typeprompt::Render<Template>({
+//       .name = "Luke",
+//   });
+//   auto tool_executor = typeprompt::MakeToolExecutor<Template>();
+//   std::string response = ExecutePrompt(prompt, *tool_executor);
+//
 //   auto result = typeprompt::ParseResponse<Template>(response);
 //   if (result.ok()) {
 //     std::cout << result->greeting;
 //   } else {
 //     throw std::runtime_error(result.error().message);
 //   }
+//
+// For templates with tools, define a typed executor and pass it to MakeToolExecutor:
+//
+//   struct MyExecutor {
+//     typeprompt::Result<schema::web_search::Output> operator()(
+//         tools::WebSearch,
+//         const schema::web_search::Input& input) {
+//       const std::string& query = input.query;
+//       // Execute tool logic...
+//       return schema::web_search::Output{ ... };
+//     }
+//   };
+//
+//   MyExecutor my_executor;
+//   auto tool_executor =
+//       typeprompt::MakeToolExecutor<templates::ResearchQuestion>(&my_executor);
 
 #include <algorithm>
 #include <cassert>
