@@ -32,6 +32,9 @@
 // Then call it:
 //
 //   val output = executePrompt(prompt, NoTools)
+//
+// Integration guide:
+//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/kotlin.md
 
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @file:Suppress("ktlint")
@@ -241,7 +244,8 @@ internal object Spec {
     @Serializable(with = TemplateContents_Serializer::class)
     sealed interface TemplateContents
 
-    private object TemplateContents_Serializer : JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
+    private object TemplateContents_Serializer :
+        JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<TemplateContents> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "no-variants" -> TemplateContents_KindNoVariants.serializer()

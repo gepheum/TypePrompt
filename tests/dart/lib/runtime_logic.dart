@@ -34,6 +34,9 @@
 // Then call it:
 //
 //   final output = await executePrompt(prompt, noTools);
+//
+// Integration guide:
+//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/dart.md
 // </static:dart-top-level>
 
 // <static:dart-imports>

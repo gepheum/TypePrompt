@@ -69,6 +69,9 @@
 //
 //   MyExecutor my_executor;
 //   auto tool_executor = MakeToolExecutor<Template>(&my_executor);
+//
+// Integration guide:
+//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/cpp.md
 
 #include <algorithm>
 #include <cassert>

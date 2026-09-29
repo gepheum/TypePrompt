@@ -42,6 +42,9 @@ import { AssertSatisfies } from "../../../src/util/static-assert.js";
  * ```ts
  *   const output = await executePrompt(prompt, {});
  * ```
+//
+// Integration guide:
+//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/typescript.md
  */
 
 import { encode as encodeToon } from "@toon-format/toon";

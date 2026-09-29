@@ -36,6 +36,9 @@ from runtime_types import _internal
 # Then call it:
 #
 #   output = await execute_prompt(prompt, None)
+#
+# Integration guide:
+#   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/python.md
 
 from dataclasses import dataclass
 from collections.abc import Iterable, Mapping, Sequence
