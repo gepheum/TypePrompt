@@ -3190,7 +3190,7 @@ void TestRenderTools() {
 }
 
 void TestMakeToolExecutor() {
-  // Test template with tools
+  // 1. Single tool template with success and error paths
   struct ResearchExecutor {
     typeprompt_03::Result<typeprompt_03::schema::web_search::Output> operator()(
         typeprompt_03::tools::WebSearch, const typeprompt_03::schema::web_search::Input& input) {
@@ -3219,7 +3219,7 @@ void TestMakeToolExecutor() {
   typeprompt_03::ToolCall call1{
       .call_id = "c1",
       .tool_name = "webSearch",
-      .stringified_input = R"({"query":"quantum computing"})",
+      .stringified_input = R"({"query": "quantum computing"})",
   };
   auto resp1 = executor->Execute(call1);
   ASSERT_EQ(resp1.call_id, "c1");
@@ -3227,11 +3227,11 @@ void TestMakeToolExecutor() {
   ASSERT_TRUE(resp1.stringified_output.find("Snippet about quantum computing") !=
               std::string::npos);
 
-  // Tool handler error
+  // Tool executor returned error
   typeprompt_03::ToolCall call2{
       .call_id = "c2",
       .tool_name = "webSearch",
-      .stringified_input = R"({"query":"fail"})",
+      .stringified_input = R"({"query": "fail"})",
   };
   auto resp2 = executor->Execute(call2);
   ASSERT_EQ(resp2.call_id, "c2");
@@ -3239,6 +3239,31 @@ void TestMakeToolExecutor() {
   ASSERT_EQ(*resp2.error, "Search service error");
   ASSERT_TRUE(resp2.stringified_output.find(R"("error": "Search service error")") !=
               std::string::npos);
+
+  // Malformed JSON input
+  typeprompt_03::ToolCall call_bad_json{
+      .call_id = "c_bad_json",
+      .tool_name = "webSearch",
+      .stringified_input = "{invalid json",
+  };
+  auto resp_bad_json = executor->Execute(call_bad_json);
+  ASSERT_EQ(resp_bad_json.call_id, "c_bad_json");
+  ASSERT_TRUE(resp_bad_json.error.has_value());
+  ASSERT_TRUE(resp_bad_json.error->find("Failed to parse tool input") != std::string::npos);
+  ASSERT_TRUE(resp_bad_json.stringified_output.find("Failed to parse tool input") !=
+              std::string::npos);
+
+  // Schema validation failure (missing required 'query' field)
+  typeprompt_03::ToolCall call_missing_field{
+      .call_id = "c_missing",
+      .tool_name = "webSearch",
+      .stringified_input = "{}",
+  };
+  auto resp_missing = executor->Execute(call_missing_field);
+  ASSERT_EQ(resp_missing.call_id, "c_missing");
+  ASSERT_TRUE(resp_missing.error.has_value());
+  ASSERT_TRUE(resp_missing.error->find("Missing key: query") != std::string::npos);
+  ASSERT_TRUE(resp_missing.stringified_output.find("Missing key: query") != std::string::npos);
 
   // Unknown tool error
   typeprompt_03::ToolCall call3{
@@ -3250,8 +3275,80 @@ void TestMakeToolExecutor() {
   ASSERT_EQ(resp3.call_id, "c3");
   ASSERT_TRUE(resp3.error.has_value());
   ASSERT_EQ(*resp3.error, "Tool not found: unknownTool");
+  ASSERT_TRUE(resp3.stringified_output.find(R"("error": "Tool not found: unknownTool")") !=
+              std::string::npos);
 
-  // Test template with no tools
+  // 2. Smart pointer support (std::shared_ptr and std::unique_ptr)
+  auto shared_executor =
+      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(
+          std::make_shared<ResearchExecutor>());
+  ASSERT_TRUE(shared_executor != nullptr);
+  auto shared_resp = shared_executor->Execute(call1);
+  ASSERT_FALSE(shared_resp.error.has_value());
+  ASSERT_EQ(shared_resp.call_id, "c1");
+
+  auto unique_executor =
+      typeprompt_03::MakeToolExecutor<typeprompt_03::templates::ResearchQuestion>(
+          std::make_unique<ResearchExecutor>());
+  ASSERT_TRUE(unique_executor != nullptr);
+  auto unique_resp = unique_executor->Execute(call1);
+  ASSERT_FALSE(unique_resp.error.has_value());
+  ASSERT_EQ(unique_resp.call_id, "c1");
+
+  // 3. Multi-tool template dispatch
+  struct MultiToolExecutor {
+    typeprompt_e01::Result<typeprompt_e01::schema::my_tool::Output> operator()(
+        typeprompt_e01::tools::MyTool, const typeprompt_e01::schema::shared::Square& input) {
+      return typeprompt_e01::schema::my_tool::Output{
+          .shared =
+              {
+                  .square = input,
+                  .value = "my_tool_result",
+              },
+      };
+    }
+
+    typeprompt_e01::Result<std::vector<typeprompt_e01::schema::my_other_tool::Output>> operator()(
+        typeprompt_e01::tools::MyOtherTool, const typeprompt_e01::schema::shared::Square& input) {
+      return std::vector<typeprompt_e01::schema::my_other_tool::Output>{
+          typeprompt_e01::schema::my_other_tool::Output{
+              .shared =
+                  {
+                      .square = input,
+                      .value = "my_other_tool_result",
+                  },
+          },
+      };
+    }
+  };
+
+  MultiToolExecutor multi_typed_executor;
+  auto multi_executor =
+      typeprompt_e01::MakeToolExecutor<typeprompt_e01::templates::MyOtherTemplate>(
+          &multi_typed_executor);
+  ASSERT_TRUE(multi_executor != nullptr);
+
+  typeprompt_e01::ToolCall multi_call1{
+      .call_id = "m1",
+      .tool_name = "myTool",
+      .stringified_input = R"({"fromJson": "true", "self": "s1", "size": 16.0})",
+  };
+  auto multi_resp1 = multi_executor->Execute(multi_call1);
+  ASSERT_EQ(multi_resp1.call_id, "m1");
+  ASSERT_FALSE(multi_resp1.error.has_value());
+  ASSERT_TRUE(multi_resp1.stringified_output.find("my_tool_result") != std::string::npos);
+
+  typeprompt_e01::ToolCall multi_call2{
+      .call_id = "m2",
+      .tool_name = "myOtherTool",
+      .stringified_input = R"({"fromJson": "true", "self": "s2", "size": 25.0})",
+  };
+  auto multi_resp2 = multi_executor->Execute(multi_call2);
+  ASSERT_EQ(multi_resp2.call_id, "m2");
+  ASSERT_FALSE(multi_resp2.error.has_value());
+  ASSERT_TRUE(multi_resp2.stringified_output.find("my_other_tool_result") != std::string::npos);
+
+  // 4. Template with no tools (zero-argument overload)
   auto no_tools_executor = typeprompt_01::MakeToolExecutor<typeprompt_01::templates::Translate>();
   ASSERT_TRUE(no_tools_executor != nullptr);
   typeprompt_01::ToolCall call4{
