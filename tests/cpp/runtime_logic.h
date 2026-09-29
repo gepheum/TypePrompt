@@ -147,7 +147,6 @@ using Status = Result<std::nullopt_t>;
 inline constexpr Status kOkStatus = std::nullopt;
 
 namespace internal {
-
 class NumberFormatter {
  public:
   /// Formats a floating-point number in concise decimal or scientific notation.
@@ -204,7 +203,6 @@ class NumberFormatter {
     return Format(number);
   }
 };
-
 }  // namespace internal
 
 /// A composable JSON value. Can be formatted to JSON, YAML or TOON format.
@@ -796,7 +794,6 @@ class must_init {
 };
 
 namespace internal {
-
 class ToonFormatter {
  public:
   static std::string Format(const JsonNode& root) {
@@ -2323,7 +2320,6 @@ class Unions {
     return context.MakeError(std::format("Missing key: {}", discriminator));
   }
 };
-
 }  // namespace internal
 
 inline Result<JsonNode> JsonNode::ParseJson(std::string_view json) {
@@ -2349,7 +2345,6 @@ enum class OutputFormat { kText, kJson };
 using Meta = double;
 
 namespace internal::spec {
-
 struct Templates;
 struct Template;
 enum class OutputFormat_;
@@ -3306,7 +3301,6 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Tool& ou
   parser.Parse("name", out.name);
   return std::move(parser).status();
 }
-
 }  // namespace internal::spec
 
 namespace internal {

@@ -45,12 +45,12 @@ function writeAll(
 ): string {
   const { rootNamespace } = config;
   const includeGuard = `__${toScreamCase(rootNamespace)}_GEN_H_`;
-  return coalesceEmptyLines(
-    [
-      [`#ifndef ${includeGuard}`, `#define ${includeGuard}`].join("\n"),
-      STATIC_SNIPPETS["cpp-top-level"],
-      `namespace ${rootNamespace} {`,
-      STATIC_SNIPPETS["cpp-public-types"],
+  return [
+    [`#ifndef ${includeGuard}`, `#define ${includeGuard}`].join("\n"),
+    STATIC_SNIPPETS["cpp-top-level"],
+    `namespace ${rootNamespace} {`,
+    STATIC_SNIPPETS["cpp-public-types"],
+    coalesceEmptyLines(
       scaleIndent(
         [
           writeUserDefinedDatatypes(compilationResult, config),
@@ -60,11 +60,11 @@ function writeAll(
           writeTemplatesData(compilationResult),
         ].join("\n\n"),
       ),
-      STATIC_SNIPPETS["cpp-logic"],
-      `}  // namespace ${config.rootNamespace}`,
-      "#endif",
-    ].join("\n\n"),
-  );
+    ),
+    STATIC_SNIPPETS["cpp-logic"],
+    `}  // namespace ${config.rootNamespace}`,
+    "#endif\n",
+  ].join("\n\n");
 }
 
 function writeUserDefinedDatatypes(
@@ -86,7 +86,6 @@ function writeUserDefinedDatatypes(
   if (anyTypes(metaSchema)) {
     lines.push(
       "namespace schema::meta {",
-      "",
       writeSchema(metaSchema, {
         typePrefix: "schema::meta::",
         rootNamespace,
@@ -104,7 +103,6 @@ function writeUserDefinedDatatypes(
     if (anyTypes(namespace.schema)) {
       lines.push(
         `namespace ${typePrefixBase}shared {`,
-        "",
         writeSchema(namespace.schema, {
           typePrefix: sharedTypePrefix,
           rootNamespace,
@@ -121,7 +119,6 @@ function writeUserDefinedDatatypes(
       const typePrefix = cNamespace.concat("::");
       lines.push(
         `namespace ${cNamespace} {`,
-        "",
         writeSchema(template.schema, {
           typePrefix,
           sharedTypePrefix,
@@ -139,7 +136,6 @@ function writeUserDefinedDatatypes(
       const typePrefix = cNamespace.concat("::");
       lines.push(
         `namespace ${cNamespace} {`,
-        "",
         writeSchema(tool.schema, {
           typePrefix,
           sharedTypePrefix,
@@ -196,7 +192,7 @@ function writeToolsSignatures(
   ): void => {
     const tools = Object.values(namespace.tools);
     if (tools.length <= 0) return;
-    lines.push(`namespace tools${middleComp} {`, "");
+    lines.push(`namespace tools${middleComp} {`);
     const typePrefixBase = `schema${middleComp}::`;
     const sharedTypePrefix = typePrefixBase.concat("shared::");
     for (const tool of tools) {
@@ -268,7 +264,7 @@ function writeTemplatesSignatures(
   ): void => {
     const templates = Object.values(namespace.templates);
     if (templates.length <= 0) return;
-    lines.push(`namespace templates${middleComp} {`, "");
+    lines.push(`namespace templates${middleComp} {`);
     const typePrefixBase = `schema${middleComp}::`;
     const sharedTypePrefix = typePrefixBase.concat("shared::");
     for (const template of templates) {
@@ -571,9 +567,6 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
-      if (!internal) {
-        lines.push("/// To convert to a string: to_string_view(v)");
-      }
       lines.push(`enum class ${typeCName} {`);
       for (const member of members.members) {
         const cName = toCName("k".concat(toPascalCase(member.value)));
@@ -638,7 +631,7 @@ function writeTypepromptUnion(
         }
         lines.push(
           " };",
-          ` constexpr ${discriminatorCName} ${discriminatorCName}() const {`,
+          ` ${discriminatorCName} ${discriminatorCName}() const {`,
           `  return static_cast<enum ${discriminatorCName}>(data_.index());`,
           " }",
         );
@@ -646,7 +639,7 @@ function writeTypepromptUnion(
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
         const indexOfTrue = firstDiscriminant ? 0 : 1;
         lines.push(
-          ` constexpr bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
+          ` bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
         );
       }
       lines.push("");
@@ -664,8 +657,8 @@ function writeTypepromptUnion(
           const type = memberTypes[i];
           lines.push(
             ` /// Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
-            ` constexpr const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            ` constexpr ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
@@ -682,8 +675,8 @@ function writeTypepromptUnion(
           const maybeNot = discriminantValue ? "" : "!";
           lines.push(
             ` /// Precondition: ${maybeNot}${discriminatorCName}()`,
-            ` constexpr const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            ` constexpr ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
@@ -815,7 +808,7 @@ function writeMethodImplsForUnion(
   const lines: string[] = [];
   if (members.kind === "strings") {
     lines.push(
-      `inline constexpr std::string_view to_string_view(${typeCName} input) {`,
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
       " switch (input) {",
     );
     for (const member of members.members.slice(1)) {
@@ -830,9 +823,6 @@ function writeMethodImplsForUnion(
       "  default:",
       `   return "${first.value satisfies string}";`,
       " }",
-      "}",
-      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
-      " return to_string_view(input);",
       "}",
       `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       " if (node.type() != JsonNode::Type::kString) {",
@@ -990,15 +980,18 @@ function commentify(doc: string, indent = ""): readonly string[] {
 function coalesceEmptyLines(code: string): string {
   return (
     code
+      // Coalesce consecutive empty lines first.
+      .replace(/\n\n\n+/g, "\n\n")
       // Remove spaces enclosed within curly brackets if that's all there is.
       .replace(/\{\s+\}/g, "{}")
       // Remove spaces enclosed within round brackets if that's all there is.
       .replace(/\(\s+\)/g, "()")
       // Remove spaces enclosed within square brackets if that's all there is.
       .replace(/\[\s+\]/g, "[]")
-      // Coalesce consecutive empty lines.
-      .replace(/\n\n\n+/g, "\n\n")
-      .replace(/\n*$/g, "\n")
+      // Remove empty lines following an open curly bracket.
+      .replace(/(\{\n *)\n+/g, "$1")
+      // Remove empty lines preceding a closed curly bracket.
+      .replace(/\n+(\n *\})/g, "$1")
   );
 }
 
