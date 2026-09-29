@@ -99,7 +99,7 @@ struct Error {
   std::string message;
 };
 
-/// Either a successfully parsed value of type T or an Error.
+/// Either a successfully value of type T or an Error.
 template <typename T>
 class Result {
  public:
@@ -115,19 +115,19 @@ class Result {
   Result& operator=(const Result& other) = default;
   Result& operator=(Result&& other) = default;
 
-  /// Returns true if the result contains a parsed value, false if it contains an Error.
+  /// Returns true if the result contains an okay value, false if it contains an Error.
   constexpr bool ok() const { return data_.index() == 0; }
 
-  /// Returns a reference to the parsed value. Precondition: ok() must be true.
+  /// Returns a reference to the okay value. Precondition: ok() must be true.
   constexpr const T& operator*() const& { return std::get<0>(data_); }
   constexpr T& operator*() & { return std::get<0>(data_); }
   constexpr T&& operator*() && { return std::get<0>(std::move(data_)); }
 
-  /// Member access operator for the parsed value. Precondition: ok() must be true.
+  /// Member access operator for the okay value. Precondition: ok() must be true.
   constexpr const T* operator->() const { return &std::get<0>(data_); }
   constexpr T* operator->() { return &std::get<0>(data_); }
 
-  /// Returns a reference to the error. Precondition: ok() must be false.
+  /// Returns a reference to the Error. Precondition: ok() must be false.
   const Error& error() const& { return std::get<1>(data_); }
   Error& error() & { return std::get<1>(data_); }
   Error&& error() && { return std::get<1>(std::move(data_)); }
@@ -3559,7 +3559,8 @@ class Renderer {
                            const spec::Templates& spec) {
     auto tmpl_it = spec.templates.find(std::string(template_id));
     if (tmpl_it == spec.templates.end()) {
-      throw std::invalid_argument(std::format("Template not found: {}", template_id));
+      // Error: template 'template_id' not found.
+      return {};
     }
     const spec::Template& template_val = tmpl_it->second;
 
@@ -3586,7 +3587,8 @@ class Renderer {
       }
       case spec::TemplateContents::kind::kVariants: {
         if (input.type() != JsonNode::Type::kObject) {
-          throw std::invalid_argument("Input for template with variants must be an object");
+          // Error: input for template with variants must be an object.
+          return {};
         }
         std::string variant_str;
         bool found_variant = false;
@@ -3612,12 +3614,14 @@ class Renderer {
           }
         }
         if (!found_variant) {
-          throw std::invalid_argument("Missing 'variant' field in input");
+          // Error: missing 'variant' field in input.
+          return {};
         }
         const auto& variants_obj = contents.as_kind_variants();
         auto var_it = variants_obj.variants.find(variant_str);
         if (var_it == variants_obj.variants.end()) {
-          throw std::invalid_argument("Unknown variant: " + variant_str);
+          // Error: unknown variant 'variant_str'
+          return {};
         }
         const auto& variant_content = var_it->second;
         const auto& default_content = variants_obj.default_content;
@@ -3657,7 +3661,8 @@ class Renderer {
     for (const auto& template_tool : template_val.tools_) {
       auto tool_it = spec.tools_.find(template_tool.id);
       if (tool_it == spec.tools_.end()) {
-        throw std::invalid_argument("Tool spec not found: " + template_tool.id);
+        // Error: tool spec not found 'template_tool.id'
+        return {};
       }
       Tool tool;
       tool.name = template_tool.name;
@@ -3959,7 +3964,8 @@ class Renderer {
         }
         auto it = snip_switch.branches.find(switch_key);
         if (it == snip_switch.branches.end()) {
-          throw std::invalid_argument("Branch not found: " + switch_key);
+          // Error: branch not found: 'switch_key'
+          return {};
         }
         return RenderBody(it->second, inp, snippets);
       }
@@ -3990,7 +3996,8 @@ class Renderer {
           const auto& insert_snip = piece.as_kind_insert_snippet();
           auto it = snippets.find(insert_snip.snippet);
           if (it == snippets.end()) {
-            throw std::invalid_argument("Snippet not found: " + insert_snip.snippet);
+            // Error: snippet not found: 'insert_snip.snippet'
+            return {};
           }
           std::string rendered_snippet = RenderSnippet(it->second, inp, snippets);
           sb += Indent(rendered_snippet, insert_snip.indent);
