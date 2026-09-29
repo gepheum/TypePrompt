@@ -10,14 +10,17 @@
 //
 // 1. Wire a runner helper to your LLM API:
 //
-//   std::string ExecutePrompt(const typeprompt::Prompt& prompt,
-//                             typeprompt::ToolExecutor& tool_executor) {
+//   using ::typeprompt::Prompt;
+//   using ::typeprompt::Result;
+//   using ::typeprompt::ToolExecutor;
+//
+//   Result<std::string> ExecutePrompt(const Prompt& prompt,
+//                                     ToolExecutor& tool_executor) {
 //     // Send prompt.system_message, prompt.user_message, prompt.examples,
 //     // and prompt.tools to your LLM provider.
 //     //
 //     // When the model produces tool calls, execute them:
-//     //   typeprompt::ToolCallResponse response =
-//     //       tool_executor.Execute(tool_call);
+//     //   auto tool_response = tool_executor.Execute(tool_call);
 //     //
 //     // Repeat until the model finishes and returns a text response:
 //     return model_response;
@@ -25,19 +28,24 @@
 //
 // 2. Render, execute, and parse:
 //
-//   using Template = typeprompt::templates::Greet;
+//   using ::typeprompt::MakeToolExecutor;
+//   using ::typeprompt::ParseResponse;
+//   using ::typeprompt::Render;
+//   using ::typeprompt::templates::Greet;
 //
-//   auto prompt = typeprompt::Render<Template>({
-//       .name = "Luke",
-//   });
-//   auto tool_executor = typeprompt::MakeToolExecutor<Template>();
-//   std::string response = ExecutePrompt(prompt, *tool_executor);
+//   auto prompt = Render<Template>({ .name = "Luke" });
+//   auto tool_executor = MakeToolExecutor<Template>();
+//   auto response = ExecutePrompt(prompt, *tool_executor);
 //
-//   auto result = typeprompt::ParseResponse<Template>(response);
-//   if (result.ok()) {
-//     std::cout << result->greeting;
+//   if (response.ok()) {
+//     auto parse_result = ParseResponse<Template>(response);
+//     if (parse_result.ok()) {
+//       std::cout << parse_result->greeting;
+//     } else {
+//       // Handle parse_result.error();
+//     }
 //   } else {
-//     throw std::runtime_error(result.error().message);
+//     // Handle response.error();
 //   }
 //
 // For templates with tools, define a typed executor and pass it to MakeToolExecutor:
@@ -53,8 +61,7 @@
 //   };
 //
 //   MyExecutor my_executor;
-//   auto tool_executor =
-//       typeprompt::MakeToolExecutor<templates::ResearchQuestion>(&my_executor);
+//   auto tool_executor = MakeToolExecutor<Template>(&my_executor);
 
 #include <algorithm>
 #include <cassert>
