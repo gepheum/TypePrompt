@@ -638,7 +638,7 @@ function writeTypepromptUnion(
         }
         lines.push(
           " };",
-          ` ${discriminatorCName} ${discriminatorCName}() const {`,
+          ` constexpr ${discriminatorCName} ${discriminatorCName}() const {`,
           `  return static_cast<enum ${discriminatorCName}>(data_.index());`,
           " }",
         );
@@ -646,7 +646,7 @@ function writeTypepromptUnion(
         const firstDiscriminant: boolean = discriminants.values[0]!.value;
         const indexOfTrue = firstDiscriminant ? 0 : 1;
         lines.push(
-          ` bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
+          ` constexpr bool ${discriminatorCName}() const { return data_.index() == ${indexOfTrue}; }`,
         );
       }
       lines.push("");
@@ -664,8 +664,8 @@ function writeTypepromptUnion(
           const type = memberTypes[i];
           lines.push(
             ` /// Precondition: ${discriminatorCName}() == ${typeCName}::${discriminatorCName}::${constantCName}`,
-            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` constexpr const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` constexpr ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );
@@ -682,8 +682,8 @@ function writeTypepromptUnion(
           const maybeNot = discriminantValue ? "" : "!";
           lines.push(
             ` /// Precondition: ${maybeNot}${discriminatorCName}()`,
-            ` const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
-            ` ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
+            ` constexpr const ${type}& ${methodCName}() const& { return *std::get<${i}>(data_); }`,
+            ` constexpr ${type}& ${methodCName}() & { return *std::get<${i}>(data_); }`,
             ` indirect<${type}> ${methodCName}() && { return std::move(std::get<${i}>(data_)); }`,
             "",
           );

@@ -112,7 +112,7 @@ class Result {
   constexpr Result(T ok_value) : data_(std::move(ok_value)) {}
 
   /// Constructs a failed Result containing error.
-  Result(Error error) : data_(std::move(error)) {}
+  constexpr Result(Error error) : data_(std::move(error)) {}
 
   Result(const Result& other) = default;
   Result(Result&& other) = default;
@@ -133,9 +133,9 @@ class Result {
   constexpr T* operator->() { return &std::get<0>(data_); }
 
   /// Returns a reference to the Error. Precondition: ok() must be false.
-  const Error& error() const& { return std::get<1>(data_); }
-  Error& error() & { return std::get<1>(data_); }
-  Error&& error() && { return std::get<1>(std::move(data_)); }
+  constexpr const Error& error() const& { return std::get<1>(data_); }
+  constexpr Error& error() & { return std::get<1>(data_); }
+  constexpr Error&& error() && { return std::get<1>(std::move(data_)); }
 
  private:
   std::variant<T, Error> data_;
@@ -224,11 +224,11 @@ class JsonNode {
   /// A JSON object as an ordered list of key-value pairs.
   using Object = std::vector<std::pair<std::string, JsonNode>>;
 
-  JsonNode() : data_(std::nullopt) {}
-  JsonNode(std::nullopt_t value) : data_(value) {}
-  JsonNode(bool value) : data_(value) {}
-  JsonNode(int value) : data_(static_cast<double>(value)) {}
-  JsonNode(double value) : data_(value) {}
+  constexpr JsonNode() : data_(std::nullopt) {}
+  constexpr JsonNode(std::nullopt_t value) : data_(value) {}
+  constexpr JsonNode(bool value) : data_(value) {}
+  constexpr JsonNode(int value) : data_(static_cast<double>(value)) {}
+  constexpr JsonNode(double value) : data_(value) {}
   JsonNode(const char* value) : data_(NormalizeUtf8(value)) {}
   JsonNode(const std::string& value) : data_(NormalizeUtf8(value)) {}
   JsonNode(std::string_view value) : data_(NormalizeUtf8(value)) {}
@@ -266,10 +266,10 @@ class JsonNode {
   }
 
   /// Returns the boolean value. Precondition: type() == Type::kBool.
-  bool as_bool() const { return std::get<bool>(data_); }
+  constexpr bool as_bool() const { return std::get<bool>(data_); }
 
   /// Returns the numeric value. Precondition: type() == Type::kNumber.
-  double as_number() const { return std::get<double>(data_); }
+  constexpr double as_number() const { return std::get<double>(data_); }
 
   /// Returns the string value. Precondition: type() == Type::kString.
   const std::string& as_string() const& { return std::get<std::string>(data_); }
@@ -763,13 +763,13 @@ class indirect {
   indirect& operator=(indirect&&) = default;
 
   /// Accesses the underlying value.
-  const T& operator*() const& { return *ptr_; }
-  T& operator*() & { return *ptr_; }
-  T&& operator*() && { return std::move(*ptr_); }
+  constexpr const T& operator*() const& { return *ptr_; }
+  constexpr T& operator*() & { return *ptr_; }
+  constexpr T&& operator*() && { return std::move(*ptr_); }
 
   /// Accesses members of the underlying value.
-  const T* operator->() const { return ptr_.get(); }
-  T* operator->() { return ptr_.get(); }
+  constexpr const T* operator->() const { return ptr_.get(); }
+  constexpr T* operator->() { return ptr_.get(); }
 
  private:
   std::unique_ptr<T> ptr_;
@@ -781,14 +781,14 @@ class must_init {
  public:
   using value_type = T;
 
-  must_init(T value) : value_(std::move(value)) {}
+  constexpr must_init(T value) : value_(std::move(value)) {}
 
   template <typename Value>
     requires(!std::is_same_v<std::decay_t<Value>, must_init> &&
              !std::is_same_v<std::decay_t<Value>, T> && std::is_constructible_v<T, Value>)
-  must_init(Value&& value) : value_(std::forward<Value>(value)) {}
+  constexpr must_init(Value&& value) : value_(std::forward<Value>(value)) {}
 
-  T operator*() && { return std::move(value_); }
+  constexpr T operator*() && { return std::move(value_); }
   T operator*() const& = delete;
 
  private:
