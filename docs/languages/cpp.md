@@ -274,17 +274,22 @@ auto input = *TriageInput::whole{
 
 ### Discriminated Unions
 
-Union types (like AST trees or multi-variant output nodes) generate type-safe wrapper classes with accessor methods and a `kind()` enum:
+Discriminated union types generate type-safe wrapper classes with an enum named after the discriminator property (e.g. `kind` or `type`), a getter method returning the enum value, and type-safe accessors for each variant:
 
 ```cpp
 using PageNode = schema::generate_page_tree::PageNode;
 
-if (node.kind() == PageNode::kind::kSection) {
-  const auto& section = node.as_kind_section();
-  std::cout << "Section title: " << section.title.value_or("(none)") << "\n";
-} else if (node.kind() == PageNode::kind::kHeading) {
-  const auto& heading = node.as_kind_heading();
-  std::cout << "Heading: " << heading.text << "\n";
+switch (node.kind()) {
+  case PageNode::kind::kSection: {
+    const auto& section = node.as_kind_section();
+    std::cout << "Section title: " << section.title.value_or("(none)") << "\n";
+    break;
+  }
+  case PageNode::kind::kHeading: {
+    const auto& heading = node.as_kind_heading();
+    std::cout << "Heading: " << heading.text << "\n";
+    break;
+  }
 }
 ```
 
@@ -363,7 +368,7 @@ Result<typename Template::output_type> ExecutePrompt(
   messages.push_back({{"role", "system"}, {"content", prompt.system_message}});
 
   for (const auto& example : prompt.examples) {
-    messages.push_back({{"role", "user"},      {"content", example.user_message}});
+    messages.push_back({{"role", "user"}, {"content", example.user_message}});
     messages.push_back({{"role", "assistant"}, {"content", example.response}});
   }
 
@@ -372,7 +377,7 @@ Result<typename Template::output_type> ExecutePrompt(
   // 3. Conversation & tool execution loop
   while (true) {
     json request = {
-        {"model", "gpt-4o"},
+        {"model", json::parse(ToJson(prompt.meta.model))},
         {"messages", messages},
     };
 

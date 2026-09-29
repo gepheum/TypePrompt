@@ -162,17 +162,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-          rootNamespace,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+        rootNamespace,
+      },
+    )
     : "internal::NoMeta";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -393,7 +393,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -1117,4 +1117,5 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "schema",
   "std",
   "tools",
+  "whole",
 ]);
