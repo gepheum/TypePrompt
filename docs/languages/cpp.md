@@ -272,6 +272,15 @@ auto input = *TriageInput::whole{
 - **Nested initializer lists**: Because fields inside `::whole` are wrapped in `must_init<T>`, initializing a container or struct via initializer list syntax requires double braces (e.g. `{{}}` for an empty vector, or `{{item1, item2}}`).
 - **Direct initialization in `Render`**: `Render<Template>({ ... })` accepts `Template::input_type::whole` by default, so passing a designated initializer directly to `Render` automatically enforces that all template input fields are initialized in alphabetical order.
 
+### String Unions (Enums)
+
+String unions generate C++ `enum class` types along with a `to_string_view()` helper function:
+
+```cpp
+// Convert enum value directly to std::string_view:
+std::string_view model_name = to_string_view(schema::meta::Meta_Model::kGpt4o); // "gpt-4o"
+```
+
 ### Discriminated Unions
 
 Discriminated union types generate type-safe wrapper classes with an enum named after the discriminator property (e.g. `kind` or `type`), a getter method returning the enum value, and type-safe accessors for each variant:
@@ -377,7 +386,7 @@ Result<typename Template::output_type> ExecutePrompt(
   // 3. Conversation & tool execution loop
   while (true) {
     json request = {
-        {"model", json::parse(ToJson(prompt.meta.model))},
+        {"model", to_string_view(prompt.meta.model)},
         {"messages", messages},
     };
 

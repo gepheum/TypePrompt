@@ -162,17 +162,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-      {
-        kind: "type-name",
-        name: { text: "Meta" },
-      },
-      metaSchema,
-      {
-        topLevel: true,
-        typePrefix: "schema::meta::",
-        rootNamespace,
-      },
-    )
+        {
+          kind: "type-name",
+          name: { text: "Meta" },
+        },
+        metaSchema,
+        {
+          topLevel: true,
+          typePrefix: "schema::meta::",
+          rootNamespace,
+        },
+      )
     : "internal::NoMeta";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -393,7 +393,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-        schema.unionToMembers.get(type)!.kind === "strings"
+      schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -571,6 +571,9 @@ function writeTypepromptUnion(
   const lines: string[] = [];
   switch (members.kind) {
     case "strings": {
+      if (!internal) {
+        lines.push("/// To convert to a string: to_string_view(v)");
+      }
       lines.push(`enum class ${typeCName} {`);
       for (const member of members.members) {
         const cName = toCName("k".concat(toPascalCase(member.value)));
@@ -812,7 +815,7 @@ function writeMethodImplsForUnion(
   const lines: string[] = [];
   if (members.kind === "strings") {
     lines.push(
-      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      `inline constexpr std::string_view to_string_view(${typeCName} input) {`,
       " switch (input) {",
     );
     for (const member of members.members.slice(1)) {
@@ -827,6 +830,9 @@ function writeMethodImplsForUnion(
       "  default:",
       `   return "${first.value satisfies string}";`,
       " }",
+      "}",
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      " return to_string_view(input);",
       "}",
       `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       " if (node.type() != JsonNode::Type::kString) {",
