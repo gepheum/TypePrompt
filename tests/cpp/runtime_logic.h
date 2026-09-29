@@ -36,6 +36,7 @@
 //   auto output = ExecutePrompt<typeprompt::templates::Greet>(prompt);
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <concepts>
@@ -3362,27 +3363,6 @@ struct Prompt {
   std::string template_id;
 };
 
-template <typename T>
-class ToolCallback {
- public:
-  ToolCallback(const ToolCallback&) = default;
-  ToolCallback(ToolCallback&&) = default;
-
-  ToolCallback& operator=(const ToolCallback&) = default;
-  ToolCallback&& operator=(ToolCallback&&) = default;
-
-  void OnSuccess(T output);
-  void OnError(std::string_view message);
-
- private:
-  ToolCallback(T* output, std::string* error_message, std::function<void()>* callback)
-      : output_(*output), error_message_(*error_message), callback_(*callback) {}
-
-  T& output_;
-  std::string& error_message_;
-  std::function<void()>& callback_;
-};
-
 struct ToolCall {
   std::string call_id;
   std::string tool_name;
@@ -3391,13 +3371,30 @@ struct ToolCall {
 
 struct ToolCallResponse {
   std::string call_id;
+
+  /// The JSON-stringified output of the tool call:
+  /// - On success, contains the JSON-serialized return value of the tool.
+  /// - On failure, contains a JSON object with a single "error" key containing
+  ///   the error message (e.g. `{"error": "..."}`).
+  ///
+  /// Integration guide:
+  /// - **OpenAI / Gemini SDKs**: Forward `stringified_output` directly as the
+  ///   tool result content and ignore the `error` field.
+  /// - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error = true`
+  ///   in the tool result block and pass the error message to `content`. Otherwise,
+  ///   pass `stringified_output` to `content`.
+
   std::string stringified_output;
+  /// The error message if the tool call failed, or `std::nullopt` on success.
+  ///
+  /// Set when tool argument parsing fails, when the tool itself returns an error,
+  /// or when the requested tool is not found.
   std::optional<std::string> error;
 };
 
-class ToolExecutor {
+class ToolExecutorInterface {
  public:
-  virtual ~ToolExecutor() = default;
+  virtual ~ToolExecutorInterface() = default;
   virtual ToolCallResponse Execute(const ToolCall& tool_call) = 0;
 };
 
@@ -3412,43 +3409,55 @@ constexpr void for_each_type(F&& f) {
 }
 }  // namespace internal
 
-template <typename Template, typename TypedImplPtr>
-class ToolExecutorImpl : public ToolExecutor {
+template <typename Template, typename TypedExecutorPtr>
+class ToolExecutor : public ToolExecutorInterface {
  public:
-  ToolExecutorImpl(TypedImplPtr typed_impl) : typed_impl_(typed_impl) {}
+  ToolExecutor(TypedExecutorPtr typed_executor) : typed_executor_(std::move(typed_executor)) {
+    assert(typed_executor != nullptr);
+  }
 
   ToolCallResponse Execute(const ToolCall& tool_call) override {
     using tools_type = typename Template::tools_type;
     std::optional<Result<ToolCallResponse>> result;
-    internal::for_each_type<tools_type>(
-        [this, &tool_call, &result]<typename tool_type>(std::type_identity<tool_type>) {
-          using input_type = typename tool_type::input_type;
-          using output_type = typename tool_type::output_type;
-          if (tool_type::kToolName != tool_call.tool_name) return;
-          auto input_result = ParseJson<input_type>(tool_call.stringified_input);
-          if (!input_result.ok()) {
-            result = Error(std::format("Failed to parse tool input: {}", input_result.error()));
-            return;
-          }
-          constexpr tool_type tool{};
-          Result<output_type> output_result = (*typed_impl_)(tool, *input_result);
-          if (!output_result.ok()) {
-            result = std::move(output_result).error;
-            return;
-          }
-          result = ToolCallResponse{tool_call.call_id, ToJson(*output_result)};
-        });
+    internal::for_each_type<tools_type>([this, &tool_call, &result]<typename tool_type>(
+                                            std::type_identity<tool_type>) {
+      using input_type = typename tool_type::input_type;
+      using output_type = typename tool_type::output_type;
+      if (tool_type::kToolName != tool_call.tool_name) return;
+      auto input_result = ParseJson<input_type>(tool_call.stringified_input);
+      if (!input_result.ok()) {
+        result = Error(std::format("Failed to parse tool input: {}", input_result.error().message));
+        return;
+      }
+      constexpr tool_type tool{};
+      Result<output_type> output_result = (*typed_executor_)(tool, *input_result);
+      if (!output_result.ok()) {
+        result = std::move(output_result).error();
+        return;
+      }
+      result = ToolCallResponse{
+          .call_id = tool_call.call_id,
+          .stringified_output = ToJson(*output_result),
+          .error = std::nullopt,
+      };
+    });
     if (!result.has_value()) {
       result = Error(std::format("Tool not found: {}", tool_call.tool_name));
     }
     if (!result->ok()) {
-      return { call_id = tool_call.call_id, }
+      const std::string& error_msg = result->error().message;
+      const JsonNode error_node = JsonNode::Object{{"error", error_msg}};
+      return ToolCallResponse{
+          .call_id = tool_call.call_id,
+          .stringified_output = error_node.ToJson(),
+          .error = error_msg,
+      };
     }
     return **result;
   }
 
  private:
-  TypedImplPtr typed_impl_;
+  const TypedExecutorPtr typed_executor_;
 };
 
 namespace internal {
