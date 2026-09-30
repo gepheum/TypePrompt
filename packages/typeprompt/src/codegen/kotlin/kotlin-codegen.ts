@@ -589,18 +589,15 @@ function writeExecuteToolCall(
     "): ToolCallResponse {",
   ];
 
-  const throwLine =
-    'throw IllegalArgumentException("Tool not found: ${toolCall.toolName}")';
   if (toolList.length <= 0) {
-    lines.push(throwLine, "}");
+    lines.push(
+      'return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
+      "}",
+    );
     return lines.join("\n");
   }
 
-  lines.push(
-    'var stringifiedOutput = ""',
-    "try {",
-    'when ("$namespace:${toolCall.toolName}") {',
-  );
+  lines.push("try {", 'when ("$namespace:${toolCall.toolName}") {');
 
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
@@ -617,25 +614,27 @@ function writeExecuteToolCall(
     lines.push(
       `"${toolId}" -> {`,
       `val toolExecutor = executor as? ${toolInterface}`,
-      "if (toolExecutor != null) {",
-      `val input = Json.decodeFromString<${inputType}>(toolCall.stringifiedInput)`,
-      `val rawOutput = toolExecutor.${methodName}(input)`,
-      "stringifiedOutput = Json.encodeToString(rawOutput)",
+      '?: return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
+      "val input = try {",
+      `Json.decodeFromString<${inputType}>(toolCall.stringifiedInput)`,
+      "} catch (e: Exception) {",
+      'return makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: ${e.message ?: e.toString()}")',
       "}",
+      `val rawOutput = toolExecutor.${methodName}(input)`,
+      "return ToolCallResponse(",
+      "callId = toolCall.callId,",
+      "stringifiedOutput = Json.encodeToString(rawOutput),",
+      ")",
       "}",
     );
   }
 
   lines.push(
+    'else -> return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
     "}",
     "} catch (e: Exception) {",
-    'val callInfo = "{\\"callId\\": \\"${toolCall.callId}\\", \\"toolName\\": \\"${toolCall.toolName}\\"}"',
-    'throw RuntimeException("Tool call failed: $callInfo — ${e.message ?: e.toString()}", e)',
+    "return makeToolErrorResponse(toolCall.callId, e.message ?: e.toString())",
     "}",
-    "if (stringifiedOutput.isEmpty()) {",
-    throwLine,
-    "}",
-    "return ToolCallResponse(toolCall.callId, stringifiedOutput)",
     "}",
   );
 

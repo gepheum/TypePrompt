@@ -390,15 +390,17 @@ class Test03Tools_ResearchQuestion {
         }
 
     @Test
-    fun testExecuteToolsThrowsForUnknownTool() =
+    fun testExecuteToolsUnknownToolReturnsError() =
         runTest {
             val toolCalls =
                 listOf(
                     com.example.prompts03.ToolCall("c1", "noSuchTool", "{}"),
                 )
-            assertFailsWith<Throwable> {
-                prompt.executeTools(toolCalls, MockWebSearchExecutor())
-            }
+            val results = prompt.executeTools(toolCalls, MockWebSearchExecutor())
+            assertEquals(1, results.size)
+            assertEquals("c1", results[0].callId)
+            assertEquals("Tool not found: noSuchTool", results[0].error)
+            assertTrue(results[0].stringifiedOutput.contains("\"error\":\"Tool not found: noSuchTool\""))
         }
 }
 

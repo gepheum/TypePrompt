@@ -178,7 +178,27 @@ data class ToolCall(
 
 data class ToolCallResponse(
     val callId: String,
+    /**
+     * The JSON-stringified output of the tool call:
+     * - On success, contains the JSON-serialized return value of the tool.
+     * - On failure, contains a JSON object with a single "error" key containing
+     *   the error message (e.g. `{"error": "..."}`).
+     *
+     * Integration guide:
+     * - **OpenAI / Gemini SDKs**: Forward `stringifiedOutput` directly as the
+     *   tool result content and ignore the `error` field.
+     * - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error = true`
+     *   in the tool result block and pass the error message to `content`. Otherwise,
+     *   pass `stringifiedOutput` to `content`.
+     */
     val stringifiedOutput: String,
+    /**
+     * The error message if the tool call failed, or `null` on success.
+     *
+     * Set when tool argument parsing fails, when the tool itself returns an error,
+     * or when the requested tool is not found.
+     */
+    val error: String? = null,
 )
 
 object NoTools
@@ -591,10 +611,19 @@ private suspend fun executeToolCall(
     namespace: String,
     executor: Any,
 ): ToolCallResponse {
-    throw NotImplementedError()
+    return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")
 }
 
 // <static:kotlin-logic>
+private fun makeToolErrorResponse(callId: String, errorMessage: String): ToolCallResponse {
+    val errorJson = Json.encodeToString(JsonObject(mapOf("error" to JsonPrimitive(errorMessage))))
+    return ToolCallResponse(
+        callId = callId,
+        stringifiedOutput = errorJson,
+        error = errorMessage,
+    )
+}
+
 private object JsonConfig {
     @OptIn(ExperimentalSerializationApi::class)
     val lenient: Json =

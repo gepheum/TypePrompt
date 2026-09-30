@@ -3418,8 +3418,8 @@ struct ToolCallResponse {
   /// - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error = true`
   ///   in the tool result block and pass the error message to `content`. Otherwise,
   ///   pass `stringified_output` to `content`.
-
   std::string stringified_output;
+
   /// The error message if the tool call failed, or `std::nullopt` on success.
   ///
   /// Set when tool argument parsing fails, when the tool itself returns an error,

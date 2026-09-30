@@ -1,6 +1,8 @@
 .DS_Store
 dist
 
+packages/prompt-viewer
+
 tests/cpp/build/
 tests/cpp/gen/
 
