@@ -27,6 +27,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateSwiftCode(
   compilationResult: ValidCompilationResult,
@@ -54,11 +55,13 @@ function writeAll(
     [
       STATIC_SNIPPETS["swift-top-level"],
       STATIC_SNIPPETS["swift-imports"],
-      reformat(
+      `public enum ${rootNamespace} {`,
+      reformatCFamilyCode(writePromptsStruct(compilationResult), {
+        baseIndent: 1,
+      }),
+      STATIC_SNIPPETS["swift-public-types"],
+      reformatCFamilyCode(
         [
-          `public enum ${rootNamespace} {`,
-          writePromptsStruct(compilationResult),
-          STATIC_SNIPPETS["swift-public-types"],
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorProtocols(compilationResult),
           writePromptToolsEnums(compilationResult),
@@ -67,6 +70,7 @@ function writeAll(
           writeTemplatesData(compilationResult),
           writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
+        { baseIndent: 1 },
       ),
       STATIC_SNIPPETS["swift-logic"],
       `}  // enum ${rootNamespace}\n`,
@@ -713,34 +717,22 @@ function writeExecuteToolCall(
   const toolList = Object.values(tools);
 
   const lines = [
-    "fileprivate struct ToolExecutionError: Error, CustomStringConvertible {",
-    "let description: String",
-    "}",
-    "",
-    "fileprivate struct ToolNotFoundError: Error, CustomStringConvertible {",
-    "let description: String",
-    "}",
-    "",
     "fileprivate static func executeToolCall(",
     "toolCall: ToolCall,",
     "namespace: String,",
     "executor: any Any,",
-    ") async throws -> ToolCallResponse {",
+    ") async -> ToolCallResponse {",
   ];
 
   if (toolList.length === 0) {
     lines.push(
-      'throw ToolNotFoundError(description: "Tool not found: \\(toolCall.toolName)")',
+      'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "Tool not found: \\(toolCall.toolName)")',
       "}",
     );
     return lines.join("\n");
   }
 
-  lines.push(
-    'var stringifiedOutput = ""',
-    "do {",
-    'switch "\\(namespace):\\(toolCall.toolName)" {',
-  );
+  lines.push("do {", 'switch "\\(namespace):\\(toolCall.toolName)" {');
 
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
@@ -759,13 +751,17 @@ function writeExecuteToolCall(
 
     lines.push(
       `case "${toolId}":`,
-      `guard let toolExecutor = executor as? ${interfaceName} else {`,
-      "break",
+      `guard let toolExecutor = executor as? ${interfaceName} else { break }`,
+      `let input: ${inputType}`,
+      "do {",
+      `input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
+      "} catch {",
+      'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "Failed to parse tool input: \\(error)")',
       "}",
-      `let input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
       `let rawOutput = try await toolExecutor.${methodName}(input: input)`,
       "let outputData = try Foundation.JSONEncoder().encode(rawOutput)",
-      "stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
+      "let stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
+      "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)",
     );
   }
 
@@ -774,13 +770,9 @@ function writeExecuteToolCall(
     "break",
     "}",
     "} catch {",
-    'let callInfo = "{\\"callId\\": \\"\\(toolCall.callId)\\", \\"toolName\\": \\"\\(toolCall.toolName)\\"}"',
-    'throw ToolExecutionError(description: "Tool call failed: \\(callInfo) — \\(error)")',
+    'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "\\(error)")',
     "}",
-    "if stringifiedOutput.isEmpty {",
-    'throw ToolNotFoundError(description: "Tool not found: \\(toolCall.toolName)")',
-    "}",
-    "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)",
+    'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "Tool not found: \\(toolCall.toolName)")',
     "}",
   );
 
@@ -1094,43 +1086,6 @@ function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
   return lines.map((l) => (l ? `/// ${l}` : "///"));
-}
-
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-  let indent = "";
-  let continuationIndent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -2);
-    }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(
-      line.length <= 0
-        ? line
-        : [indent, continuationIndent, starPrefix, line].join(""),
-    );
-    if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
-    ) {
-      indent = indent + "  ";
-    } else if (line.endsWith(":")) {
-      continuationIndent = "  ";
-    } else if (!line.endsWith(",")) {
-      continuationIndent = "";
-    }
-  }
-  return outputLines.join("\n");
 }
 
 function coalesceEmptyLines(code: string): string {

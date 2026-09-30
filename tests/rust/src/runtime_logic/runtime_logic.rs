@@ -233,8 +233,26 @@ pub struct ToolCall {
 pub struct ToolCallResponse {
   /// The matching call ID from the request.
   pub call_id: String,
-  /// The stringified output produced by the tool.
+
+  /// The JSON-stringified output of the tool call:
+  /// - On success, contains the JSON-serialized return value of the tool.
+  /// - On failure, contains a JSON object with a single "error" key containing
+  ///   the error message (e.g. `{"error": "..."}`).
+  ///
+  /// Integration guide:
+  /// - **OpenAI / Gemini SDKs**: Forward `stringified_output` directly as the
+  ///   tool result content and ignore the `error` field.
+  /// - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error = true`
+  ///   in the tool result block and pass the error message to `content`. Otherwise,
+  ///   pass `stringified_output` to `content`.
   pub stringified_output: String,
+
+  /// The error message if the tool call failed, or `None` on success.
+  ///
+  /// Set when tool argument parsing fails, when the tool itself returns an error,
+  /// or when the requested tool is not found.
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  pub error: Option<String>,
 }
 
 /// Manages prompt template overrides at runtime.
@@ -302,6 +320,16 @@ impl std::fmt::Display for TemplateId {
 pub type Meta = ();
 
 // <static:rust-logic>
+fn make_tool_error_response(call_id: String, error_message: String) -> ToolCallResponse {
+  let stringified_output = serde_json::to_string(&serde_json::json!({ "error": &error_message }))
+    .unwrap_or_else(|_| format!(r#"{{"error": "{}"}}"#, error_message));
+  ToolCallResponse {
+    call_id,
+    stringified_output,
+    error: Some(error_message),
+  }
+}
+
 fn indent(text: &str, spaces: &str) -> String {
   if spaces.is_empty() {
     return text.to_string();

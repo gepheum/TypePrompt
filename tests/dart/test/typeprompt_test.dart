@@ -336,7 +336,7 @@ void main() {
       expect(results[0].callId, equals("call_1"));
     });
 
-    test('executeTools throws for unknown tool', () async {
+    test('executeTools returns error for unknown tool', () async {
       final toolCalls = [
         p03.ToolCall(
           callId: "c1",
@@ -344,9 +344,16 @@ void main() {
           stringifiedInput: "{}",
         ),
       ];
+      final results = await prompt.executeTools(
+        toolCalls,
+        MockWebSearchExecutor(),
+      );
+      expect(results.length, equals(1));
+      expect(results[0].callId, equals("c1"));
+      expect(results[0].error, equals("Tool not found: noSuchTool"));
       expect(
-        () => prompt.executeTools(toolCalls, MockWebSearchExecutor()),
-        throwsA(isA<ArgumentError>()),
+        results[0].stringifiedOutput,
+        contains('"error":"Tool not found: noSuchTool"'),
       );
     });
   });

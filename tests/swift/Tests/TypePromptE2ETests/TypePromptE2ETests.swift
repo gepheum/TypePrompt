@@ -303,7 +303,7 @@ struct ToolsResearchQuestionTests {
         stringifiedInput: "{\"query\":\"Tokyo population\"}"
       )
     ]
-    let results = try await prompt.executeTools(
+    let results = await prompt.executeTools(
       toolCalls,
       toolExecutor: MockWebSearchExecutor()
     )
@@ -320,7 +320,7 @@ struct ToolsResearchQuestionTests {
         stringifiedInput: "{\"query\":\"Tokyo population\"}"
       )
     ]
-    let results = try await prompt.executeTools(
+    let results = await prompt.executeTools(
       toolCalls.dropFirst(0),
       toolExecutor: MockWebSearchExecutor()
     )
@@ -328,7 +328,7 @@ struct ToolsResearchQuestionTests {
     #expect(results[0].callId == "call_1")
   }
 
-  @Test func executeToolsThrowsForUnknownTool() async throws {
+  @Test func executeToolsReturnsErrorForUnknownTool() async {
     let toolCalls = [
       TypePrompt03.ToolCall(
         callId: "c1",
@@ -336,9 +336,13 @@ struct ToolsResearchQuestionTests {
         stringifiedInput: "{}"
       )
     ]
-    await #expect(throws: Error.self) {
-      try await prompt.executeTools(toolCalls, toolExecutor: MockWebSearchExecutor())
-    }
+    let results = await prompt.executeTools(toolCalls, toolExecutor: MockWebSearchExecutor())
+    #expect(results.count == 1)
+    #expect(results[0].callId == "c1")
+    #expect(results[0].error == "Tool not found: noSuchTool")
+    #expect(
+      results[0].stringifiedOutput.contains("\"error\":\"Tool not found: noSuchTool\"")
+        || results[0].stringifiedOutput.contains("\"error\": \"Tool not found: noSuchTool\""))
   }
 }
 

@@ -28,6 +28,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateKotlinCode(
   compilationResult: ValidCompilationResult,
@@ -51,14 +52,15 @@ function writeAll(
 ): string {
   const unionContext = makeUnionContext(compilationResult);
 
+  const indentUnit = " ".repeat(4);
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["kotlin-top-level"],
       `package ${kotlinConfig.package};`,
       STATIC_SNIPPETS["kotlin-imports"],
-      reformat(writePromptsClass(compilationResult)),
+      reformatCFamilyCode(writePromptsClass(compilationResult), { indentUnit }),
       STATIC_SNIPPETS["kotlin-public-types"],
-      reformat(
+      reformatCFamilyCode(
         [
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorInterfaces(compilationResult),
@@ -68,6 +70,7 @@ function writeAll(
           writeTemplatesData(compilationResult),
           writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
+        { indentUnit },
       ),
       STATIC_SNIPPETS["kotlin-logic"],
     ].join("\n\n"),
@@ -510,7 +513,7 @@ function writeUserDefinedDatatypes(
       lines.push(`}  // object ${ktNamespace}\n`);
     }
   }
-  lines.push("}\n");
+  lines.push("}  // object Schema\n");
   return lines.join("\n");
 }
 
@@ -614,11 +617,11 @@ function writeExecuteToolCall(
     lines.push(
       `"${toolId}" -> {`,
       `val toolExecutor = executor as? ${toolInterface}`,
-      '?: return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
+      "if (toolExecutor != null) {",
       "val input = try {",
       `Json.decodeFromString<${inputType}>(toolCall.stringifiedInput)`,
       "} catch (e: Exception) {",
-      'return makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: ${e.message ?: e.toString()}")',
+      'return makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: ${e.message}")',
       "}",
       `val rawOutput = toolExecutor.${methodName}(input)`,
       "return ToolCallResponse(",
@@ -626,15 +629,16 @@ function writeExecuteToolCall(
       "stringifiedOutput = Json.encodeToString(rawOutput),",
       ")",
       "}",
+      "}",
     );
   }
 
   lines.push(
-    'else -> return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
     "}",
     "} catch (e: Exception) {",
     "return makeToolErrorResponse(toolCall.callId, e.message ?: e.toString())",
     "}",
+    'return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
     "}",
   );
 
@@ -1002,34 +1006,6 @@ function wrapKDoc(doc: string): readonly string[] {
   }
 }
 
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-  let indent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -4);
-    }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
-    if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
-    ) {
-      indent = indent + "    ";
-    }
-  }
-  return outputLines.join("\n");
-}
-
 function coalesceEmptyLines(code: string): string {
   return (
     code
@@ -1062,6 +1038,7 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "Map",
   "OptIn",
   "Schema",
+  "SerialName",
   "Serializable",
   "String",
 ] as const);

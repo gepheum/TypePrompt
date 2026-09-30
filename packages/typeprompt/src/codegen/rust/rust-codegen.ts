@@ -26,6 +26,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateRustCode(
   compilationResult: ValidCompilationResult,
@@ -48,7 +49,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     [
       STATIC_SNIPPETS["rust-top-level"],
       STATIC_SNIPPETS["rust-imports"],
-      reformat(
+      reformatCFamilyCode(
         [
           STATIC_SNIPPETS["rust-public-types"],
           writePromptsStruct(compilationResult),
@@ -783,25 +784,39 @@ function writeExecuteToolCall(
 
       lines.push(
         `"${rawToolName}" => {`,
-        `let input: ${inputType} = serde_json::from_str(&tool_call.stringified_input).map_err(|e| {`,
-        'let call_info = format!(r#"{{"callId": "{}", "toolName": "{}"}}"#, tool_call.call_id, tool_call.tool_name);',
-        'format!("Tool call failed: {} — {}", call_info, e)',
-        "})?;",
+        `let input: ${inputType} = match serde_json::from_str(&tool_call.stringified_input) {`,
+        "Ok(val) => val,",
+        "Err(e) => {",
+        "return Ok(make_tool_error_response(",
+        "tool_call.call_id.clone(),",
+        'format!("Failed to parse tool input: {}", e),',
+        "));",
+        "}",
+        "};",
         `let raw_output = executor.${methodName}(input).await;`,
-        "let stringified_output = serde_json::to_string(&raw_output).map_err(|e| {",
-        'let call_info = format!(r#"{{"callId": "{}", "toolName": "{}"}}"#, tool_call.call_id, tool_call.tool_name);',
-        'format!("Tool call failed: {} — {}", call_info, e)',
-        "})?;",
+        "let stringified_output = match serde_json::to_string(&raw_output) {",
+        "Ok(val) => val,",
+        "Err(e) => {",
+        "return Ok(make_tool_error_response(",
+        "tool_call.call_id.clone(),",
+        "e.to_string(),",
+        "));",
+        "}",
+        "};",
         "Ok(ToolCallResponse {",
         "call_id: tool_call.call_id.clone(),",
         "stringified_output,",
+        "error: None,",
         "})",
         "}",
       );
     }
 
     lines.push(
-      '_ => Err(format!("Tool not found: {}", tool_call.tool_name).into()),',
+      "_ => Ok(make_tool_error_response(",
+      "tool_call.call_id.clone(),",
+      'format!("Tool not found: {}", tool_call.tool_name),',
+      ")),",
       "}",
       "}",
     );
@@ -1159,113 +1174,6 @@ function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
   return lines.map((l) => (l ? `/// ${l}` : "///"));
-}
-
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-
-  const indentUnit = "  ";
-  // The indent at every line is obtained by repeating indentUnit N times,
-  // where N is the length of this array.
-  const contextStack: Array<"{" | "(" | "[" | "<" | ":" | "."> = [];
-  // Returns the last element in `contextStack`.
-  const peakTop = (): string => contextStack.at(-1)!;
-  const getMatchingLeftBracket = (r: "}" | ")" | "]" | ">"): string => {
-    switch (r) {
-      case "}":
-        return "{";
-      case ")":
-        return "(";
-      case "]":
-        return "[";
-      case ">":
-        return "<";
-    }
-  };
-  for (let line of inputLines) {
-    line = line.trim();
-    if (line.length <= 0) {
-      // Don't indent empty lines.
-      outputLines.push("");
-      continue;
-    }
-
-    const firstChar = line[0];
-    switch (firstChar) {
-      case "}":
-      case ")":
-      case "]":
-      case ">": {
-        const left = getMatchingLeftBracket(firstChar);
-        while (contextStack.pop() !== left) {
-          if (contextStack.length <= 0) {
-            throw Error();
-          }
-        }
-        break;
-      }
-      case ".": {
-        if (peakTop() !== ".") {
-          contextStack.push(".");
-        }
-        break;
-      }
-    }
-    const indent =
-      indentUnit.repeat(contextStack.length) +
-      (line.startsWith("*") ? " " : "");
-    outputLines.push(`${indent}${line.trimEnd()}`);
-    if (line.startsWith("/") || line.startsWith("*")) {
-      // A comment.
-      continue;
-    }
-    const lastChar = line.slice(-1);
-    switch (lastChar) {
-      case "{":
-      case "(":
-      case "[":
-      case "<": {
-        // The next line will be indented
-        contextStack.push(lastChar);
-        break;
-      }
-      case ":":
-      case "=": {
-        if (peakTop() !== ":") {
-          contextStack.push(":");
-        }
-        break;
-      }
-      case ";":
-      case ",": {
-        if (peakTop() === "." || peakTop() === ":") {
-          contextStack.pop();
-        }
-      }
-    }
-  }
-
-  return outputLines.join("\n");
-}
-
-function coalesceEmptyLines(code: string): string {
-  return (
-    code
-      // Remove spaces enclosed within curly brackets if that's all there is.
-      .replace(/\{\s+\}/g, "{}")
-      // Remove spaces enclosed within round brackets if that's all there is.
-      .replace(/\(\s+\)/g, "()")
-      // Remove spaces enclosed within square brackets if that's all there is.
-      .replace(/\[\s+\]/g, "[]")
-      // Remove empty line following an open curly bracket.
-      .replace(/(\{\n *)\n/g, "$1")
-      // Remove empty line preceding a closed curly bracket.
-      .replace(/\n(\n *\})/g, "$1")
-      // Coalesce consecutive empty lines.
-      .replace(/\n\n\n+/g, "\n\n")
-      .replace(/\n*$/g, "\n")
-  );
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([

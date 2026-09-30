@@ -343,13 +343,28 @@ mod tests {
                 .is_err()
         );
 
-        // execute_tools errors for unknown tool
+        // execute_tools returns error for unknown tool
         let bad_calls = vec![gen::prompts_03::ToolCall {
             call_id: "c1".to_string(),
             tool_name: "noSuchTool".to_string(),
             stringified_input: "{}".to_string(),
         }];
-        assert!(block_on(prompt.execute_tools(&bad_calls, &MockWebSearchExecutor)).is_err());
+        let bad_results =
+            block_on(prompt.execute_tools(&bad_calls, &MockWebSearchExecutor)).unwrap();
+        assert_eq!(bad_results.len(), 1);
+        assert_eq!(bad_results[0].call_id, "c1");
+        assert_eq!(
+            bad_results[0].error.as_deref(),
+            Some("Tool not found: noSuchTool")
+        );
+        assert!(
+            bad_results[0]
+                .stringified_output
+                .contains(r#""error":"Tool not found: noSuchTool""#)
+                || bad_results[0]
+                    .stringified_output
+                    .contains(r#""error": "Tool not found: noSuchTool""#)
+        );
     }
 
     // ─── 04 Variants: WriteProductDescription ───────────────────────────────────

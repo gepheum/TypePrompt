@@ -23,6 +23,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateCSharpCode(
   compilationResult: ValidCompilationResult,
@@ -47,11 +48,12 @@ function writeAll(
   const { rootNamespace } = config;
   const unionContext = makeUnionContext(compilationResult);
 
+  const indentUnit = "    ";
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["csharp-imports"],
       `namespace ${rootNamespace};`,
-      reformat(
+      reformatCFamilyCode(
         [
           writePromptsClass(compilationResult),
           writePublicTypes(compilationResult),
@@ -66,6 +68,7 @@ function writeAll(
         ]
           .filter(Boolean)
           .join("\n\n"),
+        { indentUnit },
       ),
       STATIC_SNIPPETS["csharp-logic"],
     ].join("\n\n"),
@@ -1263,35 +1266,6 @@ function wrapXmlDoc(
     ...contentLines.map((line) => (line ? `/// ${line}` : "///")),
     "/// </summary>",
   ];
-}
-
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-  let indent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -4);
-    }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
-    if (
-      (line.endsWith("{") ||
-        line.endsWith("(") ||
-        line.endsWith("[") ||
-        line.endsWith("<")) &&
-      !line.startsWith("//")
-    ) {
-      indent = indent + "    ";
-    }
-  }
-  return outputLines.join("\n");
 }
 
 function coalesceEmptyLines(code: string): string {

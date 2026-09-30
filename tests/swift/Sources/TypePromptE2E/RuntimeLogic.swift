@@ -24,7 +24,7 @@
 //       // Build and send the API request using prompt.systemMessage,
 //       // prompt.userMessage, prompt.examples, and prompt.tools.
 //       // If the model requests tool calls, dispatch them:
-//       //   let results = try await prompt.executeTools(toolCalls, toolExecutor: toolExecutor)
+//       //   let results = await prompt.executeTools(toolCalls, toolExecutor: toolExecutor)
 //       // Repeat until the model produces a final response, then parse it:
 //       return try prompt.parseResponse(modelResponse)
 //   }
@@ -102,8 +102,8 @@ public enum TypePromptRuntime {
     public func executeTools(
       _ toolCalls: some Sequence<ToolCall>,
       toolExecutor: ToolExecutor,
-    ) async throws -> [ToolCallResponse] {
-      return try await doExecuteTools(
+    ) async -> [ToolCallResponse] {
+      return await doExecuteTools(
         toolCalls,
         templateId: templateId,
         toolExecutor: toolExecutor,
@@ -245,12 +245,30 @@ public enum TypePromptRuntime {
   public struct ToolCallResponse: Sendable, Codable, Equatable {
     /// Identifier matching the original tool call.
     public let callId: String
-    /// The stringified JSON output from executing the tool.
+
+    /// The JSON-stringified output of the tool call:
+    /// - On success, contains the JSON-serialized return value of the tool.
+    /// - On failure, contains a JSON object with a single "error" key containing
+    ///   the error message (e.g. `{"error": "..."}`).
+    ///
+    /// Integration guide:
+    /// - **OpenAI / Gemini SDKs**: Forward `stringifiedOutput` directly as the
+    ///   tool result content and ignore the `error` field.
+    /// - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error = true`
+    ///   in the tool result block and pass the error message to `content`. Otherwise,
+    ///   pass `stringifiedOutput` to `content`.
     public let stringifiedOutput: String
 
-    public init(callId: String, stringifiedOutput: String) {
+    /// The error message if the tool call failed, or `nil` on success.
+    ///
+    /// Set when tool argument parsing fails, when the tool itself returns an error,
+    /// or when the requested tool is not found.
+    public let error: String?
+
+    public init(callId: String, stringifiedOutput: String, error: String? = nil) {
       self.callId = callId
       self.stringifiedOutput = stringifiedOutput
+      self.error = error
     }
   }
 
@@ -273,16 +291,9 @@ public enum TypePromptRuntime {
     toolCall: ToolCall,
     namespace: String,
     executor: any Any,
-  ) async throws -> ToolCallResponse {
-    throw ToolNotFoundError(description: "Tool not found: \(toolCall.toolName)")
-  }
-
-  fileprivate struct ToolExecutionError: Error, CustomStringConvertible {
-    let description: String
-  }
-
-  fileprivate struct ToolNotFoundError: Error, CustomStringConvertible {
-    let description: String
+  ) async -> ToolCallResponse {
+    return makeToolErrorResponse(
+      callId: toolCall.callId, errorMessage: "Tool not found: \(toolCall.toolName)")
   }
 
   fileprivate static func parseMeta(_ meta: Any?) -> Meta {
@@ -797,6 +808,21 @@ public enum TypePromptRuntime {
   )
 
   // <static:swift-logic>
+  fileprivate static func makeToolErrorResponse(callId: String, errorMessage: String)
+    -> ToolCallResponse
+  {
+    let errorObj = ["error": errorMessage]
+    let errorJson: String
+    if let data = try? JSONSerialization.data(withJSONObject: errorObj),
+      let str = String(data: data, encoding: .utf8)
+    {
+      errorJson = str
+    } else {
+      errorJson = "{\"error\": \"\(errorMessage)\"}"
+    }
+    return ToolCallResponse(callId: callId, stringifiedOutput: errorJson, error: errorMessage)
+  }
+
   /// A JSON value representation.
   public enum JsonElement: Codable, Sendable, Equatable {
     case string(String)
@@ -1462,13 +1488,13 @@ public enum TypePromptRuntime {
     _ toolCalls: some Sequence<ToolCall>,
     templateId: TemplateId,
     toolExecutor: ToolExecutor,
-  ) async throws -> [ToolCallResponse] {
+  ) async -> [ToolCallResponse] {
     let namespace = templateId.description.split(separator: ":").first.map(String.init) ?? ""
-    return try await withThrowingTaskGroup(of: (Int, ToolCallResponse).self) {
+    return await withTaskGroup(of: (Int, ToolCallResponse).self) {
       group in
       for (index, call) in toolCalls.enumerated() {
         group.addTask {
-          let result = try await executeToolCall(
+          let result = await executeToolCall(
             toolCall: call,
             namespace: namespace,
             executor: toolExecutor,
@@ -1477,7 +1503,7 @@ public enum TypePromptRuntime {
         }
       }
       var results = [(Int, ToolCallResponse)]()
-      for try await item in group {
+      for await item in group {
         results.append(item)
       }
       return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }

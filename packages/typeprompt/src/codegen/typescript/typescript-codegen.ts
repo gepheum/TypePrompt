@@ -26,6 +26,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
@@ -49,9 +50,9 @@ function writeAll(compilationResult: ValidCompilationResult): string {
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["typescript-imports"],
-      reformat(writePromptsInterface(compilationResult)),
+      reformatCFamilyCode(writePromptsInterface(compilationResult)),
       STATIC_SNIPPETS["typescript-public-types"],
-      reformat(
+      reformatCFamilyCode(
         [
           writeTemplateIdEnum(Object.values(templates)),
           writeToolsType(compilationResult),
@@ -277,9 +278,11 @@ function writeSpecDatatypes(): string {
     writeSchema(runtimeTypesSchema, options),
     "}",
     "",
-    "const templatesSchema = " +
-      writeZodType(runtimeTypesSchema, "Templates", options) +
+    [
+      "const templatesSchema = ",
+      writeZodType(runtimeTypesSchema, "Templates", options),
       ";",
+    ].join(""),
   ];
   return lines.join("\n");
 }
@@ -575,51 +578,4 @@ function wrapJsdoc(doc: string): string {
     result += ` */\n`;
     return result;
   }
-}
-
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-  let indent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -2);
-    }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(line.length <= 0 ? line : `${indent}${starPrefix}${line}`);
-    if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
-    ) {
-      indent = indent + "  ";
-    }
-  }
-  return outputLines.join("\n");
-}
-
-function coalesceEmptyLines(code: string): string {
-  return (
-    code
-      // Remove spaces enclosed within curly brackets if that's all there is.
-      .replace(/\{\s+\}/g, "{}")
-      // Remove spaces enclosed within round brackets if that's all there is.
-      .replace(/\(\s+\)/g, "()")
-      // Remove spaces enclosed within square brackets if that's all there is.
-      .replace(/\[\s+\]/g, "[]")
-      // Remove empty line following an open curly bracket.
-      .replace(/(\{\n *)\n/g, "$1")
-      // Remove empty line preceding a closed curly bracket.
-      .replace(/\n(\n *\})/g, "$1")
-      // Coalesce consecutive empty lines.
-      .replace(/\n\n\n+/g, "\n\n")
-      .replace(/\n*$/g, "\n")
-  );
 }

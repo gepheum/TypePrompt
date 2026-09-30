@@ -193,11 +193,30 @@ final class ToolCall {
 
 final class ToolCallResponse {
   final String callId;
+
+  /// The JSON-stringified output of the tool call:
+  /// - On success, contains the JSON-serialized return value of the tool.
+  /// - On failure, contains a JSON object with a single "error" key containing
+  ///   the error message (e.g. `{"error": "..."}`).
+  ///
+  /// Integration guide:
+  /// - **OpenAI / Gemini SDKs**: Forward [stringifiedOutput] directly as the
+  ///   tool result content and ignore the [error] field.
+  /// - **Anthropic SDK**: Check if [error] is set. If set, mark `is_error: true`
+  ///   in the tool result block and pass the error message to `content`. Otherwise,
+  ///   pass [stringifiedOutput] to `content`.
   final String stringifiedOutput;
+
+  /// The error message if the tool call failed, or `null` on success.
+  ///
+  /// Set when tool argument parsing fails, when the tool itself returns an error,
+  /// or when the requested tool is not found.
+  final String? error;
 
   const ToolCallResponse({
     required this.callId,
     required this.stringifiedOutput,
+    this.error,
   });
 }
 
@@ -1045,7 +1064,8 @@ Future<ToolCallResponse> _executeToolCall(
   String namespace,
   Object executor,
 ) async {
-  throw UnimplementedError();
+  return _makeToolErrorResponse(
+      toolCall.callId, 'Tool not found: ${toolCall.toolName}');
 }
 
 /// Entry point for building prompts.
@@ -1058,6 +1078,15 @@ final class Prompts {
 final prompts = Prompts._(_templatesData);
 
 // <static:dart-logic>
+ToolCallResponse _makeToolErrorResponse(String callId, String errorMessage) {
+  final errorJson = jsonEncode({'error': errorMessage});
+  return ToolCallResponse(
+    callId: callId,
+    stringifiedOutput: errorJson,
+    error: errorMessage,
+  );
+}
+
 dynamic _evaluate(_Spec_Expression expression, dynamic val) {
   switch (expression) {
     case _Spec_Expression_KindInput():

@@ -29,6 +29,7 @@ import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
+import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateDartCode(
   compilationResult: ValidCompilationResult,
@@ -53,9 +54,9 @@ function writeAll(compilationResult: ValidCompilationResult): string {
     [
       STATIC_SNIPPETS["dart-top-level"],
       STATIC_SNIPPETS["dart-imports"],
-      reformat(writePromptsClass(compilationResult)),
+      reformatCFamilyCode(writePromptsClass(compilationResult)),
       STATIC_SNIPPETS["dart-public-types"],
-      reformat(
+      reformatCFamilyCode(
         [
           writeTemplateIdEnum(compilationResult),
           writeToolExecutorClasses(compilationResult),
@@ -623,10 +624,17 @@ function writeExecuteToolCall(
     "String namespace,",
     "Object executor,",
     ") async {",
-    "var stringifiedOutput = '';",
-    "try {",
-    'switch ("$namespace:${toolCall.toolName}") {',
   ];
+
+  if (toolList.length <= 0) {
+    lines.push(
+      'return _makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}");',
+      "}",
+    );
+    return lines.join("\n");
+  }
+
+  lines.push("try {", 'switch ("$namespace:${toolCall.toolName}") {');
 
   for (const tool of toolList) {
     const toolId = getId(tool.tool);
@@ -636,11 +644,12 @@ function writeExecuteToolCall(
       inputTypeNode,
       outputTypeNode,
       options,
+      inputType,
     } = getToolInfo(tool, compilationResult);
 
     const inputFromJson = writeFromJsonExpr(
       inputTypeNode,
-      "jsonDecode(toolCall.stringifiedInput)",
+      "decodedInput",
       tool.schema,
       options,
     );
@@ -654,28 +663,29 @@ function writeExecuteToolCall(
     lines.push(
       `case "${toolId}": {`,
       `if (executor is! ${interfaceName}) break;`,
-      `final input = ${inputFromJson};`,
+      `final ${inputType} input;`,
+      "try {",
+      "final dynamic decodedInput = jsonDecode(toolCall.stringifiedInput);",
+      `input = ${inputFromJson};`,
+      "} catch (e) {",
+      'return _makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: $e");',
+      "}",
       `final rawOutput = await executor.${methodName}(input);`,
       `final json = ${outputToJson};`,
-      "stringifiedOutput = jsonEncode(json);",
-      "break;",
+      "return ToolCallResponse(",
+      "callId: toolCall.callId,",
+      "stringifiedOutput: jsonEncode(json),",
+      ");",
       "}",
     );
   }
 
   lines.push(
-    "default: {",
-    "break;",
-    "}",
     "}",
     "} catch (e) {",
-    'final callInfo = \'{"callId": "${toolCall.callId}", "toolName": "${toolCall.toolName}"}\';',
-    "throw Exception('Tool call failed: $callInfo — $e');",
+    "return _makeToolErrorResponse(toolCall.callId, e.toString());",
     "}",
-    "if (stringifiedOutput.isEmpty) {",
-    'throw ArgumentError("Tool not found: ${toolCall.toolName}");',
-    "}",
-    "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput);",
+    'return _makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}");',
     "}",
   );
 
@@ -1213,62 +1223,6 @@ function commentify(doc: string): readonly string[] {
   if (!doc) return [];
   const lines = doc.split("\n");
   return lines.map((l) => (l ? `/// ${l}` : "///"));
-}
-
-function reformat(code: string): string {
-  const inputLines: readonly string[] = code.split("\n");
-  const outputLines: string[] = [];
-  let indent = "";
-  let continuationIndent = "";
-  for (const inputLine of inputLines) {
-    const line = inputLine.trim();
-    if (
-      line.startsWith("}") ||
-      line.startsWith(")") ||
-      line.startsWith("]") ||
-      line.startsWith(">")
-    ) {
-      indent = indent.slice(0, -2);
-    }
-    const starPrefix = line.startsWith("*") ? " " : "";
-    outputLines.push(
-      line.length <= 0
-        ? line
-        : [indent, continuationIndent, starPrefix, line].join(""),
-    );
-    if (
-      line.endsWith("{") ||
-      line.endsWith("(") ||
-      line.endsWith("[") ||
-      line.endsWith("<")
-    ) {
-      indent = indent + "  ";
-    } else if (line.endsWith(":")) {
-      continuationIndent = "  ";
-    } else if (line.endsWith(";")) {
-      continuationIndent = "";
-    }
-  }
-  return outputLines.join("\n");
-}
-
-function coalesceEmptyLines(code: string): string {
-  return (
-    code
-      // Remove spaces enclosed within curly brackets if that's all there is.
-      .replace(/\{\s+\}/g, "{}")
-      // Remove spaces enclosed within round brackets if that's all there is.
-      .replace(/\(\s+\)/g, "()")
-      // Remove spaces enclosed within square brackets if that's all there is.
-      .replace(/\[\s+\]/g, "[]")
-      // Remove empty line following an open curly bracket.
-      .replace(/(\{\n *)\n/g, "$1")
-      // Remove empty line preceding a closed curly bracket.
-      .replace(/\n(\n *\})/g, "$1")
-      // Coalesce consecutive empty lines.
-      .replace(/\n\n\n+/g, "\n\n")
-      .replace(/\n*$/g, "\n")
-  );
 }
 
 const RESERVED_NAMES: ReadonlySet<string> = new Set([
