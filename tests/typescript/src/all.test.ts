@@ -379,6 +379,30 @@ describe("03-tools / ResearchQuestion", () => {
       /"error":\s*"Tool not found: nonExistentTool"/,
     );
   });
+
+  it("executeTools returns error when executor throws", async () => {
+    const throwingExecutor = {
+      webSearch: async () => {
+        throw new Error("Search service failure");
+      },
+    };
+    const responses = await prompt.executeTools(
+      [
+        {
+          callId: "call_err",
+          toolName: "webSearch",
+          stringifiedInput: JSON.stringify({ query: "fail" }),
+        },
+      ],
+      throwingExecutor,
+    );
+    expect(responses.length).toMatch(1);
+    expect(responses[0]!.callId).toMatch("call_err");
+    expect(responses[0]!.error).toMatch("Search service failure");
+    expect(responses[0]!.stringifiedOutput).toMatch(
+      /"error":\s*"Search service failure"/,
+    );
+  });
 });
 
 // ─── 04 Variants: multiple prompt variants, common schema ────────────────────

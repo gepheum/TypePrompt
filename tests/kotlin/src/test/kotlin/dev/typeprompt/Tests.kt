@@ -402,6 +402,28 @@ class Test03Tools_ResearchQuestion {
             assertEquals("Tool not found: noSuchTool", results[0].error)
             assertTrue(results[0].stringifiedOutput.contains("\"error\":\"Tool not found: noSuchTool\""))
         }
+
+    @Test
+    fun testExecuteToolsExecutorThrowsReturnsError() =
+        runTest {
+            val failingExecutor =
+                object : com.example.prompts03.ToolExecutor.WebSearch {
+                    override suspend fun webSearch(
+                        input: com.example.prompts03.Schema.WebSearch.Input,
+                    ): com.example.prompts03.Schema.WebSearch.Output {
+                        throw RuntimeException("Search service failure")
+                    }
+                }
+            val toolCalls =
+                listOf(
+                    com.example.prompts03.ToolCall("call_err", "webSearch", "{\"query\":\"fail\"}"),
+                )
+            val results = prompt.executeTools(toolCalls, failingExecutor)
+            assertEquals(1, results.size)
+            assertEquals("call_err", results[0].callId)
+            assertEquals("Search service failure", results[0].error)
+            assertTrue(results[0].stringifiedOutput.contains("\"error\":\"Search service failure\""))
+        }
 }
 
 class Test04Snippets_SummarizeDocument {

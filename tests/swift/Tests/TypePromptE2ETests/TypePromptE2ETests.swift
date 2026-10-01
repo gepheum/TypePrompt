@@ -19,6 +19,18 @@ private struct MockWebSearchExecutor: TypePrompt03.ToolExecutor.WebSearch {
   }
 }
 
+private struct ThrowingWebSearchExecutor: TypePrompt03.ToolExecutor.WebSearch {
+  struct SearchError: LocalizedError {
+    var errorDescription: String? { "Search service unavailable" }
+  }
+
+  func webSearch(
+    input: TypePrompt03.Schema.WebSearch.Input
+  ) async throws -> TypePrompt03.Schema.WebSearch.Output {
+    throw SearchError()
+  }
+}
+
 @Suite("01 Basics: Translate")
 struct BasicsTranslateTests {
   let prompt = TypePrompt01.prompts.renderTranslate(
@@ -343,6 +355,21 @@ struct ToolsResearchQuestionTests {
     #expect(
       results[0].stringifiedOutput.contains("\"error\":\"Tool not found: noSuchTool\"")
         || results[0].stringifiedOutput.contains("\"error\": \"Tool not found: noSuchTool\""))
+  }
+
+  @Test func executeToolsReturnsErrorWhenExecutorThrows() async {
+    let toolCalls = [
+      TypePrompt03.ToolCall(
+        callId: "call_err",
+        toolName: "webSearch",
+        stringifiedInput: "{\"query\":\"Tokyo population\"}"
+      )
+    ]
+    let results = await prompt.executeTools(toolCalls, toolExecutor: ThrowingWebSearchExecutor())
+    #expect(results.count == 1)
+    #expect(results[0].callId == "call_err")
+    #expect(results[0].error?.contains("Search service unavailable") == true)
+    #expect(results[0].stringifiedOutput.contains("Search service unavailable"))
   }
 }
 

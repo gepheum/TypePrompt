@@ -25,6 +25,13 @@ class MockWebSearchExecutor implements p03.ToolExecutor_WebSearch {
   }
 }
 
+class ThrowingWebSearchExecutor implements p03.ToolExecutor_WebSearch {
+  @override
+  Future<p03.WebSearch_Output> webSearch(p03.WebSearch_Input input) async {
+    throw Exception("Search service failure");
+  }
+}
+
 void main() {
   // To disable unused imports warning
   [pe02.noTools, pe03.noTools];
@@ -354,6 +361,27 @@ void main() {
       expect(
         results[0].stringifiedOutput,
         contains('"error":"Tool not found: noSuchTool"'),
+      );
+    });
+
+    test('executeTools returns error when executor throws', () async {
+      final toolCalls = [
+        p03.ToolCall(
+          callId: "call_err",
+          toolName: "webSearch",
+          stringifiedInput: '{"query":"Tokyo population"}',
+        ),
+      ];
+      final results = await prompt.executeTools(
+        toolCalls,
+        ThrowingWebSearchExecutor(),
+      );
+      expect(results.length, equals(1));
+      expect(results[0].callId, equals("call_err"));
+      expect(results[0].error, contains("Search service failure"));
+      expect(
+        results[0].stringifiedOutput,
+        contains("Search service failure"),
       );
     });
   });

@@ -473,6 +473,31 @@ class TestResearchQuestion:
             or '"error":"Tool not found: noSuchTool"' in result[0].stringified_output
         )
 
+    async def test_execute_tools_returns_error_when_executor_raises(self):
+        class FailingExecutor:
+            async def web_search(
+                self, input: s03.web_search.Input
+            ) -> s03.web_search.Output:
+                raise RuntimeError("Search service failure")
+
+        result = await self.prompt.execute_tools(
+            [
+                ToolCall(
+                    call_id="call_err",
+                    tool_name="webSearch",
+                    stringified_input='{"query":"fail"}',
+                )
+            ],
+            FailingExecutor(),
+        )
+        assert len(result) == 1
+        assert result[0].call_id == "call_err"
+        assert result[0].error == "Search service failure"
+        assert (
+            '"error": "Search service failure"' in result[0].stringified_output
+            or '"error":"Search service failure"' in result[0].stringified_output
+        )
+
 
 # ─── 04 Snippets: switch snippet, conditional snippet ────────────────────────
 

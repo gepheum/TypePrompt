@@ -411,6 +411,32 @@ public class Test03Tools_ResearchQuestion
         Assert.Contains("Tool not found: noSuchTool", results[0].StringifiedOutput);
     }
 
+    private class FailingWebSearchExecutor : TypePrompt03.ToolExecutor.IWebSearch
+    {
+        public Task<TypePrompt03.Schema.WebSearch.Output> WebSearch(
+            TypePrompt03.Schema.WebSearch.Input input,
+            CancellationToken cancellationToken = default
+        )
+        {
+            throw new InvalidOperationException("Search service failure");
+        }
+    }
+
+    [Fact]
+    public async Task TestExecuteToolsExecutorThrowsReturnsError()
+    {
+        var toolCalls = new[]
+        {
+            new TypePrompt03.ToolCall("call_err", "webSearch", "{\"query\":\"fail\"}")
+        };
+
+        var results = await _prompt.ExecuteTools(toolCalls, new FailingWebSearchExecutor());
+        Assert.Single(results);
+        Assert.Equal("call_err", results[0].CallId);
+        Assert.Equal("Search service failure", results[0].Error);
+        Assert.Contains("Search service failure", results[0].StringifiedOutput);
+    }
+
     [Fact]
     public async Task TestExecuteToolsWithCancellationToken()
     {

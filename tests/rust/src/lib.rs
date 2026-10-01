@@ -365,6 +365,25 @@ mod tests {
                     .stringified_output
                     .contains(r#""error": "Tool not found: noSuchTool""#)
         );
+
+        // execute_tools returns error for invalid input json
+        let invalid_input_calls = vec![gen::prompts_03::ToolCall {
+            call_id: "c_bad_input".to_string(),
+            tool_name: "webSearch".to_string(),
+            stringified_input: "{bad json".to_string(),
+        }];
+        let invalid_input_results =
+            block_on(prompt.execute_tools(&invalid_input_calls, &MockWebSearchExecutor)).unwrap();
+        assert_eq!(invalid_input_results.len(), 1);
+        assert_eq!(invalid_input_results[0].call_id, "c_bad_input");
+        assert!(invalid_input_results[0]
+            .error
+            .as_deref()
+            .unwrap()
+            .contains("Failed to parse tool input"));
+        assert!(invalid_input_results[0]
+            .stringified_output
+            .contains("Failed to parse tool input"));
     }
 
     // ─── 04 Variants: WriteProductDescription ───────────────────────────────────
