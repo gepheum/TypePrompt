@@ -131,7 +131,10 @@ class Test02StructuredOutput_TriageTicket {
                 "{\"category\":\"billing\",\"urgency\":\"low\",\"summary\":\"Invoice question\",\"suggestedActions\":[]}",
             )
         assertEquals(com.example.prompts02.Schema.TriageTicket.TicketCategory.Billing, result.category)
+        assertEquals("billing", result.category.value)
+        assertEquals("billing", result.category.toString())
         assertEquals(com.example.prompts02.Schema.TriageTicket.Output_Urgency.Low, result.urgency)
+        assertEquals("low", result.urgency.value)
         assertEquals("Invoice question", result.summary)
     }
 

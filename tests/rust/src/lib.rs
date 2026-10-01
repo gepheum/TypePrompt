@@ -102,10 +102,14 @@ mod tests {
             result.category,
             gen::prompts_02::schema::triage_ticket::TicketCategory::Billing
         );
+        assert_eq!(result.category.as_str(), "billing");
+        assert_eq!(result.category.to_string(), "billing");
+        assert_eq!(format!("{}", result.category), "billing");
         assert_eq!(
             result.urgency,
             gen::prompts_02::schema::triage_ticket::Output_Urgency::Low
         );
+        assert_eq!(result.urgency.as_str(), "low");
         assert_eq!(result.summary, "Invoice question");
 
         // Strips ```json code fences

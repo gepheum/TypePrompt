@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TypePrompt01;
+using TypePrompt02;
 using TypePrompt03;
 using Xunit;
 
@@ -130,7 +132,9 @@ public class Test02StructuredOutput_TriageTicket
             "{\"category\":\"billing\",\"urgency\":\"low\",\"summary\":\"Invoice question\",\"suggestedActions\":[]}"
         );
         Assert.Equal(TypePrompt02.Schema.TriageTicket.TicketCategory.Billing, result.Category);
+        Assert.Equal("billing", result.Category.GetValue());
         Assert.Equal(TypePrompt02.Schema.TriageTicket.Output_Urgency.Low, result.Urgency);
+        Assert.Equal("low", result.Urgency.GetValue());
         Assert.Equal("Invoice question", result.Summary);
     }
 

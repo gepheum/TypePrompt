@@ -760,13 +760,18 @@ function writeTypepromptUnion(
   switch (members.kind) {
     case "strings": {
       lines.push("@Serializable");
-      lines.push(`enum class ${typeName} {\n`);
+      lines.push(`enum class ${typeName}(val value: String) {\n`);
       for (const member of members.members) {
         const kotlinName = toKotlinName(toPascalCase(member.value));
         lines.push(`@SerialName("${member.value}")`);
-        lines.push(kotlinName.concat(","));
+        lines.push(`${kotlinName}(${JSON.stringify(member.value)}),`);
       }
-      lines.push("}");
+      lines.push(
+        lines.pop()!.slice(0, -1).concat(";"),
+        "",
+        "override fun toString(): String = value",
+        "}",
+      );
       break;
     }
     case "interfaces": {

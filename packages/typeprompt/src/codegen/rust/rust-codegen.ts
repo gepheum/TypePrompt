@@ -921,6 +921,27 @@ function writeTypepromptUnion(
         lines.push(rustName.concat(","));
       }
       lines.push("}"); // enum
+      lines.push(
+        "",
+        `impl ${typeName} {`,
+        `  ${vis}const fn as_str(&self) -> &'static str {`,
+        "    match self {",
+      );
+      for (const member of members.members) {
+        const rustName = toRustName(toPascalCase(member.value));
+        lines.push(`      Self::${rustName} => "${member.value}",`);
+      }
+      lines.push(
+        "    }",
+        "  }",
+        "}",
+        "",
+        `impl std::fmt::Display for ${typeName} {`,
+        "  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
+        '    write!(f, "{}", self.as_str())',
+        "  }",
+        "}",
+      );
       break;
     }
     case "interfaces": {

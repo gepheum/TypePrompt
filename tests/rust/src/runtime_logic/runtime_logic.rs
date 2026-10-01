@@ -769,6 +769,21 @@ mod spec {
     Text,
   }
 
+  impl OutputFormat {
+    pub(super) const fn as_str(&self) -> &'static str {
+      match self {
+        Self::Json => "json",
+        Self::Text => "text",
+      }
+    }
+  }
+
+  impl std::fmt::Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.as_str())
+    }
+  }
+
   #[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
   pub(super) struct TemplateTool {
     pub(super) id: String,
@@ -986,6 +1001,25 @@ mod spec {
     Tsv,
   }
 
+  impl InsertFormat {
+    pub(super) const fn as_str(&self) -> &'static str {
+      match self {
+        Self::Text => "text",
+        Self::Json => "json",
+        Self::Yaml => "yaml",
+        Self::Toon => "toon",
+        Self::Csv => "csv",
+        Self::Tsv => "tsv",
+      }
+    }
+  }
+
+  impl std::fmt::Display for InsertFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.as_str())
+    }
+  }
+
   #[derive(Clone, Debug, PartialEq)]
   pub(super) enum Expression {
     KindInput(Expression_KindInput),
@@ -1132,6 +1166,22 @@ mod spec {
     NotEmpty,
     #[serde(rename = "true")]
     True,
+  }
+
+  impl Snippet_KindSnippetIf_Is {
+    pub(super) const fn as_str(&self) -> &'static str {
+      match self {
+        Self::NotNull => "not-null",
+        Self::NotEmpty => "not-empty",
+        Self::True => "true",
+      }
+    }
+  }
+
+  impl std::fmt::Display for Snippet_KindSnippetIf_Is {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.as_str())
+    }
   }
 
   #[derive(Clone, serde::Deserialize, Debug, PartialEq)]

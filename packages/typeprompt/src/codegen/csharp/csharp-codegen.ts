@@ -542,36 +542,47 @@ function writeUserDefinedDatatypes(
     Object.keys(schema.typeDeclarations).length >= 1;
 
   const schemaInnerLines: string[] = [];
+  const extensionsInnerLines: string[] = [];
 
   // Meta types
   if (anyTypes(metaSchema)) {
-    const metaTypesCode = writeSchemaTypes(metaSchema, unionContext, {
-      namespace: "Schema",
-    });
-    if (metaTypesCode.trim()) {
-      schemaInnerLines.push(metaTypesCode);
+    const { code, extensionsCode } = writeSchemaTypes(
+      metaSchema,
+      unionContext,
+      {
+        namespace: "Schema",
+      },
+    );
+    if (code.trim()) {
+      schemaInnerLines.push(code);
+    }
+    if (extensionsCode.trim()) {
+      extensionsInnerLines.push(extensionsCode);
     }
   }
 
   if (singleNamespace) {
     const sharedNamespace = "Schema.Shared";
     if (anyTypes(singleNamespace.schema)) {
-      const sharedTypesCode = writeSchemaTypes(
+      const { code, extensionsCode } = writeSchemaTypes(
         singleNamespace.schema,
         unionContext,
         {
           namespace: sharedNamespace,
         },
       );
-      if (sharedTypesCode.trim()) {
+      if (code.trim()) {
         schemaInnerLines.push(
-          ["public static class Shared", "{", sharedTypesCode, "}"].join("\n"),
+          ["public static class Shared", "{", code, "}"].join("\n"),
         );
+      }
+      if (extensionsCode.trim()) {
+        extensionsInnerLines.push(extensionsCode);
       }
     }
     for (const template of singleNamespace.templates) {
       const templateName = toCSharpName(template.template.name.text);
-      const templateTypesCode = writeSchemaTypes(
+      const { code, extensionsCode } = writeSchemaTypes(
         template.schema,
         unionContext,
         {
@@ -579,29 +590,32 @@ function writeUserDefinedDatatypes(
           sharedNamespace,
         },
       );
-      if (templateTypesCode.trim()) {
+      if (code.trim()) {
         schemaInnerLines.push(
-          [
-            `public static class ${templateName}`,
-            "{",
-            templateTypesCode,
-            "}",
-          ].join("\n"),
+          [`public static class ${templateName}`, "{", code, "}"].join("\n"),
         );
+      }
+      if (extensionsCode.trim()) {
+        extensionsInnerLines.push(extensionsCode);
       }
     }
     for (const tool of Object.values(singleNamespace.tools)) {
       const toolName = toCSharpName(capitalize(tool.tool.name.text));
-      const toolTypesCode = writeSchemaTypes(tool.schema, unionContext, {
-        namespace: `Schema.${toolName}`,
-        sharedNamespace,
-      });
-      if (toolTypesCode.trim()) {
+      const { code, extensionsCode } = writeSchemaTypes(
+        tool.schema,
+        unionContext,
+        {
+          namespace: `Schema.${toolName}`,
+          sharedNamespace,
+        },
+      );
+      if (code.trim()) {
         schemaInnerLines.push(
-          [`public static class ${toolName}`, "{", toolTypesCode, "}"].join(
-            "\n",
-          ),
+          [`public static class ${toolName}`, "{", code, "}"].join("\n"),
         );
+      }
+      if (extensionsCode.trim()) {
+        extensionsInnerLines.push(extensionsCode);
       }
     }
   } else {
@@ -612,24 +626,25 @@ function writeUserDefinedDatatypes(
       const nsInnerLines: string[] = [];
 
       if (anyTypes(namespace.schema)) {
-        const sharedTypesCode = writeSchemaTypes(
+        const { code, extensionsCode } = writeSchemaTypes(
           namespace.schema,
           unionContext,
           {
             namespace: sharedNamespace,
           },
         );
-        if (sharedTypesCode.trim()) {
+        if (code.trim()) {
           nsInnerLines.push(
-            ["public static class Shared", "{", sharedTypesCode, "}"].join(
-              "\n",
-            ),
+            ["public static class Shared", "{", code, "}"].join("\n"),
           );
+        }
+        if (extensionsCode.trim()) {
+          extensionsInnerLines.push(extensionsCode);
         }
       }
       for (const template of namespace.templates) {
         const templateName = toCSharpName(template.template.name.text);
-        const templateTypesCode = writeSchemaTypes(
+        const { code, extensionsCode } = writeSchemaTypes(
           template.schema,
           unionContext,
           {
@@ -637,29 +652,32 @@ function writeUserDefinedDatatypes(
             sharedNamespace,
           },
         );
-        if (templateTypesCode.trim()) {
+        if (code.trim()) {
           nsInnerLines.push(
-            [
-              `public static class ${templateName}`,
-              "{",
-              templateTypesCode,
-              "}",
-            ].join("\n"),
+            [`public static class ${templateName}`, "{", code, "}"].join("\n"),
           );
+        }
+        if (extensionsCode.trim()) {
+          extensionsInnerLines.push(extensionsCode);
         }
       }
       for (const tool of Object.values(namespace.tools)) {
         const toolName = toCSharpName(capitalize(tool.tool.name.text));
-        const toolTypesCode = writeSchemaTypes(tool.schema, unionContext, {
-          namespace: namespaceBase.concat(toolName),
-          sharedNamespace,
-        });
-        if (toolTypesCode.trim()) {
+        const { code, extensionsCode } = writeSchemaTypes(
+          tool.schema,
+          unionContext,
+          {
+            namespace: namespaceBase.concat(toolName),
+            sharedNamespace,
+          },
+        );
+        if (code.trim()) {
           nsInnerLines.push(
-            [`public static class ${toolName}`, "{", toolTypesCode, "}"].join(
-              "\n",
-            ),
+            [`public static class ${toolName}`, "{", code, "}"].join("\n"),
           );
+        }
+        if (extensionsCode.trim()) {
+          extensionsInnerLines.push(extensionsCode);
         }
       }
 
@@ -678,19 +696,31 @@ function writeUserDefinedDatatypes(
 
   if (schemaInnerLines.length <= 0) return "";
 
-  return [
+  const schemaClass = [
     "public static class Schema",
     "{",
     schemaInnerLines.join("\n\n"),
     "}",
   ].join("\n");
+
+  const extensionsClass =
+    extensionsInnerLines.length > 0
+      ? [
+          "public static class SchemaExtensions",
+          "{",
+          extensionsInnerLines.join("\n\n"),
+          "}",
+        ].join("\n")
+      : "";
+
+  return [schemaClass, extensionsClass].filter(Boolean).join("\n\n");
 }
 
 function writeSpecDatatypes(unionContext: UnionContext): string {
   const options = {
     namespace: "Spec",
   } as const;
-  const specTypesCode = writeSchemaTypes(
+  const { code: specTypesCode } = writeSchemaTypes(
     runtimeTypesSchema,
     unionContext,
     options,
@@ -876,12 +906,35 @@ type WriteSchemaOptions = {
   readonly sharedNamespace?: string;
 };
 
+function writeEnumExtensionMethod(
+  fullEnumRef: string,
+  members: readonly { readonly value: string }[],
+): string {
+  const lines: string[] = [
+    `public static string GetValue(this ${fullEnumRef} value) => value switch`,
+    "{",
+    ...members.map(
+      (m) =>
+        `${fullEnumRef}.${toCSharpName(toPascalCase(m.value))} => "${m.value}",`,
+    ),
+    "_ => throw new ArgumentOutOfRangeException(nameof(value), value, null),",
+    "};",
+  ];
+  return lines.join("\n");
+}
+
+interface SchemaTypesResult {
+  readonly code: string;
+  readonly extensionsCode: string;
+}
+
 function writeSchemaTypes(
   schema: Schema,
   unionContext: UnionContext,
   options: WriteSchemaOptions,
-): string {
+): SchemaTypesResult {
   const lines: string[] = [];
+  const extensionLines: string[] = [];
   for (const [type, namingHint] of schema.namingHints.defaultScope.entries()) {
     const name = makeNameFromHint(namingHint);
     let implementations: readonly string[] | undefined;
@@ -890,6 +943,13 @@ function writeSchemaTypes(
       if (members?.kind === "interfaces") {
         implementations = Object.values(members.members).map((member) =>
           writeType(member.resolved, schema, options),
+        );
+      } else if (members?.kind === "strings") {
+        extensionLines.push(
+          writeEnumExtensionMethod(
+            `${options.namespace}.${name}`,
+            members.members,
+          ),
         );
       }
     }
@@ -909,7 +969,10 @@ function writeSchemaTypes(
     lines.push("");
   }
 
-  return lines.join("\n");
+  return {
+    code: lines.join("\n"),
+    extensionsCode: extensionLines.join("\n\n"),
+  };
 }
 
 function writeTypepromptInterface(

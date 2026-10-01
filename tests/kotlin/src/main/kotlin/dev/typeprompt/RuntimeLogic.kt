@@ -244,12 +244,15 @@ internal object Spec {
 
     // Exported as 'Spec.OutputFormat'
     @Serializable
-    enum class OutputFormat {
+    enum class OutputFormat(val value: String) {
         @SerialName("json")
-        Json,
+        Json("json"),
 
         @SerialName("text")
-        Text,
+        Text("text"),
+        ;
+
+        override fun toString(): String = value
     }
 
     // Exported as 'Spec.TemplateTool'
@@ -425,24 +428,27 @@ internal object Spec {
 
     // Exported as 'Spec.InsertFormat'
     @Serializable
-    enum class InsertFormat {
+    enum class InsertFormat(val value: String) {
         @SerialName("text")
-        Text,
+        Text("text"),
 
         @SerialName("json")
-        Json,
+        Json("json"),
 
         @SerialName("yaml")
-        Yaml,
+        Yaml("yaml"),
 
         @SerialName("toon")
-        Toon,
+        Toon("toon"),
 
         @SerialName("csv")
-        Csv,
+        Csv("csv"),
 
         @SerialName("tsv")
-        Tsv,
+        Tsv("tsv"),
+        ;
+
+        override fun toString(): String = value
     }
 
     // Exported as 'Spec.Expression'
@@ -548,15 +554,18 @@ internal object Spec {
 
     // Exported as 'Spec.Snippet_KindSnippetIf_Is'
     @Serializable
-    enum class Snippet_KindSnippetIf_Is {
+    enum class Snippet_KindSnippetIf_Is(val value: String) {
         @SerialName("not-null")
-        NotNull,
+        NotNull("not-null"),
 
         @SerialName("not-empty")
-        NotEmpty,
+        NotEmpty("not-empty"),
 
         @SerialName("true")
-        True,
+        True("true"),
+        ;
+
+        override fun toString(): String = value
     }
 
     // Exported as 'Spec.Snippet_KindSnippetSwitch'
