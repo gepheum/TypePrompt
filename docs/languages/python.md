@@ -136,7 +136,11 @@ for resp in responses:
     print(resp.stringified_output)  # JSON output string
 ```
 
-`execute_tools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM.
+`execute_tools` executes matching tool functions concurrently without throwing unhandled exceptions. If a tool implementation raises an error, it captures the error and returns a `ToolCallResponse`:
+
+- `resp.call_id`: The matching call ID.
+- `resp.stringified_output`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
+- `resp.error`: Plain error message string if execution failed, or `None` on success (useful for Anthropic's `is_error` flag).
 
 ### 3. Type-Safe Tool Names
 

@@ -135,7 +135,7 @@ let toolCalls = [
     )
 ]
 
-let responses = try await prompt.executeTools(toolCalls, toolExecutor: ResearchExecutor())
+let responses = await prompt.executeTools(toolCalls, toolExecutor: ResearchExecutor())
 
 for resp in responses {
     print(resp.callId)            // "call_123"
@@ -143,7 +143,13 @@ for resp in responses {
 }
 ```
 
-`executeTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `noTools` as the executor.
+`executeTools` executes matching tool functions concurrently without throwing unhandled exceptions. If a tool implementation throws an error, it captures the error and returns a `ToolCallResponse`:
+
+- `resp.callId`: The matching call ID.
+- `resp.stringifiedOutput`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
+- `resp.error`: Plain error message string if execution failed, or `nil` on success (useful for Anthropic's `is_error` flag).
+
+If a template has no tools, pass `noTools` as the executor.
 
 ### 3. Type-Safe Tool Names
 

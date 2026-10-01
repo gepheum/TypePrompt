@@ -191,10 +191,6 @@ ToolCallResponse response = tool_executor->Execute(call);
 
 std::cout << "Call ID: " << response.call_id << "\n";
 std::cout << "Output:  " << response.stringified_output << "\n";
-
-if (response.error.has_value()) {
-  std::cerr << "Tool error: " << *response.error << "\n";
-}
 ```
 
 #### Smart Pointer & Lifetime Support
@@ -214,8 +210,9 @@ auto no_tools_executor = MakeToolExecutor<templates::Translate>();
 ### 3. ToolCallResponse Format & Provider Integration
 
 The `ToolCallResponse` contains:
-- `stringified_output`: On success, the JSON serialization of your tool's output struct. On error, a JSON error object (`{"error": "..."}`).
-- `error`: An `std::optional<std::string>` containing the error message if input parsing, schema validation, tool execution, or tool lookup failed.
+- `call_id`: The matching call ID.
+- `stringified_output`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
+- `error`: An `std::optional<std::string>` containing the plain error message if a tool execution failed, or `std::nullopt` on success (useful for Anthropic's `is_error` flag).
 
 **Integration guidelines:**
 - **OpenAI / Gemini APIs**: Send `response.stringified_output` directly as the tool message content.

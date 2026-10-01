@@ -140,7 +140,13 @@ for (var resp in responses)
 }
 ```
 
-`ExecuteTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM. If a template has no tools, pass `NoTools.NoTools` as the executor.
+`ExecuteTools` executes matching tool functions concurrently without throwing unhandled exceptions. If a tool implementation throws an exception, it captures the error and returns a `ToolCallResponse`:
+
+- `resp.CallId`: The matching call ID.
+- `resp.StringifiedOutput`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
+- `resp.Error`: Plain error message string if execution failed, or `null` on success (useful for Anthropic's `is_error` flag).
+
+If a template has no tools, pass `NoTools.NoTools` as the executor.
 
 ### 3. Type-Safe Tool Names
 

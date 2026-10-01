@@ -129,7 +129,11 @@ for (const resp of responses) {
 }
 ```
 
-`executeTools` executes the matching tool functions concurrently and returns formatted responses ready to send back to the LLM.
+`executeTools` executes matching tool functions concurrently without throwing unhandled exceptions. If a tool implementation throws an error, it captures the error and returns a `ToolCallResponse`:
+
+- `resp.callId`: The matching call ID.
+- `resp.stringifiedOutput`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
+- `resp.error`: Plain error message string if execution failed, or `undefined` on success (useful for Anthropic's `is_error` flag).
 
 ---
 
@@ -247,7 +251,7 @@ async function executePrompt<Id extends TemplateId>(
     messages.push(message);
 
     // If the model requested tool calls, execute them with prompt.executeTools()
-    if (message.tool_calls.length > 0) {
+    if (message.tool_calls && message.tool_calls.length > 0) {
       const toolCallsToExecute = message.tool_calls.map((tc) => ({
         callId: tc.id,
         toolName: tc.function.name,
