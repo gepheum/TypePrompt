@@ -2605,6 +2605,10 @@ void TestUserDefinedEnums() {
   using namespace typeprompt_02::schema::generate_page_tree;
 
   // 1. Meta_Model
+  ASSERT_EQ(to_string_view(Meta_Model::kGpt4o), "gpt-4o");
+  ASSERT_EQ(to_string_view(Meta_Model::kGpt4oMini), "gpt-4o-mini");
+  static_assert(to_string_view(Meta_Model::kGpt4o) == "gpt-4o");
+  static_assert(to_string_view(Meta_Model::kGpt4oMini) == "gpt-4o-mini");
   ASSERT_EQ(typeprompt_02::ToJson(Meta_Model::kGpt4o), "\"gpt-4o\"");
   ASSERT_EQ(typeprompt_02::ToJson(Meta_Model::kGpt4oMini), "\"gpt-4o-mini\"");
   ASSERT_EQ(typeprompt_02::ToToon(Meta_Model::kGpt4o), "gpt-4o");
@@ -2627,6 +2631,11 @@ void TestUserDefinedEnums() {
   ASSERT_EQ(parsed_err_unknown.error().message, "Unknown constant 'claude-3' at json");
 
   // 2. TicketCategory
+  ASSERT_EQ(to_string_view(TicketCategory::kBilling), "billing");
+  ASSERT_EQ(to_string_view(TicketCategory::kTechnicalIssue), "technical-issue");
+  ASSERT_EQ(to_string_view(TicketCategory::kFeatureRequest), "feature-request");
+  ASSERT_EQ(to_string_view(TicketCategory::kOther), "other");
+  static_assert(to_string_view(TicketCategory::kBilling) == "billing");
   ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kBilling), "\"billing\"");
   ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kTechnicalIssue), "\"technical-issue\"");
   ASSERT_EQ(typeprompt_02::ToJson(TicketCategory::kFeatureRequest), "\"feature-request\"");
@@ -2637,32 +2646,38 @@ void TestUserDefinedEnums() {
   ASSERT_TRUE(*parsed_cat == TicketCategory::kFeatureRequest);
 
   // 3. CustomerTier & Output_Urgency
+  ASSERT_EQ(to_string_view(Input_CustomerTier::kEnterprise), "enterprise");
   ASSERT_EQ(typeprompt_02::ToJson(Input_CustomerTier::kEnterprise), "\"enterprise\"");
   auto parsed_tier = typeprompt_02::ParseJson<Input_CustomerTier>("\"enterprise\"");
   ASSERT_TRUE(parsed_tier.ok());
   ASSERT_TRUE(*parsed_tier == Input_CustomerTier::kEnterprise);
 
+  ASSERT_EQ(to_string_view(Output_Urgency::kCritical), "critical");
   ASSERT_EQ(typeprompt_02::ToJson(Output_Urgency::kCritical), "\"critical\"");
   auto parsed_urg = typeprompt_02::ParseJson<Output_Urgency>("\"critical\"");
   ASSERT_TRUE(parsed_urg.ok());
   ASSERT_TRUE(*parsed_urg == Output_Urgency::kCritical);
 
   // 4. ProductCategory, Pricing_Model, PageNode_KindHeading_Level, Input_Audience
+  ASSERT_EQ(to_string_view(ProductCategory::kDatabase), "database");
   ASSERT_EQ(typeprompt_02::ToJson(ProductCategory::kDatabase), "\"database\"");
   auto parsed_prod = typeprompt_02::ParseJson<ProductCategory>("\"database\"");
   ASSERT_TRUE(parsed_prod.ok());
   ASSERT_TRUE(*parsed_prod == ProductCategory::kDatabase);
 
+  ASSERT_EQ(to_string_view(Pricing_Model::kPerHour), "perHour");
   ASSERT_EQ(typeprompt_02::ToJson(Pricing_Model::kPerHour), "\"perHour\"");
   auto parsed_pm = typeprompt_02::ParseJson<Pricing_Model>("\"perHour\"");
   ASSERT_TRUE(parsed_pm.ok());
   ASSERT_TRUE(*parsed_pm == Pricing_Model::kPerHour);
 
+  ASSERT_EQ(to_string_view(PageNode_KindHeading_Level::kH2), "h2");
   ASSERT_EQ(typeprompt_02::ToJson(PageNode_KindHeading_Level::kH2), "\"h2\"");
   auto parsed_lvl = typeprompt_02::ParseJson<PageNode_KindHeading_Level>("\"h2\"");
   ASSERT_TRUE(parsed_lvl.ok());
   ASSERT_TRUE(*parsed_lvl == PageNode_KindHeading_Level::kH2);
 
+  ASSERT_EQ(to_string_view(Input_Audience::kDeveloper), "developer");
   ASSERT_EQ(typeprompt_02::ToJson(Input_Audience::kDeveloper), "\"developer\"");
   auto parsed_aud = typeprompt_02::ParseJson<Input_Audience>("\"developer\"");
   ASSERT_TRUE(parsed_aud.ok());
@@ -4021,8 +4036,19 @@ void TestE01_JsonSerialization() {
   ASSERT_EQ(parsed_success->as_success().y, 84.0);
   ASSERT_EQ(parsed_success->as_success().z, 99);
 
+  // testToStringViewForEnumE
+  ASSERT_EQ(to_string_view(E::kIf), "if");
+  ASSERT_EQ(to_string_view(E::kFooBar), "foo-BAR");
+  ASSERT_EQ(to_string_view(E::kClass), "class");
+  static_assert(to_string_view(E::kIf) == "if");
+  static_assert(to_string_view(E::kFooBar) == "foo-BAR");
+  static_assert(to_string_view(E::kClass) == "class");
+
   // testStringEnumVariantSerialization
   auto variant = typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv;
+  ASSERT_EQ(typeprompt_e01::schema::analyze_sales_data::to_string_view(variant), "csv");
+  static_assert(typeprompt_e01::schema::analyze_sales_data::to_string_view(
+                    typeprompt_e01::schema::analyze_sales_data::Input_Variant::kCsv) == "csv");
   std::string json_variant = typeprompt_e01::ToJson(variant);
   ASSERT_EQ(json_variant, "\"csv\"");
   auto parsed_variant =

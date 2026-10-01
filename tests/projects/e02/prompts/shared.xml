@@ -51,6 +51,8 @@
     encode: boolean;
   };
 
+  type EHolder = { e: E };
+
   type MatrixUnion =
     | Matrix
     | {

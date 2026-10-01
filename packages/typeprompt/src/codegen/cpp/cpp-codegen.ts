@@ -158,17 +158,17 @@ function writeUserDefinedDatatypes(
 
   const metaType = anyTypes(metaSchema)
     ? writeType(
-        {
-          kind: "type-name",
-          name: { text: "Meta" },
-        },
-        metaSchema,
-        {
-          topLevel: true,
-          typePrefix: "schema::meta::",
-          rootNamespace,
-        },
-      )
+      {
+        kind: "type-name",
+        name: { text: "Meta" },
+      },
+      metaSchema,
+      {
+        topLevel: true,
+        typePrefix: "schema::meta::",
+        rootNamespace,
+      },
+    )
     : "internal::NoMeta";
   lines.push(
     "/// Metadata associated with a prompt.",
@@ -389,7 +389,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
     const cName = makeNameFromHint(namingHint);
     const what =
       type.kind === "union" &&
-      schema.unionToMembers.get(type)!.kind === "strings"
+        schema.unionToMembers.get(type)!.kind === "strings"
         ? "enum class"
         : "struct";
     lines.push(`${what} ${cName};`);
@@ -452,7 +452,6 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
       "",
       `inline JsonNode ToJsonNode(const ${typeCName}&);`,
       `inline Status ParseValue(const JsonNode&, const JsonPath&, ${typeCName}&);`,
-      "",
       "",
     );
   };
@@ -540,6 +539,7 @@ function writeTypepromptInterface(
           }
         }
         case "union": {
+          // We need an initializer in the case of an enum class.
           return schema.unionToMembers.get(type)!.kind === "strings";
         }
         default: {
@@ -833,11 +833,11 @@ function writeMethodImplsForUnion(
   const lines: string[] = [];
   if (members.kind === "strings") {
     lines.push(
-      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      `inline constexpr std::string_view to_string_view(${typeCName} input) {`,
       " switch (input) {",
     );
     for (const member of members.members.slice(1)) {
-      const constantCName = "k".concat(toPascalCase(member.value));
+      const constantCName = toCName("k".concat(toPascalCase(member.value)));
       lines.push(
         `  case ${typeCName}::${constantCName}:`,
         `   return "${member.value}";`,
@@ -848,6 +848,10 @@ function writeMethodImplsForUnion(
       "  default:",
       `   return "${first.value satisfies string}";`,
       " }",
+      "}",
+      "",
+      `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
+      " return JsonNode(to_string_view(input));",
       "}",
       "",
       `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
