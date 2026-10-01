@@ -180,7 +180,7 @@ void TestToJsonObject() {
 
   JsonNode single_obj(
       std::vector<std::pair<std::string, JsonNode>>{{"key", JsonNode(std::string("value"))}});
-  ASSERT_EQ(single_obj.ToJson(), "{\"key\": \"value\"}");
+  ASSERT_EQ(single_obj.ToJson(), "{\"key\":\"value\"}");
 
   JsonNode multi_obj(std::vector<std::pair<std::string, JsonNode>>{
       {"name", JsonNode(std::string("Alice"))},
@@ -188,19 +188,18 @@ void TestToJsonObject() {
       {"active", JsonNode(true)},
       {"extra", JsonNode(std::nullopt)},
   });
-  ASSERT_EQ(multi_obj.ToJson(),
-            "{\"name\": \"Alice\",\"age\": 30,\"active\": true,\"extra\": null}");
+  ASSERT_EQ(multi_obj.ToJson(), "{\"name\":\"Alice\",\"age\":30,\"active\":true,\"extra\":null}");
 
   JsonNode special_key(std::vector<std::pair<std::string, JsonNode>>{
       {"key\n\"quoted\"", JsonNode(std::string("val"))}});
-  ASSERT_EQ(special_key.ToJson(), "{\"key\\n\\\"quoted\\\"\": \"val\"}");
+  ASSERT_EQ(special_key.ToJson(), "{\"key\\n\\\"quoted\\\"\":\"val\"}");
 
   JsonNode nested_obj(std::vector<std::pair<std::string, JsonNode>>{
       {"outer", JsonNode(std::vector<std::pair<std::string, JsonNode>>{
                     {"inner", JsonNode(std::string("leaf"))}})},
       {"empty", JsonNode(std::vector<std::pair<std::string, JsonNode>>{})},
   });
-  ASSERT_EQ(nested_obj.ToJson(), "{\"outer\": {\"inner\": \"leaf\"},\"empty\": {}}");
+  ASSERT_EQ(nested_obj.ToJson(), "{\"outer\":{\"inner\":\"leaf\"},\"empty\":{}}");
 }
 
 void TestToJsonNestedComplex() {
@@ -224,12 +223,12 @@ void TestToJsonNestedComplex() {
   });
 
   std::string expected =
-      "{\"title\": \"Task List\","
-      "\"tasks\": ["
-      "{\"id\": 1,\"tags\": [\"c++\",\"json\",\"json\"]},"
-      "{\"id\": 2,\"tags\": []}"
+      "{\"title\":\"Task List\","
+      "\"tasks\":["
+      "{\"id\":1,\"tags\":[\"c++\",\"json\",\"json\"]},"
+      "{\"id\":2,\"tags\":[]}"
       "],"
-      "\"completed\": false}";
+      "\"completed\":false}";
   ASSERT_EQ(complex_node.ToJson(), expected);
 }
 
@@ -1477,7 +1476,7 @@ void TestParseJsonObjects() {
 
   auto r_nested = JsonNode::ParseJson("{\"outer\": {\"inner\": [1, 2, {\"deep\": true}]}}");
   ASSERT_TRUE(r_nested.ok());
-  ASSERT_EQ(r_nested->ToJson(), "{\"outer\": {\"inner\": [1,2,{\"deep\": true}]}}");
+  ASSERT_EQ(r_nested->ToJson(), "{\"outer\":{\"inner\":[1,2,{\"deep\":true}]}}");
 }
 
 void TestParseJsonErrors() {
@@ -1565,24 +1564,24 @@ void TestParseJsonErrors() {
 
 void TestParseJsonRoundtrip() {
   std::string json_sample =
-      "{\"title\": \"Task List\","
-      "\"tasks\": ["
-      "{\"id\": 1,\"tags\": [\"c++\",\"json\"]},"
-      "{\"id\": 2,\"tags\": []}"
+      "{\"title\":\"Task List\","
+      "\"tasks\":["
+      "{\"id\":1,\"tags\":[\"c++\",\"json\"]},"
+      "{\"id\":2,\"tags\":[]}"
       "],"
-      "\"completed\": false}";
+      "\"completed\":false}";
 
   auto res = JsonNode::ParseJson(json_sample);
   ASSERT_TRUE(res.ok());
   const auto& node = *res;
 
   ASSERT_EQ(node.ToJson(),
-            "{\"title\": \"Task List\","
-            "\"tasks\": ["
-            "{\"id\": 1,\"tags\": [\"c++\",\"json\"]},"
-            "{\"id\": 2,\"tags\": []}"
+            "{\"title\":\"Task List\","
+            "\"tasks\":["
+            "{\"id\":1,\"tags\":[\"c++\",\"json\"]},"
+            "{\"id\":2,\"tags\":[]}"
             "],"
-            "\"completed\": false}");
+            "\"completed\":false}");
 
   std::string toon = node.ToToon();
   ASSERT_TRUE(!toon.empty());
@@ -2044,7 +2043,7 @@ void TestTopLevelSerializers() {
 
   // 3. Custom ADL type
   test_custom_adl::Point pt{1.0, 2.0};
-  ASSERT_EQ(ToJson(pt), "{\"x\": 1,\"y\": 2}");
+  ASSERT_EQ(ToJson(pt), "{\"x\":1,\"y\":2}");
   ASSERT_EQ(ToPrettyJson(pt), "{\n  \"x\": 1,\n  \"y\": 2\n}");
   ASSERT_EQ(ToToon(pt), "x: 1\ny: 2");
   ASSERT_EQ(ToYaml(pt), "x: 1\n\"y\": 2");
@@ -2808,7 +2807,7 @@ void TestUserDefinedStructs() {
   ASSERT_EQ(*parsed_ticket_output->suggested_reply, "Here is your invoice.");
 
   // Top-level serialization formats test
-  ASSERT_EQ(typeprompt_02::ToJson(m2), "{\"model\": \"gpt-4o-mini\",\"temperature\": null}");
+  ASSERT_EQ(typeprompt_02::ToJson(m2), "{\"model\":\"gpt-4o-mini\"}");
   ASSERT_EQ(typeprompt_02::ToYaml(b1),
             "name: Latency\n"
             "score: 15.2\n"
@@ -3048,7 +3047,7 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
 
   // Top-level serialization formats for NotSuccess
   ASSERT_EQ(typeprompt_e01::ToJson(not_success),
-            "{\"success\": false,\"x\": 10,\"y\": 20.5,\"z\": \"failed-state\"}");
+            "{\"success\":false,\"x\":10,\"y\":20.5,\"z\":\"failed-state\"}");
   ASSERT_EQ(typeprompt_e01::ToYaml(not_success),
             "success: false\n"
             "x: 10\n"
@@ -3070,8 +3069,7 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
   ASSERT_EQ(parsed_s->as_success().z, 100);
 
   // Top-level serialization formats for Success
-  ASSERT_EQ(typeprompt_e01::ToJson(success),
-            "{\"success\": true,\"x\": 42,\"y\": 3.14,\"z\": 100}");
+  ASSERT_EQ(typeprompt_e01::ToJson(success), "{\"success\":true,\"x\":42,\"y\":3.14,\"z\":100}");
   ASSERT_EQ(typeprompt_e01::ToYaml(success),
             "success: true\n"
             "x: 42\n"
@@ -3481,8 +3479,7 @@ void TestMakeToolExecutor() {
   ASSERT_EQ(resp2.call_id, "c2");
   ASSERT_TRUE(resp2.error.has_value());
   ASSERT_EQ(*resp2.error, "Search service error");
-  ASSERT_TRUE(resp2.stringified_output.find(R"("error": "Search service error")") !=
-              std::string::npos);
+  ASSERT_TRUE(resp2.stringified_output == R"({"error":"Search service error"})");
 
   // Malformed JSON input
   typeprompt_03::ToolCall call_bad_json{
@@ -3519,8 +3516,7 @@ void TestMakeToolExecutor() {
   ASSERT_EQ(resp3.call_id, "c3");
   ASSERT_TRUE(resp3.error.has_value());
   ASSERT_EQ(*resp3.error, "Tool not found: unknownTool");
-  ASSERT_TRUE(resp3.stringified_output.find(R"("error": "Tool not found: unknownTool")") !=
-              std::string::npos);
+  ASSERT_TRUE(resp3.stringified_output == R"({"error":"Tool not found: unknownTool"})");
 
   // 2. Smart pointer support (std::shared_ptr and std::unique_ptr)
   auto shared_executor =
@@ -3604,7 +3600,7 @@ void TestMakeToolExecutor() {
   ASSERT_EQ(resp4.call_id, "c4");
   ASSERT_TRUE(resp4.error.has_value());
   ASSERT_EQ(*resp4.error, "Tool not found: anyTool");
-  ASSERT_TRUE(resp4.stringified_output.find(R"("error": "Tool not found: anyTool")") !=
+  ASSERT_TRUE(resp4.stringified_output.find(R"("error":"Tool not found: anyTool")") !=
               std::string::npos);
 }
 
@@ -3646,6 +3642,13 @@ void Test04Snippets_SummarizeDocument() {
       .focus_topic = "climate change",
       .title = "T",
   });
+  ASSERT_EQ(typeprompt_05::ToJson(typeprompt_05::templates::SummarizeDocument::input_type{
+                .audience = typeprompt_05::schema::summarize_document::Input_Audience::kGeneral,
+                .content = "C",
+                .focus_topic = "climate change",
+                .title = "T",
+            }),
+            R"({"title":"T","content":"C","focusTopic":"climate change","audience":"general"})");
   ASSERT_TRUE(p_focus.system_message.find("climate change") != std::string::npos);
 
   // testConditionalSnippetNoFocusInstructionWhenAbsent

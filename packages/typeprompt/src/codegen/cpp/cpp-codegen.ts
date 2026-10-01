@@ -524,32 +524,7 @@ function writeTypepromptInterface(
     const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
     lines.push(...commentify(field.doc, "  "));
-    const maybeInitializer = ((): boolean => {
-      switch (type.kind) {
-        case "primitive": {
-          switch (type.primitive.text) {
-            case "boolean":
-            case "integer":
-            case "number":
-              return true;
-            case "string":
-              return false;
-            default:
-              throw new Error(type.primitive as never);
-          }
-        }
-        case "union": {
-          // We need an initializer in the case of an enum class.
-          return schema.unionToMembers.get(type)!.kind === "strings";
-        }
-        default: {
-          return false;
-        }
-      }
-    })()
-      ? "{}"
-      : "";
-    lines.push(`  ${fieldType} ${cName}${maybeInitializer};`);
+    lines.push(`  ${fieldType} ${cName}{};`);
   }
   if (!internal) {
     lines.push(
@@ -780,7 +755,7 @@ function writeMethodImplsForInterface(
   lines.push(
     `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
     ` using ::${rootNamespace}::ToJsonNode;`,
-    " return JsonNode::Object{",
+    " return internal::MakeJsonObject({",
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
@@ -795,7 +770,7 @@ function writeMethodImplsForInterface(
     lines.push(`  {"${rawFieldName}", ToJsonNode(${value})},`);
   }
   lines.push(
-    " };", // return JsonNode::Object({...});
+    " });", // return MakeJsonObject({...});
     "}", // ToJsonNode
     "",
     `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,

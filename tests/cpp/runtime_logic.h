@@ -449,7 +449,7 @@ class JsonNode {
             }
             const auto& [name, value] = object[i];
             AppendJsonString(name, out);
-            out += ": ";
+            out += ":";
             value.AppendJson(out, eolIndent);
           }
           out += "}";
@@ -2323,6 +2323,16 @@ class Unions {
     return context.MakeError(std::format("Missing key: {}", discriminator));
   }
 };
+
+inline JsonNode MakeJsonObject(std::vector<std::pair<std::string_view, JsonNode>> entries) {
+  JsonNode::Object object;
+  object.reserve(entries.size());
+  for (auto& [k, v] : entries) {
+    if (v.type() == JsonNode::Type::kNull) continue;
+    object.push_back({std::string(k), std::move(v)});
+  }
+  return object;
+}
 }  // namespace internal
 
 inline Result<JsonNode> JsonNode::ParseJson(std::string_view json) {
