@@ -841,9 +841,7 @@ public enum TypePromptRuntime {
       let stringifiedOutput = String(decoding: outputData, as: UTF8.self)
       return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)
     } catch {
-      let errorMessage =
-        (error as? LocalizedError)?.errorDescription
-        ?? (error as? CustomStringConvertible)?.description ?? "\(error)"
+      let errorMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
       return makeToolErrorResponse(callId: toolCall.callId, errorMessage: errorMessage)
     }
   }
