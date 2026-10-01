@@ -361,23 +361,23 @@ describe("03-tools / ResearchQuestion", () => {
     expect(responses[0]!.callId).toMatch("call_set");
   });
 
-  it("executeTools throws for an unknown tool name", async () => {
-    let threw = false;
-    try {
-      await prompt.executeTools(
-        [
-          {
-            callId: "call_bad",
-            toolName: "nonExistentTool",
-            stringifiedInput: "{}",
-          },
-        ],
-        mockExecutor,
-      );
-    } catch {
-      threw = true;
-    }
-    expect(threw).toMatch(true);
+  it("executeTools returns error for an unknown tool name", async () => {
+    const responses = await prompt.executeTools(
+      [
+        {
+          callId: "call_bad",
+          toolName: "nonExistentTool",
+          stringifiedInput: "{}",
+        },
+      ],
+      mockExecutor,
+    );
+    expect(responses.length).toMatch(1);
+    expect(responses[0]!.callId).toMatch("call_bad");
+    expect(responses[0]!.error).toMatch("Tool not found: nonExistentTool");
+    expect(responses[0]!.stringifiedOutput).toMatch(
+      /"error":\s*"Tool not found: nonExistentTool"/,
+    );
   });
 });
 

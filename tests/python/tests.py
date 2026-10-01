@@ -454,22 +454,24 @@ class TestResearchQuestion:
         assert len(result) == 1
         assert result[0].call_id == "c1"
 
-    async def test_execute_tools_throws_for_unknown_tool(self):
+    async def test_execute_tools_returns_error_for_unknown_tool(self):
         class Executor:
             async def web_search(
                 self, input: s03.web_search.Input
             ) -> s03.web_search.Output:
                 return s03.web_search.Output(results=[])
 
-        with pytest.raises(Exception):
-            await self.prompt.execute_tools(
-                [
-                    ToolCall(
-                        call_id="c1", tool_name="noSuchTool", stringified_input="{}"
-                    )
-                ],
-                Executor(),
-            )
+        result = await self.prompt.execute_tools(
+            [ToolCall(call_id="c1", tool_name="noSuchTool", stringified_input="{}")],
+            Executor(),
+        )
+        assert len(result) == 1
+        assert result[0].call_id == "c1"
+        assert result[0].error == "Tool not found: noSuchTool"
+        assert (
+            '"error": "Tool not found: noSuchTool"' in result[0].stringified_output
+            or '"error":"Tool not found: noSuchTool"' in result[0].stringified_output
+        )
 
 
 # ─── 04 Snippets: switch snippet, conditional snippet ────────────────────────

@@ -154,9 +154,28 @@ export type ToolCall = {
   readonly stringifiedInput: string;
 };
 
+/**
+ * The result of executing a single tool call.
+ */
 export type ToolCallResponse = {
+  /** The matching call ID from the request. */
   readonly callId: string;
+  /**
+   * The JSON-stringified output of the tool call:
+   * - On success, contains the JSON-serialized return value of the tool.
+   * - On failure, contains a JSON object with a single "error" key containing the error message (e.g. `{"error": "..."}`).
+   *
+   * Integration guide:
+   * - **OpenAI / Gemini SDKs**: Forward `stringifiedOutput` directly as the tool result content and ignore the `error` property.
+   * - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error: true` in the tool result block and pass the error message to `content`. Otherwise, pass `stringifiedOutput` to `content`.
+   */
   readonly stringifiedOutput: string;
+  /**
+   * The error message if the tool call failed, or `undefined` on success.
+   *
+   * Set when tool argument parsing fails, when the tool itself returns an error, or when the requested tool is not found.
+   */
+  readonly error?: string;
 };
 // </static:typescript-public-types>
 
@@ -226,6 +245,17 @@ const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
 
 // <static:typescript-logic>
+function makeToolErrorResponse(
+  callId: string,
+  errorMessage: string,
+): ToolCallResponse {
+  return {
+    callId,
+    stringifiedOutput: JSON.stringify({ error: errorMessage }),
+    error: errorMessage,
+  };
+}
+
 async function executeToolsImpl<Id extends TemplateId>(
   calls: Iterable<ToolCall>,
   tools: Tools<Id>,
@@ -236,30 +266,42 @@ async function executeToolsImpl<Id extends TemplateId>(
       const { callId, toolName, stringifiedInput } = call;
       const tool = (tools as Record<string, Tool<unknown, unknown>>)[toolName];
       if (!tool) {
-        throw new Error(`Tool not found: ${toolName}`);
+        return makeToolErrorResponse(callId, `Tool not found: ${toolName}`);
       }
       const impl = (
-        executor as Record<string, (input: unknown) => Promise<unknown>>
+        executor as Record<
+          string,
+          ((input: unknown) => Promise<unknown>) | undefined
+        >
       )[toolName];
       if (!impl) {
-        throw new Error(`Tool implementation not found: ${toolName}`);
-      }
-      let stringifiedOutput: string;
-      try {
-        const input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
-        const output = tool.outputSchema.parse(await impl(input));
-        stringifiedOutput = JSON.stringify(output);
-      } catch (e) {
-        const err = new Error(
-          "Tool call failed: "
-            .concat(JSON.stringify({ callId, toolName }))
-            .concat(" — ")
-            .concat(String(e)),
+        return makeToolErrorResponse(
+          callId,
+          `Tool implementation not found: ${toolName}`,
         );
-        (err as { cause?: unknown }).cause = e;
-        throw err;
       }
-      return { callId, stringifiedOutput };
+      let input: unknown;
+      try {
+        input = tool.inputSchema.parse(JSON.parse(stringifiedInput));
+      } catch (e) {
+        return makeToolErrorResponse(
+          callId,
+          `Failed to parse tool input: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+      try {
+        const rawOutput = await impl(input);
+        const output = tool.outputSchema.parse(rawOutput);
+        return {
+          callId,
+          stringifiedOutput: JSON.stringify(output),
+        };
+      } catch (e) {
+        return makeToolErrorResponse(
+          callId,
+          e instanceof Error ? e.message : String(e),
+        );
+      }
     }),
   );
 }

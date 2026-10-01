@@ -182,8 +182,24 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class ToolCallResponse:
+    """The result of executing a single tool call.
+
+    Attributes:
+        call_id: The matching call ID from the request.
+        stringified_output: The JSON-stringified output of the tool call:
+            - On success, contains the JSON-serialized return value of the tool.
+            - On failure, contains a JSON object with a single "error" key containing the error message (e.g. `{"error": "..."}`).
+
+            Integration guide:
+            - **OpenAI / Gemini SDKs**: Forward `stringified_output` directly as the tool result content and ignore the `error` property.
+            - **Anthropic SDK**: Check if `error` is set. If set, mark `is_error=True` in the tool result block and pass the error message to `content`. Otherwise, pass `stringified_output` to `content`.
+        error: The error message if the tool call failed, or `None` on success.
+            Set when tool argument parsing fails, when the tool itself returns an error, or when the requested tool is not found.
+    """
+
     call_id: str
     stringified_output: str
+    error: str | None = None
 
 
 _StaticClass: Final = Protocol  # To prevent instantiation; use with @final
@@ -294,6 +310,15 @@ def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> 
             return cast(Output, response)
 
 
+def _make_tool_error_response(call_id: str, error_message: str) -> ToolCallResponse:
+    error_json = json.dumps({"error": error_message})
+    return ToolCallResponse(
+        call_id=call_id,
+        stringified_output=error_json,
+        error=error_message,
+    )
+
+
 async def _execute_tools_impl[ToolExecutor](
     tool_calls: Iterable[ToolCall],
     namespace: str,
@@ -305,31 +330,39 @@ async def _execute_tools_impl[ToolExecutor](
     async def _execute_one(call: ToolCall) -> ToolCallResponse:
         tool = prompt.tools.get(call.tool_name)
         if tool is None:
-            raise ValueError(f"Tool not found: {call.tool_name}")
+            return _make_tool_error_response(
+                call.call_id, f"Tool not found: {call.tool_name}"
+            )
         tool_id = f"{namespace}:{call.tool_name}"
-        method_name = _TOOL_ID_TO_METHOD_NAME[tool_id]
-        impl = getattr(executor, method_name, None) if executor is not None else None
+        method_name = _TOOL_ID_TO_METHOD_NAME.get(tool_id)
+        impl = (
+            getattr(executor, method_name, None)
+            if method_name and executor is not None
+            else None
+        )
         if impl is None:
-            raise ValueError(f"Tool implementation not found: {call.tool_name}")
+            return _make_tool_error_response(
+                call.call_id, f"Tool implementation not found: {call.tool_name}"
+            )
         try:
             input = tool.input_adapter.validate_json(
                 call.stringified_input, by_alias=True
             )
+        except Exception as e:
+            return _make_tool_error_response(
+                call.call_id, f"Failed to parse tool input: {e}"
+            )
+        try:
             raw_output = await impl(input)
             stringified_output = tool.output_adapter.dump_json(
                 raw_output, by_alias=True
             ).decode()
-        except Exception as e:
-            call_info = json.dumps(
-                {
-                    "callId": call.call_id,
-                    "toolName": call.tool_name,
-                }
+            return ToolCallResponse(
+                call_id=call.call_id,
+                stringified_output=stringified_output,
             )
-            raise type(e)(f"Tool call failed: {call_info} — {e}") from e
-        return ToolCallResponse(
-            call_id=call.call_id, stringified_output=stringified_output
-        )
+        except Exception as e:
+            return _make_tool_error_response(call.call_id, str(e))
 
     return await asyncio.gather(*(_execute_one(call) for call in tool_calls))
 
