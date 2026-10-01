@@ -525,7 +525,31 @@ function writeTypepromptInterface(
     const cName = toCName(toSnakeCase(field.name.text));
     const fieldType = writeType(type, schema, options);
     lines.push(...commentify(field.doc, "  "));
-    lines.push(`  ${fieldType} ${cName}{};`);
+    const maybeInitializer = ((): boolean => {
+      switch (type.kind) {
+        case "primitive": {
+          switch (type.primitive.text) {
+            case "boolean":
+            case "integer":
+            case "number":
+              return true;
+            case "string":
+              return false;
+            default:
+              throw new Error(type.primitive as never);
+          }
+        }
+        case "union": {
+          return schema.unionToMembers.get(type)!.kind === "strings";
+        }
+        default: {
+          return false;
+        }
+      }
+    })()
+      ? "{}"
+      : "";
+    lines.push(`  ${fieldType} ${cName}${maybeInitializer};`);
   }
   if (!internal) {
     lines.push(
@@ -773,6 +797,7 @@ function writeMethodImplsForInterface(
   lines.push(
     " };", // return JsonNode::Object({...});
     "}", // ToJsonNode
+    "",
     `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     " internal::StructParser parser(&node, context);",
   );
@@ -824,6 +849,7 @@ function writeMethodImplsForUnion(
       `   return "${first.value satisfies string}";`,
       " }",
       "}",
+      "",
       `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       " if (node.type() != JsonNode::Type::kString) {",
       '  return context.MakeError("Expected string");',
@@ -853,6 +879,7 @@ function writeMethodImplsForUnion(
       ` using ::${rootNamespace}::ToJsonNode;`,
       " return input.visit([](const auto& v) { return ToJsonNode(v); });",
       "}",
+      "",
       `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
       ` using ::${rootNamespace}::ParseValue;`,
       ` auto discriminant = internal::Unions::${findMethod}(node, context, "${discriminator}");`,
