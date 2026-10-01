@@ -634,7 +634,7 @@ function writeExecuteToolCall(
     return lines.join("\n");
   }
 
-  lines.push("try {", 'switch ("$namespace:${toolCall.toolName}") {');
+  lines.push('switch ("$namespace:${toolCall.toolName}") {');
 
   for (const tool of toolList) {
     const toolId = getId(tool.tool);
@@ -644,46 +644,35 @@ function writeExecuteToolCall(
       inputTypeNode,
       outputTypeNode,
       options,
-      inputType,
     } = getToolInfo(tool, compilationResult);
 
     const inputFromJson = writeFromJsonExpr(
       inputTypeNode,
-      "decodedInput",
+      "json",
       tool.schema,
       options,
     );
     const outputToJson = writeToJsonExpr(
       outputTypeNode,
-      "rawOutput",
+      "output",
       tool.schema,
       options,
     );
 
     lines.push(
-      `case "${toolId}": {`,
-      `if (executor is! ${interfaceName}) break;`,
-      `final ${inputType} input;`,
-      "try {",
-      "final dynamic decodedInput = jsonDecode(toolCall.stringifiedInput);",
-      `input = ${inputFromJson};`,
-      "} catch (e) {",
-      'return _makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: $e");',
-      "}",
-      `final rawOutput = await executor.${methodName}(input);`,
-      `final json = ${outputToJson};`,
-      "return ToolCallResponse(",
-      "callId: toolCall.callId,",
-      "stringifiedOutput: jsonEncode(json),",
+      `case "${toolId}":`,
+      `if (executor is ${interfaceName}) {`,
+      "return _dispatchToolCall(",
+      "toolCall,",
+      `(json) => ${inputFromJson},`,
+      `executor.${methodName},`,
+      `(output) => ${outputToJson},`,
       ");",
       "}",
     );
   }
 
   lines.push(
-    "}",
-    "} catch (e) {",
-    "return _makeToolErrorResponse(toolCall.callId, e.toString());",
     "}",
     'return _makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}");',
     "}",

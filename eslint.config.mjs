@@ -33,6 +33,12 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'packages/*/dist/', 'node_modules/', '*.js'],
+    ignores: [
+      'dist/',
+      'packages/*/dist/',
+      'packages/prompt-viewer/',
+      'node_modules/',
+      '*.js',
+    ],
   },
 ];

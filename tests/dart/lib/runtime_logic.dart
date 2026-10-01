@@ -1087,6 +1087,32 @@ ToolCallResponse _makeToolErrorResponse(String callId, String errorMessage) {
   );
 }
 
+Future<ToolCallResponse> _dispatchToolCall<Input, Output>(
+  ToolCall toolCall,
+  Input Function(dynamic json) parseInput,
+  Future<Output> Function(Input input) execute,
+  dynamic Function(Output output) serializeOutput,
+) async {
+  final Input input;
+  try {
+    final dynamic decoded = jsonDecode(toolCall.stringifiedInput);
+    input = parseInput(decoded);
+  } catch (e) {
+    return _makeToolErrorResponse(
+        toolCall.callId, "Failed to parse tool input: $e");
+  }
+  try {
+    final rawOutput = await execute(input);
+    final json = serializeOutput(rawOutput);
+    return ToolCallResponse(
+      callId: toolCall.callId,
+      stringifiedOutput: jsonEncode(json),
+    );
+  } catch (e) {
+    return _makeToolErrorResponse(toolCall.callId, e.toString());
+  }
+}
+
 dynamic _evaluate(_Spec_Expression expression, dynamic val) {
   switch (expression) {
     case _Spec_Expression_KindInput():

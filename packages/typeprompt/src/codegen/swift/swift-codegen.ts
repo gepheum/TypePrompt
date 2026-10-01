@@ -732,7 +732,7 @@ function writeExecuteToolCall(
     return lines.join("\n");
   }
 
-  lines.push("do {", 'switch "\\(namespace):\\(toolCall.toolName)" {');
+  lines.push('switch "\\(namespace):\\(toolCall.toolName)" {');
 
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
@@ -741,7 +741,6 @@ function writeExecuteToolCall(
       tool.tool.namespace?.text ?? DEFAULT_NAMESPACE,
     );
     const toolId = getId(tool.tool);
-    const { inputType } = getToolTypes(tool, compilationResult);
 
     const interfaceName = singleNamespace
       ? `ToolExecutor.${toolSwiftName}`
@@ -751,26 +750,15 @@ function writeExecuteToolCall(
 
     lines.push(
       `case "${toolId}":`,
-      `guard let toolExecutor = executor as? ${interfaceName} else { break }`,
-      `let input: ${inputType}`,
-      "do {",
-      `input = try Foundation.JSONDecoder().decode(${inputType}.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))`,
-      "} catch {",
-      'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "Failed to parse tool input: \\(error)")',
+      `if let toolExecutor = executor as? ${interfaceName} {`,
+      `return await dispatchToolCall(toolCall: toolCall) { try await toolExecutor.${methodName}(input: $0) }`,
       "}",
-      `let rawOutput = try await toolExecutor.${methodName}(input: input)`,
-      "let outputData = try Foundation.JSONEncoder().encode(rawOutput)",
-      "let stringifiedOutput = String(decoding: outputData, as: UTF8.self)",
-      "return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)",
     );
   }
 
   lines.push(
     "default:",
     "break",
-    "}",
-    "} catch {",
-    'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "\\(error)")',
     "}",
     'return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "Tool not found: \\(toolCall.toolName)")',
     "}",

@@ -600,43 +600,32 @@ function writeExecuteToolCall(
     return lines.join("\n");
   }
 
-  lines.push("try {", 'when ("$namespace:${toolCall.toolName}") {');
+  lines.push('when ("$namespace:${toolCall.toolName}") {');
 
   for (const tool of toolList) {
     const rawToolName = tool.tool.name.text;
     const toolKtName = toKotlinName(capitalize(rawToolName));
     const toolNamespace = tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
     const toolId = getId(tool.tool);
-    const { inputType } = getToolTypes(tool, compilationResult);
 
     const toolInterface = singleNamespace
       ? `ToolExecutor.${toolKtName}`
       : `ToolExecutor.${toKotlinName(toolNamespace)}.${toolKtName}`;
     const methodName = toKotlinName(rawToolName);
 
+    const { inputType, outputType } = getToolTypes(tool, compilationResult);
+
     lines.push(
       `"${toolId}" -> {`,
       `val toolExecutor = executor as? ${toolInterface}`,
       "if (toolExecutor != null) {",
-      "val input = try {",
-      `Json.decodeFromString<${inputType}>(toolCall.stringifiedInput)`,
-      "} catch (e: Exception) {",
-      'return makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: ${e.message}")',
-      "}",
-      `val rawOutput = toolExecutor.${methodName}(input)`,
-      "return ToolCallResponse(",
-      "callId = toolCall.callId,",
-      "stringifiedOutput = Json.encodeToString(rawOutput),",
-      ")",
+      `return dispatchToolCall<${inputType}, ${outputType}>(toolCall) { toolExecutor.${methodName}(it) }`,
       "}",
       "}",
     );
   }
 
   lines.push(
-    "}",
-    "} catch (e: Exception) {",
-    "return makeToolErrorResponse(toolCall.callId, e.message ?: e.toString())",
     "}",
     'return makeToolErrorResponse(toolCall.callId, "Tool not found: ${toolCall.toolName}")',
     "}",

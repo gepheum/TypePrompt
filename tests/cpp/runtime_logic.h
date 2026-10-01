@@ -3362,6 +3362,7 @@ struct IntermediateStepExample {
   /// Tool calls made in parallel at this step.
   std::vector<ToolCallExample> tool_calls;
 };
+
 /// A single few-shot example consisting of a user message, optional intermediate
 /// tool-call steps, and the expected response.
 struct FewShotExample {

@@ -823,6 +823,28 @@ public enum TypePromptRuntime {
     return ToolCallResponse(callId: callId, stringifiedOutput: errorJson, error: errorMessage)
   }
 
+  fileprivate static func dispatchToolCall<Input: Decodable, Output: Encodable>(
+    toolCall: ToolCall,
+    execute: (Input) async throws -> Output
+  ) async -> ToolCallResponse {
+    let input: Input
+    do {
+      input = try Foundation.JSONDecoder().decode(
+        Input.self, from: Foundation.Data(toolCall.stringifiedInput.utf8))
+    } catch {
+      return makeToolErrorResponse(
+        callId: toolCall.callId, errorMessage: "Failed to parse tool input: \(error)")
+    }
+    do {
+      let rawOutput = try await execute(input)
+      let outputData = try Foundation.JSONEncoder().encode(rawOutput)
+      let stringifiedOutput = String(decoding: outputData, as: UTF8.self)
+      return ToolCallResponse(callId: toolCall.callId, stringifiedOutput: stringifiedOutput)
+    } catch {
+      return makeToolErrorResponse(callId: toolCall.callId, errorMessage: "\(error)")
+    }
+  }
+
   /// A JSON value representation.
   public enum JsonElement: Codable, Sendable, Equatable {
     case string(String)

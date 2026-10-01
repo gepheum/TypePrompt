@@ -624,6 +624,26 @@ private fun makeToolErrorResponse(callId: String, errorMessage: String): ToolCal
     )
 }
 
+private suspend inline fun <reified Input, reified Output> dispatchToolCall(
+    toolCall: ToolCall,
+    execute: (Input) -> Output,
+): ToolCallResponse {
+    val input = try {
+        Json.decodeFromString<Input>(toolCall.stringifiedInput)
+    } catch (e: Exception) {
+        return makeToolErrorResponse(toolCall.callId, "Failed to parse tool input: ${e.message}")
+    }
+    return try {
+        val rawOutput = execute(input)
+        ToolCallResponse(
+            callId = toolCall.callId,
+            stringifiedOutput = Json.encodeToString(rawOutput),
+        )
+    } catch (e: Exception) {
+        makeToolErrorResponse(toolCall.callId, e.message ?: e.toString())
+    }
+}
+
 private object JsonConfig {
     @OptIn(ExperimentalSerializationApi::class)
     val lenient: Json =
