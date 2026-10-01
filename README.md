@@ -86,7 +86,7 @@ val prompt = prompts.renderDecodeCatMood(
 // ... send prompt to LLM ...
 
 // 2. Parse the LLM response into strongly-typed output
-val result = prompt.parseResponse(rawModelOutput)
+val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 ```
 
