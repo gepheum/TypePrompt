@@ -397,17 +397,18 @@ public class Test03Tools_ResearchQuestion
     }
 
     [Fact]
-    public async Task TestExecuteToolsThrowsForUnknownTool()
+    public async Task TestExecuteToolsUnknownToolReturnsError()
     {
         var toolCalls = new[]
         {
             new TypePrompt03.ToolCall("c1", "noSuchTool", "{}")
         };
 
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
-        {
-            await _prompt.ExecuteTools(toolCalls, new MockWebSearchExecutor());
-        });
+        var results = await _prompt.ExecuteTools(toolCalls, new MockWebSearchExecutor());
+        Assert.Single(results);
+        Assert.Equal("c1", results[0].CallId);
+        Assert.Equal("Tool not found: noSuchTool", results[0].Error);
+        Assert.Contains("Tool not found: noSuchTool", results[0].StringifiedOutput);
     }
 
     [Fact]

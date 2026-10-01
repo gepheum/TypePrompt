@@ -774,49 +774,24 @@ function writeExecuteToolCall(
       `async fn ${functionName}<E: ${traitBounds}>(`,
       "tool_call: &ToolCall,",
       "executor: &E,",
-      ") -> Result<ToolCallResponse, Box<dyn std::error::Error + Send + Sync>> {",
+      ") -> ToolCallResponse {",
       "match tool_call.tool_name.as_str() {",
     ];
 
     for (const tool of templateTools) {
       const rawToolName = tool.tool.name.text;
-      const { methodName, inputType } = getToolInfo(tool, compilationResult);
+      const { methodName } = getToolInfo(tool, compilationResult);
 
       lines.push(
-        `"${rawToolName}" => {`,
-        `let input: ${inputType} = match serde_json::from_str(&tool_call.stringified_input) {`,
-        "Ok(val) => val,",
-        "Err(e) => {",
-        "return Ok(make_tool_error_response(",
-        "tool_call.call_id.clone(),",
-        'format!("Failed to parse tool input: {}", e),',
-        "));",
-        "}",
-        "};",
-        `let raw_output = executor.${methodName}(input).await;`,
-        "let stringified_output = match serde_json::to_string(&raw_output) {",
-        "Ok(val) => val,",
-        "Err(e) => {",
-        "return Ok(make_tool_error_response(",
-        "tool_call.call_id.clone(),",
-        "e.to_string(),",
-        "));",
-        "}",
-        "};",
-        "Ok(ToolCallResponse {",
-        "call_id: tool_call.call_id.clone(),",
-        "stringified_output,",
-        "error: None,",
-        "})",
-        "}",
+        `"${rawToolName}" => dispatch_tool_call(tool_call, |input| executor.${methodName}(input)).await,`,
       );
     }
 
     lines.push(
-      "_ => Ok(make_tool_error_response(",
+      "_ => make_tool_error_response(",
       "tool_call.call_id.clone(),",
       'format!("Tool not found: {}", tool_call.tool_name),',
-      ")),",
+      "),",
       "}",
       "}",
     );

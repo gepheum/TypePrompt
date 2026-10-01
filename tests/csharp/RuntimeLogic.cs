@@ -95,6 +95,7 @@ public sealed record Prompt<TOutput, TToolExecutor>(
         CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var @namespace = TemplateId.GetId().Split(':')[0];
         var tasks = new List<Task<ToolCallResponse>>();
         foreach (var call in toolCalls)
@@ -158,9 +159,32 @@ public sealed record ToolCall(
     string StringifiedInput
 );
 
+/// <summary>
+/// The result of executing a single tool call.
+/// </summary>
+/// <param name="CallId">The matching call ID from the request.</param>
+/// <param name="StringifiedOutput">
+/// The JSON-stringified output of the tool call:
+/// <list type="bullet">
+/// <item><description>On success, contains the JSON-serialized return value of the tool.</description></item>
+/// <item><description>On failure, contains a JSON object with a single "error" key containing the error message (e.g. <c>{"error": "..."}</c>).</description></item>
+/// </list>
+/// Integration guide:
+/// <list type="bullet">
+/// <item><description><b>OpenAI / Gemini SDKs</b>: Forward <c>StringifiedOutput</c> directly as the tool result content and ignore the <c>Error</c> property.</description></item>
+/// <item><description><b>Anthropic SDK</b>: Check if <c>Error</c> is set. If set, mark <c>is_error = true</c> in the tool result block and pass the error message to <c>content</c>. Otherwise, pass <c>StringifiedOutput</c> to <c>content</c>.</description></item>
+/// </list>
+/// </param>
+/// <param name="Error">
+/// The error message if the tool call failed, or <c>null</c> on success.
+/// <para>
+/// Set when tool argument parsing fails, when the tool itself returns an error, or when the requested tool is not found.
+/// </para>
+/// </param>
 public sealed record ToolCallResponse(
     string CallId,
-    string StringifiedOutput
+    string StringifiedOutput,
+    string? Error = null
 );
 
 public enum NoTools
@@ -192,6 +216,43 @@ public static class TemplateIdExtensions
 
 file static class ToolExecution
 {
+    public static ToolCallResponse MakeToolErrorResponse(string callId, string errorMessage)
+    {
+        var errorJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["error"] = errorMessage });
+        return new ToolCallResponse(callId, errorJson, errorMessage);
+    }
+
+    public static async Task<ToolCallResponse> DispatchToolCall<TInput, TOutput>(
+        ToolCall toolCall,
+        Func<TInput, Task<TOutput>> execute
+    )
+    {
+        TInput input;
+        try
+        {
+            input = JsonSerializer.Deserialize<TInput>(toolCall.StringifiedInput)!;
+        }
+        catch (Exception e)
+        {
+            return MakeToolErrorResponse(toolCall.CallId, $"Failed to parse tool input: {e.Message}");
+        }
+
+        try
+        {
+            var rawOutput = await execute(input);
+            var stringifiedOutput = JsonSerializer.Serialize(rawOutput);
+            return new ToolCallResponse(toolCall.CallId, stringifiedOutput);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            return MakeToolErrorResponse(toolCall.CallId, e.Message);
+        }
+    }
+
     public static async Task<ToolCallResponse> ExecuteToolCall(
         ToolCall toolCall,
         string @namespace,

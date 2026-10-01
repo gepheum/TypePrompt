@@ -66,7 +66,7 @@ pub type ExecuteToolCallFn<E> = for<'a> fn(
 ) -> std::pin::Pin<
   Box<
     dyn std::future::Future<
-        Output = Result<ToolCallResponse, Box<dyn std::error::Error + Send + Sync>>,
+        Output = ToolCallResponse,
       > + Send
       + 'a,
   >,
@@ -128,7 +128,7 @@ impl<Output, ToolExecutor: ?Sized> Prompt<Output, ToolExecutor> {
     for tool_call in tool_calls {
       futures.push(execute_fn(tool_call, tool_executor));
     }
-    futures::future::try_join_all(futures).await
+    Ok(futures::future::join_all(futures).await)
   }
 }
 
@@ -327,6 +327,38 @@ fn make_tool_error_response(call_id: String, error_message: String) -> ToolCallR
     call_id,
     stringified_output,
     error: Some(error_message),
+  }
+}
+
+async fn dispatch_tool_call<Input, Output, Fut>(
+  tool_call: &ToolCall,
+  execute: impl FnOnce(Input) -> Fut,
+) -> ToolCallResponse
+where
+  Input: serde::de::DeserializeOwned,
+  Output: serde::Serialize,
+  Fut: std::future::Future<Output = Output> + Send,
+{
+  let input: Input = match serde_json::from_str(&tool_call.stringified_input) {
+    Ok(val) => val,
+    Err(e) => {
+      return make_tool_error_response(
+        tool_call.call_id.clone(),
+        format!("Failed to parse tool input: {}", e),
+      );
+    }
+  };
+  let raw_output = execute(input).await;
+  let stringified_output = match serde_json::to_string(&raw_output) {
+    Ok(val) => val,
+    Err(e) => {
+      return make_tool_error_response(tool_call.call_id.clone(), e.to_string());
+    }
+  };
+  ToolCallResponse {
+    call_id: tool_call.call_id.clone(),
+    stringified_output,
+    error: None,
   }
 }
 
