@@ -184,21 +184,24 @@ describe("parseXmlDocument", () => {
     });
   });
 
-  it("tracks whether elements are self-closing", () => {
+  it("tracks whether elements are self-closing and sets closingTag", () => {
     expect(parseXmlDocument("<z><a/><b></b></z>")).toMatch({
       kind: "success",
       root: {
+        closingTag: { start: 14, end: 18 },
         children: [
           {
             kind: "element",
             tag: { text: "a" },
             isSelfClosing: true,
+            closingTag: undefined,
             children: [],
           },
           {
             kind: "element",
             tag: { text: "b" },
             isSelfClosing: false,
+            closingTag: { start: 10, end: 14 },
             children: [],
           },
         ],

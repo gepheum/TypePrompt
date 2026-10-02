@@ -3,6 +3,7 @@ import type {
   InternalErrors,
   MappedSpan,
   OffsetMapEntry,
+  Span,
   TextSpan,
 } from "../util/shared-types.js";
 import type {
@@ -210,6 +211,7 @@ class XmlParser {
       children: [],
       comments: [],
       contentStart: openingTagEnd,
+      closingTag: undefined,
       isSelfClosing: isSelfClosing,
       xmlSlice: isSelfClosing
         ? this.content.slice(tokenStart, openingTagEnd)
@@ -305,10 +307,11 @@ class XmlParser {
       this.cursor += 1;
     }
     const tokenEnd = this.cursor;
+    const closingTag: Span = { start: tokenStart, end: tokenEnd };
 
     if (this.openElements.length <= 0) {
       this.errors.push({
-        span: { start: tokenStart, end: tokenEnd },
+        span: closingTag,
         message: `Unexpected closing tag '</${name}>'`,
       });
       return;
@@ -319,6 +322,7 @@ class XmlParser {
     if (top.tag.text === name) {
       this.openElements.pop();
       top.end = tokenEnd;
+      top.closingTag = closingTag;
       top.xmlSlice = this.content.slice(top.start, tokenEnd);
       this.appendNode(top);
       return;
@@ -335,10 +339,7 @@ class XmlParser {
 
     if (foundIndex === -1) {
       this.errors.push({
-        span: {
-          start: tokenStart,
-          end: tokenEnd,
-        },
+        span: closingTag,
         message: `Unexpected closing tag '</${name}>'`,
       });
       return;
@@ -346,10 +347,7 @@ class XmlParser {
 
     const topTag = top.tag.text;
     this.errors.push({
-      span: {
-        start: tokenStart,
-        end: tokenEnd,
-      },
+      span: closingTag,
       message: `Mismatched closing tag '</${name}>'; expected '</${topTag}>'`,
     });
 
@@ -361,6 +359,9 @@ class XmlParser {
 
     // Close the matched element with the actual content span.
     const matched = this.openElements.pop()!;
+    matched.end = tokenEnd;
+    matched.closingTag = closingTag;
+    matched.xmlSlice = this.content.slice(matched.start, tokenEnd);
     this.appendNode(matched);
   }
 
@@ -583,6 +584,7 @@ function codePointToString(codePoint: number): string | undefined {
 
 type OpenElement = ElementNode & {
   end: number;
+  closingTag: Span | undefined;
   readonly children: XmlNode[];
   readonly comments: XmlComment[];
   xmlSlice: string;

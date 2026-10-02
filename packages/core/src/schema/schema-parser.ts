@@ -283,13 +283,13 @@ class SchemaParser {
   private parseTypeRef(
     context?:
       | {
-        lastTokenWasPipe: true;
-        allowLiteral: true;
-      }
+          lastTokenWasPipe: true;
+          allowLiteral: true;
+        }
       | {
-        lastTokenWasPipe?: undefined;
-        allowLiteral: true;
-      },
+          lastTokenWasPipe?: undefined;
+          allowLiteral: true;
+        },
   ): Type | Literal | null {
     let type = ((): Type | Literal | null => {
       const token = this.peekToken();
@@ -681,7 +681,7 @@ class SchemaParser {
 
 type Token = {
   readonly kind:
-  "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
+    "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
   readonly text: string;
   /** Position of the start of the token in `content.text`. */
   readonly textStart: number;
