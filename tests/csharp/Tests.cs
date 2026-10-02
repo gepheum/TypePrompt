@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TypePrompt;
 using TypePrompt01;
 using TypePrompt02;
 using TypePrompt03;
@@ -1077,6 +1078,131 @@ public class TestE01_JsonSerialization
         };
         Assert.Null(matrix.OtherMatrix);
         Assert.Null(matrix.Foo);
+    }
+
+    [Fact]
+    public void TestComplexTypeSerializationAndDeserialization()
+    {
+        var sq = new TypePrompt.Schema.Shared.Square { Size = 10.0, FromJson = "fj", Self = "sf" };
+        var sq2 = new TypePrompt.Schema.Shared.Square { Size = 20.0, FromJson = "fj2", Self = "sf2" };
+        var sq3 = new TypePrompt.Schema.Shared.Square { Size = 30.0, FromJson = "fj3", Self = "sf3" };
+        var sq4 = new TypePrompt.Schema.Shared.Square { Size = 40.0, FromJson = "fj4", Self = "sf4" };
+
+        var full = new TypePrompt.Schema.Shared.ComplexType
+        {
+            StringField = "hello",
+            IntField = 42,
+            NumField = 3.14,
+            BoolField = true,
+            EnumField = TypePrompt.Schema.Shared.E.FooBar,
+            StringUnion = TypePrompt.Schema.Shared.ComplexType_StringUnion.FooBar,
+            UnionField = new TypePrompt.Schema.Shared.Expr_KindNumber { Value = 100.0 },
+            StructField = sq,
+            StringList = new[] { "a", "b" },
+            StructList = new[] { sq2 },
+            Matrix = new[] { new[] { 1, 2 }, new[] { 3, 4 } },
+            MapField = new Dictionary<string, int> { ["key1"] = 10, ["key2"] = 20 },
+            OptString = "optional hello",
+            OptInt = 99,
+            OptNum = 2.718,
+            OptBool = false,
+            OptEnum = TypePrompt.Schema.Shared.E.If,
+            OptStringUnion = TypePrompt.Schema.Shared.ComplexType_OptStringUnion.ZooKar,
+            OptUnion = new TypePrompt.Schema.Shared.Expr_KindNumber { Value = 200.0 },
+            OptStruct = sq3,
+            OptStringList = new[] { "x", "y" },
+            OptStructList = new[] { sq4 },
+            OptMatrix = new[] { new[] { 5, 6 }, new[] { 7, 8 } },
+            OptMap = new Dictionary<string, int> { ["optKey"] = 30 }
+        };
+
+        var fullJson = JsonSerializer.Serialize(full);
+        var parsedFull = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.ComplexType>(fullJson);
+        Assert.NotNull(parsedFull);
+        Assert.Equal("hello", parsedFull.StringField);
+        Assert.Equal(42, parsedFull.IntField);
+        Assert.Equal(3.14, parsedFull.NumField);
+        Assert.True(parsedFull.BoolField);
+        Assert.Equal(TypePrompt.Schema.Shared.E.FooBar, parsedFull.EnumField);
+        Assert.Equal(TypePrompt.Schema.Shared.ComplexType_StringUnion.FooBar, parsedFull.StringUnion);
+        Assert.Equal("foo-bar", parsedFull.StringUnion.GetValue());
+        var numTyped = Assert.IsType<TypePrompt.Schema.Shared.Expr_KindNumber>(parsedFull.UnionField);
+        Assert.Equal(100.0, numTyped.Value);
+        Assert.Equal(10.0, parsedFull.StructField.Size);
+        Assert.Equal(new[] { "a", "b" }, parsedFull.StringList);
+        Assert.Single(parsedFull.StructList);
+        Assert.Equal(20.0, parsedFull.StructList[0].Size);
+        Assert.Equal(2, parsedFull.Matrix.Count);
+        Assert.Equal(2, parsedFull.Matrix[0][1]);
+        Assert.Equal(10, parsedFull.MapField["key1"]);
+        Assert.Equal(20, parsedFull.MapField["key2"]);
+
+        Assert.Equal("optional hello", parsedFull.OptString);
+        Assert.Equal(99, parsedFull.OptInt);
+        Assert.Equal(2.718, parsedFull.OptNum);
+        Assert.False(parsedFull.OptBool);
+        Assert.Equal(TypePrompt.Schema.Shared.E.If, parsedFull.OptEnum);
+        Assert.Equal(TypePrompt.Schema.Shared.ComplexType_OptStringUnion.ZooKar, parsedFull.OptStringUnion);
+        Assert.Equal("zooKar", parsedFull.OptStringUnion!.Value.GetValue());
+        var optNumTyped = Assert.IsType<TypePrompt.Schema.Shared.Expr_KindNumber>(parsedFull.OptUnion);
+        Assert.Equal(200.0, optNumTyped.Value);
+        Assert.NotNull(parsedFull.OptStruct);
+        Assert.Equal(30.0, parsedFull.OptStruct.Size);
+        Assert.Equal(new[] { "x", "y" }, parsedFull.OptStringList);
+        Assert.NotNull(parsedFull.OptStructList);
+        Assert.Single(parsedFull.OptStructList);
+        Assert.Equal(40.0, parsedFull.OptStructList[0].Size);
+        Assert.NotNull(parsedFull.OptMatrix);
+        Assert.Equal(7, parsedFull.OptMatrix[1][0]);
+        Assert.NotNull(parsedFull.OptMap);
+        Assert.Equal(30, parsedFull.OptMap["optKey"]);
+
+        // Omitted optional fields
+        var omitted = new TypePrompt.Schema.Shared.ComplexType
+        {
+            StringField = "hello",
+            IntField = 42,
+            NumField = 3.14,
+            BoolField = true,
+            EnumField = TypePrompt.Schema.Shared.E.FooBar,
+            StringUnion = TypePrompt.Schema.Shared.ComplexType_StringUnion.FooBar,
+            UnionField = new TypePrompt.Schema.Shared.Expr_KindNumber { Value = 100.0 },
+            StructField = sq,
+            StringList = new[] { "a", "b" },
+            StructList = new[] { sq2 },
+            Matrix = new[] { new[] { 1, 2 }, new[] { 3, 4 } },
+            MapField = new Dictionary<string, int> { ["key1"] = 10, ["key2"] = 20 }
+        };
+
+        var omittedJson = JsonSerializer.Serialize(omitted);
+        Assert.DoesNotContain("optString", omittedJson);
+        Assert.DoesNotContain("optInt", omittedJson);
+        Assert.DoesNotContain("optNum", omittedJson);
+        Assert.DoesNotContain("optBool", omittedJson);
+        Assert.DoesNotContain("optEnum", omittedJson);
+        Assert.DoesNotContain("optStringUnion", omittedJson);
+        Assert.DoesNotContain("optUnion", omittedJson);
+        Assert.DoesNotContain("optStruct", omittedJson);
+        Assert.DoesNotContain("optStringList", omittedJson);
+        Assert.DoesNotContain("optStructList", omittedJson);
+        Assert.DoesNotContain("optMatrix", omittedJson);
+        Assert.DoesNotContain("optMap", omittedJson);
+
+        var parsedOmitted = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.ComplexType>(omittedJson);
+        Assert.NotNull(parsedOmitted);
+        Assert.Equal("hello", parsedOmitted.StringField);
+        Assert.Null(parsedOmitted.OptString);
+        Assert.Null(parsedOmitted.OptInt);
+        Assert.Null(parsedOmitted.OptNum);
+        Assert.Null(parsedOmitted.OptBool);
+        Assert.Null(parsedOmitted.OptEnum);
+        Assert.Null(parsedOmitted.OptStringUnion);
+        Assert.Null(parsedOmitted.OptUnion);
+        Assert.Null(parsedOmitted.OptStruct);
+        Assert.Null(parsedOmitted.OptStringList);
+        Assert.Null(parsedOmitted.OptStructList);
+        Assert.Null(parsedOmitted.OptMatrix);
+        Assert.Null(parsedOmitted.OptMap);
     }
 }
 

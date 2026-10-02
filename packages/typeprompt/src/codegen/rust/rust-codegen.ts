@@ -851,7 +851,7 @@ function writeTypepromptInterface(
   lines.push(`#[derive(${derives})]`);
   lines.push(`${vis}struct ${typeName} {`);
   for (const field of fields) {
-    const { type } = field;
+    const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
     const rawFieldName = field.name.text;
     const rustName = toRustName(toSnakeCase(rawFieldName));
@@ -862,7 +862,7 @@ function writeTypepromptInterface(
       serdeAttrs.push(`rename = "${rawFieldName}"`);
     }
     if (type.kind === "optional") {
-      serdeAttrs.push("default");
+      serdeAttrs.push("default", 'skip_serializing_if = "Option::is_none"');
     }
     if (serdeAttrs.length > 0) {
       lines.push(`#[serde(${serdeAttrs.join(", ")})]`);
@@ -879,7 +879,7 @@ function writeTypepromptInterface(
       `let mut state = serde::Serializer::serialize_struct(serializer, "${typeName}", ${fields.length})?;`,
     );
     for (const field of fields) {
-      const { type } = field;
+      const type = resolveType(field.type, schema);
       const rawFieldName = field.name.text;
       if (isLiteralType(type)) {
         lines.push(
@@ -887,9 +887,17 @@ function writeTypepromptInterface(
         );
       } else {
         const rustName = toRustName(toSnakeCase(rawFieldName));
-        lines.push(
-          `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
-        );
+        if (type.kind === "optional") {
+          lines.push(
+            `if self.${rustName}.is_some() {`,
+            `  serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
+            "}",
+          );
+        } else {
+          lines.push(
+            `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
+          );
+        }
       }
     }
     lines.push("serde::ser::SerializeStruct::end(state)");

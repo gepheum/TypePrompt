@@ -951,4 +951,122 @@ describe("e01 / JSON serialization & deserialization", () => {
     expect(matrix.otherMatrix).toMatch(undefined);
     expect(matrix.foo).toMatch(undefined);
   });
+
+  it("serializes and deserializes ComplexType with all types and optional fields", () => {
+    const sq: SchemaE01.Shared.Square = {
+      kind: "square",
+      size: 10.0,
+      fromJson: "fj",
+      self: "sf",
+      foo: "foo",
+    };
+    const sq2: SchemaE01.Shared.Square = {
+      kind: "square",
+      size: 20.0,
+      fromJson: "fj2",
+      self: "sf2",
+      foo: "foo",
+    };
+    const sq3: SchemaE01.Shared.Square = {
+      kind: "square",
+      size: 30.0,
+      fromJson: "fj3",
+      self: "sf3",
+      foo: "foo",
+    };
+    const sq4: SchemaE01.Shared.Square = {
+      kind: "square",
+      size: 40.0,
+      fromJson: "fj4",
+      self: "sf4",
+      foo: "foo",
+    };
+
+    const full: SchemaE01.Shared.ComplexType = {
+      stringField: "hello",
+      intField: 42,
+      numField: 3.14,
+      boolField: true,
+      literalField: "constant",
+      enumField: "foo-BAR",
+      stringUnion: "foo-bar",
+      unionField: { kind: "number", value: 100.0 },
+      structField: sq,
+      stringList: ["a", "b"],
+      structList: [sq2],
+      matrix: [
+        [1, 2],
+        [3, 4],
+      ],
+      mapField: { key1: 10, key2: 20 },
+      optString: "optional hello",
+      optInt: 99,
+      optNum: 2.718,
+      optBool: false,
+      optEnum: "if",
+      optStringUnion: "zooKar",
+      optUnion: { kind: "number", value: 200.0 },
+      optStruct: sq3,
+      optStringList: ["x", "y"],
+      optStructList: [sq4],
+      optMatrix: [
+        [5, 6],
+        [7, 8],
+      ],
+      optMap: { optKey: 30 },
+    };
+
+    const fullJson = JSON.stringify(full);
+    const parsedFull: SchemaE01.Shared.ComplexType = JSON.parse(fullJson);
+    expect(parsedFull).toMatch(full);
+
+    // Omitted optional fields
+    const omitted: SchemaE01.Shared.ComplexType = {
+      stringField: "hello",
+      intField: 42,
+      numField: 3.14,
+      boolField: true,
+      literalField: "constant",
+      enumField: "foo-BAR",
+      stringUnion: "foo-bar",
+      unionField: { kind: "number", value: 100.0 },
+      structField: sq,
+      stringList: ["a", "b"],
+      structList: [sq2],
+      matrix: [
+        [1, 2],
+        [3, 4],
+      ],
+      mapField: { key1: 10, key2: 20 },
+    };
+
+    const omittedJson = JSON.stringify(omitted);
+    expect(omittedJson.includes("optString")).toMatch(false);
+    expect(omittedJson.includes("optInt")).toMatch(false);
+    expect(omittedJson.includes("optNum")).toMatch(false);
+    expect(omittedJson.includes("optBool")).toMatch(false);
+    expect(omittedJson.includes("optEnum")).toMatch(false);
+    expect(omittedJson.includes("optStringUnion")).toMatch(false);
+    expect(omittedJson.includes("optUnion")).toMatch(false);
+    expect(omittedJson.includes("optStruct")).toMatch(false);
+    expect(omittedJson.includes("optStringList")).toMatch(false);
+    expect(omittedJson.includes("optStructList")).toMatch(false);
+    expect(omittedJson.includes("optMatrix")).toMatch(false);
+    expect(omittedJson.includes("optMap")).toMatch(false);
+
+    const parsedOmitted: SchemaE01.Shared.ComplexType = JSON.parse(omittedJson);
+    expect(parsedOmitted).toMatch(omitted);
+    expect(parsedOmitted.optString).toMatch(undefined);
+    expect(parsedOmitted.optInt).toMatch(undefined);
+    expect(parsedOmitted.optNum).toMatch(undefined);
+    expect(parsedOmitted.optBool).toMatch(undefined);
+    expect(parsedOmitted.optEnum).toMatch(undefined);
+    expect(parsedOmitted.optStringUnion).toMatch(undefined);
+    expect(parsedOmitted.optUnion).toMatch(undefined);
+    expect(parsedOmitted.optStruct).toMatch(undefined);
+    expect(parsedOmitted.optStringList).toMatch(undefined);
+    expect(parsedOmitted.optStructList).toMatch(undefined);
+    expect(parsedOmitted.optMatrix).toMatch(undefined);
+    expect(parsedOmitted.optMap).toMatch(undefined);
+  });
 });

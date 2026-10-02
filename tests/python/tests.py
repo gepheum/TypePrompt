@@ -331,7 +331,6 @@ class TestGeneratePageTree:
             "    pricing:\n"
             "      model: perHour\n"
             "      basePrice: 0.1\n"
-            "      overage: null\n"
             "    benchmarks[1,]{name,score,unit}:\n"
             "      throughput,1000.0,rps\n"
             "    pros[2]: fast,reliable\n"
@@ -839,3 +838,128 @@ class TestE01JsonSerialization:
         )
         assert matrix.other_matrix is None
         assert matrix.foo is None
+
+    def test_complex_type_serialization_and_deserialization(self):
+        sq = s_e01.shared.Square(
+            kind="square", size=10.0, from_json="fj", self="sf", foo="foo"
+        )
+        sq2 = s_e01.shared.Square(
+            kind="square", size=20.0, from_json="fj2", self="sf2", foo="foo"
+        )
+        sq3 = s_e01.shared.Square(
+            kind="square", size=30.0, from_json="fj3", self="sf3", foo="foo"
+        )
+        sq4 = s_e01.shared.Square(
+            kind="square", size=40.0, from_json="fj4", self="sf4", foo="foo"
+        )
+
+        full = s_e01.shared.ComplexType(
+            string_field="hello",
+            int_field=42,
+            num_field=3.14,
+            bool_field=True,
+            literal_field="constant",
+            enum_field="foo-BAR",
+            string_union="foo-bar",
+            union_field=s_e01.shared.Expr_KindNumber(kind="number", value=100.0),
+            struct_field=sq,
+            string_list=["a", "b"],
+            struct_list=[sq2],
+            matrix=[[1, 2], [3, 4]],
+            map_field={"key1": 10, "key2": 20},
+            opt_string="optional hello",
+            opt_int=99,
+            opt_num=2.718,
+            opt_bool=False,
+            opt_enum="if",
+            opt_string_union="zooKar",
+            opt_union=s_e01.shared.Expr_KindNumber(kind="number", value=200.0),
+            opt_struct=sq3,
+            opt_string_list=["x", "y"],
+            opt_struct_list=[sq4],
+            opt_matrix=[[5, 6], [7, 8]],
+            opt_map={"optKey": 30},
+        )
+
+        adapter = pydantic.TypeAdapter(s_e01.shared.ComplexType)
+        full_json = adapter.dump_json(full, exclude_none=True).decode("utf-8")
+        parsed_full = adapter.validate_json(full_json)
+        assert parsed_full.string_field == "hello"
+        assert parsed_full.int_field == 42
+        assert parsed_full.num_field == 3.14
+        assert parsed_full.bool_field is True
+        assert parsed_full.literal_field == "constant"
+        assert parsed_full.enum_field == "foo-BAR"
+        assert parsed_full.string_union == "foo-bar"
+        assert isinstance(parsed_full.union_field, s_e01.shared.Expr_KindNumber)
+        assert parsed_full.union_field.value == 100.0
+        assert parsed_full.struct_field.size == 10.0
+        assert parsed_full.string_list == ["a", "b"]
+        assert len(parsed_full.struct_list) == 1
+        assert parsed_full.struct_list[0].size == 20.0
+        assert parsed_full.matrix == [[1, 2], [3, 4]]
+        assert parsed_full.map_field["key1"] == 10
+        assert parsed_full.map_field["key2"] == 20
+
+        assert parsed_full.opt_string == "optional hello"
+        assert parsed_full.opt_int == 99
+        assert parsed_full.opt_num == 2.718
+        assert parsed_full.opt_bool is False
+        assert parsed_full.opt_enum == "if"
+        assert parsed_full.opt_string_union == "zooKar"
+        assert isinstance(parsed_full.opt_union, s_e01.shared.Expr_KindNumber)
+        assert parsed_full.opt_union.value == 200.0
+        assert parsed_full.opt_struct is not None
+        assert parsed_full.opt_struct.size == 30.0
+        assert parsed_full.opt_string_list == ["x", "y"]
+        assert parsed_full.opt_struct_list is not None
+        assert len(parsed_full.opt_struct_list) == 1
+        assert parsed_full.opt_struct_list[0].size == 40.0
+        assert parsed_full.opt_matrix == [[5, 6], [7, 8]]
+        assert parsed_full.opt_map == {"optKey": 30}
+
+        # Omitted optional fields
+        omitted = s_e01.shared.ComplexType(
+            string_field="hello",
+            int_field=42,
+            num_field=3.14,
+            bool_field=True,
+            literal_field="constant",
+            enum_field="foo-BAR",
+            string_union="foo-bar",
+            union_field=s_e01.shared.Expr_KindNumber(kind="number", value=100.0),
+            struct_field=sq,
+            string_list=["a", "b"],
+            struct_list=[sq2],
+            matrix=[[1, 2], [3, 4]],
+            map_field={"key1": 10, "key2": 20},
+        )
+
+        omitted_json = adapter.dump_json(omitted, exclude_none=True).decode("utf-8")
+        assert "optString" not in omitted_json
+        assert "optInt" not in omitted_json
+        assert "optNum" not in omitted_json
+        assert "optBool" not in omitted_json
+        assert "optEnum" not in omitted_json
+        assert "optStringUnion" not in omitted_json
+        assert "optUnion" not in omitted_json
+        assert "optStruct" not in omitted_json
+        assert "optStringList" not in omitted_json
+        assert "optStructList" not in omitted_json
+        assert "optMatrix" not in omitted_json
+        assert "optMap" not in omitted_json
+
+        parsed_omitted = adapter.validate_json(omitted_json)
+        assert parsed_omitted.string_field == "hello"
+        assert parsed_omitted.opt_string is None
+        assert parsed_omitted.opt_int is None
+        assert parsed_omitted.opt_num is None
+        assert parsed_omitted.opt_bool is None
+        assert parsed_omitted.opt_enum is None
+        assert parsed_omitted.opt_string_union is None
+        assert parsed_omitted.opt_union is None
+        assert parsed_omitted.opt_struct is None
+        assert parsed_omitted.opt_string_list is None
+        assert parsed_omitted.opt_struct_list is None
+        assert parsed_omitted.opt_matrix is None
+        assert parsed_omitted.opt_map is None

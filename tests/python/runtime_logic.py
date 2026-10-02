@@ -355,7 +355,7 @@ async def _execute_tools_impl[ToolExecutor](
         try:
             raw_output = await impl(input)
             stringified_output = tool.output_adapter.dump_json(
-                raw_output, by_alias=True
+                raw_output, by_alias=True, exclude_none=True
             ).decode()
             return ToolCallResponse(
                 call_id=call.call_id,
@@ -380,7 +380,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                     return val
                 case "property":
                     obj = evaluate(expression.left, val)
-                    return cast(dict, obj)[expression.property]
+                    return cast(dict, obj).get(expression.property)
 
         def indent(text: str, spaces: str) -> str:
             if not spaces:
@@ -522,7 +522,9 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             return result
 
         input_adapter, output_adapter = _type_adapters[self._template_id]
-        input_val = input_adapter.dump_python(cast(Any, input), by_alias=True)
+        input_val = input_adapter.dump_python(
+            cast(Any, input), by_alias=True, exclude_none=True
+        )
         del input
 
         template = self._template_data

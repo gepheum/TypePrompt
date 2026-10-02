@@ -667,6 +667,7 @@ private object JsonConfig {
         Json {
             prettyPrint = true
             prettyPrintIndent = "  "
+            explicitNulls = false
         }
 }
 

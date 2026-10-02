@@ -4071,6 +4071,170 @@ void TestE01_JsonSerialization() {
   };
   ASSERT_FALSE(matrix.other_matrix.has_value());
   ASSERT_FALSE(matrix.foo.has_value());
+
+  // testComplexTypeSerializationAndDeserialization
+  Square sq = *Square::whole{
+      .from_json = "fj",
+      .self = "sf",
+      .size = 10.0,
+  };
+  Square sq2 = *Square::whole{
+      .from_json = "fj2",
+      .self = "sf2",
+      .size = 20.0,
+  };
+  Square sq3 = *Square::whole{
+      .from_json = "fj3",
+      .self = "sf3",
+      .size = 30.0,
+  };
+  Square sq4 = *Square::whole{
+      .from_json = "fj4",
+      .self = "sf4",
+      .size = 40.0,
+  };
+
+  ComplexType full = *ComplexType::whole{
+      .bool_field = true,
+      .enum_field = E::kFooBar,
+      .int_field = 42,
+      .map_field = std::map<std::string, std::int32_t>{{"key1", 10}, {"key2", 20}},
+      .matrix = std::vector<std::vector<std::int32_t>>{{1, 2}, {3, 4}},
+      .num_field = 3.14,
+      .opt_bool = false,
+      .opt_enum = E::kIf,
+      .opt_int = 99,
+      .opt_map = std::map<std::string, std::int32_t>{{"optKey", 30}},
+      .opt_matrix = std::vector<std::vector<std::int32_t>>{{5, 6}, {7, 8}},
+      .opt_num = 2.718,
+      .opt_string = "optional hello",
+      .opt_string_list = std::vector<std::string>{"x", "y"},
+      .opt_string_union = ComplexType_OptStringUnion::kZooKar,
+      .opt_struct = sq3,
+      .opt_struct_list = std::vector<Square>{sq4},
+      .opt_union = Expr::variant_type(
+          typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{.value = 200.0})),
+      .string_field = "hello",
+      .string_list = std::vector<std::string>{"a", "b"},
+      .string_union = ComplexType_StringUnion::kFooBar,
+      .struct_field = sq,
+      .struct_list = std::vector<Square>{sq2},
+      .union_field = Expr::variant_type(
+          typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{.value = 100.0})),
+  };
+
+  std::string full_json = typeprompt_e01::ToJson(full);
+  auto parsed_full_res = typeprompt_e01::ParseJson<ComplexType>(full_json);
+  ASSERT_TRUE(parsed_full_res.ok());
+  const auto& parsed_full = *parsed_full_res;
+  ASSERT_EQ(parsed_full.string_field, "hello");
+  ASSERT_EQ(parsed_full.int_field, 42);
+  ASSERT_EQ(parsed_full.num_field, 3.14);
+  ASSERT_EQ(parsed_full.bool_field, true);
+  ASSERT_TRUE(parsed_full.enum_field == E::kFooBar);
+  ASSERT_TRUE(parsed_full.string_union == ComplexType_StringUnion::kFooBar);
+  ASSERT_EQ(to_string_view(parsed_full.string_union), "foo-bar");
+  ASSERT_TRUE(parsed_full.union_field.kind() == Expr::kind::kNumber);
+  ASSERT_EQ(parsed_full.union_field.as_kind_number().value, 100.0);
+  ASSERT_EQ(parsed_full.struct_field.size, 10.0);
+  ASSERT_EQ(parsed_full.string_list.size(), 2);
+  ASSERT_EQ(parsed_full.string_list[0], "a");
+  ASSERT_EQ(parsed_full.string_list[1], "b");
+  ASSERT_EQ(parsed_full.struct_list.size(), 1);
+  ASSERT_EQ(parsed_full.struct_list[0].size, 20.0);
+  ASSERT_EQ(parsed_full.matrix.size(), 2);
+  ASSERT_EQ(parsed_full.matrix[0][1], 2);
+  ASSERT_EQ(parsed_full.map_field.at("key1"), 10);
+  ASSERT_EQ(parsed_full.map_field.at("key2"), 20);
+
+  ASSERT_TRUE(parsed_full.opt_string.has_value());
+  ASSERT_EQ(*parsed_full.opt_string, "optional hello");
+  ASSERT_TRUE(parsed_full.opt_int.has_value());
+  ASSERT_EQ(*parsed_full.opt_int, 99);
+  ASSERT_TRUE(parsed_full.opt_num.has_value());
+  ASSERT_EQ(*parsed_full.opt_num, 2.718);
+  ASSERT_TRUE(parsed_full.opt_bool.has_value());
+  ASSERT_EQ(*parsed_full.opt_bool, false);
+  ASSERT_TRUE(parsed_full.opt_enum.has_value());
+  ASSERT_TRUE(*parsed_full.opt_enum == E::kIf);
+  ASSERT_TRUE(parsed_full.opt_string_union.has_value());
+  ASSERT_TRUE(*parsed_full.opt_string_union == ComplexType_OptStringUnion::kZooKar);
+  ASSERT_EQ(to_string_view(*parsed_full.opt_string_union), "zooKar");
+  ASSERT_TRUE(parsed_full.opt_union.has_value());
+  ASSERT_TRUE(parsed_full.opt_union->kind() == Expr::kind::kNumber);
+  ASSERT_EQ(parsed_full.opt_union->as_kind_number().value, 200.0);
+  ASSERT_TRUE(parsed_full.opt_struct.has_value());
+  ASSERT_EQ(parsed_full.opt_struct->size, 30.0);
+  ASSERT_TRUE(parsed_full.opt_string_list.has_value());
+  ASSERT_EQ(parsed_full.opt_string_list->size(), 2);
+  ASSERT_TRUE(parsed_full.opt_struct_list.has_value());
+  ASSERT_EQ(parsed_full.opt_struct_list->size(), 1);
+  ASSERT_EQ((*parsed_full.opt_struct_list)[0].size, 40.0);
+  ASSERT_TRUE(parsed_full.opt_matrix.has_value());
+  ASSERT_EQ(parsed_full.opt_matrix->size(), 2);
+  ASSERT_EQ((*parsed_full.opt_matrix)[1][0], 7);
+  ASSERT_TRUE(parsed_full.opt_map.has_value());
+  ASSERT_EQ(parsed_full.opt_map->at("optKey"), 30);
+
+  // Omitted optional fields
+  ComplexType omitted = *ComplexType::whole{
+      .bool_field = true,
+      .enum_field = E::kFooBar,
+      .int_field = 42,
+      .map_field = std::map<std::string, std::int32_t>{{"key1", 10}, {"key2", 20}},
+      .matrix = std::vector<std::vector<std::int32_t>>{{1, 2}, {3, 4}},
+      .num_field = 3.14,
+      .opt_bool = std::nullopt,
+      .opt_enum = std::nullopt,
+      .opt_int = std::nullopt,
+      .opt_map = std::nullopt,
+      .opt_matrix = std::nullopt,
+      .opt_num = std::nullopt,
+      .opt_string = std::nullopt,
+      .opt_string_list = std::nullopt,
+      .opt_string_union = std::nullopt,
+      .opt_struct = std::nullopt,
+      .opt_struct_list = std::nullopt,
+      .opt_union = std::nullopt,
+      .string_field = "hello",
+      .string_list = std::vector<std::string>{"a", "b"},
+      .string_union = ComplexType_StringUnion::kFooBar,
+      .struct_field = sq,
+      .struct_list = std::vector<Square>{sq2},
+      .union_field = Expr::variant_type(
+          typeprompt_e01::indirect<Expr_KindNumber>(*Expr_KindNumber::whole{.value = 100.0})),
+  };
+
+  std::string omitted_json = typeprompt_e01::ToJson(omitted);
+  ASSERT_TRUE(omitted_json.find("optString") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optInt") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optNum") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optBool") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optEnum") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optStringUnion") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optUnion") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optStruct") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optStringList") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optStructList") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optMatrix") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("optMap") == std::string::npos);
+
+  auto parsed_omitted_res = typeprompt_e01::ParseJson<ComplexType>(omitted_json);
+  ASSERT_TRUE(parsed_omitted_res.ok());
+  const auto& parsed_omitted = *parsed_omitted_res;
+  ASSERT_EQ(parsed_omitted.string_field, "hello");
+  ASSERT_FALSE(parsed_omitted.opt_string.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_int.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_num.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_bool.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_enum.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_string_union.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_union.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_struct.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_string_list.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_struct_list.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_matrix.has_value());
+  ASSERT_FALSE(parsed_omitted.opt_map.has_value());
 }
 
 void TestTemplateOverrider() {

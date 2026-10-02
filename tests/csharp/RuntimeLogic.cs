@@ -471,8 +471,12 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
                 return val;
             case Spec.Expression_KindProperty propExpr:
                 {
-                    var obj = (IDictionary<string, object?>)Evaluate(propExpr.Left, val)!;
-                    return obj[propExpr.Property];
+                    if (Evaluate(propExpr.Left, val) is IDictionary<string, object?> dict)
+                    {
+                        dict.TryGetValue(propExpr.Property, out var result);
+                        return result;
+                    }
+                    return null;
                 }
             default:
                 {
@@ -539,7 +543,11 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
             case Spec.InsertFormat.Text:
                 return v?.ToString() ?? "";
             case Spec.InsertFormat.Json:
-                var json = JsonSerializer.Serialize(v, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(v, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                });
                 return json.Replace("\r\n", "\n");
             case Spec.InsertFormat.Yaml:
                 var yamlSerializer = new SerializerBuilder().Build();

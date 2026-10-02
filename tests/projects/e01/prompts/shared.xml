@@ -70,4 +70,32 @@
     indirect: boolean;
     int32T: integer;
   };
+
+  type ComplexType = {
+    stringField: string;
+    intField: integer;
+    numField: number;
+    boolField: boolean;
+    literalField: "constant";
+    enumField: E;
+    stringUnion: "foo-bar" | "zooKar";
+    unionField: Expr;
+    structField: Square;
+    stringList: string[];
+    structList: Square[];
+    matrix: integer[][];
+    mapField: { [x: string]: integer };
+    optString?: string;
+    optInt?: integer;
+    optNum?: number;
+    optBool?: boolean;
+    optEnum?: E;
+    optStringUnion?: "foo-bar" | "zooKar";
+    optUnion?: Expr;
+    optStruct?: Square;
+    optStringList?: string[];
+    optStructList?: Square[];
+    optMatrix?: integer[][];
+    optMap?: { [x: string]: integer };
+  };
 </namespace>

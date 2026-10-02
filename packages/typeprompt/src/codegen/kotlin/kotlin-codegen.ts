@@ -706,13 +706,9 @@ function writeTypepromptInterface(
         primary && unionContext.overrideFields.has(field) ? "override " : "";
       const val = primary ? "val " : "";
       const isOptional = type.kind === "optional";
-      const encodeDefault =
-        primary && isOptional ? "@kotlinx.serialization.EncodeDefault " : "";
       const defaultVal = isOptional ? " = null" : "";
       lines.push(...wrapKDoc(field.doc));
-      lines.push(
-        `${encodeDefault}${override}${val}${ktName}: ${fieldType}${defaultVal},`,
-      );
+      lines.push(`${override}${val}${ktName}: ${fieldType}${defaultVal},`);
     }
   };
   writeCtorParams(true);

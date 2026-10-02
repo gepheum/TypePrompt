@@ -1030,6 +1030,11 @@ function writeTypepromptInterface(
     } else {
       const isOptional = resolveType(type, schema).kind === "optional";
       const required = isOptional ? "" : "required ";
+      if (isOptional) {
+        lines.push(
+          "[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]",
+        );
+      }
       lines.push(
         `[JsonPropertyName("${rawFieldName}")]`,
         `public ${required}${fieldType} ${propertyName} { get; init; }`,
@@ -1377,6 +1382,8 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   "JsonDocument",
   "JsonElement",
   "JsonException",
+  "JsonIgnore",
+  "JsonIgnoreCondition",
   "JsonInclude",
   "JsonPropertyName",
   "JsonSerializer",

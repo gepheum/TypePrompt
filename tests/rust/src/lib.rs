@@ -720,8 +720,9 @@ mod tests {
 
     use gen::prompts_e01::schema::analyze_sales_data::Input_Variant;
     use gen::prompts_e01::schema::shared::{
-        EnumWithCommonFields, EnumWithCommonFields_NotSuccess, EnumWithCommonFields_Success, Expr,
-        Expr_KindAdd, Expr_KindNumber, Matrix,
+        ComplexType, ComplexType_OptStringUnion, ComplexType_StringUnion, EnumWithCommonFields,
+        EnumWithCommonFields_NotSuccess, EnumWithCommonFields_Success, Expr, Expr_KindAdd,
+        Expr_KindNumber, Matrix, Square, E,
     };
 
     #[test]
@@ -784,6 +785,115 @@ mod tests {
 
         let decoded: Matrix = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, matrix);
+    }
+
+    #[test]
+    fn test_complex_type_serialization() {
+        let sq = Square {
+            size: 10.0,
+            from_json: "fj".to_string(),
+            self_: "sf".to_string(),
+        };
+        let sq2 = Square {
+            size: 20.0,
+            from_json: "fj2".to_string(),
+            self_: "sf2".to_string(),
+        };
+        let sq3 = Square {
+            size: 30.0,
+            from_json: "fj3".to_string(),
+            self_: "sf3".to_string(),
+        };
+        let sq4 = Square {
+            size: 40.0,
+            from_json: "fj4".to_string(),
+            self_: "sf4".to_string(),
+        };
+
+        let full = ComplexType {
+            string_field: "hello".to_string(),
+            int_field: 42,
+            num_field: 3.14,
+            bool_field: true,
+            enum_field: E::FooBar,
+            string_union: ComplexType_StringUnion::FooBar,
+            union_field: Expr::KindNumber(Expr_KindNumber { value: 100.0 }),
+            struct_field: sq.clone(),
+            string_list: vec!["a".to_string(), "b".to_string()],
+            struct_list: vec![sq2.clone()],
+            matrix: vec![vec![1, 2], vec![3, 4]],
+            map_field: [("key1".to_string(), 10), ("key2".to_string(), 20)]
+                .into_iter()
+                .collect(),
+            opt_string: Some("optional hello".to_string()),
+            opt_int: Some(99),
+            opt_num: Some(2.718),
+            opt_bool: Some(false),
+            opt_enum: Some(E::If),
+            opt_string_union: Some(ComplexType_OptStringUnion::ZooKar),
+            opt_union: Some(Expr::KindNumber(Expr_KindNumber { value: 200.0 })),
+            opt_struct: Some(sq3),
+            opt_string_list: Some(vec!["x".to_string(), "y".to_string()]),
+            opt_struct_list: Some(vec![sq4]),
+            opt_matrix: Some(vec![vec![5, 6], vec![7, 8]]),
+            opt_map: Some([("optKey".to_string(), 30)].into_iter().collect()),
+        };
+
+        let full_json = serde_json::to_string(&full).unwrap();
+        let parsed_full: ComplexType = serde_json::from_str(&full_json).unwrap();
+        assert_eq!(parsed_full, full);
+        assert_eq!(parsed_full.string_union.to_string(), "foo-bar");
+        assert_eq!(
+            parsed_full.opt_string_union.as_ref().unwrap().to_string(),
+            "zooKar"
+        );
+
+        // Omitted optional fields
+        let omitted = ComplexType {
+            string_field: "hello".to_string(),
+            int_field: 42,
+            num_field: 3.14,
+            bool_field: true,
+            enum_field: E::FooBar,
+            string_union: ComplexType_StringUnion::FooBar,
+            union_field: Expr::KindNumber(Expr_KindNumber { value: 100.0 }),
+            struct_field: sq,
+            string_list: vec!["a".to_string(), "b".to_string()],
+            struct_list: vec![sq2],
+            matrix: vec![vec![1, 2], vec![3, 4]],
+            map_field: [("key1".to_string(), 10), ("key2".to_string(), 20)]
+                .into_iter()
+                .collect(),
+            opt_string: None,
+            opt_int: None,
+            opt_num: None,
+            opt_bool: None,
+            opt_enum: None,
+            opt_string_union: None,
+            opt_union: None,
+            opt_struct: None,
+            opt_string_list: None,
+            opt_struct_list: None,
+            opt_matrix: None,
+            opt_map: None,
+        };
+
+        let omitted_json = serde_json::to_string(&omitted).unwrap();
+        assert!(!omitted_json.contains("optString"));
+        assert!(!omitted_json.contains("optInt"));
+        assert!(!omitted_json.contains("optNum"));
+        assert!(!omitted_json.contains("optBool"));
+        assert!(!omitted_json.contains("optEnum"));
+        assert!(!omitted_json.contains("optStringUnion"));
+        assert!(!omitted_json.contains("optUnion"));
+        assert!(!omitted_json.contains("optStruct"));
+        assert!(!omitted_json.contains("optStringList"));
+        assert!(!omitted_json.contains("optStructList"));
+        assert!(!omitted_json.contains("optMatrix"));
+        assert!(!omitted_json.contains("optMap"));
+
+        let parsed_omitted: ComplexType = serde_json::from_str(&omitted_json).unwrap();
+        assert_eq!(parsed_omitted, omitted);
     }
 
     // ─── TemplateOverrider ──────────────────────────────────────────────────────

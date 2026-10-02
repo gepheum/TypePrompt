@@ -817,6 +817,131 @@ struct E01SpecSerializationTests {
     )
     #expect(decoded == .csv)
   }
+
+  @Test func complexTypeSerialization() throws {
+    let sq = TypePrompt.Schema.Shared.Square(size: 10.0, fromJson: "fj", self_: "sf")
+    let sq2 = TypePrompt.Schema.Shared.Square(size: 20.0, fromJson: "fj2", self_: "sf2")
+    let sq3 = TypePrompt.Schema.Shared.Square(size: 30.0, fromJson: "fj3", self_: "sf3")
+    let sq4 = TypePrompt.Schema.Shared.Square(size: 40.0, fromJson: "fj4", self_: "sf4")
+
+    let full = TypePrompt.Schema.Shared.ComplexType(
+      stringField: "hello",
+      intField: 42,
+      numField: 3.14,
+      boolField: true,
+      enumField: .fooBar,
+      stringUnion: .fooBar,
+      unionField: .kindNumber(TypePrompt.Schema.Shared.Expr_KindNumber(value: 100.0)),
+      structField: sq,
+      stringList: ["a", "b"],
+      structList: [sq2],
+      matrix: [[1, 2], [3, 4]],
+      mapField: ["key1": 10, "key2": 20],
+      optString: "optional hello",
+      optInt: 99,
+      optNum: 2.718,
+      optBool: false,
+      optEnum: .if,
+      optStringUnion: .zooKar,
+      optUnion: .kindNumber(TypePrompt.Schema.Shared.Expr_KindNumber(value: 200.0)),
+      optStruct: sq3,
+      optStringList: ["x", "y"],
+      optStructList: [sq4],
+      optMatrix: [[5, 6], [7, 8]],
+      optMap: ["optKey": 30]
+    )
+
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+
+    let fullData = try encoder.encode(full)
+    let parsedFull = try decoder.decode(TypePrompt.Schema.Shared.ComplexType.self, from: fullData)
+    #expect(parsedFull.stringField == "hello")
+    #expect(parsedFull.intField == 42)
+    #expect(parsedFull.numField == 3.14)
+    #expect(parsedFull.boolField == true)
+    #expect(parsedFull.enumField == TypePrompt.Schema.Shared.E.fooBar)
+    #expect(parsedFull.stringUnion == TypePrompt.Schema.Shared.ComplexType_StringUnion.fooBar)
+    #expect(parsedFull.stringUnion.rawValue == "foo-bar")
+    if case .kindNumber(let n) = parsedFull.unionField {
+      #expect(n.value == 100.0)
+    } else {
+      Issue.record("Expected kindNumber")
+    }
+    #expect(parsedFull.structField.size == 10.0)
+    #expect(parsedFull.stringList == ["a", "b"])
+    #expect(parsedFull.structList.count == 1)
+    #expect(parsedFull.structList[0].size == 20.0)
+    #expect(parsedFull.matrix == [[1, 2], [3, 4]])
+    #expect(parsedFull.mapField["key1"] == 10)
+    #expect(parsedFull.mapField["key2"] == 20)
+
+    #expect(parsedFull.optString == "optional hello")
+    #expect(parsedFull.optInt == 99)
+    #expect(parsedFull.optNum == 2.718)
+    #expect(parsedFull.optBool == false)
+    #expect(parsedFull.optEnum == TypePrompt.Schema.Shared.E.if)
+    #expect(parsedFull.optStringUnion == TypePrompt.Schema.Shared.ComplexType_OptStringUnion.zooKar)
+    #expect(parsedFull.optStringUnion?.rawValue == "zooKar")
+    if case .kindNumber(let optN) = parsedFull.optUnion {
+      #expect(optN.value == 200.0)
+    } else {
+      Issue.record("Expected opt kindNumber")
+    }
+    #expect(parsedFull.optStruct?.size == 30.0)
+    #expect(parsedFull.optStringList == ["x", "y"])
+    #expect(parsedFull.optStructList?.count == 1)
+    #expect(parsedFull.optStructList?[0].size == 40.0)
+    #expect(parsedFull.optMatrix == [[5, 6], [7, 8]])
+    #expect(parsedFull.optMap?["optKey"] == 30)
+
+    // Omitted optional fields
+    let omitted = TypePrompt.Schema.Shared.ComplexType(
+      stringField: "hello",
+      intField: 42,
+      numField: 3.14,
+      boolField: true,
+      enumField: .fooBar,
+      stringUnion: .fooBar,
+      unionField: .kindNumber(TypePrompt.Schema.Shared.Expr_KindNumber(value: 100.0)),
+      structField: sq,
+      stringList: ["a", "b"],
+      structList: [sq2],
+      matrix: [[1, 2], [3, 4]],
+      mapField: ["key1": 10, "key2": 20]
+    )
+
+    let omittedData = try encoder.encode(omitted)
+    let omittedJson = String(decoding: omittedData, as: UTF8.self)
+    #expect(!omittedJson.contains("optString"))
+    #expect(!omittedJson.contains("optInt"))
+    #expect(!omittedJson.contains("optNum"))
+    #expect(!omittedJson.contains("optBool"))
+    #expect(!omittedJson.contains("optEnum"))
+    #expect(!omittedJson.contains("optStringUnion"))
+    #expect(!omittedJson.contains("optUnion"))
+    #expect(!omittedJson.contains("optStruct"))
+    #expect(!omittedJson.contains("optStringList"))
+    #expect(!omittedJson.contains("optStructList"))
+    #expect(!omittedJson.contains("optMatrix"))
+    #expect(!omittedJson.contains("optMap"))
+
+    let parsedOmitted = try decoder.decode(
+      TypePrompt.Schema.Shared.ComplexType.self, from: omittedData)
+    #expect(parsedOmitted.stringField == "hello")
+    #expect(parsedOmitted.optString == nil)
+    #expect(parsedOmitted.optInt == nil)
+    #expect(parsedOmitted.optNum == nil)
+    #expect(parsedOmitted.optBool == nil)
+    #expect(parsedOmitted.optEnum == nil)
+    #expect(parsedOmitted.optStringUnion == nil)
+    #expect(parsedOmitted.optUnion == nil)
+    #expect(parsedOmitted.optStruct == nil)
+    #expect(parsedOmitted.optStringList == nil)
+    #expect(parsedOmitted.optStructList == nil)
+    #expect(parsedOmitted.optMatrix == nil)
+    #expect(parsedOmitted.optMap == nil)
+  }
 }
 
 @Suite("TemplateOverrider")

@@ -78,8 +78,8 @@ function getTemplateTypes(
 ): {
   readonly inputType: string;
   readonly outputType: string;
-  readonly inputTypeNode: Type | Optional;
-  readonly outputTypeNode: Type | Optional;
+  readonly inputTypeNode: Type;
+  readonly outputTypeNode: Type;
   readonly options: WriteSchemaOptions;
 } {
   const { singleNamespace } = compilationResult;
@@ -410,9 +410,7 @@ function writePromptToolsEnums(
         : `PromptTools_${namespace.name}_${rawTemplateName}`;
 
       lines.push(
-        "/// Tools available for the '" +
-          rawTemplateName +
-          "' prompt template.",
+        `/// Tools available for the '${rawTemplateName}' prompt template.`,
         `enum ${enumName} {`,
       );
 
@@ -568,8 +566,8 @@ function getToolInfo(
 ): {
   readonly interfaceName: string;
   readonly methodName: string;
-  readonly inputTypeNode: Type | Optional;
-  readonly outputTypeNode: Type | Optional;
+  readonly inputTypeNode: Type;
+  readonly outputTypeNode: Type;
   readonly options: WriteSchemaOptions;
   readonly inputType: string;
   readonly outputType: string;
@@ -765,6 +763,16 @@ function writeTypepromptInterface(
     lines.push("@override");
   }
   lines.push("Map<String, dynamic> toJson() {");
+  for (const field of fields) {
+    const resolvedFieldType = resolveType(field.type, schema);
+    if (
+      !isLiteralType(resolvedFieldType) &&
+      resolvedFieldType.kind === "optional"
+    ) {
+      const dartName = toDartName(field.name.text);
+      lines.push(`final ${dartName} = this.${dartName};`);
+    }
+  }
   lines.push("return {");
   for (const field of fields) {
     const rawName = field.name.text;
@@ -776,13 +784,18 @@ function writeTypepromptInterface(
       );
       lines.push(`"${rawName}": ${value},`);
     } else {
+      const isOptional = resolvedFieldType.kind === "optional";
       const toJsonExpr = writeToJsonExpr(
-        resolvedFieldType,
+        isOptional ? resolvedFieldType.innerType : resolvedFieldType,
         dartName,
         schema,
         options,
       );
-      lines.push(`"${rawName}": ${toJsonExpr},`);
+      if (isOptional) {
+        lines.push(`if (${dartName} != null) "${rawName}": ${toJsonExpr},`);
+      } else {
+        lines.push(`"${rawName}": ${toJsonExpr},`);
+      }
     }
   }
   lines.push(
@@ -972,7 +985,7 @@ function writeType(
 }
 
 function writeToJsonExpr(
-  type: Type | Optional,
+  type: Type,
   inputExpr: string,
   schema: Schema,
   options: WriteSchemaOptions,
@@ -1000,21 +1013,6 @@ function writeToJsonExpr(
     case "interface":
     case "union": {
       return inputExpr.concat(".toJson()");
-    }
-    case "optional": {
-      const innerToJsonExpr = writeToJsonExpr(
-        type.innerType,
-        inputExpr,
-        schema,
-        options,
-      );
-      if (innerToJsonExpr === inputExpr) {
-        return inputExpr;
-      } else if (innerToJsonExpr.startsWith(inputExpr.concat("."))) {
-        return innerToJsonExpr.replace(".", "?.");
-      } else {
-        return `${inputExpr} == null ? null : ${innerToJsonExpr}`;
-      }
     }
     case "record": {
       const valueToJsonExpr = writeToJsonExpr(
@@ -1286,4 +1284,4 @@ const RESERVED_NAMES: ReadonlySet<string> = new Set([
   // Generated symbols
   "toJson",
   "copyWith",
-] as const);
+]);

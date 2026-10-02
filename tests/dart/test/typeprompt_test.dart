@@ -815,6 +815,143 @@ void main() {
         equals(pe01.AnalyzeSalesData_Input_Variant.csv),
       );
     });
+
+    test('ComplexType serialization & deserialization', () {
+      final sq = pe01.Shared_Square(size: 10.0, fromJson: "fj", self: "sf");
+      final sq2 = pe01.Shared_Square(size: 20.0, fromJson: "fj2", self: "sf2");
+      final sq3 = pe01.Shared_Square(size: 30.0, fromJson: "fj3", self: "sf3");
+      final sq4 = pe01.Shared_Square(size: 40.0, fromJson: "fj4", self: "sf4");
+
+      final full = pe01.Shared_ComplexType(
+        stringField: "hello",
+        intField: 42,
+        numField: 3.14,
+        boolField: true,
+        enumField: pe01.Shared_E.fooBar,
+        stringUnion: pe01.Shared_ComplexType_StringUnion.fooBar,
+        unionField: pe01.Shared_Expr_KindNumber(value: 100.0),
+        structField: sq,
+        stringList: ["a", "b"],
+        structList: [sq2],
+        matrix: [
+          [1, 2],
+          [3, 4],
+        ],
+        mapField: {"key1": 10, "key2": 20},
+        optString: "optional hello",
+        optInt: 99,
+        optNum: 2.718,
+        optBool: false,
+        optEnum: pe01.Shared_E.if_,
+        optStringUnion: pe01.Shared_ComplexType_OptStringUnion.zooKar,
+        optUnion: pe01.Shared_Expr_KindNumber(value: 200.0),
+        optStruct: sq3,
+        optStringList: ["x", "y"],
+        optStructList: [sq4],
+        optMatrix: [
+          [5, 6],
+          [7, 8],
+        ],
+        optMap: {"optKey": 30},
+      );
+
+      final fullJson = full.toJson();
+      final parsedFull = pe01.Shared_ComplexType.fromJson(fullJson);
+      expect(parsedFull.stringField, equals("hello"));
+      expect(parsedFull.intField, equals(42));
+      expect(parsedFull.numField, equals(3.14));
+      expect(parsedFull.boolField, isTrue);
+      expect(parsedFull.enumField, equals(pe01.Shared_E.fooBar));
+      expect(parsedFull.stringUnion,
+          equals(pe01.Shared_ComplexType_StringUnion.fooBar));
+      expect(parsedFull.stringUnion.toJson(), equals("foo-bar"));
+      expect(parsedFull.unionField, isA<pe01.Shared_Expr_KindNumber>());
+      expect((parsedFull.unionField as pe01.Shared_Expr_KindNumber).value,
+          equals(100.0));
+      expect(parsedFull.structField.size, equals(10.0));
+      expect(parsedFull.stringList, equals(["a", "b"]));
+      expect(parsedFull.structList.length, equals(1));
+      expect(parsedFull.structList[0].size, equals(20.0));
+      expect(
+          parsedFull.matrix,
+          equals([
+            [1, 2],
+            [3, 4]
+          ]));
+      expect(parsedFull.mapField["key1"], equals(10));
+      expect(parsedFull.mapField["key2"], equals(20));
+
+      expect(parsedFull.optString, equals("optional hello"));
+      expect(parsedFull.optInt, equals(99));
+      expect(parsedFull.optNum, equals(2.718));
+      expect(parsedFull.optBool, isFalse);
+      expect(parsedFull.optEnum, equals(pe01.Shared_E.if_));
+      expect(parsedFull.optStringUnion,
+          equals(pe01.Shared_ComplexType_OptStringUnion.zooKar));
+      expect(parsedFull.optStringUnion?.toJson(), equals("zooKar"));
+      expect(parsedFull.optUnion, isA<pe01.Shared_Expr_KindNumber>());
+      expect((parsedFull.optUnion as pe01.Shared_Expr_KindNumber).value,
+          equals(200.0));
+      expect(parsedFull.optStruct?.size, equals(30.0));
+      expect(parsedFull.optStringList, equals(["x", "y"]));
+      expect(parsedFull.optStructList?.length, equals(1));
+      expect(parsedFull.optStructList?[0].size, equals(40.0));
+      expect(
+          parsedFull.optMatrix,
+          equals([
+            [5, 6],
+            [7, 8]
+          ]));
+      expect(parsedFull.optMap?["optKey"], equals(30));
+
+      // Omitted optional fields
+      final omitted = pe01.Shared_ComplexType(
+        stringField: "hello",
+        intField: 42,
+        numField: 3.14,
+        boolField: true,
+        enumField: pe01.Shared_E.fooBar,
+        stringUnion: pe01.Shared_ComplexType_StringUnion.fooBar,
+        unionField: pe01.Shared_Expr_KindNumber(value: 100.0),
+        structField: sq,
+        stringList: ["a", "b"],
+        structList: [sq2],
+        matrix: [
+          [1, 2],
+          [3, 4],
+        ],
+        mapField: {"key1": 10, "key2": 20},
+      );
+
+      final omittedJson = omitted.toJson();
+      expect(omittedJson.containsKey("optString"), isFalse);
+      expect(omittedJson.containsKey("optInt"), isFalse);
+      expect(omittedJson.containsKey("optNum"), isFalse);
+      expect(omittedJson.containsKey("optBool"), isFalse);
+      expect(omittedJson.containsKey("optEnum"), isFalse);
+      expect(omittedJson.containsKey("optStringUnion"), isFalse);
+      expect(omittedJson.containsKey("optUnion"), isFalse);
+      expect(omittedJson.containsKey("optStruct"), isFalse);
+      expect(omittedJson.containsKey("optStringList"), isFalse);
+      expect(omittedJson.containsKey("optStructList"), isFalse);
+      expect(omittedJson.containsKey("optMatrix"), isFalse);
+      expect(omittedJson.containsKey("optMap"), isFalse);
+
+      final parsedOmitted = pe01.Shared_ComplexType.fromJson(omittedJson);
+      expect(parsedOmitted.stringField, equals("hello"));
+      expect(parsedOmitted.optString, isNull);
+      expect(parsedOmitted.optInt, isNull);
+      expect(parsedOmitted.optNum, isNull);
+      expect(parsedOmitted.optBool, isNull);
+      expect(parsedOmitted.optEnum, isNull);
+      expect(parsedOmitted.optStringUnion, isNull);
+      expect(parsedOmitted.optUnion, isNull);
+      expect(parsedOmitted.optStruct, isNull);
+      expect(parsedOmitted.optStringList, isNull);
+      expect(parsedOmitted.optStructList, isNull);
+      expect(parsedOmitted.optMatrix, isNull);
+      expect(parsedOmitted.optMap, isNull);
+    });
   });
 
   group('TemplateOverrider', () {

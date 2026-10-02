@@ -1062,6 +1062,126 @@ class TestE01_JsonSerialization {
         assertNull(matrix.otherMatrix)
         assertNull(matrix.foo)
     }
+
+    @Test
+    fun testComplexTypeSerializationAndDeserialization() {
+        val sq = com.example.prompts_e01.Schema.Shared.Square(size = 10.0, fromJson = "fj", self = "sf")
+        val sq2 = com.example.prompts_e01.Schema.Shared.Square(size = 20.0, fromJson = "fj2", self = "sf2")
+        val sq3 = com.example.prompts_e01.Schema.Shared.Square(size = 30.0, fromJson = "fj3", self = "sf3")
+        val sq4 = com.example.prompts_e01.Schema.Shared.Square(size = 40.0, fromJson = "fj4", self = "sf4")
+
+        val full =
+            com.example.prompts_e01.Schema.Shared.ComplexType(
+                stringField = "hello",
+                intField = 42,
+                numField = 3.14,
+                boolField = true,
+                enumField = com.example.prompts_e01.Schema.Shared.E.FooBar,
+                stringUnion = com.example.prompts_e01.Schema.Shared.ComplexType_StringUnion.FooBar,
+                unionField = com.example.prompts_e01.Schema.Shared.Expr_KindNumber(value = 100.0),
+                structField = sq,
+                stringList = listOf("a", "b"),
+                structList = listOf(sq2),
+                matrix = listOf(listOf(1, 2), listOf(3, 4)),
+                mapField = mapOf("key1" to 10, "key2" to 20),
+                optString = "optional hello",
+                optInt = 99,
+                optNum = 2.718,
+                optBool = false,
+                optEnum = com.example.prompts_e01.Schema.Shared.E.If,
+                optStringUnion = com.example.prompts_e01.Schema.Shared.ComplexType_OptStringUnion.ZooKar,
+                optUnion = com.example.prompts_e01.Schema.Shared.Expr_KindNumber(value = 200.0),
+                optStruct = sq3,
+                optStringList = listOf("x", "y"),
+                optStructList = listOf(sq4),
+                optMatrix = listOf(listOf(5, 6), listOf(7, 8)),
+                optMap = mapOf("optKey" to 30),
+            )
+
+        val fullJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), full)
+        val parsedFull = Json.decodeFromString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), fullJson)
+        assertEquals("hello", parsedFull.stringField)
+        assertEquals(42, parsedFull.intField)
+        assertEquals(3.14, parsedFull.numField)
+        assertTrue(parsedFull.boolField)
+        assertEquals(com.example.prompts_e01.Schema.Shared.E.FooBar, parsedFull.enumField)
+        assertEquals(com.example.prompts_e01.Schema.Shared.ComplexType_StringUnion.FooBar, parsedFull.stringUnion)
+        assertEquals("foo-bar", parsedFull.stringUnion.value)
+        val numTyped = assertIs<com.example.prompts_e01.Schema.Shared.Expr_KindNumber>(parsedFull.unionField)
+        assertEquals(100.0, numTyped.value)
+        assertEquals(10.0, parsedFull.structField.size)
+        assertEquals(listOf("a", "b"), parsedFull.stringList)
+        assertEquals(1, parsedFull.structList.size)
+        assertEquals(20.0, parsedFull.structList[0].size)
+        assertEquals(2, parsedFull.matrix.size)
+        assertEquals(2, parsedFull.matrix[0][1])
+        assertEquals(10, parsedFull.mapField["key1"])
+        assertEquals(20, parsedFull.mapField["key2"])
+
+        assertEquals("optional hello", parsedFull.optString)
+        assertEquals(99, parsedFull.optInt)
+        assertEquals(2.718, parsedFull.optNum)
+        assertFalse(parsedFull.optBool!!)
+        assertEquals(com.example.prompts_e01.Schema.Shared.E.If, parsedFull.optEnum)
+        assertEquals(com.example.prompts_e01.Schema.Shared.ComplexType_OptStringUnion.ZooKar, parsedFull.optStringUnion)
+        assertEquals("zooKar", parsedFull.optStringUnion?.value)
+        val optNumTyped = assertIs<com.example.prompts_e01.Schema.Shared.Expr_KindNumber>(parsedFull.optUnion)
+        assertEquals(200.0, optNumTyped.value)
+        assertNotNull(parsedFull.optStruct)
+        assertEquals(30.0, parsedFull.optStruct?.size)
+        assertEquals(listOf("x", "y"), parsedFull.optStringList)
+        assertNotNull(parsedFull.optStructList)
+        assertEquals(1, parsedFull.optStructList?.size)
+        assertEquals(40.0, parsedFull.optStructList?.get(0)?.size)
+        assertEquals(7, parsedFull.optMatrix?.get(1)?.get(0))
+        assertEquals(30, parsedFull.optMap?.get("optKey"))
+
+        // Omitted optional fields
+        val omitted =
+            com.example.prompts_e01.Schema.Shared.ComplexType(
+                stringField = "hello",
+                intField = 42,
+                numField = 3.14,
+                boolField = true,
+                enumField = com.example.prompts_e01.Schema.Shared.E.FooBar,
+                stringUnion = com.example.prompts_e01.Schema.Shared.ComplexType_StringUnion.FooBar,
+                unionField = com.example.prompts_e01.Schema.Shared.Expr_KindNumber(value = 100.0),
+                structField = sq,
+                stringList = listOf("a", "b"),
+                structList = listOf(sq2),
+                matrix = listOf(listOf(1, 2), listOf(3, 4)),
+                mapField = mapOf("key1" to 10, "key2" to 20),
+            )
+
+        val omittedJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omitted)
+        assertFalse(omittedJson.contains("optString"))
+        assertFalse(omittedJson.contains("optInt"))
+        assertFalse(omittedJson.contains("optNum"))
+        assertFalse(omittedJson.contains("optBool"))
+        assertFalse(omittedJson.contains("optEnum"))
+        assertFalse(omittedJson.contains("optStringUnion"))
+        assertFalse(omittedJson.contains("optUnion"))
+        assertFalse(omittedJson.contains("optStruct"))
+        assertFalse(omittedJson.contains("optStringList"))
+        assertFalse(omittedJson.contains("optStructList"))
+        assertFalse(omittedJson.contains("optMatrix"))
+        assertFalse(omittedJson.contains("optMap"))
+
+        val parsedOmitted = Json.decodeFromString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omittedJson)
+        assertEquals("hello", parsedOmitted.stringField)
+        assertNull(parsedOmitted.optString)
+        assertNull(parsedOmitted.optInt)
+        assertNull(parsedOmitted.optNum)
+        assertNull(parsedOmitted.optBool)
+        assertNull(parsedOmitted.optEnum)
+        assertNull(parsedOmitted.optStringUnion)
+        assertNull(parsedOmitted.optUnion)
+        assertNull(parsedOmitted.optStruct)
+        assertNull(parsedOmitted.optStringList)
+        assertNull(parsedOmitted.optStructList)
+        assertNull(parsedOmitted.optMatrix)
+        assertNull(parsedOmitted.optMap)
+    }
 }
 
 class TestTemplateOverrider {
