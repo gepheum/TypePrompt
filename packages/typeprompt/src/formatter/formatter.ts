@@ -9,7 +9,11 @@ import {
 import { format as prettierFormat } from "prettier";
 
 export async function formatTemplateFile(content: string): Promise<string> {
-  const xmlDocument = parseXmlDocument(content) as XmlDocument;
+  const xmlDocument = parseXmlDocument(content);
+  if (xmlDocument.kind !== "success") {
+    // If the XML is malformed, we cannot format the file.
+    return content;
+  }
   const { slices, anyXmlCommentsInCode } =
     collectFormattableSlicesForXmlDocument(xmlDocument);
 

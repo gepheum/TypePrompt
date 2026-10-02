@@ -8,21 +8,25 @@ import {
   type InternalError,
   type LineFinderData,
 } from "@typeprompt/core";
+import fastDiff from "fast-diff";
 import { glob } from "glob";
 import { minimatch } from "minimatch";
 import * as fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { formatTemplateFile } from "typeprompt/formatter";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   createConnection,
   Diagnostic,
   DiagnosticSeverity,
+  DocumentFormattingParams,
   InitializeParams,
   InitializeResult,
   Position,
   ProposedFeatures,
   TextDocuments,
   TextDocumentSyncKind,
+  TextEdit,
   type _Connection,
 } from "vscode-languageserver/node.js";
 
@@ -119,6 +123,56 @@ export function internalErrorToDiagnostic(
     message,
     source: "typeprompt",
   };
+}
+
+export function computeEdits(
+  doc: TextDocument,
+  formattedText: string,
+): TextEdit[] {
+  const originalText = doc.getText();
+  if (originalText === formattedText) {
+    return [];
+  }
+
+  const diffs = fastDiff(originalText, formattedText);
+  const edits: TextEdit[] = [];
+  let currentOffset = 0;
+
+  for (let i = 0; i < diffs.length; i++) {
+    const [op, text] = diffs[i]!;
+
+    if (op === fastDiff.EQUAL) {
+      currentOffset += text.length;
+    } else {
+      const editStart = currentOffset;
+      let deleteLength = 0;
+      let newText = "";
+
+      while (i < diffs.length && diffs[i]![0] !== fastDiff.EQUAL) {
+        const [currentOp, chunkText] = diffs[i]!;
+        if (currentOp === fastDiff.DELETE) {
+          deleteLength += chunkText.length;
+        } else if (currentOp === fastDiff.INSERT) {
+          newText += chunkText;
+        }
+        i++;
+      }
+      i--;
+
+      const editEnd = editStart + deleteLength;
+      currentOffset = editEnd;
+
+      edits.push({
+        range: {
+          start: doc.positionAt(editStart),
+          end: doc.positionAt(editEnd),
+        },
+        newText,
+      });
+    }
+  }
+
+  return edits;
 }
 
 export class Workspace {
@@ -646,6 +700,38 @@ export class TypePromptLanguageExtension {
       this.sendDiagnostics(uri, diagnostics);
     }
   }
+
+  public async formatDocument(uri: string): Promise<TextEdit[]> {
+    if (this.disposed) return [];
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return [];
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (!xmlBundle?.workspace) {
+      this.logger.log(
+        `[TypePrompt LSP] Ignoring format request for ${uri}: file is not assigned to any TypePrompt workspace.`,
+      );
+      return [];
+    }
+
+    const doc =
+      this.getDocument(uri) ??
+      TextDocument.create(uri, "xml", 0, xmlBundle.content.content);
+
+    const text = doc.getText();
+    try {
+      const formatted = await formatTemplateFile(text);
+      return computeEdits(doc, formatted);
+    } catch (error) {
+      this.logger.error(
+        `[TypePrompt LSP] Error formatting document ${uri}:`,
+        error,
+      );
+      return [];
+    }
+  }
 }
 
 export function validateTypePromptDocument(
@@ -727,6 +813,7 @@ export function createLanguageServer(
     return {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
+        documentFormattingProvider: true,
         workspace: {
           workspaceFolders: {
             supported: true,
@@ -808,6 +895,15 @@ export function createLanguageServer(
     }
     extension.setFileContent(uri, undefined);
   });
+
+  connection.onDocumentFormatting(
+    async (params: DocumentFormattingParams): Promise<TextEdit[]> => {
+      logger.log(
+        `[TypePrompt LSP] onDocumentFormatting: ${params.textDocument.uri}`,
+      );
+      return extension.formatDocument(params.textDocument.uri);
+    },
+  );
 
   connection.onShutdown(() => {
     logger.log("[TypePrompt LSP] connection.onShutdown: disposing extension.");

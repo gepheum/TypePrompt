@@ -33,6 +33,7 @@ import {
   RenderableError,
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
+export { formatTemplateFile };
 
 class WatchModeMainLoop {
   constructor(

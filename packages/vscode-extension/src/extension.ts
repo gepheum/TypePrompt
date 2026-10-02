@@ -25,6 +25,7 @@ export function activate(context: ExtensionContext): void {
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
+      { scheme: "file", language: "xml" },
       { scheme: "file", pattern: "**/*.xml" },
       { scheme: "file", pattern: "**/typeprompt.yml" },
     ],

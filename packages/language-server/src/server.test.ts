@@ -1,11 +1,13 @@
 import { createLineFinder } from "@typeprompt/core";
-import { strictEqual } from "node:assert";
+import { expect } from "buckwheat";
+import { afterEach, beforeEach, describe, it } from "mocha";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { Diagnostic } from "vscode-languageserver/node.js";
+import { Diagnostic, TextEdit } from "vscode-languageserver/node.js";
 import {
+  computeEdits,
   fsPathToUri,
   TypePromptLanguageExtension,
   uriToFsPath,
@@ -27,8 +29,8 @@ describe("TypePrompt Language Server", () => {
   it("converts URI to FS path and back", () => {
     const fsPath = path.resolve(tempDir, "prompts", "Translate.xml");
     const uri = fsPathToUri(fsPath);
-    strictEqual(uri.startsWith("file://"), true);
-    strictEqual(uriToFsPath(uri), fsPath);
+    expect(uri.startsWith("file://")).toBe(true);
+    expect(uriToFsPath(uri)).toBe(fsPath);
   });
 
   it("scans workspace directory, discovers config and templates, and produces diagnostics", async () => {
@@ -66,21 +68,21 @@ describe("TypePrompt Language Server", () => {
     await extension.runScan();
 
     // Verify workspace discovered
-    strictEqual(extension.workspaces.size, 1);
+    expect(extension.workspaces.size).toBe(1);
     const workspace = Array.from(extension.workspaces.values())[0];
-    strictEqual(workspace !== undefined, true);
-    strictEqual(workspace!.xmls.size, 1);
+    expect(workspace !== undefined).toBe(true);
+    expect(workspace!.xmls.size).toBe(1);
 
     const templateFsPath = path.join(promptsDir, "Translate.xml");
     const templateUri = fsPathToUri(templateFsPath);
     const bundle = extension.getXmlBundle(templateUri);
-    strictEqual(bundle !== undefined, true);
-    strictEqual(bundle!.relativePath, "prompts/Translate.xml");
+    expect(bundle !== undefined).toBe(true);
+    expect(bundle!.relativePath).toBe("prompts/Translate.xml");
 
     // Check diagnostics sent
     const diag = sentDiagnostics.find((d) => d.uri === templateUri);
-    strictEqual(diag !== undefined, true);
-    strictEqual(diag!.diagnostics.length, 0); // valid template -> 0 errors
+    expect(diag !== undefined).toBe(true);
+    expect(diag!.diagnostics.length).toBe(0); // valid template -> 0 errors
   });
 
   it("scans multi-namespace project files and resolves namespace references", async () => {
@@ -131,14 +133,14 @@ describe("TypePrompt Language Server", () => {
     extension.setWorkspaceFolders([tempDirUri]);
     await extension.runScan();
 
-    strictEqual(extension.workspaces.size, 1);
+    expect(extension.workspaces.size).toBe(1);
     const workspace = Array.from(extension.workspaces.values())[0];
-    strictEqual(workspace?.xmls.size, 2);
+    expect(workspace?.xmls.size).toBe(2);
 
     const invoiceUri = fsPathToUri(path.join(financeDir, "Invoice.xml"));
     const diag = sentDiagnostics.find((d) => d.uri === invoiceUri);
-    strictEqual(diag !== undefined, true);
-    strictEqual(diag!.diagnostics.length, 0);
+    expect(diag !== undefined).toBe(true);
+    expect(diag!.diagnostics.length).toBe(0);
   });
 
   it("gives precedence to open in-memory documents during scan", async () => {
@@ -174,7 +176,7 @@ describe("TypePrompt Language Server", () => {
     await extension.runScan();
 
     // Verify in-memory content was preserved and not replaced with on-disk content
-    strictEqual(extension.getFileContent(templateUri)?.content, inMemoryText);
+    expect(extension.getFileContent(templateUri)?.content).toBe(inMemoryText);
   });
 
   it("garbage collects deleted files from workspace", async () => {
@@ -211,7 +213,7 @@ describe("TypePrompt Language Server", () => {
     await extension.runScan();
 
     const templateUri = fsPathToUri(templatePath);
-    strictEqual(extension.xmlBundles.has(templateUri), true);
+    expect(extension.xmlBundles.has(templateUri)).toBe(true);
 
     // Delete the file from disk
     await fs.unlink(templatePath);
@@ -220,9 +222,9 @@ describe("TypePrompt Language Server", () => {
     await extension.runGarbageCollection();
 
     // Verify file was removed from bundles and workspace
-    strictEqual(extension.xmlBundles.has(templateUri), false);
+    expect(extension.xmlBundles.has(templateUri)).toBe(false);
     const workspace = Array.from(extension.workspaces.values())[0];
-    strictEqual(workspace?.xmls.has(templateUri), false);
+    expect(workspace?.xmls.has(templateUri)).toBe(false);
   });
 
   it("schedules scan loop and disposes cleanly", () => {
@@ -232,5 +234,238 @@ describe("TypePrompt Language Server", () => {
     );
     extension.scheduleScanLoop(100);
     extension.dispose();
+  });
+
+  describe("computeEdits", () => {
+    function applyEdits(doc: TextDocument, edits: TextEdit[]): string {
+      const sorted = [...edits].sort((a, b) => {
+        const diffLine = b.range.start.line - a.range.start.line;
+        if (diffLine !== 0) return diffLine;
+        return b.range.start.character - a.range.start.character;
+      });
+      let text = doc.getText();
+      for (const edit of sorted) {
+        const startOffset = doc.offsetAt(edit.range.start);
+        const endOffset = doc.offsetAt(edit.range.end);
+        text =
+          text.slice(0, startOffset) + edit.newText + text.slice(endOffset);
+      }
+      return text;
+    }
+
+    it("returns empty edits for identical strings", () => {
+      const original = "<template>\n  <system>Hello</system>\n</template>";
+      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const edits = computeEdits(doc, original);
+      expect(edits.length).toBe(0);
+    });
+
+    it("computes insertion edits", () => {
+      const original = "Hello World";
+      const formatted = "Hello Beautiful World";
+      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const edits = computeEdits(doc, formatted);
+      expect(edits.length).toBe(1);
+      expect(applyEdits(doc, edits)).toBe(formatted);
+    });
+
+    it("computes deletion edits", () => {
+      const original = "Hello Beautiful World";
+      const formatted = "Hello World";
+      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const edits = computeEdits(doc, formatted);
+      expect(edits.length).toBe(1);
+      expect(applyEdits(doc, edits)).toBe(formatted);
+    });
+
+    it("computes replacement edits", () => {
+      const original = "Hello Earth";
+      const formatted = "Hello Moon";
+      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const edits = computeEdits(doc, formatted);
+      expect(edits.length).toBe(1);
+      expect(applyEdits(doc, edits)).toBe(formatted);
+    });
+
+    it("computes complex multi-line formatting diffs cleanly", () => {
+      const original =
+        '<template name="Test"><schema output-format="text">interface Input{text:string;}type Output=string;</schema><system>You are a helper.</system><user><insert val="input.text"/></user></template>';
+      const formatted = `<template name="Test">
+  <schema output-format="text">
+    interface Input {
+      text: string;
+    }
+    type Output = string;
+  </schema>
+  <system>You are a helper.</system>
+  <user><insert val="input.text" /></user>
+</template>
+`;
+      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const edits = computeEdits(doc, formatted);
+      expect(edits.length > 0).toBe(true);
+      expect(applyEdits(doc, edits)).toBe(formatted);
+    });
+  });
+
+  describe("formatDocument", () => {
+    function applyEdits(doc: TextDocument, edits: TextEdit[]): string {
+      const sorted = [...edits].sort((a, b) => {
+        const diffLine = b.range.start.line - a.range.start.line;
+        if (diffLine !== 0) return diffLine;
+        return b.range.start.character - a.range.start.character;
+      });
+      let text = doc.getText();
+      for (const edit of sorted) {
+        const startOffset = doc.offsetAt(edit.range.start);
+        const endOffset = doc.offsetAt(edit.range.end);
+        text =
+          text.slice(0, startOffset) + edit.newText + text.slice(endOffset);
+      }
+      return text;
+    }
+
+    it("formats an unformatted template file in a workspace", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+
+      // Create workspace config
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const ymlContent = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: ymlContent,
+        lineFinder: createLineFinder(ymlContent),
+        lastModified: Date.now(),
+      });
+
+      const unformattedXml = `<template name="Translate">
+<schema output-format="text">
+interface Input{text:string;}
+type Output=string;
+</schema>
+<system>You are a translator.</system>
+<user><insert val="input.text"/></user>
+</template>`;
+
+      const promptsDir = path.join(tempDir, "prompts");
+      await fs.mkdir(promptsDir, { recursive: true });
+      const filePath = path.join(promptsDir, "Translate.xml");
+      await fs.writeFile(filePath, unformattedXml, "utf-8");
+
+      const fileUri = fsPathToUri(filePath);
+      extension.setFileContent(fileUri, {
+        content: unformattedXml,
+        lineFinder: createLineFinder(unformattedXml),
+        lastModified: Date.now(),
+      });
+
+      const edits = await extension.formatDocument(fileUri);
+      expect(edits.length > 0).toBe(true);
+
+      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
+      const formattedResult = applyEdits(doc, edits);
+      expect(formattedResult.includes("interface Input {\n")).toBe(true);
+
+      // Formatting again should produce 0 edits
+      extension.setFileContent(fileUri, {
+        content: formattedResult,
+        lineFinder: createLineFinder(formattedResult),
+        lastModified: Date.now(),
+      });
+      const secondEdits = await extension.formatDocument(fileUri);
+      expect(secondEdits.length).toBe(0);
+    });
+
+    it("formats open in-memory documents belonging to a workspace", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const ymlContent = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: ymlContent,
+        lineFinder: createLineFinder(ymlContent),
+        lastModified: Date.now(),
+      });
+
+      const unformattedXml =
+        '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
+      openDocs.set(fileUri, doc);
+      extension.setFileContent(fileUri, {
+        content: unformattedXml,
+        lineFinder: createLineFinder(unformattedXml),
+        lastModified: Date.now(),
+      });
+
+      const edits = await extension.formatDocument(fileUri);
+      expect(edits.length > 0).toBe(true);
+      const formatted = applyEdits(doc, edits);
+      expect(formatted.includes('<template name="Test">')).toBe(true);
+      expect(formatted.includes("<system>")).toBe(true);
+      expect(formatted.includes("Hello")).toBe(true);
+    });
+
+    it("returns empty edits for XML files not assigned to any workspace", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      const unformattedXml =
+        '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(
+        path.join(tempDir, "other", "Unassigned.xml"),
+      );
+      extension.setFileContent(fileUri, {
+        content: unformattedXml,
+        lineFinder: createLineFinder(unformattedXml),
+        lastModified: Date.now(),
+      });
+
+      const edits = await extension.formatDocument(fileUri);
+      expect(edits.length).toBe(0);
+    });
+
+    it("returns empty edits for non-XML documents", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const edits = await extension.formatDocument(ymlUri);
+      expect(edits.length).toBe(0);
+    });
+
+    it("returns empty edits gracefully for invalid XML documents", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const ymlContent = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: ymlContent,
+        lineFinder: createLineFinder(ymlContent),
+        lastModified: Date.now(),
+      });
+
+      const invalidXml = "<template><unclosed>";
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Invalid.xml"));
+      extension.setFileContent(fileUri, {
+        content: invalidXml,
+        lineFinder: createLineFinder(invalidXml),
+        lastModified: Date.now(),
+      });
+
+      const edits = await extension.formatDocument(fileUri);
+      expect(edits.length).toBe(0);
+    });
   });
 });

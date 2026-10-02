@@ -7,6 +7,21 @@
     "typeprompt": "dist/main.js"
   },
   "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
+    },
+    "./formatter": {
+      "types": "./dist/formatter/formatter.d.ts",
+      "default": "./dist/formatter/formatter.js"
+    },
+    "./formatter.js": {
+      "types": "./dist/formatter/formatter.d.ts",
+      "default": "./dist/formatter/formatter.js"
+    }
+  },
   "scripts": {
     "make-static-snippets": "tsx src/static-snippets/make-static-snippets.ts",
     "build": "tsc -p tsconfig.build.json",
