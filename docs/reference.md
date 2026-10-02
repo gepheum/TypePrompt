@@ -106,11 +106,16 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
     interface Input {
       subject: string;
       body: string;
+      recipients: Recipient[];
+    }
+
+    interface Recipient {
+      emailAddress: string;
+      alias: string;
     }
 
     interface Output {
       category: "billing" | "support" | "feedback" | "other";
-      urgency: "low" | "medium" | "high";
       summary: string;
     }
   </schema>
