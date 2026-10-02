@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { MappedText } from "../util/shared-types.js";
-import { parseYaml } from "./yaml-parser.js";
+import { parseYaml, tokenizeYaml } from "./yaml-parser.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -569,5 +569,126 @@ describe("parseYaml - span preservation", () => {
         },
       },
     });
+  });
+});
+
+describe("tokenizeYaml", () => {
+  it("returns an empty array for empty input", () => {
+    expect(tokenizeYaml(textNode(""))).toMatch([]);
+  });
+
+  it("identifies comments in various positions", () => {
+    const input = [
+      "# top comment",
+      "model: gpt-4 # inline comment",
+      "# middle comment",
+      "tags:",
+      "  - fast # item comment",
+      "# trailing comment",
+    ].join("\n");
+
+    const tokens = tokenizeYaml(textNode(input));
+    const comments = tokens.filter((t) => t.kind === "comment");
+    expect(comments).toMatch([
+      {
+        kind: "comment",
+        span: { start: 0, end: 13 },
+      },
+      {
+        kind: "comment",
+        span: { start: 27, end: 43 },
+      },
+      {
+        kind: "comment",
+        span: { start: 44, end: 60 },
+      },
+      {
+        kind: "comment",
+        span: { start: 76, end: 90 },
+      },
+      {
+        kind: "comment",
+        span: { start: 91, end: 109 },
+      },
+    ]);
+  });
+
+  it("identifies string literals", () => {
+    const input = "double: \"hello\"\nsingle: 'world'\nplain: unquoted";
+    const tokens = tokenizeYaml(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "string",
+        span: { start: 8, end: 15 },
+      },
+      {
+        kind: "string",
+        span: { start: 24, end: 31 },
+      },
+      {
+        kind: "string",
+        span: { start: 39, end: 47 },
+      },
+    ]);
+  });
+
+  it("identifies number and boolean literals", () => {
+    const input = "count: 42\ntemperature: 0.7\nflag: true\ndisabled: false";
+    const tokens = tokenizeYaml(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "number",
+        span: { start: 7, end: 9 },
+      },
+      {
+        kind: "number",
+        span: { start: 23, end: 26 },
+      },
+      {
+        kind: "boolean",
+        span: { start: 33, end: 37 },
+      },
+      {
+        kind: "boolean",
+        span: { start: 48, end: 53 },
+      },
+    ]);
+  });
+
+  it("identifies quoted keys as strings but ignores unquoted keys", () => {
+    const input = '"quotedKey": "val"\nunquotedKey: 123';
+    const tokens = tokenizeYaml(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "string",
+        span: { start: 0, end: 11 },
+      },
+      {
+        kind: "string",
+        span: { start: 13, end: 18 },
+      },
+      {
+        kind: "number",
+        span: { start: 32, end: 35 },
+      },
+    ]);
+  });
+
+  it("preserves source offsets across mapped text segments", () => {
+    const mapped: MappedText = {
+      text: "# comment\nmodel: gpt-4",
+      offsetMap: [{ textPosition: 0, sourcePosition: 200 }],
+    };
+    const tokens = tokenizeYaml(mapped);
+    expect(tokens).toMatch([
+      {
+        kind: "comment",
+        span: { start: 200, end: 209 },
+      },
+      {
+        kind: "string",
+        span: { start: 217, end: 222 },
+      },
+    ]);
   });
 });

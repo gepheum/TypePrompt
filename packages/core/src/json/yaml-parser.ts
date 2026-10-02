@@ -1,5 +1,14 @@
-import type { Scalar, YAMLMap, YAMLSeq } from "yaml";
-import { isMap, isScalar, isSeq, parseDocument } from "yaml";
+import type { CST, Scalar, YAMLMap, YAMLSeq } from "yaml";
+import {
+  isMap,
+  isScalar,
+  isSeq,
+  parseAllDocuments,
+  parseDocument,
+  Parser,
+  visit,
+} from "yaml";
+import type { SemanticToken } from "../lsp-util/semantic-token.js";
 import { makeSingletonErrors } from "../util/errors.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
@@ -53,6 +62,135 @@ export function parseYaml(
   }
 
   return result;
+}
+
+/**
+ * Tokenizes YAML content into semantic tokens for syntax highlighting.
+ * Used by the language server.
+ */
+export function tokenizeYaml(content: MappedText): readonly SemanticToken[] {
+  const result: SemanticToken[] = [];
+
+  // Collect comments using the CST Parser
+  const parser = new Parser();
+  for (const token of parser.parse(content.text)) {
+    collectComments(token, result, content);
+  }
+
+  // Collect semantic tokens for scalars (strings, numbers, booleans)
+  const docs = parseAllDocuments(content.text, { logLevel: "silent" });
+  for (const doc of docs) {
+    visit(doc, {
+      Scalar(key, node) {
+        if (!node.range) return;
+        const [start, valueEnd] = node.range;
+        const val = node.value;
+        if (typeof val === "boolean" && key !== "key") {
+          result.push({
+            kind: "boolean",
+            span: {
+              start: mapOffset(content, start),
+              end: mapOffset(content, valueEnd),
+            },
+          });
+        } else if (
+          (typeof val === "number" || typeof val === "bigint") &&
+          key !== "key"
+        ) {
+          result.push({
+            kind: "number",
+            span: {
+              start: mapOffset(content, start),
+              end: mapOffset(content, valueEnd),
+            },
+          });
+        } else if (typeof val === "string") {
+          if (
+            key !== "key" ||
+            node.type === "QUOTE_DOUBLE" ||
+            node.type === "QUOTE_SINGLE"
+          ) {
+            result.push({
+              kind: "string",
+              span: {
+                start: mapOffset(content, start),
+                end: mapOffset(content, valueEnd),
+              },
+            });
+          }
+        }
+      },
+    });
+  }
+
+  result.sort((a, b) => a.span.start - b.span.start);
+  return result;
+}
+
+function collectComments(
+  token: CST.Token | CST.SourceToken | CST.CollectionItem | null | undefined,
+  tokens: SemanticToken[],
+  content: MappedText,
+): void {
+  if (!token) return;
+  if ("type" in token) {
+    if (token.type === "comment") {
+      tokens.push({
+        kind: "comment",
+        span: {
+          start: mapOffset(content, token.offset),
+          end: mapOffset(content, token.offset + token.source.length),
+        },
+      });
+      return;
+    }
+    switch (token.type) {
+      case "document": {
+        for (const t of token.start) collectComments(t, tokens, content);
+        if (token.value) collectComments(token.value, tokens, content);
+        if (token.end) {
+          for (const t of token.end) collectComments(t, tokens, content);
+        }
+        break;
+      }
+      case "doc-end":
+      case "alias":
+      case "scalar":
+      case "single-quoted-scalar":
+      case "double-quoted-scalar": {
+        if (token.end) {
+          for (const t of token.end) collectComments(t, tokens, content);
+        }
+        break;
+      }
+      case "block-scalar": {
+        for (const t of token.props) collectComments(t, tokens, content);
+        break;
+      }
+      case "block-map":
+      case "block-seq": {
+        for (const item of token.items) {
+          collectComments(item, tokens, content);
+        }
+        break;
+      }
+      case "flow-collection": {
+        collectComments(token.start, tokens, content);
+        for (const item of token.items) {
+          collectComments(item, tokens, content);
+        }
+        for (const t of token.end) collectComments(t, tokens, content);
+        break;
+      }
+    }
+  } else {
+    for (const t of token.start) collectComments(t, tokens, content);
+    if (token.key) collectComments(token.key, tokens, content);
+    if (token.sep) {
+      for (const t of token.sep) collectComments(t, tokens, content);
+    }
+    if (token.value) collectComments(token.value, tokens, content);
+  }
 }
 
 /// Maps a decoded YAML offset to a source offset, safely extrapolating for
