@@ -571,11 +571,11 @@ function wrapJsdoc(doc: string): string {
   if (lines.length === 1) {
     return `/** ${doc} */\n`;
   } else {
-    let result = `/**\n`;
+    let result = "/**\n";
     for (const line of lines) {
-      result += line ? ` * ${line}\n` : ` *\n`;
+      result += line ? ` * ${line}\n` : " *\n";
     }
-    result += ` */\n`;
+    result += " */\n";
     return result;
   }
 }

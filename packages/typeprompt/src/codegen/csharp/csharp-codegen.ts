@@ -195,7 +195,7 @@ function writeToolExecutorInterfaces(
         ),
         `) => new Forwarding(${callArgs});`,
         "",
-        `private sealed class Forwarding(`,
+        "private sealed class Forwarding(",
         ...toolInfoList.map(
           (t, idx) =>
             `    ${t.interfaceRef} ${t.paramName}${idx < toolInfoList.length - 1 ? "," : ""}`,
@@ -208,7 +208,7 @@ function writeToolExecutorInterfaces(
         lines.push(
           `public Task<${t.outputType}> ${t.methodName}(`,
           `${t.inputType} input,`,
-          `CancellationToken cancellationToken = default`,
+          "CancellationToken cancellationToken = default",
           `) => ${t.paramName}.${t.methodName}(input, cancellationToken);`,
           "",
         );
@@ -1110,7 +1110,7 @@ function writeTypepromptUnion(
           );
         }
         lines.push(
-          `_ => throw new JsonException($"Unknown discriminant value '{discriminant}'")`,
+          "_ => throw new JsonException($\"Unknown discriminant value '{discriminant}'\")",
           "};",
         );
       } else {

@@ -231,7 +231,7 @@ describe("resolveIfExpression - optional type", () => {
       errors: [
         {
           span: expr.fullPath,
-          message: `must use 'is="notNull"' with optional type`,
+          message: "must use 'is=\"notNull\"' with optional type",
         },
       ],
     });
@@ -247,7 +247,7 @@ describe("resolveIfExpression - optional type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notNull"' with optional type`,
+          message: "must use 'is=\"notNull\"' with optional type",
         },
       ],
     });
@@ -263,7 +263,7 @@ describe("resolveIfExpression - optional type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notNull"' with optional type`,
+          message: "must use 'is=\"notNull\"' with optional type",
         },
       ],
     });
@@ -303,7 +303,7 @@ describe("resolveIfExpression - array type", () => {
       errors: [
         {
           span: expr.fullPath,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });
@@ -316,7 +316,7 @@ describe("resolveIfExpression - array type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });
@@ -329,7 +329,7 @@ describe("resolveIfExpression - array type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });
@@ -366,7 +366,7 @@ describe("resolveIfExpression - string primitive type", () => {
       errors: [
         {
           span: expr.fullPath,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });
@@ -379,7 +379,7 @@ describe("resolveIfExpression - string primitive type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });
@@ -392,7 +392,7 @@ describe("resolveIfExpression - string primitive type", () => {
       errors: [
         {
           span: isSpan,
-          message: `must use 'is="notEmpty"' with array or string type`,
+          message: "must use 'is=\"notEmpty\"' with array or string type",
         },
       ],
     });

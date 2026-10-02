@@ -30,6 +30,7 @@ export default [
       'prefer-const': 'error',
       'no-constant-condition': 'off',
       'no-var': 'error',
+      quotes: ['error', 'double', { avoidEscape: true }],
     },
   },
   {

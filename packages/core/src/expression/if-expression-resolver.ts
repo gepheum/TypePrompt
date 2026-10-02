@@ -26,7 +26,7 @@ export function resolveIfExpression(
         errors: [
           {
             span: is,
-            message: `Cannot use 'is' attribute with boolean type`,
+            message: "Cannot use 'is' attribute with boolean type",
             hint: "Remove the 'is' attribute",
           },
         ],
@@ -62,7 +62,7 @@ export function resolveIfExpression(
         errors: [
           {
             span: is ?? expression.fullPath,
-            message: `must use 'is="notNull"' with optional type`,
+            message: "must use 'is=\"notNull\"' with optional type",
           },
         ],
       };
@@ -83,7 +83,7 @@ export function resolveIfExpression(
         errors: [
           {
             span: is ?? expression.fullPath,
-            message: `must use 'is="notEmpty"' with array or string type`,
+            message: "must use 'is=\"notEmpty\"' with array or string type",
           },
         ],
       };

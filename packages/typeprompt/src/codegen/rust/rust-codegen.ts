@@ -177,9 +177,9 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
 
         lines.push(
           `pub fn render_${propertyName}<E: ${traitBound} + Send + Sync + 'static>(&self, input: &${inputType}) -> Prompt<${outputType}, E> {`,
-          `  let execute_fn: ExecuteToolCallFn<E> = |call, exec| {`,
+          "  let execute_fn: ExecuteToolCallFn<E> = |call, exec| {",
           `    Box::pin(${executeFunctionName}(call, exec))`,
-          `  };`,
+          "  };",
           `  do_render(self.spec.as_ref(), "${templateId}", input, Some(execute_fn))`,
           "}",
           "",
@@ -615,7 +615,7 @@ function writeUserDefinedDatatypes(
           typePrefix: sharedTypePrefix,
         }),
       );
-      lines.push(`}  // mod shared`, "");
+      lines.push("}  // mod shared", "");
     }
     for (const template of namespace.templates) {
       const templateModName = toRustName(
@@ -676,11 +676,11 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
   const templatesData = makeTemplates(compilationResult);
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
-    `static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {`,
-    `serde_json::from_str(`,
+    "static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {",
+    "serde_json::from_str(",
     `${stringifiedJson},`,
-    `).unwrap()`,
-    `});`,
+    ").unwrap()",
+    "});",
   ];
   return lines.join("\n");
 }

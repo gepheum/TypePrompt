@@ -842,7 +842,7 @@ function writeMethodImplsForUnion(
     }
     lines.push(
       " } else {",
-      `  return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));`,
+      "  return context.MakeError(std::format(\"Unknown constant '{}'\", node.as_string()));",
       " }",
       " return kOkStatus;",
       "}",
@@ -874,13 +874,13 @@ function writeMethodImplsForUnion(
       lines.push(
         ` } else if (*discriminant == ${discriminant}) {`,
         `  ${type} v;`,
-        `  status = ParseValue(node, context, v);`,
+        "  status = ParseValue(node, context, v);",
         "  out = std::move(v);",
       );
     }
     lines.push(
       " } else {",
-      `  return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));`,
+      "  return context.MakeError(std::format(\"Unknown discriminant '{}'\", *discriminant));",
       " }",
       " return status;",
       "}",

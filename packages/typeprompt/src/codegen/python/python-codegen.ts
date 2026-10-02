@@ -169,7 +169,7 @@ function writeUserDefinedDatatypes(
         template.template.name.text,
         "snake_case_class_name",
       );
-      lines.push(` @final`);
+      lines.push(" @final");
       lines.push(` class ${templateName}(_StaticClass):`);
       lines.push(
         ...writeSchema(template.schema, {
@@ -180,7 +180,7 @@ function writeUserDefinedDatatypes(
     }
     for (const tool of Object.values(namespace.tools)) {
       const toolName = toPyName(tool.tool.name.text, "snake_case_class_name");
-      lines.push(` @final`);
+      lines.push(" @final");
       lines.push(` class ${toolName}(_StaticClass):`);
       lines.push(
         ...writeSchema(tool.schema, {
@@ -216,7 +216,7 @@ function writeUserDefinedDatatypes(
   } else {
     for (const namespace of Object.values(namespaces)) {
       const templateName = toPyName(namespace.name, "snake_case_class_name");
-      lines.push(` @final`);
+      lines.push(" @final");
       lines.push(` class ${templateName}(_StaticClass):`);
       lines.push(
         ...writeDatatypes(namespace).map((line) => indentLine(line, " ")),

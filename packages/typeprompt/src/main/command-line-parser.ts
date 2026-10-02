@@ -160,7 +160,7 @@ function parseOptions(args: string[]): ParsedOptions {
       options.watch = true;
     } else if (arg === "--ci") {
       if (options.ci) {
-        throw new CommandLineParseError(`Option --ci specified multiple times`);
+        throw new CommandLineParseError("Option --ci specified multiple times");
       }
       options.ci = true;
     } else if (arg.startsWith("-")) {
@@ -179,7 +179,7 @@ function buildGenCommand(options: ParsedOptions): ParsedArgs {
 
   if (options.ci) {
     throw new CommandLineParseError(
-      `Option --ci is not valid for 'gen' command`,
+      "Option --ci is not valid for 'gen' command",
     );
   }
 
@@ -195,7 +195,7 @@ function buildFormatCommand(options: ParsedOptions): ParsedArgs {
 
   if (options.watch) {
     throw new CommandLineParseError(
-      `Option --watch is not valid for 'format' command`,
+      "Option --watch is not valid for 'format' command",
     );
   }
 
@@ -211,12 +211,12 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
 
   if (options.watch) {
     throw new CommandLineParseError(
-      `Option --watch is not valid for 'init' command`,
+      "Option --watch is not valid for 'init' command",
     );
   }
   if (options.ci) {
     throw new CommandLineParseError(
-      `Option --ci is not valid for 'init' command`,
+      "Option --ci is not valid for 'init' command",
     );
   }
 

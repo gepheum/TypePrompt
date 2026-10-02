@@ -90,7 +90,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".h"), `must end with '.h'`),
+              .refine((f) => f.endsWith(".h"), "must end with '.h'"),
             rootNamespace: z
               .string()
               .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "must be a valid identifier")
@@ -103,7 +103,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".cs"), `must end with '.cs'`),
+              .refine((f) => f.endsWith(".cs"), "must end with '.cs'"),
             rootNamespace: z
               .string()
               .regex(
@@ -119,7 +119,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".dart"), `must end with '.dart'`),
+              .refine((f) => f.endsWith(".dart"), "must end with '.dart'"),
           })
           .strict()
           .optional(),
@@ -127,7 +127,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".kt"), `must end with '.kt'`),
+              .refine((f) => f.endsWith(".kt"), "must end with '.kt'"),
             package: z
               .string()
               .regex(
@@ -141,7 +141,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".py"), `must end with '.py'`),
+              .refine((f) => f.endsWith(".py"), "must end with '.py'"),
           })
           .strict()
           .optional(),
@@ -149,7 +149,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".rs"), `must end with '.rs'`),
+              .refine((f) => f.endsWith(".rs"), "must end with '.rs'"),
           })
           .strict()
           .optional(),
@@ -157,7 +157,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".swift"), `must end with '.swift'`),
+              .refine((f) => f.endsWith(".swift"), "must end with '.swift'"),
             rootNamespace: z
               .string()
               .regex(
@@ -173,7 +173,7 @@ const RawConfigSchema = z
           .object({
             file: z
               .string()
-              .refine((f) => f.endsWith(".ts"), `must end with '.ts'`),
+              .refine((f) => f.endsWith(".ts"), "must end with '.ts'"),
           })
           .strict()
           .optional(),

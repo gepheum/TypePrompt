@@ -189,7 +189,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         lines.push(
           `// Defined in '${t.template.sourcePath}'`,
           `Prompt<${outputType}, ${toolExecutorRef}> ${methodName}(${inputType} input) {`,
-          `final fromJson = (str) => str as String;`,
+          "final fromJson = (str) => str as String;",
           `return _doRender(_spec, "${templateId}", ${inputToJsonExpr}, fromJson);`,
           "}",
           "",
@@ -364,7 +364,7 @@ function writeToolExecutorClasses(
         "",
         `_${templateInterface}Forwarding(`,
         ...toolInfoList.map((t) => `this._${t.paramName},`),
-        `);`,
+        ");",
         "",
       );
 
@@ -553,9 +553,9 @@ function writeTemplatesData(compilationResult: ValidCompilationResult): string {
     "\\$",
   );
   const lines = [
-    `final _templatesData = _Spec_Templates.fromJson(`,
+    "final _templatesData = _Spec_Templates.fromJson(",
     `jsonDecode(${stringifiedJson}) as Map<String, dynamic>,`,
-    `);`,
+    ");",
   ];
   return lines.join("\n");
 }
@@ -828,7 +828,7 @@ function writeTypepromptInterface(
     );
     lines.push(`${dartName}: ${valueFromJsonExpr},`);
   }
-  lines.push(`);`, `}`);
+  lines.push(");", "}");
 
   lines.push("}"); // class
 

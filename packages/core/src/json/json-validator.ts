@@ -262,7 +262,7 @@ export function jsonMatchesType(
           return mismatch(
             mode,
             value.firstToken,
-            `Expected int but got float`,
+            "Expected int but got float",
             0.5,
           );
         }

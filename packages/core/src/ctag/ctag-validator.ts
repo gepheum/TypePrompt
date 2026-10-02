@@ -96,7 +96,7 @@ function validateJsonCTag(
       return [
         {
           span: cTag.json.firstToken,
-          message: `Does not match any of the types defined in the schema`,
+          message: "Does not match any of the types defined in the schema",
         },
       ];
     }
