@@ -369,18 +369,15 @@ fn indent(text: &str, spaces: &str) -> String {
   text.replace('\n', &format!("\n{}", spaces))
 }
 
-fn evaluate(expr: &spec::Expression, val: &serde_json::Value) -> serde_json::Value {
+static NULL_VALUE: serde_json::Value = serde_json::Value::Null;
+
+fn evaluate<'a>(expr: &spec::Expression, val: &'a serde_json::Value) -> &'a serde_json::Value {
   match expr {
-    spec::Expression::KindInput(_) => val.clone(),
-    spec::Expression::KindProperty(p) => {
-      let left = evaluate(&p.left, val);
-      match left {
-        serde_json::Value::Object(map) => {
-          map.get(&p.property).cloned().unwrap_or(serde_json::Value::Null)
-        }
-        _ => serde_json::Value::Null,
-      }
-    }
+    spec::Expression::KindInput(_) => val,
+    spec::Expression::KindProperty(p) => match evaluate(&p.left, val) {
+      serde_json::Value::Object(map) => map.get(&p.property).unwrap_or(&NULL_VALUE),
+      _ => &NULL_VALUE,
+    },
   }
 }
 
@@ -489,7 +486,7 @@ fn render_body(
       }
       spec::BodyPiece::KindInsertVal(p) => {
         let v = evaluate(&p.val, val);
-        let formatted = format_value(&v, Some(&p.format));
+        let formatted = format_value(v, Some(&p.format));
         result.push_str(&indent(&formatted, &p.indent));
       }
       spec::BodyPiece::KindInsertSnippet(p) => {
@@ -514,7 +511,7 @@ fn render_snippet(
     spec::Snippet::KindSnippetIf(s) => {
       let eval_result = evaluate(&s.expression, val);
       let condition = match s.is {
-        spec::Snippet_KindSnippetIf_Is::NotEmpty => match &eval_result {
+        spec::Snippet_KindSnippetIf_Is::NotEmpty => match eval_result {
           serde_json::Value::Array(a) => !a.is_empty(),
           serde_json::Value::Object(o) => !o.is_empty(),
           serde_json::Value::String(str) => !str.is_empty(),
@@ -522,7 +519,7 @@ fn render_snippet(
           _ => true,
         },
         spec::Snippet_KindSnippetIf_Is::NotNull => !eval_result.is_null(),
-        spec::Snippet_KindSnippetIf_Is::True => match &eval_result {
+        spec::Snippet_KindSnippetIf_Is::True => match eval_result {
           serde_json::Value::Bool(b) => *b,
           serde_json::Value::String(str) => !str.is_empty(),
           serde_json::Value::Number(n) => n.as_f64().map_or(false, |num| num != 0.0),
@@ -538,7 +535,7 @@ fn render_snippet(
     }
     spec::Snippet::KindSnippetSwitch(s) => {
       let switch_val = evaluate(&s.expression, val);
-      let switch_key = match &switch_val {
+      let switch_key = match switch_val {
         serde_json::Value::Bool(b) => b.to_string(),
         serde_json::Value::String(str) => str.clone(),
         serde_json::Value::Number(n) => n.to_string(),
