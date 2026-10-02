@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { MappedText } from "../util/shared-types.js";
-import { parseSchema } from "./schema-parser.js";
+import { parseSchema, tokenizeSchema } from "./schema-parser.js";
 
 function textNode(source: string): MappedText {
   return {
@@ -948,5 +948,121 @@ describe("parseSchema - boolean literals", () => {
         },
       },
     });
+  });
+});
+
+describe("tokenizeSchema", () => {
+  it("returns an empty array for empty schema", () => {
+    expect(tokenizeSchema(textNode(""))).toMatch([]);
+  });
+
+  it("identifies 'type' and 'interface' as schema keywords", () => {
+    const input =
+      "type Input = { name: string };\ninterface Output { id: string }";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 0, end: 4 },
+      },
+      {
+        kind: "schema-keyword",
+        span: { start: 31, end: 40 },
+      },
+    ]);
+  });
+
+  it("does not classify 'type' or 'interface' as keywords when used as field names", () => {
+    const input = "type Foo = { type: string; interface: string };";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 0, end: 4 },
+      },
+    ]);
+  });
+
+  it("identifies string literals", () => {
+    const input = "type Mode = \"fast\" | 'accurate';";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 0, end: 4 },
+      },
+      {
+        kind: "string",
+        span: { start: 12, end: 18 },
+      },
+      {
+        kind: "string",
+        span: { start: 21, end: 31 },
+      },
+    ]);
+  });
+
+  it("identifies boolean literals", () => {
+    const input = "type Result = { success: true; error: false };";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 0, end: 4 },
+      },
+      {
+        kind: "boolean",
+        span: { start: 25, end: 29 },
+      },
+      {
+        kind: "boolean",
+        span: { start: 38, end: 43 },
+      },
+    ]);
+  });
+
+  it("does not classify 'true' or 'false' as boolean literals when used as field names", () => {
+    const input = "type S = { true: string; false: number };";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 0, end: 4 },
+      },
+    ]);
+  });
+
+  it("identifies JSDoc comments", () => {
+    const input =
+      "/** Describes input */\ntype Input = {\n  /** The user name */\n  name: string;\n};";
+    const tokens = tokenizeSchema(textNode(input));
+    expect(tokens).toMatch([
+      {
+        kind: "comment",
+        span: { start: 0, end: 22 },
+      },
+      {
+        kind: "schema-keyword",
+        span: { start: 23, end: 27 },
+      },
+      {
+        kind: "comment",
+        span: { start: 40, end: 60 },
+      },
+    ]);
+  });
+
+  it("preserves source offsets across mapped text segments", () => {
+    const mapped: MappedText = {
+      text: "type A = string;",
+      offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
+    };
+    const tokens = tokenizeSchema(mapped);
+    expect(tokens).toMatch([
+      {
+        kind: "schema-keyword",
+        span: { start: 100, end: 104 },
+      },
+    ]);
   });
 });

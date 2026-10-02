@@ -119,7 +119,4 @@ export function getNameDependencies(
   return deps;
 }
 
-export const NAME_SCOPES: readonly NameScope[] = [
-  "shared",
-  "defaultScope",
-] as const;
+export const NAME_SCOPES: readonly NameScope[] = ["shared", "defaultScope"];

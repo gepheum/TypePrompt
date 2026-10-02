@@ -1,3 +1,4 @@
+import type { SemanticToken } from "../lsp-util/semantic-token.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import type {
@@ -24,8 +25,23 @@ export function parseSchema(
   return new SchemaParser(content).parse();
 }
 
+/**
+ * Tokenizes schema content into semantic tokens for syntax highlighting.
+ * Used by the language server.
+ */
+export function tokenizeSchema(content: MappedText): readonly SemanticToken[] {
+  return new SchemaParser(content).getSemanticTokens();
+}
+
 class SchemaParser {
-  constructor(private readonly content: MappedText) {}
+  private readonly tokens: Token[];
+  private tokenIndex = 0;
+  private readonly tokenizerErrors: InternalError[] = [];
+  private readonly parserErrors: InternalError[] = [];
+
+  constructor(private readonly content: MappedText) {
+    this.tokens = this.tokenize();
+  }
 
   parse(): SchemaParseResult | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
@@ -36,7 +52,7 @@ class SchemaParser {
         if (this.peekToken().kind === "string-end") {
           break;
         } else {
-          // Jump to the next "type" keyword.
+          // Jump to the next "type" or "interface" keyword.
           let token = this.peekToken();
           let nestingLevel = 0;
           while (
@@ -51,7 +67,8 @@ class SchemaParser {
             } else if (token.text === "}") {
               --nestingLevel;
             }
-            token = this.movePastThenPeek(token);
+            this.moveNext();
+            token = this.peekToken();
           }
         }
       } else {
@@ -93,7 +110,8 @@ class SchemaParser {
     let jsdoc: Token | undefined;
     if (token.kind === "jsdoc") {
       jsdoc = token;
-      token = this.movePastThenPeek(token);
+      this.moveNext();
+      token = this.peekToken();
     }
 
     const match = this.expectThenMove(token, {
@@ -130,7 +148,7 @@ class SchemaParser {
 
     const maybeSemicolon = this.peekToken();
     if (maybeSemicolon.text === ";") {
-      this.movePast(maybeSemicolon);
+      this.moveNext();
     } else if (
       maybeSemicolon.kind !== "string-end" &&
       !maybeSemicolon.newLine
@@ -169,7 +187,7 @@ class SchemaParser {
 
     const maybeSemicolon = this.peekToken();
     if (maybeSemicolon.text === ";") {
-      this.movePast(maybeSemicolon);
+      this.moveNext();
     }
 
     return {
@@ -193,7 +211,7 @@ class SchemaParser {
           (token = this.peekToken()).kind !== "string-end" &&
           token.text !== "}"
         ) {
-          this.movePast(token);
+          this.moveNext();
         }
         break;
       }
@@ -206,7 +224,8 @@ class SchemaParser {
     let jsdoc: Token | undefined;
     if (token.kind === "jsdoc") {
       jsdoc = token;
-      token = this.movePastThenPeek(token);
+      this.moveNext();
+      token = this.peekToken();
     }
     const name = token;
     if (name.kind !== "identifier") {
@@ -220,11 +239,12 @@ class SchemaParser {
       return null;
     }
     const doc = getDocText(jsdoc);
-    this.movePast(name);
+    this.moveNext();
     token = this.peekToken();
     const optional = token.text === "?";
     if (optional) {
-      token = this.movePastThenPeek(token);
+      this.moveNext();
+      token = this.peekToken();
     }
     if (!this.expectExactThenMove(":", token)) {
       return null;
@@ -240,7 +260,7 @@ class SchemaParser {
     }
     token = this.peekToken();
     if (token.text === ";" || token.text === ",") {
-      this.movePast(token);
+      this.moveNext();
     } else if (token.text !== "}" && !token.newLine) {
       // Will always push an error.
       this.expectExactThenMove(";", token);
@@ -263,13 +283,13 @@ class SchemaParser {
   private parseTypeRef(
     context?:
       | {
-          lastTokenWasPipe: true;
-          allowLiteral: true;
-        }
+        lastTokenWasPipe: true;
+        allowLiteral: true;
+      }
       | {
-          lastTokenWasPipe?: undefined;
-          allowLiteral: true;
-        },
+        lastTokenWasPipe?: undefined;
+        allowLiteral: true;
+      },
   ): Type | Literal | null {
     let type = ((): Type | Literal | null => {
       const token = this.peekToken();
@@ -290,7 +310,7 @@ class SchemaParser {
         }
         case "{": {
           if (this.peekToken().text === "[") {
-            this.movePast(this.peekToken());
+            this.moveNext();
             const keyName = this.peekToken().text;
             if (
               this.expectThenMove(this.peekToken(), {
@@ -306,7 +326,7 @@ class SchemaParser {
             const valueType = this.parseTypeRef();
             if (valueType === null) return null;
             if (this.peekToken().text === ";") {
-              this.movePast(this.peekToken());
+              this.moveNext();
             }
             if (!this.expectExactThenMove("}")) return null;
             return {
@@ -392,7 +412,7 @@ class SchemaParser {
       if (type === null) return null;
       let token = this.peekToken();
       if (token.text === "|") {
-        this.movePast(token);
+        this.moveNext();
         const rightType = this.parseTypeRef({
           lastTokenWasPipe: true,
           allowLiteral: true,
@@ -405,7 +425,8 @@ class SchemaParser {
         this.parserErrors.push(makeLiteralTypeNotAllowedError(type));
         return null;
       } else if (token.text === "[") {
-        token = this.movePastThenPeek(token);
+        this.moveNext();
+        token = this.peekToken();
         if (!this.expectExactThenMove("]", token)) {
           return null;
         }
@@ -423,10 +444,8 @@ class SchemaParser {
     }
   }
 
-  private peekToken(): Token {
-    if (this.cachedPeek !== null) {
-      return this.cachedPeek;
-    }
+  private tokenize(): Token[] {
+    const tokens: Token[] = [];
     // Multiline comment:            \/\*([^*]|\*[^\/])*(\*\/)?
     // Single-line comment:          \/\/[^\n\r]*
     // Word:                         \b\w+\b
@@ -439,12 +458,9 @@ class SchemaParser {
     const re =
       /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?.])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
     // 1    2             3        4                5       6            7                  8                        9                        10
-    re.lastIndex = this.cursor;
     let group: RegExpExecArray | null;
     let newLine = false;
-    // Local position tracker for gap detection; this.cursor is never modified
-    // by peekToken() — only movePast() advances it.
-    let expectedAt = this.cursor;
+    let expectedAt = 0;
     while ((group = re.exec(this.content.text)) !== null) {
       const position = re.lastIndex - group[0].length;
 
@@ -526,29 +542,30 @@ class SchemaParser {
         throw new Error("Unexpected regex match");
       }
 
-      // peekToken() is idempotent: this.cursor is never modified here.
-      // The cursor advances only when movePast() is called explicitly.
-      this.cachedPeek = {
+      tokens.push({
         kind: tokenKind,
         text: text,
         textStart: position,
         textEnd: re.lastIndex,
         newLine: newLine,
-      };
-      return this.cachedPeek;
+      });
+      newLine = false;
+
+      if (tokenKind === "string-end") {
+        break;
+      }
     }
-    // Cannot happen because the regex matches the end of the string.
-    throw new Error();
+    return tokens;
   }
 
-  private movePast(token: Token): void {
-    this.cursor = token.textEnd;
-    this.cachedPeek = null;
+  private peekToken(): Token {
+    return this.tokens[this.tokenIndex] ?? this.tokens[this.tokens.length - 1]!;
   }
 
-  private movePastThenPeek(token: Token): Token {
-    this.movePast(token);
-    return this.peekToken();
+  private moveNext(): void {
+    if (this.tokenIndex < this.tokens.length - 1) {
+      this.tokenIndex++;
+    }
   }
 
   private expectThenMove<M extends TokenMatchers>(
@@ -560,7 +577,7 @@ class SchemaParser {
         continue;
       }
       if (matcher.test(token, id)) {
-        this.movePast(token);
+        this.moveNext();
         return id;
       }
     }
@@ -610,16 +627,61 @@ class SchemaParser {
     });
   }
 
-  private readonly tokenizerErrors: InternalError[] = [];
-  private readonly parserErrors: InternalError[] = [];
-  private cursor = 0;
-  /** Cache for peekToken(); invalidated whenever cursor advances via movePast(). */
-  private cachedPeek: Token | null = null;
+  getSemanticTokens(): readonly SemanticToken[] {
+    const { tokens } = this;
+    const result: SemanticToken[] = [];
+    for (let i = 0; i < tokens.length; ++i) {
+      const token = tokens[i]!;
+      switch (token.kind) {
+        case "identifier": {
+          let semanticKind: "schema-keyword" | "boolean" | undefined;
+          switch (token.text) {
+            case "interface":
+            case "type": {
+              semanticKind = "schema-keyword";
+              break;
+            }
+            case "false":
+            case "true": {
+              semanticKind = "boolean";
+              break;
+            }
+          }
+          if (semanticKind) {
+            const nextToken = tokens[i + 1]?.text;
+            if (nextToken !== ":") {
+              const span = this.tokenToSpan(token);
+              result.push({
+                kind: semanticKind,
+                span,
+              });
+            }
+          }
+          break;
+        }
+        case "string-literal": {
+          result.push({
+            kind: "string",
+            span: this.tokenToSpan(token),
+          });
+          break;
+        }
+        case "jsdoc": {
+          result.push({
+            kind: "comment",
+            span: this.tokenToSpan(token),
+          });
+          break;
+        }
+      }
+    }
+    return result;
+  }
 }
 
 type Token = {
   readonly kind:
-    "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
+  "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
   readonly text: string;
   /** Position of the start of the token in `content.text`. */
   readonly textStart: number;
