@@ -9,6 +9,7 @@ import type {
   Attribute,
   ElementNode,
   InvalidXmlDocument,
+  UnclosedTag,
   XmlComment,
   XmlDocument,
   XmlNode,
@@ -34,6 +35,7 @@ class XmlParser {
   private readonly openElements: OpenElement[] = [];
   private root: ElementNode | null = null;
   private readonly topLevelComments: XmlComment[] = [];
+  private readonly unclosedTags: UnclosedTag[] = [];
 
   constructor(private readonly content: string) {}
 
@@ -65,6 +67,11 @@ class XmlParser {
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
         });
+        this.unclosedTags.push({
+          tag: el.tag.text,
+          topLevel: el.topLevel,
+          endPosition: el.contentStart,
+        });
       }
       this.appendNode(el);
     }
@@ -77,11 +84,13 @@ class XmlParser {
     }
 
     if (this.errors.length >= 1) {
+      this.unclosedTags.sort((a, b) => a.endPosition - b.endPosition);
       return {
         kind: "error",
         errors: this.errors,
         root: this.root,
         topLevelComments: this.topLevelComments,
+        unclosedTags: this.unclosedTags,
       };
     }
 
@@ -222,6 +231,8 @@ class XmlParser {
       });
     }
 
+    const isTopLevel = this.openElements.length === 0;
+
     const element: OpenElement = {
       kind: "element",
       tag: tag,
@@ -237,6 +248,7 @@ class XmlParser {
         ? this.content.slice(tokenStart, openingTagEnd)
         : "",
       unclosedOpeningTag: !closedWithAngleBracket,
+      topLevel: isTopLevel,
     };
     if (isSelfClosing) {
       this.appendNode(element);
@@ -376,6 +388,11 @@ class XmlParser {
             end: el.tag.end,
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
+        });
+        this.unclosedTags.push({
+          tag: el.tag.text,
+          topLevel: el.topLevel,
+          endPosition: el.contentStart,
         });
       }
       this.appendNode(el);
@@ -613,6 +630,7 @@ type OpenElement = ElementNode & {
   readonly comments: XmlComment[];
   xmlSlice: string;
   unclosedOpeningTag?: boolean;
+  topLevel: boolean;
 };
 
 type EntityDecodeResult =

@@ -516,4 +516,39 @@ describe("parseXmlDocument - lenient parsing", () => {
       },
     ]);
   });
+
+  it("records unclosedTags for tags closed with > but missing closing tags", () => {
+    expect(parseXmlDocument("<a><b></a>")).toMatch({
+      kind: "error",
+      unclosedTags: [{ tag: "b", topLevel: false, endPosition: 6 }],
+    });
+
+    expect(parseXmlDocument("<a>")).toMatch({
+      kind: "error",
+      unclosedTags: [{ tag: "a", topLevel: true, endPosition: 3 }],
+    });
+
+    expect(parseXmlDocument("<a><b>")).toMatch({
+      kind: "error",
+      unclosedTags: [
+        { tag: "a", topLevel: true, endPosition: 3 },
+        { tag: "b", topLevel: false, endPosition: 6 },
+      ],
+    });
+
+    expect(parseXmlDocument("<root><foo>hello</root>")).toMatch({
+      kind: "error",
+      unclosedTags: [{ tag: "foo", topLevel: false, endPosition: 11 }],
+    });
+
+    expect(parseXmlDocument("<a x=y></a>")).toMatch({
+      kind: "error",
+      unclosedTags: [],
+    });
+
+    expect(parseXmlDocument("<root")).toMatch({
+      kind: "error",
+      unclosedTags: [],
+    });
+  });
 });

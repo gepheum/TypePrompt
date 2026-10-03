@@ -10,6 +10,13 @@ export type XmlDocument = {
 export type InvalidXmlDocument = InternalErrors & {
   readonly root: ElementNode | null;
   readonly topLevelComments: readonly XmlComment[];
+  readonly unclosedTags: readonly UnclosedTag[];
+};
+
+export type UnclosedTag = {
+  readonly tag: string;
+  readonly topLevel: boolean;
+  readonly endPosition: number;
 };
 
 export type XmlNode = TextNode | ElementNode;
