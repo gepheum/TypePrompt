@@ -332,9 +332,10 @@ describe("TypePrompt Language Server", () => {
     }
 
     it("formats an unformatted template file in a workspace", async () => {
+      const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
-        () => undefined,
+        (uri) => openDocs.get(uri),
       );
 
       // Create workspace config
@@ -361,6 +362,8 @@ type Output=string;
       await fs.writeFile(filePath, unformattedXml, "utf-8");
 
       const fileUri = fsPathToUri(filePath);
+      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
+      openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: unformattedXml,
         lineFinder: createLineFinder(unformattedXml),
@@ -370,11 +373,17 @@ type Output=string;
       const edits = await extension.formatDocument(fileUri);
       expect(edits.length > 0).toBe(true);
 
-      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
       const formattedResult = applyEdits(doc, edits);
       expect(formattedResult.includes("interface Input {\n")).toBe(true);
 
       // Formatting again should produce 0 edits
+      const updatedDoc = TextDocument.create(
+        fileUri,
+        "xml",
+        2,
+        formattedResult,
+      );
+      openDocs.set(fileUri, updatedDoc);
       extension.setFileContent(fileUri, {
         content: formattedResult,
         lineFinder: createLineFinder(formattedResult),
@@ -661,7 +670,7 @@ comment here -->
       ).toBe(true);
     });
 
-    it("extension.getSemanticTokens returns tokens for open documents and bundle files in a workspace", async () => {
+    it("extension.getSemanticTokens returns tokens for open documents in a workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
@@ -680,15 +689,13 @@ comment here -->
       const xml = '<template name="Test"><system>Hello</system></template>';
       const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
 
-      // Set via bundle
+      // Set via bundle without opening in editor -> returns empty
       extension.setFileContent(fileUri, {
         content: xml,
         lineFinder: createLineFinder(xml),
         lastModified: Date.now(),
       });
-
-      const bundleTokens = extension.getSemanticTokens(fileUri);
-      expect(bundleTokens.data.length > 0).toBe(true);
+      expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
 
       // Now simulate document opened in editor
       const doc = TextDocument.create(fileUri, "xml", 1, xml);
@@ -696,7 +703,6 @@ comment here -->
 
       const openDocTokens = extension.getSemanticTokens(fileUri);
       expect(openDocTokens.data.length > 0).toBe(true);
-      expect(openDocTokens.data).toMatch(bundleTokens.data);
     });
 
     it("extension.getSemanticTokens returns empty data for files not in a workspace", () => {
@@ -724,9 +730,10 @@ comment here -->
     });
 
     it("extension.getSemanticTokens returns empty data for non-XML and documents without root", () => {
+      const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
-        () => undefined,
+        (uri) => openDocs.get(uri),
       );
 
       // Non-XML
@@ -744,6 +751,8 @@ comment here -->
       // XML without root
       const noRootXml = "</root>";
       const fileUri = fsPathToUri(path.join(tempDir, "prompts", "NoRoot.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, noRootXml);
+      openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: noRootXml,
         lineFinder: createLineFinder(noRootXml),
@@ -753,9 +762,10 @@ comment here -->
     });
 
     it("extension.getSemanticTokens leniently parses and provides tokens for unclosed XML while typing", () => {
+      const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
-        () => undefined,
+        (uri) => openDocs.get(uri),
       );
 
       // Configure workspace
@@ -771,12 +781,96 @@ comment here -->
       const fileUri = fsPathToUri(
         path.join(tempDir, "prompts", "Unclosed.xml"),
       );
+      const doc = TextDocument.create(fileUri, "xml", 1, unclosedXml);
+      openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: unclosedXml,
         lineFinder: createLineFinder(unclosedXml),
         lastModified: Date.now(),
       });
       expect(extension.getSemanticTokens(fileUri).data.length > 0).toBe(true);
+    });
+  });
+
+  describe("getCompletionItems", () => {
+    it("returns completion items for child elements in a workspace template", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const xml = [
+        '<template name="Test">',
+        "  <schema>",
+        "    type Input = {};",
+        "    type Output = {};",
+        "  </schema>",
+        "  <system>",
+        "    <",
+        "  </system>",
+        "  <user></user>",
+        "</template>",
+      ].join("\n");
+
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+      extension.setFileContent(fileUri, {
+        content: xml,
+        lineFinder: createLineFinder(xml),
+        lastModified: Date.now(),
+      });
+
+      const items = extension.getCompletionItems(fileUri, {
+        line: 6,
+        character: 5,
+      });
+
+      expect(items.length > 0).toBe(true);
+      const labels = items.map((i) => i.label);
+      expect(labels).toMatch(["c", "enclosed", "insert"]);
+    });
+
+    it("returns empty completions for files not in a workspace", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system><</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      const items = extension.getCompletionItems(fileUri, {
+        line: 0,
+        character: 31,
+      });
+      expect(items).toMatch([]);
+    });
+
+    it("returns empty completions for non-XML files", () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const items = extension.getCompletionItems(ymlUri, {
+        line: 0,
+        character: 0,
+      });
+      expect(items).toMatch([]);
     });
   });
 });

@@ -52,10 +52,20 @@ function parseSourceFile(path: string, content: string): SourceFileParseResult {
   const xmlDocument = parseXmlDocument(content);
   if (xmlDocument.kind === "error") {
     result.parseErrors.push(...xmlDocument.errors);
+    if (
+      xmlDocument.root === null ||
+      (xmlDocument.root.closingTag === undefined &&
+        !xmlDocument.root.isSelfClosing)
+    ) {
+      return result;
+    }
+  }
+  const root = xmlDocument.root;
+  if (root === null) {
     return result;
   }
   const topLevelNodes = checkAllAreElements(
-    [xmlDocument.root],
+    [root],
     ["template", "tool", "namespace", "meta"] as const,
     " at the top level",
     result.parseErrors,

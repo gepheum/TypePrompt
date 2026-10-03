@@ -39,8 +39,8 @@ export function getCompletionItems(args: {
   }
 
   const pathToNewContent = Object.fromEntries(Object.entries(pathToOldContent));
-  for (const newContent of newContents) {
-    pathToNewContent[newContent] = newContent;
+  for (const content of newContents) {
+    pathToNewContent[path] = content;
 
     const compilationResult = compile(pathToNewContent, { cache });
     if (cache === null) {
@@ -50,8 +50,8 @@ export function getCompletionItems(args: {
 
     for (const error of errors) {
       const { span, suggestions } = error;
-      if (!(span.start <= position && position < span.end)) continue;
-      if (!suggestions) return null;
+      if (span.start > position || position > span.end) continue;
+      if (!suggestions || suggestions.length <= 0) continue;
       if (alphaAdjacent) {
         return { span, suggestions };
       } else {

@@ -2,6 +2,7 @@ import {
   compile,
   createLineFinder,
   findLine,
+  getCompletionItems,
   parseConfigYaml,
   tokenize,
   type CompilationResult,
@@ -19,6 +20,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { formatTemplateFile } from "typeprompt/formatter";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CompletionItem,
+  CompletionItemKind,
+  CompletionParams,
   createConnection,
   Diagnostic,
   DiagnosticSeverity,
@@ -827,9 +831,10 @@ export class TypePromptLanguageExtension {
       return [];
     }
 
-    const doc =
-      this.getDocument(uri) ??
-      TextDocument.create(uri, "xml", 0, xmlBundle.content.content);
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return [];
+    }
 
     const text = doc.getText();
     try {
@@ -858,10 +863,62 @@ export class TypePromptLanguageExtension {
       return { data: [] };
     }
 
-    const doc =
-      this.getDocument(uri) ??
-      TextDocument.create(uri, "xml", 0, xmlBundle.content.content);
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return { data: [] };
+    }
     return computeSemanticTokens(doc);
+  }
+
+  public getCompletionItems(uri: string, position: Position): CompletionItem[] {
+    if (this.disposed) {
+      return [];
+    }
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return [];
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (!xmlBundle?.workspace) {
+      return [];
+    }
+
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return [];
+    }
+
+    const offset = doc.offsetAt(position);
+    const workspace = xmlBundle.workspace;
+
+    const pathToOldContent: { [path: string]: string } = {};
+    for (const [fileUri, xml] of workspace.xmls) {
+      pathToOldContent[fileUri] = xml.content.content;
+    }
+
+    const result = getCompletionItems({
+      newContent: doc.getText(),
+      path: uri,
+      pathToOldContent,
+      position: offset,
+      cache: workspace.compilationResult,
+    });
+
+    if (!result || result.suggestions.length === 0) {
+      return [];
+    }
+
+    const startPos = doc.positionAt(result.span.start);
+    const endPos = doc.positionAt(result.span.end);
+    const range = { start: startPos, end: endPos };
+
+    return result.suggestions.map((suggestion, index) => ({
+      label: suggestion,
+      kind: CompletionItemKind.Property,
+      textEdit: TextEdit.replace(range, suggestion),
+      sortText: String(index).padStart(5, "0"),
+    }));
   }
 }
 
@@ -945,6 +1002,10 @@ export function createLanguageServer(
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
         documentFormattingProvider: true,
+        completionProvider: {
+          resolveProvider: false,
+          triggerCharacters: ["<", " ", '"', ":", "/", ".", ">"],
+        },
         semanticTokensProvider: {
           legend: semanticTokensLegend,
           full: true,
@@ -1048,6 +1109,16 @@ export function createLanguageServer(
       return extension.getSemanticTokens(params.textDocument.uri);
     },
   );
+
+  connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+    logger.log(
+      `[TypePrompt LSP] onCompletion: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
+    );
+    return extension.getCompletionItems(
+      params.textDocument.uri,
+      params.position,
+    );
+  });
 
   connection.onShutdown(() => {
     logger.log("[TypePrompt LSP] connection.onShutdown: disposing extension.");
