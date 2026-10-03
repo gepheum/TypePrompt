@@ -290,13 +290,13 @@ describe("parseXmlDocument", () => {
     });
   });
 
-  it("reports a mismatched closing tag", () => {
+  it("reports an unclosed tag when closing an ancestor", () => {
     expect(parseXmlDocument("<a><b></a>")).toMatch({
       kind: "error",
       errors: [
         {
-          span: { start: 6, end: 10 },
-          message: "Mismatched closing tag '</a>'; expected '</b>'",
+          span: { start: 4, end: 5 },
+          message: "Unclosed tag '<b>'",
         },
       ],
     });
@@ -328,7 +328,7 @@ describe("parseXmlDocument", () => {
       kind: "error",
       errors: [
         { message: "Attribute value must be quoted" },
-        { message: "Mismatched closing tag '</a>'; expected '</b>'" },
+        { message: "Unclosed tag '<b>'" },
         { message: "Unexpected closing tag '</c>'" },
       ],
     });
@@ -487,6 +487,7 @@ describe("parseXmlDocument - lenient parsing", () => {
     if (result.kind !== "error") {
       throw new Error("Expected parse error");
     }
+
     expect(result.root).toMatch({
       kind: "element",
       tag: { text: "template" },

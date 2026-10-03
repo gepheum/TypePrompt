@@ -366,15 +366,18 @@ class XmlParser {
       return;
     }
 
-    const topTag = top.tag.text;
-    this.errors.push({
-      span: closingTag,
-      message: `Mismatched closing tag '</${name}>'; expected '</${topTag}>'`,
-    });
-
     // Implicitly close all elements above the matched ancestor.
     while (this.openElements.length > foundIndex + 1) {
       const el = this.openElements.pop()!;
+      if (!el.unclosedOpeningTag) {
+        this.errors.push({
+          span: {
+            start: el.tag.start,
+            end: el.tag.end,
+          },
+          message: `Unclosed tag '<${el.tag.text}>'`,
+        });
+      }
       this.appendNode(el);
     }
 
