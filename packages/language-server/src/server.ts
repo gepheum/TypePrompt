@@ -853,23 +853,15 @@ export class TypePromptLanguageExtension {
       return { data: [] };
     }
 
-    const doc = this.getDocument(uri);
-    if (doc) {
-      return computeSemanticTokens(doc);
-    }
-
     const xmlBundle = this.xmlBundles.get(uri);
-    if (xmlBundle) {
-      const syntheticDoc = TextDocument.create(
-        uri,
-        "xml",
-        0,
-        xmlBundle.content.content,
-      );
-      return computeSemanticTokens(syntheticDoc);
+    if (!xmlBundle?.workspace) {
+      return { data: [] };
     }
 
-    return { data: [] };
+    const doc =
+      this.getDocument(uri) ??
+      TextDocument.create(uri, "xml", 0, xmlBundle.content.content);
+    return computeSemanticTokens(doc);
   }
 }
 

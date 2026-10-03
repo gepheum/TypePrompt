@@ -661,12 +661,21 @@ comment here -->
       ).toBe(true);
     });
 
-    it("extension.getSemanticTokens returns tokens for open documents and bundle files", async () => {
+    it("extension.getSemanticTokens returns tokens for open documents and bundle files in a workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
         (uri) => openDocs.get(uri),
       );
+
+      // Configure workspace
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
 
       const xml = '<template name="Test"><system>Hello</system></template>';
       const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
@@ -690,6 +699,30 @@ comment here -->
       expect(openDocTokens.data).toMatch(bundleTokens.data);
     });
 
+    it("extension.getSemanticTokens returns empty data for files not in a workspace", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      // No workspace configured, returns empty data
+      expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
+
+      // Even when set via setFileContent without workspace
+      extension.setFileContent(fileUri, {
+        content: xml,
+        lineFinder: createLineFinder(xml),
+        lastModified: Date.now(),
+      });
+      expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
+    });
+
     it("extension.getSemanticTokens returns empty data for non-XML and documents without root", () => {
       const extension = new TypePromptLanguageExtension(
         () => {},
@@ -699,6 +732,14 @@ comment here -->
       // Non-XML
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
       expect(extension.getSemanticTokens(ymlUri).data.length).toBe(0);
+
+      // Configure workspace
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
 
       // XML without root
       const noRootXml = "</root>";
@@ -716,6 +757,15 @@ comment here -->
         () => {},
         () => undefined,
       );
+
+      // Configure workspace
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
 
       const unclosedXml = "<template><unclosed>";
       const fileUri = fsPathToUri(
