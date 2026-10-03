@@ -517,38 +517,40 @@ describe("parseXmlDocument - lenient parsing", () => {
     ]);
   });
 
-  it("records unclosedTags for tags closed with > but missing closing tags", () => {
-    expect(parseXmlDocument("<a><b></a>")).toMatch({
+  it("does not trigger attribute error for unclosed tags missing >", () => {
+    expect(parseXmlDocument("<a><foo bar</a>")).toMatch({
       kind: "error",
-      unclosedTags: [{ tag: "b", topLevel: false, endPosition: 6 }],
-    });
-
-    expect(parseXmlDocument("<a>")).toMatch({
-      kind: "error",
-      unclosedTags: [{ tag: "a", topLevel: true, endPosition: 3 }],
-    });
-
-    expect(parseXmlDocument("<a><b>")).toMatch({
-      kind: "error",
-      unclosedTags: [
-        { tag: "a", topLevel: true, endPosition: 3 },
-        { tag: "b", topLevel: false, endPosition: 6 },
+      errors: [
+        {
+          span: { start: 4, end: 7 },
+          message: "Unclosed tag '<foo>'",
+        },
       ],
+      root: {
+        kind: "element",
+        tag: { text: "a" },
+        children: [
+          {
+            kind: "element",
+            tag: { text: "foo" },
+            attributes: {
+              bar: {
+                name: { text: "bar", start: 8, end: 11 },
+              },
+            },
+          },
+        ],
+      },
     });
 
-    expect(parseXmlDocument("<root><foo>hello</root>")).toMatch({
+    expect(parseXmlDocument("<foo bar")).toMatch({
       kind: "error",
-      unclosedTags: [{ tag: "foo", topLevel: false, endPosition: 11 }],
-    });
-
-    expect(parseXmlDocument("<a x=y></a>")).toMatch({
-      kind: "error",
-      unclosedTags: [],
-    });
-
-    expect(parseXmlDocument("<root")).toMatch({
-      kind: "error",
-      unclosedTags: [],
+      errors: [
+        {
+          span: { start: 1, end: 4 },
+          message: "Unclosed tag '<foo>'",
+        },
+      ],
     });
   });
 });

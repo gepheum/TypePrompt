@@ -9,7 +9,6 @@ import type {
   Attribute,
   ElementNode,
   InvalidXmlDocument,
-  UnclosedTag,
   XmlComment,
   XmlDocument,
   XmlNode,
@@ -35,7 +34,6 @@ class XmlParser {
   private readonly openElements: OpenElement[] = [];
   private root: ElementNode | null = null;
   private readonly topLevelComments: XmlComment[] = [];
-  private readonly unclosedTags: UnclosedTag[] = [];
 
   constructor(private readonly content: string) {}
 
@@ -67,11 +65,6 @@ class XmlParser {
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
         });
-        this.unclosedTags.push({
-          tag: el.tag.text,
-          topLevel: el.topLevel,
-          endPosition: el.contentStart,
-        });
       }
       this.appendNode(el);
     }
@@ -84,13 +77,11 @@ class XmlParser {
     }
 
     if (this.errors.length >= 1) {
-      this.unclosedTags.sort((a, b) => a.endPosition - b.endPosition);
       return {
         kind: "error",
         errors: this.errors,
         root: this.root,
         topLevelComments: this.topLevelComments,
-        unclosedTags: this.unclosedTags,
       };
     }
 
@@ -185,6 +176,7 @@ class XmlParser {
     const tag: TextSpan = { text: tagName, start: nameStart, end: nameEnd };
 
     const attributes: Record<string, Attribute> = {};
+    const attributeErrors: InternalError[] = [];
     let isSelfClosing = false;
     let closedWithAngleBracket = false;
 
@@ -216,7 +208,7 @@ class XmlParser {
         this.cursor += 1;
         continue;
       }
-      const attr = this.parseAttribute();
+      const attr = this.parseAttribute(attributeErrors);
       if (attr !== null && !(attr.name.text in attributes)) {
         attributes[attr.name.text] = attr;
       }
@@ -229,9 +221,9 @@ class XmlParser {
         span: tag,
         message: `Unclosed tag '<${tagName}>'`,
       });
+    } else {
+      this.errors.push(...attributeErrors);
     }
-
-    const isTopLevel = this.openElements.length === 0;
 
     const element: OpenElement = {
       kind: "element",
@@ -248,7 +240,6 @@ class XmlParser {
         ? this.content.slice(tokenStart, openingTagEnd)
         : "",
       unclosedOpeningTag: !closedWithAngleBracket,
-      topLevel: isTopLevel,
     };
     if (isSelfClosing) {
       this.appendNode(element);
@@ -257,7 +248,7 @@ class XmlParser {
     }
   }
 
-  private parseAttribute(): Attribute | null {
+  private parseAttribute(errors: InternalError[]): Attribute | null {
     const nameStart = this.cursor;
     RE_XML_NAME.lastIndex = nameStart;
     const attrNameMatch = RE_XML_NAME.exec(this.content);
@@ -276,7 +267,7 @@ class XmlParser {
     this.skipWhitespace();
 
     if (this.content[this.cursor] !== "=") {
-      this.errors.push({
+      errors.push({
         span: nameSpan,
         message: "Attribute must have a value",
       });
@@ -298,7 +289,7 @@ class XmlParser {
       const valueEnd = RE_UNQUOTED_ATTR_VALUE.lastIndex;
       this.cursor = valueEnd;
       const valueSpan = this.decodeXmlText(valueStart, valueEnd);
-      this.errors.push({
+      errors.push({
         span: nameSpan,
         message: "Attribute value must be quoted",
       });
@@ -388,11 +379,6 @@ class XmlParser {
             end: el.tag.end,
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
-        });
-        this.unclosedTags.push({
-          tag: el.tag.text,
-          topLevel: el.topLevel,
-          endPosition: el.contentStart,
         });
       }
       this.appendNode(el);
@@ -630,7 +616,6 @@ type OpenElement = ElementNode & {
   readonly comments: XmlComment[];
   xmlSlice: string;
   unclosedOpeningTag?: boolean;
-  topLevel: boolean;
 };
 
 type EntityDecodeResult =
