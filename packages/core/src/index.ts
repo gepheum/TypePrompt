@@ -60,3 +60,6 @@ export * from "./compiler/template-validator.js";
 export * from "./compiler/text-extractor.js";
 export * from "./compiler/tool-parser.js";
 export * from "./compiler/tool-validator.js";
+
+// LSP Util
+export * from "./lsp-util/semantic-token.js";

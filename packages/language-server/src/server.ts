@@ -3,10 +3,13 @@ import {
   createLineFinder,
   findLine,
   parseConfigYaml,
+  tokenize,
   type CompilationResult,
   type Config,
   type InternalError,
   type LineFinderData,
+  type SemanticToken,
+  type Span,
 } from "@typeprompt/core";
 import fastDiff from "fast-diff";
 import { glob } from "glob";
@@ -24,6 +27,10 @@ import {
   InitializeResult,
   Position,
   ProposedFeatures,
+  SemanticTokens,
+  SemanticTokensBuilder,
+  SemanticTokensLegend,
+  SemanticTokensParams,
   TextDocuments,
   TextDocumentSyncKind,
   TextEdit,
@@ -173,6 +180,110 @@ export function computeEdits(
   }
 
   return edits;
+}
+
+export const SEMANTIC_TOKEN_TYPES = [
+  "comment",
+  "string",
+  "keyword",
+  "number",
+  "type",
+  "property",
+] as const;
+
+export const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
+
+export const semanticTokensLegend: SemanticTokensLegend = {
+  tokenTypes: [...SEMANTIC_TOKEN_TYPES],
+  tokenModifiers: SEMANTIC_TOKEN_MODIFIERS,
+};
+
+export function tokenKindToType(
+  kind: SemanticToken["kind"],
+): (typeof SEMANTIC_TOKEN_TYPES)[number] {
+  switch (kind) {
+    case "comment":
+      return "comment";
+    case "string":
+      return "string";
+    case "number":
+      return "number";
+    case "boolean":
+    case "schema-keyword":
+      return "keyword";
+    case "xml-tag":
+      return "type";
+    case "xml-attribute":
+      return "property";
+    default: {
+      const _: never = kind;
+      return "keyword";
+    }
+  }
+}
+
+export function pushSemanticToken(
+  builder: SemanticTokensBuilder,
+  doc: TextDocument,
+  span: Span,
+  typeIndex: number,
+  modifiers = 0,
+): void {
+  const startPos = doc.positionAt(span.start);
+  const endPos = doc.positionAt(span.end);
+
+  if (startPos.line === endPos.line) {
+    const length = endPos.character - startPos.character;
+    if (length > 0) {
+      builder.push(
+        startPos.line,
+        startPos.character,
+        length,
+        typeIndex,
+        modifiers,
+      );
+    }
+    return;
+  }
+
+  for (let line = startPos.line; line <= endPos.line; line++) {
+    const lineText = doc.getText({
+      start: { line, character: 0 },
+      end: { line: line + 1, character: 0 },
+    });
+    const trimmedLineLength = lineText.replace(/[\r\n]+$/, "").length;
+
+    let charStart = 0;
+    let charEnd = trimmedLineLength;
+
+    if (line === startPos.line) {
+      charStart = startPos.character;
+    }
+    if (line === endPos.line) {
+      charEnd = Math.min(trimmedLineLength, endPos.character);
+    }
+
+    const length = charEnd - charStart;
+    if (length > 0) {
+      builder.push(line, charStart, length, typeIndex, modifiers);
+    }
+  }
+}
+
+export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
+  const text = doc.getText();
+  const tokens = tokenize(text);
+  const builder = new SemanticTokensBuilder();
+
+  for (const token of tokens) {
+    const tokenType = tokenKindToType(token.kind);
+    const typeIndex = SEMANTIC_TOKEN_TYPES.indexOf(tokenType);
+    if (typeIndex >= 0) {
+      pushSemanticToken(builder, doc, token.span, typeIndex);
+    }
+  }
+
+  return builder.build();
 }
 
 export class Workspace {
@@ -732,6 +843,34 @@ export class TypePromptLanguageExtension {
       return [];
     }
   }
+
+  public getSemanticTokens(uri: string): SemanticTokens {
+    if (this.disposed) {
+      return { data: [] };
+    }
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return { data: [] };
+    }
+
+    const doc = this.getDocument(uri);
+    if (doc) {
+      return computeSemanticTokens(doc);
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (xmlBundle) {
+      const syntheticDoc = TextDocument.create(
+        uri,
+        "xml",
+        0,
+        xmlBundle.content.content,
+      );
+      return computeSemanticTokens(syntheticDoc);
+    }
+
+    return { data: [] };
+  }
 }
 
 export function validateTypePromptDocument(
@@ -814,6 +953,10 @@ export function createLanguageServer(
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
         documentFormattingProvider: true,
+        semanticTokensProvider: {
+          legend: semanticTokensLegend,
+          full: true,
+        },
         workspace: {
           workspaceFolders: {
             supported: true,
@@ -902,6 +1045,15 @@ export function createLanguageServer(
         `[TypePrompt LSP] onDocumentFormatting: ${params.textDocument.uri}`,
       );
       return extension.formatDocument(params.textDocument.uri);
+    },
+  );
+
+  connection.languages.semanticTokens.on(
+    (params: SemanticTokensParams): SemanticTokens => {
+      logger.log(
+        `[TypePrompt LSP] semanticTokens.on: ${params.textDocument.uri}`,
+      );
+      return extension.getSemanticTokens(params.textDocument.uri);
     },
   );
 

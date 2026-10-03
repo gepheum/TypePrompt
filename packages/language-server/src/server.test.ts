@@ -5,10 +5,16 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { Diagnostic, TextEdit } from "vscode-languageserver/node.js";
+import {
+  Diagnostic,
+  SemanticTokens,
+  TextEdit,
+} from "vscode-languageserver/node.js";
 import {
   computeEdits,
+  computeSemanticTokens,
   fsPathToUri,
+  SEMANTIC_TOKEN_TYPES,
   TypePromptLanguageExtension,
   uriToFsPath,
 } from "./server.js";
@@ -466,6 +472,243 @@ type Output=string;
 
       const edits = await extension.formatDocument(fileUri);
       expect(edits.length).toBe(0);
+    });
+  });
+
+  describe("semanticTokens", () => {
+    function decodeSemanticTokens(
+      tokens: SemanticTokens,
+      doc: TextDocument,
+    ): Array<{
+      text: string;
+      type: string;
+      line: number;
+      character: number;
+      length: number;
+    }> {
+      const result = [];
+      let currentLine = 0;
+      let currentChar = 0;
+      for (let i = 0; i < tokens.data.length; i += 5) {
+        const deltaLine = tokens.data[i]!;
+        const deltaChar = tokens.data[i + 1]!;
+        const length = tokens.data[i + 2]!;
+        const tokenTypeIndex = tokens.data[i + 3]!;
+
+        currentLine += deltaLine;
+        if (deltaLine > 0) {
+          currentChar = deltaChar;
+        } else {
+          currentChar += deltaChar;
+        }
+
+        const text = doc.getText({
+          start: { line: currentLine, character: currentChar },
+          end: { line: currentLine, character: currentChar + length },
+        });
+
+        result.push({
+          text,
+          type: SEMANTIC_TOKEN_TYPES[tokenTypeIndex]!,
+          line: currentLine,
+          character: currentChar,
+          length,
+        });
+      }
+      return result;
+    }
+
+    it("computes semantic tokens for XML tags, attributes, comments, and schemas", () => {
+      const xml = `<!-- Header comment -->
+<template name="Translate">
+  <schema output-format="text">
+    /** schema comment */
+    interface Input {
+      text: string;
+    }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`;
+      const doc = TextDocument.create("file:///Translate.xml", "xml", 1, xml);
+      const tokens = computeSemanticTokens(doc);
+      const decoded = decodeSemanticTokens(tokens, doc);
+
+      // Verify comment token
+      expect(
+        decoded.some(
+          (t) => t.type === "comment" && t.text === "<!-- Header comment -->",
+        ),
+      ).toBe(true);
+      expect(
+        decoded.some(
+          (t) => t.type === "comment" && t.text === "/** schema comment */",
+        ),
+      ).toBe(true);
+
+      // Verify xml tags
+      expect(
+        decoded.some((t) => t.type === "type" && t.text === "template"),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "type" && t.text === "schema"),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "type" && t.text === "system"),
+      ).toBe(true);
+      expect(decoded.some((t) => t.type === "type" && t.text === "user")).toBe(
+        true,
+      );
+      expect(
+        decoded.some((t) => t.type === "type" && t.text === "insert"),
+      ).toBe(true);
+
+      // Verify attribute value strings
+      expect(
+        decoded.some((t) => t.type === "string" && t.text === "Translate"),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "string" && t.text === "text"),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "string" && t.text === "input.text"),
+      ).toBe(true);
+
+      // Verify schema keywords
+      expect(
+        decoded.some((t) => t.type === "keyword" && t.text === "interface"),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "keyword" && t.text === "type"),
+      ).toBe(true);
+    });
+
+    it("splits multi-line comments and multi-line tokens into per-line tokens", () => {
+      const xml = `<!-- Multi-line
+comment here -->
+<template name="Test">
+  <schema>
+    /** Multi-line
+        block comment */
+    interface Input {}
+  </schema>
+</template>`;
+      const doc = TextDocument.create("file:///Test.xml", "xml", 1, xml);
+      const tokens = computeSemanticTokens(doc);
+      const decoded = decodeSemanticTokens(tokens, doc);
+
+      // Check multi-line XML comment
+      const xmlCommentParts = decoded.filter(
+        (t) => t.type === "comment" && (t.line === 0 || t.line === 1),
+      );
+      expect(xmlCommentParts.length).toBe(2);
+      expect(xmlCommentParts[0]?.text).toBe("<!-- Multi-line");
+      expect(xmlCommentParts[1]?.text).toBe("comment here -->");
+
+      // Check multi-line schema block comment
+      const schemaCommentParts = decoded.filter(
+        (t) => t.type === "comment" && (t.line === 4 || t.line === 5),
+      );
+      expect(schemaCommentParts.length).toBe(2);
+      expect(schemaCommentParts[0]?.text).toBe("/** Multi-line");
+      expect(schemaCommentParts[1]?.text).toBe("        block comment */");
+    });
+
+    it("computes semantic tokens for embedded YAML in template meta and examples", () => {
+      const xml = `<template name="Test">
+  <meta>
+    # Model parameters
+    temperature: 0.7
+    stream: true
+    model: "gpt-4"
+  </meta>
+  <examples>
+    - input: "hello"
+      output: 42
+  </examples>
+</template>`;
+      const doc = TextDocument.create("file:///Test.xml", "xml", 1, xml);
+      const tokens = computeSemanticTokens(doc);
+      const decoded = decodeSemanticTokens(tokens, doc);
+
+      // Verify YAML comment
+      expect(
+        decoded.some(
+          (t) => t.type === "comment" && t.text === "# Model parameters",
+        ),
+      ).toBe(true);
+
+      // Verify YAML boolean keyword
+      expect(
+        decoded.some((t) => t.type === "keyword" && t.text === "true"),
+      ).toBe(true);
+
+      // Verify YAML numbers
+      expect(decoded.some((t) => t.type === "number" && t.text === "0.7")).toBe(
+        true,
+      );
+      expect(decoded.some((t) => t.type === "number" && t.text === "42")).toBe(
+        true,
+      );
+
+      // Verify YAML strings
+      expect(
+        decoded.some((t) => t.type === "string" && t.text === '"gpt-4"'),
+      ).toBe(true);
+      expect(
+        decoded.some((t) => t.type === "string" && t.text === '"hello"'),
+      ).toBe(true);
+    });
+
+    it("extension.getSemanticTokens returns tokens for open documents and bundle files", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+
+      // Set via bundle
+      extension.setFileContent(fileUri, {
+        content: xml,
+        lineFinder: createLineFinder(xml),
+        lastModified: Date.now(),
+      });
+
+      const bundleTokens = extension.getSemanticTokens(fileUri);
+      expect(bundleTokens.data.length > 0).toBe(true);
+
+      // Now simulate document opened in editor
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      const openDocTokens = extension.getSemanticTokens(fileUri);
+      expect(openDocTokens.data.length > 0).toBe(true);
+      expect(openDocTokens.data).toMatch(bundleTokens.data);
+    });
+
+    it("extension.getSemanticTokens returns empty data for non-XML and malformed XML", () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+
+      // Non-XML
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      expect(extension.getSemanticTokens(ymlUri).data.length).toBe(0);
+
+      // Malformed XML
+      const invalidXml = "<template><unclosed>";
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Invalid.xml"));
+      extension.setFileContent(fileUri, {
+        content: invalidXml,
+        lineFinder: createLineFinder(invalidXml),
+        lastModified: Date.now(),
+      });
+      expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
     });
   });
 });
