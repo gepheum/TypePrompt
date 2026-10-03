@@ -21,13 +21,12 @@ export function parseTool(
   const attrs = checkXmlAttributes(toolNode, {
     name: {
       schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+      optional: false,
       expected: "a camelCase identifier",
     },
     namespace: {
-      schema: z
-        .string()
-        .regex(/^[A-Z][A-Za-z0-9]*$/)
-        .optional(),
+      schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+      optional: true,
       expected: "a PascalCase identifier",
     },
   });

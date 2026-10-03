@@ -63,6 +63,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     const attrs = checkXmlAttributes(insertNode, {
       snippet: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        optional: false,
         expected: "a camelCase identifier",
       },
     });
@@ -82,9 +83,13 @@ function parseBodyImpl<HasValContext extends boolean>(
     const attrs = checkXmlAttributes(insertNode, {
       val: {
         schema: z.string(),
+        optional: false,
         expected: "a valid expression",
       },
-      format: oneOf(["text", "json", "yaml", "toon", "csv", "tsv"]),
+      format: oneOf({
+        values: ["text", "json", "yaml", "toon", "csv", "tsv"],
+        optional: true,
+      }),
     });
     if (attrs.kind === "error") {
       errors.push(...attrs.errors);
@@ -141,6 +146,7 @@ function parseBodyImpl<HasValContext extends boolean>(
         const encAttrs = checkXmlAttributes(child, {
           tag: {
             schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
+            optional: false,
             expected: "a valid XML tag name",
           },
         });

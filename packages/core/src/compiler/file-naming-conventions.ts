@@ -22,7 +22,7 @@ export function checkNamespaceSourcePath(
 
 export function checkTemplateOrToolSourcePath(
   name: AttributeValue<string>,
-  namespace: AttributeValue<string | undefined>,
+  namespace: AttributeValue<string> | undefined,
   sourcePath: string,
 ): readonly InternalError[] {
   const rawName = name.value.text;

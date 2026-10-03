@@ -12,10 +12,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeAttr<T extends string | undefined>(text: T): AttributeValue<T> {
-  if (text === undefined) {
-    return undefined as AttributeValue<T>;
-  }
+function makeAttr<T extends string>(text: T): AttributeValue<T> {
   return {
     nameSpan: { start: 0, end: 4 },
     value: {

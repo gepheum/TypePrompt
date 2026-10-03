@@ -18,6 +18,7 @@ export function parseNamespace(
   const attrs = checkXmlAttributes(namespaceNode, {
     name: {
       schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+      optional: false,
       expected: "a PascalCase identifier",
     },
   });

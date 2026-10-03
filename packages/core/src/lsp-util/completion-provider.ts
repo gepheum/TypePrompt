@@ -33,6 +33,7 @@ export function getCompletionItems(args: {
     const insertions = [
       `z${randomLetters}`,
       `Z${randomLetters}`,
+      `z${randomLetters}=""`,
       `z${randomLetters}: true`,
     ];
     newContents = insertions.map((i) => `${left}${i}${right}`);

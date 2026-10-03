@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import { z } from "zod";
 
-import { checkXmlAttributes } from "./xml-attributes-checker.js";
+import { checkXmlAttributes, oneOf } from "./xml-attributes-checker.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode } from "./xml-types.js";
 
@@ -20,8 +20,12 @@ describe("checkXmlAttributes", () => {
   it("succeeds when all required attributes are present and valid", () => {
     const el = parseElement('<foo name="hello" count="42" />');
     const result = checkXmlAttributes(el, {
-      name: { schema: z.string(), expected: "a string" },
-      count: { schema: z.string().regex(/^\d+$/), expected: "a number" },
+      name: { schema: z.string(), optional: false, expected: "a string" },
+      count: {
+        schema: z.string().regex(/^\d+$/),
+        optional: false,
+        expected: "a number",
+      },
     });
 
     expect(result).toMatch({
@@ -36,7 +40,11 @@ describe("checkXmlAttributes", () => {
   it("returns the decoded attribute value in success attributes", () => {
     const el = parseElement('<foo title="a &amp; b" />');
     const result = checkXmlAttributes(el, {
-      title: { schema: z.string(), expected: "a string" },
+      title: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
     });
 
     expect(result).toMatch({
@@ -56,8 +64,16 @@ describe("checkXmlAttributes", () => {
     const input = '<foo count="1" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      name: { schema: z.string(), expected: "a string" },
-      count: { schema: z.string(), expected: "a string" },
+      name: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
+      count: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
     });
 
     expect(result).toMatch({
@@ -70,7 +86,11 @@ describe("checkXmlAttributes", () => {
     const input = "  <foo />";
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      name: { schema: z.string(), expected: "a string" },
+      name: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
     });
 
     expect(result).toMatch({
@@ -90,7 +110,11 @@ describe("checkXmlAttributes", () => {
     const input = '<foo name="x" extra="y" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      name: { schema: z.string(), expected: "a string" },
+      name: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
     });
 
     expect(result).toMatch({
@@ -109,8 +133,8 @@ describe("checkXmlAttributes", () => {
       errors: [
         {
           span: {
-            start: input.indexOf("y"),
-            end: input.indexOf("y") + "y".length,
+            start: input.indexOf("extra"),
+            end: input.indexOf("extra") + "extra".length,
           },
         },
       ],
@@ -121,7 +145,11 @@ describe("checkXmlAttributes", () => {
     const input = '<foo count="abc" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      count: { schema: z.string().regex(/^\d+$/), expected: "a number" },
+      count: {
+        schema: z.string().regex(/^\d+$/),
+        optional: false,
+        expected: "a number",
+      },
     });
 
     expect(result).toMatch({
@@ -136,7 +164,11 @@ describe("checkXmlAttributes", () => {
     const input = '<foo count="abc" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      count: { schema: z.string().regex(/^\d+$/), expected: "a number" },
+      count: {
+        schema: z.string().regex(/^\d+$/),
+        optional: false,
+        expected: "a number",
+      },
     });
 
     expect(result).toMatch({
@@ -155,7 +187,7 @@ describe("checkXmlAttributes", () => {
   it("succeeds when an optional attribute is present and valid", () => {
     const el = parseElement('<foo title="hi" />');
     const result = checkXmlAttributes(el, {
-      title: { schema: z.string().optional(), expected: "a string" },
+      title: { schema: z.string(), optional: true, expected: "a string" },
     });
 
     expect(result).toMatch({
@@ -167,7 +199,7 @@ describe("checkXmlAttributes", () => {
   it("succeeds with undefined when an optional attribute is absent", () => {
     const el = parseElement("<foo />");
     const result = checkXmlAttributes(el, {
-      title: { schema: z.string().optional(), expected: "a string" },
+      title: { schema: z.string(), optional: true, expected: "a string" },
     });
 
     expect(result).toMatch({
@@ -176,27 +208,36 @@ describe("checkXmlAttributes", () => {
     });
   });
 
-  it("reports errors for both a missing required and an unexpected attribute", () => {
+  it("one error when there is both a missing and an unexpected attribute", () => {
     const input = '<foo unknown="x" />';
     const el = parseElement(input);
     const result = checkXmlAttributes(el, {
-      name: { schema: z.string(), expected: "a string" },
+      name: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
     });
 
     expect(result).toMatch({
       kind: "error",
-      errors: [
-        { message: "Missing required attribute 'name'" },
-        { message: "Unexpected attribute 'unknown'" },
-      ],
+      errors: [{ message: "Unexpected attribute 'unknown'" }],
     });
   });
 
   it("is typesafe: infers string for required and string|undefined for optional", () => {
     const el = parseElement('<foo req="a" />');
     const result = checkXmlAttributes(el, {
-      req: { schema: z.string(), expected: "a string" },
-      opt: { schema: z.string().optional(), expected: "a string" },
+      req: {
+        schema: z.string(),
+        optional: false,
+        expected: "a string",
+      },
+      opt: {
+        schema: z.string(),
+        optional: true,
+        expected: "a string",
+      },
     });
 
     if (result.kind === "success") {
@@ -208,5 +249,105 @@ describe("checkXmlAttributes", () => {
     } else {
       throw new Error("Expected success");
     }
+  });
+
+  describe("oneOf", () => {
+    it("succeeds when attribute matches one of the allowed values", () => {
+      const el = parseElement('<foo format="json" />');
+      const result = checkXmlAttributes(el, {
+        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+      });
+
+      expect(result).toMatch({
+        kind: "success",
+        attributes: {
+          format: { value: { text: "json" } },
+        },
+      });
+    });
+
+    it("succeeds with undefined when optional oneOf attribute is omitted", () => {
+      const el = parseElement("<foo />");
+      const result = checkXmlAttributes(el, {
+        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+      });
+
+      expect(result).toMatch({
+        kind: "success",
+        attributes: { format: undefined },
+      });
+    });
+
+    it("reports an error with suggestions when an attribute value fails oneOf validation", () => {
+      const el = parseElement('<foo format="yaml" />');
+      const result = checkXmlAttributes(el, {
+        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+      });
+
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message:
+              "Invalid value for attribute 'format': expected one of: 'json', 'text', 'csv'",
+            suggestions: ["json", "text", "csv"],
+          },
+        ],
+      });
+    });
+  });
+
+  describe("suggestions in errors", () => {
+    it("sets suggestions to entry.suggestions when an attribute value is invalid", () => {
+      const el = parseElement('<foo mode="invalid" />');
+      const result = checkXmlAttributes(el, {
+        mode: oneOf({ values: ["fast", "accurate"], optional: true }),
+      });
+
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message:
+              "Invalid value for attribute 'mode': expected one of: 'fast', 'accurate'",
+            span: {
+              start: 11,
+              end: 18,
+            },
+            suggestions: ["fast", "accurate"],
+          },
+        ],
+      });
+    });
+
+    it("sets suggestions to missingAttributes for unexpected attributes when required attributes are missing", () => {
+      const el = parseElement('<foo unexpected="bar" />');
+      const result = checkXmlAttributes(el, {
+        name: {
+          schema: z.string(),
+          optional: false,
+          expected: "a string",
+        },
+        target: {
+          schema: z.string(),
+          optional: false,
+          expected: "a string",
+        },
+      });
+
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unexpected attribute 'unexpected'",
+            span: {
+              start: 5,
+              end: 15,
+            },
+            suggestions: ["name", "target"],
+          },
+        ],
+      });
+    });
   });
 });

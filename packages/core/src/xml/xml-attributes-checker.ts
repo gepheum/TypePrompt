@@ -8,40 +8,50 @@ import type {
 } from "../util/shared-types.js";
 import type { ElementNode } from "./xml-types.js";
 
-export type AttributeSchemaEntry = {
-  readonly schema: ZodType<string | undefined>;
+export type AttributeSchemaEntry<
+  T extends string = string,
+  Optional extends boolean = boolean,
+> = {
+  readonly schema: ZodType<T, string>;
+  readonly optional: Optional;
+  /** String description. */
   readonly expected: string;
+  readonly suggestions?: readonly string[];
 };
 
 /** Builds an optional enum attribute entry from a list of allowed values. */
-export function oneOf<const T extends string>(
-  values: readonly [T, ...T[]],
-): {
-  readonly schema: ZodType<T | undefined, string | undefined>;
-  readonly expected: string;
-} {
+export function oneOf<
+  const T extends string,
+  const Optional extends boolean,
+>(args: {
+  values: readonly [T, ...T[]];
+  optional: Optional;
+}): AttributeSchemaEntry<T, Optional> {
+  const { values, optional } = args;
+  const expected = `one of: ${values.map((v) => `'${v}'`).join(", ")}`;
   return {
-    schema: z.enum(values as [T, ...T[]]).optional() satisfies ZodType<
-      T | undefined,
-      string | undefined
-    >,
-    expected: `one of: ${values.map((v) => `'${v}'`).join(", ")}`,
+    schema: z.enum(values as [T, ...T[]]),
+    optional,
+    expected,
+    suggestions: values,
   };
 }
 
 export type AttributeSchemas = Record<string, AttributeSchemaEntry>;
 
-export type AttributeValue<T> =
-  | {
-      readonly nameSpan: Span;
-      readonly value: MappedSpan<NonNullable<T>>;
-    }
-  | (undefined extends T ? undefined : never);
+export type AttributeValue<T> = {
+  readonly nameSpan: Span;
+  readonly value: MappedSpan<T>;
+};
 
 export type AttributeValues<T extends AttributeSchemas> = {
-  [K in keyof T]: T[K] extends { schema: ZodType<infer U, string | undefined> }
-    ? AttributeValue<U>
-    : never;
+  [K in keyof T]: T[K]["schema"] extends ZodType<infer U, string>
+  ? T[K]["optional"] extends false
+  ? AttributeValue<U>
+  : T[K]["optional"] extends true
+  ? AttributeValue<U> | undefined
+  : never
+  : never;
 };
 
 export function checkXmlAttributes<T extends AttributeSchemas>(
@@ -54,7 +64,12 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
   const values: Record<string, AttributeValue<unknown>> = {};
 
   // Validate each expected attribute.
-  const missingAttributes: string[] = [];
+  const missingAttrs = Object.keys(expectedAttributes).filter(
+    (name) => !element.attributes[name],
+  );
+  const missingRequiredAttrs = Object.entries(expectedAttributes)
+    .filter(([name, entry]) => !entry.optional && !element.attributes[name])
+    .map(([name]) => name);
   for (const [name, entry] of Object.entries(expectedAttributes)) {
     const attr = element.attributes[name];
     const rawValue = attr?.value.text;
@@ -66,27 +81,34 @@ export function checkXmlAttributes<T extends AttributeSchemas>(
           value: { ...attr.value, text: parsed.data! },
         };
       }
-    } else if (rawValue === undefined) {
-      missingAttributes.push(name);
-      errors.push({
-        span: element.tag,
-        message: `Missing required attribute '${name}'`,
-      });
-    } else {
+    } else if (rawValue !== undefined) {
       errors.push({
         span: attr!.value,
         message: `Invalid value for attribute '${name}': expected ${entry.expected}`,
+        suggestions: entry.suggestions,
       });
     }
   }
 
   // Check for unexpected attributes.
-  for (const [name, attr] of Object.entries(element.attributes)) {
-    if (!(name in expectedAttributes)) {
+  const unexpectedAttributes = Object.entries(element.attributes).filter(
+    ([name, _]) => !(name in expectedAttributes),
+  );
+  for (const [name, attr] of unexpectedAttributes) {
+    errors.push({
+      span: attr.name,
+      message: `Unexpected attribute '${name}'`,
+      suggestions: missingAttrs,
+    });
+  }
+  if (unexpectedAttributes.length <= 0) {
+    // If we have both an unexpected attribute and a missing attribute, it's
+    // likely that the unexpected attribute is simply misspelled. No need to
+    // report two errors.
+    for (const attr of missingRequiredAttrs) {
       errors.push({
-        span: attr.value,
-        message: `Unexpected attribute '${name}'`,
-        suggestions: missingAttributes,
+        span: element.tag,
+        message: `Missing required attribute '${attr satisfies string}'`,
       });
     }
   }

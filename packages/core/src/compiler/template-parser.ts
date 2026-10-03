@@ -64,13 +64,12 @@ class TemplateParser {
     const attrs = checkXmlAttributes(this.templateNode, {
       name: {
         schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+        optional: false,
         expected: "a PascalCase identifier",
       },
       namespace: {
-        schema: z
-          .string()
-          .regex(/^[A-Z][A-Za-z0-9]*$/)
-          .optional(),
+        schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+        optional: true,
         expected: "a PascalCase identifier",
       },
     });
@@ -182,7 +181,7 @@ class TemplateParser {
       });
     }
     const attrs = checkXmlAttributes(schemaNode, {
-      "output-format": oneOf(["json", "text"]),
+      "output-format": oneOf({ values: ["json", "text"], optional: true }),
     });
     if (attrs.kind === "error") {
       this.errors.push(...attrs.errors);
@@ -232,6 +231,7 @@ class TemplateParser {
     const attrs = checkXmlAttributes(variantNode, {
       case: {
         schema: z.string(),
+        optional: false,
         expected: "a string",
       },
     });
@@ -305,18 +305,22 @@ class TemplateParser {
     const attrs = checkXmlAttributes(snippetNode, {
       name: {
         schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+        optional: false,
         expected: "a camelCase identifier",
       },
       if: {
-        schema: z.string().optional(),
+        schema: z.string(),
+        optional: true,
         expected: "a string",
       },
       is: {
-        schema: z.enum(["notNull", "notEmpty", "true"]).optional(),
+        schema: z.enum(["notNull", "notEmpty", "true"]),
+        optional: true,
         expected: "'notNull', 'notEmpty' or 'true'",
       },
       switch: {
-        schema: z.string().optional(),
+        schema: z.string(),
+        optional: true,
         expected: "a string",
       },
     });
@@ -455,6 +459,7 @@ class TemplateParser {
           const attrs = checkXmlAttributes(child, {
             case: {
               schema: z.string(),
+              optional: false,
               expected: "a string",
             },
           });
