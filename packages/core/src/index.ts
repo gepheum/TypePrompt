@@ -62,4 +62,5 @@ export * from "./compiler/tool-parser.js";
 export * from "./compiler/tool-validator.js";
 
 // LSP Util
+export * from "./lsp-util/key-handler.js";
 export * from "./lsp-util/semantic-token.js";
