@@ -79,7 +79,11 @@ function collectFormattableSlices(
         (tagName === "meta" && topLevel)
       ) {
         format = "typescript";
-      } else if (tagName === "examples" || (tagName === "meta" && !topLevel)) {
+      } else if (
+        tagName === "tools" ||
+        tagName === "examples" ||
+        (tagName === "meta" && !topLevel)
+      ) {
         format = "yaml";
       } else if (
         tagName === "system" ||
@@ -154,23 +158,27 @@ async function formatTypescriptAndYaml(
   content: string,
   slices: readonly FormattableSlice[],
 ): Promise<string> {
-  await Promise.all(
-    slices
-      .filter((r) => r.format === "typescript" || r.format === "yaml")
-      .map(async (slice) => {
-        const { placeholder, unformatted } = slice;
-        const formatted = await prettierFormat(unformatted, {
-          parser: slice.format,
-          printWidth: 80,
-          tabWidth: 2,
-        });
-        content = replacePlaceholder({
-          content,
-          placeholder,
-          replacement: formatted,
-        });
-      }),
+  const targetSlices = slices.filter(
+    (r) => r.format === "typescript" || r.format === "yaml",
   );
+  const formattedList = await Promise.all(
+    targetSlices.map(async (slice) => {
+      const { placeholder, unformatted } = slice;
+      const formatted = await prettierFormat(unformatted, {
+        parser: slice.format,
+        printWidth: 80,
+        tabWidth: 2,
+      });
+      return { placeholder, formatted };
+    }),
+  );
+  for (const { placeholder, formatted } of formattedList) {
+    content = replacePlaceholder({
+      content,
+      placeholder,
+      replacement: formatted,
+    });
+  }
   return content;
 }
 
@@ -178,28 +186,33 @@ async function formatWhitespaceSensitiveXml(
   content: string,
   slices: readonly FormattableSlice[],
 ): Promise<string> {
-  await Promise.all(
-    slices
-      .filter((r) => r.format === "xml")
-      .map(async (slice) => {
-        const { placeholder, unformatted } = slice;
-        const dedented = dedent(unformatted);
-        const wrapped = `<z>${dedented}</z>`;
-        let formatted = await prettierFormat(wrapped, {
-          parser: "xml",
-          plugins: [plugin],
-          printWidth: 80,
-          tabWidth: 2,
-          xmlWhitespaceSensitivity: "strict",
-        });
-        formatted = formatted.slice(3, -5); // Remove the <z> wrapper
-        content = replacePlaceholder({
-          content,
-          placeholder,
-          replacement: formatted,
-        });
-      }),
+  const targetSlices = slices.filter((r) => r.format === "xml");
+  const formattedList = await Promise.all(
+    targetSlices.map(async (slice) => {
+      const { placeholder, unformatted } = slice;
+      const dedented = dedent(unformatted);
+      const wrapped = `<z>${dedented}</z>`;
+      let formatted = await prettierFormat(wrapped, {
+        parser: "xml",
+        plugins: [plugin],
+        printWidth: 80,
+        tabWidth: 2,
+        xmlWhitespaceSensitivity: "strict",
+      });
+      if (!formatted.startsWith("<z>") || !formatted.endsWith("</z>\n")) {
+        throw new Error();
+      }
+      formatted = formatted.slice(3, -5); // Remove the <z> wrapper
+      return { placeholder, formatted };
+    }),
   );
+  for (const { placeholder, formatted } of formattedList) {
+    content = replacePlaceholder({
+      content,
+      placeholder,
+      replacement: formatted,
+    });
+  }
   return content;
 }
 

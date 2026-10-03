@@ -10,7 +10,9 @@
     }
   </schema>
 
-  <tools>- tool: myTool</tools>
+  <tools>
+    - tool: myTool
+  </tools>
 
   <user>
     U

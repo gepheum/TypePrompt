@@ -58,6 +58,7 @@ export function tokenize(xmlContent: string): readonly SemanticToken[] {
             contentType = parentTag === "template" ? "yaml" : "schema";
             break;
           }
+          case "tools":
           case "examples": {
             contentType = "yaml";
             break;

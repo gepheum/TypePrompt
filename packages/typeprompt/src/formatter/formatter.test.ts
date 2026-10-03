@@ -3,12 +3,13 @@ import { describe, it } from "mocha";
 import { formatTemplateFile } from "./formatter.js";
 
 describe("formatTemplateFile", () => {
-  it("formats a standard template with schema, system, and user tags", async () => {
+  it("formats a standard template with schema, tools, system, and user tags", async () => {
     const unformatted = `<template name="Translate">
 <schema output-format="text">
 interface Input{text:string;}
 type Output=string;
 </schema>
+<tools>- tool: webSearch</tools>
 <system>You are a translator.</system>
 <user><insert val="input.text"/></user>
 </template>`;
@@ -22,6 +23,9 @@ type Output=string;
     }
     type Output = string;
   </schema>
+  <tools>
+    - tool: webSearch
+  </tools>
   <system>
     You are a translator.
   </system>
