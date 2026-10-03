@@ -46,12 +46,12 @@ export type AttributeValue<T> = {
 
 export type AttributeValues<T extends AttributeSchemas> = {
   [K in keyof T]: T[K]["schema"] extends ZodType<infer U, string>
-  ? T[K]["optional"] extends false
-  ? AttributeValue<U>
-  : T[K]["optional"] extends true
-  ? AttributeValue<U> | undefined
-  : never
-  : never;
+    ? T[K]["optional"] extends false
+      ? AttributeValue<U>
+      : T[K]["optional"] extends true
+        ? AttributeValue<U> | undefined
+        : never
+    : never;
 };
 
 export function checkXmlAttributes<T extends AttributeSchemas>(

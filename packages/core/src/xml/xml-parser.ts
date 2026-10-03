@@ -198,6 +198,10 @@ class XmlParser {
           this.cursor += 2;
           break;
         }
+        attributeErrors.push({
+          span: { start: this.cursor, end: this.cursor + 1 },
+          message: "Unexpected character",
+        });
         this.cursor += 1;
         continue;
       }
@@ -205,6 +209,10 @@ class XmlParser {
         break;
       }
       if (!RE_NAME_START_CHAR.test(ch)) {
+        attributeErrors.push({
+          span: { start: this.cursor, end: this.cursor + 1 },
+          message: "Unexpected character",
+        });
         this.cursor += 1;
         continue;
       }

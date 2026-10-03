@@ -323,6 +323,30 @@ describe("parseXmlDocument", () => {
     });
   });
 
+  it("reports an unexpected character like comma between attributes", () => {
+    const input = '<foo a="a", b="b"/>';
+    expect(parseXmlDocument(input)).toMatch({
+      kind: "error",
+      errors: [
+        {
+          span: {
+            start: input.indexOf(","),
+            end: input.indexOf(",") + 1,
+          },
+          message: "Unexpected character",
+        },
+      ],
+      root: {
+        kind: "element",
+        tag: { text: "foo" },
+        attributes: {
+          a: { name: { text: "a" }, value: { text: "a" } },
+          b: { name: { text: "b" }, value: { text: "b" } },
+        },
+      },
+    });
+  });
+
   it("reports multiple independent XML errors", () => {
     expect(parseXmlDocument("<a x=y><b></a></c>")).toMatch({
       kind: "error",
