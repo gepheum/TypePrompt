@@ -1,9 +1,14 @@
-import type { MappedSpan, Span } from "../util/shared-types.js";
+import type { InternalErrors, MappedSpan, Span } from "../util/shared-types.js";
 import { TextSpan } from "../util/shared-types.js";
 
 export type XmlDocument = {
   readonly kind: "success";
   readonly root: ElementNode;
+  readonly topLevelComments: readonly XmlComment[];
+};
+
+export type InvalidXmlDocument = InternalErrors & {
+  readonly root: ElementNode | null;
   readonly topLevelComments: readonly XmlComment[];
 };
 
@@ -22,7 +27,7 @@ export type ElementNode = {
   readonly contentStart: number;
   readonly children: readonly XmlNode[];
   readonly comments: readonly XmlComment[];
-  // Set if not self-closing
+  /** Set if not self-closing. */
   readonly closingTag: Span | undefined;
   readonly isSelfClosing: boolean;
   readonly xmlSlice: string;

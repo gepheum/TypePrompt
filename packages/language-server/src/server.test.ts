@@ -690,7 +690,7 @@ comment here -->
       expect(openDocTokens.data).toMatch(bundleTokens.data);
     });
 
-    it("extension.getSemanticTokens returns empty data for non-XML and malformed XML", () => {
+    it("extension.getSemanticTokens returns empty data for non-XML and documents without root", () => {
       const extension = new TypePromptLanguageExtension(
         () => {},
         () => undefined,
@@ -700,15 +700,33 @@ comment here -->
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
       expect(extension.getSemanticTokens(ymlUri).data.length).toBe(0);
 
-      // Malformed XML
-      const invalidXml = "<template><unclosed>";
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Invalid.xml"));
+      // XML without root
+      const noRootXml = "</root>";
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "NoRoot.xml"));
       extension.setFileContent(fileUri, {
-        content: invalidXml,
-        lineFinder: createLineFinder(invalidXml),
+        content: noRootXml,
+        lineFinder: createLineFinder(noRootXml),
         lastModified: Date.now(),
       });
       expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
+    });
+
+    it("extension.getSemanticTokens leniently parses and provides tokens for unclosed XML while typing", () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+
+      const unclosedXml = "<template><unclosed>";
+      const fileUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Unclosed.xml"),
+      );
+      extension.setFileContent(fileUri, {
+        content: unclosedXml,
+        lineFinder: createLineFinder(unclosedXml),
+        lastModified: Date.now(),
+      });
+      expect(extension.getSemanticTokens(fileUri).data.length > 0).toBe(true);
     });
   });
 });

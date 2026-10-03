@@ -4,9 +4,18 @@ import { describe, it } from "mocha";
 import { tokenize } from "./semantic-token.js";
 
 describe("tokenize", () => {
-  it("returns an empty array for empty or malformed XML", () => {
+  it("returns an empty array for empty XML or documents without root", () => {
     expect(tokenize("")).toMatch([]);
-    expect(tokenize("<unclosed")).toMatch([]);
+    expect(tokenize("</root>")).toMatch([]);
+  });
+
+  it("leniently tokenizes unclosed tags while typing", () => {
+    expect(tokenize("<unclosed")).toMatch([
+      {
+        kind: "xml-tag",
+        span: { start: 1, end: 9 },
+      },
+    ]);
   });
 
   it("tokenizes XML tags, closing tags, and attributes", () => {

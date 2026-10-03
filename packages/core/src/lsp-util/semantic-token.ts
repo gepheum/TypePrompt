@@ -18,8 +18,7 @@ export type SemanticToken = {
 
 export function tokenize(xmlContent: string): readonly SemanticToken[] {
   const xmlDocument = parseXmlDocument(xmlContent);
-  if (xmlDocument.kind !== "success") {
-    // If the XML is malformed, we cannot format the file.
+  if (!xmlDocument.root) {
     return [];
   }
   const tokens: SemanticToken[] = [];

@@ -438,3 +438,81 @@ describe("parseXmlDocument - comments", () => {
     });
   });
 });
+
+describe("parseXmlDocument - lenient parsing", () => {
+  it("recovers from an unclosed opening tag followed by another tag", () => {
+    const input = `<template>
+  <i
+  <system>Hello</system>
+</template>`;
+    const result = parseXmlDocument(input);
+    if (result.kind !== "error") {
+      throw new Error("Expected parse error");
+    }
+    expect(result.root).toMatch({
+      kind: "element",
+      tag: { text: "template" },
+    });
+    expect(result.errors.some((e) => e.message === "Unclosed tag '<i>'")).toBe(
+      true,
+    );
+  });
+
+  it("recovers attributes from an unclosed tag followed by another tag", () => {
+    const input = `<template>
+  <insert val="input"
+  <user>Hello</user>
+</template>`;
+    const result = parseXmlDocument(input);
+    if (result.kind !== "error") {
+      throw new Error("Expected parse error");
+    }
+    expect(result.root).toMatch({
+      kind: "element",
+      tag: { text: "template" },
+    });
+    expect(
+      result.errors.some((e) => e.message === "Unclosed tag '<insert>'"),
+    ).toBe(true);
+  });
+
+  it("recovers from an unclosed tag inside element text", () => {
+    const input = `<template>
+  <system>
+    Foo <i
+    You are a bookkeeping assistant.
+  </system>
+</template>`;
+    const result = parseXmlDocument(input);
+    if (result.kind !== "error") {
+      throw new Error("Expected parse error");
+    }
+    expect(result.root).toMatch({
+      kind: "element",
+      tag: { text: "template" },
+    });
+    expect(result.errors.some((e) => e.message === "Unclosed tag '<i>'")).toBe(
+      true,
+    );
+  });
+
+  it("recovers an element at EOF missing closing angle bracket", () => {
+    const input = "<root";
+    const result = parseXmlDocument(input);
+    if (result.kind !== "error") {
+      throw new Error("Expected parse error");
+    }
+    expect(result.root).toMatch({
+      kind: "element",
+      tag: { text: "root" },
+      start: 0,
+      end: 5,
+    });
+    expect(result.errors).toMatch([
+      {
+        span: { start: 1, end: 5 },
+        message: "Unclosed tag '<root>'",
+      },
+    ]);
+  });
+});

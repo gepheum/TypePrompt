@@ -1,6 +1,5 @@
 import type {
   InternalError,
-  InternalErrors,
   MappedSpan,
   OffsetMapEntry,
   Span,
@@ -9,6 +8,7 @@ import type {
 import type {
   Attribute,
   ElementNode,
+  InvalidXmlDocument,
   XmlComment,
   XmlDocument,
   XmlNode,
@@ -20,7 +20,7 @@ import type {
 
 export function parseXmlDocument(
   content: string,
-): XmlDocument | InternalErrors {
+): XmlDocument | InvalidXmlDocument {
   return new XmlParser(content).parse();
 }
 
@@ -37,7 +37,7 @@ class XmlParser {
 
   constructor(private readonly content: string) {}
 
-  parse(): XmlDocument | InternalErrors {
+  parse(): XmlDocument | InvalidXmlDocument {
     while (this.cursor < this.content.length) {
       if (this.content[this.cursor] !== "<") {
         this.parseText();
@@ -57,13 +57,15 @@ class XmlParser {
     // Report unclosed tags innermost-first, closing them into their parents.
     while (this.openElements.length >= 1) {
       const el = this.openElements.pop()!;
-      this.errors.push({
-        span: {
-          start: el.tag.start,
-          end: el.tag.end,
-        },
-        message: `Unclosed tag '<${el.tag.text}>'`,
-      });
+      if (!el.unclosedOpeningTag) {
+        this.errors.push({
+          span: {
+            start: el.tag.start,
+            end: el.tag.end,
+          },
+          message: `Unclosed tag '<${el.tag.text}>'`,
+        });
+      }
       this.appendNode(el);
     }
 
@@ -75,7 +77,12 @@ class XmlParser {
     }
 
     if (this.errors.length >= 1) {
-      return { kind: "error", errors: this.errors };
+      return {
+        kind: "error",
+        errors: this.errors,
+        root: this.root,
+        topLevelComments: this.topLevelComments,
+      };
     }
 
     return {
@@ -170,6 +177,7 @@ class XmlParser {
 
     const attributes: Record<string, Attribute> = {};
     let isSelfClosing = false;
+    let closedWithAngleBracket = false;
 
     while (this.cursor < this.content.length) {
       this.skipWhitespace();
@@ -179,16 +187,21 @@ class XmlParser {
       }
       if (ch === ">") {
         this.cursor += 1;
+        closedWithAngleBracket = true;
         break;
       }
       if (ch === "/") {
         if (this.content[this.cursor + 1] === ">") {
           isSelfClosing = true;
+          closedWithAngleBracket = true;
           this.cursor += 2;
           break;
         }
         this.cursor += 1;
         continue;
+      }
+      if (ch === "<") {
+        break;
       }
       if (!RE_NAME_START_CHAR.test(ch)) {
         this.cursor += 1;
@@ -201,6 +214,13 @@ class XmlParser {
     }
 
     const openingTagEnd = this.cursor;
+
+    if (!closedWithAngleBracket) {
+      this.errors.push({
+        span: tag,
+        message: `Unclosed tag '<${tagName}>'`,
+      });
+    }
 
     const element: OpenElement = {
       kind: "element",
@@ -216,6 +236,7 @@ class XmlParser {
       xmlSlice: isSelfClosing
         ? this.content.slice(tokenStart, openingTagEnd)
         : "",
+      unclosedOpeningTag: !closedWithAngleBracket,
     };
     if (isSelfClosing) {
       this.appendNode(element);
@@ -588,6 +609,7 @@ type OpenElement = ElementNode & {
   readonly children: XmlNode[];
   readonly comments: XmlComment[];
   xmlSlice: string;
+  unclosedOpeningTag?: boolean;
 };
 
 type EntityDecodeResult =
