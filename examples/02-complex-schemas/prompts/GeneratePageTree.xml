@@ -69,12 +69,10 @@
     use case, generate a comparison page layout represented as a hierarchy of
     page nodes.
 
-    - Use <c
-      >"section"</c> nodes to group related elements under a logical container.
+    - Use <c>"section"</c> nodes to group related elements under a logical container.
     - Start with a top-level <c>"heading"</c> with <c>level</c> <c
       >"h1"</c> or wrap the page in a root <c>"section"</c>.
-    - Use <c
-      >"paragraph"</c> nodes for descriptive analysis tailored to the target <c
+    - Use <c>"paragraph"</c> nodes for descriptive analysis tailored to the target <c
       >audience</c>.
     - Add <c>"button"</c> nodes for relevant calls to action.
   </system>

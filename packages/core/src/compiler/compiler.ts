@@ -46,7 +46,10 @@ export function compile(
   return result;
 }
 
-function parseSourceFile(path: string, content: string): SourceFileParseResult {
+export function parseSourceFile(
+  path: string,
+  content: string,
+): SourceFileParseResult {
   const result = new SourceFileParseResultImpl(path, content);
 
   const xmlDocument = parseXmlDocument(content);

@@ -27,7 +27,7 @@ export async function formatTemplateFile(content: string): Promise<string> {
   content = await prettierFormat(content, {
     parser: "xml",
     plugins: [plugin],
-    printWidth: 80,
+    printWidth: 88,
     tabWidth: 2,
     xmlWhitespaceSensitivity: "ignore",
   });
@@ -42,6 +42,7 @@ type FormattableSlice = {
   readonly end: number;
   readonly placeholder: string;
   readonly unformatted: string;
+  readonly depth: number;
   readonly format: "typescript" | "xml" | "yaml";
 };
 
@@ -51,17 +52,17 @@ function collectFormattableSlicesForXmlDocument(xmlDocument: XmlDocument): {
 } {
   const { root, topLevelComments } = xmlDocument;
   const items = buildItems([root], topLevelComments);
-  const topLevel = true;
+  const depth = 0;
   const slices: FormattableSlice[] = [];
   const xmlCommentsInCode: true[] = [];
-  collectFormattableSlices(items, topLevel, slices, xmlCommentsInCode);
+  collectFormattableSlices(items, depth, slices, xmlCommentsInCode);
   const anyXmlCommentsInCode = xmlCommentsInCode.length >= 1;
   return { slices, anyXmlCommentsInCode };
 }
 
 function collectFormattableSlices(
   items: readonly Item[],
-  topLevel: boolean,
+  depth: number,
   slices: FormattableSlice[],
   xmlCommentsInCode: true[],
 ): void {
@@ -76,13 +77,13 @@ function collectFormattableSlices(
       if (
         tagName === "namespace" ||
         tagName === "schema" ||
-        (tagName === "meta" && topLevel)
+        (tagName === "meta" && depth <= 0)
       ) {
         format = "typescript";
       } else if (
         tagName === "tools" ||
         tagName === "examples" ||
-        (tagName === "meta" && !topLevel)
+        (tagName === "meta" && depth !== 0)
       ) {
         format = "yaml";
       } else if (
@@ -112,14 +113,18 @@ function collectFormattableSlices(
       const end = childItems.at(-1)!.end;
       const placeholder = crypto.randomUUID().repeat(4);
       const unformatted = childItems.map((i) => i.xmlSlice).join("");
-      return { start, end, placeholder, unformatted, format };
+      return { start, end, placeholder, unformatted, depth, format };
     })();
 
     if (slice) {
       slices.push(slice);
     } else {
-      const topLevel = false;
-      collectFormattableSlices(childItems, topLevel, slices, xmlCommentsInCode);
+      collectFormattableSlices(
+        childItems,
+        depth + 1,
+        slices,
+        xmlCommentsInCode,
+      );
     }
   }
 }
@@ -166,7 +171,7 @@ async function formatTypescriptAndYaml(
       const { placeholder, unformatted } = slice;
       const formatted = await prettierFormat(unformatted, {
         parser: slice.format,
-        printWidth: 80,
+        printWidth: 86 - slice.depth * 2,
         tabWidth: 2,
       });
       return { placeholder, formatted };
@@ -195,7 +200,7 @@ async function formatWhitespaceSensitiveXml(
       let formatted = await prettierFormat(wrapped, {
         parser: "xml",
         plugins: [plugin],
-        printWidth: 80,
+        printWidth: 86 - slice.depth * 2,
         tabWidth: 2,
         xmlWhitespaceSensitivity: "strict",
       });
