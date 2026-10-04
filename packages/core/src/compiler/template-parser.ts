@@ -108,7 +108,7 @@ class TemplateParser {
     }
 
     return {
-      kind: "success",
+      kind: "template",
       sourcePath: this.sourcePath,
       tag: this.templateNode.tag,
       name: name.value,

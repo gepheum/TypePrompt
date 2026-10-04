@@ -107,7 +107,7 @@ export function parseTool(
   }
 
   return {
-    kind: "success",
+    kind: "tool",
     name: name.value,
     namespace: namespace?.value ?? null,
     description: description!,

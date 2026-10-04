@@ -58,7 +58,7 @@ function parseSchemaOrThrow(source: string): Schema {
 function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
   const schema = parseSchemaOrThrow(schemaSource);
   const tool: Tool = {
-    kind: "success",
+    kind: "tool",
     name: { text: name, start: 0, end: name.length },
     namespace: null,
     description: [],

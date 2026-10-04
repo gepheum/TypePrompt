@@ -53,7 +53,7 @@ function parseSchemaOrThrow(
 function makeTool(name: string, schemaSource: string): ToolValidationResult {
   const schema = parseSchemaOrThrow(schemaSource, "namespace");
   const tool: Tool = {
-    kind: "success",
+    kind: "tool",
     name: { text: name, start: 0, end: name.length },
     namespace: null,
     description: [],
@@ -78,7 +78,7 @@ function testValidateTemplate(args: {
   const path = args.path ?? "prompts/Translate.xml";
   const root = parseElement(args.templateXml);
   const parsedTemplate = parseTemplate(root, path);
-  if (parsedTemplate.kind !== "success") {
+  if (parsedTemplate.kind !== "template") {
     throw new Error(
       `parseTemplate failed: ${parsedTemplate.errors.map((e) => e.message).join(", ")}`,
     );
@@ -397,6 +397,9 @@ describe("validateTemplate - meta validation", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [
+        {
+          message: "Does not match type 'Meta'",
+        },
         {
           message: "Expected number but got string",
         },
@@ -741,6 +744,9 @@ describe("validateTemplate - tools validation", () => {
       kind: "error",
       errors: [
         {
+          message: "Does not match type 'Tool[]'",
+        },
+        {
           message: "Expected: never",
         },
       ],
@@ -837,6 +843,9 @@ describe("validateTemplate - examples validation", () => {
       kind: "error",
       errors: [
         {
+          message: "Does not match type 'Example[]'",
+        },
+        {
           message: "Expected string but got number",
         },
       ],
@@ -925,6 +934,9 @@ describe("validateTemplate - examples validation", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [
+        {
+          message: "Does not match type 'Input'",
+        },
         {
           message: "Expected string but got number",
         },

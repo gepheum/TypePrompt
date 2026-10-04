@@ -41,17 +41,14 @@ export type SourceFileParseResult = {
 
   readonly xmlDocument: XmlDocument | InternalErrors;
 
-  readonly templates: readonly Template[];
-  readonly tools: readonly Tool[];
-  readonly namespaces: readonly Namespace[];
-  readonly metas: readonly Meta[];
+  readonly entity: Template | Tool | Namespace | Meta | undefined;
 
   readonly parseErrors: readonly InternalError[];
   readonly warnings: readonly InternalError[];
 };
 
 export type Template = {
-  readonly kind: "success";
+  readonly kind: "template";
   /** Path to the XML file where the template is defined. */
   readonly sourcePath: string;
   readonly tag: Span;
@@ -150,7 +147,7 @@ export type Snippet =
 
 /** Top-level <tool> element. */
 export type Tool = {
-  readonly kind: "success";
+  readonly kind: "tool";
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly description: ToolDescription;

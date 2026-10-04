@@ -37,7 +37,7 @@ describe("parseTemplate - basic template parsing", () => {
     `);
 
     expect(parseTemplate(root, "prompts/Translate.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       name: { text: "Translate" },
       namespace: null,
       outputFormat: null,
@@ -78,7 +78,7 @@ describe("parseTemplate - basic template parsing", () => {
     `);
 
     expect(parseTemplate(root, "prompts/Legal/DraftContract.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       name: { text: "DraftContract" },
       namespace: { text: "Legal" },
       warnings: [],
@@ -219,7 +219,7 @@ describe("parseTemplate - attributes and naming validation", () => {
     `);
 
     expect(parseTemplate(root, "prompts/Wrong.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       warnings: [
         {
           message: "File path should match '**/Translate.xml'",
@@ -247,7 +247,7 @@ describe("parseTemplate - <schema> element", () => {
     `);
 
     expect(parseTemplate(root, "Translate.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       outputFormat: { text: "text" },
       warnings: [],
     });
@@ -353,7 +353,7 @@ describe("parseTemplate - <tools> element", () => {
     `);
 
     expect(parseTemplate(root, "Research.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       tools: {
         kind: "array",
         elements: [
@@ -430,7 +430,7 @@ describe("parseTemplate - <meta> and <examples>", () => {
     `);
 
     expect(parseTemplate(root, "Translate.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       contents: {
         kind: "no-variants",
         content: {
@@ -534,7 +534,7 @@ describe("parseTemplate - variants", () => {
     `);
 
     expect(parseTemplate(root, "ProductDesc.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       contents: {
         kind: "variants",
         defaultContent: {
@@ -672,7 +672,7 @@ describe("parseTemplate - snippets", () => {
     `);
 
     expect(parseTemplate(root, "Document.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       snippets: [
         {
           kind: "snippet",
@@ -900,7 +900,7 @@ describe("parseTemplate - line break verification after formatted inserts", () =
     `);
 
     expect(parseTemplate(root, "DataDoc.xml")).toMatch({
-      kind: "success",
+      kind: "template",
       warnings: [],
     });
   });

@@ -90,7 +90,7 @@ export function parseSourceFile(
       if (template.kind === "error") {
         result.parseErrors.push(...template.errors);
       } else {
-        result.templates.push(template);
+        result.entity = template;
         result.warnings.push(...template.warnings);
       }
       break;
@@ -100,7 +100,7 @@ export function parseSourceFile(
       if (tool.kind === "error") {
         result.parseErrors.push(...tool.errors);
       } else {
-        result.tools.push(tool);
+        result.entity = tool;
         result.warnings.push(...tool.warnings);
       }
       break;
@@ -110,7 +110,7 @@ export function parseSourceFile(
       if (namespace.kind === "error") {
         result.parseErrors.push(...namespace.errors);
       } else {
-        result.namespaces.push(namespace);
+        result.entity = namespace;
         if (namespace.schema.kind === "error") {
           result.parseErrors.push(...namespace.schema.errors);
         }
@@ -123,7 +123,7 @@ export function parseSourceFile(
       if (meta.kind === "error") {
         result.parseErrors.push(...meta.errors);
       } else {
-        result.metas.push(meta);
+        result.entity = meta;
         if (meta.schema.kind === "error") {
           result.parseErrors.push(...meta.schema.errors);
         }
@@ -146,10 +146,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
   }
 
   readonly lineFinder: LineFinderData;
-  readonly templates: Template[] = [];
-  readonly tools: Tool[] = [];
-  readonly namespaces: Namespace[] = [];
-  readonly metas: Meta[] = [];
+  entity: Template | Tool | Namespace | Meta | undefined;
 
   readonly parseErrors: InternalError[] = [];
   readonly warnings: InternalError[] = [];
@@ -192,10 +189,24 @@ class CompilationResultImpl implements CompilationResult {
         sourceFile,
         cached,
       });
-      metas.push(...sourceFile.metas.map(source));
-      namespaces.push(...sourceFile.namespaces.map(source));
-      templates.push(...sourceFile.templates.map(source));
-      tools.push(...sourceFile.tools.map(source));
+      switch (sourceFile.entity?.kind) {
+        case "meta":
+          metas.push(source(sourceFile.entity));
+          break;
+        case "namespace":
+          namespaces.push(source(sourceFile.entity));
+          break;
+        case "template":
+          templates.push(source(sourceFile.entity));
+          break;
+        case "tool":
+          tools.push(source(sourceFile.entity));
+          break;
+        case undefined:
+          break;
+        default:
+          throw new Error(sourceFile.entity satisfies never);
+      }
       this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
       this.warnings[sourceFile.path] = [...sourceFile.warnings];
     }

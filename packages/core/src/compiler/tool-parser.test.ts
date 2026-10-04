@@ -36,7 +36,7 @@ describe("parseTool", () => {
     `);
 
     expect(parseTool(root, "prompts/webSearch.xml")).toMatch({
-      kind: "success",
+      kind: "tool",
       name: { text: "webSearch" },
       namespace: null,
       description: [{ kind: "text", text: "Searches the web for information" }],
@@ -69,7 +69,7 @@ describe("parseTool", () => {
     `);
 
     expect(parseTool(root, "prompts/Users/fetchUser.xml")).toMatch({
-      kind: "success",
+      kind: "tool",
       name: { text: "fetchUser" },
       namespace: { text: "Users" },
       description: [
@@ -242,7 +242,7 @@ describe("parseTool", () => {
     `);
 
     expect(parseTool(root, "prompts/wrongName.xml")).toMatch({
-      kind: "success",
+      kind: "tool",
       name: { text: "webSearch" },
       warnings: [
         {
@@ -261,7 +261,7 @@ describe("parseTool", () => {
     `);
 
     expect(parseTool(root, "prompts/fetchUser.xml")).toMatch({
-      kind: "success",
+      kind: "tool",
       name: { text: "fetchUser" },
       namespace: { text: "Users" },
       warnings: [
@@ -447,7 +447,7 @@ describe("parseTool", () => {
     `);
 
     expect(parseTool(root, "webSearch.xml")).toMatch({
-      kind: "success",
+      kind: "tool",
       name: { text: "webSearch" },
       warnings: [
         {
