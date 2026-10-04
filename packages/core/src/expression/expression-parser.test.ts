@@ -144,14 +144,16 @@ describe("parseExpression - base not matched", () => {
   it("reports 'Expected input' for empty input (no context)", () => {
     expect(parseExpression(textNode(""), NO_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected 'input'" }],
+      errors: [{ message: "Expected 'input'", suggestions: ["input"] }],
     });
   });
 
   it("reports 'Expected input or it' for empty input (with context)", () => {
     expect(parseExpression(textNode(""), WITH_CONTEXT)).toMatch({
       kind: "error",
-      errors: [{ message: "Expected 'input' or 'it'" }],
+      errors: [
+        { message: "Expected 'input' or 'it'", suggestions: ["input", "it"] },
+      ],
     });
   });
 

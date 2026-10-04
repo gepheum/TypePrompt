@@ -28,8 +28,13 @@ export function parseExpression<HasValContext extends boolean>(
     start: number,
     end: number,
     message: string,
+    suggestions?: readonly string[],
   ): ExpressionParseResult<HasValContext> => {
-    return makeSingletonErrors({ span: mappedSpan(start, end), message });
+    return makeSingletonErrors({
+      span: mappedSpan(start, end),
+      message,
+      suggestions,
+    });
   };
 
   // Parse base: "input" | "it"
@@ -43,7 +48,8 @@ export function parseExpression<HasValContext extends boolean>(
     const message = options.hasValContext
       ? "Expected 'input' or 'it'"
       : "Expected 'input'";
-    return fail(pos, length, message);
+    const suggestions = options.hasValContext ? ["input", "it"] : ["input"];
+    return fail(pos, length, message, suggestions);
   }
 
   const baseText = baseMatch[0];
