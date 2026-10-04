@@ -200,8 +200,10 @@ function collectComments(
   }
 }
 
-/// Maps a decoded YAML offset to a source offset, safely extrapolating for
-/// positions that the YAML library may report one past the end of the input.
+/**
+ * Maps a decoded YAML offset to a source offset, safely extrapolating for
+ * positions that the YAML library may report one past the end of the input.
+ */
 function mapOffset(content: MappedText, offset: number): number {
   const clamped = Math.min(offset, content.text.length);
   return textToSourcePosition(content, clamped) + (offset - clamped);

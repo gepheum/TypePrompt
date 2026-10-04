@@ -6,7 +6,11 @@ import type {
   TypeDeclaration,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { InternalError, Span } from "../util/shared-types.js";
+import type {
+  DefinitionLink,
+  InternalError,
+  Span,
+} from "../util/shared-types.js";
 import type { LooseJsonValue, StrictJsonValue } from "./json-types.js";
 
 type SchemaView = {
@@ -14,6 +18,21 @@ type SchemaView = {
   readonly sharedDeclarations: Schema["sharedDeclarations"];
   readonly unionToMembers: Schema["unionToMembers"];
 };
+
+export type JsonTypeMatch =
+  | {
+      readonly kind: "match";
+      readonly definitionLinks: readonly DefinitionLink[];
+    }
+  | {
+      readonly kind: "mismatch";
+      readonly details?: {
+        /** Guaranteed to not be empty. */
+        readonly reasons: readonly InternalError[];
+        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+        readonly matchScore: number;
+      };
+    };
 
 /**
  * Validates a parsed JSON AST against a schema type declaration or synthetic type.
@@ -89,6 +108,7 @@ export function jsonMatchesType(
       if (value.kind === "array") {
         const elementType = resolveType(type.elementType, schema);
         let matchScoreTotal = 0.0;
+        const definitionLinks: DefinitionLink[] = [];
         const mismatchReasons: InternalError[] = [];
         const { elements } = value;
         for (const element of elements) {
@@ -100,6 +120,7 @@ export function jsonMatchesType(
           );
           if (elementMatch.kind === "match") {
             matchScoreTotal += 1.0;
+            definitionLinks.push(...elementMatch.definitionLinks);
           } else if (elementMatch.kind === "mismatch") {
             if (mode === "fast") {
               return FAST_MISMATCH;
@@ -119,7 +140,10 @@ export function jsonMatchesType(
             },
           };
         }
-        return MATCH;
+        return {
+          kind: "match",
+          definitionLinks,
+        };
       } else {
         return mismatch(
           mode,
@@ -155,6 +179,7 @@ export function jsonMatchesType(
           return MATCH;
         }
         let matchScoreTotal = 0.0;
+        const definitionLinks: DefinitionLink[] = [];
         const mismatchReasons: InternalError[] = [];
         const seenFieldNames = new Set<string>();
         // Includes both required and optional schema fields.
@@ -175,6 +200,7 @@ export function jsonMatchesType(
             );
             if (fieldMatch.kind === "match") {
               matchScoreTotal += 1.0;
+              definitionLinks.push(...fieldMatch.definitionLinks);
             } else {
               const _: "mismatch" = fieldMatch.kind;
               if (mode === "fast") {
@@ -225,7 +251,10 @@ export function jsonMatchesType(
             },
           };
         } else {
-          return MATCH;
+          return {
+            kind: "match",
+            definitionLinks,
+          };
         }
       } else {
         return mismatch(
@@ -273,6 +302,7 @@ export function jsonMatchesType(
       if (value.kind === "object") {
         const valueType = resolveType(type.valueType, schema);
         let matchScoreTotal = 0.0;
+        const definitionLinks: DefinitionLink[] = [];
         const mismatchReasons: InternalError[] = [];
         for (const entry of Object.values(value.entries)) {
           const valueMatch = jsonMatchesType(
@@ -283,6 +313,7 @@ export function jsonMatchesType(
           );
           if (valueMatch.kind === "match") {
             matchScoreTotal += 1.0;
+            definitionLinks.push(...valueMatch.definitionLinks);
           } else if (valueMatch.kind === "mismatch") {
             if (mode === "fast") {
               return FAST_MISMATCH;
@@ -303,7 +334,10 @@ export function jsonMatchesType(
             },
           };
         }
-        return MATCH;
+        return {
+          kind: "match",
+          definitionLinks,
+        };
       } else {
         return mismatch(
           mode,
@@ -426,19 +460,7 @@ export function jsonMatchesType(
   }
 }
 
-type JsonTypeMatch =
-  | { readonly kind: "match" }
-  | {
-      readonly kind: "mismatch";
-      readonly details?: {
-        /** Guaranteed to not be empty. */
-        readonly reasons: readonly InternalError[];
-        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
-        readonly matchScore: number;
-      };
-    };
-
-const MATCH = { kind: "match" } as const;
+const MATCH = { kind: "match", definitionLinks: [] } as const;
 const FAST_MISMATCH = { kind: "mismatch" } as const;
 
 function makeExpectedOneOfMessage(

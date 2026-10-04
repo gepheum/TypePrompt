@@ -39,7 +39,7 @@ export type LooseJsonObjectEntry = JsonObjectEntry<"loose">;
 
 export type JsonArray<Mode extends JsonMode> = {
   readonly kind: "array";
-  /// The left square bracket.
+  /** The left square bracket. */
   readonly firstToken: Span;
   readonly elements: readonly JsonValue<Mode>[];
 };

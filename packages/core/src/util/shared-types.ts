@@ -62,3 +62,8 @@ export type OffsetMapEntry = {
   readonly textPosition: number;
   readonly sourcePosition: number;
 };
+
+export type DefinitionLink = {
+  readonly reference: Span;
+  readonly definition: Span;
+};
