@@ -138,7 +138,12 @@ describe("resolveExpressionType - property access on interface", () => {
     const schema = parseSchemaOrThrow("type Input = { name: string; }");
     expect(resolveExpressionType(makeExpr("input.age"), schema, null)).toMatch({
       kind: "error",
-      errors: [{ message: "Field 'age' not found in interface" }],
+      errors: [
+        {
+          message: "Field 'age' not found in interface",
+          suggestions: ["name"],
+        },
+      ],
     });
   });
 

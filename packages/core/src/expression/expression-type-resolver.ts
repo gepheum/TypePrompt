@@ -96,6 +96,7 @@ function doResolveExpressionType<HasValContext extends boolean>(
             {
               span: expression.property,
               message: `Field '${expression.property.text}' not found in interface`,
+              suggestions: Object.keys(left.fields),
             },
           ],
         };
