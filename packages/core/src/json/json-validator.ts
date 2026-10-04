@@ -161,6 +161,10 @@ export function jsonMatchesType(
         let matchScoreTotal = 0.0;
         const mismatchReasons: InternalError[] = [];
         const seenFieldNames = new Set<string>();
+        // Includes both required and optional schema fields.
+        const missingFields: readonly string[] = Object.keys(
+          type.fields,
+        ).filter((name) => !value.entries[name]);
         for (const entry of Object.values(value.entries)) {
           const fieldName = entry.key.value;
           seenFieldNames.add(fieldName);
@@ -192,6 +196,7 @@ export function jsonMatchesType(
               mismatchReasons.push({
                 span: entry.key.firstToken,
                 message: `Unknown field '${fieldName}'`,
+                suggestions: missingFields,
               });
             }
           }

@@ -569,7 +569,25 @@ describe("validateJson - record type", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateJson - interface extras", () => {
-  it("rejects an object with an unknown field", () => {
+  it("rejects an object with an unknown field and suggests missing fields", () => {
+    const schema = parseSchemaOrThrow(
+      "type Response = { name: string; age?: number; };",
+    );
+    const type = schema.typeDeclarations["Response"]!;
+    expect(
+      validateJson(objStrict([["nickname", str("Alice")]]), type, schema),
+    ).toMatch([
+      {
+        message: "Unknown field 'nickname'",
+        suggestions: ["name", "age"],
+      },
+      {
+        message: "Missing required field 'name'",
+      },
+    ]);
+  });
+
+  it("rejects an unknown field with empty suggestions when all schema fields are present", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     const type = schema.typeDeclarations["Response"]!;
     expect(
@@ -581,7 +599,12 @@ describe("validateJson - interface extras", () => {
         type,
         schema,
       ),
-    ).toMatch([{ message: "Unknown field 'extra'" }]);
+    ).toMatch([
+      {
+        message: "Unknown field 'extra'",
+        suggestions: [],
+      },
+    ]);
   });
 });
 
@@ -1031,8 +1054,42 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reasons: [{ message: "Unknown field 'extra'" }],
+        reasons: [{ message: "Unknown field 'extra'", suggestions: [] }],
         matchScore: 2 / 3,
+      },
+    });
+  });
+
+  it("interface: unknown field includes missing required and optional fields in suggestions", () => {
+    expect(
+      jsonMatchesType(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["extra", num(1)],
+          ]),
+        ),
+        ifaceType({
+          name: { text: "string" },
+          age: { text: "number" },
+          bio: { text: "string", optional: true },
+        }),
+        "thorough",
+        EMPTY_VIEW,
+      ),
+    ).toMatch({
+      kind: "mismatch",
+      details: {
+        reasons: [
+          {
+            message: "Unknown field 'extra'",
+            suggestions: ["age", "bio"],
+          },
+          {
+            message: "Missing required field 'age'",
+          },
+        ],
+        matchScore: 0.5,
       },
     });
   });
