@@ -195,6 +195,7 @@ function validateType(
           errors.push({
             span: type.name,
             message: `Unknown type '${typeName}'`,
+            suggestions: Object.keys(schema.typeDeclarations),
           });
         }
         return null;
@@ -208,10 +209,12 @@ function validateType(
           return null;
         }
         const typeName = type.name.text;
-        if (!context.namespaceSchema.typeDeclarations[typeName]) {
+        const { typeDeclarations } = context.namespaceSchema;
+        if (!typeDeclarations[typeName]) {
           errors.push({
             span: type.name,
             message: `Unknown type '${typeName}'`,
+            suggestions: Object.keys(typeDeclarations),
           });
         }
         return null;

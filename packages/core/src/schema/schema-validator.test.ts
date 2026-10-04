@@ -243,7 +243,7 @@ describe("validateSchema - type references", () => {
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Unknown type 'Unknown'" }],
+      errors: [{ message: "Unknown type 'Unknown'", suggestions: ["Output"] }],
     });
   });
 
@@ -585,11 +585,11 @@ describe("validateSchema - shared type names", () => {
   it("reports error when the referenced type does not exist in namespace schema", () => {
     const result = validateSchema(
       parseDeclarations("type Input = string;\ntype Output = shared.Missing;"),
-      { kind: "template", namespaceSchema: EMPTY_SCHEMA },
+      makeTemplateContext("type Profile = { name: string; };"),
     );
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: "Unknown type 'Missing'" }],
+      errors: [{ message: "Unknown type 'Missing'", suggestions: ["Profile"] }],
     });
   });
 });
