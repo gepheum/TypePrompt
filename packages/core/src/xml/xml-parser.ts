@@ -296,15 +296,11 @@ class XmlParser {
       RE_UNQUOTED_ATTR_VALUE.exec(this.content);
       const valueEnd = RE_UNQUOTED_ATTR_VALUE.lastIndex;
       this.cursor = valueEnd;
-      const valueSpan = this.decodeXmlText(valueStart, valueEnd);
       errors.push({
         span: nameSpan,
         message: "Attribute value must be quoted",
       });
-      return {
-        name: nameSpan,
-        value: valueSpan,
-      };
+      return null;
     }
 
     this.cursor += 1; // skip opening quote

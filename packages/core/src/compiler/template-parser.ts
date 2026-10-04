@@ -502,7 +502,7 @@ class TemplateParser {
     }
     const snippets = this.indexSnippets();
     const seenSnippets = new Set<string>();
-    const spanToError = new Map<Span, string>();
+    const spanToError = new Map<Span, Omit<InternalError, "span">>();
 
     const traverse = (
       body: Body | BodyInContext | undefined,
@@ -514,14 +514,16 @@ class TemplateParser {
         const snippetName = piece.snippet.text;
         const snippet = snippets[snippetName];
         if (!snippet) {
-          spanToError.set(piece.snippet, `Unknown snippet '${snippetName}'`);
+          spanToError.set(piece.snippet, {
+            message: `Unknown snippet '${snippetName}'`,
+            suggestions: Object.keys(snippets),
+          });
           continue;
         }
         if (inProgress.has(snippet)) {
-          spanToError.set(
-            piece.snippet,
-            `Snippet '${snippetName}' circularly references itself`,
-          );
+          spanToError.set(piece.snippet, {
+            message: `Snippet '${snippetName}' circularly references itself`,
+          });
           continue;
         }
         inProgress.add(snippet);
@@ -565,7 +567,7 @@ class TemplateParser {
     }
 
     for (const [span, error] of spanToError.entries()) {
-      this.errors.push({ span, message: error });
+      this.errors.push({ span, ...error });
     }
 
     for (const snippet of this.snippets) {

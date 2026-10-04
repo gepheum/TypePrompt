@@ -317,9 +317,16 @@ describe("parseXmlDocument", () => {
   });
 
   it("reports an unquoted attribute value", () => {
-    expect(parseXmlDocument("<a x=y></a>")).toMatch({
+    expect(parseXmlDocument('<a valid="yes" x=y></a>')).toMatch({
       kind: "error",
       errors: [{ message: "Attribute value must be quoted" }],
+      root: {
+        kind: "element",
+        tag: { text: "a" },
+        attributes: {
+          valid: { name: { text: "valid" }, value: { text: "yes" } },
+        },
+      },
     });
   });
 
