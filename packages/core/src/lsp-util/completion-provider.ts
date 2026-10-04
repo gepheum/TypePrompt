@@ -22,35 +22,26 @@ export function getCompletionItems(args: {
   const leftPart = newContent.slice(0, position);
   const rightPart = newContent.slice(position);
 
-  // TODO: check if result span contains insertion...
-  const _insertions = (): readonly string[] => {
+  // Snippets we try to insert at 'position' until we get one error with suggestions.
+  const insertions = ((): readonly string[] => {
     if (/[a-zA-Z0-9"']$/.test(leftPart) || /^[a-zA-Z0-9"']/.test(rightPart)) {
       return [""];
     }
-    const insertions: string[] = [];
+    const insertions: string[] = [completionToken];
+    if (rightPart.endsWith(" ")) {
+      // For XML attributes
+      insertions.push(`${completionToken}=""`);
+    }
+    if (/(?:\r?\n|^)[ \t]*-?[ \t]*$/.test(rightPart)) {
+      // For YAML object entries
+      insertions.push(`${completionToken}: true`);
+    }
     return insertions;
-  };
-
-  let newContents: readonly string[];
-  const alphaAdjacent =
-    /[a-zA-Z0-9]/.test(newContent[position - 1] ?? "") ||
-    /[a-zA-Z0-9]/.test(newContent[position] ?? "");
-  if (alphaAdjacent) {
-    // There is an alphanumerical character adjacent to 'position'.
-    newContents = [newContent];
-  } else {
-    // No alphanumerical character adjacent to 'position'.
-    const insertions = [
-      `z${randomLetters}`,
-      `Z${randomLetters}`,
-      `z${randomLetters}=""`,
-      `z${randomLetters}: true`,
-    ];
-    newContents = insertions.map((i) => `${leftPart}${i}${rightPart}`);
-  }
+  })();
 
   const pathToNewContent = Object.fromEntries(Object.entries(pathToOldContent));
-  for (const content of newContents) {
+  for (const insertion of insertions) {
+    const content = [leftPart, insertion, rightPart].join("");
     pathToNewContent[path] = content;
 
     const compilationResult = compile(pathToNewContent, { cache });
@@ -63,13 +54,13 @@ export function getCompletionItems(args: {
       const { span, suggestions } = error;
       if (span.start > position || position > span.end) continue;
       if (!suggestions || suggestions.length <= 0) continue;
-      if (alphaAdjacent) {
+      if (insertion === "") {
         return { span, suggestions };
       } else {
         return {
           span: {
-            start: position,
-            end: position,
+            start: span.start,
+            end: span.end - completionToken.length,
           },
           suggestions,
         };
@@ -80,11 +71,5 @@ export function getCompletionItems(args: {
   return null;
 }
 
-const randomLetters = ((): string => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  let result = "";
-  for (let i = 0; i < 10; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-})();
+// Valid identifier unlikely to appear in a real project.
+const completionToken = "ziPuBeZGlJt";
