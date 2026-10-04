@@ -24,10 +24,13 @@ export function getCompletionItems(args: {
 
   // Snippets we try to insert at 'position' until we get one error with suggestions.
   const insertions = ((): readonly string[] => {
-    if (/[a-zA-Z0-9"']$/.test(leftPart) || /^[a-zA-Z0-9"']/.test(rightPart)) {
+    if (/[a-zA-Z0-9]$/.test(leftPart) || /^[a-zA-Z0-9]/.test(rightPart)) {
       return [""];
     }
-    const insertions: string[] = [completionToken];
+    const insertions: string[] = [
+      completionToken,
+      completionToken.toUpperCase(),
+    ];
     if (rightPart.endsWith(" ")) {
       // For XML attributes
       insertions.push(`${completionToken}=""`);
@@ -52,7 +55,7 @@ export function getCompletionItems(args: {
 
     for (const error of errors) {
       const { span, suggestions } = error;
-      if (span.start > position || position > span.end) continue;
+      if (position < span.start || span.end < position) continue;
       if (!suggestions || suggestions.length <= 0) continue;
       if (insertion === "") {
         return { span, suggestions };
@@ -72,4 +75,4 @@ export function getCompletionItems(args: {
 }
 
 // Valid identifier unlikely to appear in a real project.
-const completionToken = "ziPuBeZGlJt";
+const completionToken = "zipubezgljt";
