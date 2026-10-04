@@ -34,7 +34,7 @@ export function validateJson(
   json: StrictJsonValue,
   type: TypeDeclaration | (SyntheticType & HasName),
   schema: SchemaView,
-): InternalError[] {
+): readonly InternalError[] {
   const result = jsonMatchesType(
     json as LooseJsonValue,
     resolveType(type.kind === "type" ? type.valueType : type, schema),
@@ -45,18 +45,12 @@ export function validateJson(
     return [];
   }
   const typeName = type.name.text;
-  const errors: InternalError[] = [
+  const errors = result.details?.reasons ?? [
     {
-      span: {
-        start: json.firstToken.start,
-        end: json.firstToken.end,
-      },
+      span: json.firstToken,
       message: `Does not match type '${typeName}'`,
     },
   ];
-  if (result.details !== undefined) {
-    errors.push(result.details.reason);
-  }
   return errors;
 }
 
@@ -99,6 +93,7 @@ export function jsonMatchesType(
       if (value.kind === "array") {
         const elementType = resolveType(type.elementType, schema);
         let matchScoreTotal = 0.0;
+        const mismatchReasons: InternalError[] = [];
         const { elements } = value;
         for (const element of elements) {
           const elementMatch = jsonMatchesType(
@@ -115,15 +110,18 @@ export function jsonMatchesType(
             } else {
               const details = elementMatch.details!;
               matchScoreTotal += details.matchScore;
-              return {
-                kind: "mismatch",
-                details: {
-                  reason: details.reason,
-                  matchScore: matchScoreTotal / elements.length,
-                },
-              };
+              mismatchReasons.push(...details.reasons);
             }
           }
+        }
+        if (mismatchReasons.length) {
+          return {
+            kind: "mismatch",
+            details: {
+              reasons: mismatchReasons,
+              matchScore: matchScoreTotal / elements.length,
+            },
+          };
         }
         return MATCH;
       } else {
@@ -161,7 +159,7 @@ export function jsonMatchesType(
           return MATCH;
         }
         let matchScoreTotal = 0.0;
-        let firstMismatchReason: InternalError | undefined;
+        const mismatchReasons: InternalError[] = [];
         const seenFieldNames = new Set<string>();
         for (const entry of Object.values(value.entries)) {
           const fieldName = entry.key.value;
@@ -182,8 +180,8 @@ export function jsonMatchesType(
               if (mode === "fast") {
                 return FAST_MISMATCH;
               } else {
-                firstMismatchReason ??= fieldMatch.details!.reason;
                 matchScoreTotal += fieldMatch.details!.matchScore;
+                mismatchReasons.push(...fieldMatch.details!.reasons);
               }
             }
           } else {
@@ -191,13 +189,10 @@ export function jsonMatchesType(
             if (mode === "fast") {
               return FAST_MISMATCH;
             } else {
-              firstMismatchReason ??= {
-                span: {
-                  start: entry.key.firstToken.start,
-                  end: entry.key.firstToken.end,
-                },
+              mismatchReasons.push({
+                span: entry.key.firstToken,
                 message: `Unknown field '${fieldName}'`,
-              };
+              });
             }
           }
         }
@@ -208,24 +203,23 @@ export function jsonMatchesType(
             const fieldName = field.name.text;
             if (seenFieldNames.has(fieldName)) {
               matchScoreTotal += 1.0;
+            } else if (mode === "fast") {
+              return FAST_MISMATCH;
             } else {
-              firstMismatchReason ??= {
-                span: {
-                  start: value.firstToken.start,
-                  end: value.firstToken.end,
-                },
+              mismatchReasons.push({
+                span: value.firstToken,
                 message: `Missing required field '${fieldName}'`,
-              };
+              });
             }
           }
         }
-        if (firstMismatchReason) {
+        if (mismatchReasons.length !== 0) {
           const divisor =
             requiredFields.length + Object.keys(value.entries).length;
           return {
             kind: "mismatch",
             details: {
-              reason: firstMismatchReason,
+              reasons: mismatchReasons,
               matchScore: matchScoreTotal / divisor,
             },
           };
@@ -278,6 +272,7 @@ export function jsonMatchesType(
       if (value.kind === "object") {
         const valueType = resolveType(type.valueType, schema);
         let matchScoreTotal = 0.0;
+        const mismatchReasons: InternalError[] = [];
         for (const entry of Object.values(value.entries)) {
           const valueMatch = jsonMatchesType(
             entry.value,
@@ -293,16 +288,19 @@ export function jsonMatchesType(
             } else {
               const details = valueMatch.details!;
               matchScoreTotal += details.matchScore;
-              return {
-                kind: "mismatch",
-                details: {
-                  reason: details.reason,
-                  matchScore:
-                    matchScoreTotal / Object.keys(value.entries).length,
-                },
-              };
+              mismatchReasons.push(...details.reasons);
             }
           }
+        }
+        if (mismatchReasons.length !== 0) {
+          const dividor = Object.keys(value.entries).length;
+          return {
+            kind: "mismatch",
+            details: {
+              reasons: mismatchReasons,
+              matchScore: matchScoreTotal / dividor,
+            },
+          };
         }
         return MATCH;
       } else {
@@ -450,15 +448,15 @@ function mismatch(
   if (mode === "fast") {
     return FAST_MISMATCH;
   }
+  const reasons: readonly InternalError[] = [
+    {
+      span: sourceSpan,
+      message,
+      suggestions,
+    },
+  ];
   return {
     kind: "mismatch",
-    details: {
-      reason: {
-        span: { start: sourceSpan.start, end: sourceSpan.end },
-        message,
-        suggestions,
-      },
-      matchScore,
-    },
+    details: { reasons, matchScore },
   };
 }

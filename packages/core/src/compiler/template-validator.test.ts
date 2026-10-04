@@ -398,9 +398,6 @@ describe("validateTemplate - meta validation", () => {
       kind: "error",
       errors: [
         {
-          message: "Does not match type 'Meta'",
-        },
-        {
           message: "Expected number but got string",
         },
       ],
@@ -744,9 +741,6 @@ describe("validateTemplate - tools validation", () => {
       kind: "error",
       errors: [
         {
-          message: "Does not match type 'Tool[]'",
-        },
-        {
           message: "Expected: never",
         },
       ],
@@ -843,9 +837,6 @@ describe("validateTemplate - examples validation", () => {
       kind: "error",
       errors: [
         {
-          message: "Does not match type 'Example[]'",
-        },
-        {
           message: "Expected string but got number",
         },
       ],
@@ -934,9 +925,6 @@ describe("validateTemplate - examples validation", () => {
     expect(result).toMatch({
       kind: "error",
       errors: [
-        {
-          message: "Does not match type 'Input'",
-        },
         {
           message: "Expected string but got number",
         },

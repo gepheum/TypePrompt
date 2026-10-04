@@ -81,7 +81,8 @@ export type JsonTypeMatch =
   | {
       readonly kind: "mismatch";
       readonly details?: {
-        readonly reason: InternalError;
+        /** Guaranteed to not be empty. */
+        readonly reasons: readonly InternalError[];
         /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
         readonly matchScore: number;
       };

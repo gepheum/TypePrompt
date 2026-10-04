@@ -58,8 +58,8 @@ function validateJsonCTag(
   ) {
     return [];
   } else {
-    const mismatches = schemas.flatMap((schema) =>
-      Object.entries(schema.typeDeclarations).map(([name, t]) => {
+    const mismatches = schemas.flatMap((schema): readonly Mismatch[] =>
+      Object.entries(schema.typeDeclarations).map(([name, t]): Mismatch => {
         const result = jsonMatchesType(
           cTag.json,
           resolveType(t.valueType, schema),
@@ -69,19 +69,13 @@ function validateJsonCTag(
         const score =
           result.kind === "mismatch" ? (result.details?.matchScore ?? 0) : 0;
         const reason =
-          result.kind === "mismatch" ? result.details?.reason : undefined;
+          result.kind === "mismatch" ? result.details?.reasons[0] : undefined;
         return { name, score, reason };
       }),
     );
-    const best = mismatches.reduce<
-      | {
-          name: string;
-          score: number;
-          reason: InternalError | undefined;
-        }
-      | undefined
-    >(
-      (acc, m) => (acc === undefined || m.score > acc.score ? m : acc),
+    const best = mismatches.reduce<Mismatch | undefined>(
+      (acc, m): Mismatch | undefined =>
+        acc === undefined || m.score > acc.score ? m : acc,
       undefined,
     );
     if (best !== undefined && best.score >= 0.5 && best.reason !== undefined) {
@@ -102,3 +96,9 @@ function validateJsonCTag(
     }
   }
 }
+
+type Mismatch = {
+  readonly name: string;
+  readonly score: number;
+  readonly reason: InternalError | undefined;
+};

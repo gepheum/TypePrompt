@@ -343,60 +343,52 @@ describe("validateJson - exact match", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateJson - mismatch", () => {
-  it("returns 2 errors when a number is given for a string type", () => {
+  it("returns an error when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(42), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected string but got number" },
     ]);
   });
 
-  it("returns 2 errors when an object is given for a string type", () => {
+  it("returns an error when an object is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([]), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected string but got object" },
     ]);
   });
 
-  it("returns 2 errors when a number is given for a string union", () => {
+  it("returns an error when a number is given for a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(1), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected string but got number" },
     ]);
   });
 
-  it("returns 2 errors when the discriminator field is missing", () => {
+  it("returns an error when the discriminator field is missing", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; }; type Dog = { kind: "dog"; }; type Response = Cat | Dog',
     );
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Felix")]]), type, schema),
-    ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Missing required field 'kind'" },
-    ]);
+    ).toMatch([{ message: "Missing required field 'kind'" }]);
   });
 
-  it("returns 2 errors for an object with a wrong-typed field", () => {
+  it("returns an error for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["name", num(42)]]), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected string but got number" },
     ]);
   });
 
-  it("returns 2 errors for a string not in a string union", () => {
+  it("returns an error for a string not in a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("c"), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       {
         message: 'Expected one of ["a","b"]',
         suggestions: ['"a"', '"b"'],
@@ -404,7 +396,7 @@ describe("validateJson - mismatch", () => {
     ]);
   });
 
-  it("returns 2 errors for an unknown discriminant value in an interface union", () => {
+  it("returns an error for an unknown discriminant value in an interface union", () => {
     const schema = parseSchemaOrThrow(
       'type Response = { kind: "cat" } | { kind: "dog" }',
     );
@@ -412,7 +404,6 @@ describe("validateJson - mismatch", () => {
     expect(
       validateJson(objStrict([["kind", str("fish")]]), type, schema),
     ).toMatch([
-      { message: "Does not match type 'Response'" },
       {
         message: 'Expected one of ["cat","dog"]',
         suggestions: ['"cat"', '"dog"'],
@@ -420,16 +411,34 @@ describe("validateJson - mismatch", () => {
     ]);
   });
 
-  it("returns 2 errors for a missing required field", () => {
+  it("returns an error for a missing required field", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), type, schema),
+    ).toMatch([{ message: "Missing required field 'age'" }]);
+  });
+
+  it("returns multiple errors when an object has multiple invalid/missing fields", () => {
+    const schema = parseSchemaOrThrow(
+      "type Response = { name: string; age: number; score: number; };",
+    );
+    const type = schema.typeDeclarations["Response"]!;
+    expect(
+      validateJson(
+        objStrict([
+          ["name", num(42)],
+          ["age", str("bad")],
+        ]),
+        type,
+        schema,
+      ),
     ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Missing required field 'age'" },
+      { message: "Expected string but got number" },
+      { message: "Expected number but got string" },
+      { message: "Missing required field 'score'" },
     ]);
   });
 });
@@ -461,7 +470,6 @@ describe("validateJson - integer type", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(3.14), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected int but got float" },
     ]);
   });
@@ -470,7 +478,6 @@ describe("validateJson - integer type", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(num(2147483648), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected int but got float" },
     ]);
   });
@@ -494,20 +501,14 @@ describe("validateJson - boolean-literal type", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
-    ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Expected true", suggestions: ["true"] },
-    ]);
+    ).toMatch([{ message: "Expected true", suggestions: ["true"] }]);
   });
 
-  it("rejects a non-boolean with 2 errors", () => {
+  it("rejects a non-boolean with an error", () => {
     const schema = parseSchemaOrThrow("type Response = { status: true }");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["status", num(1)]]), type, schema)).toMatch(
-      [
-        { message: "Does not match type 'Response'" },
-        { message: "Expected true", suggestions: ["true"] },
-      ],
+      [{ message: "Expected true", suggestions: ["true"] }],
     );
   });
 });
@@ -542,13 +543,12 @@ describe("validateJson - record type", () => {
     expect(validateJson(objStrict([]), type, schema)).toMatch([]);
   });
 
-  it("rejects a non-object with 2 errors", () => {
+  it("rejects a non-object with an error", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
     );
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(str("oops"), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected object but got string" },
     ]);
   });
@@ -559,7 +559,6 @@ describe("validateJson - record type", () => {
     );
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["x", str("bad")]]), type, schema)).toMatch([
-      { message: "Does not match type 'Response'" },
       { message: "Expected number but got string" },
     ]);
   });
@@ -582,10 +581,7 @@ describe("validateJson - interface extras", () => {
         type,
         schema,
       ),
-    ).toMatch([
-      { message: "Does not match type 'Response'" },
-      { message: "Unknown field 'extra'" },
-    ]);
+    ).toMatch([{ message: "Unknown field 'extra'" }]);
   });
 });
 
@@ -619,7 +615,6 @@ describe("validateJson - boolean-discriminated union", () => {
     expect(
       validateJson(objStrict([["success", str("yes")]]), type, schema),
     ).toMatch([
-      { message: "Does not match type 'Response'" },
       {
         message: "Expected boolean but got string",
         suggestions: ["true", "false"],
@@ -645,13 +640,13 @@ describe("jsonMatchesType - result shape and mode", () => {
     ).toMatch({ kind: "mismatch" });
   });
 
-  it("thorough mode: mismatch includes reason and matchScore", () => {
+  it("thorough mode: mismatch includes reasons and matchScore", () => {
     expect(
       jsonMatchesType(num(1), primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0,
       },
     });
@@ -721,7 +716,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: 'Expected "ok"', suggestions: ['"ok"'] },
+        reasons: [{ message: 'Expected "ok"', suggestions: ['"ok"'] }],
         matchScore: 0.5,
       },
     });
@@ -733,7 +728,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: 'Expected "ok"', suggestions: ['"ok"'] },
+        reasons: [{ message: 'Expected "ok"', suggestions: ['"ok"'] }],
         matchScore: 0,
       },
     });
@@ -745,7 +740,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected true", suggestions: ["true"] },
+        reasons: [{ message: "Expected true", suggestions: ["true"] }],
         matchScore: 0.5,
       },
     });
@@ -757,7 +752,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected true", suggestions: ["true"] },
+        reasons: [{ message: "Expected true", suggestions: ["true"] }],
         matchScore: 0,
       },
     });
@@ -769,7 +764,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected int but got float" },
+        reasons: [{ message: "Expected int but got float" }],
         matchScore: 0.5,
       },
     });
@@ -786,7 +781,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected int but got float" },
+        reasons: [{ message: "Expected int but got float" }],
         matchScore: 0.5,
       },
     });
@@ -798,7 +793,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected integer but got string" },
+        reasons: [{ message: "Expected integer but got string" }],
         matchScore: 0,
       },
     });
@@ -810,7 +805,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0,
       },
     });
@@ -830,10 +825,12 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: {
-          message: 'Expected one of ["a","b"]',
-          suggestions: ['"a"', '"b"'],
-        },
+        reasons: [
+          {
+            message: 'Expected one of ["a","b"]',
+            suggestions: ['"a"', '"b"'],
+          },
+        ],
         matchScore: 0.5,
       },
     });
@@ -847,7 +844,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0,
       },
     });
@@ -868,7 +865,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Missing required field 'kind'" },
+        reasons: [{ message: "Missing required field 'kind'" }],
         matchScore: 0,
       },
     });
@@ -889,10 +886,12 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: {
-          message: "Expected string but got number",
-          suggestions: ['"cat"', '"dog"'],
-        },
+        reasons: [
+          {
+            message: "Expected string but got number",
+            suggestions: ['"cat"', '"dog"'],
+          },
+        ],
         matchScore: 0,
       },
     });
@@ -913,10 +912,12 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: {
-          message: 'Expected one of ["cat","dog"]',
-          suggestions: ['"cat"', '"dog"'],
-        },
+        reasons: [
+          {
+            message: 'Expected one of ["cat","dog"]',
+            suggestions: ['"cat"', '"dog"'],
+          },
+        ],
         matchScore: 0.5,
       },
     });
@@ -927,12 +928,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       'type Cat = { kind: "cat"; name: string; age: number }; type Dog = { kind: "dog"; breed: string }; type Pet = Cat | Dog',
     );
     const petType = schema.typeDeclarations["Pet"]!.valueType;
-    // Cat has 3 required fields (kind, name, age).
-    // Given { kind: "cat", name: "Felix", age: "bad" }:
-    // Loop 1: kind matches (1), name matches (1), age mismatches (0) -> total = 2.
-    // Loop 2: kind present (1), name present (1), age present (1) -> total = 2 + 3 = 5.
-    // Divisor: 3 required + 3 entries = 6.
-    // matchScore: 5 / 6 = 0.8333333333333334.
     expect(
       jsonMatchesType(
         safeCast(
@@ -949,7 +944,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
+        reasons: [{ message: "Expected number but got string" }],
         matchScore: 5 / 6,
       },
     });
@@ -962,9 +957,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
 
 describe("jsonMatchesType - matchScore: Interfaces", () => {
   it("interface: 1 of 2 required fields has wrong type → matchScore 0.75", () => {
-    // 2 required fields (name, age). JSON has both present: name matches (1), age fails (0).
-    // Seen required fields: name (1), age (1).
-    // Total = 1 + 0 + 1 + 1 = 3. Divisor = 2 + 2 = 4. Score = 3/4 = 0.75.
     expect(
       jsonMatchesType(
         safeCast(
@@ -980,16 +972,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
+        reasons: [{ message: "Expected number but got string" }],
         matchScore: 0.75,
       },
     });
   });
 
   it("interface: 1 of 2 required fields is missing → matchScore 2/3", () => {
-    // 2 required fields (name, age). JSON has only { name: "Alice" }.
-    // Loop 1: name matches (1). Loop 2: name present (1), age missing (0).
-    // Total = 1 + 1 = 2. Divisor = 2 required + 1 entry = 3. Score = 2/3.
     expect(
       jsonMatchesType(
         safeCast(objStrict([["name", str("Alice")]])),
@@ -1000,15 +989,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Missing required field 'age'" },
+        reasons: [{ message: "Missing required field 'age'" }],
         matchScore: 2 / 3,
       },
     });
   });
 
   it("interface: empty object with missing required fields → matchScore 0", () => {
-    // 2 required fields. JSON is {}.
-    // Total = 0. Divisor = 2 + 0 = 2. Score = 0/2 = 0.
     expect(
       jsonMatchesType(
         safeCast(objStrict([])),
@@ -1019,17 +1006,16 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Missing required field 'name'" },
+        reasons: [
+          { message: "Missing required field 'name'" },
+          { message: "Missing required field 'age'" },
+        ],
         matchScore: 0,
       },
     });
   });
 
   it("interface: valid required field plus unknown field → matchScore 2/3", () => {
-    // 1 required field (name). JSON has { name: "Alice", extra: 1 }.
-    // Loop 1: name matches (1), extra unknown (0).
-    // Loop 2: name present (1).
-    // Total = 1 + 0 + 1 = 2. Divisor = 1 required + 2 entries = 3. Score = 2/3.
     expect(
       jsonMatchesType(
         safeCast(
@@ -1045,17 +1031,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Unknown field 'extra'" },
+        reasons: [{ message: "Unknown field 'extra'" }],
         matchScore: 2 / 3,
       },
     });
   });
 
   it("interface: 1 required and 1 optional field with wrong optional type → matchScore 2/3", () => {
-    // 1 required (name), 1 optional (nickname). JSON has { name: "Alice", nickname: 123 }.
-    // Loop 1: name matches (1), nickname fails (0).
-    // Loop 2: name present (1).
-    // Total = 1 + 0 + 1 = 2. Divisor = 1 required + 2 entries = 3. Score = 2/3.
     expect(
       jsonMatchesType(
         safeCast(
@@ -1074,16 +1056,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 2 / 3,
       },
     });
   });
 
   it("interface: only optional fields with 1 valid and 1 invalid → matchScore 0.5", () => {
-    // 0 required fields. JSON has { a: "ok", b: 123 } for { a?: string, b?: string }.
-    // Loop 1: a matches (1), b fails (0). Loop 2: 0 required fields.
-    // Total = 1 + 0 = 1. Divisor = 0 required + 2 entries = 2. Score = 1/2 = 0.5.
     expect(
       jsonMatchesType(
         safeCast(
@@ -1102,7 +1081,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0.5,
       },
     });
@@ -1113,12 +1092,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       "type User = { name: string; age: number; }; type Wrapper = { user: User; };",
     );
     const wrapperType = schema.typeDeclarations["Wrapper"]!.valueType;
-    // Inner User has matchScore = 0.75 (name valid, age invalid).
-    // Outer Wrapper has 1 required field (user).
-    // Outer Loop 1: user has matchScore 0.75.
-    // Outer Loop 2: user is present (+1.0) -> total = 1.75.
-    // Outer Divisor = 1 required + 1 entry = 2.
-    // Outer score = 1.75 / 2 = 0.875.
     expect(
       jsonMatchesType(
         safeCast(
@@ -1139,7 +1112,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
+        reasons: [{ message: "Expected number but got string" }],
         matchScore: 0.875,
       },
     });
@@ -1156,7 +1129,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected object but got string" },
+        reasons: [{ message: "Expected object but got string" }],
         matchScore: 0,
       },
     });
@@ -1169,10 +1142,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
 
 describe("jsonMatchesType - matchScore: Records", () => {
   it("record: 2 entries, 1 match and 1 mismatch → matchScore 0.5", () => {
-    // Record of string. Given { a: "hello", b: 123 }:
-    // Entry 'a': match (+1.0)
-    // Entry 'b': fails with matchScore 0.0 (+0.0)
-    // Divisor = 2. Score = 1.0 / 2 = 0.5.
     expect(
       jsonMatchesType(
         safeCast(
@@ -1188,15 +1157,13 @@ describe("jsonMatchesType - matchScore: Records", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0.5,
       },
     });
   });
 
   it("record: 1 entry with nested partial score 0.5 → matchScore 0.5", () => {
-    // Record of union of string literals ("ok" | "done"). Given { a: "wrong" }:
-    // "wrong" matches union with score 0.5. Divisor = 1. Score = 0.5 / 1 = 0.5.
     const schema = parseSchemaOrThrow(
       'type Status = "ok" | "done"; type MyRec = {[key: string]: Status};',
     );
@@ -1211,10 +1178,12 @@ describe("jsonMatchesType - matchScore: Records", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: {
-          message: 'Expected one of ["ok","done"]',
-          suggestions: ['"ok"', '"done"'],
-        },
+        reasons: [
+          {
+            message: 'Expected one of ["ok","done"]',
+            suggestions: ['"ok"', '"done"'],
+          },
+        ],
         matchScore: 0.5,
       },
     });
@@ -1231,7 +1200,7 @@ describe("jsonMatchesType - matchScore: Records", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected object but got array" },
+        reasons: [{ message: "Expected object but got array" }],
         matchScore: 0,
       },
     });
@@ -1258,13 +1227,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
+        reasons: [{ message: "Expected number but got string" }],
         matchScore: 0.5,
       },
     });
   });
 
-  it("array: 1 of 3 elements matches, second fails → matchScore 1/3", () => {
+  it("array: 1 of 3 elements matches, second fails → matchScore 2/3", () => {
     const arrT: ArrayType = {
       kind: "array",
       elementType: primType("number"),
@@ -1279,13 +1248,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
-        matchScore: 1 / 3,
+        reasons: [{ message: "Expected number but got string" }],
+        matchScore: 2 / 3,
       },
     });
   });
 
-  it("array: first element fails → matchScore 0", () => {
+  it("array: first element fails, second element matches → matchScore 0.5", () => {
     const arrT: ArrayType = {
       kind: "array",
       elementType: primType("number"),
@@ -1300,16 +1269,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
-        matchScore: 0,
+        reasons: [{ message: "Expected number but got string" }],
+        matchScore: 0.5,
       },
     });
   });
 
   it("array of interfaces: partial score from failing element propagates", () => {
-    // Array of { name: string, age: number }.
-    // Element 0 matches (1.0). Element 1 has interface matchScore = 0.75.
-    // Total array score = (1.0 + 0.75) / 2 = 0.875.
     const arrT: ArrayType = {
       kind: "array",
       elementType: ifaceType({
@@ -1336,7 +1302,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected number but got string" },
+        reasons: [{ message: "Expected number but got string" }],
         matchScore: 0.875,
       },
     });
@@ -1352,7 +1318,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
     ).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected array but got object" },
+        reasons: [{ message: "Expected array but got object" }],
         matchScore: 0,
       },
     });
@@ -1392,7 +1358,7 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(num(42), optType, "thorough", EMPTY_VIEW)).toMatch({
       kind: "mismatch",
       details: {
-        reason: { message: "Expected string but got number" },
+        reasons: [{ message: "Expected string but got number" }],
         matchScore: 0,
       },
     });
