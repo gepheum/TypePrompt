@@ -101,19 +101,19 @@ export function validateTemplate(args: {
     errors.push(...validateSnippet(snippet, templateSchema, topLevelOptions));
   }
 
-  if (errors.length >= 1) {
+  if (errors.length <= 0) {
+    return {
+      kind: "template",
+      template,
+      schema: templateSchema,
+      tools: tools.kind === "success" ? tools.tools : {},
+    };
+  } else {
     return {
       kind: "error",
       errors,
     };
   }
-
-  return {
-    kind: "template",
-    template,
-    schema: templateSchema,
-    tools: tools.kind === "success" ? tools.tools : {},
-  };
 }
 
 function validateMeta(
