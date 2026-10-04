@@ -1,9 +1,15 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
-import type { HasPath, InternalError, TextSpan } from "../util/shared-types.js";
+import type {
+  HasPath,
+  InternalError,
+  InternalErrors,
+  TextSpan,
+} from "../util/shared-types.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
+import { XmlDocument } from "../xml/xml-types.js";
 import type {
   CompilationResult,
   Meta,
@@ -50,9 +56,10 @@ export function parseSourceFile(
   path: string,
   content: string,
 ): SourceFileParseResult {
-  const result = new SourceFileParseResultImpl(path, content);
-
   const xmlDocument = parseXmlDocument(content);
+
+  const result = new SourceFileParseResultImpl(path, content, xmlDocument);
+
   if (xmlDocument.kind === "error") {
     result.parseErrors.push(...xmlDocument.errors);
     if (
@@ -133,6 +140,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
   constructor(
     readonly path: string,
     readonly content: string,
+    readonly xmlDocument: XmlDocument | InternalErrors,
   ) {
     this.lineFinder = createLineFinder(content);
   }

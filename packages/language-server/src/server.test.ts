@@ -409,7 +409,7 @@ type Output=string;
       });
 
       const unformattedXml =
-        '<template name="Test"><system>Hello</system></template>';
+        '<template name="Test"><schema>type Input = string;type Output=string;</schema><system>Hello</system><user>World</user></template>';
       const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
       const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
       openDocs.set(fileUri, doc);
@@ -420,11 +420,40 @@ type Output=string;
       });
 
       const edits = await extension.formatDocument(fileUri);
-      expect(edits.length > 0).toBe(true);
+      expect(edits).toMatch([
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+      ]);
       const formatted = applyEdits(doc, edits);
-      expect(formatted.includes('<template name="Test">')).toBe(true);
-      expect(formatted.includes("<system>")).toBe(true);
-      expect(formatted.includes("Hello")).toBe(true);
+      expect(formatted).toBe(
+        [
+          '<template name="Test">',
+          "  <schema>",
+          "    type Input = string;",
+          "    type Output = string;",
+          "  </schema>",
+          "  <system>",
+          "    Hello",
+          "  </system>",
+          "  <user>",
+          "    World",
+          "  </user>",
+          "</template>",
+          "",
+        ].join("\n"),
+      );
     });
 
     it("returns empty edits for XML files not assigned to any workspace", async () => {

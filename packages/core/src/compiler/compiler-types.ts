@@ -9,6 +9,7 @@ import type {
   Span,
   TextSpan,
 } from "../util/shared-types.js";
+import { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
@@ -37,6 +38,8 @@ export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
   readonly lineFinder: LineFinderData;
+
+  readonly xmlDocument: XmlDocument | InternalErrors;
 
   readonly templates: readonly Template[];
   readonly tools: readonly Tool[];

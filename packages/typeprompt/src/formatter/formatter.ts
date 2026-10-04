@@ -1,6 +1,6 @@
 import plugin from "@prettier/plugin-xml";
+import { parseSourceFile } from "@typeprompt/core";
 
-import { parseXmlDocument } from "@typeprompt/core/xml/xml-parser.js";
 import {
   XmlComment,
   XmlDocument,
@@ -9,8 +9,9 @@ import {
 import { format as prettierFormat } from "prettier";
 
 export async function formatTemplateFile(content: string): Promise<string> {
-  const xmlDocument = parseXmlDocument(content);
-  if (xmlDocument.kind !== "success") {
+  const parseResult = parseSourceFile("path", content);
+  const { xmlDocument } = parseResult;
+  if (xmlDocument.kind !== "success" || parseResult.parseErrors.length !== 0) {
     // If the XML is malformed, we cannot format the file.
     return content;
   }
