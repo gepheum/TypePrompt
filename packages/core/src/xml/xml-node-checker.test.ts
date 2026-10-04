@@ -10,8 +10,8 @@ import type { ElementNode } from "./xml-types.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string): ElementNode {
-  const result = parseXmlDocument(xml);
+function parseElement(xml: string, path = "test.xml"): ElementNode {
+  const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,

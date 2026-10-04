@@ -17,6 +17,7 @@ export type ErrorSink = {
 
 /** Span in a source XML file. */
 export type Span = {
+  readonly path: string;
   /** Start of the range as a UTF-16 position in the XML file. */
   readonly start: number;
   /** End of the range as a UTF-16 position in the XML file. */
@@ -42,14 +43,11 @@ export type MappedSpan<T = string> = TextSpan<T> & {
 };
 
 export interface MappedText {
+  readonly path: string;
   /** XML escape sequences are decoded. */
   readonly text: string;
   readonly offsetMap: OffsetMap;
 }
-
-export type HasPath = {
-  readonly path: string;
-};
 
 /**
  * Segment-based mapping from decoded offsets back to source offsets.

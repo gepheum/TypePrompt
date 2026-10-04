@@ -45,7 +45,7 @@ export function extractTextContent(
   if (errors.length <= 0) {
     return {
       kind: "success",
-      text: joinTextNodes(textNodes, node.contentStart),
+      text: joinTextNodes(textNodes, node.contentStart, node.path),
       warnings,
     };
   } else {

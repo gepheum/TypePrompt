@@ -14,8 +14,7 @@ import type {
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { MappedText, Span } from "../util/shared-types.js";
-import { joinTextNodes } from "../util/text-node-joiner.js";
+import type { MappedText, Span, TextSpan } from "../util/shared-types.js";
 import type {
   JsonArray,
   JsonBoolean,
@@ -33,21 +32,12 @@ import { jsonMatchesType, validateJson } from "./json-validator.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseSchemaOrThrow(source: string): Schema {
-  const textNode: MappedText = joinTextNodes(
-    [
-      {
-        text: source,
-        offsetMap: [
-          {
-            textPosition: 0,
-            sourcePosition: 0,
-          },
-        ],
-      },
-    ],
-    0,
-  );
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
+  const textNode: MappedText = {
+    path,
+    text: source,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
   const schemaParseResult = parseSchema(textNode);
   if (schemaParseResult.kind !== "success") {
     throw new Error(
@@ -64,7 +54,7 @@ function parseSchemaOrThrow(source: string): Schema {
 }
 
 function span(text: string): Span {
-  return { start: 0, end: text.length };
+  return { start: 0, end: text.length, path: "" };
 }
 
 function str(value: string): JsonString {
@@ -107,9 +97,13 @@ const EMPTY_VIEW = {
   unionToMembers: new Map(),
 } as unknown as Schema;
 
+function textSpan<T extends string>(text: T): TextSpan<T> {
+  return { text, start: 0, end: text.length, path: "" };
+}
+
 const ELLIPSIS: LooseJsonValue = {
   kind: "ellipsis",
-  firstToken: { start: 0, end: 3 },
+  firstToken: { start: 0, end: 3, path: "" },
 };
 
 function primType(
@@ -117,7 +111,7 @@ function primType(
 ): PrimitiveType {
   return {
     kind: "primitive",
-    primitive: { text, start: 0, end: text.length },
+    primitive: textSpan(text),
   };
 }
 
@@ -125,7 +119,7 @@ function litType(value: string): StringLiteral {
   return {
     kind: "string-literal",
     value,
-    quotedName: { text: `"${value}"`, start: 0, end: value.length + 2 },
+    quotedName: textSpan(`"${value}"`),
   };
 }
 
@@ -133,7 +127,7 @@ function boolLitType(value: boolean): BooleanLiteral {
   const text = String(value) as "true" | "false";
   return {
     kind: "boolean-literal",
-    span: { text, start: 0, end: text.length },
+    span: textSpan(text),
     value,
   };
 }
@@ -146,12 +140,12 @@ function ifaceType(
 ): Interface {
   return {
     kind: "interface",
-    leftCurlyBracket: { start: 0, end: 1 },
+    leftCurlyBracket: { start: 0, end: 1, path: "" },
     fields: Object.fromEntries(
       Object.entries(fields).map(([name, { optional = false, text }]) => [
         name,
         {
-          name: { text: name, start: 0, end: name.length },
+          name: textSpan(name),
           type: optional
             ? { kind: "optional", innerType: primType(text) }
             : primType(text),
@@ -167,7 +161,7 @@ function recordType(
 ): RecordType {
   return {
     kind: "record",
-    leftCurlyBracket: { start: 0, end: 1 },
+    leftCurlyBracket: { start: 0, end: 1, path: "" },
     keyName: "key",
     valueType: primType(valueText),
   };
@@ -713,7 +707,7 @@ describe("jsonMatchesType - ellipsis value", () => {
   it("a loose object with an ellipsis satisfies an interface even when required fields are absent", () => {
     const loosObj: LooseJsonValue = {
       kind: "object",
-      firstToken: { start: 0, end: 1 },
+      firstToken: { start: 0, end: 1, path: "" },
       entries: {},
       ellipsis: ELLIPSIS as JsonEllipsis,
     };

@@ -19,7 +19,7 @@ import { makeTemplates } from "./spec-maker.js";
 // ---------------------------------------------------------------------------
 
 function span<T extends string>(text: T): TextSpan<T> {
-  return { text, start: 0, end: text.length };
+  return { text, start: 0, end: text.length, path: "" };
 }
 
 function str(value: string): {
@@ -57,6 +57,7 @@ function jsonArr(elements: unknown[]): unknown {
 
 const TEST_SCHEMA: Schema = ((): Schema => {
   const parsed = parseSchema({
+    path: "schema.ts",
     text: "type Input = string\ntype Output = string",
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   });
@@ -486,7 +487,7 @@ describe("makeTemplates - body pieces", () => {
             val: inputExpr,
             format: null,
             indent: "",
-            tag: { start: 0, end: 0 },
+            tag: { start: 0, end: 0, path: "" },
           },
         ]),
       },
@@ -525,7 +526,7 @@ describe("makeTemplates - body pieces", () => {
             val: inputExpr,
             format: span("json"),
             indent: "  ",
-            tag: { start: 0, end: 0 },
+            tag: { start: 0, end: 0, path: "" },
           },
         ]),
       },
@@ -552,7 +553,7 @@ describe("makeTemplates - body pieces", () => {
             kind: "insert-snippet",
             snippet: span("header"),
             indent: "    ",
-            tag: { start: 0, end: 0 },
+            tag: { start: 0, end: 0, path: "" },
           },
         ]),
       },
@@ -766,7 +767,7 @@ describe("makeTemplates - snippets", () => {
           {
             kind: "snippet-switch",
             name: span("theme"),
-            switchTag: { start: 0, end: 0 },
+            switchTag: { start: 0, end: 0, path: "" },
             expression: { kind: "input" as const, fullPath: span("input") },
             branches: [
               {
@@ -995,6 +996,7 @@ describe("makeTemplates - JSON schemas", () => {
   it("includes JSON schemas", () => {
     const schemaSource = "type Input = string\ntype Output = number";
     const sourceSpan = {
+      path: "schema.ts",
       text: schemaSource,
       offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
     };

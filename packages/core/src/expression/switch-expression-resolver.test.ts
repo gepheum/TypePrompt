@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { ResolvedFieldType, Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { MappedText } from "../util/shared-types.js";
+import type { MappedSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type { Expression } from "./expression-types.js";
@@ -14,8 +14,14 @@ import { resolveSwitchExpression } from "./switch-expression-resolver.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textNode(source: string): MappedText {
-  return { text: source, offsetMap: [{ textPosition: 0, sourcePosition: 0 }] };
+function textNode(source: string, path = ""): MappedSpan {
+  return {
+    text: source,
+    start: 0,
+    end: source.length,
+    path,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
 }
 
 function makeExpr(path: string): Expression<false> {
@@ -24,8 +30,8 @@ function makeExpr(path: string): Expression<false> {
   return r.expression;
 }
 
-function parseSchemaOrThrow(source: string): Schema {
-  const node = textNode(source);
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
+  const node = textNode(source, path);
   const parsed = parseSchema(node);
   if (parsed.kind !== "success") throw new Error("parse failed");
   const validated = validateSchema(parsed, {
@@ -190,7 +196,7 @@ describe("resolveSwitchExpression - discriminated interface union via property",
     const expr = makeExpr("input.name");
     const stringType: ResolvedFieldType = {
       kind: "primitive",
-      primitive: { text: "string", start: 0, end: 6 },
+      primitive: { text: "string", start: 0, end: 6, path: "" },
     };
 
     expect(resolveSwitchExpression(expr, stringType, schema)).toMatch({

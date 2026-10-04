@@ -26,21 +26,21 @@ import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 // ---------------------------------------------------------------------------
 
 function typeName(text: string): TypeName {
-  return { kind: "type-name", name: { text, start: 0, end: 0 } };
+  return { kind: "type-name", name: { text, start: 0, end: 0, path: "" } };
 }
 
 function sharedTypeName(text: string): SharedTypeName {
   return {
     kind: "shared-type-name",
-    shared: { start: 0, end: 0 },
-    name: { text, start: 0, end: 0 },
+    shared: { start: 0, end: 0, path: "" },
+    name: { text, start: 0, end: 0, path: "" },
   };
 }
 
 function typeDecl(name: string, valueType: Type): TypeDeclaration {
   return {
     kind: "type",
-    name: { text: name, start: 0, end: 0 },
+    name: { text: name, start: 0, end: 0, path: "" },
     valueType,
     doc: "",
   };
@@ -48,36 +48,36 @@ function typeDecl(name: string, valueType: Type): TypeDeclaration {
 
 const INTERFACE: Interface = {
   kind: "interface",
-  leftCurlyBracket: { start: 0, end: 1 },
+  leftCurlyBracket: { start: 0, end: 1, path: "" },
   fields: {},
 };
 
 const STRING_LITERAL: StringLiteral = {
   kind: "string-literal",
   value: "active",
-  quotedName: { text: '"active"', start: 0, end: 8 },
+  quotedName: { text: '"active"', start: 0, end: 8, path: "" },
 };
 
 const INACTIVE_LITERAL: StringLiteral = {
   kind: "string-literal",
   value: "inactive",
-  quotedName: { text: '"inactive"', start: 10, end: 20 },
+  quotedName: { text: '"inactive"', start: 10, end: 20, path: "" },
 };
 
 const PRIMITIVE_STRING: PrimitiveType = {
   kind: "primitive",
-  primitive: { text: "string", start: 0, end: 0 },
+  primitive: { text: "string", start: 0, end: 0, path: "" },
 };
 
 const BOOLEAN_LITERAL_TRUE: BooleanLiteral = {
   kind: "boolean-literal",
-  span: { text: "true", start: 0, end: 4 },
+  span: { text: "true", start: 0, end: 4, path: "" },
   value: true,
 };
 
 const ANY: AnyType = {
   kind: "any",
-  span: { start: 0, end: 3 },
+  span: { start: 0, end: 3, path: "" },
 };
 
 const ARRAY: Array = {

@@ -39,6 +39,10 @@ class SchemaParser {
   private readonly tokenizerErrors: InternalError[] = [];
   private readonly parserErrors: InternalError[] = [];
 
+  private get path(): string {
+    return this.content.path;
+  }
+
   constructor(private readonly content: MappedText) {
     this.tokens = this.tokenize();
   }
@@ -98,6 +102,7 @@ class SchemaParser {
         typeDeclarations.map((t) => [t.name.text, t]),
       ),
       sourcePosition: textToSourcePosition(this.content, 0),
+      path: this.path,
     };
   }
 
@@ -604,8 +609,9 @@ class SchemaParser {
   }
 
   private tokenToSpan(token: Token): TextSpan {
-    const { content } = this;
+    const { content, path } = this;
     return {
+      path,
       text: token.text,
       start: textToSourcePosition(content, token.textStart),
       end: textToSourcePosition(content, token.textEnd),
@@ -617,9 +623,10 @@ class SchemaParser {
     end: number;
     message: string;
   }): void {
-    const { content, tokenizerErrors } = this;
+    const { content, path, tokenizerErrors } = this;
     tokenizerErrors.push({
       span: {
+        path,
         start: textToSourcePosition(content, args.start),
         end: textToSourcePosition(content, args.end),
       },

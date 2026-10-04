@@ -9,15 +9,12 @@ import { checkMetaSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a top-level <meta> element. The result is already validated. */
-export function parseMeta(
-  metaNode: ElementNode,
-  sourcePath: string,
-): Meta | InternalErrors {
+export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
   const attrs = checkXmlAttributes(metaNode, {});
   const errors = [...attrs.errors];
 
   const warnings: InternalError[] = [];
-  warnings.push(...checkMetaSourcePath(sourcePath));
+  warnings.push(...checkMetaSourcePath(metaNode.path));
 
   const textContent = extractTextContent(metaNode, "typescript");
   if (textContent.kind === "error") {

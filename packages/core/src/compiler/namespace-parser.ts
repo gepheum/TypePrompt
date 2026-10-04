@@ -15,7 +15,6 @@ import { extractTextContent } from "./text-extractor.js";
 /** Parses a top-level <namespace> element. The result is already validated. */
 export function parseNamespace(
   namespaceNode: ElementNode,
-  sourcePath: string,
 ): Namespace | InternalErrors {
   const attrs = checkXmlAttributes(namespaceNode, {
     name: expectIdentifier({
@@ -52,7 +51,7 @@ export function parseNamespace(
   }
 
   // Raise a warning if the file path doesn't match the file naming conventions.
-  warnings.push(...checkNamespaceSourcePath(name, sourcePath));
+  warnings.push(...checkNamespaceSourcePath(name, namespaceNode.path));
 
   const textContent = extractTextContent(namespaceNode, "typescript");
   if (textContent.kind === "error") {

@@ -299,7 +299,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const configResult = parseConfigYaml(configContent);
+  const configResult = parseConfigYaml(configContent, configPath);
   if (configResult.kind === "error") {
     const lineFinder = createLineFinder(configContent);
     const pathNormalizer = makePathNormalizer(resolvedProject);

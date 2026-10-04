@@ -23,8 +23,9 @@ import { validateCTag } from "./ctag-validator.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseSchemaOrThrow(source: string): Schema {
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
   const sourceSpan = {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -50,6 +51,7 @@ function parseSchemaOrThrow(source: string): Schema {
 
 function span(text: string): TextSpan {
   return {
+    path: "",
     text: text,
     start: 0,
     end: text.length,

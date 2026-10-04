@@ -2,6 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import { checkNameConflicts, toPascalCase, toSnakeCase } from "./casing.js";
+import type { TextSpan } from "./shared-types.js";
 
 describe("toSnakeCase", () => {
   it("converts camelCase", () => {
@@ -116,10 +117,21 @@ describe("toPascalCase", () => {
 });
 
 describe("checkNameConflicts", () => {
+  const span = (
+    text: string,
+    start: number,
+    end: number,
+    path = "",
+  ): TextSpan => ({
+    text,
+    start,
+    end,
+    path,
+  });
   it("returns no errors when all casings are consistent", () => {
     const result = checkNameConflicts([
-      { text: "Response", start: 0, end: 8 },
-      { text: "Error", start: 40, end: 45 },
+      span("Response", 0, 8),
+      span("Error", 40, 45),
     ]);
 
     expect(result).toMatch([]);
@@ -127,12 +139,12 @@ describe("checkNameConflicts", () => {
 
   it("reports an error for each name that conflicts with first casing", () => {
     const result = checkNameConflicts([
-      { text: "Response", start: 0, end: 8 },
-      { text: "response", start: 10, end: 11 },
-      { text: "RESPONSE", start: 20, end: 21 },
-      { text: "R.e-sponse_", start: 30, end: 31 },
-      { text: "Error", start: 40, end: 41 },
-      { text: "error", start: 50, end: 51 },
+      span("Response", 0, 8),
+      span("response", 10, 11),
+      span("RESPONSE", 20, 21),
+      span("R.e-sponse_", 30, 31),
+      span("Error", 40, 41),
+      span("error", 50, 51),
     ]);
 
     expect(result).toMatch([
@@ -169,9 +181,9 @@ describe("checkNameConflicts", () => {
 
   it("uses the first seen casing as the canonical one", () => {
     const result = checkNameConflicts([
-      { text: "response", start: 0, end: 8 },
-      { text: "Response", start: 10, end: 18 },
-      { text: "response", start: 20, end: 28 },
+      span("response", 0, 8),
+      span("Response", 10, 18),
+      span("response", 20, 28),
     ]);
 
     expect(result).toMatch([
@@ -202,10 +214,7 @@ describe("checkNameConflicts", () => {
   });
 
   it("treat exact matches as conflicts", () => {
-    const result = checkNameConflicts([
-      { text: "foo", start: 0, end: 3 },
-      { text: "foo", start: 10, end: 13 },
-    ]);
+    const result = checkNameConflicts([span("foo", 0, 3), span("foo", 10, 13)]);
 
     expect(result).toMatch([
       {

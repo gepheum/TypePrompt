@@ -1,16 +1,28 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type { InternalErrors } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import { parseTool } from "./tool-parser.js";
+import type { Tool } from "./compiler-types.js";
+import { parseTool as parseToolCore } from "./tool-parser.js";
+
+function parseTool(
+  toolNode: ElementNode,
+  sourcePath?: string,
+): Tool | InternalErrors {
+  if (sourcePath !== undefined) {
+    return parseToolCore({ ...toolNode, path: sourcePath });
+  }
+  return parseToolCore(toolNode);
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string): ElementNode {
-  const result = parseXmlDocument(xml);
+function parseElement(xml: string, path = "prompts/myTool.xml"): ElementNode {
+  const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,

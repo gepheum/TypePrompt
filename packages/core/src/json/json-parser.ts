@@ -56,7 +56,7 @@ export function parseJson<Mode extends JsonMode = "loose">(
 class JsonParser<Mode extends JsonMode = "loose"> {
   constructor(
     private readonly content: MappedText,
-    private readonly mode: Mode = "loose" as Mode,
+    private readonly mode: Mode,
   ) {
     this.text = content.text;
   }
@@ -587,6 +587,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
   pushError(start: number, end: number, message: string): void {
     this.errors.push({
       span: {
+        path: this.content.path,
         start: textToSourcePosition(this.content, start),
         end: textToSourcePosition(this.content, end),
       },
@@ -596,6 +597,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
 
   exampleSlice(start: number, end: number): Span {
     return {
+      path: this.content.path,
       start: textToSourcePosition(this.content, start),
       end: textToSourcePosition(this.content, end),
     };

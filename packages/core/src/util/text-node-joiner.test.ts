@@ -21,7 +21,7 @@ function expectSuccess(
 describe("textToSourcePosition", () => {
   it("maps text positions to source positions for plain text", () => {
     const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input));
+    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -33,7 +33,7 @@ describe("textToSourcePosition", () => {
 
   it("maps text offsets to source positions across entity and raw segments", () => {
     const input = "<root>x &amp; y</root>";
-    const result = expectSuccess(parseXmlDocument(input));
+    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -56,7 +56,7 @@ describe("textToSourcePosition", () => {
 
   it("maps end boundary of a single-entity text node", () => {
     const input = "<root>&lt;</root>";
-    const result = expectSuccess(parseXmlDocument(input));
+    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -69,7 +69,7 @@ describe("textToSourcePosition", () => {
 
   it("throws for text positions outside valid range", () => {
     const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input));
+    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -92,6 +92,7 @@ describe("textToSourcePosition", () => {
 
   it("returns text start for empty decoded text nodes", () => {
     const emptyNode: MappedText = {
+      path: "",
       text: "",
       offsetMap: [{ textPosition: 0, sourcePosition: 42 }],
     };
@@ -102,7 +103,7 @@ describe("textToSourcePosition", () => {
 
 describe("joinTextNodes", () => {
   it("returns an empty text with a single offset entry for an empty list", () => {
-    const result = joinTextNodes([], 42);
+    const result = joinTextNodes([], 42, "");
 
     expect(result).toMatch({
       text: "",
@@ -112,11 +113,12 @@ describe("joinTextNodes", () => {
 
   it("returns the single node unchanged for a one-element list", () => {
     const node: MappedText = {
+      path: "",
       text: "abc",
       offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
 
-    const result = joinTextNodes([node], 0);
+    const result = joinTextNodes([node], 0, "");
 
     expect(result).toMatch({
       text: "abc",
@@ -126,26 +128,32 @@ describe("joinTextNodes", () => {
 
   it("concatenates decoded strings of two plain-text nodes", () => {
     const node1: MappedText = {
+      path: "",
       text: "foo",
       offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
     };
     const node2: MappedText = {
+      path: "",
       text: "bar",
       offsetMap: [{ textPosition: 0, sourcePosition: 200 }],
     };
 
-    const result = joinTextNodes([node1, node2], 0);
+    const result = joinTextNodes([node1, node2], 0, "the path");
 
-    expect(result.text).toBe("foobar");
-    expect(result.offsetMap).toMatch([
-      { textPosition: 0, sourcePosition: 100 },
-      { textPosition: 3, sourcePosition: 200 },
-    ]);
+    expect(result).toMatch({
+      path: "the path",
+      text: "foobar",
+      offsetMap: [
+        { textPosition: 0, sourcePosition: 100 },
+        { textPosition: 3, sourcePosition: 200 },
+      ],
+    });
   });
 
   it("preserves all offsetMap entries from each node and shifts decoded offsets", () => {
     // node1: decoded "a<b" with an entity for "<" at decoded offset 1
     const node1: MappedText = {
+      path: "",
       text: "a<b",
       offsetMap: [
         { textPosition: 0, sourcePosition: 10 },
@@ -155,11 +163,12 @@ describe("joinTextNodes", () => {
     };
     // node2: plain "cd"
     const node2: MappedText = {
+      path: "",
       text: "cd",
       offsetMap: [{ textPosition: 0, sourcePosition: 20 }],
     };
 
-    const result = joinTextNodes([node1, node2], 0);
+    const result = joinTextNodes([node1, node2], 0, "");
 
     expect(result.text).toBe("a<bcd");
     expect(result.offsetMap).toMatch([
@@ -172,19 +181,22 @@ describe("joinTextNodes", () => {
 
   it("concatenates three nodes and maps offsets correctly via textToSourcePosition", () => {
     const node1: MappedText = {
+      path: "",
       text: "hi",
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };
     const node2: MappedText = {
+      path: "",
       text: " ",
       offsetMap: [{ textPosition: 0, sourcePosition: 50 }],
     };
     const node3: MappedText = {
+      path: "",
       text: "world",
       offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
     };
 
-    const joined = joinTextNodes([node1, node2, node3], 0);
+    const joined = joinTextNodes([node1, node2, node3], 0, "");
 
     expect(joined.text).toBe("hi world");
     // "hi" maps to source 5..6

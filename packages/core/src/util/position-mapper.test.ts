@@ -11,6 +11,7 @@ import { joinTextNodes } from "./text-node-joiner.js";
 
 describe("textToSourcePosition - single segment (identity mapping)", () => {
   const node: MappedText = {
+    path: "",
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -30,6 +31,7 @@ describe("textToSourcePosition - single segment (identity mapping)", () => {
 
 describe("textToSourcePosition - single segment with source offset", () => {
   const node: MappedText = {
+    path: "",
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
   };
@@ -52,6 +54,7 @@ describe("textToSourcePosition - multiple segments", () => {
   // segment 0: textPosition=0 → sourcePosition=100  (covers text[0..2])
   // segment 1: textPosition=3 → sourcePosition=200  (covers text[3..4])
   const node: MappedText = {
+    path: "",
     text: "abcde",
     offsetMap: [
       { textPosition: 0, sourcePosition: 100 },
@@ -76,6 +79,7 @@ describe("textToSourcePosition - multiple segments", () => {
 
 describe("textToSourcePosition - error cases", () => {
   const node: MappedText = {
+    path: "",
     text: "hi",
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -109,11 +113,11 @@ describe("textToSourcePosition - error cases", () => {
 
 describe("joinTextNodes - empty array", () => {
   it("returns empty text when given no nodes", () => {
-    expect(joinTextNodes([], 0).text).toBe("");
+    expect(joinTextNodes([], 0, "").text).toBe("");
   });
 
   it("uses startPosition as the single offsetMap entry's sourcePosition", () => {
-    expect(joinTextNodes([], 42)).toMatch({
+    expect(joinTextNodes([], 42, "")).toMatch({
       offsetMap: [{ textPosition: 0, sourcePosition: 42 }],
     });
   });
@@ -121,16 +125,17 @@ describe("joinTextNodes - empty array", () => {
 
 describe("joinTextNodes - single node", () => {
   const node: MappedText = {
+    path: "",
     text: "hello",
     offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
   };
 
   it("preserves the text verbatim", () => {
-    expect(joinTextNodes([node], 0).text).toBe("hello");
+    expect(joinTextNodes([node], 0, "").text).toBe("hello");
   });
 
   it("preserves the offsetMap entry unchanged", () => {
-    expect(joinTextNodes([node], 0)).toMatch({
+    expect(joinTextNodes([node], 0, "")).toMatch({
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     });
   });
@@ -138,20 +143,22 @@ describe("joinTextNodes - single node", () => {
 
 describe("joinTextNodes - two nodes", () => {
   const nodeA: MappedText = {
+    path: "",
     text: "abc",
     offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
   };
   const nodeB: MappedText = {
+    path: "",
     text: "de",
     offsetMap: [{ textPosition: 0, sourcePosition: 20 }],
   };
 
   it("concatenates the text of both nodes", () => {
-    expect(joinTextNodes([nodeA, nodeB], 0).text).toBe("abcde");
+    expect(joinTextNodes([nodeA, nodeB], 0, "").text).toBe("abcde");
   });
 
   it("keeps the first node's entry at textPosition 0 with its source position", () => {
-    expect(joinTextNodes([nodeA, nodeB], 0)).toMatch({
+    expect(joinTextNodes([nodeA, nodeB], 0, "")).toMatch({
       offsetMap: [
         { textPosition: 0, sourcePosition: 10 },
         { textPosition: 3, sourcePosition: 20 },
@@ -160,7 +167,7 @@ describe("joinTextNodes - two nodes", () => {
   });
 
   it("produces spans that round-trip through textToSourcePosition", () => {
-    const joined = joinTextNodes([nodeA, nodeB], 0);
+    const joined = joinTextNodes([nodeA, nodeB], 0, "");
     // positions in "abc" map to source 10+delta
     expect(textToSourcePosition(joined, 0)).toBe(10);
     expect(textToSourcePosition(joined, 2)).toBe(12);
@@ -174,10 +181,12 @@ describe("joinTextNodes - node with multiple offsetMap entries", () => {
   // nodeA has its own two segments; after joining, their textPositions must be
   // shifted by the length of any preceding nodes' text.
   const nodeA: MappedText = {
+    path: "",
     text: "xx",
     offsetMap: [{ textPosition: 0, sourcePosition: 1 }],
   };
   const nodeB: MappedText = {
+    path: "",
     text: "abc",
     offsetMap: [
       { textPosition: 0, sourcePosition: 100 },
@@ -186,7 +195,7 @@ describe("joinTextNodes - node with multiple offsetMap entries", () => {
   };
 
   it("shifts nodeB's textPositions by the length of nodeA", () => {
-    const joined = joinTextNodes([nodeA, nodeB], 0);
+    const joined = joinTextNodes([nodeA, nodeB], 0, "");
     // nodeA contributes 2 chars, so nodeB's entries are shifted by 2
     expect(joined).toMatch({
       offsetMap: [
@@ -198,7 +207,7 @@ describe("joinTextNodes - node with multiple offsetMap entries", () => {
   });
 
   it("round-trips positions correctly through textToSourcePosition", () => {
-    const joined = joinTextNodes([nodeA, nodeB], 0);
+    const joined = joinTextNodes([nodeA, nodeB], 0, "");
     expect(textToSourcePosition(joined, 0)).toBe(1); // nodeA segment
     expect(textToSourcePosition(joined, 2)).toBe(100); // nodeB segment 0
     expect(textToSourcePosition(joined, 3)).toBe(101);

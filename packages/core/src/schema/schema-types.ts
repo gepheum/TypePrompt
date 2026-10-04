@@ -4,6 +4,7 @@ export type SchemaParseResult = {
   readonly kind: "success";
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
   readonly sourcePosition: number;
+  readonly path: string;
 };
 
 export type SchemaValidationContext =

@@ -8,8 +8,9 @@ import { parseYaml, tokenizeYaml } from "./yaml-parser.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = "test.yaml"): MappedText {
   return {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -478,6 +479,7 @@ describe("parseYaml - flow sequence", () => {
 describe("parseYaml - source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
     const content: MappedText = {
+      path: "test.yaml",
       text: "null",
       offsetMap: [{ textPosition: 0, sourcePosition: 20 }],
     };
@@ -490,6 +492,7 @@ describe("parseYaml - source offset remapping", () => {
 
   it("remaps error offsets via the offsetMap", () => {
     const content: MappedText = {
+      path: "test.yaml",
       text: "",
       offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
@@ -676,6 +679,7 @@ describe("tokenizeYaml", () => {
 
   it("preserves source offsets across mapped text segments", () => {
     const mapped: MappedText = {
+      path: "test.yaml",
       text: "# comment\nmodel: gpt-4",
       offsetMap: [{ textPosition: 0, sourcePosition: 200 }],
     };

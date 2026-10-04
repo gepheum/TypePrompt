@@ -5,7 +5,7 @@ import type { Span } from "../util/shared-types.js";
 import type { JsonObject, JsonString, StrictJsonValue } from "./json-types.js";
 import { unwrapJsonValue } from "./unwrapper.js";
 
-const SPAN: Span = { start: 0, end: 1 };
+const SPAN: Span = { start: 0, end: 1, path: "" };
 
 function str(value: string): JsonString {
   return { kind: "string", firstToken: SPAN, value };

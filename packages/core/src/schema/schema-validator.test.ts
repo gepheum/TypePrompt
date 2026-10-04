@@ -12,15 +12,19 @@ import type {
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = "schema.ts"): MappedText {
   return {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
 }
 
-function parseDeclarations(source: string): SchemaParseResult {
-  const result = parseSchema(textNode(source));
+function parseDeclarations(
+  source: string,
+  path = "schema.ts",
+): SchemaParseResult {
+  const result = parseSchema(textNode(source, path));
   if (result.kind !== "success") {
     throw new Error(`Parse failed: ${JSON.stringify(result)}`);
   }

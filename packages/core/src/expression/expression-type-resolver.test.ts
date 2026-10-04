@@ -9,7 +9,7 @@ import type {
   Schema,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { MappedText } from "../util/shared-types.js";
+import type { MappedSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type { Expression, ExpressionContext } from "./expression-types.js";
@@ -18,8 +18,14 @@ import type { Expression, ExpressionContext } from "./expression-types.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textNode(source: string): MappedText {
-  return { text: source, offsetMap: [{ textPosition: 0, sourcePosition: 0 }] };
+function textNode(source: string, path = ""): MappedSpan {
+  return {
+    text: source,
+    start: 0,
+    end: source.length,
+    path,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
 }
 
 function makeExpr(path: string): Expression<false> {
@@ -34,8 +40,8 @@ function makeExprCtx(path: string): Expression<true> {
   return r.expression;
 }
 
-function parseSchemaOrThrow(source: string): Schema {
-  const node = textNode(source);
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
+  const node = textNode(source, path);
   const parsed = parseSchema(node);
   if (parsed.kind !== "success") throw new Error("parse failed");
   const validated = validateSchema(parsed, {
@@ -48,7 +54,10 @@ function parseSchemaOrThrow(source: string): Schema {
 function prim(
   text: "string" | "number" | "boolean" | "integer",
 ): PrimitiveType {
-  return { kind: "primitive", primitive: { text, start: 0, end: text.length } };
+  return {
+    kind: "primitive",
+    primitive: { text, start: 0, end: text.length, path: "" },
+  };
 }
 
 function optional(type: ResolvedType): Optional {

@@ -32,6 +32,7 @@ export function parseYaml(
       kind: "error",
       errors: doc.errors.map((err) => ({
         span: {
+          path: content.path,
           start: mapOffset(content, err.pos[0]),
           end: mapOffset(content, err.pos[1]),
         },
@@ -43,6 +44,7 @@ export function parseYaml(
   if (doc.contents === null || doc.contents === undefined) {
     return makeSingletonErrors({
       span: {
+        path: content.path,
         start: textToSourcePosition(content, 0),
         end: textToSourcePosition(content, 0),
       },
@@ -54,6 +56,7 @@ export function parseYaml(
   if (result === null) {
     return makeSingletonErrors({
       span: {
+        path: content.path,
         start: textToSourcePosition(content, 0),
         end: textToSourcePosition(content, content.text.length),
       },
@@ -89,6 +92,7 @@ export function tokenizeYaml(content: MappedText): readonly SemanticToken[] {
           result.push({
             kind: "boolean",
             span: {
+              path: content.path,
               start: mapOffset(content, start),
               end: mapOffset(content, valueEnd),
             },
@@ -100,6 +104,7 @@ export function tokenizeYaml(content: MappedText): readonly SemanticToken[] {
           result.push({
             kind: "number",
             span: {
+              path: content.path,
               start: mapOffset(content, start),
               end: mapOffset(content, valueEnd),
             },
@@ -113,6 +118,7 @@ export function tokenizeYaml(content: MappedText): readonly SemanticToken[] {
             result.push({
               kind: "string",
               span: {
+                path: content.path,
                 start: mapOffset(content, start),
                 end: mapOffset(content, valueEnd),
               },
@@ -138,6 +144,7 @@ function collectComments(
       tokens.push({
         kind: "comment",
         span: {
+          path: content.path,
           start: mapOffset(content, token.offset),
           end: mapOffset(content, token.offset + token.source.length),
         },
@@ -202,6 +209,7 @@ function mapOffset(content: MappedText, offset: number): number {
 
 function span(content: MappedText, start: number, end: number): TextSpan {
   return {
+    path: content.path,
     text: content.text.slice(start, end),
     start: textToSourcePosition(content, start),
     end: textToSourcePosition(content, end),

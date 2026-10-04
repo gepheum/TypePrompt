@@ -119,6 +119,7 @@ type Tool = {
 
 export const runtimeTypesSchema = ((): Schema => {
   const parseResult = parseSchema({
+    path: "Runtime.xml",
     text: SCHEMA,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   });

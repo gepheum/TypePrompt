@@ -4,8 +4,9 @@ import { describe, it } from "mocha";
 import { MappedText } from "../util/shared-types.js";
 import { parseSchema, tokenizeSchema } from "./schema-parser.js";
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = "schema.ts"): MappedText {
   return {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -1054,6 +1055,7 @@ describe("tokenizeSchema", () => {
 
   it("preserves source offsets across mapped text segments", () => {
     const mapped: MappedText = {
+      path: "schema.ts",
       text: "type A = string;",
       offsetMap: [{ textPosition: 0, sourcePosition: 100 }],
     };

@@ -20,7 +20,7 @@ import {
 
 describe("DEFAULT_CONFIG_YAML", () => {
   it("parses as a valid config", () => {
-    const result = parseConfigYaml(DEFAULT_CONFIG_YAML);
+    const result = parseConfigYaml(DEFAULT_CONFIG_YAML, "typeprompt.yml");
     if (result.kind !== "success") {
       throw new Error(result.errors.map((e) => e.message).join("\n"));
     }
@@ -80,7 +80,7 @@ describe("initializeProject", () => {
     const uncommentedConfig = uncommentedLines.join("\n");
 
     // Validate config with config-parser
-    const configResult = parseConfigYaml(uncommentedConfig);
+    const configResult = parseConfigYaml(uncommentedConfig, "typeprompt.yml");
     if (configResult.kind !== "success") {
       throw new Error(
         `Config validation failed:\n${configResult.errors.map((e) => e.message).join("\n")}`,

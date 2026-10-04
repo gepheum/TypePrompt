@@ -21,8 +21,11 @@ import { validateTemplate } from "./template-validator.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string): ElementNode {
-  const result = parseXmlDocument(xml);
+function parseElement(
+  xml: string,
+  path = "prompts/Translate.xml",
+): ElementNode {
+  const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
@@ -34,8 +37,10 @@ function parseElement(xml: string): ElementNode {
 function parseSchemaOrThrow(
   source: string,
   kind: "namespace" | "meta" = "namespace",
+  path = "schema.ts",
 ): Schema {
   const node: MappedText = {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -54,10 +59,15 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
   const schema = parseSchemaOrThrow(schemaSource, "namespace");
   const tool: Tool = {
     kind: "tool",
-    name: { text: name, start: 0, end: name.length },
+    name: { text: name, start: 0, end: name.length, path: "" },
     namespace: null,
     description: [],
-    schema: { kind: "success", typeDeclarations: {}, sourcePosition: 0 },
+    schema: {
+      kind: "success",
+      typeDeclarations: {},
+      sourcePosition: 0,
+      path: "",
+    },
     warnings: [],
   };
   return {
@@ -76,8 +86,8 @@ function testValidateTemplate(args: {
   readonly path?: string;
 }): TemplateValidationResult {
   const path = args.path ?? "prompts/Translate.xml";
-  const root = parseElement(args.templateXml);
-  const parsedTemplate = parseTemplate(root, path);
+  const root = parseElement(args.templateXml, path);
+  const parsedTemplate = parseTemplate(root);
   if (parsedTemplate.kind !== "template") {
     throw new Error(
       `parseTemplate failed: ${parsedTemplate.errors.map((e) => e.message).join(", ")}`,

@@ -2,7 +2,6 @@ import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
 import type {
-  HasPath,
   InternalError,
   InternalErrors,
   TextSpan,
@@ -56,7 +55,7 @@ export function parseSourceFile(
   path: string,
   content: string,
 ): SourceFileParseResult {
-  const xmlDocument = parseXmlDocument(content);
+  const xmlDocument = parseXmlDocument(content, path);
 
   const result = new SourceFileParseResultImpl(path, content, xmlDocument);
 
@@ -86,7 +85,7 @@ export function parseSourceFile(
   const [tag, topLevelNode] = topLevelNodes[0]!;
   switch (tag) {
     case "template": {
-      const template = parseTemplate(topLevelNode, path);
+      const template = parseTemplate(topLevelNode);
       if (template.kind === "error") {
         result.parseErrors.push(...template.errors);
       } else {
@@ -96,7 +95,7 @@ export function parseSourceFile(
       break;
     }
     case "tool": {
-      const tool = parseTool(topLevelNode, path);
+      const tool = parseTool(topLevelNode);
       if (tool.kind === "error") {
         result.parseErrors.push(...tool.errors);
       } else {
@@ -106,7 +105,7 @@ export function parseSourceFile(
       break;
     }
     case "namespace": {
-      const namespace = parseNamespace(topLevelNode, path);
+      const namespace = parseNamespace(topLevelNode);
       if (namespace.kind === "error") {
         result.parseErrors.push(...namespace.errors);
       } else {
@@ -119,7 +118,7 @@ export function parseSourceFile(
       break;
     }
     case "meta": {
-      const meta = parseMeta(topLevelNode, path);
+      const meta = parseMeta(topLevelNode);
       if (meta.kind === "error") {
         result.parseErrors.push(...meta.errors);
       } else {
@@ -163,7 +162,7 @@ type NamespaceResultImpl = NamespaceResult & {
   readonly tools: { [name: string]: ToolValidationResult };
   readonly templates: TemplateValidationResult[];
   /** To find conflicts. */
-  readonly names: (TextSpan & HasPath)[];
+  readonly names: TextSpan[];
 };
 
 class CompilationResultImpl implements CompilationResult {
@@ -301,10 +300,7 @@ class CompilationResultImpl implements CompilationResult {
     };
 
     const nameConflicts = checkNameConflicts(
-      Object.values(namespaces).map((n) => ({
-        ...n.element.name,
-        path: n.sourceFile.path,
-      })),
+      Object.values(namespaces).map((n) => n.element.name),
     );
     for (const error of nameConflicts) {
       this.finalErrors[error.span.path]!.push(error);
@@ -344,7 +340,7 @@ class CompilationResultImpl implements CompilationResult {
       }
 
       for (const tool of tools) {
-        namespace.names.push({ ...name, path: tool.sourceFile.path });
+        namespace.names.push(tool.element.name);
       }
       if (tools.length > 1) {
         // The error will be reported when we look for name conflicts in each
@@ -406,10 +402,7 @@ class CompilationResultImpl implements CompilationResult {
       }
 
       for (const template of templates) {
-        namespace.names.push({
-          ...template.element.name,
-          path: template.sourceFile.path,
-        });
+        namespace.names.push(template.element.name);
       }
       if (templates.length > 1) {
         // The error will be reported when we look for name conflicts in each
@@ -466,9 +459,7 @@ class CompilationResultImpl implements CompilationResult {
 
   private checkNameConflictsWithinNamespaces(): void {
     for (const namespace of Object.values(this.namespaces)) {
-      const nameConflicts = checkNameConflicts(
-        namespace.names.map((n) => ({ ...n, path: n.path })),
-      );
+      const nameConflicts = checkNameConflicts(namespace.names);
       for (const error of nameConflicts) {
         this.finalErrors[error.span.path]!.push(error);
       }

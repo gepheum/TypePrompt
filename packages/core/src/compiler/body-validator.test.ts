@@ -13,7 +13,7 @@ import type {
   Schema,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { InternalError, MappedText } from "../util/shared-types.js";
+import type { InternalError, MappedSpan } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { parseBody, parseToolDescription } from "./body-parser.js";
@@ -27,8 +27,8 @@ import type { TemplateTool, Tool } from "./compiler-types.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string): ElementNode {
-  const result = parseXmlDocument(xml);
+function parseElement(xml: string, path = "test.xml"): ElementNode {
+  const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,
@@ -37,11 +37,8 @@ function parseElement(xml: string): ElementNode {
   return result.root;
 }
 
-function parseSchemaOrThrow(source: string): Schema {
-  const node: MappedText = {
-    text: source,
-    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
-  };
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
+  const node = textNode(source, path);
   const parsed = parseSchema(node);
   if (parsed.kind !== "success") throw new Error("parseSchema failed");
   const validated = validateSchema(parsed, {
@@ -59,10 +56,15 @@ function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
   const schema = parseSchemaOrThrow(schemaSource);
   const tool: Tool = {
     kind: "tool",
-    name: { text: name, start: 0, end: name.length },
+    name: { text: name, start: 0, end: name.length, path: "" },
     namespace: null,
     description: [],
-    schema: { kind: "success", typeDeclarations: {}, sourcePosition: 0 },
+    schema: {
+      kind: "success",
+      typeDeclarations: {},
+      sourcePosition: 0,
+      path: "",
+    },
     warnings: [],
   };
   return {
@@ -120,8 +122,14 @@ function testValidateToolDescription(args: {
   return { errors };
 }
 
-function textNode(source: string): MappedText {
-  return { text: source, offsetMap: [{ textPosition: 0, sourcePosition: 0 }] };
+function textNode(source: string, path = ""): MappedSpan {
+  return {
+    text: source,
+    start: 0,
+    end: source.length,
+    path,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
 }
 
 function makeExpr(path: string): Expression<false> {
@@ -133,7 +141,10 @@ function makeExpr(path: string): Expression<false> {
 function prim(
   text: "string" | "number" | "boolean" | "integer",
 ): PrimitiveType {
-  return { kind: "primitive", primitive: { text, start: 0, end: text.length } };
+  return {
+    kind: "primitive",
+    primitive: { text, start: 0, end: text.length, path: "" },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -759,10 +770,10 @@ describe("validateTemplateBody - with ExpressionContext (hasValContext=true)", (
   it("validates 'it.name' property access on interface type from context", () => {
     const userInterface: ResolvedType = {
       kind: "interface",
-      leftCurlyBracket: { start: 0, end: 1 },
+      leftCurlyBracket: { start: 0, end: 1, path: "" },
       fields: {
         name: {
-          name: { text: "name", start: 0, end: 4 },
+          name: { text: "name", start: 0, end: 4, path: "" },
           type: prim("string"),
           doc: "",
         },

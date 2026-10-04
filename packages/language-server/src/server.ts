@@ -276,7 +276,7 @@ export function pushSemanticToken(
 
 export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
   const text = doc.getText();
-  const tokens = tokenize(text);
+  const tokens = tokenize(text, doc.uri);
   const builder = new SemanticTokensBuilder();
 
   for (const token of tokens) {
@@ -568,7 +568,7 @@ export class TypePromptLanguageExtension {
       case "typeprompt.yml": {
         if (content) {
           this.logger.log(`[TypePrompt LSP] Parsing config for ${uri}...`);
-          const configResult = parseConfigYaml(content.content);
+          const configResult = parseConfigYaml(content.content, uri);
           if (configResult.kind === "success") {
             const configBundle: TypePromptConfigBundle = {
               config: configResult.config,

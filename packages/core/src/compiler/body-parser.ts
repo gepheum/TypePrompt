@@ -291,7 +291,11 @@ function removeIndentAfterEol(
       const pos = textToSourcePosition(textNode, cursor);
       const formattedIndent = baseIndent.replace(/\t/g, "\\t");
       errors.push({
-        span: { start: pos, end: pos },
+        span: {
+          path: textNode.path,
+          start: pos,
+          end: pos,
+        },
         message: `Indentation error; expected: '${formattedIndent}'`,
       });
     }

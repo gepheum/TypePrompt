@@ -1,7 +1,15 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { parseXmlDocument } from "./xml-parser.js";
+import { parseXmlDocument as parseXmlDocumentCore } from "./xml-parser.js";
+import type { InvalidXmlDocument, XmlDocument } from "./xml-types.js";
+
+function parseXmlDocument(
+  content: string,
+  path = "test.xml",
+): XmlDocument | InvalidXmlDocument {
+  return parseXmlDocumentCore(content, path);
+}
 
 describe("parseXmlDocument", () => {
   it("parses an empty document", () => {

@@ -83,6 +83,7 @@ export function validateSchema(
     if (!requiredType) {
       errors.push({
         span: {
+          path: schema.path,
           start: schema.sourcePosition,
           end: schema.sourcePosition,
         },
@@ -168,6 +169,7 @@ function validateType(
         if (!/^[A-Za-z]/.test(value)) {
           errors.push({
             span: {
+              path: type.quotedName.path,
               start: type.quotedName.start + 1,
               end: type.quotedName.end - 1,
             },
@@ -176,6 +178,7 @@ function validateType(
         } else if (!/^[A-Za-z0-9_\-./]+$/.test(value)) {
           errors.push({
             span: {
+              path: type.quotedName.path,
               start: type.quotedName.start + 1,
               end: type.quotedName.end - 1,
             },
@@ -404,13 +407,13 @@ function collectNamingHints(
                     discriminant:
                       discriminantType === "string"
                         ? {
-                            type: discriminantType,
-                            value: discriminant,
-                          }
+                          type: discriminantType,
+                          value: discriminant,
+                        }
                         : {
-                            type: discriminantType,
-                            value: discriminant === "true",
-                          },
+                          type: discriminantType,
+                          value: discriminant === "true",
+                        },
                   },
                 ],
                 doc: "",

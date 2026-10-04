@@ -11,9 +11,11 @@ import { MappedText, OffsetMapEntry } from "./shared-types.js";
 export function joinTextNodes(
   textNodes: readonly MappedText[],
   startPosition: number,
+  path: string,
 ): MappedText {
   if (textNodes.length <= 0) {
     return {
+      path,
       text: "",
       offsetMap: [
         {
@@ -39,5 +41,5 @@ export function joinTextNodes(
     text += textNode.text;
   }
 
-  return { text: text, offsetMap: offsetMap };
+  return { path, text: text, offsetMap: offsetMap };
 }

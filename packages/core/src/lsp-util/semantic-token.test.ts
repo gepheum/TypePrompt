@@ -1,7 +1,15 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { tokenize } from "./semantic-token.js";
+import type { SemanticToken } from "./semantic-token.js";
+import { tokenize as tokenizeCore } from "./semantic-token.js";
+
+function tokenize(
+  xmlContent: string,
+  path = "test.xml",
+): readonly SemanticToken[] {
+  return tokenizeCore(xmlContent, path);
+}
 
 describe("tokenize", () => {
   it("returns an empty array for empty XML or documents without root", () => {

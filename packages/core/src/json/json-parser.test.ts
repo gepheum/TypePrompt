@@ -4,8 +4,9 @@ import { describe, it } from "mocha";
 import { MappedText } from "../util/shared-types.js";
 import { parseJson } from "./json-parser.js";
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = "test.json"): MappedText {
   return {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
@@ -328,6 +329,7 @@ describe("parseJson - loose mode (default)", () => {
 describe("parseJson - source offset remapping", () => {
   it("remaps firstToken offsets via the offsetMap", () => {
     const content: MappedText = {
+      path: "test.json",
       text: '"hello"',
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };
@@ -339,6 +341,7 @@ describe("parseJson - source offset remapping", () => {
 
   it("remaps error offsets via the offsetMap", () => {
     const content: MappedText = {
+      path: "test.json",
       text: "   ",
       offsetMap: [{ textPosition: 0, sourcePosition: 7 }],
     };

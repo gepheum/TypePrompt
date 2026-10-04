@@ -9,6 +9,7 @@ export function parseCTag(content: MappedText): CTag | InternalErrors {
     return {
       kind: "identifier",
       identifier: {
+        path: content.path,
         text: identifier,
         start: textToSourcePosition(content, 0),
         end: textToSourcePosition(content, identifier.length),
@@ -24,6 +25,7 @@ export function parseCTag(content: MappedText): CTag | InternalErrors {
     return {
       kind: "identifier",
       identifier: {
+        path: content.path,
         text: identifier,
         start: textToSourcePosition(content, 1),
         end: textToSourcePosition(content, content.text.length - 1),

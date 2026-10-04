@@ -7,15 +7,16 @@ import { parseSchema } from "./schema-parser.js";
 import type { Schema } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = "schema.ts"): MappedText {
   return {
+    path,
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
 }
 
-function compile(source: string): Schema {
-  const parsed = parseSchema(textNode(source));
+function compile(source: string, path = "schema.ts"): Schema {
+  const parsed = parseSchema(textNode(source, path));
   if (parsed.kind !== "success") {
     throw new Error(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
@@ -35,9 +36,10 @@ function compile(source: string): Schema {
 function compileTemplate(
   templateSource: string,
   namespaceSource: string,
+  path = "template-schema.ts",
 ): Schema {
   const ns = compile(namespaceSource);
-  const parsed = parseSchema(textNode(templateSource));
+  const parsed = parseSchema(textNode(templateSource, path));
   if (parsed.kind !== "success") {
     throw new Error(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,

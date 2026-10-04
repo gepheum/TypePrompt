@@ -1,6 +1,6 @@
 import { makeSingletonErrors } from "../util/errors.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
-import { InternalErrors, MappedText, TextSpan } from "../util/shared-types.js";
+import { InternalErrors, MappedSpan, TextSpan } from "../util/shared-types.js";
 import { Expression, ExpressionInContext } from "./expression-types.js";
 
 export type ExpressionParseResult<HasValContext extends boolean> =
@@ -8,16 +8,17 @@ export type ExpressionParseResult<HasValContext extends boolean> =
   | InternalErrors;
 
 export function parseExpression<HasValContext extends boolean>(
-  content: MappedText,
+  content: MappedSpan,
   options: {
     readonly hasValContext: HasValContext;
   },
 ): ExpressionParseResult<HasValContext> {
-  const { text } = content;
+  const { path, text } = content;
   const { length } = text;
 
   const mappedSpan = (start: number, end: number): TextSpan => {
     return {
+      path,
       text: text.slice(start, end),
       start: textToSourcePosition(content, start),
       end: textToSourcePosition(content, end),

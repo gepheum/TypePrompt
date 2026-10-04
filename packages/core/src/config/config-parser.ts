@@ -54,14 +54,17 @@ export interface ConfigParseSuccess {
 
 export type ConfigParseResult = ConfigParseSuccess | InternalErrors;
 
-export function parseConfigYaml(content: string): ConfigParseResult {
+export function parseConfigYaml(
+  content: string,
+  path: string,
+): ConfigParseResult {
   const doc = parseDocument(content);
 
   if (doc.errors.length >= 1) {
     return {
       kind: "error",
       errors: doc.errors.map((e) => ({
-        span: { start: e.pos[0], end: e.pos[1] },
+        span: { path, start: e.pos[0], end: e.pos[1] },
         message: e.message,
       })),
     };
@@ -73,7 +76,7 @@ export function parseConfigYaml(content: string): ConfigParseResult {
     return {
       kind: "error",
       errors: parseResult.error.issues.map((issue) =>
-        makeSchemaIssueError(issue, doc),
+        makeSchemaIssueError(issue, doc, path),
       ),
     };
   }
@@ -186,6 +189,7 @@ const RawConfigSchema = z
 function makeSchemaIssueError(
   issue: z.core.$ZodIssue,
   doc: ReturnType<typeof parseDocument>,
+  path: string,
 ): InternalError {
   // Walk up the path until we find a node with a source range.
   let nodePath = [...issue.path] as PropertyKey[];
@@ -200,8 +204,8 @@ function makeSchemaIssueError(
   }
 
   const span = node?.range
-    ? { start: node.range[0], end: node.range[1] }
-    : { start: 0, end: 0 };
+    ? { path, start: node.range[0], end: node.range[1] }
+    : { path, start: 0, end: 0 };
 
   if (issue.code === "unrecognized_keys") {
     const keys = issue.keys.map((key) => `'${key}'`).join(", ");

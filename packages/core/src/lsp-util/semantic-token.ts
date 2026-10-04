@@ -16,8 +16,11 @@ export type SemanticToken = {
     | "number"; // number literal
 };
 
-export function tokenize(xmlContent: string): readonly SemanticToken[] {
-  const xmlDocument = parseXmlDocument(xmlContent);
+export function tokenize(
+  xmlContent: string,
+  path: string,
+): readonly SemanticToken[] {
+  const xmlDocument = parseXmlDocument(xmlContent, path);
   if (!xmlDocument.root) {
     return [];
   }

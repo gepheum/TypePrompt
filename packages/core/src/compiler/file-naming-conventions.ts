@@ -47,6 +47,7 @@ function checkSourcePath(
     return [
       {
         span: {
+          path: sourcePath,
           start: 0,
           end: 0,
         },

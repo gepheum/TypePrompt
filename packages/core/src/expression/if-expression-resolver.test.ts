@@ -13,7 +13,7 @@ import type {
   Schema,
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
-import type { MappedText, TextSpan } from "../util/shared-types.js";
+import type { MappedSpan, TextSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 import type { Expression } from "./expression-types.js";
 import { resolveIfExpression } from "./if-expression-resolver.js";
@@ -22,12 +22,18 @@ import { resolveIfExpression } from "./if-expression-resolver.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textNode(source: string): MappedText {
-  return { text: source, offsetMap: [{ textPosition: 0, sourcePosition: 0 }] };
+function textNode(source: string, path = ""): MappedSpan {
+  return {
+    text: source,
+    start: 0,
+    end: source.length,
+    path,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
 }
 
 function span<T extends string>(text: T): TextSpan<T> {
-  return { text, start: 0, end: text.length };
+  return { text, start: 0, end: text.length, path: "" };
 }
 
 function makeExpr(path: string): Expression<false> {
@@ -36,8 +42,8 @@ function makeExpr(path: string): Expression<false> {
   return r.expression;
 }
 
-function parseSchemaOrThrow(source: string): Schema {
-  const node = textNode(source);
+function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
+  const node = textNode(source, path);
   const parsed = parseSchema(node);
   if (parsed.kind !== "success") throw new Error("parse failed");
   const validated = validateSchema(parsed, {
@@ -52,7 +58,7 @@ function prim(
 ): PrimitiveType {
   return {
     kind: "primitive",
-    primitive: { text, start: 0, end: text.length },
+    primitive: span(text),
   };
 }
 
@@ -169,7 +175,7 @@ describe("resolveIfExpression - optional type", () => {
       kind: "optional",
       innerType: {
         kind: "type-name",
-        name: { text: "User", start: 0, end: 4 },
+        name: { text: "User", start: 0, end: 4, path: "" },
       },
     };
     expect(resolveIfExpression(expr, optType, span("notNull"), schema)).toMatch(
@@ -452,7 +458,7 @@ describe("resolveIfExpression - other types", () => {
     const ifaceExpr = makeExpr("input.user");
     const ifaceType: Interface = {
       kind: "interface",
-      leftCurlyBracket: { start: 0, end: 1 },
+      leftCurlyBracket: { start: 0, end: 1, path: "" },
       fields: {},
     };
     expect(
@@ -500,7 +506,7 @@ describe("resolveIfExpression - other types", () => {
     const recExpr = makeExpr("input.dict");
     const recType: RecordType = {
       kind: "record",
-      leftCurlyBracket: { start: 0, end: 1 },
+      leftCurlyBracket: { start: 0, end: 1, path: "" },
       keyName: "key",
       valueType: prim("string"),
     };

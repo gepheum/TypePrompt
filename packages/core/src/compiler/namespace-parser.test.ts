@@ -1,16 +1,28 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type { InternalErrors } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import { parseNamespace } from "./namespace-parser.js";
+import type { Namespace } from "./compiler-types.js";
+import { parseNamespace as parseNamespaceCore } from "./namespace-parser.js";
+
+function parseNamespace(
+  namespaceNode: ElementNode,
+  sourcePath?: string,
+): Namespace | InternalErrors {
+  if (sourcePath !== undefined) {
+    return parseNamespaceCore({ ...namespaceNode, path: sourcePath });
+  }
+  return parseNamespaceCore(namespaceNode);
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string): ElementNode {
-  const result = parseXmlDocument(xml);
+function parseElement(xml: string, path = "prompts/Main.xml"): ElementNode {
+  const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
       `Parse failed: ${result.errors.map((e) => e.message).join(", ")}`,

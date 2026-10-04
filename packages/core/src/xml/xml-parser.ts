@@ -20,8 +20,9 @@ import type {
 
 export function parseXmlDocument(
   content: string,
+  path: string,
 ): XmlDocument | InvalidXmlDocument {
-  return new XmlParser(content).parse();
+  return new XmlParser(content, path).parse();
 }
 
 // ---------------------------------------------------------------------------
@@ -35,7 +36,10 @@ class XmlParser {
   private root: ElementNode | null = null;
   private readonly topLevelComments: XmlComment[] = [];
 
-  constructor(private readonly content: string) {}
+  constructor(
+    private readonly content: string,
+    private readonly path: string,
+  ) {}
 
   parse(): XmlDocument | InvalidXmlDocument {
     while (this.cursor < this.content.length) {
@@ -60,6 +64,7 @@ class XmlParser {
       if (!el.unclosedOpeningTag) {
         this.errors.push({
           span: {
+            path: this.path,
             start: el.tag.start,
             end: el.tag.end,
           },
@@ -72,7 +77,7 @@ class XmlParser {
     if (this.root === null) {
       this.errors.push({
         message: "No root element found",
-        span: { start: 0, end: 0 },
+        span: { path: this.path, start: 0, end: 0 },
       });
     }
 
@@ -105,6 +110,7 @@ class XmlParser {
     const decoded = this.decodeXmlText(start, end);
     this.appendNode({
       kind: "text",
+      path: this.path,
       start: start,
       end: end,
       text: decoded.text,
@@ -123,6 +129,7 @@ class XmlParser {
     if (endMarker === -1) {
       this.errors.push({
         span: {
+          path: this.path,
           start: tokenStart,
           end: tokenEnd,
         },
@@ -132,6 +139,7 @@ class XmlParser {
       const xmlSlice = this.content.slice(tokenStart, tokenEnd);
       this.appendComment({
         kind: "comment",
+        path: this.path,
         start: tokenStart,
         end: tokenEnd,
         xmlSlice,
@@ -173,7 +181,12 @@ class XmlParser {
     this.cursor = RE_XML_NAME.lastIndex;
     const nameEnd = this.cursor;
     const tagName = this.content.slice(nameStart, nameEnd);
-    const tag: TextSpan = { text: tagName, start: nameStart, end: nameEnd };
+    const tag: TextSpan = {
+      path: this.path,
+      text: tagName,
+      start: nameStart,
+      end: nameEnd,
+    };
 
     const attributes: Record<string, Attribute> = {};
     const attributeErrors: InternalError[] = [];
@@ -199,7 +212,11 @@ class XmlParser {
           break;
         }
         attributeErrors.push({
-          span: { start: this.cursor, end: this.cursor + 1 },
+          span: {
+            path: this.path,
+            start: this.cursor,
+            end: this.cursor + 1,
+          },
           message: "Unexpected character",
         });
         this.cursor += 1;
@@ -210,7 +227,11 @@ class XmlParser {
       }
       if (!RE_NAME_START_CHAR.test(ch)) {
         attributeErrors.push({
-          span: { start: this.cursor, end: this.cursor + 1 },
+          span: {
+            path: this.path,
+            start: this.cursor,
+            end: this.cursor + 1,
+          },
           message: "Unexpected character",
         });
         this.cursor += 1;
@@ -235,6 +256,7 @@ class XmlParser {
 
     const element: OpenElement = {
       kind: "element",
+      path: this.path,
       tag: tag,
       start: tokenStart,
       end: openingTagEnd,
@@ -267,6 +289,7 @@ class XmlParser {
     const nameEnd = this.cursor;
     const name = this.content.slice(nameStart, nameEnd);
     const nameSpan = {
+      path: this.path,
       text: name,
       start: nameStart,
       end: nameEnd,
@@ -335,7 +358,11 @@ class XmlParser {
       this.cursor += 1;
     }
     const tokenEnd = this.cursor;
-    const closingTag: Span = { start: tokenStart, end: tokenEnd };
+    const closingTag: Span = {
+      path: this.path,
+      start: tokenStart,
+      end: tokenEnd,
+    };
 
     if (this.openElements.length <= 0) {
       this.errors.push({
@@ -379,6 +406,7 @@ class XmlParser {
       if (!el.unclosedOpeningTag) {
         this.errors.push({
           span: {
+            path: this.path,
             start: el.tag.start,
             end: el.tag.end,
           },
@@ -404,6 +432,7 @@ class XmlParser {
     const raw = this.content.slice(start, end);
     if (raw.length <= 0) {
       return {
+        path: this.path,
         text: "",
         start: start,
         end: end,
@@ -474,6 +503,7 @@ class XmlParser {
         // Unknown or malformed entity - record an error and keep the raw text.
         this.errors.push({
           span: {
+            path: this.path,
             start: start + i,
             end: start + semicolon + 1,
           },
@@ -497,6 +527,7 @@ class XmlParser {
     }
 
     return {
+      path: this.path,
       text: decodedParts.join(""),
       start: start,
       end: end,

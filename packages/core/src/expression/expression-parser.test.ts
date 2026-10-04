@@ -1,12 +1,15 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { MappedText } from "../util/shared-types.js";
+import type { MappedSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
 
-function textNode(source: string): MappedText {
+function textNode(source: string, path = ""): MappedSpan {
   return {
     text: source,
+    start: 0,
+    end: source.length,
+    path,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
 }
@@ -114,8 +117,11 @@ describe("parseExpression - property chains", () => {
 
 describe("parseExpression - source position remapping", () => {
   it("remaps the input span via the offsetMap", () => {
-    const content: MappedText = {
+    const content: MappedSpan = {
       text: "input",
+      start: 0,
+      end: 5,
+      path: "",
       offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
     expect(parseExpression(content, NO_CONTEXT)).toMatch({
@@ -125,8 +131,11 @@ describe("parseExpression - source position remapping", () => {
   });
 
   it("remaps property spans via the offsetMap", () => {
-    const content: MappedText = {
+    const content: MappedSpan = {
       text: "input.name",
+      start: 0,
+      end: 10,
+      path: "",
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };
     expect(parseExpression(content, NO_CONTEXT)).toMatch({

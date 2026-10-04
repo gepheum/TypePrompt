@@ -62,6 +62,7 @@ export function getCompletionItems(args: {
       } else {
         return {
           span: {
+            path: span.path,
             start: span.start,
             end: span.end - completionToken.length,
           },

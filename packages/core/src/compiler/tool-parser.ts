@@ -14,10 +14,7 @@ import { checkTemplateOrToolSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a <tool> element. The result has yet to be validated. */
-export function parseTool(
-  toolNode: ElementNode,
-  sourcePath: string,
-): Tool | InternalErrors {
+export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
   const attrs = checkXmlAttributes(toolNode, {
     name: expectIdentifier({
       format: "camelCase",
@@ -47,7 +44,9 @@ export function parseTool(
   }
 
   // Raise a warning if the file path doesn't match the file naming conventions.
-  warnings.push(...checkTemplateOrToolSourcePath(name, namespace, sourcePath));
+  warnings.push(
+    ...checkTemplateOrToolSourcePath(name, namespace, toolNode.path),
+  );
 
   let schema: SchemaParseResult | null = null;
   let description: ToolDescription | null = null;
