@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import { z } from "zod";
 
-import { checkXmlAttributes, oneOf } from "./xml-attributes-checker.js";
+import { checkXmlAttributes, expectOneOf } from "./xml-attributes-checker.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode } from "./xml-types.js";
 
@@ -118,7 +118,7 @@ describe("checkXmlAttributes", () => {
     });
 
     expect(result).toMatch({
-      kind: "error",
+      kind: "partial",
       errors: [{ message: "Unexpected attribute 'extra'" }],
     });
   });
@@ -129,7 +129,7 @@ describe("checkXmlAttributes", () => {
     const result = checkXmlAttributes(el, {});
 
     expect(result).toMatch({
-      kind: "error",
+      kind: "partial",
       errors: [
         {
           span: {
@@ -255,7 +255,10 @@ describe("checkXmlAttributes", () => {
     it("succeeds when attribute matches one of the allowed values", () => {
       const el = parseElement('<foo format="json" />');
       const result = checkXmlAttributes(el, {
-        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+        format: expectOneOf({
+          values: ["json", "text", "csv"],
+          optional: true,
+        }),
       });
 
       expect(result).toMatch({
@@ -269,7 +272,10 @@ describe("checkXmlAttributes", () => {
     it("succeeds with undefined when optional oneOf attribute is omitted", () => {
       const el = parseElement("<foo />");
       const result = checkXmlAttributes(el, {
-        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+        format: expectOneOf({
+          values: ["json", "text", "csv"],
+          optional: true,
+        }),
       });
 
       expect(result).toMatch({
@@ -281,7 +287,10 @@ describe("checkXmlAttributes", () => {
     it("reports an error with suggestions when an attribute value fails oneOf validation", () => {
       const el = parseElement('<foo format="yaml" />');
       const result = checkXmlAttributes(el, {
-        format: oneOf({ values: ["json", "text", "csv"], optional: true }),
+        format: expectOneOf({
+          values: ["json", "text", "csv"],
+          optional: true,
+        }),
       });
 
       expect(result).toMatch({
@@ -301,7 +310,7 @@ describe("checkXmlAttributes", () => {
     it("sets suggestions to entry.suggestions when an attribute value is invalid", () => {
       const el = parseElement('<foo mode="invalid" />');
       const result = checkXmlAttributes(el, {
-        mode: oneOf({ values: ["fast", "accurate"], optional: true }),
+        mode: expectOneOf({ values: ["fast", "accurate"], optional: true }),
       });
 
       expect(result).toMatch({

@@ -376,7 +376,7 @@ describe("parseBody - <insert snippet='...' />", () => {
     expect(
       testParseBody('<system><insert snippet="UserSnippet"/></system>'),
     ).toMatch({
-      body: [],
+      body: [{ kind: "insert-snippet" }],
       errors: [
         {
           message:
@@ -390,7 +390,7 @@ describe("parseBody - <insert snippet='...' />", () => {
     expect(
       testParseBody('<system><insert snippet="user-snippet"/></system>'),
     ).toMatch({
-      body: [],
+      body: [{ kind: "insert-snippet" }],
       errors: [
         {
           message:
@@ -404,7 +404,7 @@ describe("parseBody - <insert snippet='...' />", () => {
     expect(
       testParseBody('<system><insert snippet="user_snippet"/></system>'),
     ).toMatch({
-      body: [],
+      body: [{ kind: "insert-snippet" }],
       errors: [
         {
           message:
@@ -418,7 +418,7 @@ describe("parseBody - <insert snippet='...' />", () => {
     expect(
       testParseBody('<system><insert snippet="1snippet"/></system>'),
     ).toMatch({
-      body: [],
+      body: [{ kind: "insert-snippet" }],
       errors: [
         {
           message:
@@ -434,7 +434,7 @@ describe("parseBody - <insert snippet='...' />", () => {
         '<system><insert snippet="mySnippet" extra="bad"/></system>',
       ),
     ).toMatch({
-      body: [],
+      body: [{ kind: "insert-snippet" }],
       errors: [
         {
           message: "Unexpected attribute 'extra'",
@@ -696,7 +696,7 @@ describe("parseBody - <enclosed tag='...'>", () => {
         '<system><enclosed tag="123invalid">hello</enclosed></system>',
       ),
     ).toMatch({
-      body: [],
+      body: [{ kind: "text" }, { kind: "text" }, { kind: "text" }],
       errors: [
         {
           message:
@@ -712,7 +712,7 @@ describe("parseBody - <enclosed tag='...'>", () => {
         '<system><enclosed tag="valid" extra="bad">hello</enclosed></system>',
       ),
     ).toMatch({
-      body: [],
+      body: [{ kind: "text" }, { kind: "text" }, { kind: "text" }],
       errors: [
         {
           message: "Unexpected attribute 'extra'",

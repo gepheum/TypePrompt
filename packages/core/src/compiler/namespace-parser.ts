@@ -1,9 +1,11 @@
 import { InternalError, InternalErrors } from "../util/shared-types.js";
-import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
+import {
+  checkXmlAttributes,
+  expectIdentifier,
+} from "../xml/xml-attributes-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
 import { Namespace, SchemaOrError } from "./compiler-types.js";
 
-import * as z from "zod";
 import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
@@ -16,19 +18,18 @@ export function parseNamespace(
   sourcePath: string,
 ): Namespace | InternalErrors {
   const attrs = checkXmlAttributes(namespaceNode, {
-    name: {
-      schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+    name: expectIdentifier({
+      format: "PascalCase",
       optional: false,
-      expected: "a PascalCase identifier",
-    },
+    }),
   });
   if (attrs.kind === "error") {
     return attrs;
   }
-  const { name } = attrs.attributes;
-
-  const errors: InternalError[] = [];
+  const errors = [...attrs.errors];
   const warnings: InternalError[] = [];
+
+  const { name } = attrs.attributes;
 
   const nameText = name.value.text;
   for (const reserved of ["Meta", "Schema"]) {

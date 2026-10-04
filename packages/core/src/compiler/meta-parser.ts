@@ -14,9 +14,7 @@ export function parseMeta(
   sourcePath: string,
 ): Meta | InternalErrors {
   const attrs = checkXmlAttributes(metaNode, {});
-  if (attrs.kind === "error") {
-    return attrs;
-  }
+  const errors = [...attrs.errors];
 
   const warnings: InternalError[] = [];
   warnings.push(...checkMetaSourcePath(sourcePath));
@@ -37,10 +35,14 @@ export function parseMeta(
     });
   })();
 
-  return {
-    kind: "meta",
-    tag: metaNode.tag,
-    schema: schema,
-    warnings: textContent.warnings,
-  };
+  if (errors.length <= 0) {
+    return {
+      kind: "meta",
+      tag: metaNode.tag,
+      schema: schema,
+      warnings: textContent.warnings,
+    };
+  } else {
+    return { kind: "error", errors };
+  }
 }

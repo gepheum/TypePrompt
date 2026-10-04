@@ -13,7 +13,9 @@ import {
   AttributeValue,
   checkNoXmlAttributes,
   checkXmlAttributes,
-  oneOf,
+  expectIdentifier,
+  expectOneOf,
+  expectString,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import {
@@ -62,20 +64,19 @@ class TemplateParser {
   parse(): Template | InternalErrors {
     // 1. Validate <template> attributes.
     const attrs = checkXmlAttributes(this.templateNode, {
-      name: {
-        schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+      name: expectIdentifier({
+        format: "PascalCase",
         optional: false,
-        expected: "a PascalCase identifier",
-      },
-      namespace: {
-        schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+      }),
+      namespace: expectIdentifier({
+        format: "PascalCase",
         optional: true,
-        expected: "a PascalCase identifier",
-      },
+      }),
     });
     if (attrs.kind === "error") {
       return attrs;
     }
+    this.errors.push(...attrs.errors);
 
     const { name, namespace } = attrs.attributes;
 
@@ -181,11 +182,13 @@ class TemplateParser {
       });
     }
     const attrs = checkXmlAttributes(schemaNode, {
-      "output-format": oneOf({ values: ["json", "text"], optional: true }),
+      "output-format": expectOneOf({
+        values: ["json", "text"],
+        optional: true,
+      }),
     });
-    if (attrs.kind === "error") {
-      this.errors.push(...attrs.errors);
-    } else {
+    this.errors.push(...attrs.errors);
+    if (attrs.kind !== "error") {
       const outputFormat = attrs.attributes["output-format"];
       if (outputFormat) {
         this.outputFormat = outputFormat.value;
@@ -235,8 +238,8 @@ class TemplateParser {
         expected: "a string",
       },
     });
+    this.errors.push(...attrs.errors);
     if (attrs.kind === "error") {
-      this.errors.push(...attrs.errors);
       return;
     }
     const caseVal = attrs.attributes.case.value;
@@ -303,29 +306,25 @@ class TemplateParser {
 
   private parseSnippet(snippetNode: ElementNode): void {
     const attrs = checkXmlAttributes(snippetNode, {
-      name: {
-        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+      name: expectIdentifier({
+        format: "camelCase",
         optional: false,
-        expected: "a camelCase identifier",
-      },
-      if: {
-        schema: z.string(),
+      }),
+      if: expectString({
+        expected: "a boolean expression",
         optional: true,
-        expected: "a string",
-      },
-      is: {
-        schema: z.enum(["notNull", "notEmpty", "true"]),
+      }),
+      is: expectOneOf({
+        values: ["notNull", "notEmpty", "true"],
         optional: true,
-        expected: "'notNull', 'notEmpty' or 'true'",
-      },
-      switch: {
-        schema: z.string(),
+      }),
+      switch: expectString({
+        expected: "an expression",
         optional: true,
-        expected: "a string",
-      },
+      }),
     });
+    this.errors.push(...attrs.errors);
     if (attrs.kind === "error") {
-      this.errors.push(...attrs.errors);
       return;
     }
     if (attrs.attributes.is && !attrs.attributes.if) {
@@ -457,14 +456,13 @@ class TemplateParser {
       switch (tag) {
         case "on": {
           const attrs = checkXmlAttributes(child, {
-            case: {
-              schema: z.string(),
+            case: expectString({
+              expected: "a constant",
               optional: false,
-              expected: "a string",
-            },
+            }),
           });
+          this.errors.push(...attrs.errors);
           if (attrs.kind === "error") {
-            this.errors.push(...attrs.errors);
             break;
           }
           const caseSpan = attrs.attributes.case.value;

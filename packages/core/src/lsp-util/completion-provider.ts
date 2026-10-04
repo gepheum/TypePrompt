@@ -19,6 +19,18 @@ export function getCompletionItems(args: {
   const { newContent, path, pathToOldContent, position } = args;
   let { cache } = args;
 
+  const leftPart = newContent.slice(0, position);
+  const rightPart = newContent.slice(position);
+
+  // TODO: check if result span contains insertion...
+  const _insertions = (): readonly string[] => {
+    if (/[a-zA-Z0-9"']$/.test(leftPart) || /^[a-zA-Z0-9"']/.test(rightPart)) {
+      return [""];
+    }
+    const insertions: string[] = [];
+    return insertions;
+  };
+
   let newContents: readonly string[];
   const alphaAdjacent =
     /[a-zA-Z0-9]/.test(newContent[position - 1] ?? "") ||
@@ -28,15 +40,13 @@ export function getCompletionItems(args: {
     newContents = [newContent];
   } else {
     // No alphanumerical character adjacent to 'position'.
-    const left = newContent.slice(0, position);
-    const right = newContent.slice(position);
     const insertions = [
       `z${randomLetters}`,
       `Z${randomLetters}`,
       `z${randomLetters}=""`,
       `z${randomLetters}: true`,
     ];
-    newContents = insertions.map((i) => `${left}${i}${right}`);
+    newContents = insertions.map((i) => `${leftPart}${i}${rightPart}`);
   }
 
   const pathToNewContent = Object.fromEntries(Object.entries(pathToOldContent));

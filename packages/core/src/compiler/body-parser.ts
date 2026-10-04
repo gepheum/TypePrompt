@@ -7,7 +7,9 @@ import type {
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
-  oneOf,
+  expectIdentifier,
+  expectOneOf,
+  expectString,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode, XmlNode } from "../xml/xml-types.js";
 import type {
@@ -61,14 +63,10 @@ function parseBodyImpl<HasValContext extends boolean>(
 
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkXmlAttributes(insertNode, {
-      snippet: {
-        schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
-        optional: false,
-        expected: "a camelCase identifier",
-      },
+      snippet: expectIdentifier({ format: "camelCase", optional: false }),
     });
+    errors.push(...attrs.errors);
     if (attrs.kind === "error") {
-      errors.push(...attrs.errors);
       return;
     }
     rawPieces.push({
@@ -81,18 +79,17 @@ function parseBodyImpl<HasValContext extends boolean>(
   const visitInsertValue = (insertNode: ElementNode): void => {
     // Insert a formatted value.
     const attrs = checkXmlAttributes(insertNode, {
-      val: {
-        schema: z.string(),
+      val: expectString({
         optional: false,
         expected: "a valid expression",
-      },
-      format: oneOf({
+      }),
+      format: expectOneOf({
         values: ["text", "json", "yaml", "toon", "csv", "tsv"],
         optional: true,
       }),
     });
+    errors.push(...attrs.errors);
     if (attrs.kind === "error") {
-      errors.push(...attrs.errors);
       return;
     }
     const val = parseExpression(attrs.attributes.val.value, options);
@@ -145,14 +142,14 @@ function parseBodyImpl<HasValContext extends boolean>(
       case "enclosed": {
         const encAttrs = checkXmlAttributes(child, {
           tag: {
-            schema: z.string().regex(/^[A-Za-z_][\w.-]*$/),
-            optional: false,
+            schema: z.string(),
+            regex: /^[A-Za-z_][\w.-]*$/,
             expected: "a valid XML tag name",
+            optional: false,
           },
         });
-        if (encAttrs.kind === "error") {
-          errors.push(...encAttrs.errors);
-        } else {
+        errors.push(...encAttrs.errors);
+        if (encAttrs.kind !== "error") {
           const encTagName = encAttrs.attributes.tag.value;
           const tagName: string = encTagName.text;
           rawPieces.push({ kind: "synthetic-text", text: `<${tagName}>` });

@@ -1,10 +1,10 @@
-import * as z from "zod";
 import { parseSchema } from "../schema/schema-parser.js";
 import { SchemaParseResult } from "../schema/schema-types.js";
 import { InternalError, InternalErrors } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
+  expectIdentifier,
 } from "../xml/xml-attributes-checker.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { ElementNode } from "../xml/xml-types.js";
@@ -19,24 +19,22 @@ export function parseTool(
   sourcePath: string,
 ): Tool | InternalErrors {
   const attrs = checkXmlAttributes(toolNode, {
-    name: {
-      schema: z.string().regex(/^[a-z][A-Za-z0-9]*$/),
+    name: expectIdentifier({
+      format: "camelCase",
       optional: false,
-      expected: "a camelCase identifier",
-    },
-    namespace: {
-      schema: z.string().regex(/^[A-Z][A-Za-z0-9]*$/),
+    }),
+    namespace: expectIdentifier({
+      format: "PascalCase",
       optional: true,
-      expected: "a PascalCase identifier",
-    },
+    }),
   });
   if (attrs.kind === "error") {
     return attrs;
   }
+  const errors = [...attrs.errors];
+  const warnings: InternalError[] = [];
 
   const { name, namespace } = attrs.attributes;
-  const errors: InternalError[] = [];
-  const warnings: InternalError[] = [];
 
   const nameText = name.value.text;
   for (const reserved of ["shared", "meta"]) {
