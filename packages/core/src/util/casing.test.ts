@@ -196,7 +196,6 @@ describe("checkNameConflicts", () => {
       },
       {
         span: {
-          text: "response",
           start: 0,
           end: 8,
         },
@@ -204,7 +203,6 @@ describe("checkNameConflicts", () => {
       },
       {
         span: {
-          text: "response",
           start: 20,
           end: 28,
         },

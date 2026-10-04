@@ -407,13 +407,13 @@ function collectNamingHints(
                     discriminant:
                       discriminantType === "string"
                         ? {
-                          type: discriminantType,
-                          value: discriminant,
-                        }
+                            type: discriminantType,
+                            value: discriminant,
+                          }
                         : {
-                          type: discriminantType,
-                          value: discriminant === "true",
-                        },
+                            type: discriminantType,
+                            value: discriminant === "true",
+                          },
                   },
                 ],
                 doc: "",

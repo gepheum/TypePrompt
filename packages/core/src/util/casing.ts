@@ -1,15 +1,11 @@
 import { InternalError, TextSpan } from "./shared-types.js";
 
-type Error<S extends TextSpan> = {
-  readonly span: S;
-} & InternalError;
-
-export function checkNameConflicts<S extends TextSpan>(
-  names: readonly S[],
-): ReadonlyArray<Error<S>> {
-  const firstByLowercase = new Map<string, S>();
+export function checkNameConflicts(
+  names: readonly TextSpan[],
+): readonly InternalError[] {
+  const firstByLowercase = new Map<string, TextSpan>();
   const firstDuplicateAlreadyReported = new Set<string>();
-  const errors: Error<S>[] = [];
+  const errors: InternalError[] = [];
 
   for (const name of names) {
     const lowercase = name.text.toLowerCase().replace(/[_\-./]/g, "");
