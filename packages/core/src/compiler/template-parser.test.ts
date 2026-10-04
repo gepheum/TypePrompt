@@ -818,6 +818,7 @@ describe("parseTemplate - snippet verification", () => {
         <schema>type Input = {}; type Output = {};</schema>
         <system><insert snippet="nonExistentSnippet"/></system>
         <user>Usr</user>
+        <snippet name="mySnippet">my snippet</snippet>
       </template>
     `);
 
@@ -826,6 +827,7 @@ describe("parseTemplate - snippet verification", () => {
       errors: [
         {
           message: "Unknown snippet 'nonExistentSnippet'",
+          suggestions: ["mySnippet"],
         },
       ],
     });

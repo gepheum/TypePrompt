@@ -570,12 +570,14 @@ class TemplateParser {
       this.errors.push({ span, ...error });
     }
 
-    for (const snippet of this.snippets) {
-      if (!seenSnippets.has(snippet.name.text)) {
-        this.errors.push({
-          span: snippet.name,
-          message: `Snippet '${snippet.name.text}' is never used`,
-        });
+    if (spanToError.size <= 0) {
+      for (const snippet of this.snippets) {
+        if (!seenSnippets.has(snippet.name.text)) {
+          this.errors.push({
+            span: snippet.name,
+            message: `Snippet '${snippet.name.text}' is never used`,
+          });
+        }
       }
     }
   }
