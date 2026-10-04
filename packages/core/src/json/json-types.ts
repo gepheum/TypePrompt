@@ -1,4 +1,4 @@
-import type { InternalError, Span } from "../util/shared-types.js";
+import type { Span } from "../util/shared-types.js";
 
 /**
  * In "loose" mode, the JSON source may contain ellipses ("..."") and Javascript
@@ -20,7 +20,7 @@ export type LooseJsonValue = JsonValue<"loose">;
 
 export type JsonObject<Mode extends JsonMode> = {
   readonly kind: "object";
-  /// The left curly bracket.
+  /** The left curly bracket. */
   readonly firstToken: Span;
   readonly entries: { readonly [key: string]: JsonObjectEntry<Mode> };
   readonly ellipsis?: JsonEllipsis;
@@ -49,7 +49,7 @@ export type LooseJsonArray = JsonArray<"loose">;
 
 export type JsonString = {
   readonly kind: "string";
-  /// The quoted string.
+  /** The quoted string. */
   readonly firstToken: Span;
   readonly value: string;
 };
@@ -75,15 +75,3 @@ export type JsonEllipsis = {
   readonly kind: "ellipsis";
   readonly firstToken: Span;
 };
-
-export type JsonTypeMatch =
-  | { readonly kind: "match" }
-  | {
-      readonly kind: "mismatch";
-      readonly details?: {
-        /** Guaranteed to not be empty. */
-        readonly reasons: readonly InternalError[];
-        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
-        readonly matchScore: number;
-      };
-    };

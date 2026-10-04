@@ -7,11 +7,7 @@ import type {
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type { InternalError, Span } from "../util/shared-types.js";
-import type {
-  JsonTypeMatch,
-  LooseJsonValue,
-  StrictJsonValue,
-} from "./json-types.js";
+import type { LooseJsonValue, StrictJsonValue } from "./json-types.js";
 
 type SchemaView = {
   readonly typeDeclarations: Schema["typeDeclarations"];
@@ -429,6 +425,18 @@ export function jsonMatchesType(
     }
   }
 }
+
+type JsonTypeMatch =
+  | { readonly kind: "match" }
+  | {
+      readonly kind: "mismatch";
+      readonly details?: {
+        /** Guaranteed to not be empty. */
+        readonly reasons: readonly InternalError[];
+        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+        readonly matchScore: number;
+      };
+    };
 
 const MATCH = { kind: "match" } as const;
 const FAST_MISMATCH = { kind: "mismatch" } as const;
