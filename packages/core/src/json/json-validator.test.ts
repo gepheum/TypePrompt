@@ -26,11 +26,7 @@ import type {
   LooseJsonValue,
   StrictJsonValue,
 } from "./json-types.js";
-import {
-  collectJsonDefinitionLinks,
-  jsonMatchesType,
-  validateJson,
-} from "./json-validator.js";
+import { jsonMatchesType, validateJson } from "./json-validator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -179,26 +175,26 @@ describe("validateJson - exact match", () => {
   it("accepts a string for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("hello"), type, schema)).toMatch([]);
+    expect(validateJson(str("hello"), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a number for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = number");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(3.14), type, schema)).toMatch([]);
+    expect(validateJson(num(3.14), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a boolean for a boolean type", () => {
     const schema = parseSchemaOrThrow("type Response = boolean");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(bool(true), type, schema)).toMatch([]);
+    expect(validateJson(bool(true), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts an integer for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = { count: number; };");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["count", num(42)]]), type, schema)).toMatch(
-      [],
+      { errors: [] },
     );
   });
 
@@ -207,31 +203,31 @@ describe("validateJson - exact match", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["count", num(3.14)]]), type, schema),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts an in-range integer for an integer type", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(42), type, schema)).toMatch([]);
+    expect(validateJson(num(42), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a number for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(1), type, schema)).toMatch([]);
+    expect(validateJson(num(1), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a string for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("x"), type, schema)).toMatch([]);
+    expect(validateJson(str("x"), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts an object for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(objStrict([]), type, schema)).toMatch([]);
+    expect(validateJson(objStrict([]), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a boolean matching a boolean-literal type", () => {
@@ -239,7 +235,7 @@ describe("validateJson - exact match", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", bool(true)]]), type, schema),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts a matching record value", () => {
@@ -256,7 +252,7 @@ describe("validateJson - exact match", () => {
         type,
         schema,
       ),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts an object matching an interface", () => {
@@ -273,7 +269,7 @@ describe("validateJson - exact match", () => {
         type,
         schema,
       ),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts an object when an optional field is absent", () => {
@@ -283,14 +279,14 @@ describe("validateJson - exact match", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), type, schema),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts an array of strings for a string array type", () => {
     const schema = parseSchemaOrThrow("type Response = string[]");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(arrStrict([str("a"), str("b")]), type, schema)).toMatch(
-      [],
+      { errors: [] },
     );
   });
 
@@ -299,13 +295,13 @@ describe("validateJson - exact match", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", str("ok")]]), type, schema),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts a matching value from a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "pending" | "done"');
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("done"), type, schema)).toMatch([]);
+    expect(validateJson(str("done"), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a matching member of an interface union", () => {
@@ -322,7 +318,7 @@ describe("validateJson - exact match", () => {
         type,
         schema,
       ),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("validates against a non-root named type", () => {
@@ -330,9 +326,9 @@ describe("validateJson - exact match", () => {
       "type Response = { item: Detail }; type Detail = { x: string; };",
     );
     const type = schema.typeDeclarations["Detail"]!;
-    expect(validateJson(objStrict([["x", str("hi")]]), type, schema)).toMatch(
-      [],
-    );
+    expect(validateJson(objStrict([["x", str("hi")]]), type, schema)).toMatch({
+      errors: [],
+    });
   });
 });
 
@@ -344,25 +340,25 @@ describe("validateJson - mismatch", () => {
   it("returns an error when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(42), type, schema)).toMatch([
-      { message: "Expected string but got number" },
-    ]);
+    expect(validateJson(num(42), type, schema)).toMatch({
+      errors: [{ message: "Expected string but got number" }],
+    });
   });
 
   it("returns an error when an object is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(objStrict([]), type, schema)).toMatch([
-      { message: "Expected string but got object" },
-    ]);
+    expect(validateJson(objStrict([]), type, schema)).toMatch({
+      errors: [{ message: "Expected string but got object" }],
+    });
   });
 
   it("returns an error when a number is given for a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(1), type, schema)).toMatch([
-      { message: "Expected string but got number" },
-    ]);
+    expect(validateJson(num(1), type, schema)).toMatch({
+      errors: [{ message: "Expected string but got number" }],
+    });
   });
 
   it("returns an error when the discriminator field is missing", () => {
@@ -372,26 +368,30 @@ describe("validateJson - mismatch", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Felix")]]), type, schema),
-    ).toMatch([{ message: "Missing required field 'kind'" }]);
+    ).toMatch({
+      errors: [{ message: "Missing required field 'kind'" }],
+    });
   });
 
   it("returns an error for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(objStrict([["name", num(42)]]), type, schema)).toMatch([
-      { message: "Expected string but got number" },
-    ]);
+    expect(validateJson(objStrict([["name", num(42)]]), type, schema)).toMatch({
+      errors: [{ message: "Expected string but got number" }],
+    });
   });
 
   it("returns an error for a string not in a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("c"), type, schema)).toMatch([
-      {
-        message: 'Expected one of ["a","b"]',
-        suggestions: ['"a"', '"b"'],
-      },
-    ]);
+    expect(validateJson(str("c"), type, schema)).toMatch({
+      errors: [
+        {
+          message: 'Expected one of ["a","b"]',
+          suggestions: ['"a"', '"b"'],
+        },
+      ],
+    });
   });
 
   it("returns an error for an unknown discriminant value in an interface union", () => {
@@ -401,12 +401,14 @@ describe("validateJson - mismatch", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["kind", str("fish")]]), type, schema),
-    ).toMatch([
-      {
-        message: 'Expected one of ["cat","dog"]',
-        suggestions: ['"cat"', '"dog"'],
-      },
-    ]);
+    ).toMatch({
+      errors: [
+        {
+          message: 'Expected one of ["cat","dog"]',
+          suggestions: ['"cat"', '"dog"'],
+        },
+      ],
+    });
   });
 
   it("returns an error for a missing required field", () => {
@@ -416,7 +418,9 @@ describe("validateJson - mismatch", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), type, schema),
-    ).toMatch([{ message: "Missing required field 'age'" }]);
+    ).toMatch({
+      errors: [{ message: "Missing required field 'age'" }],
+    });
   });
 
   it("returns multiple errors when an object has multiple invalid/missing fields", () => {
@@ -433,11 +437,13 @@ describe("validateJson - mismatch", () => {
         type,
         schema,
       ),
-    ).toMatch([
-      { message: "Expected string but got number" },
-      { message: "Expected number but got string" },
-      { message: "Missing required field 'score'" },
-    ]);
+    ).toMatch({
+      errors: [
+        { message: "Expected string but got number" },
+        { message: "Expected number but got string" },
+        { message: "Missing required field 'score'" },
+      ],
+    });
   });
 });
 
@@ -449,35 +455,37 @@ describe("validateJson - integer type", () => {
   it("accepts an in-range integer number", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(42), type, schema)).toMatch([]);
+    expect(validateJson(num(42), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts lower boundary -2147483648", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(-2147483648), type, schema)).toMatch([]);
+    expect(validateJson(num(-2147483648), type, schema)).toMatch({
+      errors: [],
+    });
   });
 
   it("accepts upper boundary 2147483647", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(2147483647), type, schema)).toMatch([]);
+    expect(validateJson(num(2147483647), type, schema)).toMatch({ errors: [] });
   });
 
   it("rejects a float with a close-match error", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(3.14), type, schema)).toMatch([
-      { message: "Expected int but got float" },
-    ]);
+    expect(validateJson(num(3.14), type, schema)).toMatch({
+      errors: [{ message: "Expected int but got float" }],
+    });
   });
 
   it("rejects an out-of-range integer with the same close-match error", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(num(2147483648), type, schema)).toMatch([
-      { message: "Expected int but got float" },
-    ]);
+    expect(validateJson(num(2147483648), type, schema)).toMatch({
+      errors: [{ message: "Expected int but got float" }],
+    });
   });
 });
 
@@ -491,7 +499,7 @@ describe("validateJson - boolean-literal type", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("rejects the opposite boolean value with suggestions", () => {
@@ -499,14 +507,18 @@ describe("validateJson - boolean-literal type", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
-    ).toMatch([{ message: "Expected true", suggestions: ["true"] }]);
+    ).toMatch({
+      errors: [{ message: "Expected true", suggestions: ["true"] }],
+    });
   });
 
   it("rejects a non-boolean with an error", () => {
     const schema = parseSchemaOrThrow("type Response = { status: true }");
     const type = schema.typeDeclarations["Response"]!;
     expect(validateJson(objStrict([["status", num(1)]]), type, schema)).toMatch(
-      [{ message: "Expected true", suggestions: ["true"] }],
+      {
+        errors: [{ message: "Expected true", suggestions: ["true"] }],
+      },
     );
   });
 });
@@ -530,7 +542,7 @@ describe("validateJson - record type", () => {
         type,
         schema,
       ),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("accepts an empty object for a record type", () => {
@@ -538,7 +550,7 @@ describe("validateJson - record type", () => {
       "type Response = { [key: string]: string }",
     );
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(objStrict([]), type, schema)).toMatch([]);
+    expect(validateJson(objStrict([]), type, schema)).toMatch({ errors: [] });
   });
 
   it("rejects a non-object with an error", () => {
@@ -546,9 +558,9 @@ describe("validateJson - record type", () => {
       "type Response = { [key: string]: number }",
     );
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(str("oops"), type, schema)).toMatch([
-      { message: "Expected object but got string" },
-    ]);
+    expect(validateJson(str("oops"), type, schema)).toMatch({
+      errors: [{ message: "Expected object but got string" }],
+    });
   });
 
   it("rejects a wrong-typed record value with a close-match error", () => {
@@ -556,9 +568,9 @@ describe("validateJson - record type", () => {
       "type Response = { [key: string]: number }",
     );
     const type = schema.typeDeclarations["Response"]!;
-    expect(validateJson(objStrict([["x", str("bad")]]), type, schema)).toMatch([
-      { message: "Expected number but got string" },
-    ]);
+    expect(validateJson(objStrict([["x", str("bad")]]), type, schema)).toMatch({
+      errors: [{ message: "Expected number but got string" }],
+    });
   });
 });
 
@@ -574,15 +586,17 @@ describe("validateJson - interface extras", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["nickname", str("Alice")]]), type, schema),
-    ).toMatch([
-      {
-        message: "Unknown field 'nickname'",
-        suggestions: ["name", "age"],
-      },
-      {
-        message: "Missing required field 'name'",
-      },
-    ]);
+    ).toMatch({
+      errors: [
+        {
+          message: "Unknown field 'nickname'",
+          suggestions: ["name", "age"],
+        },
+        {
+          message: "Missing required field 'name'",
+        },
+      ],
+    });
   });
 
   it("rejects an unknown field with empty suggestions when all schema fields are present", () => {
@@ -597,12 +611,14 @@ describe("validateJson - interface extras", () => {
         type,
         schema,
       ),
-    ).toMatch([
-      {
-        message: "Unknown field 'extra'",
-        suggestions: [],
-      },
-    ]);
+    ).toMatch({
+      errors: [
+        {
+          message: "Unknown field 'extra'",
+          suggestions: [],
+        },
+      ],
+    });
   });
 });
 
@@ -625,7 +641,7 @@ describe("validateJson - boolean-discriminated union", () => {
         type,
         schema,
       ),
-    ).toMatch([]);
+    ).toMatch({ errors: [] });
   });
 
   it("rejects when the boolean discriminant is the wrong type", () => {
@@ -635,12 +651,66 @@ describe("validateJson - boolean-discriminated union", () => {
     const type = schema.typeDeclarations["Response"]!;
     expect(
       validateJson(objStrict([["success", str("yes")]]), type, schema),
-    ).toMatch([
-      {
-        message: "Expected boolean but got string",
-        suggestions: ["true", "false"],
-      },
-    ]);
+    ).toMatch({
+      errors: [
+        {
+          message: "Expected boolean but got string",
+          suggestions: ["true", "false"],
+        },
+      ],
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateJson - definition links
+// ---------------------------------------------------------------------------
+
+describe("validateJson - definition links", () => {
+  it("collects definition links for interface fields", () => {
+    const schema = parseSchemaOrThrow(
+      "type Response = { name: string; age: number; };",
+    );
+    const type = schema.typeDeclarations["Response"]!;
+    expect(
+      validateJson(
+        objStrict([
+          ["name", str("Alice")],
+          ["age", num(30)],
+        ]),
+        type,
+        schema,
+      ),
+    ).toMatch({
+      errors: [],
+      definitionLinks: [
+        { definition: { text: "name" } },
+        { definition: { text: "age" } },
+      ],
+    });
+  });
+
+  it("collects definition links for nested interfaces in discriminated union", () => {
+    const schema = parseSchemaOrThrow(
+      'type Cat = { kind: "cat"; name: string; }; type Dog = { kind: "dog"; breed: string; }; type Response = Cat | Dog;',
+    );
+    const type = schema.typeDeclarations["Response"]!;
+    expect(
+      validateJson(
+        objStrict([
+          ["kind", str("cat")],
+          ["name", str("Whiskers")],
+        ]),
+        type,
+        schema,
+      ),
+    ).toMatch({
+      errors: [],
+      definitionLinks: [
+        { definition: { text: "kind" } },
+        { definition: { text: "name" } },
+      ],
+    });
   });
 });
 
@@ -653,18 +723,12 @@ describe("jsonMatchesType - result shape and mode", () => {
     expect(
       jsonMatchesType(str("hi"), primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(str("hi"), primType("string"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("fast mode: mismatch returns { kind: 'mismatch' } without details", () => {
     expect(
       jsonMatchesType(num(1), primType("string"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("thorough mode: mismatch includes reasons and matchScore", () => {
@@ -677,9 +741,6 @@ describe("jsonMatchesType - result shape and mode", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 });
 
@@ -692,18 +753,12 @@ describe("jsonMatchesType - ellipsis value", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(ELLIPSIS, primType("string"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("ellipsis matches literal in thorough mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, litType("ok"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(ELLIPSIS, litType("ok"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("ellipsis matches interface in thorough mode", () => {
@@ -715,22 +770,12 @@ describe("jsonMatchesType - ellipsis value", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(
-        ELLIPSIS,
-        ifaceType({ name: { text: "string" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("ellipsis matches primitive number in fast mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(ELLIPSIS, primType("number"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("a loose object with an ellipsis satisfies an interface even when required fields are absent", () => {
@@ -748,13 +793,6 @@ describe("jsonMatchesType - ellipsis value", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(
-        loosObj,
-        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 });
 
@@ -773,9 +811,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(str("bad"), litType("ok"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("string-literal: wrong kind → matchScore 0", () => {
@@ -788,9 +823,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(1), litType("ok"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("boolean-literal: opposite value → matchScore 0.5", () => {
@@ -803,9 +835,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("boolean-literal: wrong kind → matchScore 0", () => {
@@ -818,9 +847,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(1), boolLitType(true), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("primitive integer: float value → matchScore 0.5", () => {
@@ -833,9 +859,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(3.14), primType("integer"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("primitive integer: out-of-range integer → matchScore 0.5", () => {
@@ -853,13 +876,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        num(2147483648),
-        primType("integer"),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("primitive integer: string value → matchScore 0", () => {
@@ -872,9 +888,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(str("123"), primType("integer"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("primitive string: wrong kind → matchScore 0", () => {
@@ -887,9 +900,6 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(42), primType("string"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 });
 
@@ -915,9 +925,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(str("c"), unionType as SyntheticType, schema),
-    ).toMatch([]);
   });
 
   it("string union: wrong kind (number) → matchScore 0", () => {
@@ -932,9 +939,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(num(1), unionType as SyntheticType, schema),
-    ).toMatch([]);
   });
 
   it("discriminated union: missing discriminator field → matchScore 0", () => {
@@ -956,13 +960,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["name", str("Felix")]])),
-        petType as SyntheticType,
-        schema,
-      ),
-    ).toMatch([]);
   });
 
   it("discriminated union: wrong discriminator type → matchScore 0", () => {
@@ -989,13 +986,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["kind", num(123)]])),
-        petType as SyntheticType,
-        schema,
-      ),
-    ).toMatch([]);
   });
 
   it("discriminated union: unknown discriminant string → matchScore 0.5", () => {
@@ -1022,13 +1012,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["kind", str("bird")]])),
-        petType as SyntheticType,
-        schema,
-      ),
-    ).toMatch([]);
   });
 
   it("discriminated union: valid discriminant with child mismatch propagates member interface score", () => {
@@ -1056,23 +1039,6 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 5 / 6,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["kind", str("cat")],
-            ["name", str("Felix")],
-            ["age", str("bad")],
-          ]),
-        ),
-        petType as SyntheticType,
-        schema,
-      ),
-    ).toMatch([
-      { definition: { text: "kind" } },
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-    ]);
   });
 });
 
@@ -1101,21 +1067,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.75,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["name", str("Alice")],
-            ["age", str("bad")],
-          ]),
-        ),
-        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-    ]);
   });
 
   it("interface: 1 of 2 required fields is missing → matchScore 2/3", () => {
@@ -1133,13 +1084,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["name", str("Alice")]])),
-        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: empty object with missing required fields → matchScore 0", () => {
@@ -1160,13 +1104,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([])),
-        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("interface: valid required field plus unknown field → matchScore 2/3", () => {
@@ -1189,18 +1126,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["name", str("Alice")],
-            ["extra", num(1)],
-          ]),
-        ),
-        ifaceType({ name: { text: "string" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: unknown field includes missing required and optional fields in suggestions", () => {
@@ -1235,22 +1160,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["name", str("Alice")],
-            ["extra", num(1)],
-          ]),
-        ),
-        ifaceType({
-          name: { text: "string" },
-          age: { text: "number" },
-          bio: { text: "string", optional: true },
-        }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: 1 required and 1 optional field with wrong optional type → matchScore 2/3", () => {
@@ -1276,24 +1185,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["name", str("Alice")],
-            ["nickname", num(123)],
-          ]),
-        ),
-        ifaceType({
-          name: { text: "string" },
-          nickname: { text: "string", optional: true },
-        }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([
-      { definition: { text: "name" } },
-      { definition: { text: "nickname" } },
-    ]);
   });
 
   it("interface: only optional fields with 1 valid and 1 invalid → matchScore 0.5", () => {
@@ -1319,21 +1210,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["a", str("ok")],
-            ["b", num(123)],
-          ]),
-        ),
-        ifaceType({
-          a: { text: "string", optional: true },
-          b: { text: "string", optional: true },
-        }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([{ definition: { text: "a" } }, { definition: { text: "b" } }]);
   });
 
   it("interface: nested interface failure propagates partial score", () => {
@@ -1365,27 +1241,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.875,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            [
-              "user",
-              objStrict([
-                ["name", str("Alice")],
-                ["age", str("bad")],
-              ]),
-            ],
-          ]),
-        ),
-        resolveType(wrapperType, schema),
-        schema,
-      ),
-    ).toMatch([
-      { definition: { text: "user" } },
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-    ]);
   });
 
   it("interface: non-object value → matchScore 0", () => {
@@ -1403,13 +1258,6 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        str("not an object"),
-        ifaceType({ name: { text: "string" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 });
 
@@ -1438,18 +1286,6 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["a", str("hello")],
-            ["b", num(123)],
-          ]),
-        ),
-        recordType("string"),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("record: 1 entry with nested partial score 0.5 → matchScore 0.5", () => {
@@ -1476,13 +1312,6 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["a", str("wrong")]])),
-        resolveType(recType, schema),
-        schema,
-      ),
-    ).toMatch([]);
   });
 
   it("record: non-object value → matchScore 0", () => {
@@ -1500,13 +1329,6 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(arrStrict([])),
-        recordType("number"),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 });
 
@@ -1534,13 +1356,6 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        arrStrict([num(1), str("bad")]) as LooseJsonValue,
-        arrT,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("array: 1 of 3 elements matches, second fails → matchScore 2/3", () => {
@@ -1562,13 +1377,6 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 2 / 3,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        arrStrict([num(1), str("bad"), num(3)]) as LooseJsonValue,
-        arrT,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("array: first element fails, second element matches → matchScore 0.5", () => {
@@ -1590,13 +1398,6 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.5,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        arrStrict([str("bad"), num(1)]) as LooseJsonValue,
-        arrT,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("array of interfaces: partial score from failing element propagates", () => {
@@ -1630,27 +1431,6 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.875,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(
-        arrStrict([
-          objStrict([
-            ["name", str("Alice")],
-            ["age", num(30)],
-          ]),
-          objStrict([
-            ["name", str("Bob")],
-            ["age", str("bad")],
-          ]),
-        ]) as LooseJsonValue,
-        arrT,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-    ]);
   });
 
   it("array: non-array value → matchScore 0", () => {
@@ -1667,9 +1447,6 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0,
       },
     });
-    expect(
-      collectJsonDefinitionLinks(safeCast(objStrict([])), arrT, EMPTY_VIEW),
-    ).toMatch([]);
   });
 });
 
@@ -1686,9 +1463,6 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(nullVal(), optType, "thorough", EMPTY_VIEW)).toMatch(
       { kind: "match" },
     );
-    expect(collectJsonDefinitionLinks(nullVal(), optType, EMPTY_VIEW)).toMatch(
-      [],
-    );
   });
 
   it("optional matches inner type when non-null", () => {
@@ -1699,9 +1473,6 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(
       jsonMatchesType(str("hello"), optType, "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(str("hello"), optType, EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("optional propagates mismatch details when non-null", () => {
@@ -1716,9 +1487,6 @@ describe("jsonMatchesType - Optionals and Any", () => {
         matchScore: 0,
       },
     });
-    expect(collectJsonDefinitionLinks(num(42), optType, EMPTY_VIEW)).toMatch(
-      [],
-    );
   });
 
   it("any type matches in fast mode", () => {
@@ -1726,9 +1494,6 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(num(42), anyType, "fast", EMPTY_VIEW)).toMatch({
       kind: "match",
     });
-    expect(collectJsonDefinitionLinks(num(42), anyType, EMPTY_VIEW)).toMatch(
-      [],
-    );
   });
 
   it("any type matches in thorough mode", () => {
@@ -1741,13 +1506,6 @@ describe("jsonMatchesType - Optionals and Any", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["x", str("y")]])),
-        anyType,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 });
 
@@ -1769,13 +1527,6 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(
-        arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
-        arrT,
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("interface: stops at first field type mismatch", () => {
@@ -1792,21 +1543,6 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(
-          objStrict([
-            ["name", num(42)],
-            ["age", num(30)],
-          ]),
-        ),
-        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([
-      { definition: { text: "name" } },
-      { definition: { text: "age" } },
-    ]);
   });
 
   it("interface: stops on unknown field", () => {
@@ -1818,13 +1554,6 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["extra", str("x")]])),
-        ifaceType({ name: { text: "string" } }),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("record: stops at first value type mismatch", () => {
@@ -1836,40 +1565,24 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["x", str("bad")]])),
-        recordType("number"),
-        EMPTY_VIEW,
-      ),
-    ).toMatch([]);
   });
 
   it("boolean-literal: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(bool(false), boolLitType(true), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("string-literal: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(str("no"), litType("yes"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(str("no"), litType("yes"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("primitive: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(str("no"), primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(str("no"), primType("number"), EMPTY_VIEW),
-    ).toMatch([]);
   });
 
   it("string union: returns mismatch in fast mode", () => {
@@ -1878,9 +1591,6 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
     expect(
       jsonMatchesType(str("c"), unionType as SyntheticType, "fast", schema),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(str("c"), unionType as SyntheticType, schema),
-    ).toMatch([]);
   });
 
   it("interface union: returns mismatch in fast mode", () => {
@@ -1896,12 +1606,5 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         schema,
       ),
     ).toMatch({ kind: "mismatch" });
-    expect(
-      collectJsonDefinitionLinks(
-        safeCast(objStrict([["kind", str("bird")]])),
-        petType as SyntheticType,
-        schema,
-      ),
-    ).toMatch([]);
   });
 });

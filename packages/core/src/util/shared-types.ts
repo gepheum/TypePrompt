@@ -67,3 +67,8 @@ export type DefinitionLink = {
   readonly reference: Span;
   readonly definition: TextSpan;
 };
+
+export type ValidationResult = {
+  readonly errors: readonly InternalError[];
+  readonly definitionLinks: readonly DefinitionLink[];
+};

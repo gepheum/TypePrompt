@@ -10,13 +10,9 @@ import type {
   DefinitionLink,
   InternalError,
   Span,
+  ValidationResult,
 } from "../util/shared-types.js";
-import type {
-  JsonMode,
-  JsonValue,
-  LooseJsonValue,
-  StrictJsonValue,
-} from "./json-types.js";
+import type { LooseJsonValue, StrictJsonValue } from "./json-types.js";
 
 type SchemaView = {
   readonly typeDeclarations: Schema["typeDeclarations"];
@@ -50,13 +46,13 @@ export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
  * @param json The strict JSON AST value to validate.
  * @param type The target type declaration or named synthetic type.
  * @param schema The schema view providing type and union resolution tables.
- * @returns An array of {@link InternalError} diagnostics (empty on successful validation).
+ * @returns A {@link ValidationResult} with errors and definition links.
  */
 export function validateJson(
   json: StrictJsonValue,
   type: TypeDeclaration | (SyntheticType & HasName),
   schema: SchemaView,
-): readonly InternalError[] {
+): ValidationResult {
   const result = jsonMatchesType(
     json as LooseJsonValue,
     resolveType(type.kind === "type" ? type.valueType : type, schema),
@@ -64,7 +60,10 @@ export function validateJson(
     schema,
   );
   if (result.kind === "match") {
-    return [];
+    return {
+      errors: [],
+      definitionLinks: result.definitionLinks,
+    };
   }
   const typeName = type.name.text;
   const errors = result.details.reasons ?? [
@@ -73,7 +72,10 @@ export function validateJson(
       message: `Does not match type '${typeName}'`,
     },
   ];
-  return errors;
+  return {
+    errors,
+    definitionLinks: [],
+  };
 }
 
 /**
@@ -198,6 +200,12 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
           seenFieldNames.add(fieldName);
           const field = type.fields[fieldName];
           if (field) {
+            if (field.name.start !== undefined) {
+              definitionLinks.push({
+                reference: entry.key.firstToken,
+                definition: field.name,
+              });
+            }
             const fieldType = resolveType(field.type, schema);
             const fieldMatch = jsonMatchesType(
               entry.value,
@@ -461,115 +469,6 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
               `Expected object but got ${value.kind}`,
             );
           }
-        }
-      }
-    }
-  }
-}
-
-export function collectJsonDefinitionLinks(
-  value: JsonValue<JsonMode>,
-  type: ResolvedFieldType | SyntheticType,
-  schema: SchemaView,
-): readonly DefinitionLink[] {
-  if (value.kind === "ellipsis") {
-    return [];
-  }
-  switch (type.kind) {
-    case "any":
-    case "boolean-literal":
-    case "primitive":
-    case "string-literal": {
-      return [];
-    }
-    case "array": {
-      if (value.kind !== "array") {
-        return [];
-      }
-      const definitionLinks: DefinitionLink[] = [];
-      const elementType = resolveType(type.elementType, schema);
-      const { elements } = value;
-      for (const element of elements) {
-        definitionLinks.push(
-          ...collectJsonDefinitionLinks(element, elementType, schema),
-        );
-      }
-      return definitionLinks;
-    }
-    case "interface": {
-      if (value.kind !== "object") {
-        return [];
-      }
-      const definitionLinks: DefinitionLink[] = [];
-      for (const entry of Object.values(value.entries)) {
-        const fieldName = entry.key;
-        const schemaField = type.fields[fieldName.value];
-        if (!schemaField) {
-          continue;
-        }
-        if (schemaField.name.start !== undefined) {
-          definitionLinks.push({
-            reference: fieldName.firstToken,
-            definition: schemaField.name,
-          });
-        }
-        const fieldType = resolveType(schemaField.type, schema);
-        definitionLinks.push(
-          ...collectJsonDefinitionLinks(entry.value, fieldType, schema),
-        );
-      }
-      return definitionLinks;
-    }
-    case "optional": {
-      if (value.kind === "null") {
-        return [];
-      } else {
-        const innerType = resolveType(type.innerType, schema);
-        return collectJsonDefinitionLinks(value, innerType, schema);
-      }
-    }
-    case "record": {
-      if (value.kind !== "object") {
-        return [];
-      }
-      const valueType = resolveType(type.valueType, schema);
-      const definitionLinks: DefinitionLink[] = [];
-      for (const entry of Object.values(value.entries)) {
-        definitionLinks.push(
-          ...collectJsonDefinitionLinks(entry.value, valueType, schema),
-        );
-      }
-      return definitionLinks;
-    }
-    case "union":
-    case "synthetic-union": {
-      const members =
-        type.kind === "union" ? schema.unionToMembers.get(type)! : type.members;
-      switch (members.kind) {
-        case "strings": {
-          return [];
-        }
-        case "interfaces": {
-          if (value.kind !== "object") {
-            return [];
-          }
-          const { discriminator } = members;
-          const discriminantEntry = value.entries[discriminator];
-          if (discriminantEntry) {
-            const discriminant: LooseJsonValue | StrictJsonValue =
-              discriminantEntry.value;
-            if (discriminant.kind === members.discriminants.type) {
-              const member = members.members[String(discriminant.value)];
-              if (member) {
-                return collectJsonDefinitionLinks(
-                  value,
-                  member.resolved,
-                  schema,
-                );
-              }
-            }
-          }
-          return [];
         }
       }
     }

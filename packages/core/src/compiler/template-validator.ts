@@ -10,10 +10,7 @@ import {
   StrictJsonObject,
   StrictJsonValue,
 } from "../json/json-types.js";
-import {
-  collectJsonDefinitionLinks,
-  validateJson,
-} from "../json/json-validator.js";
+import { validateJson } from "../json/json-validator.js";
 import {
   HasName,
   Schema,
@@ -215,7 +212,7 @@ function validateMeta(
       const { meta } = contents.content;
       if (metaType) {
         if (meta) {
-          errors.push(...validateJson(meta.value, metaType, metaSchema));
+          errors.push(...validateJson(meta.value, metaType, metaSchema).errors);
         } else {
           pushMissingMetaError(template.tag);
         }
@@ -230,7 +227,8 @@ function validateMeta(
       if (metaType) {
         if (defaultContent.meta) {
           errors.push(
-            ...validateJson(defaultContent.meta.value, metaType, metaSchema),
+            ...validateJson(defaultContent.meta.value, metaType, metaSchema)
+              .errors,
           );
         } else if (variants.every((v) => !v.content.meta)) {
           pushMissingMetaError(template.tag);
@@ -239,7 +237,8 @@ function validateMeta(
             const { content } = variant;
             if (content.meta) {
               errors.push(
-                ...validateJson(content.meta.value, metaType, metaSchema),
+                ...validateJson(content.meta.value, metaType, metaSchema)
+                  .errors,
               );
             } else {
               pushMissingMetaError(variant.tag);
@@ -271,18 +270,13 @@ function collectMetaDefinitionLinks(
   if (!metaType) {
     return links;
   }
-  const resolvedMetaType = resolveType(metaType.valueType, metaSchema);
   const { contents } = template;
   switch (contents.kind) {
     case "no-variants": {
       const { meta } = contents.content;
       if (meta) {
         links.push(
-          ...collectJsonDefinitionLinks(
-            meta.value,
-            resolvedMetaType,
-            metaSchema,
-          ),
+          ...validateJson(meta.value, metaType, metaSchema).definitionLinks,
         );
       }
       break;
@@ -291,21 +285,15 @@ function collectMetaDefinitionLinks(
       const { defaultContent, variants } = contents;
       if (defaultContent.meta) {
         links.push(
-          ...collectJsonDefinitionLinks(
-            defaultContent.meta.value,
-            resolvedMetaType,
-            metaSchema,
-          ),
+          ...validateJson(defaultContent.meta.value, metaType, metaSchema)
+            .definitionLinks,
         );
       }
       for (const variant of variants) {
         if (variant.content.meta) {
           links.push(
-            ...collectJsonDefinitionLinks(
-              variant.content.meta.value,
-              resolvedMetaType,
-              metaSchema,
-            ),
+            ...validateJson(variant.content.meta.value, metaType, metaSchema)
+              .definitionLinks,
           );
         }
       }
@@ -400,7 +388,7 @@ function validateTemplateContent(
       content.examples,
       examplesInterface,
       templateSchema,
-    );
+    ).errors;
     errors.push(...exampleErrors);
     if (exampleErrors.length <= 0) {
       if (options.isVariantSpecialization) {
@@ -431,11 +419,8 @@ function collectTemplateContentDefinitionLinks(
   const examplesInterface = makeExamplesType(templateSchema, options);
   if (content.examples) {
     links.push(
-      ...collectJsonDefinitionLinks(
-        content.examples,
-        examplesInterface,
-        templateSchema,
-      ),
+      ...validateJson(content.examples, examplesInterface, templateSchema)
+        .definitionLinks,
     );
     links.push(
       ...collectToolCallExampleDefinitionLinks(
@@ -627,8 +612,8 @@ function validateToolCallExamples(
         const { schema } = tool;
         const inputType = schema.typeDeclarations["Input"]!;
         const outputType = schema.typeDeclarations["Output"]!;
-        errors.push(...validateJson(inputValue, inputType, schema));
-        errors.push(...validateJson(outputValue, outputType, schema));
+        errors.push(...validateJson(inputValue, inputType, schema).errors);
+        errors.push(...validateJson(outputValue, outputType, schema).errors);
       }
     }
   }
@@ -680,20 +665,14 @@ function collectToolCallExampleDefinitionLinks(
         const outputType = schema.typeDeclarations["Output"];
         if (inputType) {
           links.push(
-            ...collectJsonDefinitionLinks(
-              inputEntry.value,
-              resolveType(inputType.valueType, schema),
-              schema,
-            ),
+            ...validateJson(inputEntry.value, inputType, schema)
+              .definitionLinks,
           );
         }
         if (outputType) {
           links.push(
-            ...collectJsonDefinitionLinks(
-              outputEntry.value,
-              resolveType(outputType.valueType, schema),
-              schema,
-            ),
+            ...validateJson(outputEntry.value, outputType, schema)
+              .definitionLinks,
           );
         }
       }
@@ -917,7 +896,7 @@ function validateTools(
     typeDeclarations: {},
     sharedDeclarations: {},
     unionToMembers: new Map(),
-  });
+  }).errors;
   if (validationErrors.length >= 1) {
     return {
       kind: "error",
