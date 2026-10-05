@@ -19,19 +19,21 @@ type SchemaView = {
   readonly unionToMembers: Schema["unionToMembers"];
 };
 
-export type JsonTypeMatch =
+export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
   | {
       readonly kind: "match";
       readonly definitionLinks: readonly DefinitionLink[];
     }
   | {
       readonly kind: "mismatch";
-      readonly details?: {
-        /** Guaranteed to not be empty. */
-        readonly reasons: readonly InternalError[];
-        /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
-        readonly matchScore: number;
-      };
+      readonly details: Mode extends "thorough"
+        ? {
+            /** Guaranteed to not be empty. */
+            readonly reasons: readonly InternalError[];
+            /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+            readonly matchScore: number;
+          }
+        : undefined;
     };
 
 /**
@@ -60,7 +62,7 @@ export function validateJson(
     return [];
   }
   const typeName = type.name.text;
-  const errors = result.details?.reasons ?? [
+  const errors = result.details.reasons ?? [
     {
       span: json.firstToken,
       message: `Does not match type '${typeName}'`,
@@ -91,12 +93,12 @@ export function validateJson(
  *   to member's interface scoring.
  * - **Wildcards**: `ellipsis` and `any` types always return a full match.
  */
-export function jsonMatchesType(
+export function jsonMatchesType<const Mode extends "fast" | "thorough">(
   value: LooseJsonValue,
   type: ResolvedFieldType | SyntheticType,
-  mode: "fast" | "thorough",
+  mode: Mode,
   schema: SchemaView,
-): JsonTypeMatch {
+): JsonTypeMatch<Mode> {
   if (value.kind === "ellipsis") {
     return MATCH;
   }
@@ -123,7 +125,7 @@ export function jsonMatchesType(
             definitionLinks.push(...elementMatch.definitionLinks);
           } else if (elementMatch.kind === "mismatch") {
             if (mode === "fast") {
-              return FAST_MISMATCH;
+              return FAST_MISMATCH as JsonTypeMatch<Mode>;
             } else {
               const details = elementMatch.details!;
               matchScoreTotal += details.matchScore;
@@ -138,7 +140,7 @@ export function jsonMatchesType(
               reasons: mismatchReasons,
               matchScore: matchScoreTotal / elements.length,
             },
-          };
+          } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
         }
         return {
           kind: "match",
@@ -204,7 +206,7 @@ export function jsonMatchesType(
             } else {
               const _: "mismatch" = fieldMatch.kind;
               if (mode === "fast") {
-                return FAST_MISMATCH;
+                return FAST_MISMATCH as JsonTypeMatch<Mode>;
               } else {
                 matchScoreTotal += fieldMatch.details!.matchScore;
                 mismatchReasons.push(...fieldMatch.details!.reasons);
@@ -213,7 +215,7 @@ export function jsonMatchesType(
           } else {
             // Field present in the object but not defined in the interface.
             if (mode === "fast") {
-              return FAST_MISMATCH;
+              return FAST_MISMATCH as JsonTypeMatch<Mode>;
             } else {
               mismatchReasons.push({
                 span: entry.key.firstToken,
@@ -231,7 +233,7 @@ export function jsonMatchesType(
             if (seenFieldNames.has(fieldName)) {
               matchScoreTotal += 1.0;
             } else if (mode === "fast") {
-              return FAST_MISMATCH;
+              return FAST_MISMATCH as JsonTypeMatch<Mode>;
             } else {
               mismatchReasons.push({
                 span: value.firstToken,
@@ -249,7 +251,7 @@ export function jsonMatchesType(
               reasons: mismatchReasons,
               matchScore: matchScoreTotal / divisor,
             },
-          };
+          } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
         } else {
           return {
             kind: "match",
@@ -316,7 +318,7 @@ export function jsonMatchesType(
             definitionLinks.push(...valueMatch.definitionLinks);
           } else if (valueMatch.kind === "mismatch") {
             if (mode === "fast") {
-              return FAST_MISMATCH;
+              return FAST_MISMATCH as JsonTypeMatch<Mode>;
             } else {
               const details = valueMatch.details!;
               matchScoreTotal += details.matchScore;
@@ -332,7 +334,7 @@ export function jsonMatchesType(
               reasons: mismatchReasons,
               matchScore: matchScoreTotal / dividor,
             },
-          };
+          } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
         }
         return {
           kind: "match",
@@ -461,7 +463,10 @@ export function jsonMatchesType(
 }
 
 const MATCH = { kind: "match", definitionLinks: [] } as const;
-const FAST_MISMATCH = { kind: "mismatch" } as const;
+const FAST_MISMATCH: JsonTypeMatch<"fast"> = {
+  kind: "mismatch",
+  details: undefined,
+};
 
 function makeExpectedOneOfMessage(
   values: ReadonlyArray<string | boolean>,
@@ -473,15 +478,15 @@ function makeExpectedOneOfMessage(
       : "Expected one of ".concat(JSON.stringify(values));
 }
 
-function mismatch(
-  mode: "fast" | "thorough",
+function mismatch<Mode extends "fast" | "thorough">(
+  mode: Mode,
   sourceSpan: Span,
   message: string,
   matchScore = 0,
   suggestions?: readonly string[],
-): JsonTypeMatch {
+): JsonTypeMatch<Mode> {
   if (mode === "fast") {
-    return FAST_MISMATCH;
+    return FAST_MISMATCH as JsonTypeMatch<Mode>;
   }
   const reasons: readonly InternalError[] = [
     {
@@ -493,5 +498,5 @@ function mismatch(
   return {
     kind: "mismatch",
     details: { reasons, matchScore },
-  };
+  } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
 }

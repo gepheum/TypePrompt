@@ -67,9 +67,9 @@ function validateJsonCTag(
           schema,
         );
         const score =
-          result.kind === "mismatch" ? (result.details?.matchScore ?? 0) : 0;
+          result.kind === "mismatch" ? (result.details.matchScore ?? 0) : 0;
         const reason =
-          result.kind === "mismatch" ? result.details?.reasons[0] : undefined;
+          result.kind === "mismatch" ? result.details.reasons[0] : undefined;
         return { name, score, reason };
       }),
     );
