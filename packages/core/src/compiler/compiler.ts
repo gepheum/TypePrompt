@@ -212,9 +212,11 @@ class CompilationResultImpl implements CompilationResult {
         default:
           throw new Error(sourceFile.entity satisfies never);
       }
-      this.finalErrors[sourceFile.path] = [...sourceFile.parseResult.errors];
-      this.warnings[sourceFile.path] = [...sourceFile.warnings];
-      this.pathToDefinitionLinks[sourceFile.path] = [];
+      const { path, warnings } = sourceFile;
+      const { definitionLinks, errors } = sourceFile.parseResult;
+      this.finalErrors[path] = [...errors];
+      this.warnings[path] = [...warnings];
+      this.pathToDefinitionLinks[path] = [...definitionLinks];
     }
 
     this.resolveMeta(metas);
@@ -251,12 +253,20 @@ class CompilationResultImpl implements CompilationResult {
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {
-    if (metas.length <= 1) {
-      this.metaSchema = metas[0]?.element.schema ?? EMPTY_SCHEMA;
+    if (metas.length <= 0) {
+      this.metaSchema = EMPTY_SCHEMA;
+    } else if (metas.length === 1) {
+      const meta = metas[0]!;
+      const metaSchema = meta.element.schema ?? EMPTY_SCHEMA;
+      this.metaSchema = metaSchema;
+      this.pushDefinitionLinks(
+        meta.sourceFile.path,
+        metaSchema.definitionLinks,
+      );
     } else {
       // Multiple <meta> elements found. This is an error.
       for (const meta of metas) {
-        this.finalErrors[meta.sourceFile.path]!.push({
+        this.pushFinalError(meta.sourceFile.path, {
           span: meta.element.tag,
           message: "Multiple <meta> elements found",
         });
@@ -285,6 +295,11 @@ class CompilationResultImpl implements CompilationResult {
           templates: [],
           names: [],
         };
+        const { path } = namespace.sourceFile;
+        this.pushDefinitionLinks(
+          path,
+          namespace.element.schema.definitionLinks,
+        );
       } else {
         // Multiple namespaces with the same name found. This is an error.
         this.namespaces[name] = {
@@ -310,7 +325,7 @@ class CompilationResultImpl implements CompilationResult {
       Object.values(namespaces).map((n) => n.element.name),
     );
     for (const error of nameConflicts) {
-      this.finalErrors[error.span.path]!.push(error);
+      this.pushFinalError(error.span.path, error);
     }
   }
 
@@ -336,7 +351,7 @@ class CompilationResultImpl implements CompilationResult {
       const namespaceName = tool.element.namespace?.text ?? DEFAULT_NAMESPACE;
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
-        this.finalErrors[tool.sourceFile.path]!.push({
+        this.pushFinalError(tool.sourceFile.path, {
           span: tool.element.namespace!,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaces),
@@ -370,12 +385,11 @@ class CompilationResultImpl implements CompilationResult {
       namespace.tools[name.text] = validationResult;
 
       if (validationResult.kind === "error") {
-        this.finalErrors[tool.sourceFile.path]!.push(
-          ...validationResult.errors,
-        );
+        this.pushFinalErrors(tool.sourceFile.path, validationResult.errors);
       }
-      this.pathToDefinitionLinks[tool.sourceFile.path]!.push(
-        ...validationResult.definitionLinks,
+      this.pushDefinitionLinks(
+        tool.sourceFile.path,
+        validationResult.definitionLinks,
       );
     }
   }
@@ -401,7 +415,7 @@ class CompilationResultImpl implements CompilationResult {
 
       const namespace = this.namespaces[namespaceName];
       if (!namespace) {
-        this.finalErrors[template.sourceFile.path]!.push({
+        this.pushFinalError(template.sourceFile.path, {
           span: template.element.namespace!,
           message: `Namespace '${namespaceName}' not found`,
           suggestions: Object.keys(this.namespaces),
@@ -457,16 +471,13 @@ class CompilationResultImpl implements CompilationResult {
 
       this.templates[id] = validationResult;
 
+      const { path } = template.sourceFile;
       if (validationResult.kind === "template") {
         namespace.templates.push(validationResult);
       } else if (validationResult.kind === "error") {
-        this.finalErrors[template.sourceFile.path]!.push(
-          ...validationResult.errors,
-        );
+        this.pushFinalErrors(path, validationResult.errors);
       }
-      this.pathToDefinitionLinks[template.sourceFile.path]!.push(
-        ...validationResult.definitionLinks,
-      );
+      this.pushDefinitionLinks(path, validationResult.definitionLinks);
     }
   }
 
@@ -474,8 +485,25 @@ class CompilationResultImpl implements CompilationResult {
     for (const namespace of Object.values(this.namespaces)) {
       const nameConflicts = checkNameConflicts(namespace.names);
       for (const error of nameConflicts) {
-        this.finalErrors[error.span.path]!.push(error);
+        this.pushFinalError(error.span.path, error);
       }
     }
+  }
+
+  private pushFinalError(path: string, errors: InternalError): void {
+    this.finalErrors[path]!.push(errors);
+  }
+  private pushFinalErrors(
+    path: string,
+    errors: readonly InternalError[],
+  ): void {
+    this.finalErrors[path]!.push(...errors);
+  }
+
+  private pushDefinitionLinks(
+    path: string,
+    definitionLinks: readonly DefinitionLink[],
+  ): void {
+    this.pathToDefinitionLinks[path]!.push(...definitionLinks);
   }
 }
