@@ -11,7 +11,10 @@ import type {
 import { validateSchema } from "../schema/schema-validator.js";
 import type { MappedSpan } from "../util/shared-types.js";
 import { parseExpression } from "./expression-parser.js";
-import { resolveExpressionType } from "./expression-type-resolver.js";
+import {
+  collectExpressionDefinitionLinks,
+  resolveExpressionType,
+} from "./expression-type-resolver.js";
 import type { Expression, ExpressionContext } from "./expression-types.js";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +86,9 @@ describe("resolveExpressionType - input", () => {
       kind: "primitive",
       primitive: { text: "string" },
     });
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input"), schema, null),
+    ).toMatch([]);
   });
 
   it("resolves 'input' to an interface type", () => {
@@ -90,6 +96,9 @@ describe("resolveExpressionType - input", () => {
     expect(resolveExpressionType(makeExpr("input"), schema, null)).toMatch({
       kind: "interface",
     });
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input"), schema, null),
+    ).toMatch([]);
   });
 });
 
@@ -106,6 +115,7 @@ describe("resolveExpressionType - it", () => {
       kind: "primitive",
       primitive: { text: "number" },
     });
+    expect(collectExpressionDefinitionLinks(expr, schema, context)).toMatch([]);
   });
 
   it("resolves 'it' to an optional type from context", () => {
@@ -115,6 +125,7 @@ describe("resolveExpressionType - it", () => {
     expect(resolveExpressionType(expr, schema, context) as unknown).toMatch({
       kind: "optional",
     });
+    expect(collectExpressionDefinitionLinks(expr, schema, context)).toMatch([]);
   });
 });
 
@@ -131,6 +142,9 @@ describe("resolveExpressionType - property access on interface", () => {
         primitive: { text: "string" },
       },
     );
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input.name"), schema, null),
+    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("returns an optional type for an optional field", () => {
@@ -141,6 +155,9 @@ describe("resolveExpressionType - property access on interface", () => {
       kind: "optional",
       innerType: { kind: "primitive", primitive: { text: "number" } },
     });
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input.value"), schema, null),
+    ).toMatch([{ definition: { text: "value" } }]);
   });
 
   it("reports an error for a field that does not exist", () => {
@@ -154,6 +171,9 @@ describe("resolveExpressionType - property access on interface", () => {
         },
       ],
     });
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input.age"), schema, null),
+    ).toMatch([]);
   });
 
   it("reports an error when the left side is not an interface", () => {
@@ -164,6 +184,9 @@ describe("resolveExpressionType - property access on interface", () => {
         errors: [{ message: "Not an interface type" }],
       },
     );
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input.name"), schema, null),
+    ).toMatch([]);
   });
 
   it("reports an error when the left side is optional", () => {
@@ -176,6 +199,13 @@ describe("resolveExpressionType - property access on interface", () => {
       kind: "error",
       errors: [{ message: "May be null" }],
     });
+    expect(
+      collectExpressionDefinitionLinks(
+        makeExpr("input.child.name"),
+        schema,
+        null,
+      ),
+    ).toMatch([]);
   });
 
   it("resolves a chain of property accesses", () => {
@@ -188,6 +218,16 @@ describe("resolveExpressionType - property access on interface", () => {
       kind: "primitive",
       primitive: { text: "string" },
     });
+    expect(
+      collectExpressionDefinitionLinks(
+        makeExpr("input.address.city"),
+        schema,
+        null,
+      ),
+    ).toMatch([
+      { definition: { text: "address" } },
+      { definition: { text: "city" } },
+    ]);
   });
 });
 
@@ -202,6 +242,9 @@ describe("resolveExpressionType - property on discriminated union", () => {
     );
     const result = resolveExpressionType(makeExpr("input.kind"), schema, null);
     expect(result).toMatch({ kind: "union" });
+    expect(
+      collectExpressionDefinitionLinks(makeExpr("input.kind"), schema, null),
+    ).toMatch([{ definition: { text: "kind" } }]);
   });
 });
 
@@ -221,6 +264,7 @@ describe("resolveExpressionType - type overrides", () => {
       kind: "primitive",
       primitive: { text: "number" },
     });
+    expect(collectExpressionDefinitionLinks(expr, schema, context)).toMatch([]);
   });
 
   it("rewrites 'it.x' to 'input.x' when looking up overrides", () => {
@@ -233,5 +277,8 @@ describe("resolveExpressionType - type overrides", () => {
       kind: "primitive",
       primitive: { text: "number" },
     });
+    expect(collectExpressionDefinitionLinks(itExpr, schema, context)).toMatch(
+      [],
+    );
   });
 });
