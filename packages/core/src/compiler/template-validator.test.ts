@@ -1223,3 +1223,193 @@ describe("validateTemplate - system and user body validation", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// validateTemplate - definition links
+// ---------------------------------------------------------------------------
+
+describe("validateTemplate - definition links", () => {
+  it("collects definition links from body insert val expressions", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; count: integer; };
+            type Output = string;
+          </schema>
+          <system>Count: <insert val="input.count"/></system>
+          <user>Translate: <insert val="input.text"/></user>
+        </template>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        { definition: { text: "count" } },
+        { definition: { text: "text" } },
+      ],
+    });
+  });
+
+  it("collects definition links from meta element", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <meta>
+            { "model": "gpt-4" }
+          </meta>
+          <system>Translator</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+      metaSchemaSource: `
+        type Meta = { model: string; };
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        { definition: { text: "model" } },
+        { definition: { text: "text" } },
+      ],
+    });
+  });
+
+  it("collects definition links from snippets including if and switch", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Translate">
+          <schema>
+            type Input = {
+              text: string;
+              opt?: string;
+              kind: "a" | "b";
+            };
+            type Output = string;
+          </schema>
+          <snippet name="plainSnippet">
+            <insert val="input.text"/>
+          </snippet>
+          <snippet name="ifSnippet" if="input.opt" is="notNull">
+            <then>
+              <insert val="input.opt"/>
+            </then>
+            <else>
+              <insert val="input.text"/>
+            </else>
+          </snippet>
+          <snippet name="switchSnippet" switch="input.kind">
+            <on case="a">
+              <insert val="input.text"/>
+            </on>
+            <on case="b">
+              <insert val="input.text"/>
+            </on>
+          </snippet>
+          <system>Translator</system>
+          <user>
+            <insert snippet="plainSnippet"/>
+            <insert snippet="ifSnippet"/>
+            <insert snippet="switchSnippet"/>
+          </user>
+        </template>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        { definition: { text: "text" } },
+        { definition: { text: "opt" } },
+        { definition: { text: "text" } },
+        { definition: { text: "kind" } },
+        { definition: { text: "text" } },
+        { definition: { text: "text" } },
+      ],
+    });
+  });
+
+  it("collects definition links from examples and tool calls", () => {
+    const calcTool = makeTool(
+      "calc",
+      "type Input = { expr: string; }; type Output = { result: integer; };",
+    );
+
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="MathAssistant">
+          <schema>
+            type Input = { problem: string; };
+            type Output = { answer: string; };
+          </schema>
+          <tools>
+            - tool: calc
+          </tools>
+          <system>Solve</system>
+          <user><insert val="input.problem"/></user>
+          <examples>
+            - input:
+                problem: "2+2"
+              intermediateSteps:
+                - toolCalls:
+                    - tool: calc
+                      callId: "1"
+                      input:
+                        expr: "2+2"
+                      output:
+                        result: 4
+              output:
+                answer: "4"
+          </examples>
+        </template>
+      `,
+      path: "prompts/MathAssistant.xml",
+      namespaceTools: { calc: calcTool },
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        { definition: { text: "problem" } },
+        { definition: { text: "problem" } },
+        { definition: { text: "answer" } },
+        { definition: { text: "expr" } },
+        { definition: { text: "result" } },
+      ],
+    });
+  });
+
+  it("collects definition links from variant templates", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Support">
+          <schema>
+            type Input = {
+              variant: "quick" | "full";
+              summary: string;
+            };
+            type Output = string;
+          </schema>
+          <user>Ticket: <insert val="input.summary"/></user>
+          <variant case="quick">
+            <system>Quick assistant</system>
+          </variant>
+          <variant case="full">
+            <system>Full assistant</system>
+          </variant>
+        </template>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [{ definition: { text: "summary" } }],
+    });
+  });
+});

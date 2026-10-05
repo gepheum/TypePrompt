@@ -11,7 +11,12 @@ import type {
   InternalError,
   Span,
 } from "../util/shared-types.js";
-import type { LooseJsonValue, StrictJsonValue } from "./json-types.js";
+import type {
+  JsonMode,
+  JsonValue,
+  LooseJsonValue,
+  StrictJsonValue,
+} from "./json-types.js";
 
 type SchemaView = {
   readonly typeDeclarations: Schema["typeDeclarations"];
@@ -463,7 +468,7 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
 }
 
 export function collectJsonDefinitionLinks(
-  value: LooseJsonValue,
+  value: JsonValue<JsonMode>,
   type: ResolvedFieldType | SyntheticType,
   schema: SchemaView,
 ): readonly DefinitionLink[] {

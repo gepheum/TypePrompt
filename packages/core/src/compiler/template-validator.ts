@@ -1,4 +1,7 @@
-import { resolveExpressionType } from "../expression/expression-type-resolver.js";
+import {
+  collectExpressionDefinitionLinks,
+  resolveExpressionType,
+} from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import {
@@ -7,7 +10,10 @@ import {
   StrictJsonObject,
   StrictJsonValue,
 } from "../json/json-types.js";
-import { validateJson } from "../json/json-validator.js";
+import {
+  collectJsonDefinitionLinks,
+  validateJson,
+} from "../json/json-validator.js";
 import {
   HasName,
   Schema,
@@ -20,8 +26,16 @@ import {
 import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { InternalError, InternalErrors, Span } from "../util/shared-types.js";
-import { validateTemplateBody } from "./body-validator.js";
+import {
+  DefinitionLink,
+  InternalError,
+  InternalErrors,
+  Span,
+} from "../util/shared-types.js";
+import {
+  collectTemplateBodyDefinitionLinks,
+  validateTemplateBody,
+} from "./body-validator.js";
 import {
   SchemaOrError,
   Snippet,
@@ -107,6 +121,12 @@ export function validateTemplate(args: {
       template,
       schema: templateSchema,
       tools: tools.kind === "success" ? tools.tools : {},
+      definitionLinks: collectTemplateDefinitionLinks(
+        template,
+        templateSchema,
+        metaSchema,
+        topLevelOptions,
+      ),
     };
   } else {
     return {
@@ -114,6 +134,57 @@ export function validateTemplate(args: {
       errors,
     };
   }
+}
+
+export function collectTemplateDefinitionLinks(
+  template: Template,
+  templateSchema: Schema,
+  metaSchema: SchemaOrError,
+  options: Options,
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+
+  if (metaSchema.kind === "success") {
+    links.push(...collectMetaDefinitionLinks(metaSchema, template));
+  }
+
+  if (template.contents.kind === "no-variants") {
+    links.push(
+      ...collectTemplateContentDefinitionLinks(
+        template.contents.content,
+        templateSchema,
+        options,
+      ),
+    );
+  } else {
+    links.push(
+      ...collectTemplateContentDefinitionLinks(
+        template.contents.defaultContent,
+        templateSchema,
+        options,
+      ),
+    );
+    for (const variant of template.contents.variants) {
+      links.push(
+        ...collectTemplateContentDefinitionLinks(
+          variant.content,
+          templateSchema,
+          {
+            ...options,
+            isVariantSpecialization: true,
+          },
+        ),
+      );
+    }
+  }
+
+  for (const snippet of template.snippets) {
+    links.push(
+      ...collectSnippetDefinitionLinks(snippet, templateSchema, options),
+    );
+  }
+
+  return links;
 }
 
 function validateMeta(
@@ -189,6 +260,59 @@ function validateMeta(
   }
 
   return errors;
+}
+
+function collectMetaDefinitionLinks(
+  metaSchema: Schema,
+  template: Template,
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+  const metaType = metaSchema.typeDeclarations["Meta"];
+  if (!metaType) {
+    return links;
+  }
+  const resolvedMetaType = resolveType(metaType.valueType, metaSchema);
+  const { contents } = template;
+  switch (contents.kind) {
+    case "no-variants": {
+      const { meta } = contents.content;
+      if (meta) {
+        links.push(
+          ...collectJsonDefinitionLinks(
+            meta.value,
+            resolvedMetaType,
+            metaSchema,
+          ),
+        );
+      }
+      break;
+    }
+    case "variants": {
+      const { defaultContent, variants } = contents;
+      if (defaultContent.meta) {
+        links.push(
+          ...collectJsonDefinitionLinks(
+            defaultContent.meta.value,
+            resolvedMetaType,
+            metaSchema,
+          ),
+        );
+      }
+      for (const variant of variants) {
+        if (variant.content.meta) {
+          links.push(
+            ...collectJsonDefinitionLinks(
+              variant.content.meta.value,
+              resolvedMetaType,
+              metaSchema,
+            ),
+          );
+        }
+      }
+      break;
+    }
+  }
+  return links;
 }
 
 function validateVariants(
@@ -289,6 +413,39 @@ function validateTemplateContent(
   }
 
   return errors;
+}
+
+function collectTemplateContentDefinitionLinks(
+  content: Partial<TemplateContent>,
+  templateSchema: Schema,
+  options: Options,
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+  for (const body of [content.system, content.user]) {
+    if (!body) continue;
+    links.push(
+      ...collectTemplateBodyDefinitionLinks(body, templateSchema, null),
+    );
+  }
+
+  const examplesInterface = makeExamplesType(templateSchema, options);
+  if (content.examples) {
+    links.push(
+      ...collectJsonDefinitionLinks(
+        content.examples,
+        examplesInterface,
+        templateSchema,
+      ),
+    );
+    links.push(
+      ...collectToolCallExampleDefinitionLinks(
+        content.examples,
+        options.namespaceTools,
+      ),
+    );
+  }
+
+  return links;
 }
 
 function makeExamplesType(
@@ -478,6 +635,73 @@ function validateToolCallExamples(
   return errors;
 }
 
+function collectToolCallExampleDefinitionLinks(
+  examples: StrictJsonValue,
+  namespaceTools: { readonly [name: string]: ToolValidationResult },
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+  if (examples.kind !== "array") {
+    return links;
+  }
+  for (const example of examples.elements) {
+    if (example.kind !== "object") continue;
+    const intermediateStepsEntry = example.entries["intermediateSteps"];
+    if (
+      !intermediateStepsEntry ||
+      intermediateStepsEntry.value.kind !== "array"
+    ) {
+      continue;
+    }
+    for (const step of intermediateStepsEntry.value.elements) {
+      if (step.kind !== "object") continue;
+      const toolCallsEntry = step.entries["toolCalls"];
+      if (!toolCallsEntry || toolCallsEntry.value.kind !== "array") continue;
+      for (const toolCall of toolCallsEntry.value.elements) {
+        if (toolCall.kind !== "object") continue;
+        const { entries } = toolCall;
+        const toolEntry = entries["tool"];
+        const inputEntry = entries["input"];
+        const outputEntry = entries["output"];
+        if (
+          !toolEntry ||
+          toolEntry.value.kind !== "string" ||
+          !inputEntry ||
+          !outputEntry
+        ) {
+          continue;
+        }
+
+        const toolName = toolEntry.value.value;
+        const tool = namespaceTools[toolName];
+        if (!tool || tool.kind === "error") continue;
+
+        const { schema } = tool;
+        const inputType = schema.typeDeclarations["Input"];
+        const outputType = schema.typeDeclarations["Output"];
+        if (inputType) {
+          links.push(
+            ...collectJsonDefinitionLinks(
+              inputEntry.value,
+              resolveType(inputType.valueType, schema),
+              schema,
+            ),
+          );
+        }
+        if (outputType) {
+          links.push(
+            ...collectJsonDefinitionLinks(
+              outputEntry.value,
+              resolveType(outputType.valueType, schema),
+              schema,
+            ),
+          );
+        }
+      }
+    }
+  }
+  return links;
+}
+
 function validateSnippet(
   snippet: Snippet,
   templateSchema: Schema,
@@ -590,6 +814,87 @@ function validateSnippet(
   }
 
   return errors;
+}
+
+function collectSnippetDefinitionLinks(
+  snippet: Snippet,
+  templateSchema: Schema,
+  _options: Options,
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+  switch (snippet.kind) {
+    case "snippet": {
+      links.push(
+        ...collectTemplateBodyDefinitionLinks(
+          snippet.body,
+          templateSchema,
+          null,
+        ),
+      );
+      break;
+    }
+    case "snippet-if": {
+      links.push(
+        ...collectExpressionDefinitionLinks(
+          snippet.expression,
+          templateSchema,
+          null,
+        ),
+      );
+      const expressionType = resolveExpressionType(
+        snippet.expression,
+        templateSchema,
+        null,
+      );
+      if (expressionType.kind === "error") {
+        break;
+      }
+      const ifContext = resolveIfExpression(
+        snippet.expression,
+        expressionType,
+        snippet.is,
+        templateSchema,
+      );
+      if (ifContext.kind === "error") {
+        break;
+      }
+      links.push(
+        ...collectTemplateBodyDefinitionLinks(
+          snippet.then,
+          templateSchema,
+          ifContext.then,
+        ),
+      );
+      links.push(
+        ...collectTemplateBodyDefinitionLinks(
+          snippet.else,
+          templateSchema,
+          ifContext.else,
+        ),
+      );
+      break;
+    }
+    case "snippet-switch": {
+      links.push(
+        ...collectExpressionDefinitionLinks(
+          snippet.expression,
+          templateSchema,
+          null,
+        ),
+      );
+      for (const branch of snippet.branches) {
+        links.push(
+          ...collectTemplateBodyDefinitionLinks(
+            branch.body,
+            templateSchema,
+            null,
+          ),
+        );
+      }
+      break;
+    }
+  }
+  return links;
 }
 
 function validateTools(

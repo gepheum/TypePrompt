@@ -4,6 +4,7 @@ import type { StrictJsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import { LineFinderData } from "../util/line-finder.js";
 import type {
+  DefinitionLink,
   InternalError,
   InternalErrors,
   Span,
@@ -209,6 +210,7 @@ export type ValidatedTemplate = {
   readonly template: Template;
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };
+  readonly definitionLinks: readonly DefinitionLink[];
 };
 
 /** A {@link ValidatedTemplate} known not to have any errors. */
