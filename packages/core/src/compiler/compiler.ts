@@ -7,6 +7,7 @@ import type {
   InternalErrors,
   TextSpan,
 } from "../util/shared-types.js";
+import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import { XmlDocument } from "../xml/xml-types.js";
@@ -59,9 +60,10 @@ export function parseSourceFile(
   const xmlDocument = parseXmlDocument(content, path);
 
   const result = new SourceFileParseResultImpl(path, content, xmlDocument);
+  const { errors } = result.parseResult;
 
   if (xmlDocument.kind === "error") {
-    result.parseErrors.push(...xmlDocument.errors);
+    errors.push(...xmlDocument.errors);
     if (
       xmlDocument.root === null ||
       (xmlDocument.root.closingTag === undefined &&
@@ -78,7 +80,7 @@ export function parseSourceFile(
     [root],
     ["template", "tool", "namespace", "meta"] as const,
     " at the top level",
-    result.parseErrors,
+    errors,
   );
   if (topLevelNodes.length <= 0) {
     return result;
@@ -88,7 +90,7 @@ export function parseSourceFile(
     case "template": {
       const template = parseTemplate(topLevelNode);
       if (template.kind === "error") {
-        result.parseErrors.push(...template.errors);
+        errors.push(...template.errors);
       } else {
         result.entity = template;
         result.warnings.push(...template.warnings);
@@ -98,7 +100,7 @@ export function parseSourceFile(
     case "tool": {
       const tool = parseTool(topLevelNode);
       if (tool.kind === "error") {
-        result.parseErrors.push(...tool.errors);
+        errors.push(...tool.errors);
       } else {
         result.entity = tool;
         result.warnings.push(...tool.warnings);
@@ -108,12 +110,12 @@ export function parseSourceFile(
     case "namespace": {
       const namespace = parseNamespace(topLevelNode);
       if (namespace.kind === "error") {
-        result.parseErrors.push(...namespace.errors);
-        result.definitionLinks.push(...namespace.definitionLinks);
+        errors.push(...namespace.errors);
+        result.parseResult.definitionLinks.push(...namespace.definitionLinks);
       } else {
         result.entity = namespace;
         if (namespace.schema.kind === "error") {
-          result.parseErrors.push(...namespace.schema.errors);
+          errors.push(...namespace.schema.errors);
         }
         result.warnings.push(...namespace.warnings);
       }
@@ -122,12 +124,12 @@ export function parseSourceFile(
     case "meta": {
       const meta = parseMeta(topLevelNode);
       if (meta.kind === "error") {
-        result.parseErrors.push(...meta.errors);
-        result.definitionLinks.push(...meta.definitionLinks);
+        errors.push(...meta.errors);
+        result.parseResult.definitionLinks.push(...meta.definitionLinks);
       } else {
         result.entity = meta;
         if (meta.schema.kind === "error") {
-          result.parseErrors.push(...meta.schema.errors);
+          errors.push(...meta.schema.errors);
         }
         result.warnings.push(...meta.warnings);
       }
@@ -150,9 +152,8 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
   readonly lineFinder: LineFinderData;
   entity: Template | Tool | Namespace | Meta | undefined;
 
-  readonly parseErrors: InternalError[] = [];
+  readonly parseResult = new ValidationResultBuilder();
   readonly warnings: InternalError[] = [];
-  readonly definitionLinks: DefinitionLink[] = [];
 }
 
 type Sourced<T> = {
@@ -211,7 +212,7 @@ class CompilationResultImpl implements CompilationResult {
         default:
           throw new Error(sourceFile.entity satisfies never);
       }
-      this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
+      this.finalErrors[sourceFile.path] = [...sourceFile.parseResult.errors];
       this.warnings[sourceFile.path] = [...sourceFile.warnings];
       this.pathToDefinitionLinks[sourceFile.path] = [];
     }

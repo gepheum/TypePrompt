@@ -10,6 +10,7 @@ import type {
   Span,
   TextSpan,
   ValidationErrors,
+  ValidationResult,
 } from "../util/shared-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
@@ -48,10 +49,8 @@ export type SourceFileParseResult = {
 
   readonly entity: Template | Tool | Namespace | Meta | undefined;
 
-  readonly parseErrors: readonly InternalError[];
+  readonly parseResult: ValidationResult;
   readonly warnings: readonly InternalError[];
-  /** Only if `entity` is undefined. Empty otherwise. */
-  readonly definitionLinks: readonly DefinitionLink[];
 };
 
 export type Template = {

@@ -11,7 +11,10 @@ import { format as prettierFormat } from "prettier";
 export async function formatTemplateFile(content: string): Promise<string> {
   const parseResult = parseSourceFile("path", content);
   const { xmlDocument } = parseResult;
-  if (xmlDocument.kind !== "success" || parseResult.parseErrors.length !== 0) {
+  if (
+    xmlDocument.kind !== "success" ||
+    parseResult.parseResult.errors.length !== 0
+  ) {
     // If the XML is malformed, we cannot format the file.
     return content;
   }
