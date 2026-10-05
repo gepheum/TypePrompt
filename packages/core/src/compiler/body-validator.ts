@@ -1,5 +1,8 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
-import { resolveExpressionType } from "../expression/expression-type-resolver.js";
+import {
+  collectExpressionDefinitionLinks,
+  resolveExpressionType,
+} from "../expression/expression-type-resolver.js";
 import { ExpressionContext } from "../expression/expression-types.js";
 import {
   ResolvedFieldType,
@@ -7,7 +10,7 @@ import {
   SyntheticType,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { InternalError } from "../util/shared-types.js";
+import { DefinitionLink, InternalError } from "../util/shared-types.js";
 import {
   Body,
   InsertFormat,
@@ -38,6 +41,24 @@ export function validateTemplateBody<HasValContext extends boolean>(
   );
 }
 
+export function collectTemplateBodyDefinitionLinks<
+  HasValContext extends boolean = false,
+>(
+  body: Body<HasValContext>,
+  templateSchema: Schema,
+  context: HasValContext extends true ? ExpressionContext : null,
+): readonly DefinitionLink[] {
+  const links: DefinitionLink[] = [];
+  for (const piece of body) {
+    if (piece.kind === "insert-val") {
+      links.push(
+        ...collectExpressionDefinitionLinks(piece.val, templateSchema, context),
+      );
+    }
+  }
+  return links;
+}
+
 export function validateToolDescription(args: {
   description: ToolDescription;
   toolSchema: Schema;
@@ -50,6 +71,13 @@ export function validateToolDescription(args: {
     toolNames,
     null,
   );
+}
+
+export function collectToolDescriptionDefinitionLinks(_args: {
+  description: ToolDescription;
+  toolSchema: Schema;
+}): readonly DefinitionLink[] {
+  return [];
 }
 
 function validateBodyImpl<HasValContext extends boolean>(
