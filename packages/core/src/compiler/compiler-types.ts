@@ -50,6 +50,8 @@ export type SourceFileParseResult = {
 
   readonly parseErrors: readonly InternalError[];
   readonly warnings: readonly InternalError[];
+  /** Only if `entity` is undefined. Empty otherwise. */
+  readonly definitionLinks: readonly DefinitionLink[];
 };
 
 export type Template = {
@@ -199,7 +201,9 @@ export type ValidNamespaceResult = NamespaceResult & {
 };
 
 export type SchemaOrError =
-  Schema | ValidationErrors | { readonly kind: "other-error" };
+  | Schema
+  | ValidationErrors
+  | { readonly kind: "other-error"; readonly definitionLinks: [] };
 
 export type ValidatedTool = {
   readonly kind: "tool";

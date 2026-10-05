@@ -1,4 +1,4 @@
-import { InternalError, InternalErrors } from "../util/shared-types.js";
+import type { ValidationErrors } from "../util/shared-types.js";
 import {
   checkXmlAttributes,
   expectIdentifier,
@@ -8,6 +8,7 @@ import { Namespace, SchemaOrError } from "./compiler-types.js";
 
 import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";
+import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import { checkNamespaceSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
@@ -15,22 +16,28 @@ import { extractTextContent } from "./text-extractor.js";
 /** Parses a top-level <namespace> element. The result is already validated. */
 export function parseNamespace(
   namespaceNode: ElementNode,
-): Namespace | InternalErrors {
+): Namespace | ValidationErrors {
+  const validationResult = new ValidationResultBuilder();
+  const { definitionLinks, errors } = validationResult;
+
   const attrs = checkXmlAttributes(namespaceNode, {
     name: expectIdentifier({
       format: "PascalCase",
       optional: false,
     }),
   });
+
+  errors.push(...attrs.errors);
   if (attrs.kind === "error") {
-    return attrs;
+    return validationResult.asErrors();
   }
-  const errors = [...attrs.errors];
-  const warnings: InternalError[] = [];
 
   const { name } = attrs.attributes;
-
   const nameText = name.value.text;
+
+  // Raise a warning if the file path doesn't match the file naming conventions.
+  const warnings = [...checkNamespaceSourcePath(name, namespaceNode.path)];
+
   for (const reserved of ["Meta", "Schema"]) {
     if (nameText.toLowerCase() === reserved.toLowerCase()) {
       const caseNote = nameText === reserved ? "" : " (case-insensitive)";
@@ -50,35 +57,33 @@ export function parseNamespace(
     });
   }
 
-  // Raise a warning if the file path doesn't match the file naming conventions.
-  warnings.push(...checkNamespaceSourcePath(name, namespaceNode.path));
-
   const textContent = extractTextContent(namespaceNode, "typescript");
   if (textContent.kind === "error") {
     errors.push(...textContent.errors);
-    return { kind: "error", errors };
+    return validationResult.asErrors();
   }
 
   warnings.push(...textContent.warnings);
 
-  const schema = ((): SchemaOrError => {
-    const schemaParseResult = parseSchema(textContent.text);
-    if (schemaParseResult.kind === "error") {
-      return { ...schemaParseResult, definitionLinks: [] };
-    }
-    return validateSchema(schemaParseResult, {
+  let schema: SchemaOrError;
+  const schemaParseResult = parseSchema(textContent.text);
+  if (schemaParseResult.kind === "error") {
+    schema = { ...schemaParseResult, definitionLinks: [] };
+  } else {
+    schema = validateSchema(schemaParseResult, {
       kind: "namespace",
     });
-  })();
-
-  if (errors.length >= 1) {
-    return { kind: "error", errors };
+    definitionLinks.push(...schema.definitionLinks);
   }
 
-  return {
-    kind: "namespace",
-    name: attrs.attributes.name.value,
-    schema,
-    warnings,
-  };
+  if (errors.length <= 0) {
+    return {
+      kind: "namespace",
+      name: attrs.attributes.name.value,
+      schema,
+      warnings,
+    };
+  } else {
+    return validationResult.asErrors();
+  }
 }

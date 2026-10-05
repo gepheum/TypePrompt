@@ -109,6 +109,7 @@ export function parseSourceFile(
       const namespace = parseNamespace(topLevelNode);
       if (namespace.kind === "error") {
         result.parseErrors.push(...namespace.errors);
+        result.definitionLinks.push(...namespace.definitionLinks);
       } else {
         result.entity = namespace;
         if (namespace.schema.kind === "error") {
@@ -122,6 +123,7 @@ export function parseSourceFile(
       const meta = parseMeta(topLevelNode);
       if (meta.kind === "error") {
         result.parseErrors.push(...meta.errors);
+        result.definitionLinks.push(...meta.definitionLinks);
       } else {
         result.entity = meta;
         if (meta.schema.kind === "error") {
@@ -150,6 +152,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
 
   readonly parseErrors: InternalError[] = [];
   readonly warnings: InternalError[] = [];
+  readonly definitionLinks: DefinitionLink[] = [];
 }
 
 type Sourced<T> = {
@@ -257,7 +260,7 @@ class CompilationResultImpl implements CompilationResult {
           message: "Multiple <meta> elements found",
         });
       }
-      this.metaSchema = { kind: "other-error" };
+      this.metaSchema = { kind: "other-error", definitionLinks: [] };
     }
   }
 
@@ -285,7 +288,7 @@ class CompilationResultImpl implements CompilationResult {
         // Multiple namespaces with the same name found. This is an error.
         this.namespaces[name] = {
           name: name,
-          schema: { kind: "other-error" },
+          schema: { kind: "other-error", definitionLinks: [] },
           tools: {},
           templates: [],
           names: [],
