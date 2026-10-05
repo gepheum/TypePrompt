@@ -138,7 +138,7 @@ function validateType(
   unionToMembers: Map<Union, UnionMembers>,
 ): ValidationResult {
   const validationResult = new ValidationResultBuilder();
-  const { errors } = validationResult;
+  const { definitionLinks, errors } = validationResult;
   function validate(type: FieldType | TypeDeclaration): null {
     switch (type.kind) {
       case "any":
@@ -198,11 +198,18 @@ function validateType(
       }
       case "type-name": {
         const typeName = type.name.text;
-        if (!schema.typeDeclarations[typeName]) {
+        const { typeDeclarations } = schema;
+        const typeDeclaration = typeDeclarations[typeName];
+        if (typeDeclaration) {
+          definitionLinks.push({
+            reference: type.name,
+            definition: typeDeclaration.name,
+          });
+        } else {
           errors.push({
             span: type.name,
             message: `Unknown type '${typeName}'`,
-            suggestions: Object.keys(schema.typeDeclarations),
+            suggestions: Object.keys(typeDeclarations),
           });
         }
         return null;
@@ -217,7 +224,13 @@ function validateType(
         }
         const typeName = type.name.text;
         const { typeDeclarations } = context.namespaceSchema;
-        if (!typeDeclarations[typeName]) {
+        const typeDeclaration = typeDeclarations[typeName];
+        if (typeDeclaration) {
+          definitionLinks.push({
+            reference: type.name,
+            definition: typeDeclaration.name,
+          });
+        } else {
           errors.push({
             span: type.name,
             message: `Unknown type '${typeName}'`,
@@ -403,13 +416,13 @@ function collectNamingHints(
                     discriminant:
                       discriminantType === "string"
                         ? {
-                          type: discriminantType,
-                          value: discriminant,
-                        }
+                            type: discriminantType,
+                            value: discriminant,
+                          }
                         : {
-                          type: discriminantType,
-                          value: discriminant === "true",
-                        },
+                            type: discriminantType,
+                            value: discriminant === "true",
+                          },
                   },
                 ],
                 doc: "",

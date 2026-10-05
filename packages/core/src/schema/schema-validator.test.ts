@@ -837,3 +837,157 @@ describe("validateSchema - namingHints", () => {
     expect(template.namingHints.shared).toBe(ns.namingHints.defaultScope);
   });
 });
+
+// ---------------------------------------------------------------------------
+// validateSchema - definition links
+// ---------------------------------------------------------------------------
+
+describe("validateSchema - definition links", () => {
+  it("returns empty definition links when schema has no type references", () => {
+    const result = validateSchema(
+      parseDeclarations("type Output = { name: string; count: number; };"),
+      NAMESPACE,
+    );
+    if (result.kind !== "success") throw new Error();
+    expect(result.definitionLinks).toMatch([]);
+  });
+
+  it("populates definition links for local type references in interface fields", () => {
+    const source = [
+      "type Output = { status: Status; };",
+      'type Status = "active" | "inactive";',
+    ].join("\n");
+    const result = validateSchema(
+      parseDeclarations(source, "schema.ts"),
+      NAMESPACE,
+    );
+    if (result.kind !== "success") throw new Error();
+
+    expect(result.definitionLinks).toMatch([
+      {
+        reference: {
+          start: 24,
+          end: 30,
+          path: "schema.ts",
+        },
+        definition: {
+          start: 40,
+          end: 46,
+          path: "schema.ts",
+        },
+      },
+    ]);
+  });
+
+  it("populates definition links for nested type references in arrays, records, optionals, and unions", () => {
+    const source = [
+      "type Output = {",
+      "  items: Item[];",
+      "  map: { [key: string]: Item };",
+      "  opt?: Item;",
+      "  result: Success | Failure;",
+      "};",
+      "type Item = { id: string; };",
+      "type Success = { ok: true; };",
+      "type Failure = { ok: false; };",
+    ].join("\n");
+    const result = validateSchema(
+      parseDeclarations(source, "schema.ts"),
+      NAMESPACE,
+    );
+    if (result.kind !== "success") throw new Error();
+
+    expect(result.definitionLinks).toMatch([
+      {
+        reference: { start: 25, end: 29, path: "schema.ts" },
+        definition: { start: 116, end: 120, path: "schema.ts" },
+      },
+      {
+        reference: { start: 57, end: 61, path: "schema.ts" },
+        definition: { start: 116, end: 120, path: "schema.ts" },
+      },
+      {
+        reference: { start: 73, end: 77, path: "schema.ts" },
+        definition: { start: 116, end: 120, path: "schema.ts" },
+      },
+      {
+        reference: { start: 89, end: 96, path: "schema.ts" },
+        definition: { start: 145, end: 152, path: "schema.ts" },
+      },
+      {
+        reference: { start: 99, end: 106, path: "schema.ts" },
+        definition: { start: 175, end: 182, path: "schema.ts" },
+      },
+    ]);
+  });
+
+  it("populates definition links for namespaced and local type references in template context", () => {
+    const nsSource = [
+      "type Profile = { name: string; address: Address; };",
+      "type Address = { street: string; };",
+    ].join("\n");
+    const ns = validateSchema(
+      parseDeclarations(nsSource, "shared.ts"),
+      NAMESPACE,
+    );
+    if (ns.kind !== "success") throw new Error();
+
+    // Verify definition link within the namespace schema itself
+    expect(ns.definitionLinks).toMatch([
+      {
+        reference: { start: 40, end: 47, path: "shared.ts" },
+        definition: { start: 57, end: 64, path: "shared.ts" },
+      },
+    ]);
+
+    const templateSource = [
+      "type Input = { user: shared.Profile; local: Extra; };",
+      "type Extra = { note: string; };",
+      "type Output = shared.Address;",
+    ].join("\n");
+    const template = validateSchema(
+      parseDeclarations(templateSource, "template.ts"),
+      { kind: "template", namespaceSchema: ns },
+    );
+    if (template.kind !== "success") throw new Error();
+
+    expect(template.definitionLinks).toMatch([
+      {
+        reference: {
+          start: 28,
+          end: 35,
+          path: "template.ts",
+        },
+        definition: {
+          start: 5,
+          end: 12,
+          path: "shared.ts",
+        },
+      },
+      {
+        reference: {
+          start: 44,
+          end: 49,
+          path: "template.ts",
+        },
+        definition: {
+          start: 59,
+          end: 64,
+          path: "template.ts",
+        },
+      },
+      {
+        reference: {
+          start: 107,
+          end: 114,
+          path: "template.ts",
+        },
+        definition: {
+          start: 57,
+          end: 64,
+          path: "shared.ts",
+        },
+      },
+    ]);
+  });
+});
