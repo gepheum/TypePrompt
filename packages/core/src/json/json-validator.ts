@@ -12,6 +12,7 @@ import type {
   Span,
   ValidationResult,
 } from "../util/shared-types.js";
+import { stripQuotes } from "../util/spans.js";
 import type { LooseJsonValue, StrictJsonValue } from "./json-types.js";
 
 type SchemaView = {
@@ -522,8 +523,4 @@ function mismatch<Mode extends "fast" | "thorough">(
     kind: "mismatch",
     details: { reasons, matchScore },
   } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
-}
-
-function stripQuotes<S extends Span>(span: S): S {
-  return { ...span, start: span.start + 1, end: span.end - 1 };
 }

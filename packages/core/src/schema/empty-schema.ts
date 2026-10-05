@@ -10,4 +10,5 @@ export const EMPTY_SCHEMA: Schema = {
     defaultScope: new Map(),
     shared: new Map(),
   },
+  definitionLinks: [],
 } as const;

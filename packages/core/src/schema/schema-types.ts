@@ -1,4 +1,4 @@
-import type { Span, TextSpan } from "../util/shared-types.js";
+import type { DefinitionLink, Span, TextSpan } from "../util/shared-types.js";
 
 export type SchemaParseResult = {
   readonly kind: "success";
@@ -37,6 +37,7 @@ export type Schema = SchemaView & {
     /** Covers types found in {@link SchemaView.sharedDeclarations}. */
     readonly shared: ReadonlyMap<Interface | Union, NamingHint>;
   };
+  readonly definitionLinks: readonly DefinitionLink[];
 };
 
 export type TypeDeclaration = {

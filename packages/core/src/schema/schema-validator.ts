@@ -1,10 +1,11 @@
 import { checkNameConflicts } from "../util/casing.js";
 import type {
-  ErrorSink,
   InternalError,
-  InternalErrors,
-  TextSpan,
+  ValidationErrors,
+  ValidationResult,
 } from "../util/shared-types.js";
+import { stripQuotes } from "../util/spans.js";
+import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { EMPTY_SCHEMA } from "./empty-schema.js";
 import type {
   FieldType,
@@ -25,10 +26,11 @@ import { computeUnionMembers } from "./unions.js";
 export function validateSchema(
   schema: SchemaParseResult,
   context: SchemaValidationContext,
-): Schema | InternalErrors {
+): Schema | ValidationErrors {
   const { typeDeclarations } = schema;
 
-  const errors: InternalError[] = [];
+  const validationResult = new ValidationResultBuilder();
+  const { definitionLinks, errors } = validationResult;
 
   const namespaceSchema = ((): Schema => {
     switch (context.kind) {
@@ -52,7 +54,9 @@ export function validateSchema(
       : new Map<Union, UnionMembers>();
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
-    validateType(typeDeclaration, schemaView, context, unionToMembers, errors);
+    validationResult.push(
+      validateType(typeDeclaration, schemaView, context, unionToMembers),
+    );
     const nameDependencies = getNameDependencies(
       typeDeclaration.valueType,
       "defaultScope",
@@ -93,7 +97,7 @@ export function validateSchema(
   }
 
   if (errors.length >= 1) {
-    return { kind: "error", errors };
+    return validationResult.asErrors();
   }
 
   // Verify that all types are used.
@@ -108,7 +112,7 @@ export function validateSchema(
   }
 
   if (errors.length >= 1) {
-    return { kind: "error", errors };
+    return validationResult.asErrors();
   }
 
   const identifiers = collectIdentifiers(schemaView, sharedNames);
@@ -123,6 +127,7 @@ export function validateSchema(
     identifiers,
     unionToMembers,
     namingHints,
+    definitionLinks,
   };
 }
 
@@ -131,8 +136,9 @@ function validateType(
   schema: SchemaView,
   context: SchemaValidationContext,
   unionToMembers: Map<Union, UnionMembers>,
-  errors: ErrorSink,
-): void {
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { errors } = validationResult;
   function validate(type: FieldType | TypeDeclaration): null {
     switch (type.kind) {
       case "any":
@@ -168,20 +174,12 @@ function validateType(
         const { value } = type;
         if (!/^[A-Za-z]/.test(value)) {
           errors.push({
-            span: {
-              path: type.quotedName.path,
-              start: type.quotedName.start + 1,
-              end: type.quotedName.end - 1,
-            },
+            span: stripQuotes(type.quotedName),
             message: "String must start with a letter",
           });
         } else if (!/^[A-Za-z0-9_\-./]+$/.test(value)) {
           errors.push({
-            span: {
-              path: type.quotedName.path,
-              start: type.quotedName.start + 1,
-              end: type.quotedName.end - 1,
-            },
+            span: stripQuotes(type.quotedName),
             message:
               "String must only contain letters, digits, or allowed symbols (_ - . /)",
           });
@@ -189,7 +187,13 @@ function validateType(
         return null;
       }
       case "type": {
-        validateTypeName(type.name, errors);
+        const { name } = type;
+        if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
+          errors.push({
+            span: name,
+            message: WORD_MUST_START_WITH_UPPERCASE,
+          });
+        }
         return validate(type.valueType);
       }
       case "type-name": {
@@ -237,15 +241,7 @@ function validateType(
     }
   }
   validate(type);
-}
-
-function validateTypeName(name: TextSpan, errors: ErrorSink): void {
-  if (!/^[A-Z][A-Za-z0-9]*$/.test(name.text)) {
-    errors.push({
-      span: name,
-      message: WORD_MUST_START_WITH_UPPERCASE,
-    });
-  }
+  return validationResult;
 }
 
 const WORD_MUST_START_WITH_UPPERCASE =
@@ -407,13 +403,13 @@ function collectNamingHints(
                     discriminant:
                       discriminantType === "string"
                         ? {
-                            type: discriminantType,
-                            value: discriminant,
-                          }
+                          type: discriminantType,
+                          value: discriminant,
+                        }
                         : {
-                            type: discriminantType,
-                            value: discriminant === "true",
-                          },
+                          type: discriminantType,
+                          value: discriminant === "true",
+                        },
                   },
                 ],
                 doc: "",
