@@ -17,12 +17,12 @@ import type {
   DefinitionLink,
   InternalError,
   MappedSpan,
+  ValidationResult,
 } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { parseBody, parseToolDescription } from "./body-parser.js";
 import {
-  collectTemplateBodyDefinitionLinks,
   collectToolDescriptionDefinitionLinks,
   validateTemplateBody,
   validateToolDescription,
@@ -88,7 +88,7 @@ function testValidateBody(args: {
   readonly tools?: { readonly [name: string]: TemplateTool };
   readonly context?: ExpressionContext | null;
   readonly hasValContext?: boolean;
-}): { errors: readonly InternalError[] } {
+}): ValidationResult {
   const hasValContext = args.hasValContext ?? false;
   const root = parseElement(args.bodyXml);
   const parseErrors: InternalError[] = [];
@@ -99,35 +99,10 @@ function testValidateBody(args: {
     );
   }
   const schema = parseSchemaOrThrow(args.schemaSource);
-  const errors = validateTemplateBody(
+  return validateTemplateBody(
     body,
     schema,
     args.tools ?? {},
-    (args.context ?? null) as any,
-  );
-  return { errors };
-}
-
-function testCollectBodyDefinitionLinks(args: {
-  readonly bodyXml: string;
-  readonly schemaSource: string;
-  readonly tools?: { readonly [name: string]: TemplateTool };
-  readonly context?: ExpressionContext | null;
-  readonly hasValContext?: boolean;
-}): readonly DefinitionLink[] {
-  const hasValContext = args.hasValContext ?? false;
-  const root = parseElement(args.bodyXml);
-  const parseErrors: InternalError[] = [];
-  const body = parseBody(root, parseErrors, { hasValContext });
-  if (parseErrors.length > 0) {
-    throw new Error(
-      `parseBody failed: ${parseErrors.map((e) => e.message).join(", ")}`,
-    );
-  }
-  const schema = parseSchemaOrThrow(args.schemaSource);
-  return collectTemplateBodyDefinitionLinks(
-    body,
-    schema,
     (args.context ?? null) as any,
   );
 }
@@ -208,8 +183,8 @@ describe("validateTemplateBody - plain text and snippet references", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("skips insert snippet elements without errors", () => {
@@ -219,8 +194,8 @@ describe("validateTemplateBody - plain text and snippet references", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 });
 
@@ -236,10 +211,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "name" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "name" } },
-    ]);
   });
 
   it("allows integer primitive without format", () => {
@@ -249,10 +222,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "count" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "count" } },
-    ]);
   });
 
   it("allows string literal without format", () => {
@@ -262,10 +233,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "status" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "status" } },
-    ]);
   });
 
   it("allows string union without format", () => {
@@ -275,10 +244,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "role" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "role" } },
-    ]);
   });
 
   it("requires format for float number primitive", () => {
@@ -293,10 +260,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
           hint: "Add a format attribute, for example format='json'",
         },
       ],
+      definitionLinks: [{ definition: { text: "score" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "score" } },
-    ]);
   });
 
   it("requires format for boolean primitive", () => {
@@ -310,10 +275,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
           message: "Must specify format when type is not string or integer",
         },
       ],
+      definitionLinks: [{ definition: { text: "active" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "active" } },
-    ]);
   });
 
   it("requires format for interface type", () => {
@@ -327,10 +290,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
           message: "Must specify format when type is not string or integer",
         },
       ],
+      definitionLinks: [{ definition: { text: "user" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "user" } },
-    ]);
   });
 
   it("requires format for array type", () => {
@@ -344,10 +305,8 @@ describe("validateTemplateBody - insert val with implicit format", () => {
           message: "Must specify format when type is not string or integer",
         },
       ],
+      definitionLinks: [{ definition: { text: "items" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "items" } },
-    ]);
   });
 });
 
@@ -378,8 +337,8 @@ describe("validateTemplateBody - null, optional, and expression errors", () => {
           message: "Always null",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("reports an error when expression resolves to optional", () => {
@@ -393,10 +352,8 @@ describe("validateTemplateBody - null, optional, and expression errors", () => {
           message: "May be null",
         },
       ],
+      definitionLinks: [{ definition: { text: "email" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "email" } },
-    ]);
   });
 
   it("propagates expression resolution errors for unknown fields", () => {
@@ -410,8 +367,8 @@ describe("validateTemplateBody - null, optional, and expression errors", () => {
           message: "Field 'missing' not found in interface",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 });
 
@@ -427,10 +384,8 @@ describe("validateTemplateBody - format='text'", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "text" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "text" } },
-    ]);
   });
 
   it("allows format='text' on integer primitive", () => {
@@ -440,10 +395,8 @@ describe("validateTemplateBody - format='text'", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "count" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "count" } },
-    ]);
   });
 
   it("allows format='text' on string literal", () => {
@@ -453,10 +406,8 @@ describe("validateTemplateBody - format='text'", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "status" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "status" } },
-    ]);
   });
 
   it("allows format='text' on string union", () => {
@@ -466,10 +417,8 @@ describe("validateTemplateBody - format='text'", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "mode" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "mode" } },
-    ]);
   });
 
   it("rejects format='text' on float number primitive", () => {
@@ -483,10 +432,8 @@ describe("validateTemplateBody - format='text'", () => {
           message: "'text' can only be used with string and integer types",
         },
       ],
+      definitionLinks: [{ definition: { text: "score" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "score" } },
-    ]);
   });
 
   it("rejects format='text' on boolean primitive", () => {
@@ -500,10 +447,8 @@ describe("validateTemplateBody - format='text'", () => {
           message: "'text' can only be used with string and integer types",
         },
       ],
+      definitionLinks: [{ definition: { text: "flag" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "flag" } },
-    ]);
   });
 
   it("rejects format='text' on interface type", () => {
@@ -517,10 +462,8 @@ describe("validateTemplateBody - format='text'", () => {
           message: "'text' can only be used with string and integer types",
         },
       ],
+      definitionLinks: [{ definition: { text: "user" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "user" } },
-    ]);
   });
 
   it("rejects format='text' on array type", () => {
@@ -534,10 +477,8 @@ describe("validateTemplateBody - format='text'", () => {
           message: "'text' can only be used with string and integer types",
         },
       ],
+      definitionLinks: [{ definition: { text: "tags" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "tags" } },
-    ]);
   });
 });
 
@@ -568,11 +509,11 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [
+        { definition: { text: "rows" } },
+        { definition: { text: "rows" } },
+      ],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "rows" } },
-      { definition: { text: "rows" } },
-    ]);
   });
 
   it("rejects format='csv' on non-array type", () => {
@@ -587,10 +528,8 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
           rule: "A tabular type is an array of objects with only string or integer fields",
         },
       ],
+      definitionLinks: [{ definition: { text: "name" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "name" } },
-    ]);
   });
 
   it("rejects format='tsv' on array of primitives", () => {
@@ -605,10 +544,8 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
           rule: "A tabular type is an array of objects with only string or integer fields",
         },
       ],
+      definitionLinks: [{ definition: { text: "tags" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "tags" } },
-    ]);
   });
 
   it("rejects format='csv' on array of interfaces with boolean fields", () => {
@@ -625,10 +562,8 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
           message: "'csv' can only be used with tabular types",
         },
       ],
+      definitionLinks: [{ definition: { text: "rows" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "rows" } },
-    ]);
   });
 
   it("rejects format='tsv' on array of interfaces with float number fields", () => {
@@ -645,10 +580,8 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
           message: "'tsv' can only be used with tabular types",
         },
       ],
+      definitionLinks: [{ definition: { text: "rows" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "rows" } },
-    ]);
   });
 
   it("rejects format='csv' on array of interfaces with nested interface fields", () => {
@@ -665,10 +598,8 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
           message: "'csv' can only be used with tabular types",
         },
       ],
+      definitionLinks: [{ definition: { text: "rows" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "rows" } },
-    ]);
   });
 });
 
@@ -700,13 +631,13 @@ describe("validateTemplateBody - structured formats ('json', 'yaml', 'toon')", (
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [
+        { definition: { text: "user" } },
+        { definition: { text: "items" } },
+        { definition: { text: "user" } },
+        { definition: { text: "active" } },
+      ],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "user" } },
-      { definition: { text: "items" } },
-      { definition: { text: "user" } },
-      { definition: { text: "active" } },
-    ]);
   });
 });
 
@@ -725,8 +656,8 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("allows <c> tag with field name defined in template schema", () => {
@@ -736,8 +667,8 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("allows <c> tag matching a tool name in tools map", () => {
@@ -752,8 +683,8 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("allows <c> tag matching a field name from a tool's schema", () => {
@@ -768,8 +699,8 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("reports an error for unknown identifier in <c> tag", () => {
@@ -783,8 +714,8 @@ describe("validateTemplateBody - <c> tags", () => {
           message: "Identifier 'unknownIdentifier' not found in schema",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("allows <c> tag with JSON matching a type in the schema", () => {
@@ -794,8 +725,8 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("reports an error for <c> tag with JSON not matching any schema type", () => {
@@ -809,8 +740,8 @@ describe("validateTemplateBody - <c> tags", () => {
           message: "Does not match any of the types defined in the schema",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 });
 
@@ -835,8 +766,8 @@ describe("validateTemplateBody - with ExpressionContext (hasValContext=true)", (
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("requires format for 'it' expression with number type from context", () => {
@@ -859,8 +790,8 @@ describe("validateTemplateBody - with ExpressionContext (hasValContext=true)", (
           message: "Must specify format when type is not string or integer",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([]);
   });
 
   it("validates 'it.name' property access on interface type from context", () => {
@@ -890,10 +821,8 @@ describe("validateTemplateBody - with ExpressionContext (hasValContext=true)", (
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
+      definitionLinks: [{ definition: { text: "name" } }],
     });
-    expect(testCollectBodyDefinitionLinks(args)).toMatch([
-      { definition: { text: "name" } },
-    ]);
   });
 });
 

@@ -20,17 +20,14 @@ import {
 import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
-import {
+import type {
   DefinitionLink,
   InternalError,
   InternalErrors,
   Span,
 } from "../util/shared-types.js";
-import {
-  collectTemplateBodyDefinitionLinks,
-  validateTemplateBody,
-} from "./body-validator.js";
-import {
+import { validateTemplateBody } from "./body-validator.js";
+import type {
   SchemaOrError,
   Snippet,
   Template,
@@ -370,12 +367,8 @@ function validateTemplateContent(
   for (const body of [content.system, content.user]) {
     if (!body) continue;
     errors.push(
-      ...validateTemplateBody(
-        body,
-        templateSchema,
-        options.templateTools,
-        null,
-      ),
+      ...validateTemplateBody(body, templateSchema, options.templateTools, null)
+        .errors,
     );
   }
 
@@ -409,7 +402,8 @@ function collectTemplateContentDefinitionLinks(
   for (const body of [content.system, content.user]) {
     if (!body) continue;
     links.push(
-      ...collectTemplateBodyDefinitionLinks(body, templateSchema, null),
+      ...validateTemplateBody(body, templateSchema, options.templateTools, null)
+        .definitionLinks,
     );
   }
 
@@ -692,7 +686,7 @@ function validateSnippet(
           templateSchema,
           options.templateTools,
           null,
-        ),
+        ).errors,
       );
       break;
     }
@@ -722,7 +716,7 @@ function validateSnippet(
           templateSchema,
           options.templateTools,
           ifContext.then,
-        ),
+        ).errors,
       );
       errors.push(
         ...validateTemplateBody(
@@ -730,7 +724,7 @@ function validateSnippet(
           templateSchema,
           options.templateTools,
           ifContext.else,
-        ),
+        ).errors,
       );
       break;
     }
@@ -773,7 +767,7 @@ function validateSnippet(
             templateSchema,
             options.templateTools,
             null,
-          ),
+          ).errors,
         );
       }
       if (missingCases.length >= 1) {
@@ -795,17 +789,18 @@ function validateSnippet(
 function collectSnippetDefinitionLinks(
   snippet: Snippet,
   templateSchema: Schema,
-  _options: Options,
+  options: Options,
 ): readonly DefinitionLink[] {
   const links: DefinitionLink[] = [];
   switch (snippet.kind) {
     case "snippet": {
       links.push(
-        ...collectTemplateBodyDefinitionLinks(
+        ...validateTemplateBody(
           snippet.body,
           templateSchema,
+          options.templateTools,
           null,
-        ),
+        ).definitionLinks,
       );
       break;
     }
@@ -829,18 +824,20 @@ function collectSnippetDefinitionLinks(
         break;
       }
       links.push(
-        ...collectTemplateBodyDefinitionLinks(
+        ...validateTemplateBody(
           snippet.then,
           templateSchema,
+          options.templateTools,
           ifContext.then,
-        ),
+        ).definitionLinks,
       );
       links.push(
-        ...collectTemplateBodyDefinitionLinks(
+        ...validateTemplateBody(
           snippet.else,
           templateSchema,
+          options.templateTools,
           ifContext.else,
-        ),
+        ).definitionLinks,
       );
       break;
     }
@@ -853,11 +850,12 @@ function collectSnippetDefinitionLinks(
       links.push(...expressionResult.definitionLinks);
       for (const branch of snippet.branches) {
         links.push(
-          ...collectTemplateBodyDefinitionLinks(
+          ...validateTemplateBody(
             branch.body,
             templateSchema,
+            options.templateTools,
             null,
-          ),
+          ).definitionLinks,
         );
       }
       break;
@@ -872,9 +870,9 @@ function validateTools(
 ):
   | InternalErrors
   | {
-      kind: "success";
-      tools: { readonly [name: string]: TemplateTool };
-    } {
+    kind: "success";
+    tools: { readonly [name: string]: TemplateTool };
+  } {
   if (toolsValue === null) {
     return {
       kind: "success",

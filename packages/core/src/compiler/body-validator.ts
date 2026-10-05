@@ -1,14 +1,19 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
-import { ExpressionContext } from "../expression/expression-types.js";
-import {
+import type { ExpressionContext } from "../expression/expression-types.js";
+import type {
   ResolvedFieldType,
   Schema,
   SyntheticType,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { DefinitionLink, InternalError } from "../util/shared-types.js";
-import {
+import type {
+  DefinitionLink,
+  InternalError,
+  ValidationResult,
+} from "../util/shared-types.js";
+import { ValidationResultBuilder } from "../util/validation-result-builder.js";
+import type {
   Body,
   InsertFormat,
   TemplateTool,
@@ -20,7 +25,7 @@ export function validateTemplateBody<HasValContext extends boolean>(
   templateSchema: Schema,
   tools: { readonly [name: string]: TemplateTool },
   context: HasValContext extends true ? ExpressionContext : null,
-): readonly InternalError[] {
+): ValidationResult {
   const toolNames = new Set<string>(Object.keys(tools));
   const schemasForBodyValidation = [
     templateSchema,
@@ -38,23 +43,6 @@ export function validateTemplateBody<HasValContext extends boolean>(
   );
 }
 
-export function collectTemplateBodyDefinitionLinks<
-  HasValContext extends boolean = false,
->(
-  body: Body<HasValContext>,
-  templateSchema: Schema,
-  context: HasValContext extends true ? ExpressionContext : null,
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
-  for (const piece of body) {
-    if (piece.kind === "insert-val") {
-      const result = resolveExpressionType(piece.val, templateSchema, context);
-      links.push(...result.definitionLinks);
-    }
-  }
-  return links;
-}
-
 export function validateToolDescription(args: {
   description: ToolDescription;
   toolSchema: Schema;
@@ -66,7 +54,7 @@ export function validateToolDescription(args: {
     [args.toolSchema],
     toolNames,
     null,
-  );
+  ).errors;
 }
 
 export function collectToolDescriptionDefinitionLinks(_args: {
@@ -82,8 +70,9 @@ function validateBodyImpl<HasValContext extends boolean>(
   schemasForBodyValidation: readonly Schema[],
   toolNames: ReadonlySet<string>,
   context: HasValContext extends true ? ExpressionContext : null,
-): readonly InternalError[] {
-  const errors: InternalError[] = [];
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { definitionLinks, errors } = validationResult;
   for (const piece of body) {
     if (piece.kind === "c-tag") {
       errors.push(
@@ -95,6 +84,7 @@ function validateBodyImpl<HasValContext extends boolean>(
     }
     const expression = piece.val;
     const result = resolveExpressionType(expression, templateSchema, context);
+    definitionLinks.push(...result.definitionLinks);
     if (result.kind === "error") {
       errors.push(...result.errors);
       continue;
@@ -156,7 +146,7 @@ function validateBodyImpl<HasValContext extends boolean>(
       }
     }
   }
-  return errors;
+  return validationResult;
 }
 
 function isStringOrIntegerType(
