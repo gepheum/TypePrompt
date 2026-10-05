@@ -51,7 +51,7 @@ function resolveExprTypeOrThrow(
       `resolveExpressionType failed: ${JSON.stringify(result.errors)}`,
     );
   }
-  return result;
+  return result.type;
 }
 
 // ---------------------------------------------------------------------------

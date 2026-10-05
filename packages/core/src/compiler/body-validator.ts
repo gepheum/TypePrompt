@@ -1,8 +1,5 @@
 import { validateCTag } from "../ctag/ctag-validator.js";
-import {
-  collectExpressionDefinitionLinks,
-  resolveExpressionType,
-} from "../expression/expression-type-resolver.js";
+import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { ExpressionContext } from "../expression/expression-types.js";
 import {
   ResolvedFieldType,
@@ -51,9 +48,8 @@ export function collectTemplateBodyDefinitionLinks<
   const links: DefinitionLink[] = [];
   for (const piece of body) {
     if (piece.kind === "insert-val") {
-      links.push(
-        ...collectExpressionDefinitionLinks(piece.val, templateSchema, context),
-      );
+      const result = resolveExpressionType(piece.val, templateSchema, context);
+      links.push(...result.definitionLinks);
     }
   }
   return links;
@@ -98,11 +94,13 @@ function validateBodyImpl<HasValContext extends boolean>(
       continue;
     }
     const expression = piece.val;
-    const type = resolveExpressionType(expression, templateSchema, context);
-    if (type.kind === "error") {
-      errors.push(...type.errors);
+    const result = resolveExpressionType(expression, templateSchema, context);
+    if (result.kind === "error") {
+      errors.push(...result.errors);
       continue;
-    } else if (type.kind === "null") {
+    }
+    const { type } = result;
+    if (type.kind === "null") {
       errors.push({
         span: expression.fullPath,
         message: "Always null",

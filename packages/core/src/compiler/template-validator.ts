@@ -1,7 +1,4 @@
-import {
-  collectExpressionDefinitionLinks,
-  resolveExpressionType,
-} from "../expression/expression-type-resolver.js";
+import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import {
@@ -700,18 +697,18 @@ function validateSnippet(
       break;
     }
     case "snippet-if": {
-      const expressionType = resolveExpressionType(
+      const expressionResult = resolveExpressionType(
         snippet.expression,
         templateSchema,
         null,
       );
-      if (expressionType.kind === "error") {
-        errors.push(...expressionType.errors);
+      if (expressionResult.kind === "error") {
+        errors.push(...expressionResult.errors);
         break;
       }
       const ifContext = resolveIfExpression(
         snippet.expression,
-        expressionType,
+        expressionResult.type,
         snippet.is,
         templateSchema,
       );
@@ -738,31 +735,31 @@ function validateSnippet(
       break;
     }
     case "snippet-switch": {
-      const expressionType = resolveExpressionType(
+      const expressionResult = resolveExpressionType(
         snippet.expression,
         templateSchema,
         null,
-      );
-      if (expressionType.kind === "error") {
-        errors.push(...expressionType.errors);
-        break;
-      }
-      const expressionResult = resolveSwitchExpression(
-        snippet.expression,
-        expressionType,
-        templateSchema,
       );
       if (expressionResult.kind === "error") {
         errors.push(...expressionResult.errors);
         break;
       }
+      const switchResult = resolveSwitchExpression(
+        snippet.expression,
+        expressionResult.type,
+        templateSchema,
+      );
+      if (switchResult.kind === "error") {
+        errors.push(...switchResult.errors);
+        break;
+      }
       const handledCases = new Set(snippet.branches.map((b) => b.case.text));
-      const missingCases = Object.keys(expressionResult.cases).filter(
+      const missingCases = Object.keys(switchResult.cases).filter(
         (c) => !handledCases.has(c),
       );
       for (const branch of snippet.branches) {
         const case_: string = branch.case.text;
-        if (!expressionResult.cases[case_]) {
+        if (!switchResult.cases[case_]) {
           errors.push({
             span: branch.case,
             message: `Expression can never be '${case_}'`,
@@ -813,24 +810,18 @@ function collectSnippetDefinitionLinks(
       break;
     }
     case "snippet-if": {
-      links.push(
-        ...collectExpressionDefinitionLinks(
-          snippet.expression,
-          templateSchema,
-          null,
-        ),
-      );
-      const expressionType = resolveExpressionType(
+      const expressionResult = resolveExpressionType(
         snippet.expression,
         templateSchema,
         null,
       );
-      if (expressionType.kind === "error") {
+      links.push(...expressionResult.definitionLinks);
+      if (expressionResult.kind === "error") {
         break;
       }
       const ifContext = resolveIfExpression(
         snippet.expression,
-        expressionType,
+        expressionResult.type,
         snippet.is,
         templateSchema,
       );
@@ -854,13 +845,12 @@ function collectSnippetDefinitionLinks(
       break;
     }
     case "snippet-switch": {
-      links.push(
-        ...collectExpressionDefinitionLinks(
-          snippet.expression,
-          templateSchema,
-          null,
-        ),
+      const expressionResult = resolveExpressionType(
+        snippet.expression,
+        templateSchema,
+        null,
       );
+      links.push(...expressionResult.definitionLinks);
       for (const branch of snippet.branches) {
         links.push(
           ...collectTemplateBodyDefinitionLinks(

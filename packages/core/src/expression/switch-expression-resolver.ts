@@ -19,9 +19,9 @@ export function resolveSwitchExpression(
   // any union-member map lookup.
   if (expression.kind === "property") {
     const { left } = expression;
-    const resolvedType = resolveExpressionType(left, schema, null);
-    if (resolvedType.kind === "union") {
-      const unionMembers = schema.unionToMembers.get(resolvedType);
+    const result = resolveExpressionType(left, schema, null);
+    if (result.kind === "success" && result.type.kind === "union") {
+      const unionMembers = schema.unionToMembers.get(result.type);
       if (
         unionMembers?.kind === "interfaces" &&
         unionMembers.discriminator === expression.property.text

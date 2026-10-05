@@ -72,3 +72,9 @@ export type ValidationResult = {
   readonly errors: readonly InternalError[];
   readonly definitionLinks: readonly DefinitionLink[];
 };
+
+export type ValidationErrors = {
+  readonly kind: "error";
+  readonly errors: readonly InternalError[];
+  readonly definitionLinks: readonly DefinitionLink[];
+};
