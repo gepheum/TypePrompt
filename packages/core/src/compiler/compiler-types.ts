@@ -202,9 +202,10 @@ export type ValidatedTool = {
   readonly kind: "tool";
   readonly tool: Tool;
   readonly schema: Schema;
+  readonly definitionLinks: readonly DefinitionLink[];
 };
 
-export type ToolValidationResult = ValidatedTool | InternalErrors;
+export type ToolValidationResult = ValidatedTool | ValidationErrors;
 
 export type ValidatedTemplate = {
   readonly kind: "template";

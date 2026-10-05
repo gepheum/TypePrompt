@@ -74,6 +74,7 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
     kind: "tool",
     tool,
     schema,
+    definitionLinks: [],
   };
 }
 

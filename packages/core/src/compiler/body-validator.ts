@@ -7,11 +7,7 @@ import type {
   SyntheticType,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type {
-  DefinitionLink,
-  InternalError,
-  ValidationResult,
-} from "../util/shared-types.js";
+import type { ValidationResult } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import type {
   Body,
@@ -46,7 +42,7 @@ export function validateTemplateBody<HasValContext extends boolean>(
 export function validateToolDescription(args: {
   description: ToolDescription;
   toolSchema: Schema;
-}): readonly InternalError[] {
+}): ValidationResult {
   const toolNames = new Set<string>();
   return validateBodyImpl(
     args.description,
@@ -54,14 +50,7 @@ export function validateToolDescription(args: {
     [args.toolSchema],
     toolNames,
     null,
-  ).errors;
-}
-
-export function collectToolDescriptionDefinitionLinks(_args: {
-  description: ToolDescription;
-  toolSchema: Schema;
-}): readonly DefinitionLink[] {
-  return [];
+  );
 }
 
 function validateBodyImpl<HasValContext extends boolean>(

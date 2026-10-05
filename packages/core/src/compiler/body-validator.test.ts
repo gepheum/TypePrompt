@@ -14,7 +14,6 @@ import type {
 } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type {
-  DefinitionLink,
   InternalError,
   MappedSpan,
   ValidationResult,
@@ -23,7 +22,6 @@ import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { parseBody, parseToolDescription } from "./body-parser.js";
 import {
-  collectToolDescriptionDefinitionLinks,
   validateTemplateBody,
   validateToolDescription,
 } from "./body-validator.js";
@@ -78,6 +76,7 @@ function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
       kind: "tool",
       tool,
       schema,
+      definitionLinks: [],
     },
   };
 }
@@ -110,7 +109,7 @@ function testValidateBody(args: {
 function testValidateToolDescription(args: {
   readonly descXml: string;
   readonly schemaSource: string;
-}): { errors: readonly InternalError[] } {
+}): ValidationResult {
   const root = parseElement(args.descXml);
   const parseErrors: InternalError[] = [];
   const description = parseToolDescription(root, parseErrors);
@@ -120,27 +119,7 @@ function testValidateToolDescription(args: {
     );
   }
   const toolSchema = parseSchemaOrThrow(args.schemaSource);
-  const errors = validateToolDescription({
-    description,
-    toolSchema,
-  });
-  return { errors };
-}
-
-function testCollectToolDescriptionDefinitionLinks(args: {
-  readonly descXml: string;
-  readonly schemaSource: string;
-}): readonly DefinitionLink[] {
-  const root = parseElement(args.descXml);
-  const parseErrors: InternalError[] = [];
-  const description = parseToolDescription(root, parseErrors);
-  if (parseErrors.length > 0) {
-    throw new Error(
-      `parseToolDescription failed: ${parseErrors.map((e) => e.message).join(", ")}`,
-    );
-  }
-  const toolSchema = parseSchemaOrThrow(args.schemaSource);
-  return collectToolDescriptionDefinitionLinks({
+  return validateToolDescription({
     description,
     toolSchema,
   });
@@ -845,8 +824,8 @@ describe("validateToolDescription", () => {
     };
     expect(testValidateToolDescription(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectToolDescriptionDefinitionLinks(args)).toMatch([]);
   });
 
   it("reports an error for unknown identifier in <c> tag within description", () => {
@@ -860,8 +839,8 @@ describe("validateToolDescription", () => {
           message: "Identifier 'nonExistent' not found in schema",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectToolDescriptionDefinitionLinks(args)).toMatch([]);
   });
 
   it("validates JSON within <c> tag in tool description against tool schema", () => {
@@ -872,8 +851,8 @@ describe("validateToolDescription", () => {
     };
     expect(testValidateToolDescription(args)).toMatch({
       errors: [],
+      definitionLinks: [],
     });
-    expect(testCollectToolDescriptionDefinitionLinks(args)).toMatch([]);
   });
 
   it("reports an error for invalid JSON within <c> tag in tool description", () => {
@@ -887,7 +866,7 @@ describe("validateToolDescription", () => {
           message: "Does not match any of the types defined in the schema",
         },
       ],
+      definitionLinks: [],
     });
-    expect(testCollectToolDescriptionDefinitionLinks(args)).toMatch([]);
   });
 });
