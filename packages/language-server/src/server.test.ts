@@ -902,4 +902,624 @@ comment here -->
       expect(items).toMatch([]);
     });
   });
+
+  describe("getDefinition", () => {
+    it("jumps from shared type reference in template to definition in namespace shared.xml", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const sharedXml = `<namespace name="Main">
+  type UserProfile = {
+    name: string;
+  };
+</namespace>`;
+      const sharedUri = fsPathToUri(
+        path.join(tempDir, "prompts", "shared.xml"),
+      );
+      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
+      openDocs.set(sharedUri, sharedDoc);
+      extension.setFileContent(sharedUri, {
+        content: sharedXml,
+        lineFinder: createLineFinder(sharedXml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      user: shared.UserProfile;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Hello <insert val="input.user.name"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on "UserProfile" in `shared.UserProfile` (line 3, char 22)
+      const userProfileOffset = templateXml.indexOf("UserProfile");
+      const pos = templateDoc.positionAt(userProfileOffset + 2);
+      const definition = extension.getDefinition(templateUri, pos);
+
+      expect(definition !== null).toBe(true);
+      expect(definition!.uri).toBe(sharedUri);
+      const targetText = sharedXml.slice(
+        sharedDoc.offsetAt(definition!.range.start),
+        sharedDoc.offsetAt(definition!.range.end),
+      );
+      expect(targetText).toBe("UserProfile");
+    });
+
+    it("jumps from insert val property expression to field definition", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      text: string;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Hello <insert val="input.text"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on "text" in `input.text`
+      const textOffset = templateXml.lastIndexOf("text");
+      const pos = templateDoc.positionAt(textOffset + 1);
+      const definition = extension.getDefinition(templateUri, pos);
+
+      expect(definition !== null).toBe(true);
+      expect(definition!.uri).toBe(templateUri);
+      const targetText = templateXml.slice(
+        templateDoc.offsetAt(definition!.range.start),
+        templateDoc.offsetAt(definition!.range.end),
+      );
+      expect(targetText).toBe("text");
+      // The target definition should be the field name declaration in schema
+      expect(templateDoc.offsetAt(definition!.range.start)).toBe(
+        templateXml.indexOf("text: string"),
+      );
+    });
+
+    it("returns definition location when cursor is on the definition itself", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Status = "active" | "inactive";
+    type Input = { status: Status; };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Status: <insert val="input.status"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on definition of `Status` in `type Status = ...`
+      const statusDefOffset = templateXml.indexOf("Status");
+      const pos = templateDoc.positionAt(statusDefOffset + 1);
+      const definition = extension.getDefinition(templateUri, pos);
+
+      expect(definition !== null).toBe(true);
+      expect(definition!.uri).toBe(templateUri);
+      expect(templateDoc.offsetAt(definition!.range.start)).toBe(
+        statusDefOffset,
+      );
+    });
+
+    it("returns null for non-symbol positions or files not in workspace", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      const def = extension.getDefinition(fileUri, { line: 0, character: 0 });
+      expect(def).toBe(null);
+    });
+  });
+
+  describe("getReferences", () => {
+    it("finds all references to a type across files including declaration", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const sharedXml = `<namespace name="Main">
+  type User = {
+    name: string;
+  };
+</namespace>`;
+      const sharedUri = fsPathToUri(
+        path.join(tempDir, "prompts", "shared.xml"),
+      );
+      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
+      openDocs.set(sharedUri, sharedDoc);
+      extension.setFileContent(sharedUri, {
+        content: sharedXml,
+        lineFinder: createLineFinder(sharedXml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      user: shared.User;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Hello <insert val="input.user.name"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Find references from `User` declaration in shared.xml
+      const userDefOffset = sharedXml.indexOf("User");
+      const pos = sharedDoc.positionAt(userDefOffset + 1);
+      const refs = extension.getReferences(sharedUri, pos, {
+        includeDeclaration: true,
+      });
+
+      expect(refs !== null).toBe(true);
+      expect(refs!.length).toBe(2);
+      expect(refs!.some((r) => r.uri === sharedUri)).toBe(true);
+      expect(refs!.some((r) => r.uri === templateUri)).toBe(true);
+    });
+
+    it("finds all references excluding declaration when includeDeclaration is false", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const sharedXml = `<namespace name="Main">
+  type User = {
+    name: string;
+  };
+</namespace>`;
+      const sharedUri = fsPathToUri(
+        path.join(tempDir, "prompts", "shared.xml"),
+      );
+      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
+      openDocs.set(sharedUri, sharedDoc);
+      extension.setFileContent(sharedUri, {
+        content: sharedXml,
+        lineFinder: createLineFinder(sharedXml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      user: shared.User;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Hello</user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Find references from `shared.User` reference in Greet.xml with includeDeclaration: false
+      const userRefOffset = templateXml.indexOf("User");
+      const pos = templateDoc.positionAt(userRefOffset + 1);
+      const refs = extension.getReferences(templateUri, pos, {
+        includeDeclaration: false,
+      });
+
+      expect(refs !== null).toBe(true);
+      expect(refs!.length).toBe(1);
+      expect(refs![0]!.uri).toBe(templateUri);
+    });
+
+    it("finds references to a field when invoked from insert val expression", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      title: string;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter: <insert val="input.title"/></system>
+  <user>Hello: <insert val="input.title"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on first insert val "title"
+      const titleOffset = templateXml.indexOf("input.title") + "input.".length;
+      const pos = templateDoc.positionAt(titleOffset);
+      const refs = extension.getReferences(templateUri, pos, {
+        includeDeclaration: true,
+      });
+
+      expect(refs !== null).toBe(true);
+      // Declaration + 2 references = 3 locations
+      expect(refs!.length).toBe(3);
+    });
+
+    it("returns empty array for unknown symbol position in workspace", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+      extension.setFileContent(fileUri, {
+        content: xml,
+        lineFinder: createLineFinder(xml),
+        lastModified: Date.now(),
+      });
+
+      const refs = extension.getReferences(fileUri, {
+        line: 0,
+        character: 0,
+      });
+      expect(refs).toMatch([]);
+    });
+
+    it("returns null for files not in workspace", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      const refs = extension.getReferences(fileUri, {
+        line: 0,
+        character: 0,
+      });
+      expect(refs).toBe(null);
+    });
+  });
+
+  describe("renameSymbol", () => {
+    it("renames a shared type across namespace and template files", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const sharedXml = `<namespace name="Main">
+  type OldType = {
+    field: string;
+  };
+</namespace>`;
+      const sharedUri = fsPathToUri(
+        path.join(tempDir, "prompts", "shared.xml"),
+      );
+      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
+      openDocs.set(sharedUri, sharedDoc);
+      extension.setFileContent(sharedUri, {
+        content: sharedXml,
+        lineFinder: createLineFinder(sharedXml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      data: shared.OldType;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeter</system>
+  <user>Hello</user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Trigger rename on `OldType` in shared.xml
+      const oldTypeOffset = sharedXml.indexOf("OldType");
+      const pos = sharedDoc.positionAt(oldTypeOffset + 1);
+      const edit = extension.renameSymbol(sharedUri, pos, "NewType");
+
+      expect(edit !== null).toBe(true);
+      expect(edit!.changes !== undefined).toBe(true);
+      const changes = edit!.changes!;
+
+      expect(changes[sharedUri] !== undefined).toBe(true);
+      expect(changes[sharedUri]!.length).toBe(1);
+      expect(changes[sharedUri]![0]!.newText).toBe("NewType");
+
+      expect(changes[templateUri] !== undefined).toBe(true);
+      expect(changes[templateUri]!.length).toBe(1);
+      expect(changes[templateUri]![0]!.newText).toBe("NewType");
+
+      // Verify that applying the edits produces the expected text
+      const newSharedContent = TextDocument.applyEdits(
+        sharedDoc,
+        changes[sharedUri]!,
+      );
+      expect(newSharedContent.includes("type NewType = {")).toBe(true);
+
+      const newTemplateContent = TextDocument.applyEdits(
+        templateDoc,
+        changes[templateUri]!,
+      );
+      expect(newTemplateContent.includes("data: shared.NewType;")).toBe(true);
+    });
+
+    it("renames a field in an interface across schema and body insert expressions", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Greet">
+  <schema>
+    type Input = {
+      greeting: string;
+    };
+    type Output = string;
+  </schema>
+  <system>Greeting: <insert val="input.greeting"/></system>
+  <user>Message: <insert val="input.greeting"/></user>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Greet.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Trigger rename on `greeting` field in schema
+      const greetingOffset = templateXml.indexOf("greeting: string;");
+      const pos = templateDoc.positionAt(greetingOffset + 1);
+      const edit = extension.renameSymbol(templateUri, pos, "welcomeMsg");
+
+      expect(edit !== null).toBe(true);
+      const changes = edit!.changes!;
+      expect(changes[templateUri] !== undefined).toBe(true);
+      // Field definition + 2 insert val references = 3 edits
+      expect(changes[templateUri]!.length).toBe(3);
+
+      const newContent = TextDocument.applyEdits(
+        templateDoc,
+        changes[templateUri]!,
+      );
+      expect(newContent.includes("welcomeMsg: string;")).toBe(true);
+      expect(
+        newContent.includes('Greeting: <insert val="input.welcomeMsg"/>'),
+      ).toBe(true);
+      expect(
+        newContent.includes('Message: <insert val="input.welcomeMsg"/>'),
+      ).toBe(true);
+    });
+
+    it("returns null for non-symbol position", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const xml = '<template name="Test"><system>Hello</system></template>';
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      openDocs.set(fileUri, doc);
+
+      const edit = extension.renameSymbol(
+        fileUri,
+        { line: 0, character: 0 },
+        "NewName",
+      );
+      expect(edit).toBe(null);
+    });
+  });
 });

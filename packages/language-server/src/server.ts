@@ -7,10 +7,12 @@ import {
   tokenize,
   type CompilationResult,
   type Config,
+  type DefinitionLink,
   type InternalError,
   type LineFinderData,
   type SemanticToken,
   type Span,
+  type TextSpan,
 } from "@typeprompt/core";
 import fastDiff from "fast-diff";
 import { glob } from "glob";
@@ -24,13 +26,19 @@ import {
   CompletionItemKind,
   CompletionParams,
   createConnection,
+  DefinitionParams,
   Diagnostic,
   DiagnosticSeverity,
   DocumentFormattingParams,
   InitializeParams,
   InitializeResult,
+  Location,
   Position,
   ProposedFeatures,
+  Range,
+  ReferenceContext,
+  ReferenceParams,
+  RenameParams,
   SemanticTokens,
   SemanticTokensBuilder,
   SemanticTokensLegend,
@@ -38,6 +46,7 @@ import {
   TextDocuments,
   TextDocumentSyncKind,
   TextEdit,
+  WorkspaceEdit,
   type _Connection,
 } from "vscode-languageserver/node.js";
 
@@ -134,6 +143,36 @@ export function internalErrorToDiagnostic(
     message,
     source: "typeprompt",
   };
+}
+
+export function spanToRange(
+  span: Span,
+  getDocument: (uri: string) => TextDocument | undefined,
+  xmlBundles: Map<string, XmlBundle>,
+): Range | null {
+  const doc = getDocument(span.path);
+  if (doc) {
+    return {
+      start: doc.positionAt(span.start),
+      end: doc.positionAt(span.end),
+    };
+  }
+  const xmlBundle = xmlBundles.get(span.path);
+  if (xmlBundle) {
+    const startMatch = findLine(span.start, xmlBundle.content.lineFinder);
+    const endMatch = findLine(span.end, xmlBundle.content.lineFinder);
+    return {
+      start: {
+        line: startMatch.line.zeroBasedLineNumber,
+        character: startMatch.zeroBasedColNumber,
+      },
+      end: {
+        line: endMatch.line.zeroBasedLineNumber,
+        character: endMatch.zeroBasedColNumber,
+      },
+    };
+  }
+  return null;
 }
 
 export function computeEdits(
@@ -920,6 +959,233 @@ export class TypePromptLanguageExtension {
       sortText: String(index).padStart(5, "0"),
     }));
   }
+
+  private findTargetDefinition(
+    workspace: Workspace,
+    uri: string,
+    offset: number,
+  ): { targetDef: TextSpan; allLinks: readonly DefinitionLink[] } | null {
+    let compilationResult = workspace.compilationResult;
+    if (!compilationResult) {
+      compilationResult = workspace.compile();
+    }
+
+    const allLinks: DefinitionLink[] = [];
+    for (const links of Object.values(
+      compilationResult.pathToDefinitionLinks,
+    )) {
+      allLinks.push(...links);
+    }
+
+    // 1. Check if the offset falls within any reference in pathToDefinitionLinks[uri]
+    const fileLinks = compilationResult.pathToDefinitionLinks[uri] ?? [];
+    for (const link of fileLinks) {
+      if (
+        link.reference.path === uri &&
+        link.reference.start <= offset &&
+        offset <= link.reference.end
+      ) {
+        return { targetDef: link.definition, allLinks };
+      }
+    }
+
+    // 2. Check if the offset falls within any definition declared in this file
+    for (const link of allLinks) {
+      if (
+        link.definition.path === uri &&
+        link.definition.start <= offset &&
+        offset <= link.definition.end
+      ) {
+        return { targetDef: link.definition, allLinks };
+      }
+    }
+
+    return null;
+  }
+
+  public getDefinition(uri: string, position: Position): Location | null {
+    if (this.disposed) {
+      return null;
+    }
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return null;
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (!xmlBundle?.workspace) {
+      return null;
+    }
+
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return null;
+    }
+
+    const offset = doc.offsetAt(position);
+    const workspace = xmlBundle.workspace;
+    const match = this.findTargetDefinition(workspace, uri, offset);
+    if (!match) {
+      return null;
+    }
+
+    const range = spanToRange(
+      match.targetDef,
+      this.getDocument,
+      this.xmlBundles,
+    );
+    if (!range) {
+      return null;
+    }
+
+    return {
+      uri: match.targetDef.path,
+      range,
+    };
+  }
+
+  public getReferences(
+    uri: string,
+    position: Position,
+    context?: ReferenceContext,
+  ): Location[] | null {
+    if (this.disposed) {
+      return null;
+    }
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return null;
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (!xmlBundle?.workspace) {
+      return null;
+    }
+
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return null;
+    }
+
+    const offset = doc.offsetAt(position);
+    const workspace = xmlBundle.workspace;
+    const match = this.findTargetDefinition(workspace, uri, offset);
+    if (!match) {
+      return [];
+    }
+
+    const { targetDef, allLinks } = match;
+    const locations: Location[] = [];
+    const seenSpans = new Set<string>();
+
+    const addSpanLocation = (span: Span): void => {
+      const key = `${span.path}:${span.start}:${span.end}`;
+      if (seenSpans.has(key)) return;
+      seenSpans.add(key);
+
+      const range = spanToRange(span, this.getDocument, this.xmlBundles);
+      if (range) {
+        locations.push({
+          uri: span.path,
+          range,
+        });
+      }
+    };
+
+    if (context?.includeDeclaration !== false) {
+      addSpanLocation(targetDef);
+    }
+
+    for (const link of allLinks) {
+      if (
+        link.definition.path === targetDef.path &&
+        link.definition.start === targetDef.start &&
+        link.definition.end === targetDef.end
+      ) {
+        addSpanLocation(link.reference);
+      }
+    }
+
+    return locations;
+  }
+
+  public renameSymbol(
+    uri: string,
+    position: Position,
+    newName: string,
+  ): WorkspaceEdit | null {
+    if (this.disposed) {
+      return null;
+    }
+    const fileType = getFileType(uri);
+    if (fileType !== "*.xml") {
+      return null;
+    }
+
+    const xmlBundle = this.xmlBundles.get(uri);
+    if (!xmlBundle?.workspace) {
+      return null;
+    }
+
+    const doc = this.getDocument(uri);
+    if (!doc) {
+      return null;
+    }
+
+    const offset = doc.offsetAt(position);
+    const workspace = xmlBundle.workspace;
+    const match = this.findTargetDefinition(workspace, uri, offset);
+    if (!match) {
+      return null;
+    }
+
+    const { targetDef, allLinks } = match;
+    const spansToRename: Span[] = [targetDef];
+
+    for (const link of allLinks) {
+      if (
+        link.definition.path === targetDef.path &&
+        link.definition.start === targetDef.start &&
+        link.definition.end === targetDef.end
+      ) {
+        spansToRename.push(link.reference);
+      }
+    }
+
+    const spansByPath = new Map<string, Span[]>();
+    for (const span of spansToRename) {
+      let list = spansByPath.get(span.path);
+      if (!list) {
+        list = [];
+        spansByPath.set(span.path, list);
+      }
+      list.push(span);
+    }
+
+    const changes: { [uri: string]: TextEdit[] } = {};
+
+    for (const [filePath, spans] of spansByPath) {
+      const seen = new Set<string>();
+      const edits: TextEdit[] = [];
+
+      for (const span of spans) {
+        const key = `${span.start}:${span.end}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const range = spanToRange(span, this.getDocument, this.xmlBundles);
+        if (range) {
+          edits.push(TextEdit.replace(range, newName));
+        }
+      }
+
+      if (edits.length > 0) {
+        changes[filePath] = edits;
+      }
+    }
+
+    return { changes };
+  }
 }
 
 export function validateTypePromptDocument(
@@ -1010,6 +1276,9 @@ export function createLanguageServer(
           legend: semanticTokensLegend,
           full: true,
         },
+        definitionProvider: true,
+        referencesProvider: true,
+        renameProvider: true,
         workspace: {
           workspaceFolders: {
             supported: true,
@@ -1117,6 +1386,35 @@ export function createLanguageServer(
     return extension.getCompletionItems(
       params.textDocument.uri,
       params.position,
+    );
+  });
+
+  connection.onDefinition((params: DefinitionParams): Location | null => {
+    logger.log(
+      `[TypePrompt LSP] onDefinition: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
+    );
+    return extension.getDefinition(params.textDocument.uri, params.position);
+  });
+
+  connection.onReferences((params: ReferenceParams): Location[] | null => {
+    logger.log(
+      `[TypePrompt LSP] onReferences: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
+    );
+    return extension.getReferences(
+      params.textDocument.uri,
+      params.position,
+      params.context,
+    );
+  });
+
+  connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
+    logger.log(
+      `[TypePrompt LSP] onRenameRequest: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character} to '${params.newName}'`,
+    );
+    return extension.renameSymbol(
+      params.textDocument.uri,
+      params.position,
+      params.newName,
     );
   });
 
