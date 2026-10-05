@@ -21,11 +21,12 @@ import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type {
-  DefinitionLink,
   InternalError,
   InternalErrors,
   Span,
+  ValidationResult,
 } from "../util/shared-types.js";
+import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { validateTemplateBody } from "./body-validator.js";
 import type {
   SchemaOrError,
@@ -45,10 +46,11 @@ export function validateTemplate(args: {
 }): TemplateValidationResult {
   const { template, metaSchema, namespaceSchema } = args;
 
-  const errors: InternalError[] = [];
+  const validationResult = new ValidationResultBuilder();
+  const { errors } = validationResult;
 
   if (metaSchema.kind === "success") {
-    errors.push(...validateMeta(metaSchema, template));
+    validationResult.push(validateMeta(metaSchema, template));
   }
 
   const validationContext: SchemaValidationContext = {
@@ -58,10 +60,7 @@ export function validateTemplate(args: {
   const templateSchema = validateSchema(template.schema, validationContext);
   if (templateSchema.kind === "error") {
     errors.push(...templateSchema.errors);
-    return {
-      kind: "error",
-      errors,
-    };
+    return validationResult.asErrors();
   }
 
   errors.push(...validateVariants(template, templateSchema));
@@ -77,24 +76,24 @@ export function validateTemplate(args: {
     templateTools: tools.kind === "success" ? tools.tools : {},
   };
   if (template.contents.kind === "no-variants") {
-    errors.push(
-      ...validateTemplateContent(
+    validationResult.push(
+      validateTemplateContent(
         template.contents.content,
         templateSchema,
         topLevelOptions,
       ),
     );
   } else {
-    errors.push(
-      ...validateTemplateContent(
+    validationResult.push(
+      validateTemplateContent(
         template.contents.defaultContent,
         templateSchema,
         topLevelOptions,
       ),
     );
     for (const variant of template.contents.variants) {
-      errors.push(
-        ...validateTemplateContent(variant.content, templateSchema, {
+      validationResult.push(
+        validateTemplateContent(variant.content, templateSchema, {
           ...topLevelOptions,
           isVariantSpecialization: true,
         }),
@@ -103,7 +102,9 @@ export function validateTemplate(args: {
   }
 
   for (const snippet of template.snippets) {
-    errors.push(...validateSnippet(snippet, templateSchema, topLevelOptions));
+    validationResult.push(
+      validateSnippet(snippet, templateSchema, topLevelOptions),
+    );
   }
 
   if (errors.length <= 0) {
@@ -112,77 +113,19 @@ export function validateTemplate(args: {
       template,
       schema: templateSchema,
       tools: tools.kind === "success" ? tools.tools : {},
-      definitionLinks: collectTemplateDefinitionLinks(
-        template,
-        templateSchema,
-        metaSchema,
-        topLevelOptions,
-      ),
+      definitionLinks: validationResult.definitionLinks,
     };
   } else {
-    return {
-      kind: "error",
-      errors,
-    };
+    return validationResult.asErrors();
   }
-}
-
-export function collectTemplateDefinitionLinks(
-  template: Template,
-  templateSchema: Schema,
-  metaSchema: SchemaOrError,
-  options: Options,
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
-
-  if (metaSchema.kind === "success") {
-    links.push(...collectMetaDefinitionLinks(metaSchema, template));
-  }
-
-  if (template.contents.kind === "no-variants") {
-    links.push(
-      ...collectTemplateContentDefinitionLinks(
-        template.contents.content,
-        templateSchema,
-        options,
-      ),
-    );
-  } else {
-    links.push(
-      ...collectTemplateContentDefinitionLinks(
-        template.contents.defaultContent,
-        templateSchema,
-        options,
-      ),
-    );
-    for (const variant of template.contents.variants) {
-      links.push(
-        ...collectTemplateContentDefinitionLinks(
-          variant.content,
-          templateSchema,
-          {
-            ...options,
-            isVariantSpecialization: true,
-          },
-        ),
-      );
-    }
-  }
-
-  for (const snippet of template.snippets) {
-    links.push(
-      ...collectSnippetDefinitionLinks(snippet, templateSchema, options),
-    );
-  }
-
-  return links;
 }
 
 function validateMeta(
   metaSchema: Schema,
   template: Template,
-): readonly InternalError[] {
-  const errors: InternalError[] = [];
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { errors } = validationResult;
 
   const { contents } = template;
   const metaType = metaSchema.typeDeclarations["Meta"];
@@ -206,7 +149,7 @@ function validateMeta(
       const { meta } = contents.content;
       if (metaType) {
         if (meta) {
-          errors.push(...validateJson(meta.value, metaType, metaSchema).errors);
+          validationResult.push(validateJson(meta.value, metaType, metaSchema));
         } else {
           pushMissingMetaError(template.tag);
         }
@@ -220,9 +163,8 @@ function validateMeta(
       const { variants } = contents;
       if (metaType) {
         if (defaultContent.meta) {
-          errors.push(
-            ...validateJson(defaultContent.meta.value, metaType, metaSchema)
-              .errors,
+          validationResult.push(
+            validateJson(defaultContent.meta.value, metaType, metaSchema),
           );
         } else if (variants.every((v) => !v.content.meta)) {
           pushMissingMetaError(template.tag);
@@ -230,9 +172,8 @@ function validateMeta(
           for (const variant of variants) {
             const { content } = variant;
             if (content.meta) {
-              errors.push(
-                ...validateJson(content.meta.value, metaType, metaSchema)
-                  .errors,
+              validationResult.push(
+                validateJson(content.meta.value, metaType, metaSchema),
               );
             } else {
               pushMissingMetaError(variant.tag);
@@ -252,49 +193,7 @@ function validateMeta(
     }
   }
 
-  return errors;
-}
-
-function collectMetaDefinitionLinks(
-  metaSchema: Schema,
-  template: Template,
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
-  const metaType = metaSchema.typeDeclarations["Meta"];
-  if (!metaType) {
-    return links;
-  }
-  const { contents } = template;
-  switch (contents.kind) {
-    case "no-variants": {
-      const { meta } = contents.content;
-      if (meta) {
-        links.push(
-          ...validateJson(meta.value, metaType, metaSchema).definitionLinks,
-        );
-      }
-      break;
-    }
-    case "variants": {
-      const { defaultContent, variants } = contents;
-      if (defaultContent.meta) {
-        links.push(
-          ...validateJson(defaultContent.meta.value, metaType, metaSchema)
-            .definitionLinks,
-        );
-      }
-      for (const variant of variants) {
-        if (variant.content.meta) {
-          links.push(
-            ...validateJson(variant.content.meta.value, metaType, metaSchema)
-              .definitionLinks,
-          );
-        }
-      }
-      break;
-    }
-  }
-  return links;
+  return validationResult;
 }
 
 function validateVariants(
@@ -362,66 +261,35 @@ function validateTemplateContent(
   content: Partial<TemplateContent>,
   templateSchema: Schema,
   options: Options,
-): readonly InternalError[] {
-  const errors: InternalError[] = [];
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { errors } = validationResult;
   for (const body of [content.system, content.user]) {
     if (!body) continue;
-    errors.push(
-      ...validateTemplateBody(body, templateSchema, options.templateTools, null)
-        .errors,
+    validationResult.push(
+      validateTemplateBody(body, templateSchema, options.templateTools, null),
     );
   }
 
   const examplesInterface = makeExamplesType(templateSchema, options);
   if (content.examples) {
-    const exampleErrors = validateJson(
+    const jsonResult = validateJson(
       content.examples,
       examplesInterface,
       templateSchema,
-    ).errors;
-    errors.push(...exampleErrors);
-    if (exampleErrors.length <= 0) {
+    );
+    validationResult.push(jsonResult);
+    if (jsonResult.errors.length <= 0) {
       if (options.isVariantSpecialization) {
         errors.push(...verifyVariantFieldNotSet(content.examples));
       }
-      errors.push(
-        ...validateToolCallExamples(content.examples, options.namespaceTools),
+      validationResult.push(
+        validateToolCallExamples(content.examples, options.namespaceTools),
       );
     }
   }
 
-  return errors;
-}
-
-function collectTemplateContentDefinitionLinks(
-  content: Partial<TemplateContent>,
-  templateSchema: Schema,
-  options: Options,
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
-  for (const body of [content.system, content.user]) {
-    if (!body) continue;
-    links.push(
-      ...validateTemplateBody(body, templateSchema, options.templateTools, null)
-        .definitionLinks,
-    );
-  }
-
-  const examplesInterface = makeExamplesType(templateSchema, options);
-  if (content.examples) {
-    links.push(
-      ...validateJson(content.examples, examplesInterface, templateSchema)
-        .definitionLinks,
-    );
-    links.push(
-      ...collectToolCallExampleDefinitionLinks(
-        content.examples,
-        options.namespaceTools,
-      ),
-    );
-  }
-
-  return links;
+  return validationResult;
 }
 
 function makeExamplesType(
@@ -580,44 +448,10 @@ function verifyVariantFieldNotSet(
 function validateToolCallExamples(
   examples: StrictJsonValue,
   namespaceTools: { readonly [name: string]: ToolValidationResult },
-): readonly InternalError[] {
-  const errors: InternalError[] = [];
-  for (const example of (examples as StrictJsonArray).elements) {
-    const exampleObject = example as StrictJsonObject;
-    const intermediateStepsEntry = exampleObject.entries["intermediateSteps"];
-    if (!intermediateStepsEntry) continue;
-    for (const step of (intermediateStepsEntry.value as StrictJsonArray)
-      .elements) {
-      const toolCallsEntry = (step as StrictJsonObject).entries["toolCalls"]!;
-      for (const toolCall of (toolCallsEntry.value as StrictJsonArray)
-        .elements) {
-        const { entries } = toolCall as StrictJsonObject;
-        const toolValue = entries["tool"]!.value as JsonString;
-        const inputValue = entries["input"]!.value;
-        const outputValue = entries["output"]!.value;
-
-        const toolName = toolValue.value;
-        const tool = namespaceTools[toolName]!;
-        if (tool.kind === "error") continue;
-
-        const { schema } = tool;
-        const inputType = schema.typeDeclarations["Input"]!;
-        const outputType = schema.typeDeclarations["Output"]!;
-        errors.push(...validateJson(inputValue, inputType, schema).errors);
-        errors.push(...validateJson(outputValue, outputType, schema).errors);
-      }
-    }
-  }
-  return errors;
-}
-
-function collectToolCallExampleDefinitionLinks(
-  examples: StrictJsonValue,
-  namespaceTools: { readonly [name: string]: ToolValidationResult },
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
   if (examples.kind !== "array") {
-    return links;
+    return validationResult;
   }
   for (const example of examples.elements) {
     if (example.kind !== "object") continue;
@@ -655,38 +489,37 @@ function collectToolCallExampleDefinitionLinks(
         const inputType = schema.typeDeclarations["Input"];
         const outputType = schema.typeDeclarations["Output"];
         if (inputType) {
-          links.push(
-            ...validateJson(inputEntry.value, inputType, schema)
-              .definitionLinks,
+          validationResult.push(
+            validateJson(inputEntry.value, inputType, schema),
           );
         }
         if (outputType) {
-          links.push(
-            ...validateJson(outputEntry.value, outputType, schema)
-              .definitionLinks,
+          validationResult.push(
+            validateJson(outputEntry.value, outputType, schema),
           );
         }
       }
     }
   }
-  return links;
+  return validationResult;
 }
 
 function validateSnippet(
   snippet: Snippet,
   templateSchema: Schema,
   options: Options,
-): readonly InternalError[] {
-  const errors: InternalError[] = [];
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { errors, definitionLinks } = validationResult;
   switch (snippet.kind) {
     case "snippet": {
-      errors.push(
-        ...validateTemplateBody(
+      validationResult.push(
+        validateTemplateBody(
           snippet.body,
           templateSchema,
           options.templateTools,
           null,
-        ).errors,
+        ),
       );
       break;
     }
@@ -696,6 +529,7 @@ function validateSnippet(
         templateSchema,
         null,
       );
+      definitionLinks.push(...expressionResult.definitionLinks);
       if (expressionResult.kind === "error") {
         errors.push(...expressionResult.errors);
         break;
@@ -710,21 +544,21 @@ function validateSnippet(
         errors.push(...ifContext.errors);
         break;
       }
-      errors.push(
-        ...validateTemplateBody(
+      validationResult.push(
+        validateTemplateBody(
           snippet.then,
           templateSchema,
           options.templateTools,
           ifContext.then,
-        ).errors,
+        ),
       );
-      errors.push(
-        ...validateTemplateBody(
+      validationResult.push(
+        validateTemplateBody(
           snippet.else,
           templateSchema,
           options.templateTools,
           ifContext.else,
-        ).errors,
+        ),
       );
       break;
     }
@@ -734,6 +568,7 @@ function validateSnippet(
         templateSchema,
         null,
       );
+      definitionLinks.push(...expressionResult.definitionLinks);
       if (expressionResult.kind === "error") {
         errors.push(...expressionResult.errors);
         break;
@@ -761,13 +596,13 @@ function validateSnippet(
           });
           continue;
         }
-        errors.push(
-          ...validateTemplateBody(
+        validationResult.push(
+          validateTemplateBody(
             branch.body,
             templateSchema,
             options.templateTools,
             null,
-          ).errors,
+          ),
         );
       }
       if (missingCases.length >= 1) {
@@ -783,85 +618,7 @@ function validateSnippet(
     }
   }
 
-  return errors;
-}
-
-function collectSnippetDefinitionLinks(
-  snippet: Snippet,
-  templateSchema: Schema,
-  options: Options,
-): readonly DefinitionLink[] {
-  const links: DefinitionLink[] = [];
-  switch (snippet.kind) {
-    case "snippet": {
-      links.push(
-        ...validateTemplateBody(
-          snippet.body,
-          templateSchema,
-          options.templateTools,
-          null,
-        ).definitionLinks,
-      );
-      break;
-    }
-    case "snippet-if": {
-      const expressionResult = resolveExpressionType(
-        snippet.expression,
-        templateSchema,
-        null,
-      );
-      links.push(...expressionResult.definitionLinks);
-      if (expressionResult.kind === "error") {
-        break;
-      }
-      const ifContext = resolveIfExpression(
-        snippet.expression,
-        expressionResult.type,
-        snippet.is,
-        templateSchema,
-      );
-      if (ifContext.kind === "error") {
-        break;
-      }
-      links.push(
-        ...validateTemplateBody(
-          snippet.then,
-          templateSchema,
-          options.templateTools,
-          ifContext.then,
-        ).definitionLinks,
-      );
-      links.push(
-        ...validateTemplateBody(
-          snippet.else,
-          templateSchema,
-          options.templateTools,
-          ifContext.else,
-        ).definitionLinks,
-      );
-      break;
-    }
-    case "snippet-switch": {
-      const expressionResult = resolveExpressionType(
-        snippet.expression,
-        templateSchema,
-        null,
-      );
-      links.push(...expressionResult.definitionLinks);
-      for (const branch of snippet.branches) {
-        links.push(
-          ...validateTemplateBody(
-            branch.body,
-            templateSchema,
-            options.templateTools,
-            null,
-          ).definitionLinks,
-        );
-      }
-      break;
-    }
-  }
-  return links;
+  return validationResult;
 }
 
 function validateTools(
@@ -870,9 +627,9 @@ function validateTools(
 ):
   | InternalErrors
   | {
-    kind: "success";
-    tools: { readonly [name: string]: TemplateTool };
-  } {
+      kind: "success";
+      tools: { readonly [name: string]: TemplateTool };
+    } {
   if (toolsValue === null) {
     return {
       kind: "success",

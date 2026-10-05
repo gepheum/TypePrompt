@@ -9,6 +9,7 @@ import type {
   InternalErrors,
   Span,
   TextSpan,
+  ValidationErrors,
 } from "../util/shared-types.js";
 import { XmlDocument } from "../xml/xml-types.js";
 
@@ -227,7 +228,7 @@ export type ValidTemplateTool = TemplateTool & {
   readonly tool: ValidatedTool;
 };
 
-export type TemplateValidationResult = ValidatedTemplate | InternalErrors;
+export type TemplateValidationResult = ValidatedTemplate | ValidationErrors;
 
 // =============================================================================
 // Static assertion
