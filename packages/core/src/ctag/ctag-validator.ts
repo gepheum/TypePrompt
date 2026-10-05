@@ -25,7 +25,7 @@ function validateIdentifierCTag(
   toolNames: ReadonlySet<string>,
 ): readonly InternalError[] {
   if (
-    !schemas.some((schema) => schema.identifiers.has(cTag.identifier.text)) &&
+    !schemas.some((schema) => cTag.identifier.text in schema.identifiers) &&
     !toolNames.has(cTag.identifier.text)
   ) {
     return [

@@ -4,7 +4,7 @@ export const EMPTY_SCHEMA: Schema = {
   kind: "success",
   typeDeclarations: {},
   sharedDeclarations: {},
-  identifiers: new Set(),
+  identifiers: {},
   unionToMembers: new Map(),
   namingHints: {
     defaultScope: new Map(),

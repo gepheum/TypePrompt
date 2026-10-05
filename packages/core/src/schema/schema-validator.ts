@@ -1,6 +1,7 @@
 import { checkNameConflicts } from "../util/casing.js";
 import type {
   InternalError,
+  Span,
   ValidationErrors,
   ValidationResult,
 } from "../util/shared-types.js";
@@ -299,8 +300,8 @@ function verifyAllTypesUsed(
 function collectIdentifiers(
   schema: SchemaView,
   sharedNames: ReadonlySet<string>,
-): ReadonlySet<string> {
-  const identifiers = new Set<string>();
+): { readonly [identifier: string]: Span } {
+  const identifiers: { [identifier: string]: Span } = {};
 
   const collect = (type: FieldType | TypeDeclaration): null => {
     switch (type.kind) {
@@ -314,7 +315,7 @@ function collectIdentifiers(
       }
       case "interface": {
         for (const field of Object.values(type.fields)) {
-          identifiers.add(field.name.text);
+          identifiers[field.name.text] ??= field.name;
           collect(field.type);
         }
         return null;
@@ -330,7 +331,7 @@ function collectIdentifiers(
         return null;
       }
       case "string-literal": {
-        identifiers.add(type.value);
+        identifiers[type.value] ??= stripQuotes(type.quotedName);
         return null;
       }
       case "type": {

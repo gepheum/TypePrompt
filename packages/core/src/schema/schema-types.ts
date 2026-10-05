@@ -27,7 +27,7 @@ export type Schema = SchemaView & {
    * Includes identifiers from shared types if they are referenced from this schema.
    * Does not include types names.
    */
-  readonly identifiers: ReadonlySet<string>;
+  readonly identifiers: { readonly [identifier: string]: Span };
   /** Includes shared types. */
   readonly unionToMembers: ReadonlyMap<Union, UnionMembers>;
   /** Hints for creating names for anonymous types in generated code. */

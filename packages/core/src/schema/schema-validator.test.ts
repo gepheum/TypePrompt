@@ -610,7 +610,11 @@ describe("validateSchema - Schema fields", () => {
     );
     expect(result).toMatch({
       kind: "success",
-      identifiers: new Set(["name", "role", "admin"]),
+      identifiers: {
+        name: { start: 16, end: 20 },
+        role: { start: 30, end: 34 },
+        admin: { start: 37, end: 42 },
+      },
     });
   });
 
@@ -621,7 +625,10 @@ describe("validateSchema - Schema fields", () => {
     );
     expect(result).toMatch({
       kind: "success",
-      identifiers: new Set(["active", "inactive"]),
+      identifiers: {
+        active: { start: 15, end: 21 },
+        inactive: { start: 26, end: 34 },
+      },
     });
   });
 
@@ -634,7 +641,29 @@ describe("validateSchema - Schema fields", () => {
     );
     expect(result).toMatch({
       kind: "success",
-      identifiers: new Set(["kind", "val", "num", "a", "b"]),
+      identifiers: {
+        kind: { start: 16, end: 20 },
+        val: { start: 27, end: 30 },
+        num: { start: 56, end: 59 },
+        a: { start: 23, end: 24 },
+        b: { start: 52, end: 53 },
+      },
+    });
+  });
+
+  it("keeps the first Span when an identifier appears multiple times", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Output = { name: string; user: { name: string; }; };",
+      ),
+      NAMESPACE,
+    );
+    expect(result).toMatch({
+      kind: "success",
+      identifiers: {
+        name: { start: 16, end: 20 },
+        user: { start: 30, end: 34 },
+      },
     });
   });
 });
