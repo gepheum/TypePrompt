@@ -168,6 +168,7 @@ export type SyntheticOptional = {
 export type SyntheticField = {
   readonly name: {
     readonly text: string;
+    readonly start?: undefined;
   };
   readonly type: FieldType | SyntheticType;
   readonly doc?: string;

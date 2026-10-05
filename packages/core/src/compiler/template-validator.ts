@@ -321,7 +321,9 @@ function makeExamplesType(
               name,
               {
                 type: { kind: "optional", innerType: field.type },
-                name: field.name,
+                name: {
+                  text: field.name.text,
+                },
                 doc: field.doc,
               } satisfies SyntheticField,
             ];

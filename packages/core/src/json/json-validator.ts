@@ -462,6 +462,111 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
   }
 }
 
+export function collectDefinitionLinks(
+  value: LooseJsonValue,
+  type: ResolvedFieldType | SyntheticType,
+  schema: SchemaView,
+): readonly DefinitionLink[] {
+  if (value.kind === "ellipsis") {
+    return [];
+  }
+  switch (type.kind) {
+    case "any":
+    case "boolean-literal":
+    case "primitive":
+    case "string-literal": {
+      return [];
+    }
+    case "array": {
+      if (value.kind !== "array") {
+        return [];
+      }
+      const definitionLinks: DefinitionLink[] = [];
+      const elementType = resolveType(type.elementType, schema);
+      const { elements } = value;
+      for (const element of elements) {
+        definitionLinks.push(
+          ...collectDefinitionLinks(element, elementType, schema),
+        );
+      }
+      return definitionLinks;
+    }
+    case "interface": {
+      if (value.kind !== "object") {
+        return [];
+      }
+      const definitionLinks: DefinitionLink[] = [];
+      for (const entry of Object.values(value.entries)) {
+        const fieldName = entry.key;
+        const schemaField = type.fields[fieldName.value];
+        if (!schemaField) {
+          continue;
+        }
+        if (schemaField.name.start !== undefined) {
+          definitionLinks.push({
+            reference: fieldName.firstToken,
+            definition: schemaField.name,
+          });
+        }
+        const fieldType = resolveType(schemaField.type, schema);
+        definitionLinks.push(
+          ...collectDefinitionLinks(entry.value, fieldType, schema),
+        );
+      }
+      return definitionLinks;
+    }
+    case "optional": {
+      if (value.kind === "null") {
+        return [];
+      } else {
+        const innerType = resolveType(type.innerType, schema);
+        return collectDefinitionLinks(value, innerType, schema);
+      }
+    }
+    case "record": {
+      if (value.kind !== "object") {
+        return [];
+      }
+      const valueType = resolveType(type.valueType, schema);
+      const definitionLinks: DefinitionLink[] = [];
+      for (const entry of Object.values(value.entries)) {
+        definitionLinks.push(
+          ...collectDefinitionLinks(entry.value, valueType, schema),
+        );
+      }
+      return definitionLinks;
+    }
+    case "union":
+    case "synthetic-union": {
+      const members =
+        type.kind === "union" ? schema.unionToMembers.get(type)! : type.members;
+      switch (members.kind) {
+        case "strings": {
+          return [];
+        }
+        case "interfaces": {
+          if (value.kind !== "object") {
+            return [];
+          }
+          const { discriminator } = members;
+          const discriminantEntry = value.entries[discriminator];
+          if (discriminantEntry) {
+            const discriminant: LooseJsonValue | StrictJsonValue =
+              discriminantEntry.value;
+            if (discriminant.kind === members.discriminants.type) {
+              const member = members.members[String(discriminant.value)];
+              if (member) {
+                return collectDefinitionLinks(value, member.resolved, schema);
+              }
+            }
+          }
+          return [];
+        }
+      }
+    }
+  }
+}
+
 const MATCH = { kind: "match", definitionLinks: [] } as const;
 const FAST_MISMATCH: JsonTypeMatch<"fast"> = {
   kind: "mismatch",

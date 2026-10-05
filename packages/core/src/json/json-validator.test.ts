@@ -26,7 +26,11 @@ import type {
   LooseJsonValue,
   StrictJsonValue,
 } from "./json-types.js";
-import { jsonMatchesType, validateJson } from "./json-validator.js";
+import {
+  collectDefinitionLinks,
+  jsonMatchesType,
+  validateJson,
+} from "./json-validator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -649,12 +653,18 @@ describe("jsonMatchesType - result shape and mode", () => {
     expect(
       jsonMatchesType(str("hi"), primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(str("hi"), primType("string"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("fast mode: mismatch returns { kind: 'mismatch' } without details", () => {
     expect(
       jsonMatchesType(num(1), primType("string"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("thorough mode: mismatch includes reasons and matchScore", () => {
@@ -667,6 +677,9 @@ describe("jsonMatchesType - result shape and mode", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 });
 
@@ -679,12 +692,18 @@ describe("jsonMatchesType - ellipsis value", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(ELLIPSIS, primType("string"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("ellipsis matches literal in thorough mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, litType("ok"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+    expect(collectDefinitionLinks(ELLIPSIS, litType("ok"), EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("ellipsis matches interface in thorough mode", () => {
@@ -696,12 +715,22 @@ describe("jsonMatchesType - ellipsis value", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(
+        ELLIPSIS,
+        ifaceType({ name: { text: "string" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("ellipsis matches primitive number in fast mode", () => {
     expect(
       jsonMatchesType(ELLIPSIS, primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(ELLIPSIS, primType("number"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("a loose object with an ellipsis satisfies an interface even when required fields are absent", () => {
@@ -719,6 +748,13 @@ describe("jsonMatchesType - ellipsis value", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(
+        loosObj,
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 });
 
@@ -737,6 +773,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(str("bad"), litType("ok"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("string-literal: wrong kind → matchScore 0", () => {
@@ -749,6 +788,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
+    expect(collectDefinitionLinks(num(1), litType("ok"), EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("boolean-literal: opposite value → matchScore 0.5", () => {
@@ -761,6 +803,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("boolean-literal: wrong kind → matchScore 0", () => {
@@ -773,6 +818,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(num(1), boolLitType(true), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("primitive integer: float value → matchScore 0.5", () => {
@@ -785,6 +833,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(num(3.14), primType("integer"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("primitive integer: out-of-range integer → matchScore 0.5", () => {
@@ -802,6 +853,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(num(2147483648), primType("integer"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("primitive integer: string value → matchScore 0", () => {
@@ -814,6 +868,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(str("123"), primType("integer"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("primitive string: wrong kind → matchScore 0", () => {
@@ -826,6 +883,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(num(42), primType("string"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 });
 
@@ -851,6 +911,9 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(str("c"), unionType as SyntheticType, schema),
+    ).toMatch([]);
   });
 
   it("string union: wrong kind (number) → matchScore 0", () => {
@@ -865,6 +928,9 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(num(1), unionType as SyntheticType, schema),
+    ).toMatch([]);
   });
 
   it("discriminated union: missing discriminator field → matchScore 0", () => {
@@ -886,6 +952,13 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["name", str("Felix")]])),
+        petType as SyntheticType,
+        schema,
+      ),
+    ).toMatch([]);
   });
 
   it("discriminated union: wrong discriminator type → matchScore 0", () => {
@@ -912,6 +985,13 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["kind", num(123)]])),
+        petType as SyntheticType,
+        schema,
+      ),
+    ).toMatch([]);
   });
 
   it("discriminated union: unknown discriminant string → matchScore 0.5", () => {
@@ -938,6 +1018,13 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["kind", str("bird")]])),
+        petType as SyntheticType,
+        schema,
+      ),
+    ).toMatch([]);
   });
 
   it("discriminated union: valid discriminant with child mismatch propagates member interface score", () => {
@@ -965,6 +1052,23 @@ describe("jsonMatchesType - matchScore: Unions", () => {
         matchScore: 5 / 6,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["kind", str("cat")],
+            ["name", str("Felix")],
+            ["age", str("bad")],
+          ]),
+        ),
+        petType as SyntheticType,
+        schema,
+      ),
+    ).toMatch([
+      { definition: { text: "kind" } },
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+    ]);
   });
 });
 
@@ -993,6 +1097,21 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.75,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["age", str("bad")],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+    ]);
   });
 
   it("interface: 1 of 2 required fields is missing → matchScore 2/3", () => {
@@ -1010,6 +1129,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["name", str("Alice")]])),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: empty object with missing required fields → matchScore 0", () => {
@@ -1030,6 +1156,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([])),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("interface: valid required field plus unknown field → matchScore 2/3", () => {
@@ -1052,6 +1185,18 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["extra", num(1)],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: unknown field includes missing required and optional fields in suggestions", () => {
@@ -1086,6 +1231,22 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["extra", num(1)],
+          ]),
+        ),
+        ifaceType({
+          name: { text: "string" },
+          age: { text: "number" },
+          bio: { text: "string", optional: true },
+        }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([{ definition: { text: "name" } }]);
   });
 
   it("interface: 1 required and 1 optional field with wrong optional type → matchScore 2/3", () => {
@@ -1111,6 +1272,24 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 2 / 3,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["name", str("Alice")],
+            ["nickname", num(123)],
+          ]),
+        ),
+        ifaceType({
+          name: { text: "string" },
+          nickname: { text: "string", optional: true },
+        }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([
+      { definition: { text: "name" } },
+      { definition: { text: "nickname" } },
+    ]);
   });
 
   it("interface: only optional fields with 1 valid and 1 invalid → matchScore 0.5", () => {
@@ -1136,6 +1315,21 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["a", str("ok")],
+            ["b", num(123)],
+          ]),
+        ),
+        ifaceType({
+          a: { text: "string", optional: true },
+          b: { text: "string", optional: true },
+        }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([{ definition: { text: "a" } }, { definition: { text: "b" } }]);
   });
 
   it("interface: nested interface failure propagates partial score", () => {
@@ -1167,6 +1361,27 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0.875,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            [
+              "user",
+              objStrict([
+                ["name", str("Alice")],
+                ["age", str("bad")],
+              ]),
+            ],
+          ]),
+        ),
+        resolveType(wrapperType, schema),
+        schema,
+      ),
+    ).toMatch([
+      { definition: { text: "user" } },
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+    ]);
   });
 
   it("interface: non-object value → matchScore 0", () => {
@@ -1184,6 +1399,13 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        str("not an object"),
+        ifaceType({ name: { text: "string" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 });
 
@@ -1212,6 +1434,18 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["a", str("hello")],
+            ["b", num(123)],
+          ]),
+        ),
+        recordType("string"),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("record: 1 entry with nested partial score 0.5 → matchScore 0.5", () => {
@@ -1238,6 +1472,13 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["a", str("wrong")]])),
+        resolveType(recType, schema),
+        schema,
+      ),
+    ).toMatch([]);
   });
 
   it("record: non-object value → matchScore 0", () => {
@@ -1255,6 +1496,13 @@ describe("jsonMatchesType - matchScore: Records", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        safeCast(arrStrict([])),
+        recordType("number"),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 });
 
@@ -1282,6 +1530,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        arrStrict([num(1), str("bad")]) as LooseJsonValue,
+        arrT,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("array: 1 of 3 elements matches, second fails → matchScore 2/3", () => {
@@ -1303,6 +1558,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 2 / 3,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        arrStrict([num(1), str("bad"), num(3)]) as LooseJsonValue,
+        arrT,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("array: first element fails, second element matches → matchScore 0.5", () => {
@@ -1324,6 +1586,13 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.5,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        arrStrict([str("bad"), num(1)]) as LooseJsonValue,
+        arrT,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("array of interfaces: partial score from failing element propagates", () => {
@@ -1357,6 +1626,27 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0.875,
       },
     });
+    expect(
+      collectDefinitionLinks(
+        arrStrict([
+          objStrict([
+            ["name", str("Alice")],
+            ["age", num(30)],
+          ]),
+          objStrict([
+            ["name", str("Bob")],
+            ["age", str("bad")],
+          ]),
+        ]) as LooseJsonValue,
+        arrT,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+    ]);
   });
 
   it("array: non-array value → matchScore 0", () => {
@@ -1373,6 +1663,9 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
         matchScore: 0,
       },
     });
+    expect(
+      collectDefinitionLinks(safeCast(objStrict([])), arrT, EMPTY_VIEW),
+    ).toMatch([]);
   });
 });
 
@@ -1389,6 +1682,7 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(nullVal(), optType, "thorough", EMPTY_VIEW)).toMatch(
       { kind: "match" },
     );
+    expect(collectDefinitionLinks(nullVal(), optType, EMPTY_VIEW)).toMatch([]);
   });
 
   it("optional matches inner type when non-null", () => {
@@ -1399,6 +1693,9 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(
       jsonMatchesType(str("hello"), optType, "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
+    expect(collectDefinitionLinks(str("hello"), optType, EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("optional propagates mismatch details when non-null", () => {
@@ -1413,6 +1710,7 @@ describe("jsonMatchesType - Optionals and Any", () => {
         matchScore: 0,
       },
     });
+    expect(collectDefinitionLinks(num(42), optType, EMPTY_VIEW)).toMatch([]);
   });
 
   it("any type matches in fast mode", () => {
@@ -1420,6 +1718,7 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(num(42), anyType, "fast", EMPTY_VIEW)).toMatch({
       kind: "match",
     });
+    expect(collectDefinitionLinks(num(42), anyType, EMPTY_VIEW)).toMatch([]);
   });
 
   it("any type matches in thorough mode", () => {
@@ -1432,6 +1731,13 @@ describe("jsonMatchesType - Optionals and Any", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "match" });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["x", str("y")]])),
+        anyType,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 });
 
@@ -1453,6 +1759,13 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(
+        arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
+        arrT,
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("interface: stops at first field type mismatch", () => {
@@ -1469,6 +1782,21 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(
+        safeCast(
+          objStrict([
+            ["name", num(42)],
+            ["age", num(30)],
+          ]),
+        ),
+        ifaceType({ name: { text: "string" }, age: { text: "number" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([
+      { definition: { text: "name" } },
+      { definition: { text: "age" } },
+    ]);
   });
 
   it("interface: stops on unknown field", () => {
@@ -1480,6 +1808,13 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["extra", str("x")]])),
+        ifaceType({ name: { text: "string" } }),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("record: stops at first value type mismatch", () => {
@@ -1491,24 +1826,40 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         EMPTY_VIEW,
       ),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["x", str("bad")]])),
+        recordType("number"),
+        EMPTY_VIEW,
+      ),
+    ).toMatch([]);
   });
 
   it("boolean-literal: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(bool(false), boolLitType(true), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("string-literal: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(str("no"), litType("yes"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(str("no"), litType("yes"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("primitive: returns mismatch in fast mode", () => {
     expect(
       jsonMatchesType(str("no"), primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(str("no"), primType("number"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("string union: returns mismatch in fast mode", () => {
@@ -1517,6 +1868,9 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
     expect(
       jsonMatchesType(str("c"), unionType as SyntheticType, "fast", schema),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(str("c"), unionType as SyntheticType, schema),
+    ).toMatch([]);
   });
 
   it("interface union: returns mismatch in fast mode", () => {
@@ -1532,5 +1886,12 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
         schema,
       ),
     ).toMatch({ kind: "mismatch" });
+    expect(
+      collectDefinitionLinks(
+        safeCast(objStrict([["kind", str("bird")]])),
+        petType as SyntheticType,
+        schema,
+      ),
+    ).toMatch([]);
   });
 });
