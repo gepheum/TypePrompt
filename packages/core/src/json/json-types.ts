@@ -51,6 +51,11 @@ export type JsonString = {
   readonly kind: "string";
   /** The quoted string. */
   readonly firstToken: Span;
+  /**
+   * Whether `firstToken` includes quotes. Always true when parsing JSON.
+   * Can be true or false when parsing YAML.
+   */
+  readonly quoted: boolean;
   readonly value: string;
 };
 

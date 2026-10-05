@@ -285,6 +285,7 @@ function convertScalar(node: Scalar, content: MappedText): StrictJsonValue {
   const [start, end] = node.range ?? [0, 0, 0];
   const firstToken = span(content, start, end);
   const value = node.value;
+  const quoted = node.type === "QUOTE_DOUBLE" || node.type === "QUOTE_SINGLE";
 
   if (value === null || value === undefined) {
     return { kind: "null", firstToken };
@@ -295,17 +296,19 @@ function convertScalar(node: Scalar, content: MappedText): StrictJsonValue {
   } else if (typeof value === "bigint") {
     return { kind: "number", firstToken, value: Number(value) };
   } else if (value instanceof Date) {
-    return { kind: "string", firstToken, value: value.toISOString() };
+    return { kind: "string", firstToken, value: value.toISOString(), quoted };
   } else {
-    return { kind: "string", firstToken, value: String(value) };
+    return { kind: "string", firstToken, value: String(value), quoted };
   }
 }
 
 function scalarToJsonString(node: Scalar, content: MappedText): JsonString {
   const [start, end] = node.range ?? [0, 0, 0];
+  const quoted = node.type === "QUOTE_DOUBLE" || node.type === "QUOTE_SINGLE";
   return {
     kind: "string",
     firstToken: span(content, start, end),
     value: String(node.value ?? ""),
+    quoted,
   };
 }

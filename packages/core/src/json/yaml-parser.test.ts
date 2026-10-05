@@ -141,6 +141,7 @@ describe("parseYaml - string scalar", () => {
       kind: "string",
       value: "hello",
       firstToken: { start: 0, end: 5 },
+      quoted: false,
     });
   });
 
@@ -150,6 +151,7 @@ describe("parseYaml - string scalar", () => {
       value: "world",
       // firstToken includes the surrounding quotes
       firstToken: { start: 0, end: 7 },
+      quoted: true,
     });
   });
 
@@ -158,6 +160,7 @@ describe("parseYaml - string scalar", () => {
       kind: "string",
       value: "hello",
       firstToken: { start: 0, end: 7 },
+      quoted: true,
     });
   });
 
@@ -166,6 +169,7 @@ describe("parseYaml - string scalar", () => {
     expect(parseYaml(textNode(src))).toMatch({
       kind: "string",
       value: "line1\nline2\n",
+      quoted: false,
     });
   });
 
@@ -174,6 +178,7 @@ describe("parseYaml - string scalar", () => {
     expect(parseYaml(textNode(src))).toMatch({
       kind: "string",
       value: "line1 line2\n",
+      quoted: false,
     });
   });
 

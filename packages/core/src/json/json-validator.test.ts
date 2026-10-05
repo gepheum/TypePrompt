@@ -58,7 +58,12 @@ function span(text: string): Span {
 }
 
 function str(value: string): JsonString {
-  return { kind: "string", firstToken: span(`"${value}"`), value };
+  return {
+    kind: "string",
+    firstToken: span(`"${value}"`),
+    value,
+    quoted: true,
+  };
 }
 
 function num(value: number): JsonNumber {

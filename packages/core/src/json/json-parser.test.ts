@@ -17,6 +17,7 @@ describe("parseJson - primitives", () => {
     expect(parseJson(textNode('"hello"'))).toMatch({
       kind: "string",
       value: "hello",
+      quoted: true,
     });
   });
 
@@ -24,6 +25,7 @@ describe("parseJson - primitives", () => {
     expect(parseJson(textNode('"line\\nnext"'))).toMatch({
       kind: "string",
       value: "line\nnext",
+      quoted: true,
     });
   });
 

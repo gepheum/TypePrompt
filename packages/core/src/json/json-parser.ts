@@ -300,6 +300,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
       kind: "string",
       value: this.text.slice(start, this.cursor),
       firstToken: this.exampleSlice(start, this.cursor),
+      quoted: false,
     };
   }
 
@@ -469,6 +470,7 @@ class JsonParser<Mode extends JsonMode = "loose"> {
           kind: "string",
           value: decoded ?? raw.slice(1, -1),
           firstToken: this.exampleSlice(start, end),
+          quoted: true,
         };
       }
     }

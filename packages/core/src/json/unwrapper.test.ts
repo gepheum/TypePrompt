@@ -8,7 +8,7 @@ import { unwrapJsonValue } from "./unwrapper.js";
 const SPAN: Span = { start: 0, end: 1, path: "" };
 
 function str(value: string): JsonString {
-  return { kind: "string", firstToken: SPAN, value };
+  return { kind: "string", firstToken: SPAN, value, quoted: true };
 }
 
 function obj(entries: [string, StrictJsonValue][]): JsonObject<"strict"> {

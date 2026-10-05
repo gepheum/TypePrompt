@@ -26,11 +26,13 @@ function str(value: string): {
   kind: "string";
   firstToken: { start: number; end: number };
   value: string;
+  quoted: boolean;
 } {
   return {
     kind: "string" as const,
     firstToken: { start: 0, end: value.length + 2 },
     value,
+    quoted: true,
   };
 }
 
