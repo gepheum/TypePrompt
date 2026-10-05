@@ -127,7 +127,49 @@ describe("validateTool", () => {
       schema: {
         kind: "success",
       },
-      definitionLinks: [],
+      definitionLinks: [
+        {
+          reference: {
+            path: "prompts/searchTool.xml",
+            start: 198,
+            end: 210,
+          },
+          definition: {
+            path: "schema.ts",
+            start: 12,
+            end: 24,
+          },
+        },
+      ],
+    });
+  });
+
+  it("validates a tool referencing local types in tool schema", () => {
+    const result = testValidateTool({
+      xml: `
+        <tool name="searchTool">
+          <description>Searches for items</description>
+          <schema>
+            type Item = { id: string; };
+            type Input = { filter: Item; };
+            type Output = { results: Item[]; };
+          </schema>
+        </tool>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "tool",
+      definitionLinks: [
+        {
+          reference: { path: "prompts/searchTool.xml" },
+          definition: { path: "prompts/searchTool.xml" },
+        },
+        {
+          reference: { path: "prompts/searchTool.xml" },
+          definition: { path: "prompts/searchTool.xml" },
+        },
+      ],
     });
   });
 

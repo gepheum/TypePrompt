@@ -18,6 +18,7 @@ export function validateTool(args: {
     namespaceSchema,
   };
   const toolSchema = validateSchema(tool.schema, validationContext);
+  validationResult.definitionLinks.push(...toolSchema.definitionLinks);
   if (toolSchema.kind === "error") {
     errors.push(...toolSchema.errors);
     return validationResult.asErrors();

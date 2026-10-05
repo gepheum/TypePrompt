@@ -82,6 +82,7 @@ function testValidateTemplate(args: {
   readonly templateXml: string;
   readonly metaSchemaSource?: string;
   readonly metaSchemaOrError?: SchemaOrError;
+  readonly namespaceSchema?: Schema;
   readonly namespaceSchemaSource?: string;
   readonly namespaceTools?: { readonly [name: string]: ToolValidationResult };
   readonly path?: string;
@@ -101,9 +102,11 @@ function testValidateTemplate(args: {
       ? parseSchemaOrThrow(args.metaSchemaSource, "meta")
       : EMPTY_SCHEMA);
 
-  const namespaceSchema = args.namespaceSchemaSource
-    ? parseSchemaOrThrow(args.namespaceSchemaSource, "namespace")
-    : EMPTY_SCHEMA;
+  const namespaceSchema =
+    args.namespaceSchema ??
+    (args.namespaceSchemaSource
+      ? parseSchemaOrThrow(args.namespaceSchemaSource, "namespace")
+      : EMPTY_SCHEMA);
 
   return validateTemplate({
     template: parsedTemplate,
@@ -1230,6 +1233,39 @@ describe("validateTemplate - system and user body validation", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateTemplate - definition links", () => {
+  it("collects definition links from template schema local and shared type references", () => {
+    const namespaceSchema = parseSchemaOrThrow(`
+      type UserProfile = {
+        name: string;
+      };
+    `);
+
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Greet">
+          <schema>
+            type LocalConfig = { greeting: string; };
+            type Input = { user: shared.UserProfile; config: LocalConfig; };
+            type Output = string;
+          </schema>
+          <system>Greeter</system>
+          <user><insert val="input.user.name"/></user>
+        </template>
+      `,
+      namespaceSchema,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        { definition: { text: "UserProfile" } },
+        { definition: { text: "LocalConfig" } },
+        { definition: { text: "user" } },
+        { definition: { text: "name" } },
+      ],
+    });
+  });
+
   it("collects definition links from body insert val expressions", () => {
     const result = testValidateTemplate({
       templateXml: `

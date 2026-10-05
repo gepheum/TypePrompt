@@ -58,6 +58,7 @@ export function validateTemplate(args: {
     namespaceSchema,
   };
   const templateSchema = validateSchema(template.schema, validationContext);
+  validationResult.definitionLinks.push(...templateSchema.definitionLinks);
   if (templateSchema.kind === "error") {
     errors.push(...templateSchema.errors);
     return validationResult.asErrors();

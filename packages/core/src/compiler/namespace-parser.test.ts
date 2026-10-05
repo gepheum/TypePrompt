@@ -73,6 +73,28 @@ describe("parseNamespace", () => {
     });
   });
 
+  it("populates definition links when namespace schema types reference other types", () => {
+    const root = parseElement(`
+      <namespace name="Main">
+        type Role = "admin" | "user";
+        type SharedUser = {
+          id: string;
+          role: Role;
+        };
+      </namespace>
+    `);
+
+    const result = parseNamespace(root, "prompts/shared.xml");
+    if (result.kind !== "namespace") throw new Error();
+    if (result.schema.kind !== "success") throw new Error();
+    expect(result.schema.definitionLinks).toMatch([
+      {
+        reference: { path: "prompts/shared.xml" },
+        definition: { path: "prompts/shared.xml" },
+      },
+    ]);
+  });
+
   it("parses a custom namespace with matching subdirectory source path", () => {
     const root = parseElement(`
       <namespace name="Billing">

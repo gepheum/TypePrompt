@@ -626,18 +626,53 @@ describe("compile - caching and incremental compilation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// compile - warnings collection
+// compile - pathToDefinitionLinks
 // ---------------------------------------------------------------------------
 
-describe("compile - warnings collection", () => {
-  it("collects file naming convention warnings from source files", () => {
+describe("compile - pathToDefinitionLinks", () => {
+  it("populates pathToDefinitionLinks across meta, namespace, tool, and template files", () => {
     const result = compile(
       {
-        "prompts/WrongFileName.xml": `
-          <template name="Translate">
-            <schema>type Input = string; type Output = string;</schema>
-            <system>Sys</system>
-            <user>Usr</user>
+        "prompts/meta.xml": `
+          <meta>
+            type Meta = {
+              env: Environment;
+            };
+            type Environment = "prod" | "dev";
+          </meta>
+        `,
+        "prompts/Legal/shared.xml": `
+          <namespace name="Legal">
+            type Clause = { id: string; text: string; };
+            type Document = {
+              title: string;
+              clauses: Clause[];
+            };
+          </namespace>
+        `,
+        "prompts/Legal/lookupClause.xml": `
+          <tool name="lookupClause" namespace="Legal">
+            <description>Looks up clause</description>
+            <schema>
+              type Input = { clauseId: string; };
+              type Output = shared.Clause;
+            </schema>
+          </tool>
+        `,
+        "prompts/Legal/ReviewContract.xml": `
+          <template name="ReviewContract" namespace="Legal">
+            <schema>
+              type Input = { doc: shared.Document; };
+              type Output = string;
+            </schema>
+            <tools>
+              - tool: lookupClause
+            </tools>
+            <meta>
+              env: "prod"
+            </meta>
+            <system>Review</system>
+            <user>Reviewing: <insert val="input.doc.title"/></user>
           </template>
         `,
       },
@@ -646,10 +681,110 @@ describe("compile - warnings collection", () => {
 
     expect(result).toMatch({
       anyErrors: false,
-      warnings: {
-        "prompts/WrongFileName.xml": [
+      pathToDefinitionLinks: {
+        "prompts/meta.xml": [
           {
-            message: "File path should match '**/Translate.xml'",
+            reference: { path: "prompts/meta.xml" },
+            definition: { path: "prompts/meta.xml" },
+          },
+        ],
+        "prompts/Legal/shared.xml": [
+          {
+            reference: { path: "prompts/Legal/shared.xml" },
+            definition: { path: "prompts/Legal/shared.xml" },
+          },
+        ],
+        "prompts/Legal/lookupClause.xml": [
+          {
+            reference: {
+              path: "prompts/Legal/lookupClause.xml",
+            },
+            definition: { path: "prompts/Legal/shared.xml" },
+          },
+        ],
+        "prompts/Legal/ReviewContract.xml": [
+          {
+            reference: {
+              path: "prompts/Legal/ReviewContract.xml",
+            },
+            definition: { path: "prompts/meta.xml" },
+          },
+          {
+            reference: {
+              path: "prompts/Legal/ReviewContract.xml",
+            },
+            definition: { path: "prompts/Legal/shared.xml" },
+          },
+          {
+            reference: { path: "prompts/Legal/ReviewContract.xml" },
+            definition: { path: "prompts/Legal/ReviewContract.xml" },
+          },
+          {
+            reference: { path: "prompts/Legal/ReviewContract.xml" },
+            definition: { path: "prompts/Legal/shared.xml" },
+          },
+        ],
+      },
+    });
+  });
+
+  it("preserves pathToDefinitionLinks when reusing compilation cache", () => {
+    const files = {
+      "prompts/shared.xml": `
+        <namespace name="Main">
+          type User = { name: string; };
+        </namespace>
+      `,
+      "prompts/Greet.xml": `
+        <template name="Greet">
+          <schema>
+            type Input = { user: shared.User; };
+            type Output = string;
+          </schema>
+          <system>Greeter</system>
+          <user>Hello <insert val="input.user.name"/></user>
+        </template>
+      `,
+    };
+
+    const firstResult = compile(files, { cache: null });
+    expect(firstResult).toMatch({
+      anyErrors: false,
+      pathToDefinitionLinks: {
+        "prompts/Greet.xml": [
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/shared.xml" },
+          },
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/Greet.xml" },
+          },
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/shared.xml" },
+          },
+        ],
+      },
+    });
+
+    const secondResult = compile(files, { cache: firstResult });
+    expect(secondResult).toMatch({
+      anyErrors: false,
+      pathToDefinitionLinks: {
+        "prompts/shared.xml": [],
+        "prompts/Greet.xml": [
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/shared.xml" },
+          },
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/Greet.xml" },
+          },
+          {
+            reference: { path: "prompts/Greet.xml" },
+            definition: { path: "prompts/shared.xml" },
           },
         ],
       },

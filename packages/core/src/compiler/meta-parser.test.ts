@@ -72,6 +72,27 @@ describe("parseMeta", () => {
     });
   });
 
+  it("populates definition links when Meta references other types", () => {
+    const root = parseElement(`
+      <meta>
+        type Meta = {
+          env: Environment;
+        };
+        type Environment = "prod" | "dev";
+      </meta>
+    `);
+
+    const result = parseMeta(root, "prompts/meta.xml");
+    if (result.kind !== "meta") throw new Error();
+    if (result.schema.kind !== "success") throw new Error();
+    expect(result.schema.definitionLinks).toMatch([
+      {
+        reference: { path: "prompts/meta.xml" },
+        definition: { path: "prompts/meta.xml" },
+      },
+    ]);
+  });
+
   it("reports a validation error when Meta type is missing in empty <meta>", () => {
     const root = parseElement("<meta></meta>");
 

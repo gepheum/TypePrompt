@@ -342,8 +342,6 @@ class CompilationResultImpl implements CompilationResult {
       (idToTools[id] ??= []).push(tool);
     }
 
-    if (this.metaSchema.kind !== "success") return;
-
     for (const [id, tools] of Object.entries(idToTools)) {
       const tool = tools[0]!;
       const { name } = tool.element;
