@@ -363,7 +363,17 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
     }
     case "string-literal": {
       if (value.kind === "string" && value.value === type.value) {
-        return MATCH;
+        return {
+          kind: "match",
+          definitionLinks: [
+            {
+              reference: value.quoted
+                ? stripQuotes(value.firstToken)
+                : value.firstToken,
+              definition: stripQuotes(type.quotedName),
+            },
+          ],
+        };
       } else {
         const suggestions = [JSON.stringify(type.value satisfies string)];
         return mismatch(
@@ -512,4 +522,8 @@ function mismatch<Mode extends "fast" | "thorough">(
     kind: "mismatch",
     details: { reasons, matchScore },
   } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
+}
+
+function stripQuotes<S extends Span>(span: S): S {
+  return { ...span, start: span.start + 1, end: span.end - 1 };
 }

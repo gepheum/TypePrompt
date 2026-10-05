@@ -27,6 +27,7 @@ import type {
   StrictJsonValue,
 } from "./json-types.js";
 import { jsonMatchesType, validateJson } from "./json-validator.js";
+import { parseYaml } from "./yaml-parser.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,12 +58,12 @@ function span(text: string): Span {
   return { start: 0, end: text.length, path: "" };
 }
 
-function str(value: string): JsonString {
+function str(value: string, quoted = true): JsonString {
   return {
     kind: "string",
-    firstToken: span(`"${value}"`),
+    firstToken: span(quoted ? `"${value}"` : value),
     value,
-    quoted: true,
+    quoted,
   };
 }
 
@@ -713,7 +714,125 @@ describe("validateJson - definition links", () => {
       errors: [],
       definitionLinks: [
         { definition: { text: "kind" } },
+        { definition: { text: '"cat"' } },
         { definition: { text: "name" } },
+      ],
+    });
+  });
+
+  it("collects definition links for a string literal field with stripped quotes for quoted input", () => {
+    const schema = parseSchemaOrThrow('type Status = { value: "active" };');
+    const type = schema.typeDeclarations["Status"]!;
+    const input = objStrict([["value", str("active", true)]]);
+    const result = validateJson(input, type, schema);
+
+    expect(result).toMatch({
+      errors: [],
+      definitionLinks: [
+        { definition: { text: "value" } },
+        {
+          reference: { start: 1, end: 7, path: "" },
+          definition: { start: 24, end: 30, path: "schema.ts" },
+        },
+      ],
+    });
+  });
+
+  it("collects definition links for a string literal field without stripping quotes for unquoted input", () => {
+    const schema = parseSchemaOrThrow('type Status = { value: "active" };');
+    const type = schema.typeDeclarations["Status"]!;
+    const input = objStrict([["value", str("active", false)]]);
+    const result = validateJson(input, type, schema);
+
+    expect(result).toMatch({
+      errors: [],
+      definitionLinks: [
+        { definition: { text: "value" } },
+        {
+          reference: { start: 0, end: 6, path: "" },
+          definition: { start: 24, end: 30, path: "schema.ts" },
+        },
+      ],
+    });
+  });
+
+  it("collects definition links from YAML parsed documents with unquoted and quoted string literals", () => {
+    const schema = parseSchemaOrThrow(
+      'type Config = { mode: "production"; environment: "cloud"; };',
+    );
+    const type = schema.typeDeclarations["Config"]!;
+
+    const yamlInput: MappedText = {
+      path: "config.yaml",
+      text: 'mode: production\nenvironment: "cloud"\n',
+      offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+    };
+    const parsed = parseYaml(yamlInput);
+    if (parsed.kind === "error") throw new Error("parseYaml failed");
+
+    const result = validateJson(parsed, type, schema);
+    expect(result).toMatch({
+      errors: [],
+      definitionLinks: [
+        {
+          reference: { start: 0, end: 4, path: "config.yaml" },
+          definition: { text: "mode" },
+        },
+        {
+          // unquoted "production"
+          reference: { start: 6, end: 16, path: "config.yaml" },
+          definition: { start: 23, end: 33, path: "schema.ts" },
+        },
+        {
+          reference: { start: 17, end: 28, path: "config.yaml" },
+          definition: { text: "environment" },
+        },
+        {
+          // quoted "cloud" with quotes stripped
+          reference: { start: 31, end: 36, path: "config.yaml" },
+          definition: { start: 50, end: 55, path: "schema.ts" },
+        },
+      ],
+    });
+  });
+});
+
+describe("jsonMatchesType - string literal definition links", () => {
+  const literalType: StringLiteral = {
+    kind: "string-literal",
+    value: "active",
+    quotedName: {
+      text: '"active"',
+      start: 10,
+      end: 18,
+      path: "schema.ts",
+    },
+  };
+
+  it("strips quotes on reference when input string is quoted", () => {
+    const input = str("active", true); // firstToken is 0..8
+    const result = jsonMatchesType(input, literalType, "thorough", EMPTY_VIEW);
+    expect(result).toMatch({
+      kind: "match",
+      definitionLinks: [
+        {
+          reference: { start: 1, end: 7, path: "" },
+          definition: { start: 11, end: 17, path: "schema.ts" },
+        },
+      ],
+    });
+  });
+
+  it("preserves span on reference when input string is unquoted", () => {
+    const input = str("active", false); // firstToken is 0..6
+    const result = jsonMatchesType(input, literalType, "thorough", EMPTY_VIEW);
+    expect(result).toMatch({
+      kind: "match",
+      definitionLinks: [
+        {
+          reference: { start: 0, end: 6, path: "" },
+          definition: { start: 11, end: 17, path: "schema.ts" },
+        },
       ],
     });
   });
