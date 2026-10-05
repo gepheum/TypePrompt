@@ -22,10 +22,12 @@ export type CompilationResult = {
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
   /** Includes errors from `sourceFiles`. */
-  readonly finalErrors: { readonly [path: string]: InternalError[] };
+  readonly finalErrors: { readonly [path: string]: readonly InternalError[] };
   readonly anyErrors: boolean;
-  readonly warnings: { readonly [path: string]: InternalError[] };
-  readonly pathToDefinitionLinks: { readonly [path: string]: DefinitionLink[] };
+  readonly warnings: { readonly [path: string]: readonly InternalError[] };
+  readonly pathToDefinitionLinks: {
+    readonly [path: string]: readonly DefinitionLink[];
+  };
 };
 
 /** A {@link CompilationResult} known not to have any errors. */
@@ -197,7 +199,7 @@ export type ValidNamespaceResult = NamespaceResult & {
 };
 
 export type SchemaOrError =
-  Schema | InternalErrors | { readonly kind: "other-error" };
+  Schema | ValidationErrors | { readonly kind: "other-error" };
 
 export type ValidatedTool = {
   readonly kind: "tool";

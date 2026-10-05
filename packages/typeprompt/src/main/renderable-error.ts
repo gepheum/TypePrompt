@@ -16,7 +16,7 @@ export type RenderableError = {
 };
 
 export function makeRenderableErrors(
-  pathToErrors: { readonly [path: string]: InternalError[] },
+  pathToErrors: { readonly [path: string]: readonly InternalError[] },
   pathToLineFinder: {
     readonly [path: string]: {
       readonly lineFinder: LineFinderData;

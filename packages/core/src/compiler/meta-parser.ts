@@ -25,7 +25,7 @@ export function parseMeta(metaNode: ElementNode): Meta | InternalErrors {
   const schema = ((): SchemaOrError => {
     const schemaParseResult = parseSchema(textContent.text);
     if (schemaParseResult.kind === "error") {
-      return schemaParseResult;
+      return { ...schemaParseResult, definitionLinks: [] };
     }
     return validateSchema(schemaParseResult, {
       kind: "meta",
