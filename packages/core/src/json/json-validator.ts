@@ -462,7 +462,7 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
   }
 }
 
-export function collectDefinitionLinks(
+export function collectJsonDefinitionLinks(
   value: LooseJsonValue,
   type: ResolvedFieldType | SyntheticType,
   schema: SchemaView,
@@ -486,7 +486,7 @@ export function collectDefinitionLinks(
       const { elements } = value;
       for (const element of elements) {
         definitionLinks.push(
-          ...collectDefinitionLinks(element, elementType, schema),
+          ...collectJsonDefinitionLinks(element, elementType, schema),
         );
       }
       return definitionLinks;
@@ -510,7 +510,7 @@ export function collectDefinitionLinks(
         }
         const fieldType = resolveType(schemaField.type, schema);
         definitionLinks.push(
-          ...collectDefinitionLinks(entry.value, fieldType, schema),
+          ...collectJsonDefinitionLinks(entry.value, fieldType, schema),
         );
       }
       return definitionLinks;
@@ -520,7 +520,7 @@ export function collectDefinitionLinks(
         return [];
       } else {
         const innerType = resolveType(type.innerType, schema);
-        return collectDefinitionLinks(value, innerType, schema);
+        return collectJsonDefinitionLinks(value, innerType, schema);
       }
     }
     case "record": {
@@ -531,7 +531,7 @@ export function collectDefinitionLinks(
       const definitionLinks: DefinitionLink[] = [];
       for (const entry of Object.values(value.entries)) {
         definitionLinks.push(
-          ...collectDefinitionLinks(entry.value, valueType, schema),
+          ...collectJsonDefinitionLinks(entry.value, valueType, schema),
         );
       }
       return definitionLinks;
@@ -556,7 +556,11 @@ export function collectDefinitionLinks(
             if (discriminant.kind === members.discriminants.type) {
               const member = members.members[String(discriminant.value)];
               if (member) {
-                return collectDefinitionLinks(value, member.resolved, schema);
+                return collectJsonDefinitionLinks(
+                  value,
+                  member.resolved,
+                  schema,
+                );
               }
             }
           }

@@ -27,7 +27,7 @@ import type {
   StrictJsonValue,
 } from "./json-types.js";
 import {
-  collectDefinitionLinks,
+  collectJsonDefinitionLinks,
   jsonMatchesType,
   validateJson,
 } from "./json-validator.js";
@@ -654,7 +654,7 @@ describe("jsonMatchesType - result shape and mode", () => {
       jsonMatchesType(str("hi"), primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(str("hi"), primType("string"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(str("hi"), primType("string"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -663,7 +663,7 @@ describe("jsonMatchesType - result shape and mode", () => {
       jsonMatchesType(num(1), primType("string"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -678,7 +678,7 @@ describe("jsonMatchesType - result shape and mode", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(num(1), primType("string"), EMPTY_VIEW),
     ).toMatch([]);
   });
 });
@@ -693,7 +693,7 @@ describe("jsonMatchesType - ellipsis value", () => {
       jsonMatchesType(ELLIPSIS, primType("string"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(ELLIPSIS, primType("string"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(ELLIPSIS, primType("string"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -701,9 +701,9 @@ describe("jsonMatchesType - ellipsis value", () => {
     expect(
       jsonMatchesType(ELLIPSIS, litType("ok"), "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(collectDefinitionLinks(ELLIPSIS, litType("ok"), EMPTY_VIEW)).toMatch(
-      [],
-    );
+    expect(
+      collectJsonDefinitionLinks(ELLIPSIS, litType("ok"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("ellipsis matches interface in thorough mode", () => {
@@ -716,7 +716,7 @@ describe("jsonMatchesType - ellipsis value", () => {
       ),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         ELLIPSIS,
         ifaceType({ name: { text: "string" } }),
         EMPTY_VIEW,
@@ -729,7 +729,7 @@ describe("jsonMatchesType - ellipsis value", () => {
       jsonMatchesType(ELLIPSIS, primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(ELLIPSIS, primType("number"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(ELLIPSIS, primType("number"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -749,7 +749,7 @@ describe("jsonMatchesType - ellipsis value", () => {
       ),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         loosObj,
         ifaceType({ name: { text: "string" }, age: { text: "number" } }),
         EMPTY_VIEW,
@@ -774,7 +774,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(str("bad"), litType("ok"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(str("bad"), litType("ok"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -788,9 +788,9 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
         matchScore: 0,
       },
     });
-    expect(collectDefinitionLinks(num(1), litType("ok"), EMPTY_VIEW)).toMatch(
-      [],
-    );
+    expect(
+      collectJsonDefinitionLinks(num(1), litType("ok"), EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("boolean-literal: opposite value → matchScore 0.5", () => {
@@ -804,7 +804,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
+      collectJsonDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -819,7 +819,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(1), boolLitType(true), EMPTY_VIEW),
+      collectJsonDefinitionLinks(num(1), boolLitType(true), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -834,7 +834,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(3.14), primType("integer"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(num(3.14), primType("integer"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -854,7 +854,11 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(2147483648), primType("integer"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(
+        num(2147483648),
+        primType("integer"),
+        EMPTY_VIEW,
+      ),
     ).toMatch([]);
   });
 
@@ -869,7 +873,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(str("123"), primType("integer"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(str("123"), primType("integer"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -884,7 +888,7 @@ describe("jsonMatchesType - matchScore: Primitives and Literals", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(42), primType("string"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(num(42), primType("string"), EMPTY_VIEW),
     ).toMatch([]);
   });
 });
@@ -912,7 +916,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(str("c"), unionType as SyntheticType, schema),
+      collectJsonDefinitionLinks(str("c"), unionType as SyntheticType, schema),
     ).toMatch([]);
   });
 
@@ -929,7 +933,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(num(1), unionType as SyntheticType, schema),
+      collectJsonDefinitionLinks(num(1), unionType as SyntheticType, schema),
     ).toMatch([]);
   });
 
@@ -953,7 +957,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["name", str("Felix")]])),
         petType as SyntheticType,
         schema,
@@ -986,7 +990,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["kind", num(123)]])),
         petType as SyntheticType,
         schema,
@@ -1019,7 +1023,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["kind", str("bird")]])),
         petType as SyntheticType,
         schema,
@@ -1053,7 +1057,7 @@ describe("jsonMatchesType - matchScore: Unions", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["kind", str("cat")],
@@ -1098,7 +1102,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["name", str("Alice")],
@@ -1130,7 +1134,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["name", str("Alice")]])),
         ifaceType({ name: { text: "string" }, age: { text: "number" } }),
         EMPTY_VIEW,
@@ -1157,7 +1161,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([])),
         ifaceType({ name: { text: "string" }, age: { text: "number" } }),
         EMPTY_VIEW,
@@ -1186,7 +1190,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["name", str("Alice")],
@@ -1232,7 +1236,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["name", str("Alice")],
@@ -1273,7 +1277,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["name", str("Alice")],
@@ -1316,7 +1320,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["a", str("ok")],
@@ -1362,7 +1366,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             [
@@ -1400,7 +1404,7 @@ describe("jsonMatchesType - matchScore: Interfaces", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         str("not an object"),
         ifaceType({ name: { text: "string" } }),
         EMPTY_VIEW,
@@ -1435,7 +1439,7 @@ describe("jsonMatchesType - matchScore: Records", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["a", str("hello")],
@@ -1473,7 +1477,7 @@ describe("jsonMatchesType - matchScore: Records", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["a", str("wrong")]])),
         resolveType(recType, schema),
         schema,
@@ -1497,7 +1501,7 @@ describe("jsonMatchesType - matchScore: Records", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(arrStrict([])),
         recordType("number"),
         EMPTY_VIEW,
@@ -1531,7 +1535,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         arrStrict([num(1), str("bad")]) as LooseJsonValue,
         arrT,
         EMPTY_VIEW,
@@ -1559,7 +1563,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         arrStrict([num(1), str("bad"), num(3)]) as LooseJsonValue,
         arrT,
         EMPTY_VIEW,
@@ -1587,7 +1591,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         arrStrict([str("bad"), num(1)]) as LooseJsonValue,
         arrT,
         EMPTY_VIEW,
@@ -1627,7 +1631,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
       },
     });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         arrStrict([
           objStrict([
             ["name", str("Alice")],
@@ -1664,7 +1668,7 @@ describe("jsonMatchesType - matchScore: Arrays", () => {
       },
     });
     expect(
-      collectDefinitionLinks(safeCast(objStrict([])), arrT, EMPTY_VIEW),
+      collectJsonDefinitionLinks(safeCast(objStrict([])), arrT, EMPTY_VIEW),
     ).toMatch([]);
   });
 });
@@ -1682,7 +1686,9 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(nullVal(), optType, "thorough", EMPTY_VIEW)).toMatch(
       { kind: "match" },
     );
-    expect(collectDefinitionLinks(nullVal(), optType, EMPTY_VIEW)).toMatch([]);
+    expect(collectJsonDefinitionLinks(nullVal(), optType, EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("optional matches inner type when non-null", () => {
@@ -1693,9 +1699,9 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(
       jsonMatchesType(str("hello"), optType, "thorough", EMPTY_VIEW),
     ).toMatch({ kind: "match" });
-    expect(collectDefinitionLinks(str("hello"), optType, EMPTY_VIEW)).toMatch(
-      [],
-    );
+    expect(
+      collectJsonDefinitionLinks(str("hello"), optType, EMPTY_VIEW),
+    ).toMatch([]);
   });
 
   it("optional propagates mismatch details when non-null", () => {
@@ -1710,7 +1716,9 @@ describe("jsonMatchesType - Optionals and Any", () => {
         matchScore: 0,
       },
     });
-    expect(collectDefinitionLinks(num(42), optType, EMPTY_VIEW)).toMatch([]);
+    expect(collectJsonDefinitionLinks(num(42), optType, EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("any type matches in fast mode", () => {
@@ -1718,7 +1726,9 @@ describe("jsonMatchesType - Optionals and Any", () => {
     expect(jsonMatchesType(num(42), anyType, "fast", EMPTY_VIEW)).toMatch({
       kind: "match",
     });
-    expect(collectDefinitionLinks(num(42), anyType, EMPTY_VIEW)).toMatch([]);
+    expect(collectJsonDefinitionLinks(num(42), anyType, EMPTY_VIEW)).toMatch(
+      [],
+    );
   });
 
   it("any type matches in thorough mode", () => {
@@ -1732,7 +1742,7 @@ describe("jsonMatchesType - Optionals and Any", () => {
       ),
     ).toMatch({ kind: "match" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["x", str("y")]])),
         anyType,
         EMPTY_VIEW,
@@ -1760,7 +1770,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       ),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         arrStrict([num(1), str("bad"), num(2)]) as LooseJsonValue,
         arrT,
         EMPTY_VIEW,
@@ -1783,7 +1793,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       ),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(
           objStrict([
             ["name", num(42)],
@@ -1809,7 +1819,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       ),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["extra", str("x")]])),
         ifaceType({ name: { text: "string" } }),
         EMPTY_VIEW,
@@ -1827,7 +1837,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       ),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["x", str("bad")]])),
         recordType("number"),
         EMPTY_VIEW,
@@ -1840,7 +1850,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       jsonMatchesType(bool(false), boolLitType(true), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
+      collectJsonDefinitionLinks(bool(false), boolLitType(true), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -1849,7 +1859,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       jsonMatchesType(str("no"), litType("yes"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(str("no"), litType("yes"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(str("no"), litType("yes"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -1858,7 +1868,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       jsonMatchesType(str("no"), primType("number"), "fast", EMPTY_VIEW),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(str("no"), primType("number"), EMPTY_VIEW),
+      collectJsonDefinitionLinks(str("no"), primType("number"), EMPTY_VIEW),
     ).toMatch([]);
   });
 
@@ -1869,7 +1879,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       jsonMatchesType(str("c"), unionType as SyntheticType, "fast", schema),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(str("c"), unionType as SyntheticType, schema),
+      collectJsonDefinitionLinks(str("c"), unionType as SyntheticType, schema),
     ).toMatch([]);
   });
 
@@ -1887,7 +1897,7 @@ describe("jsonMatchesType - fast mode short-circuit", () => {
       ),
     ).toMatch({ kind: "mismatch" });
     expect(
-      collectDefinitionLinks(
+      collectJsonDefinitionLinks(
         safeCast(objStrict([["kind", str("bird")]])),
         petType as SyntheticType,
         schema,
