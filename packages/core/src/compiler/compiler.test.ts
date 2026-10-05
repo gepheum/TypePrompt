@@ -21,6 +21,7 @@ describe("compile - basic compilation and empty results", () => {
       sourceFiles: {},
       finalErrors: {},
       warnings: {},
+      pathToDefinitionLinks: {},
     });
   });
 
@@ -54,6 +55,14 @@ describe("compile - basic compilation and empty results", () => {
       tools: {},
       finalErrors: {
         "prompts/Translate.xml": [],
+      },
+      pathToDefinitionLinks: {
+        "prompts/Translate.xml": [
+          {
+            reference: { path: "prompts/Translate.xml" },
+            definition: { text: "text" },
+          },
+        ],
       },
     });
   });

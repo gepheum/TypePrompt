@@ -2,6 +2,7 @@ import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { createLineFinder, LineFinderData } from "../util/line-finder.js";
 import type {
+  DefinitionLink,
   InternalError,
   InternalErrors,
   TextSpan,
@@ -175,6 +176,7 @@ class CompilationResultImpl implements CompilationResult {
   readonly finalErrors: { [path: string]: InternalError[] } = {};
   anyErrors = false;
   readonly warnings: { [path: string]: InternalError[] } = {};
+  readonly pathToDefinitionLinks: { [path: string]: DefinitionLink[] } = {};
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];
@@ -208,6 +210,7 @@ class CompilationResultImpl implements CompilationResult {
       }
       this.finalErrors[sourceFile.path] = [...sourceFile.parseErrors];
       this.warnings[sourceFile.path] = [...sourceFile.warnings];
+      this.pathToDefinitionLinks[sourceFile.path] = [];
     }
 
     this.resolveMeta(metas);
@@ -367,6 +370,9 @@ class CompilationResultImpl implements CompilationResult {
           ...validationResult.errors,
         );
       }
+      this.pathToDefinitionLinks[tool.sourceFile.path]!.push(
+        ...validationResult.definitionLinks,
+      );
     }
   }
 
@@ -432,7 +438,7 @@ class CompilationResultImpl implements CompilationResult {
               ([name, tool]) => tool === cachedNamespace.tools[name],
             ) &&
             Object.keys(namespace.tools).length ===
-              Object.keys(cachedNamespace.tools).length;
+            Object.keys(cachedNamespace.tools).length;
         }
         return sameTools ? cached : null;
       };
@@ -454,6 +460,9 @@ class CompilationResultImpl implements CompilationResult {
           ...validationResult.errors,
         );
       }
+      this.pathToDefinitionLinks[template.sourceFile.path]!.push(
+        ...validationResult.definitionLinks,
+      );
     }
   }
 

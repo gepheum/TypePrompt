@@ -25,6 +25,7 @@ export type CompilationResult = {
   readonly finalErrors: { readonly [path: string]: InternalError[] };
   readonly anyErrors: boolean;
   readonly warnings: { readonly [path: string]: InternalError[] };
+  readonly pathToDefinitionLinks: { readonly [path: string]: DefinitionLink[] };
 };
 
 /** A {@link CompilationResult} known not to have any errors. */
@@ -69,10 +70,10 @@ export type OutputFormat = "json" | "text";
 export type TemplateContents =
   | { readonly kind: "no-variants"; readonly content: TemplateContent }
   | {
-      readonly kind: "variants";
-      readonly variants: readonly TemplateVariant[];
-      readonly defaultContent: Partial<TemplateContent>;
-    };
+    readonly kind: "variants";
+    readonly variants: readonly TemplateVariant[];
+    readonly defaultContent: Partial<TemplateContent>;
+  };
 
 export type TemplateContent = {
   readonly meta: TemplateMeta | undefined;
@@ -103,49 +104,49 @@ export type BodyPiece<HasValContext extends boolean = false> =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "c-tag"; readonly text: string; readonly cTag: CTag }
   | {
-      readonly kind: "insert-val";
-      readonly val: Expression<HasValContext>;
-      readonly format: TextSpan<InsertFormat> | null;
-      /** Only contains whitespace characters. */
-      readonly indent: string;
-      /** The insert tag. */
-      readonly tag: Span;
-    }
+    readonly kind: "insert-val";
+    readonly val: Expression<HasValContext>;
+    readonly format: TextSpan<InsertFormat> | null;
+    /** Only contains whitespace characters. */
+    readonly indent: string;
+    /** The insert tag. */
+    readonly tag: Span;
+  }
   | {
-      readonly kind: "insert-snippet";
-      readonly snippet: TextSpan;
-      /** Only contains whitespace characters. */
-      readonly indent: string;
-      /** The insert tag. */
-      readonly tag: Span;
-    };
+    readonly kind: "insert-snippet";
+    readonly snippet: TextSpan;
+    /** Only contains whitespace characters. */
+    readonly indent: string;
+    /** The insert tag. */
+    readonly tag: Span;
+  };
 
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";
 
 export type Snippet =
   | {
-      readonly kind: "snippet";
-      readonly name: TextSpan;
+    readonly kind: "snippet";
+    readonly name: TextSpan;
+    readonly body: Body;
+  }
+  | {
+    readonly kind: "snippet-if";
+    readonly name: TextSpan;
+    readonly expression: Expression;
+    readonly is: TextSpan<"notNull" | "notEmpty" | "true"> | null;
+    readonly then: BodyInContext;
+    readonly else: BodyInContext;
+  }
+  | {
+    readonly kind: "snippet-switch";
+    readonly name: TextSpan;
+    readonly switchTag: Span;
+    readonly expression: Expression;
+    readonly branches: ReadonlyArray<{
+      readonly case: TextSpan;
       readonly body: Body;
-    }
-  | {
-      readonly kind: "snippet-if";
-      readonly name: TextSpan;
-      readonly expression: Expression;
-      readonly is: TextSpan<"notNull" | "notEmpty" | "true"> | null;
-      readonly then: BodyInContext;
-      readonly else: BodyInContext;
-    }
-  | {
-      readonly kind: "snippet-switch";
-      readonly name: TextSpan;
-      readonly switchTag: Span;
-      readonly expression: Expression;
-      readonly branches: ReadonlyArray<{
-        readonly case: TextSpan;
-        readonly body: Body;
-      }>;
-    };
+    }>;
+  };
 
 /** Top-level <tool> element. */
 export type Tool = {
