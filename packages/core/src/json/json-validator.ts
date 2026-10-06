@@ -10,6 +10,7 @@ import type {
   DefinitionLink,
   InternalError,
   Span,
+  TextSpan,
   ValidationResult,
 } from "../util/shared-types.js";
 import { stripQuotes } from "../util/spans.js";
@@ -393,19 +394,19 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
       switch (members.kind) {
         case "strings": {
           if (value.kind === "string") {
-            const stringLiteral = members.values[value.value];
-            if (stringLiteral !== undefined) {
-              if (stringLiteral === "synthetic") {
-                return MATCH;
-              } else {
-                const definitionLink: DefinitionLink = {
-                  reference: value.quoted
-                    ? stripQuotes(value.firstToken)
-                    : value.firstToken,
-                  definition: stripQuotes(stringLiteral.quotedName),
-                };
-                return { kind: "match", definitionLinks: [definitionLink] };
-              }
+            const stringLiteralOrSpan = members.values[value.value];
+            if (stringLiteralOrSpan) {
+              const definition: TextSpan =
+                "quotedName" in stringLiteralOrSpan
+                  ? stripQuotes(stringLiteralOrSpan.quotedName)
+                  : stringLiteralOrSpan;
+              const definitionLink: DefinitionLink = {
+                reference: value.quoted
+                  ? stripQuotes(value.firstToken)
+                  : value.firstToken,
+                definition,
+              };
+              return { kind: "match", definitionLinks: [definitionLink] };
             } else {
               const values = Object.keys(members.values);
               const message = makeExpectedOneOfMessage(values);

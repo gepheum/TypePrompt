@@ -295,7 +295,7 @@ export type SyntheticUnionMembers =
   | {
       readonly kind: "strings";
       /** Can be empty. */
-      readonly values: { readonly [v: string]: "synthetic" };
+      readonly values: { readonly [v: string]: TextSpan };
     }
   | {
       readonly kind: "interfaces";

@@ -21,7 +21,7 @@ export function validateTool(args: {
   validationResult.definitionLinks.push(...toolSchema.definitionLinks);
   if (toolSchema.kind === "error") {
     errors.push(...toolSchema.errors);
-    return validationResult.asErrors();
+    return { ...validationResult.asErrors(), tool };
   }
 
   validationResult.push(
@@ -39,6 +39,6 @@ export function validateTool(args: {
       definitionLinks: validationResult.definitionLinks,
     };
   } else {
-    return validationResult.asErrors();
+    return { ...validationResult.asErrors(), tool };
   }
 }

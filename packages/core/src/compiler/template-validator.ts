@@ -24,6 +24,7 @@ import type {
   InternalError,
   InternalErrors,
   Span,
+  TextSpan,
   ValidationResult,
 } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
@@ -379,8 +380,9 @@ function makeExamplesType(
                             members: {
                               kind: "strings",
                               values: Object.fromEntries(
-                                Object.keys(options.namespaceTools) //
-                                  .map((k) => [k, "synthetic"]),
+                                Object.entries(options.namespaceTools).map(
+                                  ([k, tool]) => [k, tool.tool.name],
+                                ),
                               ),
                             },
                           },
@@ -676,8 +678,13 @@ function validateTools(
 function makeToolsType(namespaceTools: {
   readonly [name: string]: ToolValidationResult;
 }): SyntheticArray & HasName {
-  const toolNames: { [v: string]: "synthetic" } = Object.fromEntries(
-    Object.keys(namespaceTools).map((name) => [name, "synthetic"]),
+  const toolNames: { [v: string]: TextSpan } = Object.fromEntries(
+    Object.entries(namespaceTools).map(([name, tool]) => [
+      name,
+      tool.kind === "tool"
+        ? tool.tool.name
+        : { path: "", start: 0, end: 0, text: name },
+    ]),
   );
   return {
     kind: "array",

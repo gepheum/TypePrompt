@@ -1415,6 +1415,7 @@ describe("validateTemplate - definition links", () => {
       definitionLinks: [
         { definition: { text: "problem" } },
         { definition: { text: "problem" } },
+        { definition: { text: "calc" } },
         { definition: { text: "answer" } },
         { definition: { text: "expr" } },
         { definition: { text: "result" } },

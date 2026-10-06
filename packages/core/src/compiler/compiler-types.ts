@@ -211,7 +211,8 @@ export type ValidatedTool = {
   readonly definitionLinks: readonly DefinitionLink[];
 };
 
-export type ToolValidationResult = ValidatedTool | ValidationErrors;
+export type ToolValidationResult =
+  ValidatedTool | (ValidationErrors & { readonly tool: Tool });
 
 export type ValidatedTemplate = {
   readonly kind: "template";
