@@ -241,7 +241,7 @@ export type UnionMembers =
   | {
       readonly kind: "strings";
       readonly members: readonly StringLiteral[];
-      readonly values: ReadonlySet<string>;
+      readonly values: { readonly [v: string]: StringLiteral };
       /** Other unions included in this union. */
       readonly includes: readonly Union[];
     }
@@ -295,7 +295,7 @@ export type SyntheticUnionMembers =
   | {
       readonly kind: "strings";
       /** Can be empty. */
-      readonly values: ReadonlySet<string>;
+      readonly values: { readonly [v: string]: "synthetic" };
     }
   | {
       readonly kind: "interfaces";

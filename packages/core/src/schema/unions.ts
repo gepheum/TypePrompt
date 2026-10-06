@@ -159,7 +159,7 @@ function makeStringLiteralUnionMembers(
   return {
     kind: "strings",
     members: stringLiterals,
-    values: new Set(stringLiterals.map((m) => m.value)),
+    values: Object.fromEntries(stringLiterals.map((s) => [s.value, s])),
     includes: includes,
   };
 }

@@ -393,11 +393,23 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
       switch (members.kind) {
         case "strings": {
           if (value.kind === "string") {
-            if (members.values.has(value.value)) {
-              return MATCH;
+            const stringLiteral = members.values[value.value];
+            if (stringLiteral !== undefined) {
+              if (stringLiteral === "synthetic") {
+                return MATCH;
+              } else {
+                const definitionLink: DefinitionLink = {
+                  reference: value.quoted
+                    ? stripQuotes(value.firstToken)
+                    : value.firstToken,
+                  definition: stripQuotes(stringLiteral.quotedName),
+                };
+                return { kind: "match", definitionLinks: [definitionLink] };
+              }
             } else {
-              const message = makeExpectedOneOfMessage([...members.values]);
-              const suggestions = [...members.values].map((v) => `"${v}"`);
+              const values = Object.keys(members.values);
+              const message = makeExpectedOneOfMessage(values);
+              const suggestions = values.map((v) => `"${v}"`);
               return mismatch(
                 mode,
                 value.firstToken,

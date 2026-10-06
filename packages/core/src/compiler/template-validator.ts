@@ -249,7 +249,7 @@ function validateVariants(
   }
   for (const variant of template.contents.variants) {
     const variantName = variant.case.text;
-    if (unionMembers.values.has(variantName)) continue;
+    if (unionMembers.values[variantName] !== undefined) continue;
     errors.push({
       span: variant.case,
       message: `'Input.variant' can never be '${variantName}'`,
@@ -378,8 +378,9 @@ function makeExamplesType(
                             kind: "synthetic-union",
                             members: {
                               kind: "strings",
-                              values: new Set(
-                                Object.keys(options.namespaceTools),
+                              values: Object.fromEntries(
+                                Object.keys(options.namespaceTools) //
+                                  .map((k) => [k, "synthetic"]),
                               ),
                             },
                           },
@@ -675,7 +676,9 @@ function validateTools(
 function makeToolsType(namespaceTools: {
   readonly [name: string]: ToolValidationResult;
 }): SyntheticArray & HasName {
-  const toolNames = new Set(Object.keys(namespaceTools));
+  const toolNames: { [v: string]: "synthetic" } = Object.fromEntries(
+    Object.keys(namespaceTools).map((name) => [name, "synthetic"]),
+  );
   return {
     kind: "array",
     name: {
