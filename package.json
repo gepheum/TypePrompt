@@ -6,11 +6,11 @@
     "packages/*"
   ],
   "scripts": {
-    "make-static-snippets": "tsx packages/typeprompt/src/static-snippets/make-static-snippets.ts",
+    "make-static-snippets": "tsx packages/cli/src/static-snippets/make-static-snippets.ts",
     "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "start": "node packages/typeprompt/dist/main.js",
-    "dev": "tsx packages/typeprompt/src/main.ts",
+    "start": "node packages/cli/dist/main.js",
+    "dev": "tsx packages/cli/src/main.ts",
     "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"packages/*/src/**/*.test.ts\"",
     "lint": "eslint 'packages/*/src/**/*.ts'",
     "lint:fix": "eslint 'packages/*/src/**/*.ts' --fix",
