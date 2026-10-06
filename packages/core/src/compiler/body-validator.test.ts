@@ -635,7 +635,7 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: '"active"' } }],
     });
   });
 
@@ -646,7 +646,7 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: "profileName" } }],
     });
   });
 
@@ -662,7 +662,7 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: "calculator" } }],
     });
   });
 
@@ -678,7 +678,7 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: "searchKeyword" } }],
     });
   });
 
@@ -704,7 +704,7 @@ describe("validateTemplateBody - <c> tags", () => {
     };
     expect(testValidateBody(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: "name" } }],
     });
   });
 
@@ -824,7 +824,10 @@ describe("validateToolDescription", () => {
     };
     expect(testValidateToolDescription(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [
+        { definition: { text: "location" } },
+        { definition: { text: "temp" } },
+      ],
     });
   });
 
@@ -851,7 +854,7 @@ describe("validateToolDescription", () => {
     };
     expect(testValidateToolDescription(args)).toMatch({
       errors: [],
-      definitionLinks: [],
+      definitionLinks: [{ definition: { text: "location" } }],
     });
   });
 

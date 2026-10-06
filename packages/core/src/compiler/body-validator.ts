@@ -7,7 +7,7 @@ import type {
   SyntheticType,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import type { ValidationResult } from "../util/shared-types.js";
+import type { Span, ValidationResult } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import type {
   Body,
@@ -22,7 +22,9 @@ export function validateTemplateBody<HasValContext extends boolean>(
   tools: { readonly [name: string]: TemplateTool },
   context: HasValContext extends true ? ExpressionContext : null,
 ): ValidationResult {
-  const toolNames = new Set<string>(Object.keys(tools));
+  const toolNames: { readonly [name: string]: Span } = Object.fromEntries(
+    Object.entries(tools).map(([name, tool]) => [name, tool.tool.tool.name]),
+  );
   const schemasForBodyValidation = [
     templateSchema,
     ...Object.values(tools)
@@ -43,7 +45,7 @@ export function validateToolDescription(args: {
   description: ToolDescription;
   toolSchema: Schema;
 }): ValidationResult {
-  const toolNames = new Set<string>();
+  const toolNames: { readonly [name: string]: Span } = {};
   return validateBodyImpl(
     args.description,
     args.toolSchema,
@@ -57,15 +59,15 @@ function validateBodyImpl<HasValContext extends boolean>(
   body: Body<HasValContext>,
   templateSchema: Schema,
   schemasForBodyValidation: readonly Schema[],
-  toolNames: ReadonlySet<string>,
+  toolNames: { readonly [name: string]: Span },
   context: HasValContext extends true ? ExpressionContext : null,
 ): ValidationResult {
   const validationResult = new ValidationResultBuilder();
   const { definitionLinks, errors } = validationResult;
   for (const piece of body) {
     if (piece.kind === "c-tag") {
-      errors.push(
-        ...validateCTag(piece.cTag, schemasForBodyValidation, toolNames),
+      validationResult.push(
+        validateCTag(piece.cTag, schemasForBodyValidation, toolNames),
       );
       continue;
     } else if (piece.kind !== "insert-val") {

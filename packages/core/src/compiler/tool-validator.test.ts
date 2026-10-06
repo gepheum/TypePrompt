@@ -195,7 +195,10 @@ describe("validateTool", () => {
       schema: {
         kind: "success",
       },
-      definitionLinks: [],
+      definitionLinks: [
+        { definition: { text: "query" } },
+        { definition: { text: "results" } },
+      ],
     });
   });
 
