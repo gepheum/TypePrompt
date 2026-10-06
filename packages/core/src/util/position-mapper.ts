@@ -1,4 +1,4 @@
-import { MappedText } from "./shared-types.js";
+import type { MappedText } from "./shared-types.js";
 
 /**
  * Maps a position in a decoded text node to a position in the original XML file.

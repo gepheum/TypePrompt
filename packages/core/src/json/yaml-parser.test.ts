@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { MappedText } from "../util/shared-types.js";
+import type { MappedText } from "../util/shared-types.js";
 import { parseYaml, tokenizeYaml } from "./yaml-parser.js";
 
 // ---------------------------------------------------------------------------

@@ -15,10 +15,10 @@ import type {
   Type,
   TypeDeclarations,
 } from "@typeprompt/core/schema/schema-types.js";
+import type { NameScope } from "@typeprompt/core/schema/schema-utils.js";
 import {
   getNameDependencies,
   NAME_SCOPES,
-  NameScope,
   unwrapNullable as unwrapOptional,
 } from "@typeprompt/core/schema/schema-utils.js";
 import { capitalize, uncapitalize } from "@typeprompt/core/util/casing.js";

@@ -1,14 +1,14 @@
 import { resolveExpressionType } from "../expression/expression-type-resolver.js";
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
-import {
+import type {
   JsonString,
   StrictJsonArray,
   StrictJsonObject,
   StrictJsonValue,
 } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
-import {
+import type {
   HasName,
   Schema,
   SchemaValidationContext,

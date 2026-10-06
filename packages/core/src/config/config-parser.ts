@@ -1,6 +1,6 @@
 import { parseDocument, Scalar, YAMLMap } from "yaml";
 import { z } from "zod";
-import { InternalError, InternalErrors } from "../util/shared-types.js";
+import type { InternalError, InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
   /** Glob pattern to match template files to be processed. */

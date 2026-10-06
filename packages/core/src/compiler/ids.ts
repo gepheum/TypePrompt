@@ -1,4 +1,4 @@
-import { Template, Tool } from "./compiler-types.js";
+import type { Template, Tool } from "./compiler-types.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 
 export function getId(input: Template | Tool): string {

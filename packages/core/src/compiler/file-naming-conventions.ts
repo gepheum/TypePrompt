@@ -1,4 +1,4 @@
-import { InternalError } from "../util/shared-types.js";
+import type { InternalError } from "../util/shared-types.js";
 import type { AttributeValue } from "../xml/xml-attributes-checker.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 

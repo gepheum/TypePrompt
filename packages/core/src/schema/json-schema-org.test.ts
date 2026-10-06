@@ -1,7 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { MappedText } from "../util/shared-types.js";
+import type { MappedText } from "../util/shared-types.js";
 import { toJsonSchema } from "./json-schema-org.js";
 import { parseSchema } from "./schema-parser.js";
 import type { Schema } from "./schema-types.js";

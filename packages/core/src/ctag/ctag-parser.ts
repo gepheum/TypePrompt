@@ -1,7 +1,7 @@
 import { parseJson } from "../json/json-parser.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
 import type { InternalErrors, MappedText } from "../util/shared-types.js";
-import { CTag } from "./ctag-types.js";
+import type { CTag } from "./ctag-types.js";
 
 export function parseCTag(content: MappedText): CTag | InternalErrors {
   if (/^(\w+)$/.test(content.text)) {

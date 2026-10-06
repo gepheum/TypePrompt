@@ -1,5 +1,5 @@
-import { ResolvedFieldType, Schema } from "../schema/schema-types.js";
-import { InternalErrors, TextSpan } from "../util/shared-types.js";
+import type { ResolvedFieldType, Schema } from "../schema/schema-types.js";
+import type { InternalErrors, TextSpan } from "../util/shared-types.js";
 import { stripQuotes } from "../util/spans.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type { Expression, ExpressionContext } from "./expression-types.js";

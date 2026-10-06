@@ -1,6 +1,7 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
-import { createLineFinder, LineFinderData } from "../util/line-finder.js";
+import type { LineFinderData } from "../util/line-finder.js";
+import { createLineFinder } from "../util/line-finder.js";
 import type {
   DefinitionLink,
   InternalError,
@@ -10,7 +11,7 @@ import type {
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
-import { XmlDocument } from "../xml/xml-types.js";
+import type { XmlDocument } from "../xml/xml-types.js";
 import type {
   CompilationResult,
   Meta,

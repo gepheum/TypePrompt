@@ -1,4 +1,4 @@
-import { StrictJsonValue } from "./json-types.js";
+import type { StrictJsonValue } from "./json-types.js";
 
 /**
  * Unwraps a {@link StrictJsonValue} into a regular JavaScript value which can be

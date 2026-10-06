@@ -1,10 +1,10 @@
-import {
+import type {
   InternalError,
   InternalErrors,
   MappedText,
 } from "../util/shared-types.js";
 import { joinTextNodes } from "../util/text-node-joiner.js";
-import { ElementNode } from "../xml/xml-types.js";
+import type { ElementNode } from "../xml/xml-types.js";
 
 export function extractTextContent(
   node: ElementNode,

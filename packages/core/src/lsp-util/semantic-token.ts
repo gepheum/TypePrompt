@@ -1,8 +1,8 @@
 import { tokenizeYaml } from "../json/yaml-parser.js";
 import { tokenizeSchema } from "../schema/schema-parser.js";
-import { Span } from "../util/shared-types.js";
+import type { Span } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
-import { ElementNode, XmlComment } from "../xml/xml-types.js";
+import type { ElementNode, XmlComment } from "../xml/xml-types.js";
 
 export type SemanticToken = {
   readonly span: Span;

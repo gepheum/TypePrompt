@@ -1,4 +1,4 @@
-import { Schema } from "./schema-types.js";
+import type { Schema } from "./schema-types.js";
 
 export const EMPTY_SCHEMA: Schema = {
   kind: "success",

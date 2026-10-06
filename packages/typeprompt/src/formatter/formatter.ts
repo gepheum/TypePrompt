@@ -1,7 +1,7 @@
 import plugin from "@prettier/plugin-xml";
 import { parseSourceFile } from "@typeprompt/core";
 
-import {
+import type {
   XmlComment,
   XmlDocument,
   XmlNode,

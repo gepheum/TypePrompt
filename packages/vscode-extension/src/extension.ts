@@ -1,11 +1,10 @@
 import * as path from "node:path";
 import { type ExtensionContext, workspace } from "vscode";
-import {
-  LanguageClient,
+import type {
   LanguageClientOptions,
   ServerOptions,
-  TransportKind,
 } from "vscode-languageclient/node.js";
+import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
 
 let client: LanguageClient | undefined;
 

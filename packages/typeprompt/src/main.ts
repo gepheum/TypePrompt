@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {
+import type {
   CompilationResult,
   ValidCompilationResult,
 } from "@typeprompt/core/compiler/compiler-types.js";
@@ -14,7 +14,7 @@ import globParent from "glob-parent";
 import { minimatch } from "minimatch";
 import * as Paths from "path";
 import Watcher from "watcher";
-import { OutputFile } from "./codegen/codegen-types.js";
+import type { OutputFile } from "./codegen/codegen-types.js";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
 import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
@@ -27,10 +27,10 @@ import {
 import { ExitError } from "./main/exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
 import { initializeProject } from "./main/project-initializer.js";
+import type { RenderableError } from "./main/renderable-error.js";
 import {
   makeRenderableError,
   makeRenderableErrors,
-  RenderableError,
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 export { formatTemplateFile };

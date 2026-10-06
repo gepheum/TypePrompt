@@ -1,7 +1,11 @@
-import { NullType, ResolvedFieldType, Schema } from "../schema/schema-types.js";
+import type {
+  NullType,
+  ResolvedFieldType,
+  Schema,
+} from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
-import { DefinitionLink, ValidationErrors } from "../util/shared-types.js";
-import { Expression, ExpressionContext } from "./expression-types.js";
+import type { DefinitionLink, ValidationErrors } from "../util/shared-types.js";
+import type { Expression, ExpressionContext } from "./expression-types.js";
 
 export type ExpressionTypeResult<HasValContext extends boolean = false> = {
   readonly kind: "success";

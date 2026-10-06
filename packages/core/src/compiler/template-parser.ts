@@ -1,16 +1,16 @@
-import { StrictJsonValue } from "../json/json-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { parseSchema } from "../schema/schema-parser.js";
-import { SchemaParseResult } from "../schema/schema-types.js";
-import {
+import type { SchemaParseResult } from "../schema/schema-types.js";
+import type {
   ErrorSink,
   InternalError,
   InternalErrors,
   Span,
   TextSpan,
 } from "../util/shared-types.js";
+import type { AttributeValue } from "../xml/xml-attributes-checker.js";
 import {
-  AttributeValue,
   checkNoXmlAttributes,
   checkXmlAttributes,
   expectIdentifier,
@@ -18,7 +18,7 @@ import {
   expectString,
 } from "../xml/xml-attributes-checker.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import {
+import type {
   Body,
   BodyInContext,
   InsertFormat,

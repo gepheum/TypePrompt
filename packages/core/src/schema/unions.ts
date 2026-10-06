@@ -1,7 +1,7 @@
 import { makeSingletonErrors } from "../util/errors.js";
-import { InternalErrors, Span } from "../util/shared-types.js";
+import type { InternalErrors, Span } from "../util/shared-types.js";
 import { getFirstToken } from "./get-first-token.js";
-import {
+import type {
   BooleanLiteral,
   CommonField,
   Discriminants,

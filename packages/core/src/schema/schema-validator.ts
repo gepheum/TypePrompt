@@ -21,7 +21,8 @@ import type {
   Union,
   UnionMembers,
 } from "./schema-types.js";
-import { getNameDependencies, NameDependencies } from "./schema-utils.js";
+import type { NameDependencies } from "./schema-utils.js";
+import { getNameDependencies } from "./schema-utils.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema(

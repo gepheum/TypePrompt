@@ -17,8 +17,8 @@ import type {
 } from "@typeprompt/core/json/json-types.js";
 import { unwrapJsonValue } from "@typeprompt/core/json/unwrapper.js";
 import { toJsonSchema } from "@typeprompt/core/schema/json-schema-org.js";
-import { Schema } from "@typeprompt/core/schema/schema-types.js";
-import * as Spec from "./runtime-types.js";
+import type { Schema } from "@typeprompt/core/schema/schema-types.js";
+import type * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
   const tools: { [id: string]: Spec.Tool } = {};

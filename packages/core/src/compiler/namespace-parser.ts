@@ -3,8 +3,8 @@ import {
   checkXmlAttributes,
   expectIdentifier,
 } from "../xml/xml-attributes-checker.js";
-import { ElementNode } from "../xml/xml-types.js";
-import { Namespace, SchemaOrError } from "./compiler-types.js";
+import type { ElementNode } from "../xml/xml-types.js";
+import type { Namespace, SchemaOrError } from "./compiler-types.js";
 
 import { parseSchema } from "../schema/schema-parser.js";
 import { validateSchema } from "../schema/schema-validator.js";

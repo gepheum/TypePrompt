@@ -1,4 +1,4 @@
-import { InternalError, TextSpan } from "./shared-types.js";
+import type { InternalError, TextSpan } from "./shared-types.js";
 
 export function checkNameConflicts(
   names: readonly TextSpan[],

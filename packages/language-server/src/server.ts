@@ -21,32 +21,34 @@ import * as fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { formatTemplateFile } from "typeprompt/formatter";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import {
+import type {
   CompletionItem,
-  CompletionItemKind,
   CompletionParams,
-  createConnection,
   DefinitionParams,
   Diagnostic,
-  DiagnosticSeverity,
   DocumentFormattingParams,
   InitializeParams,
   InitializeResult,
   Location,
   Position,
-  ProposedFeatures,
   Range,
   ReferenceContext,
   ReferenceParams,
   RenameParams,
   SemanticTokens,
-  SemanticTokensBuilder,
   SemanticTokensLegend,
   SemanticTokensParams,
+  WorkspaceEdit,
+} from "vscode-languageserver/node.js";
+import {
+  CompletionItemKind,
+  createConnection,
+  DiagnosticSeverity,
+  ProposedFeatures,
+  SemanticTokensBuilder,
   TextDocuments,
   TextDocumentSyncKind,
   TextEdit,
-  WorkspaceEdit,
   type _Connection,
 } from "vscode-languageserver/node.js";
 

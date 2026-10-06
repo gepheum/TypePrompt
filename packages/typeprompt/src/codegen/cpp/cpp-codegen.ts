@@ -1,27 +1,29 @@
-import {
-  capitalize,
+import type {
   Config,
   FieldType,
-  getId,
   Interface,
-  isLiteralType,
   NamingHint,
   Optional,
-  resolveType,
   Schema,
-  toPascalCase,
-  toScreamCase,
-  toSnakeCase,
   Type,
   TypeNameView,
   Union,
   ValidCompilationResult,
   ValidNamespaceResult,
 } from "@typeprompt/core";
+import {
+  capitalize,
+  getId,
+  isLiteralType,
+  resolveType,
+  toPascalCase,
+  toScreamCase,
+  toSnakeCase,
+} from "@typeprompt/core";
 import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
 import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
-import { OutputFile } from "../codegen-types.js";
+import type { OutputFile } from "../codegen-types.js";
 
 export function generateCppCode(
   compilationResult: ValidCompilationResult,

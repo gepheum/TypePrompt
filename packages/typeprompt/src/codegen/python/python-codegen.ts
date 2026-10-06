@@ -8,7 +8,7 @@ import type {
 import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.js";
 import { getId } from "@typeprompt/core/compiler/ids.js";
 import type { Config } from "@typeprompt/core/config/config-parser.js";
-import {
+import type {
   FieldType,
   NamingHint,
   Schema,

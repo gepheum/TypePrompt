@@ -1,5 +1,9 @@
-import type { InternalErrors, MappedSpan, Span } from "../util/shared-types.js";
-import { TextSpan } from "../util/shared-types.js";
+import type {
+  InternalErrors,
+  MappedSpan,
+  Span,
+  TextSpan,
+} from "../util/shared-types.js";
 
 export type XmlDocument = {
   readonly kind: "success";

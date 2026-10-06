@@ -1,5 +1,5 @@
-import { ErrorSink } from "../util/shared-types.js";
-import { ElementNode, XmlNode } from "./xml-types.js";
+import type { ErrorSink } from "../util/shared-types.js";
+import type { ElementNode, XmlNode } from "./xml-types.js";
 
 export function checkAllAreElements<Tags extends readonly string[]>(
   nodes: readonly XmlNode[],

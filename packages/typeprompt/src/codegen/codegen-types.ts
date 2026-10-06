@@ -1,4 +1,4 @@
-import { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
+import type { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
 import type { Config } from "@typeprompt/core/config/config-parser.js";
 
 export type OutputFile = {

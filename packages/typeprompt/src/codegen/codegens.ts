@@ -1,4 +1,4 @@
-import { CodeGenerator } from "./codegen-types.js";
+import type { CodeGenerator } from "./codegen-types.js";
 import { generateCppCode } from "./cpp/cpp-codegen.js";
 import { generateCSharpCode } from "./csharp/csharp-codegen.js";
 import { generateDartCode } from "./dart/dart-codegen.js";

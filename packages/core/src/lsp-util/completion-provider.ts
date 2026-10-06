@@ -1,6 +1,6 @@
-import { CompilationResult } from "../compiler/compiler-types.js";
+import type { CompilationResult } from "../compiler/compiler-types.js";
 import { compile } from "../compiler/compiler.js";
-import { Span } from "../util/shared-types.js";
+import type { Span } from "../util/shared-types.js";
 
 export type CompletionItems = {
   /** The range to replace. */

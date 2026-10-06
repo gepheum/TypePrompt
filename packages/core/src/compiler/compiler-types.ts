@@ -1,8 +1,8 @@
-import { CTag } from "../ctag/ctag-types.js";
+import type { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
-import { LineFinderData } from "../util/line-finder.js";
+import type { LineFinderData } from "../util/line-finder.js";
 import type {
   DefinitionLink,
   InternalError,
@@ -12,7 +12,7 @@ import type {
   ValidationErrors,
   ValidationResult,
 } from "../util/shared-types.js";
-import { XmlDocument } from "../xml/xml-types.js";
+import type { XmlDocument } from "../xml/xml-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };

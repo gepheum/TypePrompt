@@ -1,5 +1,5 @@
-import { Span } from "../util/shared-types.js";
-import { FieldType } from "./schema-types.js";
+import type { Span } from "../util/shared-types.js";
+import type { FieldType } from "./schema-types.js";
 
 export function getFirstToken(type: FieldType): Span {
   switch (type.kind) {

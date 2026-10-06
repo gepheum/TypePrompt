@@ -1,4 +1,4 @@
-import { Config } from "@typeprompt/core/config/config-parser.js";
+import type { Config } from "@typeprompt/core/config/config-parser.js";
 import { glob } from "glob/raw";
 import * as Paths from "path";
 import { ExitError } from "./exit-error.js";

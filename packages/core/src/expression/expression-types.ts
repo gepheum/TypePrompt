@@ -1,5 +1,5 @@
-import { NullType, ResolvedFieldType } from "../schema/schema-types.js";
-import { TextSpan } from "../util/shared-types.js";
+import type { NullType, ResolvedFieldType } from "../schema/schema-types.js";
+import type { TextSpan } from "../util/shared-types.js";
 
 export type Expression<HasValContext extends boolean = false> =
   | {

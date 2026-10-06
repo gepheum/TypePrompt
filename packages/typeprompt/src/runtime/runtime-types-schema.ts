@@ -1,5 +1,5 @@
 import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import { Schema } from "@typeprompt/core/schema/schema-types.js";
+import type { Schema } from "@typeprompt/core/schema/schema-types.js";
 import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
 
 const SCHEMA = `

@@ -1,15 +1,15 @@
 import { parseSchema } from "../schema/schema-parser.js";
-import { SchemaParseResult } from "../schema/schema-types.js";
-import { InternalError, InternalErrors } from "../util/shared-types.js";
+import type { SchemaParseResult } from "../schema/schema-types.js";
+import type { InternalError, InternalErrors } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
   checkXmlAttributes,
   expectIdentifier,
 } from "../xml/xml-attributes-checker.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
-import { ElementNode } from "../xml/xml-types.js";
+import type { ElementNode } from "../xml/xml-types.js";
 import { parseToolDescription } from "./body-parser.js";
-import { Tool, ToolDescription } from "./compiler-types.js";
+import type { Tool, ToolDescription } from "./compiler-types.js";
 import { checkTemplateOrToolSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
