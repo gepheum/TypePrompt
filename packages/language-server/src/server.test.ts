@@ -152,7 +152,7 @@ describe("TypePrompt Language Server", () => {
   it("gives precedence to open in-memory documents during scan", async () => {
     const openDocs = new Map<string, TextDocument>();
     const extension = new TypePromptLanguageExtension(
-      () => { },
+      () => {},
       (uri) => openDocs.get(uri),
     );
 
@@ -235,7 +235,7 @@ describe("TypePrompt Language Server", () => {
 
   it("schedules scan loop and disposes cleanly", () => {
     const extension = new TypePromptLanguageExtension(
-      () => { },
+      () => {},
       () => undefined,
     );
     extension.scheduleScanLoop(100);
@@ -334,7 +334,7 @@ describe("TypePrompt Language Server", () => {
     it("formats an unformatted template file in a workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -396,7 +396,7 @@ type Output=string;
     it("formats open in-memory documents belonging to a workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -458,7 +458,7 @@ type Output=string;
 
     it("returns empty edits for XML files not assigned to any workspace", async () => {
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         () => undefined,
       );
       const unformattedXml =
@@ -478,7 +478,7 @@ type Output=string;
 
     it("returns empty edits for non-XML documents", async () => {
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         () => undefined,
       );
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
@@ -488,7 +488,7 @@ type Output=string;
 
     it("returns empty edits gracefully for invalid XML documents", async () => {
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         () => undefined,
       );
 
@@ -702,7 +702,7 @@ comment here -->
     it("extension.getSemanticTokens returns tokens for open documents in a workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -737,7 +737,7 @@ comment here -->
     it("extension.getSemanticTokens returns empty data for files not in a workspace", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -761,7 +761,7 @@ comment here -->
     it("extension.getSemanticTokens returns empty data for non-XML and documents without root", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -793,7 +793,7 @@ comment here -->
     it("extension.getSemanticTokens leniently parses and provides tokens for unclosed XML while typing", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -825,7 +825,7 @@ comment here -->
     it("returns completion items for child elements in a workspace template", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -872,7 +872,7 @@ comment here -->
     it("returns empty completions for files not in a workspace", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -890,7 +890,7 @@ comment here -->
 
     it("returns empty completions for non-XML files", () => {
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         () => undefined,
       );
 
@@ -907,7 +907,7 @@ comment here -->
     it("jumps from shared type reference in template to definition in namespace shared.xml", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -978,7 +978,7 @@ comment here -->
     it("jumps from insert val property expression to field definition", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1037,7 +1037,7 @@ comment here -->
     it("returns definition location when cursor is on the definition itself", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1089,7 +1089,7 @@ comment here -->
     it("returns null for non-symbol positions or files not in workspace", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1107,7 +1107,7 @@ comment here -->
     it("finds all references to a type across files including declaration", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1177,7 +1177,7 @@ comment here -->
     it("finds all references excluding declaration when includeDeclaration is false", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1246,7 +1246,7 @@ comment here -->
     it("finds references to a field when invoked from insert val expression", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1299,7 +1299,7 @@ comment here -->
     it("returns empty array for unknown symbol position in workspace", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1331,7 +1331,7 @@ comment here -->
     it("returns null for files not in workspace", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1352,7 +1352,7 @@ comment here -->
     it("renames a shared type across namespace and template files", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1440,7 +1440,7 @@ comment here -->
     it("renames a field in an interface across schema and body insert expressions", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
@@ -1505,7 +1505,7 @@ comment here -->
     it("returns null for non-symbol position", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
-        () => { },
+        () => {},
         (uri) => openDocs.get(uri),
       );
 
