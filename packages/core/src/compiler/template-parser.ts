@@ -56,7 +56,7 @@ class TemplateParser {
     return this.templateNode.path;
   }
 
-  private constructor(readonly templateNode: ElementNode) {}
+  private constructor(readonly templateNode: ElementNode) { }
 
   parse(): Template | InternalErrors {
     // 1. Validate <template> attributes.
@@ -494,7 +494,7 @@ class TemplateParser {
 
     // Verify that all snippet names are unique.
     this.errors.push(...checkNameConflicts(this.snippets.map((s) => s.name)));
-    if (this.errors.length !== 0) {
+    if (this.errors.length >= 1) {
       return;
     }
     const snippets = this.indexSnippets();

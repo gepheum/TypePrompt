@@ -92,7 +92,7 @@ export function reformatCFamilyCode(
     }
   }
 
-  if (contextStack.length !== 0) {
+  if (contextStack.length >= 1) {
     throw new Error(JSON.stringify(contextStack));
   }
 

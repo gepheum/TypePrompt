@@ -24,20 +24,20 @@ type SchemaView = {
 
 export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
   | {
-      readonly kind: "match";
-      readonly definitionLinks: readonly DefinitionLink[];
-    }
+    readonly kind: "match";
+    readonly definitionLinks: readonly DefinitionLink[];
+  }
   | {
-      readonly kind: "mismatch";
-      readonly details: Mode extends "thorough"
-        ? {
-            /** Guaranteed to not be empty. */
-            readonly reasons: readonly InternalError[];
-            /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
-            readonly matchScore: number;
-          }
-        : undefined;
-    };
+    readonly kind: "mismatch";
+    readonly details: Mode extends "thorough"
+    ? {
+      /** Guaranteed to not be empty. */
+      readonly reasons: readonly InternalError[];
+      /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+      readonly matchScore: number;
+    }
+    : undefined;
+  };
 
 /**
  * Validates a parsed JSON AST against a schema type declaration or synthetic type.
@@ -257,7 +257,7 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
             }
           }
         }
-        if (mismatchReasons.length !== 0) {
+        if (mismatchReasons.length >= 1) {
           const divisor =
             requiredFields.length + Object.keys(value.entries).length;
           return {
@@ -341,7 +341,7 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
             }
           }
         }
-        if (mismatchReasons.length !== 0) {
+        if (mismatchReasons.length >= 1) {
           const dividor = Object.keys(value.entries).length;
           return {
             kind: "mismatch",

@@ -13,7 +13,7 @@ export async function formatTemplateFile(content: string): Promise<string> {
   const { xmlDocument } = parseResult;
   if (
     xmlDocument.kind !== "success" ||
-    parseResult.parseResult.errors.length !== 0
+    parseResult.parseResult.errors.length >= 1
   ) {
     // If the XML is malformed, we cannot format the file.
     return content;
