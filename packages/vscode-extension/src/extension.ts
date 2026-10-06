@@ -1,14 +1,18 @@
 import * as path from "node:path";
-import { type ExtensionContext, workspace } from "vscode";
+import type { ExtensionContext } from "vscode";
+import { workspace } from "vscode";
 import type {
   LanguageClientOptions,
   ServerOptions,
 } from "vscode-languageclient/node.js";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
+import { activateAutoCloseTag } from "./auto-close-tag.js";
 
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext): void {
+  activateAutoCloseTag(context);
+
   const serverModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),
   );

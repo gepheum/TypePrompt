@@ -14,6 +14,7 @@ export type XmlDocument = {
 export type InvalidXmlDocument = InternalErrors & {
   readonly root: ElementNode | null;
   readonly topLevelComments: readonly XmlComment[];
+  readonly closingTagSuggestions: readonly ClosingTagSuggestion[];
 };
 
 export type XmlNode = TextNode | ElementNode;
@@ -46,4 +47,9 @@ export type Attribute = {
 export type XmlComment = Span & {
   readonly kind: "comment";
   readonly xmlSlice: string;
+};
+
+export type ClosingTagSuggestion = {
+  readonly position: number;
+  readonly tagName: string;
 };

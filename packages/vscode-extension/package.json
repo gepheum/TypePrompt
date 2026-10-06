@@ -15,11 +15,20 @@
     "onLanguage:xml"
   ],
   "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "xml",
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@typeprompt/core": "*",
     "@typeprompt/language-server": "*",
     "vscode-languageclient": "^9.0.1"
   },

@@ -56,7 +56,7 @@ class TemplateParser {
     return this.templateNode.path;
   }
 
-  private constructor(readonly templateNode: ElementNode) { }
+  private constructor(readonly templateNode: ElementNode) {}
 
   parse(): Template | InternalErrors {
     // 1. Validate <template> attributes.

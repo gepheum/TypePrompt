@@ -592,4 +592,61 @@ describe("parseXmlDocument - lenient parsing", () => {
       ],
     });
   });
+
+  describe("closingTagSuggestions", () => {
+    it("suggests closing tag for simple unclosed element", () => {
+      const result = parseXmlDocument("<foo>");
+      expect(result).toMatch({
+        kind: "error",
+        closingTagSuggestions: [{ position: 5, tagName: "foo" }],
+      });
+    });
+
+    it("suggests closing tag for unclosed element with attributes", () => {
+      const result = parseXmlDocument(
+        '<tool name="search" description="test">',
+      );
+      expect(result).toMatch({
+        kind: "error",
+        closingTagSuggestions: [{ position: 39, tagName: "tool" }],
+      });
+    });
+
+    it("suggests closing tags for nested unclosed elements", () => {
+      const result = parseXmlDocument("<root><child>");
+      expect(result).toMatch({
+        kind: "error",
+        closingTagSuggestions: [
+          { position: 13, tagName: "child" },
+          { position: 6, tagName: "root" },
+        ],
+      });
+    });
+
+    it("suggests closing tag for unclosed element before ancestor closes", () => {
+      const result = parseXmlDocument("<root><child></root>");
+      expect(result).toMatch({
+        kind: "error",
+        closingTagSuggestions: [{ position: 13, tagName: "child" }],
+      });
+    });
+
+    it("does not suggest closing tag for self-closing elements", () => {
+      const result = parseXmlDocument("<foo/>");
+      expect(result.kind).toBe("success");
+    });
+
+    it("does not suggest closing tag for completely closed document", () => {
+      const result = parseXmlDocument("<foo></foo>");
+      expect(result.kind).toBe("success");
+    });
+
+    it("does not suggest closing tag for tag missing closing angle bracket", () => {
+      const result = parseXmlDocument("<foo");
+      expect(result).toMatch({
+        kind: "error",
+        closingTagSuggestions: [],
+      });
+    });
+  });
 });

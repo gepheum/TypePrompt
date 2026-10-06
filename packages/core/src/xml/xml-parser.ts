@@ -7,6 +7,7 @@ import type {
 } from "../util/shared-types.js";
 import type {
   Attribute,
+  ClosingTagSuggestion,
   ElementNode,
   InvalidXmlDocument,
   XmlComment,
@@ -33,6 +34,7 @@ class XmlParser {
   private cursor = 0;
   private readonly errors: InternalError[] = [];
   private readonly openElements: OpenElement[] = [];
+  private readonly closingTagSuggestions: ClosingTagSuggestion[] = [];
   private root: ElementNode | null = null;
   private readonly topLevelComments: XmlComment[] = [];
 
@@ -70,6 +72,10 @@ class XmlParser {
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
         });
+        this.closingTagSuggestions.push({
+          position: el.contentStart,
+          tagName: el.tag.text,
+        });
       }
       this.appendNode(el);
     }
@@ -87,6 +93,7 @@ class XmlParser {
         errors: this.errors,
         root: this.root,
         topLevelComments: this.topLevelComments,
+        closingTagSuggestions: this.closingTagSuggestions,
       };
     }
 
@@ -411,6 +418,10 @@ class XmlParser {
             end: el.tag.end,
           },
           message: `Unclosed tag '<${el.tag.text}>'`,
+        });
+        this.closingTagSuggestions.push({
+          position: el.contentStart,
+          tagName: el.tag.text,
         });
       }
       this.appendNode(el);

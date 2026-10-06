@@ -24,20 +24,20 @@ type SchemaView = {
 
 export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
   | {
-    readonly kind: "match";
-    readonly definitionLinks: readonly DefinitionLink[];
-  }
-  | {
-    readonly kind: "mismatch";
-    readonly details: Mode extends "thorough"
-    ? {
-      /** Guaranteed to not be empty. */
-      readonly reasons: readonly InternalError[];
-      /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
-      readonly matchScore: number;
+      readonly kind: "match";
+      readonly definitionLinks: readonly DefinitionLink[];
     }
-    : undefined;
-  };
+  | {
+      readonly kind: "mismatch";
+      readonly details: Mode extends "thorough"
+        ? {
+            /** Guaranteed to not be empty. */
+            readonly reasons: readonly InternalError[];
+            /** In [0, 1]. Used to infer which of two mismatches was closer to a match. */
+            readonly matchScore: number;
+          }
+        : undefined;
+    };
 
 /**
  * Validates a parsed JSON AST against a schema type declaration or synthetic type.
