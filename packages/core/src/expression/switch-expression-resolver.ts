@@ -1,12 +1,18 @@
 import { ResolvedFieldType, Schema } from "../schema/schema-types.js";
-import { InternalErrors } from "../util/shared-types.js";
+import { InternalErrors, TextSpan } from "../util/shared-types.js";
+import { stripQuotes } from "../util/spans.js";
 import { resolveExpressionType } from "./expression-type-resolver.js";
 import type { Expression, ExpressionContext } from "./expression-types.js";
 
 export type SwitchExpressionResult =
   | {
       readonly kind: "success";
-      readonly cases: { readonly [caseVal: string]: ExpressionContext };
+      readonly cases: {
+        readonly [caseVal: string]: {
+          readonly context: ExpressionContext;
+          readonly definition: TextSpan;
+        };
+      };
     }
   | InternalErrors;
 
@@ -26,22 +32,24 @@ export function resolveSwitchExpression(
         unionMembers?.kind === "interfaces" &&
         unionMembers.discriminator === expression.property.text
       ) {
-        return {
-          kind: "success",
-          cases: Object.fromEntries(
-            Object.entries(unionMembers.members).map(([kind, member]) => {
-              return [
-                kind,
-                {
-                  it: { expression, type },
-                  typeOverrides: {
-                    [left.fullPath.text]: member.resolved,
-                  },
+        const cases = Object.fromEntries(
+          Object.entries(unionMembers.members).map(([kind, member]) => [
+            kind,
+            {
+              context: {
+                it: { expression, type },
+                typeOverrides: {
+                  [left.fullPath.text]: member.resolved,
                 },
-              ];
-            }),
-          ),
-        };
+              },
+              definition:
+                member.discriminant.kind === "string-literal"
+                  ? stripQuotes(member.discriminant.quotedName)
+                  : member.discriminant.span,
+            },
+          ]),
+        );
+        return { kind: "success", cases };
       }
     }
   }
@@ -50,7 +58,10 @@ export function resolveSwitchExpression(
     return {
       kind: "success",
       cases: {
-        [type.value]: { it: { expression, type }, typeOverrides: {} },
+        [type.value]: {
+          context: { it: { expression, type }, typeOverrides: {} },
+          definition: stripQuotes(type.quotedName),
+        },
       },
     };
   }
@@ -78,18 +89,15 @@ export function resolveSwitchExpression(
     };
   }
 
-  return {
-    kind: "success",
-    cases: Object.fromEntries(
-      members.members.map((member) => {
-        return [
-          member.value,
-          {
-            it: { expression, type },
-            typeOverrides: {},
-          },
-        ];
-      }),
-    ),
-  };
+  const cases = Object.fromEntries(
+    Object.entries(members.values).map(([caseVal, stringLiteralOrSpan]) => [
+      caseVal,
+      {
+        context: { it: { expression, type }, typeOverrides: {} },
+        definition: stripQuotes(stringLiteralOrSpan.quotedName),
+      },
+    ]),
+  );
+
+  return { kind: "success", cases };
 }

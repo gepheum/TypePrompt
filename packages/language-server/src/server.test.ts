@@ -1086,6 +1086,124 @@ comment here -->
       );
     });
 
+    it("jumps from variant case attribute to schema union literal definition", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Support">
+  <schema>
+    type Input = {
+      variant: "quick" | "full";
+      summary: string;
+    };
+    type Output = string;
+  </schema>
+  <user>Ticket: <insert val="input.summary"/></user>
+  <variant case="quick">
+    <system>Quick</system>
+  </variant>
+  <variant case="full">
+    <system>Full</system>
+  </variant>
+</template>`;
+      const templateUri = fsPathToUri(
+        path.join(tempDir, "prompts", "Support.xml"),
+      );
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on "quick" inside `<variant case="quick">`
+      const caseOffset = templateXml.indexOf('case="quick"') + 6;
+      const pos = templateDoc.positionAt(caseOffset);
+      const definition = extension.getDefinition(templateUri, pos);
+
+      expect(definition !== null).toBe(true);
+      expect(definition!.uri).toBe(templateUri);
+      // Definition should be `"quick"` in schema (without quotes)
+      const schemaQuickOffset = templateXml.indexOf('"quick"') + 1;
+      expect(templateDoc.offsetAt(definition!.range.start)).toBe(
+        schemaQuickOffset,
+      );
+    });
+
+    it("jumps from switch on case attribute to schema definition", async () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+      const yml = "include: prompts/**/*.xml\n";
+      extension.setFileContent(ymlUri, {
+        content: yml,
+        lineFinder: createLineFinder(yml),
+        lastModified: Date.now(),
+      });
+
+      const templateXml = `<template name="Doc">
+  <schema>
+    type Tone = "formal" | "casual";
+    type Input = {
+      tone: Tone;
+    };
+    type Output = string;
+  </schema>
+  <snippet name="style" switch="input.tone">
+    <on case="formal">Formal</on>
+    <on case="casual">Casual</on>
+  </snippet>
+  <system>Doc</system>
+  <user><insert snippet="style"/></user>
+</template>`;
+      const templateUri = fsPathToUri(path.join(tempDir, "prompts", "Doc.xml"));
+      const templateDoc = TextDocument.create(
+        templateUri,
+        "xml",
+        1,
+        templateXml,
+      );
+      openDocs.set(templateUri, templateDoc);
+      extension.setFileContent(templateUri, {
+        content: templateXml,
+        lineFinder: createLineFinder(templateXml),
+        lastModified: Date.now(),
+      });
+
+      // Cursor on "formal" in `<on case="formal">`
+      const caseOffset = templateXml.indexOf('case="formal"') + 6;
+      const pos = templateDoc.positionAt(caseOffset);
+      const definition = extension.getDefinition(templateUri, pos);
+
+      expect(definition !== null).toBe(true);
+      expect(definition!.uri).toBe(templateUri);
+      const schemaFormalOffset = templateXml.indexOf('"formal"') + 1;
+      expect(templateDoc.offsetAt(definition!.range.start)).toBe(
+        schemaFormalOffset,
+      );
+    });
+
     it("returns null for non-symbol positions or files not in workspace", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(

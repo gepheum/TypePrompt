@@ -28,6 +28,7 @@ import type {
   ValidationErrors,
   ValidationResult,
 } from "../util/shared-types.js";
+import { stripQuotes } from "../util/spans.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { validateTemplateBody } from "./body-validator.js";
 import type {
@@ -66,7 +67,7 @@ export function validateTemplate(args: {
     return validationResult.asErrors();
   }
 
-  errors.push(...validateVariants(template, templateSchema));
+  validationResult.push(validateVariants(template, templateSchema));
 
   const tools = validateTools(template.tools, args.namespaceTools);
   validationResult.definitionLinks.push(...tools.definitionLinks);
@@ -203,45 +204,47 @@ function validateMeta(
 function validateVariants(
   template: Template,
   templateSchema: Schema,
-): readonly InternalError[] {
+): ValidationResult {
+  const validationResult = new ValidationResultBuilder();
+  const { definitionLinks, errors } = validationResult;
+
   if (template.contents.kind !== "variants") {
-    return [];
+    return validationResult;
   }
   const inputTypeDeclaration = templateSchema.typeDeclarations["Input"]!;
   const inputType = resolveType(inputTypeDeclaration.valueType, templateSchema);
   if (inputType.kind !== "interface") {
-    return [
-      {
-        span: inputTypeDeclaration.name,
-        message: "'Input' must be an interface when using <variant> elements",
-      },
-    ];
+    errors.push({
+      span: inputTypeDeclaration.name,
+      message: "'Input' must be an interface when using <variant> elements",
+    });
+    return validationResult;
   }
   const variantField = inputType.fields["variant"];
   if (!variantField) {
-    return [
-      {
-        span: inputTypeDeclaration.name,
-        message:
-          "'Input' must have a 'variant' field when using <variant> elements",
-      },
-    ];
+    errors.push({
+      span: inputTypeDeclaration.name,
+      message:
+        "'Input' must have a 'variant' field when using <variant> elements",
+    });
+    return validationResult;
   }
-  const makeVariantFieldTypeError = (): readonly InternalError[] => [
-    {
+  const pushVariantFieldTypeError = (): void => {
+    errors.push({
       span: variantField.name,
       message: "Type of 'variant' field must be a union of string literals",
-    },
-  ];
+    });
+  };
   const variantFieldType = resolveType(variantField.type, templateSchema);
   if (variantFieldType.kind !== "union") {
-    return makeVariantFieldTypeError();
+    pushVariantFieldTypeError();
+    return validationResult;
   }
   const unionMembers = templateSchema.unionToMembers.get(variantFieldType)!;
   if (unionMembers.kind !== "strings") {
-    return makeVariantFieldTypeError();
+    pushVariantFieldTypeError();
+    return validationResult;
   }
-  const errors: InternalError[] = [];
   const variants = new Set(template.contents.variants.map((v) => v.case.text));
   for (const member of unionMembers.members) {
     if (variants.has(member.value)) continue;
@@ -252,13 +255,21 @@ function validateVariants(
   }
   for (const variant of template.contents.variants) {
     const variantName = variant.case.text;
-    if (unionMembers.values[variantName] !== undefined) continue;
-    errors.push({
-      span: variant.case,
-      message: `'Input.variant' can never be '${variantName}'`,
-    });
+    const member = unionMembers.values[variantName];
+    if (member) {
+      const definition = stripQuotes(member.quotedName);
+      definitionLinks.push({
+        reference: variant.case,
+        definition,
+      });
+    } else {
+      errors.push({
+        span: variant.case,
+        message: `'Input.variant' can never be '${variantName}'`,
+      });
+    }
   }
-  return errors;
+  return validationResult;
 }
 
 function validateTemplateContent(
@@ -594,7 +605,8 @@ function validateSnippet(
       );
       for (const branch of snippet.branches) {
         const case_: string = branch.case.text;
-        if (!switchResult.cases[case_]) {
+        const caseEntry = switchResult.cases[case_];
+        if (!caseEntry) {
           errors.push({
             span: branch.case,
             message: `Expression can never be '${case_}'`,
@@ -602,6 +614,10 @@ function validateSnippet(
           });
           continue;
         }
+        definitionLinks.push({
+          reference: branch.case,
+          definition: caseEntry.definition,
+        });
         validationResult.push(
           validateTemplateBody(
             branch.body,

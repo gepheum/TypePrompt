@@ -1370,7 +1370,9 @@ describe("validateTemplate - definition links", () => {
         { definition: { text: "opt" } },
         { definition: { text: "text" } },
         { definition: { text: "kind" } },
+        { definition: { text: '"a"' } },
         { definition: { text: "text" } },
+        { definition: { text: '"b"' } },
         { definition: { text: "text" } },
       ],
     });
@@ -1452,7 +1454,11 @@ describe("validateTemplate - definition links", () => {
 
     expect(result).toMatch({
       kind: "template",
-      definitionLinks: [{ definition: { text: "summary" } }],
+      definitionLinks: [
+        { definition: { text: '"quick"' } },
+        { definition: { text: '"full"' } },
+        { definition: { text: "summary" } },
+      ],
     });
   });
 });

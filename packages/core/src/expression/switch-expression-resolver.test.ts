@@ -70,36 +70,40 @@ describe("resolveSwitchExpression - discriminated interface union via property",
       kind: "success",
       cases: {
         cat: {
-          it: { expression: expr, type: kindType },
-          typeOverrides: {
-            input: {
-              kind: "interface",
-              fields: {
-                kind: {
-                  name: { text: "kind" },
-                  type: { kind: "string-literal", value: "cat" },
-                },
-                name: {
-                  name: { text: "name" },
-                  type: { kind: "primitive", primitive: { text: "string" } },
+          context: {
+            it: { expression: expr, type: kindType },
+            typeOverrides: {
+              input: {
+                kind: "interface",
+                fields: {
+                  kind: {
+                    name: { text: "kind" },
+                    type: { kind: "string-literal", value: "cat" },
+                  },
+                  name: {
+                    name: { text: "name" },
+                    type: { kind: "primitive", primitive: { text: "string" } },
+                  },
                 },
               },
             },
           },
         },
         dog: {
-          it: { expression: expr, type: kindType },
-          typeOverrides: {
-            input: {
-              kind: "interface",
-              fields: {
-                kind: {
-                  name: { text: "kind" },
-                  type: { kind: "string-literal", value: "dog" },
-                },
-                breed: {
-                  name: { text: "breed" },
-                  type: { kind: "primitive", primitive: { text: "string" } },
+          context: {
+            it: { expression: expr, type: kindType },
+            typeOverrides: {
+              input: {
+                kind: "interface",
+                fields: {
+                  kind: {
+                    name: { text: "kind" },
+                    type: { kind: "string-literal", value: "dog" },
+                  },
+                  breed: {
+                    name: { text: "breed" },
+                    type: { kind: "primitive", primitive: { text: "string" } },
+                  },
                 },
               },
             },
@@ -124,62 +128,68 @@ describe("resolveSwitchExpression - discriminated interface union via property",
       kind: "success",
       cases: {
         circle: {
-          it: { expression: expr, type: shapePropType },
-          typeOverrides: {
-            "input.item.current": {
-              kind: "interface",
-              fields: {
-                shape: {
-                  name: { text: "shape" },
-                  type: { kind: "string-literal", value: "circle" },
-                },
-                radius: {
-                  name: { text: "radius" },
-                  type: { kind: "primitive", primitive: { text: "number" } },
+          context: {
+            it: { expression: expr, type: shapePropType },
+            typeOverrides: {
+              "input.item.current": {
+                kind: "interface",
+                fields: {
+                  shape: {
+                    name: { text: "shape" },
+                    type: { kind: "string-literal", value: "circle" },
+                  },
+                  radius: {
+                    name: { text: "radius" },
+                    type: { kind: "primitive", primitive: { text: "number" } },
+                  },
                 },
               },
             },
           },
         },
         rect: {
-          it: { expression: expr, type: shapePropType },
-          typeOverrides: {
-            "input.item.current": {
-              kind: "interface",
-              fields: {
-                shape: {
-                  name: { text: "shape" },
-                  type: { kind: "string-literal", value: "rect" },
-                },
-                width: {
-                  name: { text: "width" },
-                  type: { kind: "primitive", primitive: { text: "number" } },
-                },
-                height: {
-                  name: { text: "height" },
-                  type: { kind: "primitive", primitive: { text: "number" } },
+          context: {
+            it: { expression: expr, type: shapePropType },
+            typeOverrides: {
+              "input.item.current": {
+                kind: "interface",
+                fields: {
+                  shape: {
+                    name: { text: "shape" },
+                    type: { kind: "string-literal", value: "rect" },
+                  },
+                  width: {
+                    name: { text: "width" },
+                    type: { kind: "primitive", primitive: { text: "number" } },
+                  },
+                  height: {
+                    name: { text: "height" },
+                    type: { kind: "primitive", primitive: { text: "number" } },
+                  },
                 },
               },
             },
           },
         },
         triangle: {
-          it: { expression: expr, type: shapePropType },
-          typeOverrides: {
-            "input.item.current": {
-              kind: "interface",
-              fields: {
-                shape: {
-                  name: { text: "shape" },
-                  type: { kind: "string-literal", value: "triangle" },
-                },
-                base: {
-                  name: { text: "base" },
-                  type: { kind: "primitive", primitive: { text: "number" } },
-                },
-                height: {
-                  name: { text: "height" },
-                  type: { kind: "primitive", primitive: { text: "number" } },
+          context: {
+            it: { expression: expr, type: shapePropType },
+            typeOverrides: {
+              "input.item.current": {
+                kind: "interface",
+                fields: {
+                  shape: {
+                    name: { text: "shape" },
+                    type: { kind: "string-literal", value: "triangle" },
+                  },
+                  base: {
+                    name: { text: "base" },
+                    type: { kind: "primitive", primitive: { text: "number" } },
+                  },
+                  height: {
+                    name: { text: "height" },
+                    type: { kind: "primitive", primitive: { text: "number" } },
+                  },
                 },
               },
             },
@@ -237,36 +247,40 @@ describe("resolveSwitchExpression - discriminated interface union via property",
       kind: "success",
       cases: {
         true: {
-          it: { expression: expr, type: isSuccessType },
-          typeOverrides: {
-            input: {
-              kind: "interface",
-              fields: {
-                isSuccess: {
-                  name: { text: "isSuccess" },
-                  type: { kind: "boolean-literal", value: true },
-                },
-                data: {
-                  name: { text: "data" },
-                  type: { kind: "primitive", primitive: { text: "string" } },
+          context: {
+            it: { expression: expr, type: isSuccessType },
+            typeOverrides: {
+              input: {
+                kind: "interface",
+                fields: {
+                  isSuccess: {
+                    name: { text: "isSuccess" },
+                    type: { kind: "boolean-literal", value: true },
+                  },
+                  data: {
+                    name: { text: "data" },
+                    type: { kind: "primitive", primitive: { text: "string" } },
+                  },
                 },
               },
             },
           },
         },
         false: {
-          it: { expression: expr, type: isSuccessType },
-          typeOverrides: {
-            input: {
-              kind: "interface",
-              fields: {
-                isSuccess: {
-                  name: { text: "isSuccess" },
-                  type: { kind: "boolean-literal", value: false },
-                },
-                error: {
-                  name: { text: "error" },
-                  type: { kind: "primitive", primitive: { text: "string" } },
+          context: {
+            it: { expression: expr, type: isSuccessType },
+            typeOverrides: {
+              input: {
+                kind: "interface",
+                fields: {
+                  isSuccess: {
+                    name: { text: "isSuccess" },
+                    type: { kind: "boolean-literal", value: false },
+                  },
+                  error: {
+                    name: { text: "error" },
+                    type: { kind: "primitive", primitive: { text: "string" } },
+                  },
                 },
               },
             },
@@ -291,8 +305,10 @@ describe("resolveSwitchExpression - string literal type", () => {
       kind: "success",
       cases: {
         readonly: {
-          it: { expression: expr, type: statusType },
-          typeOverrides: {},
+          context: {
+            it: { expression: expr, type: statusType },
+            typeOverrides: {},
+          },
         },
       },
     });
@@ -315,16 +331,22 @@ describe("resolveSwitchExpression - string union", () => {
       kind: "success",
       cases: {
         admin: {
-          it: { expression: expr, type: inputType },
-          typeOverrides: {},
+          context: {
+            it: { expression: expr, type: inputType },
+            typeOverrides: {},
+          },
         },
         member: {
-          it: { expression: expr, type: inputType },
-          typeOverrides: {},
+          context: {
+            it: { expression: expr, type: inputType },
+            typeOverrides: {},
+          },
         },
         guest: {
-          it: { expression: expr, type: inputType },
-          typeOverrides: {},
+          context: {
+            it: { expression: expr, type: inputType },
+            typeOverrides: {},
+          },
         },
       },
     });
