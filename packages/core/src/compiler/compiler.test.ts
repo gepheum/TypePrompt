@@ -723,6 +723,10 @@ describe("compile - pathToDefinitionLinks", () => {
           },
           {
             reference: { path: "prompts/Legal/ReviewContract.xml" },
+            definition: { path: "prompts/Legal/lookupClause.xml" },
+          },
+          {
+            reference: { path: "prompts/Legal/ReviewContract.xml" },
             definition: { path: "prompts/Legal/ReviewContract.xml" },
           },
           {

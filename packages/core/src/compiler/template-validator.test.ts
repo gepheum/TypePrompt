@@ -793,6 +793,10 @@ describe("validateTemplate - tools validation", () => {
           message: "Duplicate tool 'calc'",
         },
       ],
+      definitionLinks: [
+        { definition: { text: "calc" } },
+        { definition: { text: "calc" } },
+      ],
     });
   });
 });
@@ -1413,6 +1417,7 @@ describe("validateTemplate - definition links", () => {
     expect(result).toMatch({
       kind: "template",
       definitionLinks: [
+        { definition: { text: "calc" } },
         { definition: { text: "problem" } },
         { definition: { text: "problem" } },
         { definition: { text: "calc" } },

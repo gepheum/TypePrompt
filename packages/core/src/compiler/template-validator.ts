@@ -21,10 +21,11 @@ import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type {
+  DefinitionLink,
   InternalError,
-  InternalErrors,
   Span,
   TextSpan,
+  ValidationErrors,
   ValidationResult,
 } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
@@ -68,6 +69,7 @@ export function validateTemplate(args: {
   errors.push(...validateVariants(template, templateSchema));
 
   const tools = validateTools(template.tools, args.namespaceTools);
+  validationResult.definitionLinks.push(...tools.definitionLinks);
   if (tools.kind === "error") {
     errors.push(...tools.errors);
   }
@@ -629,27 +631,30 @@ function validateTools(
   toolsValue: StrictJsonValue | null,
   namespaceTools: { readonly [name: string]: ToolValidationResult },
 ):
-  | InternalErrors
+  | ValidationErrors
   | {
-      kind: "success";
-      tools: { readonly [name: string]: TemplateTool };
+      readonly kind: "success";
+      readonly tools: { readonly [name: string]: TemplateTool };
+      readonly definitionLinks: readonly DefinitionLink[];
     } {
   if (toolsValue === null) {
     return {
       kind: "success",
       tools: {},
+      definitionLinks: [],
     } as const;
   }
   const toolsType = makeToolsType(namespaceTools);
-  const validationErrors = validateJson(toolsValue, toolsType, {
+  const jsonResult = validateJson(toolsValue, toolsType, {
     typeDeclarations: {},
     sharedDeclarations: {},
     unionToMembers: new Map(),
-  }).errors;
-  if (validationErrors.length >= 1) {
+  });
+  if (jsonResult.errors.length >= 1) {
     return {
       kind: "error",
-      errors: validationErrors,
+      errors: jsonResult.errors,
+      definitionLinks: jsonResult.definitionLinks,
     };
   }
 
@@ -668,11 +673,16 @@ function validateTools(
             message: `Duplicate tool '${name}'`,
           },
         ],
+        definitionLinks: jsonResult.definitionLinks,
       };
     }
   }
 
-  return { kind: "success", tools };
+  return {
+    kind: "success",
+    tools,
+    definitionLinks: jsonResult.definitionLinks,
+  };
 }
 
 function makeToolsType(namespaceTools: {
