@@ -1,5 +1,9 @@
 .DS_Store
 dist
+.vitepress/dist
+.vitepress/cache
+packages/website/.vitepress/dist
+packages/website/.vitepress/cache
 
 packages/prompt-viewer
 
