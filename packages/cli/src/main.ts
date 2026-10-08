@@ -36,30 +36,34 @@ import { collectTemplateFiles } from "./main/template-files-collector.js";
 export { formatTemplateFile };
 
 class WatchModeMainLoop {
+  private readonly includes: readonly string[];
+
   constructor(
     private readonly resolvedProject: string,
     private readonly config: Config,
     private readonly mode: "watch" | "once",
-  ) {}
-
-  private readonly include = Paths.join(
-    this.resolvedProject,
-    this.config.include,
-  );
+  ) {
+    const { include } = config;
+    this.includes =
+      typeof include === "string"
+        ? [Paths.join(resolvedProject, include)]
+        : include.map((inc) => Paths.join(resolvedProject, inc));
+  }
 
   async start(): Promise<void> {
     await this.generate();
-    const { include } = this;
-    const watcher = new Watcher(globParent(include), {
+    const watchDirs = Array.from(
+      new Set(this.includes.map((inc) => globParent(inc))),
+    );
+    const watcher = new Watcher(watchDirs, {
       renameDetection: true,
       recursive: true,
       persistent: true,
     });
     watcher.on("all", (_, targetPath, targetPathNext) => {
-      if (
-        minimatch(targetPath, include) ||
-        (targetPathNext && minimatch(targetPathNext, include))
-      ) {
+      const matches = (p: string): boolean =>
+        this.includes.some((inc) => minimatch(p, inc));
+      if (matches(targetPath) || (targetPathNext && matches(targetPathNext))) {
         this.triggerGeneration();
       }
     });
@@ -134,7 +138,9 @@ class WatchModeMainLoop {
           const successMessage = `Generation succeeded at ${date}`;
           console.log(makeGreen(successMessage));
           console.log("\nWaiting for changes in files matching:");
-          console.log("  ".concat(this.include));
+          for (const inc of this.includes) {
+            console.log(`  ${inc}`);
+          }
         }
         return true;
       }

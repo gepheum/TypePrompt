@@ -3,9 +3,9 @@ import { z } from "zod";
 import type { InternalError, InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
-  /** Glob pattern to match template files to be processed. */
+  /** Glob pattern(s) to match template files to be processed. */
   // Usually: 'prompts/**/*.xml'
-  readonly include: string;
+  readonly include: string | readonly string[];
 
   readonly gen?: {
     readonly cpp?: {
@@ -91,7 +91,12 @@ export function parseConfigYaml(
 
 const RawConfigSchema = z
   .object({
-    include: z.string().min(1, "must be a non-empty string"),
+    include: z.union([
+      z.string().min(1, "must be a non-empty string"),
+      z
+        .array(z.string().min(1, "must be a non-empty string"))
+        .min(1, "must not be empty"),
+    ]),
     gen: z
       .object({
         cpp: z

@@ -59,6 +59,26 @@ describe("parseConfigYaml", () => {
     });
   });
 
+  it("accepts an array of include patterns", () => {
+    const result = parse(
+      ["include:", "  - prompts/*.xml", "  - other/**/*.tp", "gen: {}"].join(
+        "\n",
+      ),
+    );
+    expect(result).toMatch({
+      kind: "success",
+      config: { include: ["prompts/*.xml", "other/**/*.tp"], gen: {} },
+    });
+  });
+
+  it("fails when include array is empty", () => {
+    const result = parse("include: []");
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: /Invalid value for 'include'/ }],
+    });
+  });
+
   it("fails when include is missing", () => {
     const result = parse("{}");
     expect(result).toMatch({

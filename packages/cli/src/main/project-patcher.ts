@@ -1,5 +1,4 @@
-export function patchProject(args: {
+export function patchProject(_args: {
   readonly base: string;
   readonly project: string;
-}): void {
-}
+}): void {}

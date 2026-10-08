@@ -346,8 +346,11 @@ export class Workspace {
   }
 
   public matchesInclude(relativePath: string): boolean {
-    const pattern = this.config.include;
-    return minimatch(relativePath, pattern);
+    let { include } = this.config;
+    if (typeof include === "string") {
+      include = [include];
+    }
+    return include.some((p) => minimatch(relativePath, p));
   }
 
   public getRelativePath(fileUri: string): string | null {

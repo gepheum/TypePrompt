@@ -91,6 +91,45 @@ describe("TypePrompt Language Server", () => {
     expect(diag!.diagnostics.length).toBe(0); // valid template -> 0 errors
   });
 
+  it("scans workspace directory with an array of include patterns", async () => {
+    const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+      [];
+    const extension = new TypePromptLanguageExtension(
+      (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+      () => undefined,
+    );
+
+    // Write typeprompt.yml with array include
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yml"),
+      "include:\n  - prompts/**/*.xml\n  - extra/**/*.xml\n",
+      "utf-8",
+    );
+
+    const promptsDir = path.join(tempDir, "prompts");
+    const extraDir = path.join(tempDir, "extra");
+    await fs.mkdir(promptsDir, { recursive: true });
+    await fs.mkdir(extraDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(promptsDir, "A.xml"),
+      '<template name="A"><system>A</system><user>A</user></template>',
+      "utf-8",
+    );
+    await fs.writeFile(
+      path.join(extraDir, "B.xml"),
+      '<template name="B"><system>B</system><user>B</user></template>',
+      "utf-8",
+    );
+
+    extension.setWorkspaceFolders([tempDirUri]);
+    await extension.runScan();
+
+    expect(extension.workspaces.size).toBe(1);
+    const workspace = Array.from(extension.workspaces.values())[0];
+    expect(workspace?.xmls.size).toBe(2);
+  });
+
   it("scans multi-namespace project files and resolves namespace references", async () => {
     const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
       [];
