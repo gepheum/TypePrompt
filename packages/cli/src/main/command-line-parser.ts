@@ -14,6 +14,11 @@ export type ParsedArgs =
       project?: string;
     }
   | {
+      kind: "patch";
+      project?: string;
+      base?: string;
+    }
+  | {
       kind: "help";
       project?: undefined;
     }
@@ -49,7 +54,7 @@ export function parseCommandLine(args: string[]): ParsedArgs {
     return { kind: "version" };
   }
 
-  const validCommands = ["gen", "format", "init"];
+  const validCommands = ["gen", "format", "init", "patch"];
   if (!command || !validCommands.includes(command)) {
     printError(`Unknown command: ${command}`);
     printHelp();
@@ -66,6 +71,8 @@ export function parseCommandLine(args: string[]): ParsedArgs {
         return buildFormatCommand(options);
       case "init":
         return buildInitCommand(options);
+      case "patch":
+        return buildPatchCommand(options);
       default:
         throw new CommandLineParseError(`Unexpected command: ${command}`);
     }
@@ -87,10 +94,12 @@ Commands:
   init         Initialize a TypePrompt project in the current directory
   gen          Generate code from template files to target languages
   format       Format all template files
+  patch        Initialize a patch project against a base project or spec
   help         Display this help message
 
 Options:
   -p <path>    Path to the directory containing the typeprompt.yml file
+  -b <path>    Path to base project directory or .json spec file (patch only)
   --watch, -w  Automatically run code generation when template files change
                  (gen only)
   --ci         Fail if code is not properly formatted (format only)
@@ -101,6 +110,7 @@ Examples:
   ${COMMAND_BASE} gen --watch
   ${COMMAND_BASE} format -p path/to/project
   ${COMMAND_BASE} format --ci -p path/to/project
+  ${COMMAND_BASE} patch -b path/to/base -p path/to/patch
 `;
 
 export class CommandLineParseError extends Error {
@@ -112,6 +122,7 @@ export class CommandLineParseError extends Error {
 
 type ParsedOptions = {
   project?: string;
+  base?: string;
   watch?: boolean;
   ci?: boolean;
   unknown: string[];
@@ -151,6 +162,30 @@ function parseOptions(args: string[]): ParsedOptions {
       }
       options.project = args[i + 1];
       i++; // Skip the next argument as it's the value
+    } else if (arg.startsWith("--base=") || arg.startsWith("-b=")) {
+      const value = arg.substring(arg.indexOf("=") + 1);
+      if (!value) {
+        throw new CommandLineParseError(
+          `Option ${arg.split("=")[0]} requires a value`,
+        );
+      }
+      if (options.base !== undefined) {
+        throw new CommandLineParseError(
+          `Option ${arg.split("=")[0]} specified multiple times`,
+        );
+      }
+      options.base = value;
+    } else if (arg === "--base" || arg === "-b") {
+      if (i + 1 >= args.length) {
+        throw new CommandLineParseError(`Option ${arg} requires a value`);
+      }
+      if (options.base !== undefined) {
+        throw new CommandLineParseError(
+          `Option ${arg} specified multiple times`,
+        );
+      }
+      options.base = args[i + 1];
+      i++;
     } else if (arg === "--watch" || arg === "-w") {
       if (options.watch) {
         throw new CommandLineParseError(
@@ -182,6 +217,11 @@ function buildGenCommand(options: ParsedOptions): ParsedArgs {
       "Option --ci is not valid for 'gen' command",
     );
   }
+  if (options.base) {
+    throw new CommandLineParseError(
+      "Option --base is not valid for 'gen' command",
+    );
+  }
 
   return {
     kind: "gen",
@@ -196,6 +236,11 @@ function buildFormatCommand(options: ParsedOptions): ParsedArgs {
   if (options.watch) {
     throw new CommandLineParseError(
       "Option --watch is not valid for 'format' command",
+    );
+  }
+  if (options.base) {
+    throw new CommandLineParseError(
+      "Option --base is not valid for 'format' command",
     );
   }
 
@@ -219,10 +264,36 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
       "Option --ci is not valid for 'init' command",
     );
   }
+  if (options.base) {
+    throw new CommandLineParseError(
+      "Option --base is not valid for 'init' command",
+    );
+  }
 
   return {
     kind: "init",
     project: options.project,
+  };
+}
+
+function buildPatchCommand(options: ParsedOptions): ParsedArgs {
+  validateNoUnknownOptions(options, "patch");
+
+  if (options.watch) {
+    throw new CommandLineParseError(
+      "Option --watch is not valid for 'patch' command",
+    );
+  }
+  if (options.ci) {
+    throw new CommandLineParseError(
+      "Option --ci is not valid for 'patch' command",
+    );
+  }
+
+  return {
+    kind: "patch",
+    project: options.project,
+    base: options.base,
   };
 }
 

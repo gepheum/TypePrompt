@@ -326,6 +326,10 @@ async function main(): Promise<void> {
       await runGeneration(resolvedProject, config, args.subcommand ?? "once");
       break;
     }
+    case "patch": {
+      // TODO: Implement patch command
+      break;
+    }
     default: {
       const _: never = args;
       throw new TypeError(_);
