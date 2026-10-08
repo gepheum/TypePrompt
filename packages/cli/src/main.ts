@@ -257,7 +257,10 @@ async function runGeneration(
 function makePathNormalizer(projectDir: string): (path: string) => string {
   const currentDir = Paths.resolve(".");
   return (path: string): string => {
-    return Paths.relative(currentDir, Paths.join(projectDir, path));
+    return Paths.relative(currentDir, Paths.join(projectDir, path)).replace(
+      /\\/g,
+      "/",
+    );
   };
 }
 
