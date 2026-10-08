@@ -1,17 +1,42 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { parseCommandLine } from "./command-line-parser.js";
+import { parseCommandLine, type ParsedArgs } from "./command-line-parser.js";
+
+function parseAndCapture(args: string[]): {
+  result: ParsedArgs;
+  errors: string[];
+  logs: string[];
+} {
+  const errors: string[] = [];
+  const logs: string[] = [];
+  const originalError = console.error;
+  const originalLog = console.log;
+  try {
+    console.error = (...msg: unknown[]) => {
+      errors.push(msg.map(String).join(" "));
+    };
+    console.log = (...msg: unknown[]) => {
+      logs.push(msg.map(String).join(" "));
+    };
+    const result = parseCommandLine(args);
+    return { result, errors, logs };
+  } finally {
+    console.error = originalError;
+    console.log = originalLog;
+  }
+}
 
 describe("command-line-parser", () => {
   describe("help and version", () => {
     it("returns help for empty arguments", () => {
-      expect(parseCommandLine([])).toMatch({ kind: "help" });
+      const { result } = parseAndCapture([]);
+      expect(result).toMatch({ kind: "help" });
     });
 
     it("returns help for 'help', '--help', and '-h'", () => {
-      expect(parseCommandLine(["help"])).toMatch({ kind: "help" });
-      expect(parseCommandLine(["--help"])).toMatch({ kind: "help" });
-      expect(parseCommandLine(["-h"])).toMatch({ kind: "help" });
+      expect(parseAndCapture(["help"]).result).toMatch({ kind: "help" });
+      expect(parseAndCapture(["--help"]).result).toMatch({ kind: "help" });
+      expect(parseAndCapture(["-h"]).result).toMatch({ kind: "help" });
     });
 
     it("returns version for 'version', '--version', and '-v'", () => {
@@ -41,11 +66,23 @@ describe("command-line-parser", () => {
     });
 
     it("returns error if invalid flags are passed to init", () => {
-      expect(parseCommandLine(["init", "--watch"])).toMatch({ kind: "error" });
-      expect(parseCommandLine(["init", "--ci"])).toMatch({ kind: "error" });
-      expect(parseCommandLine(["init", "--base", "foo"])).toMatch({
-        kind: "error",
-      });
+      const watchTest = parseAndCapture(["init", "--watch"]);
+      expect(watchTest.result).toMatch({ kind: "error" });
+      expect(watchTest.errors[0]?.trim()).toBe(
+        "Error: Option --watch is not valid for 'init' command",
+      );
+
+      const ciTest = parseAndCapture(["init", "--ci"]);
+      expect(ciTest.result).toMatch({ kind: "error" });
+      expect(ciTest.errors[0]?.trim()).toBe(
+        "Error: Option --ci is not valid for 'init' command",
+      );
+
+      const baseTest = parseAndCapture(["init", "--base", "foo"]);
+      expect(baseTest.result).toMatch({ kind: "error" });
+      expect(baseTest.errors[0]?.trim()).toBe(
+        "Error: Option --base is not valid for 'init' command",
+      );
     });
   });
 
@@ -80,10 +117,17 @@ describe("command-line-parser", () => {
     });
 
     it("returns error for invalid flags on gen", () => {
-      expect(parseCommandLine(["gen", "--ci"])).toMatch({ kind: "error" });
-      expect(parseCommandLine(["gen", "--base", "foo"])).toMatch({
-        kind: "error",
-      });
+      const ciTest = parseAndCapture(["gen", "--ci"]);
+      expect(ciTest.result).toMatch({ kind: "error" });
+      expect(ciTest.errors[0]?.trim()).toBe(
+        "Error: Option --ci is not valid for 'gen' command",
+      );
+
+      const baseTest = parseAndCapture(["gen", "--base", "foo"]);
+      expect(baseTest.result).toMatch({ kind: "error" });
+      expect(baseTest.errors[0]?.trim()).toBe(
+        "Error: Option --base is not valid for 'gen' command",
+      );
     });
   });
 
@@ -115,12 +159,17 @@ describe("command-line-parser", () => {
     });
 
     it("returns error for invalid flags on format", () => {
-      expect(parseCommandLine(["format", "--watch"])).toMatch({
-        kind: "error",
-      });
-      expect(parseCommandLine(["format", "-b", "base.json"])).toMatch({
-        kind: "error",
-      });
+      const watchTest = parseAndCapture(["format", "--watch"]);
+      expect(watchTest.result).toMatch({ kind: "error" });
+      expect(watchTest.errors[0]?.trim()).toBe(
+        "Error: Option --watch is not valid for 'format' command",
+      );
+
+      const baseTest = parseAndCapture(["format", "-b", "base.json"]);
+      expect(baseTest.result).toMatch({ kind: "error" });
+      expect(baseTest.errors[0]?.trim()).toBe(
+        "Error: Option --base is not valid for 'format' command",
+      );
     });
   });
 
@@ -158,56 +207,99 @@ describe("command-line-parser", () => {
     });
 
     it("returns error for invalid flags on patch", () => {
-      expect(parseCommandLine(["patch", "--watch"])).toMatch({
-        kind: "error",
-      });
-      expect(parseCommandLine(["patch", "--ci"])).toMatch({
-        kind: "error",
-      });
+      const watchTest = parseAndCapture(["patch", "--watch"]);
+      expect(watchTest.result).toMatch({ kind: "error" });
+      expect(watchTest.errors[0]?.trim()).toBe(
+        "Error: Option --watch is not valid for 'patch' command",
+      );
+
+      const ciTest = parseAndCapture(["patch", "--ci"]);
+      expect(ciTest.result).toMatch({ kind: "error" });
+      expect(ciTest.errors[0]?.trim()).toBe(
+        "Error: Option --ci is not valid for 'patch' command",
+      );
     });
   });
 
   describe("error handling", () => {
     it("returns error for unknown commands", () => {
-      expect(parseCommandLine(["unknown"])).toMatch({ kind: "error" });
+      const { result, errors } = parseAndCapture(["unknown"]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe("Error: Unknown command: unknown");
     });
 
     it("returns error for unknown options", () => {
-      expect(parseCommandLine(["gen", "--unknown-flag"])).toMatch({
-        kind: "error",
-      });
+      const { result, errors } = parseAndCapture(["gen", "--unknown-flag"]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe(
+        "Error: Unknown option for 'gen': --unknown-flag",
+      );
     });
 
     it("returns error for positional arguments after command", () => {
-      expect(parseCommandLine(["gen", "unexpected-arg"])).toMatch({
-        kind: "error",
-      });
+      const { result, errors } = parseAndCapture(["gen", "unexpected-arg"]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe(
+        "Error: Unexpected argument: unexpected-arg",
+      );
     });
 
     it("returns error for duplicated options", () => {
-      expect(parseCommandLine(["gen", "-p", "a", "-p", "b"])).toMatch({
-        kind: "error",
-      });
-      expect(
-        parseCommandLine(["patch", "-b", "a.json", "-b", "b.json"]),
-      ).toMatch({ kind: "error" });
-      expect(parseCommandLine(["gen", "-w", "-w"])).toMatch({
-        kind: "error",
-      });
-      expect(parseCommandLine(["format", "--ci", "--ci"])).toMatch({
-        kind: "error",
-      });
+      const dupProject = parseAndCapture(["gen", "-p", "a", "-p", "b"]);
+      expect(dupProject.result).toMatch({ kind: "error" });
+      expect(dupProject.errors[0]?.trim()).toBe(
+        "Error: Option -p specified multiple times",
+      );
+
+      const dupBase = parseAndCapture([
+        "patch",
+        "-b",
+        "a.json",
+        "-b",
+        "b.json",
+      ]);
+      expect(dupBase.result).toMatch({ kind: "error" });
+      expect(dupBase.errors[0]?.trim()).toBe(
+        "Error: Option -b specified multiple times",
+      );
+
+      const dupWatch = parseAndCapture(["gen", "-w", "-w"]);
+      expect(dupWatch.result).toMatch({ kind: "error" });
+      expect(dupWatch.errors[0]?.trim()).toBe(
+        "Error: Option -w specified multiple times",
+      );
+
+      const dupCi = parseAndCapture(["format", "--ci", "--ci"]);
+      expect(dupCi.result).toMatch({ kind: "error" });
+      expect(dupCi.errors[0]?.trim()).toBe(
+        "Error: Option --ci specified multiple times",
+      );
     });
 
     it("returns error for missing option values", () => {
-      expect(parseCommandLine(["gen", "-p"])).toMatch({ kind: "error" });
-      expect(parseCommandLine(["patch", "-b"])).toMatch({ kind: "error" });
-      expect(parseCommandLine(["gen", "--project="])).toMatch({
-        kind: "error",
-      });
-      expect(parseCommandLine(["patch", "--base="])).toMatch({
-        kind: "error",
-      });
+      const missingP = parseAndCapture(["gen", "-p"]);
+      expect(missingP.result).toMatch({ kind: "error" });
+      expect(missingP.errors[0]?.trim()).toBe(
+        "Error: Option -p requires a value",
+      );
+
+      const missingB = parseAndCapture(["patch", "-b"]);
+      expect(missingB.result).toMatch({ kind: "error" });
+      expect(missingB.errors[0]?.trim()).toBe(
+        "Error: Option -b requires a value",
+      );
+
+      const missingProjectEq = parseAndCapture(["gen", "--project="]);
+      expect(missingProjectEq.result).toMatch({ kind: "error" });
+      expect(missingProjectEq.errors[0]?.trim()).toBe(
+        "Error: Option --project requires a value",
+      );
+
+      const missingBaseEq = parseAndCapture(["patch", "--base="]);
+      expect(missingBaseEq.result).toMatch({ kind: "error" });
+      expect(missingBaseEq.errors[0]?.trim()).toBe(
+        "Error: Option --base requires a value",
+      );
     });
   });
 });
