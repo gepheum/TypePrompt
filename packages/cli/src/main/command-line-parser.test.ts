@@ -12,10 +12,10 @@ function parseAndCapture(args: string[]): {
   const originalError = console.error;
   const originalLog = console.log;
   try {
-    console.error = (...msg: unknown[]) => {
+    console.error = (...msg: unknown[]): void => {
       errors.push(msg.map(String).join(" "));
     };
-    console.log = (...msg: unknown[]) => {
+    console.log = (...msg: unknown[]): void => {
       logs.push(msg.map(String).join(" "));
     };
     const result = parseCommandLine(args);

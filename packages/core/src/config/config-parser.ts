@@ -45,6 +45,11 @@ export type Config = {
       readonly file: string;
     };
   };
+
+  readonly patch?: {
+    readonly base: string;
+    readonly overrides: string;
+  };
 };
 
 export interface ConfigParseSuccess {
@@ -180,6 +185,13 @@ const RawConfigSchema = z
           })
           .strict()
           .optional(),
+      })
+      .strict()
+      .optional(),
+    patch: z
+      .object({
+        base: z.string(),
+        overrides: z.string(),
       })
       .strict()
       .optional(),
