@@ -22,6 +22,7 @@ export type CompilationResult = {
   readonly singleNamespace: NamespaceResult | null;
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
+  readonly signature: string | undefined;
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: readonly InternalError[] };
   readonly anyErrors: boolean;
@@ -34,6 +35,7 @@ export type CompilationResult = {
 /** A {@link CompilationResult} known not to have any errors. */
 export type ValidCompilationResult = CompilationResult & {
   readonly metaSchema: Schema;
+  readonly signature: string;
   readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
@@ -43,6 +45,8 @@ export type ValidCompilationResult = CompilationResult & {
 export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
+  // Hash of (path, content)
+  readonly hash: number;
   readonly lineFinder: LineFinderData;
 
   readonly xmlDocument: XmlDocument | InternalErrors;

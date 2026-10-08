@@ -53,6 +53,7 @@ describe("compile - basic compilation and empty results", () => {
         },
       },
       tools: {},
+      signature: "22bd47ff",
       finalErrors: {
         "prompts/Translate.xml": [],
       },
@@ -140,6 +141,7 @@ describe("compile - basic compilation and empty results", () => {
           },
         },
       },
+      signature: "c931c0ec",
       finalErrors: {
         "prompts/meta.xml": [],
         "prompts/Legal/shared.xml": [],

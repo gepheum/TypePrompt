@@ -1,5 +1,6 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { checkNameConflicts } from "../util/casing.js";
+import { combineHashesUnordered, hashString } from "../util/hasher.js";
 import type { LineFinderData } from "../util/line-finder.js";
 import { createLineFinder } from "../util/line-finder.js";
 import type {
@@ -147,9 +148,11 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
     readonly content: string,
     readonly xmlDocument: XmlDocument | InternalErrors,
   ) {
+    this.hash = combineHashesUnordered([hashString(path), hashString(content)]);
     this.lineFinder = createLineFinder(content);
   }
 
+  readonly hash: number;
   readonly lineFinder: LineFinderData;
   entity: Template | Tool | Namespace | Meta | undefined;
 
@@ -178,6 +181,7 @@ class CompilationResultImpl implements CompilationResult {
   singleNamespace: NamespaceResultImpl | null = null;
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
+  signature: string | undefined;
   readonly finalErrors: { [path: string]: InternalError[] } = {};
   anyErrors = false;
   readonly warnings: { [path: string]: InternalError[] } = {};
@@ -251,6 +255,16 @@ class CompilationResultImpl implements CompilationResult {
     this.anyErrors = Object.values(this.finalErrors).some(
       (errors) => errors.length >= 1,
     );
+
+    if (!this.anyErrors) {
+      this.signature = (
+        combineHashesUnordered(
+          Object.values(this.sourceFiles).map((s) => s.hash),
+        ) >>> 0
+      )
+        .toString(16)
+        .padStart(8, "0");
+    }
   }
 
   private resolveMeta(metas: ReadonlyArray<Sourced<Meta>>): void {

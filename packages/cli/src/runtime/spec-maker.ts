@@ -21,6 +21,7 @@ import type { Schema } from "@typeprompt/core/schema/schema-types.js";
 import type * as Spec from "./runtime-types.js";
 
 export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
+  const { signature } = input;
   const tools: { [id: string]: Spec.Tool } = {};
   for (const [id, tool] of Object.entries(input.tools)) {
     tools[id] = makeTool(tool, id);
@@ -37,7 +38,6 @@ export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
   );
   const singleNamespace = input.singleNamespace !== null;
   const edition = 0;
-  const signature = crypto.randomUUID();
   return { edition, signature, tools, templates, singleNamespace, sourceFiles };
 }
 
