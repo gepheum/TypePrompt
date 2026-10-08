@@ -15,8 +15,8 @@ export type ParsedArgs =
     }
   | {
       kind: "patch";
-      project?: string;
-      base?: string;
+      project: string;
+      base: string;
     }
   | {
       kind: "help";
@@ -266,6 +266,16 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
 
 function buildPatchCommand(options: ParsedOptions): ParsedArgs {
   validateAllowedOptions(options, "patch", ["project", "base"]);
+  if (options.base === undefined) {
+    throw new CommandLineParseError(
+      "Option --base is required for 'patch' command",
+    );
+  }
+  if (options.project === undefined) {
+    throw new CommandLineParseError(
+      "Option --project is required for 'patch' command",
+    );
+  }
   return {
     kind: "patch",
     project: options.project,

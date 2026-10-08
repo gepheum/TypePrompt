@@ -174,12 +174,26 @@ describe("command-line-parser", () => {
   });
 
   describe("patch command", () => {
-    it("parses patch without options", () => {
-      expect(parseCommandLine(["patch"])).toMatch({
-        kind: "patch",
-        project: undefined,
-        base: undefined,
-      });
+    it("returns error if --base is missing for patch", () => {
+      const { result, errors } = parseAndCapture(["patch"]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe(
+        "Error: Option --base is required for 'patch' command",
+      );
+
+      const withProjectOnly = parseAndCapture(["patch", "-p", "my-patch"]);
+      expect(withProjectOnly.result).toMatch({ kind: "error" });
+      expect(withProjectOnly.errors[0]?.trim()).toBe(
+        "Error: Option --base is required for 'patch' command",
+      );
+    });
+
+    it("returns error if --project is missing for patch", () => {
+      const withBaseOnly = parseAndCapture(["patch", "-b", "base.json"]);
+      expect(withBaseOnly.result).toMatch({ kind: "error" });
+      expect(withBaseOnly.errors[0]?.trim()).toBe(
+        "Error: Option --project is required for 'patch' command",
+      );
     });
 
     it("parses patch with -b/--base and -p/--project", () => {

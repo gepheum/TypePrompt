@@ -1,5 +1,15 @@
 import type { LineMatch } from "@typeprompt/core/util/line-finder.js";
+import * as Paths from "path";
 import type { RenderableError } from "./renderable-error.js";
+
+export function makePathNormalizer(
+  projectDir: string,
+): (path: string) => string {
+  const currentDir = Paths.resolve(".");
+  return (path: string): string => {
+    return Paths.relative(currentDir, Paths.join(projectDir, path));
+  };
+}
 
 export function renderErrors(
   errors: readonly RenderableError[],

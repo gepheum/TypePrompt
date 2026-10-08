@@ -21,12 +21,14 @@ import { parseCommandLine } from "./main/command-line-parser.js";
 import {
   makeGray,
   makeGreen,
+  makePathNormalizer,
   makeRed,
   renderErrors,
 } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
 import { initializeProject } from "./main/project-initializer.js";
+import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";
 import {
   makeRenderableError,
@@ -260,16 +262,6 @@ async function runGeneration(
   }
 }
 
-function makePathNormalizer(projectDir: string): (path: string) => string {
-  const currentDir = Paths.resolve(".");
-  return (path: string): string => {
-    return Paths.relative(currentDir, Paths.join(projectDir, path)).replace(
-      /\\/g,
-      "/",
-    );
-  };
-}
-
 async function main(): Promise<void> {
   const args = parseCommandLine(process.argv.slice(2));
 
@@ -287,6 +279,13 @@ async function main(): Promise<void> {
   switch (args.kind) {
     case "init": {
       initializeProject(project);
+      return;
+    }
+    case "patch": {
+      await patchProject({
+        base: args.base,
+        project: args.project,
+      });
       return;
     }
     case "help":
@@ -330,10 +329,6 @@ async function main(): Promise<void> {
     }
     case "gen": {
       await runGeneration(resolvedProject, config, args.subcommand ?? "once");
-      break;
-    }
-    case "patch": {
-      // TODO: Implement patch command
       break;
     }
     default: {
