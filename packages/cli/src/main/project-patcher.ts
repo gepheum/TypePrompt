@@ -145,15 +145,15 @@ export async function patchProject(args: {
       .join("\n"),
     "",
     "patch:",
-    "  base: base.readonly.json",
+    "  base: patch-base.json",
     "  overrides: overrides.json",
     "",
   ].join("\n");
 
-  const filesToWrite: Record<string, string> = {
+  const filesToWrite: { readonly [path: string]: string } = {
     ...templates.sourceFiles,
     "typeprompt.yml": configYaml,
-    "base.readonly.json": JSON.stringify(templates, undefined, 2) + "\n",
+    "patch-base.json": JSON.stringify(templates, undefined, 2) + "\n",
   };
 
   const existingFiles = (

@@ -49,7 +49,7 @@ describe("patchProject", () => {
 
     const configPath = join(targetProject, "typeprompt.yml");
     const templatePath = join(targetProject, "prompts", "hello-world.xml");
-    const baseJsonPath = join(targetProject, "base.readonly.json");
+    const baseJsonPath = join(targetProject, "patch-base.json");
 
     expect(existsSync(configPath)).toBe(true);
     expect(existsSync(templatePath)).toBe(true);
@@ -61,7 +61,7 @@ describe("patchProject", () => {
     if (configResult.kind === "success") {
       expect(configResult.config.include).toMatch(["prompts/hello-world.xml"]);
       expect(configResult.config.patch).toMatch({
-        base: "base.readonly.json",
+        base: "patch-base.json",
         overrides: "overrides.json",
       });
     }
@@ -82,7 +82,7 @@ describe("patchProject", () => {
       output: target1,
     });
 
-    const baseJsonPath = join(target1, "base.readonly.json");
+    const baseJsonPath = join(target1, "patch-base.json");
     const target2 = join(tempPatchDir, "target2");
 
     await patchProject({
@@ -92,7 +92,7 @@ describe("patchProject", () => {
 
     const configPath = join(target2, "typeprompt.yml");
     const templatePath = join(target2, "prompts", "hello-world.xml");
-    const target2BaseJson = join(target2, "base.readonly.json");
+    const target2BaseJson = join(target2, "patch-base.json");
 
     expect(existsSync(configPath)).toBe(true);
     expect(existsSync(templatePath)).toBe(true);
@@ -104,7 +104,7 @@ describe("patchProject", () => {
     if (configResult.kind === "success") {
       expect(configResult.config.include).toMatch(["prompts/hello-world.xml"]);
       expect(configResult.config.patch).toMatch({
-        base: "base.readonly.json",
+        base: "patch-base.json",
         overrides: "overrides.json",
       });
     }
@@ -208,7 +208,7 @@ describe("patchProject", () => {
       output: target1,
     });
 
-    const baseJsonPath = join(target1, "base.readonly.json");
+    const baseJsonPath = join(target1, "patch-base.json");
     const jsonContent = readFileSync(baseJsonPath, "utf8");
 
     let server: Server | undefined;
@@ -233,7 +233,7 @@ describe("patchProject", () => {
 
       const configPath = join(target2, "typeprompt.yml");
       const templatePath = join(target2, "prompts", "hello-world.xml");
-      const target2BaseJson = join(target2, "base.readonly.json");
+      const target2BaseJson = join(target2, "patch-base.json");
 
       expect(existsSync(configPath)).toBe(true);
       expect(existsSync(templatePath)).toBe(true);
@@ -247,7 +247,7 @@ describe("patchProject", () => {
           "prompts/hello-world.xml",
         ]);
         expect(configResult.config.patch).toMatch({
-          base: "base.readonly.json",
+          base: "patch-base.json",
           overrides: "overrides.json",
         });
       }
