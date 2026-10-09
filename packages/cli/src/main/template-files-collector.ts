@@ -25,14 +25,19 @@ export async function collectTemplateFiles(
     .filter((file) => file.isFile())
     .map(async (file): Promise<[string, string]> => {
       const fullPath = file.fullpath();
-      const content = await REAL_FILE_SYSTEM.readTextFileAsync(fullPath);
-      if (content === undefined) {
-        throw new ExitError(`Cannot read ${fullPath}`);
-      }
       const relativePath = Paths.relative(project, fullPath).replace(
         /\\/g,
         "/",
       );
+      if (relativePath.startsWith("..") || Paths.isAbsolute(relativePath)) {
+        throw new ExitError(
+          `Template file '${relativePath}' outside project directory`,
+        );
+      }
+      const content = await REAL_FILE_SYSTEM.readTextFileAsync(fullPath);
+      if (content === undefined) {
+        throw new ExitError(`Cannot read ${fullPath}`);
+      }
       return [relativePath, content];
     });
   return Object.fromEntries(await Promise.all(entries));

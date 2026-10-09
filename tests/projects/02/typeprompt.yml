@@ -1,4 +1,4 @@
-include: ../../../examples/02-complex-schemas/**/*.xml
+include: prompts/**/*.xml
 gen:
   cpp:
     file: ../../cpp/gen/prompts_02.gen.h

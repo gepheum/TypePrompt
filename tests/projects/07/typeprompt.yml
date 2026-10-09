@@ -1,4 +1,4 @@
-include: ../../../examples/07-namespaces/**/*.xml
+include: prompts/**/*.xml
 gen:
   cpp:
     file: ../../cpp/gen/prompts_07.gen.h

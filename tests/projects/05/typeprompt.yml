@@ -1,4 +1,4 @@
-include: ../../../examples/05-conditional-logic/**/*.xml
+include: prompts/**/*.xml
 gen:
   cpp:
     file: ../../cpp/gen/prompts_05.gen.h

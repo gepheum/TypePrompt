@@ -1,4 +1,4 @@
-include: ../../../examples/04-variants/**/*.xml
+include: prompts/**/*.xml
 gen:
   cpp:
     file: ../../cpp/gen/prompts_04.gen.h

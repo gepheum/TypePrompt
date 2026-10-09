@@ -1,4 +1,4 @@
-include: ../../../examples/06-shared-types/**/*.xml
+include: prompts/**/*.xml
 gen:
   cpp:
     file: ../../cpp/gen/prompts_06.gen.h

@@ -7,6 +7,7 @@ packages/website/.vitepress/cache
 
 packages/prompt-viewer
 
+tests/projects/0*/prompts/
 tests/cpp/build/
 tests/cpp/gen/
 

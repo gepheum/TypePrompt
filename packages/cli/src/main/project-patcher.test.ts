@@ -175,9 +175,7 @@ describe("patchProject", () => {
     }
 
     expect(error instanceof ExitError).toBe(true);
-    expect((error as ExitError).message).toMatch(
-      /outside the project directory/,
-    );
+    expect((error as ExitError).message).toMatch(/outside project directory/);
   });
 
   it("fails if parent directory of project does not exist", async () => {
