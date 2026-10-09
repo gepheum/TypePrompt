@@ -35,11 +35,31 @@ export async function patchProject(args: {
 
   let compilationResult: CompilationResult;
 
-  if (base.endsWith(".json")) {
-    const baseFilePath = Paths.resolve(base);
-    const jsonContent = REAL_FILE_SYSTEM.readTextFile(baseFilePath);
-    if (jsonContent === undefined) {
-      throw new ExitError(`Cannot find ${base}`);
+  const baseIsUrl = base.startsWith("http://") || base.startsWith("https://");
+  if (baseIsUrl || base.endsWith(".json")) {
+    let jsonContent: string;
+    if (baseIsUrl) {
+      let response: Response;
+      try {
+        response = await fetch(base);
+      } catch (e) {
+        throw new ExitError(
+          `Failed to fetch ${base}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+      if (!response.ok) {
+        throw new ExitError(
+          `Failed to fetch ${base}: ${response.status} ${response.statusText}`.trim(),
+        );
+      }
+      jsonContent = await response.text();
+    } else {
+      const baseFilePath = Paths.resolve(base);
+      const content = REAL_FILE_SYSTEM.readTextFile(baseFilePath);
+      if (content === undefined) {
+        throw new ExitError(`Cannot find ${base}`);
+      }
+      jsonContent = content;
     }
 
     let parsed: unknown;

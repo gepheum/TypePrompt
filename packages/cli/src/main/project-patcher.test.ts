@@ -9,6 +9,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ExitError } from "./exit-error.js";
@@ -194,6 +196,119 @@ describe("patchProject", () => {
     expect(error instanceof ExitError).toBe(true);
     expect((error as ExitError).message).toMatch(
       /Parent directory does not exist/,
+    );
+  });
+
+  it("patches from a base spec served over HTTP", async () => {
+    initializeProject(tempBaseDir);
+
+    const target1 = join(tempPatchDir, "target1");
+    await patchProject({
+      base: tempBaseDir,
+      output: target1,
+    });
+
+    const baseJsonPath = join(target1, "base.readonly.json");
+    const jsonContent = readFileSync(baseJsonPath, "utf8");
+
+    let server: Server | undefined;
+    try {
+      server = createServer((_req, res) => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(jsonContent);
+      });
+
+      await new Promise<void>((resolve) => {
+        server!.listen(0, "127.0.0.1", () => resolve());
+      });
+
+      const address = server.address() as AddressInfo;
+      const url = `http://127.0.0.1:${address.port}/templates.json`;
+
+      const target2 = join(tempPatchDir, "target2");
+      await patchProject({
+        base: url,
+        output: target2,
+      });
+
+      const configPath = join(target2, "typeprompt.yml");
+      const templatePath = join(target2, "prompts", "hello-world.xml");
+      const target2BaseJson = join(target2, "base.readonly.json");
+
+      expect(existsSync(configPath)).toBe(true);
+      expect(existsSync(templatePath)).toBe(true);
+      expect(existsSync(target2BaseJson)).toBe(true);
+
+      const configContent = readFileSync(configPath, "utf8");
+      const configResult = parseConfigYaml(configContent, configPath);
+      expect(configResult.kind).toBe("success");
+      if (configResult.kind === "success") {
+        expect(configResult.config.include).toMatch([
+          "prompts/hello-world.xml",
+        ]);
+        expect(configResult.config.patch).toMatch({
+          base: "base.readonly.json",
+          overrides: "overrides.json",
+        });
+      }
+    } finally {
+      if (server) {
+        await new Promise<void>((resolve) => server!.close(() => resolve()));
+      }
+    }
+  });
+
+  it("fails if HTTP fetch returns 404", async () => {
+    let server: Server | undefined;
+    try {
+      server = createServer((_req, res) => {
+        res.writeHead(404, "Not Found");
+        res.end("Not Found");
+      });
+
+      await new Promise<void>((resolve) => {
+        server!.listen(0, "127.0.0.1", () => resolve());
+      });
+
+      const address = server.address() as AddressInfo;
+      const url = `http://127.0.0.1:${address.port}/missing.json`;
+
+      let error: unknown;
+      try {
+        await patchProject({
+          base: url,
+          output: join(tempPatchDir, "target"),
+        });
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error instanceof ExitError).toBe(true);
+      expect((error as ExitError).message).toMatch(
+        /Failed to fetch http:\/\/127\.0\.0\.1:/,
+      );
+      expect((error as ExitError).message).toMatch(/404/);
+    } finally {
+      if (server) {
+        await new Promise<void>((resolve) => server!.close(() => resolve()));
+      }
+    }
+  });
+
+  it("fails if HTTP fetch encounters connection error", async () => {
+    let error: unknown;
+    try {
+      await patchProject({
+        base: "http://127.0.0.1:1/nonexistent.json",
+        output: join(tempPatchDir, "target"),
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error instanceof ExitError).toBe(true);
+    expect((error as ExitError).message).toMatch(
+      /Failed to fetch http:\/\/127\.0\.0\.1:1/,
     );
   });
 });
