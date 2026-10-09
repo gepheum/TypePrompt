@@ -269,7 +269,8 @@ describe("TypePrompt Language Server", () => {
     // Verify file was removed from bundles and workspace
     expect(extension.xmlBundles.has(templateUri)).toBe(false);
     const workspace = Array.from(extension.workspaces.values())[0];
-    expect(workspace?.xmls.has(templateUri)).toBe(false);
+    expect(workspace?.xmls.size).toBe(0);
+    expect(workspace?.getXmlBundle(templateUri) === undefined).toBe(true);
   });
 
   it("schedules scan loop and disposes cleanly", () => {

@@ -18,10 +18,15 @@ export function activate(context: ExtensionContext): void {
   );
 
   const serverOptions: ServerOptions = {
-    run: { module: serverModule, transport: TransportKind.stdio },
+    run: {
+      module: serverModule,
+      transport: TransportKind.stdio,
+      args: ["--stdio"],
+    },
     debug: {
       module: serverModule,
       transport: TransportKind.stdio,
+      args: ["--stdio"],
       options: { execArgv: ["--nolazy", "--inspect=6009"] },
     },
   };
