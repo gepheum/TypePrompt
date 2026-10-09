@@ -1,15 +1,12 @@
-import type {
-  CompilationResult,
-  ValidCompilationResult,
-} from "@typeprompt/core/compiler/compiler-types.js";
+import type { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
 import { parseConfigYaml } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
-import { z } from "zod";
 import type * as Spec from "../runtime/runtime-types.js";
 import { makeTemplates } from "../runtime/spec-maker.js";
+import { parseCompilationResult } from "./compilation-result-parser.js";
 import { makePathNormalizer, renderErrors } from "./error-renderer.js";
 import { ExitError } from "./exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./io.js";
@@ -33,7 +30,7 @@ export async function patchProject(args: {
     }
   }
 
-  let compilationResult: CompilationResult;
+  let compilationResult: ValidCompilationResult;
 
   const baseIsUrl = base.startsWith("http://") || base.startsWith("https://");
   if (baseIsUrl || base.endsWith(".json")) {
@@ -62,23 +59,7 @@ export async function patchProject(args: {
       jsonContent = content;
     }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonContent);
-    } catch (e) {
-      throw new ExitError(
-        `Failed to parse JSON in ${base}: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-
-    const parseResult = TemplatesSchema.safeParse(parsed);
-    if (!parseResult.success) {
-      throw new ExitError(
-        `Invalid templates JSON in ${base}: ${parseResult.error.message}`,
-      );
-    }
-
-    compilationResult = compile(parseResult.data.sourceFiles, { cache: null });
+    compilationResult = parseCompilationResult(jsonContent, base);
   } else {
     const baseDir = Paths.resolve(base);
     if (!(await isDirectory(baseDir))) {
@@ -106,20 +87,18 @@ export async function patchProject(args: {
       baseDir,
       configResult.config,
     );
-    compilationResult = compile(templateFiles, { cache: null });
-    if (compilationResult.anyErrors) {
+    const result = compile(templateFiles, { cache: null });
+    if (result.anyErrors) {
       const pathNormalizer = makePathNormalizer(baseDir);
       const errors = makeRenderableErrors(
-        compilationResult.finalErrors,
-        compilationResult.sourceFiles,
+        result.finalErrors,
+        result.sourceFiles,
         pathNormalizer,
       );
       renderErrors(errors, "error");
+      throw new ExitError("Compilation of base project failed");
     }
-  }
-
-  if (compilationResult.anyErrors) {
-    throw new ExitError("Compilation of base project failed");
+    compilationResult = result as ValidCompilationResult;
   }
 
   // Verify that every path in compilationResult.sourceFiles is included in the
@@ -133,9 +112,7 @@ export async function patchProject(args: {
     }
   }
 
-  const templates: Spec.Templates = makeTemplates(
-    compilationResult as ValidCompilationResult,
-  );
+  const templates: Spec.Templates = makeTemplates(compilationResult);
 
   const configYaml = [
     "include:",
@@ -190,12 +167,3 @@ async function fileExists(path: string): Promise<boolean> {
     return false;
   }
 }
-
-const TemplatesSchema: z.ZodType<Spec.Templates> = z.object({
-  edition: z.number(),
-  signature: z.string(),
-  templates: z.record(z.string(), z.custom<Spec.Template>()),
-  tools: z.record(z.string(), z.custom<Spec.Tool>()),
-  singleNamespace: z.boolean(),
-  sourceFiles: z.record(z.string(), z.string()),
-});
