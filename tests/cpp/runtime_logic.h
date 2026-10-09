@@ -3343,41 +3343,7 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Tool& ou
 
 namespace internal {
 struct TemplatesData {
-  static spec::Templates get() {
-    return *ParseJson<spec::Templates>(
-        "{\"edition\":0,\"signature\":\"1b02f73b-debd-4967-9bd4-8134c5382af9\",\"tools\":{},"
-        "\"templates\":{\"Main:Translate\":{\"name\":\"Translate\",\"namespace\":\"Main\","
-        "\"outputFormat\":\"text\",\"tools\":[],\"contents\":{\"kind\":\"no-variants\",\"content\":"
-        "{\"system\":[{\"kind\":\"text\",\"text\":\"You are a professional translator. Translate "
-        "the given text into the requested\\nlanguage. Output only the translated text — no "
-        "explanations, no commentary.\"}],\"user\":[{\"kind\":\"text\",\"text\":\"Translate the "
-        "following text into "
-        "\"},{\"kind\":\"insert-val\",\"val\":{\"kind\":\"property\",\"left\":{\"kind\":\"input\"},"
-        "\"property\":\"targetLanguage\"},\"format\":\"text\",\"indent\":\"\"},{\"kind\":\"text\","
-        "\"text\":\":\\n\\n\"},{\"kind\":\"text\",\"text\":\"<Text>\"},{\"kind\":\"text\",\"text\":"
-        "\"\\n\"},{\"kind\":\"insert-val\",\"val\":{\"kind\":\"property\",\"left\":{\"kind\":"
-        "\"input\"},\"property\":\"text\"},\"format\":\"text\",\"indent\":\"\"},{\"kind\":\"text\","
-        "\"text\":\"\\n\"},{\"kind\":\"text\",\"text\":\"</"
-        "Text>\"}],\"examples\":[{\"input\":{\"text\":\"The meeting is scheduled for Monday at 3 "
-        "PM.\",\"targetLanguage\":\"French\"},\"output\":\"La réunion est prévue pour lundi à "
-        "15h.\",\"intermediateSteps\":[]},{\"input\":{\"text\":\"Please review the attached "
-        "document.\",\"targetLanguage\":\"Spanish\"},\"output\":\"Por favor, revise el documento "
-        "adjunto.\",\"intermediateSteps\":[]}]}},\"snippets\":{},\"outputJsonSchema\":{\"type\":"
-        "\"string\"}}},\"singleNamespace\":true,\"sourceFiles\":{\"../../../examples/01-basics/"
-        "prompts/Translate.xml\":\"<template name=\\\"Translate\\\">\\n  <schema "
-        "output-format=\\\"text\\\">\\n    interface Input {\\n      text: string;\\n      "
-        "targetLanguage: string;\\n    }\\n\\n    type Output = string;\\n  </schema>\\n\\n  "
-        "<system>\\n    You are a professional translator. Translate the given text into the "
-        "requested\\n    language. Output only the translated text — no explanations, no "
-        "commentary.\\n  </system>\\n\\n  <user>\\n    Translate the following text into <insert "
-        "val=\\\"input.targetLanguage\\\" />:\\n\\n    <enclosed tag=\\\"Text\\\">\\n      <insert "
-        "val=\\\"input.text\\\" />\\n    </enclosed>\\n  </user>\\n\\n  <examples>\\n    - "
-        "input:\\n        text: \\\"The meeting is scheduled for Monday at 3 PM.\\\"\\n        "
-        "targetLanguage: French\\n      output: \\\"La réunion est prévue pour lundi à "
-        "15h.\\\"\\n\\n    - input:\\n        text: \\\"Please review the attached "
-        "document.\\\"\\n        targetLanguage: Spanish\\n      output: \\\"Por favor, revise el "
-        "documento adjunto.\\\"\\n  </examples>\\n</template>\\n\"}}");
-  }
+  static spec::Templates get() { return spec::Templates{}; }
 };
 }  // namespace internal
 // </generated>

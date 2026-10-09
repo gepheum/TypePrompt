@@ -5,6 +5,15 @@ cd ..
 npm run build
 cd tests
 
+# Format template files
+node ../packages/cli/dist/main.js format -p ../examples/01-basics
+node ../packages/cli/dist/main.js format -p ../examples/02-complex-schemas
+node ../packages/cli/dist/main.js format -p ../examples/03-tools
+node ../packages/cli/dist/main.js format -p ../examples/04-variants
+node ../packages/cli/dist/main.js format -p ../examples/05-conditional-logic
+node ../packages/cli/dist/main.js format -p ../examples/06-shared-types
+node ../packages/cli/dist/main.js format -p ../examples/07-namespaces
+
 # Sync template files from examples
 rsync -a --delete ../examples/01-basics/prompts/ projects/01/prompts/
 rsync -a --delete ../examples/02-complex-schemas/prompts/ projects/02/prompts/
@@ -14,26 +23,6 @@ rsync -a --delete ../examples/05-conditional-logic/prompts/ projects/05/prompts/
 rsync -a --delete ../examples/06-shared-types/prompts/ projects/06/prompts/
 rsync -a --delete ../examples/07-namespaces/prompts/ projects/07/prompts/
 
-# Format xml files
-node ../packages/cli/dist/main.js format -p projects/01
-node ../packages/cli/dist/main.js format -p projects/02
-node ../packages/cli/dist/main.js format -p projects/03
-node ../packages/cli/dist/main.js format -p projects/04
-node ../packages/cli/dist/main.js format -p projects/05
-node ../packages/cli/dist/main.js format -p projects/06
-node ../packages/cli/dist/main.js format -p projects/07
-node ../packages/cli/dist/main.js format -p projects/e01
-node ../packages/cli/dist/main.js format -p projects/e02
-node ../packages/cli/dist/main.js format -p projects/e03
-node ../packages/cli/dist/main.js format -p ../examples/e2e-kotlin
-
-node ../packages/cli/dist/main.js format --ci -p projects/01
-node ../packages/cli/dist/main.js format --ci -p projects/02
-node ../packages/cli/dist/main.js format --ci -p projects/03
-node ../packages/cli/dist/main.js format --ci -p projects/04
-node ../packages/cli/dist/main.js format --ci -p projects/05
-node ../packages/cli/dist/main.js format --ci -p projects/06
-node ../packages/cli/dist/main.js format --ci -p projects/07
 node ../packages/cli/dist/main.js format --ci -p projects/e01
 node ../packages/cli/dist/main.js format --ci -p projects/e02
 node ../packages/cli/dist/main.js format --ci -p projects/e03
