@@ -128,7 +128,7 @@ export async function patchProject(args: {
     const normalized = Paths.normalize(filePath).replace(/\\/g, "/");
     if (normalized.startsWith("..") || Paths.isAbsolute(normalized)) {
       throw new ExitError(
-        `Source file '${filePath}' is outside the project directory`,
+        `Template file '${filePath}' outside the project directory`,
       );
     }
   }
