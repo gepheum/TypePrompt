@@ -181,41 +181,41 @@ describe("command-line-parser", () => {
         "Error: Option --base is required for 'patch' command",
       );
 
-      const withProjectOnly = parseAndCapture(["patch", "-p", "my-patch"]);
-      expect(withProjectOnly.result).toMatch({ kind: "error" });
-      expect(withProjectOnly.errors[0]?.trim()).toBe(
+      const withOutputOnly = parseAndCapture(["patch", "-o", "my-patch"]);
+      expect(withOutputOnly.result).toMatch({ kind: "error" });
+      expect(withOutputOnly.errors[0]?.trim()).toBe(
         "Error: Option --base is required for 'patch' command",
       );
     });
 
-    it("returns error if --project is missing for patch", () => {
+    it("returns error if --output is missing for patch", () => {
       const withBaseOnly = parseAndCapture(["patch", "-b", "base.json"]);
       expect(withBaseOnly.result).toMatch({ kind: "error" });
       expect(withBaseOnly.errors[0]?.trim()).toBe(
-        "Error: Option --project is required for 'patch' command",
+        "Error: Option --output is required for 'patch' command",
       );
     });
 
-    it("parses patch with -b/--base and -p/--project", () => {
+    it("parses patch with -b/--base and -o/--output", () => {
       expect(
-        parseCommandLine(["patch", "-b", "base.json", "-p", "my-patch"]),
+        parseCommandLine(["patch", "-b", "base.json", "-o", "my-patch"]),
       ).toMatch({
         kind: "patch",
-        project: "my-patch",
+        output: "my-patch",
         base: "base.json",
       });
     });
 
-    it("parses patch with --base=... and --project=...", () => {
+    it("parses patch with --base=... and --output=...", () => {
       expect(
         parseCommandLine([
           "patch",
           "--base=./base.json",
-          "--project=./patch-dir",
+          "--output=./patch-dir",
         ]),
       ).toMatch({
         kind: "patch",
-        project: "./patch-dir",
+        output: "./patch-dir",
         base: "./base.json",
       });
     });
@@ -231,6 +231,12 @@ describe("command-line-parser", () => {
       expect(ciTest.result).toMatch({ kind: "error" });
       expect(ciTest.errors[0]?.trim()).toBe(
         "Error: Option --ci is not valid for 'patch' command",
+      );
+
+      const projectTest = parseAndCapture(["patch", "-p", "my-patch"]);
+      expect(projectTest.result).toMatch({ kind: "error" });
+      expect(projectTest.errors[0]?.trim()).toBe(
+        "Error: Option --project is not valid for 'patch' command",
       );
     });
   });
@@ -277,6 +283,12 @@ describe("command-line-parser", () => {
         "Error: Option -b specified multiple times",
       );
 
+      const dupOutput = parseAndCapture(["patch", "-o", "dirA", "-o", "dirB"]);
+      expect(dupOutput.result).toMatch({ kind: "error" });
+      expect(dupOutput.errors[0]?.trim()).toBe(
+        "Error: Option -o specified multiple times",
+      );
+
       const dupWatch = parseAndCapture(["gen", "-w", "-w"]);
       expect(dupWatch.result).toMatch({ kind: "error" });
       expect(dupWatch.errors[0]?.trim()).toBe(
@@ -297,6 +309,12 @@ describe("command-line-parser", () => {
         "Error: Option -p requires a value",
       );
 
+      const missingO = parseAndCapture(["patch", "-o"]);
+      expect(missingO.result).toMatch({ kind: "error" });
+      expect(missingO.errors[0]?.trim()).toBe(
+        "Error: Option -o requires a value",
+      );
+
       const missingB = parseAndCapture(["patch", "-b"]);
       expect(missingB.result).toMatch({ kind: "error" });
       expect(missingB.errors[0]?.trim()).toBe(
@@ -307,6 +325,12 @@ describe("command-line-parser", () => {
       expect(missingProjectEq.result).toMatch({ kind: "error" });
       expect(missingProjectEq.errors[0]?.trim()).toBe(
         "Error: Option --project requires a value",
+      );
+
+      const missingOutputEq = parseAndCapture(["patch", "--output="]);
+      expect(missingOutputEq.result).toMatch({ kind: "error" });
+      expect(missingOutputEq.errors[0]?.trim()).toBe(
+        "Error: Option --output requires a value",
       );
 
       const missingBaseEq = parseAndCapture(["patch", "--base="]);

@@ -15,7 +15,7 @@ export type ParsedArgs =
     }
   | {
       kind: "patch";
-      project: string;
+      output: string;
       base: string;
     }
   | {
@@ -100,6 +100,7 @@ Commands:
 Options:
   -p <path>    Path to the directory containing the typeprompt.yml file
   -b <path>    Path to base project directory or templates.json file (patch only)
+  -o <path>    Path to output patch project directory (patch only)
   --watch, -w  Automatically run code generation when template files change
                  (gen only)
   --ci         Fail if code is not properly formatted (format only)
@@ -110,7 +111,7 @@ Examples:
   ${COMMAND_BASE} gen --watch
   ${COMMAND_BASE} format -p path/to/project
   ${COMMAND_BASE} format --ci -p path/to/project
-  ${COMMAND_BASE} patch -b path/to/base -p path/to/patch
+  ${COMMAND_BASE} patch -b path/to/base -o path/to/patch
 `;
 
 export class CommandLineParseError extends Error {
@@ -122,6 +123,7 @@ export class CommandLineParseError extends Error {
 
 type ParsedOptions = {
   project?: string;
+  output?: string;
   base?: string;
   watch?: boolean;
   ci?: boolean;
@@ -137,68 +139,59 @@ function parseOptions(args: string[]): ParsedOptions {
     const arg = args[i];
     if (!arg) continue;
 
-    // Check for --option=value syntax
-    if (arg.startsWith("--project=") || arg.startsWith("-p=")) {
-      const value = arg.substring(arg.indexOf("=") + 1);
-      if (!value) {
-        throw new CommandLineParseError(
-          `Option ${arg.split("=")[0]} requires a value`,
-        );
+    let matched = false;
+
+    for (const [key, flags] of STRING_OPTIONS) {
+      for (const flag of flags) {
+        if (arg.startsWith(`${flag}=`)) {
+          const value = arg.substring(flag.length + 1);
+          if (!value) {
+            throw new CommandLineParseError(`Option ${flag} requires a value`);
+          }
+          if (options[key] !== undefined) {
+            throw new CommandLineParseError(
+              `Option ${flag} specified multiple times`,
+            );
+          }
+          options[key] = value;
+          matched = true;
+          break;
+        }
+        if (arg === flag) {
+          if (i + 1 >= args.length) {
+            throw new CommandLineParseError(`Option ${arg} requires a value`);
+          }
+          if (options[key] !== undefined) {
+            throw new CommandLineParseError(
+              `Option ${arg} specified multiple times`,
+            );
+          }
+          options[key] = args[++i];
+          matched = true;
+          break;
+        }
       }
-      if (options.project !== undefined) {
-        throw new CommandLineParseError(
-          `Option ${arg.split("=")[0]} specified multiple times`,
-        );
+      if (matched) break;
+    }
+
+    if (matched) continue;
+
+    for (const [key, flags] of BOOLEAN_OPTIONS) {
+      if ((flags as readonly string[]).includes(arg)) {
+        if (options[key]) {
+          throw new CommandLineParseError(
+            `Option ${arg} specified multiple times`,
+          );
+        }
+        options[key] = true;
+        matched = true;
+        break;
       }
-      options.project = value;
-    } else if (arg === "--project" || arg === "-p") {
-      if (i + 1 >= args.length) {
-        throw new CommandLineParseError(`Option ${arg} requires a value`);
-      }
-      if (options.project !== undefined) {
-        throw new CommandLineParseError(
-          `Option ${arg} specified multiple times`,
-        );
-      }
-      options.project = args[i + 1];
-      i++; // Skip the next argument as it's the value
-    } else if (arg.startsWith("--base=") || arg.startsWith("-b=")) {
-      const value = arg.substring(arg.indexOf("=") + 1);
-      if (!value) {
-        throw new CommandLineParseError(
-          `Option ${arg.split("=")[0]} requires a value`,
-        );
-      }
-      if (options.base !== undefined) {
-        throw new CommandLineParseError(
-          `Option ${arg.split("=")[0]} specified multiple times`,
-        );
-      }
-      options.base = value;
-    } else if (arg === "--base" || arg === "-b") {
-      if (i + 1 >= args.length) {
-        throw new CommandLineParseError(`Option ${arg} requires a value`);
-      }
-      if (options.base !== undefined) {
-        throw new CommandLineParseError(
-          `Option ${arg} specified multiple times`,
-        );
-      }
-      options.base = args[i + 1];
-      i++;
-    } else if (arg === "--watch" || arg === "-w") {
-      if (options.watch) {
-        throw new CommandLineParseError(
-          `Option ${arg} specified multiple times`,
-        );
-      }
-      options.watch = true;
-    } else if (arg === "--ci") {
-      if (options.ci) {
-        throw new CommandLineParseError("Option --ci specified multiple times");
-      }
-      options.ci = true;
-    } else if (arg.startsWith("-")) {
+    }
+
+    if (matched) continue;
+
+    if (arg.startsWith("-")) {
       options.unknown.push(arg);
     } else {
       // Positional argument - not allowed anymore
@@ -213,6 +206,7 @@ type OptionKey = keyof Omit<ParsedOptions, "unknown">;
 
 const OPTION_FLAGS: Record<OptionKey, string> = {
   project: "--project",
+  output: "--output",
   base: "--base",
   watch: "--watch",
   ci: "--ci",
@@ -265,20 +259,20 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
 }
 
 function buildPatchCommand(options: ParsedOptions): ParsedArgs {
-  validateAllowedOptions(options, "patch", ["project", "base"]);
+  validateAllowedOptions(options, "patch", ["output", "base"]);
   if (options.base === undefined) {
     throw new CommandLineParseError(
       "Option --base is required for 'patch' command",
     );
   }
-  if (options.project === undefined) {
+  if (options.output === undefined) {
     throw new CommandLineParseError(
-      "Option --project is required for 'patch' command",
+      "Option --output is required for 'patch' command",
     );
   }
   return {
     kind: "patch",
-    project: options.project,
+    output: options.output,
     base: options.base,
   };
 }
@@ -301,3 +295,14 @@ function printHelp(): void {
 function printError(message: string): void {
   console.error(`Error: ${message}\n`);
 }
+
+const STRING_OPTIONS = [
+  ["project", ["--project", "-p"] as const],
+  ["output", ["--output", "-o"] as const],
+  ["base", ["--base", "-b"] as const],
+] as const;
+
+const BOOLEAN_OPTIONS = [
+  ["watch", ["--watch", "-w"] as const],
+  ["ci", ["--ci"] as const],
+] as const;

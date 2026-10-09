@@ -42,7 +42,7 @@ describe("patchProject", () => {
     const targetProject = join(tempPatchDir, "my-patch");
     await patchProject({
       base: tempBaseDir,
-      project: targetProject,
+      output: targetProject,
     });
 
     const configPath = join(targetProject, "typeprompt.yml");
@@ -77,7 +77,7 @@ describe("patchProject", () => {
     const target1 = join(tempPatchDir, "target1");
     await patchProject({
       base: tempBaseDir,
-      project: target1,
+      output: target1,
     });
 
     const baseJsonPath = join(target1, "base.readonly.json");
@@ -85,7 +85,7 @@ describe("patchProject", () => {
 
     await patchProject({
       base: baseJsonPath,
-      project: target2,
+      output: target2,
     });
 
     const configPath = join(target2, "typeprompt.yml");
@@ -123,7 +123,7 @@ describe("patchProject", () => {
     try {
       await patchProject({
         base: tempBaseDir,
-        project: targetProject,
+        output: targetProject,
       });
     } catch (e) {
       error = e;
@@ -138,7 +138,7 @@ describe("patchProject", () => {
     try {
       await patchProject({
         base: join(tempBaseDir, "non-existent"),
-        project: tempPatchDir,
+        output: tempPatchDir,
       });
     } catch (e) {
       error = e;
@@ -166,7 +166,7 @@ describe("patchProject", () => {
     try {
       await patchProject({
         base: jsonPath,
-        project: join(tempPatchDir, "target"),
+        output: join(tempPatchDir, "target"),
       });
     } catch (e) {
       error = e;
@@ -185,7 +185,7 @@ describe("patchProject", () => {
     try {
       await patchProject({
         base: tempBaseDir,
-        project: join(tempPatchDir, "non-existent-parent", "target"),
+        output: join(tempPatchDir, "non-existent-parent", "target"),
       });
     } catch (e) {
       error = e;

@@ -274,17 +274,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  const project = args.project ?? ".";
-
   switch (args.kind) {
     case "init": {
-      initializeProject(project);
+      initializeProject(args.project ?? ".");
       return;
     }
     case "patch": {
       await patchProject({
         base: args.base,
-        project: args.project,
+        output: args.output,
       });
       return;
     }
@@ -294,12 +292,14 @@ async function main(): Promise<void> {
     }
   }
 
+  const project = args.project ?? ".";
+
   if (!(await isDirectory(project))) {
     console.error(makeRed(`Not a directory: ${project}`));
     process.exit(1);
   }
 
-  const resolvedProject = Paths.resolve(args.project ?? ".");
+  const resolvedProject = Paths.resolve(project);
   const configPath = Paths.join(resolvedProject, "typeprompt.yml");
   const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
   if (configContent === undefined) {

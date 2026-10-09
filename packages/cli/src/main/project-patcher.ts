@@ -22,12 +22,12 @@ import { collectTemplateFiles } from "./template-files-collector.js";
 
 export async function patchProject(args: {
   readonly base: string;
-  readonly project: string;
+  readonly output: string;
 }): Promise<void> {
   const { base } = args;
-  const project = Paths.resolve(args.project);
+  const output = Paths.resolve(args.output);
   {
-    const parentDir = Paths.dirname(project);
+    const parentDir = Paths.dirname(output);
     if (!(await isDirectory(parentDir))) {
       throw new ExitError(`Parent directory does not exist: ${parentDir}`);
     }
@@ -139,7 +139,7 @@ export async function patchProject(args: {
   const existingFiles = (
     await Promise.all(
       Object.keys(filesToWrite).map(async (relativePath) => {
-        const fullPath = Paths.join(project, relativePath);
+        const fullPath = Paths.join(output, relativePath);
         return (await fileExists(fullPath)) ? fullPath : null;
       }),
     )
@@ -154,7 +154,7 @@ export async function patchProject(args: {
 
   await Promise.all(
     Object.entries(filesToWrite).map(async ([relativePath, content]) => {
-      const targetPath = Paths.join(project, relativePath);
+      const targetPath = Paths.join(output, relativePath);
       const dir = Paths.dirname(targetPath);
       await FileSystem.mkdir(dir, { recursive: true });
       await FileSystem.writeFile(targetPath, content, "utf-8");
