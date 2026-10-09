@@ -371,6 +371,7 @@ export class Workspace {
     }
     this.compilationResult = compile(pathToContent, {
       cache: this.compilationResult,
+      patchBase: null, // TODO: set
     });
     this.logger.log(
       `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
@@ -947,6 +948,7 @@ export class TypePromptLanguageExtension {
       pathToOldContent,
       position: offset,
       cache: workspace.compilationResult,
+      patchBase: null, // TODO: set
     });
 
     if (!result || result.suggestions.length === 0) {
@@ -1199,7 +1201,13 @@ export function validateTypePromptDocument(
   const uri = textDocument.uri;
   const content = textDocument.getText();
   const lineFinder = createLineFinder(content);
-  const compilationResult = compile({ [uri]: content }, { cache: null });
+  const compilationResult = compile(
+    { [uri]: content },
+    {
+      cache: null,
+      patchBase: null, // TODO: set
+    },
+  );
   const errors = compilationResult.finalErrors[uri] ?? [];
   const warnings = compilationResult.warnings[uri] ?? [];
   return [

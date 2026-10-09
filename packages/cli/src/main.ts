@@ -108,6 +108,7 @@ class WatchModeMainLoop {
         );
         compilationResult = compile(templateFiles, {
           cache: this.previousCompilationResult,
+          patchBase: null, // TODO: set
         });
         this.previousCompilationResult = compilationResult;
       } catch (e) {
@@ -189,7 +190,10 @@ async function format(
   mode: "fix" | "check",
 ): Promise<void> {
   const templateFiles = await collectTemplateFiles(resolvedProject, config);
-  const compilationResult = compile(templateFiles, { cache: null });
+  const compilationResult = compile(templateFiles, {
+    cache: null,
+    patchBase: null,
+  });
   if (compilationResult.anyErrors) {
     const errors = makeRenderableErrors(
       compilationResult.finalErrors,

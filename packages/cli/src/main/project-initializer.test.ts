@@ -31,7 +31,7 @@ describe("HELLO_WORLD_TEMPLATE", () => {
   it("compiles without errors", () => {
     const result = compile(
       { "hello-world.xml": HELLO_WORLD_TEMPLATE },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
     if (result.anyErrors) {
       const messages = Object.values(result.finalErrors)
@@ -109,7 +109,7 @@ describe("initializeProject", () => {
     const templateContent = readFileSync(templatePath, "utf8");
     const compileResult = compile(
       { "prompts/hello-world.xml": templateContent },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     if (compileResult.anyErrors) {

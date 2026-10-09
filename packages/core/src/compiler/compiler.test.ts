@@ -9,7 +9,7 @@ import { compile } from "./compiler.js";
 
 describe("compile - basic compilation and empty results", () => {
   it("compiles an empty project with no files", () => {
-    const result = compile({}, { cache: null });
+    const result = compile({}, { cache: null, patchBase: null });
 
     expect(result).toMatch({
       anyErrors: false,
@@ -39,7 +39,7 @@ describe("compile - basic compilation and empty results", () => {
           </template>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -111,7 +111,7 @@ describe("compile - basic compilation and empty results", () => {
           </template>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -162,7 +162,7 @@ describe("compile - parse and top-level XML errors", () => {
       {
         "prompts/Broken.xml": "<template name='Broken'",
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -182,7 +182,7 @@ describe("compile - parse and top-level XML errors", () => {
       {
         "prompts/Invalid.xml": "<unknownTag>content</unknownTag>",
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -202,7 +202,7 @@ describe("compile - parse and top-level XML errors", () => {
       {
         "prompts/Invalid.xml": "not xml content",
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -232,7 +232,7 @@ describe("compile - meta schema resolution", () => {
         "prompts/meta1.xml": "<meta>type Meta = { timeout: number; };</meta>",
         "prompts/meta2.xml": "<meta>type Meta = { debug: boolean; };</meta>",
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -258,7 +258,7 @@ describe("compile - meta schema resolution", () => {
       {
         "prompts/meta.xml": "<meta>type InvalidMeta = ;</meta>",
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -294,7 +294,7 @@ describe("compile - namespace resolution", () => {
           </namespace>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -334,7 +334,7 @@ describe("compile - namespace resolution", () => {
           </namespace>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -369,7 +369,7 @@ describe("compile - namespace resolution", () => {
           </template>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -404,7 +404,7 @@ describe("compile - namespace resolution", () => {
           </tool>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -445,7 +445,7 @@ describe("compile - name conflicts within namespaces", () => {
           </template>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -482,7 +482,7 @@ describe("compile - name conflicts within namespaces", () => {
           </tool>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -515,8 +515,11 @@ describe("compile - caching and incremental compilation", () => {
       `,
     };
 
-    const firstResult = compile(initialFiles, { cache: null });
-    const cachedResult = compile(initialFiles, { cache: firstResult });
+    const firstResult = compile(initialFiles, { cache: null, patchBase: null });
+    const cachedResult = compile(initialFiles, {
+      cache: firstResult,
+      patchBase: null,
+    });
 
     expect(cachedResult).toMatch({
       anyErrors: false,
@@ -548,7 +551,7 @@ describe("compile - caching and incremental compilation", () => {
       `,
     };
 
-    const firstResult = compile(initialFiles, { cache: null });
+    const firstResult = compile(initialFiles, { cache: null, patchBase: null });
 
     const updatedFiles = {
       ...initialFiles,
@@ -561,7 +564,10 @@ describe("compile - caching and incremental compilation", () => {
       `,
     };
 
-    const secondResult = compile(updatedFiles, { cache: firstResult });
+    const secondResult = compile(updatedFiles, {
+      cache: firstResult,
+      patchBase: null,
+    });
 
     expect(secondResult).toMatch({
       anyErrors: false,
@@ -596,7 +602,7 @@ describe("compile - caching and incremental compilation", () => {
       `,
     };
 
-    const firstResult = compile(initialFiles, { cache: null });
+    const firstResult = compile(initialFiles, { cache: null, patchBase: null });
 
     // Modify the tool schema
     const updatedFiles = {
@@ -609,7 +615,10 @@ describe("compile - caching and incremental compilation", () => {
       `,
     };
 
-    const secondResult = compile(updatedFiles, { cache: firstResult });
+    const secondResult = compile(updatedFiles, {
+      cache: firstResult,
+      patchBase: null,
+    });
 
     expect(secondResult).toMatch({
       anyErrors: false,
@@ -678,7 +687,7 @@ describe("compile - pathToDefinitionLinks", () => {
           </template>
         `,
       },
-      { cache: null },
+      { cache: null, patchBase: null },
     );
 
     expect(result).toMatch({
@@ -759,7 +768,7 @@ describe("compile - pathToDefinitionLinks", () => {
       `,
     };
 
-    const firstResult = compile(files, { cache: null });
+    const firstResult = compile(files, { cache: null, patchBase: null });
     expect(firstResult).toMatch({
       anyErrors: false,
       pathToDefinitionLinks: {
@@ -780,7 +789,10 @@ describe("compile - pathToDefinitionLinks", () => {
       },
     });
 
-    const secondResult = compile(files, { cache: firstResult });
+    const secondResult = compile(files, {
+      cache: firstResult,
+      patchBase: null,
+    });
     expect(secondResult).toMatch({
       anyErrors: false,
       pathToDefinitionLinks: {

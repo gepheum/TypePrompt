@@ -23,6 +23,7 @@ describe("getCompletionItems", () => {
       pathToOldContent: { "prompts/test.xml": xml },
       position: pos,
       cache: null,
+      patchBase: null,
     });
 
     expect(result !== null).toBe(true);
@@ -51,6 +52,7 @@ describe("getCompletionItems", () => {
       pathToOldContent: { "prompts/test.xml": xml },
       position: pos,
       cache: null,
+      patchBase: null,
     });
 
     expect(result !== null).toBe(true);
@@ -87,6 +89,7 @@ describe("getCompletionItems", () => {
       },
       position: pos,
       cache: null,
+      patchBase: null,
     });
 
     expect(result !== null).toBe(true);
@@ -109,6 +112,7 @@ describe("getCompletionItems", () => {
       pathToOldContent: { "prompts/test.xml": xml },
       position: 5,
       cache: null,
+      patchBase: null,
     });
 
     expect(result).toBe(null);

@@ -35,7 +35,10 @@ import { validateTool } from "./tool-validator.js";
 
 export function compile(
   pathToContent: { readonly [path: string]: string },
-  options: { readonly cache: CompilationResult | null },
+  options: {
+    readonly cache: CompilationResult | null;
+    readonly patchBase: CompilationResult | null;
+  },
 ): CompilationResult {
   const result = new CompilationResultImpl();
 

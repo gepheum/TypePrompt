@@ -87,7 +87,7 @@ export async function patchProject(args: {
       baseDir,
       configResult.config,
     );
-    const result = compile(templateFiles, { cache: null });
+    const result = compile(templateFiles, { cache: null, patchBase: null });
     if (result.anyErrors) {
       const pathNormalizer = makePathNormalizer(baseDir);
       const errors = makeRenderableErrors(

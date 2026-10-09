@@ -15,8 +15,10 @@ export function getCompletionItems(args: {
   pathToOldContent: { readonly [path: string]: string };
   position: number;
   cache: CompilationResult | null;
+  patchBase: CompilationResult | null;
 }): CompletionItems | null {
   const { newContent, path, pathToOldContent, position } = args;
+  const { patchBase } = args;
   let { cache } = args;
 
   const leftPart = newContent.slice(0, position);
@@ -47,7 +49,7 @@ export function getCompletionItems(args: {
     const content = [leftPart, insertion, rightPart].join("");
     pathToNewContent[path] = content;
 
-    const compilationResult = compile(pathToNewContent, { cache });
+    const compilationResult = compile(pathToNewContent, { cache, patchBase });
     if (cache === null) {
       cache = compilationResult;
     }

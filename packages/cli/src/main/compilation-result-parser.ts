@@ -29,7 +29,7 @@ export function parseCompilationResult(
 
   const compilationResult: CompilationResult = compile(
     parseResult.data.sourceFiles,
-    { cache: null },
+    { cache: null, patchBase: null },
   );
 
   if (compilationResult.anyErrors) {
