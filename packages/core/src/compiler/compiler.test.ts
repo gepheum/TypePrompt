@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import type { ValidCompilationResult } from "./compiler-types.js";
-import { compile } from "./compiler.js";
+import { compile, parseSourceFile } from "./compiler.js";
 
 // ---------------------------------------------------------------------------
 // compile - basic compilation & empty results
@@ -54,7 +54,7 @@ describe("compile - basic compilation and empty results", () => {
         },
       },
       tools: {},
-      signature: "22bd47ff",
+      signature: "fbb40e8b",
       finalErrors: {
         "prompts/Translate.xml": [],
       },
@@ -142,7 +142,7 @@ describe("compile - basic compilation and empty results", () => {
           },
         },
       },
-      signature: "c931c0ec",
+      signature: "51484c7f",
       finalErrors: {
         "prompts/meta.xml": [],
         "prompts/Legal/shared.xml": [],
@@ -1286,5 +1286,188 @@ describe("compile - patchBase validation", () => {
         ],
       },
     });
+  });
+});
+
+describe("SourceFileParseResult hash", () => {
+  it("computes exact hash values matching semantic patch-validation elements", () => {
+    const templateDefaultNs = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const templateCustomNs = parseSourceFile(
+      "prompts/Legal/ReviewContract.xml",
+      `
+        <template name="ReviewContract" namespace="Legal">
+          <schema>
+            type Input = { doc: shared.Document; };
+            type Output = string;
+          </schema>
+          <system>Legal reviewer</system>
+          <user>Review contract</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const toolFile = parseSourceFile(
+      "prompts/Legal/lookupClause.xml",
+      `
+        <tool name="lookupClause" namespace="Legal">
+          <description>Looks up clause by <c>clauseId</c></description>
+          <schema>
+            type Input = { clauseId: string; };
+            type Output = { clauseText: string; };
+          </schema>
+        </tool>
+      `,
+      { patchBase: null },
+    );
+
+    const namespaceFile = parseSourceFile(
+      "prompts/Legal/shared.xml",
+      `
+        <namespace name="Legal">
+          type Document = {
+            title: string;
+          };
+        </namespace>
+      `,
+      { patchBase: null },
+    );
+
+    const metaFile = parseSourceFile(
+      "prompts/meta.xml",
+      `
+        <meta>
+          type Meta = {
+            temperature: number;
+          };
+        </meta>
+      `,
+      { patchBase: null },
+    );
+
+    // Exact deterministic hash snapshots
+    expect(templateDefaultNs.hash).toBe(-72085877);
+    expect(templateCustomNs.hash).toBe(-364769186);
+    expect(toolFile.hash).toBe(486079968);
+    expect(namespaceFile.hash).toBe(-252376145);
+    expect(metaFile.hash).toBe(1494758034);
+  });
+
+  it("produces identical hash when prompt body text or doc comments change", () => {
+    const file1 = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate text</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const file2 = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate">
+          <schema>
+            /** JSDoc comment for Input */
+            type Input = {
+              /** JSDoc comment for field */
+              text: string;
+            };
+            type Output = string;
+          </schema>
+          <system>Completely different instructions for the LLM</system>
+          <user>Different user prompt template text</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    expect(file1.hash).toBe(file2.hash);
+  });
+
+  it("produces different hash when template name, namespace, or schema changes", () => {
+    const base = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user>Translate text</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const diffName = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate2">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user>Translate text</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const diffNamespace = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate" namespace="Other">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user>Translate text</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    const diffSchema = parseSourceFile(
+      "prompts/Translate.xml",
+      `
+        <template name="Translate">
+          <schema>
+            type Input = { count: number; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user>Translate text</user>
+        </template>
+      `,
+      { patchBase: null },
+    );
+
+    expect(base.hash === diffName.hash).toBe(false);
+    expect(base.hash === diffNamespace.hash).toBe(false);
+    expect(base.hash === diffSchema.hash).toBe(false);
   });
 });

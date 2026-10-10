@@ -1,8 +1,15 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
-import { schemasAreEquivalent } from "../schema/schema-equivalence.js";
+import {
+  hashSchema,
+  schemasAreEquivalent,
+} from "../schema/schema-equivalence.js";
 import type { Schema, TypeDeclarations } from "../schema/schema-types.js";
 import { checkNameConflicts } from "../util/casing.js";
-import { combineHashesUnordered, hashString } from "../util/hasher.js";
+import {
+  combineHashes,
+  combineHashesUnordered,
+  hashString,
+} from "../util/hasher.js";
 import type { LineFinderData } from "../util/line-finder.js";
 import { createLineFinder } from "../util/line-finder.js";
 import type {
@@ -148,6 +155,10 @@ export function parseSourceFile(
     }
   }
 
+  if (result.entity && errors.length <= 0) {
+    result.hash = computeSourceFileHash(path, result.entity);
+  }
+
   if (options.patchBase && errors.length <= 0) {
     const baseFile = options.patchBase.sourceFiles[path];
     if (baseFile) {
@@ -161,6 +172,39 @@ export function parseSourceFile(
   }
 
   return result;
+}
+
+function computeSourceFileHash(
+  path: string,
+  entity: Template | Tool | Namespace | Meta,
+): number {
+  switch (entity.kind) {
+    case "template":
+    case "tool": {
+      return combineHashes([
+        hashString(path),
+        hashString(entity.kind),
+        hashString(entity.name.text),
+        hashString(entity.namespace?.text ?? DEFAULT_NAMESPACE),
+        hashSchema(entity.schema.typeDeclarations),
+      ]);
+    }
+    case "namespace": {
+      return combineHashes([
+        hashString(path),
+        hashString(entity.kind),
+        hashString(entity.name.text),
+        hashSchema((entity.schema as Schema).typeDeclarations),
+      ]);
+    }
+    case "meta": {
+      return combineHashes([
+        hashString(path),
+        hashString(entity.kind),
+        hashSchema((entity.schema as Schema).typeDeclarations),
+      ]);
+    }
+  }
 }
 
 function validateAgainstPatch(
@@ -253,11 +297,10 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
     readonly content: string,
     readonly xmlDocument: XmlDocument | InternalErrors,
   ) {
-    this.hash = combineHashesUnordered([hashString(path), hashString(content)]);
     this.lineFinder = createLineFinder(content);
   }
 
-  readonly hash: number;
+  hash: number = 0;
   readonly lineFinder: LineFinderData;
   entity: Template | Tool | Namespace | Meta | undefined;
 

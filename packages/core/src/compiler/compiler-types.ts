@@ -48,7 +48,6 @@ export type ValidCompilationResult = CompilationResult & {
 export type SourceFileParseResult = {
   readonly path: string;
   readonly content: string;
-  // Hash of (path, content)
   readonly hash: number;
   readonly lineFinder: LineFinderData;
 
