@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toSnakeCase,
@@ -30,13 +31,13 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateRustCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const rustConfig = config.gen?.rust;
   if (!rustConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: rustConfig.file,

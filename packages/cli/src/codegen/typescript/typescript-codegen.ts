@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   type Spec,
   uncapitalize,
@@ -33,13 +34,13 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const tsConfig = config.gen?.typescript;
   if (!tsConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: tsConfig.file,

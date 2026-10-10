@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   type Spec,
@@ -30,13 +31,13 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateCSharpCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const csharpConfig = config.gen?.csharp;
   if (!csharpConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: csharpConfig.file,

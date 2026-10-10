@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toScreamCase,
@@ -32,13 +33,13 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateKotlinCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const kotlinConfig = config.gen?.kotlin;
   if (!kotlinConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: kotlinConfig.file,

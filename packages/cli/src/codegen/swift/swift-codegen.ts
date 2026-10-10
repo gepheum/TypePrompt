@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toCamelCase,
   toPascalCase,
@@ -31,13 +32,13 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateSwiftCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const swiftConfig = config.gen?.swift;
   if (!swiftConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: swiftConfig.file,

@@ -16,6 +16,7 @@ import {
   capitalize,
   getId,
   isLiteralType,
+  makeTemplates,
   resolveType,
   runtimeTypesSchema,
   toPascalCase,
@@ -27,13 +28,13 @@ import type { OutputFile } from "../codegen-types.js";
 
 export function generateCppCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const cppConfig = config.gen?.cpp;
   if (!cppConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: cppConfig.file,

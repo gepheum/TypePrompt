@@ -1,14 +1,12 @@
 import {
   makeTemplateOverrides,
   type Config,
-  type Spec,
   type ValidCompilationResult,
 } from "@typeprompt/core";
 import type { OutputFile } from "../codegen-types.js";
 
 export function generatePatchOverrides(
   compilationResult: ValidCompilationResult,
-  _templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   if (!config.patch) return [];

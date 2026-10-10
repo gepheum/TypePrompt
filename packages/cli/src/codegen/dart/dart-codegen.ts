@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toCamelCase,
   toPascalCase,
@@ -33,13 +34,13 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateDartCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const dartConfig = config.gen?.dart;
   if (!dartConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: dartConfig.file,

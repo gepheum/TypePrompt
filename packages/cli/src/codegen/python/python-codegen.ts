@@ -1,5 +1,6 @@
 import {
   capitalize,
+  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toSnakeCase,
@@ -26,13 +27,13 @@ import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
   compilationResult: ValidCompilationResult,
-  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const pyConfig = config.gen?.python;
   if (!pyConfig) {
     return [];
   }
+  const templatesData = makeTemplates(compilationResult);
   return [
     {
       path: pyConfig.file,
