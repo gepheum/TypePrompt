@@ -7,11 +7,12 @@ import * as Paths from "path";
 import type * as Spec from "../runtime/runtime-types.js";
 import { makeTemplates } from "../runtime/spec-maker.js";
 import { parseCompilationResult } from "./compilation-result-parser.js";
-import { makePathNormalizer, renderErrors } from "./error-renderer.js";
+import { renderErrors } from "./error-renderer.js";
 import { ExitError } from "./exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./io.js";
 import type { RenderableError } from "./renderable-error.js";
 import {
+  makePathNormalizer,
   makeRenderableError,
   makeRenderableErrors,
 } from "./renderable-error.js";
@@ -115,15 +116,15 @@ export async function patchProject(args: {
   const templates: Spec.Templates = makeTemplates(compilationResult);
 
   const configYaml = [
+    "patch:",
+    "  base: patch-base.json",
+    "  overrides: overrides.json",
+    "",
     "include:",
     Object.keys(templates.sourceFiles)
       .sort()
       .map((p) => `  - ${p}`)
       .join("\n"),
-    "",
-    "patch:",
-    "  base: patch-base.json",
-    "  overrides: overrides.json",
     "",
   ].join("\n");
 

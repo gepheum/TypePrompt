@@ -1,15 +1,5 @@
 import type { LineMatch } from "@typeprompt/core/util/line-finder.js";
-import * as Paths from "path";
 import type { RenderableError } from "./renderable-error.js";
-
-export function makePathNormalizer(
-  projectDir: string,
-): (path: string) => string {
-  const currentDir = Paths.resolve(".");
-  return (path: string): string => {
-    return Paths.relative(currentDir, Paths.join(projectDir, path));
-  };
-}
 
 export function renderErrors(
   errors: readonly RenderableError[],
@@ -57,6 +47,7 @@ export function formatError(
     error.message,
     error.hint ? makeLightGray(`\nHint: ${error.hint}`) : "",
     error.rule ? makeLightGray(`\nRule: ${error.rule}`) : "",
+    error.baseSchema ? `\n\n${makeCyan(error.baseSchema)}` : "",
     "\n\n",
     makeBlackOnWhite(lineNumberStr),
     ` ${line.line}\n`,
@@ -97,7 +88,7 @@ export function makeLightGray(text: string): string {
   return `\x1b[37m${text}\x1b[0m`;
 }
 
-function makeCyan(text: string): string {
+export function makeCyan(text: string): string {
   return `\x1b[36m${text}\x1b[0m`;
 }
 

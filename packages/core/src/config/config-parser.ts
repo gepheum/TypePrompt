@@ -47,8 +47,8 @@ export type Config = {
   };
 
   readonly patch?: {
-    readonly base: string;
-    readonly overrides: string;
+    readonly base: "patch-base.json";
+    readonly overrides: "overrides.json";
   };
 };
 
@@ -195,8 +195,8 @@ const RawConfigSchema = z
       .optional(),
     patch: z
       .object({
-        base: z.string(),
-        overrides: z.string(),
+        base: z.literal("patch-base.json"),
+        overrides: z.literal("overrides.json"),
       })
       .strict()
       .optional(),

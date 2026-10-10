@@ -41,8 +41,6 @@ node ../packages/cli/dist/main.js gen -p projects/e02
 node ../packages/cli/dist/main.js gen -p projects/e03
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-kotlin
 
-node ../packages/cli/dist/main.js patch -b projects/e03 --output projects/patch-e03
-
 # Run Python unit tests
 cd python
 .venv/bin/pytest tests.py -v

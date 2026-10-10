@@ -4,6 +4,7 @@ import {
   type LineMatch,
 } from "@typeprompt/core/util/line-finder.js";
 import type { InternalError } from "@typeprompt/core/util/shared-types.js";
+import * as Paths from "path";
 
 export type RenderableError = {
   readonly path: string;
@@ -11,6 +12,7 @@ export type RenderableError = {
   readonly hint?: string;
   readonly rule?: string;
   readonly suggestions?: readonly string[];
+  readonly baseSchema?: string;
   readonly start: LineMatch;
   readonly end: LineMatch;
 };
@@ -41,8 +43,17 @@ export function makeRenderableError(
   pathNormalizer: (path: string) => string,
 ): RenderableError {
   path = pathNormalizer(path);
-  const { message, hint, rule, suggestions } = error;
+  const { message, hint, rule, suggestions, baseSchema } = error;
   const start = findLine(error.span.start, lineFinder);
   const end = findLine(error.span.end, lineFinder);
-  return { path, message, hint, rule, suggestions, start, end };
+  return { path, message, hint, rule, suggestions, baseSchema, start, end };
+}
+
+export function makePathNormalizer(
+  projectDir: string,
+): (path: string) => string {
+  const currentDir = Paths.resolve(".");
+  return (path: string): string => {
+    return Paths.relative(currentDir, Paths.join(projectDir, path));
+  };
 }

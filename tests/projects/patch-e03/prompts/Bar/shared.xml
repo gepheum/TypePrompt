@@ -1,8 +1,0 @@
-<namespace name="Bar">
-  type Foos = string[];
-
-  type Square = {
-    kind: "square";
-    size: number;
-  };
-</namespace>

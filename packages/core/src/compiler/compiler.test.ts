@@ -815,3 +815,470 @@ describe("compile - pathToDefinitionLinks", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// compile - patchBase validation
+// ---------------------------------------------------------------------------
+
+describe("compile - patchBase validation", () => {
+  const baseFiles = {
+    "prompts/Billing/shared.xml": `
+      <namespace name="Billing">
+        type Invoice = { id: string; amount: number; };
+      </namespace>
+    `,
+    "prompts/Billing/charge.xml": `
+      <tool name="charge" namespace="Billing">
+        <description>Charges card</description>
+        <schema>
+          type Input = { cardId: string; amount: number; };
+          type Output = { success: boolean; };
+        </schema>
+      </tool>
+    `,
+    "prompts/Billing/SendInvoice.xml": `
+      <template name="SendInvoice" namespace="Billing">
+        <schema>
+          type Input = { invoiceId: string; };
+          type Output = string;
+        </schema>
+        <system>You send invoices</system>
+        <user>Invoice <insert val="input.invoiceId"/></user>
+      </template>
+    `,
+    "prompts/Translate.xml": `
+      <template name="Translate">
+        <schema>
+          type Input = { text: string; };
+          type Output = string;
+        </schema>
+        <system>Translate</system>
+        <user><insert val="input.text"/></user>
+      </template>
+    `,
+  };
+
+  const baseResult = compile(baseFiles, { cache: null, patchBase: null });
+
+  it("succeeds when overrides match base templates, tools, and namespaces", () => {
+    const overrideFiles = {
+      "prompts/Billing/shared.xml": `
+        <namespace name="Billing">
+          type Invoice = { id: string; amount: number; };
+        </namespace>
+      `,
+      "prompts/Billing/charge.xml": `
+        <tool name="charge" namespace="Billing">
+          <description>Updated description for charging</description>
+          <schema>
+            type Input = { cardId: string; amount: number; };
+            type Output = { success: boolean; };
+          </schema>
+        </tool>
+      `,
+      "prompts/Billing/SendInvoice.xml": `
+        <template name="SendInvoice" namespace="Billing">
+          <schema>
+            type Input = { invoiceId: string; };
+            type Output = string;
+          </schema>
+          <system>Updated system prompt</system>
+          <user>Sending invoice: <insert val="input.invoiceId"/></user>
+        </template>
+      `,
+      "prompts/Translate.xml": `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Custom translation engine</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result.anyErrors).toBe(false);
+  });
+
+  it("reports error when an override file is not found in patchBase", () => {
+    const overrideFiles = {
+      "prompts/NewTemplate.xml": `
+        <template name="NewTemplate">
+          <schema>
+            type Input = string;
+            type Output = string;
+          </schema>
+          <system>New</system>
+          <user><insert val="input"/></user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/NewTemplate.xml": [
+          {
+            message: "File not found in patch base",
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when element kind does not match base", () => {
+    const overrideFiles = {
+      "prompts/Translate.xml": `
+        <namespace name="Translate">
+          type Doc = string;
+        </namespace>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Translate.xml": [
+          {
+            message: "Expected <template> to match base",
+            suggestions: ["template"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when template name does not match base", () => {
+    const overrideFiles = {
+      "prompts/Translate.xml": `
+        <template name="TranslateV2">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Translate.xml": [
+          {
+            message: "Expected 'Translate' to match base",
+            suggestions: ["Translate"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when tool name does not match base", () => {
+    const overrideFiles = {
+      ...baseFiles,
+      "prompts/Billing/charge.xml": `
+        <tool name="chargeCard" namespace="Billing">
+          <description>Charges card</description>
+          <schema>
+            type Input = { cardId: string; amount: number; };
+            type Output = { success: boolean; };
+          </schema>
+        </tool>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Billing/charge.xml": [
+          {
+            message: "Expected 'charge' to match base",
+            suggestions: ["charge"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when namespace name does not match base", () => {
+    const overrideFiles = {
+      "prompts/Billing/shared.xml": `
+        <namespace name="Invoicing">
+          type Invoice = { id: string; amount: number; };
+        </namespace>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Billing/shared.xml": [
+          {
+            message: "Expected 'Billing' to match base",
+            suggestions: ["Billing"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when namespace does not match base", () => {
+    const overrideFiles = {
+      ...baseFiles,
+      "prompts/Billing/SendInvoice.xml": `
+        <template name="SendInvoice" namespace="Main">
+          <schema>
+            type Input = { invoiceId: string; };
+            type Output = string;
+          </schema>
+          <system>You send invoices</system>
+          <user>Invoice</user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Billing/SendInvoice.xml": [
+          {
+            message: "Expected 'Billing' to match base",
+            suggestions: ["Billing"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when namespace attribute is missing on override but present in base", () => {
+    const overrideFiles = {
+      "prompts/Billing/SendInvoice.xml": `
+        <template name="SendInvoice">
+          <schema>
+            type Input = { invoiceId: string; };
+            type Output = string;
+          </schema>
+          <system>You send invoices</system>
+          <user>Invoice</user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Billing/SendInvoice.xml": [
+          {
+            message: "Missing attribute 'namespace=\"Billing\"' to match base",
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports error when namespace attribute is present on override but base used default namespace", () => {
+    const overrideFiles = {
+      ...baseFiles,
+      "prompts/Translate.xml": `
+        <template name="Translate" namespace="Billing">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Translate.xml": [
+          {
+            message: "Expected 'Main' to match base",
+            suggestions: ["Main"],
+          },
+        ],
+      },
+    });
+  });
+
+  it("reports schema mismatch errors with baseSchema for template, tool, and namespace", () => {
+    const overrideFiles = {
+      "prompts/Translate.xml": `
+        <template name="Translate">
+          <schema>
+            type Input = { differentField: number; };
+            type Output = string;
+          </schema>
+          <system>Translate</system>
+          <user>hi</user>
+        </template>
+      `,
+      "prompts/Billing/charge.xml": `
+        <tool name="charge" namespace="Billing">
+          <description>Charges card</description>
+          <schema>
+            type Input = { cardId: string; };
+            type Output = { success: boolean; };
+          </schema>
+        </tool>
+      `,
+      "prompts/Billing/shared.xml": `
+        <namespace name="Billing">
+          type Invoice = { id: string; };
+        </namespace>
+      `,
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Translate.xml": [
+          {
+            message: "Schema does not match base",
+          },
+        ],
+        "prompts/Billing/charge.xml": [
+          {
+            message: "Schema does not match base",
+          },
+        ],
+        "prompts/Billing/shared.xml": [
+          {
+            message: "Schema does not match base",
+          },
+        ],
+      },
+    });
+
+    const translateErrors = result.finalErrors["prompts/Translate.xml"];
+    expect(translateErrors?.[0]?.baseSchema !== undefined).toBe(true);
+    expect(
+      translateErrors?.[0]?.baseSchema?.includes(
+        "type Input = { text: string; };",
+      ),
+    ).toBe(true);
+  });
+
+  it("reports schema mismatch errors for meta", () => {
+    const metaBase = compile(
+      {
+        "prompts/meta.xml": `
+          <meta>
+            type Meta = {
+              temperature: number;
+            };
+          </meta>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    const result = compile(
+      {
+        "prompts/meta.xml": `
+          <meta>
+            type Meta = {
+              temperature: string;
+            };
+          </meta>
+        `,
+      },
+      { cache: null, patchBase: metaBase },
+    );
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/meta.xml": [
+          {
+            message: "Schema does not match base",
+          },
+        ],
+      },
+    });
+
+    const metaErrors = result.finalErrors["prompts/meta.xml"];
+    expect(metaErrors?.[0]?.baseSchema !== undefined).toBe(true);
+    expect(metaErrors?.[0]?.baseSchema?.includes("temperature: number;")).toBe(
+      true,
+    );
+  });
+
+  it("skips patchBase validation when override file has parse errors", () => {
+    const overrideFiles = {
+      "prompts/Translate.xml": '<template name="Translate"',
+    };
+
+    const result = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    });
+
+    expect(result).toMatch({
+      anyErrors: true,
+      finalErrors: {
+        "prompts/Translate.xml": [
+          {
+            message: "Unclosed tag '<template>'",
+          },
+        ],
+      },
+    });
+  });
+});

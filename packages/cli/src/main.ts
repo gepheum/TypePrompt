@@ -21,7 +21,6 @@ import { parseCommandLine } from "./main/command-line-parser.js";
 import {
   makeGray,
   makeGreen,
-  makePathNormalizer,
   makeRed,
   renderErrors,
 } from "./main/error-renderer.js";
@@ -31,6 +30,7 @@ import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";
 import {
+  makePathNormalizer,
   makeRenderableError,
   makeRenderableErrors,
 } from "./main/renderable-error.js";
