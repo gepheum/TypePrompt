@@ -108,13 +108,13 @@ export interface XmlBundle {
   /** Cached file content, line offsets finder, and last modified timestamp. */
   content: FileContent;
   /**
-   * The workspace this XML bundle currently belongs to, or undefined if outside any
-   * workspace.
+   * The project this XML bundle currently belongs to, or undefined if outside any
+   * project.
    */
-  workspace?: Workspace;
+  project?: Project;
   /**
    * Project-relative path with forward slashes (e.g. "prompts/hello.xml") within the
-   * workspace.
+   * project.
    */
   relativePath?: string;
 }
@@ -312,13 +312,13 @@ export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
 }
 
 /**
- * A TypePrompt workspace project corresponding to a `typeprompt.yml` file.
+ * A TypePrompt project corresponding to a `typeprompt.yml` file.
  */
-export class Workspace {
-  /** Template files in this workspace. Key: relative path. */
+export class Project {
+  /** Template files in this project. Key: relative path. */
   public readonly xmls = new Map<string, XmlBundle>();
 
-  /** Cached compilation result for this workspace. */
+  /** Cached compilation result for this project. */
   public compilationResult: CompilationResult | null = null;
 
   constructor(
@@ -327,7 +327,7 @@ export class Workspace {
      * (e.g. "file:///path/to/project").
      */
     public readonly folderUri: string,
-    /** The loaded configuration bundle for this workspace. */
+    /** The loaded configuration bundle for this project. */
     public configBundle: TypePromptConfigBundle,
     public readonly logger: Logger = noopLogger,
   ) {}
@@ -346,7 +346,7 @@ export class Workspace {
 
   /**
    * Computes the project-relative path of a file given its URI, or returns null if not
-   * inside this workspace folder.
+   * inside this project folder.
    */
   public getRelativePath(fileUri: string): string | null {
     if (!fileUri.startsWith(this.folderUri)) {
@@ -358,7 +358,7 @@ export class Workspace {
   }
 
   /**
-   * Finds an XML bundle belonging to this workspace by its project-relative path
+   * Finds an XML bundle belonging to this project by its project-relative path
    * (e.g. "prompts/hello-world.xml") or by its full URI (e.g. "file:///path/to/project/prompts/hello-world.xml").
    */
   public getXmlBundle(pathOrUri: string): XmlBundle | undefined {
@@ -403,10 +403,10 @@ export class Workspace {
     };
   }
 
-  /** Compiles all XML templates in this workspace into a `CompilationResult`. */
+  /** Compiles all XML templates in this project into a `CompilationResult`. */
   public compile(): CompilationResult {
     this.logger.log(
-      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compiling ${this.xmls.size} XML file(s) (cache=${Boolean(this.compilationResult)})...`,
+      `[TypePrompt LSP] [Project: ${this.folderUri}] Compiling ${this.xmls.size} XML file(s) (cache=${Boolean(this.compilationResult)})...`,
     );
     const pathToContent: { [path: string]: string } = {};
     for (const [relPath, xml] of this.xmls) {
@@ -417,44 +417,44 @@ export class Workspace {
       patchBase: null, // TODO: set
     });
     this.logger.log(
-      `[TypePrompt LSP] [Workspace: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
+      `[TypePrompt LSP] [Project: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
     );
     return this.compilationResult;
   }
 
-  /** Registers an XML bundle with a workspace under its project-relative path. */
+  /** Registers an XML bundle with a project under its project-relative path. */
   public static addXml(
     xml: XmlBundle,
-    workspace: Workspace,
+    project: Project,
     relativePath: string,
   ): void {
     const normalizedRelPath = relativePath.replace(/\\/g, "/");
-    workspace.logger.log(
-      `[TypePrompt LSP] Adding XML ${xml.uri} to workspace ${workspace.folderUri} as '${normalizedRelPath}'`,
+    project.logger.log(
+      `[TypePrompt LSP] Adding XML ${xml.uri} to project ${project.folderUri} as '${normalizedRelPath}'`,
     );
-    xml.workspace = workspace;
+    xml.project = project;
     xml.relativePath = normalizedRelPath;
-    workspace.xmls.set(normalizedRelPath, xml);
+    project.xmls.set(normalizedRelPath, xml);
   }
 
-  /** Unregisters an XML bundle from its workspace. */
+  /** Unregisters an XML bundle from its project. */
   public static removeXml(xml: XmlBundle): void {
-    if (xml.workspace) {
-      xml.workspace.logger.log(
-        `[TypePrompt LSP] Removing XML ${xml.uri} from workspace ${xml.workspace.folderUri}`,
+    if (xml.project) {
+      xml.project.logger.log(
+        `[TypePrompt LSP] Removing XML ${xml.uri} from project ${xml.project.folderUri}`,
       );
       if (xml.relativePath) {
-        xml.workspace.xmls.delete(xml.relativePath);
+        xml.project.xmls.delete(xml.relativePath);
       }
-      xml.workspace = undefined;
+      xml.project = undefined;
       xml.relativePath = undefined;
     }
   }
 }
 
 export class TypePromptLanguageExtension {
-  /** Map of workspaces indexed by their workspace folder URI. */
-  public readonly workspaces = new Map<string, Workspace>();
+  /** Map of projects indexed by their project folder URI. */
+  public readonly projects = new Map<string, Project>();
   /** Map of all discovered or open XML bundles indexed by their absolute file URI. */
   public readonly xmlBundles = new Map<string, XmlBundle>();
   /** Set of workspace root folder URIs configured in the client. */
@@ -531,7 +531,7 @@ export class TypePromptLanguageExtension {
         continue;
       }
 
-      // Prioritize config files first so workspaces are created before XMLs.
+      // Prioritize config files first so projects are created before XMLs.
       const uriToTier = (u: string): number => {
         if (
           u.endsWith("/typeprompt.yml") ||
@@ -599,7 +599,7 @@ export class TypePromptLanguageExtension {
     for (const uri of this.xmlBundles.keys()) {
       uris.add(uri);
     }
-    for (const uri of this.workspaces.keys()) {
+    for (const uri of this.projects.keys()) {
       uris.add(uri);
     }
 
@@ -684,26 +684,22 @@ export class TypePromptLanguageExtension {
               config: configResult.config,
               yamlContent: content,
             };
-            const oldWorkspace = this.workspaces.get(uri);
-            if (oldWorkspace) {
+            const oldProject = this.projects.get(uri);
+            if (oldProject) {
               this.logger.log(
-                `[TypePrompt LSP] Updating config for existing workspace ${uri}`,
+                `[TypePrompt LSP] Updating config for existing project ${uri}`,
               );
-              oldWorkspace.configBundle = configBundle;
+              oldProject.configBundle = configBundle;
             } else {
               const folderUri = uri.replace(/typeprompt\.(yml|yaml)$/, "");
               this.logger.log(
-                `[TypePrompt LSP] Creating new workspace for ${folderUri}`,
+                `[TypePrompt LSP] Creating new project for ${folderUri}`,
               );
-              const workspace = new Workspace(
-                folderUri,
-                configBundle,
-                this.logger,
-              );
-              this.workspaces.set(uri, workspace);
+              const project = new Project(folderUri, configBundle, this.logger);
+              this.projects.set(uri, project);
             }
             this.sendDiagnostics(uri, []);
-            this.reassignXmlsToWorkspaces();
+            this.reassignXmlsToProjects();
           } else {
             this.logger.error(
               `[TypePrompt LSP] Config errors in ${uri}:`,
@@ -721,11 +717,9 @@ export class TypePromptLanguageExtension {
             this.sendDiagnostics(uri, diagnostics);
           }
         } else {
-          this.logger.log(
-            `[TypePrompt LSP] Workspace config deleted at ${uri}`,
-          );
-          if (this.workspaces.delete(uri)) {
-            this.reassignXmlsToWorkspaces();
+          this.logger.log(`[TypePrompt LSP] Project config deleted at ${uri}`);
+          if (this.projects.delete(uri)) {
+            this.reassignXmlsToProjects();
           }
         }
         break;
@@ -739,7 +733,7 @@ export class TypePromptLanguageExtension {
 
         if (content) {
           let xmlBundle = this.xmlBundles.get(uri);
-          const oldWorkspace = xmlBundle?.workspace;
+          const oldProject = xmlBundle?.project;
 
           if (xmlBundle) {
             xmlBundle.content = content;
@@ -751,37 +745,37 @@ export class TypePromptLanguageExtension {
             this.xmlBundles.set(uri, xmlBundle);
           }
 
-          const match = this.findWorkspace(xmlBundle);
+          const match = this.findProject(xmlBundle);
           if (match) {
-            if (xmlBundle.workspace !== match.workspace) {
-              Workspace.removeXml(xmlBundle);
-              Workspace.addXml(xmlBundle, match.workspace, match.relativePath);
-              if (oldWorkspace && oldWorkspace !== match.workspace) {
-                this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+            if (xmlBundle.project !== match.project) {
+              Project.removeXml(xmlBundle);
+              Project.addXml(xmlBundle, match.project, match.relativePath);
+              if (oldProject && oldProject !== match.project) {
+                this.compileAndSendDiagnosticsForProject(oldProject);
               }
             } else {
               xmlBundle.relativePath = match.relativePath;
             }
-            this.compileAndSendDiagnosticsForWorkspace(match.workspace);
+            this.compileAndSendDiagnosticsForProject(match.project);
           } else {
             this.logger.log(
-              `[TypePrompt LSP] XML file ${uri} does not belong to any workspace.`,
+              `[TypePrompt LSP] XML file ${uri} does not belong to any project.`,
             );
-            if (oldWorkspace) {
-              Workspace.removeXml(xmlBundle);
-              this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+            if (oldProject) {
+              Project.removeXml(xmlBundle);
+              this.compileAndSendDiagnosticsForProject(oldProject);
             }
             this.sendDiagnostics(uri, []);
           }
         } else {
           const existingBundle = this.xmlBundles.get(uri);
           if (existingBundle) {
-            const oldWorkspace = existingBundle.workspace;
-            Workspace.removeXml(existingBundle);
+            const oldProject = existingBundle.project;
+            Project.removeXml(existingBundle);
             this.xmlBundles.delete(uri);
             this.sendDiagnostics(uri, []);
-            if (oldWorkspace) {
-              this.compileAndSendDiagnosticsForWorkspace(oldWorkspace);
+            if (oldProject) {
+              this.compileAndSendDiagnosticsForProject(oldProject);
             }
           }
         }
@@ -800,7 +794,7 @@ export class TypePromptLanguageExtension {
       case "*.xml":
         return this.xmlBundles.get(uri)?.content;
       case "typeprompt.yml":
-        return this.workspaces.get(uri)?.configBundle.yamlContent;
+        return this.projects.get(uri)?.configBundle.yamlContent;
       case null:
         return undefined;
       default: {
@@ -835,18 +829,18 @@ export class TypePromptLanguageExtension {
     this.uriToTimeout.set(uri, timeout);
   }
 
-  public findWorkspace(
+  public findProject(
     xml: XmlBundle,
-  ): { workspace: Workspace; relativePath: string } | undefined {
-    let bestMatch: { workspace: Workspace; relativePath: string } | undefined;
-    for (const workspace of this.workspaces.values()) {
-      const relPath = workspace.getRelativePath(xml.uri);
-      if (relPath !== null && workspace.matchesInclude(relPath)) {
+  ): { project: Project; relativePath: string } | undefined {
+    let bestMatch: { project: Project; relativePath: string } | undefined;
+    for (const project of this.projects.values()) {
+      const relPath = project.getRelativePath(xml.uri);
+      if (relPath !== null && project.matchesInclude(relPath)) {
         if (
           !bestMatch ||
-          workspace.folderUri.length > bestMatch.workspace.folderUri.length
+          project.folderUri.length > bestMatch.project.folderUri.length
         ) {
-          bestMatch = { workspace, relativePath: relPath };
+          bestMatch = { project, relativePath: relPath };
         }
       }
     }
@@ -857,47 +851,47 @@ export class TypePromptLanguageExtension {
     return this.xmlBundles.get(uri);
   }
 
-  public reassignXmlsToWorkspaces(): void {
+  public reassignXmlsToProjects(): void {
     this.logger.log(
-      `[TypePrompt LSP] Reassigning XMLs (workspaces=${this.workspaces.size}, xmls=${this.xmlBundles.size})...`,
+      `[TypePrompt LSP] Reassigning XMLs (projects=${this.projects.size}, xmls=${this.xmlBundles.size})...`,
     );
-    const affectedWorkspaces = new Set<Workspace>();
+    const affectedProjects = new Set<Project>();
 
     for (const xmlBundle of this.xmlBundles.values()) {
-      const oldWorkspace = xmlBundle.workspace;
-      const match = this.findWorkspace(xmlBundle);
+      const oldProject = xmlBundle.project;
+      const match = this.findProject(xmlBundle);
 
       if (match) {
         if (
-          xmlBundle.workspace !== match.workspace ||
+          xmlBundle.project !== match.project ||
           xmlBundle.relativePath !== match.relativePath
         ) {
-          Workspace.removeXml(xmlBundle);
-          Workspace.addXml(xmlBundle, match.workspace, match.relativePath);
-          if (oldWorkspace) {
-            affectedWorkspaces.add(oldWorkspace);
+          Project.removeXml(xmlBundle);
+          Project.addXml(xmlBundle, match.project, match.relativePath);
+          if (oldProject) {
+            affectedProjects.add(oldProject);
           }
-          affectedWorkspaces.add(match.workspace);
+          affectedProjects.add(match.project);
         } else {
-          affectedWorkspaces.add(match.workspace);
+          affectedProjects.add(match.project);
         }
       } else {
-        if (oldWorkspace) {
-          Workspace.removeXml(xmlBundle);
-          affectedWorkspaces.add(oldWorkspace);
+        if (oldProject) {
+          Project.removeXml(xmlBundle);
+          affectedProjects.add(oldProject);
         }
         this.sendDiagnostics(xmlBundle.uri, []);
       }
     }
 
-    for (const ws of affectedWorkspaces) {
-      this.compileAndSendDiagnosticsForWorkspace(ws);
+    for (const proj of affectedProjects) {
+      this.compileAndSendDiagnosticsForProject(proj);
     }
   }
 
-  public compileAndSendDiagnosticsForWorkspace(workspace: Workspace): void {
-    const result = workspace.compile();
-    for (const [relPath, xml] of workspace.xmls) {
+  public compileAndSendDiagnosticsForProject(project: Project): void {
+    const result = project.compile();
+    for (const [relPath, xml] of project.xmls) {
       const errors = result.finalErrors[relPath] ?? [];
       const warnings = result.warnings[relPath] ?? [];
       const doc = this.getDocument(xml.uri);
@@ -934,9 +928,9 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       this.logger.log(
-        `[TypePrompt LSP] Ignoring format request for ${uri}: file is not assigned to any TypePrompt workspace.`,
+        `[TypePrompt LSP] Ignoring format request for ${uri}: file is not assigned to any TypePrompt project.`,
       );
       return [];
     }
@@ -969,7 +963,7 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       return { data: [] };
     }
 
@@ -990,7 +984,7 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       return [];
     }
 
@@ -1000,14 +994,14 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const workspace = xmlBundle.workspace;
+    const project = xmlBundle.project;
 
     const pathToOldContent: { [path: string]: string } = {};
-    for (const [relPath, xml] of workspace.xmls) {
+    for (const [relPath, xml] of project.xmls) {
       pathToOldContent[relPath] = xml.content.content;
     }
 
-    const relPath = xmlBundle.relativePath ?? workspace.getRelativePath(uri);
+    const relPath = xmlBundle.relativePath ?? project.getRelativePath(uri);
     if (!relPath) {
       return [];
     }
@@ -1017,7 +1011,7 @@ export class TypePromptLanguageExtension {
       path: relPath,
       pathToOldContent,
       position: offset,
-      cache: workspace.compilationResult,
+      cache: project.compilationResult,
       patchBase: null, // TODO: set
     });
 
@@ -1038,13 +1032,13 @@ export class TypePromptLanguageExtension {
   }
 
   private findTargetDefinition(
-    workspace: Workspace,
+    project: Project,
     uri: string,
     offset: number,
   ): { targetDef: TextSpan; allLinks: readonly DefinitionLink[] } | null {
-    let compilationResult = workspace.compilationResult;
+    let compilationResult = project.compilationResult;
     if (!compilationResult) {
-      compilationResult = workspace.compile();
+      compilationResult = project.compile();
     }
 
     const allLinks: DefinitionLink[] = [];
@@ -1054,8 +1048,8 @@ export class TypePromptLanguageExtension {
       allLinks.push(...links);
     }
 
-    const xmlBundle = workspace.getXmlBundle(uri);
-    const relPath = xmlBundle?.relativePath ?? workspace.getRelativePath(uri);
+    const xmlBundle = project.getXmlBundle(uri);
+    const relPath = xmlBundle?.relativePath ?? project.getRelativePath(uri);
     if (!relPath) {
       return null;
     }
@@ -1096,7 +1090,7 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       return null;
     }
 
@@ -1106,18 +1100,18 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const workspace = xmlBundle.workspace;
-    const match = this.findTargetDefinition(workspace, uri, offset);
+    const project = xmlBundle.project;
+    const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return null;
     }
 
-    const range = workspace.spanToRange(match.targetDef, this.getDocument);
+    const range = project.spanToRange(match.targetDef, this.getDocument);
     if (!range) {
       return null;
     }
 
-    const targetXmlBundle = workspace.getXmlBundle(match.targetDef.path);
+    const targetXmlBundle = project.getXmlBundle(match.targetDef.path);
     const targetUri = targetXmlBundle?.uri ?? match.targetDef.path;
 
     return {
@@ -1140,7 +1134,7 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       return null;
     }
 
@@ -1150,8 +1144,8 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const workspace = xmlBundle.workspace;
-    const match = this.findTargetDefinition(workspace, uri, offset);
+    const project = xmlBundle.project;
+    const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return [];
     }
@@ -1165,9 +1159,9 @@ export class TypePromptLanguageExtension {
       if (seenSpans.has(key)) return;
       seenSpans.add(key);
 
-      const range = workspace.spanToRange(span, this.getDocument);
+      const range = project.spanToRange(span, this.getDocument);
       if (range) {
-        const targetBundle = workspace.getXmlBundle(span.path);
+        const targetBundle = project.getXmlBundle(span.path);
         locations.push({
           uri: targetBundle?.uri ?? span.path,
           range,
@@ -1206,7 +1200,7 @@ export class TypePromptLanguageExtension {
     }
 
     const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.workspace) {
+    if (!xmlBundle?.project) {
       return null;
     }
 
@@ -1216,8 +1210,8 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const workspace = xmlBundle.workspace;
-    const match = this.findTargetDefinition(workspace, uri, offset);
+    const project = xmlBundle.project;
+    const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return null;
     }
@@ -1256,14 +1250,14 @@ export class TypePromptLanguageExtension {
         if (seen.has(key)) continue;
         seen.add(key);
 
-        const range = workspace.spanToRange(span, this.getDocument);
+        const range = project.spanToRange(span, this.getDocument);
         if (range) {
           edits.push(TextEdit.replace(range, newName));
         }
       }
 
       if (edits.length > 0) {
-        const targetBundle = workspace.getXmlBundle(filePath);
+        const targetBundle = project.getXmlBundle(filePath);
         const targetUri = targetBundle?.uri ?? filePath;
         changes[targetUri] = edits;
       }

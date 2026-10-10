@@ -18,6 +18,7 @@ import type { OutputFile } from "./codegen/codegen-types.js";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
 import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
+import { parseCompilationResult } from "./main/compilation-result-parser.js";
 import {
   makeGray,
   makeGreen,
@@ -39,6 +40,7 @@ export { formatTemplateFile };
 
 class WatchModeMainLoop {
   private readonly includes: readonly string[];
+  private patchBase: ValidCompilationResult | null = null;
 
   constructor(
     private readonly resolvedProject: string,
@@ -50,6 +52,17 @@ class WatchModeMainLoop {
       typeof include === "string"
         ? [Paths.join(resolvedProject, include)]
         : include.map((inc) => Paths.join(resolvedProject, inc));
+  }
+
+  async maybeReadPatchBase(): Promise<void> {
+    const { config, resolvedProject } = this;
+    if (!config.patch) return;
+    const basePath = Paths.join(resolvedProject, "patch-base.json");
+    const jsonContent = await FileSystem.readFile(
+      Paths.join(resolvedProject, "patch-base.json"),
+      "utf-8",
+    );
+    this.patchBase = parseCompilationResult(jsonContent, basePath);
   }
 
   async start(): Promise<void> {
@@ -108,7 +121,7 @@ class WatchModeMainLoop {
         );
         compilationResult = compile(templateFiles, {
           cache: this.previousCompilationResult,
-          patchBase: null, // TODO: set
+          patchBase: this.patchBase,
         });
         this.previousCompilationResult = compilationResult;
       } catch (e) {
@@ -258,6 +271,7 @@ async function runGeneration(
     config,
     mode,
   );
+  await watchModeMainLoop.maybeReadPatchBase();
   if (mode === "watch") {
     await watchModeMainLoop.start();
   } else {
