@@ -59,15 +59,15 @@ import {
 
 const DEBUG = true;
 
-export type FileType = "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
+type FileType = "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
 
-export interface FileContent {
+interface FileContent {
   readonly content: string;
   readonly lineFinder: LineFinderData;
   readonly lastModified: number;
 }
 
-export interface Logger {
+interface Logger {
   readonly log: (message: string) => void;
   readonly error: (message: string, ...args: unknown[]) => void;
 }
@@ -77,7 +77,7 @@ const noopLogger: Logger = {
   error: () => {},
 };
 
-export function getFileType(uri: string): FileType {
+function getFileType(uri: string): FileType {
   if (uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
   } else if (uri.endsWith(".xml")) {
@@ -104,23 +104,23 @@ export function fsPathToUri(fsPath: string): string {
   return pathToFileURL(fsPath).toString();
 }
 
-export interface TypePromptConfigBundle {
+interface TypePromptConfigBundle {
   readonly config: Config;
   readonly yamlContent: FileContent;
 }
 
-export interface XmlBundle {
+interface TemplateFile {
   /** The absolute file URI (e.g. "file:///path/to/project/prompts/hello.xml"). */
   readonly uri: string;
   /** Cached file content, line offsets finder, and last modified timestamp. */
   content: FileContent;
-  /** The project this XML bundle belongs to, or undefined if outside any project. */
+  /** The project this template file belongs to, or undefined if outside any project. */
   project?: Project;
   /** Project-relative path within the project. */
   relativePath?: string;
 }
 
-export interface PatchBase {
+interface PatchBase {
   /** The absolute file URI (e.g. "file:///path/to/project/patch-base.json"). */
   readonly uri: string;
   readonly content: FileContent;
@@ -129,7 +129,7 @@ export interface PatchBase {
   project?: Project;
 }
 
-export function internalErrorToDiagnostic(
+function internalErrorToDiagnostic(
   err: InternalError,
   severity: DiagnosticSeverity,
   doc: TextDocument | undefined,
@@ -226,14 +226,14 @@ export const SEMANTIC_TOKEN_TYPES = [
   "property",
 ] as const;
 
-export const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
+const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
 
-export const semanticTokensLegend: SemanticTokensLegend = {
+const semanticTokensLegend: SemanticTokensLegend = {
   tokenTypes: [...SEMANTIC_TOKEN_TYPES],
   tokenModifiers: SEMANTIC_TOKEN_MODIFIERS,
 };
 
-export function tokenKindToType(
+function tokenKindToType(
   kind: SemanticToken["kind"],
 ): (typeof SEMANTIC_TOKEN_TYPES)[number] {
   switch (kind) {
@@ -257,7 +257,7 @@ export function tokenKindToType(
   }
 }
 
-export function pushSemanticToken(
+function pushSemanticToken(
   builder: SemanticTokensBuilder,
   doc: TextDocument,
   span: Span,
@@ -324,9 +324,9 @@ export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
 /**
  * A TypePrompt project corresponding to a `typeprompt.yml` file.
  */
-export class Project {
+class Project {
   /** Template files in this project. Key: relative path. */
-  public readonly xmls = new Map<string, XmlBundle>();
+  public readonly templateFiles = new Map<string, TemplateFile>();
 
   public patchBase:
     ValidCompilationResult | CompilationResultParseError | null = null;
@@ -376,17 +376,17 @@ export class Project {
   }
 
   /**
-   * Finds an XML bundle belonging to this project by its project-relative path
+   * Finds a template file belonging to this project by its project-relative path
    * (e.g. "prompts/hello-world.xml") or by its full URI (e.g. "file:///path/to/project/prompts/hello-world.xml").
    */
-  public getXmlBundle(pathOrUri: string): XmlBundle | undefined {
-    const direct = this.xmls.get(pathOrUri);
+  public getTemplateFile(pathOrUri: string): TemplateFile | undefined {
+    const direct = this.templateFiles.get(pathOrUri);
     if (direct) {
       return direct;
     }
     const rel = this.getRelativePath(pathOrUri);
     if (rel) {
-      return this.xmls.get(rel);
+      return this.templateFiles.get(rel);
     }
     return undefined;
   }
@@ -396,19 +396,19 @@ export class Project {
     span: Span,
     getDocument: (uri: string) => TextDocument | undefined,
   ): Range | null {
-    const xmlBundle = this.getXmlBundle(span.path);
-    if (!xmlBundle) {
+    const templateFile = this.getTemplateFile(span.path);
+    if (!templateFile) {
       return null;
     }
-    const doc = getDocument(xmlBundle.uri);
+    const doc = getDocument(templateFile.uri);
     if (doc) {
       return {
         start: doc.positionAt(span.start),
         end: doc.positionAt(span.end),
       };
     }
-    const startMatch = findLine(span.start, xmlBundle.content.lineFinder);
-    const endMatch = findLine(span.end, xmlBundle.content.lineFinder);
+    const startMatch = findLine(span.start, templateFile.content.lineFinder);
+    const endMatch = findLine(span.end, templateFile.content.lineFinder);
     return {
       start: {
         line: startMatch.line.zeroBasedLineNumber,
@@ -421,14 +421,14 @@ export class Project {
     };
   }
 
-  /** Compiles all XML templates in this project into a `CompilationResult`. */
+  /** Compiles all template files in this project into a `CompilationResult`. */
   public compile(): CompilationResult {
     this.logger.log(
-      `[TypePrompt LSP] [Project: ${this.folderUri}] Compiling ${this.xmls.size} XML file(s) (cache=${Boolean(this.compilationResult)})...`,
+      `[TypePrompt LSP] [Project: ${this.folderUri}] Compiling ${this.templateFiles.size} template file(s) (cache=${Boolean(this.compilationResult)})...`,
     );
     const pathToContent: { [path: string]: string } = {};
-    for (const [relPath, xml] of this.xmls) {
-      pathToContent[relPath] = xml.content.content;
+    for (const [relPath, templateFile] of this.templateFiles) {
+      pathToContent[relPath] = templateFile.content.content;
     }
     this.compilationResult = compile(pathToContent, {
       cache: this.compilationResult,
@@ -440,18 +440,18 @@ export class Project {
     return this.compilationResult;
   }
 
-  /** Registers an XML bundle with a project under its project-relative path. */
-  public static addXml(
-    xml: XmlBundle,
+  /** Registers a template file with a project under its project-relative path. */
+  public static addTemplateFile(
+    templateFile: TemplateFile,
     project: Project,
     relativePath: string,
   ): void {
     project.logger.log(
-      `[TypePrompt LSP] Adding XML ${xml.uri} to project ${project.folderUri} as '${relativePath}'`,
+      `[TypePrompt LSP] Adding template file ${templateFile.uri} to project ${project.folderUri} as '${relativePath}'`,
     );
-    xml.project = project;
-    xml.relativePath = relativePath;
-    project.xmls.set(relativePath, xml);
+    templateFile.project = project;
+    templateFile.relativePath = relativePath;
+    project.templateFiles.set(relativePath, templateFile);
   }
 
   /** Registers a patch base with a project. */
@@ -463,17 +463,17 @@ export class Project {
     project.patchBase = patchBase.compilationResult;
   }
 
-  /** Unregisters an XML bundle from its project. */
-  public static removeXml(xml: XmlBundle): void {
-    if (!xml.project) return;
-    xml.project.logger.log(
-      `[TypePrompt LSP] Removing XML ${xml.uri} from project ${xml.project.folderUri}`,
+  /** Unregisters a template file from its project. */
+  public static removeTemplateFile(templateFile: TemplateFile): void {
+    if (!templateFile.project) return;
+    templateFile.project.logger.log(
+      `[TypePrompt LSP] Removing template file ${templateFile.uri} from project ${templateFile.project.folderUri}`,
     );
-    if (xml.relativePath) {
-      xml.project.xmls.delete(xml.relativePath);
+    if (templateFile.relativePath) {
+      templateFile.project.templateFiles.delete(templateFile.relativePath);
     }
-    xml.project = undefined;
-    xml.relativePath = undefined;
+    templateFile.project = undefined;
+    templateFile.relativePath = undefined;
   }
 
   /** Unregisters a patch base from its project. */
@@ -489,8 +489,8 @@ export class Project {
 export class TypePromptLanguageExtension {
   /** Map of projects indexed by their project folder URI. */
   public readonly projects = new Map<string, Project>();
-  /** Map of all discovered or open XML bundles indexed by their absolute file URI. */
-  public readonly xmlBundles = new Map<string, XmlBundle>();
+  /** Map of all discovered or open template files indexed by their absolute file URI. */
+  public readonly templateFiles = new Map<string, TemplateFile>();
   /** Map of all discovered or open patch bases indexed by their absolute file URI. */
   public readonly patchBases = new Map<string, PatchBase>();
   /** Set of workspace root folder URIs configured in the client. */
@@ -567,7 +567,7 @@ export class TypePromptLanguageExtension {
         continue;
       }
 
-      // Prioritize config files first so projects are created before XMLs.
+      // Prioritize config files first so projects are created before template files.
       const uriToTier = (u: string): number => {
         if (
           u.endsWith("/typeprompt.yml") ||
@@ -632,7 +632,7 @@ export class TypePromptLanguageExtension {
   public async runGarbageCollection(): Promise<void> {
     if (this.disposed) return;
     const uris = new Set<string>();
-    for (const uri of this.xmlBundles.keys()) {
+    for (const uri of this.templateFiles.keys()) {
       uris.add(uri);
     }
     for (const uri of this.projects.keys()) {
@@ -735,7 +735,7 @@ export class TypePromptLanguageExtension {
               this.projects.set(uri, project);
             }
             this.sendDiagnostics(uri, []);
-            this.reassignXmlsToProjects();
+            this.reassignTemplateFilesToProjects();
           } else {
             this.logger.error(
               `[TypePrompt LSP] Config errors in ${uri}:`,
@@ -755,7 +755,7 @@ export class TypePromptLanguageExtension {
         } else {
           this.logger.log(`[TypePrompt LSP] Project config deleted at ${uri}`);
           if (this.projects.delete(uri)) {
-            this.reassignXmlsToProjects();
+            this.reassignTemplateFilesToProjects();
           }
         }
         break;
@@ -768,47 +768,51 @@ export class TypePromptLanguageExtension {
         }
 
         if (content) {
-          let xmlBundle = this.xmlBundles.get(uri);
-          const oldProject = xmlBundle?.project;
+          let templateFile = this.templateFiles.get(uri);
+          const oldProject = templateFile?.project;
 
-          if (xmlBundle) {
-            xmlBundle.content = content;
+          if (templateFile) {
+            templateFile.content = content;
           } else {
-            xmlBundle = {
+            templateFile = {
               uri,
               content,
             };
-            this.xmlBundles.set(uri, xmlBundle);
+            this.templateFiles.set(uri, templateFile);
           }
 
           const match = this.findProjectByUri(uri);
           if (match) {
-            if (xmlBundle.project !== match.project) {
-              Project.removeXml(xmlBundle);
-              Project.addXml(xmlBundle, match.project, match.relativePath);
+            if (templateFile.project !== match.project) {
+              Project.removeTemplateFile(templateFile);
+              Project.addTemplateFile(
+                templateFile,
+                match.project,
+                match.relativePath,
+              );
               if (oldProject && oldProject !== match.project) {
                 this.compileAndSendDiagnosticsForProject(oldProject);
               }
             } else {
-              xmlBundle.relativePath = match.relativePath;
+              templateFile.relativePath = match.relativePath;
             }
             this.compileAndSendDiagnosticsForProject(match.project);
           } else {
             this.logger.log(
-              `[TypePrompt LSP] XML file ${uri} does not belong to any project.`,
+              `[TypePrompt LSP] Template file ${uri} does not belong to any project.`,
             );
             if (oldProject) {
-              Project.removeXml(xmlBundle);
+              Project.removeTemplateFile(templateFile);
               this.compileAndSendDiagnosticsForProject(oldProject);
             }
             this.sendDiagnostics(uri, []);
           }
         } else {
-          const existingBundle = this.xmlBundles.get(uri);
-          if (existingBundle) {
-            const oldProject = existingBundle.project;
-            Project.removeXml(existingBundle);
-            this.xmlBundles.delete(uri);
+          const existingTemplateFile = this.templateFiles.get(uri);
+          if (existingTemplateFile) {
+            const oldProject = existingTemplateFile.project;
+            Project.removeTemplateFile(existingTemplateFile);
+            this.templateFiles.delete(uri);
             this.sendDiagnostics(uri, []);
             if (oldProject) {
               this.compileAndSendDiagnosticsForProject(oldProject);
@@ -885,8 +889,9 @@ export class TypePromptLanguageExtension {
     const fileType = getFileType(uri);
     switch (fileType) {
       case "*.xml":
+        return this.templateFiles.get(uri)?.content;
       case "patch-base.json":
-        return this.xmlBundles.get(uri)?.content;
+        return this.patchBases.get(uri)?.content;
       case "typeprompt.yml":
         return this.projects.get(uri)?.configBundle.yamlContent;
       case null:
@@ -941,27 +946,31 @@ export class TypePromptLanguageExtension {
     return bestMatch;
   }
 
-  public getXmlBundle(uri: string): XmlBundle | undefined {
-    return this.xmlBundles.get(uri);
+  public getTemplateFile(uri: string): TemplateFile | undefined {
+    return this.templateFiles.get(uri);
   }
 
-  public reassignXmlsToProjects(): void {
+  public reassignTemplateFilesToProjects(): void {
     this.logger.log(
-      `[TypePrompt LSP] Reassigning XMLs (projects=${this.projects.size}, xmls=${this.xmlBundles.size})...`,
+      `[TypePrompt LSP] Reassigning template files (projects=${this.projects.size}, templateFiles=${this.templateFiles.size})...`,
     );
     const affectedProjects = new Set<Project>();
 
-    for (const xmlBundle of this.xmlBundles.values()) {
-      const oldProject = xmlBundle.project;
-      const match = this.findProjectByUri(xmlBundle.uri);
+    for (const templateFile of this.templateFiles.values()) {
+      const oldProject = templateFile.project;
+      const match = this.findProjectByUri(templateFile.uri);
 
       if (match) {
         if (
-          xmlBundle.project !== match.project ||
-          xmlBundle.relativePath !== match.relativePath
+          templateFile.project !== match.project ||
+          templateFile.relativePath !== match.relativePath
         ) {
-          Project.removeXml(xmlBundle);
-          Project.addXml(xmlBundle, match.project, match.relativePath);
+          Project.removeTemplateFile(templateFile);
+          Project.addTemplateFile(
+            templateFile,
+            match.project,
+            match.relativePath,
+          );
           if (oldProject) {
             affectedProjects.add(oldProject);
           }
@@ -971,10 +980,10 @@ export class TypePromptLanguageExtension {
         }
       } else {
         if (oldProject) {
-          Project.removeXml(xmlBundle);
+          Project.removeTemplateFile(templateFile);
           affectedProjects.add(oldProject);
         }
-        this.sendDiagnostics(xmlBundle.uri, []);
+        this.sendDiagnostics(templateFile.uri, []);
       }
     }
 
@@ -985,17 +994,17 @@ export class TypePromptLanguageExtension {
 
   public compileAndSendDiagnosticsForProject(project: Project): void {
     const result = project.compile();
-    for (const [relPath, xml] of project.xmls) {
+    for (const [relPath, templateFile] of project.templateFiles) {
       const errors = result.finalErrors[relPath] ?? [];
       const warnings = result.warnings[relPath] ?? [];
-      const doc = this.getDocument(xml.uri);
+      const doc = this.getDocument(templateFile.uri);
       const diagnostics: Diagnostic[] = [
         ...errors.map((err) =>
           internalErrorToDiagnostic(
             err,
             DiagnosticSeverity.Error,
             doc,
-            xml.content.lineFinder,
+            templateFile.content.lineFinder,
           ),
         ),
         ...warnings.map((warn) =>
@@ -1003,14 +1012,14 @@ export class TypePromptLanguageExtension {
             warn,
             DiagnosticSeverity.Warning,
             doc,
-            xml.content.lineFinder,
+            templateFile.content.lineFinder,
           ),
         ),
       ];
       this.logger.log(
-        `[TypePrompt LSP] Diagnostics for ${xml.uri}: ${diagnostics.length} item(s) (${errors.length} error(s), ${warnings.length} warning(s))`,
+        `[TypePrompt LSP] Diagnostics for ${templateFile.uri}: ${diagnostics.length} item(s) (${errors.length} error(s), ${warnings.length} warning(s))`,
       );
-      this.sendDiagnostics(xml.uri, diagnostics);
+      this.sendDiagnostics(templateFile.uri, diagnostics);
     }
   }
 
@@ -1021,8 +1030,8 @@ export class TypePromptLanguageExtension {
       return [];
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       this.logger.log(
         `[TypePrompt LSP] Ignoring format request for ${uri}: file is not assigned to any TypePrompt project.`,
       );
@@ -1056,8 +1065,8 @@ export class TypePromptLanguageExtension {
       return { data: [] };
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       return { data: [] };
     }
 
@@ -1077,8 +1086,8 @@ export class TypePromptLanguageExtension {
       return [];
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       return [];
     }
 
@@ -1088,14 +1097,14 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const project = xmlBundle.project;
+    const project = templateFile.project;
 
     const pathToOldContent: { [path: string]: string } = {};
-    for (const [relPath, xml] of project.xmls) {
-      pathToOldContent[relPath] = xml.content.content;
+    for (const [relPath, file] of project.templateFiles) {
+      pathToOldContent[relPath] = file.content.content;
     }
 
-    const relPath = xmlBundle.relativePath ?? project.getRelativePath(uri);
+    const relPath = templateFile.relativePath ?? project.getRelativePath(uri);
     if (!relPath) {
       return [];
     }
@@ -1142,8 +1151,8 @@ export class TypePromptLanguageExtension {
       allLinks.push(...links);
     }
 
-    const xmlBundle = project.getXmlBundle(uri);
-    const relPath = xmlBundle?.relativePath ?? project.getRelativePath(uri);
+    const templateFile = project.getTemplateFile(uri);
+    const relPath = templateFile?.relativePath ?? project.getRelativePath(uri);
     if (!relPath) {
       return null;
     }
@@ -1183,8 +1192,8 @@ export class TypePromptLanguageExtension {
       return null;
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       return null;
     }
 
@@ -1194,7 +1203,7 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const project = xmlBundle.project;
+    const project = templateFile.project;
     const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return null;
@@ -1205,8 +1214,8 @@ export class TypePromptLanguageExtension {
       return null;
     }
 
-    const targetXmlBundle = project.getXmlBundle(match.targetDef.path);
-    const targetUri = targetXmlBundle?.uri ?? match.targetDef.path;
+    const targetTemplateFile = project.getTemplateFile(match.targetDef.path);
+    const targetUri = targetTemplateFile?.uri ?? match.targetDef.path;
 
     return {
       uri: targetUri,
@@ -1227,8 +1236,8 @@ export class TypePromptLanguageExtension {
       return null;
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       return null;
     }
 
@@ -1238,7 +1247,7 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const project = xmlBundle.project;
+    const project = templateFile.project;
     const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return [];
@@ -1255,9 +1264,9 @@ export class TypePromptLanguageExtension {
 
       const range = project.spanToRange(span, this.getDocument);
       if (range) {
-        const targetBundle = project.getXmlBundle(span.path);
+        const targetTemplateFile = project.getTemplateFile(span.path);
         locations.push({
-          uri: targetBundle?.uri ?? span.path,
+          uri: targetTemplateFile?.uri ?? span.path,
           range,
         });
       }
@@ -1293,8 +1302,8 @@ export class TypePromptLanguageExtension {
       return null;
     }
 
-    const xmlBundle = this.xmlBundles.get(uri);
-    if (!xmlBundle?.project) {
+    const templateFile = this.templateFiles.get(uri);
+    if (!templateFile?.project) {
       return null;
     }
 
@@ -1304,7 +1313,7 @@ export class TypePromptLanguageExtension {
     }
 
     const offset = doc.offsetAt(position);
-    const project = xmlBundle.project;
+    const project = templateFile.project;
     const match = this.findTargetDefinition(project, uri, offset);
     if (!match) {
       return null;
@@ -1351,8 +1360,8 @@ export class TypePromptLanguageExtension {
       }
 
       if (edits.length > 0) {
-        const targetBundle = project.getXmlBundle(filePath);
-        const targetUri = targetBundle?.uri ?? filePath;
+        const targetTemplateFile = project.getTemplateFile(filePath);
+        const targetUri = targetTemplateFile?.uri ?? filePath;
         changes[targetUri] = edits;
       }
     }

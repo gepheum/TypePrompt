@@ -77,11 +77,11 @@ describe("TypePrompt Language Server", () => {
     expect(extension.projects.size).toBe(1);
     const project = Array.from(extension.projects.values())[0];
     expect(project !== undefined).toBe(true);
-    expect(project!.xmls.size).toBe(1);
+    expect(project!.templateFiles.size).toBe(1);
 
     const templateFsPath = path.join(promptsDir, "Translate.xml");
     const templateUri = fsPathToUri(templateFsPath);
-    const bundle = extension.getXmlBundle(templateUri);
+    const bundle = extension.getTemplateFile(templateUri);
     expect(bundle !== undefined).toBe(true);
     expect(bundle!.relativePath).toBe("prompts/Translate.xml");
 
@@ -127,7 +127,7 @@ describe("TypePrompt Language Server", () => {
 
     expect(extension.projects.size).toBe(1);
     const project = Array.from(extension.projects.values())[0];
-    expect(project?.xmls.size).toBe(2);
+    expect(project?.templateFiles.size).toBe(2);
   });
 
   it("scans multi-namespace project files and resolves namespace references", async () => {
@@ -180,7 +180,7 @@ describe("TypePrompt Language Server", () => {
 
     expect(extension.projects.size).toBe(1);
     const project = Array.from(extension.projects.values())[0];
-    expect(project?.xmls.size).toBe(2);
+    expect(project?.templateFiles.size).toBe(2);
 
     const invoiceUri = fsPathToUri(path.join(financeDir, "Invoice.xml"));
     const diag = sentDiagnostics.find((d) => d.uri === invoiceUri);
@@ -258,7 +258,7 @@ describe("TypePrompt Language Server", () => {
     await extension.runScan();
 
     const templateUri = fsPathToUri(templatePath);
-    expect(extension.xmlBundles.has(templateUri)).toBe(true);
+    expect(extension.templateFiles.has(templateUri)).toBe(true);
 
     // Delete the file from disk
     await fs.unlink(templatePath);
@@ -267,10 +267,10 @@ describe("TypePrompt Language Server", () => {
     await extension.runGarbageCollection();
 
     // Verify file was removed from bundles and project
-    expect(extension.xmlBundles.has(templateUri)).toBe(false);
+    expect(extension.templateFiles.has(templateUri)).toBe(false);
     const project = Array.from(extension.projects.values())[0];
-    expect(project?.xmls.size).toBe(0);
-    expect(project?.getXmlBundle(templateUri) === undefined).toBe(true);
+    expect(project?.templateFiles.size).toBe(0);
+    expect(project?.getTemplateFile(templateUri) === undefined).toBe(true);
   });
 
   it("schedules scan loop and disposes cleanly", () => {
