@@ -1,6 +1,7 @@
 // Utilities
 export * from "./util/casing.js";
 export * from "./util/errors.js";
+export * from "./util/hasher.js";
 export * from "./util/line-finder.js";
 export * from "./util/position-mapper.js";
 export * from "./util/shared-types.js";

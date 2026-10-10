@@ -16,3 +16,12 @@ export function combineHashesUnordered(hashes: readonly number[]): number {
   }
   return hash;
 }
+
+export function combineHashes(hashes: readonly number[]): number {
+  let hash = 0;
+  for (const h of hashes) {
+    hash = (hash << 5) - hash + h;
+    hash |= 0;
+  }
+  return hash;
+}
