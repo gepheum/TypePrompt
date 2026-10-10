@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseCompilationResult } from "@typeprompt/core";
+import { makeTemplates, parseCompilationResult } from "@typeprompt/core";
 import type {
   CompilationResult,
   ValidCompilationResult,
@@ -175,9 +175,12 @@ class WatchModeMainLoop {
   private async doGenerate(
     compilationResult: ValidCompilationResult,
   ): Promise<void> {
+    const templatesData = makeTemplates(compilationResult);
     const outputFiles: OutputFile[] = [];
     for (const generator of CODE_GENERATORS) {
-      outputFiles.push(...generator(compilationResult, this.config));
+      outputFiles.push(
+        ...generator(compilationResult, templatesData, this.config),
+      );
     }
     // Write all the generated files.
     await Promise.all(

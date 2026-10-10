@@ -1,9 +1,9 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toSnakeCase,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   ValidCompilationResult,
@@ -30,6 +30,7 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateRustCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const rustConfig = config.gen?.rust;
@@ -39,12 +40,15 @@ export function generateRustCode(
   return [
     {
       path: rustConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, templatesData),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
+): string {
   return coalesceEmptyLines(
     [
       STATIC_SNIPPETS["rust-top-level"],
@@ -58,7 +62,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult),
           writeSpecDatatypes(),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
           writeExecuteToolCall(compilationResult),
           STATIC_SNIPPETS["rust-logic"],
         ].join("\n\n"),
@@ -672,8 +676,7 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
     "static TEMPLATES_DATA: std::sync::LazyLock<spec::Templates> = std::sync::LazyLock::new(|| {",

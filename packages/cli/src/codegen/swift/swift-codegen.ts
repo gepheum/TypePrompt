@@ -1,10 +1,10 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toCamelCase,
   toPascalCase,
   uncapitalize,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   ValidCompilationResult,
@@ -31,6 +31,7 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateSwiftCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const swiftConfig = config.gen?.swift;
@@ -40,13 +41,14 @@ export function generateSwiftCode(
   return [
     {
       path: swiftConfig.file,
-      content: writeAll(compilationResult, swiftConfig),
+      content: writeAll(compilationResult, templatesData, swiftConfig),
     },
   ];
 }
 
 function writeAll(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: { rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
@@ -67,7 +69,7 @@ function writeAll(
           writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult),
           writeSpecDatatypes(),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
           writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
         { baseIndent: 1 },
@@ -661,8 +663,7 @@ function addKeysToExamples(templatesData: unknown): unknown {
   return clone;
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const dataWithKeys = addKeysToExamples(templatesData);
   const stringifiedJson = JSON.stringify(JSON.stringify(dataWithKeys));
   const lines = [

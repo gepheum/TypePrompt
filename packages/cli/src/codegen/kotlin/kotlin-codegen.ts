@@ -1,10 +1,10 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toScreamCase,
   uncapitalize,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   ValidCompilationResult,
@@ -32,6 +32,7 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateKotlinCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const kotlinConfig = config.gen?.kotlin;
@@ -41,13 +42,14 @@ export function generateKotlinCode(
   return [
     {
       path: kotlinConfig.file,
-      content: writeAll(compilationResult, kotlinConfig),
+      content: writeAll(compilationResult, templatesData, kotlinConfig),
     },
   ];
 }
 
 function writeAll(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   kotlinConfig: { package: string },
 ): string {
   const unionContext = makeUnionContext(compilationResult);
@@ -67,7 +69,7 @@ function writeAll(
           writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
           writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
         { indentUnit },
@@ -529,8 +531,7 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   return lines.join("\n");
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
     /\$/g,
     "\\$",

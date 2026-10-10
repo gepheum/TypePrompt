@@ -1,7 +1,7 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
+  type Spec,
   uncapitalize,
 } from "@typeprompt/core";
 import type {
@@ -33,6 +33,7 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const tsConfig = config.gen?.typescript;
@@ -42,12 +43,15 @@ export function generateTypescriptCode(
   return [
     {
       path: tsConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, templatesData),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
+): string {
   const { templates } = compilationResult;
 
   return coalesceEmptyLines(
@@ -63,7 +67,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           writeUserDefinedDatatypes(compilationResult),
           writeZodSchemas(compilationResult),
           writeSpecDatatypes(),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
         ].join("\n\n"),
       ),
       STATIC_SNIPPETS["typescript-logic"],
@@ -290,8 +294,7 @@ function writeSpecDatatypes(): string {
   return lines.join("\n");
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   return (
     "const TEMPLATES_DATA: Spec.Templates = " +
     JSON.stringify(templatesData, undefined, 2) +

@@ -1,8 +1,8 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   ValidCompilationResult,
@@ -30,6 +30,7 @@ import { reformatCFamilyCode } from "../formatters.js";
 
 export function generateCSharpCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const csharpConfig = config.gen?.csharp;
@@ -39,13 +40,14 @@ export function generateCSharpCode(
   return [
     {
       path: csharpConfig.file,
-      content: writeAll(compilationResult, csharpConfig),
+      content: writeAll(compilationResult, templatesData, csharpConfig),
     },
   ];
 }
 
 function writeAll(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: { rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
@@ -65,7 +67,7 @@ function writeAll(
           writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
           writeExecuteToolCall(compilationResult),
           writeMetaParser(compilationResult),
         ]
@@ -731,8 +733,7 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   return ["file static class Spec", "{", specTypesCode, "}"].join("\n");
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   const lines = [
     "file static class RuntimeData",

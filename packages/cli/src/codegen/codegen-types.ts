@@ -1,5 +1,4 @@
-import type { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
-import type { Config } from "@typeprompt/core/config/config-parser.js";
+import type { Config, Spec, ValidCompilationResult } from "@typeprompt/core";
 
 export type OutputFile = {
   readonly path: string;
@@ -8,5 +7,6 @@ export type OutputFile = {
 
 export type CodeGenerator = (
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ) => readonly OutputFile[];

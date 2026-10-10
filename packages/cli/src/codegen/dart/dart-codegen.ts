@@ -1,10 +1,10 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toCamelCase,
   toPascalCase,
   uncapitalize,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   ValidCompilationResult,
@@ -33,6 +33,7 @@ import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
 
 export function generateDartCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const dartConfig = config.gen?.dart;
@@ -42,12 +43,15 @@ export function generateDartCode(
   return [
     {
       path: dartConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, templatesData),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
+): string {
   const unionContext = makeUnionContext(compilationResult);
 
   return coalesceEmptyLines(
@@ -63,7 +67,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
           writePromptToolsEnums(compilationResult),
           writeUserDefinedDatatypes(compilationResult, unionContext),
           writeSpecDatatypes(unionContext),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
           writeExecuteToolCall(compilationResult),
         ].join("\n\n"),
       ),
@@ -546,8 +550,7 @@ function writeSpecDatatypes(unionContext: UnionContext): string {
   return writeSchema(runtimeTypesSchema, unionContext, options);
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData)).replace(
     /\$/g,
     "\\$",

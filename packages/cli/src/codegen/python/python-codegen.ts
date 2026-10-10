@@ -1,9 +1,9 @@
 import {
   capitalize,
-  makeTemplates,
   runtimeTypesSchema,
   toPascalCase,
   toSnakeCase,
+  type Spec,
 } from "@typeprompt/core";
 import type {
   Template,
@@ -26,6 +26,7 @@ import type { OutputFile } from "../codegen-types.js";
 
 export function generatePythonCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const pyConfig = config.gen?.python;
@@ -35,12 +36,15 @@ export function generatePythonCode(
   return [
     {
       path: pyConfig.file,
-      content: writeAll(compilationResult),
+      content: writeAll(compilationResult, templatesData),
     },
   ];
 }
 
-function writeAll(compilationResult: ValidCompilationResult): string {
+function writeAll(
+  compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
+): string {
   const { templates, tools } = compilationResult;
 
   return [
@@ -55,7 +59,7 @@ function writeAll(compilationResult: ValidCompilationResult): string {
         writeToolIdToMethodName(Object.values(tools)),
         writePydanticTypeAdapters(compilationResult),
         writeSpecDatatypes(),
-        writeTemplatesData(compilationResult),
+        writeTemplatesData(templatesData),
         writeCreatePromptsFunction(compilationResult),
       ]
         .map((code) => code.trimEnd())
@@ -468,8 +472,7 @@ function indentLine(line: string, indent: " " | "  " | "   "): string {
   return line.length <= 0 ? "" : indent.concat(line);
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   return [
     "_templates_data: Final = _internal.Templates.model_validate_json(",

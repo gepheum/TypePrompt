@@ -5,6 +5,7 @@ import type {
   NamingHint,
   Optional,
   Schema,
+  Spec,
   Type,
   TypeNameView,
   Union,
@@ -15,7 +16,6 @@ import {
   capitalize,
   getId,
   isLiteralType,
-  makeTemplates,
   resolveType,
   runtimeTypesSchema,
   toPascalCase,
@@ -27,6 +27,7 @@ import type { OutputFile } from "../codegen-types.js";
 
 export function generateCppCode(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: Config,
 ): readonly OutputFile[] {
   const cppConfig = config.gen?.cpp;
@@ -36,13 +37,14 @@ export function generateCppCode(
   return [
     {
       path: cppConfig.file,
-      content: writeAll(compilationResult, cppConfig),
+      content: writeAll(compilationResult, templatesData, cppConfig),
     },
   ];
 }
 
 function writeAll(
   compilationResult: ValidCompilationResult,
+  templatesData: Spec.Templates,
   config: { readonly rootNamespace: string },
 ): string {
   const { rootNamespace } = config;
@@ -59,7 +61,7 @@ function writeAll(
           writeToolsSignatures(compilationResult, config),
           writeTemplatesSignatures(compilationResult, config),
           writeSpecDatatypes(config),
-          writeTemplatesData(compilationResult),
+          writeTemplatesData(templatesData),
         ].join("\n\n"),
       ),
     ),
@@ -360,8 +362,7 @@ function writeSpecDatatypes(config: {
   ].join("\n\n");
 }
 
-function writeTemplatesData(compilationResult: ValidCompilationResult): string {
-  const templatesData = makeTemplates(compilationResult);
+function writeTemplatesData(templatesData: Spec.Templates): string {
   const stringifiedJson = JSON.stringify(JSON.stringify(templatesData));
   return [
     "namespace internal {",
