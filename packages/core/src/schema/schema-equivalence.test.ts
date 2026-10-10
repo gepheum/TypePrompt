@@ -26,43 +26,57 @@ describe("schemasAreEquivalent", () => {
   it("returns true for identical simple schemas", () => {
     const a = parse("type Foo = { name: string; age?: integer; };");
     const b = parse("type Foo = { name: string; age?: integer; };");
-    expect(schemasAreEquivalent(a, b)).toBe(true);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      true,
+    );
   });
 
   it("returns true for same schema parsed from different offsets/files", () => {
     const a = parse("type Foo = { name: string; };");
     const b = parse("\n\n   type Foo = { name: string; };");
-    expect(schemasAreEquivalent(a, b)).toBe(true);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      true,
+    );
   });
 
   it("returns false for different type names", () => {
     const a = parse("type Foo = { name: string; };");
     const b = parse("type Bar = { name: string; };");
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 
   it("returns false for different field types", () => {
     const a = parse("type Foo = { name: string; };");
     const b = parse("type Foo = { name: number; };");
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 
   it("returns false for different field order", () => {
     const a = parse("type Foo = { a: string; b: number; };");
     const b = parse("type Foo = { b: number; a: string; };");
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 
   it("returns false for different docs", () => {
     const a = parse("/** Doc A */ type Foo = { name: string; };");
     const b = parse("/** Doc B */ type Foo = { name: string; };");
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 
   it("returns false for different field docs", () => {
     const a = parse("type Foo = { /** Field doc A */ name: string; };");
     const b = parse("type Foo = { /** Field doc B */ name: string; };");
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 
   it("compares unions, arrays, records, and literals correctly", () => {
@@ -84,12 +98,16 @@ describe("schemasAreEquivalent", () => {
         payload: any;
       };
     `);
-    expect(schemasAreEquivalent(a, b)).toBe(true);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      true,
+    );
   });
 
   it("returns false when union members differ or have different order", () => {
     const a = parse('type Status = "active" | "inactive";');
     const b = parse('type Status = "inactive" | "active";');
-    expect(schemasAreEquivalent(a, b)).toBe(false);
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
   });
 });

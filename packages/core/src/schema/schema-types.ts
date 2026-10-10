@@ -3,7 +3,7 @@ import type { DefinitionLink, Span, TextSpan } from "../util/shared-types.js";
 export type SchemaParseResult = {
   readonly kind: "success";
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
-  readonly sourcePosition: number;
+  readonly source: Omit<TextSpan, "path">;
   readonly path: string;
 };
 
@@ -22,6 +22,7 @@ export type TypeDeclarations = { readonly [name: string]: TypeDeclaration };
 
 export type Schema = SchemaView & {
   readonly kind: "success";
+  readonly source: Omit<TextSpan, "path">;
   /**
    * Field names and identifiers used in string literals.
    * Includes identifiers from shared types if they are referenced from this schema.

@@ -65,7 +65,11 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
     schema: {
       kind: "success",
       typeDeclarations: {},
-      sourcePosition: 0,
+      source: {
+        text: "",
+        start: 0,
+        end: 0,
+      },
       path: "",
     },
     warnings: [],

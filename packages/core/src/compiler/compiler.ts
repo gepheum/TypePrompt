@@ -1,4 +1,6 @@
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
+import { schemasAreEquivalent } from "../schema/schema-equivalence.js";
+import type { Schema, TypeDeclarations } from "../schema/schema-types.js";
 import { checkNameConflicts } from "../util/casing.js";
 import { combineHashesUnordered, hashString } from "../util/hasher.js";
 import type { LineFinderData } from "../util/line-finder.js";
@@ -12,7 +14,7 @@ import type {
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
-import type { XmlDocument } from "../xml/xml-types.js";
+import type { ElementNode, XmlDocument } from "../xml/xml-types.js";
 import type {
   CompilationResult,
   Meta,
@@ -48,7 +50,7 @@ export function compile(
     if (cachedFile && cachedFile.content === content) {
       outSourceFile = cachedFile;
     } else {
-      outSourceFile = parseSourceFile(path, content);
+      outSourceFile = parseSourceFile(path, content, options);
     }
     result.sourceFiles[path] = outSourceFile;
   }
@@ -61,6 +63,9 @@ export function compile(
 export function parseSourceFile(
   path: string,
   content: string,
+  options: {
+    readonly patchBase: CompilationResult | null;
+  },
 ): SourceFileParseResult {
   const xmlDocument = parseXmlDocument(content, path);
 
@@ -142,8 +147,104 @@ export function parseSourceFile(
     }
   }
 
+  if (options.patchBase && errors.length <= 0) {
+    const baseFile = options.patchBase.sourceFiles[path];
+    if (baseFile) {
+      errors.push(...validateAgainstPatch(result, baseFile, root));
+    } else {
+      errors.push({
+        message: "File not found in patch base",
+        span: { path, start: 0, end: 0 },
+      });
+    }
+  }
+
   return result;
 }
+
+function validateAgainstPatch(
+  override: SourceFileParseResult,
+  base: SourceFileParseResult,
+  root: ElementNode,
+): InternalError[] {
+  if (!override.entity || !base.entity) return [];
+  const baseEntity = base.entity;
+  const { kind } = baseEntity;
+  if (override.entity.kind !== kind) {
+    return [
+      {
+        span: root.tag,
+        message: `Expected <${kind}> to match base`,
+        suggestions: [kind],
+      },
+    ];
+  }
+  const errors: InternalError[] = [];
+  const checkName = (override: TextSpan, base: TextSpan): void => {
+    if (override.text === base.text) return;
+    errors.push({
+      span: override,
+      message: `Expected '${base.text}' to match base`,
+      suggestions: [base.text],
+    });
+  };
+  const checkNamespace = (
+    override: TextSpan | null,
+    base: TextSpan | null,
+  ): void => {
+    const expected: string = base?.text ?? DEFAULT_NAMESPACE;
+    if ((override?.text ?? DEFAULT_NAMESPACE) === expected) return;
+    if (override) {
+      errors.push({
+        span: override,
+        message: `Expected '${expected}' to match base`,
+        suggestions: [expected],
+      });
+    } else {
+      errors.push({
+        span: root.tag,
+        message: `Missing attribute 'namespace="${expected}"' to match base`,
+      });
+    }
+  };
+  const { path } = override;
+  const checkSchema = (override: SchemaLike, base: SchemaLike): void => {
+    if (schemasAreEquivalent(override.typeDeclarations, base.typeDeclarations))
+      return;
+    errors.push({
+      message: "Schema does not match base",
+      span: { ...override.source, path },
+      baseSchema: base.source.text,
+    });
+  };
+  switch (kind) {
+    case "template":
+    case "tool": {
+      const overrideEntity = override.entity as Template | Tool;
+      checkName(overrideEntity.name, baseEntity.name);
+      checkNamespace(overrideEntity.namespace, baseEntity.namespace);
+      checkSchema(overrideEntity.schema, baseEntity.schema);
+      break;
+    }
+    case "namespace": {
+      const overrideEntity = override.entity as Namespace;
+      checkName(overrideEntity.name, baseEntity.name);
+      checkSchema(overrideEntity.schema as Schema, baseEntity.schema as Schema);
+      break;
+    }
+    case "meta": {
+      const overrideEntity = override.entity as Meta;
+      checkSchema(overrideEntity.schema as Schema, baseEntity.schema as Schema);
+      break;
+    }
+  }
+  return errors;
+}
+
+type SchemaLike = {
+  readonly typeDeclarations: TypeDeclarations;
+  readonly source: Omit<TextSpan, "path">;
+};
 
 class SourceFileParseResultImpl implements SourceFileParseResult {
   constructor(

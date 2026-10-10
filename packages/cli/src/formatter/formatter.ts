@@ -9,7 +9,7 @@ import type {
 import { format as prettierFormat } from "prettier";
 
 export async function formatTemplateFile(content: string): Promise<string> {
-  const parseResult = parseSourceFile("path", content);
+  const parseResult = parseSourceFile("path", content, { patchBase: null });
   const { xmlDocument } = parseResult;
   if (
     xmlDocument.kind !== "success" ||

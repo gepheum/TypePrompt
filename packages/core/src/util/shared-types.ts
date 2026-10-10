@@ -9,6 +9,7 @@ export type InternalError = {
   readonly hint?: string;
   readonly rule?: string;
   readonly suggestions?: readonly string[];
+  readonly baseSchema?: string;
 };
 
 export type ErrorSink = {
@@ -42,12 +43,12 @@ export type MappedSpan<T = string> = TextSpan<T> & {
   readonly offsetMap: OffsetMap;
 };
 
-export interface MappedText {
+export type MappedText = {
   readonly path: string;
   /** XML escape sequences are decoded. */
   readonly text: string;
   readonly offsetMap: OffsetMap;
-}
+};
 
 /**
  * Segment-based mapping from decoded offsets back to source offsets.

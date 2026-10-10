@@ -4,6 +4,11 @@ export const EMPTY_SCHEMA: Schema = {
   kind: "success",
   typeDeclarations: {},
   sharedDeclarations: {},
+  source: {
+    text: "",
+    start: 0,
+    end: 0,
+  },
   identifiers: {},
   unionToMembers: new Map(),
   namingHints: {

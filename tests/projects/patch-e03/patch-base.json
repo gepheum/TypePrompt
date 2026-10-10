@@ -1,0 +1,225 @@
+{
+  "edition": 0,
+  "signature": "4d5ac35b",
+  "tools": {
+    "Foo:myTool": {
+      "id": "Foo:myTool",
+      "name": "myTool",
+      "description": "Hello",
+      "inputJsonSchema": {
+        "$ref": "#/$defs/_Foos",
+        "$defs": {
+          "_Foos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "Bar:myOtherTool": {
+      "id": "Bar:myOtherTool",
+      "name": "myOtherTool",
+      "description": "Bonjour",
+      "inputJsonSchema": {
+        "$ref": "#/$defs/_Square",
+        "$defs": {
+          "_Square": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "square"
+              },
+              "size": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "size"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "templates": {
+    "Foo:MyTemplate": {
+      "name": "MyTemplate",
+      "namespace": "Foo",
+      "outputFormat": "json",
+      "tools": [
+        {
+          "id": "Foo:myTool",
+          "name": "myTool"
+        }
+      ],
+      "contents": {
+        "kind": "no-variants",
+        "content": {
+          "system": [
+            {
+              "kind": "text",
+              "text": "S"
+            }
+          ],
+          "user": [
+            {
+              "kind": "text",
+              "text": "U"
+            }
+          ],
+          "examples": []
+        }
+      },
+      "snippets": {},
+      "outputJsonSchema": {
+        "type": "object",
+        "properties": {
+          "reversedText": {
+            "type": "string"
+          },
+          "shape": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "square"
+                  },
+                  "size": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "size"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "circle"
+                  },
+                  "radius": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "radius"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "reversedText",
+          "shape"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "Bar:MyOtherTemplate": {
+      "name": "MyOtherTemplate",
+      "namespace": "Bar",
+      "outputFormat": "json",
+      "tools": [
+        {
+          "id": "Bar:myOtherTool",
+          "name": "myOtherTool"
+        }
+      ],
+      "contents": {
+        "kind": "no-variants",
+        "content": {
+          "system": [
+            {
+              "kind": "text",
+              "text": "S"
+            }
+          ],
+          "user": [
+            {
+              "kind": "text",
+              "text": "U"
+            }
+          ],
+          "examples": []
+        }
+      },
+      "snippets": {},
+      "outputJsonSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "reversedText": {
+              "type": "string"
+            },
+            "shape": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "square"
+                    },
+                    "size": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "size"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "circle"
+                    },
+                    "radius": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "radius"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "reversedText",
+            "shape"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "singleNamespace": false,
+  "sourceFiles": {
+    "prompts/Foo/shared.xml": "<namespace name=\"Foo\">\n  type Foos = string[];\n\n  type Square = {\n    kind: \"square\";\n    size: number;\n  };\n</namespace>\n",
+    "prompts/Foo/myTool.xml": "<tool name=\"myTool\" namespace=\"Foo\">\n  <schema>\n    type Input = shared.Foos;\n\n    interface Output {\n      shared: Shared;\n    }\n\n    type Shared = {\n      value: string;\n      square: shared.Square;\n    };\n  </schema>\n  <description>\n    Hello\n  </description>\n</tool>\n",
+    "prompts/Foo/MyTemplate.xml": "<template name=\"MyTemplate\" namespace=\"Foo\">\n  <schema>\n    interface Input {\n      text: string;\n    }\n\n    interface Output {\n      reversedText: string;\n      shape: shared.Square | { kind: \"circle\"; radius: number };\n    }\n  </schema>\n\n  <tools>\n    - tool: myTool\n  </tools>\n\n  <user>\n    U\n  </user>\n  <system>\n    S\n  </system>\n</template>\n",
+    "prompts/Bar/shared.xml": "<namespace name=\"Bar\">\n  type Foos = string[];\n\n  type Square = {\n    kind: \"square\";\n    size: number;\n  };\n</namespace>\n",
+    "prompts/Bar/myOtherTool.xml": "<tool name=\"myOtherTool\" namespace=\"Bar\">\n  <schema>\n    type Input = shared.Square;\n\n    type Output = {\n      shared: Shared;\n    }[];\n\n    type Shared = {\n      value: string;\n      square: shared.Square;\n    };\n  </schema>\n  <description>\n    Bonjour\n  </description>\n</tool>\n",
+    "prompts/Bar/MyOtherTemplate.xml": "<template name=\"MyOtherTemplate\" namespace=\"Bar\">\n  <schema>\n    type Input = shared.Square[];\n\n    type Output = {\n      reversedText: string;\n      shape: shared.Square | { kind: \"circle\"; radius: number };\n    }[];\n  </schema>\n\n  <tools>\n    - tool: myOtherTool\n  </tools>\n\n  <user>\n    U\n  </user>\n  <system>\n    S\n  </system>\n</template>\n"
+  }
+}

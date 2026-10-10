@@ -6,7 +6,6 @@ import type {
   PrimitiveType,
   RecordType,
   Array as SchemaArray,
-  SchemaView,
   SharedTypeName,
   StringLiteral,
   TypeDeclarations,
@@ -14,11 +13,7 @@ import type {
   Union,
 } from "./schema-types.js";
 
-export function schemasAreEquivalent(a: SchemaView, b: SchemaView): boolean {
-  return typeDeclarationsAreEquivalent(a.typeDeclarations, b.typeDeclarations);
-}
-
-export function typeDeclarationsAreEquivalent(
+export function schemasAreEquivalent(
   a: TypeDeclarations,
   b: TypeDeclarations,
 ): boolean {

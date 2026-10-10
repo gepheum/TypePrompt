@@ -1,0 +1,23 @@
+<template name="MyTemplate" namespace="Foo">
+  <schema>
+    interface Input {
+      text: string;
+    }
+
+    interface Output {
+      reversedText: string;
+      shape: shared.Square | { kind: "circle"; radius: number };
+    }
+  </schema>
+
+  <tools>
+    - tool: myTool
+  </tools>
+
+  <user>
+    U
+  </user>
+  <system>
+    S
+  </system>
+</template>

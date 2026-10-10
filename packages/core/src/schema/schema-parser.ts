@@ -7,6 +7,7 @@ import type {
   MappedText,
   TextSpan,
 } from "../util/shared-types.js";
+import { toMappedSpan } from "../util/spans.js";
 import { getFirstToken } from "./get-first-token.js";
 import type {
   Field,
@@ -101,7 +102,7 @@ class SchemaParser {
       typeDeclarations: Object.fromEntries(
         typeDeclarations.map((t) => [t.name.text, t]),
       ),
-      sourcePosition: textToSourcePosition(this.content, 0),
+      source: toMappedSpan(this.content),
       path: this.path,
     };
   }

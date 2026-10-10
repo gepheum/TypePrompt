@@ -90,8 +90,8 @@ export function validateSchema(
       errors.push({
         span: {
           path: schema.path,
-          start: schema.sourcePosition,
-          end: schema.sourcePosition,
+          start: schema.source.start,
+          end: schema.source.start,
         },
         message: `Missing required type '${requiredTypeName}'`,
       });
@@ -126,6 +126,7 @@ export function validateSchema(
   return {
     ...schemaView,
     kind: "success",
+    source: schema.source,
     identifiers,
     unionToMembers,
     namingHints,
