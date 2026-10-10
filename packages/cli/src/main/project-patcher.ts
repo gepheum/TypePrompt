@@ -1,12 +1,14 @@
+import {
+  makeTemplates,
+  parseCompilationResult,
+  type Spec,
+} from "@typeprompt/core";
 import type { ValidCompilationResult } from "@typeprompt/core/compiler/compiler-types.js";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
 import { parseConfigYaml } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
-import type * as Spec from "../runtime/runtime-types.js";
-import { makeTemplates } from "../runtime/spec-maker.js";
-import { parseCompilationResult } from "./compilation-result-parser.js";
 import { renderErrors } from "./error-renderer.js";
 import { ExitError } from "./exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./io.js";
@@ -60,7 +62,11 @@ export async function patchProject(args: {
       jsonContent = content;
     }
 
-    compilationResult = parseCompilationResult(jsonContent, base);
+    const parseResult = parseCompilationResult(jsonContent, base);
+    if (parseResult.anyErrors) {
+      throw new ExitError(parseResult.error);
+    }
+    compilationResult = parseResult;
   } else {
     const baseDir = Paths.resolve(base);
     if (!(await isDirectory(baseDir))) {

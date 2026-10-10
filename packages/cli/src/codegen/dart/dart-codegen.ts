@@ -1,3 +1,11 @@
+import {
+  capitalize,
+  makeTemplates,
+  runtimeTypesSchema,
+  toCamelCase,
+  toPascalCase,
+  uncapitalize,
+} from "@typeprompt/core";
 import type {
   ValidCompilationResult,
   ValidNamespaceResult,
@@ -19,14 +27,6 @@ import type {
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
 import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
-import {
-  capitalize,
-  toCamelCase,
-  toPascalCase,
-  uncapitalize,
-} from "@typeprompt/core/util/casing.js";
-import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
-import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";

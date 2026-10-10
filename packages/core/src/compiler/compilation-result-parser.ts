@@ -1,30 +1,36 @@
+import { z } from "zod";
 import type {
   CompilationResult,
   ValidCompilationResult,
-} from "@typeprompt/core/compiler/compiler-types.js";
-import { compile } from "@typeprompt/core/compiler/compiler.js";
-import { z } from "zod";
-import type * as Spec from "../runtime/runtime-types.js";
-import { ExitError } from "./exit-error.js";
+} from "./compiler-types.js";
+import { compile } from "./compiler.js";
+import type * as Spec from "./spec-types.js";
+
+export type CompilationResultParseError = {
+  readonly anyErrors: true;
+  readonly error: string;
+};
 
 export function parseCompilationResult(
   jsonContent: string,
   basePath: string,
-): ValidCompilationResult {
+): ValidCompilationResult | CompilationResultParseError {
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonContent);
   } catch (e) {
-    throw new ExitError(
-      `Failed to parse JSON in ${basePath}: ${e instanceof Error ? e.message : String(e)}`,
-    );
+    return {
+      anyErrors: true,
+      error: e instanceof Error ? e.message : String(e),
+    };
   }
 
   const parseResult = TemplatesSchema.safeParse(parsed);
   if (!parseResult.success) {
-    throw new ExitError(
-      `Invalid templates JSON in ${basePath}: ${parseResult.error.message}`,
-    );
+    return {
+      anyErrors: true,
+      error: `Invalid templates JSON in ${basePath}: ${parseResult.error.message}`,
+    };
   }
 
   const compilationResult: CompilationResult = compile(
@@ -33,7 +39,10 @@ export function parseCompilationResult(
   );
 
   if (compilationResult.anyErrors) {
-    throw new ExitError("Compilation of base project failed");
+    return {
+      anyErrors: true,
+      error: "Compilation of base project failed",
+    };
   }
 
   return compilationResult as ValidCompilationResult;

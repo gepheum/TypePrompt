@@ -1,6 +1,6 @@
-import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import type { Schema } from "@typeprompt/core/schema/schema-types.js";
-import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
+import { parseSchema } from "../schema/schema-parser.js";
+import type { Schema } from "../schema/schema-types.js";
+import { validateSchema } from "../schema/schema-validator.js";
 
 const SCHEMA = `
 type Templates = {

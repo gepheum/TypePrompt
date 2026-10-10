@@ -15,13 +15,13 @@ import {
   capitalize,
   getId,
   isLiteralType,
+  makeTemplates,
   resolveType,
+  runtimeTypesSchema,
   toPascalCase,
   toScreamCase,
   toSnakeCase,
 } from "@typeprompt/core";
-import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
-import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 

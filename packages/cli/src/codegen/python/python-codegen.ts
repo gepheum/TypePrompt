@@ -1,3 +1,10 @@
+import {
+  capitalize,
+  makeTemplates,
+  runtimeTypesSchema,
+  toPascalCase,
+  toSnakeCase,
+} from "@typeprompt/core";
 import type {
   Template,
   ValidatedTool,
@@ -14,13 +21,6 @@ import type {
   Schema,
 } from "@typeprompt/core/schema/schema-types.js";
 import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
-import {
-  capitalize,
-  toPascalCase,
-  toSnakeCase,
-} from "@typeprompt/core/util/casing.js";
-import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
-import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 

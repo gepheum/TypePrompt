@@ -1,4 +1,4 @@
-# Copied from generated code. Source of truth: 'src/runtime/runtime-types-schema.ts'
+# Copied from generated code. Source of truth: 'spec-types-schema.ts'
 # Do not edit.
 
 from typing import Annotated, Any, Literal, Optional, Union, final

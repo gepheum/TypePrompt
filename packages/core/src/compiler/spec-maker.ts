@@ -1,3 +1,13 @@
+import type { Expression } from "../expression/expression-types.js";
+import type {
+  JsonString,
+  StrictJsonArray,
+  StrictJsonObject,
+  StrictJsonValue,
+} from "../json/json-types.js";
+import { unwrapJsonValue } from "../json/unwrapper.js";
+import { toJsonSchema } from "../schema/json-schema-org.js";
+import type { Schema } from "../schema/schema-types.js";
 import type {
   Body,
   Snippet,
@@ -6,19 +16,9 @@ import type {
   ValidatedTool,
   ValidCompilationResult,
   ValidTemplate,
-} from "@typeprompt/core/compiler/compiler-types.js";
-import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.js";
-import type { Expression } from "@typeprompt/core/expression/expression-types.js";
-import type {
-  JsonString,
-  StrictJsonArray,
-  StrictJsonObject,
-  StrictJsonValue,
-} from "@typeprompt/core/json/json-types.js";
-import { unwrapJsonValue } from "@typeprompt/core/json/unwrapper.js";
-import { toJsonSchema } from "@typeprompt/core/schema/json-schema-org.js";
-import type { Schema } from "@typeprompt/core/schema/schema-types.js";
-import type * as Spec from "./runtime-types.js";
+} from "./compiler-types.js";
+import { DEFAULT_NAMESPACE } from "./default-namespace.js";
+import type * as Spec from "./spec-types.js";
 
 export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
   const { signature } = input;

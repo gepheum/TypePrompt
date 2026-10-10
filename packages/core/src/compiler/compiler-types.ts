@@ -40,6 +40,7 @@ export type ValidCompilationResult = CompilationResult & {
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
+  readonly anyErrors: false;
 };
 
 export type SourceFileParseResult = {

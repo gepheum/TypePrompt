@@ -49,12 +49,16 @@ export * from "./ctag/ctag-validator.js";
 // Compiler
 export * from "./compiler/body-parser.js";
 export * from "./compiler/body-validator.js";
+export * from "./compiler/compilation-result-parser.js";
 export * from "./compiler/compiler-types.js";
 export * from "./compiler/compiler.js";
 export * from "./compiler/default-namespace.js";
 export * from "./compiler/ids.js";
 export * from "./compiler/meta-parser.js";
 export * from "./compiler/namespace-parser.js";
+export * from "./compiler/spec-maker.js";
+export * from "./compiler/spec-types-schema.js";
+export * as Spec from "./compiler/spec-types.js";
 export * from "./compiler/template-parser.js";
 export * from "./compiler/template-validator.js";
 export * from "./compiler/text-extractor.js";

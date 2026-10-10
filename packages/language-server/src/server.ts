@@ -1,8 +1,13 @@
+import type {
+  CompilationResultParseError,
+  ValidCompilationResult,
+} from "@typeprompt/core";
 import {
   compile,
   createLineFinder,
   findLine,
   getCompletionItems,
+  parseCompilationResult,
   parseConfigYaml,
   tokenize,
   type CompilationResult,
@@ -54,7 +59,7 @@ import {
 
 const DEBUG = true;
 
-export type FileType = "typeprompt.yml" | "*.xml" | null;
+export type FileType = "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
 
 export interface FileContent {
   readonly content: string;
@@ -73,10 +78,12 @@ const noopLogger: Logger = {
 };
 
 export function getFileType(uri: string): FileType {
-  if (uri === "typeprompt.yml" || uri.endsWith("/typeprompt.yml")) {
+  if (uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
   } else if (uri.endsWith(".xml")) {
     return "*.xml";
+  } else if (uri.endsWith("/patch-base.json")) {
+    return "patch-base.json";
   } else {
     return null;
   }
@@ -107,16 +114,19 @@ export interface XmlBundle {
   readonly uri: string;
   /** Cached file content, line offsets finder, and last modified timestamp. */
   content: FileContent;
-  /**
-   * The project this XML bundle currently belongs to, or undefined if outside any
-   * project.
-   */
+  /** The project this XML bundle belongs to, or undefined if outside any project. */
   project?: Project;
-  /**
-   * Project-relative path with forward slashes (e.g. "prompts/hello.xml") within the
-   * project.
-   */
+  /** Project-relative path within the project. */
   relativePath?: string;
+}
+
+export interface PatchBase {
+  /** The absolute file URI (e.g. "file:///path/to/project/patch-base.json"). */
+  readonly uri: string;
+  readonly content: FileContent;
+  compilationResult: ValidCompilationResult | CompilationResultParseError;
+  /** The project this patch base belongs to, or undefined if outside any project. */
+  project?: Project;
 }
 
 export function internalErrorToDiagnostic(
@@ -318,6 +328,15 @@ export class Project {
   /** Template files in this project. Key: relative path. */
   public readonly xmls = new Map<string, XmlBundle>();
 
+  public patchBase:
+    ValidCompilationResult | CompilationResultParseError | null = null;
+
+  get patchBaseOrNull(): ValidCompilationResult | null {
+    const { patchBase } = this;
+    if (patchBase && patchBase.anyErrors) return null;
+    return patchBase;
+  }
+
   /** Cached compilation result for this project. */
   public compilationResult: CompilationResult | null = null;
 
@@ -353,8 +372,7 @@ export class Project {
       return null;
     }
     const rel = fileUri.slice(this.folderUri.length);
-    const normalized = rel.startsWith("/") ? rel.slice(1) : rel;
-    return normalized.replace(/\\/g, "/");
+    return rel.startsWith("/") ? rel.slice(1) : rel;
   }
 
   /**
@@ -414,7 +432,7 @@ export class Project {
     }
     this.compilationResult = compile(pathToContent, {
       cache: this.compilationResult,
-      patchBase: null, // TODO: set
+      patchBase: this.patchBaseOrNull,
     });
     this.logger.log(
       `[TypePrompt LSP] [Project: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
@@ -428,27 +446,43 @@ export class Project {
     project: Project,
     relativePath: string,
   ): void {
-    const normalizedRelPath = relativePath.replace(/\\/g, "/");
     project.logger.log(
-      `[TypePrompt LSP] Adding XML ${xml.uri} to project ${project.folderUri} as '${normalizedRelPath}'`,
+      `[TypePrompt LSP] Adding XML ${xml.uri} to project ${project.folderUri} as '${relativePath}'`,
     );
     xml.project = project;
-    xml.relativePath = normalizedRelPath;
-    project.xmls.set(normalizedRelPath, xml);
+    xml.relativePath = relativePath;
+    project.xmls.set(relativePath, xml);
+  }
+
+  /** Registers a patch base with a project. */
+  public static addPatchBase(patchBase: PatchBase, project: Project): void {
+    project.logger.log(
+      `[TypePrompt LSP] Adding patch base ${patchBase.uri} to project ${project.folderUri}`,
+    );
+    patchBase.project = project;
+    project.patchBase = patchBase.compilationResult;
   }
 
   /** Unregisters an XML bundle from its project. */
   public static removeXml(xml: XmlBundle): void {
-    if (xml.project) {
-      xml.project.logger.log(
-        `[TypePrompt LSP] Removing XML ${xml.uri} from project ${xml.project.folderUri}`,
-      );
-      if (xml.relativePath) {
-        xml.project.xmls.delete(xml.relativePath);
-      }
-      xml.project = undefined;
-      xml.relativePath = undefined;
+    if (!xml.project) return;
+    xml.project.logger.log(
+      `[TypePrompt LSP] Removing XML ${xml.uri} from project ${xml.project.folderUri}`,
+    );
+    if (xml.relativePath) {
+      xml.project.xmls.delete(xml.relativePath);
     }
+    xml.project = undefined;
+    xml.relativePath = undefined;
+  }
+
+  /** Unregisters a patch base from its project. */
+  public static removePatchBase(patchBase: PatchBase): void {
+    if (!patchBase.project) return;
+    patchBase.project.logger.log(
+      `[TypePrompt LSP] Removing patch base ${patchBase.uri} from project ${patchBase.project.folderUri}`,
+    );
+    patchBase.project = undefined;
   }
 }
 
@@ -457,6 +491,8 @@ export class TypePromptLanguageExtension {
   public readonly projects = new Map<string, Project>();
   /** Map of all discovered or open XML bundles indexed by their absolute file URI. */
   public readonly xmlBundles = new Map<string, XmlBundle>();
+  /** Map of all discovered or open patch bases indexed by their absolute file URI. */
+  public readonly patchBases = new Map<string, PatchBase>();
   /** Set of workspace root folder URIs configured in the client. */
   private readonly workspaceFolders = new Set<string>();
   /**
@@ -745,7 +781,7 @@ export class TypePromptLanguageExtension {
             this.xmlBundles.set(uri, xmlBundle);
           }
 
-          const match = this.findProject(xmlBundle);
+          const match = this.findProjectByUri(uri);
           if (match) {
             if (xmlBundle.project !== match.project) {
               Project.removeXml(xmlBundle);
@@ -781,6 +817,63 @@ export class TypePromptLanguageExtension {
         }
         break;
       }
+      case "patch-base.json": {
+        const timeout = this.uriToTimeout.get(uri);
+        if (timeout) {
+          clearTimeout(timeout);
+          this.uriToTimeout.delete(uri);
+        }
+
+        if (content) {
+          let patchBase = this.patchBases.get(uri);
+          const oldProject = patchBase?.project;
+
+          const compilationResult = parseCompilationResult(
+            content.content,
+            uri,
+          );
+
+          if (patchBase) {
+            patchBase.compilationResult = compilationResult;
+          } else {
+            patchBase = { uri, content, compilationResult };
+            this.patchBases.set(uri, patchBase);
+          }
+
+          const match = this.findProjectByUri(uri);
+          if (match) {
+            if (patchBase.project !== match.project) {
+              Project.removePatchBase(patchBase);
+              Project.addPatchBase(patchBase, match.project);
+              if (oldProject && oldProject !== match.project) {
+                this.compileAndSendDiagnosticsForProject(oldProject);
+              }
+            }
+            this.compileAndSendDiagnosticsForProject(match.project);
+          } else {
+            this.logger.log(
+              `[TypePrompt LSP] patch base ${uri} does not belong to any project.`,
+            );
+            if (oldProject) {
+              Project.removePatchBase(patchBase);
+              this.compileAndSendDiagnosticsForProject(oldProject);
+            }
+            this.sendDiagnostics(uri, []);
+          }
+        } else {
+          const existingPatchBase = this.patchBases.get(uri);
+          if (existingPatchBase) {
+            const oldProject = existingPatchBase.project;
+            Project.removePatchBase(existingPatchBase);
+            this.patchBases.delete(uri);
+            this.sendDiagnostics(uri, []);
+            if (oldProject) {
+              this.compileAndSendDiagnosticsForProject(oldProject);
+            }
+          }
+        }
+        break;
+      }
       default: {
         const _: null = fileType;
         break;
@@ -792,6 +885,7 @@ export class TypePromptLanguageExtension {
     const fileType = getFileType(uri);
     switch (fileType) {
       case "*.xml":
+      case "patch-base.json":
         return this.xmlBundles.get(uri)?.content;
       case "typeprompt.yml":
         return this.projects.get(uri)?.configBundle.yamlContent;
@@ -829,12 +923,12 @@ export class TypePromptLanguageExtension {
     this.uriToTimeout.set(uri, timeout);
   }
 
-  public findProject(
-    xml: XmlBundle,
+  public findProjectByUri(
+    uri: string,
   ): { project: Project; relativePath: string } | undefined {
     let bestMatch: { project: Project; relativePath: string } | undefined;
     for (const project of this.projects.values()) {
-      const relPath = project.getRelativePath(xml.uri);
+      const relPath = project.getRelativePath(uri);
       if (relPath !== null && project.matchesInclude(relPath)) {
         if (
           !bestMatch ||
@@ -859,7 +953,7 @@ export class TypePromptLanguageExtension {
 
     for (const xmlBundle of this.xmlBundles.values()) {
       const oldProject = xmlBundle.project;
-      const match = this.findProject(xmlBundle);
+      const match = this.findProjectByUri(xmlBundle.uri);
 
       if (match) {
         if (
@@ -1012,7 +1106,7 @@ export class TypePromptLanguageExtension {
       pathToOldContent,
       position: offset,
       cache: project.compilationResult,
-      patchBase: null, // TODO: set
+      patchBase: project.patchBaseOrNull,
     });
 
     if (!result || result.suggestions.length === 0) {
@@ -1265,41 +1359,6 @@ export class TypePromptLanguageExtension {
 
     return { changes };
   }
-}
-
-export function validateTypePromptDocument(
-  textDocument: TextDocument,
-): Diagnostic[] {
-  const uri = textDocument.uri;
-  const content = textDocument.getText();
-  const lineFinder = createLineFinder(content);
-  const compilationResult = compile(
-    { [uri]: content },
-    {
-      cache: null,
-      patchBase: null, // TODO: set
-    },
-  );
-  const errors = compilationResult.finalErrors[uri] ?? [];
-  const warnings = compilationResult.warnings[uri] ?? [];
-  return [
-    ...errors.map((err) =>
-      internalErrorToDiagnostic(
-        err,
-        DiagnosticSeverity.Error,
-        textDocument,
-        lineFinder,
-      ),
-    ),
-    ...warnings.map((warn) =>
-      internalErrorToDiagnostic(
-        warn,
-        DiagnosticSeverity.Warning,
-        textDocument,
-        lineFinder,
-      ),
-    ),
-  ];
 }
 
 export interface ServerOptions {

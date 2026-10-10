@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { parseCompilationResult } from "@typeprompt/core";
 import type {
   CompilationResult,
   ValidCompilationResult,
@@ -18,7 +19,6 @@ import type { OutputFile } from "./codegen/codegen-types.js";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
 import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
-import { parseCompilationResult } from "./main/compilation-result-parser.js";
 import {
   makeGray,
   makeGreen,
@@ -62,7 +62,11 @@ class WatchModeMainLoop {
       Paths.join(resolvedProject, "patch-base.json"),
       "utf-8",
     );
-    this.patchBase = parseCompilationResult(jsonContent, basePath);
+    const patchBase = parseCompilationResult(jsonContent, basePath);
+    if (patchBase.anyErrors) {
+      throw new ExitError(patchBase.error);
+    }
+    this.patchBase = patchBase;
   }
 
   async start(): Promise<void> {

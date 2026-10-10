@@ -1,3 +1,9 @@
+import {
+  capitalize,
+  makeTemplates,
+  runtimeTypesSchema,
+  uncapitalize,
+} from "@typeprompt/core";
 import type {
   Template,
   Tool,
@@ -21,9 +27,6 @@ import {
   NAME_SCOPES,
   unwrapNullable as unwrapOptional,
 } from "@typeprompt/core/schema/schema-utils.js";
-import { capitalize, uncapitalize } from "@typeprompt/core/util/casing.js";
-import { runtimeTypesSchema } from "../../runtime/runtime-types-schema.js";
-import { makeTemplates } from "../../runtime/spec-maker.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
