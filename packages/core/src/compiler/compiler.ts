@@ -26,6 +26,7 @@ import type {
   TemplateValidationResult,
   Tool,
   ToolValidationResult,
+  ValidCompilationResult,
 } from "./compiler-types.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import { parseMeta } from "./meta-parser.js";
@@ -39,10 +40,10 @@ export function compile(
   pathToContent: { readonly [path: string]: string },
   options: {
     readonly cache: CompilationResult | null;
-    readonly patchBase: CompilationResult | null;
+    readonly patchBase: ValidCompilationResult | null;
   },
 ): CompilationResult {
-  const result = new CompilationResultImpl();
+  const result = new CompilationResultImpl(options);
 
   for (const [path, content] of Object.entries(pathToContent)) {
     const cachedFile = options.cache?.sourceFiles[path];
@@ -285,11 +286,16 @@ class CompilationResultImpl implements CompilationResult {
   singleNamespace: NamespaceResultImpl | null = null;
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
+  readonly patchBase: ValidCompilationResult | null;
   signature: string | undefined;
   readonly finalErrors: { [path: string]: InternalError[] } = {};
   anyErrors = false;
   readonly warnings: { [path: string]: InternalError[] } = {};
   readonly pathToDefinitionLinks: { [path: string]: DefinitionLink[] } = {};
+
+  constructor(options: { readonly patchBase: ValidCompilationResult | null }) {
+    this.patchBase = options.patchBase;
+  }
 
   validate(cache: CompilationResult | null): void {
     const metas: Array<Sourced<Meta>> = [];

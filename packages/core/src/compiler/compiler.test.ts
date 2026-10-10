@@ -1,6 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type { ValidCompilationResult } from "./compiler-types.js";
 import { compile } from "./compiler.js";
 
 // ---------------------------------------------------------------------------
@@ -858,7 +859,11 @@ describe("compile - patchBase validation", () => {
     `,
   };
 
-  const baseResult = compile(baseFiles, { cache: null, patchBase: null });
+  const baseResult = compile(baseFiles, {
+    cache: null,
+    patchBase: null,
+  }) as ValidCompilationResult;
+  if (baseResult.anyErrors) throw new Error();
 
   it("succeeds when overrides match base templates, tools, and namespaces", () => {
     const overrideFiles = {
@@ -1227,7 +1232,8 @@ describe("compile - patchBase validation", () => {
         `,
       },
       { cache: null, patchBase: null },
-    );
+    ) as ValidCompilationResult;
+    if (metaBase.anyErrors) throw new Error();
 
     const result = compile(
       {

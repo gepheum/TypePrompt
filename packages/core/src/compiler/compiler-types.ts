@@ -22,6 +22,7 @@ export type CompilationResult = {
   readonly singleNamespace: NamespaceResult | null;
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
+  readonly patchBase: ValidCompilationResult | null;
   readonly signature: string | undefined;
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: readonly InternalError[] };

@@ -3,6 +3,7 @@ import { generateCppCode } from "./cpp/cpp-codegen.js";
 import { generateCSharpCode } from "./csharp/csharp-codegen.js";
 import { generateDartCode } from "./dart/dart-codegen.js";
 import { generateKotlinCode } from "./kotlin/kotlin-codegen.js";
+import { generatePatchOverrides } from "./patch-overrides/patch-overrides-gen.js";
 import { generatePythonCode } from "./python/python-codegen.js";
 import { generateRustCode } from "./rust/rust-codegen.js";
 import { generateSwiftCode } from "./swift/swift-codegen.js";
@@ -17,4 +18,5 @@ export const CODE_GENERATORS: ReadonlyArray<CodeGenerator> = [
   generateRustCode,
   generateSwiftCode,
   generateTypescriptCode,
+  generatePatchOverrides,
 ];

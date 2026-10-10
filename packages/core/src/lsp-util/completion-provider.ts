@@ -1,4 +1,7 @@
-import type { CompilationResult } from "../compiler/compiler-types.js";
+import type {
+  CompilationResult,
+  ValidCompilationResult,
+} from "../compiler/compiler-types.js";
 import { compile } from "../compiler/compiler.js";
 import type { Span } from "../util/shared-types.js";
 
@@ -15,7 +18,7 @@ export function getCompletionItems(args: {
   pathToOldContent: { readonly [path: string]: string };
   position: number;
   cache: CompilationResult | null;
-  patchBase: CompilationResult | null;
+  patchBase: ValidCompilationResult | null;
 }): CompletionItems | null {
   const { newContent, path, pathToOldContent, position } = args;
   const { patchBase } = args;
