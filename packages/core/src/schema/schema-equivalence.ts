@@ -1,3 +1,4 @@
+import { combineHashes, hashString } from "../util/hasher.js";
 import type {
   BooleanLiteral,
   FieldType,
@@ -28,14 +29,21 @@ export function schemasAreEquivalent(
     if (aName !== bName || aDecl.name.text !== bDecl.name.text) {
       return false;
     }
-    if (aDecl.doc !== bDecl.doc) {
-      return false;
-    }
     if (!typesAreEquivalent(aDecl.valueType, bDecl.valueType)) {
       return false;
     }
   }
   return true;
+}
+
+export function hashSchema(schema: TypeDeclarations): number {
+  return combineHashes(
+    Object.entries(schema).flatMap(([name, decl]) => [
+      hashString(name),
+      hashString(decl.name.text),
+      hashType(decl.valueType),
+    ]),
+  );
 }
 
 export function typesAreEquivalent(a: FieldType, b: FieldType): boolean {
@@ -94,7 +102,6 @@ export function typesAreEquivalent(a: FieldType, b: FieldType): boolean {
         if (
           aFieldName !== bFieldName ||
           aField.name.text !== bField.name.text ||
-          aField.doc !== bField.doc ||
           !typesAreEquivalent(aField.type, bField.type)
         ) {
           return false;
@@ -113,6 +120,73 @@ export function typesAreEquivalent(a: FieldType, b: FieldType): boolean {
         }
       }
       return true;
+    }
+  }
+}
+
+export function hashType(type: FieldType): number {
+  switch (type.kind) {
+    case "any": {
+      return hashString("any");
+    }
+    case "primitive": {
+      return combineHashes([
+        hashString("primitive"),
+        hashString(type.primitive.text),
+      ]);
+    }
+    case "type-name": {
+      return combineHashes([
+        hashString("type-name"),
+        hashString(type.name.text),
+      ]);
+    }
+    case "shared-type-name": {
+      return combineHashes([
+        hashString("shared-type-name"),
+        hashString(type.name.text),
+      ]);
+    }
+    case "string-literal": {
+      return combineHashes([
+        hashString("string-literal"),
+        hashString(type.value),
+      ]);
+    }
+    case "boolean-literal": {
+      return combineHashes([
+        hashString("boolean-literal"),
+        hashString(type.value ? "true" : "false"),
+      ]);
+    }
+    case "optional": {
+      return combineHashes([hashString("optional"), hashType(type.innerType)]);
+    }
+    case "array": {
+      return combineHashes([hashString("array"), hashType(type.elementType)]);
+    }
+    case "record": {
+      return combineHashes([
+        hashString("record"),
+        hashString(type.keyName),
+        hashType(type.valueType),
+      ]);
+    }
+    case "interface": {
+      return combineHashes([
+        hashString("interface"),
+        ...Object.entries(type.fields).flatMap(([fieldName, field]) => [
+          hashString(fieldName),
+          hashString(field.name.text),
+          hashType(field.type),
+        ]),
+      ]);
+    }
+    case "union": {
+      return combineHashes([
+        hashString("union"),
+        ...type.members.map((member) => hashType(member)),
+      ]);
     }
   }
 }

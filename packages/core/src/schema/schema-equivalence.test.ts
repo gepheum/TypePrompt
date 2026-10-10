@@ -2,7 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
 import type { MappedText } from "../util/shared-types.js";
-import { schemasAreEquivalent } from "./schema-equivalence.js";
+import { hashSchema, schemasAreEquivalent } from "./schema-equivalence.js";
 import { parseSchema } from "./schema-parser.js";
 import type { SchemaView } from "./schema-types.js";
 
@@ -63,19 +63,19 @@ describe("schemasAreEquivalent", () => {
     );
   });
 
-  it("returns false for different docs", () => {
+  it("returns true for different type docs", () => {
     const a = parse("/** Doc A */ type Foo = { name: string; };");
     const b = parse("/** Doc B */ type Foo = { name: string; };");
     expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
-      false,
+      true,
     );
   });
 
-  it("returns false for different field docs", () => {
+  it("returns true for different field docs", () => {
     const a = parse("type Foo = { /** Field doc A */ name: string; };");
     const b = parse("type Foo = { /** Field doc B */ name: string; };");
     expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
-      false,
+      true,
     );
   });
 
@@ -109,5 +109,67 @@ describe("schemasAreEquivalent", () => {
     expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
       false,
     );
+  });
+});
+
+describe("hashSchema", () => {
+  it("returns 0 for empty schema", () => {
+    expect(hashSchema({})).toBe(0);
+  });
+
+  it("computes exact hash for simple primitive schema", () => {
+    const schema = parse("type Foo = { name: string; age?: integer; };");
+    expect(hashSchema(schema.typeDeclarations)).toBe(
+      hashSchema(
+        parse("type Foo = { name: string; age?: integer; };").typeDeclarations,
+      ),
+    );
+  });
+
+  it("computes identical hashes despite differing doc comments", () => {
+    const a = parse(
+      "/** Doc A */ type Foo = { /** Field A */ name: string; };",
+    );
+    const b = parse(
+      "/** Doc B */ type Foo = { /** Field B */ name: string; };",
+    );
+    expect(hashSchema(a.typeDeclarations)).toBe(hashSchema(b.typeDeclarations));
+  });
+
+  it("computes exact hash codes matching snapshot expectations", () => {
+    const schema1 = parse("type Foo = { name: string; age?: integer; };");
+    const schema2 = parse('type Status = "active" | "inactive";');
+    const schema3 = parse(`
+      type Status = "active" | "inactive";
+      type Container = {
+        tags: string[];
+        counts: { [k: string]: number };
+        flag: true | false;
+        payload: any;
+      };
+    `);
+    const schema4 = parse(`
+      type A = { b: B; };
+      type B = { id: string; };
+    `);
+
+    // Exact hash values computed by the deterministic hash algorithm
+    expect(hashSchema(schema1.typeDeclarations)).toBe(1952263366);
+    expect(hashSchema(schema2.typeDeclarations)).toBe(403624084);
+    expect(hashSchema(schema3.typeDeclarations)).toBe(-993373756);
+    expect(hashSchema(schema4.typeDeclarations)).toBe(-1724151258);
+  });
+
+  it("produces different hashes when type structure or field order changes", () => {
+    const a = parse("type Foo = { a: string; b: number; };");
+    const b = parse("type Foo = { b: number; a: string; };");
+    const c = parse("type Bar = { a: string; b: number; };");
+
+    expect(
+      hashSchema(a.typeDeclarations) === hashSchema(b.typeDeclarations),
+    ).toBe(false);
+    expect(
+      hashSchema(a.typeDeclarations) === hashSchema(c.typeDeclarations),
+    ).toBe(false);
   });
 });
