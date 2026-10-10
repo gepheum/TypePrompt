@@ -37,8 +37,51 @@ export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
     ]),
   );
   const singleNamespace = input.singleNamespace !== null;
-  const edition = 0;
+  const edition = input.edition;
   return { edition, signature, tools, templates, singleNamespace, sourceFiles };
+}
+
+export function makeTemplateOverrides(
+  input: ValidCompilationResult,
+): Spec.Templates {
+  const { patchBase } = input;
+  if (!patchBase) {
+    return {
+      edition: input.edition,
+      signature: input.signature,
+      tools: {},
+      templates: {},
+      singleNamespace: input.singleNamespace != null,
+      sourceFiles: {},
+    };
+  }
+  const modifiedFiles = Object.fromEntries(
+    Object.entries(input.sourceFiles)
+      .map(([path, result]): [string, string] => [path, result.content])
+      .filter(
+        ([path, content]) => patchBase.sourceFiles[path]?.content !== content,
+      ),
+  );
+  const tools: { [id: string]: Spec.Tool } = {};
+  for (const [id, tool] of Object.entries(input.tools)) {
+    const { path } = tool.tool.name;
+    if (!modifiedFiles[path]) continue;
+    tools[id] = makeTool(tool, id);
+  }
+  const templates: { [id: string]: Spec.Template } = {};
+  for (const [id, result] of Object.entries(input.templates)) {
+    const { path } = result.template.name;
+    if (!modifiedFiles[path]) continue;
+    templates[id] = makeTemplate(result);
+  }
+  return {
+    edition: input.edition,
+    signature: patchBase.signature,
+    tools,
+    templates,
+    singleNamespace: patchBase.singleNamespace !== null,
+    sourceFiles: modifiedFiles,
+  };
 }
 
 function makeTool(input: ValidatedTool, id: string): Spec.Tool {

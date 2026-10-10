@@ -12,7 +12,8 @@ import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
 import type { Schema } from "@typeprompt/core/schema/schema-types.js";
 import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
 import type { TextSpan } from "@typeprompt/core/util/shared-types.js";
-import { makeTemplates } from "./spec-maker.js";
+import { compile } from "./compiler.js";
+import { makeTemplateOverrides, makeTemplates } from "./spec-maker.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1043,5 +1044,212 @@ describe("makeTemplates - JSON schemas", () => {
     expect(spec.templates["Main:T"]!.outputJsonSchema).toMatch({
       type: "number",
     });
+  });
+});
+
+describe("makeTemplateOverrides", () => {
+  const baseFiles = {
+    "prompts/Translate.xml": `
+      <template name="Translate">
+        <schema>
+          type Input = { text: string; };
+          type Output = string;
+        </schema>
+        <system>Translate base system</system>
+        <user>Translate: <insert val="input.text" /></user>
+      </template>
+    `,
+    "prompts/Summarize.xml": `
+      <template name="Summarize">
+        <schema>
+          type Input = { doc: string; };
+          type Output = string;
+        </schema>
+        <system>Summarize base system</system>
+        <user>Summarize: <insert val="input.doc" /></user>
+      </template>
+    `,
+    "prompts/calculator.xml": `
+      <tool name="calculator">
+        <description>Performs math calculations</description>
+        <schema>
+          type Input = { expr: string; };
+          type Output = { result: number; };
+        </schema>
+      </tool>
+    `,
+    "prompts/fetchUrl.xml": `
+      <tool name="fetchUrl">
+        <description>Fetches URL content</description>
+        <schema>
+          type Input = { url: string; };
+          type Output = { content: string; };
+        </schema>
+      </tool>
+    `,
+  };
+
+  it("returns empty templates, tools, and sourceFiles when no files are modified", () => {
+    const baseResult = compile(baseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    expect(baseResult.anyErrors).toBe(false);
+
+    const overrideFiles = { ...baseFiles };
+    const overrideResult = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    }) as ValidCompilationResult & {
+      readonly patchBase: ValidCompilationResult;
+    };
+    expect(overrideResult.anyErrors).toBe(false);
+
+    const overrides = makeTemplateOverrides(overrideResult);
+    expect(overrides.edition).toBe(0);
+    expect(overrides.signature).toBe(baseResult.signature);
+    expect(overrides.singleNamespace).toBe(true);
+    expect(Object.keys(overrides.sourceFiles).length).toBe(0);
+    expect(Object.keys(overrides.templates).length).toBe(0);
+    expect(Object.keys(overrides.tools).length).toBe(0);
+  });
+
+  it("includes only modified templates and tools in overrides output", () => {
+    const baseResult = compile(baseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    expect(baseResult.anyErrors).toBe(false);
+
+    const overrideFiles = {
+      ...baseFiles,
+      "prompts/Translate.xml": `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Custom translation prompt override</system>
+          <user>Translate: <insert val="input.text" /></user>
+        </template>
+      `,
+      "prompts/calculator.xml": `
+        <tool name="calculator">
+          <description>Updated calculator description override</description>
+          <schema>
+            type Input = { expr: string; };
+            type Output = { result: number; };
+          </schema>
+        </tool>
+      `,
+    };
+
+    const overrideResult = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    }) as ValidCompilationResult & {
+      readonly patchBase: ValidCompilationResult;
+    };
+    expect(overrideResult.anyErrors).toBe(false);
+
+    const overrides = makeTemplateOverrides(overrideResult);
+
+    expect(overrides.edition).toBe(0);
+    expect(overrides.signature).toBe(baseResult.signature);
+    expect(overrides.singleNamespace).toBe(true);
+
+    // Only the two modified files should be in sourceFiles
+    expect(Object.keys(overrides.sourceFiles).sort()).toMatch([
+      "prompts/Translate.xml",
+      "prompts/calculator.xml",
+    ]);
+
+    // Only Translate template should be present, not Summarize
+    expect(Object.keys(overrides.templates)).toMatch(["Main:Translate"]);
+    expect(overrides.templates["Main:Translate"]!.name).toBe("Translate");
+    expect(overrides.templates["Main:Summarize"]).toBe(undefined);
+
+    // Only calculator tool should be present, not fetchUrl
+    expect(Object.keys(overrides.tools)).toMatch(["Main:calculator"]);
+    expect(overrides.tools["Main:calculator"]!.description).toBe(
+      "Updated calculator description override",
+    );
+    expect(overrides.tools["Main:fetchUrl"]).toBe(undefined);
+  });
+
+  it("handles multi-namespace projects and sets singleNamespace=false", () => {
+    const multiNamespaceBase = {
+      "prompts/Billing/shared.xml": `
+        <namespace name="Billing">
+          interface Invoice { id: string; amount: number; }
+        </namespace>
+      `,
+      "prompts/Billing/SendInvoice.xml": `
+        <template name="SendInvoice" namespace="Billing">
+          <schema>
+            type Input = { invoiceId: string; };
+            type Output = string;
+          </schema>
+          <system>Billing system</system>
+          <user>Send invoice <insert val="input.invoiceId" /></user>
+        </template>
+      `,
+      "prompts/Auth/shared.xml": `
+        <namespace name="Auth">
+          type Token = string;
+        </namespace>
+      `,
+      "prompts/Auth/Login.xml": `
+        <template name="Login" namespace="Auth">
+          <schema>
+            type Input = string;
+            type Output = string;
+          </schema>
+          <system>Auth system</system>
+          <user>Login</user>
+        </template>
+      `,
+    };
+
+    const baseResult = compile(multiNamespaceBase, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    expect(baseResult.anyErrors).toBe(false);
+    expect(baseResult.singleNamespace).toBe(null);
+
+    const overrideFiles = {
+      ...multiNamespaceBase,
+      "prompts/Billing/SendInvoice.xml": `
+        <template name="SendInvoice" namespace="Billing">
+          <schema>
+            type Input = { invoiceId: string; };
+            type Output = string;
+          </schema>
+          <system>Updated billing prompt</system>
+          <user>Send invoice <insert val="input.invoiceId" /></user>
+        </template>
+      `,
+    };
+
+    const overrideResult = compile(overrideFiles, {
+      cache: null,
+      patchBase: baseResult,
+    }) as ValidCompilationResult & {
+      readonly patchBase: ValidCompilationResult;
+    };
+    expect(overrideResult.anyErrors).toBe(false);
+
+    const overrides = makeTemplateOverrides(overrideResult);
+    expect(overrides.singleNamespace).toBe(false);
+    expect(overrides.signature).toBe(baseResult.signature);
+    expect(Object.keys(overrides.sourceFiles)).toMatch([
+      "prompts/Billing/SendInvoice.xml",
+    ]);
+    expect(Object.keys(overrides.templates)).toMatch(["Billing:SendInvoice"]);
+    expect(overrides.templates["Billing:SendInvoice"]!.namespace).toBe(
+      "Billing",
+    );
+    expect(overrides.templates["Auth:Login"]).toBe(undefined);
   });
 });

@@ -23,6 +23,7 @@ export type CompilationResult = {
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
   readonly patchBase: ValidCompilationResult | null;
+  readonly edition: number;
   readonly signature: string | undefined;
   /** Includes errors from `sourceFiles`. */
   readonly finalErrors: { readonly [path: string]: readonly InternalError[] };

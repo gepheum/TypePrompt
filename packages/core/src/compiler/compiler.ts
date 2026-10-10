@@ -287,6 +287,7 @@ class CompilationResultImpl implements CompilationResult {
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
   readonly patchBase: ValidCompilationResult | null;
+  readonly edition = 0;
   signature: string | undefined;
   readonly finalErrors: { [path: string]: InternalError[] } = {};
   anyErrors = false;
