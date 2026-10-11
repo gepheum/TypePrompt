@@ -218,8 +218,6 @@ Inside a **template** or **tool** schema, you may reference a type from the encl
 | String literals | `[A-Za-z][A-Za-z0-9._/-]*` | `"application/json"` |
 | Identifiers     | No leading digit, no `_`   | `myVar`         |
 
-Type names across all declarations in a file must be case-insensitively unique: you cannot have both `GoodDay` and `Goodday` in the same schema.
-
 ---
 
 ## Comments and JSDoc
