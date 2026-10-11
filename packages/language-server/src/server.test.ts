@@ -1,4 +1,9 @@
-import { createLineFinder } from "@typeprompt/core";
+import {
+  compile,
+  createLineFinder,
+  makeTemplates,
+  type ValidCompilationResult,
+} from "@typeprompt/core";
 import { expect } from "buckwheat";
 import { afterEach, beforeEach, describe, it } from "mocha";
 import * as fs from "node:fs/promises";
@@ -280,6 +285,249 @@ describe("TypePrompt Language Server", () => {
     );
     extension.scheduleScanLoop(100);
     extension.dispose();
+  });
+
+  it("scans workspace directory, discovers patch-base.json, and produces validation diagnostics", async () => {
+    const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+      [];
+    const extension = new TypePromptLanguageExtension(
+      (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+      () => undefined,
+    );
+
+    // Create base templates
+    const baseFiles = {
+      "prompts/Translate.xml": `<template name="Translate">
+  <schema>
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+    };
+    const baseResult = compile(baseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    const patchBaseJson = JSON.stringify(makeTemplates(baseResult), null, 2);
+
+    // Write project files
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yml"),
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n",
+      "utf-8",
+    );
+    await fs.writeFile(
+      path.join(tempDir, "patch-base.json"),
+      patchBaseJson,
+      "utf-8",
+    );
+
+    const promptsDir = path.join(tempDir, "prompts");
+    await fs.mkdir(promptsDir, { recursive: true });
+
+    // Write override with mismatched schema
+    const translatePath = path.join(promptsDir, "Translate.xml");
+    await fs.writeFile(
+      translatePath,
+      `<template name="Translate">
+  <schema>
+    interface Input { differentField: number; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user>Hello</user>
+</template>`,
+      "utf-8",
+    );
+
+    extension.setWorkspaceFolders([tempDirUri]);
+    await extension.runScan();
+
+    expect(extension.projects.size).toBe(1);
+    expect(extension.patchBases.size).toBe(1);
+    const project = Array.from(extension.projects.values())[0]!;
+    expect(project.patchBase !== null).toBe(true);
+
+    const templateUri = fsPathToUri(translatePath);
+    const diags = sentDiagnostics.filter((d) => d.uri === templateUri);
+    const lastDiag = diags[diags.length - 1];
+    expect(lastDiag !== undefined).toBe(true);
+    expect(lastDiag!.diagnostics.length).toBe(1);
+    expect(lastDiag!.diagnostics[0]!.message).toBe(
+      "Schema does not match base",
+    );
+  });
+
+  it("reacts to patch-base.json in-memory changes and updates diagnostics", async () => {
+    const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+      [];
+    const extension = new TypePromptLanguageExtension(
+      (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+      () => undefined,
+    );
+
+    const baseFiles = {
+      "prompts/Translate.xml": `<template name="Translate">
+  <schema>
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+    };
+    const baseResult = compile(baseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    const patchBaseJson = JSON.stringify(makeTemplates(baseResult), null, 2);
+
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yml"),
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n",
+      "utf-8",
+    );
+    await fs.writeFile(
+      path.join(tempDir, "patch-base.json"),
+      patchBaseJson,
+      "utf-8",
+    );
+
+    const promptsDir = path.join(tempDir, "prompts");
+    await fs.mkdir(promptsDir, { recursive: true });
+    const translatePath = path.join(promptsDir, "Translate.xml");
+    const translateContent = `<template name="Translate">
+  <schema>
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`;
+    await fs.writeFile(translatePath, translateContent, "utf-8");
+
+    extension.setWorkspaceFolders([tempDirUri]);
+    await extension.runScan();
+
+    const templateUri = fsPathToUri(translatePath);
+    const diags1 = sentDiagnostics.filter((d) => d.uri === templateUri);
+    expect(diags1[diags1.length - 1]!.diagnostics.length).toBe(0);
+
+    // Update patch-base in memory to require count: number
+    const updatedBaseFiles = {
+      "prompts/Translate.xml": `<template name="Translate">
+  <schema>
+    interface Input { count: number; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user>Count</user>
+</template>`,
+    };
+    const updatedBaseResult = compile(updatedBaseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    const updatedPatchBaseJson = JSON.stringify(
+      makeTemplates(updatedBaseResult),
+      null,
+      2,
+    );
+
+    const patchBaseUri = fsPathToUri(path.join(tempDir, "patch-base.json"));
+    extension.setFileContent(patchBaseUri, {
+      content: updatedPatchBaseJson,
+      lineFinder: createLineFinder(updatedPatchBaseJson),
+      lastModified: Date.now(),
+    });
+
+    const diags2 = sentDiagnostics.filter((d) => d.uri === templateUri);
+    const lastDiag2 = diags2[diags2.length - 1]!;
+    expect(lastDiag2.diagnostics.length).toBe(1);
+    expect(lastDiag2.diagnostics[0]!.message).toBe(
+      "Schema does not match base",
+    );
+
+    // Remove patch-base in memory (content undefined)
+    extension.setFileContent(patchBaseUri, undefined);
+    const diags3 = sentDiagnostics.filter((d) => d.uri === templateUri);
+    const lastDiag3 = diags3[diags3.length - 1]!;
+    expect(lastDiag3.diagnostics.length).toBe(0);
+  });
+
+  it("reassigns patch-base.json when project config is added dynamically", async () => {
+    const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+      [];
+    const extension = new TypePromptLanguageExtension(
+      (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+      () => undefined,
+    );
+
+    const baseFiles = {
+      "prompts/Translate.xml": `<template name="Translate">
+  <schema>
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+    };
+    const baseResult = compile(baseFiles, {
+      cache: null,
+      patchBase: null,
+    }) as ValidCompilationResult;
+    const patchBaseJson = JSON.stringify(makeTemplates(baseResult), null, 2);
+
+    const patchBaseUri = fsPathToUri(path.join(tempDir, "patch-base.json"));
+    const translateUri = fsPathToUri(
+      path.join(tempDir, "prompts", "Translate.xml"),
+    );
+    const configUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
+
+    const translateContent = `<template name="Translate">
+  <schema>
+    interface Input { mismatch: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.mismatch" /></user>
+</template>`;
+
+    // Set patchBase and template file BEFORE config exists
+    extension.setFileContent(patchBaseUri, {
+      content: patchBaseJson,
+      lineFinder: createLineFinder(patchBaseJson),
+      lastModified: Date.now(),
+    });
+    extension.setFileContent(translateUri, {
+      content: translateContent,
+      lineFinder: createLineFinder(translateContent),
+      lastModified: Date.now(),
+    });
+
+    expect(extension.projects.size).toBe(0);
+    expect(extension.patchBases.size).toBe(1);
+
+    // Now add typeprompt.yml
+    const configContent =
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n";
+    extension.setFileContent(configUri, {
+      content: configContent,
+      lineFinder: createLineFinder(configContent),
+      lastModified: Date.now(),
+    });
+
+    expect(extension.projects.size).toBe(1);
+    const project = Array.from(extension.projects.values())[0]!;
+    expect(project.patchBase !== null).toBe(true);
+
+    const diags = sentDiagnostics.filter((d) => d.uri === translateUri);
+    const lastDiag = diags[diags.length - 1]!;
+    expect(lastDiag.diagnostics.length).toBe(1);
+    expect(lastDiag.diagnostics[0]!.message).toBe("Schema does not match base");
   });
 
   describe("computeEdits", () => {

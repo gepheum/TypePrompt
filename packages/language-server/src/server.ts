@@ -57,8 +57,6 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
-const DEBUG = true;
-
 type FileType = "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
 
 interface FileContent {
@@ -66,16 +64,6 @@ interface FileContent {
   readonly lineFinder: LineFinderData;
   readonly lastModified: number;
 }
-
-interface Logger {
-  readonly log: (message: string) => void;
-  readonly error: (message: string, ...args: unknown[]) => void;
-}
-
-const noopLogger: Logger = {
-  log: () => {},
-  error: () => {},
-};
 
 function getFileType(uri: string): FileType {
   if (uri.endsWith("/typeprompt.yml")) {
@@ -123,7 +111,7 @@ interface TemplateFile {
 interface PatchBase {
   /** The absolute file URI (e.g. "file:///path/to/project/patch-base.json"). */
   readonly uri: string;
-  readonly content: FileContent;
+  content: FileContent;
   compilationResult: ValidCompilationResult | CompilationResultParseError;
   /** The project this patch base belongs to, or undefined if outside any project. */
   project?: Project;
@@ -348,7 +336,6 @@ class Project {
     public readonly folderUri: string,
     /** The loaded configuration bundle for this project. */
     public configBundle: TypePromptConfigBundle,
-    public readonly logger: Logger = noopLogger,
   ) {}
 
   public get config(): Config {
@@ -423,9 +410,6 @@ class Project {
 
   /** Compiles all template files in this project into a `CompilationResult`. */
   public compile(): CompilationResult {
-    this.logger.log(
-      `[TypePrompt LSP] [Project: ${this.folderUri}] Compiling ${this.templateFiles.size} template file(s) (cache=${Boolean(this.compilationResult)})...`,
-    );
     const pathToContent: { [path: string]: string } = {};
     for (const [relPath, templateFile] of this.templateFiles) {
       pathToContent[relPath] = templateFile.content.content;
@@ -434,9 +418,6 @@ class Project {
       cache: this.compilationResult,
       patchBase: this.patchBaseOrNull,
     });
-    this.logger.log(
-      `[TypePrompt LSP] [Project: ${this.folderUri}] Compilation complete. anyErrors=${this.compilationResult.anyErrors}`,
-    );
     return this.compilationResult;
   }
 
@@ -446,9 +427,6 @@ class Project {
     project: Project,
     relativePath: string,
   ): void {
-    project.logger.log(
-      `[TypePrompt LSP] Adding template file ${templateFile.uri} to project ${project.folderUri} as '${relativePath}'`,
-    );
     templateFile.project = project;
     templateFile.relativePath = relativePath;
     project.templateFiles.set(relativePath, templateFile);
@@ -456,9 +434,6 @@ class Project {
 
   /** Registers a patch base with a project. */
   public static addPatchBase(patchBase: PatchBase, project: Project): void {
-    project.logger.log(
-      `[TypePrompt LSP] Adding patch base ${patchBase.uri} to project ${project.folderUri}`,
-    );
     patchBase.project = project;
     project.patchBase = patchBase.compilationResult;
   }
@@ -466,9 +441,6 @@ class Project {
   /** Unregisters a template file from its project. */
   public static removeTemplateFile(templateFile: TemplateFile): void {
     if (!templateFile.project) return;
-    templateFile.project.logger.log(
-      `[TypePrompt LSP] Removing template file ${templateFile.uri} from project ${templateFile.project.folderUri}`,
-    );
     if (templateFile.relativePath) {
       templateFile.project.templateFiles.delete(templateFile.relativePath);
     }
@@ -479,9 +451,7 @@ class Project {
   /** Unregisters a patch base from its project. */
   public static removePatchBase(patchBase: PatchBase): void {
     if (!patchBase.project) return;
-    patchBase.project.logger.log(
-      `[TypePrompt LSP] Removing patch base ${patchBase.uri} from project ${patchBase.project.folderUri}`,
-    );
+    patchBase.project.patchBase = null;
     patchBase.project = undefined;
   }
 }
@@ -502,7 +472,6 @@ export class TypePromptLanguageExtension {
   private readonly uriToTimeout = new Map<string, NodeJS.Timeout>();
   private scanLoopTimeout?: NodeJS.Timeout;
   private disposed = false;
-  public readonly logger: Logger;
 
   constructor(
     private readonly sendDiagnostics: (
@@ -510,10 +479,7 @@ export class TypePromptLanguageExtension {
       diagnostics: Diagnostic[],
     ) => void,
     private readonly getDocument: (uri: string) => TextDocument | undefined,
-    logger: Logger = noopLogger,
-  ) {
-    this.logger = logger;
-  }
+  ) {}
 
   public setWorkspaceFolders(uris: string[]): void {
     this.workspaceFolders.clear();
@@ -532,9 +498,6 @@ export class TypePromptLanguageExtension {
 
   public async runScan(): Promise<void> {
     if (this.disposed) return;
-    this.logger.log(
-      `[TypePrompt LSP] Running scan across ${this.workspaceFolders.size} workspace folder(s)...`,
-    );
 
     for (const folderUri of this.workspaceFolders) {
       const folderPath = uriToFsPath(folderUri);
@@ -544,7 +507,7 @@ export class TypePromptLanguageExtension {
 
       let files: string[];
       try {
-        files = await glob("**/{typeprompt.yml,typeprompt.yaml,*.xml}", {
+        files = await glob("**/{typeprompt.yml,patch-base.json,*.xml}", {
           cwd: folderPath,
           nodir: true,
           absolute: true,
@@ -559,24 +522,27 @@ export class TypePromptLanguageExtension {
             "**/target/**",
           ],
         });
-      } catch (error) {
-        this.logger.error(
-          `[TypePrompt LSP] Glob scan failed in ${folderPath}:`,
-          error,
-        );
+      } catch {
         continue;
       }
 
       // Prioritize config files first so projects are created before template files.
       const uriToTier = (u: string): number => {
-        if (
-          u.endsWith("/typeprompt.yml") ||
-          u.endsWith("/typeprompt.yaml") ||
-          u === "typeprompt.yml"
-        ) {
-          return 1;
+        const fileType = getFileType(u);
+        switch (fileType) {
+          case "typeprompt.yml":
+            return 1;
+          case "patch-base.json":
+            return 2;
+          case "*.xml":
+            return 3;
+          case null:
+            return 4;
+          default: {
+            const _: never = fileType;
+            return 4;
+          }
         }
-        return 2;
       };
 
       files.sort((a, b) => uriToTier(a) - uriToTier(b));
@@ -592,11 +558,7 @@ export class TypePromptLanguageExtension {
         try {
           const stat = await fs.stat(filePath);
           mtime = stat.mtimeMs;
-        } catch (error) {
-          this.logger.error(
-            `[TypePrompt LSP] Failed to stat file ${filePath}:`,
-            error,
-          );
+        } catch {
           continue;
         }
 
@@ -608,11 +570,7 @@ export class TypePromptLanguageExtension {
         let contentText: string;
         try {
           contentText = await fs.readFile(filePath, "utf-8");
-        } catch (error) {
-          this.logger.error(
-            `[TypePrompt LSP] Failed to read file ${filePath}:`,
-            error,
-          );
+        } catch {
           continue;
         }
 
@@ -638,6 +596,9 @@ export class TypePromptLanguageExtension {
     for (const uri of this.projects.keys()) {
       uris.add(uri);
     }
+    for (const uri of this.patchBases.keys()) {
+      uris.add(uri);
+    }
 
     for (const uri of uris) {
       if (this.getDocument(uri)) {
@@ -658,9 +619,6 @@ export class TypePromptLanguageExtension {
       }
 
       if (!exists) {
-        this.logger.log(
-          `[TypePrompt LSP] File no longer exists on disk, removing: ${uri}`,
-        );
         this.setFileContent(uri, undefined);
       }
     }
@@ -682,8 +640,8 @@ export class TypePromptLanguageExtension {
     try {
       await this.runGarbageCollection();
       await this.runScan();
-    } catch (error) {
-      this.logger.error("[TypePrompt LSP] Error during scheduled scan:", error);
+    } catch {
+      // Ignored
     }
     this.scheduleScanLoop(delayMilliseconds);
   }
@@ -702,9 +660,6 @@ export class TypePromptLanguageExtension {
 
   public setFileContent(uri: string, content: FileContent | undefined): void {
     const fileType = getFileType(uri);
-    this.logger.log(
-      `[TypePrompt LSP] setFileContent: uri=${uri}, fileType=${fileType}, hasContent=${Boolean(content)}`,
-    );
 
     if (fileType && !content) {
       this.sendDiagnostics(uri, []);
@@ -713,7 +668,6 @@ export class TypePromptLanguageExtension {
     switch (fileType) {
       case "typeprompt.yml": {
         if (content) {
-          this.logger.log(`[TypePrompt LSP] Parsing config for ${uri}...`);
           const configResult = parseConfigYaml(content.content, uri);
           if (configResult.kind === "success") {
             const configBundle: TypePromptConfigBundle = {
@@ -722,25 +676,15 @@ export class TypePromptLanguageExtension {
             };
             const oldProject = this.projects.get(uri);
             if (oldProject) {
-              this.logger.log(
-                `[TypePrompt LSP] Updating config for existing project ${uri}`,
-              );
               oldProject.configBundle = configBundle;
             } else {
               const folderUri = uri.replace(/typeprompt\.(yml|yaml)$/, "");
-              this.logger.log(
-                `[TypePrompt LSP] Creating new project for ${folderUri}`,
-              );
-              const project = new Project(folderUri, configBundle, this.logger);
+              const project = new Project(folderUri, configBundle);
               this.projects.set(uri, project);
             }
             this.sendDiagnostics(uri, []);
             this.reassignTemplateFilesToProjects();
           } else {
-            this.logger.error(
-              `[TypePrompt LSP] Config errors in ${uri}:`,
-              configResult.errors,
-            );
             const doc = this.getDocument(uri);
             const diagnostics = configResult.errors.map((err): Diagnostic =>
               internalErrorToDiagnostic(
@@ -753,7 +697,6 @@ export class TypePromptLanguageExtension {
             this.sendDiagnostics(uri, diagnostics);
           }
         } else {
-          this.logger.log(`[TypePrompt LSP] Project config deleted at ${uri}`);
           if (this.projects.delete(uri)) {
             this.reassignTemplateFilesToProjects();
           }
@@ -798,9 +741,6 @@ export class TypePromptLanguageExtension {
             }
             this.compileAndSendDiagnosticsForProject(match.project);
           } else {
-            this.logger.log(
-              `[TypePrompt LSP] Template file ${uri} does not belong to any project.`,
-            );
             if (oldProject) {
               Project.removeTemplateFile(templateFile);
               this.compileAndSendDiagnosticsForProject(oldProject);
@@ -838,6 +778,7 @@ export class TypePromptLanguageExtension {
           );
 
           if (patchBase) {
+            patchBase.content = content;
             patchBase.compilationResult = compilationResult;
           } else {
             patchBase = { uri, content, compilationResult };
@@ -852,12 +793,11 @@ export class TypePromptLanguageExtension {
               if (oldProject && oldProject !== match.project) {
                 this.compileAndSendDiagnosticsForProject(oldProject);
               }
+            } else {
+              match.project.patchBase = patchBase.compilationResult;
             }
             this.compileAndSendDiagnosticsForProject(match.project);
           } else {
-            this.logger.log(
-              `[TypePrompt LSP] patch base ${uri} does not belong to any project.`,
-            );
             if (oldProject) {
               Project.removePatchBase(patchBase);
               this.compileAndSendDiagnosticsForProject(oldProject);
@@ -918,11 +858,8 @@ export class TypePromptLanguageExtension {
           lineFinder: createLineFinder(text),
           lastModified: Date.now(),
         });
-      } catch (error) {
-        this.logger.error(
-          `[TypePrompt LSP] Error setting file content for ${uri}:`,
-          error,
-        );
+      } catch {
+        // Ignored
       }
     }, delayMilliseconds);
     this.uriToTimeout.set(uri, timeout);
@@ -931,10 +868,18 @@ export class TypePromptLanguageExtension {
   public findProjectByUri(
     uri: string,
   ): { project: Project; relativePath: string } | undefined {
+    const fileType = getFileType(uri);
     let bestMatch: { project: Project; relativePath: string } | undefined;
     for (const project of this.projects.values()) {
       const relPath = project.getRelativePath(uri);
-      if (relPath !== null && project.matchesInclude(relPath)) {
+      if (relPath === null) {
+        continue;
+      }
+      const matches =
+        fileType === "patch-base.json"
+          ? relPath === "patch-base.json"
+          : project.matchesInclude(relPath);
+      if (matches) {
         if (
           !bestMatch ||
           project.folderUri.length > bestMatch.project.folderUri.length
@@ -951,10 +896,31 @@ export class TypePromptLanguageExtension {
   }
 
   public reassignTemplateFilesToProjects(): void {
-    this.logger.log(
-      `[TypePrompt LSP] Reassigning template files (projects=${this.projects.size}, templateFiles=${this.templateFiles.size})...`,
-    );
     const affectedProjects = new Set<Project>();
+
+    for (const patchBase of this.patchBases.values()) {
+      const oldProject = patchBase.project;
+      const match = this.findProjectByUri(patchBase.uri);
+
+      if (match) {
+        if (patchBase.project !== match.project) {
+          Project.removePatchBase(patchBase);
+          Project.addPatchBase(patchBase, match.project);
+          if (oldProject) {
+            affectedProjects.add(oldProject);
+          }
+          affectedProjects.add(match.project);
+        } else {
+          match.project.patchBase = patchBase.compilationResult;
+          affectedProjects.add(match.project);
+        }
+      } else {
+        if (oldProject) {
+          Project.removePatchBase(patchBase);
+          affectedProjects.add(oldProject);
+        }
+      }
+    }
 
     for (const templateFile of this.templateFiles.values()) {
       const oldProject = templateFile.project;
@@ -1016,9 +982,6 @@ export class TypePromptLanguageExtension {
           ),
         ),
       ];
-      this.logger.log(
-        `[TypePrompt LSP] Diagnostics for ${templateFile.uri}: ${diagnostics.length} item(s) (${errors.length} error(s), ${warnings.length} warning(s))`,
-      );
       this.sendDiagnostics(templateFile.uri, diagnostics);
     }
   }
@@ -1032,9 +995,6 @@ export class TypePromptLanguageExtension {
 
     const templateFile = this.templateFiles.get(uri);
     if (!templateFile?.project) {
-      this.logger.log(
-        `[TypePrompt LSP] Ignoring format request for ${uri}: file is not assigned to any TypePrompt project.`,
-      );
       return [];
     }
 
@@ -1047,11 +1007,7 @@ export class TypePromptLanguageExtension {
     try {
       const formatted = await formatTemplateFile(text);
       return computeEdits(doc, formatted);
-    } catch (error) {
-      this.logger.error(
-        `[TypePrompt LSP] Error formatting document ${uri}:`,
-        error,
-      );
+    } catch {
       return [];
     }
   }
@@ -1401,18 +1357,9 @@ export function createLanguageServer(
     TextDocument,
   );
 
-  const logger: Logger = {
-    log: (msg) => connection.console.log(msg),
-    error: (msg, ...args) => {
-      const extra = args.length > 0 ? " " + JSON.stringify(args) : "";
-      connection.console.error(`${msg}${extra}`);
-    },
-  };
-
   const extension = new TypePromptLanguageExtension(
     (uri, diagnostics) => connection.sendDiagnostics({ uri, diagnostics }),
     (uri) => documents.get(uri),
-    DEBUG ? logger : noopLogger,
   );
 
   let hasWorkspaceFolderCapability = false;
@@ -1425,9 +1372,6 @@ export function createLanguageServer(
     if (folders.length > 0) {
       extension.setWorkspaceFolders(folders);
     }
-    logger.log(
-      `[TypePrompt LSP] connection.onInitialize: workspaceFolders=${folders.join(", ") || "none"}`,
-    );
     return {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
@@ -1460,9 +1404,6 @@ export function createLanguageServer(
   connection.onInitialized(async () => {
     if (hasWorkspaceFolderCapability) {
       connection.workspace.onDidChangeWorkspaceFolders((event) => {
-        logger.log(
-          `[TypePrompt LSP] onDidChangeWorkspaceFolders: added=${event.added.length}, removed=${event.removed.length}`,
-        );
         for (const folder of event.added) {
           extension.addWorkspaceFolder(folder.uri);
         }
@@ -1473,27 +1414,20 @@ export function createLanguageServer(
       });
     }
 
-    logger.log(
-      "[TypePrompt LSP] connection.onInitialized: starting initial scan and loop.",
-    );
     try {
       await extension.runScan();
-    } catch (err) {
-      logger.error("[TypePrompt LSP] Error during initial scan:", err);
+    } catch {
+      // Ignored
     }
     extension.scheduleScanLoop();
   });
 
-  connection.onDidChangeWatchedFiles(async (params) => {
-    logger.log(
-      `[TypePrompt LSP] onDidChangeWatchedFiles: ${params.changes.length} change(s)`,
-    );
+  connection.onDidChangeWatchedFiles(async () => {
     await extension.runGarbageCollection();
     await extension.runScan();
   });
 
   documents.onDidChangeContent((change) => {
-    logger.log(`[TypePrompt LSP] onDidChangeContent: ${change.document.uri}`);
     const text = change.document.getText();
     extension.setFileContent(change.document.uri, {
       content: text,
@@ -1503,7 +1437,6 @@ export function createLanguageServer(
   });
 
   documents.onDidClose(async (event) => {
-    logger.log(`[TypePrompt LSP] onDidClose: ${event.document.uri}`);
     const uri = event.document.uri;
     const fsPath = uriToFsPath(uri);
     if (fsPath) {
@@ -1527,26 +1460,17 @@ export function createLanguageServer(
 
   connection.onDocumentFormatting(
     async (params: DocumentFormattingParams): Promise<TextEdit[]> => {
-      logger.log(
-        `[TypePrompt LSP] onDocumentFormatting: ${params.textDocument.uri}`,
-      );
       return extension.formatDocument(params.textDocument.uri);
     },
   );
 
   connection.languages.semanticTokens.on(
     (params: SemanticTokensParams): SemanticTokens => {
-      logger.log(
-        `[TypePrompt LSP] semanticTokens.on: ${params.textDocument.uri}`,
-      );
       return extension.getSemanticTokens(params.textDocument.uri);
     },
   );
 
   connection.onCompletion((params: CompletionParams): CompletionItem[] => {
-    logger.log(
-      `[TypePrompt LSP] onCompletion: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
-    );
     return extension.getCompletionItems(
       params.textDocument.uri,
       params.position,
@@ -1554,16 +1478,10 @@ export function createLanguageServer(
   });
 
   connection.onDefinition((params: DefinitionParams): Location | null => {
-    logger.log(
-      `[TypePrompt LSP] onDefinition: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
-    );
     return extension.getDefinition(params.textDocument.uri, params.position);
   });
 
   connection.onReferences((params: ReferenceParams): Location[] | null => {
-    logger.log(
-      `[TypePrompt LSP] onReferences: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character}`,
-    );
     return extension.getReferences(
       params.textDocument.uri,
       params.position,
@@ -1572,9 +1490,6 @@ export function createLanguageServer(
   });
 
   connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
-    logger.log(
-      `[TypePrompt LSP] onRenameRequest: ${params.textDocument.uri} at line ${params.position.line}, character ${params.position.character} to '${params.newName}'`,
-    );
     return extension.renameSymbol(
       params.textDocument.uri,
       params.position,
@@ -1583,7 +1498,6 @@ export function createLanguageServer(
   });
 
   connection.onShutdown(() => {
-    logger.log("[TypePrompt LSP] connection.onShutdown: disposing extension.");
     extension.dispose();
   });
 
@@ -1594,7 +1508,6 @@ export function createLanguageServer(
     documents,
     extension,
     listen: (): void => {
-      logger.log("[TypePrompt LSP] Language server connection listening.");
       connection.listen();
     },
   };

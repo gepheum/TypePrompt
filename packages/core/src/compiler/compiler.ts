@@ -52,8 +52,11 @@ export function compile(
 ): CompilationResult {
   const result = new CompilationResultImpl(options);
 
+  const cache =
+    options.cache?.patchBase === options.patchBase ? options.cache : null;
+
   for (const [path, content] of Object.entries(pathToContent)) {
-    const cachedFile = options.cache?.sourceFiles[path];
+    const cachedFile = cache?.sourceFiles[path];
     let outSourceFile: SourceFileParseResult;
     if (cachedFile && cachedFile.content === content) {
       outSourceFile = cachedFile;
@@ -63,7 +66,7 @@ export function compile(
     result.sourceFiles[path] = outSourceFile;
   }
 
-  result.validate(options.cache);
+  result.validate(cache);
 
   return result;
 }
