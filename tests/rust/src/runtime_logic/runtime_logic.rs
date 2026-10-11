@@ -738,8 +738,6 @@ mod spec {
     pub(super) signature: String,
     pub(super) templates: std::collections::HashMap<String, Template>,
     pub(super) tools: std::collections::HashMap<String, Tool>,
-    #[serde(rename = "singleNamespace")]
-    pub(super) single_namespace: bool,
     /// The key is a relative path to a .xml file. The value is the file content.
     #[serde(rename = "sourceFiles")]
     pub(super) source_files: std::collections::HashMap<String, String>,

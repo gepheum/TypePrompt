@@ -1108,7 +1108,6 @@ describe("makeTemplateOverrides", () => {
     const overrides = makeTemplateOverrides(overrideResult);
     expect(overrides.edition).toBe(0);
     expect(overrides.signature).toBe(baseResult.signature);
-    expect(overrides.singleNamespace).toBe(true);
     expect(Object.keys(overrides.sourceFiles).length).toBe(0);
     expect(Object.keys(overrides.templates).length).toBe(0);
     expect(Object.keys(overrides.tools).length).toBe(0);
@@ -1156,7 +1155,6 @@ describe("makeTemplateOverrides", () => {
 
     expect(overrides.edition).toBe(0);
     expect(overrides.signature).toBe(baseResult.signature);
-    expect(overrides.singleNamespace).toBe(true);
 
     // Only the two modified files should be in sourceFiles
     expect(Object.keys(overrides.sourceFiles).sort()).toMatch([
@@ -1241,7 +1239,6 @@ describe("makeTemplateOverrides", () => {
     expect(overrideResult.anyErrors).toBe(false);
 
     const overrides = makeTemplateOverrides(overrideResult);
-    expect(overrides.singleNamespace).toBe(false);
     expect(overrides.signature).toBe(baseResult.signature);
     expect(Object.keys(overrides.sourceFiles)).toMatch([
       "prompts/Billing/SendInvoice.xml",

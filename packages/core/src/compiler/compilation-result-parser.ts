@@ -53,6 +53,5 @@ const TemplatesSchema: z.ZodType<Spec.Templates> = z.object({
   signature: z.string(),
   templates: z.record(z.string(), z.custom<Spec.Template>()),
   tools: z.record(z.string(), z.custom<Spec.Tool>()),
-  singleNamespace: z.boolean(),
   sourceFiles: z.record(z.string(), z.string()),
 });

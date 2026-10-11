@@ -325,7 +325,6 @@ public enum TypePromptRuntime {
       let signature: String
       let templates: [String: Template]
       let tools: [String: Tool]
-      let singleNamespace: Bool
       /// The key is a relative path to a .xml file. The value is the file content.
       let sourceFiles: [String: String]
 
@@ -334,14 +333,12 @@ public enum TypePromptRuntime {
         signature: String,
         templates: [String: Template],
         tools: [String: Tool],
-        singleNamespace: Bool,
         sourceFiles: [String: String],
       ) {
         self.edition = edition
         self.signature = signature
         self.templates = templates
         self.tools = tools
-        self.singleNamespace = singleNamespace
         self.sourceFiles = sourceFiles
       }
     }
@@ -803,7 +800,6 @@ public enum TypePromptRuntime {
     signature: "",
     templates: [:],
     tools: [:],
-    singleNamespace: true,
     sourceFiles: [:],
   )
 
@@ -1572,7 +1568,6 @@ public enum TypePromptRuntime {
         signature: _templatesData.signature,
         templates: mergedTemplates,
         tools: mergedTools,
-        singleNamespace: _templatesData.singleNamespace,
         sourceFiles: mergedSourceFiles,
       )
       return Prompts(mergedData)

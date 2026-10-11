@@ -8,7 +8,6 @@ type Templates = {
   signature: string;
   templates: { [id: string]: Template };
   tools: { [id: string]: Tool };
-  singleNamespace: boolean;
   /** The key is a relative path to a .xml file. The value is the file content. */
   sourceFiles: { [path: string]: string };
 };

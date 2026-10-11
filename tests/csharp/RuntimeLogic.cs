@@ -281,7 +281,6 @@ file static class RuntimeData
         Signature = "",
         templates = new Dictionary<string, Spec.Template>(),
         Tools = new Dictionary<string, Spec.Tool>(),
-        SingleNamespace = true,
         SourceFiles = new Dictionary<string, string>(),
     };
 }
@@ -760,7 +759,6 @@ public class TemplateOverrider
             Signature = RuntimeData.TemplatesData.Signature,
             templates = mergedTemplates,
             Tools = mergedTools,
-            SingleNamespace = RuntimeData.TemplatesData.SingleNamespace,
             SourceFiles = mergedSourceFiles,
         };
         return new Prompts(new SpecRenderer(mergedData));
@@ -781,8 +779,6 @@ file static class Spec
         public required IReadOnlyDictionary<string, Template> templates { get; init; }
         [JsonPropertyName("tools")]
         public required IReadOnlyDictionary<string, Tool> Tools { get; init; }
-        [JsonPropertyName("singleNamespace")]
-        public required bool SingleNamespace { get; init; }
         /// <summary>
         /// The key is a relative path to a .xml file. The value is the file content.
         /// </summary>

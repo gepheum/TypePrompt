@@ -224,7 +224,6 @@ internal object Spec {
         val signature: String,
         val templates: Map<String, Template>,
         val tools: Map<String, Tool>,
-        val singleNamespace: Boolean,
         /** The key is a relative path to a .xml file. The value is the file content. */
         val sourceFiles: Map<String, String>,
     )
@@ -610,7 +609,6 @@ private val templatesData: Spec.Templates =
         signature = "",
         templates = emptyMap(),
         tools = emptyMap(),
-        singleNamespace = true,
         sourceFiles = emptyMap(),
     )
 
@@ -1128,7 +1126,6 @@ object TemplateOverrider {
                 signature = templatesData.signature,
                 templates = mergedTemplates,
                 tools = mergedTools,
-                singleNamespace = templatesData.singleNamespace,
                 sourceFiles = mergedSourceFiles,
             )
         return Prompts(mergedData)

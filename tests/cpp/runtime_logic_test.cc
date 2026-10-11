@@ -4252,7 +4252,6 @@ void TestTemplateOverrider() {
   // 2. Signature mismatch returns error
   typeprompt_01::JsonNode wrong_doc(typeprompt_01::JsonNode::Object{
       {"signature", typeprompt_01::JsonNode("wrong_sig")},
-      {"singleNamespace", typeprompt_01::JsonNode(true)},
       {"edition", typeprompt_01::JsonNode(0)},
       {"templates", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},
       {"tools", typeprompt_01::JsonNode(typeprompt_01::JsonNode::Object{})},

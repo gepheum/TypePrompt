@@ -247,7 +247,6 @@ final class _Spec_Templates {
   final String signature;
   final Map<String, _Spec_Template> templates;
   final Map<String, _Spec_Tool> tools;
-  final bool singleNamespace;
 
   /// The key is a relative path to a .xml file. The value is the file content.
   final Map<String, String> sourceFiles;
@@ -257,7 +256,6 @@ final class _Spec_Templates {
     required this.signature,
     required this.templates,
     required this.tools,
-    required this.singleNamespace,
     required this.sourceFiles,
   });
 
@@ -267,7 +265,6 @@ final class _Spec_Templates {
       "signature": signature,
       "templates": templates.map((k, v) => MapEntry(k, v.toJson())),
       "tools": tools.map((k, v) => MapEntry(k, v.toJson())),
-      "singleNamespace": singleNamespace,
       "sourceFiles": sourceFiles.map((k, v) => MapEntry(k, v)),
     };
   }
@@ -285,7 +282,6 @@ final class _Spec_Templates {
           (k, v) => MapEntry(k.toString(), _Spec_Template.fromJson(v))),
       tools: (json["tools"] as Map).map<String, _Spec_Tool>(
           (k, v) => MapEntry(k.toString(), _Spec_Tool.fromJson(v))),
-      singleNamespace: json["singleNamespace"],
       sourceFiles: (json["sourceFiles"] as Map)
           .map<String, String>((k, v) => MapEntry(k.toString(), v)),
     );
@@ -1055,7 +1051,6 @@ final _templatesData = _Spec_Templates(
   signature: "",
   templates: const {},
   tools: const {},
-  singleNamespace: true,
   sourceFiles: const {},
 );
 
@@ -1463,7 +1458,6 @@ abstract final class TemplateOverrider {
       signature: _templatesData.signature,
       templates: mergedTemplates,
       tools: mergedTools,
-      singleNamespace: _templatesData.singleNamespace,
       sourceFiles: mergedSourceFiles,
     );
     return Prompts._(mergedData);

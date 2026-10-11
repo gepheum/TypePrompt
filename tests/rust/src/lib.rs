@@ -909,7 +909,6 @@ mod tests {
         let wrong_doc = serde_json::json!({
             "signature": "wrong_sig",
             "edition": 0,
-            "singleNamespace": true,
             "templates": {},
             "tools": {},
             "sourceFiles": {},

@@ -14,12 +14,6 @@ class _internal:
         signature: str
         templates: dict[str, _internal.Template]
         tools: dict[str, _internal.Tool]
-        single_namespace: bool = pydantic.Field(
-            validation_alias=pydantic.AliasChoices(
-                "singleNamespace", "single_namespace"
-            ),
-            serialization_alias="singleNamespace",
-        )
         # The key is a relative path to a .xml file. The value is the file content.
         source_files: dict[str, str] = pydantic.Field(
             validation_alias=pydantic.AliasChoices("sourceFiles", "source_files"),

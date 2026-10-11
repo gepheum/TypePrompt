@@ -2836,11 +2836,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, Tool&);
 inline JsonNode ToJsonNode(const Templates& input) {
   using ::typeprompt::ToJsonNode;
   return JsonNode::Object{
-      {"edition", ToJsonNode(input.edition)},
-      {"signature", ToJsonNode(input.signature)},
-      {"templates", ToJsonNode(input.templates)},
-      {"tools", ToJsonNode(input.tools_)},
-      {"singleNamespace", ToJsonNode(input.single_namespace)},
+      {"edition", ToJsonNode(input.edition)},          {"signature", ToJsonNode(input.signature)},
+      {"templates", ToJsonNode(input.templates)},      {"tools", ToJsonNode(input.tools_)},
       {"sourceFiles", ToJsonNode(input.source_files)},
   };
 }
@@ -2849,7 +2846,6 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
   internal::StructParser parser(&node, context);
   parser.Parse("edition", out.edition);
   parser.Parse("signature", out.signature);
-  parser.Parse("singleNamespace", out.single_namespace);
   parser.Parse("sourceFiles", out.source_files);
   parser.Parse("templates", out.templates);
   parser.Parse("tools", out.tools_);

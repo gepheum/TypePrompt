@@ -339,7 +339,10 @@ class Test03Tools_ResearchQuestion {
         assertNotNull(schema)
         assertEquals("object", schema["type"]?.jsonPrimitive?.content)
         assertEquals(listOf("query"), schema["required"]?.jsonArray?.map { it.jsonPrimitive.content })
-        assertEquals("string", schema["properties"]?.jsonObject?.get("query")?.jsonObject?.get("type")?.jsonPrimitive?.content)
+        assertEquals(
+            "string",
+            schema["properties"]?.jsonObject?.get("query")?.jsonObject?.get("type")?.jsonPrimitive?.content,
+        )
     }
 
     @Test
@@ -636,7 +639,10 @@ class Test06SharedTypes {
                     estimatedDelivery = "2026-08-20",
                     items =
                         listOf(
-                            com.example.prompts06.Schema.ShippingConfirmation.Input_Items(name = "Laptop", quantity = 1),
+                            com.example.prompts06.Schema.ShippingConfirmation.Input_Items(
+                                name = "Laptop",
+                                quantity = 1,
+                            ),
                         ),
                 ),
             )
@@ -1167,7 +1173,8 @@ class TestE01_JsonSerialization {
         assertFalse(omittedJson.contains("optMatrix"))
         assertFalse(omittedJson.contains("optMap"))
 
-        val parsedOmitted = Json.decodeFromString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omittedJson)
+        val parsedOmitted =
+            Json.decodeFromString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omittedJson)
         assertEquals("hello", parsedOmitted.stringField)
         assertNull(parsedOmitted.optString)
         assertNull(parsedOmitted.optInt)
@@ -1195,7 +1202,7 @@ class TestTemplateOverrider {
         // Test signature mismatch throws IllegalArgumentException
         val wrongDoc =
             Json.parseToJsonElement(
-                "{\"signature\":\"wrong_sig\",\"edition\":0,\"singleNamespace\":true,\"templates\":{},\"tools\":{},\"sourceFiles\":{}}",
+                "{\"signature\":\"wrong_sig\",\"edition\":0,\"templates\":{},\"tools\":{},\"sourceFiles\":{}}",
             )
         assertFailsWith<IllegalArgumentException> {
             com.example.prompts01.TemplateOverrider.applyOverrides(wrongDoc)

@@ -7,7 +7,6 @@ export type Templates = {
   readonly signature: string;
   readonly templates: { [id: string]: Template };
   readonly tools: { [id: string]: Tool };
-  readonly singleNamespace: boolean;
   /** The key is a relative path to a .xml file. The value is the file content. */
   readonly sourceFiles: { [path: string]: string };
 };

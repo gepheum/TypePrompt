@@ -237,7 +237,6 @@ const TEMPLATES_DATA: Spec.Templates = {
   signature: "",
   templates: {},
   tools: {},
-  singleNamespace: true,
   sourceFiles: {},
 } as const;
 

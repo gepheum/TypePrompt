@@ -153,7 +153,6 @@ describe("patchProject", () => {
     const invalidJson = {
       edition: 0,
       signature: "sig",
-      singleNamespace: true,
       templates: {},
       tools: {},
       sourceFiles: {

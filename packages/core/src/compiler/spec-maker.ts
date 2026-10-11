@@ -36,9 +36,8 @@ export function makeTemplates(input: ValidCompilationResult): Spec.Templates {
       result.content,
     ]),
   );
-  const singleNamespace = input.singleNamespace !== null;
   const edition = input.edition;
-  return { edition, signature, tools, templates, singleNamespace, sourceFiles };
+  return { edition, signature, tools, templates, sourceFiles };
 }
 
 export function makeTemplateOverrides(
@@ -51,7 +50,6 @@ export function makeTemplateOverrides(
       signature: input.signature,
       tools: {},
       templates: {},
-      singleNamespace: input.singleNamespace != null,
       sourceFiles: {},
     };
   }
@@ -79,7 +77,6 @@ export function makeTemplateOverrides(
     signature: patchBase.signature,
     tools,
     templates,
-    singleNamespace: patchBase.singleNamespace !== null,
     sourceFiles: modifiedFiles,
   };
 }
