@@ -1,4 +1,4 @@
-# TypePrompt Language Reference
+# TypePrompt language reference
 
 TypePrompt projects are made up of `.xml` files matching the `include` pattern in `typeprompt.yml` (by default, `prompts/**/*.xml`). Every file has one of the following root elements:
 
@@ -13,7 +13,7 @@ For the type system (schemas, SDL), see [schema.md](schema.md).
 
 ---
 
-## Table of Contents
+## Table of contents
 
 1. [`<meta>`](#the-meta-element-top-level)
 2. [`<template>`](#the-template-element)
@@ -29,11 +29,11 @@ For the type system (schemas, SDL), see [schema.md](schema.md).
    - [`<variant>`](#variant)
 3. [`<tool>`](#the-tool-element)
 4. [`<namespace>`](#the-namespace-element)
-5. [File Naming Conventions](#file-naming-conventions)
+5. [File naming conventions](#file-naming-conventions)
 
 ---
 
-## The `<meta>` Element (Top Level)
+## The `<meta>` element (top level)
 
 `<meta>` lets you attach structured metadata to each template — for example, the model to use, the sampling temperature, or any other configuration your LLM client needs. You define the shape of that metadata once at the top level, then supply values per template.
 
@@ -54,7 +54,7 @@ At the top level of a file, the text content of `<meta>` must define a `Meta` ty
 
 ---
 
-## The `<template>` Element
+## The `<template>` element
 
 A `<template>` defines a prompt that can be built and sent to an LLM.
 
@@ -80,7 +80,7 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 
 ---
 
-### Template-Level `<meta>` — Supplying Values
+### Template-level `<meta>` — supplying values
 
 When a top-level `<meta>` is declared, every `<template>` must include a `<meta>` child whose text content is a YAML value of type `Meta`.
 
@@ -95,7 +95,7 @@ When a top-level `<meta>` is declared, every `<template>` must include a `<meta>
 </template>
 ```
 
-### The `<schema>` Element
+### The `<schema>` element
 
 Defines the `Input` and `Output` types for the template using TypePrompt's SDL. Both types are required.
 
@@ -131,7 +131,7 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
 
 ---
 
-### The `<tools>` Element
+### The `<tools>` element
 
 Registers tools that the model may call during this prompt. The text content is a YAML list of tool references.
 
@@ -150,7 +150,7 @@ Each `tool` value must match a `<tool>` element defined at the top level (in the
 
 ---
 
-### The `<system>` and `<user>` Elements
+### The `<system>` and `<user>` elements
 
 These elements contain the system and user messages. Each may contain a mix of plain text and the inline elements described below: [`<insert>`](#insert), [`<enclosed>`](#enclosed), and [`<c>`](#c).
 
@@ -171,7 +171,7 @@ If the element's content begins with a line containing only whitespace, TypeProm
 ```xml
 <system>
   You are a helpful assistant.
-  Today is <insert val="input.dateToday"/>.
+  Today is <insert val="input.dateToday" />.
 
   Answer the user's question clearly and concisely.
 </system>
@@ -194,8 +194,8 @@ Inserts a formatted value or a snippet into the message at this position.
 **To insert a value**, set the `val` attribute to an expression rooted at `input`:
 
 ```xml
-<insert val="input.userQuery"/>
-<insert val="input.documents" format="json"/>
+<insert val="input.userQuery" />
+<insert val="input.documents" format="json" />
 ```
 
 The `format` attribute controls serialization:
@@ -212,7 +212,7 @@ The `format` attribute controls serialization:
 **To insert a snippet**, use the `snippet` attribute:
 
 ```xml
-<insert snippet="systemContext"/>
+<insert snippet="systemContext" />
 ```
 
 **Indentation propagation:** if the `<insert>` tag appears on an indented line, that indentation is prepended to every line of the resolved value or snippet. This lets you embed multi-line content inside a block element cleanly:
@@ -220,7 +220,7 @@ The `format` attribute controls serialization:
 ```xml
 <user>
   <enclosed tag="Document">
-    <insert val="input.documentContent"/>
+    <insert val="input.documentContent" />
   </enclosed>
 </user>
 ```
@@ -244,10 +244,10 @@ Wraps its content in an XML-like tag in the resolved text. This is more readable
 ```xml
 <user>
   <enclosed tag="Context">
-    <insert val="input.background"/>
+    <insert val="input.background" />
   </enclosed>
   <enclosed tag="Question">
-    <insert val="input.question"/>
+    <insert val="input.question" />
   </enclosed>
 </user>
 ```
@@ -284,7 +284,9 @@ The `<description>` element inside `<tool>` may also contain `<enclosed>` and `<
     detectedSourceLanguage: string;
   }
 </schema>
+```
 
+```xml
 <system>
   Translate the <c>documentText</c> into the <c>targetLanguage</c>.
   Return the result as <c>translatedText</c> and set <c>detectedSourceLanguage</c>
@@ -382,29 +384,29 @@ There may be at most one `<examples>` element per template or variant.
 
 ### `<snippet>`
 
-A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..."/>`.
+A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..." />`.
 
 ```xml
 <snippet name="todayDate">
-  Today's date is <insert val="input.dateToday"/>.
+  Today's date is <insert val="input.dateToday" />.
 </snippet>
 
 <system>
-  <insert snippet="todayDate"/>
+  <insert snippet="todayDate" />
   Answer the following question.
 </system>
 ```
 
 Snippet names must be `camelCase`. The same indentation-stripping rules that apply to `<system>` and `<user>` apply here.
 
-#### Conditional Snippet (`if`)
+#### Conditional snippet (`if`)
 
 A snippet can conditionally render one of two bodies depending on an expression:
 
 ```xml
 <snippet name="locationContext" if="input.userLocation" is="notNull">
   <then>
-    The user is located in <insert val="it"/>.
+    The user is located in <insert val="it" />.
   </then>
   <else></else>
 </snippet>
@@ -421,7 +423,7 @@ Inside the `<then>` and `<else>` bodies, `it` is an alias for the expression pas
 
 When the condition holds, the `<then>` body is rendered; otherwise the `<else>` body is rendered.
 
-#### Switch Snippet (`switch`)
+#### Switch snippet (`switch`)
 
 A snippet can branch on a string-union expression:
 
@@ -465,8 +467,8 @@ Variants let you define multiple versions of a prompt that share the same `Input
 
   <!-- Shared across both variants -->
   <user>
-    Recipient: <insert val="input.recipient"/>
-    Topic: <insert val="input.topic"/>
+    Recipient: <insert val="input.recipient" />
+    Topic: <insert val="input.topic" />
   </user>
 
   <variant case="formal">
@@ -495,7 +497,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
 
 ---
 
-## The `<tool>` Element
+## The `<tool>` element
 
 Defines a tool that the model can call during prompt execution. Tools have a description (shown to the model), and typed input/output schemas.
 
@@ -540,7 +542,7 @@ The `<description>` element may contain `<c>` and `<enclosed>` in addition to pl
 
 ---
 
-## The `<namespace>` Element
+## The `<namespace>` element
 
 Namespaces serve two purposes: organizing large projects and defining types that are shared across multiple templates and tools within the namespace.
 
@@ -573,7 +575,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
 </tool>
 ```
 
-Types declared inside `<namespace>` can be referenced from template and tool schemas using the `shared.TypeName` prefix (see [Shared Types](schema.md#shared-types) in schema.md).
+Types declared inside `<namespace>` can be referenced from template and tool schemas using the `shared.TypeName` prefix (see [Shared types](schema.md#shared-types) in schema.md).
 
 **Attributes:**
 
@@ -585,7 +587,7 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 ---
 
-## File Naming Conventions
+## File naming conventions
 
 By convention, `.xml` files and directories within your prompts directory follow these rules:
 
@@ -596,7 +598,7 @@ By convention, `.xml` files and directories within your prompts directory follow
 | `<meta>` | `meta.xml` | `prompts/meta.xml` | `prompts/meta.xml` |
 | `<namespace>` | `shared.xml` | `prompts/shared.xml` | `prompts/MyNamespace/shared.xml` |
 
-### Single-Namespace Project Layout
+### Single-namespace project layout
 
 ```
 prompts/
@@ -607,7 +609,7 @@ prompts/
 └── webSearch.xml
 ```
 
-### Multi-Namespace Project Layout
+### Multi-namespace project layout
 
 ```
 prompts/

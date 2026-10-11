@@ -1,10 +1,10 @@
-# Kotlin Integration Guide
+# Kotlin integration guide
 
 This guide explains how to use TypePrompt-generated Kotlin code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone Kotlin code that relies on these lightweight runtime dependencies:
 
@@ -40,7 +40,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the `prompts` object and call the template render method with your typed input:
 
@@ -61,7 +61,7 @@ println(prompt.userMessage)
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with everything needed to interact with an LLM:
 
@@ -78,7 +78,7 @@ Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with 
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
@@ -94,11 +94,11 @@ val result = prompt.parseResponse(rawModelOutput)
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor interface and dispatch tool calls with `prompt.executeTools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Implement the tool interface generated for your template:
 
@@ -124,7 +124,7 @@ class ResearchExecutor : ToolExecutor.WebSearch {
 }
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
@@ -155,7 +155,7 @@ for (resp in responses) {
 
 If a template has no tools, pass `NoTools` as the executor.
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates a `PromptTools` object with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
 
@@ -165,7 +165,7 @@ val toolName = PromptTools.ResearchQuestion.webSearch.toolName  // "webSearch"
 
 ---
 
-## Type Definitions and `Schema`
+## Type definitions and `Schema`
 
 All types declared in your TypePrompt schemas are exported inside the `Schema` class:
 
@@ -185,7 +185,7 @@ typealias SearchOutput = Schema.WebSearch.Output
 typealias Meta = Schema.Meta.Meta
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -215,7 +215,7 @@ typealias LegalInput = Schema.Legal.DraftNda.Input
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `executePrompt` function integrating TypePrompt with the OpenAI Java / Kotlin SDK:
 

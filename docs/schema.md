@@ -1,22 +1,22 @@
-# TypePrompt Schema Definition Language
+# TypePrompt schema definition language
 
 TypePrompt uses a schema definition language (SDL) to describe the inputs and outputs of prompts and tools. The syntax is a subset of TypeScript with one addition: the `integer` primitive type.
 
 ---
 
-## Table of Contents
+## Table of contents
 
 1. [Declarations](#declarations)
-2. [Primitive Types](#primitive-types)
-3. [Any Type](#any-type)
+2. [Primitive types](#primitive-types)
+3. [Any type](#any-type)
 4. [Interfaces](#interfaces)
 5. [Records](#records)
 6. [Arrays](#arrays)
-7. [Union Types](#union-types)
-8. [String Literals](#string-literals)
-9. [Recursive Types](#recursive-types)
-10. [Shared Types](#shared-types)
-11. [Naming Rules](#naming-rules)
+7. [Union types](#union-types)
+8. [String literals](#string-literals)
+9. [Recursive types](#recursive-types)
+10. [Shared types](#shared-types)
+11. [Naming rules](#naming-rules)
 12. [Comments and JSDoc](#comments-and-jsdoc)
 
 ---
@@ -40,7 +40,7 @@ Declarations may be separated by semicolons or newlines; semicolons are optional
 
 ---
 
-## Primitive Types
+## Primitive types
 
 | Keyword   | Meaning                                    |
 |-----------|--------------------------------------------|
@@ -53,7 +53,7 @@ Declarations may be separated by semicolons or newlines; semicolons are optional
 
 ---
 
-## Any Type
+## Any type
 
 The keyword `any` is supported and maps to an unconstrained value:
 
@@ -106,11 +106,11 @@ type Matrix = number[][];
 
 ---
 
-## Union Types
+## Union types
 
-Union types follow strict rules. Every union must be **homogeneous**: all members must be string literals, or all members must be interfaces. Mixing the two is an error.
+Every union must be **homogeneous**: all members must be string literals, or all members must be interfaces. Mixing the two is an error.
 
-### String-Literal Unions
+### String-literal unions
 
 ```ts
 type Color = "red" | "green" | "blue";
@@ -118,7 +118,7 @@ type Color = "red" | "green" | "blue";
 
 Each member must be a quoted string starting with a letter (see [String literals](#string-literals)).
 
-### Interface Unions (Discriminated Unions)
+### Interface unions (discriminated unions)
 
 ```ts
 type Shape =
@@ -150,7 +150,7 @@ The same homogeneity and uniqueness rules apply to the flattened result. Circula
 
 ---
 
-## String Literals
+## String literals
 
 Quoted string values used as types must start with a letter and contain only letters, digits, underscores, dashes or dots:
 
@@ -165,7 +165,7 @@ type Format = "application/json" | "text/plain";
 
 ---
 
-## Recursive Types
+## Recursive types
 
 Recursive types are supported through discriminated unions. The **first member** of the union must be non-recursive (the base case); all subsequent members may reference the type being defined.
 
@@ -180,7 +180,7 @@ Circular references that do not go through a discriminated union boundary are no
 
 ---
 
-## Shared Types
+## Shared types
 
 Inside a **template** or **tool** schema, you may reference a type from the enclosing namespace schema by prefixing the type name with `shared.`:
 
@@ -209,7 +209,7 @@ Inside a **template** or **tool** schema, you may reference a type from the encl
 
 ---
 
-## Naming Rules
+## Naming rules
 
 | Context         | Pattern                    | Example         |
 |-----------------|----------------------------|-----------------|

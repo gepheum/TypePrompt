@@ -1,10 +1,10 @@
-# Dart Integration Guide
+# Dart integration guide
 
 This guide explains how to use TypePrompt-generated Dart code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone Dart code that relies on these lightweight dependencies:
 
@@ -37,7 +37,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the generated file and call the template render method on the `prompts` singleton:
 
@@ -57,7 +57,7 @@ print(prompt.userMessage);
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with everything needed to interact with an LLM:
 
@@ -74,7 +74,7 @@ Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with 
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
@@ -90,11 +90,11 @@ final result = prompt.parseResponse(rawModelOutput);
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor interface and dispatch tool calls with `prompt.executeTools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Implement the tool interface generated for your template:
 
@@ -116,7 +116,7 @@ class ResearchExecutor implements ToolExecutor_WebSearch {
 }
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
@@ -148,7 +148,7 @@ for (final resp in responses) {
 
 If a template has no tools, pass `noTools` as the executor.
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates `PromptTools` enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
 
@@ -158,7 +158,7 @@ final toolName = PromptTools_ResearchQuestion.webSearch.toolName;  // "webSearch
 
 ---
 
-## Type Definitions
+## Type definitions
 
 All types declared in your TypePrompt schemas are emitted with descriptive prefixed names:
 
@@ -178,7 +178,7 @@ typedef SearchOutput = WebSearch_Output;
 typedef Meta = Meta_Meta;
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and types are prefixed by their namespace name:
 
@@ -203,7 +203,7 @@ final legalPrompt = prompts.legal.renderDraftNda(
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `executePrompt` function integrating TypePrompt with the OpenAI HTTP API:
 

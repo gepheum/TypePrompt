@@ -1,10 +1,10 @@
-# C# Integration Guide
+# C# integration guide
 
 This guide explains how to use TypePrompt-generated C# code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone C# (C# 10+) code that relies on these lightweight NuGet packages:
 
@@ -34,7 +34,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the generated namespace and call the template render method on `Prompts.Default`:
 
@@ -53,7 +53,7 @@ Console.WriteLine(prompt.UserMessage);
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling a `Render*` method returns a `Prompt<TOutput, TToolExecutor>` object with everything needed to interact with an LLM:
 
@@ -70,7 +70,7 @@ Calling a `Render*` method returns a `Prompt<TOutput, TToolExecutor>` object wit
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.ParseResponse()` to validate and parse it into your typed output:
 
@@ -86,11 +86,11 @@ var result = prompt.ParseResponse(rawModelOutput);
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor interface and dispatch tool calls with `prompt.ExecuteTools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Implement the tool interface generated for your template:
 
@@ -118,7 +118,7 @@ public class ResearchExecutor : ToolExecutor.IWebSearch
 }
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.ExecuteTools()`:
 
@@ -148,7 +148,7 @@ for (var resp in responses)
 
 If a template has no tools, pass `NoTools.NoTools` as the executor.
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates a `PromptTools` class with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
 
@@ -158,7 +158,7 @@ var toolName = PromptTools.ResearchQuestion.WebSearch.GetToolName();  // "webSea
 
 ---
 
-## Type Definitions and `Schema`
+## Type definitions and `Schema`
 
 All types declared in your TypePrompt schemas are exported inside the `Schema` class:
 
@@ -178,7 +178,7 @@ using SearchOutput = MyCompany.Prompts.Schema.WebSearch.Output;
 using Meta = MyCompany.Prompts.Schema.Meta.Meta;
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -201,7 +201,7 @@ var legalPrompt = Prompts.Default.Legal.RenderDraftNda(new Schema.Legal.DraftNda
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `ExecutePrompt` function integrating TypePrompt with the official OpenAI .NET SDK (`OpenAI.Chat`):
 
