@@ -14,7 +14,11 @@ export function generatePatchOverrides(
   return [
     {
       path: config.patch.overrides,
-      content: JSON.stringify(makeTemplateOverrides(compilationResult)),
+      content: JSON.stringify(
+        makeTemplateOverrides(compilationResult),
+        undefined,
+        2,
+      ),
     },
   ];
 }

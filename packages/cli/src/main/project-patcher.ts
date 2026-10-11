@@ -137,7 +137,7 @@ export async function patchProject(args: {
   const filesToWrite: { readonly [path: string]: string } = {
     ...templates.sourceFiles,
     "typeprompt.yml": configYaml,
-    "patch-base.json": JSON.stringify(templates),
+    "patch-base.json": JSON.stringify(templates, undefined, 2),
   };
 
   const existingFiles = (
