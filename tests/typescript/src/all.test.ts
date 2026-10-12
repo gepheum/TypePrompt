@@ -5,7 +5,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { prompts as p01 } from "./gen/prompts-01.js";
+import { prompts as p01, templateOverrider as to01 } from "./gen/prompts-01.js";
 import { prompts as p02, type Schema as Schema02 } from "./gen/prompts-02.js";
 import {
   prompts as p03,
@@ -1068,5 +1068,37 @@ describe("e01 / JSON serialization & deserialization", () => {
     expect(parsedOmitted.optStructList).toMatch(undefined);
     expect(parsedOmitted.optMatrix).toMatch(undefined);
     expect(parsedOmitted.optMap).toMatch(undefined);
+  });
+});
+
+describe("templateOverrider", () => {
+  it("exports templatesData with signature", () => {
+    const data = to01.templatesData as { signature?: string };
+    expect(typeof data.signature).toMatch("string");
+    expect(data.signature!.length > 0).toMatch(true);
+  });
+
+  it("throws on signature mismatch", () => {
+    let error: Error | null = null;
+    try {
+      to01.applyOverrides({ signature: "wrong_sig" });
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error !== null).toBe(true);
+  });
+
+  it("applies valid overrides", () => {
+    const overridden = to01.applyOverrides(to01.templatesData);
+    const prompt = overridden.translate.render({
+      text: "Hello",
+      targetLanguage: "French",
+    });
+    expect(prompt.userMessage).toMatch(/French/);
+  });
+
+  it("returns default prompts when overrides is null or undefined", () => {
+    expect(to01.applyOverrides(null)).toBe(p01);
+    expect(to01.applyOverrides(undefined)).toBe(p01);
   });
 });

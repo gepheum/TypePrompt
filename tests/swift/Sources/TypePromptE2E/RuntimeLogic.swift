@@ -1530,7 +1530,7 @@ public enum TypePromptRuntime {
   }
 
   /// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
-  // automated prompt refinement with coding agents without restarting your service.
+  /// automated prompt refinement with coding agents.
   ///
   /// When using overrides, inject the resulting `Prompts` instance as a dependency
   /// rather than relying on `prompts`.

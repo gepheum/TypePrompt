@@ -4104,7 +4104,7 @@ using input_type = typename whole_or_const_ref<typename Template::input_type>::t
 }  // namespace internal
 
 /// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
-/// automated prompt refinement with coding agents without restarting your service.
+/// automated prompt refinement with coding agents.
 ///
 /// When using overrides, pass the resulting `Templates` instance as a dependency
 /// rather than relying on `Templates::getDefault()`.

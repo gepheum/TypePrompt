@@ -711,7 +711,7 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
 
 /// <summary>
 /// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
-/// automated prompt refinement with coding agents without restarting your service.
+/// automated prompt refinement with coding agents.
 /// <para>
 /// When using overrides, inject the resulting <see cref="Prompts"/> instance as a
 /// dependency rather than relying on <see cref="Prompts.Default"/>.

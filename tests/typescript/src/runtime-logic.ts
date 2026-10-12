@@ -126,10 +126,10 @@ export type Tool<Input, Output> = {
  */
 export type OutputFormat<Id extends TemplateId> =
   | {
-    readonly kind: "json";
-    readonly schema: z.ZodType<Output<Id>>;
-    readonly jsonSchema: { readonly [key: string]: unknown };
-  }
+      readonly kind: "json";
+      readonly schema: z.ZodType<Output<Id>>;
+      readonly jsonSchema: { readonly [key: string]: unknown };
+    }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
 /** Names of the tools available from the given template. */
@@ -144,8 +144,8 @@ export type ToolExecutor<Id extends TemplateId> = {
     infer Input,
     infer Output
   >
-  ? (input: Input) => Promise<Output>
-  : never;
+    ? (input: Input) => Promise<Output>
+    : never;
 };
 
 export type ToolCall = {
@@ -326,7 +326,7 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
 
 /**
  * Enables dynamic template overrides for rapid prompt iteration, evaluations, and
- * automated prompt refinement with coding agents without restarting your service.
+ * automated prompt refinement with coding agents.
  *
  * When using overrides, inject the resulting {@link Prompts} instance as a
  * dependency rather than relying on the global {@link prompts} variable.
@@ -335,11 +335,21 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
  *   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
  */
 export const templateOverrider: {
+  /** The compiled prompt templates data. */
   readonly templatesData: unknown;
+
+  /**
+   * Returns a {@link Prompts} instance with the given template overrides applied.
+   * If `overrides` is `null` or `undefined`, returns the default {@link prompts}
+   * instance.
+   */
   readonly applyOverrides: (overrides: unknown) => Prompts;
 } = {
   templatesData: TEMPLATES_DATA,
   applyOverrides: (overrides: unknown) => {
+    if (overrides === null || overrides === undefined) {
+      return prompts;
+    }
     const templatesData = templatesSchema.parse(
       typeof overrides === "object"
         ? { ...TEMPLATES_DATA, ...overrides }
@@ -422,10 +432,10 @@ function renderTemplate<Id extends TemplateId>(
   const outputFormat = (
     template.outputFormat === "json"
       ? {
-        kind: "json",
-        schema: outputSchema,
-        jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-      }
+          kind: "json",
+          schema: outputSchema,
+          jsonSchema: template.outputJsonSchema as Record<string, unknown>,
+        }
       : { kind: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>
