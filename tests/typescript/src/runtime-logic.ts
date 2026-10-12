@@ -350,7 +350,7 @@ export const templateOverrider: {
     }
     return newPromptsImpl(templatesData);
   },
-} as const;
+};
 
 function renderTemplate<Id extends TemplateId>(
   templateId: TemplateId,
