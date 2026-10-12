@@ -126,10 +126,10 @@ export type Tool<Input, Output> = {
  */
 export type OutputFormat<Id extends TemplateId> =
   | {
-      readonly kind: "json";
-      readonly schema: z.ZodType<Output<Id>>;
-      readonly jsonSchema: { readonly [key: string]: unknown };
-    }
+    readonly kind: "json";
+    readonly schema: z.ZodType<Output<Id>>;
+    readonly jsonSchema: { readonly [key: string]: unknown };
+  }
   | (Output<Id> extends string ? { readonly kind: "text" } : never);
 
 /** Names of the tools available from the given template. */
@@ -144,8 +144,8 @@ export type ToolExecutor<Id extends TemplateId> = {
     infer Input,
     infer Output
   >
-    ? (input: Input) => Promise<Output>
-    : never;
+  ? (input: Input) => Promise<Output>
+  : never;
 };
 
 export type ToolCall = {
@@ -325,11 +325,14 @@ function newPromptsImpl(templates: Spec.Templates): Prompts {
 }
 
 /**
- * Use this with external frameworks that support template override injection
- * for experimentation or A/B testing.
+ * Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+ * automated prompt refinement with coding agents without restarting your service.
  *
  * When using overrides, inject the resulting {@link Prompts} instance as a
  * dependency rather than relying on the global {@link prompts} variable.
+ *
+ * Guide:
+ *   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
  */
 export const templateOverrider: {
   readonly templatesData: unknown;
@@ -419,10 +422,10 @@ function renderTemplate<Id extends TemplateId>(
   const outputFormat = (
     template.outputFormat === "json"
       ? {
-          kind: "json",
-          schema: outputSchema,
-          jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-        }
+        kind: "json",
+        schema: outputSchema,
+        jsonSchema: template.outputJsonSchema as Record<string, unknown>,
+      }
       : { kind: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>

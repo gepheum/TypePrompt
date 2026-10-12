@@ -638,10 +638,14 @@ class _TemplateOverrider:
         )
 
 
-# Use this with external frameworks that support template override injection
-# for experimentation or A/B testing.
-# When using overrides, inject the resulting Prompts instance as a dependency
-# rather than relying on the global 'prompts' variable.
+# Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+# automated prompt refinement with coding agents without restarting your service.
+#
+# When using overrides, inject the resulting Prompts instance as a dependency rather
+# than relying on the global 'prompts' variable.
+#
+# Guide:
+#   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
 template_overrider: Final = _TemplateOverrider()
 
 

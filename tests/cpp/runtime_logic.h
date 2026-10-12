@@ -4103,8 +4103,14 @@ template <typename Template>
 using input_type = typename whole_or_const_ref<typename Template::input_type>::type;
 }  // namespace internal
 
-/// Use this with external frameworks that support template override injection
-/// for experimentation or A/B testing.
+/// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+/// automated prompt refinement with coding agents without restarting your service.
+///
+/// When using overrides, pass the resulting `Templates` instance as a dependency
+/// rather than relying on `Templates::getDefault()`.
+///
+/// Guide:
+///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
 class TemplateOverrider {
  public:
   /// Returns the compiled prompt templates serialized as a JsonNode.
@@ -4146,8 +4152,8 @@ class TemplateOverrider {
 /// \tparam Template One of the template structs generated in the 'templates' namespace (e.g.,
 /// 'templates::MyTemplate').
 /// \param input The input arguments matching the template's input schema.
-/// \param templates Optional template definitions, useful when injecting prompt overrides from an
-/// external experimentation or A/B testing framework. Defaults to the compiled templates.
+/// \param templates Optional template definitions, useful when injecting prompt overrides.
+/// Defaults to the compiled templates.
 /// \return A fully resolved Prompt ready to be sent to an LLM.
 template <typename Template, typename Input = internal::input_type<Template>>
 Prompt Render(Input input, const Templates& templates = Templates::getDefault()) {

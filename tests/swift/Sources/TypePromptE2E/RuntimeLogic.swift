@@ -1529,11 +1529,14 @@ public enum TypePromptRuntime {
     }
   }
 
-  /// Use this with external frameworks that support template override injection
-  /// for experimentation or A/B testing.
+  /// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+  // automated prompt refinement with coding agents without restarting your service.
   ///
   /// When using overrides, inject the resulting `Prompts` instance as a dependency
   /// rather than relying on `prompts`.
+  ///
+  /// Guide:
+  ///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
   public enum TemplateOverrider {
     /// Returns the current template data as JSON-encoded data.
     public static func templatesData() throws -> Data {

@@ -1101,11 +1101,14 @@ private fun <Output> doParseResponse(
 }
 
 /**
- * Use this with external frameworks that support template override injection
- * for experimentation or A/B testing.
+ * Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+ * automated prompt refinement with coding agents without restarting your service.
  *
  * When using overrides, inject the resulting [Prompts] instance as a
  * dependency rather than relying on the global [prompts] variable.
+ *
+ * Guide:
+ *   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
  */
 object TemplateOverrider {
     fun templatesData(): JsonElement {

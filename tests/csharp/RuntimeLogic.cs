@@ -710,11 +710,15 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
 }
 
 /// <summary>
-/// Use this with external frameworks that support template override injection
-/// for experimentation or A/B testing.
+/// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+/// automated prompt refinement with coding agents without restarting your service.
 /// <para>
-/// When using overrides, inject the resulting <see cref="Prompts"/> instance as a dependency
-/// rather than relying on <see cref="Prompts.Default"/>.
+/// When using overrides, inject the resulting <see cref="Prompts"/> instance as a
+/// dependency rather than relying on <see cref="Prompts.Default"/>.
+/// </para>
+/// <para>
+/// Guide:
+///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
 /// </para>
 /// </summary>
 public class TemplateOverrider

@@ -255,7 +255,14 @@ pub struct ToolCallResponse {
   pub error: Option<String>,
 }
 
-/// Manages prompt template overrides at runtime.
+/// Enables dynamic template overrides for rapid prompt iteration, evaluations, and
+// automated prompt refinement with coding agents without restarting your service.
+///
+/// When using overrides, inject the resulting `Prompts` instance as a dependency
+/// rather than relying on the default prompt templates.
+///
+/// Guide:
+///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
 pub struct TemplateOverrider;
 
 impl TemplateOverrider {
