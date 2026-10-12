@@ -4120,7 +4120,13 @@ class TemplateOverrider {
   }
 
   /// Applies JSON overrides and returns an updated Templates instance, or an Error.
-  static Result<Templates> applyOverrides(const JsonNode& overrides) {
+  ///
+  /// If `overrides` is JSON null, returns the default `Templates` instance.
+  static Result<Templates> applyOverrides(const JsonNode& overrides = JsonNode{}) {
+    if (overrides.type() == JsonNode::Type::kNull) {
+      return Templates(internal::TemplatesSpecAccessor::get(Templates::getDefault()));
+    }
+
     auto overrides_value = Parse<internal::spec::Templates>(overrides);
     if (!overrides_value.ok()) {
       return std::move(overrides_value).error();

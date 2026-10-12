@@ -4278,6 +4278,34 @@ void TestTemplateOverrider() {
       },
       moved_data);
   ASSERT_TRUE(prompt.user_message.find("French") != std::string::npos);
+
+  // 5. Default argument returns default templates and works with Render
+  auto default_arg_res = typeprompt_01::TemplateOverrider::applyOverrides();
+  ASSERT_TRUE(default_arg_res.ok());
+  auto default_arg_templates = std::move(*default_arg_res);
+  auto default_arg_prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
+      {
+          .target_language = "French",
+          .text = "Hello",
+      },
+      default_arg_templates);
+  ASSERT_TRUE(default_arg_prompt.user_message.find("French") != std::string::npos);
+
+  // 6. JSON null returns default templates
+  auto null_res = typeprompt_01::TemplateOverrider::applyOverrides(std::nullopt);
+  ASSERT_TRUE(null_res.ok());
+  auto null_templates = std::move(*null_res);
+  auto null_prompt = typeprompt_01::Render<typeprompt_01::templates::Translate>(
+      {
+          .target_language = "French",
+          .text = "Hello",
+      },
+      null_templates);
+  ASSERT_TRUE(null_prompt.user_message.find("French") != std::string::npos);
+
+  auto json_null_res =
+      typeprompt_01::TemplateOverrider::applyOverrides(*typeprompt_01::JsonNode::ParseJson("null"));
+  ASSERT_TRUE(json_null_res.ok());
 }
 
 }  // namespace

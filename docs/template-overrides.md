@@ -349,6 +349,6 @@ jq -n \
 | **Kotlin** | `TemplateOverrider.templatesData: JsonElement` | `TemplateOverrider.applyOverrides(overrides: JsonElement?): Prompts` |
 | **C#** | `TemplateOverrider.TemplatesData` | `TemplateOverrider.ApplyOverrides(JsonElement? overrides)` |
 | **Rust** | `TemplateOverrider::templates_data(): serde_json::Value` | `TemplateOverrider::apply_overrides(overrides)?` |
-| **C++** | `TemplateOverrider::templatesData()` | `TemplateOverrider::applyOverrides(overrides)` |
+| **C++** | `TemplateOverrider::templatesData(): JsonNode` | `TemplateOverrider::applyOverrides(overrides = {})` |
 | **Swift** | `TemplateOverrider.templatesData: JsonElement` | `try TemplateOverrider.applyOverrides(overrides: JsonElement?)` |
 | **Dart** | `TemplateOverrider.templatesData` | `TemplateOverrider.applyOverrides(overrides)` |
