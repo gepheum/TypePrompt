@@ -39,7 +39,7 @@ With template overrides:
 1. **Base templates**: Your compiled application packages a snapshot of its prompt templates and tools.
 2. **Safe patching**: A *patch project* is initialized using `npx typeprompt patch`. The compiler enforces that template names, namespaces, and schemas remain strictly identical to the base project, ensuring runtime type safety and contract compatibility.
 3. **Sparse delta**: Running `npx typeprompt gen` in the patch project generates `overrides.json`, a minimal JSON payload containing only the templates and tools that were modified.
-4. **Dynamic injection**: Your application's API endpoint passes this JSON object to `template_overrider.apply_overrides(...)` (or `TemplateOverrider.applyOverrides(...)`) to obtain a scoped `Prompts` instance used solely for that request.
+4. **Dynamic injection**: Your application's API endpoint passes this JSON object to `template_overrider.apply_overrides(...)` to obtain a scoped `Prompts` instance used solely for that request.
 
 ---
 
@@ -66,7 +66,7 @@ In your endpoint handler, apply template overrides if present:
 active_prompts = template_overrider.apply_overrides(request.template_overrides)
 ```
 
-If `template_overrides` is `None` (or omitted), `apply_overrides` returns the global default `prompts` instance with zero overhead.
+If `template_overrides` is `None` (or omitted), `apply_overrides` returns the global default `prompts` instance.
 
 ### 2. Inject `Prompts` into your application logic
 
@@ -132,7 +132,7 @@ The generated patch directory contains:
 
 To ensure your application code never breaks at runtime, the compiler strictly enforces the following rules in a patch project:
 - **No adding or deleting templates or tools**: You can only edit templates and tools that exist in the base project.
-- **No schema modifications**: You cannot edit any of the schemas of your templates or tools, with the exception of JSDoc comments on top of fields or schemas, which can be added or modified (since documentation comments guide the model without altering compiled types).
+- **No schema modifications**: You cannot edit any of the schemas of your templates or tools, with the exception of JSDoc comments on top of fields or types.
 
 ### Generating overrides
 
