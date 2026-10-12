@@ -1,4 +1,5 @@
 .DS_Store
+*.tsbuildinfo
 dist
 .vitepress/dist
 .vitepress/cache
