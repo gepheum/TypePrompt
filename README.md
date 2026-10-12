@@ -129,7 +129,7 @@ TypePrompt shares many similarities with [DotPrompt](https://github.com/google/d
 - **[Language reference](docs/reference.md)** — XML syntax for defining prompt templates, tools, metadata.
 - **[Schema language](docs/schema.md)** — TypeScript subset for defining `Input` and `Output` types.
 - **[Prompt refinement](docs/template-overrides.md)** — Iterating on prompts using template overrides.
-- **Language guides**:
+- **Integration guides**:
   - [TypeScript](docs/languages/typescript.md)
   - [Python](docs/languages/python.md)
   - [Kotlin](docs/languages/kotlin.md)
