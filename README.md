@@ -4,18 +4,18 @@
 
 You write prompt templates in a simple XML format, along with few-shot examples, tools, and schemas (written in a subset of TypeScript). TypePrompt transpiles them into native code for your target language.
 
-### End-to-End Type Safety
+### End-to-end type safety
 
 - **At template resolution time**: TypePrompt guarantees that the values you pass match the input placeholders expected by the template.
 - **At response processing time**: TypePrompt guarantees that the typed objects your application uses to represent the LLM's response match the schema passed to the model.
 
-### Supported Languages
+### Supported languages
 
 TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*).
 
 ---
 
-## Example Prompt Template
+## Example prompt template
 
 ```xml
 <template name="DecodeCatMood">
@@ -96,21 +96,21 @@ println(result.humanAction)
 
 ## Features
 
-- **Lightweight Prompt Management**: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
-- **End-to-End Type Safety**: Guarantees application types never drift from prompt schemas.
-- **TypeScript-Based SDL**: Define schemas using familiar TypeScript interfaces and unions.
-- **JSON Schema Generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
-- **Flexible Input Formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
-- **Schema-Checked Instructions (`<c>`)**: Verifies that fields and sample JSON referenced in your prompt instructions actually match your schema.
-- **Validated Few-Shot Examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
-- **Prompt Variants**: Author multiple versions of a prompt with identical input and output types, and easily pick the desired variant at runtime.
-- **Typed Tool Calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
-- **Custom Structured Metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
-- **Fast Developer Workflow**: CLI with watch mode (`npx typeprompt gen --watch`) and built-in template formatter (`npx typeprompt format`).
+- **Lightweight prompt management**: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
+- **End-to-end type safety**: Guarantees application types never drift from prompt schemas.
+- **TypeScript-based SDL**: Define schemas using familiar TypeScript interfaces and unions.
+- **JSON schema generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
+- **Flexible input formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
+- **Schema-checked instructions (`<c>`)**: Verifies that fields and sample JSON referenced in your prompt instructions actually match your schema.
+- **Validated few-shot examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
+- **Prompt variants**: Author multiple versions of a prompt with identical input and output types, and easily pick the desired variant at runtime.
+- **Typed tool calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
+- **Custom structured metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
+- **Fast developer workflow**: CLI with watch mode (`npx typeprompt gen --watch`) and built-in template formatter (`npx typeprompt format`).
 
 ---
 
-## Getting Started
+## Getting started
 
 1. **Initialize your project**: Run `npx typeprompt init` in your project root.
 2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
@@ -118,7 +118,7 @@ println(result.humanAction)
 
 ---
 
-## Comparison with Other Tools
+## Comparison with other tools
 
 TypePrompt shares many similarities with [DotPrompt](https://github.com/google/dotprompt), but introduces **end-to-end type safety**. Tools like DotPrompt, LangChain, Semantic Kernel, and Promptfoo parse templates dynamically at runtime, allowing application types to drift from prompt definitions. TypePrompt eliminates this risk by treating your prompt schemas as the source of truth and transpiling them into native code at build time.
 
@@ -126,9 +126,10 @@ TypePrompt shares many similarities with [DotPrompt](https://github.com/google/d
 
 ## Documentation
 
-- **[Language Reference](docs/reference.md)** — XML syntax for defining prompt templates, tools, metadata.
-- **[Schema Language](docs/schema.md)** — TypeScript subset for defining `Input` and `Output` types.
-- **Language Guides**:
+- **[Language reference](docs/reference.md)** — XML syntax for defining prompt templates, tools, metadata.
+- **[Schema language](docs/schema.md)** — TypeScript subset for defining `Input` and `Output` types.
+- **[Prompt refinement](docs/template-overrides.md)** — Iterating on prompts using template overrides.
+- **Language guides**:
   - [TypeScript](docs/languages/typescript.md)
   - [Python](docs/languages/python.md)
   - [Kotlin](docs/languages/kotlin.md)
