@@ -179,7 +179,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "private val spec: Spec.Templates,",
       ") {",
       "companion object {",
-      "val default: Prompts = Prompts(templatesData)",
+      "val default: Prompts = Prompts(globalTemplatesData)",
       "}",
       "",
     );
@@ -195,7 +195,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
       "private val spec: Spec.Templates,",
       ") {",
       "companion object {",
-      "val default: Prompts = Prompts(templatesData)",
+      "val default: Prompts = Prompts(globalTemplatesData)",
       "}",
       "",
     );
@@ -538,7 +538,7 @@ function writeTemplatesData(templatesData: Spec.Templates): string {
     "\\$",
   );
   const lines = [
-    "private val templatesData: Spec.Templates = JsonConfig.lenient.decodeFromString(",
+    "private val globalTemplatesData: Spec.Templates = JsonConfig.lenient.decodeFromString(",
     `${stringifiedJson},`,
     ")",
   ];

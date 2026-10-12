@@ -603,7 +603,7 @@ class Prompts internal constructor(
     private val spec: Spec.Templates,
 )
 
-private val templatesData: Spec.Templates =
+private val globalTemplatesData: Spec.Templates =
     Spec.Templates(
         edition = 0,
         signature = "",
@@ -1111,22 +1111,29 @@ private fun <Output> doParseResponse(
  *   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
  */
 object TemplateOverrider {
-    fun templatesData(): JsonElement {
-        return JsonConfig.lenient.encodeToJsonElement(Spec.Templates.serializer(), templatesData)
-    }
+    /** The compiled prompt templates data. */
+    val templatesData: JsonElement
+        get() = JsonConfig.lenient.encodeToJsonElement(Spec.Templates.serializer(), globalTemplatesData)
 
-    fun applyOverrides(overrides: JsonElement): Prompts {
+    /**
+     * Returns a [Prompts] instance with the given template overrides applied.
+     * If [overrides] is null or [JsonNull], returns the default [prompts] instance.
+     */
+    fun applyOverrides(overrides: JsonElement?): Prompts {
+        if (overrides == null || overrides is JsonNull) {
+            return prompts
+        }
         val parsed = JsonConfig.lenient.decodeFromJsonElement(Spec.Templates.serializer(), overrides)
-        if (parsed.signature != templatesData.signature) {
+        if (parsed.signature != globalTemplatesData.signature) {
             throw IllegalArgumentException("Signature mismatch")
         }
-        val mergedTemplates = templatesData.templates.toMutableMap().apply { putAll(parsed.templates) }
-        val mergedTools = templatesData.tools.toMutableMap().apply { putAll(parsed.tools) }
-        val mergedSourceFiles = templatesData.sourceFiles.toMutableMap().apply { putAll(parsed.sourceFiles) }
+        val mergedTemplates = globalTemplatesData.templates.toMutableMap().apply { putAll(parsed.templates) }
+        val mergedTools = globalTemplatesData.tools.toMutableMap().apply { putAll(parsed.tools) }
+        val mergedSourceFiles = globalTemplatesData.sourceFiles.toMutableMap().apply { putAll(parsed.sourceFiles) }
         val mergedData =
             Spec.Templates(
-                edition = templatesData.edition,
-                signature = templatesData.signature,
+                edition = globalTemplatesData.edition,
+                signature = globalTemplatesData.signature,
                 templates = mergedTemplates,
                 tools = mergedTools,
                 sourceFiles = mergedSourceFiles,
@@ -1136,5 +1143,5 @@ object TemplateOverrider {
 }
 
 /** Entry point for building prompts. */
-val prompts = Prompts(templatesData)
+val prompts = Prompts(globalTemplatesData)
 // </static:kotlin-logic>

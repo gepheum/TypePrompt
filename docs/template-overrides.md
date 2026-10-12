@@ -60,17 +60,13 @@ Add an optional JSON field (`templateOverrides` or `promptOverrides`) to endpoin
 }
 ```
 
-In your endpoint handler, instantiate a scoped `Prompts` object if template overrides are present:
+In your endpoint handler, apply template overrides if present:
 
 ```python
-active_prompts = (
-    template_overrider.apply_overrides(request.template_overrides)
-    if request.template_overrides is not None
-    else prompts
-)
+active_prompts = template_overrider.apply_overrides(request.template_overrides)
 ```
 
-If `template_overrides` is `None`, the global default `prompts` instance is used with zero overhead.
+If `template_overrides` is `None` (or omitted), `apply_overrides` returns the global default `prompts` instance with zero overhead.
 
 ### 2. Inject `Prompts` into your application logic
 
@@ -102,7 +98,7 @@ To let external tools or coding agents inspect your active prompts, expose a rea
 # GET /api/prompts/templates
 @app.get("/api/prompts/templates")
 async def get_prompt_templates() -> dict[str, Any]:
-    return template_overrider.templates_data()
+    return template_overrider.templates_data
 ```
 
 ---
@@ -121,7 +117,7 @@ npx typeprompt patch -b <base> -o <output-dir>
 
 - `-b, --base <path | url>` *(required)*: Specifies the base project. Can be:
   - A path to a local TypePrompt project directory (containing `typeprompt.yml`).
-  - A path to a templates JSON file (saved from `template_overrider.templates_data()`).
+  - A path to a templates JSON file (saved from `template_overrider.templates_data`).
   - An HTTP/HTTPS URL serving templates JSON (e.g. `http://localhost:8000/api/prompts/templates`).
 - `-o, --output <dir>` *(required)*: Path to the new patch project directory (e.g. in `/tmp` or an evaluation folder).
 
@@ -212,28 +208,22 @@ Below is a complete example in Python 3 (using FastAPI and Pydantic) showing how
 
 ```python
 from typing import Any
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class TriageRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    ticket_id: str = Field(alias="ticketId")
+    ticket_id: str
     subject: str
     body: str
     # Optional prompt template overrides JSON object.
-    template_overrides: dict[str, Any] | None = Field(
-        default=None, alias="templateOverrides"
-    )
+    template_overrides: dict[str, Any] | None = None
 
 
 class TriageResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    ticket_id: str = Field(alias="ticketId")
+    ticket_id: str
     category: str
     urgency: str
-    suggested_reply: str | None = Field(default=None, alias="suggestedReply")
+    suggested_reply: str | None = None
 ```
 
 ### 2. Application service
@@ -289,7 +279,7 @@ class TriageService:
 from typing import Any
 from fastapi import FastAPI, HTTPException, status
 from myapp.api import TriageRequest, TriageResponse
-from myapp.gen.prompts import prompts, template_overrider
+from myapp.gen.prompts import template_overrider
 from myapp.service import TriageService
 from openai import AsyncOpenAI
 
@@ -300,25 +290,21 @@ triage_service = TriageService(client=AsyncOpenAI())
 # 1. Export active prompt templates
 @app.get("/api/prompts/templates")
 async def get_prompt_templates() -> dict[str, Any]:
-    return template_overrider.templates_data()
+    return template_overrider.templates_data
 
 
 # 2. Ticket triage endpoint supporting overrides
 @app.post("/api/triage")
 async def triage(request: TriageRequest) -> TriageResponse:
-    # Apply overrides if provided, or fall back to default prompts
-    if request.template_overrides is not None:
-        try:
-            active_prompts = template_overrider.apply_overrides(
-                request.template_overrides
-            )
-        except (ValueError, Exception) as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid template overrides: {e}",
-            )
-    else:
-        active_prompts = prompts
+    try:
+        active_prompts = template_overrider.apply_overrides(
+            request.template_overrides
+        )
+    except (ValueError, Exception) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid template overrides: {e}",
+        )
 
     return await triage_service.triage_ticket(request, active_prompts)
 ```
@@ -337,14 +323,14 @@ npx typeprompt patch -b http://localhost:8000/api/prompts/templates -o /tmp/tria
 # 3. Compile the patch to produce overrides.json
 npx typeprompt gen -p /tmp/triage-patch
 
-# 4. Invoke the API, embedding overrides.json as the templateOverrides JSON object:
+# 4. Invoke the API, embedding overrides.json as the template_overrides JSON object:
 jq -n \
   --slurpfile overrides /tmp/triage-patch/overrides.json \
   '{
-    ticketId: "TCK-104",
+    ticket_id: "TCK-104",
     subject: "Payment failed",
     body: "My card was charged twice but subscription is inactive.",
-    templateOverrides: $overrides[0]
+    template_overrides: $overrides[0]
   }' | curl -X POST http://localhost:8000/api/triage \
     -H "Content-Type: application/json" \
     -d @-
@@ -358,10 +344,10 @@ jq -n \
 
 | Language | Export default templates | Apply overrides |
 |---|---|---|
-| **Python** | `template_overrider.templates_data(): dict[str, Any]` | `template_overrider.apply_overrides(overrides: dict[str, Any]): Prompts` |
+| **Python** | `template_overrider.templates_data: dict[str, Any]` | `template_overrider.apply_overrides(overrides: dict[str, Any] | None): Prompts` |
 | **TypeScript** | `templateOverrider.templatesData` | `templateOverrider.applyOverrides(overrides: unknown): Prompts` |
-| **Kotlin** | `TemplateOverrider.templatesData(): JsonElement` | `TemplateOverrider.applyOverrides(overrides: JsonElement): Prompts` |
-| **C#** | `TemplateOverrider.TemplatesData` | `TemplateOverrider.ApplyOverrides(JsonElement overrides)` |
+| **Kotlin** | `TemplateOverrider.templatesData: JsonElement` | `TemplateOverrider.applyOverrides(overrides: JsonElement?): Prompts` |
+| **C#** | `TemplateOverrider.TemplatesData` | `TemplateOverrider.ApplyOverrides(JsonElement? overrides)` |
 | **Rust** | `TemplateOverrider::templates_data()` | `TemplateOverrider::apply_overrides(&overrides)?` |
 | **C++** | `TemplateOverrider::templatesData()` | `TemplateOverrider::applyOverrides(overrides)` |
 | **Swift** | `TemplateOverrider.templatesData` | `try TemplateOverrider.applyOverrides(overrides)` |

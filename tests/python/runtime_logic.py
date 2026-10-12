@@ -615,6 +615,7 @@ def _get_template_impl(
 
 
 class _TemplateOverrider:
+    @property
     def templates_data(self) -> dict[str, Any]:
         """Returns the compiled prompt templates data."""
         return _templates_data.model_dump(by_alias=True)

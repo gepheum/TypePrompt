@@ -5,6 +5,7 @@ package dev.typeprompt
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -16,6 +17,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class Test01Basics_Translate {
@@ -1194,7 +1196,7 @@ class TestE01_JsonSerialization {
 class TestTemplateOverrider {
     @Test
     fun testSignatureCheckAndOverrides() {
-        val data = com.example.prompts01.TemplateOverrider.templatesData()
+        val data = com.example.prompts01.TemplateOverrider.templatesData
         val sig = data.jsonObject["signature"]?.jsonPrimitive?.content
         assertNotNull(sig)
         assertTrue(sig.isNotEmpty())
@@ -1219,5 +1221,11 @@ class TestTemplateOverrider {
                 ),
             )
         assertTrue(prompt.userMessage.contains("French"))
+
+        val defaultFromNull = com.example.prompts01.TemplateOverrider.applyOverrides(null)
+        assertSame(com.example.prompts01.prompts, defaultFromNull)
+
+        val defaultFromJsonNull = com.example.prompts01.TemplateOverrider.applyOverrides(JsonNull)
+        assertSame(com.example.prompts01.prompts, defaultFromJsonNull)
     }
 }

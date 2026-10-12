@@ -729,14 +729,23 @@ public class TemplateOverrider
     {
     }
 
-    public JsonElement TemplatesData()
-    {
-        return JsonSerializer.SerializeToElement(RuntimeData.TemplatesData);
-    }
+    /// <summary>
+    /// The compiled prompt templates data.
+    /// </summary>
+    public JsonElement TemplatesData =>
+        JsonSerializer.SerializeToElement(RuntimeData.TemplatesData);
 
-    public Prompts ApplyOverrides(JsonElement overrides)
+    /// <summary>
+    /// Returns a <see cref="Prompts"/> instance with the given template overrides applied.
+    /// If <paramref name="overrides"/> is null or represents a JSON null value, returns <see cref="Prompts.Default"/>.
+    /// </summary>
+    public Prompts ApplyOverrides(JsonElement? overrides)
     {
-        var parsed = JsonSerializer.Deserialize<Spec.Templates>(overrides)
+        if (overrides is null or { ValueKind: JsonValueKind.Null or JsonValueKind.Undefined })
+        {
+            return Prompts.Default;
+        }
+        var parsed = JsonSerializer.Deserialize<Spec.Templates>(overrides.Value)
             ?? throw new ArgumentException("Overrides could not be deserialized");
         if (parsed.Signature != RuntimeData.TemplatesData.Signature)
         {

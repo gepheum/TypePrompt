@@ -967,18 +967,18 @@ class TestE01JsonSerialization:
 
 class TestTemplateOverrider:
     def test_templates_data(self) -> None:
-        data = to01.templates_data()
+        data = to01.templates_data
         assert isinstance(data, dict)
         assert "signature" in data
         assert len(data["signature"]) > 0
 
     def test_signature_mismatch(self) -> None:
-        wrong_data = {**to01.templates_data(), "signature": "wrong_sig"}
+        wrong_data = {**to01.templates_data, "signature": "wrong_sig"}
         with pytest.raises(ValueError, match="Signature mismatch"):
             to01.apply_overrides(wrong_data)
 
     def test_apply_valid_overrides(self) -> None:
-        overridden = to01.apply_overrides(to01.templates_data())
+        overridden = to01.apply_overrides(to01.templates_data)
         prompt = overridden.translate.render(
             s01.translate.Input(text="Hello", target_language="French")
         )

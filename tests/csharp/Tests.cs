@@ -1211,7 +1211,7 @@ public class TestTemplateOverrider
     [Fact]
     public void TestSignatureCheckAndOverrides()
     {
-        var data = TypePrompt01.TemplateOverrider.Instance.TemplatesData();
+        var data = TypePrompt01.TemplateOverrider.Instance.TemplatesData;
         Assert.True(data.TryGetProperty("signature", out var sig));
         var signature = sig.GetString();
         Assert.False(string.IsNullOrEmpty(signature));
@@ -1232,5 +1232,11 @@ public class TestTemplateOverrider
             TargetLanguage = "French"
         });
         Assert.Contains("French", prompt.UserMessage);
+
+        // Test null, undefined, and JSON null return default prompts
+        Assert.Same(TypePrompt01.Prompts.Default, TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(null));
+        Assert.Same(TypePrompt01.Prompts.Default, TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(default(JsonElement)));
+        using var nullDoc = JsonDocument.Parse("null");
+        Assert.Same(TypePrompt01.Prompts.Default, TypePrompt01.TemplateOverrider.Instance.ApplyOverrides(nullDoc.RootElement));
     }
 }
