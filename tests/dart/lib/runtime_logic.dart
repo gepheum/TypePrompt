@@ -1439,11 +1439,17 @@ Output _doParseResponse<Output>(
 /// Guide:
 ///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
 abstract final class TemplateOverrider {
-  static UnmodifiableMapView<String, dynamic> templatesData() {
+  /// The compiled prompt templates data.
+  static UnmodifiableMapView<String, dynamic> get templatesData {
     return UnmodifiableMapView<String, dynamic>(_templatesData.toJson());
   }
 
-  static Prompts applyOverrides(Map<String, dynamic> overrides) {
+  /// Returns a [Prompts] instance with the given template overrides applied.
+  /// If [overrides] is `null`, returns the default [prompts] instance.
+  static Prompts applyOverrides(Map<String, dynamic>? overrides) {
+    if (overrides == null) {
+      return prompts;
+    }
     final parsed = _Spec_Templates.fromJson(overrides);
     if (parsed.signature != _templatesData.signature) {
       throw ArgumentError('Signature mismatch');

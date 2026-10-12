@@ -956,7 +956,7 @@ void main() {
 
   group('TemplateOverrider', () {
     test('signature check and overrides', () {
-      final data = p01.TemplateOverrider.templatesData();
+      final data = p01.TemplateOverrider.templatesData;
       final sig = data["signature"];
       expect(sig, isNotNull);
       expect((sig as String).isNotEmpty, isTrue);
@@ -982,6 +982,9 @@ void main() {
         ),
       );
       expect(prompt.userMessage, contains("French"));
+
+      final defaultPrompts = p01.TemplateOverrider.applyOverrides(null);
+      expect(identical(defaultPrompts, p01.prompts), isTrue);
     });
   });
 }

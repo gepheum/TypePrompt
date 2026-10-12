@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from gen.prompts_01 import prompts as p01, schema as s01
+from gen.prompts_01 import prompts as p01, schema as s01, template_overrider as to01
 from gen.prompts_02 import prompts as p02, schema as s02
 from gen.prompts_03 import prompts as p03, schema as s03, ToolCall
 from gen.prompts_04 import prompts as p04, schema as s04
@@ -963,3 +963,26 @@ class TestE01JsonSerialization:
         assert parsed_omitted.opt_struct_list is None
         assert parsed_omitted.opt_matrix is None
         assert parsed_omitted.opt_map is None
+
+
+class TestTemplateOverrider:
+    def test_templates_data(self) -> None:
+        data = to01.templates_data()
+        assert isinstance(data, dict)
+        assert "signature" in data
+        assert len(data["signature"]) > 0
+
+    def test_signature_mismatch(self) -> None:
+        wrong_data = {**to01.templates_data(), "signature": "wrong_sig"}
+        with pytest.raises(ValueError, match="Signature mismatch"):
+            to01.apply_overrides(wrong_data)
+
+    def test_apply_valid_overrides(self) -> None:
+        overridden = to01.apply_overrides(to01.templates_data())
+        prompt = overridden.translate.render(
+            s01.translate.Input(text="Hello", target_language="French")
+        )
+        assert "French" in prompt.user_message
+
+    def test_apply_none_overrides(self) -> None:
+        assert to01.apply_overrides(None) is p01

@@ -616,9 +616,16 @@ def _get_template_impl(
 
 class _TemplateOverrider:
     def templates_data(self) -> dict[str, Any]:
+        """Returns the compiled prompt templates data."""
         return _templates_data.model_dump(by_alias=True)
 
-    def apply_overrides(self, overrides: dict[str, Any]) -> Prompts:
+    def apply_overrides(self, overrides: dict[str, Any] | None) -> Prompts:
+        """Returns a `Prompts` instance with the given template overrides applied.
+
+        If `overrides` is None, returns the default `prompts` instance.
+        """
+        if overrides is None:
+            return prompts
         overrides_obj = _internal.Templates.model_validate(overrides, by_alias=True)
         del overrides
         if _templates_data.signature != overrides_obj.signature:
