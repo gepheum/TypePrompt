@@ -238,7 +238,7 @@ const TEMPLATES_DATA: Spec.Templates = {
   templates: {},
   tools: {},
   sourceFiles: {},
-} as const;
+};
 
 const templatesSchema: z.ZodType<Spec.Templates> = z.any();
 // </generated>
