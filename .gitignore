@@ -2,6 +2,7 @@
 dist
 .vitepress/dist
 .vitepress/cache
+.vscode
 packages/website/.vitepress/dist
 packages/website/.vitepress/cache
 
