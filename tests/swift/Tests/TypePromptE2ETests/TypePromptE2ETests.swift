@@ -947,20 +947,24 @@ struct E01SpecSerializationTests {
 @Suite("TemplateOverrider")
 struct TemplateOverriderTests {
   @Test func signatureCheckAndOverrides() throws {
-    let data = try TypePrompt01.TemplateOverrider.templatesData()
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-    let sig = json?["signature"] as? String
-    #expect(sig != nil)
-    #expect(!sig!.isEmpty)
+    let data = TypePrompt01.TemplateOverrider.templatesData
+    guard case .object(let dict, _) = data,
+      case .string(let sig)? = dict["signature"]
+    else {
+      #expect(Bool(false), "Expected object with signature")
+      return
+    }
+    #expect(!sig.isEmpty)
 
-    let wrongDoc = try JSONSerialization.data(
-      withJSONObject: [
-        "signature": "wrong_sig",
-        "edition": 0,
-        "templates": [String: Any](),
-        "tools": [String: Any](),
-        "sourceFiles": [String: Any](),
-      ]
+    let wrongDoc = TypePrompt01.JsonElement.object(
+      [
+        "signature": .string("wrong_sig"),
+        "edition": .number(0),
+        "templates": .object([:], []),
+        "tools": .object([:], []),
+        "sourceFiles": .object([:], []),
+      ],
+      ["signature", "edition", "templates", "tools", "sourceFiles"]
     )
     #expect(throws: Error.self) {
       try TypePrompt01.TemplateOverrider.applyOverrides(wrongDoc)
@@ -974,5 +978,23 @@ struct TemplateOverriderTests {
       )
     )
     #expect(prompt.userMessage.contains("French"))
+
+    let defaultPrompts = try TypePrompt01.TemplateOverrider.applyOverrides(nil)
+    let defaultPrompt = defaultPrompts.renderTranslate(
+      TypePrompt01.Schema.Translate.Input(
+        text: "Hello",
+        targetLanguage: "French"
+      )
+    )
+    #expect(defaultPrompt.userMessage.contains("French"))
+
+    let nullPrompts = try TypePrompt01.TemplateOverrider.applyOverrides(.null)
+    let nullPrompt = nullPrompts.renderTranslate(
+      TypePrompt01.Schema.Translate.Input(
+        text: "Hello",
+        targetLanguage: "French"
+      )
+    )
+    #expect(nullPrompt.userMessage.contains("French"))
   }
 }

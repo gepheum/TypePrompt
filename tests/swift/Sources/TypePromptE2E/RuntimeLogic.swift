@@ -283,6 +283,7 @@ public enum TypePromptRuntime {
   public static let noTools = NoTools.shared
   // </static:swift-public-types>
 
+  // <generated>
   public struct Prompts: Sendable {
     fileprivate init(_ spec: Spec.Templates) {}
   }
@@ -317,6 +318,7 @@ public enum TypePromptRuntime {
   }
 
   public typealias Meta = Never?
+  // </generated>
 
   // <generated:spec>
   fileprivate enum Spec {
@@ -795,6 +797,7 @@ public enum TypePromptRuntime {
   }  // enum Spec
   // </generated:spec>
 
+  // <generated>
   private static let _templatesData: Spec.Templates = Spec.Templates(
     edition: 1,
     signature: "",
@@ -802,6 +805,9 @@ public enum TypePromptRuntime {
     tools: [:],
     sourceFiles: [:],
   )
+
+  public static let prompts = Prompts(_templatesData)
+  // </generated>
 
   // <static:swift-logic>
   fileprivate static func makeToolErrorResponse(callId: String, errorMessage: String)
@@ -1538,16 +1544,23 @@ public enum TypePromptRuntime {
   /// Guide:
   ///   https://github.com/gepheum/TypePrompt/blob/main/docs/template-overrides.md
   public enum TemplateOverrider {
-    /// Returns the current template data as JSON-encoded data.
-    public static func templatesData() throws -> Data {
-      let encoder = JSONEncoder()
-      return try encoder.encode(_templatesData)
+    /// Returns the compiled prompt templates as a `JsonElement`.
+    public static var templatesData: JsonElement {
+      let data = try! JSONEncoder().encode(_templatesData)
+      return try! JSONDecoder().decode(JsonElement.self, from: data)
     }
 
-    /// Applies overrides from JSON data and returns a new `Prompts` instance.
-    public static func applyOverrides(_ overridesData: Data) throws -> Prompts {
+    /// Returns a `Prompts` instance with the given template overrides applied.
+    ///
+    /// If `overrides` is nil or `.null`, returns the default `prompts` instance.
+    public static func applyOverrides(_ overrides: JsonElement?) throws -> Prompts {
+      guard let overrides, overrides != .null else {
+        return prompts
+      }
       let decoder = JSONDecoder()
-      let parsed = try decoder.decode(Spec.Templates.self, from: overridesData)
+      let encoder = JSONEncoder()
+      let data = try encoder.encode(overrides)
+      let parsed = try decoder.decode(Spec.Templates.self, from: data)
       if parsed.signature != _templatesData.signature {
         throw NSError(
           domain: "TemplateOverrider", code: 2,
