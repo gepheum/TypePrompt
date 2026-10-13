@@ -9,6 +9,9 @@
     type Shared = {
       value: string;
       square: shared.Square;
+      squares: shared.Square[];
+      squares2: shared.Squares;
+      squareHolders: shared.SquaresHolder;
     };
   </schema>
   <description>
