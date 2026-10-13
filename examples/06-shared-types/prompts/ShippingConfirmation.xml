@@ -28,4 +28,33 @@
   <user>
     <insert val="input" format="json" />
   </user>
+
+  <examples>
+    - input:
+        recipient:
+          name: "Alice Smith"
+          email: "alice@example.com"
+          address:
+            street: "123 Market St"
+            city: "San Francisco"
+            country: "USA"
+            postalCode: "94105"
+        orderNumber: "ORD-9481"
+        estimatedDelivery: "Friday, October 16"
+        items:
+          - name: "Wireless Mechanical Keyboard"
+            quantity: 1
+          - name: "USB-C Braided Cable"
+            quantity: 2
+      output: |
+        Hi Alice,
+
+        Your order ORD-9481 has shipped and is on its way! It is estimated to arrive on Friday, October 16.
+
+        Items in this shipment:
+        - 1x Wireless Mechanical Keyboard
+        - 2x USB-C Braided Cable
+
+        Thank you for shopping with us!
+  </examples>
 </template>

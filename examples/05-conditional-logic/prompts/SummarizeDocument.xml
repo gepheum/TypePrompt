@@ -32,6 +32,31 @@
     <enclosed tag="Document"><insert val="input.content" /></enclosed>
   </user>
 
+  <examples>
+    - input:
+        title: "Quarterly Platform Migration"
+        content: "We completed migrating our primary database cluster to PostgreSQL 16. Query latency dropped 30% and throughput increased by 40%."
+        audience: executive
+      output:
+        summary: "Primary database cluster successfully migrated to PostgreSQL 16, resulting in a 30% latency drop and 40% throughput increase."
+        keyPoints:
+          - "Completed migration to PostgreSQL 16"
+          - "Query latency decreased by 30%"
+          - "System throughput increased by 40%"
+
+    - input:
+        title: "API Gateway Redesign"
+        content: "The API gateway was updated with gRPC-Web proxying and Redis rate-limiting middleware. P99 latency is down 12ms."
+        focusTopic: "Rate Limiting"
+        audience: technical
+      output:
+        summary: "API gateway migration introduced Redis-backed token bucket rate limiting and gRPC-Web proxying, cutting P99 latency by 12ms."
+        keyPoints:
+          - "Added Redis rate-limiting middleware"
+          - "Implemented gRPC-Web proxying"
+          - "Reduced P99 latency by 12ms"
+  </examples>
+
   <!--
     Reusable snippet: inserted at the top of the system prompt.
     Uses <insert val="it"/> to reference the focusTopic expression tested by `if`.

@@ -25,4 +25,29 @@
   <user>
     <insert val="input" format="json" />
   </user>
+
+  <examples>
+    - input:
+        disclosingParty:
+          name: "Innovate AI Inc."
+          role: client
+          jurisdiction: California
+        receivingParty:
+          name: "Venture Partners LLC"
+          role: counterparty
+          jurisdiction: Delaware
+        purposeOfDisclosure: "evaluating a potential strategic investment"
+        durationYears: 2
+      output: |
+        NON-DISCLOSURE AGREEMENT
+
+        This Non-Disclosure Agreement is entered into between Innovate AI Inc. ("Disclosing Party") and Venture Partners LLC ("Receiving Party") for the purpose of evaluating a potential strategic investment.
+
+        1. Confidential Information: Receiving Party agrees to maintain the confidentiality of all proprietary materials received.
+        2. Term: This obligation shall remain in effect for a period of 2 years from disclosure.
+
+        [Signatures]
+        Innovate AI Inc.: ____________________
+        Venture Partners LLC: ____________________
+  </examples>
 </template>

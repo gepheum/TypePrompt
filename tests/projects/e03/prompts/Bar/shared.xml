@@ -5,4 +5,10 @@
     kind: "square";
     size: number;
   };
+
+  type SquareHolder = { square: Square };
+
+  type Squares = SquareHolder[];
+
+  type SquaresHolder = { squares: Squares };
 </namespace>

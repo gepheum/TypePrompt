@@ -28,4 +28,28 @@
   <user>
     <insert val="input" format="json" />
   </user>
+
+  <examples>
+    - input:
+        description: "Monthly subscription for team communication platform"
+        amount:
+          value: 120.0
+          currency: USD
+        category: expense
+        date: "2026-10-01"
+      output:
+        summary: "Monthly recurring expense of $120.00 for team communication software."
+        bookkeepingLabel: "Software Subscription"
+
+    - input:
+        description: "Payment received from Acme Corp for consulting services"
+        amount:
+          value: 3500.0
+          currency: USD
+        category: income
+        date: "2026-10-05"
+      output:
+        summary: "Consulting services revenue payment of $3,500.00 from Acme Corp."
+        bookkeepingLabel: "Client Revenue"
+  </examples>
 </template>

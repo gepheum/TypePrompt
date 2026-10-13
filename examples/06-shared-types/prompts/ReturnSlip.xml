@@ -24,4 +24,27 @@
   <user>
     <insert val="input" format="json" />
   </user>
+
+  <examples>
+    - input:
+        customer:
+          name: "Bob Jones"
+          email: "bob@example.com"
+          address:
+            street: "456 Elm Ave"
+            city: "Seattle"
+            country: "USA"
+            postalCode: "98101"
+        returnReason: defective
+        orderNumber: "ORD-2045"
+      output: |
+        RETURN AUTHORIZATION SLIP
+        =========================
+        Order Number: ORD-2045
+        Customer: Bob Jones
+        Return Address: 456 Elm Ave, Seattle, USA 98101
+        Reason: defective
+
+        Please place this slip inside your package before sealing.
+  </examples>
 </template>
