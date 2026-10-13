@@ -75,7 +75,11 @@ function doResolveType(
       if (!resolved) {
         return null;
       }
-      return doResolveType(resolved.valueType, schema, seenNames);
+      const sharedSchema: SchemaView = {
+        typeDeclarations: schema.sharedDeclarations,
+        sharedDeclarations: {},
+      };
+      return doResolveType(resolved.valueType, sharedSchema, seenNames);
     }
     default: {
       return type;

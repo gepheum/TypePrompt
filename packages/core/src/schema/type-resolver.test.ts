@@ -213,6 +213,19 @@ describe("resolveType - shared-type-name resolution", () => {
       primitive: { text: "string" },
     });
   });
+
+  it("resolves a shared type that references another shared type via type-name", () => {
+    const schema: Schema = {
+      ...EMPTY_SCHEMA,
+      sharedDeclarations: {
+        Address: typeDecl("Address", INTERFACE),
+        ContactInfo: typeDecl("ContactInfo", typeName("Address")),
+      },
+    };
+    expect(resolveType(sharedTypeName("ContactInfo"), schema)).toMatch({
+      kind: "interface",
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -260,6 +273,14 @@ describe("resolveMaybeInvalidType - null cases", () => {
       null,
     );
   });
+
+  it("returns null for a type-name when present only in sharedDeclarations", () => {
+    const view: SchemaView = {
+      typeDeclarations: {},
+      sharedDeclarations: { Address: typeDecl("Address", INTERFACE) },
+    };
+    expect(resolveMaybeInvalidType(typeName("Address"), view)).toMatch(null);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -280,6 +301,21 @@ describe("resolveMaybeInvalidType - valid resolution", () => {
       sharedDeclarations: {},
     };
     expect(resolveMaybeInvalidType(typeName("Profile"), view)).toMatch({
+      kind: "interface",
+    });
+  });
+
+  it("resolves a shared-type-name whose declaration references another shared type via type-name", () => {
+    const view: SchemaView = {
+      typeDeclarations: {},
+      sharedDeclarations: {
+        Address: typeDecl("Address", INTERFACE),
+        ContactInfo: typeDecl("ContactInfo", typeName("Address")),
+      },
+    };
+    expect(
+      resolveMaybeInvalidType(sharedTypeName("ContactInfo"), view),
+    ).toMatch({
       kind: "interface",
     });
   });
