@@ -97,16 +97,13 @@ println(result.humanAction)
 ## Features
 
 - **Lightweight prompt management**: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
-- **End-to-end type safety**: Guarantees application types never drift from prompt schemas.
-- **TypeScript-based SDL**: Define schemas using familiar TypeScript interfaces and unions.
-- **JSON schema generation**: Generates JSON Schemas compliant with OpenAI Structured Outputs, Gemini, and Anthropic.
-- **Flexible input formatting**: Format complex input types using JSON, YAML, CSV or [TOON](https://toonformat.dev), and easily switch between formats without changing application code.
-- **Schema-checked instructions (`<c>`)**: Verifies that fields and sample JSON referenced in your prompt instructions actually match your schema.
+- **End-to-end type safety**: Enforces compile-time type safety across every stage of the LLM lifecycle: resolving template placeholders, parsing model responses, and dispatching tool calls.
+- **TypeScript-based SDL**: Define schemas with familiar TypeScript types and generate standard JSON Schemas (OpenAI, Gemini, Anthropic).
 - **Validated few-shot examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
-- **Prompt variants**: Author multiple versions of a prompt with identical input and output types, and easily pick the desired variant at runtime.
-- **Typed tool calling**: Declare tools with typed inputs and outputs, and generate type-safe dispatchers.
+- **Prompt variants & template overrides**: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
+- **Flexible input formatting**: Format complex input types using JSON, YAML, CSV, or [TOON](https://toonformat.dev) without changing application code.
 - **Custom structured metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
-- **Fast developer workflow**: CLI with watch mode (`npx typeprompt gen --watch`) and built-in template formatter (`npx typeprompt format`).
+- **Developer experience & tooling**: Official VS Code extension, standalone Language Server (`npx @typeprompt/language-server`), CLI watch mode, and built-in template formatter (`npx typeprompt format`).
 
 ---
 
