@@ -12,6 +12,11 @@ export type SchemaParseResult<Context extends SchemaContext> = {
 
 export type SchemaView = {
   readonly typeDeclarations: TypeDeclarations;
+  /**
+   * Type declarations in the <namespace> schema.
+   * Empty if this schema is the <meta> schema.
+   * Same as `typeDeclarations` if this schema is the <namespace> schema.
+   */
   readonly sharedDeclarations: TypeDeclarations;
 };
 
