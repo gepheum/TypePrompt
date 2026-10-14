@@ -43,6 +43,33 @@ function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
   return schema;
 }
 
+function parseTemplateSchemaOrThrow(
+  templateSource: string,
+  namespaceSource: string,
+): Schema {
+  const ns = parseSchemaOrThrow(namespaceSource, "shared.ts");
+  const sourceSpan = {
+    path: "template.ts",
+    text: templateSource,
+    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+  };
+  const parseResult = parseSchema(sourceSpan, "template");
+  if (parseResult.kind !== "success") {
+    const { errors } = parseResult;
+    throw new Error(
+      `Template schema parse failed: ${errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+  const schema = validateSchema(parseResult, ns);
+  if (schema.kind === "error") {
+    const { errors } = schema;
+    throw new Error(
+      `Template schema validation failed: ${errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+  return schema;
+}
+
 function span(text: string): TextSpan {
   return {
     path: "",
@@ -469,6 +496,39 @@ describe("validateExample - json: multi-type schema", () => {
           message: "Identifier 'baz' not found in schema",
           suggestions: ["foo", "bar"],
         },
+      ],
+    });
+  });
+});
+
+describe("validateExample - json: shared declarations", () => {
+  it("accepts a json cTag matching an interface in sharedDeclarations", () => {
+    const schema = parseTemplateSchemaOrThrow(
+      "type Input = string;\ntype Output = shared.User;",
+      [
+        "type Address = { city: string; };",
+        "type User = { name: string; address: Address; };",
+      ].join("\n"),
+    );
+    expect(
+      validateCTag(jsonCTag(obj([["city", str("Paris")]])), [schema]),
+    ).toMatch({
+      errors: [],
+    });
+  });
+
+  it("selects best mismatch among sharedDeclarations when json does not match", () => {
+    const schema = parseTemplateSchemaOrThrow(
+      "type Input = string;\ntype Output = shared.User;",
+      [
+        "type Address = { city: string; };",
+        "type User = { name: string; address: Address; };",
+      ].join("\n"),
+    );
+    expect(validateCTag(jsonCTag(obj([["city", num(42)]])), [schema])).toMatch({
+      errors: [
+        { message: "Does not match type 'Address'" },
+        { message: "Expected string but got number" },
       ],
     });
   });
