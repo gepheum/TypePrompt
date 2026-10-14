@@ -1,0 +1,20 @@
+<tool name="getServiceMetrics">
+  <description>
+    Fetch real-time telemetry metrics and operational health for a specific backend service.
+  </description>
+
+  <schema>
+    interface Input {
+      service: string;
+    }
+
+    interface Output {
+      cpuUsagePercent: number;
+      memoryUsagePercent: number;
+      p99LatencyMs: number;
+      errorRatePercent: number;
+      status: "healthy" | "degraded" | "down";
+      activeReplicas: number;
+    }
+  </schema>
+</tool>

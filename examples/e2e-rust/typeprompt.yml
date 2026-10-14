@@ -1,0 +1,4 @@
+include: prompts/**/*.xml
+gen:
+  rust:
+    file: src/gen/prompts.rs

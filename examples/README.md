@@ -24,3 +24,4 @@ This directory contains self-contained TypePrompt examples demonstrating various
 |---|---|---|
 | **[e2e-kotlin](e2e-kotlin)** | Runnable CLI translation tool with structured JSON output calling OpenAI | Kotlin, Gradle, OpenAI Java SDK |
 | **[e2e-python](e2e-python)** | Runnable city day-planner with weather tool and structured JSON output calling Claude | Python, Anthropic Python SDK |
+| **[e2e-rust](e2e-rust)** | Runnable SRE incident commander with service metrics tool and structured JSON output calling Google Gemini | Rust, Cargo, Google Gemini API |

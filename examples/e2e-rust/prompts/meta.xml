@@ -1,0 +1,7 @@
+<meta>
+  interface Meta {
+    model: string;
+    /** Sampling temperature (0-1). */
+    temperature?: number;
+  }
+</meta>

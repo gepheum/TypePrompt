@@ -1,0 +1,79 @@
+<template name="TriageIncident">
+  <meta>
+    model: gemini-2.5-flash
+    temperature: 0.2
+  </meta>
+
+  <tools>
+    - tool: getServiceMetrics
+  </tools>
+
+  <schema>
+    interface Input {
+      service: string;
+      reportedIssue: string;
+    }
+
+    interface Output {
+      service: string;
+      severity: "low" | "medium" | "high" | "critical";
+      rootCauseSummary: string;
+      metricsAnalysis: string;
+      actionPlan: {
+        priority: number;
+        action: string;
+        suggestedCommand?: string;
+      }[];
+      followUpRecommendation: string;
+    }
+  </schema>
+
+  <system>
+    You are an expert Site Reliability Engineering (SRE) incident commander.
+    When an operational incident is reported:
+    1. Always inspect real-time telemetry using the <c>getServiceMetrics</c> tool first.
+    2. Analyze resource saturation, error rates, and latency.
+    3. Return your final assessment strictly as a structured JSON object matching the output schema.
+  </system>
+
+  <user>
+    Operational alert received for service: <insert val="input.service" />
+    <insert val="input.reportedIssue" />
+
+    Please triage this incident and recommend immediate mitigations.
+  </user>
+
+  <examples>
+    - input:
+        service: "order-processor"
+        reportedIssue: "Orders stuck in pending queue and webhook delivery delays."
+      intermediateSteps:
+        - toolCalls:
+            - callId: call_metrics_1
+              tool: getServiceMetrics
+              input:
+                service: "order-processor"
+              output:
+                cpuUsagePercent: 96.5
+                memoryUsagePercent: 91.2
+                p99LatencyMs: 3200
+                errorRatePercent: 8.4
+                status: degraded
+                activeReplicas: 2
+      output:
+        service: "order-processor"
+        severity: high
+        rootCauseSummary: "Worker starvation under surge traffic: CPU saturated at 96.5% and queue processing latency spiked to 3.2s."
+        metricsAnalysis: "Service is degraded with 8.4% error rate and 2 replicas overwhelmed by pending order volume."
+        actionPlan:
+          - priority: 1
+            action: "Scale up worker pods to absorb queue backlog."
+            suggestedCommand: "kubectl scale deployment/order-processor --replicas=8"
+          - priority: 2
+            action: "Enable rate limiting on incoming order webhooks."
+            suggestedCommand: "kubectl annotate ingress/orders-ingress rate-limit=500"
+          - priority: 3
+            action: "Monitor p99 latency recovery."
+        followUpRecommendation: "Configure Horizontal Pod Autoscaler (HPA) targeting 70% CPU utilization."
+  </examples>
+</template>

@@ -47,6 +47,9 @@ examples/e2e-python/**/*.pyc
 examples/e2e-python/.ruff_cache
 examples/e2e-python/.venv
 
+examples/e2e-rust/src/gen/
+examples/e2e-rust/target/
+
 tests/python/.ruff_cache
 tests/python/.venv
 tests/python/__pycache/

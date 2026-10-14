@@ -28,11 +28,13 @@ node ../packages/cli/dist/main.js format -p projects/e02
 node ../packages/cli/dist/main.js format -p projects/e03
 node ../packages/cli/dist/main.js format -p ../examples/e2e-kotlin
 node ../packages/cli/dist/main.js format -p ../examples/e2e-python
+node ../packages/cli/dist/main.js format -p ../examples/e2e-rust
 node ../packages/cli/dist/main.js format --ci -p projects/e01
 node ../packages/cli/dist/main.js format --ci -p projects/e02
 node ../packages/cli/dist/main.js format --ci -p projects/e03
 node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-kotlin
 node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-python
+node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-rust
 
 # Run codegen
 node ../packages/cli/dist/main.js gen -p projects/01
@@ -47,6 +49,7 @@ node ../packages/cli/dist/main.js gen -p projects/e02
 node ../packages/cli/dist/main.js gen -p projects/e03
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-kotlin
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-python
+node ../packages/cli/dist/main.js gen -p ../examples/e2e-rust
 
 # Run Python unit tests
 cd python
@@ -77,6 +80,11 @@ if [ -f ".venv/bin/python" ]; then
 fi
 "$PY_BIN" -m py_compile src/main.py src/gen/prompts.py
 npx pyright --pythonpath "$PY_BIN" src/
+cd ../../tests
+
+# Build Rust e2e example
+cd ../examples/e2e-rust
+cargo check
 cd ../../tests
 
 # Run C# unit tests

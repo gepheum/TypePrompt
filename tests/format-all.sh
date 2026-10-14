@@ -41,3 +41,7 @@ cd ../../tests
 cd ../examples/e2e-python
 ./format.sh
 cd ../../tests
+
+cd ../examples/e2e-rust
+./format.sh
+cd ../../tests
