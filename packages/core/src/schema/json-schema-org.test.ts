@@ -549,4 +549,34 @@ describe("toJsonSchema - shared type refs", () => {
       },
     });
   });
+
+  it("emits _-prefixed $refs when one shared interface refers to another shared interface", () => {
+    const schema = compileTemplate(
+      "type Input = string;\ntype Output = shared.User;",
+      [
+        "type Address = { city: string; };",
+        "type User = { name: string; address: Address; };",
+      ].join("\n"),
+    );
+    expect(toJsonSchema("Output", schema, schema.unionToMembers)).toMatch({
+      $ref: "#/$defs/_User",
+      $defs: {
+        _User: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            address: { $ref: "#/$defs/_Address" },
+          },
+          required: ["name", "address"],
+          additionalProperties: false,
+        },
+        _Address: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+          additionalProperties: false,
+        },
+      },
+    });
+  });
 });

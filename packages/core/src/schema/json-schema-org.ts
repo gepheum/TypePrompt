@@ -60,7 +60,10 @@ class Generator {
         return { type: "string", const: type.value };
       }
       case "type-name": {
-        return this.namedTypeToRef(type.name.text, { shared: false });
+        const shared =
+          type.context === "namespace" &&
+          this.schema.sharedDeclarations !== this.schema.typeDeclarations;
+        return this.namedTypeToRef(type.name.text, { shared });
       }
       case "union": {
         return this.unionToSchema(type);
