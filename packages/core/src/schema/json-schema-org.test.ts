@@ -538,6 +538,7 @@ describe("toJsonSchema - shared type refs", () => {
         local: { $ref: "#/$defs/Profile" },
         remote: { $ref: "#/$defs/_Profile" },
       },
+      required: ["local", "remote"],
       $defs: {
         Profile: {
           properties: { id: { type: "number" } },

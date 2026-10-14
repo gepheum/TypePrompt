@@ -54,13 +54,13 @@ class Generator {
         };
       }
       case "shared-type-name": {
-        return this.namedTypeToRef(type.name.text, true);
+        return this.namedTypeToRef(type.name.text, { shared: true });
       }
       case "string-literal": {
         return { type: "string", const: type.value };
       }
       case "type-name": {
-        return this.namedTypeToRef(type.name.text, false);
+        return this.namedTypeToRef(type.name.text, { shared: false });
       }
       case "union": {
         return this.unionToSchema(type);
@@ -70,12 +70,12 @@ class Generator {
 
   private namedTypeToRef(
     name: string,
-    shared: boolean,
+    options: { readonly shared: boolean },
   ): Record<string, unknown> {
-    const defName = shared ? `_${name}` : name;
+    const defName = options.shared ? `_${name}` : name;
     if (!this.defs[defName] && !this.inProgress.has(defName)) {
       this.inProgress.add(defName);
-      const declarations = shared
+      const declarations = options.shared
         ? this.schema.sharedDeclarations
         : this.schema.typeDeclarations;
       const decl = declarations?.[name];
