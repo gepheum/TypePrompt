@@ -3,13 +3,13 @@ title: TypeScript
 description: How to use TypePrompt-generated TypeScript code in your application.
 ---
 
-# TypeScript Integration Guide
+# TypeScript integration guide
 
 This guide explains how to use TypePrompt-generated TypeScript code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone TypeScript code that relies on these lightweight runtime dependencies:
 
@@ -37,7 +37,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the `prompts` object and call `.render()` on any template with your typed input:
 
@@ -55,7 +55,7 @@ console.log(prompt.userMessage);
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling `.render()` returns a `prompt` object with everything needed to interact with an LLM:
 
@@ -72,7 +72,7 @@ Calling `.render()` returns a `prompt` object with everything needed to interact
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
@@ -88,11 +88,11 @@ const result = prompt.parseResponse(rawModelOutput);
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the `ToolExecutor` and dispatch tool calls with `prompt.executeTools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Define an object with methods matching your tool names:
 
@@ -113,7 +113,7 @@ const executor: ToolExecutor<"Main:ResearchQuestion"> = {
 };
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
@@ -142,7 +142,7 @@ for (const resp of responses) {
 
 ---
 
-## Type Definitions and `Schema`
+## Type definitions and `Schema`
 
 All types declared in your TypePrompt schemas are exported under the `Schema` namespace:
 
@@ -162,7 +162,7 @@ type SearchOutput = Schema.WebSearch.Output;
 type Meta = Schema.Meta.Meta;
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -187,7 +187,7 @@ type LegalInput = Schema.Legal.DraftNda.Input;
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `executePrompt` function that integrates TypePrompt with the official OpenAI Node.js SDK:
 

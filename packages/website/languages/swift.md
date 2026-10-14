@@ -3,13 +3,13 @@ title: Swift
 description: How to use TypePrompt-generated Swift code in your application.
 ---
 
-# Swift Integration Guide
+# Swift integration guide
 
 This guide explains how to use TypePrompt-generated Swift code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone Swift (Swift 5.9+) code that relies on these lightweight Swift package dependencies:
 
@@ -43,7 +43,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the generated module and call the template render method on `prompts`:
 
@@ -63,7 +63,7 @@ print(prompt.userMessage)
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with everything needed to interact with an LLM:
 
@@ -80,7 +80,7 @@ Calling a `render*` method returns a `Prompt<Output, ToolExecutor>` object with 
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parseResponse()` to validate and parse it into your typed output:
 
@@ -96,11 +96,11 @@ let result = try prompt.parseResponse(rawModelOutput)
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor protocol and dispatch tool calls with `prompt.executeTools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Implement the tool protocol generated for your template:
 
@@ -125,7 +125,7 @@ struct ResearchExecutor: ToolExecutor.WebSearch {
 }
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.executeTools()`:
 
@@ -156,7 +156,7 @@ for resp in responses {
 
 If a template has no tools, pass `noTools` as the executor.
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates a `PromptTools` enum containing tool cases for each template, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
 
@@ -166,7 +166,7 @@ let toolName = PromptTools.ResearchQuestion.webSearch.toolName  // "webSearch"
 
 ---
 
-## Type Definitions and `Schema`
+## Type definitions and `Schema`
 
 All types declared in your TypePrompt schemas are exported inside the `Schema` enum:
 
@@ -186,7 +186,7 @@ typealias SearchOutput = Schema.WebSearch.Output
 typealias Meta = Schema.Meta.Meta
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -211,7 +211,7 @@ let legalPrompt = prompts.legal.renderDraftNda(
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `executePrompt` function integrating TypePrompt with the OpenAI HTTP API:
 

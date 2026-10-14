@@ -3,13 +3,13 @@ title: Rust
 description: How to use TypePrompt-generated Rust code in your application.
 ---
 
-# Rust Integration Guide
+# Rust integration guide
 
 This guide explains how to use TypePrompt-generated Rust code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone Rust code that relies on these lightweight dependencies:
 
@@ -44,7 +44,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the generated module and call the template render method on the `PROMPTS` static:
 
@@ -62,7 +62,7 @@ println!("{}", prompt.user_message);
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling a `render_*` method returns a `Prompt<Output, ToolExecutor>` object with everything needed to interact with an LLM:
 
@@ -79,7 +79,7 @@ Calling a `render_*` method returns a `Prompt<Output, ToolExecutor>` object with
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parse_response()` to validate and parse it into your typed output:
 
@@ -95,11 +95,11 @@ let result = prompt.parse_response(raw_model_output)?;
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor trait and dispatch tool calls with `prompt.execute_tools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Implement the tool trait generated for your template:
 
@@ -128,7 +128,7 @@ impl tool_executor::WebSearch for ResearchExecutor {
 }
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.execute_tools()`:
 
@@ -161,7 +161,7 @@ for resp in responses {
 
 If a template has no tools, pass `&NO_TOOLS` as the executor.
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates a `prompt_tools` module with enums for each template's tools, providing compile-time safety when referencing tool names (e.g., configuring tool choice):
 
@@ -171,7 +171,7 @@ let tool_name = prompt_tools::ResearchQuestion::WebSearch.tool_name();  // "webS
 
 ---
 
-## Type Definitions and `schema`
+## Type definitions and `schema`
 
 All types declared in your TypePrompt schemas are exported inside the `schema` module:
 
@@ -191,7 +191,7 @@ type SearchOutput = schema::web_search::Output;
 type Meta = schema::meta::Meta;
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -216,7 +216,7 @@ let legal_prompt = PROMPTS.legal.render_draft_nda(
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `execute_prompt` function that integrates TypePrompt with the OpenAI HTTP API:
 

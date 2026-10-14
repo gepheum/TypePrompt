@@ -3,13 +3,13 @@ title: Python
 description: How to use TypePrompt-generated Python code in your application.
 ---
 
-# Python Integration Guide
+# Python integration guide
 
 This guide explains how to use TypePrompt-generated Python code in your application.
 
 ---
 
-## Installation & Setup
+## Installation & setup
 
 TypePrompt generates clean, standalone Python code that relies on these lightweight runtime dependencies:
 
@@ -37,7 +37,7 @@ npx typeprompt gen
 
 ---
 
-## Quick Start
+## Quick start
 
 Import the `prompts` object and call `.render()` on any template with your typed input:
 
@@ -57,7 +57,7 @@ print(prompt.user_message)
 
 ---
 
-## The `Prompt` Object
+## The `Prompt` object
 
 Calling `.render()` returns a `Prompt` object with everything needed to interact with an LLM:
 
@@ -74,7 +74,7 @@ Calling `.render()` returns a `Prompt` object with everything needed to interact
 
 ---
 
-## Parsing LLM Responses
+## Parsing LLM responses
 
 Pass the LLM's response string to `prompt.parse_response()` to validate and parse it into your typed output:
 
@@ -90,11 +90,11 @@ result = prompt.parse_response(raw_model_output)
 
 ---
 
-## Executing Tools
+## Executing tools
 
 When a template defines `<tools>`, implement the tool executor and dispatch tool calls with `prompt.execute_tools()`.
 
-### 1. Implement the Tool Executor
+### 1. Implement the tool executor
 
 Define a class or object with async methods matching your tool names:
 
@@ -118,7 +118,7 @@ class ResearchExecutor:
         )
 ```
 
-### 2. Dispatch Tool Calls
+### 2. Dispatch tool calls
 
 Pass tool calls returned by the LLM to `prompt.execute_tools()`:
 
@@ -147,7 +147,7 @@ for resp in responses:
 - `resp.stringified_output`: Serialized JSON output on success, or `{"error": "<message>"}` on failure (ready to forward directly to OpenAI / Gemini).
 - `resp.error`: Plain error message string if execution failed, or `None` on success (useful for Anthropic's `is_error` flag).
 
-### 3. Type-Safe Tool Names
+### 3. Type-safe tool names
 
 TypePrompt generates a `tools` class containing `ToolName` string literal unions for each template, allowing static type-checkers (e.g., mypy, pyright) to verify tool names at compile time:
 
@@ -158,7 +158,7 @@ tool_name: tools.research_question.ToolName = "webSearch"
 
 ---
 
-## Type Definitions and `schema`
+## Type definitions and `schema`
 
 All types declared in your TypePrompt schemas are exported under the `schema` namespace:
 
@@ -178,7 +178,7 @@ search_output = schema.web_search.Output
 meta = schema.meta.Meta
 ```
 
-### Multi-Namespace Projects
+### Multi-namespace projects
 
 When your project defines `<namespace>` blocks other than `Main`, templates and schemas are organized under their namespace:
 
@@ -207,7 +207,7 @@ LegalInput = schema.legal.draft_nda.Input
 
 ---
 
-## End-to-End OpenAI Example
+## End-to-end OpenAI example
 
 Here is a complete, production-ready example defining a generic `execute_prompt` function that integrates TypePrompt with the official OpenAI Python SDK:
 

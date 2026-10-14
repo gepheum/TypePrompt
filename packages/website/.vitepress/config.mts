@@ -43,6 +43,7 @@ export default defineConfig({
       { text: "Guide", link: "/guide/" },
       { text: "Reference", link: "/reference" },
       { text: "Schema", link: "/schema" },
+      { text: "Template overrides", link: "/template-overrides" },
       { text: "Examples", link: "/examples" },
       { text: "Languages", items: languageItems },
     ],
