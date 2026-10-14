@@ -117,17 +117,18 @@ type Tool = {
 `;
 
 export const runtimeTypesSchema = ((): Schema => {
-  const parseResult = parseSchema({
-    path: "Runtime.xml",
-    text: SCHEMA,
-    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
-  });
+  const parseResult = parseSchema(
+    {
+      path: "Runtime.xml",
+      text: SCHEMA,
+      offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+    },
+    "namespace",
+  );
   if (parseResult.kind === "error") {
     throw new Error(JSON.stringify(parseResult, undefined, 2));
   }
-  const schema = validateSchema(parseResult, {
-    kind: "namespace",
-  });
+  const schema = validateSchema(parseResult, null);
   if (schema.kind === "error") {
     throw new Error(JSON.stringify(schema, undefined, 2));
   }

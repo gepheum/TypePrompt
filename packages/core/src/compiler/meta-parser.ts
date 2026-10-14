@@ -27,13 +27,11 @@ export function parseMeta(metaNode: ElementNode): Meta | ValidationErrors {
   warnings.push(...textContent.warnings);
 
   let schema: SchemaOrError;
-  const schemaParseResult = parseSchema(textContent.text);
+  const schemaParseResult = parseSchema(textContent.text, "meta");
   if (schemaParseResult.kind === "error") {
     schema = { ...schemaParseResult, definitionLinks: [] };
   } else {
-    schema = validateSchema(schemaParseResult, {
-      kind: "meta",
-    });
+    schema = validateSchema(schemaParseResult, null);
     definitionLinks.push(...schema.definitionLinks);
   }
 

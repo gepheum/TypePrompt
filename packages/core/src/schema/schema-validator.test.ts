@@ -6,8 +6,9 @@ import { EMPTY_SCHEMA } from "./empty-schema.js";
 import { parseSchema } from "./schema-parser.js";
 import type {
   Interface,
+  Schema,
+  SchemaContext,
   SchemaParseResult,
-  SchemaValidationContext,
   Union,
 } from "./schema-types.js";
 import { validateSchema } from "./schema-validator.js";
@@ -20,11 +21,12 @@ function textNode(source: string, path = "schema.ts"): MappedText {
   };
 }
 
-function parseDeclarations(
+function parseDeclarations<Context extends SchemaContext>(
   source: string,
+  context: Context,
   path = "schema.ts",
-): SchemaParseResult {
-  const result = parseSchema(textNode(source, path));
+): SchemaParseResult<Context> {
+  const result = parseSchema(textNode(source, path), context);
   if (result.kind !== "success") {
     throw new Error(`Parse failed: ${JSON.stringify(result)}`);
   }
@@ -38,16 +40,16 @@ function parseDeclarations(
 describe("validateSchema - success", () => {
   it("validates a simple interface", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { name: string; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { name: string; };", "namespace"),
+      null,
     );
     expect([result]).toMatch([{ kind: "success" }]);
   });
 
   it("validates a string literal union", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = "active" | "inactive";'),
-      NAMESPACE,
+      parseDeclarations('type Output = "active" | "inactive";', "namespace"),
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -59,24 +61,25 @@ describe("validateSchema - success", () => {
           "type Output = { status: Status; };",
           'type Status = "active" | "inactive";',
         ].join("\n"),
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("validates a schema containing any", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = any;"),
-      NAMESPACE,
+      parseDeclarations("type Output = any;", "namespace"),
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("validates a schema containing a boolean literal field", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { flag: true; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { flag: true; };", "namespace"),
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -85,24 +88,31 @@ describe("validateSchema - success", () => {
     const result = validateSchema(
       parseDeclarations(
         "type Output = { success: true; value: string } | { success: false; error: string };",
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("validates a record type", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { [key: string]: number };"),
-      NAMESPACE,
+      parseDeclarations(
+        "type Output = { [key: string]: number };",
+        "namespace",
+      ),
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("validates a valid Meta interface", () => {
     const result = validateSchema(
-      parseDeclarations("type Meta = { model: string; temperature: number; };"),
-      META,
+      parseDeclarations(
+        "type Meta = { model: string; temperature: number; };",
+        "meta",
+      ),
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -111,8 +121,9 @@ describe("validateSchema - success", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Meta = { role: "admin" | "user" | "FOO/-BAR_-3.1"; }',
+        "meta",
       ),
-      META,
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -124,7 +135,10 @@ describe("validateSchema - success", () => {
 
 describe("validateSchema - required type", () => {
   it("reports missing Input/Output in template context", () => {
-    const result = validateSchema(parseDeclarations(""), TEMPLATE);
+    const result = validateSchema(
+      parseDeclarations("", "template"),
+      EMPTY_SCHEMA,
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -135,7 +149,7 @@ describe("validateSchema - required type", () => {
   });
 
   it("reports missing Meta in meta context", () => {
-    const result = validateSchema(parseDeclarations(""), META);
+    const result = validateSchema(parseDeclarations("", "meta"), null);
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Missing required type 'Meta'" }],
@@ -143,7 +157,7 @@ describe("validateSchema - required type", () => {
   });
 
   it("reports missing Input/Output in tool context", () => {
-    const result = validateSchema(parseDeclarations(""), TOOL);
+    const result = validateSchema(parseDeclarations("", "tool"), EMPTY_SCHEMA);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -154,7 +168,7 @@ describe("validateSchema - required type", () => {
   });
 
   it("accepts empty declarations in namespace context (no required types)", () => {
-    const result = validateSchema(parseDeclarations(""), NAMESPACE);
+    const result = validateSchema(parseDeclarations("", "namespace"), null);
     expect(result).toMatch({ kind: "success" });
   });
 });
@@ -166,8 +180,8 @@ describe("validateSchema - required type", () => {
 describe("validateSchema - naming errors", () => {
   it("reports a type name starting with lowercase", () => {
     const result = validateSchema(
-      parseDeclarations("type response = { name: string; };"),
-      NAMESPACE,
+      parseDeclarations("type response = { name: string; };", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -182,8 +196,8 @@ describe("validateSchema - naming errors", () => {
 
   it("reports a field name starting with uppercase", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { Name: string; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { Name: string; };", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -198,8 +212,11 @@ describe("validateSchema - naming errors", () => {
 
   it("reports field names that conflict by case", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { myField: string; myfield: number; };"),
-      NAMESPACE,
+      parseDeclarations(
+        "type Output = { myField: string; myfield: number; };",
+        "namespace",
+      ),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -215,8 +232,8 @@ describe("validateSchema - naming errors", () => {
 describe("validateSchema - type references", () => {
   it("reports an invalid string literal starting wiht a digit", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = {status: '3foo'};"),
-      NAMESPACE,
+      parseDeclarations("type Output = {status: '3foo'};", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -226,8 +243,8 @@ describe("validateSchema - type references", () => {
 
   it("reports an invalid string literal containing invalid character", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = {status: 'foo bar'};"),
-      NAMESPACE,
+      parseDeclarations("type Output = {status: 'foo bar'};", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -242,8 +259,8 @@ describe("validateSchema - type references", () => {
 
   it("reports an unknown type reference", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { value: Unknown; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { value: Unknown; };", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -253,8 +270,8 @@ describe("validateSchema - type references", () => {
 
   it("reports a direct circular reference", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { child: Output; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { child: Output; };", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -269,8 +286,9 @@ describe("validateSchema - type references", () => {
           "type Output = { next: Other; };",
           "type Other = { back: Output; };",
         ].join("\n"),
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -289,8 +307,9 @@ describe("validateSchema - type references", () => {
           "type Unused = string;",
           "type Input = integer;",
         ].join("\n"),
+        "template",
       ),
-      TEMPLATE,
+      EMPTY_SCHEMA,
     );
     expect(result).toMatch({
       kind: "error",
@@ -306,8 +325,9 @@ describe("validateSchema - type references", () => {
           "type Unused = string;",
           "type Input = integer;",
         ].join("\n"),
+        "tool",
       ),
-      TOOL,
+      EMPTY_SCHEMA,
     );
     expect(result).toMatch({
       kind: "error",
@@ -323,8 +343,8 @@ describe("validateSchema - type references", () => {
 describe("validateSchema - union type errors", () => {
   it("reports a union with a primitive member", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = string | number;"),
-      NAMESPACE,
+      parseDeclarations("type Output = string | number;", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -334,8 +354,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports a union with an array member", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = integer[] | string[];"),
-      NAMESPACE,
+      parseDeclarations("type Output = integer[] | string[];", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -345,8 +365,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports a boolean literal as a direct union member", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = true | false;"),
-      NAMESPACE,
+      parseDeclarations("type Output = true | false;", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -356,8 +376,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an any type as a direct union member", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = any | string;"),
-      NAMESPACE,
+      parseDeclarations("type Output = any | string;", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -369,8 +389,9 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = "active" | { kind: "inactive"; value: string };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -380,8 +401,11 @@ describe("validateSchema - union type errors", () => {
 
   it("reports a union mixing interfaces and strings (interface first)", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = { kind: "active" } | "inactive";'),
-      NAMESPACE,
+      parseDeclarations(
+        'type Output = { kind: "active" } | "inactive";',
+        "namespace",
+      ),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -393,8 +417,11 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an interface union member without a string/boolean literal discriminator", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { kind: string; } | { kind: string; };"),
-      NAMESPACE,
+      parseDeclarations(
+        "type Output = { kind: string; } | { kind: string; };",
+        "namespace",
+      ),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -408,8 +435,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an interface union member with no first field", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = {} | { kind: "b"; };'),
-      NAMESPACE,
+      parseDeclarations('type Output = {} | { kind: "b"; };', "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -425,8 +452,9 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: "a"; value: string } | { type: "b"; value: string };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -443,8 +471,9 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: "same"; x: number } | { kind: "same"; y: number };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -459,8 +488,9 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: "foo"; x: number } | { kind: "fOO"; y: number };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -470,8 +500,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports case-only duplicate members in a string literal union", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = "foo" | "fOO";'),
-      NAMESPACE,
+      parseDeclarations('type Output = "foo" | "fOO";', "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -486,8 +516,9 @@ describe("validateSchema - union type errors", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: true; x: number } | { kind: "b"; y: number };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -501,8 +532,8 @@ describe("validateSchema - union type errors", () => {
 
   it("reports duplicate string literals in a string union", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = "active" | "active";'),
-      NAMESPACE,
+      parseDeclarations('type Output = "active" | "active";', "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -522,8 +553,9 @@ describe("validateSchema - union type errors", () => {
           '  | { kind: "b"; y: string }',
           '  | { kind: "c"; z: boolean };',
         ].join("\n"),
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -534,21 +566,25 @@ describe("validateSchema - union type errors", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateSchema - shared type names", () => {
-  function makeTemplateContext(
-    namespaceSource: string,
-  ): SchemaValidationContext {
-    const ns = validateSchema(parseDeclarations(namespaceSource), NAMESPACE);
+  function makeTemplateContext(namespaceSource: string): Schema {
+    const ns = validateSchema(
+      parseDeclarations(namespaceSource, "namespace"),
+      null,
+    );
     if (ns.kind !== "success") {
       throw new Error(
         `Namespace schema failed: ${ns.errors.map((e) => e.message).join(", ")}`,
       );
     }
-    return { kind: "template", namespaceSchema: ns };
+    return ns;
   }
 
   it("accepts shared.X in template context when X exists in namespace schema", () => {
     const result = validateSchema(
-      parseDeclarations("type Input = string;\ntype Output = shared.Profile;"),
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Profile;",
+        "template",
+      ),
       makeTemplateContext("type Profile = { name: string; };"),
     );
     expect(result).toMatch({ kind: "success" });
@@ -558,6 +594,7 @@ describe("validateSchema - shared type names", () => {
     const result = validateSchema(
       parseDeclarations(
         "type Input = string;\ntype Output = { user: shared.Profile; };",
+        "template",
       ),
       makeTemplateContext("type Profile = { name: string; };"),
     );
@@ -566,8 +603,8 @@ describe("validateSchema - shared type names", () => {
 
   it("reports error for shared.X in namespace context", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = shared.Profile;"),
-      NAMESPACE,
+      parseDeclarations("type Output = shared.Profile;", "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -577,8 +614,8 @@ describe("validateSchema - shared type names", () => {
 
   it("reports error for shared.X in meta context", () => {
     const result = validateSchema(
-      parseDeclarations("type Meta = { field: shared.Profile; };"),
-      META,
+      parseDeclarations("type Meta = { field: shared.Profile; };", "meta"),
+      null,
     );
     expect(result).toMatch({
       kind: "error",
@@ -588,7 +625,10 @@ describe("validateSchema - shared type names", () => {
 
   it("reports error when the referenced type does not exist in namespace schema", () => {
     const result = validateSchema(
-      parseDeclarations("type Input = string;\ntype Output = shared.Missing;"),
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Missing;",
+        "template",
+      ),
       makeTemplateContext("type Profile = { name: string; };"),
     );
     expect(result).toMatch({
@@ -605,8 +645,11 @@ describe("validateSchema - shared type names", () => {
 describe("validateSchema - Schema fields", () => {
   it("collects field names and string literal values as identifiers", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = { name: string; role: "admin"; }'),
-      NAMESPACE,
+      parseDeclarations(
+        'type Output = { name: string; role: "admin"; }',
+        "namespace",
+      ),
+      null,
     );
     expect(result).toMatch({
       kind: "success",
@@ -620,8 +663,8 @@ describe("validateSchema - Schema fields", () => {
 
   it("collects string literal values from a string literal union as identifiers", () => {
     const result = validateSchema(
-      parseDeclarations('type Output = "active" | "inactive";'),
-      NAMESPACE,
+      parseDeclarations('type Output = "active" | "inactive";', "namespace"),
+      null,
     );
     expect(result).toMatch({
       kind: "success",
@@ -636,8 +679,9 @@ describe("validateSchema - Schema fields", () => {
     const result = validateSchema(
       parseDeclarations(
         'type Output = { kind: "a"; val: string } | { kind: "b"; num: number };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "success",
@@ -655,8 +699,9 @@ describe("validateSchema - Schema fields", () => {
     const result = validateSchema(
       parseDeclarations(
         "type Output = { name: string; user: { name: string; }; };",
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     expect(result).toMatch({
       kind: "success",
@@ -668,22 +713,6 @@ describe("validateSchema - Schema fields", () => {
   });
 });
 
-const NAMESPACE: SchemaValidationContext = {
-  kind: "namespace",
-};
-
-const META: SchemaValidationContext = { kind: "meta" };
-
-const TEMPLATE: SchemaValidationContext = {
-  kind: "template",
-  namespaceSchema: EMPTY_SCHEMA,
-};
-
-const TOOL: SchemaValidationContext = {
-  kind: "tool",
-  namespaceSchema: EMPTY_SCHEMA,
-};
-
 // ---------------------------------------------------------------------------
 // validateSchema - namingHints
 // ---------------------------------------------------------------------------
@@ -691,8 +720,8 @@ const TOOL: SchemaValidationContext = {
 describe("validateSchema - namingHints", () => {
   it("registers a top-level interface with the type name as the first piece", () => {
     const schema = validateSchema(
-      parseDeclarations("type Output = { name: string; };"),
-      NAMESPACE,
+      parseDeclarations("type Output = { name: string; };", "namespace"),
+      null,
     ) as { kind: "success" } & ReturnType<typeof validateSchema>;
     if (schema.kind !== "success") throw new Error();
     const iface = schema.typeDeclarations["Output"]!.valueType as Interface;
@@ -705,8 +734,9 @@ describe("validateSchema - namingHints", () => {
     const schema = validateSchema(
       parseDeclarations(
         "type Output = { address: { street: string; city: string }; };",
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const outer = schema.typeDeclarations["Output"]!.valueType as Interface;
@@ -723,8 +753,9 @@ describe("validateSchema - namingHints", () => {
     const schema = validateSchema(
       parseDeclarations(
         "type Output = { location: { address: { street: string } } };",
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const outer = schema.typeDeclarations["Output"]!.valueType as Interface;
@@ -741,8 +772,8 @@ describe("validateSchema - namingHints", () => {
 
   it("registers a top-level string-literal union with the type name as the first piece", () => {
     const schema = validateSchema(
-      parseDeclarations('type Output = "a" | "b";'),
-      NAMESPACE,
+      parseDeclarations('type Output = "a" | "b";', "namespace"),
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const union = schema.typeDeclarations["Output"]!.valueType as Union;
@@ -755,8 +786,9 @@ describe("validateSchema - namingHints", () => {
     const schema = validateSchema(
       parseDeclarations(
         'type Output = { kind: "cat"; name: string } | { kind: "dog"; breed: string };',
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const union = schema.typeDeclarations["Output"]!.valueType as Union;
@@ -800,8 +832,9 @@ describe("validateSchema - namingHints", () => {
     const schema = validateSchema(
       parseDeclarations(
         "type Output = { success: true; value: string } | { success: false; error: string };",
+        "namespace",
       ),
-      NAMESPACE,
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const union = schema.typeDeclarations["Output"]!.valueType as Union;
@@ -839,8 +872,8 @@ describe("validateSchema - namingHints", () => {
 
   it("traverses into an array element type to register nested interfaces", () => {
     const schema = validateSchema(
-      parseDeclarations("type Output = { name: string }[];"),
-      NAMESPACE,
+      parseDeclarations("type Output = { name: string }[];", "namespace"),
+      null,
     );
     if (schema.kind !== "success") throw new Error();
     const arrayType = schema.typeDeclarations["Output"]!.valueType;
@@ -853,13 +886,16 @@ describe("validateSchema - namingHints", () => {
 
   it("populates the shared scope from the namespace schema's defaultScope", () => {
     const ns = validateSchema(
-      parseDeclarations("type Profile = { name: string; };"),
-      NAMESPACE,
+      parseDeclarations("type Profile = { name: string; };", "namespace"),
+      null,
     );
     if (ns.kind !== "success") throw new Error();
     const template = validateSchema(
-      parseDeclarations("type Input = string;\ntype Output = shared.Profile;"),
-      { kind: "template", namespaceSchema: ns },
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Profile;",
+        "template",
+      ),
+      ns,
     );
     if (template.kind !== "success") throw new Error();
     // shared scope is the namespace's defaultScope
@@ -874,8 +910,11 @@ describe("validateSchema - namingHints", () => {
 describe("validateSchema - definition links", () => {
   it("returns empty definition links when schema has no type references", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = { name: string; count: number; };"),
-      NAMESPACE,
+      parseDeclarations(
+        "type Output = { name: string; count: number; };",
+        "namespace",
+      ),
+      null,
     );
     if (result.kind !== "success") throw new Error();
     expect(result.definitionLinks).toMatch([]);
@@ -887,8 +926,8 @@ describe("validateSchema - definition links", () => {
       'type Status = "active" | "inactive";',
     ].join("\n");
     const result = validateSchema(
-      parseDeclarations(source, "schema.ts"),
-      NAMESPACE,
+      parseDeclarations(source, "namespace", "schema.ts"),
+      null,
     );
     if (result.kind !== "success") throw new Error();
 
@@ -921,8 +960,8 @@ describe("validateSchema - definition links", () => {
       "type Failure = { ok: false; };",
     ].join("\n");
     const result = validateSchema(
-      parseDeclarations(source, "schema.ts"),
-      NAMESPACE,
+      parseDeclarations(source, "namespace", "schema.ts"),
+      null,
     );
     if (result.kind !== "success") throw new Error();
 
@@ -956,18 +995,20 @@ describe("validateSchema - definition links", () => {
       "type Address = { street: string; };",
     ].join("\n");
     const ns = validateSchema(
-      parseDeclarations(nsSource, "shared.ts"),
-      NAMESPACE,
+      parseDeclarations(nsSource, "namespace", "shared.ts"),
+      null,
     );
-    if (ns.kind !== "success") throw new Error();
-
     // Verify definition link within the namespace schema itself
-    expect(ns.definitionLinks).toMatch([
-      {
-        reference: { start: 40, end: 47, path: "shared.ts" },
-        definition: { start: 57, end: 64, path: "shared.ts" },
-      },
-    ]);
+    expect(ns).toMatch({
+      kind: "success",
+      definitionLinks: [
+        {
+          reference: { start: 40, end: 47, path: "shared.ts" },
+          definition: { start: 57, end: 64, path: "shared.ts" },
+        },
+      ],
+    });
+    if (ns.kind !== "success") throw new Error();
 
     const templateSource = [
       "type Input = { user: shared.Profile; local: Extra; };",
@@ -975,48 +1016,49 @@ describe("validateSchema - definition links", () => {
       "type Output = shared.Address;",
     ].join("\n");
     const template = validateSchema(
-      parseDeclarations(templateSource, "template.ts"),
-      { kind: "template", namespaceSchema: ns },
+      parseDeclarations(templateSource, "template", "template.ts"),
+      ns,
     );
-    if (template.kind !== "success") throw new Error();
-
-    expect(template.definitionLinks).toMatch([
-      {
-        reference: {
-          start: 28,
-          end: 35,
-          path: "template.ts",
+    expect(template).toMatch({
+      kind: "success",
+      definitionLinks: [
+        {
+          reference: {
+            start: 28,
+            end: 35,
+            path: "template.ts",
+          },
+          definition: {
+            start: 5,
+            end: 12,
+            path: "shared.ts",
+          },
         },
-        definition: {
-          start: 5,
-          end: 12,
-          path: "shared.ts",
+        {
+          reference: {
+            start: 44,
+            end: 49,
+            path: "template.ts",
+          },
+          definition: {
+            start: 59,
+            end: 64,
+            path: "template.ts",
+          },
         },
-      },
-      {
-        reference: {
-          start: 44,
-          end: 49,
-          path: "template.ts",
+        {
+          reference: {
+            start: 107,
+            end: 114,
+            path: "template.ts",
+          },
+          definition: {
+            start: 57,
+            end: 64,
+            path: "shared.ts",
+          },
         },
-        definition: {
-          start: 59,
-          end: 64,
-          path: "template.ts",
-        },
-      },
-      {
-        reference: {
-          start: 107,
-          end: 114,
-          path: "template.ts",
-        },
-        definition: {
-          start: 57,
-          end: 64,
-          path: "shared.ts",
-        },
-      },
-    ]);
+      ],
+    });
   });
 });

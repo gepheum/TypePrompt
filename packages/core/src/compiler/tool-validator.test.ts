@@ -35,9 +35,9 @@ function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const parsed = parseSchema(node);
+  const parsed = parseSchema(node, "namespace");
   if (parsed.kind !== "success") throw new Error("parseSchema failed");
-  const validated = validateSchema(parsed, { kind: "namespace" });
+  const validated = validateSchema(parsed, null);
   if (validated.kind !== "success") {
     throw new Error(
       `validateSchema failed: ${validated.errors.map((e) => e.message).join(", ")}`,

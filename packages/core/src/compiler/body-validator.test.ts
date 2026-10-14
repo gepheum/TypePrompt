@@ -43,11 +43,9 @@ function parseElement(xml: string, path = "test.xml"): ElementNode {
 
 function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
   const node = textNode(source, path);
-  const parsed = parseSchema(node);
+  const parsed = parseSchema(node, "namespace");
   if (parsed.kind !== "success") throw new Error("parseSchema failed");
-  const validated = validateSchema(parsed, {
-    kind: "namespace",
-  });
+  const validated = validateSchema(parsed, null);
   if (validated.kind !== "success") {
     throw new Error(
       `validateSchema failed: ${validated.errors.map((e) => e.message).join(", ")}`,
@@ -65,6 +63,7 @@ function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
     description: [],
     schema: {
       kind: "success",
+      context: "tool",
       typeDeclarations: {},
       source: {
         text: "",

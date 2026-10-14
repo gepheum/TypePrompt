@@ -39,15 +39,13 @@ function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const schemaParseResult = parseSchema(textNode);
+  const schemaParseResult = parseSchema(textNode, "namespace");
   if (schemaParseResult.kind !== "success") {
     throw new Error(
       `Schema parse failed: ${JSON.stringify(schemaParseResult)}`,
     );
   }
-  const schema = validateSchema(schemaParseResult, {
-    kind: "namespace",
-  });
+  const schema = validateSchema(schemaParseResult, null);
   if (schema.kind !== "success") {
     throw new Error(`Schema validation failed: ${JSON.stringify(schema)}`);
   }

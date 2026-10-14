@@ -13,6 +13,7 @@ import type {
   Field,
   FieldType,
   Literal,
+  SchemaContext,
   SchemaParseResult,
   Type,
   TypeDeclaration,
@@ -20,10 +21,11 @@ import type {
 } from "./schema-types.js";
 import { isLiteralType } from "./schema-utils.js";
 
-export function parseSchema(
+export function parseSchema<Context extends SchemaContext>(
   content: MappedText,
-): SchemaParseResult | InternalErrors {
-  return new SchemaParser(content).parse();
+  context: Context,
+): SchemaParseResult<Context> | InternalErrors {
+  return new SchemaParser<Context>(content, context).parse();
 }
 
 /**
@@ -31,10 +33,10 @@ export function parseSchema(
  * Used by the language server.
  */
 export function tokenizeSchema(content: MappedText): readonly SemanticToken[] {
-  return new SchemaParser(content).getSemanticTokens();
+  return new SchemaParser(content, "template").getSemanticTokens();
 }
 
-class SchemaParser {
+class SchemaParser<Context extends SchemaContext> {
   private readonly tokens: Token[];
   private tokenIndex = 0;
   private readonly tokenizerErrors: InternalError[] = [];
@@ -44,11 +46,14 @@ class SchemaParser {
     return this.content.path;
   }
 
-  constructor(private readonly content: MappedText) {
+  constructor(
+    private readonly content: MappedText,
+    private readonly context: Context,
+  ) {
     this.tokens = this.tokenize();
   }
 
-  parse(): SchemaParseResult | InternalErrors {
+  parse(): SchemaParseResult<Context> | InternalErrors {
     const typeDeclarations: TypeDeclaration[] = [];
 
     while (true) {
@@ -99,6 +104,7 @@ class SchemaParser {
 
     return {
       kind: "success",
+      context: this.context,
       typeDeclarations: Object.fromEntries(
         typeDeclarations.map((t) => [t.name.text, t]),
       ),
@@ -406,6 +412,7 @@ class SchemaParser {
             return {
               kind: "type-name",
               name: this.tokenToSpan(token),
+              context: this.context,
             };
           }
         }

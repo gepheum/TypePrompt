@@ -1,17 +1,14 @@
 import type { DefinitionLink, Span, TextSpan } from "../util/shared-types.js";
 
-export type SchemaParseResult = {
+export type SchemaContext = "meta" | "namespace" | "template" | "tool";
+
+export type SchemaParseResult<Context extends SchemaContext> = {
   readonly kind: "success";
+  readonly context: Context;
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
   readonly source: Omit<TextSpan, "path">;
   readonly path: string;
 };
-
-export type SchemaValidationContext =
-  | { readonly kind: "meta" }
-  | { readonly kind: "namespace" }
-  | { readonly kind: "template"; readonly namespaceSchema: Schema }
-  | { readonly kind: "tool"; readonly namespaceSchema: Schema };
 
 export type SchemaView = {
   readonly typeDeclarations: TypeDeclarations;
@@ -117,6 +114,7 @@ export type UnionMemberType = Exclude<Type, Union> | Literal;
 export type TypeName = {
   readonly kind: "type-name";
   readonly name: TextSpan;
+  readonly context: SchemaContext;
 };
 
 export type TypeNameView = {
@@ -124,6 +122,7 @@ export type TypeNameView = {
   readonly name: {
     readonly text: string;
   };
+  readonly context?: undefined;
 };
 
 export type SharedTypeName = {

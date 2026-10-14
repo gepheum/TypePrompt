@@ -44,11 +44,9 @@ function makeExpr(path: string): Expression<false> {
 
 function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
   const node = textNode(source, path);
-  const parsed = parseSchema(node);
+  const parsed = parseSchema(node, "namespace");
   if (parsed.kind !== "success") throw new Error("parse failed");
-  const validated = validateSchema(parsed, {
-    kind: "namespace",
-  });
+  const validated = validateSchema(parsed, null);
   if (validated.kind !== "success") throw new Error("validation failed");
   return validated;
 }
@@ -176,6 +174,7 @@ describe("resolveIfExpression - optional type", () => {
       innerType: {
         kind: "type-name",
         name: { text: "User", start: 0, end: 4, path: "" },
+        context: "namespace",
       },
     };
     expect(resolveIfExpression(expr, optType, span("notNull"), schema)).toMatch(

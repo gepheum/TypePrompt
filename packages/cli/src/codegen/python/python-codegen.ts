@@ -571,16 +571,13 @@ function writeType(
       const valueType = writeType(type.valueType, schema, options);
       return `dict[str, ${valueType}]`;
     }
-    case "shared-type-name": {
-      const declaration = schema.sharedDeclarations[type.name.text]!;
-      return writeType(declaration.valueType, schema, options);
+    case "shared-type-name":
+    case "type-name": {
+      const resolvedType = resolveType(type, schema);
+      return writeType(resolvedType, schema, options);
     }
     case "string-literal": {
       return `Literal['${type.value}']`;
-    }
-    case "type-name": {
-      const declaration = schema.typeDeclarations[type.name.text]!;
-      return writeType(declaration.valueType, schema, options);
     }
   }
 }

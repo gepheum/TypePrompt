@@ -66,7 +66,7 @@ export type Template = {
   readonly tag: Span;
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
-  readonly schema: SchemaParseResult;
+  readonly schema: SchemaParseResult<"template">;
   readonly tools: StrictJsonValue | null;
   readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
@@ -163,7 +163,7 @@ export type Tool = {
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly description: ToolDescription;
-  readonly schema: SchemaParseResult;
+  readonly schema: SchemaParseResult<"tool">;
   readonly warnings: readonly InternalError[];
 };
 

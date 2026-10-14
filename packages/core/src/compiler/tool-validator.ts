@@ -1,7 +1,4 @@
-import type {
-  Schema,
-  SchemaValidationContext,
-} from "../schema/schema-types.js";
+import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { validateToolDescription } from "./body-validator.js";
@@ -16,11 +13,7 @@ export function validateTool(args: {
   const validationResult = new ValidationResultBuilder();
   const { errors } = validationResult;
 
-  const validationContext: SchemaValidationContext = {
-    kind: "tool",
-    namespaceSchema,
-  };
-  const toolSchema = validateSchema(tool.schema, validationContext);
+  const toolSchema = validateSchema(tool.schema, namespaceSchema);
   validationResult.definitionLinks.push(...toolSchema.definitionLinks);
   if (toolSchema.kind === "error") {
     errors.push(...toolSchema.errors);

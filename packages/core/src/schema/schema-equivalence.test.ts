@@ -12,7 +12,7 @@ function parse(source: string): SchemaView {
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const result = parseSchema(node);
+  const result = parseSchema(node, "namespace");
   if (result.kind !== "success") {
     throw new Error("Expected schema parsing to succeed");
   }

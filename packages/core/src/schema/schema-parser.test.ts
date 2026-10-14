@@ -18,7 +18,10 @@ function textNode(source: string, path = "schema.ts"): MappedText {
 
 describe("parseSchema - interfaces", () => {
   it("parses a simple interface declaration", () => {
-    const result = parseSchema(textNode("type Response = { name: string; };"));
+    const result = parseSchema(
+      textNode("type Response = { name: string; };"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -46,6 +49,7 @@ describe("parseSchema - interfaces", () => {
       textNode(
         "type Response = { name: string; age: number; active: boolean; };",
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -72,6 +76,7 @@ describe("parseSchema - interfaces", () => {
   it("parses optional fields", () => {
     const result = parseSchema(
       textNode("type Response = { required: string; optional?: number; };"),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -97,7 +102,7 @@ describe("parseSchema - interfaces", () => {
   });
 
   it("parses an interface with no fields", () => {
-    const result = parseSchema(textNode("type Response = { };"));
+    const result = parseSchema(textNode("type Response = { };"), "template");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -114,6 +119,7 @@ describe("parseSchema - interfaces", () => {
       textNode(
         "type Response = { address: { street: string; city: string }; };",
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -150,6 +156,7 @@ describe("parseSchema - interfaces", () => {
   it("accepts comma as field separator", () => {
     const result = parseSchema(
       textNode("type Response = { name: string, age: number };"),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -161,13 +168,14 @@ describe("parseSchema - interfaces", () => {
           "\n",
         ),
       ),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
 
   it("records correct source span for type name", () => {
     const source = "type Response = { name: string; };";
-    const result = parseSchema(textNode(source));
+    const result = parseSchema(textNode(source), "template");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -187,6 +195,7 @@ describe("parseSchema - records", () => {
   it("parses a record type", () => {
     const result = parseSchema(
       textNode("type Response = {[foo: string]: integer};"),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -213,7 +222,7 @@ describe("parseSchema - records", () => {
 
 describe("parseSchema - type aliases", () => {
   it("parses a type alias to a primitive", () => {
-    const result = parseSchema(textNode("type Response = string;"));
+    const result = parseSchema(textNode("type Response = string;"), "template");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -228,7 +237,10 @@ describe("parseSchema - type aliases", () => {
   });
 
   it("parses a type alias to an array", () => {
-    const result = parseSchema(textNode("type Response = string[];"));
+    const result = parseSchema(
+      textNode("type Response = string[];"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -243,7 +255,10 @@ describe("parseSchema - type aliases", () => {
   });
 
   it("parses a type alias to a 2D array", () => {
-    const result = parseSchema(textNode("type Response = string[][];"));
+    const result = parseSchema(
+      textNode("type Response = string[][];"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -263,6 +278,7 @@ describe("parseSchema - type aliases", () => {
   it("parses a type alias to a string literal union", () => {
     const result = parseSchema(
       textNode('type Response = "active" | "inactive";'),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -286,6 +302,7 @@ describe("parseSchema - type aliases", () => {
       textNode(
         'type Response = { kind: "circle"; radius: number } | { kind: "rect"; width: number; height: number };',
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -327,6 +344,7 @@ describe("parseSchema - type aliases", () => {
       textNode(
         ["type Response =", '  | "active"', '  | "inactive";'].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -347,6 +365,7 @@ describe("parseSchema - type aliases", () => {
   it("parses a parenthesized type", () => {
     const result = parseSchema(
       textNode('type Response = ("active" | "inactive");'),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -367,6 +386,7 @@ describe("parseSchema - type aliases", () => {
   it("parses a type alias without semicolon when followed by newline", () => {
     const result = parseSchema(
       textNode(["type Response =", "  string"].join("\n")),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -374,6 +394,7 @@ describe("parseSchema - type aliases", () => {
   it("parses a type alias to an inline interface", () => {
     const result = parseSchema(
       textNode("type Response = { name: string; age: number };"),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -410,6 +431,7 @@ describe("parseSchema - multiple types", () => {
           'type Status = "active" | "inactive";',
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -428,6 +450,7 @@ describe("parseSchema - multiple types", () => {
           'type Status = "active" | "inactive";',
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -452,7 +475,10 @@ describe("parseSchema - multiple types", () => {
 
 describe("parseSchema - shared type names", () => {
   it("parses a shared type name as a type alias", () => {
-    const result = parseSchema(textNode("type Response = shared.Profile;"));
+    const result = parseSchema(
+      textNode("type Response = shared.Profile;"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -466,6 +492,7 @@ describe("parseSchema - shared type names", () => {
   it("parses a shared type name as a field type", () => {
     const result = parseSchema(
       textNode("type Response = { user: shared.Profile; };"),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -484,7 +511,10 @@ describe("parseSchema - shared type names", () => {
   });
 
   it("parses an array of a shared type", () => {
-    const result = parseSchema(textNode("type Response = shared.Profile[];"));
+    const result = parseSchema(
+      textNode("type Response = shared.Profile[];"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -504,6 +534,7 @@ describe("parseSchema - shared type names", () => {
   it("parses a union containing a shared type name", () => {
     const result = parseSchema(
       textNode('type Response = shared.Profile | "guest";'),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -526,7 +557,10 @@ describe("parseSchema - shared type names", () => {
     //  0123456789012345678901234567890
     //                  ^     ^
     //                  16    23
-    const result = parseSchema(textNode("type Response = shared.Profile;"));
+    const result = parseSchema(
+      textNode("type Response = shared.Profile;"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -549,6 +583,7 @@ describe("parseSchema - comments and JSDoc", () => {
   it("accepts a single-line comment", () => {
     const result = parseSchema(
       textNode("// This is a comment\ntype Response = { name: string; };"),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -556,6 +591,7 @@ describe("parseSchema - comments and JSDoc", () => {
   it("accepts a non-JSDoc block comment", () => {
     const result = parseSchema(
       textNode("/* comment */\ntype Response = { name: string; };"),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -567,6 +603,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "\n",
         ),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -584,6 +621,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "type Response = { name: string; };",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -601,6 +639,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "};",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -619,6 +658,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "\n",
         ),
       ),
+      "template",
     );
     expect(result).toMatch({ kind: "success" });
   });
@@ -634,6 +674,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "};", //
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -651,6 +692,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "};",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -667,6 +709,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "type Other = { id: number; };",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -683,6 +726,7 @@ describe("parseSchema - comments and JSDoc", () => {
           "type Other = { id: number; };",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -697,7 +741,10 @@ describe("parseSchema - comments and JSDoc", () => {
 
 describe("parseSchema - tokenizer errors", () => {
   it("reports error for an identifier starting with a digit", () => {
-    const result = parseSchema(textNode("type Response = { 1name: string; };"));
+    const result = parseSchema(
+      textNode("type Response = { 1name: string; };"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Invalid identifier" }],
@@ -707,6 +754,7 @@ describe("parseSchema - tokenizer errors", () => {
   it("reports error for an identifier containing an underscore", () => {
     const result = parseSchema(
       textNode("type Response = { my_field: string; };"),
+      "template",
     );
     expect(result).toMatch({
       kind: "error",
@@ -715,7 +763,10 @@ describe("parseSchema - tokenizer errors", () => {
   });
 
   it("reports error for an unterminated double-quoted string literal", () => {
-    const result = parseSchema(textNode('type Response = "unterminated;'));
+    const result = parseSchema(
+      textNode('type Response = "unterminated;'),
+      "template",
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Unterminated string literal" }],
@@ -723,7 +774,10 @@ describe("parseSchema - tokenizer errors", () => {
   });
 
   it("reports error for an unterminated single-quoted string literal", () => {
-    const result = parseSchema(textNode("type Response = 'unterminated;"));
+    const result = parseSchema(
+      textNode("type Response = 'unterminated;"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Unterminated string literal" }],
@@ -731,7 +785,10 @@ describe("parseSchema - tokenizer errors", () => {
   });
 
   it("reports error for a string literal containing an escape sequence", () => {
-    const result = parseSchema(textNode('type Response = "with\\\\escape";'));
+    const result = parseSchema(
+      textNode('type Response = "with\\\\escape";'),
+      "template",
+    );
     expect(result).toMatch({
       kind: "error",
       errors: [{ message: "Must not contain escape sequences" }],
@@ -741,6 +798,7 @@ describe("parseSchema - tokenizer errors", () => {
   it("reports error for an unterminated multi-line comment", () => {
     const result = parseSchema(
       textNode("/* unterminated\ntype Response = { name: string; };"),
+      "template",
     );
     expect(result).toMatch({
       kind: "error",
@@ -762,6 +820,7 @@ describe("parseSchema - naming errors", () => {
           "type response = { other: string; };",
         ].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "error",
@@ -778,6 +837,7 @@ describe("parseSchema - interface keyword", () => {
   it("parses an interface declaration using the interface keyword", () => {
     const result = parseSchema(
       textNode("interface Response { name: string; age: number; }"),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -807,6 +867,7 @@ describe("parseSchema - interface keyword", () => {
       textNode(
         ["/** A user. */", "interface Response { name: string; }"].join("\n"),
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",
@@ -815,7 +876,10 @@ describe("parseSchema - interface keyword", () => {
   });
 
   it("parses an interface keyword declaration without trailing semicolon", () => {
-    const result = parseSchema(textNode("interface Response { id: number }"));
+    const result = parseSchema(
+      textNode("interface Response { id: number }"),
+      "template",
+    );
     expect(result).toMatch({ kind: "success" });
   });
 });
@@ -826,7 +890,7 @@ describe("parseSchema - interface keyword", () => {
 
 describe("parseSchema - any type", () => {
   it("parses any as a top-level type alias", () => {
-    const result = parseSchema(textNode("type Payload = any;"));
+    const result = parseSchema(textNode("type Payload = any;"), "template");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -839,7 +903,10 @@ describe("parseSchema - any type", () => {
   });
 
   it("parses any as a field type", () => {
-    const result = parseSchema(textNode("type Response = { data: any; };"));
+    const result = parseSchema(
+      textNode("type Response = { data: any; };"),
+      "template",
+    );
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -855,7 +922,7 @@ describe("parseSchema - any type", () => {
   });
 
   it("parses an array of any", () => {
-    const result = parseSchema(textNode("type Items = any[];"));
+    const result = parseSchema(textNode("type Items = any[];"), "template");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -876,7 +943,7 @@ describe("parseSchema - any type", () => {
 
 describe("parseSchema - boolean literals", () => {
   it("parses true as a top-level type alias", () => {
-    const result = parseSchema(textNode("type S = true"));
+    const result = parseSchema(textNode("type S = true"), "template");
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -895,6 +962,7 @@ describe("parseSchema - boolean literals", () => {
   it("boolean literal only accepted as field type", () => {
     const result = parseSchema(
       textNode("type AlwaysFalse = false; type S = { alwaysTrue: true[] }"),
+      "template",
     );
     expect(result).toMatch({
       kind: "error",
@@ -918,6 +986,7 @@ describe("parseSchema - boolean literals", () => {
       textNode(
         "type Result = { success: true; value: string } | { success: false; error: string };",
       ),
+      "template",
     );
     expect(result).toMatch({
       kind: "success",

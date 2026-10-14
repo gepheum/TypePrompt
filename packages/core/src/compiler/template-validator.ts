@@ -11,7 +11,6 @@ import { validateJson } from "../json/json-validator.js";
 import type {
   HasName,
   Schema,
-  SchemaValidationContext,
   SyntheticArray,
   SyntheticField,
   SyntheticInterface,
@@ -56,11 +55,7 @@ export function validateTemplate(args: {
     validationResult.push(validateMeta(metaSchema, template));
   }
 
-  const validationContext: SchemaValidationContext = {
-    kind: "template",
-    namespaceSchema,
-  };
-  const templateSchema = validateSchema(template.schema, validationContext);
+  const templateSchema = validateSchema(template.schema, namespaceSchema);
   validationResult.definitionLinks.push(...templateSchema.definitionLinks);
   if (templateSchema.kind === "error") {
     errors.push(...templateSchema.errors);

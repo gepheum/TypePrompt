@@ -13,8 +13,8 @@ import type {
   Interface,
   NamingHint,
   Schema,
+  SchemaContext,
   SchemaParseResult,
-  SchemaValidationContext,
   SchemaView,
   Type,
   TypeDeclaration,
@@ -25,39 +25,36 @@ import type { NameDependencies } from "./schema-utils.js";
 import { getNameDependencies } from "./schema-utils.js";
 import { computeUnionMembers } from "./unions.js";
 
-export function validateSchema(
-  schema: SchemaParseResult,
-  context: SchemaValidationContext,
+export function validateSchema<Context extends SchemaContext>(
+  schema: SchemaParseResult<Context>,
+  namespaceSchema: Context extends "template" | "tool" ? Schema : null,
 ): Schema | ValidationErrors {
   const { typeDeclarations } = schema;
 
   const validationResult = new ValidationResultBuilder();
   const { definitionLinks, errors } = validationResult;
 
-  const namespaceSchema = ((): Schema => {
-    switch (context.kind) {
-      case "template":
-      case "tool":
-        return context.namespaceSchema;
-      case "meta":
-      case "namespace":
-        return EMPTY_SCHEMA;
-    }
-  })();
-
   const schemaView: SchemaView = {
     typeDeclarations: typeDeclarations,
-    sharedDeclarations: namespaceSchema.typeDeclarations,
+    sharedDeclarations:
+      schema.context === "namespace"
+        ? typeDeclarations
+        : (namespaceSchema ?? EMPTY_SCHEMA).typeDeclarations,
   };
 
-  const unionToMembers =
-    context.kind === "template"
-      ? new Map(context.namespaceSchema.unionToMembers)
-      : new Map<Union, UnionMembers>();
+  const unionToMembers = new Map(
+    (namespaceSchema ?? EMPTY_SCHEMA).unionToMembers,
+  );
   for (const typeDeclaration of Object.values(typeDeclarations)) {
     const { name } = typeDeclaration;
     validationResult.push(
-      validateType(typeDeclaration, schemaView, context, unionToMembers),
+      validateType(
+        typeDeclaration,
+        schemaView,
+        schema.context,
+        namespaceSchema ?? EMPTY_SCHEMA,
+        unionToMembers,
+      ),
     );
     const nameDependencies = getNameDependencies(
       typeDeclaration.valueType,
@@ -74,7 +71,7 @@ export function validateSchema(
   }
 
   const requiredTypeNames = ((): readonly string[] => {
-    switch (context.kind) {
+    switch (schema.context) {
       case "meta":
         return ["Meta"];
       case "namespace":
@@ -104,7 +101,7 @@ export function validateSchema(
 
   // Verify that all types are used.
   let sharedNames: ReadonlySet<string> = new Set();
-  if (context.kind !== "namespace") {
+  if (schema.context !== "namespace") {
     const allTypesUsedResult = verifyAllTypesUsed(
       requiredTypeNames,
       schemaView,
@@ -120,7 +117,7 @@ export function validateSchema(
   const identifiers = collectIdentifiers(schemaView, sharedNames);
   const namingHints = {
     defaultScope: collectNamingHints(schemaView, unionToMembers),
-    shared: namespaceSchema.namingHints.defaultScope,
+    shared: (namespaceSchema ?? EMPTY_SCHEMA).namingHints.defaultScope,
   } as const;
 
   return {
@@ -137,7 +134,8 @@ export function validateSchema(
 function validateType(
   type: Type | TypeDeclaration,
   schema: SchemaView,
-  context: SchemaValidationContext,
+  context: SchemaContext,
+  namespaceSchema: SchemaView,
   unionToMembers: Map<Union, UnionMembers>,
 ): ValidationResult {
   const validationResult = new ValidationResultBuilder();
@@ -201,7 +199,10 @@ function validateType(
       }
       case "type-name": {
         const typeName = type.name.text;
-        const { typeDeclarations } = schema;
+        const typeDeclarations =
+          type.context === "namespace"
+            ? schema.sharedDeclarations
+            : schema.typeDeclarations;
         const typeDeclaration = typeDeclarations[typeName];
         if (typeDeclaration) {
           definitionLinks.push({
@@ -218,15 +219,15 @@ function validateType(
         return null;
       }
       case "shared-type-name": {
-        if (context.kind === "namespace" || context.kind === "meta") {
+        if (context === "namespace" || context === "meta") {
           errors.push({
             span: type.shared,
-            message: `'shared' not allowed inside <${context.kind}> elements`,
+            message: `'shared' not allowed inside <${context}> elements`,
           });
           return null;
         }
         const typeName = type.name.text;
-        const { typeDeclarations } = context.namespaceSchema;
+        const { typeDeclarations } = namespaceSchema;
         const typeDeclaration = typeDeclarations[typeName];
         if (typeDeclaration) {
           definitionLinks.push({

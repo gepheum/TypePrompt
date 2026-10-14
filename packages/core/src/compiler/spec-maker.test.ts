@@ -59,15 +59,16 @@ function jsonArr(elements: unknown[]): unknown {
 }
 
 const TEST_SCHEMA: Schema = ((): Schema => {
-  const parsed = parseSchema({
-    path: "schema.ts",
-    text: "type Input = string\ntype Output = string",
-    offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
-  });
+  const parsed = parseSchema(
+    {
+      path: "schema.ts",
+      text: "type Input = string\ntype Output = string",
+      offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+    },
+    "template",
+  );
   if (parsed.kind !== "success") throw new Error("parse failed");
-  const schema = validateSchema(parsed, {
-    kind: "namespace",
-  });
+  const schema = validateSchema(parsed, EMPTY_SCHEMA);
   if (schema.kind !== "success") throw new Error("validation failed");
   return schema;
 })();
@@ -1003,11 +1004,9 @@ describe("makeTemplates - JSON schemas", () => {
       text: schemaSource,
       offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
     };
-    const parsed = parseSchema(sourceSpan);
+    const parsed = parseSchema(sourceSpan, "template");
     if (parsed.kind !== "success") throw new Error("parse failed");
-    const schema = validateSchema(parsed, {
-      kind: "namespace",
-    });
+    const schema = validateSchema(parsed, EMPTY_SCHEMA);
     if (schema.kind !== "success") throw new Error("validation failed");
 
     const result = {

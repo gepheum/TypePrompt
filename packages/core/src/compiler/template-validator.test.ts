@@ -44,9 +44,9 @@ function parseSchemaOrThrow(
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const parsed = parseSchema(node);
+  const parsed = parseSchema(node, kind);
   if (parsed.kind !== "success") throw new Error("parseSchema failed");
-  const validated = validateSchema(parsed, { kind });
+  const validated = validateSchema(parsed, null);
   if (validated.kind !== "success") {
     throw new Error(
       `validateSchema failed: ${validated.errors.map((e) => e.message).join(", ")}`,
@@ -64,6 +64,7 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
     description: [],
     schema: {
       kind: "success",
+      context: "tool",
       typeDeclarations: {},
       source: {
         text: "",

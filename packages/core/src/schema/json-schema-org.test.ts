@@ -16,15 +16,13 @@ function textNode(source: string, path = "schema.ts"): MappedText {
 }
 
 function compile(source: string, path = "schema.ts"): Schema {
-  const parsed = parseSchema(textNode(source, path));
+  const parsed = parseSchema(textNode(source, path), "namespace");
   if (parsed.kind !== "success") {
     throw new Error(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  const validated = validateSchema(parsed, {
-    kind: "namespace",
-  });
+  const validated = validateSchema(parsed, null);
   if (validated.kind !== "success") {
     throw new Error(
       `Validation failed: ${validated.errors.map((e) => e.message).join(", ")}`,
@@ -39,16 +37,13 @@ function compileTemplate(
   path = "template-schema.ts",
 ): Schema {
   const ns = compile(namespaceSource);
-  const parsed = parseSchema(textNode(templateSource, path));
+  const parsed = parseSchema(textNode(templateSource, path), "template");
   if (parsed.kind !== "success") {
     throw new Error(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
     );
   }
-  const validated = validateSchema(parsed, {
-    kind: "template",
-    namespaceSchema: ns,
-  });
+  const validated = validateSchema(parsed, ns);
   if (validated.kind !== "success") {
     throw new Error(
       `Validation failed: ${validated.errors.map((e) => e.message).join(", ")}`,

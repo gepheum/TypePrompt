@@ -10,10 +10,7 @@ import type {
   LooseJsonValue,
 } from "../json/json-types.js";
 import { parseSchema } from "../schema/schema-parser.js";
-import type {
-  Schema,
-  SchemaValidationContext,
-} from "../schema/schema-types.js";
+import type { Schema } from "../schema/schema-types.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import type { TextSpan } from "../util/shared-types.js";
 import type { CTag } from "./ctag-types.js";
@@ -29,17 +26,14 @@ function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const parseResult = parseSchema(sourceSpan);
+  const parseResult = parseSchema(sourceSpan, "namespace");
   if (parseResult.kind !== "success") {
     const { errors } = parseResult;
     throw new Error(
       `Schema parse failed: ${errors.map((e) => e.message).join(", ")}`,
     );
   }
-  const template: SchemaValidationContext = {
-    kind: "namespace",
-  };
-  const schema = validateSchema(parseResult, template);
+  const schema = validateSchema(parseResult, null);
   if (schema.kind === "error") {
     const { errors } = schema;
     throw new Error(

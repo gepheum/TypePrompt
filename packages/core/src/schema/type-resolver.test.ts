@@ -9,6 +9,7 @@ import type {
   Interface,
   PrimitiveType,
   Schema,
+  SchemaContext,
   SchemaView,
   SharedTypeName,
   StringLiteral,
@@ -25,8 +26,12 @@ import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function typeName(text: string): TypeName {
-  return { kind: "type-name", name: { text, start: 0, end: 0, path: "" } };
+function typeName(text: string, context: SchemaContext = "template"): TypeName {
+  return {
+    kind: "type-name",
+    name: { text, start: 0, end: 0, path: "" },
+    context,
+  };
 }
 
 function sharedTypeName(text: string): SharedTypeName {
@@ -219,7 +224,7 @@ describe("resolveType - shared-type-name resolution", () => {
       ...EMPTY_SCHEMA,
       sharedDeclarations: {
         Address: typeDecl("Address", INTERFACE),
-        ContactInfo: typeDecl("ContactInfo", typeName("Address")),
+        ContactInfo: typeDecl("ContactInfo", typeName("Address", "namespace")),
       },
     };
     expect(resolveType(sharedTypeName("ContactInfo"), schema)).toMatch({
@@ -310,7 +315,7 @@ describe("resolveMaybeInvalidType - valid resolution", () => {
       typeDeclarations: {},
       sharedDeclarations: {
         Address: typeDecl("Address", INTERFACE),
-        ContactInfo: typeDecl("ContactInfo", typeName("Address")),
+        ContactInfo: typeDecl("ContactInfo", typeName("Address", "namespace")),
       },
     };
     expect(

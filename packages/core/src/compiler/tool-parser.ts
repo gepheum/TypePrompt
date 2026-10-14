@@ -48,7 +48,7 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
     ...checkTemplateOrToolSourcePath(name, namespace, toolNode.path),
   );
 
-  let schema: SchemaParseResult | null = null;
+  let schema: SchemaParseResult<"tool"> | null = null;
   let description: ToolDescription | null = null;
 
   const requiredTags = ["description", "schema"] as const;
@@ -81,7 +81,7 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
           errors.push(...textContent.errors);
         } else {
           warnings.push(...textContent.warnings);
-          const parsed = parseSchema(textContent.text);
+          const parsed = parseSchema(textContent.text, "tool");
           if (parsed.kind === "error") {
             errors.push(...parsed.errors);
           } else {

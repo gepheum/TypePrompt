@@ -110,7 +110,7 @@ class TemplateParser {
       tag: this.templateNode.tag,
       name: name.value,
       namespace: namespace?.value ?? null,
-      schema: this.schema as SchemaParseResult,
+      schema: this.schema as SchemaParseResult<"template">,
       tools: this.tools,
       outputFormat: this.outputFormat,
       contents: contents!,
@@ -197,7 +197,7 @@ class TemplateParser {
       return;
     }
     this.warnings.push(...textContent.warnings);
-    const schema = parseSchema(textContent.text);
+    const schema = parseSchema(textContent.text, "template");
     if (schema.kind === "error") {
       this.errors.push(...schema.errors);
     }
@@ -690,7 +690,7 @@ class TemplateParser {
   }
 
   private readonly errors: InternalError[] = [];
-  private schema: SchemaParseResult | InternalErrors | null = null;
+  private schema: SchemaParseResult<"template"> | InternalErrors | null = null;
   private tools: StrictJsonValue | null = null;
   private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();

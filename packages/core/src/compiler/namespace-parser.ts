@@ -66,13 +66,11 @@ export function parseNamespace(
   warnings.push(...textContent.warnings);
 
   let schema: SchemaOrError;
-  const schemaParseResult = parseSchema(textContent.text);
+  const schemaParseResult = parseSchema(textContent.text, "namespace");
   if (schemaParseResult.kind === "error") {
     schema = { ...schemaParseResult, definitionLinks: [] };
   } else {
-    schema = validateSchema(schemaParseResult, {
-      kind: "namespace",
-    });
+    schema = validateSchema(schemaParseResult, null);
     definitionLinks.push(...schema.definitionLinks);
   }
 
