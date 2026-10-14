@@ -68,20 +68,18 @@ export function getNameDependencies(
       case "record": {
         return collect(type.valueType, scope);
       }
-      case "shared-type-name": {
-        scope = "shared";
-        if (mode === "cycle-detection") {
-          return null;
-        }
-        // fallthrough
-      }
+      case "shared-type-name":
       case "type-name": {
-        if (
-          type.kind === "type-name" &&
-          type.context === "namespace" &&
-          schema.sharedDeclarations !== schema.typeDeclarations
-        ) {
-          scope = "shared";
+        const shared =
+          type.kind === "shared-type-name" ||
+          (type.context === "namespace" &&
+            schema.sharedDeclarations !== schema.typeDeclarations);
+        if (shared) {
+          if (mode === "cycle-detection") {
+            return null;
+          } else {
+            scope = "shared";
+          }
         }
         const typeName = type.name.text;
         if (deps[scope].has(typeName)) {
