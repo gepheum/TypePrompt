@@ -11,6 +11,16 @@ const languageItems = [
   { text: "C#", link: "/languages/csharp" },
 ];
 
+const referenceSidebar = [
+  {
+    text: "Language specification",
+    items: [
+      { text: "Template syntax", link: "/reference" },
+      { text: "Schema language", link: "/schema" },
+    ],
+  },
+];
+
 export default defineConfig({
   title: "TypePrompt",
   description: "End-to-end type safety for LLM prompts.",
@@ -40,13 +50,38 @@ export default defineConfig({
     logo: { light: "/favicon.svg", dark: "/favicon.svg" },
 
     nav: [
-      { text: "Guide", link: "/guide/" },
-      { text: "Reference", link: "/reference" },
-      { text: "Schema", link: "/schema" },
-      { text: "Template overrides", link: "/template-overrides" },
-      { text: "Examples", link: "/examples" },
-      { text: "Languages", items: languageItems },
+      { text: "Guide", link: "/guide/", activeMatch: "^/guide/" },
+      {
+        text: "Reference",
+        link: "/reference",
+        activeMatch: "^/(reference|schema)",
+      },
+      { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
+      { text: "Examples", link: "/examples", activeMatch: "^/examples" },
     ],
+
+    sidebar: {
+      "/guide/": [
+        {
+          text: "Getting started",
+          items: [{ text: "Introduction", link: "/guide/" }],
+        },
+        {
+          text: "Advanced workflows",
+          items: [
+            { text: "Template overrides", link: "/guide/template-overrides" },
+          ],
+        },
+      ],
+      "/reference": referenceSidebar,
+      "/schema": referenceSidebar,
+      "/languages/": [
+        {
+          text: "Supported languages",
+          items: languageItems,
+        },
+      ],
+    },
 
     outline: {
       level: [2, 3],
