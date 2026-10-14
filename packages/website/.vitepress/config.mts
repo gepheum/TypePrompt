@@ -11,12 +11,22 @@ const languageItems = [
   { text: "C#", link: "/languages/csharp" },
 ];
 
-const referenceSidebar = [
+const docsSidebar = [
+  {
+    text: "Getting started",
+    items: [{ text: "Introduction", link: "/guide/" }],
+  },
   {
     text: "Language specification",
     items: [
       { text: "Template syntax", link: "/reference" },
       { text: "Schema language", link: "/schema" },
+    ],
+  },
+  {
+    text: "Advanced topics",
+    items: [
+      { text: "Template overrides", link: "/template-overrides" },
     ],
   },
 ];
@@ -50,31 +60,20 @@ export default defineConfig({
     logo: { light: "/favicon.svg", dark: "/favicon.svg" },
 
     nav: [
-      { text: "Guide", link: "/guide/", activeMatch: "^/guide/" },
       {
-        text: "Reference",
-        link: "/reference",
-        activeMatch: "^/(reference|schema)",
+        text: "Docs",
+        link: "/guide/",
+        activeMatch: "^/(guide|reference|schema|template-overrides)",
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
     ],
 
     sidebar: {
-      "/guide/": [
-        {
-          text: "Getting started",
-          items: [{ text: "Introduction", link: "/guide/" }],
-        },
-        {
-          text: "Advanced workflows",
-          items: [
-            { text: "Template overrides", link: "/guide/template-overrides" },
-          ],
-        },
-      ],
-      "/reference": referenceSidebar,
-      "/schema": referenceSidebar,
+      "/guide/": docsSidebar,
+      "/reference": docsSidebar,
+      "/schema": docsSidebar,
+      "/template-overrides": docsSidebar,
       "/languages/": [
         {
           text: "Supported languages",

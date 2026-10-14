@@ -89,7 +89,7 @@ val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 ```
 
-If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the full guide →](/guide/#getting-started)
+If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
 
 ## Works with your stack
 

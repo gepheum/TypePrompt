@@ -24,7 +24,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 - **End-to-end type safety**: Enforces compile-time type safety across every stage of the LLM lifecycle: resolving template placeholders, parsing model responses, and dispatching tool calls.
 - **TypeScript-based SDL**: Define schemas with familiar TypeScript types and generate standard JSON Schemas (OpenAI, Gemini, Anthropic).
 - **Validated few-shot examples**: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
-- **Prompt variants & [template overrides](/guide/template-overrides)**: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
+- **Prompt variants & [template overrides](/template-overrides)**: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
 - **Flexible input formatting**: Format complex input types using JSON, YAML, CSV, or [TOON](https://toonformat.dev) without changing application code.
 - **Custom structured metadata (`<meta>`)**: Define your own `Meta` schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
 - **Developer experience & tooling**: Official VS Code extension, standalone Language Server (`npx @typeprompt/language-server`), CLI watch mode, and built-in template formatter (`npx typeprompt format`).
