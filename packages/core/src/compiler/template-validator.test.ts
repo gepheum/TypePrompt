@@ -804,6 +804,70 @@ describe("validateTemplate - tools validation", () => {
       ],
     });
   });
+
+  it("accepts and links a tool even when the tool has validation errors", () => {
+    const brokenTool: ToolValidationResult = {
+      kind: "error",
+      tool: {
+        kind: "tool",
+        name: {
+          text: "brokenTool",
+          start: 10,
+          end: 20,
+          path: "tools/Broken.xml",
+        },
+        namespace: null,
+        description: [],
+        schema: {
+          kind: "success",
+          context: "tool",
+          typeDeclarations: {},
+          source: { text: "", start: 0, end: 0 },
+          path: "",
+        },
+        warnings: [],
+      },
+      errors: [
+        {
+          message: "Tool schema is invalid",
+          span: { start: 0, end: 0, path: "tools/Broken.xml" },
+        },
+      ],
+      definitionLinks: [],
+    };
+
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="Research">
+          <schema>
+            type Input = string;
+            type Output = string;
+          </schema>
+          <tools>
+            - tool: brokenTool
+          </tools>
+          <system>Sys</system>
+          <user>Usr</user>
+        </template>
+      `,
+      path: "prompts/Research.xml",
+      namespaceTools: { brokenTool },
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      definitionLinks: [
+        {
+          definition: {
+            text: "brokenTool",
+            path: "tools/Broken.xml",
+            start: 10,
+            end: 20,
+          },
+        },
+      ],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

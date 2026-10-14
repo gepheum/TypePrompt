@@ -702,9 +702,7 @@ function makeToolsType(namespaceTools: {
   const toolNames: { [v: string]: TextSpan } = Object.fromEntries(
     Object.entries(namespaceTools).map(([name, tool]) => [
       name,
-      tool.kind === "tool"
-        ? tool.tool.name
-        : { path: "", start: 0, end: 0, text: name },
+      tool.tool.name,
     ]),
   );
   return {
