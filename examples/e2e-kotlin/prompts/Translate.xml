@@ -1,16 +1,24 @@
 <template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
       targetLanguage: string;
     }
 
-    type Output = string;
+    interface Output {
+      /** The translated text in the target language. */
+      translation: string;
+      /** The detected source language of the input text. */
+      detectedSourceLanguage: string;
+      /** Cultural, linguistic, or register notes, if any. */
+      notes?: string;
+    }
   </schema>
 
   <system>
     You are a professional translator. Translate the given text into the requested
-    language. Output only the translated text — no explanations, no commentary.
+    language. Provide the translation, the detected source language, and any useful
+    linguistic or register notes.
   </system>
 
   <user>
@@ -25,11 +33,17 @@
     - input:
         text: "The meeting is scheduled for Monday at 3 PM."
         targetLanguage: French
-      output: "La réunion est prévue pour lundi à 15h."
+      output:
+        translation: "La réunion est prévue pour lundi à 15h."
+        detectedSourceLanguage: English
+        notes: "Standard business register."
 
     - input:
         text: "Please review the attached document."
         targetLanguage: Spanish
-      output: "Por favor, revise el documento adjunto."
+      output:
+        translation: "Por favor, revise el documento adjunto."
+        detectedSourceLanguage: English
+        notes: "Uses formal address (usted)."
   </examples>
 </template>

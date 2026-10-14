@@ -251,7 +251,6 @@ _templates_data: Final = _internal.Templates(
     signature="",
     templates=dict(),
     tools=dict(),
-    single_namespace=True,
     source_files=dict(),
 )
 
@@ -284,7 +283,7 @@ def _create_prompts(data: _internal.Templates) -> Prompts:
 
 
 # <static:python-logic>
-_meta_type_adapter: Final = pydantic.TypeAdapter(Meta)
+_meta_type_adapter: Final = pydantic.TypeAdapter(cast(Any, Meta))
 
 
 def _parse_response_impl[Output](response: str, prompt: Prompt[Output, Any]) -> Output:
@@ -637,7 +636,6 @@ class _TemplateOverrider:
                 signature=_templates_data.signature,
                 templates={**_templates_data.templates, **overrides_obj.templates},
                 tools={**_templates_data.tools, **overrides_obj.tools},
-                single_namespace=True,
                 source_files={
                     **_templates_data.source_files,
                     **overrides_obj.source_files,

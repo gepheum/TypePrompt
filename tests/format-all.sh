@@ -37,3 +37,7 @@ cd ..
 cd ../examples/e2e-kotlin
 ./format.sh
 cd ../../tests
+
+cd ../examples/e2e-python
+./format.sh
+cd ../../tests

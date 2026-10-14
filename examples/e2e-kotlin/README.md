@@ -1,6 +1,6 @@
 # TypePrompt Kotlin End-to-End Example
 
-A simple command-line translation tool built with Kotlin, TypePrompt, and the official OpenAI Java/Kotlin SDK.
+A command-line translation tool built with Kotlin, TypePrompt, and the official OpenAI Java/Kotlin SDK, demonstrating **structured JSON output**.
 
 ---
 

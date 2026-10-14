@@ -1,0 +1,17 @@
+<tool name="getWeather">
+  <description>
+    Get the current weather and forecast for a given city.
+  </description>
+
+  <schema>
+    interface Input {
+      city: string;
+    }
+
+    interface Output {
+      temperatureC: number;
+      condition: string;
+      forecast: string;
+    }
+  </schema>
+</tool>

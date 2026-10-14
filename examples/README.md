@@ -22,4 +22,5 @@ This directory contains self-contained TypePrompt examples demonstrating various
 
 | Directory | Description | Stack |
 |---|---|---|
-| **[e2e-kotlin](e2e-kotlin)** | Runnable CLI translation tool calling OpenAI | Kotlin, Gradle, OpenAI Java SDK |
+| **[e2e-kotlin](e2e-kotlin)** | Runnable CLI translation tool with structured JSON output calling OpenAI | Kotlin, Gradle, OpenAI Java SDK |
+| **[e2e-python](e2e-python)** | Runnable city day-planner with weather tool and structured JSON output calling Claude | Python, Anthropic Python SDK |

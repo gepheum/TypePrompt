@@ -27,10 +27,12 @@ node ../packages/cli/dist/main.js format -p projects/e01
 node ../packages/cli/dist/main.js format -p projects/e02
 node ../packages/cli/dist/main.js format -p projects/e03
 node ../packages/cli/dist/main.js format -p ../examples/e2e-kotlin
+node ../packages/cli/dist/main.js format -p ../examples/e2e-python
 node ../packages/cli/dist/main.js format --ci -p projects/e01
 node ../packages/cli/dist/main.js format --ci -p projects/e02
 node ../packages/cli/dist/main.js format --ci -p projects/e03
 node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-kotlin
+node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-python
 
 # Run codegen
 node ../packages/cli/dist/main.js gen -p projects/01
@@ -44,6 +46,7 @@ node ../packages/cli/dist/main.js gen -p projects/e01
 node ../packages/cli/dist/main.js gen -p projects/e02
 node ../packages/cli/dist/main.js gen -p projects/e03
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-kotlin
+node ../packages/cli/dist/main.js gen -p ../examples/e2e-python
 
 # Run Python unit tests
 cd python
@@ -64,6 +67,16 @@ cd ..
 # Build Kotlin e2e example
 cd ../examples/e2e-kotlin
 ./gradlew build
+cd ../../tests
+
+# Build and typecheck Python e2e example
+cd ../examples/e2e-python
+PY_BIN="../../tests/python/.venv/bin/python"
+if [ -f ".venv/bin/python" ]; then
+  PY_BIN=".venv/bin/python"
+fi
+"$PY_BIN" -m py_compile src/main.py src/gen/prompts.py
+npx pyright --pythonpath "$PY_BIN" src/
 cd ../../tests
 
 # Run C# unit tests

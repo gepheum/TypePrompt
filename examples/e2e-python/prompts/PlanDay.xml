@@ -1,0 +1,77 @@
+<template name="PlanDay">
+  <meta>
+    model: claude-3-7-sonnet-latest
+    temperature: 0.7
+  </meta>
+
+  <tools>
+    - tool: getWeather
+  </tools>
+
+  <schema>
+    interface Input {
+      city: string;
+      interests: string;
+    }
+
+    interface Output {
+      city: string;
+      weatherSummary: string;
+      activities: {
+        title: string;
+        timeOfDay: "morning" | "afternoon" | "evening";
+        description: string;
+        indoor: boolean;
+      }[];
+      packingTip: string;
+    }
+  </schema>
+
+  <system>
+    You are a friendly, knowledgeable local city guide. When helping a user plan their day:
+    1. First check the current weather in their destination using the <c
+      >getWeather</c> tool.
+    2. Recommend engaging activities tailored to both their interests and the current weather.
+    3. Return your final plan as a structured JSON object matching the output schema.
+  </system>
+
+  <user>
+    I am visiting <insert val="input.city" /> today! My interests are: <insert
+        val="input.interests"
+      />.
+    What do you recommend I do?
+  </user>
+
+  <examples>
+    - input:
+        city: Seattle
+        interests: "books and coffee"
+      intermediateSteps:
+        - toolCalls:
+            - callId: call_weather_1
+              tool: getWeather
+              input:
+                city: Seattle
+              output:
+                temperatureC: 13
+                condition: rainy
+                forecast: "Light rain throughout the day with overcast skies."
+      output:
+        city: Seattle
+        weatherSummary: "13°C, rainy with overcast skies"
+        activities:
+          - title: "Browse Elliott Bay Book Company"
+            timeOfDay: morning
+            description: "Explore the multi-level stacks and cozy reading nooks in Pioneer Square."
+            indoor: true
+          - title: "Coffee tasting at Ghost Alley Espresso"
+            timeOfDay: afternoon
+            description: "Warm up with artisan pour-overs tucked away near Pike Place Market."
+            indoor: true
+          - title: "Dinner and poetry reading in Capitol Hill"
+            timeOfDay: evening
+            description: "Enjoy an evening meal and a quiet corner to read in Capitol Hill."
+            indoor: true
+        packingTip: "Bring a waterproof jacket and an umbrella for walking between stops."
+  </examples>
+</template>

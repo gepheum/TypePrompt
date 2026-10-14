@@ -41,6 +41,12 @@ examples/e2e-kotlin/src/main/kotlin/gen/
 examples/e2e-kotlin/.idea/
 examples/e2e-kotlin/**/*.iml
 
+examples/e2e-python/src/gen/
+examples/e2e-python/**/__pycache__/
+examples/e2e-python/**/*.pyc
+examples/e2e-python/.ruff_cache
+examples/e2e-python/.venv
+
 tests/python/.ruff_cache
 tests/python/.venv
 tests/python/__pycache/
@@ -63,3 +69,4 @@ playground
 .kotlin/
 *.iml
 *.tsbuildinfo
+.venv

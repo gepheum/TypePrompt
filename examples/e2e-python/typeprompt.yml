@@ -1,0 +1,4 @@
+include: prompts/**/*.xml
+gen:
+  python:
+    file: src/gen/prompts.py
