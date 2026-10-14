@@ -601,6 +601,61 @@ describe("validateSchema - shared type names", () => {
     expect(result).toMatch({ kind: "success" });
   });
 
+  it("accepts shared.X when X refers to another type in namespace schema", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.User;",
+        "template",
+      ),
+      makeTemplateContext(
+        [
+          "type Address = { city: string; };",
+          "type User = { name: string; address: Address; };",
+        ].join("\n"),
+      ),
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("flattens a shared union member into a template union", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Status | 'custom';",
+        "template",
+      ),
+      makeTemplateContext("type Status = 'active' | 'inactive';"),
+    );
+    expect(result).toMatch({ kind: "success" });
+    if (result.kind !== "success") throw new Error();
+    const outputUnion = result.typeDeclarations["Output"]!.valueType as Union;
+    const unionMembers = result.unionToMembers.get(outputUnion)!;
+    expect(unionMembers.kind).toBe("strings");
+    if (unionMembers.kind === "strings") {
+      expect(Object.keys(unionMembers.values).sort()).toMatch([
+        "active",
+        "custom",
+        "inactive",
+      ]);
+    }
+  });
+
+  it("accepts a recursive discriminated union in namespace schema used in template", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = string;\ntype Output = shared.Node;",
+        "template",
+      ),
+      makeTemplateContext(
+        [
+          "type Node = Leaf | Branch;",
+          "type Leaf = { kind: 'leaf'; value: number; };",
+          "type Branch = { kind: 'branch'; left: Node; right: Node; };",
+        ].join("\n"),
+      ),
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
   it("reports error for shared.X in namespace context", () => {
     const result = validateSchema(
       parseDeclarations("type Output = shared.Profile;", "namespace"),

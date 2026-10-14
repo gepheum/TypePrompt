@@ -264,6 +264,7 @@ export type DiscriminatedUnionMembers = {
       readonly discriminant: StringLiteral | BooleanLiteral;
       readonly resolved: Interface;
       readonly unresolved: UnionMemberType;
+      /** True if this union member contains a reference to the union type. */
       readonly isRecursive: boolean;
     };
   };

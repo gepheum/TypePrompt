@@ -23,10 +23,14 @@ rsync -a --delete ../examples/05-conditional-logic/prompts/ projects/05/prompts/
 rsync -a --delete ../examples/06-shared-types/prompts/ projects/06/prompts/
 rsync -a --delete ../examples/07-namespaces/prompts/ projects/07/prompts/
 
-node ../packages/cli/dist/main.js format --ci -p projects/e01
-node ../packages/cli/dist/main.js format --ci -p projects/e02
-node ../packages/cli/dist/main.js format --ci -p projects/e03
-node ../packages/cli/dist/main.js format --ci -p ../examples/e2e-kotlin
+node ../packages/cli/dist/main.js format -p projects/e01
+node ../packages/cli/dist/main.js format -p projects/e02
+node ../packages/cli/dist/main.js format -p projects/e03
+node ../packages/cli/dist/main.js format -p ../examples/e2e-kotlin
+node ../packages/cli/dist/main.js format -p --ci projects/e01
+node ../packages/cli/dist/main.js format -p --ci projects/e02
+node ../packages/cli/dist/main.js format -p --ci projects/e03
+node ../packages/cli/dist/main.js format -p --ci ../examples/e2e-kotlin
 
 # Run codegen
 node ../packages/cli/dist/main.js gen -p projects/01

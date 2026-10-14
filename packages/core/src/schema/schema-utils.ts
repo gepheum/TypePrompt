@@ -76,6 +76,13 @@ export function getNameDependencies(
         // fallthrough
       }
       case "type-name": {
+        if (
+          type.kind === "type-name" &&
+          type.context === "namespace" &&
+          schema.sharedDeclarations !== schema.typeDeclarations
+        ) {
+          scope = "shared";
+        }
         const typeName = type.name.text;
         if (deps[scope].has(typeName)) {
           return null;

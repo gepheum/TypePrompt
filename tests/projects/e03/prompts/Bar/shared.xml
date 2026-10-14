@@ -11,4 +11,8 @@
   type Squares = SquareHolder[];
 
   type SquaresHolder = { squares: Squares };
+
+  type Node = Leaf | Branch;
+  type Leaf = { kind: "leaf"; value: number };
+  type Branch = { kind: "branch"; left: Node; right: Node };
 </namespace>

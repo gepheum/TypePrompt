@@ -12,6 +12,7 @@
       squares: shared.Square[];
       squares2: shared.Squares;
       squareHolders: shared.SquaresHolder;
+      myNode: shared.Leaf | shared.Branch;
     };
   </schema>
   <description>
