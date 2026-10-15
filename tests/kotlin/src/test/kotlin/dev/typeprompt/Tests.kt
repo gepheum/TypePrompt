@@ -95,7 +95,7 @@ class Test02StructuredOutput_TriageTicket {
     @Test
     fun testJsonOutputFormat() {
         val format = assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
-        val schema = format.jsonSchema.jsonObject
+        val schema = format.jsonSchema
         assertEquals("object", schema["type"]?.jsonPrimitive?.content)
         assertTrue(schema["properties"]?.jsonObject?.containsKey("category") == true)
         assertTrue(schema["properties"]?.jsonObject?.containsKey("urgency") == true)
@@ -337,7 +337,7 @@ class Test03Tools_ResearchQuestion {
 
     @Test
     fun testWebSearchToolInputJsonSchema() {
-        val schema = prompt.tools["webSearch"]?.inputJsonSchema?.jsonObject
+        val schema = prompt.tools["webSearch"]?.inputJsonSchema
         assertNotNull(schema)
         assertEquals("object", schema["type"]?.jsonPrimitive?.content)
         assertEquals(listOf("query"), schema["required"]?.jsonArray?.map { it.jsonPrimitive.content })

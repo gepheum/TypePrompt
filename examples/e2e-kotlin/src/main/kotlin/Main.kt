@@ -57,7 +57,7 @@ suspend fun <Output, ToolExecutor> executePrompt(
     val tools: List<ChatCompletionTool> =
         prompt.tools.values.map { t ->
             val jsonMap: Map<String, JsonValue> =
-                (t.inputJsonSchema as? JsonObject)?.mapValues { it.value.toJsonValue() } ?: emptyMap()
+                t.inputJsonSchema.mapValues { it.value.toJsonValue() }
 
             ChatCompletionTool.builder()
                 .function(
@@ -108,7 +108,7 @@ suspend fun <Output, ToolExecutor> executePrompt(
                     if (prompt.outputFormat is JsonOutputFormat) {
                         val jsonFormat = prompt.outputFormat as JsonOutputFormat
                         val schemaMap: Map<String, JsonValue> =
-                            (jsonFormat.jsonSchema as? JsonObject)?.mapValues { it.value.toJsonValue() } ?: emptyMap()
+                            jsonFormat.jsonSchema.mapValues { it.value.toJsonValue() }
 
                         responseFormat(
                             ResponseFormatJsonSchema.builder()

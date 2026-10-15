@@ -133,7 +133,7 @@ sealed class OutputFormat
 
 data class JsonOutputFormat internal constructor(
     val stringifiedJsonSchema: String,
-    val jsonSchema: JsonElement,
+    val jsonSchema: JsonObject,
 ) : OutputFormat()
 
 class TextOutputFormat : OutputFormat()
@@ -141,7 +141,7 @@ class TextOutputFormat : OutputFormat()
 data class Tool(
     val name: String,
     val description: String,
-    val inputJsonSchema: JsonElement,
+    val inputJsonSchema: JsonObject,
 )
 
 /**
@@ -1021,7 +1021,7 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
             Tool(
                 name = templateTool.name,
                 description = toolSpec.description,
-                inputJsonSchema = toolSpec.inputJsonSchema,
+                inputJsonSchema = toolSpec.inputJsonSchema.jsonObject,
             )
     }
 
@@ -1036,7 +1036,7 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
                             JsonElement.serializer(),
                             template.outputJsonSchema,
                         ),
-                    jsonSchema = template.outputJsonSchema,
+                    jsonSchema = template.outputJsonSchema.jsonObject,
                 )
             fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)
