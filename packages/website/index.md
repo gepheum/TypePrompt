@@ -70,12 +70,36 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
     Action: <insert val="input.action" />
     Food bowl: <insert val="input.bowlStatus" />
   </user>
+
+  <examples>
+    - input:
+        action: "Yowl at 3am"
+        bowlStatus: half-full
+      output:
+        demand: feed-me
+        urgency: crisis
+        humanAction: "Shake the bowl to cover the bottom."
+
+    - input:
+        action: "Knock glass"
+        bowlStatus: empty
+      output:
+        demand: kneel
+        urgency: crisis
+        humanAction: "Apologize and refill the bowl."
+  </examples>
 </template>
 ```
 
-`npx typeprompt gen` turns it into a native, type-safe API for your target language. Here's application code calling the generated Kotlin API:
+`npx typeprompt gen` turns it into a native, type-safe API for your target language. In your application code:
 
 ```kotlin
+// MyApp.kt
+
+import ai.myapp.generated.prompts.prompts
+import ai.myapp.generated.prompts.Schema.DecodeCatMood
+
+// 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
     DecodeCatMood.Input(
         action = "Knock glass",
@@ -83,8 +107,9 @@ val prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// ... send prompt.systemMessage / prompt.userMessage to your LLM ...
+// ... send prompt to LLM ...
 
+// 2. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 ```
