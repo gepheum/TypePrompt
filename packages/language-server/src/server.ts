@@ -343,11 +343,7 @@ class Project {
   }
 
   public matchesInclude(relativePath: string): boolean {
-    let { include } = this.config;
-    if (typeof include === "string") {
-      include = [include];
-    }
-    return include.some((p) => minimatch(relativePath, p));
+    return this.config.include.some((p) => minimatch(relativePath, p));
   }
 
   /**

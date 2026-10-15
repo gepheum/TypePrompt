@@ -35,7 +35,7 @@ describe("collectTemplateFiles", () => {
     );
 
     const files = await collectTemplateFiles(tempDir, {
-      include: "prompts/**/*.xml",
+      include: ["prompts/**/*.xml"],
     });
 
     expect(files).toMatch({
@@ -47,7 +47,7 @@ describe("collectTemplateFiles", () => {
     let error: unknown;
     try {
       await collectTemplateFiles(tempDir, {
-        include: "prompts/**/*.xml",
+        include: ["prompts/**/*.xml"],
       });
     } catch (e) {
       error = e;
@@ -73,7 +73,7 @@ describe("collectTemplateFiles", () => {
     let error: unknown;
     try {
       await collectTemplateFiles(projectDir, {
-        include: "../outside/*.xml",
+        include: ["../outside/*.xml"],
       });
     } catch (e) {
       error = e;

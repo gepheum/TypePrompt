@@ -5,7 +5,7 @@ import type { InternalError, InternalErrors } from "../util/shared-types.js";
 export type Config = {
   /** Glob pattern(s) to match template files to be processed. */
   // Usually: 'prompts/**/*.xml'
-  readonly include: string | readonly string[];
+  readonly include: readonly string[];
 
   readonly gen?: {
     readonly cpp?: {
@@ -91,12 +91,16 @@ export function parseConfigYaml(
 
 const RawConfigSchema = z
   .object({
-    include: z.union([
-      z.string().min(1, "must be a non-empty string"),
-      z
-        .array(z.string().min(1, "must be a non-empty string"))
-        .min(1, "must not be empty"),
-    ]),
+    include: z
+      .union([
+        z.string().min(1, "must be a non-empty string"),
+        z
+          .array(z.string().min(1, "must be a non-empty string"))
+          .min(1, "must not be empty"),
+      ])
+      .transform((val): readonly string[] =>
+        typeof val === "string" ? [val] : val,
+      ),
     gen: z
       .object({
         cpp: z

@@ -87,7 +87,7 @@ describe("initializeProject", () => {
       );
     }
 
-    expect(configResult.config.include).toBe("prompts/**/*.xml");
+    expect(configResult.config.include).toMatch(["prompts/**/*.xml"]);
     expect(configResult.config.gen).toMatch({
       cpp: { file: "./prompts.gen.h", rootNamespace: "typeprompt" },
       csharp: { file: "./Prompts.generated.cs", rootNamespace: "TypePrompt" },

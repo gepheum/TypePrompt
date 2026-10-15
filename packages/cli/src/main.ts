@@ -47,11 +47,9 @@ class WatchModeMainLoop {
     private readonly config: Config,
     private readonly mode: "watch" | "once",
   ) {
-    const { include } = config;
-    this.includes =
-      typeof include === "string"
-        ? [Paths.join(resolvedProject, include)]
-        : include.map((inc) => Paths.join(resolvedProject, inc));
+    this.includes = config.include.map((inc) =>
+      Paths.join(resolvedProject, inc),
+    );
   }
 
   async maybeReadPatchBase(): Promise<void> {

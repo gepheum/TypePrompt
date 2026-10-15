@@ -21,7 +21,7 @@ describe("parseConfigYaml", () => {
     expect(result).toMatch({
       kind: "success",
       config: {
-        include: "prompts/*.xml",
+        include: ["prompts/*.xml"],
         gen: { typescript: { file: "out/prompts.ts" } },
       },
     });
@@ -42,7 +42,7 @@ describe("parseConfigYaml", () => {
     expect(result).toMatch({
       kind: "success",
       config: {
-        include: "prompts/*.tp",
+        include: ["prompts/*.tp"],
         gen: {
           typescript: { file: "out/prompts.ts" },
           python: { file: "out/prompts.py" },
@@ -55,7 +55,7 @@ describe("parseConfigYaml", () => {
     const result = parse("include: prompts/*.xml\ngen: {}");
     expect(result).toMatch({
       kind: "success",
-      config: { include: "prompts/*.xml", gen: {} },
+      config: { include: ["prompts/*.xml"], gen: {} },
     });
   });
 

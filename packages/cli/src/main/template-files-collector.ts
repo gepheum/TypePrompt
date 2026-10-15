@@ -8,10 +8,7 @@ export async function collectTemplateFiles(
   project: string,
   config: Config,
 ): Promise<{ [path: string]: string }> {
-  let { include } = config;
-  if (typeof include === "string") {
-    include = [include];
-  }
+  const { include } = config;
   const patterns = include.map((pattern) => Paths.join(project, pattern));
   const templateFiles = await glob(patterns, {
     withFileTypes: true,
