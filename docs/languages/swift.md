@@ -220,15 +220,11 @@ public enum TicketCategory : String, Codable, Sendable {
 }
 ```
 
-- **Raw value**: Access `.rawValue` to retrieve the wire-format string (e.g. `TicketCategory.technicalIssue.rawValue` returns `"technical-issue"`).
-- **Initialization from raw value**: Use `TicketCategory(rawValue: "billing")` to initialize an enum case from a string, returning `nil` if unrecognized.
+Access `.rawValue` to retrieve the string value:
 
 ```swift
 let category = Schema.TriageTicket.TicketCategory.billing
 print(category.rawValue) // "billing"
-
-let parsed = Schema.TriageTicket.TicketCategory(rawValue: "billing")
-print(parsed == .billing) // true
 ```
 
 ### Discriminated unions
@@ -242,24 +238,6 @@ indirect public enum PageNode : Codable, Sendable {
     case kindParagraph(PageNode_KindParagraph)
     case kindButton(PageNode_KindButton)
     case kindSection(PageNode_KindSection)
-}
-```
-
-#### Pattern matching with `switch`
-
-Swift provides exhaustive pattern matching over the union enum cases without requiring a `default` case:
-
-```swift
-// Exhaustive switch statement
-switch node {
-case .kindHeading(let heading):
-    renderHeading(heading.level, heading.text)
-case .kindParagraph(let paragraph):
-    renderParagraph(paragraph.text)
-case .kindButton(let button):
-    renderButton(button.label, button.url)
-case .kindSection(let section):
-    renderSection(section.title, section.children)
 }
 ```
 

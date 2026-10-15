@@ -173,7 +173,7 @@ using MyCompany.Prompts;
 // Template inputs & outputs
 using TriageInput = MyCompany.Prompts.Schema.TriageTicket.Input;
 using TriageOutput = MyCompany.Prompts.Schema.TriageTicket.Output;
-using Priority = MyCompany.Prompts.Schema.TriageTicket.Priority;
+using TicketCategory = MyCompany.Prompts.Schema.TriageTicket.TicketCategory;
 
 // Tool inputs & outputs
 using SearchInput = MyCompany.Prompts.Schema.WebSearch.Input;
@@ -182,6 +182,97 @@ using SearchOutput = MyCompany.Prompts.Schema.WebSearch.Output;
 // Metadata type
 using Meta = MyCompany.Prompts.Schema.Meta.Meta;
 ```
+
+### Generated records
+
+TypePrompt generates a `public sealed record` for each interface declared in your schema. Instances are constructed using C#'s object initializer syntax:
+
+```csharp
+var input = new Schema.TriageTicket.Input
+{
+    Subject = "Bug report",
+    Body = "Crashes on startup",
+    CustomerTier = Schema.TriageTicket.Input_CustomerTier.Pro,
+    RecentTickets = [
+        new Schema.TriageTicket.Input_RecentTickets
+        {
+            Id = "T-101",
+            Summary = "Cannot login",
+            Category = Schema.TriageTicket.TicketCategory.Billing,
+        },
+    ],
+};
+```
+
+#### Rules & behavior
+
+- **Object initializers**: Properties should be initialized using C#'s object initializer syntax.
+- **Required vs. optional**: Non-optional schema fields are declared as `required` properties (e.g. `public required string Subject { get; init; }`), requiring them at initialization. Optional fields are nullable (`T?`) without `required` and can be omitted.
+- **Literal fields**: Fields whose type is a literal value (e.g. `"success"` or `true`) are omitted from object initialization.
+- **Immutability**: Generated records use `{ get; init; }` properties.
+
+### String unions (enums)
+
+String unions generate C# `enum` types with values mapped to PascalCase:
+
+```csharp
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum TicketCategory
+{
+    [JsonStringEnumMemberName("billing")]
+    Billing,
+    [JsonStringEnumMemberName("technical-issue")]
+    TechnicalIssue,
+    [JsonStringEnumMemberName("feature-request")]
+    FeatureRequest,
+    [JsonStringEnumMemberName("other")]
+    Other,
+}
+```
+
+An extension method `.GetValue()` is generated to retrieve the string value:
+
+```csharp
+var category = Schema.TriageTicket.TicketCategory.Billing;
+Console.WriteLine(category.GetValue()); // "billing"
+```
+
+### Discriminated unions
+
+Discriminated unions generate an `interface` implemented by each variant record:
+
+```csharp
+/// <summary>
+/// A node in the rendered page tree.
+/// </summary>
+[JsonConverter(typeof(PageNode__Converter))]
+public interface PageNode
+{
+}
+```
+
+#### Pattern matching with `switch`
+
+C# pattern matching enables clean switching over the interface variants:
+
+```csharp
+var summary = node switch
+{
+    Schema.GeneratePageTree.PageNode_KindHeading heading =>
+        $"Heading (H{heading.Level}): {heading.Text}",
+    Schema.GeneratePageTree.PageNode_KindParagraph paragraph =>
+        $"Paragraph: {paragraph.Text}",
+    Schema.GeneratePageTree.PageNode_KindButton button =>
+        $"Button: {button.Label} ({button.Url})",
+    Schema.GeneratePageTree.PageNode_KindSection section =>
+        $"Section: {section.Title ?? "(untitled)"} ({section.Children.Count} items)",
+    _ => throw new InvalidOperationException()
+};
+```
+
+### JSON serialization & deserialization
+
+While `prompt.Render*` and `prompt.ParseResponse` handle JSON conversion automatically during prompt execution, all generated types integrate with `System.Text.Json.JsonSerializer` for manual serialization and deserialization (e.g. for logging, caching, or IPC).
 
 ### Multi-namespace projects
 

@@ -216,15 +216,11 @@ enum TriageTicket_TicketCategory {
 }
 ```
 
-- **Serialization**: Call `.toJson()` on an enum value to get its wire-format string (e.g. `TriageTicket_TicketCategory.featureRequest.toJson()` returns `"feature-request"`).
-- **Deserialization**: Call `EnumName.fromJson("wire-value")` to convert a string back into an enum value. Throws a `FormatException` if the value is unrecognized.
+Call `.toJson()` on an enum value to retrieve its string value:
 
 ```dart
 final category = TriageTicket_TicketCategory.bug;
 print(category.toJson()); // "bug"
-
-final parsed = TriageTicket_TicketCategory.fromJson("billing");
-print(parsed == TriageTicket_TicketCategory.billing); // true
 ```
 
 ### Discriminated unions

@@ -181,7 +181,7 @@ use crate::gen::prompts::schema;
 // Template inputs & outputs
 type TriageInput = schema::triage_ticket::Input;
 type TriageOutput = schema::triage_ticket::Output;
-type Priority = schema::triage_ticket::Priority;
+type TicketCategory = schema::triage_ticket::TicketCategory;
 
 // Tool inputs & outputs
 type SearchInput = schema::web_search::Input;
@@ -190,6 +190,76 @@ type SearchOutput = schema::web_search::Output;
 // Metadata type
 type Meta = schema::meta::Meta;
 ```
+
+### Generated structs
+
+TypePrompt generates a `pub struct` for each interface declared in your schema. Instances are constructed using standard Rust struct expression syntax:
+
+```rust
+let input = schema::triage_ticket::Input {
+    subject: "Bug report".to_string(),
+    body: "Crashes on startup".to_string(),
+    customer_tier: schema::triage_ticket::Input_CustomerTier::Pro,
+    recent_tickets: vec![
+        schema::triage_ticket::Input_RecentTickets {
+            id: "T-101".to_string(),
+            summary: "Cannot login".to_string(),
+            category: schema::triage_ticket::TicketCategory::Billing,
+        },
+    ],
+};
+```
+
+#### Rules & behavior
+
+- **Named fields**: Fields should be initialized using standard Rust struct expression syntax.
+- **Required vs. optional**: Non-optional schema fields are required. Optional fields are typed as `Option<T>` (e.g. `suggested_reply: Option<String>`), requiring `None` or `Some(...)` when constructing the struct directly.
+- **Literal fields**: Fields whose type is a literal value (e.g. `"success"` or `true`) are omitted from the struct definition.
+- **Derives**: Structs automatically derive `Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq`.
+
+### String unions (enums)
+
+String unions generate Rust `enum` types with variants mapped to PascalCase:
+
+```rust
+#[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+pub enum TicketCategory {
+    #[serde(rename = "billing")]
+    Billing,
+    #[serde(rename = "technical-issue")]
+    TechnicalIssue,
+    #[serde(rename = "feature-request")]
+    FeatureRequest,
+    #[serde(rename = "other")]
+    Other,
+}
+```
+
+Generated enums implement `.as_str()` and `std::fmt::Display` to retrieve the string value:
+
+```rust
+let category = schema::triage_ticket::TicketCategory::Billing;
+println!("{}", category.as_str()); // "billing"
+```
+
+### Discriminated unions
+
+Discriminated unions generate an `enum` wrapping each variant struct:
+
+```rust
+/// A node in the rendered page tree.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PageNode {
+    KindHeading(PageNode_KindHeading),
+    KindParagraph(PageNode_KindParagraph),
+    KindButton(PageNode_KindButton),
+    KindSection(Box<PageNode_KindSection>),
+}
+```
+
+### JSON serialization & deserialization
+
+While `prompt.render*` and `prompt.parse_response` handle JSON conversion automatically during prompt execution, all generated types implement `serde::Serialize` and `serde::Deserialize` for standalone serialization and deserialization with `serde_json`.
 
 ### Multi-namespace projects
 

@@ -235,8 +235,7 @@ enum class TicketCategory(val value: String) {
 }
 ```
 
-- **Serialization**: Serializes using the `@SerialName` wire-format string (e.g. `TicketCategory.TechnicalIssue` serializes to `"technical-issue"`).
-- **String value**: Access `.value` or call `.toString()` to retrieve the raw wire string directly.
+Access `.value` or call `.toString()` to retrieve the string value:
 
 ```kotlin
 val category = Schema.TriageTicket.TicketCategory.Billing
