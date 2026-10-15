@@ -77,9 +77,9 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
 
 ```kotlin
 val prompt = prompts.renderDecodeCatMood(
-    Schema.DecodeCatMood.Input(
+    DecodeCatMood.Input(
         action = "Knock glass",
-        bowlStatus = Schema.DecodeCatMood.Input_BowlStatus.Empty,
+        bowlStatus = DecodeCatMood.Input_BowlStatus.Empty,
     )
 )
 

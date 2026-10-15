@@ -73,13 +73,13 @@ In your application code:
 // MyApp.kt
 
 import ai.myapp.generated.prompts.prompts
-import ai.myapp.generated.prompts.Schema
+import ai.myapp.generated.prompts.Schema.DecodeCatMood
 
 // 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
-    Schema.DecodeCatMood.Input(
+    DecodeCatMood.Input(
         action = "Knock glass",
-        bowlStatus = Schema.DecodeCatMood.Input_BowlStatus.Empty,
+        bowlStatus = DecodeCatMood.Input_BowlStatus.Empty,
     )
 )
 
