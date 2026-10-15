@@ -235,13 +235,6 @@ enum class TicketCategory(val value: String) {
 }
 ```
 
-Access `.value` or call `.toString()` to retrieve the string value:
-
-```kotlin
-val category = Schema.TriageTicket.TicketCategory.Billing
-println(category.value) // "billing"
-```
-
 ### Discriminated unions
 
 Discriminated unions generate a `@Serializable sealed interface`:

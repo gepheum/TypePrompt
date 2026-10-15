@@ -221,12 +221,7 @@ enum TriageTicket_TicketCategory {
 }
 ```
 
-Call `.toJson()` on an enum value to retrieve its string value:
-
-```dart
-final category = TriageTicket_TicketCategory.bug;
-print(category.toJson()); // "bug"
-```
+Call `.toJson()` on an enum value to retrieve its string value.
 
 ### Discriminated unions
 
