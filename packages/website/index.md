@@ -8,7 +8,7 @@ hero:
   text: End-to-end type safety for LLM prompts
   tagline: Define your Input and Output schemas once. TypePrompt keeps your prompts and your application code from silently drifting apart, catching mismatches at compile time instead of in production.
   image:
-    src: /tilly.svg
+    src: /tilly2.svg
     alt: Tilly
   actions:
     - theme: brand
@@ -29,7 +29,7 @@ features:
   - title: TypeScript-based SDL
     details: Define schemas with familiar TypeScript types and generate standard JSON Schemas for OpenAI, Gemini, and Anthropic.
   - title: Validated few-shot examples
-    details: Author few-shot examples in YAML that are validated against your input and output schemas at compile time.
+    details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.
   - title: Prompt variants & template overrides
     details: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
   - title: Flexible input formatting
