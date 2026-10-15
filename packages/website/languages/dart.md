@@ -202,7 +202,7 @@ final input = TriageTicket_Input(
 
 - **Named parameters**: Every non-literal field is declared as a named parameter in the constructor.
 - **Required vs. optional**: Non-optional schema fields use `required` parameters (e.g. `required this.subject`). Optional fields are nullable (`String?`) and can be omitted during construction (defaulting to `null`).
-- **Literal discriminant fields**: In union variant classes, constant discriminant fields (such as `kind: "heading"`) are omitted from constructor parameters and class properties. Their values are fixed constants emitted directly in `toJson()`.
+- **Literal fields**: Fields whose type is a literal value (e.g. `"success"` or `true`) are omitted from the constructor.
 - **Immutability**: All fields are declared `final`.
 
 ### String unions (enums)
@@ -246,10 +246,9 @@ sealed class GeneratePageTree_PageNode {
 
 #### Pattern matching with `switch`
 
-Because the base class is `sealed`, Dart 3 enables exhaustive pattern matching with `switch` statements and `switch` expressions without requiring a `default` case:
+Because the base class is `sealed`, Dart 3 enables exhaustive pattern matching with `switch` without requiring a `default` case:
 
 ```dart
-// Exhaustive switch expression
 final summary = switch (node) {
   GeneratePageTree_PageNode_KindHeading heading =>
     "Heading (H${heading.level.toJson()}): ${heading.text}",
@@ -260,49 +259,11 @@ final summary = switch (node) {
   GeneratePageTree_PageNode_KindSection section =>
     "Section: ${section.title ?? '(untitled)'} (${section.children.length} items)",
 };
-
-// Exhaustive switch statement
-switch (node) {
-  case GeneratePageTree_PageNode_KindHeading heading:
-    renderHeading(heading.level, heading.text);
-  case GeneratePageTree_PageNode_KindParagraph paragraph:
-    renderParagraph(paragraph.text);
-  case GeneratePageTree_PageNode_KindButton button:
-    renderButton(button.label, button.url);
-  case GeneratePageTree_PageNode_KindSection section:
-    renderSection(section.title, section.children);
-}
 ```
 
 ### JSON serialization & deserialization
 
-While `render*` and `parseResponse` handle JSON conversion automatically during prompt execution, you can also serialize or deserialize generated types directly (e.g. for logging, caching, or disk storage):
-
-```dart
-import 'dart:convert';
-
-// 1. Serialize any generated class or union to a Map:
-final Map<String, dynamic> jsonMap = input.toJson();
-
-// Or serialize to a JSON string:
-final String jsonString = jsonEncode(input.toJson());
-
-// Overridden toString() returns formatted JSON for easy logging:
-print(input);
-
-// 2. Deserialize from a Map:
-final output = TriageTicket_Output.fromJson(jsonMap);
-
-// 3. Deserialize from a raw JSON string:
-final outputFromJson = TriageTicket_Output.fromJson(
-  jsonDecode(jsonString) as Map<String, dynamic>,
-);
-
-// Discriminated unions deserialize through their sealed base class factory:
-final pageNode = GeneratePageTree_PageNode.fromJson(
-  jsonDecode(nodeJson) as Map<String, dynamic>,
-);
-```
+While `render*` and `parseResponse` handle JSON conversion automatically during prompt execution, all generated classes and unions provide `.toJson()` and `fromJson()` methods for manual serialization and deserialization (e.g. for logging, caching, or disk storage).
 
 ### Multi-namespace projects
 

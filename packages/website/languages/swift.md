@@ -176,7 +176,7 @@ import MyPrompts
 // Template inputs & outputs
 typealias TriageInput = Schema.TriageTicket.Input
 typealias TriageOutput = Schema.TriageTicket.Output
-typealias Priority = Schema.TriageTicket.Priority
+typealias TicketCategory = Schema.TriageTicket.TicketCategory
 
 // Tool inputs & outputs
 typealias SearchInput = Schema.WebSearch.Input
@@ -185,6 +185,92 @@ typealias SearchOutput = Schema.WebSearch.Output
 // Metadata type
 typealias Meta = Schema.Meta.Meta
 ```
+
+### Generated structs
+
+TypePrompt generates a `public struct` conforming to `Codable` and `Sendable` for each interface declared in your schema. Instances are constructed using Swift's memberwise initializer with named arguments:
+
+```swift
+let input = Schema.TriageTicket.Input(
+    subject: "Bug report",
+    body: "Crashes on startup",
+    customerTier: .pro,
+    recentTickets: [
+        Schema.TriageTicket.Input_RecentTickets(
+            id: "T-101",
+            summary: "Cannot login",
+            category: .billing
+        ),
+    ]
+)
+```
+
+#### Rules & behavior
+
+- **Named parameters**: Every non-literal field is declared as a parameter in the initializer.
+- **Required vs. optional**: Non-optional schema fields are required in `init`. Optional fields are typed as optionals (`T?`) and default to `nil` (e.g. `suggestedReply: String? = nil`), allowing them to be omitted during initialization.
+- **Literal fields**: Fields whose type is a literal value (e.g. `"success"` or `true`) are omitted from the initializer.
+- **Immutability**: All struct properties are declared `let`.
+
+### String unions (enums)
+
+String unions generate Swift `enum` types conforming to `String`, `Codable`, and `Sendable` with cases mapped to camelCase:
+
+```swift
+public enum TicketCategory : String, Codable, Sendable {
+    case billing = "billing"
+    case technicalIssue = "technical-issue"
+    case featureRequest = "feature-request"
+    case other = "other"
+}
+```
+
+- **Raw value**: Access `.rawValue` to retrieve the wire-format string (e.g. `TicketCategory.technicalIssue.rawValue` returns `"technical-issue"`).
+- **Initialization from raw value**: Use `TicketCategory(rawValue: "billing")` to initialize an enum case from a string, returning `nil` if unrecognized.
+
+```swift
+let category = Schema.TriageTicket.TicketCategory.billing
+print(category.rawValue) // "billing"
+
+let parsed = Schema.TriageTicket.TicketCategory(rawValue: "billing")
+print(parsed == .billing) // true
+```
+
+### Discriminated unions
+
+Discriminated unions generate an `enum` conforming to `Codable` and `Sendable` with an associated value for each variant:
+
+```swift
+/// A node in the rendered page tree.
+indirect public enum PageNode : Codable, Sendable {
+    case kindHeading(PageNode_KindHeading)
+    case kindParagraph(PageNode_KindParagraph)
+    case kindButton(PageNode_KindButton)
+    case kindSection(PageNode_KindSection)
+}
+```
+
+#### Pattern matching with `switch`
+
+Swift provides exhaustive pattern matching over the union enum cases without requiring a `default` case:
+
+```swift
+// Exhaustive switch statement
+switch node {
+case .kindHeading(let heading):
+    renderHeading(heading.level, heading.text)
+case .kindParagraph(let paragraph):
+    renderParagraph(paragraph.text)
+case .kindButton(let button):
+    renderButton(button.label, button.url)
+case .kindSection(let section):
+    renderSection(section.title, section.children)
+}
+```
+
+### JSON serialization & deserialization
+
+While `prompt.render*` and `prompt.parseResponse` handle JSON conversion automatically during prompt execution, all generated types conform to `Codable` for standalone serialization and deserialization using Foundation's `JSONEncoder` and `JSONDecoder`.
 
 ### Multi-namespace projects
 

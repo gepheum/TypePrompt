@@ -175,7 +175,7 @@ import com.example.prompts.Schema
 // Template inputs & outputs
 typealias TriageInput = Schema.TriageTicket.Input
 typealias TriageOutput = Schema.TriageTicket.Output
-typealias Priority = Schema.TriageTicket.Priority
+typealias TicketCategory = Schema.TriageTicket.TicketCategory
 
 // Tool inputs & outputs
 typealias SearchInput = Schema.WebSearch.Input
@@ -184,6 +184,90 @@ typealias SearchOutput = Schema.WebSearch.Output
 // Metadata type
 typealias Meta = Schema.Meta.Meta
 ```
+
+### Generated data classes
+
+TypePrompt generates a `@Serializable data class` for each interface declared in your schema. Instances are constructed using Kotlin's standard constructor syntax with named arguments:
+
+```kotlin
+val input = Schema.TriageTicket.Input(
+    subject = "Bug report",
+    body = "Crashes on startup",
+    customerTier = Schema.TriageTicket.Input_CustomerTier.Pro,
+    recentTickets = listOf(
+        Schema.TriageTicket.Input_RecentTickets(
+            id = "T-101",
+            summary = "Cannot login",
+            category = Schema.TriageTicket.TicketCategory.Billing,
+        ),
+    ),
+)
+```
+
+#### Rules & behavior
+
+- **Named parameters**: Fields should be supplied using Kotlin's named argument syntax.
+- **Required vs. optional**: Non-optional schema fields are required in the constructor. Optional fields are nullable (`T?`) and default to `null` (e.g. `val suggestedReply: String? = null`), allowing them to be omitted during construction.
+- **Literal fields**: Fields whose type is a literal value (e.g. `"success"` or `true`) are omitted from the constructor.
+- **Immutability**: All fields are declared `val`.
+
+### String unions (enums)
+
+String unions generate Kotlin `@Serializable enum class` types with values mapped to PascalCase:
+
+```kotlin
+enum class TicketCategory(val value: String) {
+    @SerialName("billing")
+    Billing("billing"),
+    @SerialName("technical-issue")
+    TechnicalIssue("technical-issue"),
+    @SerialName("feature-request")
+    FeatureRequest("feature-request"),
+    @SerialName("other")
+    Other("other");
+
+    override fun toString(): String = value
+}
+```
+
+- **Serialization**: Serializes using the `@SerialName` wire-format string (e.g. `TicketCategory.TechnicalIssue` serializes to `"technical-issue"`).
+- **String value**: Access `.value` or call `.toString()` to retrieve the raw wire string directly.
+
+```kotlin
+val category = Schema.TriageTicket.TicketCategory.Billing
+println(category.value) // "billing"
+```
+
+### Discriminated unions
+
+Discriminated unions generate a `@Serializable sealed interface`:
+
+```kotlin
+/// A node in the rendered page tree.
+@Serializable(with = PageNode_Serializer::class)
+sealed interface PageNode
+```
+
+#### Pattern matching with `when`
+
+Because the base interface is `sealed`, Kotlin enables exhaustive pattern matching with `when` without requiring an `else` branch:
+
+```kotlin
+val summary = when (node) {
+    is Schema.GeneratePageTree.PageNode_KindHeading ->
+        "Heading (H${node.level.value}): ${node.text}"
+    is Schema.GeneratePageTree.PageNode_KindParagraph ->
+        "Paragraph: ${node.text}"
+    is Schema.GeneratePageTree.PageNode_KindButton ->
+        "Button: ${node.label} (${node.url})"
+    is Schema.GeneratePageTree.PageNode_KindSection ->
+        "Section: ${node.title ?: "(untitled)"} (${node.children.size} items)"
+}
+```
+
+### JSON serialization & deserialization
+
+While `prompt.render*` and `prompt.parseResponse` handle JSON conversion automatically during prompt execution, all generated types integrate with standard `kotlinx.serialization` for standalone serialization and deserialization (e.g. for logging, caching, or IPC).
 
 ### Multi-namespace projects
 
