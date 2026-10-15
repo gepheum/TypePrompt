@@ -55,7 +55,7 @@ describe("TypePrompt Language Server", () => {
     // Write typeprompt.yml
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include: prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
 
@@ -145,7 +145,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include: prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
 
@@ -202,7 +202,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include: prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
 
@@ -239,7 +239,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include: prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
 
@@ -315,7 +315,7 @@ describe("TypePrompt Language Server", () => {
     // Write project files
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n",
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
     await fs.writeFile(
@@ -386,7 +386,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n",
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n",
       "utf-8",
     );
     await fs.writeFile(
@@ -513,7 +513,7 @@ describe("TypePrompt Language Server", () => {
 
     // Now add typeprompt.yml
     const configContent =
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude: prompts/**/*.xml\n";
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n";
     extension.setFileContent(configUri, {
       content: configContent,
       lineFinder: createLineFinder(configContent),
@@ -628,7 +628,7 @@ describe("TypePrompt Language Server", () => {
 
       // Create workspace config
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include: prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -689,7 +689,7 @@ type Output=string;
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include: prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -781,7 +781,7 @@ type Output=string;
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include: prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -996,7 +996,7 @@ comment here -->
 
       // Configure workspace
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1058,7 +1058,7 @@ comment here -->
       expect(extension.getSemanticTokens(ymlUri).data.length).toBe(0);
 
       // Configure workspace
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1087,7 +1087,7 @@ comment here -->
 
       // Configure workspace
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1118,7 +1118,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1200,7 +1200,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1271,7 +1271,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1330,7 +1330,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1382,7 +1382,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1443,7 +1443,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1518,7 +1518,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1588,7 +1588,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1657,7 +1657,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1710,7 +1710,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1763,7 +1763,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1851,7 +1851,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include: prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.xml\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),

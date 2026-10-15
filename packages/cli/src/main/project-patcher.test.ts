@@ -117,7 +117,7 @@ describe("patchProject", () => {
     mkdirSync(targetProject, { recursive: true });
     writeFileSync(
       join(targetProject, "typeprompt.yml"),
-      "include: prompts/*.xml",
+      "include:\n  - prompts/*.xml",
       "utf8",
     );
 

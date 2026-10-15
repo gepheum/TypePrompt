@@ -11,7 +11,8 @@ describe("parseConfigYaml", () => {
   it("parses a minimal valid config with typescript codegen", () => {
     const result = parse(
       [
-        "include: prompts/*.xml",
+        "include:",
+        "  - prompts/*.xml",
         "gen:",
         "  typescript:",
         "    file: out/prompts.ts",
@@ -30,7 +31,8 @@ describe("parseConfigYaml", () => {
   it("parses all fields", () => {
     const result = parse(
       [
-        "include: prompts/*.tp",
+        "include:",
+        "  - prompts/*.tp",
         "gen:",
         "  typescript:",
         "    file: out/prompts.ts",
@@ -52,7 +54,7 @@ describe("parseConfigYaml", () => {
   });
 
   it("accepts an empty gen block", () => {
-    const result = parse("include: prompts/*.xml\ngen: {}");
+    const result = parse("include:\n  - prompts/*.xml\ngen: {}");
     expect(result).toMatch({
       kind: "success",
       config: { include: ["prompts/*.xml"], gen: {} },
@@ -68,6 +70,14 @@ describe("parseConfigYaml", () => {
     expect(result).toMatch({
       kind: "success",
       config: { include: ["prompts/*.xml", "other/**/*.tp"], gen: {} },
+    });
+  });
+
+  it("fails when include is a string instead of an array", () => {
+    const result = parse("include: prompts/*.xml");
+    expect(result).toMatch({
+      kind: "error",
+      errors: [{ message: /Invalid value for 'include'/ }],
     });
   });
 
@@ -96,7 +106,7 @@ describe("parseConfigYaml", () => {
   });
 
   it("fails on unknown top-level fields with a root-level span", () => {
-    const result = parse("include: prompts/*.xml\noutputPath: x");
+    const result = parse("include:\n  - prompts/*.xml\noutputPath: x");
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -125,7 +135,8 @@ describe("parseConfigYaml", () => {
   it("fails when typescript file does not end with .ts", () => {
     const result = parse(
       [
-        "include: prompts/*.xml",
+        "include:",
+        "  - prompts/*.xml",
         "gen:",
         "  typescript:",
         "    file: out/prompts.py",
@@ -140,7 +151,8 @@ describe("parseConfigYaml", () => {
   it("fails when python file does not end with .py", () => {
     const result = parse(
       [
-        "include: prompts/*.xml",
+        "include:",
+        "  - prompts/*.xml",
         "gen:",
         "  python:",
         "    file: out/prompts.ts",
@@ -155,7 +167,8 @@ describe("parseConfigYaml", () => {
   it("fails on unknown nested fields", () => {
     const result = parse(
       [
-        "include: prompts/*.xml",
+        "include:",
+        "  - prompts/*.xml",
         "gen:",
         "  typescript:",
         "    file: out/p.ts",

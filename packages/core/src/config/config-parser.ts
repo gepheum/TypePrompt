@@ -92,15 +92,8 @@ export function parseConfigYaml(
 const RawConfigSchema = z
   .object({
     include: z
-      .union([
-        z.string().min(1, "must be a non-empty string"),
-        z
-          .array(z.string().min(1, "must be a non-empty string"))
-          .min(1, "must not be empty"),
-      ])
-      .transform((val): readonly string[] =>
-        typeof val === "string" ? [val] : val,
-      ),
+      .array(z.string().min(1, "must be a non-empty string"))
+      .min(1, "must not be empty"),
     gen: z
       .object({
         cpp: z
