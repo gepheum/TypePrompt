@@ -147,7 +147,7 @@ import type { Schema } from "./gen/prompts.js";
 // Template inputs & outputs
 type TriageInput = Schema.TriageTicket.Input;
 type TriageOutput = Schema.TriageTicket.Output;
-type Priority = Schema.TriageTicket.Priority;
+type TicketCategory = Schema.TriageTicket.TicketCategory;
 
 // Tool inputs & outputs
 type SearchInput = Schema.WebSearch.Input;
@@ -156,6 +156,8 @@ type SearchOutput = Schema.WebSearch.Output;
 // Metadata type
 type Meta = Schema.Meta.Meta;
 ```
+
+Generated types map directly to your TypePrompt schema definitions as standard TypeScript type aliases with `readonly` properties, string literal unions, and discriminated union types.
 
 ### Multi-namespace projects
 

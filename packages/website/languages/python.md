@@ -168,7 +168,7 @@ from gen.prompts import schema
 # Template inputs & outputs
 triage_input = schema.triage_ticket.Input
 triage_output = schema.triage_ticket.Output
-priority = schema.triage_ticket.Priority
+ticket_category = schema.triage_ticket.TicketCategory
 
 # Tool inputs & outputs
 search_input = schema.web_search.Input
@@ -177,6 +177,82 @@ search_output = schema.web_search.Output
 # Metadata type
 meta = schema.meta.Meta
 ```
+
+### Generated Pydantic models
+
+TypePrompt generates a `pydantic.BaseModel` for each interface declared in your schema:
+
+```python
+input = schema.triage_ticket.Input(
+    subject="Bug report",
+    body="Crashes on startup",
+    customer_tier="pro",
+    recent_tickets=[
+        schema.triage_ticket.Input_RecentTickets(
+            id="T-101",
+            summary="Cannot login",
+            category="billing",
+        ),
+    ],
+)
+```
+
+#### Rules & behavior
+
+- **Keyword arguments**: Instances are constructed using standard Python keyword arguments.
+- **Field names & aliases**: Fields are generated with `snake_case` attribute names, but Pydantic aliases allow initialization with either `snake_case` or `camelCase`.
+- **Required vs. optional**: Non-optional schema fields are required. Optional fields default to `None` and can be omitted.
+
+### String unions
+
+String unions generate `typing.Literal` type aliases rather than `Enum` classes:
+
+```python
+type TicketCategory = Literal[
+    "billing",
+    "technical-issue",
+    "feature-request",
+    "other",
+]
+```
+
+Because string unions are plain string literals, raw `str` values can be passed directly with static type checking in mypy and pyright—no enum conversions are necessary.
+
+### Discriminated unions
+
+Discriminated unions generate an `Annotated[Union[...], pydantic.Field(discriminator=...)]` type alias wrapping individual Pydantic models for each variant:
+
+```python
+# A node in the rendered page tree.
+type PageNode = Annotated[
+    Union[
+        PageNode_KindHeading,
+        PageNode_KindParagraph,
+        PageNode_KindButton,
+        PageNode_KindSection,
+    ],
+    pydantic.Field(discriminator="kind"),
+]
+```
+
+#### Inspecting variants with `if`
+
+Type checkers automatically narrow the variant type when branching on `node.kind`:
+
+```python
+if node.kind == "heading":
+    render_heading(node.level, node.text)
+elif node.kind == "paragraph":
+    render_paragraph(node.text)
+elif node.kind == "button":
+    render_button(node.label, node.url)
+elif node.kind == "section":
+    render_section(node.title, node.children)
+```
+
+### JSON serialization & deserialization
+
+While `prompt.render*` and `prompt.parse_response` handle JSON conversion automatically during prompt execution, all generated models integrate with Pydantic for manual serialization and deserialization via `.model_dump_json()` and `.model_validate_json()`.
 
 ### Multi-namespace projects
 
