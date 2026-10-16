@@ -330,7 +330,6 @@ async function main(): Promise<void> {
     const errors = configResult.errors.map((e): RenderableError =>
       makeRenderableError(e, configPath, lineFinder, pathNormalizer),
     );
-    console.error(makeRed("Invalid TypePrompt config"));
     renderErrors(errors, "error");
     process.exit(1);
   }

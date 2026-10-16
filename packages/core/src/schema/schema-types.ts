@@ -73,6 +73,7 @@ export type AnyTypeView = {
 export type Array = {
   readonly kind: "array";
   readonly elementType: Type;
+  readonly constraint?: undefined;
 };
 
 export type Interface = {
@@ -92,6 +93,7 @@ export type Field = {
 export type PrimitiveType = {
   readonly kind: "primitive";
   readonly primitive: TextSpan<"number" | "string" | "boolean" | "integer">;
+  readonly constraint?: undefined;
 };
 
 export type PrimitiveTypeView = {
@@ -99,6 +101,16 @@ export type PrimitiveTypeView = {
   readonly primitive: {
     readonly text: "number" | "string" | "boolean" | "integer";
   };
+  readonly constraint?: undefined;
+};
+
+/** String type with an optional constraint. */
+export type SyntheticStringType = {
+  readonly kind: "primitive";
+  readonly primitive: {
+    readonly text: "string";
+  };
+  readonly constraint?: Constraint<string>;
 };
 
 export type RecordType = {
@@ -143,6 +155,7 @@ export type StringLiteral = StringLiteralView & {
 export type StringLiteralView = {
   readonly kind: "string-literal";
   readonly value: string;
+  readonly quotedName?: TextSpan;
 };
 
 export type BooleanLiteral = {
@@ -159,6 +172,7 @@ export type Optional = {
 export type SyntheticArray = {
   readonly kind: "array";
   readonly elementType: Type | SyntheticType;
+  readonly constraint?: Constraint<readonly unknown[]>;
 };
 
 export type SyntheticInterface = {
@@ -194,12 +208,20 @@ export type HasName = {
 export type SyntheticType =
   | AnyTypeView
   | PrimitiveTypeView
+  | StringLiteralView
   | SyntheticArray
   | SyntheticInterface
   | SyntheticOptional
+  | SyntheticStringType
   | SyntheticUnion;
 
 export type NullType = { readonly kind: "null" };
+
+export type Constraint<T> = {
+  readonly predicate: (t: T) => boolean;
+  /** Starts with "Must" or "Must not". */
+  readonly message: string;
+};
 
 /** Hint for creating a name for an anonymous type in generated code. */
 export type NamingHint = {
@@ -301,7 +323,23 @@ export type SyntheticUnionMembers =
   | {
       readonly kind: "strings";
       /** Can be empty. */
-      readonly values: { readonly [v: string]: TextSpan };
+      readonly values: {
+        readonly [v: string]:
+          | {
+              readonly kind: "string-literal";
+              readonly quotedName: TextSpan;
+            }
+          | {
+              readonly kind: "unquoted";
+              readonly unquotedName:
+                | TextSpan
+                | {
+                    readonly text: string;
+                    readonly start?: undefined;
+                    readonly end?: undefined;
+                  };
+            };
+      };
     }
   | {
       readonly kind: "interfaces";

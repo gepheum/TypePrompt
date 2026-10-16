@@ -74,18 +74,30 @@ describe("parseConfigYaml", () => {
   });
 
   it("fails when include is a string instead of an array", () => {
-    const result = parse("include: prompts/*.xml");
+    const yaml = "include: prompts/*.xml";
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Invalid value for 'include'/ }],
+      errors: [
+        {
+          span: { start: yaml.indexOf("prompts/*.xml") },
+          message: "Expected array but got string",
+        },
+      ],
     });
   });
 
   it("fails when include array is empty", () => {
-    const result = parse("include: []");
+    const yaml = "include: []";
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Invalid value for 'include'/ }],
+      errors: [
+        {
+          span: { start: yaml.indexOf("[]") },
+          message: "Must not be empty",
+        },
+      ],
     });
   });
 
@@ -93,7 +105,12 @@ describe("parseConfigYaml", () => {
     const result = parse("{}");
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Invalid value for 'include'/ }],
+      errors: [
+        {
+          span: { start: 0 },
+          message: "Missing required field 'include'",
+        },
+      ],
     });
   });
 
@@ -105,14 +122,15 @@ describe("parseConfigYaml", () => {
     });
   });
 
-  it("fails on unknown top-level fields with a root-level span", () => {
-    const result = parse("include:\n  - prompts/*.xml\noutputPath: x");
+  it("fails on unknown top-level fields", () => {
+    const yaml = "include:\n  - prompts/*.xml\noutputPath: x";
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
       errors: [
         {
-          span: { start: 0 },
-          message: /Unknown config field\(s\): 'outputPath'/,
+          span: { start: yaml.indexOf("outputPath") },
+          message: "Unknown field 'outputPath'",
         },
       ],
     });
@@ -126,58 +144,70 @@ describe("parseConfigYaml", () => {
       errors: [
         {
           span: { start: yaml.indexOf("123") },
-          message: /Invalid value for 'include'/,
+          message: "Expected array but got number",
         },
       ],
     });
   });
 
   it("fails when typescript file does not end with .ts", () => {
-    const result = parse(
-      [
-        "include:",
-        "  - prompts/*.xml",
-        "gen:",
-        "  typescript:",
-        "    file: out/prompts.py",
-      ].join("\n"),
-    );
+    const yaml = [
+      "include:",
+      "  - prompts/*.xml",
+      "gen:",
+      "  typescript:",
+      "    file: out/prompts.py",
+    ].join("\n");
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Invalid value for 'gen.typescript.file'/ }],
+      errors: [
+        {
+          span: { start: yaml.indexOf("out/prompts.py") },
+          message: "Must end with '.ts'",
+        },
+      ],
     });
   });
 
   it("fails when python file does not end with .py", () => {
-    const result = parse(
-      [
-        "include:",
-        "  - prompts/*.xml",
-        "gen:",
-        "  python:",
-        "    file: out/prompts.ts",
-      ].join("\n"),
-    );
+    const yaml = [
+      "include:",
+      "  - prompts/*.xml",
+      "gen:",
+      "  python:",
+      "    file: out/prompts.ts",
+    ].join("\n");
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Invalid value for 'gen.python.file'/ }],
+      errors: [
+        {
+          span: { start: yaml.indexOf("out/prompts.ts") },
+          message: "Must end with '.py'",
+        },
+      ],
     });
   });
 
   it("fails on unknown nested fields", () => {
-    const result = parse(
-      [
-        "include:",
-        "  - prompts/*.xml",
-        "gen:",
-        "  typescript:",
-        "    file: out/p.ts",
-        "    extra: x",
-      ].join("\n"),
-    );
+    const yaml = [
+      "include:",
+      "  - prompts/*.xml",
+      "gen:",
+      "  typescript:",
+      "    file: out/p.ts",
+      "    extra: x",
+    ].join("\n");
+    const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
-      errors: [{ message: /Unknown config field\(s\): 'extra'/ }],
+      errors: [
+        {
+          span: { start: yaml.indexOf("extra") },
+          message: "Unknown field 'extra'",
+        },
+      ],
     });
   });
 });

@@ -89,8 +89,8 @@ describe("initializeProject", () => {
 
     expect(configResult.config.include).toMatch(["prompts/**/*.xml"]);
     expect(configResult.config.gen).toMatch({
-      cpp: { file: "./prompts.gen.h", rootNamespace: "typeprompt" },
-      csharp: { file: "./Prompts.generated.cs", rootNamespace: "TypePrompt" },
+      cpp: { file: "./prompts.gen.h", rootNamespace: undefined },
+      csharp: { file: "./Prompts.generated.cs", rootNamespace: undefined },
       dart: { file: "../lib/prompts.g.dart" },
       kotlin: {
         file: "./src/main/kotlin/Prompts_Generated.kt",
@@ -100,7 +100,7 @@ describe("initializeProject", () => {
       rust: { file: "./src/generated/prompts.rs" },
       swift: {
         file: "./Sources/Prompts.Generated.swift",
-        rootNamespace: "TypePrompt",
+        rootNamespace: undefined,
       },
       typescript: { file: "./prompts.gen.ts" },
     });

@@ -39,10 +39,11 @@ export function generateSwiftCode(
     return [];
   }
   const templatesData = makeTemplates(compilationResult);
+  const rootNamespace = swiftConfig.rootNamespace ?? "TypePrompt";
   return [
     {
       path: swiftConfig.file,
-      content: writeAll(compilationResult, templatesData, swiftConfig),
+      content: writeAll(compilationResult, templatesData, { rootNamespace }),
     },
   ];
 }

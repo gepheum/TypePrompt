@@ -1,5 +1,4 @@
 import type {
-  HasName,
   ResolvedFieldType,
   Schema,
   SyntheticType,
@@ -52,7 +51,7 @@ export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
  */
 export function validateJson(
   json: StrictJsonValue,
-  type: TypeDeclaration | (SyntheticType & HasName),
+  type: TypeDeclaration | SyntheticType,
   schema: SchemaView,
 ): ValidationResult {
   const result = jsonMatchesType(
@@ -67,13 +66,7 @@ export function validateJson(
       definitionLinks: result.definitionLinks,
     };
   }
-  const typeName = type.name.text;
-  const errors = result.details.reasons ?? [
-    {
-      span: json.firstToken,
-      message: `Does not match type '${typeName}'`,
-    },
-  ];
+  const errors = result.details.reasons;
   return {
     errors,
     definitionLinks: [],
@@ -151,10 +144,15 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
             },
           } satisfies JsonTypeMatch<"thorough"> as unknown as JsonTypeMatch<Mode>;
         }
-        return {
-          kind: "match",
-          definitionLinks,
-        };
+        const { constraint } = type;
+        if (constraint && !constraint.predicate(value.elements)) {
+          return mismatch(mode, value.firstToken, constraint.message, 1.0);
+        } else {
+          return {
+            kind: "match",
+            definitionLinks,
+          };
+        }
       } else {
         return mismatch(
           mode,
@@ -290,7 +288,14 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
       }
     }
     case "primitive": {
-      if (value.kind === type.primitive.text) {
+      if (
+        value.kind === "string" &&
+        type.primitive.text === "string" &&
+        type.constraint &&
+        !type.constraint.predicate(value.value)
+      ) {
+        return mismatch(mode, value.firstToken, type.constraint.message, 1.0);
+      } else if (value.kind === type.primitive.text) {
         return MATCH;
       } else if (value.kind === "number" && type.primitive.text === "integer") {
         if (
@@ -365,16 +370,20 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
     }
     case "string-literal": {
       if (value.kind === "string" && value.value === type.value) {
+        const { quotedName } = type;
+        const definitionLinks = quotedName
+          ? [
+              {
+                reference: value.quoted
+                  ? stripQuotes(value.firstToken)
+                  : value.firstToken,
+                definition: stripQuotes(quotedName),
+              },
+            ]
+          : [];
         return {
           kind: "match",
-          definitionLinks: [
-            {
-              reference: value.quoted
-                ? stripQuotes(value.firstToken)
-                : value.firstToken,
-              definition: stripQuotes(type.quotedName),
-            },
-          ],
+          definitionLinks,
         };
       } else {
         const suggestions = [JSON.stringify(type.value satisfies string)];
@@ -394,19 +403,25 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
       switch (members.kind) {
         case "strings": {
           if (value.kind === "string") {
-            const stringLiteralOrSpan = members.values[value.value];
-            if (stringLiteralOrSpan) {
-              const definition: TextSpan =
-                "quotedName" in stringLiteralOrSpan
-                  ? stripQuotes(stringLiteralOrSpan.quotedName)
-                  : stringLiteralOrSpan;
-              const definitionLink: DefinitionLink = {
-                reference: value.quoted
-                  ? stripQuotes(value.firstToken)
-                  : value.firstToken,
-                definition,
-              };
-              return { kind: "match", definitionLinks: [definitionLink] };
+            const stringLiteral = members.values[value.value];
+            if (stringLiteral) {
+              const definition: TextSpan | undefined =
+                stringLiteral.kind === "string-literal"
+                  ? stripQuotes(stringLiteral.quotedName)
+                  : stringLiteral.unquotedName.start !== undefined
+                    ? stringLiteral.unquotedName
+                    : undefined;
+              const definitionLinks: readonly DefinitionLink[] = definition
+                ? [
+                    {
+                      reference: value.quoted
+                        ? stripQuotes(value.firstToken)
+                        : value.firstToken,
+                      definition,
+                    },
+                  ]
+                : [];
+              return { kind: "match", definitionLinks };
             } else {
               const values = Object.keys(members.values);
               const message = makeExpectedOneOfMessage(values);

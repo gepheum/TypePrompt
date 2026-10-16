@@ -38,10 +38,11 @@ export function generateCSharpCode(
     return [];
   }
   const templatesData = makeTemplates(compilationResult);
+  const rootNamespace = csharpConfig.rootNamespace ?? "TypePrompt";
   return [
     {
       path: csharpConfig.file,
-      content: writeAll(compilationResult, templatesData, csharpConfig),
+      content: writeAll(compilationResult, templatesData, { rootNamespace }),
     },
   ];
 }

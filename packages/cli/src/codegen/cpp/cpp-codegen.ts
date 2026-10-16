@@ -35,10 +35,11 @@ export function generateCppCode(
     return [];
   }
   const templatesData = makeTemplates(compilationResult);
+  const rootNamespace = cppConfig.rootNamespace ?? "typeprompt";
   return [
     {
       path: cppConfig.file,
-      content: writeAll(compilationResult, templatesData, cppConfig),
+      content: writeAll(compilationResult, templatesData, { rootNamespace }),
     },
   ];
 }

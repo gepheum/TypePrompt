@@ -1,6 +1,9 @@
-import { parseDocument, Scalar, YAMLMap } from "yaml";
-import { z } from "zod";
-import type { InternalError, InternalErrors } from "../util/shared-types.js";
+import { validateJson } from "../json/json-validator.js";
+import { unwrapJsonValue } from "../json/unwrapper.js";
+import { parseYaml } from "../json/yaml-parser.js";
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
+import type { Constraint, SyntheticType } from "../schema/schema-types.js";
+import type { InternalErrors, MappedText } from "../util/shared-types.js";
 
 export type Config = {
   /** Glob pattern(s) to match template files to be processed. */
@@ -11,12 +14,12 @@ export type Config = {
     readonly cpp?: {
       /** Path to the generated .h file. */
       readonly file: string;
-      readonly rootNamespace: string;
+      readonly rootNamespace?: string;
     };
     readonly csharp?: {
       /** Path to the generated .cs file. */
       readonly file: string;
-      readonly rootNamespace: string;
+      readonly rootNamespace?: string;
     };
     readonly dart?: {
       /** Path to the generated .dart file. */
@@ -38,7 +41,7 @@ export type Config = {
     readonly swift?: {
       /** Path to the generated .swift file. */
       readonly file: string;
-      readonly rootNamespace: string;
+      readonly rootNamespace?: string;
     };
     readonly typescript?: {
       /** Path to the generated .ts file. */
@@ -52,10 +55,10 @@ export type Config = {
   };
 };
 
-export interface ConfigParseSuccess {
+export type ConfigParseSuccess = {
   readonly kind: "success";
   readonly config: Config;
-}
+};
 
 export type ConfigParseResult = ConfigParseSuccess | InternalErrors;
 
@@ -63,181 +66,206 @@ export function parseConfigYaml(
   content: string,
   path: string,
 ): ConfigParseResult {
-  const doc = parseDocument(content);
-
-  if (doc.errors.length >= 1) {
+  const mappedText: MappedText = {
+    path,
+    text: content,
+    offsetMap: [
+      { textPosition: 0, sourcePosition: 0 },
+      { textPosition: content.length, sourcePosition: content.length },
+    ],
+  };
+  const parseResult = parseYaml(mappedText);
+  if (parseResult.kind === "error") {
+    return parseResult;
+  }
+  const validationResult = validateJson(
+    parseResult,
+    CONFIG_TYPE.type,
+    EMPTY_SCHEMA,
+  );
+  if (validationResult.errors.length) {
     return {
       kind: "error",
-      errors: doc.errors.map((e) => ({
-        span: { path, start: e.pos[0], end: e.pos[1] },
-        message: e.message,
-      })),
+      errors: validationResult.errors,
     };
   }
-
-  const parseResult = RawConfigSchema.safeParse(doc.toJS());
-
-  if (!parseResult.success) {
-    return {
-      kind: "error",
-      errors: parseResult.error.issues.map((issue) =>
-        makeSchemaIssueError(issue, doc, path),
-      ),
-    };
-  }
-
-  return { kind: "success", config: parseResult.data };
+  const config = unwrapJsonValue(parseResult) as Config;
+  return { kind: "success", config };
 }
 
-const RawConfigSchema = z
-  .object({
-    include: z
-      .array(z.string().min(1, "must be a non-empty string"))
-      .min(1, "must not be empty"),
-    gen: z
-      .object({
-        cpp: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".h"), "must end with '.h'"),
-            rootNamespace: z
-              .string()
-              .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "must be a valid identifier")
-              .optional()
-              .default("typeprompt"),
-          })
-          .strict()
-          .optional(),
-        csharp: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".cs"), "must end with '.cs'"),
-            rootNamespace: z
-              .string()
-              .regex(
-                /^[A-Z][A-Za-z0-9_]*$/,
-                "must be a valid PascalCase identifier",
-              )
-              .optional()
-              .default("TypePrompt"),
-          })
-          .strict()
-          .optional(),
-        dart: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".dart"), "must end with '.dart'"),
-          })
-          .strict()
-          .optional(),
-        kotlin: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".kt"), "must end with '.kt'"),
-            package: z
-              .string()
-              .regex(
-                /^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/,
-                "must be a valid snake_case identifier",
-              ),
-          })
-          .strict()
-          .optional(),
-        python: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".py"), "must end with '.py'"),
-          })
-          .strict()
-          .optional(),
-        rust: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".rs"), "must end with '.rs'"),
-          })
-          .strict()
-          .optional(),
-        swift: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".swift"), "must end with '.swift'"),
-            rootNamespace: z
-              .string()
-              .regex(
-                /^[A-Z][A-Za-z0-9_]*$/,
-                "must be a valid PascalCase identifier",
-              )
-              .optional()
-              .default("TypePrompt"),
-          })
-          .strict()
-          .optional(),
-        typescript: z
-          .object({
-            file: z
-              .string()
-              .refine((f) => f.endsWith(".ts"), "must end with '.ts'"),
-          })
-          .strict()
-          .optional(),
-      })
-      .strict()
-      .optional(),
-    patch: z
-      .object({
-        base: z.literal("patch-base.json"),
-        overrides: z.literal("overrides.json"),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict();
+type GenericType<T> = {
+  readonly type: SyntheticType;
+  readonly phantom?: T;
+};
 
-function makeSchemaIssueError(
-  issue: z.core.$ZodIssue,
-  doc: ReturnType<typeof parseDocument>,
-  path: string,
-): InternalError {
-  // Walk up the path until we find a node with a source range.
-  let nodePath = [...issue.path] as PropertyKey[];
-  let node: Scalar | YAMLMap | undefined;
-  while (nodePath.length >= 1) {
-    const candidate = doc.getIn(nodePath, true);
-    if (candidate instanceof Scalar || candidate instanceof YAMLMap) {
-      node = candidate;
-      break;
-    }
-    nodePath = nodePath.slice(0, -1);
-  }
-
-  const span = node?.range
-    ? { path, start: node.range[0], end: node.range[1] }
-    : { path, start: 0, end: 0 };
-
-  if (issue.code === "unrecognized_keys") {
-    const keys = issue.keys.map((key) => `'${key}'`).join(", ");
-    return { span, message: `Unknown config field(s): ${keys}` };
-  }
-
-  const issuePath = formatIssuePath(issue.path);
+function string(constraint?: Constraint<string>): GenericType<string> {
   return {
-    span,
-    message: `Invalid value for '${issuePath}': ${issue.message}`,
+    type: {
+      kind: "primitive",
+      primitive: {
+        text: "string",
+      },
+      constraint,
+    },
   };
 }
 
-function formatIssuePath(path: readonly PropertyKey[]): string {
-  if (path.length <= 0) {
-    return "<root>";
-  }
-  return path
-    .map((part) => (typeof part === "number" ? `[${part}]` : String(part)))
-    .join(".");
+function stringLiteral<const S extends string>(value: S): GenericType<S> {
+  return {
+    type: {
+      kind: "string-literal",
+      value,
+    },
+  };
 }
+
+function optional<T>(innerType: GenericType<T>): GenericType<T | undefined> {
+  return {
+    type: {
+      kind: "optional",
+      innerType: innerType.type,
+    },
+  };
+}
+
+function array<E>(
+  innerType: GenericType<E>,
+  constraint?: Constraint<readonly unknown[]>,
+): GenericType<readonly E[]> {
+  return {
+    type: {
+      kind: "array",
+      elementType: innerType.type,
+      constraint,
+    },
+  };
+}
+
+type GenericFields = { readonly [name: string]: GenericType<unknown> };
+
+type Object<Fields extends GenericFields> = {
+  readonly [K in keyof Fields]: NonNullable<Fields[K]["phantom"]>;
+};
+
+function object<Fields extends GenericFields>(
+  fields: Fields,
+): GenericType<Object<Fields>> {
+  return {
+    type: {
+      kind: "interface",
+      fields: Object.fromEntries(
+        Object.entries(fields).map(([name, field]) => [
+          name,
+          {
+            name: {
+              text: name,
+            },
+            type: field.type,
+          },
+        ]),
+      ),
+    },
+  };
+}
+
+function endsWith(suffix: string): Constraint<string> {
+  return {
+    predicate: (value: string) => value.endsWith(suffix),
+    message: `Must end with '${suffix}'`,
+  };
+}
+
+function matches(regex: RegExp, message: string): Constraint<string> {
+  return {
+    predicate: (value: string) => regex.test(value),
+    message,
+  };
+}
+
+function notEmpty<T extends string | readonly unknown[]>(): Constraint<T> {
+  return {
+    predicate: (value: T) => value.length > 0,
+    message: "Must not be empty",
+  };
+}
+
+const CONFIG_TYPE: GenericType<Config> = object({
+  include: array(string(notEmpty()), notEmpty()),
+  gen: optional(
+    object({
+      cpp: optional(
+        object({
+          file: string(endsWith(".h")),
+          rootNamespace: optional(
+            string(
+              matches(/^[A-Za-z_][A-Za-z0-9_]*$/, "must be a valid identifier"),
+            ),
+          ),
+        }),
+      ),
+      csharp: optional(
+        object({
+          file: string(endsWith(".cs")),
+          rootNamespace: optional(
+            string(
+              matches(
+                /^[A-Z][A-Za-z0-9_]*$/,
+                "must be a valid PascalCase identifier",
+              ),
+            ),
+          ),
+        }),
+      ),
+      dart: optional(
+        object({
+          file: string(endsWith(".dart")),
+        }),
+      ),
+      kotlin: optional(
+        object({
+          file: string(endsWith(".kt")),
+          package: string(
+            matches(
+              /^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/,
+              "must be a valid snake_case identifier",
+            ),
+          ),
+        }),
+      ),
+      python: optional(
+        object({
+          file: string(endsWith(".py")),
+        }),
+      ),
+      rust: optional(
+        object({
+          file: string(endsWith(".rs")),
+        }),
+      ),
+      swift: optional(
+        object({
+          file: string(endsWith(".swift")),
+          rootNamespace: optional(
+            string(
+              matches(
+                /^[A-Z][A-Za-z0-9_]*$/,
+                "must be a valid PascalCase identifier",
+              ),
+            ),
+          ),
+        }),
+      ),
+      typescript: optional(
+        object({
+          file: string(endsWith(".ts")),
+        }),
+      ),
+    }),
+  ),
+  patch: optional(
+    object({
+      base: stringLiteral("patch-base.json"),
+      overrides: stringLiteral("overrides.json"),
+    }),
+  ),
+});

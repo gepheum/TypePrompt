@@ -23,7 +23,6 @@ import type {
   DefinitionLink,
   InternalError,
   Span,
-  TextSpan,
   ValidationErrors,
   ValidationResult,
 } from "../util/shared-types.js";
@@ -389,7 +388,13 @@ function makeExamplesType(
                               kind: "strings",
                               values: Object.fromEntries(
                                 Object.entries(options.namespaceTools).map(
-                                  ([k, tool]) => [k, tool.tool.name],
+                                  ([k, tool]) => [
+                                    k,
+                                    {
+                                      kind: "unquoted",
+                                      unquotedName: tool.tool.name,
+                                    },
+                                  ],
                                 ),
                               ),
                             },
@@ -699,10 +704,10 @@ function validateTools(
 function makeToolsType(namespaceTools: {
   readonly [name: string]: ToolValidationResult;
 }): SyntheticArray & HasName {
-  const toolNames: { [v: string]: TextSpan } = Object.fromEntries(
+  const toolNames = Object.fromEntries(
     Object.entries(namespaceTools).map(([name, tool]) => [
       name,
-      tool.tool.name,
+      { kind: "unquoted", unquotedName: tool.tool.name } as const,
     ]),
   );
   return {
