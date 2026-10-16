@@ -16,19 +16,7 @@ TypePrompt generates a clean, standalone, header-only C++ library that relies ex
 - **Standard**: C++20 or later (`-std=c++20` or `-std=c++23`)
 - **Dependencies**: None (Standard Library only)
 
-In your `typeprompt.json` configuration file, specify your C++ output file path and optional root namespace (defaults to `typeprompt`):
-
-```json
-{
-  "gen": {
-    "cpp": {
-      "file": "include/gen/prompts.h"
-    }
-  }
-}
-```
-
-Or in `typeprompt.yml`:
+In your `typeprompt.yaml` configuration file, specify your C++ output file path and optional root namespace (defaults to `typeprompt`):
 
 ```yaml
 gen:

@@ -17,16 +17,12 @@ dependencies:
   yaml_writer: ^2.1.0
 ```
 
-In your `typeprompt.json` configuration file, specify your Dart output path:
+In your `typeprompt.yaml` configuration file, specify your Dart output path:
 
-```json
-{
-  "gen": {
-    "dart": {
-      "file": "lib/gen/prompts.dart"
-    }
-  }
-}
+```yaml
+gen:
+  dart:
+    file: lib/gen/prompts.dart
 ```
 
 Generate the Dart code:

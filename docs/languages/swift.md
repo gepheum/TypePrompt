@@ -17,17 +17,13 @@ dependencies: [
 ]
 ```
 
-In your `typeprompt.json` configuration file, specify your Swift output path and optional root namespace:
+In your `typeprompt.yaml` configuration file, specify your Swift output path and optional root namespace:
 
-```json
-{
-  "gen": {
-    "swift": {
-      "file": "Sources/Gen/Prompts.swift",
-      "rootNamespace": "MyPrompts"
-    }
-  }
-}
+```yaml
+gen:
+  swift:
+    file: Sources/Gen/Prompts.swift
+    rootNamespace: MyPrompts
 ```
 
 Generate the Swift code:

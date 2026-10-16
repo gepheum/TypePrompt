@@ -13,17 +13,13 @@ dotnet add package YamlDotNet
 dotnet add package Toon.DotNet
 ```
 
-In your `typeprompt.json` configuration file, specify your C# output path and optional root namespace:
+In your `typeprompt.yaml` configuration file, specify your C# output path and optional root namespace:
 
-```json
-{
-  "gen": {
-    "csharp": {
-      "file": "src/Gen/Prompts.cs",
-      "rootNamespace": "MyCompany.Prompts"
-    }
-  }
-}
+```yaml
+gen:
+  csharp:
+    file: src/Gen/Prompts.cs
+    rootNamespace: MyCompany.Prompts
 ```
 
 Generate the C# code:

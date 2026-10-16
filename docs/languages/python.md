@@ -12,16 +12,12 @@ TypePrompt generates clean, standalone Python code that relies on these lightwei
 pip install pydantic pyyaml toon-format
 ```
 
-In your `typeprompt.json` configuration file, specify your Python output path:
+In your `typeprompt.yaml` configuration file, specify your Python output path:
 
-```json
-{
-  "gen": {
-    "python": {
-      "file": "src/gen/prompts.py"
-    }
-  }
-}
+```yaml
+gen:
+  python:
+    file: src/gen/prompts.py
 ```
 
 Generate the Python code:

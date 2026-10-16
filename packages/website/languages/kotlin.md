@@ -24,17 +24,13 @@ dependencies {
 }
 ```
 
-In your `typeprompt.json` configuration file, specify your Kotlin output path and package name:
+In your `typeprompt.yaml` configuration file, specify your Kotlin output path and package name:
 
-```json
-{
-  "gen": {
-    "kotlin": {
-      "file": "src/main/kotlin/gen/Prompts.kt",
-      "package": "com.example.prompts"
-    }
-  }
-}
+```yaml
+gen:
+  kotlin:
+    file: src/main/kotlin/gen/Prompts.kt
+    package: com.example.prompts
 ```
 
 Generate the Kotlin code:

@@ -12,16 +12,12 @@ TypePrompt generates clean, standalone TypeScript code that relies on these ligh
 npm install @toon-format/toon yaml zod
 ```
 
-In your `typeprompt.json` configuration file, specify your TypeScript output path:
+In your `typeprompt.yaml` configuration file, specify your TypeScript output path:
 
-```json
-{
-  "gen": {
-    "typescript": {
-      "file": "src/gen/prompts.ts"
-    }
-  }
-}
+```yaml
+gen:
+  typescript:
+    file: src/gen/prompts.ts
 ```
 
 Generate the TypeScript code:

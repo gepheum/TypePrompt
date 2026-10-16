@@ -24,16 +24,12 @@ serde_yaml = "0.9"
 toon-format = { version = "0.5", default-features = false }
 ```
 
-In your `typeprompt.json` configuration file, specify your Rust output path:
+In your `typeprompt.yaml` configuration file, specify your Rust output path:
 
-```json
-{
-  "gen": {
-    "rust": {
-      "file": "src/gen/prompts.rs"
-    }
-  }
-}
+```yaml
+gen:
+  rust:
+    file: src/gen/prompts.rs
 ```
 
 Generate the Rust code:
