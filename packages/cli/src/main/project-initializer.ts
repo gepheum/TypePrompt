@@ -50,7 +50,7 @@ gen:
   # csharp:
   #   file: ./Prompts.generated.cs
   # dart:
-  #   file: ../lib/prompts.g.dart
+  #   file: ./lib/prompts.g.dart
   # kotlin:
   #   file: ./src/main/kotlin/Prompts_Generated.kt
   #   package: com.example.prompts
