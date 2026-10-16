@@ -8,7 +8,7 @@ hero:
   text: End-to-end type safety for LLM prompts
   tagline: Define your Input and Output schemas once. TypePrompt keeps your prompts and your application code from silently drifting apart, catching mismatches at compile time instead of in production.
   image:
-    src: /tilly2.svg
+    src: /tilly.svg
     alt: Tilly
   actions:
     - theme: brand
