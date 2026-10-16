@@ -120,6 +120,7 @@ export async function patchProject(args: {
   }
 
   const templates: Spec.Templates = makeTemplates(compilationResult);
+  const { sourceFiles } = templates;
 
   const configYaml = [
     "patch:",
@@ -127,10 +128,12 @@ export async function patchProject(args: {
     "  overrides: overrides.json",
     "",
     "include:",
-    Object.keys(templates.sourceFiles)
-      .sort()
-      .map((p) => `  - ${p}`)
-      .join("\n"),
+    Object.keys(sourceFiles).length <= 0
+      ? "  - prompts/**/*.xml"
+      : Object.keys(sourceFiles)
+          .sort()
+          .map((p) => `  - ${JSON.stringify(p)}`)
+          .join("\n"),
     "",
   ].join("\n");
 
