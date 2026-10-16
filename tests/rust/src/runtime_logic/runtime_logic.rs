@@ -39,7 +39,7 @@
 //   let output = execute_prompt(&prompt, &NO_TOOLS).await?;
 //
 // Integration guide:
-//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/rust.md
+//   https://typeprompt.dev/languages/rust.md
 // </static:rust-top-level>
 
 // <static:rust-imports>

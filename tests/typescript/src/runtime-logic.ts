@@ -44,7 +44,7 @@ import * as Spec from "../../../packages/core/src/compiler/spec-types.js";
  * ```
 //
 // Integration guide:
-//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/typescript.md
+//   https://typeprompt.dev/languages/typescript.md
  */
 
 import { encode as encodeToon } from "@toon-format/toon";

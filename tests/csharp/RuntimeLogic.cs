@@ -38,7 +38,7 @@
 //   var output = await ExecutePrompt(prompt, NoTools.NoTools);
 //
 // Integration guide:
-//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/csharp.md
+//   https://typeprompt.dev/languages/csharp.md
 
 #pragma warning disable CS0108, CS0162, CS0219, CS0414, CS0649, CS1591, CS8600, CS8601, CS8602, CS8603, CS8604, CS8618, CS8625, CS8669
 

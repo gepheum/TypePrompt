@@ -34,7 +34,7 @@
 //   val output = executePrompt(prompt, NoTools)
 //
 // Integration guide:
-//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/kotlin.md
+//   https://typeprompt.dev/languages/kotlin.md
 
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @file:Suppress("ktlint")

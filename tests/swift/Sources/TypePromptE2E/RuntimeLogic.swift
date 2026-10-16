@@ -34,7 +34,7 @@
 //   let output = try await executePrompt(prompt: prompt, toolExecutor: noTools)
 //
 // Integration guide:
-//   https://github.com/gepheum/TypePrompt/blob/main/docs/languages/swift.md
+//   https://typeprompt.dev/languages/swift.md
 // </static:swift-top-level>
 
 // <static:swift-imports>
