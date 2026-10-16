@@ -110,7 +110,7 @@ println(result.humanAction)
 ## Getting started
 
 1. **Initialize your project**: Run `npx typeprompt init` in your project root.
-2. **Configure target languages**: Edit `typeprompt.yml` to specify your target language.
+2. **Configure target languages**: Edit `typeprompt.yaml` to specify your target language.
 3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
 
 ---

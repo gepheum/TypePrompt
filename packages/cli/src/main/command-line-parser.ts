@@ -98,7 +98,7 @@ Commands:
   help         Display this help message
 
 Options:
-  -p <path>    Path to the directory containing the typeprompt.yml file
+  -p <path>    Path to the directory containing the typeprompt.yaml file
   -b <path>    Path to base project directory or templates.json file (patch only)
   -o <path>    Path to output patch project directory (patch only)
   --watch, -w  Automatically run code generation when template files change

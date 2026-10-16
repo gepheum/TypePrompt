@@ -17,7 +17,7 @@ A command-line translation tool built with Kotlin, TypePrompt, and the official 
 .
 ├── build.gradle.kts
 ├── settings.gradle.kts
-├── typeprompt.yml
+├── typeprompt.yaml
 ├── prompts/
 │   └── Translate.xml
 └── src/main/kotlin/

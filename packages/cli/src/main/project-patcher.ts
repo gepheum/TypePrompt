@@ -12,6 +12,10 @@ import * as Paths from "path";
 import { renderErrors } from "./error-renderer.js";
 import { ExitError } from "./exit-error.js";
 import { isDirectory, REAL_FILE_SYSTEM } from "./io.js";
+import {
+  checkNoConfigInDirectory,
+  readConfigInDirectory,
+} from "./project-config.js";
 import type { RenderableError } from "./renderable-error.js";
 import {
   makePathNormalizer,
@@ -73,11 +77,7 @@ export async function patchProject(args: {
       throw new ExitError(`Not a directory: ${base}`);
     }
 
-    const configPath = Paths.join(baseDir, "typeprompt.yml");
-    const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
-    if (configContent === undefined) {
-      throw new ExitError(`Cannot find ${configPath}`);
-    }
+    const { configPath, configContent } = readConfigInDirectory(baseDir);
 
     const configResult = parseConfigYaml(configContent, configPath);
     if (configResult.kind === "error") {
@@ -136,9 +136,11 @@ export async function patchProject(args: {
 
   const filesToWrite: { readonly [path: string]: string } = {
     ...templates.sourceFiles,
-    "typeprompt.yml": configYaml,
+    "typeprompt.yaml": configYaml,
     "patch-base.json": JSON.stringify(templates, undefined, 2),
   };
+
+  checkNoConfigInDirectory(output);
 
   const existingFiles = (
     await Promise.all(

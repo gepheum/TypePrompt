@@ -109,7 +109,7 @@ npx typeprompt patch -b <base> -o <output-dir>
 #### Options
 
 - `-b, --base <path | url>` *(required)*: Specifies the base project. Can be:
-  - A path to a local TypePrompt project directory (containing `typeprompt.yml`).
+  - A path to a local TypePrompt project directory (containing `typeprompt.yaml`).
   - A path to a templates JSON file (saved from `template_overrider.templates_data`).
   - An HTTP/HTTPS URL serving templates JSON (e.g. `http://localhost:8000/api/prompts/templates`).
 - `-o, --output <dir>` *(required)*: Path to the new patch project directory (e.g. in `/tmp` or an evaluation folder).
@@ -117,7 +117,7 @@ npx typeprompt patch -b <base> -o <output-dir>
 ### What the patch project contains
 
 The generated patch directory contains:
-- `typeprompt.yml`: Preconfigured with `patch.base: patch-base.json` and `patch.overrides: overrides.json`.
+- `typeprompt.yaml`: Preconfigured with `patch.base: patch-base.json` and `patch.overrides: overrides.json`.
 - `patch-base.json`: Baseline template definitions against which your changes are validated.
 - Cloned `.xml` prompt files ready for editing.
 

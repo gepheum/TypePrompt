@@ -35,11 +35,12 @@ export function activate(context: ExtensionContext): void {
     documentSelector: [
       { scheme: "file", language: "xml" },
       { scheme: "file", pattern: "**/*.xml" },
+      { scheme: "file", pattern: "**/typeprompt.yaml" },
       { scheme: "file", pattern: "**/typeprompt.yml" },
     ],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/{*.xml,typeprompt.yml}",
+        "**/{*.xml,typeprompt.yaml,typeprompt.yml}",
       ),
     },
   };

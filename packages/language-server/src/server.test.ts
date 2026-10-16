@@ -530,6 +530,94 @@ describe("TypePrompt Language Server", () => {
     expect(lastDiag.diagnostics[0]!.message).toBe("Schema does not match base");
   });
 
+  it("scans workspace directory and discovers typeprompt.yaml", async () => {
+    const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+      [];
+    const extension = new TypePromptLanguageExtension(
+      (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+      () => undefined,
+    );
+
+    // Write typeprompt.yaml
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yaml"),
+      "include:\n  - prompts/**/*.xml\n",
+      "utf-8",
+    );
+
+    // Create prompts directory and template
+    const promptsDir = path.join(tempDir, "prompts");
+    await fs.mkdir(promptsDir, { recursive: true });
+    await fs.writeFile(
+      path.join(promptsDir, "Translate.xml"),
+      `<template name="Translate">
+  <schema output-format="text">
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+      "utf-8",
+    );
+
+    extension.setWorkspaceFolders([fsPathToUri(tempDir)]);
+    await extension.runScan();
+
+    expect(extension.projects.size).toBe(1);
+    expect(extension.templateFiles.size).toBe(1);
+
+    const translateUri = fsPathToUri(path.join(promptsDir, "Translate.xml"));
+    const diags = sentDiagnostics.filter((d) => d.uri === translateUri);
+    expect(diags.length >= 1).toBe(true);
+    expect(diags[diags.length - 1]!.diagnostics.length).toBe(0);
+  });
+
+  it("prefers typeprompt.yaml over typeprompt.yml when both exist in the same directory", async () => {
+    const extension = new TypePromptLanguageExtension(
+      () => undefined,
+      () => undefined,
+    );
+
+    // Write typeprompt.yml with include 'prompts-yml/**/*.xml'
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yml"),
+      "include:\n  - prompts-yml/**/*.xml\n",
+      "utf-8",
+    );
+
+    // Write typeprompt.yaml with include 'prompts/**/*.xml'
+    await fs.writeFile(
+      path.join(tempDir, "typeprompt.yaml"),
+      "include:\n  - prompts/**/*.xml\n",
+      "utf-8",
+    );
+
+    // Create template inside prompts/
+    const promptsDir = path.join(tempDir, "prompts");
+    await fs.mkdir(promptsDir, { recursive: true });
+    await fs.writeFile(
+      path.join(promptsDir, "Test.xml"),
+      `<template name="Test">
+  <schema output-format="text">
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>Test</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+      "utf-8",
+    );
+
+    extension.setWorkspaceFolders([fsPathToUri(tempDir)]);
+    await extension.runScan();
+
+    const templateUri = fsPathToUri(path.join(promptsDir, "Test.xml"));
+    const match = extension.findProjectByUri(templateUri);
+    expect(match !== undefined).toBe(true);
+    expect(match!.project.configUri.endsWith("/typeprompt.yaml")).toBe(true);
+  });
+
   describe("computeEdits", () => {
     function applyEdits(doc: TextDocument, edits: TextEdit[]): string {
       const sorted = [...edits].sort((a, b) => {

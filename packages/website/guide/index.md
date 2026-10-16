@@ -43,11 +43,11 @@ Run the init command in your project root:
 npx typeprompt init
 ```
 
-This scaffolds a `typeprompt.yml` configuration file and a `prompts/` directory containing a starter template.
+This scaffolds a `typeprompt.yaml` configuration file and a `prompts/` directory containing a starter template.
 
 ### 2. Configure target languages
 
-Edit `typeprompt.yml` to specify where generated code should be written, for each language you target. For example, to generate TypeScript and Kotlin:
+Edit `typeprompt.yaml` to specify where generated code should be written, for each language you target. For example, to generate TypeScript and Kotlin:
 
 ```yaml
 gen:

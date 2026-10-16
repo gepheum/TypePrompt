@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { findConfigInDirectory } from "./project-config.js";
 
 export function initializeProject(projectDir: string): void {
   if (!existsSync(projectDir)) {
@@ -7,15 +8,17 @@ export function initializeProject(projectDir: string): void {
     console.log(`Created ${projectDir}`);
   }
 
-  const configPath = join(projectDir, "typeprompt.yml");
+  const existingConfigPath = findConfigInDirectory(projectDir);
+
   const promptsDir = join(projectDir, "prompts");
   const helloWorldPath = join(promptsDir, "hello-world.xml");
 
-  if (!existsSync(configPath)) {
-    writeFileSync(configPath, DEFAULT_CONFIG_YAML, "utf8");
-    console.log(`Created ${configPath}`);
+  if (!existingConfigPath) {
+    const yamlConfigPath = join(projectDir, "typeprompt.yaml");
+    writeFileSync(yamlConfigPath, DEFAULT_CONFIG_YAML, "utf8");
+    console.log(`Created ${yamlConfigPath}`);
   } else {
-    console.log(`Config already exists: ${configPath}`);
+    console.log(`Config already exists: ${existingConfigPath}`);
   }
 
   if (!existsSync(promptsDir)) {

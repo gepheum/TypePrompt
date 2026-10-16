@@ -56,16 +56,16 @@ describe("initializeProject", () => {
     }
   });
 
-  it("generates typeprompt.yml and prompts/hello-world.xml in a temporary directory", () => {
+  it("generates typeprompt.yaml and prompts/hello-world.xml in a temporary directory", () => {
     initializeProject(tempDir);
 
-    const configPath = join(tempDir, "typeprompt.yml");
+    const configPath = join(tempDir, "typeprompt.yaml");
     const templatePath = join(tempDir, "prompts", "hello-world.xml");
 
     expect(existsSync(configPath)).toBe(true);
     expect(existsSync(templatePath)).toBe(true);
 
-    // Read typeprompt.yml and uncomment all commented lines under "gen:"
+    // Read typeprompt.yaml and uncomment all commented lines under "gen:"
     const rawConfig = readFileSync(configPath, "utf8");
     const lines = rawConfig.split("\n");
     const genIndex = lines.findIndex((line) => line.trim() === "gen:");
@@ -80,7 +80,7 @@ describe("initializeProject", () => {
     const uncommentedConfig = uncommentedLines.join("\n");
 
     // Validate config with config-parser
-    const configResult = parseConfigYaml(uncommentedConfig, "typeprompt.yml");
+    const configResult = parseConfigYaml(uncommentedConfig, "typeprompt.yaml");
     if (configResult.kind !== "success") {
       throw new Error(
         `Config validation failed:\n${configResult.errors.map((e) => e.message).join("\n")}`,
@@ -125,7 +125,7 @@ describe("initializeProject", () => {
   });
 
   it("does not overwrite existing config or template files", () => {
-    const configPath = join(tempDir, "typeprompt.yml");
+    const configPath = join(tempDir, "typeprompt.yaml");
     const promptsDir = join(tempDir, "prompts");
     const templatePath = join(promptsDir, "hello-world.xml");
 
@@ -140,5 +140,17 @@ describe("initializeProject", () => {
     initializeProject(tempDir);
 
     expect(readFileSync(templatePath, "utf8")).toBe("custom template");
+  });
+
+  it("does not overwrite existing typeprompt.yml with typeprompt.yaml", () => {
+    const ymlConfigPath = join(tempDir, "typeprompt.yml");
+    const yamlConfigPath = join(tempDir, "typeprompt.yaml");
+
+    writeFileSync(ymlConfigPath, "custom yml config", "utf8");
+
+    initializeProject(tempDir);
+
+    expect(readFileSync(ymlConfigPath, "utf8")).toBe("custom yml config");
+    expect(existsSync(yamlConfigPath)).toBe(false);
   });
 });

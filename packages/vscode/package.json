@@ -12,7 +12,9 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:xml"
+    "onLanguage:xml",
+    "workspaceContains:**/typeprompt.yaml",
+    "workspaceContains:**/typeprompt.yml"
   ],
   "main": "./dist/extension.js",
   "contributes": {

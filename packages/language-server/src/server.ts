@@ -57,7 +57,8 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
-type FileType = "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
+type FileType =
+  "typeprompt.yaml" | "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
 
 interface FileContent {
   readonly content: string;
@@ -66,7 +67,9 @@ interface FileContent {
 }
 
 function getFileType(uri: string): FileType {
-  if (uri.endsWith("/typeprompt.yml")) {
+  if (uri.endsWith("/typeprompt.yaml")) {
+    return "typeprompt.yaml";
+  } else if (uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
   } else if (uri.endsWith(".xml")) {
     return "*.xml";
@@ -309,9 +312,7 @@ export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
   return builder.build();
 }
 
-/**
- * A TypePrompt project corresponding to a `typeprompt.yml` file.
- */
+/** A TypePrompt project corresponding to a `typeprompt.yaml` file. */
 class Project {
   /** Template files in this project. Key: relative path. */
   public readonly templateFiles = new Map<string, TemplateFile>();
@@ -330,12 +331,14 @@ class Project {
 
   constructor(
     /**
-     * The absolute file URI of the directory containing `typeprompt.yml`
+     * The absolute file URI of the directory containing `typeprompt.yaml` or `typeprompt.yml`
      * (e.g. "file:///path/to/project").
      */
     public readonly folderUri: string,
     /** The loaded configuration bundle for this project. */
     public configBundle: TypePromptConfigBundle,
+    /** The URI of the config file itself. */
+    public readonly configUri: string,
   ) {}
 
   public get config(): Config {
@@ -503,40 +506,46 @@ export class TypePromptLanguageExtension {
 
       let files: string[];
       try {
-        files = await glob("**/{typeprompt.yml,patch-base.json,*.xml}", {
-          cwd: folderPath,
-          nodir: true,
-          absolute: true,
-          ignore: [
-            "**/node_modules/**",
-            "**/.git/**",
-            "**/dist/**",
-            "**/build/**",
-            "**/bin/**",
-            "**/obj/**",
-            "**/.gradle/**",
-            "**/target/**",
-          ],
-        });
+        files = await glob(
+          "**/{typeprompt.yaml,typeprompt.yml,patch-base.json,*.xml}",
+          {
+            cwd: folderPath,
+            nodir: true,
+            absolute: true,
+            ignore: [
+              "**/node_modules/**",
+              "**/.git/**",
+              "**/dist/**",
+              "**/build/**",
+              "**/bin/**",
+              "**/obj/**",
+              "**/.gradle/**",
+              "**/target/**",
+            ],
+          },
+        );
       } catch {
         continue;
       }
 
       // Prioritize config files first so projects are created before template files.
+      // typeprompt.yaml is preferred over typeprompt.yml.
       const uriToTier = (u: string): number => {
         const fileType = getFileType(u);
         switch (fileType) {
-          case "typeprompt.yml":
+          case "typeprompt.yaml":
             return 1;
-          case "patch-base.json":
+          case "typeprompt.yml":
             return 2;
-          case "*.xml":
+          case "patch-base.json":
             return 3;
-          case null:
+          case "*.xml":
             return 4;
+          case null:
+            return 5;
           default: {
             const _: never = fileType;
-            return 4;
+            return 5;
           }
         }
       };
@@ -662,6 +671,7 @@ export class TypePromptLanguageExtension {
     }
 
     switch (fileType) {
+      case "typeprompt.yaml":
       case "typeprompt.yml": {
         if (content) {
           const configResult = parseConfigYaml(content.content, uri);
@@ -675,7 +685,7 @@ export class TypePromptLanguageExtension {
               oldProject.configBundle = configBundle;
             } else {
               const folderUri = uri.replace(/typeprompt\.(yml|yaml)$/, "");
-              const project = new Project(folderUri, configBundle);
+              const project = new Project(folderUri, configBundle, uri);
               this.projects.set(uri, project);
             }
             this.sendDiagnostics(uri, []);
@@ -828,6 +838,7 @@ export class TypePromptLanguageExtension {
         return this.templateFiles.get(uri)?.content;
       case "patch-base.json":
         return this.patchBases.get(uri)?.content;
+      case "typeprompt.yaml":
       case "typeprompt.yml":
         return this.projects.get(uri)?.configBundle.yamlContent;
       case null:
@@ -876,10 +887,13 @@ export class TypePromptLanguageExtension {
           ? relPath === "patch-base.json"
           : project.matchesInclude(relPath);
       if (matches) {
-        if (
+        const isBetter =
           !bestMatch ||
-          project.folderUri.length > bestMatch.project.folderUri.length
-        ) {
+          project.folderUri.length > bestMatch.project.folderUri.length ||
+          (project.folderUri.length === bestMatch.project.folderUri.length &&
+            project.configUri.endsWith("/typeprompt.yaml") &&
+            !bestMatch.project.configUri.endsWith("/typeprompt.yaml"));
+        if (isBetter) {
           bestMatch = { project, relativePath: relPath };
         }
       }

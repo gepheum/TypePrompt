@@ -26,7 +26,8 @@ import {
   renderErrors,
 } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
-import { isDirectory, REAL_FILE_SYSTEM } from "./main/io.js";
+import { isDirectory } from "./main/io.js";
+import { readConfigInDirectory } from "./main/project-config.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";
@@ -320,12 +321,7 @@ async function main(): Promise<void> {
   }
 
   const resolvedProject = Paths.resolve(project);
-  const configPath = Paths.join(resolvedProject, "typeprompt.yml");
-  const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
-  if (configContent === undefined) {
-    console.error(makeRed(`Cannot find ${configPath}`));
-    process.exit(1);
-  }
+  const { configPath, configContent } = readConfigInDirectory(resolvedProject);
 
   const configResult = parseConfigYaml(configContent, configPath);
   if (configResult.kind === "error") {

@@ -5,7 +5,7 @@ description: XML syntax for defining prompt templates, tools, and metadata.
 
 # TypePrompt language reference
 
-TypePrompt projects are made up of `.xml` files matching the `include` pattern in `typeprompt.yml` (by default, `prompts/**/*.xml`). Every file has one of the following root elements:
+TypePrompt projects are made up of `.xml` files matching the `include` pattern in `typeprompt.yaml` (by default, `prompts/**/*.xml`). Every file has one of the following root elements:
 
 | Element | Purpose |
 |---|---|

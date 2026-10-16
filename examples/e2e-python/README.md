@@ -16,7 +16,7 @@ An engaging day-planner and local activity advisor built with Python, TypePrompt
 
 ```
 .
-├── typeprompt.yml           # TypePrompt configuration
+├── typeprompt.yaml          # TypePrompt configuration
 ├── requirements.txt         # Python dependencies
 ├── prompts/
 │   ├── meta.xml             # Metadata declaration (model, temperature)

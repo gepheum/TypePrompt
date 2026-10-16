@@ -47,7 +47,7 @@ describe("patchProject", () => {
       output: targetProject,
     });
 
-    const configPath = join(targetProject, "typeprompt.yml");
+    const configPath = join(targetProject, "typeprompt.yaml");
     const templatePath = join(targetProject, "prompts", "hello-world.xml");
     const baseJsonPath = join(targetProject, "patch-base.json");
 
@@ -90,7 +90,7 @@ describe("patchProject", () => {
       output: target2,
     });
 
-    const configPath = join(target2, "typeprompt.yml");
+    const configPath = join(target2, "typeprompt.yaml");
     const templatePath = join(target2, "prompts", "hello-world.xml");
     const target2BaseJson = join(target2, "patch-base.json");
 
@@ -114,6 +114,31 @@ describe("patchProject", () => {
     initializeProject(tempBaseDir);
 
     const targetProject = join(tempPatchDir, "existing-target");
+    mkdirSync(targetProject, { recursive: true });
+    writeFileSync(
+      join(targetProject, "typeprompt.yaml"),
+      "include:\n  - prompts/*.xml",
+      "utf8",
+    );
+
+    let error: unknown;
+    try {
+      await patchProject({
+        base: tempBaseDir,
+        output: targetProject,
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error instanceof ExitError).toBe(true);
+    expect((error as ExitError).message).toMatch(/File already exists/);
+  });
+
+  it("fails if target project already contains typeprompt.yml", async () => {
+    initializeProject(tempBaseDir);
+
+    const targetProject = join(tempPatchDir, "existing-yml-target");
     mkdirSync(targetProject, { recursive: true });
     writeFileSync(
       join(targetProject, "typeprompt.yml"),
@@ -228,7 +253,7 @@ describe("patchProject", () => {
         output: target2,
       });
 
-      const configPath = join(target2, "typeprompt.yml");
+      const configPath = join(target2, "typeprompt.yaml");
       const templatePath = join(target2, "prompts", "hello-world.xml");
       const target2BaseJson = join(target2, "patch-base.json");
 
@@ -307,5 +332,30 @@ describe("patchProject", () => {
     expect((error as ExitError).message).toMatch(
       /Failed to fetch http:\/\/127\.0\.0\.1:1/,
     );
+  });
+
+  it("patches from a base project directory that uses typeprompt.yml", async () => {
+    mkdirSync(tempBaseDir, { recursive: true });
+    writeFileSync(
+      join(tempBaseDir, "typeprompt.yml"),
+      "include:\n  - prompts/**/*.xml\n",
+      "utf8",
+    );
+    const promptsDir = join(tempBaseDir, "prompts");
+    mkdirSync(promptsDir, { recursive: true });
+    writeFileSync(
+      join(promptsDir, "hello-world.xml"),
+      HELLO_WORLD_TEMPLATE,
+      "utf8",
+    );
+
+    const targetProject = join(tempPatchDir, "patch-from-yml");
+    await patchProject({
+      base: tempBaseDir,
+      output: targetProject,
+    });
+
+    const configPath = join(targetProject, "typeprompt.yaml");
+    expect(existsSync(configPath)).toBe(true);
   });
 });

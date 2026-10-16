@@ -17,7 +17,7 @@ An SRE Incident Commander and automated triage assistant built with Rust, TypePr
 ```
 .
 ├── Cargo.toml                 # Rust package configuration & dependencies
-├── typeprompt.yml             # TypePrompt configuration
+├── typeprompt.yaml            # TypePrompt configuration
 ├── prompts/
 │   ├── meta.xml               # Metadata declaration (model, temperature)
 │   ├── getServiceMetrics.xml  # Tool definition (Input & Output schema)
