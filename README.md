@@ -1,3 +1,6 @@
+<br />
+<img src="packages/website/public/tilly.svg" width="80" alt="Tilly" />
+
 # TypePrompt
 
 **TypePrompt** is a tool for managing LLM prompts in your codebase. It brings end-to-end type safety to your AI workflow through code generation, and integrates seamlessly with any LLM SDK.
