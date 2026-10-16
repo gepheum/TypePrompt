@@ -7,6 +7,7 @@ import {
   createLineFinder,
   findLine,
   getCompletionItems,
+  getConfigCompletionItems,
   parseCompilationResult,
   parseConfigYaml,
   tokenize,
@@ -1048,6 +1049,28 @@ export class TypePromptLanguageExtension {
       return [];
     }
     const fileType = getFileType(uri);
+    if (fileType === "typeprompt.yaml" || fileType === "typeprompt.yml") {
+      const doc = this.getDocument(uri);
+      if (!doc) {
+        return [];
+      }
+      const offset = doc.offsetAt(position);
+      const result = getConfigCompletionItems(doc.getText(), offset);
+      if (!result || result.suggestions.length === 0) {
+        return [];
+      }
+      const startPos = doc.positionAt(result.span.start);
+      const endPos = doc.positionAt(result.span.end);
+      const range = { start: startPos, end: endPos };
+
+      return result.suggestions.map((suggestion, index) => ({
+        label: suggestion,
+        kind: CompletionItemKind.Property,
+        textEdit: TextEdit.replace(range, suggestion),
+        sortText: String(index).padStart(5, "0"),
+      }));
+    }
+
     if (fileType !== "*.xml") {
       return [];
     }

@@ -10,10 +10,11 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import type {
-  Diagnostic,
-  SemanticTokens,
-  TextEdit,
+import {
+  CompletionItemKind,
+  type Diagnostic,
+  type SemanticTokens,
+  type TextEdit,
 } from "vscode-languageserver/node.js";
 import {
   computeEdits,
@@ -1264,14 +1265,64 @@ comment here -->
       expect(items).toMatch([]);
     });
 
-    it("returns empty completions for non-XML files", () => {
+    it("returns completion items for typeprompt.yaml when editing config", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const yaml = "include:\n  - prompts/**/*.xml\ngen:\n  ";
+      const yamlUri = fsPathToUri(path.join(tempDir, "typeprompt.yaml"));
+      const doc = TextDocument.create(yamlUri, "yaml", 1, yaml);
+      openDocs.set(yamlUri, doc);
+
+      const items = extension.getCompletionItems(yamlUri, {
+        line: 3,
+        character: 2,
+      });
+
+      expect(items.length > 0).toBe(true);
+      const labels = items.map((i) => i.label);
+      expect(labels).toMatch([
+        "cpp",
+        "csharp",
+        "dart",
+        "kotlin",
+        "python",
+        "rust",
+        "swift",
+        "typescript",
+      ]);
+      expect(items[0]?.kind).toBe(CompletionItemKind.Property);
+    });
+
+    it("returns empty completions for unsupported files", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const txtUri = fsPathToUri(path.join(tempDir, "notes.txt"));
+      const doc = TextDocument.create(txtUri, "plaintext", 1, "hello");
+      openDocs.set(txtUri, doc);
+
+      const items = extension.getCompletionItems(txtUri, {
+        line: 0,
+        character: 0,
+      });
+      expect(items).toMatch([]);
+    });
+
+    it("returns empty completions when document is not open", () => {
       const extension = new TypePromptLanguageExtension(
         () => {},
         () => undefined,
       );
 
-      const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const items = extension.getCompletionItems(ymlUri, {
+      const yamlUri = fsPathToUri(path.join(tempDir, "typeprompt.yaml"));
+      const items = extension.getCompletionItems(yamlUri, {
         line: 0,
         character: 0,
       });

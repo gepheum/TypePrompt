@@ -1,6 +1,9 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { getCompletionItems } from "./completion-provider.js";
+import {
+  getCompletionItems,
+  getConfigCompletionItems,
+} from "./completion-provider.js";
 
 describe("getCompletionItems", () => {
   it("suggests valid child elements when typing after < in body", () => {
@@ -115,6 +118,69 @@ describe("getCompletionItems", () => {
       patchBase: null,
     });
 
+    expect(result).toBe(null);
+  });
+});
+
+describe("getConfigCompletionItems", () => {
+  it("suggests missing top-level fields", () => {
+    const yaml = "include:\n  - prompts/*.xml\n";
+    const result = getConfigCompletionItems(yaml, yaml.length);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["gen", "patch"]);
+    expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
+  });
+
+  it("suggests generators under gen", () => {
+    const yaml = "include:\n  - prompts/*.xml\ngen:\n  ";
+    const result = getConfigCompletionItems(yaml, yaml.length);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch([
+      "cpp",
+      "csharp",
+      "dart",
+      "kotlin",
+      "python",
+      "rust",
+      "swift",
+      "typescript",
+    ]);
+    expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
+  });
+
+  it("suggests generator fields under gen.<lang>", () => {
+    const yaml = "include:\n  - prompts/*.xml\ngen:\n  typescript:\n    ";
+    const result = getConfigCompletionItems(yaml, yaml.length);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["file"]);
+    expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
+  });
+
+  it("suggests matching fields when partially typed with colon", () => {
+    const yaml = "include:\n  - prompts/*.xml\ngen:\n  typ:";
+    const pos = yaml.indexOf("typ") + 2;
+    const result = getConfigCompletionItems(yaml, pos);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch([
+      "cpp",
+      "csharp",
+      "dart",
+      "kotlin",
+      "python",
+      "rust",
+      "swift",
+      "typescript",
+    ]);
+    expect(result!.span).toMatch({
+      start: yaml.indexOf("typ"),
+      end: yaml.indexOf("typ") + 3,
+    });
+  });
+
+  it("returns null when no suggestions available at position", () => {
+    const yaml = "include:\n  - prompts/*.xml\n";
+    const pos = yaml.indexOf("prompts") + 2;
+    const result = getConfigCompletionItems(yaml, pos);
     expect(result).toBe(null);
   });
 });

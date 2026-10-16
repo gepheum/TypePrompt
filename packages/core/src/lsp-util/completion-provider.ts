@@ -3,7 +3,8 @@ import type {
   ValidCompilationResult,
 } from "../compiler/compiler-types.js";
 import { compile } from "../compiler/compiler.js";
-import type { Span } from "../util/shared-types.js";
+import { parseConfigYaml } from "../config/config-parser.js";
+import type { InternalError, Span } from "../util/shared-types.js";
 
 export type CompletionItems = {
   /** The range to replace. */
@@ -26,37 +27,68 @@ export function getCompletionItems(args: {
 
   const leftPart = newContent.slice(0, position);
   const rightPart = newContent.slice(position);
-
-  // Snippets we try to insert at 'position' until we get one error with suggestions.
-  const insertions = ((): readonly string[] => {
-    if (/[a-zA-Z0-9]$/.test(leftPart) || /^[a-zA-Z0-9]/.test(rightPart)) {
-      return [""];
-    }
-    const insertions: string[] = [
-      completionToken,
-      completionToken.toUpperCase(),
-    ];
-    if (rightPart.endsWith(" ")) {
-      // For XML attributes
-      insertions.push(`${completionToken}=""`);
-    }
-    if (/(?:\r?\n|^)[ \t]*-?[ \t]*$/.test(rightPart)) {
-      // For YAML object entries
-      insertions.push(`${completionToken}: true`);
-    }
-    return insertions;
-  })();
+  const insertions = computeInsertions(leftPart, rightPart, "template");
 
   const pathToNewContent = Object.fromEntries(Object.entries(pathToOldContent));
-  for (const insertion of insertions) {
-    const content = [leftPart, insertion, rightPart].join("");
+  return findCompletionItem(newContent, position, insertions, (content) => {
     pathToNewContent[path] = content;
-
     const compilationResult = compile(pathToNewContent, { cache, patchBase });
     if (cache === null) {
       cache = compilationResult;
     }
-    const errors = compilationResult.finalErrors[path] ?? [];
+    return compilationResult.finalErrors[path] ?? [];
+  });
+}
+
+export function getConfigCompletionItems(
+  newContent: string,
+  position: number,
+): CompletionItems | null {
+  const leftPart = newContent.slice(0, position);
+  const rightPart = newContent.slice(position);
+  const insertions = computeInsertions(leftPart, rightPart, "config");
+
+  return findCompletionItem(newContent, position, insertions, (content) => {
+    const parseResult = parseConfigYaml(content, "typeprompt.yaml");
+    return parseResult.kind === "error" ? parseResult.errors : [];
+  });
+}
+
+function computeInsertions(
+  leftPart: string,
+  rightPart: string,
+  kind: "template" | "config",
+): readonly string[] {
+  if (/[a-zA-Z0-9]$/.test(leftPart) || /^[a-zA-Z0-9]/.test(rightPart)) {
+    return [""];
+  }
+  const insertions: string[] = [completionToken];
+  if (kind === "template") {
+    insertions.push(completionToken.toUpperCase());
+    if (rightPart.endsWith(" ")) {
+      // For XML attributes
+      insertions.push(`${completionToken}=""`);
+    }
+  }
+  if (/(?:\r?\n|^)[ \t]*-?[ \t]*$/.test(rightPart)) {
+    // For YAML object entries
+    insertions.push(`${completionToken}: true`);
+  }
+  return insertions;
+}
+
+function findCompletionItem(
+  newContent: string,
+  position: number,
+  insertions: readonly string[],
+  getErrors: (content: string) => readonly InternalError[],
+): CompletionItems | null {
+  const leftPart = newContent.slice(0, position);
+  const rightPart = newContent.slice(position);
+
+  for (const insertion of insertions) {
+    const content = [leftPart, insertion, rightPart].join("");
+    const errors = getErrors(content);
 
     for (const error of errors) {
       const { span, suggestions } = error;
