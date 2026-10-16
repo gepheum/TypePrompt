@@ -38,6 +38,7 @@ export function initializeProject(projectDir: string): void {
 
 export const DEFAULT_CONFIG_YAML = `
 # TypePrompt configuration. Run 'npx typeprompt gen' to generate code.
+# Docs: https://typeprompt.dev
 
 include:
   - prompts/**/*.xml
