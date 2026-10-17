@@ -99,6 +99,7 @@ class XmlParser {
 
     return {
       kind: "success",
+      content: this.content,
       root: this.root!,
       topLevelComments: this.topLevelComments,
     };

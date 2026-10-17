@@ -91,7 +91,7 @@ describe("initializeProject", () => {
     expect(configResult.config.gen).toMatch({
       cpp: { file: "./prompts.gen.h", rootNamespace: undefined },
       csharp: { file: "./Prompts.generated.cs", rootNamespace: undefined },
-      dart: { file: "../lib/prompts.g.dart" },
+      dart: { file: "./lib/prompts.g.dart" },
       kotlin: {
         file: "./src/main/kotlin/Prompts_Generated.kt",
         package: "com.example.prompts",

@@ -29,6 +29,7 @@ describe("parseXmlDocument", () => {
 
     expect(parseXmlDocument(input)).toMatch({
       kind: "success",
+      content: input,
       root: {
         kind: "element",
         tag: {

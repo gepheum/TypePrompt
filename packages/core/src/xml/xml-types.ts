@@ -7,6 +7,7 @@ import type {
 
 export type XmlDocument = {
   readonly kind: "success";
+  readonly content: string;
   readonly root: ElementNode;
   readonly topLevelComments: readonly XmlComment[];
 };
@@ -29,6 +30,7 @@ export type ElementNode = {
   readonly kind: "element";
   readonly tag: TextSpan;
   readonly attributes: { readonly [name: string]: Attribute };
+  /** Position immediately after '>'. */
   readonly contentStart: number;
   readonly children: readonly XmlNode[];
   readonly comments: readonly XmlComment[];
