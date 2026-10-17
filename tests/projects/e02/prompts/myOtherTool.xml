@@ -1,4 +1,7 @@
 <tool name="myOtherTool">
+  <description>
+    Bonjour
+  </description>
   <schema>
     type Input = shared.Square;
 
@@ -11,7 +14,4 @@
       square: shared.Square;
     };
   </schema>
-  <description>
-    Bonjour
-  </description>
 </tool>

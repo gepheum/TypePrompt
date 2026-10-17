@@ -14,10 +14,11 @@
     - tool: myTool
   </tools>
 
-  <user>
-    U
-  </user>
   <system>
     S
   </system>
+
+  <user>
+    U
+  </user>
 </template>

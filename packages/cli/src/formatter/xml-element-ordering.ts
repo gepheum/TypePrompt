@@ -13,19 +13,17 @@ export function reorderXmlElements(xmlDocument: XmlDocument): XmlDocument {
 
   const doReorder = (node: ElementNode): void => {
     if (!mustReorderChildren(node.tag.text)) return;
-    const { children } = node;
+    const children = node.children.filter(
+      (c): c is ElementNode => c.kind === "element",
+    );
     if (children.length <= 0) return;
-    if (!children.every((c): c is ElementNode => c.kind === "element")) {
-      return;
-    }
     children.forEach(doReorder);
     if (
       children.every(
         (c, i) => i <= 0 || getTagIndex(children[i - 1]!) <= getTagIndex(c),
       )
-    ) {
+    )
       return;
-    }
     const fragments: Array<{
       readonly contentSlice: string;
       readonly tagIndex: number;
@@ -38,7 +36,7 @@ export function reorderXmlElements(xmlDocument: XmlDocument): XmlDocument {
     });
     const insertionRange = {
       start: node.contentStart,
-      end: children[-1]!.end,
+      end: children.at(-1)!.end,
     } as const;
     fragments.sort((a, b) => a.tagIndex - b.tagIndex);
     content = [
@@ -118,8 +116,9 @@ function mustReorderChildren(tagName: string): boolean {
 
 const ORDERED_TAG_NAMES: readonly TagName[] = [
   "meta",
-  "schema",
   "description",
+  "schema",
+  "tools",
   "system",
   "user",
   "examples",

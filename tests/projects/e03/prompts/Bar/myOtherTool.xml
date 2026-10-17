@@ -1,4 +1,7 @@
 <tool name="myOtherTool" namespace="Bar">
+  <description>
+    Bonjour
+  </description>
   <schema>
     type Input = shared.Square;
 
@@ -15,7 +18,4 @@
       myNode: shared.Leaf | shared.Branch;
     };
   </schema>
-  <description>
-    Bonjour
-  </description>
 </tool>

@@ -7,10 +7,11 @@ import type {
   XmlNode,
 } from "@typeprompt/core/xml/xml-types.js";
 import { format as prettierFormat } from "prettier";
+import { reorderXmlElements } from "./xml-element-ordering.js";
 
 export async function formatTemplateFile(content: string): Promise<string> {
   const parseResult = parseSourceFile("path", content, { patchBase: null });
-  const { xmlDocument } = parseResult;
+  let { xmlDocument } = parseResult;
   if (
     xmlDocument.kind !== "success" ||
     parseResult.parseResult.errors.length >= 1
@@ -18,6 +19,10 @@ export async function formatTemplateFile(content: string): Promise<string> {
     // If the XML is malformed, we cannot format the file.
     return content;
   }
+
+  xmlDocument = reorderXmlElements(xmlDocument);
+  content = xmlDocument.content;
+
   const { slices, anyXmlCommentsInCode } =
     collectFormattableSlicesForXmlDocument(xmlDocument);
 

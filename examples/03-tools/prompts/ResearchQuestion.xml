@@ -4,11 +4,6 @@
     temperature: 0.2
   </meta>
 
-  <tools>
-    # List of tools in YAML format
-    - tool: webSearch
-  </tools>
-
   <schema>
     interface Input {
       question: string;
@@ -20,6 +15,11 @@
       sources: string[];
     }
   </schema>
+
+  <tools>
+    # List of tools in YAML format
+    - tool: webSearch
+  </tools>
 
   <system>
     You are a research assistant. Use the <c>webSearch</c> tool to find

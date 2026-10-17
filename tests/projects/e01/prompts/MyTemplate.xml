@@ -9,10 +9,10 @@
       shape: shared.Square | { kind: "circle"; radius: number };
     }
   </schema>
-  <user>
-    U
-  </user>
   <system>
     S
   </system>
+  <user>
+    U
+  </user>
 </template>
