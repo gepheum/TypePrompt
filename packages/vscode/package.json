@@ -4,6 +4,11 @@
   "description": "VS Code support for TypePrompt templates",
   "version": "0.1.0",
   "publisher": "gepheum",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt",
+    "directory": "packages/vscode"
+  },
   "private": true,
   "engines": {
     "vscode": "^1.80.0"
@@ -12,7 +17,6 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:xml",
     "workspaceContains:**/typeprompt.yaml",
     "workspaceContains:**/typeprompt.yml"
   ],
