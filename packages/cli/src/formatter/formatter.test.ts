@@ -57,4 +57,102 @@ type Output = string;
     const formatted = await formatTemplateFile(xmlWithCommentInCode);
     expect(formatted).toBe(xmlWithCommentInCode);
   });
+
+  it("reorders elements in template before formatting", async () => {
+    const unformatted = `<template name="Reordered">
+<user><insert val="input.text"/></user>
+<system>You are an assistant.</system>
+<tools>- tool: webSearch</tools>
+<schema output-format="text">
+interface Input{text:string;}
+type Output=string;
+</schema>
+<meta>
+model: gpt-4o
+</meta>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="Reordered">
+  <meta>
+    model: gpt-4o
+  </meta>
+  <schema output-format="text">
+    interface Input {
+      text: string;
+    }
+    type Output = string;
+  </schema>
+  <tools>
+    - tool: webSearch
+  </tools>
+  <system>
+    You are an assistant.
+  </system>
+  <user>
+    <insert val="input.text" />
+  </user>
+</template>
+`,
+    );
+  });
+
+  it("reorders description before schema when formatting a tool", async () => {
+    const unformatted = `<tool name="webSearch">
+<schema>
+interface Input{query:string;}
+type Output=string;
+</schema>
+<description>Search web</description>
+</tool>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<tool name="webSearch">
+  <description>
+    Search web
+  </description>
+  <schema>
+    interface Input {
+      query: string;
+    }
+    type Output = string;
+  </schema>
+</tool>
+`,
+    );
+  });
+
+  it("reorders elements inside variant tags when formatting", async () => {
+    const unformatted = `<template name="VariantTest">
+<schema output-format="text">
+interface Input{}
+type Output=string;
+</schema>
+<variant case="a">
+<user>Variant U</user>
+<system>Variant S</system>
+</variant>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="VariantTest">
+  <schema output-format="text">
+    interface Input {}
+    type Output = string;
+  </schema>
+  <variant case="a">
+    <system>
+      Variant S
+    </system>
+    <user>
+      Variant U
+    </user>
+  </variant>
+</template>
+`,
+    );
+  });
 });
