@@ -44,7 +44,7 @@ export default [
     ignores: [
       'dist/',
       'packages/*/dist/',
-      'packages/prompt-viewer/',
+      'packages/code-mirror/',
       'node_modules/',
       '*.js',
     ],
