@@ -1,5 +1,5 @@
 <br />
-<img src="packages/website/public/tilly.svg" width="80" alt="Tilly" />
+<img src="packages/website/public/favicon.svg" width="80" alt="TypePrompt" />
 
 # TypePrompt
 
