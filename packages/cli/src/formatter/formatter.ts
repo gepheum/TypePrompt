@@ -7,7 +7,7 @@ import type {
   XmlNode,
 } from "@typeprompt/core/xml/xml-types.js";
 import { format as prettierFormat } from "prettier";
-import { reorderXmlElements } from "./xml-element-ordering.js";
+import { reorderXmlDocument } from "./xml-ordering.js";
 
 export async function formatTemplateFile(content: string): Promise<string> {
   const parseResult = parseSourceFile("path", content, { patchBase: null });
@@ -20,7 +20,7 @@ export async function formatTemplateFile(content: string): Promise<string> {
     return content;
   }
 
-  xmlDocument = reorderXmlElements(xmlDocument);
+  xmlDocument = reorderXmlDocument(xmlDocument);
   content = xmlDocument.content;
 
   const { slices, anyXmlCommentsInCode } =

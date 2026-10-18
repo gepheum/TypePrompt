@@ -1,7 +1,7 @@
 import { parseXmlDocument } from "@typeprompt/core";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { reorderXmlElements } from "./xml-element-ordering.js";
+import { reorderXmlDocument } from "./xml-ordering.js";
 
 describe("reorderXmlElements", () => {
   it("reorders template children into canonical order", () => {
@@ -13,7 +13,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<template name="Test">
   <system>S</system>
   <user>U</user>
@@ -34,7 +34,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<template name="Test">
   <schema>
     type Input = { q: string; };
@@ -75,7 +75,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<template name="Scrambled">
   <meta>
     model: gpt-4o
@@ -119,7 +119,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered).toBe(doc);
   });
 
@@ -134,7 +134,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<template name="WithComments">
   <!-- Comment for system -->
   <system>S</system>
@@ -154,7 +154,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<template name="WithVariant">
   <variant case="a">
     <system>Variant S</system>
@@ -175,7 +175,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered.content).toBe(`<tool name="myTool">
   <description>Search tool description</description>
   <schema>
@@ -197,7 +197,7 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
     expect(reordered).toBe(doc);
   });
 
@@ -210,7 +210,71 @@ describe("reorderXmlElements", () => {
     const doc = parseXmlDocument(xml, "test.xml");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
-    const reordered = reorderXmlElements(doc);
+    const reordered = reorderXmlDocument(doc);
+    expect(reordered).toBe(doc);
+  });
+
+  it("reorders attributes according to z-index (name, if, is, default, format)", () => {
+    const xml = `<template name="Test">
+  <snippet switch="input.audience" name="audienceInstruction">
+    <on case="executive">Exec</on>
+  </snippet>
+</template>`;
+
+    const doc = parseXmlDocument(xml, "test.xml");
+    if (doc.kind !== "success") throw new Error("Parse failed");
+
+    const reordered = reorderXmlDocument(doc);
+    expect(reordered.content).toBe(`<template name="Test">
+  <snippet name="audienceInstruction" switch="input.audience">
+    <on case="executive">Exec</on>
+  </snippet>
+</template>`);
+  });
+
+  it("reorders format after name attribute", () => {
+    const xml = `<template format="text" name="Test">
+  <system>S</system>
+</template>`;
+
+    const doc = parseXmlDocument(xml, "test.xml");
+    if (doc.kind !== "success") throw new Error("Parse failed");
+
+    const reordered = reorderXmlDocument(doc);
+    expect(reordered.content).toBe(`<template name="Test" format="text">
+  <system>S</system>
+</template>`);
+  });
+
+  it("reorders if before is attribute", () => {
+    const xml = `<template name="Test">
+  <snippet name="focus" is="notNull" if="input.focus">
+    <then>Focus</then>
+  </snippet>
+</template>`;
+
+    const doc = parseXmlDocument(xml, "test.xml");
+    if (doc.kind !== "success") throw new Error("Parse failed");
+
+    const reordered = reorderXmlDocument(doc);
+    expect(reordered.content).toBe(`<template name="Test">
+  <snippet name="focus" if="input.focus" is="notNull">
+    <then>Focus</then>
+  </snippet>
+</template>`);
+  });
+
+  it("leaves attributes untouched when already in order", () => {
+    const xml = `<template name="Test">
+  <snippet name="audienceInstruction" switch="input.audience">
+    <on case="executive">Exec</on>
+  </snippet>
+</template>`;
+
+    const doc = parseXmlDocument(xml, "test.xml");
+    if (doc.kind !== "success") throw new Error("Parse failed");
+
+    const reordered = reorderXmlDocument(doc);
     expect(reordered).toBe(doc);
   });
 });

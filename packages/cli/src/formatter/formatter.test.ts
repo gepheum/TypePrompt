@@ -155,4 +155,48 @@ type Output=string;
 `,
     );
   });
+
+  it("reorders attributes when formatting", async () => {
+    const unformatted = `<template name="AttrTest">
+<schema output-format="text">
+interface Input{
+  flag?: string;
+}
+type Output=string;
+</schema>
+<system>
+<insert snippet="mySnippet"/>
+</system>
+<user>User</user>
+<snippet is="notNull" if="input.flag" name="mySnippet">
+<then>Hello</then>
+<else/>
+</snippet>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="AttrTest">
+  <schema output-format="text">
+    interface Input {
+      flag?: string;
+    }
+    type Output = string;
+  </schema>
+  <system>
+    <insert snippet="mySnippet" />
+  </system>
+  <user>
+    User
+  </user>
+  <snippet name="mySnippet" if="input.flag" is="notNull">
+    <then>
+      Hello
+    </then>
+    <else />
+  </snippet>
+</template>
+`,
+    );
+  });
 });
