@@ -1,6 +1,7 @@
 .DS_Store
 *.tsbuildinfo
 dist
+*.vsix
 .vitepress/dist
 .vitepress/cache
 .vscode

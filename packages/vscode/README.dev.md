@@ -31,10 +31,11 @@ The extension is packaged into a `.vsix` file using the official Visual Studio C
 2. Package the extension:
    ```bash
    cd packages/vscode
-   npx @vscode/vsce package
+   npm run package
+   # or: npx @vscode/vsce package --no-dependencies
    ```
 
-This generates a file named `typeprompt-vscode-<version>.vsix` in `packages/vscode/`.
+This bundles the extension and language server with `esbuild` and produces `typeprompt-vscode-<version>.vsix` in `packages/vscode/`.
 
 ## Installing the Extension
 

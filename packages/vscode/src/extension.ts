@@ -1,6 +1,7 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionContext } from "vscode";
-import { workspace } from "vscode";
+import { ExtensionMode, workspace } from "vscode";
 import type {
   LanguageClientOptions,
   ServerOptions,
@@ -13,9 +14,19 @@ let client: LanguageClient | undefined;
 export function activate(context: ExtensionContext): void {
   activateAutoCloseTag(context);
 
-  const serverModule = context.asAbsolutePath(
+  const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),
   );
+  const bundledServerModule = context.asAbsolutePath(
+    path.join("dist", "server.js"),
+  );
+
+  const serverModule =
+    fs.existsSync(devServerModule) &&
+    (context.extensionMode === ExtensionMode.Development ||
+      !fs.existsSync(bundledServerModule))
+      ? devServerModule
+      : bundledServerModule;
 
   const serverOptions: ServerOptions = {
     run: {

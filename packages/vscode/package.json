@@ -4,6 +4,8 @@
   "description": "VS Code support for TypePrompt templates",
   "version": "0.1.0",
   "publisher": "gepheum",
+  "license": "MIT",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/gepheum/typeprompt",
@@ -31,14 +33,15 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node && esbuild ../language-server/src/main.ts --bundle --outfile=dist/server.js --format=cjs --platform=node --minify --banner:js=\"const import_meta_url = require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url",
+    "vscode:prepublish": "npm run build && npm run bundle",
+    "package": "npx @vscode/vsce package --no-dependencies",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
     "@typeprompt/core": "*",
     "@typeprompt/language-server": "*",
     "vscode-languageclient": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.80.0"
   }
 }
