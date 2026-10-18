@@ -1,8 +1,6 @@
 import type { ValidationErrors } from "../util/shared-types.js";
-import {
-  checkXmlAttributes,
-  expectIdentifier,
-} from "../xml/xml-attributes-checker.js";
+import { expectIdentifier } from "../xml/xml-attributes-checker.js";
+import { checkKnownXmlAttributes } from "../xml/xml-entities.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import type { Namespace, SchemaOrError } from "./compiler-types.js";
 
@@ -20,7 +18,7 @@ export function parseNamespace(
   const validationResult = new ValidationResultBuilder();
   const { definitionLinks, errors } = validationResult;
 
-  const attrs = checkXmlAttributes(namespaceNode, {
+  const attrs = checkKnownXmlAttributes(namespaceNode, {
     name: expectIdentifier({
       format: "PascalCase",
       optional: false,

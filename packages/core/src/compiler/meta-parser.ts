@@ -1,5 +1,5 @@
 import type { ValidationErrors } from "../util/shared-types.js";
-import { checkXmlAttributes } from "../xml/xml-attributes-checker.js";
+import { checkKnownXmlAttributes } from "../xml/xml-entities.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import type { Meta, SchemaOrError } from "./compiler-types.js";
 
@@ -14,7 +14,7 @@ export function parseMeta(metaNode: ElementNode): Meta | ValidationErrors {
   const validationResult = new ValidationResultBuilder();
   const { definitionLinks, errors } = validationResult;
 
-  const attrs = checkXmlAttributes(metaNode, {});
+  const attrs = checkKnownXmlAttributes(metaNode, {});
   errors.push(...attrs.errors);
 
   const warnings = [...checkMetaSourcePath(metaNode.path)];

@@ -12,11 +12,14 @@ import type {
 import type { AttributeValue } from "../xml/xml-attributes-checker.js";
 import {
   checkNoXmlAttributes,
-  checkXmlAttributes,
   expectIdentifier,
   expectOneOf,
   expectString,
 } from "../xml/xml-attributes-checker.js";
+import {
+  checkAllAreKnownElements,
+  checkKnownXmlAttributes,
+} from "../xml/xml-entities.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import type {
   Body,
@@ -34,7 +37,6 @@ import type {
 import * as z from "zod";
 import { parseExpression } from "../expression/expression-parser.js";
 import { checkNameConflicts } from "../util/casing.js";
-import { checkAllAreElements } from "../xml/xml-node-checker.js";
 import { parseBody } from "./body-parser.js";
 import { checkTemplateOrToolSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
@@ -60,7 +62,7 @@ class TemplateParser {
 
   parse(): Template | InternalErrors {
     // 1. Validate <template> attributes.
-    const attrs = checkXmlAttributes(this.templateNode, {
+    const attrs = checkKnownXmlAttributes(this.templateNode, {
       name: expectIdentifier({
         format: "PascalCase",
         optional: false,
@@ -120,7 +122,7 @@ class TemplateParser {
   }
 
   private parseChildren(): void {
-    const children = checkAllAreElements(
+    const children = checkAllAreKnownElements(
       this.templateNode.children,
       [
         "schema",
@@ -178,7 +180,7 @@ class TemplateParser {
         message: "Multiple <schema> elements in <template>",
       });
     }
-    const attrs = checkXmlAttributes(schemaNode, {
+    const attrs = checkKnownXmlAttributes(schemaNode, {
       "output-format": expectOneOf({
         values: ["json", "text"],
         optional: true,
@@ -228,7 +230,7 @@ class TemplateParser {
   }
 
   private parseVariant(variantNode: ElementNode): void {
-    const attrs = checkXmlAttributes(variantNode, {
+    const attrs = checkKnownXmlAttributes(variantNode, {
       case: {
         schema: z.string(),
         optional: false,
@@ -241,7 +243,7 @@ class TemplateParser {
     }
     const caseVal = attrs.attributes.case.value;
     const contentBuilder = new ContentBuilder();
-    const children = checkAllAreElements(
+    const children = checkAllAreKnownElements(
       variantNode.children,
       ["meta", "system", "user", "examples"] as const,
       " in <variant>",
@@ -302,7 +304,7 @@ class TemplateParser {
   }
 
   private parseSnippet(snippetNode: ElementNode): void {
-    const attrs = checkXmlAttributes(snippetNode, {
+    const attrs = checkKnownXmlAttributes(snippetNode, {
       name: expectIdentifier({
         format: "camelCase",
         optional: false,
@@ -383,7 +385,7 @@ class TemplateParser {
       then?: BodyInContext;
       else?: BodyInContext;
     } = {};
-    const children = checkAllAreElements(
+    const children = checkAllAreKnownElements(
       snippetNode.children,
       ["then", "else"] as const,
       " in <snippet if='...'>",
@@ -443,7 +445,7 @@ class TemplateParser {
       readonly body: Body;
     }> = [];
     const seenOptions = new Set<string>();
-    const children = checkAllAreElements(
+    const children = checkAllAreKnownElements(
       snippetNode.children,
       ["on"] as const,
       " in <snippet switch='...'>",
@@ -452,7 +454,7 @@ class TemplateParser {
     for (const [tag, child] of children) {
       switch (tag) {
         case "on": {
-          const attrs = checkXmlAttributes(child, {
+          const attrs = checkKnownXmlAttributes(child, {
             case: expectString({
               expected: "a constant",
               optional: false,

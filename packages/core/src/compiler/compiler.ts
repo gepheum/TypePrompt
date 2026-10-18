@@ -19,7 +19,7 @@ import type {
   TextSpan,
 } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
-import { checkAllAreElements } from "../xml/xml-node-checker.js";
+import { checkAllAreKnownElements } from "../xml/xml-entities.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode, XmlDocument } from "../xml/xml-types.js";
 import type {
@@ -97,7 +97,7 @@ export function parseSourceFile(
   if (root === null) {
     return result;
   }
-  const topLevelNodes = checkAllAreElements(
+  const topLevelNodes = checkAllAreKnownElements(
     [root],
     ["template", "tool", "namespace", "meta"] as const,
     " at the top level",

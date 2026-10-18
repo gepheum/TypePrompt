@@ -6,7 +6,6 @@ import type {
 } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
-  checkXmlAttributes,
   expectIdentifier,
   expectOneOf,
   expectString,
@@ -25,7 +24,7 @@ import type { CTag } from "../ctag/ctag-types.js";
 import { parseExpression } from "../expression/expression-parser.js";
 import type { Expression } from "../expression/expression-types.js";
 import { textToSourcePosition } from "../util/position-mapper.js";
-import { checkTag } from "../xml/xml-node-checker.js";
+import { checkKnownTag, checkKnownXmlAttributes } from "../xml/xml-entities.js";
 import { extractTextContent } from "./text-extractor.js";
 
 export function parseBody<HasValContext extends boolean>(
@@ -62,7 +61,7 @@ function parseBodyImpl<HasValContext extends boolean>(
   const rawPieces: Array<RawBodyPiece<HasValContext>> = [];
 
   const visitInsertSnippet = (insertNode: ElementNode): void => {
-    const attrs = checkXmlAttributes(insertNode, {
+    const attrs = checkKnownXmlAttributes(insertNode, {
       snippet: expectIdentifier({ format: "camelCase", optional: false }),
     });
     errors.push(...attrs.errors);
@@ -78,7 +77,7 @@ function parseBodyImpl<HasValContext extends boolean>(
 
   const visitInsertValue = (insertNode: ElementNode): void => {
     // Insert a formatted value.
-    const attrs = checkXmlAttributes(insertNode, {
+    const attrs = checkKnownXmlAttributes(insertNode, {
       val: expectString({
         optional: false,
         expected: "a valid expression",
@@ -111,7 +110,7 @@ function parseBodyImpl<HasValContext extends boolean>(
       rawPieces.push({ kind: "text", text: child });
       return null;
     }
-    const tag = checkTag(
+    const tag = checkKnownTag(
       child,
       options.isToolDescription
         ? (["c"] as const)
@@ -140,7 +139,7 @@ function parseBodyImpl<HasValContext extends boolean>(
         return null;
       }
       case "enclosed": {
-        const encAttrs = checkXmlAttributes(child, {
+        const encAttrs = checkKnownXmlAttributes(child, {
           tag: {
             schema: z.string(),
             regex: /^[A-Za-z_][\w.-]*$/,

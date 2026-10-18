@@ -3,10 +3,12 @@ import type { SchemaParseResult } from "../schema/schema-types.js";
 import type { InternalError, InternalErrors } from "../util/shared-types.js";
 import {
   checkNoXmlAttributes,
-  checkXmlAttributes,
   expectIdentifier,
 } from "../xml/xml-attributes-checker.js";
-import { checkAllAreElements } from "../xml/xml-node-checker.js";
+import {
+  checkAllAreKnownElements,
+  checkKnownXmlAttributes,
+} from "../xml/xml-entities.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import { parseToolDescription } from "./body-parser.js";
 import type { Tool, ToolDescription } from "./compiler-types.js";
@@ -15,7 +17,7 @@ import { extractTextContent } from "./text-extractor.js";
 
 /** Parses a <tool> element. The result has yet to be validated. */
 export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
-  const attrs = checkXmlAttributes(toolNode, {
+  const attrs = checkKnownXmlAttributes(toolNode, {
     name: expectIdentifier({
       format: "camelCase",
       optional: false,
@@ -52,7 +54,7 @@ export function parseTool(toolNode: ElementNode): Tool | InternalErrors {
   let description: ToolDescription | null = null;
 
   const requiredTags = ["description", "schema"] as const;
-  const children = checkAllAreElements(
+  const children = checkAllAreKnownElements(
     toolNode.children,
     requiredTags,
     " in <tool>",

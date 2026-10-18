@@ -72,26 +72,34 @@ export function expectString<const Optional extends boolean>(args: {
   };
 }
 
-export type AttributesResult<T extends Record<string, AttributeSchemaEntry>> =
+export type AttributesResult<
+  T extends Record<string, AttributeSchemaEntry>,
+  KnownAttribute extends string,
+> =
   | {
       kind: "success";
-      attributes: Attributes<T>;
+      attributes: Attributes<T, KnownAttribute>;
       errors: readonly [];
     }
   | {
       kind: "partial";
-      attributes: Attributes<T>;
+      attributes: Attributes<T, KnownAttribute>;
       errors: readonly InternalError[];
     }
   | InternalErrors;
 
-export type Attributes<T extends Record<string, AttributeSchemaEntry>> = {
-  readonly [K in keyof T]: T[K]["schema"] extends ZodType<infer U, string>
-    ? T[K]["optional"] extends false
-      ? AttributeValue<U>
-      : T[K]["optional"] extends true
-        ? AttributeValue<U> | undefined
-        : never
+export type Attributes<
+  T extends Record<string, AttributeSchemaEntry>,
+  KnownAttribute extends string,
+> = {
+  readonly [K in keyof T]: K extends KnownAttribute
+    ? T[K]["schema"] extends ZodType<infer U, string>
+      ? T[K]["optional"] extends false
+        ? AttributeValue<U>
+        : T[K]["optional"] extends true
+          ? AttributeValue<U> | undefined
+          : never
+      : never
     : never;
 };
 
@@ -102,7 +110,11 @@ export type AttributeValue<T> = {
 
 export function checkXmlAttributes<
   T extends Record<string, AttributeSchemaEntry>,
->(element: ElementNode, expectedAttributes: T): AttributesResult<T> {
+  KnownAttribute extends string = string,
+>(
+  element: ElementNode,
+  expectedAttributes: T,
+): AttributesResult<T, KnownAttribute> {
   const errors: InternalError[] = [];
   let anySchemaErrors = false;
   const values: Record<string, AttributeValue<unknown>> = {};
@@ -176,12 +188,20 @@ export function checkXmlAttributes<
   }
 
   if (errors.length <= 0) {
-    return { kind: "success", attributes: values as Attributes<T>, errors: [] };
+    return {
+      kind: "success",
+      attributes: values as Attributes<T, KnownAttribute>,
+      errors: [],
+    };
   } else {
     if (anySchemaErrors) {
       return { kind: "error", errors };
     } else {
-      return { kind: "partial", attributes: values as Attributes<T>, errors };
+      return {
+        kind: "partial",
+        attributes: values as Attributes<T, KnownAttribute>,
+        errors,
+      };
     }
   }
 }

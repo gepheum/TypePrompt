@@ -4,7 +4,14 @@ import {
   type ElementNode,
   type XmlDocument,
 } from "@typeprompt/core";
+import type {
+  KnownAttribute,
+  KnownTag,
+} from "@typeprompt/core/xml/xml-entities.js";
 
+/**
+ * Reorders XML child elements and attributes to match the preferred TypePrompt order.
+ */
 export function reorderXmlDocument(xmlDocument: XmlDocument): XmlDocument {
   let { content } = xmlDocument;
   let changed = false;
@@ -48,7 +55,7 @@ export function reorderXmlDocument(xmlDocument: XmlDocument): XmlDocument {
     if (children.length <= 0) return;
     children.forEach(reorder);
     const alreadyOrdered = isOrdered(children, getTagZIndex);
-    if (mustReorderChildren(node.tag.text) && !alreadyOrdered) {
+    if (mustReorderChildren(node.tag.text as KnownTag) && !alreadyOrdered) {
       const fragments: Array<{
         readonly contentSlice: string;
         readonly zIndex: number;
@@ -91,29 +98,8 @@ export function reorderXmlDocument(xmlDocument: XmlDocument): XmlDocument {
   }
 }
 
-type TagName =
-  | "c"
-  | "description"
-  | "else"
-  | "enclosed"
-  | "examples"
-  | "meta"
-  | "namespace"
-  | "insert"
-  | "on"
-  | "schema"
-  | "snippet"
-  | "system"
-  | "template"
-  | "then"
-  | "tool"
-  | "tools"
-  | "user"
-  | "variant";
-
-function mustReorderChildren(tagName: string): boolean {
-  const tag = tagName as TagName;
-  switch (tag) {
+function mustReorderChildren(tagName: KnownTag): boolean {
+  switch (tagName) {
     case "tool":
     case "template":
     case "snippet":
@@ -135,13 +121,13 @@ function mustReorderChildren(tagName: string): boolean {
     case "user":
       return false;
     default: {
-      const _: never = tag;
+      const _: never = tagName;
       return false;
     }
   }
 }
 
-const ORDERED_TAG_NAMES: readonly TagName[] = [
+const ORDERED_TAG_NAMES: readonly KnownTag[] = [
   "meta",
   "description",
   "schema",
@@ -163,14 +149,26 @@ function getTagZIndex(e: ElementNode): number {
 }
 
 function getAttributeZIndex(attribute: Attribute): number {
-  switch (attribute.name.text) {
+  const a = attribute.name.text as KnownAttribute;
+  switch (a) {
     case "name":
       return 0;
+    case "case":
+    case "if":
+    case "namespace":
+    case "output-format":
+    case "snippet":
+    case "switch":
+    case "tag":
+    case "val":
+      return 1;
     case "is":
     case "format":
       return 2;
-    default:
+    default: {
+      const _: never = a;
       return 1;
+    }
   }
 }
 

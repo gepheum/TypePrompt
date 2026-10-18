@@ -2,6 +2,11 @@ import plugin from "@prettier/plugin-xml";
 import { parseSourceFile } from "@typeprompt/core";
 
 import type {
+  KnownAttribute,
+  KnownTag,
+} from "@typeprompt/core/xml/xml-entities.js";
+import type {
+  ElementNode,
   XmlComment,
   XmlDocument,
   XmlNode,
@@ -78,38 +83,11 @@ function collectFormattableSlices(
   for (const item of items) {
     if (item.kind !== "element") continue;
     const childItems = buildItems(item.children, item.comments);
-    const tagName = item.tag.text;
 
     const slice = ((): FormattableSlice | null => {
       if (childItems.length <= 0) return null;
-      let format: "typescript" | "xml" | "yaml";
-      if (
-        tagName === "namespace" ||
-        tagName === "schema" ||
-        (tagName === "meta" && depth <= 0)
-      ) {
-        format = "typescript";
-      } else if (
-        tagName === "tools" ||
-        tagName === "examples" ||
-        (tagName === "meta" && depth !== 0)
-      ) {
-        format = "yaml";
-      } else if (
-        tagName === "system" ||
-        tagName === "user" ||
-        tagName === "description" ||
-        tagName === "then" ||
-        tagName === "else" ||
-        tagName === "on" ||
-        (tagName === "snippet" &&
-          !item.attributes["if"] &&
-          !item.attributes["switch"])
-      ) {
-        format = "xml";
-      } else {
-        return null;
-      }
+      const format = getFormat(item, depth);
+      if (format === null) return null;
       if (format === "typescript" || format === "yaml") {
         // Do not format TypeScript/YAML code if the content contains XML comments.
         const anyComments = item.comments.length >= 1;
@@ -135,6 +113,43 @@ function collectFormattableSlices(
         xmlCommentsInCode,
       );
     }
+  }
+}
+
+function getFormat(
+  node: ElementNode,
+  depth: number,
+): FormattableSlice["format"] | null {
+  const tag = node.tag.text as KnownTag;
+  switch (tag) {
+    case "namespace":
+    case "schema":
+      return "typescript";
+    case "meta":
+      return depth <= 0 ? "typescript" : "yaml";
+    case "tools":
+    case "examples":
+      return "yaml";
+    case "system":
+    case "user":
+    case "description":
+    case "then":
+    case "else":
+    case "on":
+      return "xml";
+    case "snippet": {
+      return node.attributes["if" satisfies KnownAttribute] ||
+        node.attributes["switch" satisfies KnownAttribute]
+        ? null
+        : "xml";
+    }
+    case "c":
+    case "enclosed":
+    case "insert":
+    case "template":
+    case "tool":
+    case "variant":
+      return null;
   }
 }
 
