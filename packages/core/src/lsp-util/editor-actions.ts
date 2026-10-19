@@ -2,6 +2,37 @@ import { createLineFinder, findLine } from "../util/line-finder.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import { getPositionContext } from "./position-context.js";
 
+export type AutoCloseTagAction = string;
+
+export type AutoCloseCommentAction = {
+  readonly insert: string;
+  readonly cursorOffset: number;
+};
+
+export type BackspaceAction = {
+  readonly from: number;
+  readonly to: number;
+  readonly insert: string;
+  readonly targetCursorOffset: number;
+};
+
+export type EnterChange = {
+  readonly from: number;
+  readonly to: number;
+  readonly insert: string;
+};
+
+export type EnterAction = {
+  readonly changes: readonly EnterChange[];
+  readonly targetCursorOffset: number;
+  readonly handled: boolean;
+};
+
+export type EnterActionOptions = {
+  readonly tabSize?: number;
+  readonly insertSpaces?: boolean;
+};
+
 /**
  * Given the document content and cursor offset (immediately following a `>`),
  * determines if an unclosed XML start-tag was just finished and returns its matching
@@ -10,7 +41,7 @@ import { getPositionContext } from "./position-context.js";
 export function getAutoCloseTagAction(
   content: string,
   offsetAfterGreater: number,
-): string | null {
+): AutoCloseTagAction | null {
   const parsed = parseXmlDocument(content, "path");
   if (parsed.kind !== "error" || !parsed.closingTagSuggestions) {
     return null;
@@ -30,10 +61,7 @@ export function getAutoCloseCommentAction(
   content: string,
   offset: number,
   inputChar: string,
-): {
-  readonly insert: string;
-  readonly cursorOffset: number;
-} | null {
+): AutoCloseCommentAction | null {
   // 1. XML comment auto-closing (<!-- -->): always append regardless of context
   const isTypingHyphenAfterCommentStart =
     inputChar === "-" &&
@@ -108,12 +136,7 @@ export function getAutoCloseCommentAction(
 export function computeBackspaceAction(
   content: string,
   offset: number,
-): {
-  readonly from: number;
-  readonly to: number;
-  readonly insert: string;
-  readonly targetCursorOffset: number;
-} | null {
+): BackspaceAction | null {
   // 1. Undo XML comment auto-close (<!--|--> -> <!-) regardless of context
   const nextChars = content.slice(offset, offset + 4);
   const closeLen = nextChars.startsWith(" -->")
@@ -179,19 +202,8 @@ export function computeBackspaceAction(
 export function computeEnterAction(
   content: string,
   offset: number,
-  options?: {
-    readonly tabSize?: number;
-    readonly insertSpaces?: boolean;
-  },
-): {
-  readonly changes: readonly {
-    readonly from: number;
-    readonly to: number;
-    readonly insert: string;
-  }[];
-  readonly targetCursorOffset: number;
-  readonly handled: boolean;
-} {
+  options?: EnterActionOptions,
+): EnterAction {
   const tabSize = options?.tabSize ?? 2;
   const ctx = getPositionContext(content, offset);
 

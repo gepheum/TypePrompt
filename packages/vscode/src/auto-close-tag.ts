@@ -1,7 +1,4 @@
-import {
-  getAutoCloseCommentAction,
-  getAutoCloseTagAction,
-} from "@typeprompt/core";
+import { Lsp } from "@typeprompt/core";
 import type { ExtensionContext, TextDocumentChangeEvent } from "vscode";
 import { SnippetString, window, workspace } from "vscode";
 
@@ -36,7 +33,10 @@ function onDocumentChange(event: TextDocumentChangeEvent): void {
       document.offsetAt(change.range.start) + change.text.length;
     const insertPosition = document.positionAt(insertOffset);
 
-    const closingTag = getAutoCloseTagAction(document.getText(), insertOffset);
+    const closingTag = Lsp.getAutoCloseTagAction(
+      document.getText(),
+      insertOffset,
+    );
     if (!closingTag) {
       return;
     }
@@ -62,7 +62,7 @@ function onDocumentChange(event: TextDocumentChangeEvent): void {
     const offsetBeforeChange = insertOffset - change.text.length;
     const fullTextBeforeChange =
       text.slice(0, offsetBeforeChange) + text.slice(insertOffset);
-    const action = getAutoCloseCommentAction(
+    const action = Lsp.getAutoCloseCommentAction(
       fullTextBeforeChange,
       offsetBeforeChange,
       change.text,

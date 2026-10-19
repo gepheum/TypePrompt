@@ -6,17 +6,14 @@ import {
   compile,
   createLineFinder,
   findLine,
-  getCompletionItems,
-  getConfigCompletionItems,
+  Lsp,
   parseCompilationResult,
   parseConfigYaml,
-  tokenize,
   type CompilationResult,
   type Config,
   type DefinitionLink,
   type InternalError,
   type LineFinderData,
-  type SemanticToken,
   type Span,
   type TextSpan,
 } from "@typeprompt/core";
@@ -226,7 +223,7 @@ const semanticTokensLegend: SemanticTokensLegend = {
 };
 
 function tokenKindToType(
-  kind: SemanticToken["kind"],
+  kind: Lsp.SemanticToken["kind"],
 ): (typeof SEMANTIC_TOKEN_TYPES)[number] {
   switch (kind) {
     case "comment":
@@ -299,7 +296,7 @@ function pushSemanticToken(
 
 export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
   const text = doc.getText();
-  const tokens = tokenize(text, doc.uri);
+  const tokens = Lsp.tokenize(text, doc.uri);
   const builder = new SemanticTokensBuilder();
 
   for (const token of tokens) {
@@ -1055,7 +1052,7 @@ export class TypePromptLanguageExtension {
         return [];
       }
       const offset = doc.offsetAt(position);
-      const result = getConfigCompletionItems(doc.getText(), offset);
+      const result = Lsp.getConfigCompletionItems(doc.getText(), offset);
       if (!result || result.suggestions.length === 0) {
         return [];
       }
@@ -1097,7 +1094,7 @@ export class TypePromptLanguageExtension {
       return [];
     }
 
-    const result = getCompletionItems({
+    const result = Lsp.getCompletionItems({
       newContent: doc.getText(),
       path: relPath,
       position: offset,

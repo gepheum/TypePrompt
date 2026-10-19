@@ -1,9 +1,6 @@
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import {
-  getAutoCloseCommentAction,
-  getAutoCloseTagAction,
-} from "@typeprompt/core";
+import { Lsp } from "@typeprompt/core";
 
 /**
  * Extension that automatically closes XML tags when the user types `>`.
@@ -18,7 +15,7 @@ export function autoCloseTags(): Extension {
     const fullText = doc.sliceString(0, from) + ">" + doc.sliceString(to);
     const insertPosition = from + 1;
 
-    const closingTag = getAutoCloseTagAction(fullText, insertPosition);
+    const closingTag = Lsp.getAutoCloseTagAction(fullText, insertPosition);
     if (!closingTag) {
       return false;
     }
@@ -41,7 +38,7 @@ export function autoCloseComments(): Extension {
     }
 
     const doc = view.state.doc;
-    const action = getAutoCloseCommentAction(doc.toString(), from, text);
+    const action = Lsp.getAutoCloseCommentAction(doc.toString(), from, text);
     if (!action) {
       return false;
     }

@@ -11,14 +11,14 @@ import {
 } from "@codemirror/state";
 import { Decoration, EditorView, type DecorationSet } from "@codemirror/view";
 import { tags as t, type Tag } from "@lezer/highlight";
-import type { SemanticToken } from "@typeprompt/core";
+import type { Lsp } from "@typeprompt/core";
 import { typepromptStateField } from "./state-field.js";
 
 /**
  * Maps TypePrompt semantic token kinds to standard CodeMirror highlight tags.
  * Any theme (One Dark, Dracula, GitHub, etc.) styles these tags.
  */
-const tokenTags: Record<SemanticToken["kind"], Tag> = {
+const tokenTags: Record<Lsp.SemanticToken["kind"], Tag> = {
   comment: t.comment,
   "xml-tag": t.tagName,
   "xml-attribute": t.attributeName,
@@ -30,15 +30,15 @@ const tokenTags: Record<SemanticToken["kind"], Tag> = {
 
 function buildHighlightDecorations(
   state: EditorState,
-  tokens: readonly SemanticToken[],
+  tokens: readonly Lsp.SemanticToken[],
 ): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   const docLength = state.doc.length;
 
   // Resolve decoration classes from active theme
-  const kindDecorations = new Map<SemanticToken["kind"], Decoration>();
+  const kindDecorations = new Map<Lsp.SemanticToken["kind"], Decoration>();
   for (const [kind, tag] of Object.entries(tokenTags) as [
-    SemanticToken["kind"],
+    Lsp.SemanticToken["kind"],
     Tag,
   ][]) {
     const cls = highlightingFor(state, [tag]);

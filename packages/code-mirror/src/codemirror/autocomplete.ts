@@ -5,7 +5,7 @@ import {
   type CompletionResult,
 } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
-import { getCompletionItems, getConfigCompletionItems } from "@typeprompt/core";
+import { Lsp } from "@typeprompt/core";
 import { typepromptStateField } from "./state-field.js";
 
 export function typepromptCompletionSource(
@@ -23,8 +23,8 @@ export function typepromptCompletionSource(
   const isConfig = path === "typeprompt.yaml" || path === "typeprompt.yml";
 
   const completionItems = isConfig
-    ? getConfigCompletionItems(content, position)
-    : getCompletionItems({
+    ? Lsp.getConfigCompletionItems(content, position)
+    : Lsp.getCompletionItems({
         newContent: content,
         path,
         position,

@@ -1,6 +1,6 @@
 import type {
   CompilationResult,
-  SemanticToken,
+  Lsp,
   ValidCompilationResult,
 } from "@typeprompt/core";
 
@@ -68,5 +68,5 @@ export type TypePromptConfig = {
 export type TypePromptState = {
   readonly path: string;
   readonly compilationResult: CompilationResult;
-  readonly tokens: readonly SemanticToken[];
+  readonly tokens: readonly Lsp.SemanticToken[];
 };

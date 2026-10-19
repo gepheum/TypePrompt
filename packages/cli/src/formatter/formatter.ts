@@ -1,5 +1,5 @@
 import plugin from "@prettier/plugin-xml";
-import { getElementContentFormat, parseSourceFile } from "@typeprompt/core";
+import { Lsp, parseSourceFile } from "@typeprompt/core";
 import type {
   XmlComment,
   XmlDocument,
@@ -80,7 +80,7 @@ function collectFormattableSlices(
 
     const slice = ((): FormattableSlice | null => {
       if (childItems.length <= 0) return null;
-      const contentFormat = getElementContentFormat(item, depth);
+      const contentFormat = Lsp.getElementContentFormat(item, depth);
       if (contentFormat === "unrendered-xml") return null;
       const format: FormattableSlice["format"] =
         contentFormat === "schema"

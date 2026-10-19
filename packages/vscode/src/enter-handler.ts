@@ -1,4 +1,4 @@
-import { computeEnterAction } from "@typeprompt/core";
+import { Lsp } from "@typeprompt/core";
 import type { ExtensionContext } from "vscode";
 import { commands, Range, Selection, window } from "vscode";
 
@@ -32,7 +32,7 @@ async function onEnterKey(): Promise<void> {
     typeof editor.options.tabSize === "number" ? editor.options.tabSize : 2;
   const insertSpaces = editor.options.insertSpaces !== false;
 
-  const action = computeEnterAction(document.getText(), offset, {
+  const action = Lsp.computeEnterAction(document.getText(), offset, {
     tabSize,
     insertSpaces,
   });

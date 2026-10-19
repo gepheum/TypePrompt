@@ -7,7 +7,7 @@ import {
 } from "@codemirror/language";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
-import { computeBackspaceAction, computeEnterAction } from "@typeprompt/core";
+import { Lsp } from "@typeprompt/core";
 
 /**
  * Matches an open XML tag at the end of a line that is NOT:
@@ -171,7 +171,7 @@ export function typepromptEnterCommand(view: EditorView): boolean {
   }
 
   const cx = new IndentContext(state);
-  const res = computeEnterAction(state.doc.toString(), from, {
+  const res = Lsp.computeEnterAction(state.doc.toString(), from, {
     tabSize: cx.unit,
   });
 
@@ -203,7 +203,7 @@ export function typepromptBackspaceCommand(view: EditorView): boolean {
     return false;
   }
 
-  const action = computeBackspaceAction(state.doc.toString(), from);
+  const action = Lsp.computeBackspaceAction(state.doc.toString(), from);
   if (action) {
     view.dispatch({
       changes: action,

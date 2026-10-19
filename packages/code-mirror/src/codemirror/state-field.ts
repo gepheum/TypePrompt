@@ -4,12 +4,7 @@ import {
   type EditorState,
   type Transaction,
 } from "@codemirror/state";
-import {
-  compile,
-  tokenize,
-  type CompilationResult,
-  type SemanticToken,
-} from "@typeprompt/core";
+import { compile, Lsp, type CompilationResult } from "@typeprompt/core";
 import type { TypePromptConfig, TypePromptState } from "./types.js";
 
 /**
@@ -46,7 +41,7 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       { ...workspaceFiles, [path]: content },
       { cache: null, patchBase },
     );
-    const tokens = tokenize(content, path);
+    const tokens = Lsp.tokenize(content, path);
 
     return {
       path,
@@ -76,7 +71,7 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       cache: oldState.compilationResult,
       patchBase: oldState.compilationResult.patchBase,
     });
-    const tokens = tokenize(newContent, oldState.path);
+    const tokens = Lsp.tokenize(newContent, oldState.path);
 
     return {
       path: oldState.path,
@@ -99,7 +94,7 @@ export function getCompilationResult(
 /** Retrieve the current SemanticTokens from an EditorState, if available. */
 export function getSemanticTokens(
   state: EditorState,
-): readonly SemanticToken[] | null {
+): readonly Lsp.SemanticToken[] | null {
   const tpState = state.field(typepromptStateField, false);
   return tpState ? tpState.tokens : null;
 }
