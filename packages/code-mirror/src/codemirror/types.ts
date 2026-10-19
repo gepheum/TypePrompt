@@ -50,6 +50,12 @@ export type TypePromptConfig = {
   readonly autoCloseTags?: boolean;
 
   /**
+   * Whether to enable multiline comment auto-closing (typing '/**' inserts ' *\/').
+   * Defaults to true.
+   */
+  readonly autoCloseComments?: boolean;
+
+  /**
    * Whether to enable automatic indentation and onEnter rules.
    * Defaults to true.
    */

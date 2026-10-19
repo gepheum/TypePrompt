@@ -29,7 +29,83 @@
         "id": "xml",
         "configuration": "./language-configuration.json"
       }
-    ]
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "non-jsdoc-comment",
+        "description": "Non-JSDoc comments",
+        "superType": "comment"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "xml",
+        "scopes": {
+          "non-jsdoc-comment": [
+            "comment.line",
+            "comment.block"
+          ]
+        }
+      }
+    ],
+    "configurationDefaults": {
+      "editor.semanticTokenColorCustomizations": {
+        "rules": {
+          "non-jsdoc-comment": {
+            "foreground": "#5a6068",
+            "fontStyle": "italic"
+          }
+        },
+        "[Default Dark+]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#5a6068",
+              "fontStyle": "italic"
+            }
+          }
+        },
+        "[Default Light+]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#8c959f",
+              "fontStyle": "italic"
+            }
+          }
+        },
+        "[Dark+]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#5a6068",
+              "fontStyle": "italic"
+            }
+          }
+        },
+        "[Light+]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#8c959f",
+              "fontStyle": "italic"
+            }
+          }
+        },
+        "[Visual Studio Dark]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#5a6068",
+              "fontStyle": "italic"
+            }
+          }
+        },
+        "[Visual Studio Light]": {
+          "rules": {
+            "non-jsdoc-comment": {
+              "foreground": "#8c959f",
+              "fontStyle": "italic"
+            }
+          }
+        }
+      }
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

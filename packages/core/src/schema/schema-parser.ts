@@ -33,7 +33,9 @@ export function parseSchema<Context extends SchemaContext>(
  * Used by the language server.
  */
 export function tokenizeSchema(content: MappedText): readonly SemanticToken[] {
-  return new SchemaParser(content, "template").getSemanticTokens();
+  return new SchemaParser(content, "template", {
+    keepNonJsdocComments: true,
+  }).getSemanticTokens();
 }
 
 class SchemaParser<Context extends SchemaContext> {
@@ -49,6 +51,7 @@ class SchemaParser<Context extends SchemaContext> {
   constructor(
     private readonly content: MappedText,
     private readonly context: Context,
+    private readonly options?: { readonly keepNonJsdocComments?: boolean },
   ) {
     this.tokens = this.tokenize();
   }
@@ -459,7 +462,7 @@ class SchemaParser<Context extends SchemaContext> {
 
   private tokenize(): Token[] {
     const tokens: Token[] = [];
-    // Multiline comment:            \/\*([^*]|\*[^\/])*(\*\/)?
+    // Multiline comment:            \/\*([^*]|\*(?!\/))*(\*\/)?
     // Single-line comment:          \/\/[^\n\r]*
     // Word:                         \b\w+\b
     // Whitespaces:                  [ \n\r\t]+
@@ -469,8 +472,8 @@ class SchemaParser<Context extends SchemaContext> {
     //
     // To iterate on this regex, use https://regex101.com/.
     const re =
-      /(\/\*([^*]|\*[^/])*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?.])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
-    // 1    2             3        4                5       6            7                  8                        9                        10
+      /(\/\*([^*]|\*(?!\/))*(\*\/)?)|(\/\/[^\n\r]*)|\b(\w+)\b|([ \n\r\t]+)|([{}[\]():=;|,?.])|("(?:\\.|[^\\"\n\r])*"?)|('(?:\\.|[^\\'\n\r])*'?)|($)/g;
+    // 1    2               3        4                5       6            7                  8                        9                        10
     let group: RegExpExecArray | null;
     let newLine = false;
     let expectedAt = 0;
@@ -508,13 +511,13 @@ class SchemaParser<Context extends SchemaContext> {
         if (text.startsWith("/**")) {
           tokenKind = "jsdoc";
         } else {
-          // Non-JSDoc block comment — skip.
+          // Non-JSDoc block comment
+          tokenKind = "comment";
           newLine = newLine || group[0].includes("\n");
-          continue;
         }
       } else if (group[4] !== undefined) {
-        // Single-line comment — skip.
-        continue;
+        // Single-line comment
+        tokenKind = "comment";
       } else if (group[5] !== undefined) {
         // Validate identifier.
         if (/^[0-9]/.test(text)) {
@@ -553,6 +556,10 @@ class SchemaParser<Context extends SchemaContext> {
         tokenKind = "string-end";
       } else {
         throw new Error("Unexpected regex match");
+      }
+
+      if (tokenKind === "comment" && !this.options?.keepNonJsdocComments) {
+        continue;
       }
 
       tokens.push({
@@ -688,6 +695,13 @@ class SchemaParser<Context extends SchemaContext> {
           });
           break;
         }
+        case "comment": {
+          result.push({
+            kind: "non-jsdoc-comment",
+            span: this.tokenToSpan(token),
+          });
+          break;
+        }
       }
     }
     return result;
@@ -696,7 +710,12 @@ class SchemaParser<Context extends SchemaContext> {
 
 type Token = {
   readonly kind:
-    "identifier" | "symbol" | "string-literal" | "jsdoc" | "string-end";
+    | "identifier"
+    | "symbol"
+    | "string-literal"
+    | "jsdoc"
+    | "comment"
+    | "string-end";
   readonly text: string;
   /** Position of the start of the token in `content.text`. */
   readonly textStart: number;

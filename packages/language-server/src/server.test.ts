@@ -950,7 +950,7 @@ type Output=string;
       const tokens = computeSemanticTokens(doc);
       const decoded = decodeSemanticTokens(tokens, doc);
 
-      // Verify comment token
+      // Verify comment and non-jsdoc-comment tokens
       expect(
         decoded.some(
           (t) => t.type === "comment" && t.text === "<!-- Header comment -->",
@@ -1006,6 +1006,7 @@ comment here -->
   <schema>
     /** Multi-line
         block comment */
+    // non-jsdoc comment
     interface Input {}
   </schema>
 </template>`;
@@ -1021,13 +1022,21 @@ comment here -->
       expect(xmlCommentParts[0]?.text).toBe("<!-- Multi-line");
       expect(xmlCommentParts[1]?.text).toBe("comment here -->");
 
-      // Check multi-line schema block comment
+      // Check multi-line schema JSDoc comment
       const schemaCommentParts = decoded.filter(
         (t) => t.type === "comment" && (t.line === 4 || t.line === 5),
       );
       expect(schemaCommentParts.length).toBe(2);
       expect(schemaCommentParts[0]?.text).toBe("/** Multi-line");
       expect(schemaCommentParts[1]?.text).toBe("        block comment */");
+
+      // Check non-jsdoc comment
+      expect(
+        decoded.some(
+          (t) =>
+            t.type === "non-jsdoc-comment" && t.text === "// non-jsdoc comment",
+        ),
+      ).toBe(true);
     });
 
     it("computes semantic tokens for embedded YAML in template meta and examples", () => {

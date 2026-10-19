@@ -1,5 +1,5 @@
 import type { Extension } from "@codemirror/state";
-import { autoCloseTags } from "./auto-close.js";
+import { autoCloseComments, autoCloseTags } from "./auto-close.js";
 import {
   typepromptAutocomplete,
   typepromptCompletionSource,
@@ -13,6 +13,7 @@ import {
   CLOSE_RE,
   OPEN_BRACKET_RE,
   OPEN_TAG_RE,
+  typepromptBackspaceCommand,
   typepromptEnterCommand,
   typepromptIndentation,
   typepromptIndentCalculation,
@@ -31,13 +32,13 @@ import type { TypePromptConfig, TypePromptState } from "./types.js";
  * Creates a comprehensive CodeMirror 6 extension for the TypePrompt language.
  *
  * Includes:
- * - Syntactic coloring using `@typeprompt/core`'s semantic tokenizer
- * - Automatic live validation and error squiggles using `CompilationResult.finalErrors`
- * - Autocompletion using `@typeprompt/core`'s `getCompletionItems`
+ * - Syntactic coloring
+ * - Automatic live validation and error squiggles
+ * - Autocompletion
  * - XML tag auto-closing on `>`
+ * - Multiline comment auto-closing on `/*`
  * - Smart auto-indentation on Enter (open tags, open brackets, YAML colons)
  * - On-Enter tag and bracket split with indentOutdent
- * - Full immutability caching for instant re-evaluations and high performance
  *
  * @param config Optional configuration options (file path, workspace files, patchBase, toggles)
  */
@@ -63,6 +64,10 @@ export function typeprompt(config: TypePromptConfig = {}): Extension {
     extensions.push(autoCloseTags());
   }
 
+  if (config.autoCloseComments !== false) {
+    extensions.push(autoCloseComments());
+  }
+
   if (config.indent !== false) {
     extensions.push(typepromptIndentation);
   }
@@ -72,6 +77,7 @@ export function typeprompt(config: TypePromptConfig = {}): Extension {
 
 // Re-export all sub-modules and helpers
 export {
+  autoCloseComments,
   autoCloseTags,
   CLOSE_RE,
   getCompilationResult,
@@ -79,6 +85,7 @@ export {
   OPEN_BRACKET_RE,
   OPEN_TAG_RE,
   typepromptAutocomplete,
+  typepromptBackspaceCommand,
   typepromptCompletionSource,
   typepromptConfigFacet,
   typepromptEnterCommand,

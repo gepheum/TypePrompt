@@ -15,7 +15,7 @@
     { "open": "'", "close": "'", "notIn": ["string", "comment"] },
     { "open": "\"", "close": "\"", "notIn": ["string", "comment"] },
     { "open": "<!--", "close": "-->", "notIn": ["comment"] },
-    { "open": "/**", "close": " */", "notIn": ["string"] }
+    { "open": "/*", "close": " */", "notIn": ["string"] }
   ],
   "surroundingPairs": [
     ["{", "}"],
@@ -40,7 +40,7 @@
       }
     },
     {
-      "beforeText": "^\\s*/\\*(\\*?).*$",
+      "beforeText": "^\\s*/\\*(\\*?)(?!/)([^\\*]|\\*(?!/))*$",
       "action": {
         "indent": "none",
         "appendText": " * "
@@ -65,7 +65,7 @@
       "beforeText": "^(\\t|[ ])*[ ]\\*/\\s*$",
       "action": {
         "indent": "none",
-        "removeIndentation": 1
+        "removeText": 1
       }
     },
     {

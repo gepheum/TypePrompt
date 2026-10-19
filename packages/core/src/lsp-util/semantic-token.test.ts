@@ -117,6 +117,53 @@ describe("tokenize", () => {
     ]);
   });
 
+  it("tokenizes single-line (//), block (/* */), and JSDoc (/** */) comments in schema with distinct kinds", () => {
+    const input = [
+      "<schema>",
+      "  // Single-line comment",
+      "  /* Block comment */",
+      "  /** JSDoc comment */",
+      "  type User = string;",
+      "</schema>",
+    ].join("\n");
+
+    const tokens = tokenize(input);
+    const nonJsdocTokens = tokens.filter((t) => t.kind === "non-jsdoc-comment");
+    const commentTokens = tokens.filter((t) => t.kind === "comment");
+
+    expect(nonJsdocTokens).toMatch([
+      {
+        kind: "non-jsdoc-comment",
+        span: {
+          start: input.indexOf("// Single-line comment"),
+          end:
+            input.indexOf("// Single-line comment") +
+            "// Single-line comment".length,
+        },
+      },
+      {
+        kind: "non-jsdoc-comment",
+        span: {
+          start: input.indexOf("/* Block comment */"),
+          end:
+            input.indexOf("/* Block comment */") + "/* Block comment */".length,
+        },
+      },
+    ]);
+
+    expect(commentTokens).toMatch([
+      {
+        kind: "comment",
+        span: {
+          start: input.indexOf("/** JSDoc comment */"),
+          end:
+            input.indexOf("/** JSDoc comment */") +
+            "/** JSDoc comment */".length,
+        },
+      },
+    ]);
+  });
+
   it("tokenizes YAML inside <template><meta>", () => {
     const input = [
       "<template name='demo'>",

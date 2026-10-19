@@ -1,7 +1,8 @@
 import { CompletionContext } from "@codemirror/autocomplete";
-import { getIndentation } from "@codemirror/language";
+import { defaultKeymap, historyKeymap } from "@codemirror/commands";
+import { getIndentation, IndentContext } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { githubDark } from "@uiw/codemirror-themes-all";
 import { describe, it } from "mocha";
 import assert from "node:assert";
@@ -12,12 +13,14 @@ import {
   OPEN_BRACKET_RE,
   OPEN_TAG_RE,
   typeprompt,
+  typepromptBackspaceCommand,
   typepromptCompletionSource,
   typepromptConfigFacet,
   typepromptEnterCommand,
   typepromptHighlightField,
   typepromptHighlighting,
   typepromptIndentation,
+  typepromptIndentCalculation,
   typepromptLinter,
   typepromptStateField,
 } from "./codemirror/index.js";
@@ -147,6 +150,54 @@ describe("TypePrompt CodeMirror Extension", () => {
       const decorations = state.field(typepromptHighlightField);
       assert.ok(decorations);
       assert.ok(decorations.size > 0);
+    });
+
+    it("distinguishes comment and non-jsdoc-comment tokens and produces theme decorations", () => {
+      const doc = `<template name="Test">
+  <schema>
+    // regular comment
+    /** jsdoc comment */
+    type Input = string;
+  </schema>
+</template>`;
+      const state = EditorState.create({
+        doc,
+        extensions: [typepromptStateField, typepromptHighlighting],
+      });
+
+      const tokens = getSemanticTokens(state)!;
+      const commentToken = tokens.find((t) => t.kind === "comment");
+      const nonJsdocToken = tokens.find((t) => t.kind === "non-jsdoc-comment");
+
+      assert.ok(commentToken, "Should find comment token");
+      assert.ok(nonJsdocToken, "Should find non-jsdoc-comment token");
+      assert.strictEqual(commentToken.kind, "comment");
+      assert.strictEqual(nonJsdocToken.kind, "non-jsdoc-comment");
+
+      const decorations = state.field(typepromptHighlightField);
+      let foundCommentDeco = false;
+      let foundNonJsdocDeco = false;
+
+      decorations.between(0, doc.length, (from, to) => {
+        if (from === commentToken.span.start && to === commentToken.span.end) {
+          foundCommentDeco = true;
+        }
+        if (
+          from === nonJsdocToken.span.start &&
+          to === nonJsdocToken.span.end
+        ) {
+          foundNonJsdocDeco = true;
+        }
+      });
+
+      assert.ok(
+        foundCommentDeco,
+        "Should produce decoration for comment token",
+      );
+      assert.ok(
+        foundNonJsdocDeco,
+        "Should produce decoration for non-jsdoc-comment token",
+      );
     });
   });
 
@@ -438,6 +489,461 @@ describe("TypePrompt CodeMirror Extension", () => {
         const expected = ["type Input = {", "  "].join("\n");
         assert.strictEqual(getState().doc.toString(), expected);
         assert.strictEqual(getState().selection.main.anchor, expected.length);
+      });
+    });
+
+    describe("Multiline Comment Editing", () => {
+      const createFullMockView = (initialDoc: string, cursorOffset: number) => {
+        let state = EditorState.create({
+          doc: initialDoc,
+          selection: { anchor: cursorOffset },
+          extensions: [
+            typeprompt({
+              path: "template.xml",
+              autoCloseComments: true,
+              indent: true,
+            }),
+          ],
+        });
+        const view = {
+          get state() {
+            return state;
+          },
+          dispatch(tr: any) {
+            if (tr.state) {
+              state = tr.state;
+            } else {
+              state = state.update(tr).state;
+            }
+          },
+        } as unknown as EditorView;
+        const input = (text: string) => {
+          const from = state.selection.main.from;
+          const to = state.selection.main.to;
+          const handlers = state.facet(EditorView.inputHandler);
+          for (const handler of handlers) {
+            if (
+              handler(view, from, to, text, () =>
+                view.state.update({ changes: { from, to, insert: text } }),
+              )
+            ) {
+              return true;
+            }
+          }
+          return false;
+        };
+        return { view, getState: () => state, input };
+      };
+
+      describe("autoCloseComments", () => {
+        it("auto-closes '/*' with ' */' when typing '*' after '/'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/") + 1;
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("*");
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /* */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          // Cursor must be placed right between "/*" and " */"
+          const expectedCursor = expectedDoc.indexOf("/*") + 2;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("auto-closes '/*' with ' */' when entering '/*' directly", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    ",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("    ") + 4;
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("/*");
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /* */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor = expectedDoc.indexOf("/*") + 2;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("does not auto-close when already followed by '*/'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /*/",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/*") + 1; // between / and /
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("*");
+          assert.strictEqual(handled, false);
+          assert.strictEqual(getState().doc.toString(), doc);
+        });
+      });
+
+      describe("Enter in multiline comments", () => {
+        it("splits between '/**' and ' */' with well-aligned '* ' on newline", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /** */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/**") + 3;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * ",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          // Cursor should be at the indented middle line right after "* "
+          const expectedCursor =
+            expectedDoc.indexOf("     * ") + "     * ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("prepends '* ' well-aligned when hitting Enter on a continuation line", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Description of type",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor =
+            doc.indexOf("Description of type") + "Description of type".length;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Description of type",
+            "     * ",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("     * \n") + "     * ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("splits text and prepends '* ' when hitting Enter in the middle of a line", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Hello world",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("Hello ") + "Hello ".length;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Hello",
+            "     * world",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("     * world") + "     * ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("prepends '* ' well-aligned when hitting Enter after '/**' without closing '*/'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/**") + 3;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * ",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("     * \n") + "     * ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("moves '*/' to newline well-aligned when hitting Enter before '*/' on a line with text", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Some comment */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("*/");
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Some comment",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("     */") + "     ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("outdents to base indent when hitting Enter right after '*/'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Comment",
+            "     */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("*/") + 2;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * Comment",
+            "     */",
+            "    ",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("    \n  </schema>") + "    ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("does not insert '*' when hitting Enter after a single-line comment", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /** A support ticket to be triaged. */",
+            "    interface Input {}",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("*/") + 2;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /** A support ticket to be triaged. */",
+            "    ",
+            "    interface Input {}",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("    \n    interface") + "    ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("ensures typepromptKeymap has higher precedence than defaultKeymap", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /** */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/**") + 3;
+          let state = EditorState.create({
+            doc,
+            selection: { anchor: cursor },
+            extensions: [
+              keymap.of([...defaultKeymap, ...historyKeymap]),
+              typeprompt(),
+            ],
+          });
+
+          // Check that in the resolved keymap facet, the highest-priority Enter binding is typepromptEnterCommand
+          const keymaps = state.facet(keymap);
+          let firstEnterBinding: ((view: any) => boolean) | null = null;
+          for (const km of keymaps) {
+            for (const b of km) {
+              if (b.key === "Enter" && b.run && !firstEnterBinding) {
+                // Ignore autocompletion acceptCompletion
+                if (b.run.name !== "acceptCompletion") {
+                  firstEnterBinding = b.run;
+                  break;
+                }
+              }
+            }
+            if (firstEnterBinding) break;
+          }
+          assert.strictEqual(firstEnterBinding, typepromptEnterCommand);
+        });
+
+        it("calculates indentation for lines starting with '*/' to align stars", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /**",
+            "     * line 1",
+            "*/",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const state = EditorState.create({
+            doc,
+            extensions: [typeprompt()],
+          });
+          const cx = new IndentContext(state);
+          const lineWithClose = state.doc.line(5);
+          const indent = typepromptIndentCalculation(cx, lineWithClose.from);
+          // Opening /** is at 4 spaces (col 4). First star is at col 5.
+          // Therefore, */ must indent to 5 spaces.
+          assert.strictEqual(indent, 5);
+        });
+      });
+
+      describe("typepromptBackspaceCommand", () => {
+        it("undoes auto-closing '/** */' on Backspace, leaving '/*'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /** */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/**") + 3;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptBackspaceCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /*",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor = expectedDoc.indexOf("/*") + 2;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("undoes auto-closing '/* */' on Backspace, leaving '/'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /* */",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("/*") + 2;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptBackspaceCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    /",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor = expectedDoc.indexOf("/") + 1;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
       });
     });
   });
