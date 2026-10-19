@@ -50,49 +50,38 @@ export const typepromptStateField = StateField.define<TypePromptState>({
 
     return {
       path,
-      content,
       compilationResult,
       tokens,
-      workspaceFiles,
     };
   },
 
   update(oldState: TypePromptState, tr: Transaction): TypePromptState {
-    const config = tr.state.facet(typepromptConfigFacet);
-    const newPath = config.path ?? oldState.path;
-    const newWorkspaceFiles = config.workspaceFiles ?? oldState.workspaceFiles;
-    const { patchBase } = config;
-
-    const docChanged = tr.docChanged;
-    const configChanged =
-      newPath !== oldState.path ||
-      newWorkspaceFiles !== oldState.workspaceFiles;
-
-    // Fast path: if neither the document nor the configuration changed,
-    // return the exact same immutable state reference.
-    if (!docChanged && !configChanged) {
+    if (!tr.docChanged) {
       return oldState;
     }
 
     const newContent = tr.state.doc.toString();
-    if (!configChanged && newContent === oldState.content) {
-      return oldState;
-    }
+
+    // Reconstruct pathToContent from compilationResult.sourceFiles
+    const pathToContent = Object.fromEntries(
+      Object.values(oldState.compilationResult.sourceFiles).map((f) => [
+        f.path,
+        f.content,
+      ]),
+    );
+    pathToContent[oldState.path] = newContent;
 
     // Incremental compilation leveraging the cached, immutable CompilationResult
-    const pathToContent = { ...newWorkspaceFiles, [newPath]: newContent };
     const compilationResult = compile(pathToContent, {
       cache: oldState.compilationResult,
-      patchBase: patchBase ?? null,
+      patchBase: oldState.compilationResult.patchBase,
     });
-    const tokens = tokenize(newContent, newPath);
+    const tokens = tokenize(newContent, oldState.path);
 
     return {
-      path: newPath,
-      content: newContent,
+      path: oldState.path,
       compilationResult,
       tokens,
-      workspaceFiles: newWorkspaceFiles,
     };
   },
 });

@@ -61,8 +61,6 @@ export type TypePromptConfig = {
  */
 export type TypePromptState = {
   readonly path: string;
-  readonly content: string;
   readonly compilationResult: CompilationResult;
   readonly tokens: readonly SemanticToken[];
-  readonly workspaceFiles: { readonly [path: string]: string };
 };
