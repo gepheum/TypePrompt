@@ -41,16 +41,16 @@ if [ "$FAST" != true ]; then
   cd cpp
   ./format.sh
   cd ..
+
+  cd ../examples/e2e-kotlin
+  ./format.sh
+  cd ../../tests
+
+  cd ../examples/e2e-python
+  ./format.sh
+  cd ../../tests
+
+  cd ../examples/e2e-rust
+  ./format.sh
+  cd ../../tests
 fi
-
-cd ../examples/e2e-kotlin
-./format.sh
-cd ../../tests
-
-cd ../examples/e2e-python
-./format.sh
-cd ../../tests
-
-cd ../examples/e2e-rust
-./format.sh
-cd ../../tests

@@ -19,10 +19,11 @@ npm run typecheck
 npm run test
 
 cd tests
-./format-all.sh
 if [ "$FAST" = true ]; then
+  ./format-all.sh --fast
   ./test.sh --fast
 else
+  ./format-all.sh
   ./test.sh
 fi
 cd ..
