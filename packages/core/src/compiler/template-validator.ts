@@ -153,7 +153,7 @@ function validateMeta(
           pushMissingMetaError(template.tag);
         }
       } else if (meta) {
-        pushExtraneousMetaError(template.tag);
+        pushExtraneousMetaError(meta.tag);
       }
       break;
     }

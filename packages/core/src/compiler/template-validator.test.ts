@@ -447,6 +447,9 @@ describe("validateTemplate - meta validation", () => {
         {
           message: "Extraneous <meta> element",
           hint: "Remove this <meta> element or add a <meta> element at the top level",
+          span: {
+            start: 154,
+          },
         },
       ],
     });

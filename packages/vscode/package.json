@@ -45,7 +45,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && npm run bundle",
     "bundle": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node && esbuild ../language-server/src/main.ts --bundle --outfile=dist/server.js --format=cjs --platform=node --minify --banner:js=\"const import_meta_url = require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url",
     "vscode:prepublish": "npm run build && npm run bundle",
     "package": "npx @vscode/vsce package --no-dependencies",

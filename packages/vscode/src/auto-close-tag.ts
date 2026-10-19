@@ -32,11 +32,11 @@ function onDocumentChange(event: TextDocumentChangeEvent): void {
   }
 
   if (change.text === ">") {
-    // The position immediately after the inserted '>'
-    const insertPosition = change.range.start.translate(0, 1);
-    const offset = document.offsetAt(insertPosition);
+    const insertOffset =
+      document.offsetAt(change.range.start) + change.text.length;
+    const insertPosition = document.positionAt(insertOffset);
 
-    const closingTag = getAutoCloseTagAction(document.getText(), offset);
+    const closingTag = getAutoCloseTagAction(document.getText(), insertOffset);
     if (!closingTag) {
       return;
     }
@@ -49,24 +49,31 @@ function onDocumentChange(event: TextDocumentChangeEvent): void {
     return;
   }
 
-  if (change.text === "*") {
-    const insertPosition = change.range.start.translate(0, 1);
-    const offset = document.offsetAt(insertPosition);
+  if (
+    change.text === "*" ||
+    change.text === "/*" ||
+    change.text === "-" ||
+    change.text === "<!--"
+  ) {
+    const insertOffset =
+      document.offsetAt(change.range.start) + change.text.length;
+    const insertPosition = document.positionAt(insertOffset);
     const text = document.getText();
-    if (offset >= 2 && text.slice(offset - 2, offset) === "/*") {
-      const fullTextBeforeStar = text.slice(0, offset - 1) + text.slice(offset);
-      const action = getAutoCloseCommentAction(
-        fullTextBeforeStar,
-        offset - 1,
-        "*",
-      );
-      if (action) {
-        const snippet = new SnippetString(" $0*/");
-        editor.insertSnippet(snippet, insertPosition, {
-          undoStopBefore: false,
-          undoStopAfter: false,
-        });
-      }
+    const offsetBeforeChange = insertOffset - change.text.length;
+    const fullTextBeforeChange =
+      text.slice(0, offsetBeforeChange) + text.slice(insertOffset);
+    const action = getAutoCloseCommentAction(
+      fullTextBeforeChange,
+      offsetBeforeChange,
+      change.text,
+    );
+    if (action) {
+      const suffix = action.insert.slice(change.text.length);
+      const snippet = new SnippetString(`$0${suffix}`);
+      editor.insertSnippet(snippet, insertPosition, {
+        undoStopBefore: false,
+        undoStopAfter: false,
+      });
     }
   }
 }
