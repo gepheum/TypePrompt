@@ -688,16 +688,10 @@ class SchemaParser<Context extends SchemaContext> {
           });
           break;
         }
-        case "jsdoc": {
-          result.push({
-            kind: "comment",
-            span: this.tokenToSpan(token),
-          });
-          break;
-        }
+        case "jsdoc":
         case "comment": {
           result.push({
-            kind: "non-jsdoc-comment",
+            kind: "comment",
             span: this.tokenToSpan(token),
           });
           break;

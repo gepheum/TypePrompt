@@ -175,10 +175,7 @@ export function typepromptEnterCommand(view: EditorView): boolean {
   // the tokens and see if we're in a comment and see if it starts with "/*"."
   const tokens = getSemanticTokens(state);
   const commentToken = tokens?.find(
-    (t) =>
-      (t.kind === "comment" || t.kind === "non-jsdoc-comment") &&
-      t.span.start <= from &&
-      from <= t.span.end,
+    (t) => t.kind === "comment" && t.span.start <= from && from <= t.span.end,
   );
 
   if (commentToken) {

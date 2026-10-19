@@ -152,7 +152,7 @@ describe("TypePrompt CodeMirror Extension", () => {
       assert.ok(decorations.size > 0);
     });
 
-    it("distinguishes comment and non-jsdoc-comment tokens and produces theme decorations", () => {
+    it("produces theme decorations for both JSDoc and line comments", () => {
       const doc = `<template name="Test">
   <schema>
     // regular comment
@@ -166,38 +166,21 @@ describe("TypePrompt CodeMirror Extension", () => {
       });
 
       const tokens = getSemanticTokens(state)!;
-      const commentToken = tokens.find((t) => t.kind === "comment");
-      const nonJsdocToken = tokens.find((t) => t.kind === "non-jsdoc-comment");
-
-      assert.ok(commentToken, "Should find comment token");
-      assert.ok(nonJsdocToken, "Should find non-jsdoc-comment token");
-      assert.strictEqual(commentToken.kind, "comment");
-      assert.strictEqual(nonJsdocToken.kind, "non-jsdoc-comment");
+      const commentTokens = tokens.filter((t) => t.kind === "comment");
+      assert.strictEqual(commentTokens.length, 2);
 
       const decorations = state.field(typepromptHighlightField);
-      let foundCommentDeco = false;
-      let foundNonJsdocDeco = false;
+      let foundComments = 0;
 
       decorations.between(0, doc.length, (from, to) => {
-        if (from === commentToken.span.start && to === commentToken.span.end) {
-          foundCommentDeco = true;
-        }
         if (
-          from === nonJsdocToken.span.start &&
-          to === nonJsdocToken.span.end
+          commentTokens.some((t) => t.span.start === from && t.span.end === to)
         ) {
-          foundNonJsdocDeco = true;
+          foundComments++;
         }
       });
 
-      assert.ok(
-        foundCommentDeco,
-        "Should produce decoration for comment token",
-      );
-      assert.ok(
-        foundNonJsdocDeco,
-        "Should produce decoration for non-jsdoc-comment token",
-      );
+      assert.strictEqual(foundComments, 2);
     });
   });
 

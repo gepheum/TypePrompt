@@ -216,7 +216,6 @@ export const SEMANTIC_TOKEN_TYPES = [
   "number",
   "type",
   "property",
-  "non-jsdoc-comment",
 ] as const;
 
 const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
@@ -232,8 +231,6 @@ function tokenKindToType(
   switch (kind) {
     case "comment":
       return "comment";
-    case "non-jsdoc-comment":
-      return "non-jsdoc-comment";
     case "string":
       return "string";
     case "number":

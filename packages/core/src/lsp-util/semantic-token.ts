@@ -8,7 +8,6 @@ export type SemanticToken = {
   readonly span: Span;
   readonly kind:
     | "comment"
-    | "non-jsdoc-comment"
     | "xml-tag"
     | "xml-attribute"
     | "schema-keyword" // "type" or "interface"

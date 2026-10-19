@@ -20,7 +20,6 @@ import { typepromptStateField } from "./state-field.js";
  */
 const tokenTags: Record<SemanticToken["kind"], Tag> = {
   comment: t.comment,
-  "non-jsdoc-comment": t.lineComment,
   "xml-tag": t.tagName,
   "xml-attribute": t.attributeName,
   "schema-keyword": t.keyword,

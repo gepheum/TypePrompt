@@ -117,7 +117,7 @@ describe("tokenize", () => {
     ]);
   });
 
-  it("tokenizes single-line (//), block (/* */), and JSDoc (/** */) comments in schema with distinct kinds", () => {
+  it("tokenizes single-line (//), block (/* */), and JSDoc (/** */) comments in schema with comment kind", () => {
     const input = [
       "<schema>",
       "  // Single-line comment",
@@ -128,12 +128,11 @@ describe("tokenize", () => {
     ].join("\n");
 
     const tokens = tokenize(input);
-    const nonJsdocTokens = tokens.filter((t) => t.kind === "non-jsdoc-comment");
     const commentTokens = tokens.filter((t) => t.kind === "comment");
 
-    expect(nonJsdocTokens).toMatch([
+    expect(commentTokens).toMatch([
       {
-        kind: "non-jsdoc-comment",
+        kind: "comment",
         span: {
           start: input.indexOf("// Single-line comment"),
           end:
@@ -142,16 +141,13 @@ describe("tokenize", () => {
         },
       },
       {
-        kind: "non-jsdoc-comment",
+        kind: "comment",
         span: {
           start: input.indexOf("/* Block comment */"),
           end:
             input.indexOf("/* Block comment */") + "/* Block comment */".length,
         },
       },
-    ]);
-
-    expect(commentTokens).toMatch([
       {
         kind: "comment",
         span: {

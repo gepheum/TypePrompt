@@ -950,7 +950,7 @@ type Output=string;
       const tokens = computeSemanticTokens(doc);
       const decoded = decodeSemanticTokens(tokens, doc);
 
-      // Verify comment and non-jsdoc-comment tokens
+      // Verify comment tokens
       expect(
         decoded.some(
           (t) => t.type === "comment" && t.text === "<!-- Header comment -->",
@@ -1033,8 +1033,7 @@ comment here -->
       // Check non-jsdoc comment
       expect(
         decoded.some(
-          (t) =>
-            t.type === "non-jsdoc-comment" && t.text === "// non-jsdoc comment",
+          (t) => t.type === "comment" && t.text === "// non-jsdoc comment",
         ),
       ).toBe(true);
     });
