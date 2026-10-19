@@ -6,9 +6,6 @@ import { typepromptStateField } from "./state-field.js";
 
 /**
  * Linter function that extracts compilation diagnostics from the cached `CompilationResult`.
- *
- * Because `CompilationResult` is immutable and already computed in `typepromptStateField`,
- * the linter runs instantaneously without any redundant compilation!
  */
 export function typepromptLinter(view: EditorView): readonly Diagnostic[] {
   const tpState = view.state.field(typepromptStateField, false);

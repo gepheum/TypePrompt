@@ -1,23 +1,51 @@
-import { RangeSetBuilder, StateField, type Extension } from "@codemirror/state";
+import {
+  defaultHighlightStyle,
+  highlightingFor,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import {
+  EditorState,
+  RangeSetBuilder,
+  StateField,
+  type Extension,
+} from "@codemirror/state";
 import { Decoration, EditorView, type DecorationSet } from "@codemirror/view";
+import { tags as t, type Tag } from "@lezer/highlight";
 import type { SemanticToken } from "@typeprompt/core";
 import { typepromptStateField } from "./state-field.js";
 
-const tokenDecorations: Record<SemanticToken["kind"], Decoration> = {
-  comment: Decoration.mark({ class: "cm-tp-comment" }),
-  "xml-tag": Decoration.mark({ class: "cm-tp-tag" }),
-  "xml-attribute": Decoration.mark({ class: "cm-tp-attribute" }),
-  "schema-keyword": Decoration.mark({ class: "cm-tp-keyword" }),
-  string: Decoration.mark({ class: "cm-tp-string" }),
-  boolean: Decoration.mark({ class: "cm-tp-boolean" }),
-  number: Decoration.mark({ class: "cm-tp-number" }),
+/**
+ * Maps TypePrompt semantic token kinds to standard CodeMirror highlight tags.
+ * Any theme (One Dark, Dracula, GitHub, etc.) styles these tags.
+ */
+const tokenTags: Record<SemanticToken["kind"], Tag> = {
+  comment: t.comment,
+  "xml-tag": t.tagName,
+  "xml-attribute": t.attributeName,
+  "schema-keyword": t.keyword,
+  string: t.string,
+  boolean: t.bool,
+  number: t.number,
 };
 
 function buildHighlightDecorations(
+  state: EditorState,
   tokens: readonly SemanticToken[],
-  docLength: number,
 ): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
+  const docLength = state.doc.length;
+
+  // Resolve decoration classes from active theme
+  const kindDecorations = new Map<SemanticToken["kind"], Decoration>();
+  for (const [kind, tag] of Object.entries(tokenTags) as [
+    SemanticToken["kind"],
+    Tag,
+  ][]) {
+    const cls = highlightingFor(state, [tag]);
+    if (cls) {
+      kindDecorations.set(kind, Decoration.mark({ class: cls }));
+    }
+  }
 
   // Ensure tokens are sorted strictly by start, then end
   const sorted = [...tokens].sort((a, b) => {
@@ -32,9 +60,8 @@ function buildHighlightDecorations(
     const from = Math.max(0, Math.min(docLength, token.span.start));
     const to = Math.max(from, Math.min(docLength, token.span.end));
 
-    // RangeSetBuilder requires non-overlapping strictly advancing ranges
     if (from < to && from >= lastEnd) {
-      const deco = tokenDecorations[token.kind];
+      const deco = kindDecorations.get(token.kind);
       if (deco) {
         builder.add(from, to, deco);
         lastEnd = to;
@@ -46,88 +73,45 @@ function buildHighlightDecorations(
 }
 
 /**
- * StateField producing syntax highlighting decorations derived from the semantic tokens
- * computed in `typepromptStateField`.
+ * StateField producing syntax highlighting decorations derived from semantic tokens,
+ * styled dynamically using whatever theme or highlighter is active in CodeMirror.
  */
 export const typepromptHighlightField = StateField.define<DecorationSet>({
   create(state): DecorationSet {
-    const tpState = state.field(typepromptStateField);
-    return buildHighlightDecorations(tpState.tokens, state.doc.length);
+    const tpState = state.field(typepromptStateField, false);
+    if (!tpState) {
+      return Decoration.none;
+    }
+    return buildHighlightDecorations(state, tpState.tokens);
   },
 
   update(decorations, tr): DecorationSet {
-    if (!tr.docChanged) {
+    const oldTpState = tr.startState.field(typepromptStateField, false);
+    const newTpState = tr.state.field(typepromptStateField, false);
+
+    if (!tr.docChanged && !tr.reconfigured && oldTpState === newTpState) {
       return decorations;
     }
-    const tpState = tr.state.field(typepromptStateField);
-    return buildHighlightDecorations(tpState.tokens, tr.state.doc.length);
+    if (!newTpState) {
+      return Decoration.none;
+    }
+    return buildHighlightDecorations(tr.state, newTpState.tokens);
   },
 
   provide: (field) => EditorView.decorations.from(field),
 });
 
 /**
- * Clean, readable base theme providing syntactic colors for TypePrompt tokens in both light and dark modes.
+ * @deprecated CodeMirror themes should be used instead. This extension is now a no-op kept for backwards compatibility.
  */
-export const typepromptHighlightTheme = EditorView.baseTheme({
-  ".cm-tp-comment": {
-    color: "#6a737d",
-    fontStyle: "italic",
-  },
-  ".cm-tp-tag": {
-    color: "#22863a",
-    fontWeight: "600",
-  },
-  ".cm-tp-attribute": {
-    color: "#6f42c1",
-  },
-  ".cm-tp-keyword": {
-    color: "#d73a49",
-    fontWeight: "600",
-  },
-  ".cm-tp-string": {
-    color: "#032f62",
-  },
-  ".cm-tp-boolean": {
-    color: "#005cc5",
-    fontWeight: "600",
-  },
-  ".cm-tp-number": {
-    color: "#005cc5",
-  },
-
-  // Dark mode styling
-  "&dark .cm-tp-comment, .cm-theme-dark .cm-tp-comment": {
-    color: "#8b949e",
-    fontStyle: "italic",
-  },
-  "&dark .cm-tp-tag, .cm-theme-dark .cm-tp-tag": {
-    color: "#7ee787",
-    fontWeight: "600",
-  },
-  "&dark .cm-tp-attribute, .cm-theme-dark .cm-tp-attribute": {
-    color: "#d2a8ff",
-  },
-  "&dark .cm-tp-keyword, .cm-theme-dark .cm-tp-keyword": {
-    color: "#ff7b72",
-    fontWeight: "600",
-  },
-  "&dark .cm-tp-string, .cm-theme-dark .cm-tp-string": {
-    color: "#a5d6ff",
-  },
-  "&dark .cm-tp-boolean, .cm-theme-dark .cm-tp-boolean": {
-    color: "#79c0ff",
-    fontWeight: "600",
-  },
-  "&dark .cm-tp-number, .cm-theme-dark .cm-tp-number": {
-    color: "#79c0ff",
-  },
-});
+export const typepromptHighlightTheme: Extension = [];
 
 /**
- * Extension bundling the syntax highlighting decoration field and theme styles.
+ * Extension bundling the syntax highlighting decoration field and standard fallback styling.
+ * If a custom theme is provided in the editor, CodeMirror automatically uses it; otherwise,
+ * defaultHighlightStyle is used as a fallback.
  */
 export const typepromptHighlighting: Extension = [
   typepromptHighlightField,
-  typepromptHighlightTheme,
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
 ];

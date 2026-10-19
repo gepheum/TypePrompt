@@ -96,9 +96,7 @@ export function getCompilationResult(
   return tpState ? tpState.compilationResult : null;
 }
 
-/**
- * Retrieve the current SemanticTokens from an EditorState, if available.
- */
+/** Retrieve the current SemanticTokens from an EditorState, if available. */
 export function getSemanticTokens(
   state: EditorState,
 ): readonly SemanticToken[] | null {

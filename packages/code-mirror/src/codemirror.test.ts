@@ -2,6 +2,7 @@ import { CompletionContext } from "@codemirror/autocomplete";
 import { getIndentation } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { githubDark } from "@uiw/codemirror-themes-all";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
@@ -15,6 +16,7 @@ import {
   typepromptConfigFacet,
   typepromptEnterCommand,
   typepromptHighlightField,
+  typepromptHighlighting,
   typepromptIndentation,
   typepromptLinter,
   typepromptStateField,
@@ -118,7 +120,7 @@ describe("TypePrompt CodeMirror Extension", () => {
     it("produces syntax highlighting decorations for tokens", () => {
       const state = EditorState.create({
         doc: validTemplate,
-        extensions: [typepromptStateField, typepromptHighlightField],
+        extensions: [typepromptStateField, typepromptHighlighting],
       });
 
       const decorations = state.field(typepromptHighlightField);
@@ -134,6 +136,17 @@ describe("TypePrompt CodeMirror Extension", () => {
         "Should contain schema-keyword tokens",
       );
       assert.ok(kinds.has("string"), "Should contain string tokens");
+    });
+
+    it("adapts syntax highlighting decorations to custom themes", () => {
+      const state = EditorState.create({
+        doc: validTemplate,
+        extensions: [typepromptStateField, typepromptHighlighting, githubDark],
+      });
+
+      const decorations = state.field(typepromptHighlightField);
+      assert.ok(decorations);
+      assert.ok(decorations.size > 0);
     });
   });
 
