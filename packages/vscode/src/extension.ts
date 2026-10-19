@@ -8,11 +8,13 @@ import type {
 } from "vscode-languageclient/node.js";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
 import { activateAutoCloseTag } from "./auto-close-tag.js";
+import { activateEnterHandler } from "./enter-handler.js";
 
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext): void {
   activateAutoCloseTag(context);
+  activateEnterHandler(context);
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),

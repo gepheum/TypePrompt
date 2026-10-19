@@ -473,6 +473,14 @@ describe("TypePrompt CodeMirror Extension", () => {
         assert.strictEqual(getState().doc.toString(), expected);
         assert.strictEqual(getState().selection.main.anchor, expected.length);
       });
+
+      it("attempts to accept completion before performing Enter indentation actions", () => {
+        const { view, getState } = createMockView("<system></system>", 8);
+        const handled = typepromptEnterCommand(view);
+        assert.strictEqual(handled, true);
+        const expected = ["<system>", "  ", "</system>"].join("\n");
+        assert.strictEqual(getState().doc.toString(), expected);
+      });
     });
 
     describe("Multiline Comment Editing", () => {
@@ -588,6 +596,67 @@ describe("TypePrompt CodeMirror Extension", () => {
           const handled = input("*");
           assert.strictEqual(handled, false);
           assert.strictEqual(getState().doc.toString(), doc);
+        });
+
+        it("auto-closes '<!--' with '-->' outside schema when typing '-' after '<!-'", () => {
+          const doc = ['<template name="Test">', "  <!-", "</template>"].join(
+            "\n",
+          );
+          const cursor = doc.indexOf("<!-") + 3;
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("-");
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <!---->",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor = expectedDoc.indexOf("<!---->") + 4;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("does not auto-close '/*' with ' */' when outside schema", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <system>",
+            "    /",
+            "  </system>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("    /") + 5;
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("*");
+          assert.strictEqual(handled, false);
+          assert.strictEqual(getState().doc.toString(), doc);
+        });
+
+        it("auto-closes '<!--' with '-->' regardless of context", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    <!-",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("<!-") + 3;
+          const { getState, input } = createFullMockView(doc, cursor);
+
+          const handled = input("-");
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <schema>",
+            "    <!---->",
+            "  </schema>",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
         });
       });
 
@@ -871,6 +940,32 @@ describe("TypePrompt CodeMirror Extension", () => {
           // Therefore, */ must indent to 5 spaces.
           assert.strictEqual(indent, 5);
         });
+
+        it("splits between '<!--' and '-->' with indent and outdent outside schema", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <!---->",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("<!---->") + 4;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptEnterCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <!--",
+            "    ",
+            "  -->",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor =
+            expectedDoc.indexOf("  <!--\n    ") + "  <!--\n    ".length;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
       });
 
       describe("typepromptBackspaceCommand", () => {
@@ -925,6 +1020,29 @@ describe("TypePrompt CodeMirror Extension", () => {
           assert.strictEqual(getState().doc.toString(), expectedDoc);
 
           const expectedCursor = expectedDoc.indexOf("/") + 1;
+          assert.strictEqual(getState().selection.main.anchor, expectedCursor);
+        });
+
+        it("undoes auto-closing '<!---->' on Backspace outside schema, leaving '<!-'", () => {
+          const doc = [
+            '<template name="Test">',
+            "  <!---->",
+            "</template>",
+          ].join("\n");
+          const cursor = doc.indexOf("<!---->") + 4;
+          const { view, getState } = createFullMockView(doc, cursor);
+
+          const handled = typepromptBackspaceCommand(view);
+          assert.strictEqual(handled, true);
+
+          const expectedDoc = [
+            '<template name="Test">',
+            "  <!-",
+            "</template>",
+          ].join("\n");
+          assert.strictEqual(getState().doc.toString(), expectedDoc);
+
+          const expectedCursor = expectedDoc.indexOf("<!-") + 3;
           assert.strictEqual(getState().selection.main.anchor, expectedCursor);
         });
       });

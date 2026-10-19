@@ -29,6 +29,19 @@
         "id": "xml",
         "configuration": "./language-configuration.json"
       }
+    ],
+    "commands": [
+      {
+        "command": "typeprompt.onEnterKey",
+        "title": "TypePrompt: Enter Key"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "typeprompt.onEnterKey",
+        "key": "enter",
+        "when": "editorTextFocus && !editorHasSelection && !editorReadonly && !suggestWidgetVisible && (editorLangId == 'xml' || resourceExtname == '.xml')"
+      }
     ]
   },
   "scripts": {

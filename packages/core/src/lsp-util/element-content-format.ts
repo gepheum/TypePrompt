@@ -5,9 +5,10 @@ import type { ElementNode } from "../xml/xml-types.js";
 export type ElementContentFormat =
   | "yaml"
   | "schema"
-  | "rendered-xml"  // Children may include text nodes
-  | "unrendered-xml"  // Children may not include text nodes
-  ;
+  // Children may include text nodes
+  | "rendered-xml"
+  // Children may not include text nodes
+  | "unrendered-xml";
 
 export function getElementContentFormat(
   node: ElementNode,

@@ -1,4 +1,7 @@
-import { parseXmlDocument } from "@typeprompt/core";
+import {
+  getAutoCloseCommentAction,
+  getAutoCloseTagAction,
+} from "@typeprompt/core";
 import type { ExtensionContext, TextDocumentChangeEvent } from "vscode";
 import { SnippetString, window, workspace } from "vscode";
 
@@ -24,29 +27,46 @@ function onDocumentChange(event: TextDocumentChangeEvent): void {
   }
 
   const change = contentChanges[0];
-  if (!change || change.text !== ">") {
+  if (!change) {
     return;
   }
 
-  // The position immediately after the inserted '>'
-  const insertPosition = change.range.start.translate(0, 1);
-  const offset = document.offsetAt(insertPosition);
+  if (change.text === ">") {
+    // The position immediately after the inserted '>'
+    const insertPosition = change.range.start.translate(0, 1);
+    const offset = document.offsetAt(insertPosition);
 
-  const parsed = parseXmlDocument(document.getText(), document.uri.fsPath);
-  if (parsed.kind !== "error") {
+    const closingTag = getAutoCloseTagAction(document.getText(), offset);
+    if (!closingTag) {
+      return;
+    }
+
+    const snippet = new SnippetString(`$0${closingTag}`);
+    editor.insertSnippet(snippet, insertPosition, {
+      undoStopBefore: false,
+      undoStopAfter: false,
+    });
     return;
   }
 
-  const suggestion = parsed.closingTagSuggestions.find(
-    (s) => s.position === offset,
-  );
-  if (!suggestion) {
-    return;
+  if (change.text === "*") {
+    const insertPosition = change.range.start.translate(0, 1);
+    const offset = document.offsetAt(insertPosition);
+    const text = document.getText();
+    if (offset >= 2 && text.slice(offset - 2, offset) === "/*") {
+      const fullTextBeforeStar = text.slice(0, offset - 1) + text.slice(offset);
+      const action = getAutoCloseCommentAction(
+        fullTextBeforeStar,
+        offset - 1,
+        "*",
+      );
+      if (action) {
+        const snippet = new SnippetString(" $0*/");
+        editor.insertSnippet(snippet, insertPosition, {
+          undoStopBefore: false,
+          undoStopAfter: false,
+        });
+      }
+    }
   }
-
-  const snippet = new SnippetString(`$0</${suggestion.tagName}>`);
-  editor.insertSnippet(snippet, insertPosition, {
-    undoStopBefore: false,
-    undoStopAfter: false,
-  });
 }

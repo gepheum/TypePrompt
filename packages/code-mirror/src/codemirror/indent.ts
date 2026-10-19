@@ -1,3 +1,4 @@
+import { acceptCompletion } from "@codemirror/autocomplete";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import {
   IndentContext,
@@ -6,7 +7,7 @@ import {
 } from "@codemirror/language";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
-import { getSemanticTokens } from "./state-field.js";
+import { computeBackspaceAction, computeEnterAction } from "@typeprompt/core";
 
 /**
  * Matches an open XML tag at the end of a line that is NOT:
@@ -150,18 +151,17 @@ export function typepromptIndentCalculation(
 }
 
 /**
- * Custom Enter command that handles:
- * - Multiline comment editing (aligning '* ' on Enter and splitting '/** ... *\/')
- * - IndentOutdent when Enter is pressed between open and close XML tags
- *     (`<system>|</system>`)
- * - IndentOutdent when Enter is pressed between open and close brackets
- *     (`{|}`, `[|]`, `(|)`)
- *
- * In all other cases, delegates to `insertNewlineAndIndent`.
+ * Custom Enter command that delegates smart actions (multiline comments,
+ * tag splitting, bracket splitting) to `computeEnterAction`, and in all
+ * other cases delegates to `insertNewlineAndIndent`.
  */
 export function typepromptEnterCommand(view: EditorView): boolean {
   if (view.state.readOnly) {
     return false;
+  }
+
+  if (acceptCompletion(view)) {
+    return true;
   }
 
   const { state } = view;
@@ -170,239 +170,15 @@ export function typepromptEnterCommand(view: EditorView): boolean {
     return insertNewlineAndIndent(view);
   }
 
-  // 1. Check tokens to see if we're inside a multiline comment:
-  // "To know whether to append a "*" when the user enters a new line, we can check
-  // the tokens and see if we're in a comment and see if it starts with "/*"."
-  const tokens = getSemanticTokens(state);
-  const commentToken = tokens?.find(
-    (t) => t.kind === "comment" && t.span.start <= from && from <= t.span.end,
-  );
+  const cx = new IndentContext(state);
+  const res = computeEnterAction(state.doc.toString(), from, {
+    tabSize: cx.unit,
+  });
 
-  if (commentToken) {
-    const tokenText = state.doc.sliceString(
-      commentToken.span.start,
-      commentToken.span.end,
-    );
-
-    if (tokenText.startsWith("/*")) {
-      // Check if cursor is right after closing `*/`
-      if (from === commentToken.span.end && tokenText.endsWith("*/")) {
-        const openLine = state.doc.lineAt(commentToken.span.start);
-        const slashCol = commentToken.span.start - openLine.from;
-        const outdented = " ".repeat(slashCol);
-        const insert = `\n${outdented}`;
-        view.dispatch({
-          changes: { from, to, insert },
-          selection: { anchor: from + insert.length },
-          scrollIntoView: true,
-          userEvent: "input",
-        });
-        return true;
-      }
-
-      // Inside multiline comment: compute star indent aligned with opening `*`
-      const openLine = state.doc.lineAt(commentToken.span.start);
-      const slashCol = commentToken.span.start - openLine.from;
-      const starIndent = " ".repeat(slashCol + 1);
-
-      const curLine = state.doc.lineAt(from);
-      const before = curLine.text.slice(0, from - curLine.from);
-      const after = curLine.text.slice(from - curLine.from);
-
-      const closeMatch = /^\s*\*\/(.*)$/.exec(after);
-      if (closeMatch) {
-        const restAfterClose = closeMatch[1];
-        const isCommentOpening = /^\s*\/\*(\*?)\s*$/.test(before);
-
-        if (isCommentOpening) {
-          // Splitting right after comment open, e.g. `/**| */` -> 3 aligned lines
-          const trailingSpaces = before.length - before.trimEnd().length;
-          const replaceFrom = from - trailingSpaces;
-          const replaceTo = from + after.length;
-
-          const insert = `\n${starIndent}* \n${starIndent}*/${restAfterClose}`;
-          const targetCursorPos = replaceFrom + 1 + starIndent.length + 2;
-
-          view.dispatch({
-            changes: { from: replaceFrom, to: replaceTo, insert },
-            selection: { anchor: targetCursorPos },
-            scrollIntoView: true,
-            userEvent: "input",
-          });
-          return true;
-        }
-
-        // Before already has comment content (e.g. ` * text| */`),
-        // simply move `*/` to next line with aligned star indent
-        const trailingSpaces = before.length - before.trimEnd().length;
-        const replaceFrom = from - trailingSpaces;
-        const replaceTo = from + after.length;
-
-        const insert = `\n${starIndent}*/${restAfterClose}`;
-        const targetCursorPos = replaceFrom + 1 + starIndent.length;
-
-        view.dispatch({
-          changes: { from: replaceFrom, to: replaceTo, insert },
-          selection: { anchor: targetCursorPos },
-          scrollIntoView: true,
-          userEvent: "input",
-        });
-        return true;
-      }
-
-      // Prepend `* ` to the newline with the star well-aligned
-      const trailingSpaces = before.length - before.trimEnd().length;
-      const replaceFrom = from - trailingSpaces;
-      const insert = `\n${starIndent}* `;
-      const targetCursorPos = replaceFrom + insert.length;
-
-      view.dispatch({
-        changes: { from: replaceFrom, to, insert },
-        selection: { anchor: targetCursorPos },
-        scrollIntoView: true,
-        userEvent: "input",
-      });
-      return true;
-    }
-  }
-
-  // 1b. Fallback when tokens are unavailable (e.g. isolated test without state field):
-  if (tokens === null) {
-    const curLine = state.doc.lineAt(from);
-    const before = curLine.text.slice(0, from - curLine.from);
-    const after = curLine.text.slice(from - curLine.from);
-
-    const commentOpenMatch = /^(\s*)\/\*(\*?)(?!\/)(?:[^*]|\*(?!\/))*$/.exec(
-      before,
-    );
-    const commentContinuationMatch = /^(\s*)\*(?!\/)(?:[^*]|\*(?!\/))*$/.exec(
-      before,
-    );
-
-    if (commentOpenMatch) {
-      const baseIndent = commentOpenMatch[1];
-      const starIndent = baseIndent + " ";
-      const closeMatch = /^\s*\*\/(.*)$/.exec(after);
-
-      if (closeMatch) {
-        const restAfterClose = closeMatch[1];
-        const isCommentOpening = /^\s*\/\*(\*?)\s*$/.test(before);
-
-        if (isCommentOpening) {
-          const trailingSpaces = before.length - before.trimEnd().length;
-          const replaceFrom = from - trailingSpaces;
-          const replaceTo = from + after.length;
-
-          const insert = `\n${starIndent}* \n${starIndent}*/${restAfterClose}`;
-          const targetCursorPos = replaceFrom + 1 + starIndent.length + 2;
-
-          view.dispatch({
-            changes: { from: replaceFrom, to: replaceTo, insert },
-            selection: { anchor: targetCursorPos },
-            scrollIntoView: true,
-            userEvent: "input",
-          });
-          return true;
-        }
-
-        const trailingSpaces = before.length - before.trimEnd().length;
-        const replaceFrom = from - trailingSpaces;
-        const replaceTo = from + after.length;
-
-        const insert = `\n${starIndent}*/${restAfterClose}`;
-        const targetCursorPos = replaceFrom + 1 + starIndent.length;
-
-        view.dispatch({
-          changes: { from: replaceFrom, to: replaceTo, insert },
-          selection: { anchor: targetCursorPos },
-          scrollIntoView: true,
-          userEvent: "input",
-        });
-        return true;
-      }
-
-      const trailingSpaces = before.length - before.trimEnd().length;
-      const replaceFrom = from - trailingSpaces;
-      const insert = `\n${starIndent}* `;
-      const targetCursorPos = replaceFrom + insert.length;
-
-      view.dispatch({
-        changes: { from: replaceFrom, to, insert },
-        selection: { anchor: targetCursorPos },
-        scrollIntoView: true,
-        userEvent: "input",
-      });
-      return true;
-    }
-
-    if (commentContinuationMatch) {
-      const starIndent = commentContinuationMatch[1];
-      const closeMatch = /^\s*\*\/(.*)$/.exec(after);
-
-      if (closeMatch) {
-        const restAfterClose = closeMatch[1];
-        const trailingSpaces = before.length - before.trimEnd().length;
-        const replaceFrom = from - trailingSpaces;
-        const replaceTo = from + after.length;
-
-        const insert = `\n${starIndent}* \n${starIndent}*/${restAfterClose}`;
-        const targetCursorPos = replaceFrom + 1 + starIndent.length + 2;
-
-        view.dispatch({
-          changes: { from: replaceFrom, to: replaceTo, insert },
-          selection: { anchor: targetCursorPos },
-          scrollIntoView: true,
-          userEvent: "input",
-        });
-        return true;
-      }
-
-      const trailingSpaces = before.length - before.trimEnd().length;
-      const replaceFrom = from - trailingSpaces;
-      const insert = `\n${starIndent}* `;
-      const targetCursorPos = replaceFrom + insert.length;
-
-      view.dispatch({
-        changes: { from: replaceFrom, to, insert },
-        selection: { anchor: targetCursorPos },
-        scrollIntoView: true,
-        userEvent: "input",
-      });
-      return true;
-    }
-  }
-
-  // 2. Existing tag / bracket indentOutdent logic:
-  const curLine = state.doc.lineAt(from);
-  const before = curLine.text.slice(0, from - curLine.from);
-  const after = curLine.text.slice(from - curLine.from);
-
-  const openTagMatch =
-    /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/.exec(before);
-  const closeTagMatch = /^\s*<\/[_a-zA-Z0-9\-:]+>/.exec(after);
-
-  const isBetweenTags =
-    openTagMatch !== null &&
-    closeTagMatch !== null &&
-    !before.trimEnd().endsWith("/>");
-
-  const isBetweenBrackets =
-    /[{[(]\s*$/.test(before) && /^\s*[}\])]/.test(after);
-
-  if (isBetweenTags || isBetweenBrackets) {
-    const cx = new IndentContext(state);
-    const baseIndent = cx.lineIndent(curLine.from);
-    const innerIndent = baseIndent + cx.unit;
-
-    const indentStr = " ".repeat(innerIndent);
-    const baseIndentStr = " ".repeat(baseIndent);
-
-    const insert = `\n${indentStr}\n${baseIndentStr}`;
-    const targetCursorPos = from + 1 + indentStr.length;
-
+  if (res.handled) {
     view.dispatch({
-      changes: { from, to, insert },
-      selection: { anchor: targetCursorPos },
+      changes: res.changes,
+      selection: { anchor: res.targetCursorOffset },
       scrollIntoView: true,
       userEvent: "input",
     });
@@ -413,8 +189,8 @@ export function typepromptEnterCommand(view: EditorView): boolean {
 }
 
 /**
- * Custom Backspace command that cleanly undos auto-closing '/** *\/':
- * When cursor is at '/**| *\/', deletes '* *\/' to leave '/*|'.
+ * Custom Backspace command that cleanly undos auto-closing comments:
+ * When cursor is at unclosed comment opening, deletes the auto-closed pair.
  */
 export function typepromptBackspaceCommand(view: EditorView): boolean {
   if (view.state.readOnly) {
@@ -427,28 +203,11 @@ export function typepromptBackspaceCommand(view: EditorView): boolean {
     return false;
   }
 
-  if (
-    from >= 3 &&
-    state.doc.sliceString(from - 3, from) === "/**" &&
-    state.doc.sliceString(from, from + 3) === " */"
-  ) {
+  const action = computeBackspaceAction(state.doc.toString(), from);
+  if (action) {
     view.dispatch({
-      changes: { from: from - 1, to: from + 3 },
-      selection: { anchor: from - 1 },
-      scrollIntoView: true,
-      userEvent: "delete.backward",
-    });
-    return true;
-  }
-
-  if (
-    from >= 2 &&
-    state.doc.sliceString(from - 2, from) === "/*" &&
-    state.doc.sliceString(from, from + 3) === " */"
-  ) {
-    view.dispatch({
-      changes: { from: from - 1, to: from + 3 },
-      selection: { anchor: from - 1 },
+      changes: action,
+      selection: { anchor: action.targetCursorOffset },
       scrollIntoView: true,
       userEvent: "delete.backward",
     });
