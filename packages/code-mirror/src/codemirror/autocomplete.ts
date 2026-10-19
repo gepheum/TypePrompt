@@ -41,38 +41,9 @@ export function typepromptCompletionSource(
   const from = Math.max(0, Math.min(docLen, span.start));
   const to = Math.max(from, Math.min(docLen, span.end));
 
-  const options: Completion[] = suggestions.map((suggestion) => {
-    let type: string = "text";
-    let boost = 0;
-
-    if (suggestion.startsWith("<") || suggestion.endsWith(">")) {
-      type = "type";
-      boost = 2;
-    } else if (suggestion.includes("=")) {
-      type = "property";
-      boost = 1;
-    } else if (
-      suggestion === "type" ||
-      suggestion === "interface" ||
-      suggestion === "namespace"
-    ) {
-      type = "keyword";
-      boost = 1;
-    } else if (
-      suggestion === "string" ||
-      suggestion === "number" ||
-      suggestion === "boolean"
-    ) {
-      type = "type";
-      boost = 1;
-    }
-
-    return {
-      label: suggestion,
-      type,
-      boost,
-    };
-  });
+  const options: Completion[] = suggestions.map((suggestion) => ({
+    label: suggestion,
+  }));
 
   return {
     from,
