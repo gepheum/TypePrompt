@@ -5,8 +5,6 @@ import { typepromptStateField } from "./state-field.js";
 
 /**
  * Extension that automatically closes XML tags when the user types `>`.
- *
- * Uses `parseXmlDocument` from `@typeprompt/core` to check for closing tag suggestions.
  */
 export function autoCloseTags(): Extension {
   return EditorView.inputHandler.of((view, from, to, text) => {

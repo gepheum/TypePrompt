@@ -542,22 +542,23 @@ export class App extends LitElement {
         </div>
 
         <div class="controls-group">
-          ${isValid
-        ? html`<span class="badge badge-valid">✓ Valid Template</span>`
-        : hasErrors
-          ? html`<span class="badge badge-error"
+          ${
+            isValid
+              ? html`<span class="badge badge-valid">✓ Valid Template</span>`
+              : hasErrors
+                ? html`<span class="badge badge-error"
                     >✕ ${errors.length}
                     Error${errors.length > 1 ? "s" : ""}</span
                   >`
-          : html`<span class="badge">Compiling...</span>`
-      }
+                : html`<span class="badge">Compiling...</span>`
+          }
 
           <select
             @change="${this.handleTemplateSelect}"
             aria-label="Select sample template"
           >
             ${sampleTemplates.map(
-        (t) => html`
+              (t) => html`
                 <option
                   value="${t.id}"
                   ?selected="${t.id === this.selectedTemplateId}"
@@ -565,7 +566,7 @@ export class App extends LitElement {
                   ${t.name}
                 </option>
               `,
-      )}
+            )}
           </select>
 
           <button @click="${this.toggleTheme}">
@@ -614,12 +615,12 @@ export class App extends LitElement {
 
           <div class="inspector-content">
             ${(() => {
-        const validTemplateEntity =
-          primaryTemplate && "template" in primaryTemplate
-            ? primaryTemplate.template
-            : null;
-        if (this.activeTab === "overview") {
-          return html`
+              const validTemplateEntity =
+                primaryTemplate && "template" in primaryTemplate
+                  ? primaryTemplate.template
+                  : null;
+              if (this.activeTab === "overview") {
+                return html`
                   <div class="card">
                     <div class="card-title">Template Metadata</div>
                     <div>
@@ -633,18 +634,18 @@ export class App extends LitElement {
                   </div>
 
                   ${(() => {
-              const meta =
-                validTemplateEntity?.contents.kind === "no-variants"
-                  ? validTemplateEntity.contents.content.meta
-                  : validTemplateEntity?.contents.defaultContent.meta;
-              if (!meta) return "";
-              return html`
+                    const meta =
+                      validTemplateEntity?.contents.kind === "no-variants"
+                        ? validTemplateEntity.contents.content.meta
+                        : validTemplateEntity?.contents.defaultContent.meta;
+                    if (!meta) return "";
+                    return html`
                       <div class="card">
                         <div class="card-title">Model Settings</div>
                         <pre>${JSON.stringify(meta.value, null, 2)}</pre>
                       </div>
                     `;
-            })()}
+                  })()}
 
                   <div class="card">
                     <div class="card-title">Quick Try-It Tips</div>
@@ -676,10 +677,11 @@ export class App extends LitElement {
                     </ul>
                   </div>
                 `;
-        } else if (this.activeTab === "diagnostics") {
-          return html`
-                  ${errors.length === 0 && warnings.length === 0
-              ? html`
+              } else if (this.activeTab === "diagnostics") {
+                return html`
+                  ${
+                    errors.length === 0 && warnings.length === 0
+                      ? html`
                           <div class="card">
                             <p style="color: #3fb950; margin: 0;">
                               ✓ No diagnostics found. Template passes all static
@@ -687,10 +689,10 @@ export class App extends LitElement {
                             </p>
                           </div>
                         `
-              : ""
-            }
+                      : ""
+                  }
                   ${errors.map(
-              (err) => html`
+                    (err) => html`
                       <div
                         class="diagnostic-item error"
                         @click="${() => this.jumpToSpan(err.span.start)}"
@@ -701,19 +703,20 @@ export class App extends LitElement {
                           Offset: ${err.span.start}..${err.span.end} (Click to
                           jump)
                         </span>
-                        ${err.suggestions && err.suggestions.length > 0
-                  ? html`
+                        ${
+                          err.suggestions && err.suggestions.length > 0
+                            ? html`
                                 <span class="diag-suggestions">
                                   Suggestions: ${err.suggestions.join(", ")}
                                 </span>
                               `
-                  : ""
-                }
+                            : ""
+                        }
                       </div>
                     `,
-            )}
+                  )}
                   ${warnings.map(
-              (warn) => html`
+                    (warn) => html`
                       <div
                         class="diagnostic-item warning"
                         @click="${() => this.jumpToSpan(warn.span.start)}"
@@ -726,10 +729,10 @@ export class App extends LitElement {
                         </span>
                       </div>
                     `,
-            )}
+                  )}
                 `;
-        } else {
-          return html`
+              } else {
+                return html`
                   <div class="card">
                     <div class="card-title">CodeMirror Features</div>
                     <ul class="feature-list">
@@ -786,8 +789,8 @@ export class App extends LitElement {
                     </ul>
                   </div>
                 `;
-        }
-      })()}
+              }
+            })()}
           </div>
         </div>
       </div>

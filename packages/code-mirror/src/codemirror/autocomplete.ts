@@ -8,34 +8,28 @@ import type { Extension } from "@codemirror/state";
 import { getCompletionItems, getConfigCompletionItems } from "@typeprompt/core";
 import { typepromptStateField } from "./state-field.js";
 
-/**
- * CompletionSource that delegates to `@typeprompt/core`'s `getCompletionItems` or
- * `getConfigCompletionItems`, leveraging the cached CompilationResult.
- */
 export function typepromptCompletionSource(
   context: CompletionContext,
 ): CompletionResult | null {
-  const tpState = context.state.field(typepromptStateField, false);
-  if (!tpState) {
+  const previousState = context.state.field(typepromptStateField, false);
+  if (!previousState) {
     return null;
   }
 
-  const { path, compilationResult, workspaceFiles, patchBase } = tpState;
+  const { path, compilationResult } = previousState;
   const content = context.state.doc.toString();
   const position = context.pos;
 
   const isConfig =
-    path.endsWith("typeprompt.yaml") || path.endsWith("typeprompt.yml");
+    path.endsWith("/typeprompt.yaml") || path.endsWith("/typeprompt.yml");
 
   const completionItems = isConfig
     ? getConfigCompletionItems(content, position)
     : getCompletionItems({
         newContent: content,
         path,
-        pathToOldContent: { ...workspaceFiles, [path]: tpState.content },
         position,
         cache: compilationResult,
-        patchBase,
       });
 
   if (!completionItems || completionItems.suggestions.length === 0) {

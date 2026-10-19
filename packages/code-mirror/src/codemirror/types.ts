@@ -7,7 +7,7 @@ import type {
 /**
  * Configuration options for the TypePrompt CodeMirror extension.
  */
-export interface TypePromptConfig {
+export type TypePromptConfig = {
   /**
    * The virtual path of the file being edited (e.g. "prompts/template.xml").
    * Defaults to "template.xml".
@@ -54,16 +54,15 @@ export interface TypePromptConfig {
    * Defaults to true.
    */
   readonly indent?: boolean;
-}
+};
 
 /**
  * The immutable state cached inside CodeMirror's StateField.
  */
-export interface TypePromptState {
+export type TypePromptState = {
   readonly path: string;
   readonly content: string;
   readonly compilationResult: CompilationResult;
   readonly tokens: readonly SemanticToken[];
   readonly workspaceFiles: { readonly [path: string]: string };
-  readonly patchBase: ValidCompilationResult | null;
-}
+};

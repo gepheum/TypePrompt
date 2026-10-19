@@ -54,7 +54,6 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       compilationResult,
       tokens,
       workspaceFiles,
-      patchBase,
     };
   },
 
@@ -62,13 +61,12 @@ export const typepromptStateField = StateField.define<TypePromptState>({
     const config = tr.state.facet(typepromptConfigFacet);
     const newPath = config.path ?? oldState.path;
     const newWorkspaceFiles = config.workspaceFiles ?? oldState.workspaceFiles;
-    const newPatchBase = config.patchBase ?? oldState.patchBase;
+    const { patchBase } = config;
 
     const docChanged = tr.docChanged;
     const configChanged =
       newPath !== oldState.path ||
-      newWorkspaceFiles !== oldState.workspaceFiles ||
-      newPatchBase !== oldState.patchBase;
+      newWorkspaceFiles !== oldState.workspaceFiles;
 
     // Fast path: if neither the document nor the configuration changed,
     // return the exact same immutable state reference.
@@ -85,7 +83,7 @@ export const typepromptStateField = StateField.define<TypePromptState>({
     const pathToContent = { ...newWorkspaceFiles, [newPath]: newContent };
     const compilationResult = compile(pathToContent, {
       cache: oldState.compilationResult,
-      patchBase: newPatchBase,
+      patchBase: patchBase ?? null,
     });
     const tokens = tokenize(newContent, newPath);
 
@@ -95,7 +93,6 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       compilationResult,
       tokens,
       workspaceFiles: newWorkspaceFiles,
-      patchBase: newPatchBase,
     };
   },
 });

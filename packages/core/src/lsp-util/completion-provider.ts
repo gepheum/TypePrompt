@@ -1,6 +1,6 @@
 import type {
   CompilationResult,
-  ValidCompilationResult,
+  SourceFileParseResult,
 } from "../compiler/compiler-types.js";
 import { compile } from "../compiler/compiler.js";
 import { parseConfigYaml } from "../config/config-parser.js";
@@ -16,26 +16,26 @@ export type CompletionItems = {
 export function getCompletionItems(args: {
   newContent: string;
   path: string;
-  pathToOldContent: { readonly [path: string]: string };
   position: number;
-  cache: CompilationResult | null;
-  patchBase: ValidCompilationResult | null;
+  cache: CompilationResult;
 }): CompletionItems | null {
-  const { newContent, path, pathToOldContent, position } = args;
-  const { patchBase } = args;
-  let { cache } = args;
+  const { newContent, path, position } = args;
+  const { cache } = args;
+  const { patchBase } = cache;
 
   const leftPart = newContent.slice(0, position);
   const rightPart = newContent.slice(position);
   const insertions = computeInsertions(leftPart, rightPart, "template");
 
-  const pathToNewContent = Object.fromEntries(Object.entries(pathToOldContent));
+  const pathToNewContent = Object.fromEntries(
+    Object.values(cache.sourceFiles).map((f: SourceFileParseResult) => [
+      f.path,
+      f.content,
+    ]),
+  );
   return findCompletionItem(newContent, position, insertions, (content) => {
     pathToNewContent[path] = content;
     const compilationResult = compile(pathToNewContent, { cache, patchBase });
-    if (cache === null) {
-      cache = compilationResult;
-    }
     return compilationResult.finalErrors[path] ?? [];
   });
 }

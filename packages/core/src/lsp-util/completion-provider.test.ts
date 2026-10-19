@@ -1,5 +1,6 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
+import { compile } from "../compiler/compiler.js";
 import {
   getCompletionItems,
   getConfigCompletionItems,
@@ -20,13 +21,15 @@ describe("getCompletionItems", () => {
     ].join("\n");
 
     const pos = xml.indexOf("    <") + 5; // right after '<'
+    const cache = compile(
+      { "prompts/test.xml": xml },
+      { cache: null, patchBase: null },
+    );
     const result = getCompletionItems({
       newContent: xml,
       path: "prompts/test.xml",
-      pathToOldContent: { "prompts/test.xml": xml },
       position: pos,
-      cache: null,
-      patchBase: null,
+      cache,
     });
 
     expect(result !== null).toBe(true);
@@ -49,13 +52,15 @@ describe("getCompletionItems", () => {
 
     const start = xml.indexOf("<ins") + 1; // start of 'ins'
     const pos = start + 3; // end of 'ins'
+    const cache = compile(
+      { "prompts/test.xml": xml },
+      { cache: null, patchBase: null },
+    );
     const result = getCompletionItems({
       newContent: xml,
       path: "prompts/test.xml",
-      pathToOldContent: { "prompts/test.xml": xml },
       position: pos,
-      cache: null,
-      patchBase: null,
+      cache,
     });
 
     expect(result !== null).toBe(true);
@@ -83,16 +88,18 @@ describe("getCompletionItems", () => {
 
     const start = mainXml.indexOf('namespace="') + 'namespace="'.length;
     const pos = start + 3; // after 'Leg'
-    const result = getCompletionItems({
-      newContent: mainXml,
-      path: "prompts/Leg/Test.xml",
-      pathToOldContent: {
+    const cache = compile(
+      {
         "prompts/Legal/shared.xml": legalXml,
         "prompts/Leg/Test.xml": mainXml,
       },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: mainXml,
+      path: "prompts/Leg/Test.xml",
       position: pos,
-      cache: null,
-      patchBase: null,
+      cache,
     });
 
     expect(result !== null).toBe(true);
@@ -109,13 +116,15 @@ describe("getCompletionItems", () => {
       "</template>",
     ].join("\n");
 
+    const cache = compile(
+      { "prompts/test.xml": xml },
+      { cache: null, patchBase: null },
+    );
     const result = getCompletionItems({
       newContent: xml,
       path: "prompts/test.xml",
-      pathToOldContent: { "prompts/test.xml": xml },
       position: 5,
-      cache: null,
-      patchBase: null,
+      cache,
     });
 
     expect(result).toBe(null);

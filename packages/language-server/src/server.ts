@@ -1087,10 +1087,9 @@ export class TypePromptLanguageExtension {
 
     const offset = doc.offsetAt(position);
     const project = templateFile.project;
-
-    const pathToOldContent: { [path: string]: string } = {};
-    for (const [relPath, file] of project.templateFiles) {
-      pathToOldContent[relPath] = file.content.content;
+    const cache = project.compilationResult;
+    if (!cache) {
+      return [];
     }
 
     const relPath = templateFile.relativePath ?? project.getRelativePath(uri);
@@ -1101,10 +1100,8 @@ export class TypePromptLanguageExtension {
     const result = getCompletionItems({
       newContent: doc.getText(),
       path: relPath,
-      pathToOldContent,
       position: offset,
-      cache: project.compilationResult,
-      patchBase: project.patchBaseOrNull,
+      cache,
     });
 
     if (!result || result.suggestions.length === 0) {
