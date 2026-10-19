@@ -2,6 +2,13 @@
 
 set -e
 
+FAST=false
+for arg in "$@"; do
+  if [ "$arg" = "--fast" ]; then
+    FAST=true
+  fi
+done
+
 npm i
 npm run make-static-snippets
 npm run lint:fix
@@ -13,5 +20,10 @@ npm run test
 
 cd tests
 ./format-all.sh
-./test.sh
+if [ "$FAST" = true ]; then
+  ./test.sh --fast
+else
+  ./test.sh
+fi
 cd ..
+

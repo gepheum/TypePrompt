@@ -1,38 +1,47 @@
 #!/bin/bash
 set -e
 
-cd python
-./format.sh
-cd ..
+FAST=false
+for arg in "$@"; do
+  if [ "$arg" = "--fast" ]; then
+    FAST=true
+  fi
+done
 
-cd typescript
-npm i
-npm run format
-cd ..
+if [ "$FAST" != true ]; then
+  cd python
+  ./format.sh
+  cd ..
 
-cd kotlin
-./format.sh
-cd ..
+  cd typescript
+  npm i
+  npm run format
+  cd ..
 
-cd csharp
-./format.sh
-cd ..
+  cd kotlin
+  ./format.sh
+  cd ..
 
-cd rust
-./format.sh
-cd ..
+  cd csharp
+  ./format.sh
+  cd ..
 
-cd swift
-./format.sh
-cd ..
+  cd rust
+  ./format.sh
+  cd ..
 
-cd dart
-./format.sh
-cd ..
+  cd swift
+  ./format.sh
+  cd ..
 
-cd cpp
-./format.sh
-cd ..
+  cd dart
+  ./format.sh
+  cd ..
+
+  cd cpp
+  ./format.sh
+  cd ..
+fi
 
 cd ../examples/e2e-kotlin
 ./format.sh

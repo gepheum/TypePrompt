@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+FAST=false
+for arg in "$@"; do
+  if [ "$arg" = "--fast" ]; then
+    FAST=true
+  fi
+done
+
 cd ..
 npm run build
 cd tests
@@ -51,63 +58,65 @@ node ../packages/cli/dist/main.js gen -p ../examples/e2e-kotlin
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-python
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-rust
 
-# Run Python unit tests
-cd python
-.venv/bin/pytest tests.py -v
-cd ..
+if [ "$FAST" != true ]; then
+  # Run Python unit tests
+  cd python
+  .venv/bin/pytest tests.py -v
+  cd ..
 
-# Run TypeScript unit tests
-cd typescript
-npm i
-npm run test
-cd ..
+  # Run TypeScript unit tests
+  cd typescript
+  npm i
+  npm run test
+  cd ..
 
-# Run Kotlin unit tests
-cd kotlin
-./gradlew test
-cd ..
+  # Run Kotlin unit tests
+  cd kotlin
+  ./gradlew test
+  cd ..
 
-# Build Kotlin e2e example
-cd ../examples/e2e-kotlin
-./gradlew build
-cd ../../tests
+  # Build Kotlin e2e example
+  cd ../examples/e2e-kotlin
+  ./gradlew build
+  cd ../../tests
 
-# Build and typecheck Python e2e example
-cd ../examples/e2e-python
-PY_BIN="../../tests/python/.venv/bin/python"
-if [ -f ".venv/bin/python" ]; then
-  PY_BIN=".venv/bin/python"
+  # Build and typecheck Python e2e example
+  cd ../examples/e2e-python
+  PY_BIN="../../tests/python/.venv/bin/python"
+  if [ -f ".venv/bin/python" ]; then
+    PY_BIN=".venv/bin/python"
+  fi
+  "$PY_BIN" -m py_compile src/main.py src/gen/prompts.py
+  npx pyright --pythonpath "$PY_BIN" src/
+  cd ../../tests
+
+  # Build Rust e2e example
+  cd ../examples/e2e-rust
+  cargo check
+  cd ../../tests
+
+  # Run C# unit tests
+  cd csharp
+  dotnet test
+  cd ..
+
+  # Run Rust unit tests
+  cd rust
+  cargo test
+  cd ..
+
+  # Run Swift unit tests
+  cd swift
+  swift test
+  cd ..
+
+  # Run Dart unit tests
+  cd dart
+  dart test
+  cd ..
+
+  # Run C++ unit tests
+  cd cpp
+  ./test.sh
+  cd ..
 fi
-"$PY_BIN" -m py_compile src/main.py src/gen/prompts.py
-npx pyright --pythonpath "$PY_BIN" src/
-cd ../../tests
-
-# Build Rust e2e example
-cd ../examples/e2e-rust
-cargo check
-cd ../../tests
-
-# Run C# unit tests
-cd csharp
-dotnet test
-cd ..
-
-# Run Rust unit tests
-cd rust
-cargo test
-cd ..
-
-# Run Swift unit tests
-cd swift
-swift test
-cd ..
-
-# Run Dart unit tests
-cd dart
-dart test
-cd ..
-
-# Run C++ unit tests
-cd cpp
-./test.sh
-cd ..
