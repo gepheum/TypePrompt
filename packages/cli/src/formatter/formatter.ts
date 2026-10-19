@@ -1,12 +1,6 @@
 import plugin from "@prettier/plugin-xml";
-import { parseSourceFile } from "@typeprompt/core";
-
+import { getElementContentFormat, parseSourceFile } from "@typeprompt/core";
 import type {
-  KnownAttribute,
-  KnownTag,
-} from "@typeprompt/core/xml/xml-entities.js";
-import type {
-  ElementNode,
   XmlComment,
   XmlDocument,
   XmlNode,
@@ -86,8 +80,14 @@ function collectFormattableSlices(
 
     const slice = ((): FormattableSlice | null => {
       if (childItems.length <= 0) return null;
-      const format = getFormat(item, depth);
-      if (format === null) return null;
+      const contentFormat = getElementContentFormat(item, depth);
+      if (contentFormat === "unrendered-xml") return null;
+      const format: FormattableSlice["format"] =
+        contentFormat === "schema"
+          ? "typescript"
+          : contentFormat === "rendered-xml"
+            ? "xml"
+            : "yaml";
       if (format === "typescript" || format === "yaml") {
         // Do not format TypeScript/YAML code if the content contains XML comments.
         const anyComments = item.comments.length >= 1;
@@ -113,43 +113,6 @@ function collectFormattableSlices(
         xmlCommentsInCode,
       );
     }
-  }
-}
-
-function getFormat(
-  node: ElementNode,
-  depth: number,
-): FormattableSlice["format"] | null {
-  const tag = node.tag.text as KnownTag;
-  switch (tag) {
-    case "namespace":
-    case "schema":
-      return "typescript";
-    case "meta":
-      return depth <= 0 ? "typescript" : "yaml";
-    case "tools":
-    case "examples":
-      return "yaml";
-    case "system":
-    case "user":
-    case "description":
-    case "then":
-    case "else":
-    case "on":
-      return "xml";
-    case "snippet": {
-      return node.attributes["if" satisfies KnownAttribute] ||
-        node.attributes["switch" satisfies KnownAttribute]
-        ? null
-        : "xml";
-    }
-    case "c":
-    case "enclosed":
-    case "insert":
-    case "template":
-    case "tool":
-    case "variant":
-      return null;
   }
 }
 

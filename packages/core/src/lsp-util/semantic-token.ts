@@ -3,6 +3,7 @@ import { tokenizeSchema } from "../schema/schema-parser.js";
 import type { Span } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode, XmlComment } from "../xml/xml-types.js";
+import { getElementContentFormat } from "./element-content-format.js";
 
 export type SemanticToken = {
   readonly span: Span;
@@ -33,10 +34,7 @@ export function tokenize(
       })),
     );
   };
-  const collectTokens = (
-    element: ElementNode,
-    parentTag: string | null,
-  ): void => {
+  const collectTokens = (element: ElementNode, depth: number): void => {
     const { tag, closingTag } = element;
     pushXmlComments(element.comments);
     tokens.push({ span: tag, kind: "xml-tag" });
@@ -48,34 +46,19 @@ export function tokenize(
     }
     for (const child of element.children) {
       if (child.kind === "element") {
-        collectTokens(child, tag.text);
+        collectTokens(child, depth + 1);
       } else {
-        let contentType: "schema" | "yaml" | undefined;
-        switch (tag.text) {
-          case "namespace":
-          case "schema":
-            contentType = "schema";
-            break;
-          case "meta": {
-            contentType = parentTag === "template" ? "yaml" : "schema";
-            break;
-          }
-          case "tools":
-          case "examples": {
-            contentType = "yaml";
-            break;
-          }
-        }
-        if (contentType === "schema") {
+        const format = getElementContentFormat(element, depth);
+        if (format === "schema") {
           tokens.push(...tokenizeSchema(child));
-        } else if (contentType === "yaml") {
+        } else if (format === "yaml") {
           tokens.push(...tokenizeYaml(child));
         }
       }
     }
   };
   pushXmlComments(xmlDocument.topLevelComments);
-  collectTokens(xmlDocument.root, null);
+  collectTokens(xmlDocument.root, 0);
   tokens.sort((a, b) => a.span.start - b.span.start);
   return tokens;
 }

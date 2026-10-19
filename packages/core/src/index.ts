@@ -68,4 +68,5 @@ export * from "./compiler/tool-validator.js";
 
 // LSP Util
 export * from "./lsp-util/completion-provider.js";
+export * from "./lsp-util/element-content-format.js";
 export * from "./lsp-util/semantic-token.js";
