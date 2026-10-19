@@ -129,6 +129,68 @@ describe("getCompletionItems", () => {
 
     expect(result).toBe(null);
   });
+
+  it("suggests YAML fields on an indented empty line inside examples without trailing newline", () => {
+    const xml = [
+      '<template name="Test">',
+      "  <schema>",
+      "    type Input = { subject: string; priority: string; };",
+      "    type Output = { status: string; };",
+      "  </schema>",
+      "  <system>sys</system>",
+      "  <user>usr</user>",
+      "  <examples>",
+      "    - input:",
+      "        subject: Test",
+      "        ",
+      "      output:",
+      "        status: ok",
+      "  </examples>",
+      "</template>",
+    ].join("\n");
+
+    const pos = xml.indexOf("        \n") + 8;
+    const cache = compile(
+      { "prompts/test.xml": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.xml",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["priority"]);
+    expect(result!.span).toMatch({ start: pos, end: pos });
+  });
+
+  it("suggests XML attributes when typing a space inside opening tag", () => {
+    const xml = [
+      '<template name="Test" >',
+      "  <schema>",
+      "    type Input = {};",
+      "    type Output = {};",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const pos = xml.indexOf('name="Test" ') + 'name="Test" '.length;
+    const cache = compile(
+      { "prompts/test.xml": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.xml",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["namespace"]);
+  });
 });
 
 describe("getConfigCompletionItems", () => {
@@ -191,5 +253,15 @@ describe("getConfigCompletionItems", () => {
     const pos = yaml.indexOf("prompts") + 2;
     const result = getConfigCompletionItems(yaml, pos);
     expect(result).toBe(null);
+  });
+
+  it("suggests fields on an empty line with content following below", () => {
+    const yaml =
+      "include:\n  - prompts/*.xml\n\ngen:\n  typescript:\n    file: test.ts\n";
+    const pos = yaml.indexOf("\n\n") + 1;
+    const result = getConfigCompletionItems(yaml, pos);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["patch"]);
+    expect(result!.span).toMatch({ start: pos, end: pos });
   });
 });

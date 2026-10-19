@@ -251,6 +251,42 @@ describe("TypePrompt CodeMirror Extension", () => {
       assert.ok(labels.includes("insert"));
       assert.ok(labels.includes("c"));
     });
+
+    it("suggests YAML fields on an indented empty line inside examples", () => {
+      const doc = [
+        '<template name="Test">',
+        "  <schema>",
+        "    type Input = { subject: string; priority: string; };",
+        "    type Output = { status: string; };",
+        "  </schema>",
+        "  <system>sys</system>",
+        "  <user>usr</user>",
+        "  <examples>",
+        "    - input:",
+        "        subject: Test",
+        "        ",
+        "      output:",
+        "        status: ok",
+        "  </examples>",
+        "</template>",
+      ].join("\n");
+
+      const pos = doc.indexOf("        \n") + 8;
+      const state = EditorState.create({
+        doc,
+        selection: { anchor: pos },
+        extensions: [typepromptStateField],
+      });
+
+      const context = new CompletionContext(state, pos, true);
+      const result = typepromptCompletionSource(context);
+
+      assert.ok(result !== null);
+      assert.strictEqual(result.from, pos);
+      assert.strictEqual(result.to, pos);
+      const labels = result.options.map((o) => o.label);
+      assert.ok(labels.includes("priority"));
+    });
   });
 
   describe("Indentation Rules", () => {

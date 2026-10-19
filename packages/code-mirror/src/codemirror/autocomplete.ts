@@ -20,8 +20,7 @@ export function typepromptCompletionSource(
   const content = context.state.doc.toString();
   const position = context.pos;
 
-  const isConfig =
-    path.endsWith("/typeprompt.yaml") || path.endsWith("/typeprompt.yml");
+  const isConfig = path === "typeprompt.yaml" || path === "typeprompt.yml";
 
   const completionItems = isConfig
     ? getConfigCompletionItems(content, position)
@@ -49,6 +48,7 @@ export function typepromptCompletionSource(
     from,
     to,
     options,
+    validFor: /^[\w-]*$/,
     filter: true,
   };
 }

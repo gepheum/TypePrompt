@@ -65,12 +65,15 @@ function computeInsertions(
   const insertions: string[] = [completionToken];
   if (kind === "template") {
     insertions.push(completionToken.toUpperCase());
-    if (rightPart.endsWith(" ")) {
+    if (leftPart.endsWith(" ")) {
       // For XML attributes
       insertions.push(`${completionToken}=""`);
     }
   }
-  if (/(?:\r?\n|^)[ \t]*-?[ \t]*$/.test(rightPart)) {
+  if (
+    /(?:\r?\n|^)[ \t]*-?[ \t]*$/.test(leftPart) &&
+    /^[ \t]*(?:\r?\n|$)/.test(rightPart)
+  ) {
     // For YAML object entries
     insertions.push(`${completionToken}: true`);
   }
