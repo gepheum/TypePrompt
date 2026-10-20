@@ -11,6 +11,14 @@ export default {
   appIndex: "dev/index.html",
   nodeResolve: { exportConditions: mode === "dev" ? ["development"] : [] },
   preserveSymlinks: true,
+  middleware: [
+    async (ctx, next) => {
+      if (ctx.url === "/" || ctx.url === "/index.html") {
+        ctx.url = "/dev/index.html";
+      }
+      await next();
+    },
+  ],
   plugins: [
     importMapsPlugin({
       inject: {
