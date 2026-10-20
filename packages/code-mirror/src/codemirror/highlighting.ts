@@ -101,10 +101,6 @@ export const typepromptHighlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-/**
- * @deprecated CodeMirror themes should be used instead. This extension is now a no-op kept for backwards compatibility.
- */
-export const typepromptHighlightTheme: Extension = [];
 
 /**
  * Extension bundling the syntax highlighting decoration field and standard fallback styling.

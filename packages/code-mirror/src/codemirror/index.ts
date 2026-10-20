@@ -10,7 +10,6 @@ import {
 import {
   typepromptHighlightField,
   typepromptHighlighting,
-  typepromptHighlightTheme,
 } from "./highlighting.js";
 import {
   typepromptBackspaceCommand,
@@ -101,7 +100,6 @@ export {
   typepromptEnterCommand,
   typepromptHighlightField,
   typepromptHighlighting,
-  typepromptHighlightTheme,
   typepromptIndentation,
   typepromptIndentCalculation,
   typepromptKeymap,
