@@ -28,8 +28,7 @@
     "lint": "eslint 'src/**/*.ts' 'dev/**/*.ts'",
     "format": "prettier \"{src,dev}/**/*.{cjs,html,js,json,md,ts}\" --write",
     "format:check": "prettier \"{src,dev}/**/*.{cjs,html,js,json,md,ts}\" --check",
-    "bundle": "npm run build && npm run build:dev && rollup -c rollup.standalone.config.js",
-    "serve": "npm run build && npm run build:dev && wds --watch",
+    "serve": "npm run build:dev && wds --config dev/web-dev-server.config.js --watch",
     "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"{src,dev}/**/*.test.ts\""
   },
   "dependencies": {
@@ -43,17 +42,11 @@
     "@typeprompt/core": "*"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-replace": "^5.0.7",
-    "@rollup/plugin-terser": "^1.0.0",
     "@uiw/codemirror-themes-all": "^4.25.9",
     "@web/dev-server": "^0.4.6",
     "@web/dev-server-import-maps": "^0.3.0",
     "@webcomponents/webcomponentsjs": "^2.8.0",
     "lit": "^3.2.0",
-    "rimraf": "^6.1.3",
-    "rollup": "^4.18.0",
-    "rollup-plugin-summary": "^2.0.1"
-  },
-  "customElements": "custom-elements.json"
+    "rimraf": "^6.1.3"
+  }
 }

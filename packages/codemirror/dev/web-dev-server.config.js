@@ -7,6 +7,8 @@ if (!["dev", "prod"].includes(mode)) {
 
 export default {
   port: 8080,
+  rootDir: ".",
+  appIndex: "dev/index.html",
   nodeResolve: { exportConditions: mode === "dev" ? ["development"] : [] },
   preserveSymlinks: true,
   plugins: [
