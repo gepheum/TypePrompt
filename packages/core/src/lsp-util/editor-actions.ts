@@ -2,37 +2,6 @@ import { createLineFinder, findLine } from "../util/line-finder.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import { getPositionContext } from "./position-context.js";
 
-export type AutoCloseTagAction = string;
-
-export type AutoCloseCommentAction = {
-  readonly insert: string;
-  readonly cursorOffset: number;
-};
-
-export type BackspaceAction = {
-  readonly from: number;
-  readonly to: number;
-  readonly insert: string;
-  readonly targetCursorOffset: number;
-};
-
-export type EnterChange = {
-  readonly from: number;
-  readonly to: number;
-  readonly insert: string;
-};
-
-export type EnterAction = {
-  readonly changes: readonly EnterChange[];
-  readonly targetCursorOffset: number;
-  readonly handled: boolean;
-};
-
-export type EnterActionOptions = {
-  readonly tabSize?: number;
-  readonly insertSpaces?: boolean;
-};
-
 /**
  * Given the document content and cursor offset (immediately following a `>`),
  * determines if an unclosed XML start-tag was just finished and returns its matching
@@ -41,7 +10,7 @@ export type EnterActionOptions = {
 export function getAutoCloseTagAction(
   content: string,
   offsetAfterGreater: number,
-): AutoCloseTagAction | null {
+): string | null {
   const parsed = parseXmlDocument(content, "path");
   if (parsed.kind !== "error" || !parsed.closingTagSuggestions) {
     return null;
@@ -61,7 +30,10 @@ export function getAutoCloseCommentAction(
   content: string,
   offset: number,
   inputChar: string,
-): AutoCloseCommentAction | null {
+): {
+  readonly insert: string;
+  readonly cursorOffset: number;
+} | null {
   // 1. XML comment auto-closing (<!-- -->): always append regardless of context
   const isTypingHyphenAfterCommentStart =
     inputChar === "-" &&
@@ -136,7 +108,12 @@ export function getAutoCloseCommentAction(
 export function computeBackspaceAction(
   content: string,
   offset: number,
-): BackspaceAction | null {
+): {
+  readonly from: number;
+  readonly to: number;
+  readonly insert: string;
+  readonly targetCursorOffset: number;
+} | null {
   // 1. Undo XML comment auto-close (<!--|--> -> <!-) regardless of context
   const nextChars = content.slice(offset, offset + 4);
   const closeLen = nextChars.startsWith(" -->")
@@ -202,8 +179,19 @@ export function computeBackspaceAction(
 export function computeEnterAction(
   content: string,
   offset: number,
-  options?: EnterActionOptions,
-): EnterAction {
+  options?: {
+    readonly tabSize?: number;
+    readonly insertSpaces?: boolean;
+  },
+): {
+  readonly changes: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly insert: string;
+  }[];
+  readonly targetCursorOffset: number;
+  readonly handled: boolean;
+} {
   const tabSize = options?.tabSize ?? 2;
   const ctx = getPositionContext(content, offset);
 
@@ -457,5 +445,386 @@ export function computeEnterAction(
     changes: [],
     targetCursorOffset: offset,
     handled: false,
+  };
+}
+
+/**
+ * Determines whether a position falls within a JavaScript schema zone,
+ * a YAML zone, or an XML zone.
+ */
+export function getCommentTypeAtPosition(
+  content: string,
+  offset: number,
+): "xml" | "javascript" | "yaml" {
+  const ctx = getPositionContext(content, offset);
+  if (ctx.isInsideSchema) {
+    return "javascript";
+  }
+  const isInsideYaml =
+    ctx.contentFormat === "yaml" &&
+    Boolean(
+      ctx.currentElement &&
+      offset >= ctx.currentElement.contentStart &&
+      (!ctx.currentElement.closingTag ||
+        offset <= ctx.currentElement.closingTag.start),
+    );
+  if (isInsideYaml) {
+    return "yaml";
+  }
+  return "xml";
+}
+
+function mapSelection(
+  selFrom: number,
+  selTo: number,
+  changes: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly insert: string;
+  }[],
+): { targetFrom: number; targetTo: number } {
+  const sorted = [...changes].sort((a, b) => a.from - b.from);
+  let mappedFrom = selFrom;
+  let mappedTo = selTo;
+
+  for (const c of sorted) {
+    const delta = c.insert.length - (c.to - c.from);
+    if (selFrom >= c.to) {
+      mappedFrom += delta;
+    } else if (selFrom > c.from) {
+      mappedFrom = c.from + c.insert.length;
+    }
+    if (selTo >= c.to) {
+      mappedTo += delta;
+    } else if (selTo > c.from) {
+      mappedTo = c.from + c.insert.length;
+    }
+  }
+
+  return { targetFrom: mappedFrom, targetTo: mappedTo };
+}
+
+/**
+ * Computes changes to toggle comments on the selected line range based on
+ * the comment type of the selection (XML, JavaScript `//`, or YAML `#`).
+ */
+export function computeToggleComment(
+  content: string,
+  selection: {
+    readonly from: number;
+    readonly to: number;
+  },
+): {
+  readonly changes: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly insert: string;
+  }[];
+  readonly targetSelection: {
+    readonly from: number;
+    readonly to: number;
+  };
+  readonly commentType: "xml" | "javascript" | "yaml";
+} {
+  if (content.length === 0) {
+    return {
+      changes: [{ from: 0, to: 0, insert: "<!--  -->" }],
+      targetSelection: { from: 5, to: 5 },
+      commentType: "xml",
+    };
+  }
+
+  const rawFrom = Math.max(0, Math.min(selection.from, content.length));
+  const rawTo = Math.max(0, Math.min(selection.to, content.length));
+  const selFrom = Math.min(rawFrom, rawTo);
+  const selTo = Math.max(rawFrom, rawTo);
+  const isReversed = selection.from > selection.to;
+
+  const lineFinder = createLineFinder(content);
+  const startLineMatch = findLine(selFrom, lineFinder);
+  const startLineNumber = startLineMatch.line.zeroBasedLineNumber;
+
+  let endLineNumber: number;
+  if (selTo === selFrom) {
+    endLineNumber = startLineNumber;
+  } else {
+    const endLineMatch = findLine(selTo, lineFinder);
+    endLineNumber = endLineMatch.line.zeroBasedLineNumber;
+    if (
+      endLineNumber > startLineNumber &&
+      endLineMatch.zeroBasedColNumber === 0
+    ) {
+      endLineNumber--;
+    }
+  }
+
+  const startLineStart = lineFinder.lineStarts[startLineNumber]!;
+  const startLineEnd =
+    startLineNumber + 1 < lineFinder.lineStarts.length
+      ? lineFinder.lineStarts[startLineNumber + 1]!
+      : content.length;
+  const startLineText = content.slice(startLineStart, startLineEnd);
+  const nonWsMatch = /^\s*(\S)/.exec(startLineText);
+  const checkOffset = nonWsMatch
+    ? startLineStart + startLineText.indexOf(nonWsMatch[1]!)
+    : selFrom;
+  const commentType = getCommentTypeAtPosition(content, checkOffset);
+
+  type LineData = {
+    lineNumber: number;
+    lineStart: number;
+    lineEnd: number;
+    lineText: string;
+    indent: number;
+    nonEmpty: boolean;
+  };
+
+  const lines: LineData[] = [];
+  for (let i = startLineNumber; i <= endLineNumber; i++) {
+    const lineStart = lineFinder.lineStarts[i]!;
+    const lineEnd =
+      i + 1 < lineFinder.lineStarts.length
+        ? lineFinder.lineStarts[i + 1]!
+        : content.length;
+    const rawText = content.slice(lineStart, lineEnd);
+    const lineText = rawText.replace(/[\r\n]+$/, "");
+    const indentMatch = /^[ \t]*/.exec(lineText);
+    const indent = indentMatch ? indentMatch[0].length : 0;
+    const nonEmpty = lineText.trim().length > 0;
+    lines.push({
+      lineNumber: i,
+      lineStart,
+      lineEnd,
+      lineText,
+      indent,
+      nonEmpty,
+    });
+  }
+
+  if (commentType === "javascript" || commentType === "yaml") {
+    const token = commentType === "javascript" ? "//" : "#";
+    const nonEmptyLines = lines.filter((l) => l.nonEmpty);
+
+    const isLineCommented = (l: LineData): boolean => {
+      const afterIndent = l.lineText.slice(l.indent);
+      return afterIndent.startsWith(token);
+    };
+
+    const allCommented =
+      nonEmptyLines.length > 0 && nonEmptyLines.every(isLineCommented);
+
+    const changes: {
+      readonly from: number;
+      readonly to: number;
+      readonly insert: string;
+    }[] = [];
+
+    if (allCommented) {
+      // UNCOMMENT
+      for (const l of lines) {
+        if (l.nonEmpty && isLineCommented(l)) {
+          const afterIndent = l.lineText.slice(l.indent);
+          const hasSpace = afterIndent.slice(token.length).startsWith(" ");
+          const cutLen = token.length + (hasSpace ? 1 : 0);
+          changes.push({
+            from: l.lineStart + l.indent,
+            to: l.lineStart + l.indent + cutLen,
+            insert: "",
+          });
+        }
+      }
+    } else {
+      // COMMENT
+      const minIndent =
+        nonEmptyLines.length > 0
+          ? Math.min(...nonEmptyLines.map((l) => l.indent))
+          : lines[0]!.indent;
+
+      for (const l of lines) {
+        if (l.nonEmpty) {
+          changes.push({
+            from: l.lineStart + minIndent,
+            to: l.lineStart + minIndent,
+            insert: `${token} `,
+          });
+        } else if (lines.length === 1) {
+          changes.push({
+            from: l.lineStart + l.indent,
+            to: l.lineStart + l.indent,
+            insert: `${token} `,
+          });
+        }
+      }
+    }
+
+    const { targetFrom, targetTo } = mapSelection(selFrom, selTo, changes);
+    return {
+      changes,
+      targetSelection: {
+        from: isReversed ? targetTo : targetFrom,
+        to: isReversed ? targetFrom : targetTo,
+      },
+      commentType,
+    };
+  }
+
+  // XML comment handling
+  const ctx = getPositionContext(content, selFrom);
+  if (
+    ctx.comment &&
+    ctx.comment.kind === "xml" &&
+    !ctx.comment.isUnclosed &&
+    selTo <= ctx.comment.span.end
+  ) {
+    // Selection is completely inside an XML comment block -> uncomment
+    const span = ctx.comment.span;
+    const start = span.start;
+    const end = span.end;
+    const lineStart = content.lastIndexOf("\n", start) + 1;
+    const beforeOpen = content.slice(lineStart, start);
+    const afterOpen = content.slice(start + 4);
+    const matchOpenNl = /^[ \t]*\r?\n/.exec(afterOpen);
+
+    const prevNl = content.lastIndexOf("\n", end - 3);
+    const betweenNlAndClose =
+      prevNl >= 0 ? content.slice(prevNl + 1, end - 3) : "";
+
+    let changes: {
+      readonly from: number;
+      readonly to: number;
+      readonly insert: string;
+    }[];
+    if (
+      /^\s*$/.test(beforeOpen) &&
+      matchOpenNl &&
+      prevNl >= lineStart &&
+      /^\s*$/.test(betweenNlAndClose)
+    ) {
+      changes = [
+        { from: lineStart, to: start + 4 + matchOpenNl[0].length, insert: "" },
+        { from: prevNl, to: end, insert: "" },
+      ];
+    } else {
+      const commentText = content.slice(start, end);
+      let startCut = 4;
+      if (commentText.slice(4).startsWith(" ")) startCut++;
+      let endCut = 3;
+      if (commentText.slice(0, commentText.length - 3).endsWith(" ")) endCut++;
+      changes = [
+        { from: start, to: start + startCut, insert: "" },
+        { from: end - endCut, to: end, insert: "" },
+      ];
+    }
+
+    const { targetFrom, targetTo } = mapSelection(selFrom, selTo, changes);
+    return {
+      changes,
+      targetSelection: {
+        from: isReversed ? targetTo : targetFrom,
+        to: isReversed ? targetFrom : targetTo,
+      },
+      commentType: "xml",
+    };
+  }
+
+  const xmlCommentRegex = /^\s*<!--(.*)-->\s*$/;
+  const nonEmptyLines = lines.filter((l) => l.nonEmpty);
+  const allCommented =
+    nonEmptyLines.length > 0 &&
+    nonEmptyLines.every((l) => xmlCommentRegex.test(l.lineText));
+
+  const changes: {
+    readonly from: number;
+    readonly to: number;
+    readonly insert: string;
+  }[] = [];
+
+  if (allCommented) {
+    // UNCOMMENT each line
+    for (const l of lines) {
+      if (l.nonEmpty) {
+        const match = /^(\s*)<!-- ?(.*?) ?-->(\s*)$/.exec(l.lineText);
+        if (match) {
+          const indentStr = match[1]!;
+          const contentStr = match[2]!;
+          const trailingWs = match[3]!;
+          changes.push({
+            from: l.lineStart,
+            to: l.lineStart + l.lineText.length,
+            insert: indentStr + contentStr + trailingWs,
+          });
+        }
+      }
+    }
+  } else {
+    // Check if the whole selection forms a block comment
+    const firstLine = lines[0]!;
+    const lastLine = lines[lines.length - 1]!;
+    if (
+      lines.length > 1 &&
+      firstLine.lineText.trimStart().startsWith("<!--") &&
+      lastLine.lineText.trimEnd().endsWith("-->")
+    ) {
+      const firstMatch = /^(\s*)<!-- ?(.*)$/.exec(firstLine.lineText);
+      const lastMatch = /^(.*?) ?-->(\s*)$/.exec(lastLine.lineText);
+      if (firstMatch && lastMatch) {
+        changes.push({
+          from: firstLine.lineStart,
+          to: firstLine.lineStart + firstLine.lineText.length,
+          insert: firstMatch[1]! + firstMatch[2]!,
+        });
+        changes.push({
+          from: lastLine.lineStart,
+          to: lastLine.lineStart + lastLine.lineText.length,
+          insert: lastMatch[1]! + lastMatch[2]!,
+        });
+      }
+    } else {
+      // COMMENT each line
+      for (const l of lines) {
+        if (l.nonEmpty) {
+          if (!xmlCommentRegex.test(l.lineText)) {
+            const indentStr = " ".repeat(l.indent);
+            const contentStr = l.lineText.slice(l.indent);
+            const newText = `${indentStr}<!-- ${contentStr} -->`;
+            changes.push({
+              from: l.lineStart,
+              to: l.lineStart + l.lineText.length,
+              insert: newText,
+            });
+          }
+        } else if (lines.length === 1) {
+          const newText = `${l.lineText}<!--  -->`;
+          changes.push({
+            from: l.lineStart,
+            to: l.lineStart + l.lineText.length,
+            insert: newText,
+          });
+        }
+      }
+    }
+  }
+
+  if (
+    changes.length === 1 &&
+    changes[0]!.insert.endsWith("<!--  -->") &&
+    selFrom === selTo
+  ) {
+    const mid = changes[0]!.from + changes[0]!.insert.indexOf("  ") + 1;
+    return {
+      changes,
+      targetSelection: { from: mid, to: mid },
+      commentType: "xml",
+    };
+  }
+
+  const { targetFrom, targetTo } = mapSelection(selFrom, selTo, changes);
+  return {
+    changes,
+    targetSelection: {
+      from: isReversed ? targetTo : targetFrom,
+      to: isReversed ? targetFrom : targetTo,
+    },
+    commentType: "xml",
   };
 }

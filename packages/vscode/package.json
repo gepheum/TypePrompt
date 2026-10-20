@@ -34,6 +34,10 @@
       {
         "command": "typeprompt.onEnterKey",
         "title": "TypePrompt: Enter Key"
+      },
+      {
+        "command": "typeprompt.toggleComment",
+        "title": "TypePrompt: Toggle Comment"
       }
     ],
     "keybindings": [
@@ -41,6 +45,12 @@
         "command": "typeprompt.onEnterKey",
         "key": "enter",
         "when": "editorTextFocus && !editorHasSelection && !editorReadonly && !suggestWidgetVisible && (editorLangId == 'xml' || resourceExtname == '.xml')"
+      },
+      {
+        "command": "typeprompt.toggleComment",
+        "key": "ctrl+/",
+        "mac": "cmd+/",
+        "when": "editorTextFocus && !editorReadonly && (editorLangId == 'xml' || resourceExtname == '.xml')"
       }
     ]
   },

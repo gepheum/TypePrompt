@@ -10,14 +10,12 @@ import {
   typepromptHighlightTheme,
 } from "./highlighting.js";
 import {
-  CLOSE_RE,
-  OPEN_BRACKET_RE,
-  OPEN_TAG_RE,
   typepromptBackspaceCommand,
   typepromptEnterCommand,
   typepromptIndentation,
   typepromptIndentCalculation,
   typepromptKeymap,
+  typepromptToggleCommentCommand,
 } from "./indent.js";
 import { typepromptLinter, typepromptLinting } from "./linter.js";
 import {
@@ -79,11 +77,8 @@ export function typeprompt(config: TypePromptConfig = {}): Extension {
 export {
   autoCloseComments,
   autoCloseTags,
-  CLOSE_RE,
   getCompilationResult,
   getSemanticTokens,
-  OPEN_BRACKET_RE,
-  OPEN_TAG_RE,
   typepromptAutocomplete,
   typepromptBackspaceCommand,
   typepromptCompletionSource,
@@ -98,6 +93,7 @@ export {
   typepromptLinter,
   typepromptLinting,
   typepromptStateField,
+  typepromptToggleCommentCommand,
   type TypePromptConfig,
   type TypePromptState,
 };

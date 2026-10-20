@@ -7,11 +7,8 @@ import { githubDark } from "@uiw/codemirror-themes-all";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
-  CLOSE_RE,
   getCompilationResult,
   getSemanticTokens,
-  OPEN_BRACKET_RE,
-  OPEN_TAG_RE,
   typeprompt,
   typepromptBackspaceCommand,
   typepromptCompletionSource,
@@ -23,6 +20,7 @@ import {
   typepromptIndentCalculation,
   typepromptLinter,
   typepromptStateField,
+  typepromptToggleCommentCommand,
 } from "./codemirror/index.js";
 
 const validTemplate = `
@@ -290,52 +288,6 @@ describe("TypePrompt CodeMirror Extension", () => {
   });
 
   describe("Indentation Rules", () => {
-    describe("Regular Expressions", () => {
-      it("correctly matches open tags", () => {
-        assert.ok(OPEN_TAG_RE.test("<template>"));
-        assert.ok(OPEN_TAG_RE.test('<template name="Summarize">'));
-        assert.ok(OPEN_TAG_RE.test("  <system>"));
-        assert.ok(OPEN_TAG_RE.test('  <custom:tag foo="bar">  '));
-
-        // Must NOT match self-closing, closing, comments, or processing instructions
-        assert.strictEqual(OPEN_TAG_RE.test('<insert val="x" />'), false);
-        assert.strictEqual(OPEN_TAG_RE.test('  <val foo="bar"/>'), false);
-        assert.strictEqual(OPEN_TAG_RE.test("</template>"), false);
-        assert.strictEqual(OPEN_TAG_RE.test("  </system>"), false);
-        assert.strictEqual(OPEN_TAG_RE.test("<!-- comment -->"), false);
-        assert.strictEqual(OPEN_TAG_RE.test('<?xml version="1.0"?>'), false);
-      });
-
-      it("correctly matches open brackets and YAML colons", () => {
-        assert.ok(OPEN_BRACKET_RE.test("{"));
-        assert.ok(OPEN_BRACKET_RE.test("type Input = {"));
-        assert.ok(OPEN_BRACKET_RE.test("items: ["));
-        assert.ok(OPEN_BRACKET_RE.test("fn("));
-        assert.ok(OPEN_BRACKET_RE.test("metadata:"));
-        assert.ok(OPEN_BRACKET_RE.test("metadata:  "));
-        assert.ok(OPEN_BRACKET_RE.test("if (x <"));
-
-        assert.strictEqual(
-          OPEN_BRACKET_RE.test("type Input = { text: string };"),
-          false,
-        );
-        assert.strictEqual(OPEN_BRACKET_RE.test("normal text"), false);
-        assert.strictEqual(OPEN_BRACKET_RE.test("foo: bar"), false);
-      });
-
-      it("correctly matches closing tags and closing brackets", () => {
-        assert.ok(CLOSE_RE.test("</template>"));
-        assert.ok(CLOSE_RE.test("  </system>"));
-        assert.ok(CLOSE_RE.test("}"));
-        assert.ok(CLOSE_RE.test("  }"));
-        assert.ok(CLOSE_RE.test("]"));
-        assert.ok(CLOSE_RE.test(")"));
-
-        assert.strictEqual(CLOSE_RE.test("<template>"), false);
-        assert.strictEqual(CLOSE_RE.test("text"), false);
-      });
-    });
-
     describe("Indentation Calculation via getIndentation", () => {
       it("indents line following an open tag by 2 spaces", () => {
         const doc = ['<template name="Test">', ""].join("\n");
@@ -1081,6 +1033,86 @@ describe("TypePrompt CodeMirror Extension", () => {
           const expectedCursor = expectedDoc.indexOf("<!-") + 3;
           assert.strictEqual(getState().selection.main.anchor, expectedCursor);
         });
+      });
+    });
+
+    describe("Toggle Comment", () => {
+      const createCommentView = (initialDoc: string, cursorOffset: number) => {
+        let state = EditorState.create({
+          doc: initialDoc,
+          selection: { anchor: cursorOffset },
+          extensions: [
+            typeprompt({
+              path: "template.xml",
+              indent: true,
+            }),
+          ],
+        });
+        const view = {
+          get state() {
+            return state;
+          },
+          dispatch(tr: any) {
+            if (tr.state) {
+              state = tr.state;
+            } else {
+              state = state.update(tr).state;
+            }
+          },
+        } as unknown as EditorView;
+        return { view, getState: () => state };
+      };
+
+      it("toggles XML comment in XML zone with <!-- -->", () => {
+        const doc = '<template id="t">\n  <system>Hello</system>\n</template>';
+        const cursor = doc.indexOf("<system>");
+        const { view, getState } = createCommentView(doc, cursor);
+
+        const handled = typepromptToggleCommentCommand(view);
+        assert.strictEqual(handled, true);
+        assert.strictEqual(
+          getState().doc.toString(),
+          '<template id="t">\n  <!-- <system>Hello</system> -->\n</template>',
+        );
+
+        // Toggle again to uncomment
+        typepromptToggleCommentCommand(view);
+        assert.strictEqual(getState().doc.toString(), doc);
+      });
+
+      it("toggles JavaScript // comment inside schema", () => {
+        const doc = "<schema>\n  const x = 1;\n</schema>";
+        const cursor = doc.indexOf("const x");
+        const { view, getState } = createCommentView(doc, cursor);
+
+        const handled = typepromptToggleCommentCommand(view);
+        assert.strictEqual(handled, true);
+        assert.strictEqual(
+          getState().doc.toString(),
+          "<schema>\n  // const x = 1;\n</schema>",
+        );
+
+        // Toggle again to uncomment
+        typepromptToggleCommentCommand(view);
+        assert.strictEqual(getState().doc.toString(), doc);
+      });
+
+      it("toggles YAML # comment inside examples", () => {
+        const doc =
+          '<template id="t">\n  <examples>\n    - input: "hi"\n  </examples>\n</template>';
+        const cursor = doc.indexOf("- input");
+        const { view, getState } = createCommentView(doc, cursor);
+
+        const handled = typepromptToggleCommentCommand(view);
+        assert.strictEqual(handled, true);
+        assert.strictEqual(
+          getState().doc.toString(),
+          '<template id="t">\n  <examples>\n    # - input: "hi"\n  </examples>\n</template>',
+        );
+
+        // Toggle again to uncomment
+        typepromptToggleCommentCommand(view);
+        assert.strictEqual(getState().doc.toString(), doc);
       });
     });
   });

@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import {
   computeBackspaceAction,
   computeEnterAction,
+  computeToggleComment,
   getAutoCloseCommentAction,
   getAutoCloseTagAction,
+  getCommentTypeAtPosition,
 } from "./editor-actions.js";
 
 describe("editor-actions", () => {
@@ -278,6 +280,165 @@ describe("editor-actions", () => {
       const offset = content.length;
       const res = computeEnterAction(content, offset);
       assert.equal(res.handled, false);
+    });
+  });
+
+  describe("getCommentTypeAtPosition", () => {
+    const template = `<template id="test">
+  <meta>
+    model: gpt-4
+  </meta>
+  <schema>
+    interface Input {
+      text: string;
+    }
+  </schema>
+  <examples>
+    - input: "hello"
+  </examples>
+  <system>
+    Hello
+  </system>
+</template>`;
+
+    it("identifies XML context", () => {
+      assert.equal(getCommentTypeAtPosition(template, 2), "xml");
+      assert.equal(
+        getCommentTypeAtPosition(template, template.indexOf("<system>")),
+        "xml",
+      );
+      assert.equal(
+        getCommentTypeAtPosition(template, template.indexOf("<schema>")),
+        "xml",
+      );
+    });
+
+    it("identifies JavaScript schema context", () => {
+      const offset = template.indexOf("interface Input");
+      assert.equal(getCommentTypeAtPosition(template, offset), "javascript");
+    });
+
+    it("identifies YAML context in meta and examples", () => {
+      const metaOffset = template.indexOf("model: gpt-4");
+      assert.equal(getCommentTypeAtPosition(template, metaOffset), "yaml");
+      const exOffset = template.indexOf("- input:");
+      assert.equal(getCommentTypeAtPosition(template, exOffset), "yaml");
+    });
+  });
+
+  describe("computeToggleComment", () => {
+    function applyChanges(
+      content: string,
+      changes: readonly { from: number; to: number; insert: string }[],
+    ): string {
+      const sorted = [...changes].sort((a, b) => b.from - a.from);
+      let res = content;
+      for (const c of sorted) {
+        res = res.slice(0, c.from) + c.insert + res.slice(c.to);
+      }
+      return res;
+    }
+
+    it("toggles single-line comment in schema with //", () => {
+      const doc = "<schema>\n  const x = 1;\n</schema>";
+      const offset = doc.indexOf("const x");
+      const action = computeToggleComment(doc, { from: offset, to: offset });
+      assert.equal(action.commentType, "javascript");
+      const commented = applyChanges(doc, action.changes);
+      assert.equal(commented, "<schema>\n  // const x = 1;\n</schema>");
+
+      // Toggle again to uncomment
+      const newOffset = action.targetSelection.from;
+      const uncommentAction = computeToggleComment(commented, {
+        from: newOffset,
+        to: newOffset,
+      });
+      const uncommented = applyChanges(commented, uncommentAction.changes);
+      assert.equal(uncommented, doc);
+    });
+
+    it("toggles multi-line comments in schema with //", () => {
+      const doc = "<schema>\n  const a = 1;\n  const b = 2;\n</schema>";
+      const from = doc.indexOf("const a");
+      const to = doc.indexOf("const b") + "const b = 2;".length;
+      const action = computeToggleComment(doc, { from, to });
+      assert.equal(action.commentType, "javascript");
+      const commented = applyChanges(doc, action.changes);
+      assert.equal(
+        commented,
+        "<schema>\n  // const a = 1;\n  // const b = 2;\n</schema>",
+      );
+
+      // Uncomment
+      const uncommentAction = computeToggleComment(
+        commented,
+        action.targetSelection,
+      );
+      const uncommented = applyChanges(commented, uncommentAction.changes);
+      assert.equal(uncommented, doc);
+    });
+
+    it("toggles comments in YAML with #", () => {
+      const doc =
+        '<template id="t">\n  <examples>\n    - input: "foo"\n  </examples>\n</template>';
+      const offset = doc.indexOf("- input");
+      const action = computeToggleComment(doc, { from: offset, to: offset });
+      assert.equal(action.commentType, "yaml");
+      const commented = applyChanges(doc, action.changes);
+      assert.equal(
+        commented,
+        '<template id="t">\n  <examples>\n    # - input: "foo"\n  </examples>\n</template>',
+      );
+
+      // Uncomment
+      const uncommentAction = computeToggleComment(
+        commented,
+        action.targetSelection,
+      );
+      const uncommented = applyChanges(commented, uncommentAction.changes);
+      assert.equal(uncommented, doc);
+    });
+
+    it("toggles comments in XML with <!-- -->", () => {
+      const doc = '<template id="t">\n  <system>Hello</system>\n</template>';
+      const offset = doc.indexOf("<system>");
+      const action = computeToggleComment(doc, { from: offset, to: offset });
+      assert.equal(action.commentType, "xml");
+      const commented = applyChanges(doc, action.changes);
+      assert.equal(
+        commented,
+        '<template id="t">\n  <!-- <system>Hello</system> -->\n</template>',
+      );
+
+      // Uncomment
+      const uncommentAction = computeToggleComment(
+        commented,
+        action.targetSelection,
+      );
+      const uncommented = applyChanges(commented, uncommentAction.changes);
+      assert.equal(uncommented, doc);
+    });
+
+    it("uncomments an XML block comment when cursor is inside", () => {
+      const doc =
+        '<template id="t">\n  <!--\n  <system>Hello</system>\n  -->\n</template>';
+      const offset = doc.indexOf("<system>");
+      const action = computeToggleComment(doc, { from: offset, to: offset });
+      assert.equal(action.commentType, "xml");
+      const uncommented = applyChanges(doc, action.changes);
+      assert.equal(
+        uncommented,
+        '<template id="t">\n  <system>Hello</system>\n</template>',
+      );
+    });
+
+    it("handles empty XML line by inserting empty comment and centering cursor", () => {
+      const doc = "";
+      const action = computeToggleComment(doc, { from: 0, to: 0 });
+      assert.equal(action.commentType, "xml");
+      assert.equal(action.changes[0]?.insert, "<!--  -->");
+      assert.equal(action.targetSelection.from, 5);
+      assert.equal(action.targetSelection.to, 5);
     });
   });
 });

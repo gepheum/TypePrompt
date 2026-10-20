@@ -16,22 +16,21 @@ import { Lsp } from "@typeprompt/core";
  * - An XML comment (e.g. `<!-- ... -->`)
  * - A processing instruction (e.g. `<?xml ... ?>`)
  */
-export const OPEN_TAG_RE =
-  /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
+const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
 
 /**
  * Matches an open bracket or YAML colon at the end of a line:
  * - `{`, `[`, `(`, or `<`
  * - `:` (used in YAML headers or blocks)
  */
-export const OPEN_BRACKET_RE = /(?:[{[(<]|:)\s*$/;
+const OPEN_BRACKET_RE = /(?:[{[(<]|:)\s*$/;
 
 /**
  * Matches a closing tag or closing bracket at the start of a line:
  * - `</tagName>`
  * - `}`, `]`, `)`
  */
-export const CLOSE_RE = /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])])/;
+const CLOSE_RE = /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])])/;
 
 /**
  * Computes the indentation for a line in TypePrompt:
@@ -218,12 +217,47 @@ export function typepromptBackspaceCommand(view: EditorView): boolean {
 }
 
 /**
+ * Custom Toggle Comment command that dynamically comments/uncomments code
+ * using the appropriate delimiter (XML `<!-- -->`, JavaScript `//`, or YAML `#`)
+ * determined by the cursor or selection position context.
+ */
+export function typepromptToggleCommentCommand(view: EditorView): boolean {
+  if (view.state.readOnly) {
+    return false;
+  }
+  const { state } = view;
+  const content = state.doc.toString();
+  const main = state.selection.main;
+
+  const action = Lsp.computeToggleComment(content, {
+    from: main.from,
+    to: main.to,
+  });
+
+  if (action.changes.length === 0) {
+    return false;
+  }
+
+  view.dispatch({
+    changes: action.changes,
+    selection: {
+      anchor: action.targetSelection.from,
+      head: action.targetSelection.to,
+    },
+    scrollIntoView: true,
+    userEvent: "input.comment",
+  });
+  return true;
+}
+
+/**
  * Keymap binding Enter and Shift-Enter to `typepromptEnterCommand`,
- * and Backspace to `typepromptBackspaceCommand`.
+ * Backspace to `typepromptBackspaceCommand`, and Mod-/ to `typepromptToggleCommentCommand`.
  */
 export const typepromptKeymap: readonly KeyBinding[] = [
   { key: "Enter", run: typepromptEnterCommand, shift: typepromptEnterCommand },
   { key: "Backspace", run: typepromptBackspaceCommand },
+  { key: "Mod-/", run: typepromptToggleCommentCommand },
 ];
 
 /**
@@ -231,15 +265,27 @@ export const typepromptKeymap: readonly KeyBinding[] = [
  * - Provides automatic indentation rules (open bracket / open tag increases indent, closing tag decreases).
  * - Provides onEnter rules (splits between matching tags or brackets with indentOutdent, aligns comments).
  * - Enables automatic reindentation when typing closing brackets or tags via `indentOnInput`.
+ * - Provides dynamic position-aware comment tokens (XML, Schema //, YAML #).
  */
 export const typepromptIndentation: Extension = [
   indentService.of(typepromptIndentCalculation),
   indentOnInput(),
-  EditorState.languageData.of(() => [
-    {
-      indentOnInput: /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])]|\*\/\s*)$/,
-      commentTokens: { block: { open: "<!--", close: "-->" } },
-    },
-  ]),
+  EditorState.languageData.of((state, pos) => {
+    const commentType = Lsp.getCommentTypeAtPosition(state.doc.toString(), pos);
+    let commentTokens;
+    if (commentType === "javascript") {
+      commentTokens = { line: "//" };
+    } else if (commentType === "yaml") {
+      commentTokens = { line: "#" };
+    } else {
+      commentTokens = { block: { open: "<!--", close: "-->" } };
+    }
+    return [
+      {
+        indentOnInput: /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])]|\*\/\s*)$/,
+        commentTokens,
+      },
+    ];
+  }),
   Prec.high(keymap.of(typepromptKeymap)),
 ];
