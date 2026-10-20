@@ -48,7 +48,7 @@ describe("patchProject", () => {
     });
 
     const configPath = join(targetProject, "typeprompt.yaml");
-    const templatePath = join(targetProject, "prompts", "hello-world.xml");
+    const templatePath = join(targetProject, "prompts", "hello-world.tp");
     const baseJsonPath = join(targetProject, "patch-base.json");
 
     expect(existsSync(configPath)).toBe(true);
@@ -59,7 +59,7 @@ describe("patchProject", () => {
     const configResult = parseConfigYaml(configContent, configPath);
     expect(configResult.kind).toBe("success");
     if (configResult.kind === "success") {
-      expect(configResult.config.include).toMatch(["prompts/hello-world.xml"]);
+      expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
       expect(configResult.config.patch).toMatch({
         base: "patch-base.json",
         overrides: "overrides.json",
@@ -67,7 +67,7 @@ describe("patchProject", () => {
     }
 
     const baseJson = JSON.parse(readFileSync(baseJsonPath, "utf8"));
-    expect(baseJson.sourceFiles["prompts/hello-world.xml"] !== undefined).toBe(
+    expect(baseJson.sourceFiles["prompts/hello-world.tp"] !== undefined).toBe(
       true,
     );
     expect(baseJson.templates["Main:SayHello"] !== undefined).toBe(true);
@@ -91,7 +91,7 @@ describe("patchProject", () => {
     });
 
     const configPath = join(target2, "typeprompt.yaml");
-    const templatePath = join(target2, "prompts", "hello-world.xml");
+    const templatePath = join(target2, "prompts", "hello-world.tp");
     const target2BaseJson = join(target2, "patch-base.json");
 
     expect(existsSync(configPath)).toBe(true);
@@ -102,7 +102,7 @@ describe("patchProject", () => {
     const configResult = parseConfigYaml(configContent, configPath);
     expect(configResult.kind).toBe("success");
     if (configResult.kind === "success") {
-      expect(configResult.config.include).toMatch(["prompts/hello-world.xml"]);
+      expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
       expect(configResult.config.patch).toMatch({
         base: "patch-base.json",
         overrides: "overrides.json",
@@ -117,7 +117,7 @@ describe("patchProject", () => {
     mkdirSync(targetProject, { recursive: true });
     writeFileSync(
       join(targetProject, "typeprompt.yaml"),
-      "include:\n  - prompts/*.xml",
+      "include:\n  - prompts/*.tp",
       "utf8",
     );
 
@@ -142,7 +142,7 @@ describe("patchProject", () => {
     mkdirSync(targetProject, { recursive: true });
     writeFileSync(
       join(targetProject, "typeprompt.yml"),
-      "include:\n  - prompts/*.xml",
+      "include:\n  - prompts/*.tp",
       "utf8",
     );
 
@@ -181,7 +181,7 @@ describe("patchProject", () => {
       templates: {},
       tools: {},
       sourceFiles: {
-        "../SayHello.xml": HELLO_WORLD_TEMPLATE,
+        "../SayHello.tp": HELLO_WORLD_TEMPLATE,
       },
     };
 
@@ -254,7 +254,7 @@ describe("patchProject", () => {
       });
 
       const configPath = join(target2, "typeprompt.yaml");
-      const templatePath = join(target2, "prompts", "hello-world.xml");
+      const templatePath = join(target2, "prompts", "hello-world.tp");
       const target2BaseJson = join(target2, "patch-base.json");
 
       expect(existsSync(configPath)).toBe(true);
@@ -265,9 +265,7 @@ describe("patchProject", () => {
       const configResult = parseConfigYaml(configContent, configPath);
       expect(configResult.kind).toBe("success");
       if (configResult.kind === "success") {
-        expect(configResult.config.include).toMatch([
-          "prompts/hello-world.xml",
-        ]);
+        expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
         expect(configResult.config.patch).toMatch({
           base: "patch-base.json",
           overrides: "overrides.json",
@@ -338,13 +336,13 @@ describe("patchProject", () => {
     mkdirSync(tempBaseDir, { recursive: true });
     writeFileSync(
       join(tempBaseDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf8",
     );
     const promptsDir = join(tempBaseDir, "prompts");
     mkdirSync(promptsDir, { recursive: true });
     writeFileSync(
-      join(promptsDir, "hello-world.xml"),
+      join(promptsDir, "hello-world.tp"),
       HELLO_WORLD_TEMPLATE,
       "utf8",
     );

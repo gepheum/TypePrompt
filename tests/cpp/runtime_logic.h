@@ -2388,7 +2388,7 @@ struct Templates {
   std::int32_t edition{};
   std::string signature;
   bool single_namespace{};
-  /// The key is a relative path to a .xml file. The value is the file content.
+  /// The key is a relative path to a .tp file. The value is the file content.
   std::map<std::string, std::string> source_files;
   std::map<std::string, Template> templates;
   std::map<std::string, Tool> tools_;

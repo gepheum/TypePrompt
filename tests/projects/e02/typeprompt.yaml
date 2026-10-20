@@ -1,5 +1,5 @@
 include:
-  - prompts/**/*.xml
+  - prompts/**/*.tp
 gen:
   cpp:
     file: ../../cpp/gen/prompts_e02.gen.h

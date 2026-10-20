@@ -6,7 +6,7 @@ import { checkXmlAttributes, expectOneOf } from "./xml-attributes-checker.js";
 import { parseXmlDocument } from "./xml-parser.js";
 import type { ElementNode } from "./xml-types.js";
 
-function parseElement(xml: string, path = "test.xml"): ElementNode {
+function parseElement(xml: string, path = "test.tp"): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(

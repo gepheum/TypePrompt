@@ -10,7 +10,10 @@ export function activateAutoCloseTag(context: ExtensionContext): void {
 
 function onDocumentChange(event: TextDocumentChangeEvent): void {
   const { document, contentChanges } = event;
-  if (document.languageId !== "xml" && !document.fileName.endsWith(".xml")) {
+  if (
+    document.languageId !== "typeprompt" &&
+    !document.fileName.endsWith(".tp")
+  ) {
     return;
   }
 

@@ -17,7 +17,7 @@ export const typepromptConfigFacet = Facet.define<
   combine(values: readonly TypePromptConfig[]): TypePromptConfig {
     if (values.length === 0) {
       return {
-        path: "template.xml",
+        path: "template.tp",
         workspaceFiles: {},
         patchBase: null,
       };

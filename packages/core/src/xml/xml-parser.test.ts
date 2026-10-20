@@ -6,7 +6,7 @@ import type { InvalidXmlDocument, XmlDocument } from "./xml-types.js";
 
 function parseXmlDocument(
   content: string,
-  path = "test.xml",
+  path = "test.tp",
 ): XmlDocument | InvalidXmlDocument {
   return parseXmlDocumentCore(content, path);
 }

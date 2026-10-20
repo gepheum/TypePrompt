@@ -18,7 +18,7 @@ import { validateTool } from "./tool-validator.js";
 
 function parseElement(
   xml: string,
-  path = "prompts/searchTool.xml",
+  path = "prompts/searchTool.tp",
 ): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
@@ -51,7 +51,7 @@ function testValidateTool(args: {
   readonly namespaceSchema?: Schema;
   readonly path?: string;
 }): ToolValidationResult {
-  const root = parseElement(args.xml, args.path ?? "prompts/searchTool.xml");
+  const root = parseElement(args.xml, args.path ?? "prompts/searchTool.tp");
   const parsedTool = parseTool(root);
   if (parsedTool.kind === "error") {
     throw new Error(
@@ -130,7 +130,7 @@ describe("validateTool", () => {
       definitionLinks: [
         {
           reference: {
-            path: "prompts/searchTool.xml",
+            path: "prompts/searchTool.tp",
             start: 198,
             end: 210,
           },
@@ -162,12 +162,12 @@ describe("validateTool", () => {
       kind: "tool",
       definitionLinks: [
         {
-          reference: { path: "prompts/searchTool.xml" },
-          definition: { path: "prompts/searchTool.xml" },
+          reference: { path: "prompts/searchTool.tp" },
+          definition: { path: "prompts/searchTool.tp" },
         },
         {
-          reference: { path: "prompts/searchTool.xml" },
-          definition: { path: "prompts/searchTool.xml" },
+          reference: { path: "prompts/searchTool.tp" },
+          definition: { path: "prompts/searchTool.tp" },
         },
       ],
     });

@@ -17,7 +17,7 @@ npm run build
 2. Switch to the **Run and Debug** panel (<kbd>Cmd+Shift+D</kbd> / <kbd>Ctrl+Shift+D</kbd>).
 3. Select **"Launch TypePrompt VS Code Extension"** and press <kbd>F5</kbd>.
 4. A new VS Code window (**Extension Development Host**) will open with the extension active.
-5. In this window, open any project containing TypePrompt templates (`.xml`) or a `typeprompt.yaml` file to test features.
+5. In this window, open any project containing TypePrompt templates (`.tp`) or a `typeprompt.yaml` file to test features.
 
 ## Packaging the Extension
 

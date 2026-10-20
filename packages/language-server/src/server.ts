@@ -56,7 +56,7 @@ import {
 } from "vscode-languageserver/node.js";
 
 type FileType =
-  "typeprompt.yaml" | "typeprompt.yml" | "*.xml" | "patch-base.json" | null;
+  "typeprompt.yaml" | "typeprompt.yml" | "*.tp" | "patch-base.json" | null;
 
 interface FileContent {
   readonly content: string;
@@ -69,8 +69,8 @@ function getFileType(uri: string): FileType {
     return "typeprompt.yaml";
   } else if (uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
-  } else if (uri.endsWith(".xml")) {
-    return "*.xml";
+  } else if (uri.endsWith(".tp")) {
+    return "*.tp";
   } else if (uri.endsWith("/patch-base.json")) {
     return "patch-base.json";
   } else {
@@ -99,7 +99,7 @@ interface TypePromptConfigBundle {
 }
 
 interface TemplateFile {
-  /** The absolute file URI (e.g. "file:///path/to/project/prompts/hello.xml"). */
+  /** The absolute file URI (e.g. "file:///path/to/project/prompts/hello.tp"). */
   readonly uri: string;
   /** Cached file content, line offsets finder, and last modified timestamp. */
   content: FileContent;
@@ -361,7 +361,7 @@ class Project {
 
   /**
    * Finds a template file belonging to this project by its project-relative path
-   * (e.g. "prompts/hello-world.xml") or by its full URI (e.g. "file:///path/to/project/prompts/hello-world.xml").
+   * (e.g. "prompts/hello-world.tp") or by its full URI (e.g. "file:///path/to/project/prompts/hello-world.tp").
    */
   public getTemplateFile(pathOrUri: string): TemplateFile | undefined {
     const direct = this.templateFiles.get(pathOrUri);
@@ -505,7 +505,7 @@ export class TypePromptLanguageExtension {
       let files: string[];
       try {
         files = await glob(
-          "**/{typeprompt.yaml,typeprompt.yml,patch-base.json,*.xml}",
+          "**/{typeprompt.yaml,typeprompt.yml,patch-base.json,*.tp}",
           {
             cwd: folderPath,
             nodir: true,
@@ -537,7 +537,7 @@ export class TypePromptLanguageExtension {
             return 2;
           case "patch-base.json":
             return 3;
-          case "*.xml":
+          case "*.tp":
             return 4;
           case null:
             return 5;
@@ -707,7 +707,7 @@ export class TypePromptLanguageExtension {
         }
         break;
       }
-      case "*.xml": {
+      case "*.tp": {
         const timeout = this.uriToTimeout.get(uri);
         if (timeout) {
           clearTimeout(timeout);
@@ -832,7 +832,7 @@ export class TypePromptLanguageExtension {
   public getFileContent(uri: string): FileContent | undefined {
     const fileType = getFileType(uri);
     switch (fileType) {
-      case "*.xml":
+      case "*.tp":
         return this.templateFiles.get(uri)?.content;
       case "patch-base.json":
         return this.patchBases.get(uri)?.content;
@@ -997,7 +997,7 @@ export class TypePromptLanguageExtension {
   public async formatDocument(uri: string): Promise<TextEdit[]> {
     if (this.disposed) return [];
     const fileType = getFileType(uri);
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return [];
     }
 
@@ -1025,7 +1025,7 @@ export class TypePromptLanguageExtension {
       return { data: [] };
     }
     const fileType = getFileType(uri);
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return { data: [] };
     }
 
@@ -1068,7 +1068,7 @@ export class TypePromptLanguageExtension {
       }));
     }
 
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return [];
     }
 
@@ -1171,7 +1171,7 @@ export class TypePromptLanguageExtension {
       return null;
     }
     const fileType = getFileType(uri);
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return null;
     }
 
@@ -1215,7 +1215,7 @@ export class TypePromptLanguageExtension {
       return null;
     }
     const fileType = getFileType(uri);
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return null;
     }
 
@@ -1281,7 +1281,7 @@ export class TypePromptLanguageExtension {
       return null;
     }
     const fileType = getFileType(uri);
-    if (fileType !== "*.xml") {
+    if (fileType !== "*.tp") {
       return null;
     }
 

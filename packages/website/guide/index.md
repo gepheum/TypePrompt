@@ -62,7 +62,7 @@ See the language guide for your target (TypeScript, Python, Kotlin, Rust, C++, S
 
 ### 3. Write a template
 
-Create an `.xml` file under `prompts/` describing your template's schema, instructions, and few-shot examples. See the [language reference](/reference) for the full XML syntax and the [schema language](/schema) for the type system.
+Create a `.tp` file under `prompts/` describing your template's schema, instructions, and few-shot examples. See the [language reference](/reference) for the full XML syntax and the [schema language](/schema) for the type system.
 
 ### 4. Generate code
 

@@ -39,7 +39,7 @@ describe("TypePrompt Language Server", () => {
   });
 
   it("converts URI to FS path and back", () => {
-    const fsPath = path.resolve(tempDir, "prompts", "Translate.xml");
+    const fsPath = path.resolve(tempDir, "prompts", "Translate.tp");
     const uri = fsPathToUri(fsPath);
     expect(uri.startsWith("file://")).toBe(true);
     expect(uriToFsPath(uri)).toBe(fsPath);
@@ -56,7 +56,7 @@ describe("TypePrompt Language Server", () => {
     // Write typeprompt.yml
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
@@ -64,7 +64,7 @@ describe("TypePrompt Language Server", () => {
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
     await fs.writeFile(
-      path.join(promptsDir, "Translate.xml"),
+      path.join(promptsDir, "Translate.tp"),
       `<template name="Translate">
   <schema output-format="text">
     interface Input { text: string; }
@@ -85,11 +85,11 @@ describe("TypePrompt Language Server", () => {
     expect(project !== undefined).toBe(true);
     expect(project!.templateFiles.size).toBe(1);
 
-    const templateFsPath = path.join(promptsDir, "Translate.xml");
+    const templateFsPath = path.join(promptsDir, "Translate.tp");
     const templateUri = fsPathToUri(templateFsPath);
     const bundle = extension.getTemplateFile(templateUri);
     expect(bundle !== undefined).toBe(true);
-    expect(bundle!.relativePath).toBe("prompts/Translate.xml");
+    expect(bundle!.relativePath).toBe("prompts/Translate.tp");
 
     // Check diagnostics sent
     const diag = sentDiagnostics.find((d) => d.uri === templateUri);
@@ -108,7 +108,7 @@ describe("TypePrompt Language Server", () => {
     // Write typeprompt.yml with array include
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n  - extra/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n  - extra/**/*.tp\n",
       "utf-8",
     );
 
@@ -118,12 +118,12 @@ describe("TypePrompt Language Server", () => {
     await fs.mkdir(extraDir, { recursive: true });
 
     await fs.writeFile(
-      path.join(promptsDir, "A.xml"),
+      path.join(promptsDir, "A.tp"),
       '<template name="A"><system>A</system><user>A</user></template>',
       "utf-8",
     );
     await fs.writeFile(
-      path.join(extraDir, "B.xml"),
+      path.join(extraDir, "B.tp"),
       '<template name="B"><system>B</system><user>B</user></template>',
       "utf-8",
     );
@@ -146,7 +146,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
@@ -155,7 +155,7 @@ describe("TypePrompt Language Server", () => {
 
     // Namespace file
     await fs.writeFile(
-      path.join(financeDir, "shared.xml"),
+      path.join(financeDir, "shared.tp"),
       `<namespace name="Finance">
   interface Item {
     id: string;
@@ -167,7 +167,7 @@ describe("TypePrompt Language Server", () => {
 
     // Template referencing Finance namespace
     await fs.writeFile(
-      path.join(financeDir, "Invoice.xml"),
+      path.join(financeDir, "Invoice.tp"),
       `<template name="Invoice" namespace="Finance">
   <schema output-format="text">
     interface Input {
@@ -188,7 +188,7 @@ describe("TypePrompt Language Server", () => {
     const project = Array.from(extension.projects.values())[0];
     expect(project?.templateFiles.size).toBe(2);
 
-    const invoiceUri = fsPathToUri(path.join(financeDir, "Invoice.xml"));
+    const invoiceUri = fsPathToUri(path.join(financeDir, "Invoice.tp"));
     const diag = sentDiagnostics.find((d) => d.uri === invoiceUri);
     expect(diag !== undefined).toBe(true);
     expect(diag!.diagnostics.length).toBe(0);
@@ -203,18 +203,18 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
-    const templatePath = path.join(promptsDir, "Translate.xml");
+    const templatePath = path.join(promptsDir, "Translate.tp");
     await fs.writeFile(templatePath, "on-disk content", "utf-8");
 
     const templateUri = fsPathToUri(templatePath);
     const inMemoryText = "in-memory unsaved content";
-    const doc = TextDocument.create(templateUri, "xml", 1, inMemoryText);
+    const doc = TextDocument.create(templateUri, "typeprompt", 1, inMemoryText);
     openDocs.set(templateUri, doc);
 
     extension.setFileContent(templateUri, {
@@ -240,13 +240,13 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
-    const templatePath = path.join(promptsDir, "Temp.xml");
+    const templatePath = path.join(promptsDir, "Temp.tp");
     await fs.writeFile(
       templatePath,
       `<template name="Temp">
@@ -298,7 +298,7 @@ describe("TypePrompt Language Server", () => {
 
     // Create base templates
     const baseFiles = {
-      "prompts/Translate.xml": `<template name="Translate">
+      "prompts/Translate.tp": `<template name="Translate">
   <schema>
     interface Input { text: string; }
     type Output = string;
@@ -316,7 +316,7 @@ describe("TypePrompt Language Server", () => {
     // Write project files
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n",
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
     await fs.writeFile(
@@ -329,7 +329,7 @@ describe("TypePrompt Language Server", () => {
     await fs.mkdir(promptsDir, { recursive: true });
 
     // Write override with mismatched schema
-    const translatePath = path.join(promptsDir, "Translate.xml");
+    const translatePath = path.join(promptsDir, "Translate.tp");
     await fs.writeFile(
       translatePath,
       `<template name="Translate">
@@ -370,7 +370,7 @@ describe("TypePrompt Language Server", () => {
     );
 
     const baseFiles = {
-      "prompts/Translate.xml": `<template name="Translate">
+      "prompts/Translate.tp": `<template name="Translate">
   <schema>
     interface Input { text: string; }
     type Output = string;
@@ -387,7 +387,7 @@ describe("TypePrompt Language Server", () => {
 
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n",
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
     await fs.writeFile(
@@ -398,7 +398,7 @@ describe("TypePrompt Language Server", () => {
 
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
-    const translatePath = path.join(promptsDir, "Translate.xml");
+    const translatePath = path.join(promptsDir, "Translate.tp");
     const translateContent = `<template name="Translate">
   <schema>
     interface Input { text: string; }
@@ -418,7 +418,7 @@ describe("TypePrompt Language Server", () => {
 
     // Update patch-base in memory to require count: number
     const updatedBaseFiles = {
-      "prompts/Translate.xml": `<template name="Translate">
+      "prompts/Translate.tp": `<template name="Translate">
   <schema>
     interface Input { count: number; }
     type Output = string;
@@ -467,7 +467,7 @@ describe("TypePrompt Language Server", () => {
     );
 
     const baseFiles = {
-      "prompts/Translate.xml": `<template name="Translate">
+      "prompts/Translate.tp": `<template name="Translate">
   <schema>
     interface Input { text: string; }
     type Output = string;
@@ -484,7 +484,7 @@ describe("TypePrompt Language Server", () => {
 
     const patchBaseUri = fsPathToUri(path.join(tempDir, "patch-base.json"));
     const translateUri = fsPathToUri(
-      path.join(tempDir, "prompts", "Translate.xml"),
+      path.join(tempDir, "prompts", "Translate.tp"),
     );
     const configUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
 
@@ -514,7 +514,7 @@ describe("TypePrompt Language Server", () => {
 
     // Now add typeprompt.yml
     const configContent =
-      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.xml\n";
+      "patch:\n  base: patch-base.json\n  overrides: overrides.json\ninclude:\n  - prompts/**/*.tp\n";
     extension.setFileContent(configUri, {
       content: configContent,
       lineFinder: createLineFinder(configContent),
@@ -542,7 +542,7 @@ describe("TypePrompt Language Server", () => {
     // Write typeprompt.yaml
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yaml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
@@ -550,7 +550,7 @@ describe("TypePrompt Language Server", () => {
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
     await fs.writeFile(
-      path.join(promptsDir, "Translate.xml"),
+      path.join(promptsDir, "Translate.tp"),
       `<template name="Translate">
   <schema output-format="text">
     interface Input { text: string; }
@@ -568,7 +568,7 @@ describe("TypePrompt Language Server", () => {
     expect(extension.projects.size).toBe(1);
     expect(extension.templateFiles.size).toBe(1);
 
-    const translateUri = fsPathToUri(path.join(promptsDir, "Translate.xml"));
+    const translateUri = fsPathToUri(path.join(promptsDir, "Translate.tp"));
     const diags = sentDiagnostics.filter((d) => d.uri === translateUri);
     expect(diags.length >= 1).toBe(true);
     expect(diags[diags.length - 1]!.diagnostics.length).toBe(0);
@@ -580,17 +580,17 @@ describe("TypePrompt Language Server", () => {
       () => undefined,
     );
 
-    // Write typeprompt.yml with include 'prompts-yml/**/*.xml'
+    // Write typeprompt.yml with include 'prompts-yml/**/*.tp'
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yml"),
-      "include:\n  - prompts-yml/**/*.xml\n",
+      "include:\n  - prompts-yml/**/*.tp\n",
       "utf-8",
     );
 
-    // Write typeprompt.yaml with include 'prompts/**/*.xml'
+    // Write typeprompt.yaml with include 'prompts/**/*.tp'
     await fs.writeFile(
       path.join(tempDir, "typeprompt.yaml"),
-      "include:\n  - prompts/**/*.xml\n",
+      "include:\n  - prompts/**/*.tp\n",
       "utf-8",
     );
 
@@ -598,7 +598,7 @@ describe("TypePrompt Language Server", () => {
     const promptsDir = path.join(tempDir, "prompts");
     await fs.mkdir(promptsDir, { recursive: true });
     await fs.writeFile(
-      path.join(promptsDir, "Test.xml"),
+      path.join(promptsDir, "Test.tp"),
       `<template name="Test">
   <schema output-format="text">
     interface Input { text: string; }
@@ -613,7 +613,7 @@ describe("TypePrompt Language Server", () => {
     extension.setWorkspaceFolders([fsPathToUri(tempDir)]);
     await extension.runScan();
 
-    const templateUri = fsPathToUri(path.join(promptsDir, "Test.xml"));
+    const templateUri = fsPathToUri(path.join(promptsDir, "Test.tp"));
     const match = extension.findProjectByUri(templateUri);
     expect(match !== undefined).toBe(true);
     expect(match!.project.configUri.endsWith("/typeprompt.yaml")).toBe(true);
@@ -638,7 +638,12 @@ describe("TypePrompt Language Server", () => {
 
     it("returns empty edits for identical strings", () => {
       const original = "<template>\n  <system>Hello</system>\n</template>";
-      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const doc = TextDocument.create(
+        "file:///test.tp",
+        "typeprompt",
+        1,
+        original,
+      );
       const edits = computeEdits(doc, original);
       expect(edits.length).toBe(0);
     });
@@ -646,7 +651,12 @@ describe("TypePrompt Language Server", () => {
     it("computes insertion edits", () => {
       const original = "Hello World";
       const formatted = "Hello Beautiful World";
-      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const doc = TextDocument.create(
+        "file:///test.tp",
+        "typeprompt",
+        1,
+        original,
+      );
       const edits = computeEdits(doc, formatted);
       expect(edits.length).toBe(1);
       expect(applyEdits(doc, edits)).toBe(formatted);
@@ -655,7 +665,12 @@ describe("TypePrompt Language Server", () => {
     it("computes deletion edits", () => {
       const original = "Hello Beautiful World";
       const formatted = "Hello World";
-      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const doc = TextDocument.create(
+        "file:///test.tp",
+        "typeprompt",
+        1,
+        original,
+      );
       const edits = computeEdits(doc, formatted);
       expect(edits.length).toBe(1);
       expect(applyEdits(doc, edits)).toBe(formatted);
@@ -664,7 +679,12 @@ describe("TypePrompt Language Server", () => {
     it("computes replacement edits", () => {
       const original = "Hello Earth";
       const formatted = "Hello Moon";
-      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const doc = TextDocument.create(
+        "file:///test.tp",
+        "typeprompt",
+        1,
+        original,
+      );
       const edits = computeEdits(doc, formatted);
       expect(edits.length).toBe(1);
       expect(applyEdits(doc, edits)).toBe(formatted);
@@ -684,7 +704,12 @@ describe("TypePrompt Language Server", () => {
   <user><insert val="input.text" /></user>
 </template>
 `;
-      const doc = TextDocument.create("file:///test.xml", "xml", 1, original);
+      const doc = TextDocument.create(
+        "file:///test.tp",
+        "typeprompt",
+        1,
+        original,
+      );
       const edits = computeEdits(doc, formatted);
       expect(edits.length > 0).toBe(true);
       expect(applyEdits(doc, edits)).toBe(formatted);
@@ -717,7 +742,7 @@ describe("TypePrompt Language Server", () => {
 
       // Create workspace config
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include:\n  - prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -735,11 +760,11 @@ type Output=string;
 
       const promptsDir = path.join(tempDir, "prompts");
       await fs.mkdir(promptsDir, { recursive: true });
-      const filePath = path.join(promptsDir, "Translate.xml");
+      const filePath = path.join(promptsDir, "Translate.tp");
       await fs.writeFile(filePath, unformattedXml, "utf-8");
 
       const fileUri = fsPathToUri(filePath);
-      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, unformattedXml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: unformattedXml,
@@ -756,7 +781,7 @@ type Output=string;
       // Formatting again should produce 0 edits
       const updatedDoc = TextDocument.create(
         fileUri,
-        "xml",
+        "typeprompt",
         2,
         formattedResult,
       );
@@ -778,7 +803,7 @@ type Output=string;
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include:\n  - prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -787,8 +812,8 @@ type Output=string;
 
       const unformattedXml =
         '<template name="Test"><schema>type Input = string;type Output=string;</schema><system>Hello</system><user>World</user></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, unformattedXml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, unformattedXml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: unformattedXml,
@@ -840,9 +865,7 @@ type Output=string;
       );
       const unformattedXml =
         '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(
-        path.join(tempDir, "other", "Unassigned.xml"),
-      );
+      const fileUri = fsPathToUri(path.join(tempDir, "other", "Unassigned.tp"));
       extension.setFileContent(fileUri, {
         content: unformattedXml,
         lineFinder: createLineFinder(unformattedXml),
@@ -870,7 +893,7 @@ type Output=string;
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const ymlContent = "include:\n  - prompts/**/*.xml\n";
+      const ymlContent = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: ymlContent,
         lineFinder: createLineFinder(ymlContent),
@@ -878,7 +901,7 @@ type Output=string;
       });
 
       const invalidXml = "<template><unclosed>";
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Invalid.xml"));
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Invalid.tp"));
       extension.setFileContent(fileUri, {
         content: invalidXml,
         lineFinder: createLineFinder(invalidXml),
@@ -946,7 +969,12 @@ type Output=string;
   <system>You are a translator.</system>
   <user><insert val="input.text" /></user>
 </template>`;
-      const doc = TextDocument.create("file:///Translate.xml", "xml", 1, xml);
+      const doc = TextDocument.create(
+        "file:///Translate.tp",
+        "typeprompt",
+        1,
+        xml,
+      );
       const tokens = computeSemanticTokens(doc);
       const decoded = decodeSemanticTokens(tokens, doc);
 
@@ -1010,7 +1038,7 @@ comment here -->
     interface Input {}
   </schema>
 </template>`;
-      const doc = TextDocument.create("file:///Test.xml", "xml", 1, xml);
+      const doc = TextDocument.create("file:///Test.tp", "typeprompt", 1, xml);
       const tokens = computeSemanticTokens(doc);
       const decoded = decodeSemanticTokens(tokens, doc);
 
@@ -1051,7 +1079,7 @@ comment here -->
       output: 42
   </examples>
 </template>`;
-      const doc = TextDocument.create("file:///Test.xml", "xml", 1, xml);
+      const doc = TextDocument.create("file:///Test.tp", "typeprompt", 1, xml);
       const tokens = computeSemanticTokens(doc);
       const decoded = decodeSemanticTokens(tokens, doc);
 
@@ -1093,7 +1121,7 @@ comment here -->
 
       // Configure workspace
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1101,7 +1129,7 @@ comment here -->
       });
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
 
       // Set via bundle without opening in editor -> returns empty
       extension.setFileContent(fileUri, {
@@ -1112,7 +1140,7 @@ comment here -->
       expect(extension.getSemanticTokens(fileUri).data.length).toBe(0);
 
       // Now simulate document opened in editor
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       const openDocTokens = extension.getSemanticTokens(fileUri);
@@ -1127,8 +1155,8 @@ comment here -->
       );
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       // No workspace configured, returns empty data
@@ -1155,7 +1183,7 @@ comment here -->
       expect(extension.getSemanticTokens(ymlUri).data.length).toBe(0);
 
       // Configure workspace
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1164,8 +1192,8 @@ comment here -->
 
       // XML without root
       const noRootXml = "</root>";
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "NoRoot.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, noRootXml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "NoRoot.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, noRootXml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: noRootXml,
@@ -1184,7 +1212,7 @@ comment here -->
 
       // Configure workspace
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1192,10 +1220,8 @@ comment here -->
       });
 
       const unclosedXml = "<template><unclosed>";
-      const fileUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Unclosed.xml"),
-      );
-      const doc = TextDocument.create(fileUri, "xml", 1, unclosedXml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Unclosed.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, unclosedXml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: unclosedXml,
@@ -1215,7 +1241,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1235,8 +1261,8 @@ comment here -->
         "</template>",
       ].join("\n");
 
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: xml,
@@ -1262,8 +1288,8 @@ comment here -->
       );
 
       const xml = '<template name="Test"><system><</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       const items = extension.getCompletionItems(fileUri, {
@@ -1280,7 +1306,7 @@ comment here -->
         (uri) => openDocs.get(uri),
       );
 
-      const yaml = "include:\n  - prompts/**/*.xml\ngen:\n  ";
+      const yaml = "include:\n  - prompts/**/*.tp\ngen:\n  ";
       const yamlUri = fsPathToUri(path.join(tempDir, "typeprompt.yaml"));
       const doc = TextDocument.create(yamlUri, "yaml", 1, yaml);
       openDocs.set(yamlUri, doc);
@@ -1339,7 +1365,7 @@ comment here -->
   });
 
   describe("getDefinition", () => {
-    it("jumps from shared type reference in template to definition in namespace shared.xml", async () => {
+    it("jumps from shared type reference in template to definition in namespace shared.tp", async () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
         () => {},
@@ -1347,7 +1373,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1359,10 +1385,13 @@ comment here -->
     name: string;
   };
 </namespace>`;
-      const sharedUri = fsPathToUri(
-        path.join(tempDir, "prompts", "shared.xml"),
+      const sharedUri = fsPathToUri(path.join(tempDir, "prompts", "shared.tp"));
+      const sharedDoc = TextDocument.create(
+        sharedUri,
+        "typeprompt",
+        1,
+        sharedXml,
       );
-      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
       openDocs.set(sharedUri, sharedDoc);
       extension.setFileContent(sharedUri, {
         content: sharedXml,
@@ -1381,11 +1410,11 @@ comment here -->
   <user>Hello <insert val="input.user.name"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1418,7 +1447,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1436,11 +1465,11 @@ comment here -->
   <user>Hello <insert val="input.text"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1477,7 +1506,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1494,11 +1523,11 @@ comment here -->
   <user>Status: <insert val="input.status"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1529,7 +1558,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1553,11 +1582,11 @@ comment here -->
   </variant>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Support.xml"),
+        path.join(tempDir, "prompts", "Support.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1590,7 +1619,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1612,10 +1641,10 @@ comment here -->
   <system>Doc</system>
   <user><insert snippet="style"/></user>
 </template>`;
-      const templateUri = fsPathToUri(path.join(tempDir, "prompts", "Doc.xml"));
+      const templateUri = fsPathToUri(path.join(tempDir, "prompts", "Doc.tp"));
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1647,8 +1676,8 @@ comment here -->
       );
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       const def = extension.getDefinition(fileUri, { line: 0, character: 0 });
@@ -1665,7 +1694,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1677,10 +1706,13 @@ comment here -->
     name: string;
   };
 </namespace>`;
-      const sharedUri = fsPathToUri(
-        path.join(tempDir, "prompts", "shared.xml"),
+      const sharedUri = fsPathToUri(path.join(tempDir, "prompts", "shared.tp"));
+      const sharedDoc = TextDocument.create(
+        sharedUri,
+        "typeprompt",
+        1,
+        sharedXml,
       );
-      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
       openDocs.set(sharedUri, sharedDoc);
       extension.setFileContent(sharedUri, {
         content: sharedXml,
@@ -1699,11 +1731,11 @@ comment here -->
   <user>Hello <insert val="input.user.name"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1714,7 +1746,7 @@ comment here -->
         lastModified: Date.now(),
       });
 
-      // Find references from `User` declaration in shared.xml
+      // Find references from `User` declaration in shared.tp
       const userDefOffset = sharedXml.indexOf("User");
       const pos = sharedDoc.positionAt(userDefOffset + 1);
       const refs = extension.getReferences(sharedUri, pos, {
@@ -1735,7 +1767,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1747,10 +1779,13 @@ comment here -->
     name: string;
   };
 </namespace>`;
-      const sharedUri = fsPathToUri(
-        path.join(tempDir, "prompts", "shared.xml"),
+      const sharedUri = fsPathToUri(path.join(tempDir, "prompts", "shared.tp"));
+      const sharedDoc = TextDocument.create(
+        sharedUri,
+        "typeprompt",
+        1,
+        sharedXml,
       );
-      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
       openDocs.set(sharedUri, sharedDoc);
       extension.setFileContent(sharedUri, {
         content: sharedXml,
@@ -1769,11 +1804,11 @@ comment here -->
   <user>Hello</user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1784,7 +1819,7 @@ comment here -->
         lastModified: Date.now(),
       });
 
-      // Find references from `shared.User` reference in Greet.xml with includeDeclaration: false
+      // Find references from `shared.User` reference in Greet.tp with includeDeclaration: false
       const userRefOffset = templateXml.indexOf("User");
       const pos = templateDoc.positionAt(userRefOffset + 1);
       const refs = extension.getReferences(templateUri, pos, {
@@ -1804,7 +1839,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1822,11 +1857,11 @@ comment here -->
   <user>Hello: <insert val="input.title"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1857,7 +1892,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1865,8 +1900,8 @@ comment here -->
       });
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
       extension.setFileContent(fileUri, {
         content: xml,
@@ -1889,8 +1924,8 @@ comment here -->
       );
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       const refs = extension.getReferences(fileUri, {
@@ -1910,7 +1945,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -1922,10 +1957,13 @@ comment here -->
     field: string;
   };
 </namespace>`;
-      const sharedUri = fsPathToUri(
-        path.join(tempDir, "prompts", "shared.xml"),
+      const sharedUri = fsPathToUri(path.join(tempDir, "prompts", "shared.tp"));
+      const sharedDoc = TextDocument.create(
+        sharedUri,
+        "typeprompt",
+        1,
+        sharedXml,
       );
-      const sharedDoc = TextDocument.create(sharedUri, "xml", 1, sharedXml);
       openDocs.set(sharedUri, sharedDoc);
       extension.setFileContent(sharedUri, {
         content: sharedXml,
@@ -1944,11 +1982,11 @@ comment here -->
   <user>Hello</user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -1959,7 +1997,7 @@ comment here -->
         lastModified: Date.now(),
       });
 
-      // Trigger rename on `OldType` in shared.xml
+      // Trigger rename on `OldType` in shared.tp
       const oldTypeOffset = sharedXml.indexOf("OldType");
       const pos = sharedDoc.positionAt(oldTypeOffset + 1);
       const edit = extension.renameSymbol(sharedUri, pos, "NewType");
@@ -1998,7 +2036,7 @@ comment here -->
       );
 
       const ymlUri = fsPathToUri(path.join(tempDir, "typeprompt.yml"));
-      const yml = "include:\n  - prompts/**/*.xml\n";
+      const yml = "include:\n  - prompts/**/*.tp\n";
       extension.setFileContent(ymlUri, {
         content: yml,
         lineFinder: createLineFinder(yml),
@@ -2016,11 +2054,11 @@ comment here -->
   <user>Message: <insert val="input.greeting"/></user>
 </template>`;
       const templateUri = fsPathToUri(
-        path.join(tempDir, "prompts", "Greet.xml"),
+        path.join(tempDir, "prompts", "Greet.tp"),
       );
       const templateDoc = TextDocument.create(
         templateUri,
-        "xml",
+        "typeprompt",
         1,
         templateXml,
       );
@@ -2063,8 +2101,8 @@ comment here -->
       );
 
       const xml = '<template name="Test"><system>Hello</system></template>';
-      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.xml"));
-      const doc = TextDocument.create(fileUri, "xml", 1, xml);
+      const fileUri = fsPathToUri(path.join(tempDir, "prompts", "Test.tp"));
+      const doc = TextDocument.create(fileUri, "typeprompt", 1, xml);
       openDocs.set(fileUri, doc);
 
       const edit = extension.renameSymbol(

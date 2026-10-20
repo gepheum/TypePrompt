@@ -15,7 +15,10 @@ async function onToggleComment(): Promise<void> {
   }
 
   const document = editor.document;
-  if (document.languageId !== "xml" && !document.fileName.endsWith(".xml")) {
+  if (
+    document.languageId !== "typeprompt" &&
+    !document.fileName.endsWith(".tp")
+  ) {
     await commands.executeCommand("editor.action.commentLine");
     return;
   }

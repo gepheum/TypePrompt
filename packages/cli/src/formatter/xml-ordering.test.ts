@@ -10,7 +10,7 @@ describe("reorderXmlElements", () => {
   <system>S</system>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -31,7 +31,7 @@ describe("reorderXmlElements", () => {
   </schema>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -72,7 +72,7 @@ describe("reorderXmlElements", () => {
   </meta>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -116,7 +116,7 @@ describe("reorderXmlElements", () => {
   <user>U</user>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -131,7 +131,7 @@ describe("reorderXmlElements", () => {
   <system>S</system>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -151,7 +151,7 @@ describe("reorderXmlElements", () => {
   </variant>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -172,7 +172,7 @@ describe("reorderXmlElements", () => {
   <description>Search tool description</description>
 </tool>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -194,7 +194,7 @@ describe("reorderXmlElements", () => {
   </schema>
 </tool>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -207,7 +207,7 @@ describe("reorderXmlElements", () => {
   type A = number;
 </namespace>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -221,7 +221,7 @@ describe("reorderXmlElements", () => {
   </snippet>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -237,7 +237,7 @@ describe("reorderXmlElements", () => {
   <system>S</system>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -253,7 +253,7 @@ describe("reorderXmlElements", () => {
   </snippet>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);
@@ -271,7 +271,7 @@ describe("reorderXmlElements", () => {
   </snippet>
 </template>`;
 
-    const doc = parseXmlDocument(xml, "test.xml");
+    const doc = parseXmlDocument(xml, "test.tp");
     if (doc.kind !== "success") throw new Error("Parse failed");
 
     const reordered = reorderXmlDocument(doc);

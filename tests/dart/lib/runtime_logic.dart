@@ -248,7 +248,7 @@ final class _Spec_Templates {
   final Map<String, _Spec_Template> templates;
   final Map<String, _Spec_Tool> tools;
 
-  /// The key is a relative path to a .xml file. The value is the file content.
+  /// The key is a relative path to a .tp file. The value is the file content.
   final Map<String, String> sourceFiles;
 
   _Spec_Templates({

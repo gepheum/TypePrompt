@@ -7,7 +7,7 @@ import type { InternalErrors, MappedText } from "../util/shared-types.js";
 
 export type Config = {
   /** Glob pattern(s) to match template files to be processed. */
-  // Usually: 'prompts/**/*.xml'
+  // Usually: 'prompts/**/*.tp'
   readonly include: readonly string[];
 
   readonly gen?: {

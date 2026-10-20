@@ -96,7 +96,7 @@ export default defineConfig({
     ],
 
     footer: {
-      copyright: "Copyright © 2025-present TypePrompt",
+      copyright: "Copyright © 2026-present TypePrompt",
     },
 
     editLink: {

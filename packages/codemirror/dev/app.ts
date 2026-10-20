@@ -9,17 +9,17 @@ interface SampleTemplate {
   readonly name: string;
   readonly path: string;
   readonly description: string;
-  readonly xml: string;
+  readonly content: string;
 }
 
 const sampleTemplates: readonly SampleTemplate[] = [
   {
     id: "summarize",
     name: "Summarize Document",
-    path: "prompts/SummarizeDocument.xml",
+    path: "prompts/SummarizeDocument.tp",
     description:
       "Full prompt template with meta, schemas, system instructions, and examples",
-    xml: `<template name="SummarizeDocument">
+    content: `<template name="SummarizeDocument">
   <meta>
     model: gpt-4o
     temperature: 0.2
@@ -70,10 +70,10 @@ const sampleTemplates: readonly SampleTemplate[] = [
   {
     id: "catmood",
     name: "Cat Mood Decoder",
-    path: "prompts/DecodeCatMood.xml",
+    path: "prompts/DecodeCatMood.tp",
     description:
       "Template featuring union types, custom prompts, and prompt parameters",
-    xml: `<template name="DecodeCatMood">
+    content: `<template name="DecodeCatMood">
   <meta>
     model: gpt-4o
     temperature: 0.3
@@ -108,9 +108,9 @@ const sampleTemplates: readonly SampleTemplate[] = [
   {
     id: "triage",
     name: "Ticket Triage",
-    path: "prompts/TriageTicket.xml",
+    path: "prompts/TriageTicket.tp",
     description: "Template with tools and structured classification",
-    xml: `<template name="TriageTicket">
+    content: `<template name="TriageTicket">
   <meta>
     model: claude-3-5-sonnet
     temperature: 0.1
@@ -145,10 +145,10 @@ const sampleTemplates: readonly SampleTemplate[] = [
   {
     id: "errors",
     name: "Template with Errors (Live Diagnostics Demo)",
-    path: "prompts/BrokenExample.xml",
+    path: "prompts/BrokenExample.tp",
     description:
       "Demonstrates real-time error detection, red squiggles, and quick-fix suggestions",
-    xml: `<template name="BrokenExample">
+    content: `<template name="BrokenExample">
   <schema>
     interface Input {
       title: string
@@ -467,7 +467,7 @@ export class App extends LitElement {
   private compilationResult: CompilationResult | null = null;
 
   @state()
-  private currentPath = "prompts/SummarizeDocument.xml";
+  private currentPath = "prompts/SummarizeDocument.tp";
 
   private get currentTemplate(): SampleTemplate {
     return (
@@ -486,7 +486,7 @@ export class App extends LitElement {
       "code-mirror-editor",
     ) as Editor | null;
     if (editorEl) {
-      editorEl.setContent(template.xml, template.path);
+      editorEl.setContent(template.content, template.path);
     }
   }
 
@@ -583,7 +583,7 @@ export class App extends LitElement {
           </div>
 
           <code-mirror-editor
-            .content="${template.xml}"
+            .content="${template.content}"
             .path="${template.path}"
             .darkMode="${this.darkMode}"
             @typeprompt-change="${this.handleEditorChange}"

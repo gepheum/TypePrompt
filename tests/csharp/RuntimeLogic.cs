@@ -793,7 +793,7 @@ file static class Spec
         [JsonPropertyName("tools")]
         public required IReadOnlyDictionary<string, Tool> Tools { get; init; }
         /// <summary>
-        /// The key is a relative path to a .xml file. The value is the file content.
+        /// The key is a relative path to a .tp file. The value is the file content.
         /// </summary>
         [JsonPropertyName("sourceFiles")]
         public required IReadOnlyDictionary<string, string> SourceFiles { get; init; }

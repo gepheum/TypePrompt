@@ -7,13 +7,13 @@ describe("getElementContentFormat", () => {
   it("determines schema content format for namespace and schema", () => {
     const doc = parseXmlDocument(
       "<schema>type X = string;</schema>",
-      "test.xml",
+      "test.tp",
     );
     expect(getElementContentFormat(doc.root!, 0)).toBe("schema");
 
     const nsDoc = parseXmlDocument(
       '<namespace name="Foo"></namespace>',
-      "test.xml",
+      "test.tp",
     );
     expect(getElementContentFormat(nsDoc.root!, 0)).toBe("schema");
   });
@@ -21,7 +21,7 @@ describe("getElementContentFormat", () => {
   it("determines meta format based on depth", () => {
     const metaDoc = parseXmlDocument(
       "<meta>type X = string;</meta>",
-      "test.xml",
+      "test.tp",
     );
     // Top-level meta (depth 0) is schema
     expect(getElementContentFormat(metaDoc.root!, 0)).toBe("schema");
@@ -31,16 +31,16 @@ describe("getElementContentFormat", () => {
   });
 
   it("determines yaml content format for tools and examples", () => {
-    const toolsDoc = parseXmlDocument("<tools></tools>", "test.xml");
+    const toolsDoc = parseXmlDocument("<tools></tools>", "test.tp");
     expect(getElementContentFormat(toolsDoc.root!, 1)).toBe("yaml");
 
-    const examplesDoc = parseXmlDocument("<examples></examples>", "test.xml");
+    const examplesDoc = parseXmlDocument("<examples></examples>", "test.tp");
     expect(getElementContentFormat(examplesDoc.root!, 1)).toBe("yaml");
   });
 
   it("determines rendered-xml for system, user, description, then, else, on", () => {
     for (const tag of ["system", "user", "description", "then", "else", "on"]) {
-      const doc = parseXmlDocument(`<${tag}></${tag}>`, "test.xml");
+      const doc = parseXmlDocument(`<${tag}></${tag}>`, "test.tp");
       expect(getElementContentFormat(doc.root!, 1)).toBe("rendered-xml");
     }
   });
@@ -48,7 +48,7 @@ describe("getElementContentFormat", () => {
   it("determines unrendered-xml or rendered-xml for snippet based on if/switch attributes", () => {
     const conditionalSnippet = parseXmlDocument(
       '<snippet if="val"></snippet>',
-      "test.xml",
+      "test.tp",
     );
     expect(getElementContentFormat(conditionalSnippet.root!, 1)).toBe(
       "unrendered-xml",
@@ -56,13 +56,13 @@ describe("getElementContentFormat", () => {
 
     const switchSnippet = parseXmlDocument(
       '<snippet switch="val"></snippet>',
-      "test.xml",
+      "test.tp",
     );
     expect(getElementContentFormat(switchSnippet.root!, 1)).toBe(
       "unrendered-xml",
     );
 
-    const plainSnippet = parseXmlDocument("<snippet></snippet>", "test.xml");
+    const plainSnippet = parseXmlDocument("<snippet></snippet>", "test.tp");
     expect(getElementContentFormat(plainSnippet.root!, 1)).toBe("rendered-xml");
   });
 
@@ -75,7 +75,7 @@ describe("getElementContentFormat", () => {
       "enclosed",
       "insert",
     ]) {
-      const doc = parseXmlDocument(`<${tag}></${tag}>`, "test.xml");
+      const doc = parseXmlDocument(`<${tag}></${tag}>`, "test.tp");
       expect(getElementContentFormat(doc.root!, 0)).toBe("unrendered-xml");
     }
   });

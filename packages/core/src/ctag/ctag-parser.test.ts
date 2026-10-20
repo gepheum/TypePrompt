@@ -4,7 +4,7 @@ import { describe, it } from "mocha";
 import type { MappedText } from "../util/shared-types.js";
 import { parseCTag } from "./ctag-parser.js";
 
-function textNode(source: string, path = "test.xml"): MappedText {
+function textNode(source: string, path = "test.tp"): MappedText {
   return {
     path,
     text: source,
@@ -223,7 +223,7 @@ describe("parseCTag - errors", () => {
 describe("parseCTag - source position remapping", () => {
   it("remaps unquoted identifier spans via the offsetMap", () => {
     const content: MappedText = {
-      path: "test.xml",
+      path: "test.tp",
       text: "hello",
       offsetMap: [{ textPosition: 0, sourcePosition: 10 }],
     };
@@ -236,7 +236,7 @@ describe("parseCTag - source position remapping", () => {
   it("remaps quoted identifier spans via the offsetMap", () => {
     // text = '"hi"', identifier text positions 1-3, source offset = +5
     const content: MappedText = {
-      path: "test.xml",
+      path: "test.tp",
       text: '"hi"',
       offsetMap: [{ textPosition: 0, sourcePosition: 5 }],
     };

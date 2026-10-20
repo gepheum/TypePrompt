@@ -28,30 +28,30 @@ function makeAttr<T extends string>(text: T): AttributeValue<T> {
 // ---------------------------------------------------------------------------
 
 describe("checkMetaSourcePath", () => {
-  it("succeeds for exact filename 'meta.xml'", () => {
-    expect(checkMetaSourcePath("meta.xml")).toMatch([]);
+  it("succeeds for exact filename 'meta.tp'", () => {
+    expect(checkMetaSourcePath("meta.tp")).toMatch([]);
   });
 
-  it("succeeds for nested path ending in '/meta.xml'", () => {
-    expect(checkMetaSourcePath("prompts/meta.xml")).toMatch([]);
+  it("succeeds for nested path ending in '/meta.tp'", () => {
+    expect(checkMetaSourcePath("prompts/meta.tp")).toMatch([]);
   });
 
-  it("succeeds for deeply nested path ending in '/meta.xml'", () => {
-    expect(checkMetaSourcePath("src/features/prompts/meta.xml")).toMatch([]);
+  it("succeeds for deeply nested path ending in '/meta.tp'", () => {
+    expect(checkMetaSourcePath("src/features/prompts/meta.tp")).toMatch([]);
   });
 
-  it("reports an error when the filename is not 'meta.xml'", () => {
-    expect(checkMetaSourcePath("prompts/other.xml")).toMatch([
+  it("reports an error when the filename is not 'meta.tp'", () => {
+    expect(checkMetaSourcePath("prompts/other.tp")).toMatch([
       {
-        message: "File path should match '**/meta.xml'",
+        message: "File path should match '**/meta.tp'",
       },
     ]);
   });
 
   it("reports an error when filename has an extension suffix", () => {
-    expect(checkMetaSourcePath("meta.xml.bak")).toMatch([
+    expect(checkMetaSourcePath("meta.tp.bak")).toMatch([
       {
-        message: "File path should match '**/meta.xml'",
+        message: "File path should match '**/meta.tp'",
       },
     ]);
   });
@@ -62,49 +62,47 @@ describe("checkMetaSourcePath", () => {
 // ---------------------------------------------------------------------------
 
 describe("checkNamespaceSourcePath", () => {
-  it("succeeds for default Main namespace with 'shared.xml'", () => {
-    expect(checkNamespaceSourcePath(makeAttr("Main"), "shared.xml")).toMatch(
-      [],
-    );
+  it("succeeds for default Main namespace with 'shared.tp'", () => {
+    expect(checkNamespaceSourcePath(makeAttr("Main"), "shared.tp")).toMatch([]);
   });
 
-  it("succeeds for default Main namespace with 'prompts/shared.xml'", () => {
+  it("succeeds for default Main namespace with 'prompts/shared.tp'", () => {
     expect(
-      checkNamespaceSourcePath(makeAttr("Main"), "prompts/shared.xml"),
+      checkNamespaceSourcePath(makeAttr("Main"), "prompts/shared.tp"),
     ).toMatch([]);
   });
 
-  it("reports an error when default Main namespace file is not 'shared.xml'", () => {
+  it("reports an error when default Main namespace file is not 'shared.tp'", () => {
     expect(
-      checkNamespaceSourcePath(makeAttr("Main"), "prompts/custom.xml"),
+      checkNamespaceSourcePath(makeAttr("Main"), "prompts/custom.tp"),
     ).toMatch([
       {
-        message: "File path should match '**/shared.xml'",
+        message: "File path should match '**/shared.tp'",
       },
     ]);
   });
 
-  it("succeeds for custom namespace with '<Namespace>/shared.xml'", () => {
+  it("succeeds for custom namespace with '<Namespace>/shared.tp'", () => {
     expect(
-      checkNamespaceSourcePath(makeAttr("Billing"), "Billing/shared.xml"),
+      checkNamespaceSourcePath(makeAttr("Billing"), "Billing/shared.tp"),
     ).toMatch([]);
   });
 
-  it("succeeds for custom namespace with 'prompts/<Namespace>/shared.xml'", () => {
+  it("succeeds for custom namespace with 'prompts/<Namespace>/shared.tp'", () => {
     expect(
       checkNamespaceSourcePath(
         makeAttr("Billing"),
-        "prompts/Billing/shared.xml",
+        "prompts/Billing/shared.tp",
       ),
     ).toMatch([]);
   });
 
   it("reports an error when custom namespace file is in the wrong directory", () => {
     expect(
-      checkNamespaceSourcePath(makeAttr("Billing"), "prompts/shared.xml"),
+      checkNamespaceSourcePath(makeAttr("Billing"), "prompts/shared.tp"),
     ).toMatch([
       {
-        message: "File path should match '**/Billing/shared.xml'",
+        message: "File path should match '**/Billing/shared.tp'",
       },
     ]);
   });
@@ -115,22 +113,22 @@ describe("checkNamespaceSourcePath", () => {
 // ---------------------------------------------------------------------------
 
 describe("checkTemplateOrToolSourcePath", () => {
-  it("succeeds for template/tool in default namespace with '<Name>.xml'", () => {
+  it("succeeds for template/tool in default namespace with '<Name>.tp'", () => {
     expect(
       checkTemplateOrToolSourcePath(
         makeAttr("Translate"),
         undefined,
-        "Translate.xml",
+        "Translate.tp",
       ),
     ).toMatch([]);
   });
 
-  it("succeeds for template/tool in default namespace with 'prompts/<Name>.xml'", () => {
+  it("succeeds for template/tool in default namespace with 'prompts/<Name>.tp'", () => {
     expect(
       checkTemplateOrToolSourcePath(
         makeAttr("Translate"),
         undefined,
-        "prompts/Translate.xml",
+        "prompts/Translate.tp",
       ),
     ).toMatch([]);
   });
@@ -140,7 +138,7 @@ describe("checkTemplateOrToolSourcePath", () => {
       checkTemplateOrToolSourcePath(
         makeAttr("Translate"),
         makeAttr("Main"),
-        "prompts/Translate.xml",
+        "prompts/Translate.tp",
       ),
     ).toMatch([]);
   });
@@ -150,31 +148,31 @@ describe("checkTemplateOrToolSourcePath", () => {
       checkTemplateOrToolSourcePath(
         makeAttr("Translate"),
         undefined,
-        "prompts/Wrong.xml",
+        "prompts/Wrong.tp",
       ),
     ).toMatch([
       {
-        message: "File path should match '**/Translate.xml'",
+        message: "File path should match '**/Translate.tp'",
       },
     ]);
   });
 
-  it("succeeds for template/tool with custom namespace in '<Namespace>/<Name>.xml'", () => {
+  it("succeeds for template/tool with custom namespace in '<Namespace>/<Name>.tp'", () => {
     expect(
       checkTemplateOrToolSourcePath(
         makeAttr("Summarize"),
         makeAttr("Finance"),
-        "Finance/Summarize.xml",
+        "Finance/Summarize.tp",
       ),
     ).toMatch([]);
   });
 
-  it("succeeds for template/tool with custom namespace in 'prompts/<Namespace>/<Name>.xml'", () => {
+  it("succeeds for template/tool with custom namespace in 'prompts/<Namespace>/<Name>.tp'", () => {
     expect(
       checkTemplateOrToolSourcePath(
         makeAttr("Summarize"),
         makeAttr("Finance"),
-        "prompts/Finance/Summarize.xml",
+        "prompts/Finance/Summarize.tp",
       ),
     ).toMatch([]);
   });
@@ -184,11 +182,11 @@ describe("checkTemplateOrToolSourcePath", () => {
       checkTemplateOrToolSourcePath(
         makeAttr("Summarize"),
         makeAttr("Finance"),
-        "prompts/Summarize.xml",
+        "prompts/Summarize.tp",
       ),
     ).toMatch([
       {
-        message: "File path should match '**/Finance/Summarize.xml'",
+        message: "File path should match '**/Finance/Summarize.tp'",
       },
     ]);
   });
@@ -198,11 +196,11 @@ describe("checkTemplateOrToolSourcePath", () => {
       checkTemplateOrToolSourcePath(
         makeAttr("Summarize"),
         makeAttr("Finance"),
-        "prompts/Legal/Summarize.xml",
+        "prompts/Legal/Summarize.tp",
       ),
     ).toMatch([
       {
-        message: "File path should match '**/Finance/Summarize.xml'",
+        message: "File path should match '**/Finance/Summarize.tp'",
       },
     ]);
   });

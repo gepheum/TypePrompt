@@ -224,7 +224,7 @@ internal object Spec {
         val signature: String,
         val templates: Map<String, Template>,
         val tools: Map<String, Tool>,
-        /** The key is a relative path to a .xml file. The value is the file content. */
+        /** The key is a relative path to a .tp file. The value is the file content. */
         val sourceFiles: Map<String, String>,
     )
 

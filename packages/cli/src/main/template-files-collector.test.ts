@@ -29,17 +29,17 @@ describe("collectTemplateFiles", () => {
     const promptsDir = join(tempDir, "prompts");
     mkdirSync(promptsDir, { recursive: true });
     writeFileSync(
-      join(promptsDir, "Hello.xml"),
+      join(promptsDir, "Hello.tp"),
       "<template>hello</template>",
       "utf8",
     );
 
     const files = await collectTemplateFiles(tempDir, {
-      include: ["prompts/**/*.xml"],
+      include: ["prompts/**/*.tp"],
     });
 
     expect(files).toMatch({
-      "prompts/Hello.xml": "<template>hello</template>",
+      "prompts/Hello.tp": "<template>hello</template>",
     });
   });
 
@@ -47,7 +47,7 @@ describe("collectTemplateFiles", () => {
     let error: unknown;
     try {
       await collectTemplateFiles(tempDir, {
-        include: ["prompts/**/*.xml"],
+        include: ["prompts/**/*.tp"],
       });
     } catch (e) {
       error = e;
@@ -55,7 +55,7 @@ describe("collectTemplateFiles", () => {
 
     expect(error instanceof ExitError).toBe(true);
     expect((error as ExitError).message).toMatch(
-      /No template files matching 'prompts\/\*\*\/\*\.xml'/,
+      /No template files matching 'prompts\/\*\*\/\*\.tp'/,
     );
   });
 
@@ -65,7 +65,7 @@ describe("collectTemplateFiles", () => {
     mkdirSync(projectDir, { recursive: true });
     mkdirSync(outsideDir, { recursive: true });
     writeFileSync(
-      join(outsideDir, "Outside.xml"),
+      join(outsideDir, "Outside.tp"),
       "<template>outside</template>",
       "utf8",
     );
@@ -73,7 +73,7 @@ describe("collectTemplateFiles", () => {
     let error: unknown;
     try {
       await collectTemplateFiles(projectDir, {
-        include: ["../outside/*.xml"],
+        include: ["../outside/*.tp"],
       });
     } catch (e) {
       error = e;

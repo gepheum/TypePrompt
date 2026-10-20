@@ -327,7 +327,7 @@ public enum TypePromptRuntime {
       let signature: String
       let templates: [String: Template]
       let tools: [String: Tool]
-      /// The key is a relative path to a .xml file. The value is the file content.
+      /// The key is a relative path to a .tp file. The value is the file content.
       let sourceFiles: [String: String]
 
       init(

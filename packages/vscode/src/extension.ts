@@ -48,14 +48,14 @@ export function activate(context: ExtensionContext): void {
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
-      { scheme: "file", language: "xml" },
-      { scheme: "file", pattern: "**/*.xml" },
+      { scheme: "file", language: "typeprompt" },
+      { scheme: "file", pattern: "**/*.tp" },
       { scheme: "file", pattern: "**/typeprompt.yaml" },
       { scheme: "file", pattern: "**/typeprompt.yml" },
     ],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/{*.xml,typeprompt.yaml,typeprompt.yml}",
+        "**/{*.tp,typeprompt.yaml,typeprompt.yml}",
       ),
     },
   };

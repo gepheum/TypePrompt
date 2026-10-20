@@ -21,7 +21,7 @@ function parseTool(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string, path = "prompts/myTool.xml"): ElementNode {
+function parseElement(xml: string, path = "prompts/myTool.tp"): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
@@ -47,7 +47,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "prompts/webSearch.xml")).toMatch({
+    expect(parseTool(root, "prompts/webSearch.tp")).toMatch({
       kind: "tool",
       name: { text: "webSearch" },
       namespace: null,
@@ -80,7 +80,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "prompts/Users/fetchUser.xml")).toMatch({
+    expect(parseTool(root, "prompts/Users/fetchUser.tp")).toMatch({
       kind: "tool",
       name: { text: "fetchUser" },
       namespace: { text: "Users" },
@@ -124,7 +124,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "myTool.xml")).toMatch({
+    expect(parseTool(root, "myTool.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -142,7 +142,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "WebSearch.xml")).toMatch({
+    expect(parseTool(root, "WebSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -161,7 +161,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "web-search.xml")).toMatch({
+    expect(parseTool(root, "web-search.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -180,7 +180,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "users/fetchUser.xml")).toMatch({
+    expect(parseTool(root, "users/fetchUser.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -199,7 +199,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "fetchUser.xml")).toMatch({
+    expect(parseTool(root, "fetchUser.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -217,7 +217,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "shared.xml")).toMatch({
+    expect(parseTool(root, "shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -235,7 +235,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "meta.xml")).toMatch({
+    expect(parseTool(root, "meta.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -245,7 +245,7 @@ describe("parseTool", () => {
     });
   });
 
-  it("emits a warning when file path does not match '**/<name>.xml' for default namespace", () => {
+  it("emits a warning when file path does not match '**/<name>.tp' for default namespace", () => {
     const root = parseElement(`
       <tool name="webSearch">
         <description>Desc</description>
@@ -253,18 +253,18 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "prompts/wrongName.xml")).toMatch({
+    expect(parseTool(root, "prompts/wrongName.tp")).toMatch({
       kind: "tool",
       name: { text: "webSearch" },
       warnings: [
         {
-          message: "File path should match '**/webSearch.xml'",
+          message: "File path should match '**/webSearch.tp'",
         },
       ],
     });
   });
 
-  it("emits a warning when file path does not match '**/<namespace>/<name>.xml' for custom namespace", () => {
+  it("emits a warning when file path does not match '**/<namespace>/<name>.tp' for custom namespace", () => {
     const root = parseElement(`
       <tool name="fetchUser" namespace="Users">
         <description>Desc</description>
@@ -272,13 +272,13 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "prompts/fetchUser.xml")).toMatch({
+    expect(parseTool(root, "prompts/fetchUser.tp")).toMatch({
       kind: "tool",
       name: { text: "fetchUser" },
       namespace: { text: "Users" },
       warnings: [
         {
-          message: "File path should match '**/Users/fetchUser.xml'",
+          message: "File path should match '**/Users/fetchUser.tp'",
         },
       ],
     });
@@ -291,7 +291,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -308,7 +308,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -321,7 +321,7 @@ describe("parseTool", () => {
   it("reports errors when both required child elements are missing", () => {
     const root = parseElement('<tool name="webSearch" />');
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -343,7 +343,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -362,7 +362,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -381,7 +381,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -399,7 +399,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -417,7 +417,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -435,7 +435,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -458,7 +458,7 @@ describe("parseTool", () => {
       </tool>
     `);
 
-    expect(parseTool(root, "webSearch.xml")).toMatch({
+    expect(parseTool(root, "webSearch.tp")).toMatch({
       kind: "tool",
       name: { text: "webSearch" },
       warnings: [

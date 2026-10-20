@@ -5,7 +5,7 @@ import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 export function checkMetaSourcePath(
   sourcePath: string,
 ): readonly InternalError[] {
-  return checkSourcePath("meta.xml", sourcePath);
+  return checkSourcePath("meta.tp", sourcePath);
 }
 
 export function checkNamespaceSourcePath(
@@ -14,9 +14,7 @@ export function checkNamespaceSourcePath(
 ): readonly InternalError[] {
   const rawName = name.value.text;
   const expectedPathSuffix =
-    rawName === DEFAULT_NAMESPACE
-      ? "shared.xml"
-      : rawName.concat("/shared.xml");
+    rawName === DEFAULT_NAMESPACE ? "shared.tp" : rawName.concat("/shared.tp");
   return checkSourcePath(expectedPathSuffix, sourcePath);
 }
 
@@ -29,8 +27,8 @@ export function checkTemplateOrToolSourcePath(
   const rawNamespace = namespace?.value.text ?? DEFAULT_NAMESPACE;
   const expectedPathSuffix =
     rawNamespace === DEFAULT_NAMESPACE
-      ? `${rawName}.xml`
-      : `${rawNamespace}/${rawName}.xml`;
+      ? `${rawName}.tp`
+      : `${rawNamespace}/${rawName}.tp`;
   return checkSourcePath(expectedPathSuffix, sourcePath);
 }
 

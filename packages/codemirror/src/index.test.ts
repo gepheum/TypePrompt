@@ -189,7 +189,7 @@ describe("TypePrompt CodeMirror Extension", () => {
         doc: validTemplate,
         extensions: [
           typepromptConfigFacet.of({
-            path: "Summarize.xml",
+            path: "Summarize.tp",
             workspaceFiles: {},
             patchBase: null,
           }),
@@ -483,7 +483,7 @@ describe("TypePrompt CodeMirror Extension", () => {
           selection: { anchor: cursorOffset },
           extensions: [
             typeprompt({
-              path: "template.xml",
+              path: "template.tp",
               workspaceFiles: {},
               patchBase: null,
             }),
@@ -891,7 +891,7 @@ describe("TypePrompt CodeMirror Extension", () => {
             extensions: [
               keymap.of([...defaultKeymap, ...historyKeymap]),
               typeprompt({
-                path: "template.xml",
+                path: "template.tp",
                 workspaceFiles: {},
                 patchBase: null,
               }),
@@ -930,7 +930,7 @@ describe("TypePrompt CodeMirror Extension", () => {
             doc,
             extensions: [
               typeprompt({
-                path: "template.xml",
+                path: "template.tp",
                 workspaceFiles: {},
                 patchBase: null,
               }),
@@ -1058,7 +1058,7 @@ describe("TypePrompt CodeMirror Extension", () => {
           selection: { anchor: cursorOffset },
           extensions: [
             typeprompt({
-              path: "template.xml",
+              path: "template.tp",
               workspaceFiles: {},
               patchBase: null,
             }),
@@ -1260,7 +1260,7 @@ describe("TypePrompt CodeMirror Extension", () => {
         doc: validTemplate,
         extensions: [
           typeprompt({
-            path: "prompts/Summarize.xml",
+            path: "prompts/Summarize.tp",
             workspaceFiles: {},
             patchBase: null,
           }),
@@ -1269,7 +1269,7 @@ describe("TypePrompt CodeMirror Extension", () => {
 
       const compState = state.field(typepromptStateField);
       assert.ok(compState);
-      assert.strictEqual(compState.path, "prompts/Summarize.xml");
+      assert.strictEqual(compState.path, "prompts/Summarize.tp");
       assert.strictEqual(compState.compilationResult.anyErrors, false);
     });
   });

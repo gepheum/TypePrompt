@@ -30,7 +30,7 @@ describe("DEFAULT_CONFIG_YAML", () => {
 describe("HELLO_WORLD_TEMPLATE", () => {
   it("compiles without errors", () => {
     const result = compile(
-      { "hello-world.xml": HELLO_WORLD_TEMPLATE },
+      { "hello-world.tp": HELLO_WORLD_TEMPLATE },
       { cache: null, patchBase: null },
     );
     if (result.anyErrors) {
@@ -56,11 +56,11 @@ describe("initializeProject", () => {
     }
   });
 
-  it("generates typeprompt.yaml and prompts/hello-world.xml in a temporary directory", () => {
+  it("generates typeprompt.yaml and prompts/hello-world.tp in a temporary directory", () => {
     initializeProject(tempDir);
 
     const configPath = join(tempDir, "typeprompt.yaml");
-    const templatePath = join(tempDir, "prompts", "hello-world.xml");
+    const templatePath = join(tempDir, "prompts", "hello-world.tp");
 
     expect(existsSync(configPath)).toBe(true);
     expect(existsSync(templatePath)).toBe(true);
@@ -87,7 +87,7 @@ describe("initializeProject", () => {
       );
     }
 
-    expect(configResult.config.include).toMatch(["prompts/**/*.xml"]);
+    expect(configResult.config.include).toMatch(["prompts/**/*.tp"]);
     expect(configResult.config.gen).toMatch({
       cpp: { file: "./prompts.gen.h", rootNamespace: undefined },
       csharp: { file: "./Prompts.generated.cs", rootNamespace: undefined },
@@ -108,7 +108,7 @@ describe("initializeProject", () => {
     // Read and validate the generated template file with compiler.ts
     const templateContent = readFileSync(templatePath, "utf8");
     const compileResult = compile(
-      { "prompts/hello-world.xml": templateContent },
+      { "prompts/hello-world.tp": templateContent },
       { cache: null, patchBase: null },
     );
 
@@ -127,7 +127,7 @@ describe("initializeProject", () => {
   it("does not overwrite existing config or template files", () => {
     const configPath = join(tempDir, "typeprompt.yaml");
     const promptsDir = join(tempDir, "prompts");
-    const templatePath = join(promptsDir, "hello-world.xml");
+    const templatePath = join(promptsDir, "hello-world.tp");
 
     writeFileSync(configPath, "custom config", "utf8");
 

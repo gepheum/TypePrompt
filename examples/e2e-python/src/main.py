@@ -18,7 +18,7 @@ from gen.prompts import Prompt, ToolCall, prompts, schema
 
 
 class WeatherExecutor:
-    """Implements the getWeather tool declared in prompts/getWeather.xml."""
+    """Implements the getWeather tool declared in prompts/getWeather.tp."""
 
     _SAMPLE_FORECASTS: Mapping[str, schema.get_weather.Output] = {
         "seattle": schema.get_weather.Output(

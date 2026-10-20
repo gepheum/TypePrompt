@@ -1,5 +1,5 @@
 include:
-  - prompts/**/*.xml
+  - prompts/**/*.tp
 gen:
   rust:
     file: src/gen/prompts.rs

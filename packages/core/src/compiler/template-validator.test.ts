@@ -21,10 +21,7 @@ import { validateTemplate } from "./template-validator.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(
-  xml: string,
-  path = "prompts/Translate.xml",
-): ElementNode {
+function parseElement(xml: string, path = "prompts/Translate.tp"): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
@@ -92,7 +89,7 @@ function testValidateTemplate(args: {
   readonly namespaceTools?: { readonly [name: string]: ToolValidationResult };
   readonly path?: string;
 }): TemplateValidationResult {
-  const path = args.path ?? "prompts/Translate.xml";
+  const path = args.path ?? "prompts/Translate.tp";
   const root = parseElement(args.templateXml, path);
   const parsedTemplate = parseTemplate(root);
   if (parsedTemplate.kind !== "template") {
@@ -189,7 +186,7 @@ describe("validateTemplate - minimal valid templates", () => {
           <user>Problem: <insert val="input.problem"/></user>
         </template>
       `,
-      path: "prompts/MathAssistant.xml",
+      path: "prompts/MathAssistant.tp",
       namespaceTools: { calc: calcTool },
     });
 
@@ -225,7 +222,7 @@ describe("validateTemplate - minimal valid templates", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -471,7 +468,7 @@ describe("validateTemplate - meta validation", () => {
           <variant case="b"><system>Sys B</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
       metaSchemaSource: "type Meta = { temperature: number; };",
     });
 
@@ -499,7 +496,7 @@ describe("validateTemplate - meta validation", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
       metaSchemaSource: "type Meta = { temperature: number; };",
     });
 
@@ -521,7 +518,7 @@ describe("validateTemplate - meta validation", () => {
           <variant case="b"><system>Sys B</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
       metaSchemaSource: "type Meta = { temperature: number; };",
     });
 
@@ -553,7 +550,7 @@ describe("validateTemplate - meta validation", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
       metaSchemaSource: "type Meta = { temperature: number; };",
     });
 
@@ -585,7 +582,7 @@ describe("validateTemplate - meta validation", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
       metaSchemaOrError: EMPTY_SCHEMA,
     });
 
@@ -617,7 +614,7 @@ describe("validateTemplate - variants validation", () => {
           <variant case="a"><system>Sys A</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -642,7 +639,7 @@ describe("validateTemplate - variants validation", () => {
           <variant case="a"><system>Sys A</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -668,7 +665,7 @@ describe("validateTemplate - variants validation", () => {
           <variant case="a"><system>Sys A</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -694,7 +691,7 @@ describe("validateTemplate - variants validation", () => {
           <variant case="b"><system>Sys B</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -721,7 +718,7 @@ describe("validateTemplate - variants validation", () => {
           <variant case="c"><system>Sys C</system></variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -755,7 +752,7 @@ describe("validateTemplate - tools validation", () => {
           <user>Usr</user>
         </template>
       `,
-      path: "prompts/Research.xml",
+      path: "prompts/Research.tp",
       namespaceTools: {},
     });
 
@@ -790,7 +787,7 @@ describe("validateTemplate - tools validation", () => {
           <user>Usr</user>
         </template>
       `,
-      path: "prompts/Research.xml",
+      path: "prompts/Research.tp",
       namespaceTools: { calc: calcTool },
     });
 
@@ -817,7 +814,7 @@ describe("validateTemplate - tools validation", () => {
           text: "brokenTool",
           start: 10,
           end: 20,
-          path: "tools/Broken.xml",
+          path: "tools/Broken.tp",
         },
         namespace: null,
         description: [],
@@ -833,7 +830,7 @@ describe("validateTemplate - tools validation", () => {
       errors: [
         {
           message: "Tool schema is invalid",
-          span: { start: 0, end: 0, path: "tools/Broken.xml" },
+          span: { start: 0, end: 0, path: "tools/Broken.tp" },
         },
       ],
       definitionLinks: [],
@@ -853,7 +850,7 @@ describe("validateTemplate - tools validation", () => {
           <user>Usr</user>
         </template>
       `,
-      path: "prompts/Research.xml",
+      path: "prompts/Research.tp",
       namespaceTools: { brokenTool },
     });
 
@@ -863,7 +860,7 @@ describe("validateTemplate - tools validation", () => {
         {
           definition: {
             text: "brokenTool",
-            path: "tools/Broken.xml",
+            path: "tools/Broken.tp",
             start: 10,
             end: 20,
           },
@@ -966,7 +963,7 @@ describe("validateTemplate - examples validation", () => {
           </examples>
         </template>
       `,
-      path: "prompts/MathAssistant.xml",
+      path: "prompts/MathAssistant.tp",
       namespaceTools: { calc: calcTool },
     });
 
@@ -1008,7 +1005,7 @@ describe("validateTemplate - examples validation", () => {
           </examples>
         </template>
       `,
-      path: "prompts/MathAssistant.xml",
+      path: "prompts/MathAssistant.tp",
       namespaceTools: { calc: calcTool },
     });
 
@@ -1048,7 +1045,7 @@ describe("validateTemplate - examples validation", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -1087,7 +1084,7 @@ describe("validateTemplate - examples validation", () => {
           </variant>
         </template>
       `,
-      path: "prompts/Classify.xml",
+      path: "prompts/Classify.tp",
     });
 
     expect(result).toMatch({
@@ -1484,7 +1481,7 @@ describe("validateTemplate - definition links", () => {
           </examples>
         </template>
       `,
-      path: "prompts/MathAssistant.xml",
+      path: "prompts/MathAssistant.tp",
       namespaceTools: { calc: calcTool },
     });
 

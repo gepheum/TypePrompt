@@ -112,12 +112,12 @@ describe("makeTemplates - source files", () => {
     const result = {
       ...emptyResult(),
       sourceFiles: {
-        "a.xml": { content: "<template/>" },
-        "b.xml": { content: "<tool/>" },
+        "a.tp": { content: "<template/>" },
+        "b.tp": { content: "<tool/>" },
       },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
-      sourceFiles: { "a.xml": "<template/>", "b.xml": "<tool/>" },
+      sourceFiles: { "a.tp": "<template/>", "b.tp": "<tool/>" },
     });
   });
 });
@@ -1048,7 +1048,7 @@ describe("makeTemplates - JSON schemas", () => {
 
 describe("makeTemplateOverrides", () => {
   const baseFiles = {
-    "prompts/Translate.xml": `
+    "prompts/Translate.tp": `
       <template name="Translate">
         <schema>
           type Input = { text: string; };
@@ -1058,7 +1058,7 @@ describe("makeTemplateOverrides", () => {
         <user>Translate: <insert val="input.text" /></user>
       </template>
     `,
-    "prompts/Summarize.xml": `
+    "prompts/Summarize.tp": `
       <template name="Summarize">
         <schema>
           type Input = { doc: string; };
@@ -1068,7 +1068,7 @@ describe("makeTemplateOverrides", () => {
         <user>Summarize: <insert val="input.doc" /></user>
       </template>
     `,
-    "prompts/calculator.xml": `
+    "prompts/calculator.tp": `
       <tool name="calculator">
         <description>Performs math calculations</description>
         <schema>
@@ -1077,7 +1077,7 @@ describe("makeTemplateOverrides", () => {
         </schema>
       </tool>
     `,
-    "prompts/fetchUrl.xml": `
+    "prompts/fetchUrl.tp": `
       <tool name="fetchUrl">
         <description>Fetches URL content</description>
         <schema>
@@ -1121,7 +1121,7 @@ describe("makeTemplateOverrides", () => {
 
     const overrideFiles = {
       ...baseFiles,
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>
             type Input = { text: string; };
@@ -1131,7 +1131,7 @@ describe("makeTemplateOverrides", () => {
           <user>Translate: <insert val="input.text" /></user>
         </template>
       `,
-      "prompts/calculator.xml": `
+      "prompts/calculator.tp": `
         <tool name="calculator">
           <description>Updated calculator description override</description>
           <schema>
@@ -1157,8 +1157,8 @@ describe("makeTemplateOverrides", () => {
 
     // Only the two modified files should be in sourceFiles
     expect(Object.keys(overrides.sourceFiles).sort()).toMatch([
-      "prompts/Translate.xml",
-      "prompts/calculator.xml",
+      "prompts/Translate.tp",
+      "prompts/calculator.tp",
     ]);
 
     // Only Translate template should be present, not Summarize
@@ -1176,12 +1176,12 @@ describe("makeTemplateOverrides", () => {
 
   it("handles multi-namespace projects and sets singleNamespace=false", () => {
     const multiNamespaceBase = {
-      "prompts/Billing/shared.xml": `
+      "prompts/Billing/shared.tp": `
         <namespace name="Billing">
           interface Invoice { id: string; amount: number; }
         </namespace>
       `,
-      "prompts/Billing/SendInvoice.xml": `
+      "prompts/Billing/SendInvoice.tp": `
         <template name="SendInvoice" namespace="Billing">
           <schema>
             type Input = { invoiceId: string; };
@@ -1191,12 +1191,12 @@ describe("makeTemplateOverrides", () => {
           <user>Send invoice <insert val="input.invoiceId" /></user>
         </template>
       `,
-      "prompts/Auth/shared.xml": `
+      "prompts/Auth/shared.tp": `
         <namespace name="Auth">
           type Token = string;
         </namespace>
       `,
-      "prompts/Auth/Login.xml": `
+      "prompts/Auth/Login.tp": `
         <template name="Login" namespace="Auth">
           <schema>
             type Input = string;
@@ -1217,7 +1217,7 @@ describe("makeTemplateOverrides", () => {
 
     const overrideFiles = {
       ...multiNamespaceBase,
-      "prompts/Billing/SendInvoice.xml": `
+      "prompts/Billing/SendInvoice.tp": `
         <template name="SendInvoice" namespace="Billing">
           <schema>
             type Input = { invoiceId: string; };
@@ -1240,7 +1240,7 @@ describe("makeTemplateOverrides", () => {
     const overrides = makeTemplateOverrides(overrideResult);
     expect(overrides.signature).toBe(baseResult.signature);
     expect(Object.keys(overrides.sourceFiles)).toMatch([
-      "prompts/Billing/SendInvoice.xml",
+      "prompts/Billing/SendInvoice.tp",
     ]);
     expect(Object.keys(overrides.templates)).toMatch(["Billing:SendInvoice"]);
     expect(overrides.templates["Billing:SendInvoice"]!.namespace).toBe(

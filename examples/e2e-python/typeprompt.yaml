@@ -1,5 +1,5 @@
 include:
-  - prompts/**/*.xml
+  - prompts/**/*.tp
 gen:
   python:
     file: src/gen/prompts.py

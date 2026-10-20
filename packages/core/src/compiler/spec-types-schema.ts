@@ -8,7 +8,7 @@ type Templates = {
   signature: string;
   templates: { [id: string]: Template };
   tools: { [id: string]: Tool };
-  /** The key is a relative path to a .xml file. The value is the file content. */
+  /** The key is a relative path to a .tp file. The value is the file content. */
   sourceFiles: { [path: string]: string };
 };
 
@@ -119,7 +119,7 @@ type Tool = {
 export const runtimeTypesSchema = ((): Schema => {
   const parseResult = parseSchema(
     {
-      path: "Runtime.xml",
+      path: "Runtime.tp",
       text: SCHEMA,
       offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
     },

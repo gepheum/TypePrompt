@@ -52,18 +52,18 @@ describe("project-config", () => {
   describe("readConfigInDirectory", () => {
     it("reads typeprompt.yaml when present", () => {
       const yamlPath = join(tempDir, "typeprompt.yaml");
-      writeFileSync(yamlPath, "include:\n  - prompts/**/*.xml\n", "utf8");
+      writeFileSync(yamlPath, "include:\n  - prompts/**/*.tp\n", "utf8");
       const result = readConfigInDirectory(tempDir);
       expect(result.configPath).toBe(yamlPath);
-      expect(result.configContent).toBe("include:\n  - prompts/**/*.xml\n");
+      expect(result.configContent).toBe("include:\n  - prompts/**/*.tp\n");
     });
 
     it("reads typeprompt.yml when present", () => {
       const ymlPath = join(tempDir, "typeprompt.yml");
-      writeFileSync(ymlPath, "include:\n  - yml-prompts/**/*.xml\n", "utf8");
+      writeFileSync(ymlPath, "include:\n  - yml-prompts/**/*.tp\n", "utf8");
       const result = readConfigInDirectory(tempDir);
       expect(result.configPath).toBe(ymlPath);
-      expect(result.configContent).toBe("include:\n  - yml-prompts/**/*.xml\n");
+      expect(result.configContent).toBe("include:\n  - yml-prompts/**/*.tp\n");
     });
 
     it("prefers typeprompt.yaml when both exist", () => {

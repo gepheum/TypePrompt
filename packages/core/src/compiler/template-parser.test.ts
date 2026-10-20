@@ -23,7 +23,7 @@ function parseTemplate(
 
 function parseElement(
   xml: string,
-  path = "prompts/HelloWorld.xml",
+  path = "prompts/HelloWorld.tp",
 ): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
@@ -51,7 +51,7 @@ describe("parseTemplate - basic template parsing", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "prompts/Translate.xml")).toMatch({
+    expect(parseTemplate(root, "prompts/Translate.tp")).toMatch({
       kind: "template",
       name: { text: "Translate" },
       namespace: null,
@@ -92,7 +92,7 @@ describe("parseTemplate - basic template parsing", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "prompts/Legal/DraftContract.xml")).toMatch({
+    expect(parseTemplate(root, "prompts/Legal/DraftContract.tp")).toMatch({
       kind: "template",
       name: { text: "DraftContract" },
       namespace: { text: "Legal" },
@@ -115,7 +115,7 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -134,7 +134,7 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "translateText.xml")).toMatch({
+    expect(parseTemplate(root, "translateText.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -154,7 +154,7 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "legal/Translate.xml")).toMatch({
+    expect(parseTemplate(root, "legal/Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -175,7 +175,7 @@ describe("parseTemplate - attributes and naming validation", () => {
         </template>
       `);
 
-      expect(parseTemplate(root, `${name}.xml`)).toMatch({
+      expect(parseTemplate(root, `${name}.tp`)).toMatch({
         kind: "error",
         errors: [
           {
@@ -195,7 +195,7 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "SCHEMA.xml")).toMatch({
+    expect(parseTemplate(root, "SCHEMA.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -214,7 +214,7 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -233,11 +233,11 @@ describe("parseTemplate - attributes and naming validation", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "prompts/Wrong.xml")).toMatch({
+    expect(parseTemplate(root, "prompts/Wrong.tp")).toMatch({
       kind: "template",
       warnings: [
         {
-          message: "File path should match '**/Translate.xml'",
+          message: "File path should match '**/Translate.tp'",
         },
       ],
     });
@@ -261,7 +261,7 @@ describe("parseTemplate - <schema> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "template",
       outputFormat: { text: "text" },
       warnings: [],
@@ -279,7 +279,7 @@ describe("parseTemplate - <schema> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -298,7 +298,7 @@ describe("parseTemplate - <schema> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -318,7 +318,7 @@ describe("parseTemplate - <schema> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -337,7 +337,7 @@ describe("parseTemplate - <schema> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -367,7 +367,7 @@ describe("parseTemplate - <tools> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Research.xml")).toMatch({
+    expect(parseTemplate(root, "Research.tp")).toMatch({
       kind: "template",
       tools: {
         kind: "array",
@@ -391,7 +391,7 @@ describe("parseTemplate - <tools> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Research.xml")).toMatch({
+    expect(parseTemplate(root, "Research.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -411,7 +411,7 @@ describe("parseTemplate - <tools> element", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Research.xml")).toMatch({
+    expect(parseTemplate(root, "Research.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -444,7 +444,7 @@ describe("parseTemplate - <meta> and <examples>", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "template",
       contents: {
         kind: "no-variants",
@@ -499,7 +499,7 @@ describe("parseTemplate - <meta> and <examples>", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         { message: "Missing <system> element" },
@@ -518,7 +518,7 @@ describe("parseTemplate - <meta> and <examples>", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Translate.xml")).toMatch({
+    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -548,7 +548,7 @@ describe("parseTemplate - variants", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "ProductDesc.xml")).toMatch({
+    expect(parseTemplate(root, "ProductDesc.tp")).toMatch({
       kind: "template",
       contents: {
         kind: "variants",
@@ -596,7 +596,7 @@ describe("parseTemplate - variants", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "ProductDesc.xml")).toMatch({
+    expect(parseTemplate(root, "ProductDesc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -618,7 +618,7 @@ describe("parseTemplate - variants", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "ProductDesc.xml")).toMatch({
+    expect(parseTemplate(root, "ProductDesc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -639,7 +639,7 @@ describe("parseTemplate - variants", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "ProductDesc.xml")).toMatch({
+    expect(parseTemplate(root, "ProductDesc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -686,7 +686,7 @@ describe("parseTemplate - snippets", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Document.xml")).toMatch({
+    expect(parseTemplate(root, "Document.tp")).toMatch({
       kind: "template",
       snippets: [
         {
@@ -745,7 +745,7 @@ describe("parseTemplate - snippets", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -767,7 +767,7 @@ describe("parseTemplate - snippets", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         { message: "Cannot have both 'if' and 'switch' attributes" },
@@ -788,7 +788,7 @@ describe("parseTemplate - snippets", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -811,7 +811,7 @@ describe("parseTemplate - snippets", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -837,7 +837,7 @@ describe("parseTemplate - snippet verification", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -863,7 +863,7 @@ describe("parseTemplate - snippet verification", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -885,7 +885,7 @@ describe("parseTemplate - snippet verification", () => {
       </template>
     `);
 
-    expect(parseTemplate(root, "Doc.xml")).toMatch({
+    expect(parseTemplate(root, "Doc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -914,7 +914,7 @@ describe("parseTemplate - line break verification after formatted inserts", () =
       </template>
     `);
 
-    expect(parseTemplate(root, "DataDoc.xml")).toMatch({
+    expect(parseTemplate(root, "DataDoc.tp")).toMatch({
       kind: "template",
       warnings: [],
     });
@@ -929,7 +929,7 @@ describe("parseTemplate - line break verification after formatted inserts", () =
       </template>
     `);
 
-    expect(parseTemplate(root, "DataDoc.xml")).toMatch({
+    expect(parseTemplate(root, "DataDoc.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -948,7 +948,7 @@ describe("parseTemplate - line break verification after formatted inserts", () =
       </template>
     `);
 
-    expect(parseTemplate(root, "DataDoc.xml")).toMatch({
+    expect(parseTemplate(root, "DataDoc.tp")).toMatch({
       kind: "error",
       errors: [
         {

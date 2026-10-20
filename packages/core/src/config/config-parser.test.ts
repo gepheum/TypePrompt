@@ -12,7 +12,7 @@ describe("parseConfigYaml", () => {
     const result = parse(
       [
         "include:",
-        "  - prompts/*.xml",
+        "  - prompts/*.tp",
         "gen:",
         "  typescript:",
         "    file: out/prompts.ts",
@@ -22,7 +22,7 @@ describe("parseConfigYaml", () => {
     expect(result).toMatch({
       kind: "success",
       config: {
-        include: ["prompts/*.xml"],
+        include: ["prompts/*.tp"],
         gen: { typescript: { file: "out/prompts.ts" } },
       },
     });
@@ -54,33 +54,33 @@ describe("parseConfigYaml", () => {
   });
 
   it("accepts an empty gen block", () => {
-    const result = parse("include:\n  - prompts/*.xml\ngen: {}");
+    const result = parse("include:\n  - prompts/*.tp\ngen: {}");
     expect(result).toMatch({
       kind: "success",
-      config: { include: ["prompts/*.xml"], gen: {} },
+      config: { include: ["prompts/*.tp"], gen: {} },
     });
   });
 
   it("accepts an array of include patterns", () => {
     const result = parse(
-      ["include:", "  - prompts/*.xml", "  - other/**/*.tp", "gen: {}"].join(
+      ["include:", "  - prompts/*.tp", "  - other/**/*.tp", "gen: {}"].join(
         "\n",
       ),
     );
     expect(result).toMatch({
       kind: "success",
-      config: { include: ["prompts/*.xml", "other/**/*.tp"], gen: {} },
+      config: { include: ["prompts/*.tp", "other/**/*.tp"], gen: {} },
     });
   });
 
   it("fails when include is a string instead of an array", () => {
-    const yaml = "include: prompts/*.xml";
+    const yaml = "include: prompts/*.tp";
     const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
       errors: [
         {
-          span: { start: yaml.indexOf("prompts/*.xml") },
+          span: { start: yaml.indexOf("prompts/*.tp") },
           message: "Expected array but got string",
         },
       ],
@@ -123,7 +123,7 @@ describe("parseConfigYaml", () => {
   });
 
   it("fails on unknown top-level fields", () => {
-    const yaml = "include:\n  - prompts/*.xml\noutputPath: x";
+    const yaml = "include:\n  - prompts/*.tp\noutputPath: x";
     const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
@@ -153,7 +153,7 @@ describe("parseConfigYaml", () => {
   it("fails when typescript file does not end with .ts", () => {
     const yaml = [
       "include:",
-      "  - prompts/*.xml",
+      "  - prompts/*.tp",
       "gen:",
       "  typescript:",
       "    file: out/prompts.py",
@@ -173,7 +173,7 @@ describe("parseConfigYaml", () => {
   it("fails when python file does not end with .py", () => {
     const yaml = [
       "include:",
-      "  - prompts/*.xml",
+      "  - prompts/*.tp",
       "gen:",
       "  python:",
       "    file: out/prompts.ts",
@@ -193,7 +193,7 @@ describe("parseConfigYaml", () => {
   it("fails on unknown nested fields", () => {
     const yaml = [
       "include:",
-      "  - prompts/*.xml",
+      "  - prompts/*.tp",
       "gen:",
       "  typescript:",
       "    file: out/p.ts",

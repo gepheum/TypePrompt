@@ -6,7 +6,7 @@ import type { RenderableError } from "./renderable-error.js";
 describe("error-renderer", () => {
   it("formats standard error without base schema", () => {
     const error: RenderableError = {
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       message: "Syntax error",
       start: {
         line: {
@@ -27,7 +27,7 @@ describe("error-renderer", () => {
     };
 
     const formatted = formatError(error, "error");
-    expect(formatted.includes("prompts/test.xml")).toBe(true);
+    expect(formatted.includes("prompts/test.tp")).toBe(true);
     expect(formatted.includes("Syntax error")).toBe(true);
     expect(formatted.includes('<template name="test">')).toBe(true);
   });
@@ -36,7 +36,7 @@ describe("error-renderer", () => {
     const baseSchemaText =
       "type Input = { text: string; };\ntype Output = string;";
     const error: RenderableError = {
-      path: "prompts/Translate.xml",
+      path: "prompts/Translate.tp",
       message: "Schema does not match base",
       baseSchema: baseSchemaText,
       start: {
@@ -58,7 +58,7 @@ describe("error-renderer", () => {
     };
 
     const formatted = formatError(error, "error");
-    expect(formatted.includes("prompts/Translate.xml")).toBe(true);
+    expect(formatted.includes("prompts/Translate.tp")).toBe(true);
     expect(formatted.includes("Schema does not match base")).toBe(true);
     expect(formatted.includes(makeCyan(baseSchemaText))).toBe(true);
   });

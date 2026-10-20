@@ -1,5 +1,5 @@
 include:
-  - prompts/**/*.xml
+  - prompts/**/*.tp
 gen:
   kotlin:
     file: src/main/kotlin/gen/Prompts.kt

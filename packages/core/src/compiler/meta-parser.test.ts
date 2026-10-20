@@ -21,7 +21,7 @@ function parseMeta(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string, path = "prompts/Meta.xml"): ElementNode {
+function parseElement(xml: string, path = "prompts/Meta.tp"): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
@@ -45,7 +45,7 @@ describe("parseMeta", () => {
       </meta>
     `);
 
-    expect(parseMeta(root, "prompts/meta.xml")).toMatch({
+    expect(parseMeta(root, "prompts/meta.tp")).toMatch({
       kind: "meta",
       schema: {
         kind: "success",
@@ -82,13 +82,13 @@ describe("parseMeta", () => {
       </meta>
     `);
 
-    const result = parseMeta(root, "prompts/meta.xml");
+    const result = parseMeta(root, "prompts/meta.tp");
     if (result.kind !== "meta") throw new Error();
     if (result.schema.kind !== "success") throw new Error();
     expect(result.schema.definitionLinks).toMatch([
       {
-        reference: { path: "prompts/meta.xml" },
-        definition: { path: "prompts/meta.xml" },
+        reference: { path: "prompts/meta.tp" },
+        definition: { path: "prompts/meta.tp" },
       },
     ]);
   });
@@ -96,7 +96,7 @@ describe("parseMeta", () => {
   it("reports a validation error when Meta type is missing in empty <meta>", () => {
     const root = parseElement("<meta></meta>");
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "meta",
       schema: {
         kind: "error",
@@ -113,7 +113,7 @@ describe("parseMeta", () => {
   it("reports a validation error when Meta type is missing in self-closing <meta/>", () => {
     const root = parseElement("<meta/>");
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "meta",
       schema: {
         kind: "error",
@@ -130,7 +130,7 @@ describe("parseMeta", () => {
   it("reports an error when <meta> contains XML attributes", () => {
     const root = parseElement('<meta name="something"></meta>');
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -143,7 +143,7 @@ describe("parseMeta", () => {
   it("reports an error when <meta> contains child XML elements", () => {
     const root = parseElement("<meta><childTag/></meta>");
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -163,7 +163,7 @@ describe("parseMeta", () => {
       </meta>
     `);
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "meta",
       schema: {
         kind: "success",
@@ -183,7 +183,7 @@ describe("parseMeta", () => {
       </meta>
     `);
 
-    expect(parseMeta(root, "meta.xml")).toMatch({
+    expect(parseMeta(root, "meta.tp")).toMatch({
       kind: "meta",
       schema: {
         kind: "error",

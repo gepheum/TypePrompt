@@ -8,7 +8,7 @@ import type {
  * Configuration options for the TypePrompt CodeMirror extension.
  */
 export type TypePromptConfig = {
-  /** The virtual path of the file being edited, e.g. "prompts/MyTemplate.xml". */
+  /** The virtual path of the file being edited, e.g. "prompts/MyTemplate.tp". */
   readonly path: string;
 
   /**

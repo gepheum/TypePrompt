@@ -21,7 +21,7 @@ function expectSuccess(
 describe("textToSourcePosition", () => {
   it("maps text positions to source positions for plain text", () => {
     const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
+    const result = expectSuccess(parseXmlDocument(input, "test.tp"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -33,7 +33,7 @@ describe("textToSourcePosition", () => {
 
   it("maps text offsets to source positions across entity and raw segments", () => {
     const input = "<root>x &amp; y</root>";
-    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
+    const result = expectSuccess(parseXmlDocument(input, "test.tp"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -56,7 +56,7 @@ describe("textToSourcePosition", () => {
 
   it("maps end boundary of a single-entity text node", () => {
     const input = "<root>&lt;</root>";
-    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
+    const result = expectSuccess(parseXmlDocument(input, "test.tp"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 
@@ -69,7 +69,7 @@ describe("textToSourcePosition", () => {
 
   it("throws for text positions outside valid range", () => {
     const input = "<root>abc</root>";
-    const result = expectSuccess(parseXmlDocument(input, "test.xml"));
+    const result = expectSuccess(parseXmlDocument(input, "test.tp"));
     const { root } = result;
     const textNode = root.children[0] as TextNode;
 

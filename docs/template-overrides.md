@@ -126,7 +126,7 @@ npx typeprompt patch -b <base> -o <output-dir>
 The generated patch directory contains:
 - `typeprompt.yaml`: Preconfigured with `patch.base: patch-base.json` and `patch.overrides: overrides.json`.
 - `patch-base.json`: Baseline template definitions against which your changes are validated.
-- Cloned `.xml` prompt files ready for editing.
+- Cloned `.tp` prompt files ready for editing.
 
 ### Editing restrictions
 
@@ -317,7 +317,7 @@ Once your service is running:
 # 1. Fetch current templates and create a patch project
 npx typeprompt patch -b http://localhost:8000/api/prompts/templates -o /tmp/triage-patch
 
-# 2. Modify prompt instructions or examples in /tmp/triage-patch/prompts/TriageTicket.xml
+# 2. Modify prompt instructions or examples in /tmp/triage-patch/prompts/TriageTicket.tp
 # ... make edits ...
 
 # 3. Compile the patch to produce overrides.json

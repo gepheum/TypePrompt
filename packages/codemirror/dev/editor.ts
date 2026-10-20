@@ -57,7 +57,7 @@ export class Editor extends LitElement {
   content = "";
 
   @property({ type: String })
-  path = "template.xml";
+  path = "template.tp";
 
   @property({ type: Boolean })
   darkMode = true;
@@ -240,7 +240,7 @@ declare global {
 }
 
 const defaultWorkspaceFiles: { readonly [path: string]: string } = {
-  "prompts/meta.xml": `<meta>
+  "prompts/meta.tp": `<meta>
   interface Meta {
     model: "gpt-4o" | "gpt-4o-mini";
     /** Sampling temperature (0-2). */

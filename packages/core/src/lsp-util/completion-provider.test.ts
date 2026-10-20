@@ -22,12 +22,12 @@ describe("getCompletionItems", () => {
 
     const pos = xml.indexOf("    <") + 5; // right after '<'
     const cache = compile(
-      { "prompts/test.xml": xml },
+      { "prompts/test.tp": xml },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: xml,
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       position: pos,
       cache,
     });
@@ -53,12 +53,12 @@ describe("getCompletionItems", () => {
     const start = xml.indexOf("<ins") + 1; // start of 'ins'
     const pos = start + 3; // end of 'ins'
     const cache = compile(
-      { "prompts/test.xml": xml },
+      { "prompts/test.tp": xml },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: xml,
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       position: pos,
       cache,
     });
@@ -90,14 +90,14 @@ describe("getCompletionItems", () => {
     const pos = start + 3; // after 'Leg'
     const cache = compile(
       {
-        "prompts/Legal/shared.xml": legalXml,
-        "prompts/Leg/Test.xml": mainXml,
+        "prompts/Legal/shared.tp": legalXml,
+        "prompts/Leg/Test.tp": mainXml,
       },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: mainXml,
-      path: "prompts/Leg/Test.xml",
+      path: "prompts/Leg/Test.tp",
       position: pos,
       cache,
     });
@@ -117,12 +117,12 @@ describe("getCompletionItems", () => {
     ].join("\n");
 
     const cache = compile(
-      { "prompts/test.xml": xml },
+      { "prompts/test.tp": xml },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: xml,
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       position: 5,
       cache,
     });
@@ -151,12 +151,12 @@ describe("getCompletionItems", () => {
 
     const pos = xml.indexOf("        \n") + 8;
     const cache = compile(
-      { "prompts/test.xml": xml },
+      { "prompts/test.tp": xml },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: xml,
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       position: pos,
       cache,
     });
@@ -178,12 +178,12 @@ describe("getCompletionItems", () => {
 
     const pos = xml.indexOf('name="Test" ') + 'name="Test" '.length;
     const cache = compile(
-      { "prompts/test.xml": xml },
+      { "prompts/test.tp": xml },
       { cache: null, patchBase: null },
     );
     const result = getCompletionItems({
       newContent: xml,
-      path: "prompts/test.xml",
+      path: "prompts/test.tp",
       position: pos,
       cache,
     });
@@ -195,7 +195,7 @@ describe("getCompletionItems", () => {
 
 describe("getConfigCompletionItems", () => {
   it("suggests missing top-level fields", () => {
-    const yaml = "include:\n  - prompts/*.xml\n";
+    const yaml = "include:\n  - prompts/*.tp\n";
     const result = getConfigCompletionItems(yaml, yaml.length);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["gen", "patch"]);
@@ -203,7 +203,7 @@ describe("getConfigCompletionItems", () => {
   });
 
   it("suggests generators under gen", () => {
-    const yaml = "include:\n  - prompts/*.xml\ngen:\n  ";
+    const yaml = "include:\n  - prompts/*.tp\ngen:\n  ";
     const result = getConfigCompletionItems(yaml, yaml.length);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch([
@@ -220,7 +220,7 @@ describe("getConfigCompletionItems", () => {
   });
 
   it("suggests generator fields under gen.<lang>", () => {
-    const yaml = "include:\n  - prompts/*.xml\ngen:\n  typescript:\n    ";
+    const yaml = "include:\n  - prompts/*.tp\ngen:\n  typescript:\n    ";
     const result = getConfigCompletionItems(yaml, yaml.length);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["file"]);
@@ -228,7 +228,7 @@ describe("getConfigCompletionItems", () => {
   });
 
   it("suggests matching fields when partially typed with colon", () => {
-    const yaml = "include:\n  - prompts/*.xml\ngen:\n  typ:";
+    const yaml = "include:\n  - prompts/*.tp\ngen:\n  typ:";
     const pos = yaml.indexOf("typ") + 2;
     const result = getConfigCompletionItems(yaml, pos);
     expect(result !== null).toBe(true);
@@ -249,7 +249,7 @@ describe("getConfigCompletionItems", () => {
   });
 
   it("returns null when no suggestions available at position", () => {
-    const yaml = "include:\n  - prompts/*.xml\n";
+    const yaml = "include:\n  - prompts/*.tp\n";
     const pos = yaml.indexOf("prompts") + 2;
     const result = getConfigCompletionItems(yaml, pos);
     expect(result).toBe(null);
@@ -257,7 +257,7 @@ describe("getConfigCompletionItems", () => {
 
   it("suggests fields on an empty line with content following below", () => {
     const yaml =
-      "include:\n  - prompts/*.xml\n\ngen:\n  typescript:\n    file: test.ts\n";
+      "include:\n  - prompts/*.tp\n\ngen:\n  typescript:\n    file: test.ts\n";
     const pos = yaml.indexOf("\n\n") + 1;
     const result = getConfigCompletionItems(yaml, pos);
     expect(result !== null).toBe(true);

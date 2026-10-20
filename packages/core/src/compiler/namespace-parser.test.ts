@@ -21,7 +21,7 @@ function parseNamespace(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseElement(xml: string, path = "prompts/Main.xml"): ElementNode {
+function parseElement(xml: string, path = "prompts/Main.tp"): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
     throw new Error(
@@ -36,7 +36,7 @@ function parseElement(xml: string, path = "prompts/Main.xml"): ElementNode {
 // ---------------------------------------------------------------------------
 
 describe("parseNamespace", () => {
-  it("parses the default Main namespace with shared.xml source path", () => {
+  it("parses the default Main namespace with shared.tp source path", () => {
     const root = parseElement(`
       <namespace name="Main">
         type SharedUser = {
@@ -45,7 +45,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "prompts/shared.xml")).toMatch({
+    expect(parseNamespace(root, "prompts/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Main" },
       schema: {
@@ -84,13 +84,13 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    const result = parseNamespace(root, "prompts/shared.xml");
+    const result = parseNamespace(root, "prompts/shared.tp");
     if (result.kind !== "namespace") throw new Error();
     if (result.schema.kind !== "success") throw new Error();
     expect(result.schema.definitionLinks).toMatch([
       {
-        reference: { path: "prompts/shared.xml" },
-        definition: { path: "prompts/shared.xml" },
+        reference: { path: "prompts/shared.tp" },
+        definition: { path: "prompts/shared.tp" },
       },
     ]);
   });
@@ -104,7 +104,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "prompts/Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "prompts/Billing/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Billing" },
       schema: {
@@ -135,7 +135,7 @@ describe("parseNamespace", () => {
   it("parses an empty namespace with no type declarations", () => {
     const root = parseElement('<namespace name="Main"></namespace>');
 
-    expect(parseNamespace(root, "prompts/shared.xml")).toMatch({
+    expect(parseNamespace(root, "prompts/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Main" },
       schema: {
@@ -153,7 +153,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "shared.xml")).toMatch({
+    expect(parseNamespace(root, "shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -166,7 +166,7 @@ describe("parseNamespace", () => {
   it("rejects non-PascalCase namespace names", () => {
     const root = parseElement('<namespace name="billingService" />');
 
-    expect(parseNamespace(root, "billingService/shared.xml")).toMatch({
+    expect(parseNamespace(root, "billingService/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -180,7 +180,7 @@ describe("parseNamespace", () => {
   it("rejects kebab-case namespace names", () => {
     const root = parseElement('<namespace name="billing-service" />');
 
-    expect(parseNamespace(root, "billing-service/shared.xml")).toMatch({
+    expect(parseNamespace(root, "billing-service/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -194,7 +194,7 @@ describe("parseNamespace", () => {
   it("rejects namespace names starting with a digit", () => {
     const root = parseElement('<namespace name="1Billing" />');
 
-    expect(parseNamespace(root, "1Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "1Billing/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -208,7 +208,7 @@ describe("parseNamespace", () => {
   it("reports an error for unexpected attributes on <namespace>", () => {
     const root = parseElement('<namespace name="Billing" version="1" />');
 
-    expect(parseNamespace(root, "Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Billing/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -221,7 +221,7 @@ describe("parseNamespace", () => {
   it("rejects reserved namespace name 'Meta'", () => {
     const root = parseElement('<namespace name="Meta" />');
 
-    expect(parseNamespace(root, "Meta/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Meta/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -234,7 +234,7 @@ describe("parseNamespace", () => {
   it("rejects reserved namespace name 'Schema'", () => {
     const root = parseElement('<namespace name="Schema" />');
 
-    expect(parseNamespace(root, "Schema/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Schema/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -247,7 +247,7 @@ describe("parseNamespace", () => {
   it("rejects case-insensitive variations of reserved namespace names", () => {
     const root = parseElement('<namespace name="META" />');
 
-    expect(parseNamespace(root, "META/shared.xml")).toMatch({
+    expect(parseNamespace(root, "META/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -260,7 +260,7 @@ describe("parseNamespace", () => {
   it("rejects improper casing of the default Main namespace", () => {
     const root = parseElement('<namespace name="MAIN" />');
 
-    expect(parseNamespace(root, "shared.xml")).toMatch({
+    expect(parseNamespace(root, "shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -270,29 +270,29 @@ describe("parseNamespace", () => {
     });
   });
 
-  it("emits a warning when Main namespace file path does not match '**/shared.xml'", () => {
+  it("emits a warning when Main namespace file path does not match '**/shared.tp'", () => {
     const root = parseElement('<namespace name="Main" />');
 
-    expect(parseNamespace(root, "prompts/custom.xml")).toMatch({
+    expect(parseNamespace(root, "prompts/custom.tp")).toMatch({
       kind: "namespace",
       name: { text: "Main" },
       warnings: [
         {
-          message: "File path should match '**/shared.xml'",
+          message: "File path should match '**/shared.tp'",
         },
       ],
     });
   });
 
-  it("emits a warning when custom namespace file path does not match '**/{Name}/shared.xml'", () => {
+  it("emits a warning when custom namespace file path does not match '**/{Name}/shared.tp'", () => {
     const root = parseElement('<namespace name="Billing" />');
 
-    expect(parseNamespace(root, "prompts/shared.xml")).toMatch({
+    expect(parseNamespace(root, "prompts/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Billing" },
       warnings: [
         {
-          message: "File path should match '**/Billing/shared.xml'",
+          message: "File path should match '**/Billing/shared.tp'",
         },
       ],
     });
@@ -305,7 +305,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Billing/shared.tp")).toMatch({
       kind: "error",
       errors: [
         {
@@ -323,7 +323,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Billing/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Billing" },
       warnings: [
@@ -341,7 +341,7 @@ describe("parseNamespace", () => {
       </namespace>
     `);
 
-    expect(parseNamespace(root, "Billing/shared.xml")).toMatch({
+    expect(parseNamespace(root, "Billing/shared.tp")).toMatch({
       kind: "namespace",
       name: { text: "Billing" },
       schema: {

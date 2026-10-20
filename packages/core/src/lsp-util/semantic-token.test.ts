@@ -6,7 +6,7 @@ import { tokenize as tokenizeCore } from "./semantic-token.js";
 
 function tokenize(
   xmlContent: string,
-  path = "test.xml",
+  path = "test.tp",
 ): readonly SemanticToken[] {
   return tokenizeCore(xmlContent, path);
 }

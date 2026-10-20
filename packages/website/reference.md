@@ -5,7 +5,7 @@ description: XML syntax for defining prompt templates, tools, and metadata.
 
 # TypePrompt language reference
 
-TypePrompt projects are made up of `.xml` files matching the `include` pattern in `typeprompt.yaml` (by default, `prompts/**/*.xml`). Every file has one of the following root elements:
+TypePrompt projects are made up of `.tp` files matching the `include` pattern in `typeprompt.yaml` (by default, `prompts/**/*.tp`). Every file has one of the following root elements:
 
 | Element | Purpose |
 |---|---|
@@ -27,7 +27,7 @@ For the type system (schemas, SDL), see the [schema language guide](/schema).
 At the top level of a file, the text content of `<meta>` must define a `Meta` type using TypePrompt's SDL.
 
 ```xml
-<!-- meta.xml -->
+<!-- meta.tp -->
 <meta>
   interface Meta {
     /** Sampling temperature (0–2). */
@@ -70,7 +70,7 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 When a top-level `<meta>` is declared, every `<template>` must include a `<meta>` child whose text content is a YAML value of type `Meta`.
 
 ```xml
-<!-- Summarize.xml -->
+<!-- Summarize.tp -->
 <template name="Summarize">
   <meta>
     temperature: 0.3
@@ -85,7 +85,7 @@ When a top-level `<meta>` is declared, every `<template>` must include a `<meta>
 Defines the `Input` and `Output` types for the template using TypePrompt's SDL. Both types are required.
 
 ```xml
-<!-- ClassifyEmail.xml -->
+<!-- ClassifyEmail.tp -->
 <template name="ClassifyEmail">
   <schema>
     interface Input {
@@ -121,7 +121,7 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
 Registers tools that the model may call during this prompt. The text content is a YAML list of tool references.
 
 ```xml
-<!-- ResearchAssistant.xml -->
+<!-- ResearchAssistant.tp -->
 <template name="ResearchAssistant">
   <tools>
     - tool: webSearch
@@ -433,7 +433,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
 - Elements defined directly under `<template>` act as defaults and are inherited by variants that omit them. An element defined under `<template>` cannot be redefined under `<variant>`.
 
 ```xml
-<!-- WriteEmail.xml -->
+<!-- WriteEmail.tp -->
 <template name="WriteEmail">
   <schema>
     interface Input {
@@ -499,7 +499,7 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 | `<schema>` | Yes | `Input` and `Output` types |
 
 ```xml
-<!-- getWeather.xml -->
+<!-- getWeather.tp -->
 <tool name="getWeather">
   <description>
     Returns the current weather at a given location. Use this when the user's
@@ -530,7 +530,7 @@ The `<description>` element may contain `<c>` and `<enclosed>` in addition to pl
 Namespaces serve two purposes: organizing large projects and defining types that are shared across multiple templates and tools within the namespace.
 
 ```xml
-<!-- Geo/shared.xml -->
+<!-- Geo/shared.tp -->
 <namespace name="Geo">
   interface Address {
     street: string;
@@ -539,7 +539,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
   }
 </namespace>
 
-<!-- Geo/FormatAddress.xml -->
+<!-- Geo/FormatAddress.tp -->
 <template name="FormatAddress" namespace="Geo">
   <schema>
     interface Input {
@@ -552,7 +552,7 @@ Namespaces serve two purposes: organizing large projects and defining types that
   ...
 </template>
 
-<!-- Geo/geocode.xml -->
+<!-- Geo/geocode.tp -->
 <tool name="geocode" namespace="Geo">
   ...
 </tool>
@@ -572,37 +572,37 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 ## File naming conventions
 
-By convention, `.xml` files and directories within your prompts directory follow these rules:
+By convention, `.tp` files and directories within your prompts directory follow these rules:
 
 | Element | Naming Convention | Single-Namespace Project | Multi-Namespace Project |
 |---|---|---|---|
-| `<template>` | `PascalCase.xml` | `prompts/MyTemplate.xml` | `prompts/MyNamespace/MyTemplate.xml` |
-| `<tool>` | `lowerCamel.xml` | `prompts/myTool.xml` | `prompts/MyNamespace/myTool.xml` |
-| `<meta>` | `meta.xml` | `prompts/meta.xml` | `prompts/meta.xml` |
-| `<namespace>` | `shared.xml` | `prompts/shared.xml` | `prompts/MyNamespace/shared.xml` |
+| `<template>` | `PascalCase.tp` | `prompts/MyTemplate.tp` | `prompts/MyNamespace/MyTemplate.tp` |
+| `<tool>` | `lowerCamel.tp` | `prompts/myTool.tp` | `prompts/MyNamespace/myTool.tp` |
+| `<meta>` | `meta.tp` | `prompts/meta.tp` | `prompts/meta.tp` |
+| `<namespace>` | `shared.tp` | `prompts/shared.tp` | `prompts/MyNamespace/shared.tp` |
 
 ### Single-namespace project layout
 
 ```
 prompts/
-├── meta.xml
-├── shared.xml
-├── Translate.xml
-├── TriageTicket.xml
-└── webSearch.xml
+├── meta.tp
+├── shared.tp
+├── Translate.tp
+├── TriageTicket.tp
+└── webSearch.tp
 ```
 
 ### Multi-namespace project layout
 
 ```
 prompts/
-├── meta.xml
+├── meta.tp
 ├── Finance/
-│   ├── shared.xml
-│   ├── DetectAnomaly.xml
-│   └── SummarizeTransaction.xml
+│   ├── shared.tp
+│   ├── DetectAnomaly.tp
+│   └── SummarizeTransaction.tp
 └── Legal/
-    ├── shared.xml
-    ├── DraftNda.xml
-    └── SummarizeClause.xml
+    ├── shared.tp
+    ├── DraftNda.tp
+    └── SummarizeClause.tp
 ```

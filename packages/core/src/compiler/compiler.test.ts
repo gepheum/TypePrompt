@@ -29,7 +29,7 @@ describe("compile - basic compilation and empty results", () => {
   it("compiles a single valid template in the default namespace", () => {
     const result = compile(
       {
-        "prompts/Translate.xml": `
+        "prompts/Translate.tp": `
           <template name="Translate">
             <schema>
               type Input = { text: string; };
@@ -54,14 +54,14 @@ describe("compile - basic compilation and empty results", () => {
         },
       },
       tools: {},
-      signature: "7affafbd",
+      signature: "7d6199f8",
       finalErrors: {
-        "prompts/Translate.xml": [],
+        "prompts/Translate.tp": [],
       },
       pathToDefinitionLinks: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
-            reference: { path: "prompts/Translate.xml" },
+            reference: { path: "prompts/Translate.tp" },
             definition: { text: "text" },
           },
         ],
@@ -72,21 +72,21 @@ describe("compile - basic compilation and empty results", () => {
   it("compiles a multi-file project with meta, namespace, tools, and templates", () => {
     const result = compile(
       {
-        "prompts/meta.xml": `
+        "prompts/meta.tp": `
           <meta>
             type Meta = {
               temperature: number;
             };
           </meta>
         `,
-        "prompts/Legal/shared.xml": `
+        "prompts/Legal/shared.tp": `
           <namespace name="Legal">
             type Document = {
               title: string;
             };
           </namespace>
         `,
-        "prompts/Legal/lookupClause.xml": `
+        "prompts/Legal/lookupClause.tp": `
           <tool name="lookupClause" namespace="Legal">
             <description>Looks up clause by <c>clauseId</c></description>
             <schema>
@@ -95,7 +95,7 @@ describe("compile - basic compilation and empty results", () => {
             </schema>
           </tool>
         `,
-        "prompts/Legal/ReviewContract.xml": `
+        "prompts/Legal/ReviewContract.tp": `
           <template name="ReviewContract" namespace="Legal">
             <schema>
               type Input = { doc: shared.Document; };
@@ -142,12 +142,12 @@ describe("compile - basic compilation and empty results", () => {
           },
         },
       },
-      signature: "c538246b",
+      signature: "a8985639",
       finalErrors: {
-        "prompts/meta.xml": [],
-        "prompts/Legal/shared.xml": [],
-        "prompts/Legal/lookupClause.xml": [],
-        "prompts/Legal/ReviewContract.xml": [],
+        "prompts/meta.tp": [],
+        "prompts/Legal/shared.tp": [],
+        "prompts/Legal/lookupClause.tp": [],
+        "prompts/Legal/ReviewContract.tp": [],
       },
     });
   });
@@ -161,7 +161,7 @@ describe("compile - parse and top-level XML errors", () => {
   it("reports parse errors for malformed XML in a source file", () => {
     const result = compile(
       {
-        "prompts/Broken.xml": "<template name='Broken'",
+        "prompts/Broken.tp": "<template name='Broken'",
       },
       { cache: null, patchBase: null },
     );
@@ -169,7 +169,7 @@ describe("compile - parse and top-level XML errors", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Broken.xml": [
+        "prompts/Broken.tp": [
           {
             message: "Unclosed tag '<template>'",
           },
@@ -181,7 +181,7 @@ describe("compile - parse and top-level XML errors", () => {
   it("reports an error for unexpected top-level XML elements", () => {
     const result = compile(
       {
-        "prompts/Invalid.xml": "<unknownTag>content</unknownTag>",
+        "prompts/Invalid.tp": "<unknownTag>content</unknownTag>",
       },
       { cache: null, patchBase: null },
     );
@@ -189,7 +189,7 @@ describe("compile - parse and top-level XML errors", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Invalid.xml": [
+        "prompts/Invalid.tp": [
           {
             message: "Unexpected element <unknownTag> at the top level",
           },
@@ -201,7 +201,7 @@ describe("compile - parse and top-level XML errors", () => {
   it("reports an error when top-level content contains plain text", () => {
     const result = compile(
       {
-        "prompts/Invalid.xml": "not xml content",
+        "prompts/Invalid.tp": "not xml content",
       },
       { cache: null, patchBase: null },
     );
@@ -209,7 +209,7 @@ describe("compile - parse and top-level XML errors", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Invalid.xml": [
+        "prompts/Invalid.tp": [
           {
             message: "Unexpected text node at top level",
           },
@@ -230,8 +230,8 @@ describe("compile - meta schema resolution", () => {
   it("reports an error when multiple <meta> files are present in the project", () => {
     const result = compile(
       {
-        "prompts/meta1.xml": "<meta>type Meta = { timeout: number; };</meta>",
-        "prompts/meta2.xml": "<meta>type Meta = { debug: boolean; };</meta>",
+        "prompts/meta1.tp": "<meta>type Meta = { timeout: number; };</meta>",
+        "prompts/meta2.tp": "<meta>type Meta = { debug: boolean; };</meta>",
       },
       { cache: null, patchBase: null },
     );
@@ -240,12 +240,12 @@ describe("compile - meta schema resolution", () => {
       anyErrors: true,
       metaSchema: { kind: "other-error" },
       finalErrors: {
-        "prompts/meta1.xml": [
+        "prompts/meta1.tp": [
           {
             message: "Multiple <meta> elements found",
           },
         ],
-        "prompts/meta2.xml": [
+        "prompts/meta2.tp": [
           {
             message: "Multiple <meta> elements found",
           },
@@ -257,7 +257,7 @@ describe("compile - meta schema resolution", () => {
   it("reports schema errors when <meta> schema is invalid", () => {
     const result = compile(
       {
-        "prompts/meta.xml": "<meta>type InvalidMeta = ;</meta>",
+        "prompts/meta.tp": "<meta>type InvalidMeta = ;</meta>",
       },
       { cache: null, patchBase: null },
     );
@@ -265,7 +265,7 @@ describe("compile - meta schema resolution", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/meta.xml": [
+        "prompts/meta.tp": [
           {
             message:
               "Expected one of: '(', '{', '|', 'shared', string literal, identifier",
@@ -284,12 +284,12 @@ describe("compile - namespace resolution", () => {
   it("reports an error when multiple namespace files share the exact same name", () => {
     const result = compile(
       {
-        "prompts/Legal1/shared.xml": `
+        "prompts/Legal1/shared.tp": `
           <namespace name="Legal">
             type Doc = { title: string; };
           </namespace>
         `,
-        "prompts/Legal2/shared.xml": `
+        "prompts/Legal2/shared.tp": `
           <namespace name="Legal">
             type Other = { id: string; };
           </namespace>
@@ -307,12 +307,12 @@ describe("compile - namespace resolution", () => {
         },
       },
       finalErrors: {
-        "prompts/Legal1/shared.xml": [
+        "prompts/Legal1/shared.tp": [
           {
             message: "Duplicate identifier 'Legal'",
           },
         ],
-        "prompts/Legal2/shared.xml": [
+        "prompts/Legal2/shared.tp": [
           {
             message: "Duplicate identifier 'Legal'",
           },
@@ -324,12 +324,12 @@ describe("compile - namespace resolution", () => {
   it("reports a conflict error for case-insensitive namespace name collisions", () => {
     const result = compile(
       {
-        "prompts/Legal/shared.xml": `
+        "prompts/Legal/shared.tp": `
           <namespace name="Legal">
             type Doc = { title: string; };
           </namespace>
         `,
-        "prompts/LEGAL/shared.xml": `
+        "prompts/LEGAL/shared.tp": `
           <namespace name="LEGAL">
             type Other = { id: string; };
           </namespace>
@@ -341,8 +341,8 @@ describe("compile - namespace resolution", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Legal/shared.xml": [],
-        "prompts/LEGAL/shared.xml": [
+        "prompts/Legal/shared.tp": [],
+        "prompts/LEGAL/shared.tp": [
           {
             message: "'LEGAL' and 'Legal' differ only by casing",
           },
@@ -354,12 +354,12 @@ describe("compile - namespace resolution", () => {
   it("reports an error when a template references a non-existent namespace", () => {
     const result = compile(
       {
-        "prompts/Finance/shared.xml": `
+        "prompts/Finance/shared.tp": `
           <namespace name="Finance">
             type Tx = { id: string; };
           </namespace>
         `,
-        "prompts/Unknown/Doc.xml": `
+        "prompts/Unknown/Doc.tp": `
           <template name="Doc" namespace="NonExistent">
             <schema>
               type Input = string;
@@ -376,8 +376,8 @@ describe("compile - namespace resolution", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Finance/shared.xml": [],
-        "prompts/Unknown/Doc.xml": [
+        "prompts/Finance/shared.tp": [],
+        "prompts/Unknown/Doc.tp": [
           {
             message: "Namespace 'NonExistent' not found",
             suggestions: ["Finance", "Main"],
@@ -390,12 +390,12 @@ describe("compile - namespace resolution", () => {
   it("reports an error when a tool references a non-existent namespace", () => {
     const result = compile(
       {
-        "prompts/Finance/shared.xml": `
+        "prompts/Finance/shared.tp": `
           <namespace name="Finance">
             type Tx = { id: string; };
           </namespace>
         `,
-        "prompts/Unknown/myTool.xml": `
+        "prompts/Unknown/myTool.tp": `
           <tool name="myTool" namespace="NonExistent">
             <description>Tool description</description>
             <schema>
@@ -411,8 +411,8 @@ describe("compile - namespace resolution", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Finance/shared.xml": [],
-        "prompts/Unknown/myTool.xml": [
+        "prompts/Finance/shared.tp": [],
+        "prompts/Unknown/myTool.tp": [
           {
             message: "Namespace 'NonExistent' not found",
             suggestions: ["Finance", "Main"],
@@ -431,14 +431,14 @@ describe("compile - name conflicts within namespaces", () => {
   it("reports an error when two templates share the same name in the same namespace", () => {
     const result = compile(
       {
-        "prompts/Translate1.xml": `
+        "prompts/Translate1.tp": `
           <template name="Translate">
             <schema>type Input = string; type Output = string;</schema>
             <system>Sys 1</system>
             <user>Usr 1</user>
           </template>
         `,
-        "prompts/Translate2.xml": `
+        "prompts/Translate2.tp": `
           <template name="Translate">
             <schema>type Input = string; type Output = string;</schema>
             <system>Sys 2</system>
@@ -452,12 +452,12 @@ describe("compile - name conflicts within namespaces", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate1.xml": [
+        "prompts/Translate1.tp": [
           {
             message: "Duplicate identifier 'Translate'",
           },
         ],
-        "prompts/Translate2.xml": [
+        "prompts/Translate2.tp": [
           {
             message: "Duplicate identifier 'Translate'",
           },
@@ -469,14 +469,14 @@ describe("compile - name conflicts within namespaces", () => {
   it("reports an error when a template and a tool share the same name in the same namespace", () => {
     const result = compile(
       {
-        "prompts/Search.xml": `
+        "prompts/Search.tp": `
           <template name="Search">
             <schema>type Input = string; type Output = string;</schema>
             <system>Sys</system>
             <user>Usr</user>
           </template>
         `,
-        "prompts/searchTool.xml": `
+        "prompts/searchTool.tp": `
           <tool name="search">
             <description>Search tool</description>
             <schema>type Input = string; type Output = string;</schema>
@@ -489,12 +489,12 @@ describe("compile - name conflicts within namespaces", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Search.xml": [
+        "prompts/Search.tp": [
           {
             message: "'Search' and 'search' differ only by casing",
           },
         ],
-        "prompts/searchTool.xml": [],
+        "prompts/searchTool.tp": [],
       },
     });
   });
@@ -507,7 +507,7 @@ describe("compile - name conflicts within namespaces", () => {
 describe("compile - caching and incremental compilation", () => {
   it("reuses cached source files and validation results for unchanged content", () => {
     const initialFiles = {
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>type Input = string; type Output = string;</schema>
           <system>Sys</system>
@@ -525,8 +525,7 @@ describe("compile - caching and incremental compilation", () => {
     expect(cachedResult).toMatch({
       anyErrors: false,
       sourceFiles: {
-        "prompts/Translate.xml":
-          firstResult.sourceFiles["prompts/Translate.xml"],
+        "prompts/Translate.tp": firstResult.sourceFiles["prompts/Translate.tp"],
       },
       templates: {
         "Main:Translate": firstResult.templates["Main:Translate"],
@@ -536,14 +535,14 @@ describe("compile - caching and incremental compilation", () => {
 
   it("re-evaluates modified files while preserving unchanged cached results", () => {
     const initialFiles = {
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>type Input = string; type Output = string;</schema>
           <system>Sys</system>
           <user>Usr</user>
         </template>
       `,
-      "prompts/Summarize.xml": `
+      "prompts/Summarize.tp": `
         <template name="Summarize">
           <schema>type Input = string; type Output = string;</schema>
           <system>Summarize</system>
@@ -556,7 +555,7 @@ describe("compile - caching and incremental compilation", () => {
 
     const updatedFiles = {
       ...initialFiles,
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>type Input = { text: string; }; type Output = string;</schema>
           <system>Updated sys</system>
@@ -573,8 +572,7 @@ describe("compile - caching and incremental compilation", () => {
     expect(secondResult).toMatch({
       anyErrors: false,
       sourceFiles: {
-        "prompts/Summarize.xml":
-          firstResult.sourceFiles["prompts/Summarize.xml"],
+        "prompts/Summarize.tp": firstResult.sourceFiles["prompts/Summarize.tp"],
       },
       templates: {
         "Main:Summarize": firstResult.templates["Main:Summarize"],
@@ -587,13 +585,13 @@ describe("compile - caching and incremental compilation", () => {
 
   it("re-validates templates when a referenced tool is updated", () => {
     const initialFiles = {
-      "prompts/calc.xml": `
+      "prompts/calc.tp": `
         <tool name="calc">
           <description>Calculator</description>
           <schema>type Input = { expr: string; }; type Output = { result: number; };</schema>
         </tool>
       `,
-      "prompts/Math.xml": `
+      "prompts/Math.tp": `
         <template name="Math">
           <schema>type Input = { q: string; }; type Output = string;</schema>
           <tools>- tool: calc</tools>
@@ -608,7 +606,7 @@ describe("compile - caching and incremental compilation", () => {
     // Modify the tool schema
     const updatedFiles = {
       ...initialFiles,
-      "prompts/calc.xml": `
+      "prompts/calc.tp": `
         <tool name="calc">
           <description>Updated calculator</description>
           <schema>type Input = { expression: string; }; type Output = { answer: number; };</schema>
@@ -645,7 +643,7 @@ describe("compile - pathToDefinitionLinks", () => {
   it("populates pathToDefinitionLinks across meta, namespace, tool, and template files", () => {
     const result = compile(
       {
-        "prompts/meta.xml": `
+        "prompts/meta.tp": `
           <meta>
             type Meta = {
               env: Environment;
@@ -653,7 +651,7 @@ describe("compile - pathToDefinitionLinks", () => {
             type Environment = "prod" | "dev";
           </meta>
         `,
-        "prompts/Legal/shared.xml": `
+        "prompts/Legal/shared.tp": `
           <namespace name="Legal">
             type Clause = { id: string; text: string; };
             type Document = {
@@ -662,7 +660,7 @@ describe("compile - pathToDefinitionLinks", () => {
             };
           </namespace>
         `,
-        "prompts/Legal/lookupClause.xml": `
+        "prompts/Legal/lookupClause.tp": `
           <tool name="lookupClause" namespace="Legal">
             <description>Looks up clause</description>
             <schema>
@@ -671,7 +669,7 @@ describe("compile - pathToDefinitionLinks", () => {
             </schema>
           </tool>
         `,
-        "prompts/Legal/ReviewContract.xml": `
+        "prompts/Legal/ReviewContract.tp": `
           <template name="ReviewContract" namespace="Legal">
             <schema>
               type Input = { doc: shared.Document; };
@@ -694,56 +692,56 @@ describe("compile - pathToDefinitionLinks", () => {
     expect(result).toMatch({
       anyErrors: false,
       pathToDefinitionLinks: {
-        "prompts/meta.xml": [
+        "prompts/meta.tp": [
           {
-            reference: { path: "prompts/meta.xml" },
-            definition: { path: "prompts/meta.xml" },
+            reference: { path: "prompts/meta.tp" },
+            definition: { path: "prompts/meta.tp" },
           },
         ],
-        "prompts/Legal/shared.xml": [
+        "prompts/Legal/shared.tp": [
           {
-            reference: { path: "prompts/Legal/shared.xml" },
-            definition: { path: "prompts/Legal/shared.xml" },
+            reference: { path: "prompts/Legal/shared.tp" },
+            definition: { path: "prompts/Legal/shared.tp" },
           },
         ],
-        "prompts/Legal/lookupClause.xml": [
+        "prompts/Legal/lookupClause.tp": [
           {
             reference: {
-              path: "prompts/Legal/lookupClause.xml",
+              path: "prompts/Legal/lookupClause.tp",
             },
-            definition: { path: "prompts/Legal/shared.xml" },
+            definition: { path: "prompts/Legal/shared.tp" },
           },
         ],
-        "prompts/Legal/ReviewContract.xml": [
+        "prompts/Legal/ReviewContract.tp": [
           {
             reference: {
-              path: "prompts/Legal/ReviewContract.xml",
+              path: "prompts/Legal/ReviewContract.tp",
             },
-            definition: { path: "prompts/meta.xml" },
-          },
-          {
-            reference: {
-              path: "prompts/Legal/ReviewContract.xml",
-            },
-            definition: { path: "prompts/meta.xml" },
+            definition: { path: "prompts/meta.tp" },
           },
           {
             reference: {
-              path: "prompts/Legal/ReviewContract.xml",
+              path: "prompts/Legal/ReviewContract.tp",
             },
-            definition: { path: "prompts/Legal/shared.xml" },
+            definition: { path: "prompts/meta.tp" },
           },
           {
-            reference: { path: "prompts/Legal/ReviewContract.xml" },
-            definition: { path: "prompts/Legal/lookupClause.xml" },
+            reference: {
+              path: "prompts/Legal/ReviewContract.tp",
+            },
+            definition: { path: "prompts/Legal/shared.tp" },
           },
           {
-            reference: { path: "prompts/Legal/ReviewContract.xml" },
-            definition: { path: "prompts/Legal/ReviewContract.xml" },
+            reference: { path: "prompts/Legal/ReviewContract.tp" },
+            definition: { path: "prompts/Legal/lookupClause.tp" },
           },
           {
-            reference: { path: "prompts/Legal/ReviewContract.xml" },
-            definition: { path: "prompts/Legal/shared.xml" },
+            reference: { path: "prompts/Legal/ReviewContract.tp" },
+            definition: { path: "prompts/Legal/ReviewContract.tp" },
+          },
+          {
+            reference: { path: "prompts/Legal/ReviewContract.tp" },
+            definition: { path: "prompts/Legal/shared.tp" },
           },
         ],
       },
@@ -752,12 +750,12 @@ describe("compile - pathToDefinitionLinks", () => {
 
   it("preserves pathToDefinitionLinks when reusing compilation cache", () => {
     const files = {
-      "prompts/shared.xml": `
+      "prompts/shared.tp": `
         <namespace name="Main">
           type User = { name: string; };
         </namespace>
       `,
-      "prompts/Greet.xml": `
+      "prompts/Greet.tp": `
         <template name="Greet">
           <schema>
             type Input = { user: shared.User; };
@@ -773,18 +771,18 @@ describe("compile - pathToDefinitionLinks", () => {
     expect(firstResult).toMatch({
       anyErrors: false,
       pathToDefinitionLinks: {
-        "prompts/Greet.xml": [
+        "prompts/Greet.tp": [
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/shared.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/shared.tp" },
           },
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/Greet.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/Greet.tp" },
           },
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/shared.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/shared.tp" },
           },
         ],
       },
@@ -797,19 +795,19 @@ describe("compile - pathToDefinitionLinks", () => {
     expect(secondResult).toMatch({
       anyErrors: false,
       pathToDefinitionLinks: {
-        "prompts/shared.xml": [],
-        "prompts/Greet.xml": [
+        "prompts/shared.tp": [],
+        "prompts/Greet.tp": [
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/shared.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/shared.tp" },
           },
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/Greet.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/Greet.tp" },
           },
           {
-            reference: { path: "prompts/Greet.xml" },
-            definition: { path: "prompts/shared.xml" },
+            reference: { path: "prompts/Greet.tp" },
+            definition: { path: "prompts/shared.tp" },
           },
         ],
       },
@@ -823,12 +821,12 @@ describe("compile - pathToDefinitionLinks", () => {
 
 describe("compile - patchBase validation", () => {
   const baseFiles = {
-    "prompts/Billing/shared.xml": `
+    "prompts/Billing/shared.tp": `
       <namespace name="Billing">
         type Invoice = { id: string; amount: number; };
       </namespace>
     `,
-    "prompts/Billing/charge.xml": `
+    "prompts/Billing/charge.tp": `
       <tool name="charge" namespace="Billing">
         <description>Charges card</description>
         <schema>
@@ -837,7 +835,7 @@ describe("compile - patchBase validation", () => {
         </schema>
       </tool>
     `,
-    "prompts/Billing/SendInvoice.xml": `
+    "prompts/Billing/SendInvoice.tp": `
       <template name="SendInvoice" namespace="Billing">
         <schema>
           type Input = { invoiceId: string; };
@@ -847,7 +845,7 @@ describe("compile - patchBase validation", () => {
         <user>Invoice <insert val="input.invoiceId"/></user>
       </template>
     `,
-    "prompts/Translate.xml": `
+    "prompts/Translate.tp": `
       <template name="Translate">
         <schema>
           type Input = { text: string; };
@@ -867,12 +865,12 @@ describe("compile - patchBase validation", () => {
 
   it("succeeds when overrides match base templates, tools, and namespaces", () => {
     const overrideFiles = {
-      "prompts/Billing/shared.xml": `
+      "prompts/Billing/shared.tp": `
         <namespace name="Billing">
           type Invoice = { id: string; amount: number; };
         </namespace>
       `,
-      "prompts/Billing/charge.xml": `
+      "prompts/Billing/charge.tp": `
         <tool name="charge" namespace="Billing">
           <description>Updated description for charging</description>
           <schema>
@@ -881,7 +879,7 @@ describe("compile - patchBase validation", () => {
           </schema>
         </tool>
       `,
-      "prompts/Billing/SendInvoice.xml": `
+      "prompts/Billing/SendInvoice.tp": `
         <template name="SendInvoice" namespace="Billing">
           <schema>
             type Input = { invoiceId: string; };
@@ -891,7 +889,7 @@ describe("compile - patchBase validation", () => {
           <user>Sending invoice: <insert val="input.invoiceId"/></user>
         </template>
       `,
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>
             type Input = { text: string; };
@@ -913,7 +911,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports error when an override file is not found in patchBase", () => {
     const overrideFiles = {
-      "prompts/NewTemplate.xml": `
+      "prompts/NewTemplate.tp": `
         <template name="NewTemplate">
           <schema>
             type Input = string;
@@ -933,7 +931,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/NewTemplate.xml": [
+        "prompts/NewTemplate.tp": [
           {
             message: "File not found in patch base",
           },
@@ -944,7 +942,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports error when element kind does not match base", () => {
     const overrideFiles = {
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <namespace name="Translate">
           type Doc = string;
         </namespace>
@@ -959,7 +957,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
             message: "Expected <template> to match base",
             suggestions: ["template"],
@@ -971,7 +969,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports error when template name does not match base", () => {
     const overrideFiles = {
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="TranslateV2">
           <schema>
             type Input = { text: string; };
@@ -991,7 +989,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
             message: "Expected 'Translate' to match base",
             suggestions: ["Translate"],
@@ -1004,7 +1002,7 @@ describe("compile - patchBase validation", () => {
   it("reports error when tool name does not match base", () => {
     const overrideFiles = {
       ...baseFiles,
-      "prompts/Billing/charge.xml": `
+      "prompts/Billing/charge.tp": `
         <tool name="chargeCard" namespace="Billing">
           <description>Charges card</description>
           <schema>
@@ -1023,7 +1021,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Billing/charge.xml": [
+        "prompts/Billing/charge.tp": [
           {
             message: "Expected 'charge' to match base",
             suggestions: ["charge"],
@@ -1035,7 +1033,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports error when namespace name does not match base", () => {
     const overrideFiles = {
-      "prompts/Billing/shared.xml": `
+      "prompts/Billing/shared.tp": `
         <namespace name="Invoicing">
           type Invoice = { id: string; amount: number; };
         </namespace>
@@ -1050,7 +1048,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Billing/shared.xml": [
+        "prompts/Billing/shared.tp": [
           {
             message: "Expected 'Billing' to match base",
             suggestions: ["Billing"],
@@ -1063,7 +1061,7 @@ describe("compile - patchBase validation", () => {
   it("reports error when namespace does not match base", () => {
     const overrideFiles = {
       ...baseFiles,
-      "prompts/Billing/SendInvoice.xml": `
+      "prompts/Billing/SendInvoice.tp": `
         <template name="SendInvoice" namespace="Main">
           <schema>
             type Input = { invoiceId: string; };
@@ -1083,7 +1081,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Billing/SendInvoice.xml": [
+        "prompts/Billing/SendInvoice.tp": [
           {
             message: "Expected 'Billing' to match base",
             suggestions: ["Billing"],
@@ -1095,7 +1093,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports error when namespace attribute is missing on override but present in base", () => {
     const overrideFiles = {
-      "prompts/Billing/SendInvoice.xml": `
+      "prompts/Billing/SendInvoice.tp": `
         <template name="SendInvoice">
           <schema>
             type Input = { invoiceId: string; };
@@ -1115,7 +1113,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Billing/SendInvoice.xml": [
+        "prompts/Billing/SendInvoice.tp": [
           {
             message: "Missing attribute 'namespace=\"Billing\"' to match base",
           },
@@ -1127,7 +1125,7 @@ describe("compile - patchBase validation", () => {
   it("reports error when namespace attribute is present on override but base used default namespace", () => {
     const overrideFiles = {
       ...baseFiles,
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate" namespace="Billing">
           <schema>
             type Input = { text: string; };
@@ -1147,7 +1145,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
             message: "Expected 'Main' to match base",
             suggestions: ["Main"],
@@ -1159,7 +1157,7 @@ describe("compile - patchBase validation", () => {
 
   it("reports schema mismatch errors with baseSchema for template, tool, and namespace", () => {
     const overrideFiles = {
-      "prompts/Translate.xml": `
+      "prompts/Translate.tp": `
         <template name="Translate">
           <schema>
             type Input = { differentField: number; };
@@ -1169,7 +1167,7 @@ describe("compile - patchBase validation", () => {
           <user>hi</user>
         </template>
       `,
-      "prompts/Billing/charge.xml": `
+      "prompts/Billing/charge.tp": `
         <tool name="charge" namespace="Billing">
           <description>Charges card</description>
           <schema>
@@ -1178,7 +1176,7 @@ describe("compile - patchBase validation", () => {
           </schema>
         </tool>
       `,
-      "prompts/Billing/shared.xml": `
+      "prompts/Billing/shared.tp": `
         <namespace name="Billing">
           type Invoice = { id: string; };
         </namespace>
@@ -1193,17 +1191,17 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
             message: "Schema does not match base",
           },
         ],
-        "prompts/Billing/charge.xml": [
+        "prompts/Billing/charge.tp": [
           {
             message: "Schema does not match base",
           },
         ],
-        "prompts/Billing/shared.xml": [
+        "prompts/Billing/shared.tp": [
           {
             message: "Schema does not match base",
           },
@@ -1211,7 +1209,7 @@ describe("compile - patchBase validation", () => {
       },
     });
 
-    const translateErrors = result.finalErrors["prompts/Translate.xml"];
+    const translateErrors = result.finalErrors["prompts/Translate.tp"];
     expect(translateErrors?.[0]?.baseSchema !== undefined).toBe(true);
     expect(
       translateErrors?.[0]?.baseSchema?.includes(
@@ -1223,7 +1221,7 @@ describe("compile - patchBase validation", () => {
   it("reports schema mismatch errors for meta", () => {
     const metaBase = compile(
       {
-        "prompts/meta.xml": `
+        "prompts/meta.tp": `
           <meta>
             type Meta = {
               temperature: number;
@@ -1237,7 +1235,7 @@ describe("compile - patchBase validation", () => {
 
     const result = compile(
       {
-        "prompts/meta.xml": `
+        "prompts/meta.tp": `
           <meta>
             type Meta = {
               temperature: string;
@@ -1251,7 +1249,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/meta.xml": [
+        "prompts/meta.tp": [
           {
             message: "Schema does not match base",
           },
@@ -1259,7 +1257,7 @@ describe("compile - patchBase validation", () => {
       },
     });
 
-    const metaErrors = result.finalErrors["prompts/meta.xml"];
+    const metaErrors = result.finalErrors["prompts/meta.tp"];
     expect(metaErrors?.[0]?.baseSchema !== undefined).toBe(true);
     expect(metaErrors?.[0]?.baseSchema?.includes("temperature: number;")).toBe(
       true,
@@ -1268,7 +1266,7 @@ describe("compile - patchBase validation", () => {
 
   it("skips patchBase validation when override file has parse errors", () => {
     const overrideFiles = {
-      "prompts/Translate.xml": '<template name="Translate"',
+      "prompts/Translate.tp": '<template name="Translate"',
     };
 
     const result = compile(overrideFiles, {
@@ -1279,7 +1277,7 @@ describe("compile - patchBase validation", () => {
     expect(result).toMatch({
       anyErrors: true,
       finalErrors: {
-        "prompts/Translate.xml": [
+        "prompts/Translate.tp": [
           {
             message: "Unclosed tag '<template>'",
           },
@@ -1292,7 +1290,7 @@ describe("compile - patchBase validation", () => {
 describe("SourceFileParseResult hash", () => {
   it("computes exact hash values matching semantic patch-validation elements", () => {
     const templateDefaultNs = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate">
           <schema>
@@ -1307,7 +1305,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const templateCustomNs = parseSourceFile(
-      "prompts/Legal/ReviewContract.xml",
+      "prompts/Legal/ReviewContract.tp",
       `
         <template name="ReviewContract" namespace="Legal">
           <schema>
@@ -1322,7 +1320,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const toolFile = parseSourceFile(
-      "prompts/Legal/lookupClause.xml",
+      "prompts/Legal/lookupClause.tp",
       `
         <tool name="lookupClause" namespace="Legal">
           <description>Looks up clause by <c>clauseId</c></description>
@@ -1336,7 +1334,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const namespaceFile = parseSourceFile(
-      "prompts/Legal/shared.xml",
+      "prompts/Legal/shared.tp",
       `
         <namespace name="Legal">
           type Document = {
@@ -1348,7 +1346,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const metaFile = parseSourceFile(
-      "prompts/meta.xml",
+      "prompts/meta.tp",
       `
         <meta>
           type Meta = {
@@ -1360,16 +1358,16 @@ describe("SourceFileParseResult hash", () => {
     );
 
     // Exact deterministic hash snapshots
-    expect(templateDefaultNs.hash).toBe(2063577021);
-    expect(templateCustomNs.hash).toBe(1580329034);
-    expect(toolFile.hash).toBe(486079968);
-    expect(namespaceFile.hash).toBe(-252376145);
-    expect(metaFile.hash).toBe(1494758034);
+    expect(templateDefaultNs.hash).toBe(2103548408);
+    expect(templateCustomNs.hash).toBe(-828742231);
+    expect(toolFile.hash).toBe(1830807043);
+    expect(namespaceFile.hash).toBe(-2055341980);
+    expect(metaFile.hash).toBe(-413134295);
   });
 
   it("produces identical hash when prompt body text or doc comments change", () => {
     const file1 = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate">
           <schema>
@@ -1384,7 +1382,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const file2 = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate">
           <schema>
@@ -1407,7 +1405,7 @@ describe("SourceFileParseResult hash", () => {
 
   it("produces different hash when template name, namespace, or schema changes", () => {
     const base = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate">
           <schema>
@@ -1422,7 +1420,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const diffName = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate2">
           <schema>
@@ -1437,7 +1435,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const diffNamespace = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate" namespace="Other">
           <schema>
@@ -1452,7 +1450,7 @@ describe("SourceFileParseResult hash", () => {
     );
 
     const diffSchema = parseSourceFile(
-      "prompts/Translate.xml",
+      "prompts/Translate.tp",
       `
         <template name="Translate">
           <schema>

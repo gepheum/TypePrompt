@@ -11,7 +11,7 @@ export function initializeProject(projectDir: string): void {
   const existingConfigPath = findConfigInDirectory(projectDir);
 
   const promptsDir = join(projectDir, "prompts");
-  const helloWorldPath = join(promptsDir, "hello-world.xml");
+  const helloWorldPath = join(promptsDir, "hello-world.tp");
 
   if (!existingConfigPath) {
     const yamlConfigPath = join(projectDir, "typeprompt.yaml");
@@ -41,7 +41,7 @@ export const DEFAULT_CONFIG_YAML = `
 # Docs: https://typeprompt.dev
 
 include:
-  - prompts/**/*.xml
+  - prompts/**/*.tp
 
 # Uncomment and configure the generators for your target language(s).
 gen:

@@ -129,7 +129,7 @@ export async function patchProject(args: {
     "",
     "include:",
     Object.keys(sourceFiles).length <= 0
-      ? "  - prompts/**/*.xml"
+      ? "  - prompts/**/*.tp"
       : Object.keys(sourceFiles)
           .sort()
           .map((p) => `  - ${JSON.stringify(p)}`)
