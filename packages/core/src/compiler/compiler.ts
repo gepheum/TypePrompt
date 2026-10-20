@@ -182,7 +182,16 @@ function computeSourceFileHash(
   entity: Template | Tool | Namespace | Meta,
 ): number {
   switch (entity.kind) {
-    case "template":
+    case "template": {
+      return combineHashes([
+        hashString(path),
+        hashString(entity.kind),
+        hashString(entity.name.text),
+        hashString(entity.namespace?.text ?? DEFAULT_NAMESPACE),
+        hashSchema(entity.schema.typeDeclarations),
+        hashString(entity.outputFormat?.text ?? "json"),
+      ]);
+    }
     case "tool": {
       return combineHashes([
         hashString(path),

@@ -54,7 +54,7 @@ describe("compile - basic compilation and empty results", () => {
         },
       },
       tools: {},
-      signature: "fbb40e8b",
+      signature: "7affafbd",
       finalErrors: {
         "prompts/Translate.xml": [],
       },
@@ -142,7 +142,7 @@ describe("compile - basic compilation and empty results", () => {
           },
         },
       },
-      signature: "51484c7f",
+      signature: "c538246b",
       finalErrors: {
         "prompts/meta.xml": [],
         "prompts/Legal/shared.xml": [],
@@ -1360,8 +1360,8 @@ describe("SourceFileParseResult hash", () => {
     );
 
     // Exact deterministic hash snapshots
-    expect(templateDefaultNs.hash).toBe(-72085877);
-    expect(templateCustomNs.hash).toBe(-364769186);
+    expect(templateDefaultNs.hash).toBe(2063577021);
+    expect(templateCustomNs.hash).toBe(1580329034);
     expect(toolFile.hash).toBe(486079968);
     expect(namespaceFile.hash).toBe(-252376145);
     expect(metaFile.hash).toBe(1494758034);
