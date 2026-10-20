@@ -1,18 +1,26 @@
-export * from "./body-parser.js";
-export * from "./body-validator.js";
-export * from "./compilation-result-parser.js";
-export * from "./compiler-types.js";
-export * from "./compiler.js";
-export * from "./default-namespace.js";
-export * from "./file-naming-conventions.js";
-export * from "./ids.js";
-export * from "./meta-parser.js";
-export * from "./namespace-parser.js";
-export * from "./spec-maker.js";
-export * from "./spec-types-schema.js";
+export {
+  parseCompilationResult,
+  type CompilationResultParseError,
+} from "./compilation-result-parser.js";
+
+export {
+  type CompilationResult,
+  type Template,
+  type Tool,
+  type ValidCompilationResult,
+  type ValidNamespaceResult,
+  type ValidTemplate,
+  type ValidatedTool,
+} from "./compiler-types.js";
+
+export { compile, parseSourceFile } from "./compiler.js";
+
+export { DEFAULT_NAMESPACE } from "./default-namespace.js";
+
+export { getId } from "./ids.js";
+
+export { makeTemplateOverrides, makeTemplates } from "./spec-maker.js";
+
+export { runtimeTypesSchema } from "./spec-types-schema.js";
+
 export * as Spec from "./spec-types.js";
-export * from "./template-parser.js";
-export * from "./template-validator.js";
-export * from "./text-extractor.js";
-export * from "./tool-parser.js";
-export * from "./tool-validator.js";
