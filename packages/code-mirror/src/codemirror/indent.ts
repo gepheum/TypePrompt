@@ -10,29 +10,6 @@ import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
 import { Lsp } from "@typeprompt/core";
 
 /**
- * Matches an open XML tag at the end of a line that is NOT:
- * - A self-closing tag (e.g. `<val ... />`)
- * - A closing tag (e.g. `</template>`)
- * - An XML comment (e.g. `<!-- ... -->`)
- * - A processing instruction (e.g. `<?xml ... ?>`)
- */
-const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
-
-/**
- * Matches an open bracket or YAML colon at the end of a line:
- * - `{`, `[`, `(`, or `<`
- * - `:` (used in YAML headers or blocks)
- */
-const OPEN_BRACKET_RE = /(?:[{[(<]|:)\s*$/;
-
-/**
- * Matches a closing tag or closing bracket at the start of a line:
- * - `</tagName>`
- * - `}`, `]`, `)`
- */
-const CLOSE_RE = /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])])/;
-
-/**
  * Computes the indentation for a line in TypePrompt:
  * - Indents if the previous non-empty line ended with an open tag or open bracket.
  * - Outdents if the current line starts with a closing tag or closing bracket.
@@ -289,3 +266,26 @@ export const typepromptIndentation: Extension = [
   }),
   Prec.high(keymap.of(typepromptKeymap)),
 ];
+
+/**
+ * Matches an open XML tag at the end of a line that is NOT:
+ * - A self-closing tag (e.g. `<val ... />`)
+ * - A closing tag (e.g. `</template>`)
+ * - An XML comment (e.g. `<!-- ... -->`)
+ * - A processing instruction (e.g. `<?xml ... ?>`)
+ */
+const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
+
+/**
+ * Matches an open bracket or YAML colon at the end of a line:
+ * - `{`, `[`, `(`, or `<`
+ * - `:` (used in YAML headers or blocks)
+ */
+const OPEN_BRACKET_RE = /(?:[{[(<]|:)\s*$/;
+
+/**
+ * Matches a closing tag or closing bracket at the start of a line:
+ * - `</tagName>`
+ * - `}`, `]`, `)`
+ */
+const CLOSE_RE = /^\s*(?:<\/[_a-zA-Z0-9\-:]+>|[}\])])/;

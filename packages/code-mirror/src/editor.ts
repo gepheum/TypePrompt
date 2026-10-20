@@ -83,10 +83,8 @@ export class Editor extends LitElement {
       this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
       typeprompt({
         path: this.path,
-        lint: true,
-        autocomplete: true,
-        highlight: true,
-        autoCloseTags: true,
+        workspaceFiles: {},
+        patchBase: null,
       }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
@@ -157,10 +155,8 @@ export class Editor extends LitElement {
     if (this.editorView) {
       const config: TypePromptConfig = {
         path: this.path,
-        lint: true,
-        autocomplete: true,
-        highlight: true,
-        autoCloseTags: true,
+        workspaceFiles: {},
+        patchBase: null,
       };
 
       const newState = EditorState.create({

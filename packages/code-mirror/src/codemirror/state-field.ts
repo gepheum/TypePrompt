@@ -15,6 +15,13 @@ export const typepromptConfigFacet = Facet.define<
   TypePromptConfig
 >({
   combine(values: readonly TypePromptConfig[]): TypePromptConfig {
+    if (values.length === 0) {
+      return {
+        path: "template.xml",
+        workspaceFiles: {},
+        patchBase: null,
+      };
+    }
     return Object.assign({}, ...values);
   },
 });
@@ -32,10 +39,10 @@ export const typepromptConfigFacet = Facet.define<
 export const typepromptStateField = StateField.define<TypePromptState>({
   create(state: EditorState): TypePromptState {
     const config = state.facet(typepromptConfigFacet);
-    const path = config.path ?? "template.xml";
+    const path = config.path;
     const content = state.doc.toString();
-    const workspaceFiles = config.workspaceFiles ?? {};
-    const patchBase = config.patchBase ?? null;
+    const workspaceFiles = config.workspaceFiles;
+    const patchBase = config.patchBase;
 
     const compilationResult = compile(
       { ...workspaceFiles, [path]: content },

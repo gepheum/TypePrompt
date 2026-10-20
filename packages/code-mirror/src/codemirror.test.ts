@@ -188,7 +188,11 @@ describe("TypePrompt CodeMirror Extension", () => {
       const state = EditorState.create({
         doc: validTemplate,
         extensions: [
-          typepromptConfigFacet.of({ path: "Summarize.xml" }),
+          typepromptConfigFacet.of({
+            path: "Summarize.xml",
+            workspaceFiles: {},
+            patchBase: null,
+          }),
           typepromptStateField,
         ],
       });
@@ -480,8 +484,8 @@ describe("TypePrompt CodeMirror Extension", () => {
           extensions: [
             typeprompt({
               path: "template.xml",
-              autoCloseComments: true,
-              indent: true,
+              workspaceFiles: {},
+              patchBase: null,
             }),
           ],
         });
@@ -886,7 +890,11 @@ describe("TypePrompt CodeMirror Extension", () => {
             selection: { anchor: cursor },
             extensions: [
               keymap.of([...defaultKeymap, ...historyKeymap]),
-              typeprompt(),
+              typeprompt({
+                path: "template.xml",
+                workspaceFiles: {},
+                patchBase: null,
+              }),
             ],
           });
 
@@ -920,7 +928,13 @@ describe("TypePrompt CodeMirror Extension", () => {
           ].join("\n");
           const state = EditorState.create({
             doc,
-            extensions: [typeprompt()],
+            extensions: [
+              typeprompt({
+                path: "template.xml",
+                workspaceFiles: {},
+                patchBase: null,
+              }),
+            ],
           });
           const cx = new IndentContext(state);
           const lineWithClose = state.doc.line(5);
@@ -1045,7 +1059,8 @@ describe("TypePrompt CodeMirror Extension", () => {
           extensions: [
             typeprompt({
               path: "template.xml",
-              indent: true,
+              workspaceFiles: {},
+              patchBase: null,
             }),
           ],
         });
@@ -1246,11 +1261,8 @@ describe("TypePrompt CodeMirror Extension", () => {
         extensions: [
           typeprompt({
             path: "prompts/Summarize.xml",
-            lint: true,
-            autocomplete: true,
-            highlight: true,
-            autoCloseTags: true,
-            indent: true,
+            workspaceFiles: {},
+            patchBase: null,
           }),
         ],
       });
@@ -1259,34 +1271,6 @@ describe("TypePrompt CodeMirror Extension", () => {
       assert.ok(compState);
       assert.strictEqual(compState.path, "prompts/Summarize.xml");
       assert.strictEqual(compState.compilationResult.anyErrors, false);
-    });
-
-    it("can disable indentation via config.indent = false", () => {
-      const state = EditorState.create({
-        doc: validTemplate,
-        extensions: [
-          typeprompt({
-            indent: false,
-          }),
-        ],
-      });
-      assert.ok(state);
-    });
-
-    it("can disable closeBrackets via config.closeBrackets = false", () => {
-      const state = EditorState.create({
-        doc: validTemplate,
-        extensions: [typeprompt({ closeBrackets: false })],
-      });
-      assert.ok(state);
-    });
-
-    it("can disable bracketMatching via config.bracketMatching = false", () => {
-      const state = EditorState.create({
-        doc: validTemplate,
-        extensions: [typeprompt({ bracketMatching: false })],
-      });
-      assert.ok(state);
     });
   });
 });

@@ -40,48 +40,22 @@ import type { TypePromptConfig, TypePromptState } from "./types.js";
  * - Smart auto-indentation on Enter (open tags, open brackets, YAML colons)
  * - On-Enter tag and bracket split with indentOutdent
  *
- * @param config Optional configuration options (file path, workspace files, patchBase, toggles)
+ * @param config Configuration options (path, workspaceFiles, patchBase)
  */
-export function typeprompt(config: TypePromptConfig = {}): Extension {
-  const extensions: Extension[] = [
+export function typeprompt(config: TypePromptConfig): Extension {
+  return [
     typepromptConfigFacet.of(config),
     typepromptStateField,
+    typepromptHighlighting,
+    typepromptLinting,
+    typepromptAutocomplete,
+    autoCloseTags(),
+    autoCloseComments(),
+    closeBrackets(),
+    keymap.of(closeBracketsKeymap),
+    bracketMatching(),
+    typepromptIndentation,
   ];
-
-  if (config.highlight !== false) {
-    extensions.push(typepromptHighlighting);
-  }
-
-  if (config.lint !== false) {
-    extensions.push(typepromptLinting);
-  }
-
-  if (config.autocomplete !== false) {
-    extensions.push(typepromptAutocomplete);
-  }
-
-  if (config.autoCloseTags !== false) {
-    extensions.push(autoCloseTags());
-  }
-
-  if (config.autoCloseComments !== false) {
-    extensions.push(autoCloseComments());
-  }
-
-  if (config.closeBrackets !== false) {
-    extensions.push(closeBrackets());
-    extensions.push(keymap.of(closeBracketsKeymap));
-  }
-
-  if (config.bracketMatching !== false) {
-    extensions.push(bracketMatching());
-  }
-
-  if (config.indent !== false) {
-    extensions.push(typepromptIndentation);
-  }
-
-  return extensions;
 }
 
 // Re-export all sub-modules and helpers
