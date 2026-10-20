@@ -3,9 +3,9 @@ import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
 
 export default {
-  input: "dist/app.js",
+  input: "dist-dev/dev/app.js",
   output: {
-    file: "dist/code-mirror-standalone.js",
+    file: "dist/codemirror-standalone.js",
     format: "iife",
     name: "PromptViewer",
     sourcemap: true,

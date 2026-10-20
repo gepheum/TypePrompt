@@ -20,7 +20,7 @@ import {
   getCompilationResult,
   typeprompt,
   type TypePromptConfig,
-} from "./codemirror/index.js";
+} from "../src/index.js";
 
 @customElement("code-mirror-editor")
 export class Editor extends LitElement {

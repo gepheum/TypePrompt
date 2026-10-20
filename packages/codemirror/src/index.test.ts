@@ -22,7 +22,7 @@ import {
   typepromptLinter,
   typepromptStateField,
   typepromptToggleCommentCommand,
-} from "./codemirror/index.js";
+} from "./index.js";
 
 const validTemplate = `
 <template name="Summarize">

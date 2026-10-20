@@ -7,17 +7,17 @@
   ],
   "scripts": {
     "make-static-snippets": "tsx packages/cli/src/static-snippets/make-static-snippets.ts",
-    "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode && npm run build --workspace=@typeprompt/website",
+    "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode && npm run build --workspace=@typeprompt/website && npm run build --workspace=@typeprompt/codemirror",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "website:dev": "npm run dev --workspace=@typeprompt/website",
     "website:build": "npm run build --workspace=@typeprompt/website",
     "start": "node packages/cli/dist/main.js",
     "dev": "tsx packages/cli/src/main.ts",
-    "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"packages/*/src/**/*.test.ts\"",
-    "lint": "eslint 'packages/*/src/**/*.ts'",
-    "lint:fix": "eslint 'packages/*/src/**/*.ts' --fix",
-    "format": "prettier --write \"packages/*/src/**/*.ts\"",
-    "format:check": "prettier --check \"packages/*/src/**/*.ts\""
+    "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"packages/*/{src,dev}/**/*.test.ts\"",
+    "lint": "eslint 'packages/*/{src,dev}/**/*.ts'",
+    "lint:fix": "eslint 'packages/*/{src,dev}/**/*.ts' --fix",
+    "format": "prettier --write \"packages/*/{src,dev}/**/*.ts\"",
+    "format:check": "prettier --check \"packages/*/{src,dev}/**/*.ts\""
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",

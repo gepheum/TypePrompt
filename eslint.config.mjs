@@ -44,7 +44,7 @@ export default [
     ignores: [
       'dist/',
       'packages/*/dist/',
-      'packages/code-mirror/',
+      'packages/codemirror/',
       'node_modules/',
       '*.js',
     ],
