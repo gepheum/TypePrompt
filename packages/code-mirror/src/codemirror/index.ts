@@ -1,4 +1,7 @@
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { bracketMatching } from "@codemirror/language";
 import type { Extension } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
 import { autoCloseComments, autoCloseTags } from "./auto-close.js";
 import {
   typepromptAutocomplete,
@@ -66,6 +69,15 @@ export function typeprompt(config: TypePromptConfig = {}): Extension {
     extensions.push(autoCloseComments());
   }
 
+  if (config.closeBrackets !== false) {
+    extensions.push(closeBrackets());
+    extensions.push(keymap.of(closeBracketsKeymap));
+  }
+
+  if (config.bracketMatching !== false) {
+    extensions.push(bracketMatching());
+  }
+
   if (config.indent !== false) {
     extensions.push(typepromptIndentation);
   }
@@ -77,6 +89,9 @@ export function typeprompt(config: TypePromptConfig = {}): Extension {
 export {
   autoCloseComments,
   autoCloseTags,
+  bracketMatching,
+  closeBrackets,
+  closeBracketsKeymap,
   getCompilationResult,
   getSemanticTokens,
   typepromptAutocomplete,

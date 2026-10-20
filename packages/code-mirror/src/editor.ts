@@ -4,7 +4,7 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands";
-import { bracketMatching, foldGutter } from "@codemirror/language";
+import { foldGutter } from "@codemirror/language";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import {
   EditorView,
@@ -78,7 +78,6 @@ export class Editor extends LitElement {
       highlightActiveLineGutter(),
       highlightActiveLine(),
       history(),
-      bracketMatching(),
       foldGutter(),
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
@@ -171,7 +170,6 @@ export class Editor extends LitElement {
           highlightActiveLineGutter(),
           highlightActiveLine(),
           history(),
-          bracketMatching(),
           foldGutter(),
           keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
           this.themeCompartment.of(this.darkMode ? githubDark : githubLight),

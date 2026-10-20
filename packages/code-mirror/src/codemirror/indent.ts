@@ -1,4 +1,4 @@
-import { acceptCompletion } from "@codemirror/autocomplete";
+import { acceptCompletion, deleteBracketPair } from "@codemirror/autocomplete";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import {
   IndentContext,
@@ -213,7 +213,7 @@ export function typepromptBackspaceCommand(view: EditorView): boolean {
     return true;
   }
 
-  return false;
+  return deleteBracketPair(view);
 }
 
 /**

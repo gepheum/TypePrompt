@@ -1,4 +1,4 @@
-import { CompletionContext } from "@codemirror/autocomplete";
+import { CompletionContext, insertBracket } from "@codemirror/autocomplete";
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import { getIndentation, IndentContext } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
@@ -7,6 +7,7 @@ import { githubDark } from "@uiw/codemirror-themes-all";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
+  closeBrackets,
   getCompilationResult,
   getSemanticTokens,
   typeprompt,
@@ -1117,6 +1118,127 @@ describe("TypePrompt CodeMirror Extension", () => {
     });
   });
 
+  describe("Auto-Closing Brackets and Quotes (closeBrackets)", () => {
+    it("auto-closes double quotes and positions cursor inside", () => {
+      const state = EditorState.create({
+        doc: "<tag attr=",
+        selection: { anchor: "<tag attr=".length },
+        extensions: [closeBrackets()],
+      });
+      const tr = insertBracket(state, '"');
+      assert.ok(tr);
+      const nextState = state.update(tr).state;
+      assert.strictEqual(nextState.doc.toString(), '<tag attr=""');
+      assert.strictEqual(nextState.selection.main.anchor, '<tag attr="'.length);
+    });
+
+    it("auto-closes single quotes and positions cursor inside", () => {
+      const state = EditorState.create({
+        doc: "<tag attr=",
+        selection: { anchor: "<tag attr=".length },
+        extensions: [closeBrackets()],
+      });
+      const tr = insertBracket(state, "'");
+      assert.ok(tr);
+      const nextState = state.update(tr).state;
+      assert.strictEqual(nextState.doc.toString(), "<tag attr=''");
+      assert.strictEqual(nextState.selection.main.anchor, "<tag attr='".length);
+    });
+
+    it("auto-closes parentheses () and positions cursor inside", () => {
+      const state = EditorState.create({
+        doc: "fn",
+        selection: { anchor: 2 },
+        extensions: [closeBrackets()],
+      });
+      const tr = insertBracket(state, "(");
+      assert.ok(tr);
+      const nextState = state.update(tr).state;
+      assert.strictEqual(nextState.doc.toString(), "fn()");
+      assert.strictEqual(nextState.selection.main.anchor, 3);
+    });
+
+    it("auto-closes square brackets [] and positions cursor inside", () => {
+      const state = EditorState.create({
+        doc: "items: ",
+        selection: { anchor: 7 },
+        extensions: [closeBrackets()],
+      });
+      const tr = insertBracket(state, "[");
+      assert.ok(tr);
+      const nextState = state.update(tr).state;
+      assert.strictEqual(nextState.doc.toString(), "items: []");
+      assert.strictEqual(nextState.selection.main.anchor, 8);
+    });
+
+    it("auto-closes curly braces {} and positions cursor inside", () => {
+      const state = EditorState.create({
+        doc: "type Input = ",
+        selection: { anchor: 13 },
+        extensions: [closeBrackets()],
+      });
+      const tr = insertBracket(state, "{");
+      assert.ok(tr);
+      const nextState = state.update(tr).state;
+      assert.strictEqual(nextState.doc.toString(), "type Input = {}");
+      assert.strictEqual(nextState.selection.main.anchor, 14);
+    });
+
+    it("deletes auto-closed quote pair on backspace via typepromptBackspaceCommand", () => {
+      let state = EditorState.create({
+        doc: "value: ",
+        selection: { anchor: 7 },
+        extensions: [closeBrackets()],
+      });
+      const mockView = {
+        get state() {
+          return state;
+        },
+        dispatch(tr: any) {
+          state = tr.state || state.update(tr).state;
+        },
+      } as unknown as EditorView;
+
+      const tr = insertBracket(state, '"');
+      assert.ok(tr);
+      mockView.dispatch(tr);
+      assert.strictEqual(state.doc.toString(), 'value: ""');
+      assert.strictEqual(state.selection.main.anchor, 8);
+
+      const handled = typepromptBackspaceCommand(mockView);
+      assert.strictEqual(handled, true);
+      assert.strictEqual(state.doc.toString(), "value: ");
+      assert.strictEqual(state.selection.main.anchor, 7);
+    });
+
+    it("deletes auto-closed bracket pair on backspace via typepromptBackspaceCommand", () => {
+      let state = EditorState.create({
+        doc: "fn",
+        selection: { anchor: 2 },
+        extensions: [closeBrackets()],
+      });
+      const mockView = {
+        get state() {
+          return state;
+        },
+        dispatch(tr: any) {
+          state = tr.state || state.update(tr).state;
+        },
+      } as unknown as EditorView;
+
+      const tr = insertBracket(state, "(");
+      assert.ok(tr);
+      mockView.dispatch(tr);
+      assert.strictEqual(state.doc.toString(), "fn()");
+      assert.strictEqual(state.selection.main.anchor, 3);
+
+      const handled = typepromptBackspaceCommand(mockView);
+      assert.strictEqual(handled, true);
+      assert.strictEqual(state.doc.toString(), "fn");
+      assert.strictEqual(state.selection.main.anchor, 2);
+    });
+  });
+
   describe("Full typeprompt() extension bundle", () => {
     it("creates an editor state with all extensions enabled", () => {
       const state = EditorState.create({
@@ -1147,6 +1269,22 @@ describe("TypePrompt CodeMirror Extension", () => {
             indent: false,
           }),
         ],
+      });
+      assert.ok(state);
+    });
+
+    it("can disable closeBrackets via config.closeBrackets = false", () => {
+      const state = EditorState.create({
+        doc: validTemplate,
+        extensions: [typeprompt({ closeBrackets: false })],
+      });
+      assert.ok(state);
+    });
+
+    it("can disable bracketMatching via config.bracketMatching = false", () => {
+      const state = EditorState.create({
+        doc: validTemplate,
+        extensions: [typeprompt({ bracketMatching: false })],
       });
       assert.ok(state);
     });

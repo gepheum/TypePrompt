@@ -60,6 +60,18 @@ export type TypePromptConfig = {
    * Defaults to true.
    */
   readonly indent?: boolean;
+
+  /**
+   * Whether to enable automatic closing of brackets and quotes: `(`, `[`, `{`, `'`, `"`.
+   * Defaults to true.
+   */
+  readonly closeBrackets?: boolean;
+
+  /**
+   * Whether to enable bracket matching highlight.
+   * Defaults to true.
+   */
+  readonly bracketMatching?: boolean;
 };
 
 /**
