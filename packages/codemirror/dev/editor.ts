@@ -62,6 +62,9 @@ export class Editor extends LitElement {
   @property({ type: Boolean })
   darkMode = true;
 
+  @property({ type: Object })
+  workspaceFiles: { readonly [path: string]: string } = defaultWorkspaceFiles;
+
   private themeCompartment = new Compartment();
   private editorView?: EditorView;
 
@@ -83,7 +86,7 @@ export class Editor extends LitElement {
       this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
       typeprompt({
         path: this.path,
-        workspaceFiles: {},
+        workspaceFiles: this.workspaceFiles,
         patchBase: null,
       }),
       EditorView.updateListener.of((update) => {
@@ -147,15 +150,22 @@ export class Editor extends LitElement {
   /**
    * Set editor text content directly and reset history.
    */
-  setContent(newContent: string, newPath?: string): void {
+  setContent(
+    newContent: string,
+    newPath?: string,
+    newWorkspaceFiles?: { readonly [path: string]: string },
+  ): void {
     this.content = newContent;
     if (newPath) {
       this.path = newPath;
     }
+    if (newWorkspaceFiles !== undefined) {
+      this.workspaceFiles = newWorkspaceFiles;
+    }
     if (this.editorView) {
       const config: TypePromptConfig = {
         path: this.path,
-        workspaceFiles: {},
+        workspaceFiles: this.workspaceFiles,
         patchBase: null,
       };
 
@@ -228,3 +238,13 @@ declare global {
     "code-mirror-editor": Editor;
   }
 }
+
+const defaultWorkspaceFiles: { readonly [path: string]: string } = {
+  "prompts/meta.xml": `<meta>
+  interface Meta {
+    model: "gpt-4o" | "gpt-4o-mini";
+    /** Sampling temperature (0-2). */
+    temperature?: number;
+  }
+</meta>`,
+};
