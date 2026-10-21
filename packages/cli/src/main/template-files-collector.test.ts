@@ -82,4 +82,28 @@ describe("collectTemplateFiles", () => {
     expect(error instanceof ExitError).toBe(true);
     expect((error as ExitError).message).toMatch(/outside project directory/);
   });
+
+  it("throws error when a template file does not have a .tp extension", async () => {
+    const promptsDir = join(tempDir, "prompts");
+    mkdirSync(promptsDir, { recursive: true });
+    writeFileSync(
+      join(promptsDir, "Hello.xml"),
+      "<template>hello</template>",
+      "utf8",
+    );
+
+    let error: unknown;
+    try {
+      await collectTemplateFiles(tempDir, {
+        include: ["prompts/**/*"],
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error instanceof ExitError).toBe(true);
+    expect((error as ExitError).message).toMatch(
+      /Template file 'prompts\/Hello\.xml' must have a \.tp extension/,
+    );
+  });
 });

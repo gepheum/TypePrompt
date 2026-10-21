@@ -31,6 +31,11 @@ export async function collectTemplateFiles(
           `Template file '${relativePath}' outside project directory`,
         );
       }
+      if (!relativePath.endsWith(".tp")) {
+        throw new ExitError(
+          `Template file '${relativePath}' must have a .tp extension`,
+        );
+      }
       const content = await REAL_FILE_SYSTEM.readTextFileAsync(fullPath);
       if (content === undefined) {
         throw new ExitError(`Cannot read ${fullPath}`);
