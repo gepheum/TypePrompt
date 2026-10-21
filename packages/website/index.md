@@ -105,8 +105,8 @@ import ai.myapp.generated.prompts.Schema.DecodeCatMood
 // 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
     DecodeCatMood.Input(
-        action = "Knock glass",
-        bowlStatus = DecodeCatMood.Input_BowlStatus.Empty,
+        action = "Sit on keyboard",
+        bowlStatus = DecodeCatMood.Input_BowlStatus.HalfEmpty,
     )
 )
 
@@ -115,6 +115,7 @@ val prompt = prompts.renderDecodeCatMood(
 // 2. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
+// e.g. "Surrender the warm laptop and apologize for trying to work."
 ```
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
