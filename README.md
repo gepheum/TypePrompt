@@ -3,6 +3,8 @@
 
 # TypePrompt
 
+[Website](https://typeprompt.dev)
+
 **TypePrompt** is a tool for managing LLM prompts in your codebase. It brings end-to-end type safety to your AI workflow through code generation, and integrates seamlessly with any LLM SDK.
 
 You write prompt templates in a simple XML format, along with few-shot examples, tools, and schemas (written in a subset of TypeScript). TypePrompt transpiles them into native code for your target language.
@@ -128,20 +130,20 @@ TypePrompt shares many similarities with [DotPrompt](https://github.com/google/d
 
 ### Core concepts
 
-- **[Language reference](docs/reference.md)** — XML syntax for defining prompt templates, tools, metadata.
-- **[Schema language](docs/schema.md)** — TypeScript subset for defining `Input` and `Output` types.
+- **[Language reference](https://typeprompt.dev/reference)** — XML syntax for defining prompt templates, tools, metadata.
+- **[Schema language](https://typeprompt.dev/schema)** — TypeScript subset for defining `Input` and `Output` types.
 
 ### Integration guides
 
-- [TypeScript](docs/languages/typescript.md)
-- [Python](docs/languages/python.md)
-- [Kotlin](docs/languages/kotlin.md)
-- [Rust](docs/languages/rust.md)
-- [C++](docs/languages/cpp.md)
-- [Swift](docs/languages/swift.md)
-- [Dart](docs/languages/dart.md)
-- [C#](docs/languages/csharp.md)
+- [TypeScript](https://typeprompt.dev/languages/typescript)
+- [Python](https://typeprompt.dev/languages/python)
+- [Kotlin](https://typeprompt.dev/languages/kotlin)
+- [Rust](https://typeprompt.dev/languages/rust)
+- [C++](https://typeprompt.dev/languages/cpp)
+- [Swift](https://typeprompt.dev/languages/swift)
+- [Dart](https://typeprompt.dev/languages/dart)
+- [C#](https://typeprompt.dev/languages/csharp)
 
 ### Advanced workflows
 
-- **[Prompt refinement](docs/template-overrides.md)** — Iterating on prompts using template overrides.
+- **[Prompt refinement](https://typeprompt.dev/template-overrides)** — Iterating on prompts using template overrides.
