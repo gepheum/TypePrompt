@@ -1,6 +1,6 @@
 # TypePrompt language reference
 
-TypePrompt projects are made up of `.tp` files matching the `include` pattern in `typeprompt.yaml` (by default, `prompts/**/*.tp`). Every file has one of the following root elements:
+TypePrompt projects are made up of `.tp` files matching the `include` pattern in `typeprompt.yaml` (usually: `prompts/**/*.tp`). Every file has one of the following root elements:
 
 | Element | Purpose |
 |---|---|
@@ -605,25 +605,29 @@ By convention, `.tp` files and directories within your prompts directory follow 
 ### Single-namespace project layout
 
 ```
-prompts/
-├── meta.tp
-├── shared.tp
-├── Translate.tp
-├── TriageTicket.tp
-└── webSearch.tp
+.
+├── typeprompt.yaml
+└── prompts/
+    ├── meta.tp
+    ├── shared.tp
+    ├── Translate.tp
+    ├── TriageTicket.tp
+    └── webSearch.tp
 ```
 
 ### Multi-namespace project layout
 
 ```
-prompts/
-├── meta.tp
-├── Finance/
-│   ├── shared.tp
-│   ├── DetectAnomaly.tp
-│   └── SummarizeTransaction.tp
-└── Legal/
-    ├── shared.tp
-    ├── DraftNda.tp
-    └── SummarizeClause.tp
+.
+├── typeprompt.yaml
+└── prompts/
+    ├── meta.tp
+    ├── Finance/
+    │   ├── shared.tp
+    │   ├── DetectAnomaly.tp
+    │   └── SummarizeTransaction.tp
+    └── Legal/
+        ├── shared.tp
+        ├── DraftNda.tp
+        └── SummarizeClause.tp
 ```
