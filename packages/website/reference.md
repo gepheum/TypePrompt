@@ -156,7 +156,7 @@ If the element's content begins with a line containing only whitespace, TypeProm
 ```xml
 <system>
   You are a helpful assistant.
-  Today is <insert val="input.dateToday"/>.
+  Today is <insert val="input.dateToday" />.
 
   Answer the user's question clearly and concisely.
 </system>
@@ -179,8 +179,8 @@ Inserts a formatted value or a snippet into the message at this position.
 **To insert a value**, set the `val` attribute to an expression rooted at `input`:
 
 ```xml
-<insert val="input.userQuery"/>
-<insert val="input.documents" format="json"/>
+<insert val="input.userQuery" />
+<insert val="input.documents" format="json" />
 ```
 
 The `format` attribute controls serialization:
@@ -197,7 +197,7 @@ The `format` attribute controls serialization:
 **To insert a snippet**, use the `snippet` attribute:
 
 ```xml
-<insert snippet="systemContext"/>
+<insert snippet="systemContext" />
 ```
 
 **Indentation propagation:** if the `<insert>` tag appears on an indented line, that indentation is prepended to every line of the resolved value or snippet. This lets you embed multi-line content inside a block element cleanly:
@@ -205,7 +205,7 @@ The `format` attribute controls serialization:
 ```xml
 <user>
   <enclosed tag="Document">
-    <insert val="input.documentContent"/>
+    <insert val="input.documentContent" />
   </enclosed>
 </user>
 ```
@@ -229,10 +229,10 @@ Wraps its content in an XML-like tag in the resolved text. This is more readable
 ```xml
 <user>
   <enclosed tag="Context">
-    <insert val="input.background"/>
+    <insert val="input.background" />
   </enclosed>
   <enclosed tag="Question">
-    <insert val="input.question"/>
+    <insert val="input.question" />
   </enclosed>
 </user>
 ```
@@ -300,8 +300,7 @@ The compiler checks that the JSON is well-formed and conforms to at least one na
 To keep inline examples concise, you may use an ellipsis (`...`) as a placeholder:
 
 ```xml
-<c>{"documentText": "...", ...}</c>
-<c>[{"translatedText": "Hello"}, ...]</c>
+<c>{"documentText": ..., ...}</c>
 ```
 
 ---
@@ -368,17 +367,17 @@ There may be at most one `<examples>` element per template or variant.
 
 ### `<snippet>`
 
-A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..."/>`.
+A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..." />`.
 
 ```xml
 <template name="QuestionAnswerer">
   <system>
-    <insert snippet="todayDate"/>
+    <insert snippet="todayDate" />
     Answer the following question.
   </system>
 
   <snippet name="todayDate">
-    Today's date is <insert val="input.dateToday"/>.
+    Today's date is <insert val="input.dateToday" />.
   </snippet>
   ...
 </template>
@@ -393,7 +392,7 @@ A snippet can conditionally render one of two bodies depending on an expression:
 ```xml
 <snippet name="locationContext" if="input.userLocation" is="notNull">
   <then>
-    The user is located in <insert val="it"/>.
+    The user is located in <insert val="it" />.
   </then>
   <else></else>
 </snippet>
@@ -454,8 +453,8 @@ Variants let you define multiple versions of a prompt that share the same `Input
 
   <!-- Shared across both variants -->
   <user>
-    Recipient: <insert val="input.recipient"/>
-    Topic: <insert val="input.topic"/>
+    Recipient: <insert val="input.recipient" />
+    Topic: <insert val="input.topic" />
   </user>
 
   <variant case="formal">
@@ -467,7 +466,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
       - input:
           recipient: Dr. Lee
           topic: project update
-          # variant is optional in examples
+          # Do not specify 'variant': inferred from the enclosing variant
         output:
           subject: Project Status Update
           body: "Dear Dr. Lee, ..."

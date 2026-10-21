@@ -317,8 +317,7 @@ The compiler checks that the JSON is well-formed and conforms to at least one na
 To keep inline examples concise, you may use an ellipsis (`...`) as a placeholder:
 
 ```xml
-<c>{"documentText": "...", ...}</c>
-<c>[{"translatedText": "Hello"}, ...]</c>
+<c>{"documentText": ..., ...}</c>
 ```
 
 ---
@@ -481,7 +480,7 @@ Variants let you define multiple versions of a prompt that share the same `Input
       - input:
           recipient: Dr. Lee
           topic: project update
-          # variant is optional in examples
+          # Do not specify 'variant': inferred from the enclosing variant
         output:
           subject: Project Status Update
           body: "Dear Dr. Lee, ..."
