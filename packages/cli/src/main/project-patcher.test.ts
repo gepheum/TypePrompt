@@ -59,7 +59,7 @@ describe("patchProject", () => {
     const configResult = parseConfigYaml(configContent, configPath);
     expect(configResult.kind).toBe("success");
     if (configResult.kind === "success") {
-      expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
+      expect(configResult.config.include).toMatch(["**/*.tp"]);
       expect(configResult.config.patch).toMatch({
         base: "patch-base.json",
         overrides: "overrides.json",
@@ -102,7 +102,7 @@ describe("patchProject", () => {
     const configResult = parseConfigYaml(configContent, configPath);
     expect(configResult.kind).toBe("success");
     if (configResult.kind === "success") {
-      expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
+      expect(configResult.config.include).toMatch(["**/*.tp"]);
       expect(configResult.config.patch).toMatch({
         base: "patch-base.json",
         overrides: "overrides.json",
@@ -265,7 +265,7 @@ describe("patchProject", () => {
       const configResult = parseConfigYaml(configContent, configPath);
       expect(configResult.kind).toBe("success");
       if (configResult.kind === "success") {
-        expect(configResult.config.include).toMatch(["prompts/hello-world.tp"]);
+        expect(configResult.config.include).toMatch(["**/*.tp"]);
         expect(configResult.config.patch).toMatch({
           base: "patch-base.json",
           overrides: "overrides.json",
