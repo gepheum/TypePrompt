@@ -359,6 +359,7 @@ For a template that uses tools:
             results: ["Paris is the capital of France."]
     output:
       answer: Paris
+</examples>
 ```
 
 There may be at most one `<examples>` element per template or variant.
