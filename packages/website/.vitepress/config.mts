@@ -1,4 +1,82 @@
 import { defineConfig } from "vitepress";
+import { Lsp } from "@typeprompt/core";
+
+const TOKEN_VARIABLE_MAP: Record<string, string> = {
+  "xml-tag": "--shiki-token-tag",
+  "xml-attribute": "--shiki-token-attribute",
+  "schema-keyword": "--shiki-token-keyword",
+  string: "--shiki-token-string",
+  number: "--shiki-token-constant",
+  boolean: "--shiki-token-constant",
+  comment: "--shiki-token-comment",
+};
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderTokenSpan(text: string, kind: string): string {
+  const variable = TOKEN_VARIABLE_MAP[kind];
+  if (!variable) {
+    return `<span class="tp-punctuation" style="color:var(--shiki-token-punctuation)">${escapeHtml(text)}</span>`;
+  }
+  const italic = kind === "comment" ? ";font-style:italic" : "";
+  return `<span class="tp-${kind}" style="color:var(${variable})${italic}">${escapeHtml(text)}</span>`;
+}
+
+function highlightTypePrompt(code: string): string | null {
+  const normalizedCode = code.endsWith("\n") ? code.slice(0, -1) : code;
+  const tokens = Lsp.tokenize(normalizedCode);
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  const lines: string[] = [];
+  let currentLine = "";
+
+  function appendSegment(text: string, kind?: string) {
+    if (!text) return;
+    const parts = text.split("\n");
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) {
+        lines.push(currentLine);
+        currentLine = "";
+      }
+      const part = parts[i];
+      if (part.length > 0) {
+        if (kind) {
+          currentLine += renderTokenSpan(part, kind);
+        } else {
+          currentLine += `<span class="tp-punctuation" style="color:var(--shiki-token-punctuation)">${escapeHtml(part)}</span>`;
+        }
+      }
+    }
+  }
+
+  let lastIndex = 0;
+  for (const token of tokens) {
+    const start = Math.min(token.span.start, normalizedCode.length);
+    const end = Math.min(token.span.end, normalizedCode.length);
+    if (start > lastIndex) {
+      appendSegment(normalizedCode.slice(lastIndex, start));
+    }
+    if (end > start) {
+      appendSegment(normalizedCode.slice(start, end), token.kind);
+    }
+    lastIndex = end;
+  }
+  if (lastIndex < normalizedCode.length) {
+    appendSegment(normalizedCode.slice(lastIndex));
+  }
+  lines.push(currentLine);
+
+  return lines.map((line) => `<span class="line">${line}</span>`).join("\n");
+}
 
 const languageItems = [
   { text: "TypeScript", link: "/languages/typescript" },
@@ -103,6 +181,32 @@ export default defineConfig({
       pattern:
         "https://github.com/gepheum/typeprompt/edit/main/packages/website/:path",
       text: "Edit this page on GitHub",
+    },
+  },
+
+  markdown: {
+    config(md) {
+      const defaultFence = md.renderer.rules.fence!;
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const defaultHtml = defaultFence(tokens, idx, options, env, self);
+        const token = tokens[idx];
+        const lang = token.info.trim().split(/\s+/)[0];
+        if (lang === "xml" || lang === "tp" || lang === "typeprompt") {
+          const customLines = highlightTypePrompt(token.content);
+          if (customLines) {
+            const codeStart = defaultHtml.indexOf("<code>");
+            const codeEnd = defaultHtml.lastIndexOf("</code>");
+            if (codeStart !== -1 && codeEnd !== -1) {
+              return (
+                defaultHtml.slice(0, codeStart + 6) +
+                customLines +
+                defaultHtml.slice(codeEnd)
+              );
+            }
+          }
+        }
+        return defaultHtml;
+      };
     },
   },
 });

@@ -34,3 +34,58 @@
 div[class*="language-"] {
   border-radius: 10px;
 }
+
+/* Shiki token CSS variables for TypePrompt syntax highlighting */
+:root {
+  --shiki-token-keyword: #d73a49;
+  --shiki-token-string: #032f62;
+  --shiki-token-comment: #6a737d;
+  --shiki-token-constant: #005cc5;
+  --shiki-token-punctuation: #24292e;
+  --shiki-token-function: #22863a;
+  --shiki-token-parameter: #6f42c1;
+  --shiki-token-tag: var(--shiki-token-function);
+  --shiki-token-attribute: var(--shiki-token-parameter);
+}
+
+.dark {
+  --shiki-token-keyword: #f97583;
+  --shiki-token-string: #9ecbff;
+  --shiki-token-comment: #8b949e;
+  --shiki-token-constant: #79b8ff;
+  --shiki-token-punctuation: #e1e4e8;
+  --shiki-token-function: #85e89d;
+  --shiki-token-parameter: #b392f0;
+  --shiki-token-tag: var(--shiki-token-function);
+  --shiki-token-attribute: var(--shiki-token-parameter);
+}
+
+.vp-code .tp-xml-tag {
+  color: var(--shiki-token-tag);
+}
+
+.vp-code .tp-xml-attribute {
+  color: var(--shiki-token-attribute);
+}
+
+.vp-code .tp-schema-keyword {
+  color: var(--shiki-token-keyword);
+}
+
+.vp-code .tp-string {
+  color: var(--shiki-token-string);
+}
+
+.vp-code .tp-number,
+.vp-code .tp-boolean {
+  color: var(--shiki-token-constant);
+}
+
+.vp-code .tp-comment {
+  color: var(--shiki-token-comment);
+  font-style: italic;
+}
+
+.vp-code .tp-punctuation {
+  color: var(--shiki-token-punctuation);
+}

@@ -53,7 +53,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
   <examples>
     - input:
         action: "Yowl at 3am"
-        bowlStatus: half-full
+        bowlStatus: half-empty
       output:
         demand: feed-me
         urgency: crisis

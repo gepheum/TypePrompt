@@ -296,7 +296,7 @@ function pushSemanticToken(
 
 export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
   const text = doc.getText();
-  const tokens = Lsp.tokenize(text, doc.uri);
+  const tokens = Lsp.tokenize(text);
   const builder = new SemanticTokensBuilder();
 
   for (const token of tokens) {

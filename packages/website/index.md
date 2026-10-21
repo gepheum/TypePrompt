@@ -77,7 +77,7 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
   <examples>
     - input:
         action: "Yowl at 3am"
-        bowlStatus: half-full
+        bowlStatus: half-empty
       output:
         demand: feed-me
         urgency: crisis

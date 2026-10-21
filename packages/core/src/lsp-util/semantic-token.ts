@@ -17,11 +17,8 @@ export type SemanticToken = {
     | "number"; // number literal
 };
 
-export function tokenize(
-  xmlContent: string,
-  path: string,
-): readonly SemanticToken[] {
-  const xmlDocument = parseXmlDocument(xmlContent, path);
+export function tokenize(xmlContent: string): readonly SemanticToken[] {
+  const xmlDocument = parseXmlDocument(xmlContent, "path");
   if (!xmlDocument.root) {
     return [];
   }
@@ -38,8 +35,15 @@ export function tokenize(
     const { tag, closingTag } = element;
     pushXmlComments(element.comments);
     tokens.push({ span: tag, kind: "xml-tag" });
-    if (closingTag) {
-      tokens.push({ span: closingTag, kind: "xml-tag" });
+    if (closingTag && closingTag.start + 2 < closingTag.end - 1) {
+      tokens.push({
+        span: {
+          ...closingTag,
+          start: closingTag.start + 2,
+          end: closingTag.end - 1,
+        },
+        kind: "xml-tag",
+      });
     }
     for (const value of Object.values(element.attributes)) {
       tokens.push({ span: value.value, kind: "string" });

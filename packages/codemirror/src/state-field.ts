@@ -48,7 +48,7 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       { ...workspaceFiles, [path]: content },
       { cache: null, patchBase },
     );
-    const tokens = Lsp.tokenize(content, path);
+    const tokens = Lsp.tokenize(content);
 
     return {
       path,
@@ -78,7 +78,7 @@ export const typepromptStateField = StateField.define<TypePromptState>({
       cache: oldState.compilationResult,
       patchBase: oldState.compilationResult.patchBase,
     });
-    const tokens = Lsp.tokenize(newContent, oldState.path);
+    const tokens = Lsp.tokenize(newContent);
 
     return {
       path: oldState.path,

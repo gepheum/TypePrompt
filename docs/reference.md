@@ -556,7 +556,9 @@ Namespaces serve two purposes: organizing large projects and defining types that
     country: string;
   }
 </namespace>
+```
 
+```xml
 <!-- Geo/FormatAddress.tp -->
 <template name="FormatAddress" namespace="Geo">
   <schema>
@@ -569,7 +571,9 @@ Namespaces serve two purposes: organizing large projects and defining types that
   </schema>
   ...
 </template>
+```
 
+```xml
 <!-- Geo/geocode.tp -->
 <tool name="geocode" namespace="Geo">
   ...

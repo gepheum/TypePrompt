@@ -1,15 +1,7 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import type { SemanticToken } from "./semantic-token.js";
-import { tokenize as tokenizeCore } from "./semantic-token.js";
-
-function tokenize(
-  xmlContent: string,
-  path = "test.tp",
-): readonly SemanticToken[] {
-  return tokenizeCore(xmlContent, path);
-}
+import { tokenize } from "./semantic-token.js";
 
 describe("tokenize", () => {
   it("returns an empty array for empty XML or documents without root", () => {
@@ -49,7 +41,7 @@ describe("tokenize", () => {
       },
       {
         kind: "xml-tag",
-        span: { start: 46, end: 57 }, // "</template>"
+        span: { start: 48, end: 56 }, // "template"
       },
     ]);
   });
@@ -74,7 +66,7 @@ describe("tokenize", () => {
       },
       {
         kind: "xml-tag",
-        span: { start: 55, end: 62 }, // "</root>"
+        span: { start: 57, end: 61 }, // "root"
       },
     ]);
   });
@@ -112,7 +104,7 @@ describe("tokenize", () => {
       },
       {
         kind: "xml-tag",
-        span: { start: 82, end: 91 }, // "</schema>"
+        span: { start: 84, end: 90 }, // "schema"
       },
     ]);
   });

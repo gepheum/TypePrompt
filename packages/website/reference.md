@@ -371,14 +371,17 @@ There may be at most one `<examples>` element per template or variant.
 A named, reusable fragment of text that can be inserted into `<system>`, `<user>`, or another `<snippet>` using `<insert snippet="..."/>`.
 
 ```xml
-<snippet name="todayDate">
-  Today's date is <insert val="input.dateToday"/>.
-</snippet>
+<template name="QuestionAnswerer">
+  <system>
+    <insert snippet="todayDate"/>
+    Answer the following question.
+  </system>
 
-<system>
-  <insert snippet="todayDate"/>
-  Answer the following question.
-</system>
+  <snippet name="todayDate">
+    Today's date is <insert val="input.dateToday"/>.
+  </snippet>
+  ...
+</template>
 ```
 
 Snippet names must be `camelCase`. The same indentation-stripping rules that apply to `<system>` and `<user>` apply here.
@@ -539,7 +542,9 @@ Namespaces serve two purposes: organizing large projects and defining types that
     country: string;
   }
 </namespace>
+```
 
+```xml
 <!-- Geo/FormatAddress.tp -->
 <template name="FormatAddress" namespace="Geo">
   <schema>
@@ -552,7 +557,9 @@ Namespaces serve two purposes: organizing large projects and defining types that
   </schema>
   ...
 </template>
+```
 
+```xml
 <!-- Geo/geocode.tp -->
 <tool name="geocode" namespace="Geo">
   ...
