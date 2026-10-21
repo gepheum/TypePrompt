@@ -580,12 +580,70 @@ describe("parseSchema - shared type names", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseSchema - comments and JSDoc", () => {
-  it("accepts a single-line comment", () => {
+  it("accepts a single-line comment without warnings", () => {
     const result = parseSchema(
       textNode("// This is a comment\ntype Response = { name: string; };"),
       "template",
     );
-    expect(result).toMatch({ kind: "success" });
+    expect(result).toMatch({ kind: "success", warnings: [] });
+  });
+
+  it("warns when a single-line comment starts with ///", () => {
+    const result = parseSchema(
+      textNode("/// This is a comment\ntype Response = { name: string; };"),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "success",
+      warnings: [
+        {
+          span: { path: "schema.ts", start: 0, end: 21 },
+          message: "Use '/** */' instead of '///' for documentation comments",
+        },
+      ],
+    });
+  });
+
+  it("warns for inline comments starting with /// inside an interface body", () => {
+    const result = parseSchema(
+      textNode(
+        ["type Response = {", "  /// Field doc", "  name: string;", "};"].join(
+          "\n",
+        ),
+      ),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "success",
+      warnings: [
+        {
+          message: "Use '/** */' instead of '///' for documentation comments",
+        },
+      ],
+    });
+  });
+
+  it("reports warnings for multiple comments starting with ///", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "/// First comment",
+          "/// Second comment",
+          "type Response = { name: string; };",
+        ].join("\n"),
+      ),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "success",
+      warnings: [
+        { message: "Use '/** */' instead of '///' for documentation comments" },
+        { message: "Use '/** */' instead of '///' for documentation comments" },
+      ],
+    });
+    if (result.kind === "success") {
+      expect(result.warnings.length).toBe(2);
+    }
   });
 
   it("accepts a non-JSDoc block comment", () => {
@@ -593,7 +651,7 @@ describe("parseSchema - comments and JSDoc", () => {
       textNode("/* comment */\ntype Response = { name: string; };"),
       "template",
     );
-    expect(result).toMatch({ kind: "success" });
+    expect(result).toMatch({ kind: "success", warnings: [] });
   });
 
   it("extracts JSDoc from a single-line /** ... */ comment on a type", () => {

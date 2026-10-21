@@ -69,6 +69,7 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
         end: 0,
       },
       path: "",
+      warnings: [],
     },
     warnings: [],
   };
@@ -824,6 +825,7 @@ describe("validateTemplate - tools validation", () => {
           typeDeclarations: {},
           source: { text: "", start: 0, end: 0 },
           path: "",
+          warnings: [],
         },
         warnings: [],
       },

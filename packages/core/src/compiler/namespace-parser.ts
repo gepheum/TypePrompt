@@ -68,6 +68,7 @@ export function parseNamespace(
   if (schemaParseResult.kind === "error") {
     schema = { ...schemaParseResult, definitionLinks: [] };
   } else {
+    warnings.push(...schemaParseResult.warnings);
     schema = validateSchema(schemaParseResult, null);
     definitionLinks.push(...schema.definitionLinks);
   }

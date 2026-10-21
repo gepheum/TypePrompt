@@ -43,6 +43,7 @@ class SchemaParser<Context extends SchemaContext> {
   private tokenIndex = 0;
   private readonly tokenizerErrors: InternalError[] = [];
   private readonly parserErrors: InternalError[] = [];
+  private readonly warnings: InternalError[] = [];
 
   private get path(): string {
     return this.content.path;
@@ -113,6 +114,7 @@ class SchemaParser<Context extends SchemaContext> {
       ),
       source: toMappedSpan(this.content),
       path: this.path,
+      warnings: this.warnings,
     };
   }
 
@@ -517,6 +519,13 @@ class SchemaParser<Context extends SchemaContext> {
         }
       } else if (group[4] !== undefined) {
         // Single-line comment
+        if (text.startsWith("///")) {
+          this.pushWarning({
+            start: position,
+            end: re.lastIndex,
+            message: "Use '/** */' instead of '///' for documentation comments",
+          });
+        }
         tokenKind = "comment";
       } else if (group[5] !== undefined) {
         // Validate identifier.
@@ -640,6 +649,22 @@ class SchemaParser<Context extends SchemaContext> {
   }): void {
     const { content, path, tokenizerErrors } = this;
     tokenizerErrors.push({
+      span: {
+        path,
+        start: textToSourcePosition(content, args.start),
+        end: textToSourcePosition(content, args.end),
+      },
+      message: args.message,
+    });
+  }
+
+  private pushWarning(args: {
+    start: number;
+    end: number;
+    message: string;
+  }): void {
+    const { content, path, warnings } = this;
+    warnings.push({
       span: {
         path,
         start: textToSourcePosition(content, args.start),

@@ -71,6 +71,7 @@ function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
         end: 0,
       },
       path: "",
+      warnings: [],
     },
     warnings: [],
   };

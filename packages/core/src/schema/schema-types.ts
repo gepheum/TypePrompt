@@ -1,4 +1,9 @@
-import type { DefinitionLink, Span, TextSpan } from "../util/shared-types.js";
+import type {
+  DefinitionLink,
+  InternalError,
+  Span,
+  TextSpan,
+} from "../util/shared-types.js";
 
 export type SchemaContext = "meta" | "namespace" | "template" | "tool";
 
@@ -8,6 +13,7 @@ export type SchemaParseResult<Context extends SchemaContext> = {
   readonly typeDeclarations: { readonly [name: string]: TypeDeclaration };
   readonly source: Omit<TextSpan, "path">;
   readonly path: string;
+  readonly warnings: readonly InternalError[];
 };
 
 export type SchemaView = {

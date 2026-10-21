@@ -31,6 +31,7 @@ export function parseMeta(metaNode: ElementNode): Meta | ValidationErrors {
   if (schemaParseResult.kind === "error") {
     schema = { ...schemaParseResult, definitionLinks: [] };
   } else {
+    warnings.push(...schemaParseResult.warnings);
     schema = validateSchema(schemaParseResult, null);
     definitionLinks.push(...schema.definitionLinks);
   }
@@ -40,7 +41,7 @@ export function parseMeta(metaNode: ElementNode): Meta | ValidationErrors {
       kind: "meta",
       tag: metaNode.tag,
       schema,
-      warnings: textContent.warnings,
+      warnings,
     };
   } else {
     return validationResult.asErrors();

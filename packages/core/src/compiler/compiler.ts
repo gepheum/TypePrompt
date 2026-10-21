@@ -114,7 +114,7 @@ export function parseSourceFile(
         errors.push(...template.errors);
       } else {
         result.entity = template;
-        result.warnings.push(...template.warnings);
+        result.warnings.push(...template.warnings, ...template.schema.warnings);
       }
       break;
     }
@@ -124,7 +124,7 @@ export function parseSourceFile(
         errors.push(...tool.errors);
       } else {
         result.entity = tool;
-        result.warnings.push(...tool.warnings);
+        result.warnings.push(...tool.warnings, ...tool.schema.warnings);
       }
       break;
     }

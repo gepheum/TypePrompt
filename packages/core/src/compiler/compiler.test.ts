@@ -1469,3 +1469,108 @@ describe("SourceFileParseResult hash", () => {
     expect(base.hash === diffSchema.hash).toBe(false);
   });
 });
+
+describe("compile - schema warnings", () => {
+  it("collects schema warnings from a template", () => {
+    const result = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              /// This is an inline doc comment
+              type Input = { text: string; };
+              type Output = string;
+            </schema>
+            <system>Translate</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.warnings["prompts/Translate.tp"]).toMatch([
+      {
+        message: "Use '/** */' instead of '///' for documentation comments",
+        span: {
+          path: "prompts/Translate.tp",
+        },
+      },
+    ]);
+  });
+
+  it("collects schema warnings from a tool", () => {
+    const result = compile(
+      {
+        "tools/search.tp": `
+          <tool name="search">
+            <description>Search the web</description>
+            <schema>
+              /// Query parameter doc
+              type Input = { query: string; };
+              type Output = string[];
+            </schema>
+          </tool>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.warnings["tools/search.tp"]).toMatch([
+      {
+        message: "Use '/** */' instead of '///' for documentation comments",
+        span: {
+          path: "tools/search.tp",
+        },
+      },
+    ]);
+  });
+
+  it("collects schema warnings from a namespace", () => {
+    const result = compile(
+      {
+        "shared.tp": `
+          <namespace name="Main">
+            /// Shared type doc
+            type Shared = string;
+          </namespace>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.warnings["shared.tp"]).toMatch([
+      {
+        message: "Use '/** */' instead of '///' for documentation comments",
+        span: {
+          path: "shared.tp",
+        },
+      },
+    ]);
+  });
+
+  it("collects schema warnings from meta", () => {
+    const result = compile(
+      {
+        "meta.tp": `
+          <meta>
+            /// Meta doc
+            type Meta = {
+              timeoutMs: number;
+            };
+          </meta>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.warnings["meta.tp"]).toMatch([
+      {
+        message: "Use '/** */' instead of '///' for documentation comments",
+        span: {
+          path: "meta.tp",
+        },
+      },
+    ]);
+  });
+});
