@@ -31,6 +31,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
   <schema>
     interface Input {
+      /** What the cat was observed doing. */
       action: string;
       bowlStatus: "empty" | "half-empty";
     }

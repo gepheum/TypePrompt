@@ -53,6 +53,7 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
 
   <schema>
     interface Input {
+      /** What the cat was observed doing. */
       action: string;
       bowlStatus: "empty" | "half-empty";
     }
