@@ -17,12 +17,12 @@ import {
   type Span,
   type TextSpan,
 } from "@typeprompt/core";
+import { formatTemplateFile } from "@typeprompt/formatter";
 import fastDiff from "fast-diff";
 import { glob } from "glob";
 import { minimatch } from "minimatch";
 import * as fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { formatTemplateFile } from "typeprompt/formatter";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import type {
   CompletionItem,

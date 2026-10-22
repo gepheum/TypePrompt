@@ -10,6 +10,7 @@ import {
   type Config,
 } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
+import { formatTemplateFile } from "@typeprompt/formatter";
 import * as FileSystem from "fs/promises";
 import globParent from "glob-parent";
 import { minimatch } from "minimatch";
@@ -17,7 +18,6 @@ import * as Paths from "path";
 import Watcher from "watcher";
 import type { OutputFile } from "./codegen/codegen-types.js";
 import { CODE_GENERATORS } from "./codegen/codegens.js";
-import { formatTemplateFile } from "./formatter/formatter.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import {
   makeGray,

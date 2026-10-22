@@ -1,0 +1,30 @@
+{
+  "name": "@typeprompt/formatter",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./*": {
+      "types": "./dist/*",
+      "import": "./dist/*",
+      "default": "./dist/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@prettier/plugin-xml": "^3.4.2",
+    "@typeprompt/core": "*",
+    "prettier": "^3.9.6"
+  }
+}
