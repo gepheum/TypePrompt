@@ -1,40 +1,40 @@
 export type ParsedArgs =
   | {
-    kind: "gen";
-    subcommand?: "watch";
-    project?: string;
-  }
+      kind: "gen";
+      subcommand?: "watch";
+      project?: string;
+    }
   | {
-    kind: "format";
-    subcommand?: "ci";
-    project?: string;
-  }
+      kind: "format";
+      subcommand?: "ci";
+      project?: string;
+    }
   | {
-    kind: "init";
-    project?: string;
-  }
+      kind: "init";
+      project?: string;
+    }
   | {
-    kind: "patch";
-    output: string;
-    base: string;
-  }
+      kind: "patch";
+      output: string;
+      base: string;
+    }
   | {
-    kind: "play";
-    project?: string;
-    port?: number;
-  }
+      kind: "play";
+      project?: string;
+      port?: number;
+    }
   | {
-    kind: "help";
-    project?: undefined;
-  }
+      kind: "help";
+      project?: undefined;
+    }
   | {
-    kind: "version";
-    project?: undefined;
-  }
+      kind: "version";
+      project?: undefined;
+    }
   | {
-    kind: "error";
-    project?: undefined;
-  };
+      kind: "error";
+      project?: undefined;
+    };
 
 /**
  * Parse command-line arguments and return a structured representation.
