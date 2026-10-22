@@ -241,6 +241,95 @@ describe("command-line-parser", () => {
     });
   });
 
+  describe("play command", () => {
+    it("parses play with default options", () => {
+      expect(parseCommandLine(["play"])).toMatch({
+        kind: "play",
+        project: undefined,
+        port: undefined,
+      });
+    });
+
+    it("parses --play flag", () => {
+      expect(parseCommandLine(["--play"])).toMatch({
+        kind: "play",
+        project: undefined,
+        port: undefined,
+      });
+    });
+
+    it("parses play with -p / --project", () => {
+      expect(parseCommandLine(["play", "-p", "my-project"])).toMatch({
+        kind: "play",
+        project: "my-project",
+        port: undefined,
+      });
+      expect(parseCommandLine(["play", "--project=my-project"])).toMatch({
+        kind: "play",
+        project: "my-project",
+        port: undefined,
+      });
+    });
+
+    it("parses play with --port", () => {
+      expect(parseCommandLine(["play", "--port", "4000"])).toMatch({
+        kind: "play",
+        project: undefined,
+        port: 4000,
+      });
+      expect(parseCommandLine(["play", "--port=8080"])).toMatch({
+        kind: "play",
+        project: undefined,
+        port: 8080,
+      });
+    });
+
+    it("parses play with project and port", () => {
+      expect(
+        parseCommandLine(["play", "-p", "my-project", "--port", "4000"]),
+      ).toMatch({
+        kind: "play",
+        project: "my-project",
+        port: 4000,
+      });
+      expect(
+        parseCommandLine(["--play", "-p", "my-project", "--port", "4000"]),
+      ).toMatch({
+        kind: "play",
+        project: "my-project",
+        port: 4000,
+      });
+    });
+
+    it("returns error for invalid port values", () => {
+      const nanTest = parseAndCapture(["play", "--port", "not-a-number"]);
+      expect(nanTest.result).toMatch({ kind: "error" });
+      expect(nanTest.errors[0]?.trim()).toBe(
+        "Error: Option --port must be a valid port number (1-65535)",
+      );
+
+      const outOfRange = parseAndCapture(["play", "--port", "70000"]);
+      expect(outOfRange.result).toMatch({ kind: "error" });
+      expect(outOfRange.errors[0]?.trim()).toBe(
+        "Error: Option --port must be a valid port number (1-65535)",
+      );
+    });
+
+    it("returns error if invalid flags are passed to play", () => {
+      const watchTest = parseAndCapture(["play", "--watch"]);
+      expect(watchTest.result).toMatch({ kind: "error" });
+      expect(watchTest.errors[0]?.trim()).toBe(
+        "Error: Option --watch is not valid for 'play' command",
+      );
+
+      const ciTest = parseAndCapture(["play", "--ci"]);
+      expect(ciTest.result).toMatch({ kind: "error" });
+      expect(ciTest.errors[0]?.trim()).toBe(
+        "Error: Option --ci is not valid for 'play' command",
+      );
+    });
+  });
+
   describe("error handling", () => {
     it("returns error for unknown commands", () => {
       const { result, errors } = parseAndCapture(["unknown"]);

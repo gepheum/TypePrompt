@@ -24,7 +24,9 @@
   },
   "scripts": {
     "make-static-snippets": "tsx src/static-snippets/make-static-snippets.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "play:frontend": "vite src/play/frontend",
+    "play:build": "vite build src/play/frontend",
+    "build": "tsc -p tsconfig.build.json && npm run play:build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
@@ -36,8 +38,12 @@
     "@types/glob-parent": "^5.1.3",
     "glob": "^13.0.6",
     "glob-parent": "^6.0.2",
+    "lit": "^3.2.0",
     "minimatch": "^10.2.6",
     "prettier": "^3.9.6",
     "watcher": "^2.3.1"
+  },
+  "devDependencies": {
+    "vite": "^6.4.4"
   }
 }

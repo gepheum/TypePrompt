@@ -37,6 +37,7 @@ import {
   makeRenderableErrors,
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
+import { startPlayServer } from "./play/backend/server.js";
 export { formatTemplateFile };
 
 class WatchModeMainLoop {
@@ -296,6 +297,13 @@ async function main(): Promise<void> {
   }
 
   switch (args.kind) {
+    case "play": {
+      await startPlayServer({
+        port: args.port,
+        project: args.project,
+      });
+      return;
+    }
     case "init": {
       initializeProject(args.project ?? ".");
       return;
