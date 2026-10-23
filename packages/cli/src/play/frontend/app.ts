@@ -1,5 +1,6 @@
 import type { TemplateResult } from "lit";
 import { html, LitElement } from "lit";
+import { trpc } from "./trpc.js";
 
 export class PlayApp extends LitElement {
   override render(): TemplateResult {
@@ -8,3 +9,4 @@ export class PlayApp extends LitElement {
 }
 
 customElements.define("play-app", PlayApp);
+export { trpc };

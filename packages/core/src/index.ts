@@ -11,6 +11,7 @@ export {
   type CompilationResult,
   type CompilationResultParseError,
   type Template,
+  type Templates,
   type Tool,
   type ValidCompilationResult,
   type ValidNamespaceResult,

@@ -1,8 +1,12 @@
+import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import type { ValidCompilationResult } from "@typeprompt/core";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { appRouter, type AppRouter, type PlayContext } from "./router.js";
+
+export type { AppRouter };
 
 export type PlayServerOptions = {
   readonly port?: number;
@@ -35,7 +39,33 @@ export class PlayServer {
     const port = options.port ?? 3000;
     const frontendDir = await ensureFrontendReady();
 
+    const trpcHandler = createHTTPHandler({
+      router: appRouter,
+      basePath: "/trpc/",
+      createContext: (): PlayContext => ({
+        getCompilationResult: options.getCompilationResult,
+      }),
+    });
+
     const server = http.createServer((req, res) => {
+      const pathname = req.url
+        ? new URL(req.url, "http://localhost").pathname
+        : "";
+      if (pathname === "/trpc" || pathname.startsWith("/trpc/")) {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, trpc-accept",
+        );
+        if (req.method === "OPTIONS") {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+        trpcHandler(req, res);
+        return;
+      }
       handleRequest(req, res, frontendDir);
     });
 

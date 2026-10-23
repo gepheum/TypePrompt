@@ -24,3 +24,5 @@ export { makeTemplateOverrides, makeTemplates } from "./spec-maker.js";
 export { runtimeTypesSchema } from "./spec-types-schema.js";
 
 export * as Spec from "./spec-types.js";
+
+export type { Templates } from "./spec-types.js";

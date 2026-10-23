@@ -25,6 +25,8 @@
     "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@trpc/client": "^11.19.0",
+    "@trpc/server": "^11.19.0",
     "@typeprompt/core": "*",
     "@typeprompt/formatter": "*",
     "@types/glob-parent": "^5.1.3",
