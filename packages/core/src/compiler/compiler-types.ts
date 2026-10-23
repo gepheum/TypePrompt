@@ -32,6 +32,7 @@ export type CompilationResult = {
   readonly pathToDefinitionLinks: {
     readonly [path: string]: readonly DefinitionLink[];
   };
+  readonly timestampMillis: number;
 };
 
 /** A {@link CompilationResult} known not to have any errors. */

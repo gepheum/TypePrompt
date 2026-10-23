@@ -1,11 +1,15 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { startPlayServer } from "./server.js";
+import { PlayServer } from "./server.js";
 
 describe("play backend server", () => {
   it("starts the server on localhost, serves frontend index.html, and closes", async () => {
     // Port 0 binds to any free port
-    const playServer = await startPlayServer({ port: 0 });
+    const playServer = await PlayServer.start({
+      port: 0,
+      project: ".",
+      getCompilationResult: () => null,
+    });
     try {
       expect(playServer.port > 0).toBe(true);
       expect(playServer.url).toBe(`http://localhost:${playServer.port}`);
@@ -24,7 +28,11 @@ describe("play backend server", () => {
   });
 
   it("returns 405 for non-GET/HEAD methods", async () => {
-    const playServer = await startPlayServer({ port: 0 });
+    const playServer = await PlayServer.start({
+      port: 0,
+      project: ".",
+      getCompilationResult: () => null,
+    });
     try {
       const response = await fetch(`${playServer.url}/`, { method: "POST" });
       expect(response.status).toBe(405);
@@ -34,7 +42,11 @@ describe("play backend server", () => {
   });
 
   it("returns 404 for missing static assets with extensions", async () => {
-    const playServer = await startPlayServer({ port: 0 });
+    const playServer = await PlayServer.start({
+      port: 0,
+      project: ".",
+      getCompilationResult: () => null,
+    });
     try {
       const response = await fetch(`${playServer.url}/missing-file.js`);
       expect(response.status).toBe(404);

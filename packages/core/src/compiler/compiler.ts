@@ -348,6 +348,7 @@ class CompilationResultImpl implements CompilationResult {
   anyErrors = false;
   readonly warnings: { [path: string]: InternalError[] } = {};
   readonly pathToDefinitionLinks: { [path: string]: DefinitionLink[] } = {};
+  readonly timestampMillis = Date.now();
 
   constructor(options: { readonly patchBase: ValidCompilationResult | null }) {
     this.patchBase = options.patchBase;

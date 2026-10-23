@@ -31,7 +31,22 @@ export class WatchModeMainLoop {
   constructor(
     private readonly resolvedProject: string,
     private readonly config: Config,
-    private readonly mode: "watch" | "once",
+    private readonly options:
+      | {
+          readonly watch: false;
+        }
+      | {
+          readonly watch: true;
+          readonly play?: false;
+        }
+      | {
+          readonly watch: true;
+          readonly play: true;
+          /** Called after a successful compilation. */
+          readonly onCompilationSuccess: (
+            r: ValidCompilationResult,
+          ) => Promise<void>;
+        },
   ) {
     this.includes = config.include.map((inc) =>
       Paths.join(resolvedProject, inc),
@@ -97,7 +112,8 @@ export class WatchModeMainLoop {
     this.generating = true;
     this.timeoutId = undefined;
     this.mustRegenerate = false;
-    if (this.mode === "watch") {
+    const { options } = this;
+    if (options.watch) {
       console.clear();
     }
     try {
@@ -113,7 +129,7 @@ export class WatchModeMainLoop {
         });
         this.previousCompilationResult = compilationResult;
       } catch (e) {
-        if (this.mode === "watch" && e instanceof Error) {
+        if (options.watch && e instanceof Error) {
           console.error(makeRed(e.message));
           return false;
         } else {
@@ -136,15 +152,26 @@ export class WatchModeMainLoop {
           pathNormalizer,
         );
         renderErrors(warnings, "warning");
-        await this.doGenerate(compilationResult as ValidCompilationResult);
-        if (this.mode === "watch") {
-          const date = new Date().toLocaleTimeString("en-US");
-          const successMessage = `Generation succeeded at ${date}`;
-          console.log(makeGreen(successMessage));
-          console.log("\nWaiting for changes in files matching:");
-          for (const inc of this.includes) {
-            console.log(`  ${inc}`);
+        const result = compilationResult as ValidCompilationResult;
+        if (options.watch) {
+          if (options.play) {
+            options.onCompilationSuccess(result);
+          } else {
+            await this.doGenerate(result);
+            console.log(
+              makeGreen(
+                "Generation succeeded at ".concat(
+                  new Date(result.timestampMillis).toLocaleTimeString("en-US"),
+                ),
+              ),
+            );
+            console.log("\nWatching for changes in files matching:");
+            for (const inc of this.includes) {
+              console.log(`  ${inc}`);
+            }
           }
+        } else {
+          await this.doGenerate(result);
         }
         return true;
       }

@@ -1,3 +1,4 @@
+import type { ValidCompilationResult } from "@typeprompt/core";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -5,53 +6,57 @@ import { fileURLToPath } from "node:url";
 
 export type PlayServerOptions = {
   readonly port?: number;
-  readonly host?: string;
-  readonly project?: string;
+  readonly project: string;
+  readonly getCompilationResult: () => ValidCompilationResult | null;
 };
 
-export type PlayServer = {
-  readonly server: http.Server;
-  readonly port: number;
-  readonly host: string;
+export class PlayServer {
   readonly url: string;
-  readonly close: () => Promise<void>;
-};
 
-export async function startPlayServer(
-  options: PlayServerOptions,
-): Promise<PlayServer> {
-  const port = options.port ?? 3000;
-  const host = options.host ?? "localhost";
-  const frontendDir = await ensureFrontendReady();
+  private constructor(
+    readonly server: http.Server,
+    readonly port: number,
+    readonly project: string,
+  ) {
+    this.url = `http://localhost:${port}`;
+  }
 
-  const server = http.createServer((req, res) => {
-    handleRequest(req, res, frontendDir);
-  });
+  logLocalhostUrl(): void {
+    console.log(`\nPrompt playground running at ${this.url}`);
+  }
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, host, () => {
-      resolve();
+  async close(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.server.close((err) => (err ? reject(err) : resolve()));
     });
-  });
+  }
 
-  const address = server.address();
-  const actualPort =
-    typeof address === "object" && address !== null ? address.port : port;
-  const url = `http://localhost:${actualPort}`;
+  static async start(options: PlayServerOptions): Promise<PlayServer> {
+    const port = options.port ?? 3000;
+    const frontendDir = await ensureFrontendReady();
 
-  console.log(`Prompt playground running at ${url}`);
+    const server = http.createServer((req, res) => {
+      handleRequest(req, res, frontendDir);
+    });
 
-  return {
-    server,
-    port: actualPort,
-    host,
-    url,
-    close: (): Promise<void> =>
-      new Promise<void>((resolve, reject) => {
-        server.close((err) => (err ? reject(err) : resolve()));
-      }),
-  };
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, "localhost", () => {
+        resolve();
+      });
+    });
+
+    const address = server.address();
+    const actualPort =
+      typeof address === "object" && address !== null ? address.port : port;
+
+    const playServer = new PlayServer(server, actualPort, options.project);
+    if (options.getCompilationResult()) {
+      playServer.logLocalhostUrl();
+    }
+
+    return playServer;
+  }
 }
 
 async function ensureFrontendReady(): Promise<string> {

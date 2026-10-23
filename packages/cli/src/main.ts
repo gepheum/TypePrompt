@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import type { ValidCompilationResult } from "@typeprompt/core";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
 import {
   parseConfigYaml,
@@ -23,7 +24,7 @@ import {
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
-import { startPlayServer } from "./play/backend/server.js";
+import { PlayServer } from "./play/backend/server.js";
 export { formatTemplateFile };
 
 type ModuleFormatResult = {
@@ -104,7 +105,7 @@ async function runGeneration(
   const watchModeMainLoop = new WatchModeMainLoop(
     resolvedProject,
     config,
-    mode,
+    mode === "watch" ? { watch: true } : { watch: false },
   );
   await watchModeMainLoop.maybeReadPatchBase();
   if (mode === "watch") {
@@ -113,6 +114,33 @@ async function runGeneration(
     const success: boolean = await watchModeMainLoop.generate();
     process.exit(success ? 0 : 1);
   }
+}
+
+async function startPlayground(
+  resolvedProject: string,
+  config: Config,
+  port?: number,
+): Promise<void> {
+  let compilationResult: ValidCompilationResult | null = null;
+  let playServer: PlayServer | undefined = undefined;
+  const watchModeMainLoop = new WatchModeMainLoop(resolvedProject, config, {
+    watch: true,
+    play: true,
+    onCompilationSuccess: async (r: ValidCompilationResult): Promise<void> => {
+      compilationResult = r;
+      if (playServer) {
+        playServer.logLocalhostUrl();
+      }
+    },
+  });
+  await watchModeMainLoop.maybeReadPatchBase();
+  const mainLoopPromise = watchModeMainLoop.start();
+  playServer = await PlayServer.start({
+    port,
+    project: resolvedProject,
+    getCompilationResult: () => compilationResult,
+  });
+  await mainLoopPromise;
 }
 
 async function main(): Promise<void> {
@@ -128,13 +156,6 @@ async function main(): Promise<void> {
   }
 
   switch (args.kind) {
-    case "play": {
-      await startPlayServer({
-        port: args.port,
-        project: args.project,
-      });
-      return;
-    }
     case "init": {
       initializeProject(args.project ?? ".");
       return;
@@ -183,6 +204,10 @@ async function main(): Promise<void> {
     }
     case "gen": {
       await runGeneration(resolvedProject, config, args.subcommand ?? "once");
+      break;
+    }
+    case "play": {
+      await startPlayground(resolvedProject, config, args.port);
       break;
     }
     default: {
