@@ -2,7 +2,7 @@ import type {
   ResolvedFieldType,
   Schema,
   SyntheticType,
-  TypeDeclaration,
+  Type,
 } from "../schema/schema-types.js";
 import { resolveType } from "../schema/type-resolver.js";
 import type {
@@ -39,24 +39,24 @@ export type JsonTypeMatch<Mode extends "fast" | "thorough"> =
     };
 
 /**
- * Validates a parsed JSON AST against a schema type declaration or synthetic type.
+ * Validates a parsed JSON AST against a schema type or synthetic type.
  *
  * Runs {@link jsonMatchesType} in "thorough" mode to generate descriptive errors
  * when validation fails, including the root type mismatch error and any nested failure reason.
  *
  * @param json The strict JSON AST value to validate.
- * @param type The target type declaration or named synthetic type.
+ * @param type The target type or synthetic type.
  * @param schema The schema view providing type and union resolution tables.
  * @returns A {@link ValidationResult} with errors and definition links.
  */
 export function validateJson(
   json: StrictJsonValue,
-  type: TypeDeclaration | SyntheticType,
+  type: Type | SyntheticType,
   schema: SchemaView,
 ): ValidationResult {
   const result = jsonMatchesType(
     json as LooseJsonValue,
-    resolveType(type.kind === "type" ? type.valueType : type, schema),
+    resolveType(type, schema),
     "thorough",
     schema,
   );

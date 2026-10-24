@@ -148,7 +148,9 @@ function validateMeta(
       const { meta } = contents.content;
       if (metaType) {
         if (meta) {
-          validationResult.push(validateJson(meta.value, metaType, metaSchema));
+          validationResult.push(
+            validateJson(meta.value, metaType.valueType, metaSchema),
+          );
         } else {
           pushMissingMetaError(template.tag);
         }
@@ -163,7 +165,11 @@ function validateMeta(
       if (metaType) {
         if (defaultContent.meta) {
           validationResult.push(
-            validateJson(defaultContent.meta.value, metaType, metaSchema),
+            validateJson(
+              defaultContent.meta.value,
+              metaType.valueType,
+              metaSchema,
+            ),
           );
         } else if (variants.every((v) => !v.content.meta)) {
           pushMissingMetaError(template.tag);
@@ -172,7 +178,11 @@ function validateMeta(
             const { content } = variant;
             if (content.meta) {
               validationResult.push(
-                validateJson(content.meta.value, metaType, metaSchema),
+                validateJson(
+                  content.meta.value,
+                  metaType.valueType,
+                  metaSchema,
+                ),
               );
             } else {
               pushMissingMetaError(variant.tag);
@@ -507,12 +517,12 @@ function validateToolCallExamples(
         const outputType = schema.typeDeclarations["Output"];
         if (inputType) {
           validationResult.push(
-            validateJson(inputEntry.value, inputType, schema),
+            validateJson(inputEntry.value, inputType.valueType, schema),
           );
         }
         if (outputType) {
           validationResult.push(
-            validateJson(outputEntry.value, outputType, schema),
+            validateJson(outputEntry.value, outputType.valueType, schema),
           );
         }
       }

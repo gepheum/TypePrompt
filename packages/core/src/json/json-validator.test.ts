@@ -178,25 +178,25 @@ function recordType(
 describe("validateJson - exact match", () => {
   it("accepts a string for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(str("hello"), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a number for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = number");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(3.14), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a boolean for a boolean type", () => {
     const schema = parseSchemaOrThrow("type Response = boolean");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(bool(true), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts an integer for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = { count: number; };");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([["count", num(42)]]), type, schema)).toMatch(
       { errors: [] },
     );
@@ -204,7 +204,7 @@ describe("validateJson - exact match", () => {
 
   it("accepts a float for a number type", () => {
     const schema = parseSchemaOrThrow("type Response = { count: number; };");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["count", num(3.14)]]), type, schema),
     ).toMatch({ errors: [] });
@@ -212,31 +212,31 @@ describe("validateJson - exact match", () => {
 
   it("accepts an in-range integer for an integer type", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(42), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a number for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(1), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a string for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(str("x"), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts an object for an any type", () => {
     const schema = parseSchemaOrThrow("type Response = any");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([]), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts a boolean matching a boolean-literal type", () => {
     const schema = parseSchemaOrThrow("type Response = {status: true}");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["status", bool(true)]]), type, schema),
     ).toMatch({ errors: [] });
@@ -246,7 +246,7 @@ describe("validateJson - exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -263,7 +263,7 @@ describe("validateJson - exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -280,7 +280,7 @@ describe("validateJson - exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; nickname?: string; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), type, schema),
     ).toMatch({ errors: [] });
@@ -288,7 +288,7 @@ describe("validateJson - exact match", () => {
 
   it("accepts an array of strings for a string array type", () => {
     const schema = parseSchemaOrThrow("type Response = string[]");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(arrStrict([str("a"), str("b")]), type, schema)).toMatch(
       { errors: [] },
     );
@@ -296,7 +296,7 @@ describe("validateJson - exact match", () => {
 
   it("accepts the exact string for a string-literal type", () => {
     const schema = parseSchemaOrThrow('type Response = {status: "ok"}');
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["status", str("ok")]]), type, schema),
     ).toMatch({ errors: [] });
@@ -304,7 +304,7 @@ describe("validateJson - exact match", () => {
 
   it("accepts a matching value from a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "pending" | "done"');
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(str("done"), type, schema)).toMatch({ errors: [] });
   });
 
@@ -312,7 +312,7 @@ describe("validateJson - exact match", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; name: string; }; type Dog = { kind: "dog"; breed: string; }; type Response = Cat | Dog',
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -329,7 +329,7 @@ describe("validateJson - exact match", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { item: Detail }; type Detail = { x: string; };",
     );
-    const type = schema.typeDeclarations["Detail"]!;
+    const type = schema.typeDeclarations["Detail"]!.valueType;
     expect(validateJson(objStrict([["x", str("hi")]]), type, schema)).toMatch({
       errors: [],
     });
@@ -343,7 +343,7 @@ describe("validateJson - exact match", () => {
 describe("validateJson - mismatch", () => {
   it("returns an error when a number is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(42), type, schema)).toMatch({
       errors: [{ message: "Expected string but got number" }],
     });
@@ -351,7 +351,7 @@ describe("validateJson - mismatch", () => {
 
   it("returns an error when an object is given for a string type", () => {
     const schema = parseSchemaOrThrow("type Response = string");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([]), type, schema)).toMatch({
       errors: [{ message: "Expected string but got object" }],
     });
@@ -359,7 +359,7 @@ describe("validateJson - mismatch", () => {
 
   it("returns an error when a number is given for a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(1), type, schema)).toMatch({
       errors: [{ message: "Expected string but got number" }],
     });
@@ -369,7 +369,7 @@ describe("validateJson - mismatch", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; }; type Dog = { kind: "dog"; }; type Response = Cat | Dog',
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["name", str("Felix")]]), type, schema),
     ).toMatch({
@@ -379,7 +379,7 @@ describe("validateJson - mismatch", () => {
 
   it("returns an error for an object with a wrong-typed field", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([["name", num(42)]]), type, schema)).toMatch({
       errors: [{ message: "Expected string but got number" }],
     });
@@ -387,7 +387,7 @@ describe("validateJson - mismatch", () => {
 
   it("returns an error for a string not in a string union", () => {
     const schema = parseSchemaOrThrow('type Response = "a" | "b"');
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(str("c"), type, schema)).toMatch({
       errors: [
         {
@@ -402,7 +402,7 @@ describe("validateJson - mismatch", () => {
     const schema = parseSchemaOrThrow(
       'type Response = { kind: "cat" } | { kind: "dog" }',
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["kind", str("fish")]]), type, schema),
     ).toMatch({
@@ -419,7 +419,7 @@ describe("validateJson - mismatch", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["name", str("Alice")]]), type, schema),
     ).toMatch({
@@ -431,7 +431,7 @@ describe("validateJson - mismatch", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; score: number; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -458,13 +458,13 @@ describe("validateJson - mismatch", () => {
 describe("validateJson - integer type", () => {
   it("accepts an in-range integer number", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(42), type, schema)).toMatch({ errors: [] });
   });
 
   it("accepts lower boundary -2147483648", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(-2147483648), type, schema)).toMatch({
       errors: [],
     });
@@ -472,13 +472,13 @@ describe("validateJson - integer type", () => {
 
   it("accepts upper boundary 2147483647", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(2147483647), type, schema)).toMatch({ errors: [] });
   });
 
   it("rejects a float with a close-match error", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(3.14), type, schema)).toMatch({
       errors: [{ message: "Expected int but got float" }],
     });
@@ -486,7 +486,7 @@ describe("validateJson - integer type", () => {
 
   it("rejects an out-of-range integer with the same close-match error", () => {
     const schema = parseSchemaOrThrow("type Response = integer");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(num(2147483648), type, schema)).toMatch({
       errors: [{ message: "Expected int but got float" }],
     });
@@ -500,7 +500,7 @@ describe("validateJson - integer type", () => {
 describe("validateJson - boolean-literal type", () => {
   it("accepts the matching boolean value", () => {
     const schema = parseSchemaOrThrow("type Response = {status: false}");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
     ).toMatch({ errors: [] });
@@ -508,7 +508,7 @@ describe("validateJson - boolean-literal type", () => {
 
   it("rejects the opposite boolean value with suggestions", () => {
     const schema = parseSchemaOrThrow("type Response = { status: true }");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["status", bool(false)]]), type, schema),
     ).toMatch({
@@ -518,7 +518,7 @@ describe("validateJson - boolean-literal type", () => {
 
   it("rejects a non-boolean with an error", () => {
     const schema = parseSchemaOrThrow("type Response = { status: true }");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([["status", num(1)]]), type, schema)).toMatch(
       {
         errors: [{ message: "Expected true", suggestions: ["true"] }],
@@ -536,7 +536,7 @@ describe("validateJson - record type", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -553,7 +553,7 @@ describe("validateJson - record type", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: string }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([]), type, schema)).toMatch({ errors: [] });
   });
 
@@ -561,7 +561,7 @@ describe("validateJson - record type", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(str("oops"), type, schema)).toMatch({
       errors: [{ message: "Expected object but got string" }],
     });
@@ -571,7 +571,7 @@ describe("validateJson - record type", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { [key: string]: number }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(validateJson(objStrict([["x", str("bad")]]), type, schema)).toMatch({
       errors: [{ message: "Expected number but got string" }],
     });
@@ -587,7 +587,7 @@ describe("validateJson - interface extras", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age?: number; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["nickname", str("Alice")]]), type, schema),
     ).toMatch({
@@ -605,7 +605,7 @@ describe("validateJson - interface extras", () => {
 
   it("rejects an unknown field with empty suggestions when all schema fields are present", () => {
     const schema = parseSchemaOrThrow("type Response = { name: string; };");
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -635,7 +635,7 @@ describe("validateJson - boolean-discriminated union", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { success: true; value: string } | { success: false; error: string }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -652,7 +652,7 @@ describe("validateJson - boolean-discriminated union", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { success: true; value: string } | { success: false; error: string }",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(objStrict([["success", str("yes")]]), type, schema),
     ).toMatch({
@@ -675,7 +675,7 @@ describe("validateJson - definition links", () => {
     const schema = parseSchemaOrThrow(
       "type Response = { name: string; age: number; };",
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -698,7 +698,7 @@ describe("validateJson - definition links", () => {
     const schema = parseSchemaOrThrow(
       'type Cat = { kind: "cat"; name: string; }; type Dog = { kind: "dog"; breed: string; }; type Response = Cat | Dog;',
     );
-    const type = schema.typeDeclarations["Response"]!;
+    const type = schema.typeDeclarations["Response"]!.valueType;
     expect(
       validateJson(
         objStrict([
@@ -720,7 +720,7 @@ describe("validateJson - definition links", () => {
 
   it("collects definition links for a string literal field with stripped quotes for quoted input", () => {
     const schema = parseSchemaOrThrow('type Status = { value: "active" };');
-    const type = schema.typeDeclarations["Status"]!;
+    const type = schema.typeDeclarations["Status"]!.valueType;
     const input = objStrict([["value", str("active", true)]]);
     const result = validateJson(input, type, schema);
 
@@ -738,7 +738,7 @@ describe("validateJson - definition links", () => {
 
   it("collects definition links for a string literal field without stripping quotes for unquoted input", () => {
     const schema = parseSchemaOrThrow('type Status = { value: "active" };');
-    const type = schema.typeDeclarations["Status"]!;
+    const type = schema.typeDeclarations["Status"]!.valueType;
     const input = objStrict([["value", str("active", false)]]);
     const result = validateJson(input, type, schema);
 
@@ -758,7 +758,7 @@ describe("validateJson - definition links", () => {
     const schema = parseSchemaOrThrow(
       'type Config = { mode: "production"; environment: "cloud"; };',
     );
-    const type = schema.typeDeclarations["Config"]!;
+    const type = schema.typeDeclarations["Config"]!.valueType;
 
     const yamlInput: MappedText = {
       path: "config.yaml",

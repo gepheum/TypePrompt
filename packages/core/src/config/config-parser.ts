@@ -2,7 +2,11 @@ import { validateJson } from "../json/json-validator.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
-import type { Constraint, SyntheticType } from "../schema/schema-types.js";
+import type {
+  Constraint,
+  SchemaType,
+  SyntheticType,
+} from "../schema/schema-types.js";
 import type { InternalErrors, MappedText } from "../util/shared-types.js";
 
 export type Config = {
@@ -269,3 +273,8 @@ const CONFIG_TYPE: GenericType<Config> = object({
     }),
   ),
 });
+
+export const CONFIG: SchemaType = {
+  type: CONFIG_TYPE.type,
+  schema: EMPTY_SCHEMA,
+};

@@ -358,3 +358,8 @@ export type SyntheticUnionMembers =
       readonly discriminator: string;
       readonly discriminants: Discriminants;
     };
+
+export type SchemaType = {
+  readonly type: Type | SyntheticType;
+  readonly schema: SchemaView;
+};
