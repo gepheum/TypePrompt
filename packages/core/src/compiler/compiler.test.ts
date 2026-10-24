@@ -1574,3 +1574,267 @@ describe("compile - schema warnings", () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// compile - dataset support
+// ---------------------------------------------------------------------------
+
+describe("compile - dataset support", () => {
+  it("compiles a template with a dataset in the default namespace", () => {
+    const result = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Input = { text: string; };
+              type Output = { translated: string; };
+            </schema>
+            <system>Translator</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
+        "prompts/Translate.dataset.tp": `
+          <dataset for="Translate">
+            - name: "Spanish greeting"
+              weight: 5
+              input:
+                text: "Hello"
+              output:
+                translated: "Hola"
+            - name: "Second test"
+              input:
+                text: "Goodbye"
+              output:
+                translated: "Au revoir"
+          </dataset>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(false);
+    expect(result.datasets["Main:Translate"]).toMatch({
+      kind: "dataset",
+      templateId: "Main:Translate",
+      items: [
+        {
+          name: "Spanish greeting",
+          weight: 5,
+          input: { text: "Hello" },
+          output: { translated: "Hola" },
+        },
+        {
+          name: "Second test",
+          input: { text: "Goodbye" },
+          output: { translated: "Au revoir" },
+        },
+      ],
+    });
+
+    const templateResult = result.templates["Main:Translate"];
+    if (templateResult?.kind !== "template")
+      throw new Error("Expected template");
+    expect(templateResult.dataset).toBe(result.datasets["Main:Translate"]);
+
+    const namespaceResult = result.namespaces["Main"];
+    expect(namespaceResult?.datasets["Translate"]).toBe(
+      result.datasets["Main:Translate"],
+    );
+  });
+
+  it("compiles a template with a dataset in a custom namespace", () => {
+    const result = compile(
+      {
+        "prompts/Legal/shared.tp": `
+          <namespace name="Legal">
+            type Party = { name: string; };
+          </namespace>
+        `,
+        "prompts/Legal/DraftNda.tp": `
+          <template name="DraftNda" namespace="Legal">
+            <schema>
+              type Input = { party: shared.Party; };
+              type Output = string;
+            </schema>
+            <system>Legal drafter</system>
+            <user>Draft for <insert val="input.party.name"/></user>
+          </template>
+        `,
+        "prompts/Legal/DraftNda.dataset.tp": `
+          <dataset for="DraftNda" namespace="Legal">
+            - name: "Acme NDA"
+              input:
+                party:
+                  name: "Acme Corp"
+              output: "NDA text"
+          </dataset>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(false);
+    expect(result.datasets["Legal:DraftNda"]).toMatch({
+      kind: "dataset",
+      templateId: "Legal:DraftNda",
+      items: [
+        {
+          name: "Acme NDA",
+          input: {
+            party: { name: "Acme Corp" },
+          },
+          output: "NDA text",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when target template is not found", () => {
+    const result = compile(
+      {
+        "prompts/Unknown.dataset.tp": `
+          <dataset for="Unknown">
+            - input:
+                text: "test"
+          </dataset>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(true);
+    expect(result.finalErrors["prompts/Unknown.dataset.tp"]).toMatch([
+      {
+        message: "Template 'Unknown' not found",
+      },
+    ]);
+  });
+
+  it("reports an error when multiple datasets target the same template", () => {
+    const result = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Input = { text: string; };
+              type Output = string;
+            </schema>
+            <system>Translator</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
+        "prompts/Translate.dataset.tp": `
+          <dataset for="Translate">
+            - input:
+                text: "a"
+              output: "outA"
+          </dataset>
+        `,
+        "prompts/other/Translate.dataset.tp": `
+          <dataset for="Translate">
+            - input:
+                text: "b"
+              output: "outB"
+          </dataset>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(true);
+    expect(result.finalErrors["prompts/Translate.dataset.tp"]).toMatch([
+      {
+        message: "Multiple <dataset> elements found for template 'Translate'",
+      },
+    ]);
+    expect(result.finalErrors["prompts/other/Translate.dataset.tp"]).toMatch([
+      {
+        message: "Multiple <dataset> elements found for template 'Translate'",
+      },
+    ]);
+  });
+
+  it("reuses cached dataset validation when files are unchanged", () => {
+    const files = {
+      "prompts/Translate.tp": `
+        <template name="Translate">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>Translator</system>
+          <user><insert val="input.text"/></user>
+        </template>
+      `,
+      "prompts/Translate.dataset.tp": `
+        <dataset for="Translate">
+          - input:
+              text: "hello"
+            output: "bonjour"
+        </dataset>
+      `,
+    };
+
+    const firstResult = compile(files, { cache: null, patchBase: null });
+    expect(firstResult.anyErrors).toBe(false);
+
+    const secondResult = compile(files, {
+      cache: firstResult,
+      patchBase: null,
+    });
+    expect(secondResult).toMatch({
+      anyErrors: false,
+      datasets: {
+        "Main:Translate": firstResult.datasets["Main:Translate"],
+      },
+    });
+  });
+
+  it("does not include datasets in compilation result signature hash", () => {
+    const withoutDataset = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Input = { text: string; };
+              type Output = string;
+            </schema>
+            <system>Translator</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    const withDataset = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Input = { text: string; };
+              type Output = string;
+            </schema>
+            <system>Translator</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
+        "prompts/Translate.dataset.tp": `
+          <dataset for="Translate">
+            - input:
+                text: "hello"
+              output: "bonjour"
+          </dataset>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(withoutDataset.anyErrors).toBe(false);
+    expect(withDataset.anyErrors).toBe(false);
+    expect(withDataset.signature).toBe(withoutDataset.signature);
+    expect(withDataset.sourceFiles["prompts/Translate.dataset.tp"]!.hash).toBe(
+      0,
+    );
+  });
+});

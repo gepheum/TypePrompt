@@ -32,6 +32,20 @@ export function checkTemplateOrToolSourcePath(
   return checkSourcePath(expectedPathSuffix, sourcePath);
 }
 
+export function checkDatasetSourcePath(
+  forTemplate: AttributeValue<string>,
+  namespace: AttributeValue<string> | undefined,
+  sourcePath: string,
+): readonly InternalError[] {
+  const rawFor = forTemplate.value.text;
+  const rawNamespace = namespace?.value.text ?? DEFAULT_NAMESPACE;
+  const expectedPathSuffix =
+    rawNamespace === DEFAULT_NAMESPACE
+      ? `${rawFor}.dataset.tp`
+      : `${rawNamespace}/${rawFor}.dataset.tp`;
+  return checkSourcePath(expectedPathSuffix, sourcePath);
+}
+
 function checkSourcePath(
   expectedPathSuffix: string,
   sourcePath: string,

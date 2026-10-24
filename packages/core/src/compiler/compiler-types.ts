@@ -22,6 +22,7 @@ export type CompilationResult = {
   readonly singleNamespace: NamespaceResult | null;
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
+  readonly datasets: { readonly [id: string]: DatasetValidationResult };
   readonly patchBase: ValidCompilationResult | null;
   readonly edition: number;
   readonly signature: string | undefined;
@@ -43,6 +44,7 @@ export type ValidCompilationResult = CompilationResult & {
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
+  readonly datasets: { readonly [id: string]: ValidDataset };
   readonly anyErrors: false;
 };
 
@@ -54,7 +56,7 @@ export type SourceFileParseResult = {
 
   readonly xmlDocument: XmlDocument | InternalErrors;
 
-  readonly entity: Template | Tool | Namespace | Meta | undefined;
+  readonly entity: Template | Tool | Namespace | Meta | Dataset | undefined;
 
   readonly parseResult: ValidationResult;
   readonly warnings: readonly InternalError[];
@@ -196,6 +198,9 @@ export type NamespaceResult = {
   readonly schema: SchemaOrError;
   readonly tools: { readonly [name: string]: ToolValidationResult };
   readonly templates: readonly ValidatedTemplate[];
+  readonly datasets: {
+    readonly [forTemplate: string]: DatasetValidationResult;
+  };
 };
 
 /** A {@link NamespaceResult} known not to have any errors. */
@@ -204,6 +209,7 @@ export type ValidNamespaceResult = NamespaceResult & {
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: ValidatedTool };
   readonly templates: readonly ValidTemplate[];
+  readonly datasets: { readonly [forTemplate: string]: ValidDataset };
 };
 
 export type SchemaOrError =
@@ -227,11 +233,13 @@ export type ValidatedTemplate = {
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };
   readonly definitionLinks: readonly DefinitionLink[];
+  dataset?: DatasetValidationResult;
 };
 
 /** A {@link ValidatedTemplate} known not to have any errors. */
 export type ValidTemplate = ValidatedTemplate & {
   readonly tools: { readonly [name: string]: ValidTemplateTool };
+  dataset?: ValidDataset;
 };
 
 /** Tool called from a template. */
@@ -244,6 +252,37 @@ export type ValidTemplateTool = TemplateTool & {
 };
 
 export type TemplateValidationResult = ValidatedTemplate | ValidationErrors;
+
+/** Top-level <dataset> element. */
+export type Dataset = {
+  readonly kind: "dataset";
+  readonly tag: Span;
+  readonly for: TextSpan;
+  readonly namespace: TextSpan | null;
+  readonly items: StrictJsonValue;
+  readonly warnings: readonly InternalError[];
+};
+
+export type DatasetItem = {
+  readonly name?: string;
+  readonly input: unknown;
+  readonly weight?: number;
+  readonly output: unknown;
+  readonly raw: StrictJsonValue;
+};
+
+export type ValidatedDataset = {
+  readonly kind: "dataset";
+  readonly dataset: Dataset;
+  readonly templateId: string;
+  readonly items: readonly DatasetItem[];
+  readonly definitionLinks: readonly DefinitionLink[];
+};
+
+export type ValidDataset = ValidatedDataset;
+
+export type DatasetValidationResult =
+  ValidatedDataset | (ValidationErrors & { readonly dataset: Dataset });
 
 // =============================================================================
 // Static assertion

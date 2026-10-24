@@ -3,6 +3,7 @@ import { describe, it } from "mocha";
 
 import type { AttributeValue } from "../xml/xml-attributes-checker.js";
 import {
+  checkDatasetSourcePath,
   checkMetaSourcePath,
   checkNamespaceSourcePath,
   checkTemplateOrToolSourcePath,
@@ -201,6 +202,70 @@ describe("checkTemplateOrToolSourcePath", () => {
     ).toMatch([
       {
         message: "File path should match '**/Finance/Summarize.tp'",
+      },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkDatasetSourcePath
+// ---------------------------------------------------------------------------
+
+describe("checkDatasetSourcePath", () => {
+  it("succeeds for default namespace dataset ending in '<Name>.dataset.tp'", () => {
+    expect(
+      checkDatasetSourcePath(
+        makeAttr("Translate"),
+        undefined,
+        "Translate.dataset.tp",
+      ),
+    ).toMatch([]);
+  });
+
+  it("succeeds for default namespace dataset in nested folder", () => {
+    expect(
+      checkDatasetSourcePath(
+        makeAttr("Translate"),
+        undefined,
+        "prompts/Translate.dataset.tp",
+      ),
+    ).toMatch([]);
+  });
+
+  it("succeeds for custom namespace dataset in '<Namespace>/<Name>.dataset.tp'", () => {
+    expect(
+      checkDatasetSourcePath(
+        makeAttr("Translate"),
+        makeAttr("Legal"),
+        "prompts/Legal/Translate.dataset.tp",
+      ),
+    ).toMatch([]);
+  });
+
+  it("reports an error when default namespace dataset is named without .dataset.tp", () => {
+    expect(
+      checkDatasetSourcePath(
+        makeAttr("Translate"),
+        undefined,
+        "prompts/Translate.tp",
+      ),
+    ).toMatch([
+      {
+        message: "File path should match '**/Translate.dataset.tp'",
+      },
+    ]);
+  });
+
+  it("reports an error when custom namespace dataset is missing namespace directory", () => {
+    expect(
+      checkDatasetSourcePath(
+        makeAttr("Translate"),
+        makeAttr("Legal"),
+        "prompts/Translate.dataset.tp",
+      ),
+    ).toMatch([
+      {
+        message: "File path should match '**/Legal/Translate.dataset.tp'",
       },
     ]);
   });

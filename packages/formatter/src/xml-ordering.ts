@@ -106,6 +106,7 @@ function mustReorderChildren(tagName: KnownTag): boolean {
     case "variant":
       return true;
     case "c":
+    case "dataset":
     case "description":
     case "enclosed":
     case "else":
@@ -152,6 +153,7 @@ function getAttributeZIndex(attribute: Attribute): number {
   const a = attribute.name.text as KnownAttribute;
   switch (a) {
     case "name":
+    case "for":
       return 0;
     case "case":
     case "if":

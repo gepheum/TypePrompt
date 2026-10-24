@@ -24,6 +24,8 @@ import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode, XmlDocument } from "../xml/xml-types.js";
 import type {
   CompilationResult,
+  Dataset,
+  DatasetValidationResult,
   Meta,
   Namespace,
   NamespaceResult,
@@ -35,6 +37,8 @@ import type {
   ToolValidationResult,
   ValidCompilationResult,
 } from "./compiler-types.js";
+import { parseDataset } from "./dataset-parser.js";
+import { validateDataset } from "./dataset-validator.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import { parseMeta } from "./meta-parser.js";
 import { parseNamespace } from "./namespace-parser.js";
@@ -99,7 +103,7 @@ export function parseSourceFile(
   }
   const topLevelNodes = checkAllAreKnownElements(
     [root],
-    ["template", "tool", "namespace", "meta"] as const,
+    ["template", "tool", "namespace", "meta", "dataset"] as const,
     " at the top level",
     errors,
   );
@@ -156,9 +160,19 @@ export function parseSourceFile(
       }
       break;
     }
+    case "dataset": {
+      const dataset = parseDataset(topLevelNode);
+      if (dataset.kind === "error") {
+        errors.push(...dataset.errors);
+      } else {
+        result.entity = dataset;
+        result.warnings.push(...dataset.warnings);
+      }
+      break;
+    }
   }
 
-  if (result.entity && errors.length <= 0) {
+  if (result.entity && result.entity.kind !== "dataset" && errors.length <= 0) {
     result.hash = computeSourceFileHash(path, result.entity);
   }
 
@@ -294,6 +308,13 @@ function validateAgainstPatch(
       checkSchema(overrideEntity.schema as Schema, baseEntity.schema as Schema);
       break;
     }
+    case "dataset": {
+      const overrideEntity = override.entity as Dataset;
+      const baseDataset = baseEntity as Dataset;
+      checkName(overrideEntity.for, baseDataset.for);
+      checkNamespace(overrideEntity.namespace, baseDataset.namespace);
+      break;
+    }
   }
   return errors;
 }
@@ -314,7 +335,7 @@ class SourceFileParseResultImpl implements SourceFileParseResult {
 
   hash: number = 0;
   readonly lineFinder: LineFinderData;
-  entity: Template | Tool | Namespace | Meta | undefined;
+  entity: Template | Tool | Namespace | Meta | Dataset | undefined;
 
   readonly parseResult = new ValidationResultBuilder();
   readonly warnings: InternalError[] = [];
@@ -330,6 +351,7 @@ type Sourced<T> = {
 type NamespaceResultImpl = NamespaceResult & {
   readonly tools: { [name: string]: ToolValidationResult };
   readonly templates: TemplateValidationResult[];
+  readonly datasets: { [forTemplate: string]: DatasetValidationResult };
   /** To find conflicts. */
   readonly names: TextSpan[];
 };
@@ -341,6 +363,7 @@ class CompilationResultImpl implements CompilationResult {
   singleNamespace: NamespaceResultImpl | null = null;
   readonly templates: { [id: string]: TemplateValidationResult } = {};
   readonly tools: { [id: string]: ToolValidationResult } = {};
+  readonly datasets: { [id: string]: DatasetValidationResult } = {};
   readonly patchBase: ValidCompilationResult | null;
   readonly edition = 0;
   signature: string | undefined;
@@ -359,6 +382,7 @@ class CompilationResultImpl implements CompilationResult {
     const namespaces: Array<Sourced<Namespace>> = [];
     const templates: Array<Sourced<Template>> = [];
     const tools: Array<Sourced<Tool>> = [];
+    const datasets: Array<Sourced<Dataset>> = [];
     for (const sourceFile of Object.values(this.sourceFiles)) {
       const cached = cache?.sourceFiles[sourceFile.path] === sourceFile;
       const source = <T>(element: T): Sourced<T> => ({
@@ -379,6 +403,9 @@ class CompilationResultImpl implements CompilationResult {
         case "tool":
           tools.push(source(sourceFile.entity));
           break;
+        case "dataset":
+          datasets.push(source(sourceFile.entity));
+          break;
         case undefined:
           break;
         default:
@@ -395,17 +422,19 @@ class CompilationResultImpl implements CompilationResult {
     this.resolveNamespaces(namespaces);
     this.resolveTools(tools, cache);
     this.resolveTemplates(templates, cache);
+    this.resolveDatasets(datasets, cache);
     this.checkNameConflictsWithinNamespaces();
 
     {
       // Remove the default namespace if it doesn't contain any schema,
-      // templates or tools.
+      // templates, tools or datasets.
       const defaultNamespace = this.namespaces[DEFAULT_NAMESPACE]!;
       const isEmpty =
         defaultNamespace.schema.kind === "success" &&
         defaultNamespace.templates.length <= 0 &&
         Object.keys(defaultNamespace.tools).length <= 0 &&
-        Object.keys(defaultNamespace.names).length <= 0;
+        Object.keys(defaultNamespace.names).length <= 0 &&
+        Object.keys(defaultNamespace.datasets).length <= 0;
       if (isEmpty) {
         delete this.namespaces[DEFAULT_NAMESPACE];
       }
@@ -426,7 +455,9 @@ class CompilationResultImpl implements CompilationResult {
     if (!this.anyErrors) {
       this.signature = (
         combineHashesUnordered(
-          Object.values(this.sourceFiles).map((s) => s.hash),
+          Object.values(this.sourceFiles)
+            .filter((s) => s.entity?.kind !== "dataset")
+            .map((s) => s.hash),
         ) >>> 0
       )
         .toString(16)
@@ -475,6 +506,7 @@ class CompilationResultImpl implements CompilationResult {
           schema: namespace.element.schema,
           tools: {},
           templates: [],
+          datasets: {},
           names: [],
         };
         const { path } = namespace.sourceFile;
@@ -489,6 +521,7 @@ class CompilationResultImpl implements CompilationResult {
           schema: { kind: "other-error", definitionLinks: [] },
           tools: {},
           templates: [],
+          datasets: {},
           names: [],
         };
         // Errors will be pushed to the finalErrors map below.
@@ -500,6 +533,7 @@ class CompilationResultImpl implements CompilationResult {
       schema: EMPTY_SCHEMA,
       tools: {},
       templates: [],
+      datasets: {},
       names: [],
     };
 
@@ -655,6 +689,87 @@ class CompilationResultImpl implements CompilationResult {
       if (validationResult.kind === "template") {
         namespace.templates.push(validationResult);
       } else if (validationResult.kind === "error") {
+        this.pushFinalErrors(path, validationResult.errors);
+      }
+      this.pushDefinitionLinks(path, validationResult.definitionLinks);
+    }
+  }
+
+  private resolveDatasets(
+    datasets: ReadonlyArray<Sourced<Dataset>>,
+    cache: CompilationResult | null,
+  ): void {
+    const idToDatasets: { [id: string]: Sourced<Dataset>[] } = {};
+    for (const dataset of datasets) {
+      const namespace = dataset.element.namespace?.text ?? DEFAULT_NAMESPACE;
+      const forTemplate = dataset.element.for.text;
+      const id = `${namespace}:${forTemplate}`;
+      (idToDatasets[id] ??= []).push(dataset);
+    }
+
+    for (const [id, datasetsForId] of Object.entries(idToDatasets)) {
+      const dataset = datasetsForId[0]!;
+      const forTemplate = dataset.element.for.text;
+      const namespaceName =
+        dataset.element.namespace?.text ?? DEFAULT_NAMESPACE;
+      const namespace = this.namespaces[namespaceName];
+
+      if (!namespace) {
+        this.pushFinalError(dataset.sourceFile.path, {
+          span: dataset.element.namespace!,
+          message: `Namespace '${namespaceName}' not found`,
+          suggestions: Object.keys(this.namespaces),
+        });
+        continue;
+      }
+
+      if (datasetsForId.length > 1) {
+        for (const d of datasetsForId) {
+          this.pushFinalError(d.sourceFile.path, {
+            span: d.element.tag,
+            message: `Multiple <dataset> elements found for template '${forTemplate}'`,
+          });
+        }
+        continue;
+      }
+
+      const templateValidation = this.templates[id];
+      if (!templateValidation) {
+        const availableTemplates = namespace.templates.map(
+          (t) => t.template.name.text,
+        );
+        this.pushFinalError(dataset.sourceFile.path, {
+          span: dataset.element.for,
+          message: `Template '${forTemplate}' not found${
+            namespaceName === DEFAULT_NAMESPACE
+              ? ""
+              : ` in namespace '${namespaceName}'`
+          }`,
+          suggestions: availableTemplates,
+        });
+        continue;
+      }
+
+      if (templateValidation.kind !== "template") {
+        continue;
+      }
+
+      const tryGetFromCache = (): DatasetValidationResult | null => {
+        if (!dataset.cached) return null;
+        if (templateValidation !== cache?.templates[id]) return null;
+        return cache?.datasets[id] ?? null;
+      };
+
+      const validationResult =
+        tryGetFromCache() ??
+        validateDataset(dataset.element, templateValidation);
+
+      this.datasets[id] = validationResult;
+      namespace.datasets[forTemplate] = validationResult;
+      templateValidation.dataset = validationResult;
+
+      const { path } = dataset.sourceFile;
+      if (validationResult.kind === "error") {
         this.pushFinalErrors(path, validationResult.errors);
       }
       this.pushDefinitionLinks(path, validationResult.definitionLinks);

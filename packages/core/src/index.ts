@@ -10,12 +10,17 @@ export {
   runtimeTypesSchema,
   type CompilationResult,
   type CompilationResultParseError,
+  type Dataset,
+  type DatasetItem,
+  type DatasetValidationResult,
   type Template,
   type Templates,
   type Tool,
   type ValidCompilationResult,
+  type ValidDataset,
   type ValidNamespaceResult,
   type ValidTemplate,
+  type ValidatedDataset,
   type ValidatedTool,
 } from "./compiler/index.js";
 
