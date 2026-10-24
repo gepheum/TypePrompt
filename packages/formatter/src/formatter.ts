@@ -49,9 +49,31 @@ type FormattableSlice = {
   readonly start: number;
   readonly end: number;
   readonly placeholder: string;
-  readonly unformatted: string;
+  /** Unformatted content. */
+  readonly content:
+    | {
+        readonly format: "typescript" | "yaml";
+        readonly text: string;
+      }
+    | {
+        readonly format: "xml";
+        readonly xml: string;
+      };
   readonly depth: number;
-  readonly format: "typescript" | "xml" | "yaml";
+};
+
+type FormattableTextSlice = FormattableSlice & {
+  readonly content: {
+    readonly format: "typescript" | "yaml";
+    readonly text: string;
+  };
+};
+
+type FormattableXmlSlice = FormattableSlice & {
+  readonly content: {
+    readonly format: "xml";
+    readonly xml: string;
+  };
 };
 
 function collectFormattableSlicesForXmlDocument(xmlDocument: XmlDocument): {
@@ -82,12 +104,13 @@ function collectFormattableSlices(
       if (childItems.length <= 0) return null;
       const contentFormat = Lsp.getElementContentFormat(item, depth);
       if (contentFormat === "unrendered-xml") return null;
-      const format: FormattableSlice["format"] =
+      const format =
         contentFormat === "schema"
           ? "typescript"
           : contentFormat === "rendered-xml"
             ? "xml"
             : "yaml";
+      let content: FormattableSlice["content"];
       if (format === "typescript" || format === "yaml") {
         // Do not format TypeScript/YAML code if the content contains XML comments.
         const anyComments = item.comments.length >= 1;
@@ -95,12 +118,18 @@ function collectFormattableSlices(
           xmlCommentsInCode.push(true);
           return null;
         }
+        const text = childItems
+          .map((i) => (i.kind === "text" ? i.text : ""))
+          .join("");
+        content = { format, text };
+      } else {
+        const xml = childItems.map((i) => i.xmlSlice).join("");
+        content = { format, xml };
       }
       const start = childItems[0]!.start;
       const end = childItems.at(-1)!.end;
       const placeholder = crypto.randomUUID().repeat(4);
-      const unformatted = childItems.map((i) => i.xmlSlice).join("");
-      return { start, end, placeholder, unformatted, depth, format };
+      return { start, end, placeholder, content, depth };
     })();
 
     if (slice) {
@@ -151,17 +180,20 @@ async function formatTypescriptAndYaml(
   slices: readonly FormattableSlice[],
 ): Promise<string> {
   const targetSlices = slices.filter(
-    (r) => r.format === "typescript" || r.format === "yaml",
+    (r): r is FormattableTextSlice =>
+      r.content.format === "typescript" || r.content.format === "yaml",
   );
   const formattedList = await Promise.all(
     targetSlices.map(async (slice) => {
-      const { placeholder, unformatted } = slice;
-      const formatted = await prettierFormat(unformatted, {
-        parser: slice.format,
+      const { placeholder, content } = slice;
+      const unescaped = content.text;
+      const formatted = await prettierFormat(unescaped, {
+        parser: slice.content.format,
         printWidth: 86 - slice.depth * 2,
         tabWidth: 2,
       });
-      return { placeholder, formatted };
+      const escaped = formatted.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      return { placeholder, formatted: escaped };
     }),
   );
   for (const { placeholder, formatted } of formattedList) {
@@ -178,11 +210,13 @@ async function formatWhitespaceSensitiveXml(
   content: string,
   slices: readonly FormattableSlice[],
 ): Promise<string> {
-  const targetSlices = slices.filter((r) => r.format === "xml");
+  const targetSlices = slices.filter(
+    (r): r is FormattableXmlSlice => r.content.format === "xml",
+  );
   const formattedList = await Promise.all(
     targetSlices.map(async (slice) => {
-      const { placeholder, unformatted } = slice;
-      const dedented = dedent(unformatted);
+      const { placeholder, content } = slice;
+      const dedented = dedent(content.xml);
       const wrapped = `<z>${dedented}</z>`;
       let formatted = await prettierFormat(wrapped, {
         parser: "xml",

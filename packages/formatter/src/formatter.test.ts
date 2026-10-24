@@ -199,4 +199,86 @@ type Output=string;
 `,
     );
   });
+
+  it("escapes < and & when inserting formatted TypeScript code into schema", async () => {
+    const unformatted = `<template name="TypescriptEscaping">
+<schema output-format="text">
+interface Input{
+  // Check if a < b and c > d
+  category: "rock &amp; roll" | "pop &lt; rock" | "hip > hop";
+}
+type Output=string;
+</schema>
+<system>Hello</system>
+<user>World</user>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="TypescriptEscaping">
+  <schema output-format="text">
+    interface Input {
+      // Check if a &lt; b and c > d
+      category: "rock &amp; roll" | "pop &lt; rock" | "hip > hop";
+    }
+    type Output = string;
+  </schema>
+  <system>
+    Hello
+  </system>
+  <user>
+    World
+  </user>
+</template>
+`,
+    );
+
+    // Verify idempotency: formatting again produces the exact same result
+    const reformatting = await formatTemplateFile(formatted);
+    expect(reformatting).toBe(formatted);
+  });
+
+  it("escapes < and & when inserting formatted YAML code into meta and examples", async () => {
+    const unformatted = `<template name="YamlEscaping">
+<schema output-format="text">
+type Output=string;
+</schema>
+<meta>
+summary: "Rock & Roll < Pop > Jazz"
+</meta>
+<system>Hello</system>
+<user>World</user>
+<examples>
+- input: "hello & world < foo > bar"
+  output: "baz"
+</examples>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="YamlEscaping">
+  <meta>
+    summary: "Rock &amp; Roll &lt; Pop > Jazz"
+  </meta>
+  <schema output-format="text">
+    type Output = string;
+  </schema>
+  <system>
+    Hello
+  </system>
+  <user>
+    World
+  </user>
+  <examples>
+    - input: "hello &amp; world &lt; foo > bar"
+      output: "baz"
+  </examples>
+</template>
+`,
+    );
+
+    // Verify idempotency: formatting again produces the exact same result
+    const reformatting = await formatTemplateFile(formatted);
+    expect(reformatting).toBe(formatted);
+  });
 });
