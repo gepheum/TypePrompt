@@ -24,7 +24,7 @@ export {
   type ValidatedTool,
 } from "./compiler/index.js";
 
-export { parseConfigYaml, type Config } from "./config/index.js";
+export { CONFIG, parseConfigYaml, type Config } from "./config/index.js";
 
 export * as Lsp from "./lsp-util/index.js";
 

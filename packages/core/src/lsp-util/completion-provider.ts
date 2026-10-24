@@ -3,7 +3,8 @@ import type {
   SourceFileParseResult,
 } from "../compiler/compiler-types.js";
 import { compile } from "../compiler/compiler.js";
-import { parseConfigYaml } from "../config/config-parser.js";
+import { parseAndValidateYaml } from "../json/yaml-parser-validator.js";
+import type { SchemaType } from "../schema/schema-types.js";
 import type { InternalError, Span } from "../util/shared-types.js";
 
 export type CompletionItems = {
@@ -40,16 +41,17 @@ export function getCompletionItems(args: {
   });
 }
 
-export function getConfigCompletionItems(
+export function getYamlCompletionItems(
   newContent: string,
   position: number,
+  schemaType: SchemaType,
 ): CompletionItems | null {
   const leftPart = newContent.slice(0, position);
   const rightPart = newContent.slice(position);
-  const insertions = computeInsertions(leftPart, rightPart, "config");
+  const insertions = computeInsertions(leftPart, rightPart, "yaml");
 
   return findCompletionItem(newContent, position, insertions, (content) => {
-    const parseResult = parseConfigYaml(content, "typeprompt.yaml");
+    const parseResult = parseAndValidateYaml(content, "temp.yaml", schemaType);
     return parseResult.kind === "error" ? parseResult.errors : [];
   });
 }
@@ -57,7 +59,7 @@ export function getConfigCompletionItems(
 function computeInsertions(
   leftPart: string,
   rightPart: string,
-  kind: "template" | "config",
+  kind: "template" | "yaml",
 ): readonly string[] {
   if (/[a-zA-Z0-9]$/.test(leftPart) || /^[a-zA-Z0-9]/.test(rightPart)) {
     return [""];

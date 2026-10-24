@@ -1,6 +1,6 @@
 export {
   getCompletionItems,
-  getConfigCompletionItems,
+  getYamlCompletionItems,
 } from "./completion-provider.js";
 
 export {

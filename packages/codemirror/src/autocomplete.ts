@@ -20,16 +20,12 @@ export function typepromptCompletionSource(
   const content = context.state.doc.toString();
   const position = context.pos;
 
-  const isConfig = path === "typeprompt.yaml" || path === "typeprompt.yml";
-
-  const completionItems = isConfig
-    ? Lsp.getConfigCompletionItems(content, position)
-    : Lsp.getCompletionItems({
-        newContent: content,
-        path,
-        position,
-        cache: compilationResult,
-      });
+  const completionItems = Lsp.getCompletionItems({
+    newContent: content,
+    path,
+    position,
+    cache: compilationResult,
+  });
 
   if (!completionItems || completionItems.suggestions.length === 0) {
     return null;

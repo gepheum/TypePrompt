@@ -1,9 +1,10 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import { compile } from "../compiler/compiler.js";
+import { CONFIG } from "../config/config-parser.js";
 import {
   getCompletionItems,
-  getConfigCompletionItems,
+  getYamlCompletionItems,
 } from "./completion-provider.js";
 
 describe("getCompletionItems", () => {
@@ -193,10 +194,10 @@ describe("getCompletionItems", () => {
   });
 });
 
-describe("getConfigCompletionItems", () => {
+describe("getYamlCompletionItems", () => {
   it("suggests missing top-level fields", () => {
     const yaml = "include:\n  - prompts/*.tp\n";
-    const result = getConfigCompletionItems(yaml, yaml.length);
+    const result = getYamlCompletionItems(yaml, yaml.length, CONFIG);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["gen", "patch"]);
     expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
@@ -204,7 +205,7 @@ describe("getConfigCompletionItems", () => {
 
   it("suggests generators under gen", () => {
     const yaml = "include:\n  - prompts/*.tp\ngen:\n  ";
-    const result = getConfigCompletionItems(yaml, yaml.length);
+    const result = getYamlCompletionItems(yaml, yaml.length, CONFIG);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch([
       "cpp",
@@ -221,7 +222,7 @@ describe("getConfigCompletionItems", () => {
 
   it("suggests generator fields under gen.<lang>", () => {
     const yaml = "include:\n  - prompts/*.tp\ngen:\n  typescript:\n    ";
-    const result = getConfigCompletionItems(yaml, yaml.length);
+    const result = getYamlCompletionItems(yaml, yaml.length, CONFIG);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["file"]);
     expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
@@ -230,7 +231,7 @@ describe("getConfigCompletionItems", () => {
   it("suggests matching fields when partially typed with colon", () => {
     const yaml = "include:\n  - prompts/*.tp\ngen:\n  typ:";
     const pos = yaml.indexOf("typ") + 2;
-    const result = getConfigCompletionItems(yaml, pos);
+    const result = getYamlCompletionItems(yaml, pos, CONFIG);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch([
       "cpp",
@@ -251,7 +252,7 @@ describe("getConfigCompletionItems", () => {
   it("returns null when no suggestions available at position", () => {
     const yaml = "include:\n  - prompts/*.tp\n";
     const pos = yaml.indexOf("prompts") + 2;
-    const result = getConfigCompletionItems(yaml, pos);
+    const result = getYamlCompletionItems(yaml, pos, CONFIG);
     expect(result).toBe(null);
   });
 
@@ -259,7 +260,7 @@ describe("getConfigCompletionItems", () => {
     const yaml =
       "include:\n  - prompts/*.tp\n\ngen:\n  typescript:\n    file: test.ts\n";
     const pos = yaml.indexOf("\n\n") + 1;
-    const result = getConfigCompletionItems(yaml, pos);
+    const result = getYamlCompletionItems(yaml, pos, CONFIG);
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["patch"]);
     expect(result!.span).toMatch({ start: pos, end: pos });

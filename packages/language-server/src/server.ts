@@ -4,6 +4,7 @@ import type {
 } from "@typeprompt/core";
 import {
   compile,
+  CONFIG,
   createLineFinder,
   findLine,
   Lsp,
@@ -1052,7 +1053,7 @@ export class TypePromptLanguageExtension {
         return [];
       }
       const offset = doc.offsetAt(position);
-      const result = Lsp.getConfigCompletionItems(doc.getText(), offset);
+      const result = Lsp.getYamlCompletionItems(doc.getText(), offset, CONFIG);
       if (!result || result.suggestions.length === 0) {
         return [];
       }

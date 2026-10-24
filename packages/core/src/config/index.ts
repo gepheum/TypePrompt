@@ -1,1 +1,1 @@
-export { parseConfigYaml, type Config } from "./config-parser.js";
+export { CONFIG, parseConfigYaml, type Config } from "./config-parser.js";
