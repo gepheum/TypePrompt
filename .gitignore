@@ -67,7 +67,7 @@ tests/typescript/src/gen
 
 TODO
 node_modules
-playground
+/playground
 .gradle/
 .kotlin/
 *.iml

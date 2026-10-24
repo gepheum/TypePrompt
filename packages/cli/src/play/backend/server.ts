@@ -1,9 +1,9 @@
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import type { ValidCompilationResult } from "@typeprompt/core";
+import { ensurePlaygroundFrontend } from "@typeprompt/playground";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { appRouter, type AppRouter, type PlayContext } from "./router.js";
 
 export type { AppRouter };
@@ -37,7 +37,7 @@ export class PlayServer {
 
   static async start(options: PlayServerOptions): Promise<PlayServer> {
     const port = options.port ?? 3000;
-    const frontendDir = await ensureFrontendReady();
+    const frontendDir = await ensurePlaygroundFrontend();
 
     const trpcHandler = createHTTPHandler({
       router: appRouter,
@@ -87,41 +87,6 @@ export class PlayServer {
 
     return playServer;
   }
-}
-
-async function ensureFrontendReady(): Promise<string> {
-  const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const cliRoot = path.resolve(currentDir, "../../..");
-  const distFrontend = path.join(cliRoot, "dist/play/frontend");
-  const srcFrontend = path.join(cliRoot, "src/play/frontend");
-
-  if (fs.existsSync(path.join(distFrontend, "index.html"))) {
-    return distFrontend;
-  }
-
-  if (fs.existsSync(path.join(srcFrontend, "index.html"))) {
-    try {
-      const { build } = await import("vite");
-      const viteConfig = path.join(srcFrontend, "vite.config.ts");
-      await build({
-        configFile: fs.existsSync(viteConfig) ? viteConfig : false,
-        root: srcFrontend,
-        build: {
-          outDir: distFrontend,
-          emptyOutDir: true,
-        },
-        logLevel: "warn",
-      });
-      if (fs.existsSync(path.join(distFrontend, "index.html"))) {
-        return distFrontend;
-      }
-    } catch {
-      // Fallback to srcFrontend if vite build fails or is not available
-    }
-    return srcFrontend;
-  }
-
-  return distFrontend;
 }
 
 function handleRequest(

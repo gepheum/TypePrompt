@@ -1,7 +1,7 @@
 import type { ValidCompilationResult } from "@typeprompt/core";
+import { createPlayClient } from "@typeprompt/playground";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { createPlayClient } from "../frontend/trpc.js";
 import { PlayServer } from "./server.js";
 
 describe("play backend server", () => {

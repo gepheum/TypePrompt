@@ -8,7 +8,7 @@ export default defineConfig((): UserConfig => {
   return {
     root: dirname,
     build: {
-      outDir: path.resolve(dirname, "../../../dist/play/frontend"),
+      outDir: path.resolve(dirname, "dist/client"),
       emptyOutDir: true,
     },
     server: {

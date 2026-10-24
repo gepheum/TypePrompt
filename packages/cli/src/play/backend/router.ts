@@ -1,5 +1,10 @@
-import { initTRPC } from "@trpc/server";
-import type { ValidCompilationResult } from "@typeprompt/core";
+import {
+  initTRPC,
+  type inferRouterInputs,
+  type inferRouterOutputs,
+} from "@trpc/server";
+import type { AssertSatisfies, ValidCompilationResult } from "@typeprompt/core";
+import type { PlaygroundRouter } from "@typeprompt/playground";
 import { z } from "zod";
 
 export type PlayContext = {
@@ -48,3 +53,13 @@ export const appRouter = t.router({
 });
 
 export type AppRouter = typeof appRouter;
+
+// Compile-time guarantee that the backend implementation satisfies the PlaygroundRouter contract
+type _AssertOutputs = AssertSatisfies<
+  inferRouterOutputs<AppRouter>,
+  inferRouterOutputs<PlaygroundRouter>
+>;
+type _AssertInputs = AssertSatisfies<
+  inferRouterInputs<PlaygroundRouter>,
+  inferRouterInputs<AppRouter>
+>;
