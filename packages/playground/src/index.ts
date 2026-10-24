@@ -3,7 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export { PlayApp } from "./app.js";
-export { playgroundRouterContract, type PlaygroundRouter } from "./contract.js";
+export {
+  type PlaygroundProcedures,
+  type PlaygroundRouter,
+} from "./contract.js";
 export { createPlayClient, trpc } from "./trpc.js";
 
 export async function ensurePlaygroundFrontend(): Promise<string> {

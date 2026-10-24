@@ -16,17 +16,16 @@ const t = initTRPC.context<PlayContext>().create();
 export const appRouter = t.router({
   getTemplates: t.procedure
     .input(
-      z
-        .object({
-          currentTimestampMillis: z.number().optional(),
-        })
-        .optional(),
+      z.object({
+        currentTimestampMillis: z.number().optional(),
+      }),
     )
     .query(
       ({
         ctx,
         input,
       }): {
+        readonly timestampMillis?: number;
         readonly sourceFiles?: { readonly [path: string]: string };
       } => {
         const compilationResult = ctx.getCompilationResult();
@@ -46,6 +45,7 @@ export const appRouter = t.router({
           ]),
         );
         return {
+          timestampMillis: compilationResult.timestampMillis,
           sourceFiles,
         };
       },

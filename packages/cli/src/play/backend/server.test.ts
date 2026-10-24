@@ -65,7 +65,7 @@ describe("play backend server", () => {
     });
     try {
       const client = createPlayClient(`${playServer.url}/trpc`);
-      const response = await client.getTemplates.query();
+      const response = await client.getTemplates.query({});
       expect(response.sourceFiles).toBe(undefined);
     } finally {
       await playServer.close();
@@ -95,21 +95,24 @@ describe("play backend server", () => {
       const client = createPlayClient(`${playServer.url}/trpc`);
 
       // Initial query without timestamp
-      const res1 = await client.getTemplates.query();
+      const res1 = await client.getTemplates.query({});
+      expect(res1.timestampMillis).toBe(5000);
       expect(res1.sourceFiles).toMatch({
         "prompts/test.tp": '<template name="Test"></template>',
       });
 
-      // Query with matching timestamp returns empty object (sourceFiles omitted)
+      // Query with matching timestamp returns empty object (sourceFiles and timestampMillis omitted)
       const res2 = await client.getTemplates.query({
         currentTimestampMillis: 5000,
       });
+      expect(res2.timestampMillis).toBe(undefined);
       expect(res2.sourceFiles).toBe(undefined);
 
-      // Query with older timestamp returns updated sourceFiles
+      // Query with older timestamp returns updated sourceFiles and timestampMillis
       const res3 = await client.getTemplates.query({
         currentTimestampMillis: 4000,
       });
+      expect(res3.timestampMillis).toBe(5000);
       expect(res3.sourceFiles).toMatch({
         "prompts/test.tp": '<template name="Test"></template>',
       });

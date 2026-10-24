@@ -1,24 +1,18 @@
-import { initTRPC } from "@trpc/server";
-import { z } from "zod";
+import type { TRPCBuiltRouter, TRPCQueryProcedure } from "@trpc/server";
 
-const t = initTRPC.create();
+export type PlaygroundProcedures = {
+  getTemplates: TRPCQueryProcedure<{
+    input: {
+      currentTimestampMillis?: number;
+    };
+    output: {
+      readonly timestampMillis?: number;
+      readonly sourceFiles?: {
+        readonly [path: string]: string;
+      };
+    };
+    meta: object;
+  }>;
+};
 
-export const playgroundRouterContract = t.router({
-  getTemplates: t.procedure
-    .input(
-      z
-        .object({
-          currentTimestampMillis: z.number().optional(),
-        })
-        .optional(),
-    )
-    .query(
-      (): {
-        readonly sourceFiles?: { readonly [path: string]: string };
-      } => {
-        throw new Error("Contract only");
-      },
-    ),
-});
-
-export type PlaygroundRouter = typeof playgroundRouterContract;
+export type PlaygroundRouter = TRPCBuiltRouter<any, PlaygroundProcedures>;
