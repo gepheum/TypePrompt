@@ -361,5 +361,5 @@ export type SyntheticUnionMembers =
 
 export type SchemaType = {
   readonly type: Type | SyntheticType;
-  readonly schema: SchemaView;
+  readonly schema: Schema;
 };

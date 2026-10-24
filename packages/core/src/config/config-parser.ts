@@ -1,13 +1,12 @@
-import { validateJson } from "../json/json-validator.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
-import { parseYaml } from "../json/yaml-parser.js";
+import { parseAndValidateYaml } from "../json/yaml-parser-validator.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import type {
   Constraint,
   SchemaType,
   SyntheticType,
 } from "../schema/schema-types.js";
-import type { InternalErrors, MappedText } from "../util/shared-types.js";
+import type { InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
   /** Glob pattern(s) to match template files to be processed. */
@@ -70,28 +69,9 @@ export function parseConfigYaml(
   content: string,
   path: string,
 ): ConfigParseResult {
-  const mappedText: MappedText = {
-    path,
-    text: content,
-    offsetMap: [
-      { textPosition: 0, sourcePosition: 0 },
-      { textPosition: content.length, sourcePosition: content.length },
-    ],
-  };
-  const parseResult = parseYaml(mappedText);
+  const parseResult = parseAndValidateYaml(content, path, CONFIG);
   if (parseResult.kind === "error") {
     return parseResult;
-  }
-  const validationResult = validateJson(
-    parseResult,
-    CONFIG_TYPE.type,
-    EMPTY_SCHEMA,
-  );
-  if (validationResult.errors.length) {
-    return {
-      kind: "error",
-      errors: validationResult.errors,
-    };
   }
   const config = unwrapJsonValue(parseResult) as Config;
   return { kind: "success", config };
