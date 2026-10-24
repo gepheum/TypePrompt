@@ -267,7 +267,7 @@ export type DatasetItem = {
   readonly name?: string;
   readonly input: unknown;
   readonly weight?: number;
-  readonly output: unknown;
+  readonly output?: unknown;
   readonly raw: StrictJsonValue;
 };
 

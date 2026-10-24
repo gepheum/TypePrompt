@@ -69,7 +69,7 @@ export function validateDataset(
       const nameEntry = obj.entries["name"];
       const inputEntry = obj.entries["input"]!;
       const weightEntry = obj.entries["weight"];
-      const outputEntry = obj.entries["output"]!;
+      const outputEntry = obj.entries["output"];
 
       return {
         name: nameEntry
@@ -79,7 +79,7 @@ export function validateDataset(
         weight: weightEntry
           ? (unwrapJsonValue(weightEntry.value) as number)
           : undefined,
-        output: unwrapJsonValue(outputEntry.value),
+        output: outputEntry ? unwrapJsonValue(outputEntry.value) : undefined,
         raw: el,
       };
     },
@@ -126,7 +126,10 @@ function makeDatasetType(templateSchema: Schema): SyntheticArray & HasName {
       },
       output: {
         name: { text: "output" },
-        type: outputType,
+        type: {
+          kind: "optional",
+          innerType: outputType,
+        },
       },
     },
   };

@@ -89,7 +89,7 @@ describe("validateDataset", () => {
     });
   });
 
-  it("reports an error when output is missing", () => {
+  it("validates a dataset where output is omitted", () => {
     const datasetNode = parseElement(
       `
       <dataset for="Translate">
@@ -106,10 +106,14 @@ describe("validateDataset", () => {
 
     const result = validateDataset(parsed, template);
     expect(result).toMatch({
-      kind: "error",
-      errors: [
+      kind: "dataset",
+      items: [
         {
-          message: "Missing required field 'output'",
+          name: "Input only sample",
+          input: {
+            text: "What time is it?",
+          },
+          output: undefined,
         },
       ],
     });

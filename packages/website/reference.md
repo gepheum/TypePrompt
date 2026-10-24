@@ -13,6 +13,7 @@ TypePrompt projects are made up of `.tp` files matching the `include` pattern in
 | [`<template>`](#the-template-element) | Define a prompt template |
 | [`<tool>`](#the-tool-element) | Define a callable tool |
 | [`<namespace>`](#the-namespace-element) | Group templates and tools; define shared types |
+| [`<dataset>`](#the-dataset-element) | Define an evaluation dataset for a template |
 
 For the type system (schemas, SDL), see the [schema language guide](/schema).
 
@@ -577,6 +578,70 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 ---
 
+## The `<dataset>` element
+
+`<dataset>` defines an evaluation dataset for a prompt template. Datasets live in their own `.tp` file alongside the template they evaluate.
+
+The text content of `<dataset>` is a YAML array of samples. Each sample provides an input and an optional golden output, strongly typed against the target template's schema.
+
+**Attributes:**
+
+| Attribute | Required | Format | Description |
+|---|---|---|---|
+| `for` | Yes | `PascalCase` | Name of the template this dataset evaluates |
+| `namespace` | No | `PascalCase` | Namespace of the target template; defaults to `Main` |
+
+### Sample structure
+
+Each sample in the dataset array has the following structure:
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | No | `string` | Optional label or description for the sample |
+| `input` | Yes | `Input` | Inputs matching the target template's `Input` schema |
+| `weight` | No | `number` | Relative scoring weight; defaults to 1.0 |
+| `output` | No | `Output` | Optional golden output matching the target template's `Output` schema |
+
+### Example
+
+Given a template defined in `prompts/Translate.tp`:
+
+```xml
+<!-- Translate.tp -->
+<template name="Translate">
+  ...
+</template>
+```
+
+You can define its dataset in `prompts/Translate.dataset.tp`:
+
+```xml
+<!-- Translate.dataset.tp -->
+<dataset for="Translate">
+  - name: "Spanish greeting"
+    weight: 2
+    input:
+      text: "Hello, how are you?"
+      targetLanguage: "Spanish"
+    output:
+      translated: "Hola, ¿cómo estás?"
+
+  - name: "French formal"
+    input:
+      text: "Please take a seat."
+      targetLanguage: "French"
+    output:
+      translated: "Veuillez vous asseoir."
+
+  - name: "Sample without golden output"
+    input:
+      text: "What time is it?"
+      targetLanguage: "German"
+</dataset>
+```
+
+---
+
 ## File naming conventions
 
 By convention, `.tp` files and directories within your prompts directory follow these rules:
@@ -587,6 +652,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
 | `<tool>` | `lowerCamel.tp` | `prompts/myTool.tp` | `prompts/MyNamespace/myTool.tp` |
 | `<meta>` | `meta.tp` | `prompts/meta.tp` | `prompts/meta.tp` |
 | `<namespace>` | `shared.tp` | `prompts/shared.tp` | `prompts/MyNamespace/shared.tp` |
+| `<dataset>` | `TemplateName.dataset.tp` | `prompts/MyTemplate.dataset.tp` | `prompts/MyNamespace/MyTemplate.dataset.tp` |
 
 ### Single-namespace project layout
 
@@ -597,6 +663,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
     ├── meta.tp
     ├── shared.tp
     ├── Translate.tp
+    ├── Translate.dataset.tp
     ├── TriageTicket.tp
     └── webSearch.tp
 ```
@@ -615,5 +682,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
     └── Legal/
         ├── shared.tp
         ├── DraftNda.tp
+        ├── DraftNda.dataset.tp
         └── SummarizeClause.tp
 ```
+
