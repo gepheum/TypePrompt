@@ -26,6 +26,8 @@ export {
 
 export { CONFIG, parseConfigYaml, type Config } from "./config/index.js";
 
+export { parseAndValidateYaml, type StrictJsonValue } from "./json/index.js";
+
 export * as Lsp from "./lsp-util/index.js";
 
 export {
@@ -42,6 +44,7 @@ export {
   type NamingHint,
   type Optional,
   type Schema,
+  type SchemaType,
   type Type,
   type TypeDeclarations,
   type TypeNameView,
@@ -60,6 +63,7 @@ export {
   type AssertSatisfies,
   type DefinitionLink,
   type InternalError,
+  type InternalErrors,
   type LineFinderData,
   type LineMatch,
   type Span,

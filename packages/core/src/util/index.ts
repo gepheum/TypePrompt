@@ -17,6 +17,7 @@ export {
 export {
   type DefinitionLink,
   type InternalError,
+  type InternalErrors,
   type Span,
   type TextSpan,
 } from "./shared-types.js";

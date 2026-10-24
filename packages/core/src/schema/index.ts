@@ -6,6 +6,7 @@ export {
   type NamingHint,
   type Optional,
   type Schema,
+  type SchemaType,
   type Type,
   type TypeDeclarations,
   type TypeNameView,

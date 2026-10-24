@@ -13,13 +13,15 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
+import { CONFIG, parseAndValidateYaml } from "@typeprompt/core";
 import { githubDark, githubLight } from "@uiw/codemirror-themes-all";
 import { css, html, LitElement, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   getCompilationResult,
   typeprompt,
-  type TypePromptConfig,
+  yaml,
+  type SchemaType,
 } from "../src/index.js";
 
 @customElement("code-mirror-editor")
@@ -65,8 +67,70 @@ export class Editor extends LitElement {
   @property({ type: Object })
   workspaceFiles: { readonly [path: string]: string } = defaultWorkspaceFiles;
 
+  @property({ type: Object })
+  schemaType?: SchemaType | null = null;
+
   private themeCompartment = new Compartment();
   private editorView?: EditorView;
+
+  private get isYaml(): boolean {
+    return (
+      Boolean(this.schemaType) ||
+      this.path.endsWith(".yaml") ||
+      this.path.endsWith(".yml")
+    );
+  }
+
+  private buildExtensions(): Extension[] {
+    const isYamlMode = this.isYaml;
+    const langExtension: Extension = isYamlMode
+      ? yaml(this.schemaType ?? CONFIG, { path: this.path })
+      : typeprompt({
+          path: this.path,
+          workspaceFiles: this.workspaceFiles,
+          patchBase: null,
+        });
+
+    return [
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      highlightActiveLine(),
+      history(),
+      foldGutter(),
+      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
+      langExtension,
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          const newDoc = update.state.doc.toString();
+          this.content = newDoc;
+          if (isYamlMode) {
+            const validationResult = parseAndValidateYaml(
+              newDoc,
+              this.path,
+              this.schemaType ?? CONFIG,
+            );
+            this.dispatchEvent(
+              new CustomEvent("yaml-change", {
+                detail: { doc: newDoc, validationResult },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+          } else {
+            const compilationResult = getCompilationResult(update.state);
+            this.dispatchEvent(
+              new CustomEvent("typeprompt-change", {
+                detail: { doc: newDoc, compilationResult },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+          }
+        }
+      }),
+    ];
+  }
 
   override render(): TemplateResult {
     return html`<div id="container"></div>`;
@@ -76,38 +140,9 @@ export class Editor extends LitElement {
     const container = this.renderRoot.querySelector("#container");
     if (!container) return;
 
-    const baseExtensions: Extension[] = [
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      highlightActiveLine(),
-      history(),
-      foldGutter(),
-      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-      this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
-      typeprompt({
-        path: this.path,
-        workspaceFiles: this.workspaceFiles,
-        patchBase: null,
-      }),
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          const newDoc = update.state.doc.toString();
-          this.content = newDoc;
-          const compilationResult = getCompilationResult(update.state);
-          this.dispatchEvent(
-            new CustomEvent("typeprompt-change", {
-              detail: { doc: newDoc, compilationResult },
-              bubbles: true,
-              composed: true,
-            }),
-          );
-        }
-      }),
-    ];
-
     const state = EditorState.create({
       doc: this.content,
-      extensions: baseExtensions,
+      extensions: this.buildExtensions(),
     });
 
     this.editorView = new EditorView({
@@ -115,15 +150,29 @@ export class Editor extends LitElement {
       parent: container,
     });
 
-    // Emit initial compilation result
-    const initialCompilation = getCompilationResult(state);
-    this.dispatchEvent(
-      new CustomEvent("typeprompt-init", {
-        detail: { doc: this.content, compilationResult: initialCompilation },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    if (this.isYaml) {
+      const initialValidation = parseAndValidateYaml(
+        this.content,
+        this.path,
+        this.schemaType ?? CONFIG,
+      );
+      this.dispatchEvent(
+        new CustomEvent("yaml-init", {
+          detail: { doc: this.content, validationResult: initialValidation },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } else {
+      const initialCompilation = getCompilationResult(state);
+      this.dispatchEvent(
+        new CustomEvent("typeprompt-init", {
+          detail: { doc: this.content, compilationResult: initialCompilation },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
   }
 
   override updated(changedProperties: Map<string, unknown>): void {
@@ -154,6 +203,7 @@ export class Editor extends LitElement {
     newContent: string,
     newPath?: string,
     newWorkspaceFiles?: { readonly [path: string]: string },
+    newSchemaType?: SchemaType | null,
   ): void {
     this.content = newContent;
     if (newPath) {
@@ -162,51 +212,40 @@ export class Editor extends LitElement {
     if (newWorkspaceFiles !== undefined) {
       this.workspaceFiles = newWorkspaceFiles;
     }
+    if (newSchemaType !== undefined) {
+      this.schemaType = newSchemaType;
+    }
     if (this.editorView) {
-      const config: TypePromptConfig = {
-        path: this.path,
-        workspaceFiles: this.workspaceFiles,
-        patchBase: null,
-      };
-
       const newState = EditorState.create({
         doc: newContent,
-        extensions: [
-          lineNumbers(),
-          highlightActiveLineGutter(),
-          highlightActiveLine(),
-          history(),
-          foldGutter(),
-          keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-          this.themeCompartment.of(this.darkMode ? githubDark : githubLight),
-          typeprompt(config),
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) {
-              const doc = update.state.doc.toString();
-              this.content = doc;
-              const compilationResult = getCompilationResult(update.state);
-              this.dispatchEvent(
-                new CustomEvent("typeprompt-change", {
-                  detail: { doc, compilationResult },
-                  bubbles: true,
-                  composed: true,
-                }),
-              );
-            }
-          }),
-        ],
+        extensions: this.buildExtensions(),
       });
 
       this.editorView.setState(newState);
 
-      const compilationResult = getCompilationResult(newState);
-      this.dispatchEvent(
-        new CustomEvent("typeprompt-change", {
-          detail: { doc: newContent, compilationResult },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      if (this.isYaml) {
+        const validationResult = parseAndValidateYaml(
+          newContent,
+          this.path,
+          this.schemaType ?? CONFIG,
+        );
+        this.dispatchEvent(
+          new CustomEvent("yaml-change", {
+            detail: { doc: newContent, validationResult },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else {
+        const compilationResult = getCompilationResult(newState);
+        this.dispatchEvent(
+          new CustomEvent("typeprompt-change", {
+            detail: { doc: newContent, compilationResult },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
     }
   }
 

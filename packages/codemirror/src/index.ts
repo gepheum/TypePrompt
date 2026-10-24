@@ -34,6 +34,16 @@ import {
 } from "./state-field.js";
 import type { TypePromptConfig, TypePromptState } from "./types.js";
 
+import type { SchemaType } from "@typeprompt/core";
+import {
+  yaml as createYamlExtension,
+  yamlAutocomplete,
+  yamlCompletionSource,
+  yamlLinter,
+  yamlLinting,
+  type YamlOptions,
+} from "./yaml.js";
+
 /**
  * Creates a comprehensive CodeMirror 6 extension for the TypePrompt language.
  *
@@ -69,6 +79,21 @@ export function typeprompt(config: TypePromptConfig): Extension {
   ];
 }
 
+/**
+ * Creates a CodeMirror 6 extension for YAML documents validated against a TypePrompt SchemaType.
+ *
+ * Extends CodeMirror's default YAML extension with:
+ * - Lezer-based YAML syntax highlighting, indentation, and folding
+ * - Schema-aware autocompletion
+ * - Realtime validation and error diagnostics
+ *
+ * @param schemaType The schema used to validate and autocomplete the YAML content
+ * @param options Optional configuration options (e.g. document path)
+ */
+export function yaml(schemaType: SchemaType, options?: YamlOptions): Extension {
+  return createYamlExtension(schemaType, options);
+}
+
 // Re-export all sub-modules and helpers
 export {
   autoCloseComments,
@@ -94,6 +119,12 @@ export {
   typepromptLinting,
   typepromptStateField,
   typepromptToggleCommentCommand,
+  yamlAutocomplete,
+  yamlCompletionSource,
+  yamlLinter,
+  yamlLinting,
+  type SchemaType,
   type TypePromptConfig,
   type TypePromptState,
+  type YamlOptions,
 };
