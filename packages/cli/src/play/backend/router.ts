@@ -1,9 +1,5 @@
 import { initTRPC } from "@trpc/server";
-import {
-  makeTemplates,
-  type Templates,
-  type ValidCompilationResult,
-} from "@typeprompt/core";
+import type { ValidCompilationResult } from "@typeprompt/core";
 import { z } from "zod";
 
 export type PlayContext = {
@@ -26,7 +22,7 @@ export const appRouter = t.router({
         ctx,
         input,
       }): {
-        readonly templates?: Templates;
+        readonly sourceFiles?: { readonly [path: string]: string };
       } => {
         const compilationResult = ctx.getCompilationResult();
         if (!compilationResult) {
@@ -38,9 +34,14 @@ export const appRouter = t.router({
         ) {
           return {};
         }
-        const templates = makeTemplates(compilationResult);
+        const sourceFiles = Object.fromEntries(
+          Object.values(compilationResult.sourceFiles).map((file) => [
+            file.path,
+            file.content,
+          ]),
+        );
         return {
-          templates,
+          sourceFiles,
         };
       },
     ),

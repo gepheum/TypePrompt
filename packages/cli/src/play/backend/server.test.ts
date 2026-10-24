@@ -66,7 +66,7 @@ describe("play backend server", () => {
     try {
       const client = createPlayClient(`${playServer.url}/trpc`);
       const response = await client.getTemplates.query();
-      expect(response.templates).toBe(undefined);
+      expect(response.sourceFiles).toBe(undefined);
     } finally {
       await playServer.close();
     }
@@ -77,7 +77,12 @@ describe("play backend server", () => {
       signature: "test-sig",
       tools: {},
       templates: {},
-      sourceFiles: {},
+      sourceFiles: {
+        "prompts/test.tp": {
+          path: "prompts/test.tp",
+          content: '<template name="Test"></template>',
+        },
+      },
       timestampMillis: 5000,
     } as unknown as ValidCompilationResult;
 
@@ -91,19 +96,23 @@ describe("play backend server", () => {
 
       // Initial query without timestamp
       const res1 = await client.getTemplates.query();
-      expect(res1.templates?.signature).toBe("test-sig");
+      expect(res1.sourceFiles).toMatch({
+        "prompts/test.tp": '<template name="Test"></template>',
+      });
 
-      // Query with matching timestamp returns empty object (templates omitted)
+      // Query with matching timestamp returns empty object (sourceFiles omitted)
       const res2 = await client.getTemplates.query({
         currentTimestampMillis: 5000,
       });
-      expect(res2.templates).toBe(undefined);
+      expect(res2.sourceFiles).toBe(undefined);
 
-      // Query with older timestamp returns updated templates
+      // Query with older timestamp returns updated sourceFiles
       const res3 = await client.getTemplates.query({
         currentTimestampMillis: 4000,
       });
-      expect(res3.templates?.signature).toBe("test-sig");
+      expect(res3.sourceFiles).toMatch({
+        "prompts/test.tp": '<template name="Test"></template>',
+      });
     } finally {
       await playServer.close();
     }
