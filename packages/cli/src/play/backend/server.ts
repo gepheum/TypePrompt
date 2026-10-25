@@ -11,7 +11,7 @@ export type { AppRouter };
 export type PlayServerOptions = {
   readonly port?: number;
   readonly project: string;
-  readonly getCompilationResult: () => ValidCompilationResult | null;
+  readonly getCompilationResult: () => ValidCompilationResult;
 };
 
 export class PlayServer {
@@ -26,7 +26,7 @@ export class PlayServer {
   }
 
   logLocalhostUrl(): void {
-    console.log(`\nPrompt playground running at ${this.url}`);
+    console.log(`Prompt playground running at ${this.url}\n`);
   }
 
   async close(): Promise<void> {

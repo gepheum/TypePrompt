@@ -1,16 +1,20 @@
 import type { TRPCBuiltRouter, TRPCQueryProcedure } from "@trpc/server";
 
+export type PullSourcesRequest = {
+  lastTimestampMillis: number | null;
+};
+
+export type PullSourcesResponse = {
+  readonly timestampMillis: number;
+  readonly sourceFiles: {
+    readonly [path: string]: string;
+  };
+};
+
 export type PlaygroundProcedures = {
-  getTemplates: TRPCQueryProcedure<{
-    input: {
-      currentTimestampMillis?: number;
-    };
-    output: {
-      readonly timestampMillis?: number;
-      readonly sourceFiles?: {
-        readonly [path: string]: string;
-      };
-    };
+  pullSources: TRPCQueryProcedure<{
+    input: PullSourcesRequest;
+    output: PullSourcesResponse;
     meta: object;
   }>;
 };

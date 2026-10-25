@@ -6,6 +6,8 @@ export { PlayApp } from "./app.js";
 export {
   type PlaygroundProcedures,
   type PlaygroundRouter,
+  type PullSourcesRequest,
+  type PullSourcesResponse,
 } from "./contract.js";
 export { createPlayClient, trpc } from "./trpc.js";
 

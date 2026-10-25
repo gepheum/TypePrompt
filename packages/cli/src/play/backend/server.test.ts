@@ -5,12 +5,25 @@ import { describe, it } from "mocha";
 import { PlayServer } from "./server.js";
 
 describe("play backend server", () => {
+  const mockResult = {
+    signature: "test-sig",
+    tools: {},
+    templates: {},
+    sourceFiles: {
+      "prompts/test.tp": {
+        path: "prompts/test.tp",
+        content: '<template name="Test"></template>',
+      },
+    },
+    timestampMillis: 5000,
+  } as unknown as ValidCompilationResult;
+
   it("starts the server on localhost, serves frontend index.html, and closes", async () => {
     // Port 0 binds to any free port
     const playServer = await PlayServer.start({
       port: 0,
       project: ".",
-      getCompilationResult: () => null,
+      getCompilationResult: () => mockResult,
     });
     try {
       expect(playServer.port > 0).toBe(true);
@@ -33,7 +46,7 @@ describe("play backend server", () => {
     const playServer = await PlayServer.start({
       port: 0,
       project: ".",
-      getCompilationResult: () => null,
+      getCompilationResult: () => mockResult,
     });
     try {
       const response = await fetch(`${playServer.url}/`, { method: "POST" });
@@ -47,7 +60,7 @@ describe("play backend server", () => {
     const playServer = await PlayServer.start({
       port: 0,
       project: ".",
-      getCompilationResult: () => null,
+      getCompilationResult: () => mockResult,
     });
     try {
       const response = await fetch(`${playServer.url}/missing-file.js`);
@@ -57,35 +70,7 @@ describe("play backend server", () => {
     }
   });
 
-  it("serves tRPC getTemplates when compilationResult is null", async () => {
-    const playServer = await PlayServer.start({
-      port: 0,
-      project: ".",
-      getCompilationResult: () => null,
-    });
-    try {
-      const client = createPlayClient(`${playServer.url}/trpc`);
-      const response = await client.getTemplates.query({});
-      expect(response.sourceFiles).toBe(undefined);
-    } finally {
-      await playServer.close();
-    }
-  });
-
-  it("serves tRPC getTemplates when compilationResult is present", async () => {
-    const mockResult = {
-      signature: "test-sig",
-      tools: {},
-      templates: {},
-      sourceFiles: {
-        "prompts/test.tp": {
-          path: "prompts/test.tp",
-          content: '<template name="Test"></template>',
-        },
-      },
-      timestampMillis: 5000,
-    } as unknown as ValidCompilationResult;
-
+  it("serves tRPC pullSources when compilationResult is present", async () => {
     const playServer = await PlayServer.start({
       port: 0,
       project: ".",
@@ -94,26 +79,11 @@ describe("play backend server", () => {
     try {
       const client = createPlayClient(`${playServer.url}/trpc`);
 
-      // Initial query without timestamp
-      const res1 = await client.getTemplates.query({});
-      expect(res1.timestampMillis).toBe(5000);
-      expect(res1.sourceFiles).toMatch({
-        "prompts/test.tp": '<template name="Test"></template>',
+      const res = await client.pullSources.query({
+        lastTimestampMillis: null,
       });
-
-      // Query with matching timestamp returns empty object (sourceFiles and timestampMillis omitted)
-      const res2 = await client.getTemplates.query({
-        currentTimestampMillis: 5000,
-      });
-      expect(res2.timestampMillis).toBe(undefined);
-      expect(res2.sourceFiles).toBe(undefined);
-
-      // Query with older timestamp returns updated sourceFiles and timestampMillis
-      const res3 = await client.getTemplates.query({
-        currentTimestampMillis: 4000,
-      });
-      expect(res3.timestampMillis).toBe(5000);
-      expect(res3.sourceFiles).toMatch({
+      expect(res.timestampMillis).toBe(5000);
+      expect(res.sourceFiles).toMatch({
         "prompts/test.tp": '<template name="Test"></template>',
       });
     } finally {

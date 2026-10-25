@@ -4,52 +4,38 @@ import {
   type inferRouterOutputs,
 } from "@trpc/server";
 import type { AssertSatisfies, ValidCompilationResult } from "@typeprompt/core";
-import type { PlaygroundRouter } from "@typeprompt/playground";
+import type {
+  PlaygroundRouter,
+  PullSourcesResponse,
+} from "@typeprompt/playground";
 import { z } from "zod";
 
 export type PlayContext = {
-  readonly getCompilationResult: () => ValidCompilationResult | null;
+  readonly getCompilationResult: () => ValidCompilationResult;
 };
 
 const t = initTRPC.context<PlayContext>().create();
 
 export const appRouter = t.router({
-  getTemplates: t.procedure
+  pullSources: t.procedure
     .input(
       z.object({
-        currentTimestampMillis: z.number().optional(),
+        lastTimestampMillis: z.number().nullable(),
       }),
     )
-    .query(
-      ({
-        ctx,
-        input,
-      }): {
-        readonly timestampMillis?: number;
-        readonly sourceFiles?: { readonly [path: string]: string };
-      } => {
-        const compilationResult = ctx.getCompilationResult();
-        if (!compilationResult) {
-          return {};
-        }
-        if (
-          input?.currentTimestampMillis !== undefined &&
-          input.currentTimestampMillis === compilationResult.timestampMillis
-        ) {
-          return {};
-        }
-        const sourceFiles = Object.fromEntries(
-          Object.values(compilationResult.sourceFiles).map((file) => [
-            file.path,
-            file.content,
-          ]),
-        );
-        return {
-          timestampMillis: compilationResult.timestampMillis,
-          sourceFiles,
-        };
-      },
-    ),
+    .query(({ ctx }): PullSourcesResponse => {
+      const compilationResult = ctx.getCompilationResult();
+      const sourceFiles = Object.fromEntries(
+        Object.values(compilationResult.sourceFiles).map((file) => [
+          file.path,
+          file.content,
+        ]),
+      );
+      return {
+        timestampMillis: compilationResult.timestampMillis,
+        sourceFiles,
+      };
+    }),
 });
 
 export type AppRouter = typeof appRouter;

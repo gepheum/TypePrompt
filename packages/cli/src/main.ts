@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import type { ValidCompilationResult } from "@typeprompt/core";
+import type {
+  CompilationResult,
+  ValidCompilationResult,
+} from "@typeprompt/core";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
 import {
   parseConfigYaml,
@@ -102,11 +105,7 @@ async function runGeneration(
   mode: "watch" | "once",
 ): Promise<void> {
   // Run the code generators in watch mode or once.
-  const watchModeMainLoop = new WatchModeMainLoop(
-    resolvedProject,
-    config,
-    mode === "watch" ? { watch: true } : { watch: false },
-  );
+  const watchModeMainLoop = new WatchModeMainLoop(resolvedProject, config);
   await watchModeMainLoop.maybeReadPatchBase();
   if (mode === "watch") {
     await watchModeMainLoop.start();
@@ -121,26 +120,26 @@ async function startPlayground(
   config: Config,
   port?: number,
 ): Promise<void> {
-  let compilationResult: ValidCompilationResult | null = null;
-  let playServer: PlayServer | undefined = undefined;
-  const watchModeMainLoop = new WatchModeMainLoop(resolvedProject, config, {
-    watch: true,
-    play: true,
-    onCompilationSuccess: async (r: ValidCompilationResult): Promise<void> => {
-      compilationResult = r;
-      if (playServer) {
-        playServer.logLocalhostUrl();
-      }
-    },
-  });
+  const watchModeMainLoop = new WatchModeMainLoop(resolvedProject, config);
   await watchModeMainLoop.maybeReadPatchBase();
-  const mainLoopPromise = watchModeMainLoop.start();
-  playServer = await PlayServer.start({
+  const { compilationResult: initialCompilationResult, watch } =
+    await watchModeMainLoop.startForPlayground();
+  if (!initialCompilationResult) {
+    process.exit(1);
+  }
+  let compilationResult = initialCompilationResult;
+  const playServer = await PlayServer.start({
     port,
     project: resolvedProject,
     getCompilationResult: () => compilationResult,
   });
-  await mainLoopPromise;
+  const watchPromise = watch((r: CompilationResult): void => {
+    playServer.logLocalhostUrl();
+    if (!r.anyErrors) {
+      compilationResult = r as ValidCompilationResult;
+    }
+  });
+  await watchPromise;
 }
 
 async function main(): Promise<void> {

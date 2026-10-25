@@ -31,22 +31,6 @@ export class WatchModeMainLoop {
   constructor(
     private readonly resolvedProject: string,
     private readonly config: Config,
-    private readonly options:
-      | {
-          readonly watch: false;
-        }
-      | {
-          readonly watch: true;
-          readonly play?: false;
-        }
-      | {
-          readonly watch: true;
-          readonly play: true;
-          /** Called after a successful compilation. */
-          readonly onCompilationSuccess: (
-            r: ValidCompilationResult,
-          ) => Promise<void>;
-        },
   ) {
     this.includes = config.include.map((inc) =>
       Paths.join(resolvedProject, inc),
@@ -69,25 +53,57 @@ export class WatchModeMainLoop {
   }
 
   async start(): Promise<void> {
-    await this.generate();
+    const options: WatchOptions = { watch: true };
+    await this.generateInternal(options);
+    this.startWatcherLoop(options);
+  }
+
+  async startForPlayground(): Promise<{
+    readonly compilationResult: ValidCompilationResult | null;
+    readonly watch: (
+      callback: (r: CompilationResult) => Promise<void> | void,
+    ) => Promise<void>;
+  }> {
+    const compilationResult = await this.generateInternal({
+      watch: true,
+      play: true,
+      initial: true,
+    });
+    return {
+      compilationResult,
+      watch: async (
+        callback: (r: CompilationResult) => Promise<void> | void,
+      ): Promise<void> => {
+        this.startWatcherLoop({
+          watch: true,
+          play: true,
+          initial: false,
+          callback,
+        });
+      },
+    };
+  }
+
+  private startWatcherLoop(options: WatchOptions): void {
     const watchDirs = Array.from(
       new Set(this.includes.map((inc) => globParent(inc))),
     );
     const watcher = new Watcher(watchDirs, {
-      renameDetection: true,
-      recursive: true,
+      ignoreInitial: true,
       persistent: true,
+      recursive: true,
+      renameDetection: true,
     });
     watcher.on("all", (_, targetPath, targetPathNext) => {
       const matches = (p: string): boolean =>
         this.includes.some((inc) => minimatch(p, inc));
       if (matches(targetPath) || (targetPathNext && matches(targetPathNext))) {
-        this.triggerGeneration();
+        this.triggerGeneration(options);
       }
     });
   }
 
-  private triggerGeneration(): void {
+  private triggerGeneration(options: WatchOptions): void {
     if (this.generating) {
       this.mustRegenerate = true;
       return;
@@ -98,7 +114,7 @@ export class WatchModeMainLoop {
     const delayMillis = 200;
     const callback = (): void => {
       try {
-        this.generate();
+        this.generateInternal(options);
       } catch (e) {
         const message =
           e && typeof e === "object" && "message" in e ? e.message : e;
@@ -109,13 +125,21 @@ export class WatchModeMainLoop {
   }
 
   async generate(): Promise<boolean> {
+    const result = await this.generateInternal({ watch: false });
+    return result !== null;
+  }
+
+  private async generateInternal(
+    options: LoopOptions,
+  ): Promise<ValidCompilationResult | null> {
     this.generating = true;
     this.timeoutId = undefined;
     this.mustRegenerate = false;
-    const { options } = this;
-    if (options.watch) {
-      console.clear();
-    }
+    const maybeClear = (): void => {
+      if (options.watch) {
+        console.clear();
+      }
+    };
     try {
       let compilationResult: CompilationResult;
       try {
@@ -129,12 +153,17 @@ export class WatchModeMainLoop {
         });
         this.previousCompilationResult = compilationResult;
       } catch (e) {
+        maybeClear();
         if (options.watch && e instanceof Error) {
           console.error(makeRed(e.message));
-          return false;
+          return null;
         } else {
           throw e;
         }
+      }
+      maybeClear();
+      if (options.watch && options.play && !options.initial) {
+        await options.callback(compilationResult);
       }
       const pathNormalizer = makePathNormalizer(this.resolvedProject);
       if (compilationResult.anyErrors) {
@@ -144,7 +173,7 @@ export class WatchModeMainLoop {
           pathNormalizer,
         );
         renderErrors(errors, "error");
-        return false;
+        return null;
       } else {
         const warnings = makeRenderableErrors(
           compilationResult.warnings,
@@ -154,9 +183,7 @@ export class WatchModeMainLoop {
         renderErrors(warnings, "warning");
         const result = compilationResult as ValidCompilationResult;
         if (options.watch) {
-          if (options.play) {
-            options.onCompilationSuccess(result);
-          } else {
+          if (!options.play) {
             await this.doGenerate(result);
             console.log(
               makeGreen(
@@ -173,12 +200,12 @@ export class WatchModeMainLoop {
         } else {
           await this.doGenerate(result);
         }
-        return true;
+        return result;
       }
     } finally {
       this.generating = false;
-      if (this.mustRegenerate) {
-        this.triggerGeneration();
+      if (this.mustRegenerate && options.watch) {
+        this.triggerGeneration(options);
       }
     }
   }
@@ -200,3 +227,27 @@ export class WatchModeMainLoop {
     );
   }
 }
+
+type WatchOptions =
+  | {
+      readonly watch: true;
+      readonly play?: undefined;
+    }
+  | {
+      readonly watch: true;
+      readonly play: true;
+      readonly initial: true;
+    }
+  | {
+      readonly watch: true;
+      readonly play: true;
+      readonly initial: false;
+      readonly callback: (r: CompilationResult) => Promise<void> | void;
+    };
+
+type LoopOptions =
+  | {
+      readonly watch: false;
+      readonly play?: false;
+    }
+  | WatchOptions;
