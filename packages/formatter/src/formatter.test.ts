@@ -281,4 +281,56 @@ summary: "Rock & Roll < Pop > Jazz"
     const reformatting = await formatTemplateFile(formatted);
     expect(reformatting).toBe(formatted);
   });
+
+  it("unescapes > in formatted TypeScript and YAML when it was escaped in original source", async () => {
+    const unformatted = `<template name="UnescapeGreaterThan">
+<meta>
+summary: "Rock &gt; Pop"
+</meta>
+<schema output-format="text">
+interface Input {
+  // 5 &gt; 3
+  level: "high &gt; low";
+}
+type Output = string;
+</schema>
+<system>Hello</system>
+<user>World</user>
+<examples>
+- input: "a &gt; b"
+  output: "ok"
+</examples>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="UnescapeGreaterThan">
+  <meta>
+    summary: "Rock > Pop"
+  </meta>
+  <schema output-format="text">
+    interface Input {
+      // 5 > 3
+      level: "high > low";
+    }
+    type Output = string;
+  </schema>
+  <system>
+    Hello
+  </system>
+  <user>
+    World
+  </user>
+  <examples>
+    - input: "a > b"
+      output: "ok"
+  </examples>
+</template>
+`,
+    );
+
+    // Verify idempotency: formatting again produces the exact same result
+    const reformatting = await formatTemplateFile(formatted);
+    expect(reformatting).toBe(formatted);
+  });
 });
