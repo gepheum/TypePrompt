@@ -13,6 +13,9 @@ export default defineConfig((): UserConfig => {
     },
     server: {
       port: 5174,
+      proxy: {
+        "/trpc": "http://localhost:3000",
+      },
     },
   };
 });

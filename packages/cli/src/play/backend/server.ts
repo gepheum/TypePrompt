@@ -1,6 +1,6 @@
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import type { ValidCompilationResult } from "@typeprompt/core";
-import { ensurePlaygroundFrontend } from "@typeprompt/playground";
+import { getPlaygroundFrontendDir } from "@typeprompt/playground";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -37,7 +37,7 @@ export class PlayServer {
 
   static async start(options: PlayServerOptions): Promise<PlayServer> {
     const port = options.port ?? 3000;
-    const frontendDir = await ensurePlaygroundFrontend();
+    const frontendDir = getPlaygroundFrontendDir();
 
     const trpcHandler = createHTTPHandler({
       router: appRouter,
