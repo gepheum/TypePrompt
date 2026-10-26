@@ -12,6 +12,7 @@ import {
   typepromptToggleCommentCommand,
 } from "./comment.js";
 import {
+  findDefinitionAtCoords,
   findDefinitionAtPosition,
   jumpToDefinition,
   jumpToDefinitionClickHandlers,
@@ -113,6 +114,7 @@ export {
   bracketMatching,
   closeBrackets,
   closeBracketsKeymap,
+  findDefinitionAtCoords,
   findDefinitionAtPosition,
   getCompilationResult,
   getSemanticTokens,

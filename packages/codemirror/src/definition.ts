@@ -1,5 +1,10 @@
 import { Prec, type EditorState, type Extension } from "@codemirror/state";
-import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
+import {
+  EditorView,
+  keymap,
+  ViewPlugin,
+  type KeyBinding,
+} from "@codemirror/view";
 import type { DefinitionLink } from "@typeprompt/core";
 import { typepromptConfigFacet, typepromptStateField } from "./state-field.js";
 
@@ -35,13 +40,62 @@ export function findDefinitionAtPosition(
 }
 
 /**
- * Jumps to the definition for the symbol at the given position (or current selection head).
+ * Finds the DefinitionLink at the given screen coordinates in the view.
+ * Ensures that the coordinates actually lie within the bounding box of the reference,
+ * avoiding false matches in the empty whitespace to the right or left of a line.
+ */
+export function findDefinitionAtCoords(
+  view: EditorView,
+  coords: { x: number; y: number },
+): DefinitionLink | null {
+  const pos = view.posAtCoords(coords);
+  if (pos === null) return null;
+
+  const link = findDefinitionAtPosition(view.state, pos);
+  if (!link) return null;
+
+  // Verify that the mouse coordinates are physically within the reference's bounding box
+  if (typeof view.coordsAtPos === "function") {
+    const startRect = view.coordsAtPos(link.reference.start, 1);
+    const endRect = view.coordsAtPos(link.reference.end, -1);
+    if (startRect && endRect) {
+      const padding = 2;
+      const left = Math.min(startRect.left, endRect.left) - padding;
+      const right = Math.max(startRect.right, endRect.right) + padding;
+      const top = Math.min(startRect.top, endRect.top) - padding;
+      const bottom = Math.max(startRect.bottom, endRect.bottom) + padding;
+
+      if (
+        coords.x < left ||
+        coords.x > right ||
+        coords.y < top ||
+        coords.y > bottom
+      ) {
+        return null;
+      }
+    }
+  }
+
+  return link;
+}
+
+/**
+ * Jumps to the definition for the symbol at the given position (or current selection head),
+ * or for the provided DefinitionLink.
  * If definition is in the same file, moves selection and centers the definition in view.
  * If definition is in a different file, invokes the optional onJumpToDefinition callback in TypePromptConfig.
  */
-export function jumpToDefinition(view: EditorView, pos?: number): boolean {
-  const targetPos = pos ?? view.state.selection.main.head;
-  const link = findDefinitionAtPosition(view.state, targetPos);
+export function jumpToDefinition(
+  view: EditorView,
+  target?: number | DefinitionLink,
+): boolean {
+  let link: DefinitionLink | null = null;
+  if (typeof target === "object" && target !== null) {
+    link = target;
+  } else {
+    const targetPos = target ?? view.state.selection.main.head;
+    link = findDefinitionAtPosition(view.state, targetPos);
+  }
   if (!link) {
     return false;
   }
@@ -84,50 +138,117 @@ export const jumpToDefinitionKeymap: readonly KeyBinding[] = [
   },
 ];
 
-export const jumpToDefinitionClickHandlers: Extension =
-  EditorView.domEventHandlers({
-    mousedown(event: MouseEvent, view: EditorView): boolean {
-      if (event.metaKey || event.ctrlKey) {
-        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-        if (pos !== null && findDefinitionAtPosition(view.state, pos)) {
-          event.preventDefault();
-          return true;
-        }
+export class JumpToDefinitionHoverPlugin {
+  lastCoords: { x: number; y: number } | null = null;
+
+  readonly onKeyDown = (e: KeyboardEvent): void => {
+    if (
+      (e.key === "Meta" || e.key === "Control" || e.metaKey || e.ctrlKey) &&
+      this.lastCoords
+    ) {
+      const link = findDefinitionAtCoords(this.view, this.lastCoords);
+      if (link) {
+        this.view.dom.style.cursor = "pointer";
       }
-      return false;
-    },
-    click(event: MouseEvent, view: EditorView): boolean {
-      if (event.metaKey || event.ctrlKey) {
-        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-        if (pos !== null) {
-          if (jumpToDefinition(view, pos)) {
+    }
+  };
+
+  readonly onKeyUp = (e: KeyboardEvent): void => {
+    if (
+      (!e.metaKey && !e.ctrlKey) ||
+      (!e.metaKey && e.key === "Meta") ||
+      (!e.ctrlKey && e.key === "Control")
+    ) {
+      if (this.view.dom.style.cursor === "pointer") {
+        this.view.dom.style.cursor = "";
+      }
+    }
+  };
+
+  readonly onBlur = (): void => {
+    this.lastCoords = null;
+    if (this.view.dom.style.cursor === "pointer") {
+      this.view.dom.style.cursor = "";
+    }
+  };
+
+  constructor(readonly view: EditorView) {
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", this.onKeyDown);
+      window.addEventListener("keyup", this.onKeyUp);
+      window.addEventListener("blur", this.onBlur);
+    }
+  }
+
+  destroy(): void {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this.onKeyDown);
+      window.removeEventListener("keyup", this.onKeyUp);
+      window.removeEventListener("blur", this.onBlur);
+    }
+    this.lastCoords = null;
+    if (this.view.dom.style.cursor === "pointer") {
+      this.view.dom.style.cursor = "";
+    }
+  }
+}
+
+export const jumpToDefinitionClickHandlers: Extension = ViewPlugin.fromClass(
+  JumpToDefinitionHoverPlugin,
+  {
+    eventHandlers: {
+      mousedown(event: MouseEvent, view: EditorView): boolean {
+        if (event.metaKey || event.ctrlKey) {
+          const link = findDefinitionAtCoords(view, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          if (link) {
             event.preventDefault();
             return true;
           }
         }
-      }
-      return false;
-    },
-    mousemove(event: MouseEvent, view: EditorView): boolean {
-      if (event.metaKey || event.ctrlKey) {
-        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-        if (pos !== null && findDefinitionAtPosition(view.state, pos)) {
-          view.dom.style.cursor = "pointer";
-          return false;
+        return false;
+      },
+      click(event: MouseEvent, view: EditorView): boolean {
+        if (event.metaKey || event.ctrlKey) {
+          const link = findDefinitionAtCoords(view, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          if (link) {
+            if (jumpToDefinition(view, link)) {
+              event.preventDefault();
+              return true;
+            }
+          }
         }
-      }
-      if (view.dom.style.cursor === "pointer") {
-        view.dom.style.cursor = "";
-      }
-      return false;
+        return false;
+      },
+      mousemove(event: MouseEvent, view: EditorView): boolean {
+        this.lastCoords = { x: event.clientX, y: event.clientY };
+        if (event.metaKey || event.ctrlKey) {
+          const link = findDefinitionAtCoords(view, this.lastCoords);
+          if (link) {
+            view.dom.style.cursor = "pointer";
+            return false;
+          }
+        }
+        if (view.dom.style.cursor === "pointer") {
+          view.dom.style.cursor = "";
+        }
+        return false;
+      },
+      mouseleave(_event: MouseEvent, view: EditorView): boolean {
+        this.lastCoords = null;
+        if (view.dom.style.cursor === "pointer") {
+          view.dom.style.cursor = "";
+        }
+        return false;
+      },
     },
-    keyup(event: KeyboardEvent, view: EditorView): boolean {
-      if (!event.metaKey && !event.ctrlKey) {
-        view.dom.style.cursor = "";
-      }
-      return false;
-    },
-  });
+  },
+);
 
 /**
  * Extension enabling jump-to-definition via F12, Mod-b, and Cmd/Ctrl-click.

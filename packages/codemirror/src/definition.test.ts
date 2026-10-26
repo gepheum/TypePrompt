@@ -7,6 +7,10 @@ import type { EditorView } from "@codemirror/view";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
+  findDefinitionAtCoords,
+  JumpToDefinitionHoverPlugin,
+} from "./definition.js";
+import {
   findDefinitionAtPosition,
   jumpToDefinition,
   typeprompt,
@@ -211,5 +215,120 @@ describe("CodeMirror jump-to-definition", () => {
     assert.strictEqual(state.selection.main.anchor, expectedDefOffset);
     assert.ok(lastSpec !== null);
     assert.ok((lastSpec as TransactionSpec).effects !== undefined);
+  });
+
+  it("turns cursor to pointer on keydown when mouse is over a jumpable symbol without moving mouse", () => {
+    const state = EditorState.create({
+      doc: RESEARCH_QUESTION_TP,
+      extensions: [
+        typeprompt({
+          path: "prompts/ResearchQuestion.tp",
+          workspaceFiles: {
+            "prompts/webSearch.tp": WEB_SEARCH_TP,
+          },
+          patchBase: null,
+        }),
+      ],
+    });
+
+    const toolRefOffset = RESEARCH_QUESTION_TP.indexOf("webSearch") + 2;
+    const dom = { style: { cursor: "" } };
+    const mockView = {
+      state,
+      dom,
+      posAtCoords(coords: { x: number; y: number }) {
+        return coords.x === 100 && coords.y === 50 ? toolRefOffset : null;
+      },
+    } as unknown as EditorView;
+
+    const plugin = new JumpToDefinitionHoverPlugin(mockView);
+    plugin.lastCoords = { x: 100, y: 50 };
+
+    // Press Meta key
+    plugin.onKeyDown({
+      key: "Meta",
+      metaKey: true,
+      ctrlKey: false,
+    } as KeyboardEvent);
+    assert.strictEqual(dom.style.cursor, "pointer");
+
+    // Release Meta key
+    plugin.onKeyUp({
+      key: "Meta",
+      metaKey: false,
+      ctrlKey: false,
+    } as KeyboardEvent);
+    assert.strictEqual(dom.style.cursor, "");
+
+    // Press Meta key over position without definition
+    plugin.lastCoords = { x: 999, y: 999 };
+    plugin.onKeyDown({
+      key: "Meta",
+      metaKey: true,
+      ctrlKey: false,
+    } as KeyboardEvent);
+    assert.strictEqual(dom.style.cursor, "");
+
+    // Blur resets cursor and lastCoords
+    dom.style.cursor = "pointer";
+    plugin.onBlur();
+    assert.strictEqual(dom.style.cursor, "");
+    assert.strictEqual(plugin.lastCoords, null);
+  });
+
+  it("rejects coordinates that fall to the right of the definition in empty line space", () => {
+    const state = EditorState.create({
+      doc: RESEARCH_QUESTION_TP,
+      extensions: [
+        typeprompt({
+          path: "prompts/ResearchQuestion.tp",
+          workspaceFiles: {
+            "prompts/webSearch.tp": WEB_SEARCH_TP,
+          },
+          patchBase: null,
+        }),
+      ],
+    });
+
+    const toolRefStart = RESEARCH_QUESTION_TP.indexOf("webSearch");
+    const toolRefEnd = toolRefStart + "webSearch".length;
+
+    // Simulate mock view where webSearch is between x: 50 and x: 150 on line y: 100..120
+    const mockView = {
+      state,
+      posAtCoords(coords: { x: number; y: number }) {
+        // CodeMirror returns the end of line for any x coordinate past the text on that line
+        if (coords.y >= 100 && coords.y <= 120) {
+          return toolRefEnd;
+        }
+        return null;
+      },
+      coordsAtPos(pos: number) {
+        if (pos === toolRefStart) {
+          return { left: 50, right: 60, top: 100, bottom: 120 };
+        }
+        if (pos === toolRefEnd) {
+          return { left: 140, right: 150, top: 100, bottom: 120 };
+        }
+        return null;
+      },
+    } as unknown as EditorView;
+
+    // Inside the symbol bounding box (x: 100) -> matches
+    const insideMatch = findDefinitionAtCoords(mockView, { x: 100, y: 110 });
+    assert.ok(insideMatch !== null);
+    assert.strictEqual(insideMatch.definition.text, "webSearch");
+
+    // Past the end of the line (x: 350) -> posAtCoords returns toolRefEnd, but bounding box rejects it!
+    const outsideRight = findDefinitionAtCoords(mockView, { x: 350, y: 110 });
+    assert.strictEqual(outsideRight, null);
+
+    // Before the start of the symbol (x: 20) -> rejected
+    const outsideLeft = findDefinitionAtCoords(mockView, { x: 20, y: 110 });
+    assert.strictEqual(outsideLeft, null);
+
+    // Below the line (y: 200) -> rejected
+    const outsideBottom = findDefinitionAtCoords(mockView, { x: 100, y: 200 });
+    assert.strictEqual(outsideBottom, null);
   });
 });
