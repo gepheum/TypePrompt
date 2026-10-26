@@ -12,6 +12,13 @@ import {
   typepromptToggleCommentCommand,
 } from "./comment.js";
 import {
+  findDefinitionAtPosition,
+  jumpToDefinition,
+  jumpToDefinitionClickHandlers,
+  jumpToDefinitionKeymap,
+  typepromptJumpToDefinition,
+} from "./definition.js";
+import {
   typepromptHighlightField,
   typepromptHighlighting,
 } from "./highlighting.js";
@@ -32,7 +39,11 @@ import {
   typepromptConfigFacet,
   typepromptStateField,
 } from "./state-field.js";
-import type { TypePromptConfig, TypePromptState } from "./types.js";
+import type {
+  JumpToDefinitionTarget,
+  TypePromptConfig,
+  TypePromptState,
+} from "./types.js";
 
 import type { SchemaType } from "@typeprompt/core";
 import {
@@ -76,6 +87,7 @@ export function typeprompt(config: TypePromptConfig): Extension {
     typepromptIndentation,
     typepromptComments,
     typepromptKeybindings,
+    typepromptJumpToDefinition(),
   ];
 }
 
@@ -101,8 +113,12 @@ export {
   bracketMatching,
   closeBrackets,
   closeBracketsKeymap,
+  findDefinitionAtPosition,
   getCompilationResult,
   getSemanticTokens,
+  jumpToDefinition,
+  jumpToDefinitionClickHandlers,
+  jumpToDefinitionKeymap,
   typepromptAutocomplete,
   typepromptBackspaceCommand,
   typepromptComments,
@@ -113,6 +129,7 @@ export {
   typepromptHighlighting,
   typepromptIndentCalculation,
   typepromptIndentation,
+  typepromptJumpToDefinition,
   typepromptKeybindings,
   typepromptKeymap,
   typepromptLinter,
@@ -123,6 +140,7 @@ export {
   yamlCompletionSource,
   yamlLinter,
   yamlLinting,
+  type JumpToDefinitionTarget,
   type SchemaType,
   type TypePromptConfig,
   type TypePromptState,

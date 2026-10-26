@@ -19,6 +19,9 @@ export type TypePromptConfig = {
 
   /** Optional patch base for incremental validation against a baseline. */
   readonly patchBase: ValidCompilationResult | null;
+
+  /** Optional callback invoked when jump to definition is triggered. */
+  readonly onJumpToDefinition?: (target: JumpToDefinitionTarget) => void;
 };
 
 /** The immutable state cached inside CodeMirror's StateField. */
@@ -26,4 +29,11 @@ export type TypePromptState = {
   readonly path: string;
   readonly compilationResult: CompilationResult;
   readonly tokens: readonly Lsp.SemanticToken[];
+};
+
+export type JumpToDefinitionTarget = {
+  readonly path: string;
+  readonly start: number;
+  readonly end: number;
+  readonly text?: string;
 };
