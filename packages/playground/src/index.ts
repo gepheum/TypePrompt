@@ -8,8 +8,15 @@ export {
   type PullSourcesRequest,
   type PullSourcesResponse,
 } from "./contract.js";
+export * from "./model/model.js";
+export {
+  PlaygroundStore,
+  type PlaygroundEvents,
+} from "./model/playground-store.js";
 export { createPlayClient, trpc } from "./trpc.js";
 export { PlayApp } from "./view/play-app.js";
+export { StepTemplate } from "./view/step-template.js";
+export { TypePromptEditor } from "./view/typeprompt-editor.js";
 
 export function getPlaygroundFrontendDir(): string {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
