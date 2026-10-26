@@ -32,6 +32,7 @@
   "dependencies": {
     "@trpc/client": "^11.19.0",
     "@trpc/server": "^11.19.0",
+    "@typeprompt/codemirror": "*",
     "lit": "^3.2.0"
   },
   "devDependencies": {
