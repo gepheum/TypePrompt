@@ -36,30 +36,12 @@ export function typepromptLinter(view: EditorView): readonly Diagnostic[] {
       }
     }
 
-    const actions = err.suggestions?.map((suggestion) => ({
-      name: `Replace with "${suggestion}"`,
-      apply: (editorView: EditorView): void => {
-        const spanStart = Math.max(
-          0,
-          Math.min(editorView.state.doc.length, err.span.start),
-        );
-        const spanEnd = Math.max(
-          spanStart,
-          Math.min(editorView.state.doc.length, err.span.end),
-        );
-        editorView.dispatch({
-          changes: { from: spanStart, to: spanEnd, insert: suggestion },
-        });
-      },
-    }));
-
     diagnostics.push({
       from,
       to,
       severity,
       message: err.message,
       source: "TypePrompt",
-      actions: actions && actions.length > 0 ? actions : undefined,
     });
   };
 

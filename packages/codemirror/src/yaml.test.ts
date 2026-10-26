@@ -101,7 +101,7 @@ describe("YAML CodeMirror Extension", () => {
       assert.strictEqual(diagnostics.length, 0);
     });
 
-    it("reports error with suggestions for unknown property", () => {
+    it("reports error for unknown property without action suggestions", () => {
       const doc = "unknownField: 123\n";
       const state = EditorState.create({ doc });
       const mockView = { state } as unknown as EditorView;
@@ -114,9 +114,7 @@ describe("YAML CodeMirror Extension", () => {
       assert.strictEqual(diag.severity, "error");
       assert.strictEqual(diag.source, "YAML");
       assert.ok(diag.message.includes("unknownField"));
-      assert.ok(diag.actions && diag.actions.length > 0);
-      const actionNames = diag.actions.map((a) => a.name);
-      assert.ok(actionNames.some((n) => n.includes("include")));
+      assert.strictEqual(diag.actions, undefined);
     });
 
     it("reports error for YAML syntax error", () => {
