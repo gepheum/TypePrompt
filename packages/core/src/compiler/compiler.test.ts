@@ -1596,16 +1596,11 @@ describe("compile - dataset support", () => {
         "prompts/Translate.dataset.tp": `
           <dataset for="Translate">
             - name: "Spanish greeting"
-              weight: 5
               input:
                 text: "Hello"
-              output:
-                translated: "Hola"
             - name: "Second test"
               input:
                 text: "Goodbye"
-              output:
-                translated: "Au revoir"
           </dataset>
         `,
       },
@@ -1616,25 +1611,17 @@ describe("compile - dataset support", () => {
     expect(result.datasets["Main:Translate"]).toMatch({
       kind: "dataset",
       templateId: "Main:Translate",
-      items: [
+      samples: [
         {
-          name: "Spanish greeting",
-          weight: 5,
+          name: { text: "Spanish greeting" },
           input: { text: "Hello" },
-          output: { translated: "Hola" },
         },
         {
-          name: "Second test",
+          name: { text: "Second test" },
           input: { text: "Goodbye" },
-          output: { translated: "Au revoir" },
         },
       ],
     });
-
-    const templateResult = result.templates["Main:Translate"];
-    if (templateResult?.kind !== "template")
-      throw new Error("Expected template");
-    expect(templateResult.dataset).toBe(result.datasets["Main:Translate"]);
 
     const namespaceResult = result.namespaces["Main"];
     expect(namespaceResult?.datasets["Translate"]).toBe(
@@ -1666,7 +1653,6 @@ describe("compile - dataset support", () => {
               input:
                 party:
                   name: "Acme Corp"
-              output: "NDA text"
           </dataset>
         `,
       },
@@ -1677,13 +1663,12 @@ describe("compile - dataset support", () => {
     expect(result.datasets["Legal:DraftNda"]).toMatch({
       kind: "dataset",
       templateId: "Legal:DraftNda",
-      items: [
+      samples: [
         {
-          name: "Acme NDA",
+          name: { text: "Acme NDA" },
           input: {
             party: { name: "Acme Corp" },
           },
-          output: "NDA text",
         },
       ],
     });
@@ -1770,7 +1755,6 @@ describe("compile - dataset support", () => {
         <dataset for="Translate">
           - input:
               text: "hello"
-            output: "bonjour"
         </dataset>
       `,
     };
@@ -1823,7 +1807,6 @@ describe("compile - dataset support", () => {
           <dataset for="Translate">
             - input:
                 text: "hello"
-              output: "bonjour"
           </dataset>
         `,
       },

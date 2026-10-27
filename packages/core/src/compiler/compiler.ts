@@ -766,7 +766,6 @@ class CompilationResultImpl implements CompilationResult {
 
       this.datasets[id] = validationResult;
       namespace.datasets[forTemplate] = validationResult;
-      templateValidation.dataset = validationResult;
 
       const { path } = dataset.sourceFile;
       if (validationResult.kind === "error") {

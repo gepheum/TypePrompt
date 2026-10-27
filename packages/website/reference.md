@@ -599,10 +599,20 @@ Each sample in the dataset array has the following structure:
 |---|---|---|---|
 | `name` | No | `string` | Optional label or description for the sample |
 | `input` | Yes | `Input` | Inputs matching the target template's `Input` schema |
-| `weight` | No | `number` | Relative scoring weight; defaults to 1.0 |
-| `output` | No | `Output` | Optional golden output matching the target template's `Output` schema |
+| `intermediateSteps` | No | `Step[]` | Expected tool calls for multi-step trajectories or teacher-forcing evaluation |
 
-### Example
+When `intermediateSteps` is specified, each step contains a `toolCalls` list with the following structure:
+
+```yaml
+intermediateSteps:
+  - toolCalls:
+      - tool: <tool name>
+        callId: <string>
+        input: <tool Input>   # validated against tool's Input schema
+        output: <tool Output> # optional; validated against tool's Output schema
+```
+
+### Examples
 
 Given a template defined in `prompts/Translate.tp`:
 
@@ -619,24 +629,37 @@ You can define its dataset in `prompts/Translate.dataset.tp`:
 <!-- Translate.dataset.tp -->
 <dataset for="Translate">
   - name: "Spanish greeting"
-    weight: 2
     input:
       text: "Hello, how are you?"
       targetLanguage: "Spanish"
-    output:
-      translated: "Hola, ¿cómo estás?"
 
   - name: "French formal"
     input:
       text: "Please take a seat."
       targetLanguage: "French"
-    output:
-      translated: "Veuillez vous asseoir."
 
-  - name: "Sample without golden output"
-    input:
+  - input:
       text: "What time is it?"
       targetLanguage: "German"
+</dataset>
+```
+
+For a template that uses tools:
+
+```xml
+<!-- MathAssistant.dataset.tp -->
+<dataset for="MathAssistant">
+  - name: "Multi-step arithmetic"
+    input:
+      question: "What is 2+2?"
+    intermediateSteps:
+      - toolCalls:
+          - tool: calc
+            callId: "call-1"
+            input:
+              expr: "2+2"
+            output:
+              result: 4
 </dataset>
 ```
 

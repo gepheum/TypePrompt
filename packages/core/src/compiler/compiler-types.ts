@@ -44,7 +44,7 @@ export type ValidCompilationResult = CompilationResult & {
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
-  readonly datasets: { readonly [id: string]: ValidDataset };
+  readonly datasets: { readonly [id: string]: ValidatedDataset };
   readonly anyErrors: false;
 };
 
@@ -209,7 +209,7 @@ export type ValidNamespaceResult = NamespaceResult & {
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: ValidatedTool };
   readonly templates: readonly ValidTemplate[];
-  readonly datasets: { readonly [forTemplate: string]: ValidDataset };
+  readonly datasets: { readonly [forTemplate: string]: ValidatedDataset };
 };
 
 export type SchemaOrError =
@@ -233,13 +233,11 @@ export type ValidatedTemplate = {
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };
   readonly definitionLinks: readonly DefinitionLink[];
-  dataset?: DatasetValidationResult;
 };
 
 /** A {@link ValidatedTemplate} known not to have any errors. */
 export type ValidTemplate = ValidatedTemplate & {
   readonly tools: { readonly [name: string]: ValidTemplateTool };
-  dataset?: ValidDataset;
 };
 
 /** Tool called from a template. */
@@ -259,27 +257,35 @@ export type Dataset = {
   readonly tag: Span;
   readonly for: TextSpan;
   readonly namespace: TextSpan | null;
-  readonly items: StrictJsonValue;
+  readonly samples: StrictJsonValue;
   readonly warnings: readonly InternalError[];
-};
-
-export type DatasetItem = {
-  readonly name?: string;
-  readonly input: unknown;
-  readonly weight?: number;
-  readonly output?: unknown;
-  readonly raw: StrictJsonValue;
 };
 
 export type ValidatedDataset = {
   readonly kind: "dataset";
   readonly dataset: Dataset;
   readonly templateId: string;
-  readonly items: readonly DatasetItem[];
+  readonly samples: readonly Sample[];
   readonly definitionLinks: readonly DefinitionLink[];
 };
 
-export type ValidDataset = ValidatedDataset;
+export type Sample = {
+  readonly name?: TextSpan;
+  readonly input: unknown;
+  readonly intermediateSteps?: readonly SampleIntermediateStep[];
+};
+
+export type SampleToolCall = {
+  readonly callId: TextSpan;
+  readonly toolId: string;
+  readonly toolName: TextSpan;
+  readonly input: StrictJsonValue;
+  readonly output?: StrictJsonValue;
+};
+
+export type SampleIntermediateStep = {
+  readonly toolCalls: readonly SampleToolCall[];
+};
 
 export type DatasetValidationResult =
   ValidatedDataset | (ValidationErrors & { readonly dataset: Dataset });

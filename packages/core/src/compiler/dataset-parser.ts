@@ -35,7 +35,7 @@ export function parseDataset(
     ...checkDatasetSourcePath(forTemplate, namespace, datasetNode.path),
   );
 
-  let items: StrictJsonValue | null = null;
+  let samples: StrictJsonValue | null = null;
   const textContent = extractTextContent(datasetNode, "yaml");
   if (textContent.kind === "error") {
     errors.push(...textContent.errors);
@@ -45,7 +45,7 @@ export function parseDataset(
     if (parsed.kind === "error") {
       errors.push(...parsed.errors);
     } else {
-      items = parsed;
+      samples = parsed;
     }
   }
 
@@ -58,7 +58,7 @@ export function parseDataset(
     tag: datasetNode.tag,
     for: forTemplate.value,
     namespace: namespace?.value ?? null,
-    items: items!,
+    samples: samples!,
     warnings,
   };
 }
