@@ -22,7 +22,7 @@ export type CompilationResult = {
   readonly singleNamespace: NamespaceResult | null;
   readonly templates: { readonly [id: string]: TemplateValidationResult };
   readonly tools: { readonly [id: string]: ToolValidationResult };
-  readonly datasets: { readonly [id: string]: DatasetValidationResult };
+  readonly playgrounds: { readonly [id: string]: PlaygroundValidationResult };
   readonly patchBase: ValidCompilationResult | null;
   readonly edition: number;
   readonly signature: string | undefined;
@@ -44,7 +44,7 @@ export type ValidCompilationResult = CompilationResult & {
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
   readonly tools: { readonly [id: string]: ValidatedTool };
-  readonly datasets: { readonly [id: string]: ValidatedDataset };
+  readonly playgrounds: { readonly [id: string]: ValidatedPlayground };
   readonly anyErrors: false;
 };
 
@@ -56,7 +56,7 @@ export type SourceFileParseResult = {
 
   readonly xmlDocument: XmlDocument | InternalErrors;
 
-  readonly entity: Template | Tool | Namespace | Meta | Dataset | undefined;
+  readonly entity: Template | Tool | Namespace | Meta | Playground | undefined;
 
   readonly parseResult: ValidationResult;
   readonly warnings: readonly InternalError[];
@@ -198,8 +198,8 @@ export type NamespaceResult = {
   readonly schema: SchemaOrError;
   readonly tools: { readonly [name: string]: ToolValidationResult };
   readonly templates: readonly ValidatedTemplate[];
-  readonly datasets: {
-    readonly [forTemplate: string]: DatasetValidationResult;
+  readonly playgrounds: {
+    readonly [forTemplate: string]: PlaygroundValidationResult;
   };
 };
 
@@ -209,7 +209,7 @@ export type ValidNamespaceResult = NamespaceResult & {
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: ValidatedTool };
   readonly templates: readonly ValidTemplate[];
-  readonly datasets: { readonly [forTemplate: string]: ValidatedDataset };
+  readonly playgrounds: { readonly [forTemplate: string]: ValidatedPlayground };
 };
 
 export type SchemaOrError =
@@ -251,9 +251,9 @@ export type ValidTemplateTool = TemplateTool & {
 
 export type TemplateValidationResult = ValidatedTemplate | ValidationErrors;
 
-/** Top-level <dataset> element. */
-export type Dataset = {
-  readonly kind: "dataset";
+/** Top-level <playground> element. */
+export type Playground = {
+  readonly kind: "playground";
   readonly tag: Span;
   readonly for: TextSpan;
   readonly namespace: TextSpan | null;
@@ -261,9 +261,9 @@ export type Dataset = {
   readonly warnings: readonly InternalError[];
 };
 
-export type ValidatedDataset = {
-  readonly kind: "dataset";
-  readonly dataset: Dataset;
+export type ValidatedPlayground = {
+  readonly kind: "playground";
+  readonly playground: Playground;
   readonly templateId: string;
   readonly samples: readonly Sample[];
   readonly definitionLinks: readonly DefinitionLink[];
@@ -271,8 +271,15 @@ export type ValidatedDataset = {
 
 export type Sample = {
   readonly name?: TextSpan;
+  readonly history?: readonly SampleHistoryEntry[];
   readonly input: unknown;
-  readonly intermediateSteps?: readonly SampleIntermediateStep[];
+  readonly steps?: readonly SampleStep[];
+};
+
+export type SampleHistoryEntry = {
+  readonly input: unknown;
+  readonly steps?: readonly SampleStep[];
+  readonly output: unknown;
 };
 
 export type SampleToolCall = {
@@ -283,12 +290,13 @@ export type SampleToolCall = {
   readonly output?: StrictJsonValue;
 };
 
-export type SampleIntermediateStep = {
+export type SampleStep = {
   readonly toolCalls: readonly SampleToolCall[];
 };
 
-export type DatasetValidationResult =
-  ValidatedDataset | (ValidationErrors & { readonly dataset: Dataset });
+export type PlaygroundValidationResult =
+  | ValidatedPlayground
+  | (ValidationErrors & { readonly playground: Playground });
 
 // =============================================================================
 // Static assertion

@@ -25,7 +25,7 @@ export function getElementContentFormat(
       return depth <= 0 ? "schema" : "yaml";
     case "tools":
     case "examples":
-    case "dataset":
+    case "samples":
       return "yaml";
     case "system":
     case "user":
@@ -43,6 +43,7 @@ export function getElementContentFormat(
     case "c":
     case "enclosed":
     case "insert":
+    case "playground":
     case "template":
     case "tool":
     case "variant":

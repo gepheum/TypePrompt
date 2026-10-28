@@ -10,7 +10,6 @@ import type { ElementNode, XmlNode } from "./xml-types.js";
 /** XML element tags appearing in the TypePrompt language reference. */
 export type KnownTag =
   | "c"
-  | "dataset"
   | "description"
   | "else"
   | "enclosed"
@@ -19,6 +18,8 @@ export type KnownTag =
   | "namespace"
   | "insert"
   | "on"
+  | "playground"
+  | "samples"
   | "schema"
   | "snippet"
   | "system"

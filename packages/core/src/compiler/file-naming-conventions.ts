@@ -32,7 +32,7 @@ export function checkTemplateOrToolSourcePath(
   return checkSourcePath(expectedPathSuffix, sourcePath);
 }
 
-export function checkDatasetSourcePath(
+export function checkPlaygroundSourcePath(
   forTemplate: AttributeValue<string>,
   namespace: AttributeValue<string> | undefined,
   sourcePath: string,
@@ -41,8 +41,8 @@ export function checkDatasetSourcePath(
   const rawNamespace = namespace?.value.text ?? DEFAULT_NAMESPACE;
   const expectedPathSuffix =
     rawNamespace === DEFAULT_NAMESPACE
-      ? `${rawFor}.dataset.tp`
-      : `${rawNamespace}/${rawFor}.dataset.tp`;
+      ? `${rawFor}.play.tp`
+      : `${rawNamespace}/${rawFor}.play.tp`;
   return checkSourcePath(expectedPathSuffix, sourcePath);
 }
 

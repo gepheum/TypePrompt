@@ -5,17 +5,18 @@ export {
 
 export {
   type CompilationResult,
-  type Dataset,
-  type DatasetValidationResult,
+  type Playground,
+  type PlaygroundValidationResult,
   type Sample,
-  type SampleIntermediateStep,
+  type SampleHistoryEntry,
+  type SampleStep,
   type SampleToolCall,
   type Template,
   type Tool,
   type ValidCompilationResult,
   type ValidNamespaceResult,
   type ValidTemplate,
-  type ValidatedDataset,
+  type ValidatedPlayground,
   type ValidatedTool,
 } from "./compiler-types.js";
 

@@ -14,8 +14,8 @@ import type {
   ToolValidationResult,
   ValidatedTemplate,
 } from "./compiler-types.js";
-import { parseDataset } from "./dataset-parser.js";
-import { validateDataset } from "./dataset-validator.js";
+import { parsePlayground } from "./playground-parser.js";
+import { validatePlayground } from "./playground-validator.js";
 import { parseTemplate } from "./template-parser.js";
 import { validateTemplate } from "./template-validator.js";
 
@@ -100,7 +100,7 @@ function makeTemplate(
   return validated;
 }
 
-describe("validateDataset", () => {
+describe("validatePlayground", () => {
   const template = makeTemplate(`
     <template name="Translate">
       <schema>
@@ -112,25 +112,27 @@ describe("validateDataset", () => {
     </template>
   `);
 
-  it("validates a dataset matching template input schema", () => {
-    const datasetNode = parseElement(
+  it("validates a playground matching template input schema", () => {
+    const node = parseElement(
       `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - name: "Spanish greeting"
           input:
             text: "Hello"
             targetLanguage: "es"
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
+    const result = validatePlayground(parsed, template);
     expect(result).toMatch({
-      kind: "dataset",
+      kind: "playground",
       templateId: "Main:Translate",
       samples: [
         {
@@ -144,23 +146,25 @@ describe("validateDataset", () => {
     });
   });
 
-  it("validates a dataset where name is omitted", () => {
-    const datasetNode = parseElement(
+  it("validates a playground where name is omitted", () => {
+    const node = parseElement(
       `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - input:
             text: "What time is it?"
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
+    const result = validatePlayground(parsed, template);
     expect(result).toMatch({
-      kind: "dataset",
+      kind: "playground",
       samples: [
         {
           name: undefined,
@@ -172,23 +176,139 @@ describe("validateDataset", () => {
     });
   });
 
-  it("reports an error when an unknown field is present", () => {
-    const datasetNode = parseElement(
+  it("validates a playground sample with history", () => {
+    const node = parseElement(
       `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
+        - name: "Multi-turn conversation"
+          history:
+            - input:
+                text: "Hello"
+              output:
+                translated: "Hola"
+            - input:
+                text: "How are you?"
+              output:
+                translated: "Cómo estás?"
+          input:
+            text: "Goodbye"
+        </samples>
+      </playground>
+    `,
+      "prompts/Translate.play.tp",
+    );
+
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+    const result = validatePlayground(parsed, template);
+    expect(result).toMatch({
+      kind: "playground",
+      samples: [
+        {
+          name: { text: "Multi-turn conversation" },
+          history: [
+            {
+              input: { text: "Hello" },
+              output: { translated: "Hola" },
+            },
+            {
+              input: { text: "How are you?" },
+              output: { translated: "Cómo estás?" },
+            },
+          ],
+          input: {
+            text: "Goodbye",
+          },
+        },
+      ],
+    });
+  });
+
+  it("reports an error when history input violates Input schema", () => {
+    const node = parseElement(
+      `
+      <playground for="Translate">
+        <samples>
+        - history:
+            - input:
+                text: 123
+              output:
+                translated: "123"
+          input:
+            text: "Valid"
+        </samples>
+      </playground>
+    `,
+      "prompts/Translate.play.tp",
+    );
+
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+    const result = validatePlayground(parsed, template);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Expected string but got number",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when history output violates Output schema", () => {
+    const node = parseElement(
+      `
+      <playground for="Translate">
+        <samples>
+        - history:
+            - input:
+                text: "Hello"
+              output:
+                translated: 123
+          input:
+            text: "Valid"
+        </samples>
+      </playground>
+    `,
+      "prompts/Translate.play.tp",
+    );
+
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+    const result = validatePlayground(parsed, template);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Expected string but got number",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when an unknown field is present", () => {
+    const node = parseElement(
+      `
+      <playground for="Translate">
+        <samples>
         - input:
             text: "Bonjour"
           goldenOutput:
             translated: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
+    const result = validatePlayground(parsed, template);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -200,20 +320,22 @@ describe("validateDataset", () => {
   });
 
   it("reports an error when input has mismatched schema", () => {
-    const datasetNode = parseElement(
+    const node = parseElement(
       `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - input:
             text: 12345
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
+    const result = validatePlayground(parsed, template);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -225,23 +347,25 @@ describe("validateDataset", () => {
   });
 
   it("reports an error when output or weight is provided on a sample", () => {
-    const datasetNode = parseElement(
+    const node = parseElement(
       `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - input:
             text: "Hello"
           output:
             translated: "Bonjour"
           weight: 2
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
+    const result = validatePlayground(parsed, template);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -255,55 +379,30 @@ describe("validateDataset", () => {
     });
   });
 
-  it("reports an error when dataset content is not a YAML array", () => {
-    const datasetNode = parseElement(
+  it("creates a definition link from 'for' attribute to template declaration", () => {
+    const node = parseElement(
       `
-      <dataset for="Translate">
-        input:
-          text: "Hello"
-      </dataset>
-    `,
-      "prompts/Translate.dataset.tp",
-    );
-
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
-
-    const result = validateDataset(parsed, template);
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          message: "Expected array but got object",
-        },
-      ],
-    });
-  });
-
-  it("links dataset 'for' attribute to template name span", () => {
-    const datasetNode = parseElement(
-      `
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - input:
             text: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `,
-      "prompts/Translate.dataset.tp",
+      "prompts/Translate.play.tp",
     );
 
-    const parsed = parseDataset(datasetNode);
-    if (parsed.kind === "error") throw new Error("parseDataset failed");
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-    const result = validateDataset(parsed, template);
-    if (result.kind !== "dataset") throw new Error("Expected dataset result");
-
+    const result = validatePlayground(parsed, template);
     expect(result.definitionLinks[0]).toMatch({
       reference: parsed.for,
       definition: template.template.name,
     });
   });
 
-  describe("intermediateSteps and tool calls", () => {
+  describe("steps and tool calls", () => {
     const calcTool = makeTool(
       "calc",
       "type Input = { expr: string; }; type Output = { result: number; };",
@@ -331,14 +430,15 @@ describe("validateDataset", () => {
       { calc: calcTool, search: searchTool },
     );
 
-    it("validates intermediateSteps with valid tool calls and extracts them", () => {
-      const datasetNode = parseElement(
+    it("validates steps with valid tool calls and extracts them", () => {
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - name: "Arithmetic step"
             input:
               question: "What is 2+2?"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     callId: "call-1"
@@ -346,17 +446,18 @@ describe("validateDataset", () => {
                       expr: "2+2"
                     output:
                       result: 4
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
-      expect(result.kind).toBe("dataset");
-      if (result.kind !== "dataset") return;
+      const result = validatePlayground(parsed, mathTemplate);
+      expect(result.kind).toBe("playground");
+      if (result.kind !== "playground") return;
 
       expect(result.templateId).toBe("Main:MathAssistant");
       expect(result.samples).toMatch([
@@ -367,7 +468,7 @@ describe("validateDataset", () => {
           },
         },
       ]);
-      const toolCall = result.samples[0]!.intermediateSteps![0]!.toolCalls[0]!;
+      const toolCall = result.samples[0]!.steps![0]!.toolCalls[0]!;
       expect(toolCall.callId.text).toBe("call-1");
       expect(toolCall.toolId).toBe("Main:calc");
       expect(toolCall.toolName.text).toBe("calc");
@@ -377,31 +478,87 @@ describe("validateDataset", () => {
       expect(unwrapJsonValue(toolCall.output!)).toMatch({ result: 4 });
     });
 
-    it("allows omitting tool call output (callId is required)", () => {
-      const datasetNode = parseElement(
+    it("validates steps inside history entries", () => {
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
+          - history:
+              - input:
+                  question: "What is 1+1?"
+                steps:
+                  - toolCalls:
+                      - tool: calc
+                        callId: "c1"
+                        input:
+                          expr: "1+1"
+                        output:
+                          result: 2
+                output:
+                  answer: "2"
+            input:
+              question: "Now multiply by 3"
+            steps:
+              - toolCalls:
+                  - tool: calc
+                    callId: "c2"
+                    input:
+                      expr: "2*3"
+                    output:
+                      result: 6
+          </samples>
+        </playground>
+      `,
+        "prompts/MathAssistant.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, mathTemplate);
+      expect(result.kind).toBe("playground");
+      if (result.kind !== "playground") return;
+
+      const sample = result.samples[0]!;
+      expect(sample.history?.length).toBe(1);
+      const histStep = sample.history![0]!.steps![0]!.toolCalls[0]!;
+      expect(histStep.callId.text).toBe("c1");
+      expect(histStep.toolId).toBe("Main:calc");
+      expect(unwrapJsonValue(histStep.input)).toMatch({ expr: "1+1" });
+
+      const currentStep = sample.steps![0]!.toolCalls[0]!;
+      expect(currentStep.callId.text).toBe("c2");
+      expect(currentStep.toolId).toBe("Main:calc");
+      expect(unwrapJsonValue(currentStep.input)).toMatch({ expr: "2*3" });
+    });
+
+    it("allows omitting tool call output (callId is required)", () => {
+      const node = parseElement(
+        `
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "Calculate"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     callId: "call-2"
                     input:
                       expr: "10 * 10"
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
-      expect(result.kind).toBe("dataset");
-      if (result.kind !== "dataset") return;
+      const result = validatePlayground(parsed, mathTemplate);
+      expect(result.kind).toBe("playground");
+      if (result.kind !== "playground") return;
 
-      const toolCall = result.samples[0]!.intermediateSteps![0]!.toolCalls[0]!;
+      const toolCall = result.samples[0]!.steps![0]!.toolCalls[0]!;
       expect(toolCall.callId.text).toBe("call-2");
       expect(toolCall.toolId).toBe("Main:calc");
       expect(toolCall.toolName.text).toBe("calc");
@@ -411,25 +568,27 @@ describe("validateDataset", () => {
     });
 
     it("reports an error when tool call callId is missing", () => {
-      const datasetNode = parseElement(
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "Calculate"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     input:
                       expr: "10 * 10"
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
+      const result = validatePlayground(parsed, mathTemplate);
       expect(result).toMatch({
         kind: "error",
         errors: [
@@ -441,26 +600,28 @@ describe("validateDataset", () => {
     });
 
     it("reports an error when tool is not registered on the template", () => {
-      const datasetNode = parseElement(
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "Look up"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: unknownTool
                     callId: "call-1"
                     input: {}
                     output: {}
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
+      const result = validatePlayground(parsed, mathTemplate);
       expect(result).toMatch({
         kind: "error",
         errors: [
@@ -472,12 +633,13 @@ describe("validateDataset", () => {
     });
 
     it("reports an error when tool call input violates tool Input schema", () => {
-      const datasetNode = parseElement(
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "Calculate"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     callId: "call-1"
@@ -485,15 +647,16 @@ describe("validateDataset", () => {
                       expr: 12345
                     output:
                       result: 12345
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
+      const result = validatePlayground(parsed, mathTemplate);
       expect(result).toMatch({
         kind: "error",
         errors: [
@@ -505,12 +668,13 @@ describe("validateDataset", () => {
     });
 
     it("reports an error when tool call output violates tool Output schema", () => {
-      const datasetNode = parseElement(
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "Calculate"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     callId: "call-1"
@@ -518,15 +682,56 @@ describe("validateDataset", () => {
                       expr: "5+5"
                     output:
                       result: "not a number"
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
+      const result = validatePlayground(parsed, mathTemplate);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Expected number but got string",
+          },
+        ],
+      });
+    });
+
+    it("reports an error when tool call output inside history violates tool Output schema", () => {
+      const node = parseElement(
+        `
+        <playground for="MathAssistant">
+          <samples>
+          - history:
+              - input:
+                  question: "Calculate"
+                steps:
+                  - toolCalls:
+                      - tool: calc
+                        callId: "call-1"
+                        input:
+                          expr: "5+5"
+                        output:
+                          result: "not a number"
+                output:
+                  answer: "10"
+            input:
+              question: "Calculate"
+          </samples>
+        </playground>
+      `,
+        "prompts/MathAssistant.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, mathTemplate);
       expect(result).toMatch({
         kind: "error",
         errors: [
@@ -538,12 +743,13 @@ describe("validateDataset", () => {
     });
 
     it("creates a definition link from tool call tool name to the tool declaration", () => {
-      const datasetNode = parseElement(
+      const node = parseElement(
         `
-        <dataset for="MathAssistant">
+        <playground for="MathAssistant">
+          <samples>
           - input:
               question: "What is 1+1?"
-            intermediateSteps:
+            steps:
               - toolCalls:
                   - tool: calc
                     callId: "call-1"
@@ -551,16 +757,18 @@ describe("validateDataset", () => {
                       expr: "1+1"
                     output:
                       result: 2
-        </dataset>
+          </samples>
+        </playground>
       `,
-        "prompts/MathAssistant.dataset.tp",
+        "prompts/MathAssistant.play.tp",
       );
 
-      const parsed = parseDataset(datasetNode);
-      if (parsed.kind === "error") throw new Error("parseDataset failed");
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
 
-      const result = validateDataset(parsed, mathTemplate);
-      if (result.kind !== "dataset") throw new Error("Expected dataset result");
+      const result = validatePlayground(parsed, mathTemplate);
+      if (result.kind !== "playground")
+        throw new Error("Expected playground result");
 
       const toolLink = result.definitionLinks.find(
         (link) => link.definition.text === "calc",

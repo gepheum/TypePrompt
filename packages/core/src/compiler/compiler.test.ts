@@ -1576,11 +1576,11 @@ describe("compile - schema warnings", () => {
 });
 
 // ---------------------------------------------------------------------------
-// compile - dataset support
+// compile - playground support
 // ---------------------------------------------------------------------------
 
-describe("compile - dataset support", () => {
-  it("compiles a template with a dataset in the default namespace", () => {
+describe("compile - playground support", () => {
+  it("compiles a template with a playground in the default namespace", () => {
     const result = compile(
       {
         "prompts/Translate.tp": `
@@ -1593,23 +1593,25 @@ describe("compile - dataset support", () => {
             <user><insert val="input.text"/></user>
           </template>
         `,
-        "prompts/Translate.dataset.tp": `
-          <dataset for="Translate">
+        "prompts/Translate.play.tp": `
+          <playground for="Translate">
+            <samples>
             - name: "Spanish greeting"
               input:
                 text: "Hello"
             - name: "Second test"
               input:
                 text: "Goodbye"
-          </dataset>
+            </samples>
+          </playground>
         `,
       },
       { cache: null, patchBase: null },
     );
 
     expect(result.anyErrors).toBe(false);
-    expect(result.datasets["Main:Translate"]).toMatch({
-      kind: "dataset",
+    expect(result.playgrounds["Main:Translate"]).toMatch({
+      kind: "playground",
       templateId: "Main:Translate",
       samples: [
         {
@@ -1624,12 +1626,12 @@ describe("compile - dataset support", () => {
     });
 
     const namespaceResult = result.namespaces["Main"];
-    expect(namespaceResult?.datasets["Translate"]).toBe(
-      result.datasets["Main:Translate"],
+    expect(namespaceResult?.playgrounds["Translate"]).toBe(
+      result.playgrounds["Main:Translate"],
     );
   });
 
-  it("compiles a template with a dataset in a custom namespace", () => {
+  it("compiles a template with a playground in a custom namespace", () => {
     const result = compile(
       {
         "prompts/Legal/shared.tp": `
@@ -1647,21 +1649,23 @@ describe("compile - dataset support", () => {
             <user>Draft for <insert val="input.party.name"/></user>
           </template>
         `,
-        "prompts/Legal/DraftNda.dataset.tp": `
-          <dataset for="DraftNda" namespace="Legal">
+        "prompts/Legal/DraftNda.play.tp": `
+          <playground for="DraftNda" namespace="Legal">
+            <samples>
             - name: "Acme NDA"
               input:
                 party:
                   name: "Acme Corp"
-          </dataset>
+            </samples>
+          </playground>
         `,
       },
       { cache: null, patchBase: null },
     );
 
     expect(result.anyErrors).toBe(false);
-    expect(result.datasets["Legal:DraftNda"]).toMatch({
-      kind: "dataset",
+    expect(result.playgrounds["Legal:DraftNda"]).toMatch({
+      kind: "playground",
       templateId: "Legal:DraftNda",
       samples: [
         {
@@ -1677,25 +1681,27 @@ describe("compile - dataset support", () => {
   it("reports an error when target template is not found", () => {
     const result = compile(
       {
-        "prompts/Unknown.dataset.tp": `
-          <dataset for="Unknown">
+        "prompts/Unknown.play.tp": `
+          <playground for="Unknown">
+            <samples>
             - input:
                 text: "test"
-          </dataset>
+            </samples>
+          </playground>
         `,
       },
       { cache: null, patchBase: null },
     );
 
     expect(result.anyErrors).toBe(true);
-    expect(result.finalErrors["prompts/Unknown.dataset.tp"]).toMatch([
+    expect(result.finalErrors["prompts/Unknown.play.tp"]).toMatch([
       {
         message: "Template 'Unknown' not found",
       },
     ]);
   });
 
-  it("reports an error when multiple datasets target the same template", () => {
+  it("reports an error when multiple playgrounds target the same template", () => {
     const result = compile(
       {
         "prompts/Translate.tp": `
@@ -1708,38 +1714,42 @@ describe("compile - dataset support", () => {
             <user><insert val="input.text"/></user>
           </template>
         `,
-        "prompts/Translate.dataset.tp": `
-          <dataset for="Translate">
+        "prompts/Translate.play.tp": `
+          <playground for="Translate">
+            <samples>
             - input:
                 text: "a"
-              output: "outA"
-          </dataset>
+            </samples>
+          </playground>
         `,
-        "prompts/other/Translate.dataset.tp": `
-          <dataset for="Translate">
+        "prompts/other/Translate.play.tp": `
+          <playground for="Translate">
+            <samples>
             - input:
                 text: "b"
-              output: "outB"
-          </dataset>
+            </samples>
+          </playground>
         `,
       },
       { cache: null, patchBase: null },
     );
 
     expect(result.anyErrors).toBe(true);
-    expect(result.finalErrors["prompts/Translate.dataset.tp"]).toMatch([
+    expect(result.finalErrors["prompts/Translate.play.tp"]).toMatch([
       {
-        message: "Multiple <dataset> elements found for template 'Translate'",
+        message:
+          "Multiple <playground> elements found for template 'Translate'",
       },
     ]);
-    expect(result.finalErrors["prompts/other/Translate.dataset.tp"]).toMatch([
+    expect(result.finalErrors["prompts/other/Translate.play.tp"]).toMatch([
       {
-        message: "Multiple <dataset> elements found for template 'Translate'",
+        message:
+          "Multiple <playground> elements found for template 'Translate'",
       },
     ]);
   });
 
-  it("reuses cached dataset validation when files are unchanged", () => {
+  it("reuses cached playground validation when files are unchanged", () => {
     const files = {
       "prompts/Translate.tp": `
         <template name="Translate">
@@ -1751,11 +1761,13 @@ describe("compile - dataset support", () => {
           <user><insert val="input.text"/></user>
         </template>
       `,
-      "prompts/Translate.dataset.tp": `
-        <dataset for="Translate">
+      "prompts/Translate.play.tp": `
+        <playground for="Translate">
+          <samples>
           - input:
               text: "hello"
-        </dataset>
+          </samples>
+        </playground>
       `,
     };
 
@@ -1768,14 +1780,14 @@ describe("compile - dataset support", () => {
     });
     expect(secondResult).toMatch({
       anyErrors: false,
-      datasets: {
-        "Main:Translate": firstResult.datasets["Main:Translate"],
+      playgrounds: {
+        "Main:Translate": firstResult.playgrounds["Main:Translate"],
       },
     });
   });
 
-  it("does not include datasets in compilation result signature hash", () => {
-    const withoutDataset = compile(
+  it("does not include playgrounds in compilation result signature hash", () => {
+    const withoutPlayground = compile(
       {
         "prompts/Translate.tp": `
           <template name="Translate">
@@ -1791,7 +1803,7 @@ describe("compile - dataset support", () => {
       { cache: null, patchBase: null },
     );
 
-    const withDataset = compile(
+    const withPlayground = compile(
       {
         "prompts/Translate.tp": `
           <template name="Translate">
@@ -1803,20 +1815,22 @@ describe("compile - dataset support", () => {
             <user><insert val="input.text"/></user>
           </template>
         `,
-        "prompts/Translate.dataset.tp": `
-          <dataset for="Translate">
+        "prompts/Translate.play.tp": `
+          <playground for="Translate">
+            <samples>
             - input:
                 text: "hello"
-          </dataset>
+            </samples>
+          </playground>
         `,
       },
       { cache: null, patchBase: null },
     );
 
-    expect(withoutDataset.anyErrors).toBe(false);
-    expect(withDataset.anyErrors).toBe(false);
-    expect(withDataset.signature).toBe(withoutDataset.signature);
-    expect(withDataset.sourceFiles["prompts/Translate.dataset.tp"]!.hash).toBe(
+    expect(withoutPlayground.anyErrors).toBe(false);
+    expect(withPlayground.anyErrors).toBe(false);
+    expect(withPlayground.signature).toBe(withoutPlayground.signature);
+    expect(withPlayground.sourceFiles["prompts/Translate.play.tp"]!.hash).toBe(
       0,
     );
   });

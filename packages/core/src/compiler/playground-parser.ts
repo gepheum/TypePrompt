@@ -2,17 +2,20 @@ import type { StrictJsonValue } from "../json/json-types.js";
 import { parseYaml } from "../json/yaml-parser.js";
 import type { InternalError, InternalErrors } from "../util/shared-types.js";
 import { expectIdentifier } from "../xml/xml-attributes-checker.js";
-import { checkKnownXmlAttributes } from "../xml/xml-entities.js";
+import {
+  checkAllAreKnownElements,
+  checkKnownXmlAttributes,
+} from "../xml/xml-entities.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import type { Dataset } from "./compiler-types.js";
-import { checkDatasetSourcePath } from "./file-naming-conventions.js";
+import type { Playground } from "./compiler-types.js";
+import { checkPlaygroundSourcePath } from "./file-naming-conventions.js";
 import { extractTextContent } from "./text-extractor.js";
 
-/** Parses a top-level <dataset> element. The result has yet to be validated. */
-export function parseDataset(
-  datasetNode: ElementNode,
-): Dataset | InternalErrors {
-  const attrs = checkKnownXmlAttributes(datasetNode, {
+/** Parses a top-level <playground> element. The result has yet to be validated. */
+export function parsePlayground(
+  playgroundNode: ElementNode,
+): Playground | InternalErrors {
+  const attrs = checkKnownXmlAttributes(playgroundNode, {
     for: expectIdentifier({
       format: "PascalCase",
       optional: false,
@@ -32,20 +35,51 @@ export function parseDataset(
 
   // Raise a warning if the file path doesn't match the file naming conventions.
   warnings.push(
-    ...checkDatasetSourcePath(forTemplate, namespace, datasetNode.path),
+    ...checkPlaygroundSourcePath(forTemplate, namespace, playgroundNode.path),
   );
 
+  const children = checkAllAreKnownElements(
+    playgroundNode.children,
+    ["samples"] as const,
+    " in <playground>",
+    errors,
+  );
+
+  let samplesNode: ElementNode | null = null;
+  for (const [tag, child] of children) {
+    if (tag === "samples") {
+      if (samplesNode) {
+        errors.push({
+          span: child.tag,
+          message: "Duplicate <samples> element in <playground>",
+        });
+      } else {
+        samplesNode = child;
+      }
+    }
+  }
+
   let samples: StrictJsonValue | null = null;
-  const textContent = extractTextContent(datasetNode, "yaml");
-  if (textContent.kind === "error") {
-    errors.push(...textContent.errors);
+  if (!samplesNode) {
+    errors.push({
+      span: playgroundNode.tag,
+      message: "Missing <samples> element in <playground>",
+    });
   } else {
-    warnings.push(...textContent.warnings);
-    const parsed = parseYaml(textContent.text);
-    if (parsed.kind === "error") {
-      errors.push(...parsed.errors);
+    const samplesAttrs = checkKnownXmlAttributes(samplesNode, {});
+    errors.push(...samplesAttrs.errors);
+
+    const textContent = extractTextContent(samplesNode, "yaml");
+    if (textContent.kind === "error") {
+      errors.push(...textContent.errors);
     } else {
-      samples = parsed;
+      warnings.push(...textContent.warnings);
+      const parsed = parseYaml(textContent.text);
+      if (parsed.kind === "error") {
+        errors.push(...parsed.errors);
+      } else {
+        samples = parsed;
+      }
     }
   }
 
@@ -54,8 +88,8 @@ export function parseDataset(
   }
 
   return {
-    kind: "dataset",
-    tag: datasetNode.tag,
+    kind: "playground",
+    tag: playgroundNode.tag,
     for: forTemplate.value,
     namespace: namespace?.value ?? null,
     samples: samples!,

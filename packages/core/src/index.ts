@@ -10,10 +10,11 @@ export {
   runtimeTypesSchema,
   type CompilationResult,
   type CompilationResultParseError,
-  type Dataset,
-  type DatasetValidationResult,
+  type Playground,
+  type PlaygroundValidationResult,
   type Sample,
-  type SampleIntermediateStep,
+  type SampleHistoryEntry,
+  type SampleStep,
   type SampleToolCall,
   type Template,
   type Templates,
@@ -21,7 +22,7 @@ export {
   type ValidCompilationResult,
   type ValidNamespaceResult,
   type ValidTemplate,
-  type ValidatedDataset,
+  type ValidatedPlayground,
   type ValidatedTool,
 } from "./compiler/index.js";
 

@@ -106,7 +106,6 @@ function mustReorderChildren(tagName: KnownTag): boolean {
     case "variant":
       return true;
     case "c":
-    case "dataset":
     case "description":
     case "enclosed":
     case "else":
@@ -115,6 +114,8 @@ function mustReorderChildren(tagName: KnownTag): boolean {
     case "meta":
     case "namespace":
     case "on":
+    case "playground":
+    case "samples":
     case "schema":
     case "system":
     case "then":

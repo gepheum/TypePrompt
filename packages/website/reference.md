@@ -13,7 +13,7 @@ TypePrompt projects are made up of `.tp` files matching the `include` pattern in
 | [`<template>`](#the-template-element) | Define a prompt template |
 | [`<tool>`](#the-tool-element) | Define a callable tool |
 | [`<namespace>`](#the-namespace-element) | Group templates and tools; define shared types |
-| [`<dataset>`](#the-dataset-element) | Define an evaluation dataset for a template |
+| [`<playground>`](#the-playground-element) | Define playground samples for a template |
 
 For the type system (schemas, SDL), see the [schema language guide](/schema).
 
@@ -578,33 +578,42 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 ---
 
-## The `<dataset>` element
+## The `<playground>` element
 
-`<dataset>` defines an evaluation dataset for a prompt template. Datasets live in their own `.tp` file alongside the template they evaluate.
+`<playground>` defines playground samples for a prompt template. Playgrounds live in their own `.tp` file alongside the template they target.
 
-The text content of `<dataset>` is a YAML array of samples. Each sample provides an input and an optional golden output, strongly typed against the target template's schema.
+Inside `<playground>`, samples are defined as a YAML array nested inside a `<samples>` element. Each sample provides an input, optional history of previous completed turns, and optional intermediate steps (tool calls) taken during the current turn.
 
 **Attributes:**
 
 | Attribute | Required | Format | Description |
 |---|---|---|---|
-| `for` | Yes | `PascalCase` | Name of the template this dataset evaluates |
+| `for` | Yes | `PascalCase` | Name of the template this playground targets |
 | `namespace` | No | `PascalCase` | Namespace of the target template; defaults to `Main` |
 
 ### Sample structure
 
-Each sample in the dataset array has the following structure:
+Each sample in the `<samples>` YAML array has the following structure:
 
 | Field | Required | Type | Description |
 |---|---|---|---|
 | `name` | No | `string` | Optional label or description for the sample |
-| `input` | Yes | `Input` | Inputs matching the target template's `Input` schema |
-| `intermediateSteps` | No | `Step[]` | Expected tool calls for multi-step trajectories or teacher-forcing evaluation |
+| `history` | No | `HistoryEntry[]` | Previous completed turns in multi-turn conversations |
+| `input` | Yes | `Input` | Current turn inputs matching the target template's `Input` schema |
+| `steps` | No | `Step[]` | Tool calls made during the current turn |
 
-When `intermediateSteps` is specified, each step contains a `toolCalls` list with the following structure:
+When `history` is specified, each entry represents a completed prior turn:
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `input` | Yes | `Input` | Inputs for that historical turn |
+| `steps` | No | `Step[]` | Tool calls made during that turn |
+| `output` | Yes | `Output` | Model response for that turn matching the target template's `Output` schema |
+
+Each step in `steps` contains a `toolCalls` list with the following structure:
 
 ```yaml
-intermediateSteps:
+steps:
   - toolCalls:
       - tool: <tool name>
         callId: <string>
@@ -623,11 +632,12 @@ Given a template defined in `prompts/Translate.tp`:
 </template>
 ```
 
-You can define its dataset in `prompts/Translate.dataset.tp`:
+You can define its playground samples in `prompts/Translate.play.tp`:
 
 ```xml
-<!-- Translate.dataset.tp -->
-<dataset for="Translate">
+<!-- Translate.play.tp -->
+<playground for="Translate">
+  <samples>
   - name: "Spanish greeting"
     input:
       text: "Hello, how are you?"
@@ -641,26 +651,40 @@ You can define its dataset in `prompts/Translate.dataset.tp`:
   - input:
       text: "What time is it?"
       targetLanguage: "German"
-</dataset>
+  </samples>
+</playground>
 ```
 
-For a template that uses tools:
+For multi-turn conversations or templates that use tools:
 
 ```xml
-<!-- MathAssistant.dataset.tp -->
-<dataset for="MathAssistant">
-  - name: "Multi-step arithmetic"
+<!-- MathAssistant.play.tp -->
+<playground for="MathAssistant">
+  <samples>
+  - name: "Multi-turn math session"
+    history:
+      - input:
+          question: "What is 2+2?"
+        steps:
+          - toolCalls:
+              - tool: calc
+                callId: "call-1"
+                input:
+                  expr: "2+2"
+                output:
+                  result: 4
+        output:
+          answer: "4"
     input:
-      question: "What is 2+2?"
-    intermediateSteps:
+      question: "Now multiply by 10"
+    steps:
       - toolCalls:
           - tool: calc
-            callId: "call-1"
+            callId: "call-2"
             input:
-              expr: "2+2"
-            output:
-              result: 4
-</dataset>
+              expr: "4*10"
+  </samples>
+</playground>
 ```
 
 ---
@@ -675,7 +699,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
 | `<tool>` | `lowerCamel.tp` | `prompts/myTool.tp` | `prompts/MyNamespace/myTool.tp` |
 | `<meta>` | `meta.tp` | `prompts/meta.tp` | `prompts/meta.tp` |
 | `<namespace>` | `shared.tp` | `prompts/shared.tp` | `prompts/MyNamespace/shared.tp` |
-| `<dataset>` | `TemplateName.dataset.tp` | `prompts/MyTemplate.dataset.tp` | `prompts/MyNamespace/MyTemplate.dataset.tp` |
+| `<playground>` | `TemplateName.play.tp` | `prompts/MyTemplate.play.tp` | `prompts/MyNamespace/MyTemplate.play.tp` |
 
 ### Single-namespace project layout
 
@@ -686,7 +710,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
     ├── meta.tp
     ├── shared.tp
     ├── Translate.tp
-    ├── Translate.dataset.tp
+    ├── Translate.play.tp
     ├── TriageTicket.tp
     └── webSearch.tp
 ```
@@ -705,7 +729,7 @@ By convention, `.tp` files and directories within your prompts directory follow 
     └── Legal/
         ├── shared.tp
         ├── DraftNda.tp
-        ├── DraftNda.dataset.tp
+        ├── DraftNda.play.tp
         └── SummarizeClause.tp
 ```
 

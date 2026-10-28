@@ -4,22 +4,22 @@ import { describe, it } from "mocha";
 import type { InternalErrors } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
-import type { Dataset } from "./compiler-types.js";
-import { parseDataset as parseDatasetCore } from "./dataset-parser.js";
+import type { Playground } from "./compiler-types.js";
+import { parsePlayground as parsePlaygroundCore } from "./playground-parser.js";
 
-function parseDataset(
-  datasetNode: ElementNode,
+function parsePlayground(
+  playgroundNode: ElementNode,
   sourcePath?: string,
-): Dataset | InternalErrors {
+): Playground | InternalErrors {
   if (sourcePath !== undefined) {
-    return parseDatasetCore({ ...datasetNode, path: sourcePath });
+    return parsePlaygroundCore({ ...playgroundNode, path: sourcePath });
   }
-  return parseDatasetCore(datasetNode);
+  return parsePlaygroundCore(playgroundNode);
 }
 
 function parseElement(
   xml: string,
-  path = "prompts/Translate.dataset.tp",
+  path = "prompts/Translate.play.tp",
 ): ElementNode {
   const result = parseXmlDocument(xml, path);
   if (result.kind !== "success") {
@@ -30,39 +30,42 @@ function parseElement(
   return result.root;
 }
 
-describe("parseDataset", () => {
-  it("parses a valid <dataset> with 'for' attribute", () => {
+describe("parsePlayground", () => {
+  it("parses a valid <playground> with 'for' attribute and <samples>", () => {
     const root = parseElement(`
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - name: "Spanish greeting"
           input:
             text: "Hello"
-          output: "Hola"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root, "prompts/Translate.dataset.tp");
+    const result = parsePlayground(root, "prompts/Translate.play.tp");
     expect(result).toMatch({
-      kind: "dataset",
+      kind: "playground",
       for: { text: "Translate" },
       namespace: null,
       warnings: [],
     });
   });
 
-  it("parses a valid <dataset> with 'for' and 'namespace' attributes", () => {
+  it("parses a valid <playground> with 'for' and 'namespace' attributes", () => {
     const root = parseElement(`
-      <dataset for="DraftNda" namespace="Legal">
+      <playground for="DraftNda" namespace="Legal">
+        <samples>
         - name: "Standard NDA"
           input:
             partyA: "Acme"
             partyB: "Beta"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root, "prompts/Legal/DraftNda.dataset.tp");
+    const result = parsePlayground(root, "prompts/Legal/DraftNda.play.tp");
     expect(result).toMatch({
-      kind: "dataset",
+      kind: "playground",
       for: { text: "DraftNda" },
       namespace: { text: "Legal" },
       warnings: [],
@@ -71,13 +74,15 @@ describe("parseDataset", () => {
 
   it("reports an error when 'for' attribute is missing", () => {
     const root = parseElement(`
-      <dataset>
+      <playground>
+        <samples>
         - input:
             text: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root);
+    const result = parsePlayground(root);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -90,13 +95,15 @@ describe("parseDataset", () => {
 
   it("reports an error when 'for' attribute is not PascalCase", () => {
     const root = parseElement(`
-      <dataset for="translate">
+      <playground for="translate">
+        <samples>
         - input:
             text: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root);
+    const result = parsePlayground(root);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -110,13 +117,15 @@ describe("parseDataset", () => {
 
   it("reports an error when unknown attribute is passed", () => {
     const root = parseElement(`
-      <dataset for="Translate" foo="bar">
+      <playground for="Translate" foo="bar">
+        <samples>
         - input:
             text: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root);
+    const result = parsePlayground(root);
     expect(result).toMatch({
       kind: "error",
       errors: [
@@ -127,33 +136,101 @@ describe("parseDataset", () => {
     });
   });
 
-  it("reports an error when YAML content is invalid", () => {
+  it("reports an error when <samples> is missing", () => {
     const root = parseElement(`
-      <dataset for="Translate">
-        - input: { unclosed
-      </dataset>
+      <playground for="Translate">
+      </playground>
     `);
 
-    const result = parseDataset(root);
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Missing <samples> element in <playground>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when duplicate <samples> are present", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <samples>
+        - input:
+            text: "Hello"
+        </samples>
+        <samples>
+        - input:
+            text: "World"
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate <samples> element in <playground>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when unexpected element is inside <playground>", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <foo />
+        <samples>
+        - input:
+            text: "Hello"
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Unexpected element <foo> in <playground>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when YAML content in <samples> is invalid", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <samples>
+        - input: { unclosed
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
     expect(result).toMatch({
       kind: "error",
     });
   });
 
-  it("warns when filename does not match 'TemplateName.dataset.tp'", () => {
+  it("warns when filename does not match 'TemplateName.play.tp'", () => {
     const root = parseElement(`
-      <dataset for="Translate">
+      <playground for="Translate">
+        <samples>
         - input:
             text: "Hello"
-      </dataset>
+        </samples>
+      </playground>
     `);
 
-    const result = parseDataset(root, "prompts/WrongName.tp");
+    const result = parsePlayground(root, "prompts/WrongName.tp");
     expect(result).toMatch({
-      kind: "dataset",
+      kind: "playground",
       warnings: [
         {
-          message: "File path should match '**/Translate.dataset.tp'",
+          message: "File path should match '**/Translate.play.tp'",
         },
       ],
     });
