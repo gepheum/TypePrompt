@@ -9,7 +9,7 @@ describe("formatTemplateFile", () => {
 interface Input{text:string;}
 type Output=string;
 </schema>
-<tools>- tool: webSearch</tools>
+<tools><tool name="webSearch" /></tools>
 <system>You are a translator.</system>
 <user><insert val="input.text"/></user>
 </template>`;
@@ -24,7 +24,7 @@ type Output=string;
     type Output = string;
   </schema>
   <tools>
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
   <system>
     You are a translator.
@@ -62,7 +62,7 @@ type Output = string;
     const unformatted = `<template name="Reordered">
 <user><insert val="input.text"/></user>
 <system>You are an assistant.</system>
-<tools>- tool: webSearch</tools>
+<tools><tool name="webSearch" /></tools>
 <schema output-format="text">
 interface Input{text:string;}
 type Output=string;
@@ -85,7 +85,7 @@ model: gpt-4o
     type Output = string;
   </schema>
   <tools>
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
   <system>
     You are an assistant.

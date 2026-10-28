@@ -12,7 +12,7 @@ const RESEARCH_QUESTION_TP = `<template name="ResearchQuestion">
   </schema>
 
   <tools>
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
 
   <system>

@@ -181,7 +181,7 @@ describe("validateTemplate - minimal valid templates", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: calc
+            <tool name="calc" />
           </tools>
           <system>You solve math problems with <c>calc</c>.</system>
           <user>Problem: <insert val="input.problem"/></user>
@@ -747,7 +747,7 @@ describe("validateTemplate - tools validation", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: unknownTool
+            <tool name="unknownTool" />
           </tools>
           <system>Sys</system>
           <user>Usr</user>
@@ -761,7 +761,7 @@ describe("validateTemplate - tools validation", () => {
       kind: "error",
       errors: [
         {
-          message: "Expected: never",
+          message: "Unknown tool 'unknownTool'",
         },
       ],
     });
@@ -781,8 +781,8 @@ describe("validateTemplate - tools validation", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: calc
-            - tool: calc
+            <tool name="calc" />
+            <tool name="calc" />
           </tools>
           <system>Sys</system>
           <user>Usr</user>
@@ -846,7 +846,7 @@ describe("validateTemplate - tools validation", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: brokenTool
+            <tool name="brokenTool" />
           </tools>
           <system>Sys</system>
           <user>Usr</user>
@@ -946,7 +946,7 @@ describe("validateTemplate - examples validation", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: calc
+            <tool name="calc" />
           </tools>
           <system>Sys</system>
           <user>Usr</user>
@@ -988,7 +988,7 @@ describe("validateTemplate - examples validation", () => {
             type Output = string;
           </schema>
           <tools>
-            - tool: calc
+            <tool name="calc" />
           </tools>
           <system>Sys</system>
           <user>Usr</user>
@@ -1463,7 +1463,7 @@ describe("validateTemplate - definition links", () => {
             type Output = { answer: string; };
           </schema>
           <tools>
-            - tool: calc
+            <tool name="calc" />
           </tools>
           <system>Solve</system>
           <user><insert val="input.problem"/></user>

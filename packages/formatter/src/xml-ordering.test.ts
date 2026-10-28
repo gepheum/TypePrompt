@@ -23,7 +23,7 @@ describe("reorderXmlElements", () => {
   it("reorders tools before schema into schema before tools", () => {
     const xml = `<template name="Test">
   <tools>
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
   <schema>
     type Input = { q: string; };
@@ -41,7 +41,7 @@ describe("reorderXmlElements", () => {
     type Output = string;
   </schema>
   <tools>
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
 </template>`);
   });
@@ -61,7 +61,7 @@ describe("reorderXmlElements", () => {
     Snippet text
   </snippet>
   <tools>
-    - tool: myTool
+    <tool name="myTool" />
   </tools>
   <schema>
     type Input = {};
@@ -85,7 +85,7 @@ describe("reorderXmlElements", () => {
     type Output = string;
   </schema>
   <tools>
-    - tool: myTool
+    <tool name="myTool" />
   </tools>
   <system>System msg</system>
   <user>User msg</user>

@@ -9,8 +9,8 @@
   </schema>
 
   <tools>
-    - tool: myTool
-    - tool: myOtherTool
+    <tool name="myTool" />
+    <tool name="myOtherTool" />
   </tools>
 
   <system>

@@ -9,7 +9,7 @@
   </schema>
 
   <tools>
-    - tool: myOtherTool
+    <tool name="myOtherTool" />
   </tools>
 
   <system>

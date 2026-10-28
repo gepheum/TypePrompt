@@ -17,8 +17,7 @@
   </schema>
 
   <tools>
-    # List of tools in YAML format
-    - tool: webSearch
+    <tool name="webSearch" />
   </tools>
 
   <system>

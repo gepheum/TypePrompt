@@ -119,20 +119,20 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
 
 ### The `<tools>` element
 
-Registers tools that the model may call during this prompt. The text content is a YAML list of tool references.
+Registers tools that the model may call during this prompt. Contains one or more `<tool>` child elements referencing defined tools.
 
 ```xml
 <!-- ResearchAssistant.tp -->
 <template name="ResearchAssistant">
   <tools>
-    - tool: webSearch
-    - tool: readDocument
+    <tool name="webSearch" />
+    <tool name="readDocument" />
   </tools>
   ...
 </template>
 ```
 
-Each `tool` value must match a `<tool>` element defined at the top level (in the same namespace).
+Each `name` attribute must match a `<tool>` element defined at the top level (in the same namespace).
 
 ---
 

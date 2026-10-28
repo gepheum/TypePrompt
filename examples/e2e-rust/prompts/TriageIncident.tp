@@ -25,7 +25,7 @@
   </schema>
 
   <tools>
-    - tool: getServiceMetrics
+    <tool name="getServiceMetrics" />
   </tools>
 
   <system>

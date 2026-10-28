@@ -2,7 +2,6 @@ import { resolveExpressionType } from "../expression/expression-type-resolver.js
 import { resolveIfExpression } from "../expression/if-expression-resolver.js";
 import { resolveSwitchExpression } from "../expression/switch-expression-resolver.js";
 import type {
-  JsonString,
   StrictJsonArray,
   StrictJsonObject,
   StrictJsonValue,
@@ -36,6 +35,7 @@ import type {
   TemplateContent,
   TemplateTool,
   TemplateValidationResult,
+  ToolReference,
   ToolValidationResult,
 } from "./compiler-types.js";
 
@@ -651,7 +651,7 @@ function validateSnippet(
 }
 
 function validateTools(
-  toolsValue: StrictJsonValue | null,
+  tools: readonly ToolReference[],
   namespaceTools: { readonly [name: string]: ToolValidationResult },
 ):
   | ValidationErrors
@@ -660,85 +660,49 @@ function validateTools(
       readonly tools: { readonly [name: string]: TemplateTool };
       readonly definitionLinks: readonly DefinitionLink[];
     } {
-  if (toolsValue === null) {
-    return {
-      kind: "success",
-      tools: {},
-      definitionLinks: [],
-    } as const;
-  }
-  const toolsType = makeToolsType(namespaceTools);
-  const jsonResult = validateJson(toolsValue, toolsType, {
-    typeDeclarations: {},
-    sharedDeclarations: {},
-    unionToMembers: new Map(),
-  });
-  if (jsonResult.errors.length >= 1) {
-    return {
-      kind: "error",
-      errors: jsonResult.errors,
-      definitionLinks: jsonResult.definitionLinks,
-    };
+  const resultTools: { [name: string]: TemplateTool } = {};
+  const errors: InternalError[] = [];
+  const definitionLinks: DefinitionLink[] = [];
+
+  for (const ref of tools) {
+    const toolName = ref.name.text;
+    const tool = namespaceTools[toolName];
+    if (tool === undefined) {
+      errors.push({
+        span: ref.name,
+        message: `Unknown tool '${toolName}'`,
+        ...(Object.keys(namespaceTools).length > 0
+          ? { suggestions: Object.keys(namespaceTools) }
+          : {}),
+      });
+      continue;
+    }
+    definitionLinks.push({
+      reference: ref.name,
+      definition: tool.tool.name,
+    });
+    if (resultTools[toolName] !== undefined) {
+      errors.push({
+        span: ref.name,
+        message: `Duplicate tool '${toolName}'`,
+      });
+      continue;
+    }
+    resultTools[toolName] = { tool };
   }
 
-  const tools: { [name: string]: TemplateTool } = {};
-  for (const e of (toolsValue as StrictJsonArray).elements) {
-    const nameValue = (e as StrictJsonObject).entries["tool"]!
-      .value as JsonString;
-    const name = nameValue.value;
-    const tool = { tool: namespaceTools[name]! };
-    if ((tools[name] ??= tool) != tool) {
-      return {
-        kind: "error",
-        errors: [
-          {
-            span: nameValue.firstToken,
-            message: `Duplicate tool '${name}'`,
-          },
-        ],
-        definitionLinks: jsonResult.definitionLinks,
-      };
-    }
+  if (errors.length >= 1) {
+    return {
+      kind: "error",
+      errors,
+      definitionLinks,
+    };
   }
 
   return {
     kind: "success",
-    tools,
-    definitionLinks: jsonResult.definitionLinks,
-  };
-}
-
-function makeToolsType(namespaceTools: {
-  readonly [name: string]: ToolValidationResult;
-}): SyntheticArray & HasName {
-  const toolNames = Object.fromEntries(
-    Object.entries(namespaceTools).map(([name, tool]) => [
-      name,
-      { kind: "unquoted", unquotedName: tool.tool.name } as const,
-    ]),
-  );
-  return {
-    kind: "array",
-    name: {
-      text: "Tool[]",
-    },
-    elementType: {
-      kind: "interface",
-      fields: {
-        tool: {
-          name: {
-            text: "tool",
-          },
-          type: {
-            kind: "synthetic-union",
-            members: {
-              kind: "strings",
-              values: toolNames,
-            },
-          },
-        },
-      },
-    },
+    tools: resultTools,
+    definitionLinks,
   };
 }
 

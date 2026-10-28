@@ -24,7 +24,7 @@
   </schema>
 
   <tools>
-    - tool: getWeather
+    <tool name="getWeather" />
   </tools>
 
   <system>

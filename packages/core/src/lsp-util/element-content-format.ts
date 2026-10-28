@@ -23,7 +23,6 @@ export function getElementContentFormat(
       return "schema";
     case "meta":
       return depth <= 0 ? "schema" : "yaml";
-    case "tools":
     case "examples":
     case "samples":
       return "yaml";
@@ -46,6 +45,7 @@ export function getElementContentFormat(
     case "playground":
     case "template":
     case "tool":
+    case "tools":
     case "variant":
       return "unrendered-xml";
     default: {

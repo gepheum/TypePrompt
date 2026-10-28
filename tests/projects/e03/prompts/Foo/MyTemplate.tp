@@ -11,7 +11,7 @@
   </schema>
 
   <tools>
-    - tool: myTool
+    <tool name="myTool" />
   </tools>
 
   <system>

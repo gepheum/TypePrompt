@@ -32,6 +32,7 @@ import type {
   TemplateContents,
   TemplateMeta,
   TemplateVariant,
+  ToolReference,
 } from "./compiler-types.js";
 
 import * as z from "zod";
@@ -113,7 +114,7 @@ class TemplateParser {
       name: name.value,
       namespace: namespace?.value ?? null,
       schema: this.schema as SchemaParseResult<"template">,
-      tools: this.tools,
+      tools: this.tools ?? [],
       outputFormat: this.outputFormat,
       contents: contents!,
       snippets: this.snippets,
@@ -207,7 +208,7 @@ class TemplateParser {
   }
 
   private parseTools(toolsNode: ElementNode): void {
-    if (this.tools) {
+    if (this.tools !== null) {
       this.errors.push({
         span: toolsNode.tag,
         message: "Multiple <tools> elements in <template>",
@@ -215,18 +216,48 @@ class TemplateParser {
       return;
     }
     this.errors.push(...checkNoXmlAttributes(toolsNode));
-    const textContent = extractTextContent(toolsNode, "yaml");
-    if (textContent.kind === "error") {
-      this.errors.push(...textContent.errors);
-      return;
-    }
-    this.warnings.push(...textContent.warnings);
-    const tools = parseYaml(textContent.text);
-    if (tools.kind === "error") {
-      this.errors.push(...tools.errors);
-      return;
+    const children = checkAllAreKnownElements(
+      toolsNode.children,
+      ["tool"] as const,
+      " in <tools>",
+      this.errors,
+    );
+    const tools: ToolReference[] = [];
+    for (const [tag, child] of children) {
+      switch (tag) {
+        case "tool": {
+          const tool = this.parseTool(child);
+          if (tool) {
+            tools.push(tool);
+          }
+          break;
+        }
+      }
     }
     this.tools = tools;
+  }
+
+  private parseTool(toolNode: ElementNode): ToolReference | null {
+    const attrs = checkKnownXmlAttributes(toolNode, {
+      name: expectIdentifier({
+        format: "camelCase",
+        optional: false,
+      }),
+    });
+    this.errors.push(...attrs.errors);
+    checkAllAreKnownElements(
+      toolNode.children,
+      [] as const,
+      " in <tool>",
+      this.errors,
+    );
+    if (attrs.kind === "error") {
+      return null;
+    }
+    return {
+      tag: toolNode.tag,
+      name: attrs.attributes.name.value,
+    };
   }
 
   private parseVariant(variantNode: ElementNode): void {
@@ -693,7 +724,7 @@ class TemplateParser {
 
   private readonly errors: InternalError[] = [];
   private schema: SchemaParseResult<"template"> | InternalErrors | null = null;
-  private tools: StrictJsonValue | null = null;
+  private tools: ReadonlyArray<ToolReference> | null = null;
   private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];

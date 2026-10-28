@@ -420,8 +420,8 @@ describe("validatePlayground", () => {
           type Output = { answer: string; };
         </schema>
         <tools>
-          - tool: calc
-          - tool: search
+          <tool name="calc" />
+          <tool name="search" />
         </tools>
         <system>You are a math assistant.</system>
         <user><insert val="input.question"/></user>

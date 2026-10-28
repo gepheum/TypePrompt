@@ -56,7 +56,7 @@ describe("parseTemplate - basic template parsing", () => {
       name: { text: "Translate" },
       namespace: null,
       outputFormat: null,
-      tools: null,
+      tools: [],
       contents: {
         kind: "no-variants",
         content: {
@@ -354,13 +354,13 @@ describe("parseTemplate - <schema> element", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseTemplate - <tools> element", () => {
-  it("parses valid YAML tools declaration", () => {
+  it("parses valid <tools> declaration with <tool> children", () => {
     const root = parseElement(`
       <template name="Research">
         <schema>type Input = {}; type Output = {};</schema>
         <tools>
-          - webSearch
-          - calculator
+          <tool name="webSearch" />
+          <tool name="calculator" />
         </tools>
         <system>Sys</system>
         <user>Usr</user>
@@ -369,13 +369,10 @@ describe("parseTemplate - <tools> element", () => {
 
     expect(parseTemplate(root, "Research.tp")).toMatch({
       kind: "template",
-      tools: {
-        kind: "array",
-        elements: [
-          { kind: "string", value: "webSearch" },
-          { kind: "string", value: "calculator" },
-        ],
-      },
+      tools: [
+        { name: { text: "webSearch" } },
+        { name: { text: "calculator" } },
+      ],
       warnings: [],
     });
   });
@@ -384,8 +381,8 @@ describe("parseTemplate - <tools> element", () => {
     const root = parseElement(`
       <template name="Research">
         <schema>type Input = {}; type Output = {};</schema>
-        <tools>- toolA</tools>
-        <tools>- toolB</tools>
+        <tools><tool name="toolA" /></tools>
+        <tools><tool name="toolB" /></tools>
         <system>Sys</system>
         <user>Usr</user>
       </template>
@@ -405,7 +402,7 @@ describe("parseTemplate - <tools> element", () => {
     const root = parseElement(`
       <template name="Research">
         <schema>type Input = {}; type Output = {};</schema>
-        <tools format="yaml">- toolA</tools>
+        <tools format="yaml"><tool name="toolA" /></tools>
         <system>Sys</system>
         <user>Usr</user>
       </template>
@@ -416,6 +413,95 @@ describe("parseTemplate - <tools> element", () => {
       errors: [
         {
           message: "Unexpected attribute 'format'",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when <tools> contains unexpected child element", () => {
+    const root = parseElement(`
+      <template name="Research">
+        <schema>type Input = {}; type Output = {};</schema>
+        <tools>
+          <invalid />
+        </tools>
+        <system>Sys</system>
+        <user>Usr</user>
+      </template>
+    `);
+
+    expect(parseTemplate(root, "Research.tp")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Unexpected element <invalid> in <tools>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when <tool> in <tools> is missing name attribute", () => {
+    const root = parseElement(`
+      <template name="Research">
+        <schema>type Input = {}; type Output = {};</schema>
+        <tools>
+          <tool />
+        </tools>
+        <system>Sys</system>
+        <user>Usr</user>
+      </template>
+    `);
+
+    expect(parseTemplate(root, "Research.tp")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Missing required attribute 'name'",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when <tool> in <tools> has non-camelCase name", () => {
+    const root = parseElement(`
+      <template name="Research">
+        <schema>type Input = {}; type Output = {};</schema>
+        <tools>
+          <tool name="ToolA" />
+        </tools>
+        <system>Sys</system>
+        <user>Usr</user>
+      </template>
+    `);
+
+    expect(parseTemplate(root, "Research.tp")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message:
+            "Invalid value for attribute 'name': expected a camelCase identifier",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when <tool> in <tools> has child content", () => {
+    const root = parseElement(`
+      <template name="Research">
+        <schema>type Input = {}; type Output = {};</schema>
+        <tools>
+          <tool name="toolA">unexpected</tool>
+        </tools>
+        <system>Sys</system>
+        <user>Usr</user>
+      </template>
+    `);
+
+    expect(parseTemplate(root, "Research.tp")).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Unexpected text content in <tool>",
         },
       ],
     });

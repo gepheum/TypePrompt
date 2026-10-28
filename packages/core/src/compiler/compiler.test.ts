@@ -102,7 +102,7 @@ describe("compile - basic compilation and empty results", () => {
               type Output = string;
             </schema>
             <tools>
-              - tool: lookupClause
+              <tool name="lookupClause" />
             </tools>
             <meta>
               temperature: 0.2
@@ -594,7 +594,7 @@ describe("compile - caching and incremental compilation", () => {
       "prompts/Math.tp": `
         <template name="Math">
           <schema>type Input = { q: string; }; type Output = string;</schema>
-          <tools>- tool: calc</tools>
+          <tools><tool name="calc" /></tools>
           <system>Sys <c>calc</c></system>
           <user><insert val="input.q"/></user>
         </template>
@@ -676,7 +676,7 @@ describe("compile - pathToDefinitionLinks", () => {
               type Output = string;
             </schema>
             <tools>
-              - tool: lookupClause
+              <tool name="lookupClause" />
             </tools>
             <meta>
               env: "prod"

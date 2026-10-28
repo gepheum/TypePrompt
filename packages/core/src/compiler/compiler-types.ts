@@ -70,11 +70,17 @@ export type Template = {
   readonly name: TextSpan;
   readonly namespace: TextSpan | null;
   readonly schema: SchemaParseResult<"template">;
-  readonly tools: StrictJsonValue | null;
+  readonly tools: readonly ToolReference[];
   readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
   readonly warnings: readonly InternalError[];
+};
+
+/** A tool reference declared inside <tools> in a <template>. */
+export type ToolReference = {
+  readonly tag: Span;
+  readonly name: TextSpan;
 };
 
 export type OutputFormat = "json" | "text";

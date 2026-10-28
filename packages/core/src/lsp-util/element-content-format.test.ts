@@ -30,12 +30,12 @@ describe("getElementContentFormat", () => {
     expect(getElementContentFormat(metaDoc.root!, 1)).toBe("yaml");
   });
 
-  it("determines yaml content format for tools and examples", () => {
-    const toolsDoc = parseXmlDocument("<tools></tools>", "test.tp");
-    expect(getElementContentFormat(toolsDoc.root!, 1)).toBe("yaml");
-
+  it("determines yaml content format for examples and samples", () => {
     const examplesDoc = parseXmlDocument("<examples></examples>", "test.tp");
     expect(getElementContentFormat(examplesDoc.root!, 1)).toBe("yaml");
+
+    const samplesDoc = parseXmlDocument("<samples></samples>", "test.tp");
+    expect(getElementContentFormat(samplesDoc.root!, 1)).toBe("yaml");
   });
 
   it("determines rendered-xml for system, user, description, then, else, on", () => {
@@ -66,14 +66,16 @@ describe("getElementContentFormat", () => {
     expect(getElementContentFormat(plainSnippet.root!, 1)).toBe("rendered-xml");
   });
 
-  it("determines unrendered-xml for template, tool, variant, c, enclosed, insert", () => {
+  it("determines unrendered-xml for template, tool, tools, variant, c, enclosed, insert, playground", () => {
     for (const tag of [
       "template",
       "tool",
+      "tools",
       "variant",
       "c",
       "enclosed",
       "insert",
+      "playground",
     ]) {
       const doc = parseXmlDocument(`<${tag}></${tag}>`, "test.tp");
       expect(getElementContentFormat(doc.root!, 0)).toBe("unrendered-xml");
