@@ -88,20 +88,20 @@ export type Prompt<Id extends TemplateId> = {
  */
 export type FewShotExample = {
   readonly userMessage: string;
-  readonly intermediateSteps: readonly IntermediateStepExample[];
+  readonly steps: readonly StepExample[];
   readonly response: string;
 };
 
 /**
- * One intermediate step within a {@link FewShotExample}, containing the tool
+ * One step within a {@link FewShotExample}, containing the tool
  * calls made at that step.
  */
-export type IntermediateStepExample = {
+export type StepExample = {
   /** Tool calls made in parallel at this step. */
   readonly toolCalls: readonly ToolCallExample[];
 };
 
-/** A single tool call recorded inside an {@link IntermediateStepExample}. */
+/** A single tool call recorded inside an {@link StepExample}. */
 export type ToolCallExample = {
   readonly callId: string;
   readonly toolName: string;
@@ -547,9 +547,9 @@ function renderExamples(
   template: Spec.Template,
   tools: { [id: string]: Spec.Tool },
 ): readonly FewShotExample[] {
-  return inputs.map(({ input, output, intermediateSteps }) => ({
+  return inputs.map(({ input, output, steps }) => ({
     userMessage: renderBody(body, input, template.snippets),
-    intermediateSteps: intermediateSteps.map((step) => ({
+    steps: steps.map((step) => ({
       toolCalls: step.toolCalls.map((tc) => ({
         callId: tc.callId,
         toolName: tc.toolName,

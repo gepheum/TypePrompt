@@ -78,16 +78,12 @@ class _internal:
         model_config = pydantic.ConfigDict(populate_by_name=True)
         input: Any
         output: Any
-        intermediate_steps: list[_internal.FewShotExample_IntermediateSteps] = (
-            pydantic.Field(
-                validation_alias=pydantic.AliasChoices(
-                    "intermediateSteps", "intermediate_steps"
-                ),
-                serialization_alias="intermediateSteps",
-            )
+        steps: list[_internal.FewShotExample_Steps] = pydantic.Field(
+            validation_alias=pydantic.AliasChoices("steps"),
+            serialization_alias="steps",
         )
 
-    class FewShotExample_IntermediateSteps(pydantic.BaseModel):
+    class FewShotExample_Steps(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(populate_by_name=True)
         tool_calls: list[_internal.ToolCallExample] = pydantic.Field(
             validation_alias=pydantic.AliasChoices("toolCalls", "tool_calls"),

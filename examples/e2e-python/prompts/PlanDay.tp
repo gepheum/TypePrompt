@@ -46,7 +46,7 @@
     - input:
         city: Seattle
         interests: "books and coffee"
-      intermediateSteps:
+      steps:
         - toolCalls:
             - callId: call_weather_1
               tool: getWeather

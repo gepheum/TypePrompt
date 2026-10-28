@@ -133,7 +133,7 @@ public sealed record Tool(
 /// </summary>
 public sealed record FewShotExample(
     string UserMessage,
-    IReadOnlyList<IntermediateStepExample> IntermediateSteps,
+    IReadOnlyList<StepExample> Steps,
     string Response
 );
 
@@ -141,7 +141,7 @@ public sealed record FewShotExample(
 /// One intermediate step within a few-shot example, containing the tool
 /// calls made at that step.
 /// </summary>
-public sealed record IntermediateStepExample(
+public sealed record StepExample(
     IReadOnlyList<ToolCallExample> ToolCalls
 );
 
@@ -678,8 +678,8 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
             var exOutputObj = JsonElementToObject(ex.Output);
             var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets);
 
-            var intermediateSteps = new List<IntermediateStepExample>();
-            foreach (var step in ex.IntermediateSteps)
+            var steps = new List<StepExample>();
+            foreach (var step in ex.Steps)
             {
                 var toolCalls = new List<ToolCallExample>();
                 foreach (var tc in step.ToolCalls)
@@ -691,7 +691,7 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
                         StringifiedOutput: JsonSerializer.Serialize(tc.Output)
                     ));
                 }
-                intermediateSteps.Add(new IntermediateStepExample(toolCalls));
+                steps.Add(new StepExample(toolCalls));
             }
 
             var outputFormat = tmpl.OutputFormat == Spec.OutputFormat.Json
@@ -701,7 +701,7 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
 
             result.Add(new FewShotExample(
                 UserMessage: userMessage,
-                IntermediateSteps: intermediateSteps,
+                Steps: steps,
                 Response: response
             ));
         }
@@ -898,13 +898,13 @@ file static class Spec
     {
         [JsonPropertyName("input")]
         public required JsonElement Input { get; init; }
-        [JsonPropertyName("intermediateSteps")]
-        public required IReadOnlyList<FewShotExample_IntermediateSteps> IntermediateSteps { get; init; }
+        [JsonPropertyName("steps")]
+        public required IReadOnlyList<FewShotExample_Steps> Steps { get; init; }
         [JsonPropertyName("output")]
         public required JsonElement Output { get; init; }
     }
 
-    public sealed record FewShotExample_IntermediateSteps
+    public sealed record FewShotExample_Steps
     {
         [JsonPropertyName("toolCalls")]
         public required IReadOnlyList<ToolCallExample> ToolCalls { get; init; }

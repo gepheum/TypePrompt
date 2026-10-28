@@ -49,7 +49,7 @@ export type TemplateContent = {
 export type FewShotExample = {
   readonly input: unknown;
   readonly output: unknown;
-  readonly intermediateSteps: readonly {
+  readonly steps: readonly {
     readonly toolCalls: readonly ToolCallExample[];
   }[];
 };

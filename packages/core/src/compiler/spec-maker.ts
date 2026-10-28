@@ -167,7 +167,7 @@ function makeExamples(
     };
   };
 
-  const makeIntermediateStep = (
+  const makeStep = (
     input: StrictJsonValue,
   ): {
     readonly toolCalls: readonly Spec.ToolCallExample[];
@@ -185,14 +185,12 @@ function makeExamples(
     const { entries } = input as StrictJsonObject;
     const inputEntry = entries["input"]!;
     const outputEntry = entries["output"]!;
-    const intermediateSteps = entries["intermediateSteps"];
+    const steps = entries["steps"];
     return {
       input: unwrapJsonValue(inputEntry.value),
       output: unwrapJsonValue(outputEntry.value),
-      intermediateSteps: intermediateSteps
-        ? (intermediateSteps.value as StrictJsonArray).elements.map(
-            makeIntermediateStep,
-          )
+      steps: steps
+        ? (steps.value as StrictJsonArray).elements.map(makeStep)
         : [],
     };
   };

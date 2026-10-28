@@ -3378,12 +3378,12 @@ void Test03Tools_ResearchQuestion() {
   // testPromptToolsEnum / tool name constant
   ASSERT_EQ(typeprompt_03::tools::WebSearch::kToolName, "webSearch");
 
-  // testProducesOneExampleWithOneIntermediateStep
+  // testProducesOneExampleWithOneStep
   ASSERT_EQ(prompt.examples.size(), 1);
-  ASSERT_EQ(prompt.examples[0].intermediate_steps.size(), 1);
+  ASSERT_EQ(prompt.examples[0].steps.size(), 1);
 
   // testExampleToolCallIds
-  const auto& tc = prompt.examples[0].intermediate_steps[0].tool_calls[0];
+  const auto& tc = prompt.examples[0].steps[0].tool_calls[0];
   ASSERT_EQ(tc.call_id, "s1");
   ASSERT_EQ(tc.tool_name, "webSearch");
 

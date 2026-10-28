@@ -129,12 +129,12 @@ class FewShotExample:
     """
 
     user_message: str
-    intermediate_steps: Sequence[IntermediateStepExample]
+    steps: Sequence[StepExample]
     response: str
 
 
 @dataclass(frozen=True)
-class IntermediateStepExample:
+class StepExample:
     # Tool calls made in parallel at this step.
     tool_calls: Sequence[ToolCallExample]
 
@@ -501,8 +501,8 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 result.append(
                     FewShotExample(
                         user_message=render_body(user_body, ex.input, tmpl.snippets),
-                        intermediate_steps=[
-                            IntermediateStepExample(
+                        steps=[
+                            StepExample(
                                 tool_calls=[
                                     ToolCallExample(
                                         call_id=tc.call_id,
@@ -513,7 +513,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                                     for tc in step.tool_calls
                                 ]
                             )
-                            for step in ex.intermediate_steps
+                            for step in ex.steps
                         ],
                         response=format_value(ex.output, tmpl.output_format),
                     )

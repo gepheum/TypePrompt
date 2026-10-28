@@ -2367,7 +2367,7 @@ struct TemplateContents_KindNoVariants;
 struct TemplateContents_KindVariants;
 struct TemplateContent;
 struct FewShotExample;
-struct FewShotExample_IntermediateSteps;
+struct FewShotExample_Steps;
 struct ToolCallExample;
 struct BodyPiece;
 struct BodyPiece_KindText;
@@ -2500,16 +2500,16 @@ struct ToolCallExample {
 inline JsonNode ToJsonNode(const ToolCallExample&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, ToolCallExample&);
 
-struct FewShotExample_IntermediateSteps {
+struct FewShotExample_Steps {
   std::vector<ToolCallExample> tool_calls;
 };
 
-inline JsonNode ToJsonNode(const FewShotExample_IntermediateSteps&);
-inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample_IntermediateSteps&);
+inline JsonNode ToJsonNode(const FewShotExample_Steps&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample_Steps&);
 
 struct FewShotExample {
   JsonNode input;
-  std::vector<FewShotExample_IntermediateSteps> intermediate_steps;
+  std::vector<FewShotExample_Steps> steps;
   JsonNode output;
 };
 
@@ -2995,27 +2995,26 @@ inline JsonNode ToJsonNode(const FewShotExample& input) {
   return JsonNode::Object{
       {"input", ToJsonNode(input.input)},
       {"output", ToJsonNode(input.output)},
-      {"intermediateSteps", ToJsonNode(input.intermediate_steps)},
+      {"steps", ToJsonNode(input.steps)},
   };
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("input", out.input);
-  parser.Parse("intermediateSteps", out.intermediate_steps);
+  parser.Parse("steps", out.steps);
   parser.Parse("output", out.output);
   return std::move(parser).status();
 }
 
-inline JsonNode ToJsonNode(const FewShotExample_IntermediateSteps& input) {
+inline JsonNode ToJsonNode(const FewShotExample_Steps& input) {
   using ::typeprompt::ToJsonNode;
   return JsonNode::Object{
       {"toolCalls", ToJsonNode(input.tool_calls)},
   };
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context,
-                         FewShotExample_IntermediateSteps& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample_Steps& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("toolCalls", out.tool_calls);
   return std::move(parser).status();
@@ -3353,9 +3352,9 @@ struct ToolCallExample {
   std::string stringified_output;
 };
 
-/// One intermediate step within a few-shot example, containing the tool
+/// One step within a few-shot example, containing the tool
 /// calls made at that step.
-struct IntermediateStepExample {
+struct StepExample {
   /// Tool calls made in parallel at this step.
   std::vector<ToolCallExample> tool_calls;
 };
@@ -3364,7 +3363,7 @@ struct IntermediateStepExample {
 /// tool-call steps, and the expected response.
 struct FewShotExample {
   std::string user_message;
-  std::vector<IntermediateStepExample> intermediate_steps;
+  std::vector<StepExample> steps;
   std::string response;
 };
 
@@ -4018,8 +4017,8 @@ class Renderer {
     for (const auto& ex : *examples) {
       std::string user_message = RenderBody(user_body, ex.input, tmpl.snippets);
 
-      std::vector<IntermediateStepExample> intermediate_steps;
-      for (const auto& step : ex.intermediate_steps) {
+      std::vector<StepExample> steps;
+      for (const auto& step : ex.steps) {
         std::vector<ToolCallExample> tool_calls;
         for (const auto& tc : step.tool_calls) {
           tool_calls.push_back(ToolCallExample{
@@ -4029,7 +4028,7 @@ class Renderer {
               .stringified_output = tc.output.ToJson(),
           });
         }
-        intermediate_steps.push_back(IntermediateStepExample{
+        steps.push_back(StepExample{
             .tool_calls = std::move(tool_calls),
         });
       }
@@ -4041,7 +4040,7 @@ class Renderer {
 
       result.push_back(FewShotExample{
           .user_message = std::move(user_message),
-          .intermediate_steps = std::move(intermediate_steps),
+          .steps = std::move(steps),
           .response = std::move(response),
       });
     }

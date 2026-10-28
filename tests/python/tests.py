@@ -387,17 +387,17 @@ class TestResearchQuestion:
         assert schema["properties"]["query"]["type"] == "string"
         assert schema["required"] == ["query"]
 
-    def test_produces_one_example_with_one_intermediate_step(self):
+    def test_produces_one_example_with_one_step(self):
         assert len(self.prompt.examples) == 1
-        assert len(self.prompt.examples[0].intermediate_steps) == 1
+        assert len(self.prompt.examples[0].steps) == 1
 
     def test_example_tool_call_ids(self):
-        tc = self.prompt.examples[0].intermediate_steps[0].tool_calls[0]
+        tc = self.prompt.examples[0].steps[0].tool_calls[0]
         assert tc.call_id == "s1"
         assert tc.tool_name == "webSearch"
 
     def test_example_tool_call_stringified_input(self):
-        tc = self.prompt.examples[0].intermediate_steps[0].tool_calls[0]
+        tc = self.prompt.examples[0].steps[0].tool_calls[0]
         assert tc.stringified_input == '{"query": "Tokyo population 2024"}'
 
     async def test_execute_tools_calls_executor_and_returns_output(self):

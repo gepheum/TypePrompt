@@ -298,19 +298,19 @@ describe("03-tools / ResearchQuestion", () => {
     expect(Boolean(prompt.tools["calculator"])).toMatch(false);
   });
 
-  it("produces one example with one intermediate step", () => {
+  it("produces one example with one step", () => {
     expect(prompt.examples.length).toMatch(1);
-    expect(prompt.examples[0]!.intermediateSteps.length).toMatch(1);
+    expect(prompt.examples[0]!.steps.length).toMatch(1);
   });
 
   it("example tool call has the correct callId and toolName", () => {
-    const call = prompt.examples[0]!.intermediateSteps[0]!.toolCalls[0]!;
+    const call = prompt.examples[0]!.steps[0]!.toolCalls[0]!;
     expect(call.callId).toMatch("s1");
     expect(call.toolName).toMatch("webSearch");
   });
 
   it("example tool call stringifiedInput contains the query", () => {
-    const call = prompt.examples[0]!.intermediateSteps[0]!.toolCalls[0]!;
+    const call = prompt.examples[0]!.steps[0]!.toolCalls[0]!;
     expect(call.stringifiedInput).toMatch(/Tokyo population 2024/);
   });
 

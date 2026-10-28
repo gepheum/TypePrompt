@@ -9,7 +9,7 @@ export type InferrenceLogEntry = {
     }[];
     examples: {
       userMessage: string;
-      intermediateSteps: {
+      steps: {
         toolCalls: {
           callId: string;
           toolName: string;

@@ -183,16 +183,16 @@ pub struct Tool {
 pub struct FewShotExample {
   /// The rendered user message for this example.
   pub user_message: String,
-  /// Tool calls and responses made during intermediate steps.
-  pub intermediate_steps: Vec<IntermediateStepExample>,
+  /// Tool calls made during intermediate steps.
+  pub steps: Vec<StepExample>,
   /// The expected final response.
   pub response: String,
 }
 
-/// One intermediate step within a few-shot example, containing the tool
+/// One step within a few-shot example, containing the tool
 /// calls made at that step.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct IntermediateStepExample {
+pub struct StepExample {
   /// The tool calls made in this step.
   pub tool_calls: Vec<ToolCallExample>,
 }
@@ -572,8 +572,8 @@ fn render_examples(
   let mut result = Vec::new();
   for example in examples {
     let rendered_user = render_body(user_body, &example.input, &template.snippets);
-    let mut intermediate_steps = Vec::new();
-    for step in &example.intermediate_steps {
+    let mut steps = Vec::new();
+    for step in &example.steps {
       let mut tool_calls = Vec::new();
       for call in &step.tool_calls {
         let stringified_input = serde_json::to_string(&call.input).unwrap_or_default();
@@ -589,7 +589,7 @@ fn render_examples(
           stringified_output,
         });
       }
-      intermediate_steps.push(IntermediateStepExample { tool_calls });
+      steps.push(StepExample { tool_calls });
     }
     let response_str = match &example.output {
       serde_json::Value::String(s) => s.clone(),
@@ -600,7 +600,7 @@ fn render_examples(
     };
     result.push(FewShotExample {
       user_message: rendered_user,
-      intermediate_steps,
+      steps,
       response: response_str,
     });
   }
@@ -899,12 +899,12 @@ mod spec {
   pub(super) struct FewShotExample {
     pub(super) input: serde_json::Value,
     pub(super) output: serde_json::Value,
-    #[serde(rename = "intermediateSteps")]
-    pub(super) intermediate_steps: Vec<FewShotExample_IntermediateSteps>,
+    #[serde(rename = "steps")]
+    pub(super) steps: Vec<FewShotExample_Steps>,
   }
 
   #[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-  pub(super) struct FewShotExample_IntermediateSteps {
+  pub(super) struct FewShotExample_Steps {
     #[serde(rename = "toolCalls")]
     pub(super) tool_calls: Vec<ToolCallExample>,
   }

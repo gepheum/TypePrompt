@@ -932,7 +932,7 @@ describe("validateTemplate - examples validation", () => {
     });
   });
 
-  it("validates examples with tool calls in intermediateSteps", () => {
+  it("validates examples with tool calls in steps", () => {
     const calcTool = makeTool(
       "calc",
       "type Input = { expr: string; }; type Output = { result: integer; };",
@@ -953,7 +953,7 @@ describe("validateTemplate - examples validation", () => {
           <examples>
             - input:
                 query: "What is 2+2?"
-              intermediateSteps:
+              steps:
                 - toolCalls:
                     - tool: "calc"
                       callId: "call-1"
@@ -995,7 +995,7 @@ describe("validateTemplate - examples validation", () => {
           <examples>
             - input:
                 query: "What is 2+2?"
-              intermediateSteps:
+              steps:
                 - toolCalls:
                     - tool: "calc"
                       callId: "call-1"
@@ -1470,7 +1470,7 @@ describe("validateTemplate - definition links", () => {
           <examples>
             - input:
                 problem: "2+2"
-              intermediateSteps:
+              steps:
                 - toolCalls:
                     - tool: calc
                       callId: "1"

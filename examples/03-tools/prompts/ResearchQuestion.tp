@@ -34,7 +34,7 @@
   <examples>
     - input:
         question: "What is the current population of Tokyo?"
-      intermediateSteps:
+      steps:
         - toolCalls:
             - callId: s1
               tool: webSearch

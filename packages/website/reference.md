@@ -313,7 +313,7 @@ Defines few-shot examples that are included in every rendered prompt. The text c
 ```yaml
 - input: <Input value>
   output: <Output value>
-  intermediateSteps:  # optional; include when the example involves tool calls
+  steps:  # optional; include when the example involves tool calls
     - toolCalls:
         - callId: <string>
           tool: <tool name>
@@ -349,7 +349,7 @@ For a template that uses tools:
 <examples>
   - input:
       question: "What is the capital of France?"
-    intermediateSteps:
+    steps:
       - toolCalls:
         - callId: c1
           tool: webSearch

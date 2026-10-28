@@ -287,8 +287,8 @@ mod tests {
     );
 
     assert_eq!(prompt.examples.len(), 1);
-    assert_eq!(prompt.examples[0].intermediate_steps.len(), 1);
-    let tc = &prompt.examples[0].intermediate_steps[0].tool_calls[0];
+    assert_eq!(prompt.examples[0].steps.len(), 1);
+    let tc = &prompt.examples[0].steps[0].tool_calls[0];
     assert_eq!(tc.call_id, "s1");
     assert_eq!(tc.tool_name, "webSearch");
     assert!(tc.stringified_input.contains("Tokyo population 2024"));

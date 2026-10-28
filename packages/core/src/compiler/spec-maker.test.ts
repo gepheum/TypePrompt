@@ -880,7 +880,7 @@ describe("makeTemplates - meta and examples", () => {
       jsonObj({
         input: jsonObj({ prompt: str("hi") }),
         output: str("hello"),
-        intermediateSteps: jsonArr([]),
+        steps: jsonArr([]),
       }),
     ]);
     const result = {
@@ -903,7 +903,7 @@ describe("makeTemplates - meta and examples", () => {
                 {
                   input: { prompt: "hi" },
                   output: "hello",
-                  intermediateSteps: [],
+                  steps: [],
                 },
               ],
             },
@@ -918,7 +918,7 @@ describe("makeTemplates - meta and examples", () => {
       jsonObj({
         input: str("q"),
         output: str("a"),
-        intermediateSteps: jsonArr([
+        steps: jsonArr([
           jsonObj({
             toolCalls: jsonArr([
               jsonObj({
@@ -952,7 +952,7 @@ describe("makeTemplates - meta and examples", () => {
                 {
                   input: "q",
                   output: "a",
-                  intermediateSteps: [
+                  steps: [
                     {
                       toolCalls: [
                         {

@@ -365,16 +365,16 @@ public class Test03Tools_ResearchQuestion
     }
 
     [Fact]
-    public void TestProducesOneExampleWithOneIntermediateStep()
+    public void TestProducesOneExampleWithOneStep()
     {
         Assert.Single(_prompt.Examples);
-        Assert.Single(_prompt.Examples[0].IntermediateSteps);
+        Assert.Single(_prompt.Examples[0].Steps);
     }
 
     [Fact]
     public void TestExampleToolCallIds()
     {
-        var tc = _prompt.Examples[0].IntermediateSteps[0].ToolCalls[0];
+        var tc = _prompt.Examples[0].Steps[0].ToolCalls[0];
         Assert.Equal("s1", tc.CallId);
         Assert.Equal("webSearch", tc.ToolName);
     }
@@ -382,7 +382,7 @@ public class Test03Tools_ResearchQuestion
     [Fact]
     public void TestExampleToolCallStringifiedInput()
     {
-        var tc = _prompt.Examples[0].IntermediateSteps[0].ToolCalls[0];
+        var tc = _prompt.Examples[0].Steps[0].ToolCalls[0];
         Assert.Contains("Tokyo population 2024", tc.StringifiedInput);
     }
 

@@ -354,21 +354,21 @@ class Test03Tools_ResearchQuestion {
     }
 
     @Test
-    fun testProducesOneExampleWithOneIntermediateStep() {
+    fun testProducesOneExampleWithOneStep() {
         assertEquals(1, prompt.examples.size)
-        assertEquals(1, prompt.examples[0].intermediateSteps.size)
+        assertEquals(1, prompt.examples[0].steps.size)
     }
 
     @Test
     fun testExampleToolCallIds() {
-        val tc = prompt.examples[0].intermediateSteps[0].toolCalls[0]
+        val tc = prompt.examples[0].steps[0].toolCalls[0]
         assertEquals("s1", tc.callId)
         assertEquals("webSearch", tc.toolName)
     }
 
     @Test
     fun testExampleToolCallStringifiedInput() {
-        val tc = prompt.examples[0].intermediateSteps[0].toolCalls[0]
+        val tc = prompt.examples[0].steps[0].toolCalls[0]
         assertTrue(tc.stringifiedInput.contains("Tokyo population 2024"))
     }
 

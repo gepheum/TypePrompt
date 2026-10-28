@@ -47,7 +47,7 @@ type TemplateContent = {
 type FewShotExample = {
   input: any;
   output: any;
-  intermediateSteps: {
+  steps: {
     toolCalls: ToolCallExample[];
   }[];
 };

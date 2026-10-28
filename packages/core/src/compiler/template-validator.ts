@@ -368,9 +368,9 @@ function makeExamplesType(
         },
         type: outputType,
       },
-      intermediateSteps: {
+      steps: {
         name: {
-          text: "intermediateSteps",
+          text: "steps",
         },
         type: {
           kind: "optional",
@@ -482,14 +482,11 @@ function validateToolCallExamples(
   }
   for (const example of examples.elements) {
     if (example.kind !== "object") continue;
-    const intermediateStepsEntry = example.entries["intermediateSteps"];
-    if (
-      !intermediateStepsEntry ||
-      intermediateStepsEntry.value.kind !== "array"
-    ) {
+    const stepsEntry = example.entries["steps"];
+    if (!stepsEntry || stepsEntry.value.kind !== "array") {
       continue;
     }
-    for (const step of intermediateStepsEntry.value.elements) {
+    for (const step of stepsEntry.value.elements) {
       if (step.kind !== "object") continue;
       const toolCallsEntry = step.entries["toolCalls"];
       if (!toolCallsEntry || toolCallsEntry.value.kind !== "array") continue;

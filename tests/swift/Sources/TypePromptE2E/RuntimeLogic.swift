@@ -174,25 +174,25 @@ public enum TypePromptRuntime {
   public struct FewShotExample: Sendable, Codable, Equatable {
     /// The user message for this example.
     public let userMessage: String
-    /// Intermediate tool call steps, if any.
-    public let intermediateSteps: [IntermediateStepExample]
+    /// Steps, if any.
+    public let steps: [StepExample]
     /// The expected assistant response.
     public let response: String
 
     public init(
       userMessage: String,
-      intermediateSteps: [IntermediateStepExample],
+      steps: [StepExample],
       response: String,
     ) {
       self.userMessage = userMessage
-      self.intermediateSteps = intermediateSteps
+      self.steps = steps
       self.response = response
     }
   }
 
-  /// One intermediate step within a few-shot example, containing the tool
+  /// One step within a few-shot example, containing the tool
   /// calls made at that step.
-  public struct IntermediateStepExample: Sendable, Codable, Equatable {
+  public struct StepExample: Sendable, Codable, Equatable {
     /// Tool calls made in parallel at this step.
     public let toolCalls: [ToolCallExample]
 
@@ -477,20 +477,20 @@ public enum TypePromptRuntime {
     struct FewShotExample: Codable, Sendable {
       let input: JsonElement
       let output: JsonElement
-      let intermediateSteps: [FewShotExample_IntermediateSteps]
+      let steps: [FewShotExample_Steps]
 
       init(
         input: JsonElement,
         output: JsonElement,
-        intermediateSteps: [FewShotExample_IntermediateSteps],
+        steps: [FewShotExample_Steps],
       ) {
         self.input = input
         self.output = output
-        self.intermediateSteps = intermediateSteps
+        self.steps = steps
       }
     }
 
-    struct FewShotExample_IntermediateSteps: Codable, Sendable {
+    struct FewShotExample_Steps: Codable, Sendable {
       let toolCalls: [ToolCallExample]
 
       init(
@@ -1321,8 +1321,8 @@ public enum TypePromptRuntime {
       let exOutputObj = jsonElementToObject(ex.output)
       let userMessage = renderBody(userBody, exInputObj, tmpl.snippets)
 
-      var intermediateSteps = [IntermediateStepExample]()
-      for step in ex.intermediateSteps {
+      var steps = [StepExample]()
+      for step in ex.steps {
         var toolCalls = [ToolCallExample]()
         for tc in step.toolCalls {
           let stringifiedInput = formatValue(jsonElementToObject(tc.input), .json)
@@ -1336,7 +1336,7 @@ public enum TypePromptRuntime {
             )
           )
         }
-        intermediateSteps.append(IntermediateStepExample(toolCalls: toolCalls))
+        steps.append(StepExample(toolCalls: toolCalls))
       }
 
       let outputFormat: Spec.InsertFormat = tmpl.outputFormat == .json ? .json : .text
@@ -1345,7 +1345,7 @@ public enum TypePromptRuntime {
       result.append(
         FewShotExample(
           userMessage: userMessage,
-          intermediateSteps: intermediateSteps,
+          steps: steps,
           response: response,
         )
       )

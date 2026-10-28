@@ -291,19 +291,19 @@ struct ToolsResearchQuestionTests {
     #expect(TypePrompt03.PromptTools.ResearchQuestion.allCases == [.webSearch])
   }
 
-  @Test func producesOneExampleWithOneIntermediateStep() {
+  @Test func producesOneExampleWithOneStep() {
     #expect(prompt.examples.count == 1)
-    #expect(prompt.examples[0].intermediateSteps.count == 1)
+    #expect(prompt.examples[0].steps.count == 1)
   }
 
   @Test func exampleToolCallIds() {
-    let tc = prompt.examples[0].intermediateSteps[0].toolCalls[0]
+    let tc = prompt.examples[0].steps[0].toolCalls[0]
     #expect(tc.callId == "s1")
     #expect(tc.toolName == "webSearch")
   }
 
   @Test func exampleToolCallStringifiedInput() {
-    let tc = prompt.examples[0].intermediateSteps[0].toolCalls[0]
+    let tc = prompt.examples[0].steps[0].toolCalls[0]
     #expect(tc.stringifiedInput.contains("Tokyo population 2024"))
   }
 

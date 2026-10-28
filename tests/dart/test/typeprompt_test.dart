@@ -294,19 +294,19 @@ void main() {
           equals('webSearch'));
     });
 
-    test('produces one example with one intermediate step', () {
+    test('produces one example with one step', () {
       expect(prompt.examples.length, equals(1));
-      expect(prompt.examples[0].intermediateSteps.length, equals(1));
+      expect(prompt.examples[0].steps.length, equals(1));
     });
 
     test('example tool call ids', () {
-      final tc = prompt.examples[0].intermediateSteps[0].toolCalls[0];
+      final tc = prompt.examples[0].steps[0].toolCalls[0];
       expect(tc.callId, equals("s1"));
       expect(tc.toolName, equals("webSearch"));
     });
 
     test('example tool call stringifiedInput', () {
-      final tc = prompt.examples[0].intermediateSteps[0].toolCalls[0];
+      final tc = prompt.examples[0].steps[0].toolCalls[0];
       expect(tc.stringifiedInput, contains("Tokyo population 2024"));
     });
 

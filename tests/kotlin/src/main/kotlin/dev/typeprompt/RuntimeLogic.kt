@@ -150,15 +150,15 @@ data class Tool(
  */
 data class FewShotExample(
     val userMessage: String,
-    val intermediateSteps: List<IntermediateStepExample>,
+    val steps: List<StepExample>,
     val response: String,
 )
 
 /**
- * One intermediate step within a few-shot example, containing the tool
+ * One step within a few-shot example, containing the tool
  * calls made at that step.
  */
-data class IntermediateStepExample(
+data class StepExample(
     val toolCalls: List<ToolCallExample>,
 )
 
@@ -328,13 +328,13 @@ internal object Spec {
     data class FewShotExample(
         val input: JsonElement,
         val output: JsonElement,
-        val intermediateSteps: List<FewShotExample_IntermediateSteps>,
+        val steps: List<FewShotExample_Steps>,
     )
 
-    // Exported as 'Spec.FewShotExample_IntermediateSteps'
+    // Exported as 'Spec.FewShotExample_Steps'
     @OptIn(ExperimentalSerializationApi::class)
     @Serializable
-    data class FewShotExample_IntermediateSteps(
+    data class FewShotExample_Steps(
         val toolCalls: List<ToolCallExample>,
     )
 
@@ -921,8 +921,8 @@ private fun renderExamples(
         val exOutputObj = jsonElementToObject(ex.output)
         val userMessage = renderBody(userBody, exInputObj, tmpl.snippets)
 
-        val intermediateSteps = mutableListOf<IntermediateStepExample>()
-        for (step in ex.intermediateSteps) {
+        val steps = mutableListOf<StepExample>()
+        for (step in ex.steps) {
             val toolCalls = mutableListOf<ToolCallExample>()
             for (tc in step.toolCalls) {
                 toolCalls.add(
@@ -934,7 +934,7 @@ private fun renderExamples(
                     ),
                 )
             }
-            intermediateSteps.add(IntermediateStepExample(toolCalls))
+            steps.add(StepExample(toolCalls))
         }
 
         val outputFormat =
@@ -948,7 +948,7 @@ private fun renderExamples(
         result.add(
             FewShotExample(
                 userMessage = userMessage,
-                intermediateSteps = intermediateSteps,
+                steps = steps,
                 response = response,
             ),
         )

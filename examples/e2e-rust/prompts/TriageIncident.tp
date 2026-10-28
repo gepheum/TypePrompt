@@ -47,7 +47,7 @@
     - input:
         service: "order-processor"
         reportedIssue: "Orders stuck in pending queue and webhook delivery delays."
-      intermediateSteps:
+      steps:
         - toolCalls:
             - callId: call_metrics_1
               tool: getServiceMetrics

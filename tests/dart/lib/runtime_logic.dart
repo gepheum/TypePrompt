@@ -143,23 +143,23 @@ final class Tool {
 /// tool-call steps, and the expected response.
 final class FewShotExample {
   final String userMessage;
-  final UnmodifiableListView<IntermediateStepExample> intermediateSteps;
+  final UnmodifiableListView<StepExample> steps;
   final String response;
 
   const FewShotExample({
     required this.userMessage,
-    required this.intermediateSteps,
+    required this.steps,
     required this.response,
   });
 }
 
-/// One intermediate step within a few-shot example, containing the tool
+/// One step within a few-shot example, containing the tool
 /// calls made at that step.
-final class IntermediateStepExample {
+final class StepExample {
   /// Tool calls made in parallel at this step.
   final UnmodifiableListView<ToolCallExample> toolCalls;
 
-  const IntermediateStepExample({
+  const StepExample({
     required this.toolCalls,
   });
 }
@@ -525,19 +525,19 @@ final class _Spec_TemplateContent {
 final class _Spec_FewShotExample {
   final dynamic input;
   final dynamic output;
-  final List<_Spec_FewShotExample_IntermediateSteps> intermediateSteps;
+  final List<_Spec_FewShotExample_Steps> steps;
 
   _Spec_FewShotExample({
     required this.input,
     required this.output,
-    required this.intermediateSteps,
+    required this.steps,
   });
 
   Map<String, dynamic> toJson() {
     return {
       "input": input,
       "output": output,
-      "intermediateSteps": intermediateSteps.map((e) => e.toJson()).toList(),
+      "steps": steps.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -550,18 +550,18 @@ final class _Spec_FewShotExample {
     return _Spec_FewShotExample(
       input: json["input"],
       output: json["output"],
-      intermediateSteps: (json["intermediateSteps"] as List)
-          .map<_Spec_FewShotExample_IntermediateSteps>(
-              (e) => _Spec_FewShotExample_IntermediateSteps.fromJson(e))
+      steps: (json["steps"] as List)
+          .map<_Spec_FewShotExample_Steps>(
+              (e) => _Spec_FewShotExample_Steps.fromJson(e))
           .toList(),
     );
   }
 }
 
-final class _Spec_FewShotExample_IntermediateSteps {
+final class _Spec_FewShotExample_Steps {
   final List<_Spec_ToolCallExample> toolCalls;
 
-  _Spec_FewShotExample_IntermediateSteps({
+  _Spec_FewShotExample_Steps({
     required this.toolCalls,
   });
 
@@ -576,9 +576,8 @@ final class _Spec_FewShotExample_IntermediateSteps {
     return JsonEncoder.withIndent("  ").convert(toJson());
   }
 
-  factory _Spec_FewShotExample_IntermediateSteps.fromJson(
-      Map<String, dynamic> json) {
-    return _Spec_FewShotExample_IntermediateSteps(
+  factory _Spec_FewShotExample_Steps.fromJson(Map<String, dynamic> json) {
+    return _Spec_FewShotExample_Steps(
       toolCalls: (json["toolCalls"] as List)
           .map<_Spec_ToolCallExample>((e) => _Spec_ToolCallExample.fromJson(e))
           .toList(),
@@ -1270,8 +1269,8 @@ UnmodifiableListView<FewShotExample> _renderExamples(
   for (final ex in examples) {
     final userMessage = _renderBody(userBody, ex.input, tmpl.snippets);
 
-    final intermediateSteps = <IntermediateStepExample>[];
-    for (final step in ex.intermediateSteps) {
+    final steps = <StepExample>[];
+    for (final step in ex.steps) {
       final toolCalls = <ToolCallExample>[];
       for (final tc in step.toolCalls) {
         toolCalls.add(
@@ -1283,7 +1282,7 @@ UnmodifiableListView<FewShotExample> _renderExamples(
           ),
         );
       }
-      intermediateSteps.add(IntermediateStepExample(
+      steps.add(StepExample(
         toolCalls: UnmodifiableListView<ToolCallExample>(toolCalls),
       ));
     }
@@ -1296,8 +1295,7 @@ UnmodifiableListView<FewShotExample> _renderExamples(
     result.add(
       FewShotExample(
         userMessage: userMessage,
-        intermediateSteps:
-            UnmodifiableListView<IntermediateStepExample>(intermediateSteps),
+        steps: UnmodifiableListView<StepExample>(steps),
         response: response,
       ),
     );
