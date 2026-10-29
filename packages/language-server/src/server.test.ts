@@ -2113,4 +2113,69 @@ comment here -->
       expect(edit).toBe(null);
     });
   });
+
+  describe("getFileTemplate", () => {
+    it("generates meta skeleton for meta.tp", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      const uri = fsPathToUri(path.join(tempDir, "prompts", "meta.tp"));
+      const template = await extension.getFileTemplate(uri);
+      expect(template).toBe("<meta>\n  type Meta = {};\n</meta>\n");
+    });
+
+    it("generates template without namespace in default prompts folder", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      extension.addWorkspaceFolder(tempDirUri);
+
+      // Setup project
+      await fs.writeFile(
+        path.join(tempDir, "typeprompt.yml"),
+        "include:\n  - prompts/**/*.tp\n",
+        "utf-8",
+      );
+      await extension.runScan();
+
+      const uri = fsPathToUri(path.join(tempDir, "prompts", "Translate.tp"));
+      const template = await extension.getFileTemplate(uri);
+      expect(template?.includes('<template name="Translate">')).toBe(true);
+      expect(template?.includes("namespace=")).toBe(false);
+    });
+
+    it("generates template with namespace when shared.tp exists in namespace folder", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      extension.addWorkspaceFolder(tempDirUri);
+
+      // Setup project with Legal namespace
+      await fs.mkdir(path.join(tempDir, "prompts", "Legal"), {
+        recursive: true,
+      });
+      await fs.writeFile(
+        path.join(tempDir, "typeprompt.yml"),
+        "include:\n  - prompts/**/*.tp\n",
+        "utf-8",
+      );
+      await fs.writeFile(
+        path.join(tempDir, "prompts", "Legal", "shared.tp"),
+        '<namespace name="Legal">\n</namespace>\n',
+        "utf-8",
+      );
+      await extension.runScan();
+
+      const uri = fsPathToUri(
+        path.join(tempDir, "prompts", "Legal", "DraftNda.tp"),
+      );
+      const template = await extension.getFileTemplate(uri);
+      expect(
+        template?.includes('<template name="DraftNda" namespace="Legal">'),
+      ).toBe(true);
+    });
+  });
 });

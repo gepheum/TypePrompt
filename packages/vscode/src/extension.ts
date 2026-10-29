@@ -9,6 +9,7 @@ import type {
 import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
 import { activateAutoCloseTag } from "./auto-close-tag.js";
 import { activateEnterHandler } from "./enter-handler.js";
+import { activateNewFileScaffolding } from "./new-file-scaffolding.js";
 import { activateToggleComment } from "./toggle-comment.js";
 
 let client: LanguageClient | undefined;
@@ -17,6 +18,7 @@ export function activate(context: ExtensionContext): void {
   activateAutoCloseTag(context);
   activateEnterHandler(context);
   activateToggleComment(context);
+  activateNewFileScaffolding(context, () => client);
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),

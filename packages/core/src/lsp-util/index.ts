@@ -20,4 +20,6 @@ export {
   type PositionContext,
 } from "./position-context.js";
 
+export { generateFileTemplate } from "./file-template.js";
+
 export { tokenize, type SemanticToken } from "./semantic-token.js";

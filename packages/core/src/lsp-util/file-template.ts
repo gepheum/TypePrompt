@@ -1,0 +1,109 @@
+import type { CompilationResult } from "../compiler/compiler-types.js";
+import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
+
+/**
+ * Generates initial skeleton content for newly created TypePrompt files.
+ *
+ * Rules:
+ * - "meta.tp" -> <meta>
+ * - ".../${dirname}/shared.tp" -> <namespace name="${dirname}"> (or "Main" if dirname is not PascalCase)
+ * - "Foo.tp" (PascalCase) -> <template name="Foo"[ namespace="${dirname}"]>
+ * - "foo.tp" (camelCase) -> <tool name="foo"[ namespace="${dirname}"]>
+ * - "Foo.play.tp" -> <playground for="Foo"[ namespace="${dirname}"]>
+ *
+ * A namespace attribute is added when `dirname` exists in `compilationResult.namespaces` (and is not Main).
+ * If the filename does not match PascalCase.tp or camelCase.tp, returns null.
+ */
+export function generateFileTemplate(
+  filePath: string,
+  compilationResult: CompilationResult | null,
+): string | null {
+  const normalized = filePath.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  const fileName =
+    lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized;
+  const parent = lastSlash >= 0 ? normalized.slice(0, lastSlash) : "";
+  const prevSlash = parent.lastIndexOf("/");
+  const dirname = prevSlash >= 0 ? parent.slice(prevSlash + 1) : parent;
+
+  if (fileName === "meta.tp") {
+    return [
+      //
+      "<meta>",
+      "  type Meta = {};",
+      "</meta>\n",
+    ].join("\n");
+  }
+
+  if (fileName === "shared.tp") {
+    const nsName = PASCAL_CASE_RE.test(dirname) ? dirname : DEFAULT_NAMESPACE;
+    return [
+      `<namespace name="${nsName}">`,
+      "  // Shared types go here.",
+      "</namespace>\n",
+    ].join("\n");
+  }
+
+  const isNamespace =
+    compilationResult &&
+    dirname in compilationResult.namespaces &&
+    dirname !== DEFAULT_NAMESPACE;
+  const nsAttr = isNamespace ? ` namespace="${dirname}"` : "";
+
+  if (fileName.endsWith(".play.tp")) {
+    const name = fileName.slice(0, -".play.tp".length);
+    if (!PASCAL_CASE_RE.test(name) && !CAMEL_CASE_RE.test(name)) {
+      return null;
+    }
+    return [
+      `<playground for="${name}"${nsAttr}>`,
+      "  <samples>",
+      "    []",
+      "  </samples>",
+      "</playground>\n",
+    ].join("\n");
+  }
+
+  if (fileName.endsWith(".tp")) {
+    const name = fileName.slice(0, -".tp".length);
+
+    if (PASCAL_CASE_RE.test(name)) {
+      return [
+        `<template name="${name}"${nsAttr}>`,
+        "  <schema>",
+        "    type Input = {};",
+        "    type Output = {};",
+        "  </schema>",
+        "",
+        "  <system>",
+        "    <!-- System prompt goes here. -->",
+        "  </system>",
+        "",
+        "  <user>",
+        "    <!-- User prompt goes here. -->",
+        "  </user>",
+        "</template>\n",
+      ].join("\n");
+    }
+
+    if (CAMEL_CASE_RE.test(name)) {
+      return [
+        `<tool name="${name}"${nsAttr}>`,
+        "  <description>",
+        "    <!-- Tool description goes here. -->",
+        "  </description>",
+        "",
+        "  <schema>",
+        "    type Input = {};",
+        "    type Output = {};",
+        "  </schema>",
+        "</tool>\n",
+      ].join("\n");
+    }
+  }
+
+  return null;
+}
+
+const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
+const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
