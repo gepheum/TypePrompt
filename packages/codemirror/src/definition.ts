@@ -1,12 +1,76 @@
-import { Prec, type EditorState, type Extension } from "@codemirror/state";
 import {
+  Prec,
+  StateEffect,
+  StateField,
+  type EditorState,
+  type Extension,
+} from "@codemirror/state";
+import {
+  Decoration,
   EditorView,
   keymap,
   ViewPlugin,
+  type DecorationSet,
   type KeyBinding,
+  type ViewUpdate,
 } from "@codemirror/view";
 import type { DefinitionLink } from "@typeprompt/core";
 import { typepromptConfigFacet, typepromptStateField } from "./state-field.js";
+
+/**
+ * Range of a definition reference to underline on hover.
+ */
+export interface JumpToDefinitionRange {
+  from: number;
+  to: number;
+}
+
+/**
+ * StateEffect to update the hovered jump-to-definition link decoration.
+ */
+export const setHoverLinkEffect =
+  StateEffect.define<JumpToDefinitionRange | null>();
+
+const underlineDecoration = Decoration.mark({
+  class: "cm-jump-to-definition-link",
+  attributes: { style: "text-decoration: underline; cursor: pointer;" },
+});
+
+/**
+ * Base theme styling for hovered jump-to-definition links.
+ */
+export const jumpToDefinitionTheme = EditorView.baseTheme({
+  ".cm-jump-to-definition-link": {
+    textDecoration: "underline",
+    cursor: "pointer",
+  },
+});
+
+/**
+ * State field managing the underline decoration for hovered jump-to-definition links.
+ */
+export const jumpToDefinitionHoverField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(decorations, tr) {
+    decorations = decorations.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(setHoverLinkEffect)) {
+        return e.value &&
+          e.value.from >= 0 &&
+          e.value.from < e.value.to &&
+          e.value.to <= tr.state.doc.length
+          ? Decoration.set([
+              underlineDecoration.range(e.value.from, e.value.to),
+            ])
+          : Decoration.none;
+      }
+    }
+    return decorations;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
 
 /**
  * Finds the DefinitionLink at the given character offset in the document.
@@ -140,6 +204,22 @@ export const jumpToDefinitionKeymap: readonly KeyBinding[] = [
 
 export class JumpToDefinitionHoverPlugin {
   lastCoords: { x: number; y: number } | null = null;
+  currentRange: JumpToDefinitionRange | null = null;
+
+  setUnderline(range: JumpToDefinitionRange | null): void {
+    if (
+      this.currentRange?.from === range?.from &&
+      this.currentRange?.to === range?.to
+    ) {
+      return;
+    }
+    this.currentRange = range;
+    if (typeof this.view.dispatch === "function") {
+      this.view.dispatch({
+        effects: setHoverLinkEffect.of(range),
+      });
+    }
+  }
 
   readonly onKeyDown = (e: KeyboardEvent): void => {
     if (
@@ -149,6 +229,15 @@ export class JumpToDefinitionHoverPlugin {
       const link = findDefinitionAtCoords(this.view, this.lastCoords);
       if (link) {
         this.view.dom.style.cursor = "pointer";
+        this.setUnderline({
+          from: link.reference.start,
+          to: link.reference.end,
+        });
+      } else {
+        if (this.view.dom.style.cursor === "pointer") {
+          this.view.dom.style.cursor = "";
+        }
+        this.setUnderline(null);
       }
     }
   };
@@ -162,6 +251,7 @@ export class JumpToDefinitionHoverPlugin {
       if (this.view.dom.style.cursor === "pointer") {
         this.view.dom.style.cursor = "";
       }
+      this.setUnderline(null);
     }
   };
 
@@ -170,6 +260,7 @@ export class JumpToDefinitionHoverPlugin {
     if (this.view.dom.style.cursor === "pointer") {
       this.view.dom.style.cursor = "";
     }
+    this.setUnderline(null);
   };
 
   constructor(readonly view: EditorView) {
@@ -180,6 +271,13 @@ export class JumpToDefinitionHoverPlugin {
     }
   }
 
+  update(update: ViewUpdate): void {
+    if (update.docChanged && this.currentRange) {
+      this.currentRange = null;
+      this.setUnderline(null);
+    }
+  }
+
   destroy(): void {
     if (typeof window !== "undefined") {
       window.removeEventListener("keydown", this.onKeyDown);
@@ -187,7 +285,8 @@ export class JumpToDefinitionHoverPlugin {
       window.removeEventListener("blur", this.onBlur);
     }
     this.lastCoords = null;
-    if (this.view.dom.style.cursor === "pointer") {
+    this.currentRange = null;
+    if (this.view.dom?.style?.cursor === "pointer") {
       this.view.dom.style.cursor = "";
     }
   }
@@ -219,6 +318,7 @@ export const jumpToDefinitionClickHandlers: Extension = ViewPlugin.fromClass(
           if (link) {
             if (jumpToDefinition(view, link)) {
               event.preventDefault();
+              this.setUnderline(null);
               return true;
             }
           }
@@ -231,18 +331,33 @@ export const jumpToDefinitionClickHandlers: Extension = ViewPlugin.fromClass(
           const link = findDefinitionAtCoords(view, this.lastCoords);
           if (link) {
             view.dom.style.cursor = "pointer";
+            this.setUnderline({
+              from: link.reference.start,
+              to: link.reference.end,
+            });
             return false;
           }
         }
         if (view.dom.style.cursor === "pointer") {
           view.dom.style.cursor = "";
         }
+        this.setUnderline(null);
         return false;
       },
       mouseleave(_event: MouseEvent, view: EditorView): boolean {
         this.lastCoords = null;
         if (view.dom.style.cursor === "pointer") {
           view.dom.style.cursor = "";
+        }
+        this.setUnderline(null);
+        return false;
+      },
+      scroll(_event: Event, view: EditorView): boolean {
+        if (this.currentRange) {
+          if (view.dom.style.cursor === "pointer") {
+            view.dom.style.cursor = "";
+          }
+          this.setUnderline(null);
         }
         return false;
       },
@@ -251,11 +366,13 @@ export const jumpToDefinitionClickHandlers: Extension = ViewPlugin.fromClass(
 );
 
 /**
- * Extension enabling jump-to-definition via F12, Mod-b, and Cmd/Ctrl-click.
+ * Extension enabling jump-to-definition via F12, Mod-b, and Cmd/Ctrl-click with hover underline.
  */
 export function typepromptJumpToDefinition(): Extension {
   return [
     Prec.high(keymap.of(jumpToDefinitionKeymap)),
     jumpToDefinitionClickHandlers,
+    jumpToDefinitionHoverField,
+    jumpToDefinitionTheme,
   ];
 }

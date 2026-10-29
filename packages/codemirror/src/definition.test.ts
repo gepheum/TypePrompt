@@ -8,7 +8,9 @@ import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
   findDefinitionAtCoords,
+  jumpToDefinitionHoverField,
   JumpToDefinitionHoverPlugin,
+  setHoverLinkEffect,
 } from "./definition.js";
 import {
   findDefinitionAtPosition,
@@ -330,5 +332,141 @@ describe("CodeMirror jump-to-definition", () => {
     // Below the line (y: 200) -> rejected
     const outsideBottom = findDefinitionAtCoords(mockView, { x: 100, y: 200 });
     assert.strictEqual(outsideBottom, null);
+  });
+
+  it("underlines hovered symbol when holding Meta/Ctrl and removes underline on keyup/blur", () => {
+    let state = EditorState.create({
+      doc: RESEARCH_QUESTION_TP,
+      extensions: [
+        typeprompt({
+          path: "prompts/ResearchQuestion.tp",
+          workspaceFiles: {
+            "prompts/webSearch.tp": WEB_SEARCH_TP,
+          },
+          patchBase: null,
+        }),
+      ],
+    });
+
+    const toolRefStart = RESEARCH_QUESTION_TP.indexOf("webSearch");
+    const toolRefEnd = toolRefStart + "webSearch".length;
+    const dom = { style: { cursor: "" } };
+
+    const mockView = {
+      get state() {
+        return state;
+      },
+      dispatch(tr: Transaction | TransactionSpec | { state: EditorState }) {
+        if ("state" in tr && tr.state instanceof EditorState) {
+          state = tr.state;
+        } else {
+          state = state.update(tr as TransactionSpec).state;
+        }
+      },
+      dom,
+      posAtCoords(coords: { x: number; y: number }) {
+        return coords.x === 100 && coords.y === 50 ? toolRefStart + 2 : null;
+      },
+      coordsAtPos(pos: number) {
+        if (pos === toolRefStart) {
+          return { left: 50, right: 60, top: 40, bottom: 60 };
+        }
+        if (pos === toolRefEnd) {
+          return { left: 140, right: 150, top: 40, bottom: 60 };
+        }
+        return null;
+      },
+    } as unknown as EditorView;
+
+    const plugin = new JumpToDefinitionHoverPlugin(mockView);
+    plugin.lastCoords = { x: 100, y: 50 };
+
+    // Initially no underline
+    let decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 0);
+
+    // Press Meta key
+    plugin.onKeyDown({
+      key: "Meta",
+      metaKey: true,
+      ctrlKey: false,
+    } as KeyboardEvent);
+
+    assert.strictEqual(dom.style.cursor, "pointer");
+    decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 1);
+
+    let fromPos = -1;
+    let toPos = -1;
+    let className = "";
+    decos.between(0, state.doc.length, (from, to, val) => {
+      fromPos = from;
+      toPos = to;
+      className = (val.spec as { class?: string }).class ?? "";
+    });
+    assert.strictEqual(fromPos, toolRefStart);
+    assert.strictEqual(toPos, toolRefEnd);
+    assert.strictEqual(className, "cm-jump-to-definition-link");
+
+    // Release Meta key
+    plugin.onKeyUp({
+      key: "Meta",
+      metaKey: false,
+      ctrlKey: false,
+    } as KeyboardEvent);
+
+    assert.strictEqual(dom.style.cursor, "");
+    decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 0);
+
+    // Press Ctrl key
+    plugin.onKeyDown({
+      key: "Control",
+      metaKey: false,
+      ctrlKey: true,
+    } as KeyboardEvent);
+
+    assert.strictEqual(dom.style.cursor, "pointer");
+    decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 1);
+
+    // Blur clears decoration
+    plugin.onBlur();
+    assert.strictEqual(dom.style.cursor, "");
+    decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 0);
+
+    plugin.destroy();
+  });
+
+  it("setHoverLinkEffect manually sets and clears underline decoration in jumpToDefinitionHoverField", () => {
+    let state = EditorState.create({
+      doc: "const foo = 123;",
+      extensions: [jumpToDefinitionHoverField],
+    });
+
+    assert.strictEqual(state.field(jumpToDefinitionHoverField).size, 0);
+
+    // Dispatch effect to underline "foo" (index 6 to 9)
+    state = state.update({
+      effects: setHoverLinkEffect.of({ from: 6, to: 9 }),
+    }).state;
+
+    const decos = state.field(jumpToDefinitionHoverField);
+    assert.strictEqual(decos.size, 1);
+    let fromPos = -1;
+    let toPos = -1;
+    decos.between(0, state.doc.length, (from, to) => {
+      fromPos = from;
+      toPos = to;
+    });
+    assert.strictEqual(fromPos, 6);
+    assert.strictEqual(toPos, 9);
+
+    // Clear underline
+    state = state.update({
+      effects: setHoverLinkEffect.of(null),
+    }).state;
+    assert.strictEqual(state.field(jumpToDefinitionHoverField).size, 0);
   });
 });
