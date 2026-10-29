@@ -2,6 +2,7 @@ import { formatTemplateFile } from "@typeprompt/formatter";
 import { describe, it } from "mocha";
 import assert from "node:assert/strict";
 import type { CompilationResult } from "../compiler/compiler-types.js";
+import { compile } from "../compiler/compiler.js";
 import { parseMeta } from "../compiler/meta-parser.js";
 import { parseNamespace } from "../compiler/namespace-parser.js";
 import { parsePlayground } from "../compiler/playground-parser.js";
@@ -241,6 +242,33 @@ describe("generateFileTemplate", () => {
   });
 
   describe("Foo.play.tp (playground)", () => {
+    const compilationWithTemplates = compile(
+      {
+        "prompts/Translate.tp": [
+          '<template name="Translate">',
+          "  <schema>",
+          "    type Input = { text: string; targetLanguage: string; };",
+          "    type Output = { translated: string; };",
+          "  </schema>",
+          "  <system></system>",
+          "  <user></user>",
+          "</template>",
+        ].join("\n"),
+        "prompts/Legal/shared.tp": '<namespace name="Legal"></namespace>',
+        "prompts/Legal/DraftNda.tp": [
+          '<template name="DraftNda" namespace="Legal">',
+          "  <schema>",
+          "    type Input = { partyA: string; partyB?: string; count?: integer; };",
+          "    type Output = { agreement: string; };",
+          "  </schema>",
+          "  <system></system>",
+          "  <user></user>",
+          "</template>",
+        ].join("\n"),
+      },
+      { cache: null, patchBase: null },
+    );
+
     it("generates playground skeleton without namespace when compilationResult is null", async () => {
       const template = await assertValidTemplate(
         "prompts/Translate.play.tp",
@@ -251,7 +279,7 @@ describe("generateFileTemplate", () => {
         template,
         '<playground for="Translate">\n' +
           "  <samples>\n" +
-          "    []\n" +
+          "    - input: {}\n" +
           "  </samples>\n" +
           "</playground>\n",
       );
@@ -267,7 +295,44 @@ describe("generateFileTemplate", () => {
         template,
         '<playground for="DraftNda" namespace="Legal">\n' +
           "  <samples>\n" +
-          "    []\n" +
+          "    - input: {}\n" +
+          "  </samples>\n" +
+          "</playground>\n",
+      );
+    });
+
+    it("generates sample input matching template schema when template exists in compilationResult", async () => {
+      const template = await assertValidTemplate(
+        "prompts/Translate.play.tp",
+        compilationWithTemplates,
+        "playground",
+      );
+      assert.equal(
+        template,
+        '<playground for="Translate">\n' +
+          "  <samples>\n" +
+          "    - input:\n" +
+          '        text: ""\n' +
+          '        targetLanguage: ""\n' +
+          "  </samples>\n" +
+          "</playground>\n",
+      );
+    });
+
+    it("generates sample input matching namespaced template schema", async () => {
+      const template = await assertValidTemplate(
+        "prompts/Legal/DraftNda.play.tp",
+        compilationWithTemplates,
+        "playground",
+      );
+      assert.equal(
+        template,
+        '<playground for="DraftNda" namespace="Legal">\n' +
+          "  <samples>\n" +
+          "    - input:\n" +
+          '        partyA: ""\n' +
+          '        partyB: ""\n' +
+          "        count: 0\n" +
           "  </samples>\n" +
           "</playground>\n",
       );

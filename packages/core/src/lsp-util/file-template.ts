@@ -1,5 +1,7 @@
+import { stringify } from "yaml";
 import type { CompilationResult } from "../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
+import { makeExampleValue } from "../schema/example-maker.js";
 
 /**
  * Generates initial skeleton content for newly created TypePrompt files.
@@ -55,10 +57,12 @@ export function generateFileTemplate(
     if (!PASCAL_CASE_RE.test(name) && !CAMEL_CASE_RE.test(name)) {
       return null;
     }
+    const namespaceName = isNamespace ? dirname : DEFAULT_NAMESPACE;
+    const samplesYaml = makeSamplesYaml(name, namespaceName, compilationResult);
     return [
       `<playground for="${name}"${nsAttr}>`,
       "  <samples>",
-      "    []",
+      samplesYaml,
       "  </samples>",
       "</playground>\n",
     ].join("\n");
@@ -107,3 +111,30 @@ export function generateFileTemplate(
 
 const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
 const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
+
+function makeSamplesYaml(
+  templateName: string,
+  namespaceName: string,
+  compilationResult: CompilationResult | null,
+): string {
+  let inputExample: unknown = {};
+  if (compilationResult?.templates) {
+    const templateId = `${namespaceName}:${templateName}`;
+    const templateValidation = compilationResult.templates[templateId];
+    if (templateValidation && templateValidation.kind === "template") {
+      const inputDecl = templateValidation.schema.typeDeclarations["Input"];
+      if (inputDecl) {
+        inputExample = makeExampleValue({
+          type: inputDecl.valueType,
+          schema: templateValidation.schema,
+        });
+      }
+    }
+  }
+
+  const yamlStr = stringify([{ input: inputExample }]).trimEnd();
+  return yamlStr
+    .split("\n")
+    .map((line) => "    " + line)
+    .join("\n");
+}
