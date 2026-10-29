@@ -15,11 +15,10 @@ import { EditorState, type Extension } from "@codemirror/state";
 const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
 
 /**
- * Matches an open bracket or YAML colon at the end of a line:
+ * Matches an open bracket at the end of a line:
  * - `{`, `[`, `(`, or `<`
- * - `:` (used in YAML headers or blocks)
  */
-const OPEN_BRACKET_RE = /(?:[{[(<]|:)\s*$/;
+const OPEN_BRACKET_RE = /[{[(<]\s*$/;
 
 /**
  * Matches a closing tag or closing bracket at the start of a line:

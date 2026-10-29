@@ -307,20 +307,13 @@ describe("TypePrompt CodeMirror Extension", () => {
         assert.strictEqual(indent, 2);
       });
 
-      it("indents line following an open bracket or colon", () => {
+      it("indents line following an open bracket", () => {
         const doc1 = ["type Input = {", ""].join("\n");
         const state1 = EditorState.create({
           doc: doc1,
           extensions: [typepromptIndentation],
         });
         assert.strictEqual(getIndentation(state1, doc1.indexOf("\n") + 1), 2);
-
-        const doc2 = ["params:", ""].join("\n");
-        const state2 = EditorState.create({
-          doc: doc2,
-          extensions: [typepromptIndentation],
-        });
-        assert.strictEqual(getIndentation(state2, doc2.indexOf("\n") + 1), 2);
       });
 
       it("does not increase indent after a self-closing tag or comment", () => {
@@ -473,6 +466,63 @@ describe("TypePrompt CodeMirror Extension", () => {
         assert.strictEqual(handled, true);
         const expected = ["<system>", "  ", "</system>"].join("\n");
         assert.strictEqual(getState().doc.toString(), expected);
+      });
+
+      it("indents newly inserted line with +2 spaces when pressing Enter on YAML '- foo'", () => {
+        const initialDoc = "<samples>\n  - foo: bar\n</samples>";
+        const cursor = initialDoc.indexOf("bar") + 3;
+        const { view, getState } = createMockView(initialDoc, cursor);
+
+        const handled = typepromptEnterCommand(view);
+        assert.strictEqual(handled, true);
+
+        const expected = [
+          "<samples>",
+          "  - foo: bar",
+          "    ",
+          "</samples>",
+        ].join("\n");
+        assert.strictEqual(getState().doc.toString(), expected);
+        const nextLinePos = "<samples>\n  - foo: bar\n    ".length;
+        assert.strictEqual(getState().selection.main.anchor, nextLinePos);
+      });
+
+      it("indents newly inserted line with +4 spaces when pressing Enter on YAML '- - foo'", () => {
+        const initialDoc = "<samples>\n  - - foo: bar\n</samples>";
+        const cursor = initialDoc.indexOf("bar") + 3;
+        const { view, getState } = createMockView(initialDoc, cursor);
+
+        const handled = typepromptEnterCommand(view);
+        assert.strictEqual(handled, true);
+
+        const expected = [
+          "<samples>",
+          "  - - foo: bar",
+          "      ",
+          "</samples>",
+        ].join("\n");
+        assert.strictEqual(getState().doc.toString(), expected);
+        const nextLinePos = "<samples>\n  - - foo: bar\n      ".length;
+        assert.strictEqual(getState().selection.main.anchor, nextLinePos);
+      });
+
+      it("indents newly inserted line with +6 spaces when pressing Enter on YAML '- - - foo' (N=3)", () => {
+        const initialDoc = "<samples>\n  - - - foo: bar\n</samples>";
+        const cursor = initialDoc.indexOf("bar") + 3;
+        const { view, getState } = createMockView(initialDoc, cursor);
+
+        const handled = typepromptEnterCommand(view);
+        assert.strictEqual(handled, true);
+
+        const expected = [
+          "<samples>",
+          "  - - - foo: bar",
+          "        ",
+          "</samples>",
+        ].join("\n");
+        assert.strictEqual(getState().doc.toString(), expected);
+        const nextLinePos = "<samples>\n  - - - foo: bar\n        ".length;
+        assert.strictEqual(getState().selection.main.anchor, nextLinePos);
       });
     });
 

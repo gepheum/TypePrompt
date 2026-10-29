@@ -15,10 +15,9 @@ import {
 } from "@codemirror/view";
 import {
   typeprompt,
-  yaml,
   type JumpToDefinitionTarget,
 } from "@typeprompt/codemirror";
-import { CONFIG, type ValidCompilationResult } from "@typeprompt/core";
+import type { ValidCompilationResult } from "@typeprompt/core";
 import {
   typepromptDarkHighlight,
   typepromptEditorTheme,
@@ -32,17 +31,12 @@ export function createPlaygroundEditorState(options: {
   readonly onDocChange?: (newDoc: string, state: EditorState) => void;
   readonly onJumpToDefinition?: (target: JumpToDefinitionTarget) => void;
 }): EditorState {
-  const isYaml =
-    options.path.endsWith(".yaml") || options.path.endsWith(".yml");
-
-  const langExtension: Extension = isYaml
-    ? yaml(CONFIG, { path: options.path })
-    : typeprompt({
-        path: options.path,
-        workspaceFiles: options.workspaceFiles,
-        patchBase: options.patchBase,
-        onJumpToDefinition: options.onJumpToDefinition,
-      });
+  const langExtension: Extension = typeprompt({
+    path: options.path,
+    workspaceFiles: options.workspaceFiles,
+    patchBase: options.patchBase,
+    onJumpToDefinition: options.onJumpToDefinition,
+  });
 
   const extensions: Extension[] = [
     lineNumbers(),

@@ -281,6 +281,205 @@ describe("editor-actions", () => {
       const res = computeEnterAction(content, offset);
       assert.equal(res.handled, false);
     });
+
+    it("indents next line with 2 more spaces after '${indent}- foo' in YAML samples", () => {
+      const content = "<samples>\n  - foo: bar\n</samples>";
+      const offset = content.indexOf("bar") + 3;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("indents next line with 2 more spaces after '${indent}- input:' ending with colon", () => {
+      const content = "<samples>\n  - input:\n</samples>";
+      const offset = content.indexOf("input:") + 6;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n      ");
+      assert.equal(res.targetCursorOffset, offset + "\n      ".length);
+    });
+
+    it("indents next line with 4 more spaces after '${indent}- - foo' in YAML samples", () => {
+      const content = "<samples>\n  - - foo: bar\n</samples>";
+      const offset = content.indexOf("bar") + 3;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n      ");
+      assert.equal(res.targetCursorOffset, offset + "\n      ".length);
+    });
+
+    it("indents next line with 4 more spaces after '${indent}- - foo:' ending with colon", () => {
+      const content = "<samples>\n  - - foo:\n</samples>";
+      const offset = content.indexOf("foo:") + 4;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n        ");
+      assert.equal(res.targetCursorOffset, offset + "\n        ".length);
+    });
+
+    it("indents next line with 6 more spaces after '${indent}- - - foo' (N=3 repeated bullets)", () => {
+      const content = "<samples>\n  - - - foo: bar\n</samples>";
+      const offset = content.indexOf("bar") + 3;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      // 2 (base) + 3 * 2 (bullets) = 8 spaces
+      assert.equal(res.changes[0]?.insert, "\n        ");
+      assert.equal(res.targetCursorOffset, offset + "\n        ".length);
+    });
+
+    it("indents next line after '- foo' at column 0 in pure YAML", () => {
+      const content = "- foo: bar";
+      const offset = content.length;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n  ");
+      assert.equal(res.targetCursorOffset, offset + "\n  ".length);
+    });
+
+    it("indents next line with custom tabSize option", () => {
+      const content = "<samples>\n  - input:\n</samples>";
+      const offset = content.indexOf("input:") + 6;
+      const res = computeEnterAction(content, offset, { tabSize: 4 });
+      assert.equal(res.handled, true);
+      // 2 (base) + 4 (tabSize) + 2 (hyphen) = 8 spaces
+      assert.equal(res.changes[0]?.insert, "\n        ");
+    });
+
+    it("replaces trailing spaces before cursor when hitting Enter on '- foo'", () => {
+      const content = "<samples>\n  - foo: bar  \n</samples>";
+      const offset = content.indexOf("bar  ") + 5;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.from, offset - 2);
+      assert.equal(res.changes[0]?.to, offset);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+    });
+
+    it("splits line when hitting Enter in middle of '- foo: bar'", () => {
+      const content = "<samples>\n  - foo: bar\n</samples>";
+      const offset = content.indexOf("bar");
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      // '  - foo: ' ends with ':' -> opensIndent is true -> 2 + 2 + 2 = 6
+      assert.equal(res.changes[0]?.insert, "\n      ");
+    });
+
+    it("does not handle when cursor is before the hyphen", () => {
+      const content = "<samples>\n  - foo: bar\n</samples>";
+      const offset = content.indexOf("-") - 1; // in the indent before '-'
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, false);
+    });
+
+    it("does not handle for empty list item '- ' without content", () => {
+      const content = "<samples>\n  - \n</samples>";
+      const offset = content.indexOf("  - ") + 4;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, false);
+    });
+
+    it("does not handle for comment-only line '- # comment'", () => {
+      const content = "<samples>\n  - # comment\n</samples>";
+      const offset = content.indexOf("# comment") + 9;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, false);
+    });
+
+    it("does not handle for normal non-list YAML line '    input:'", () => {
+      const content = "<samples>\n    input: test\n</samples>";
+      const offset = content.indexOf("test") + 4;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, false);
+    });
+
+    it("works inside <examples> element", () => {
+      const content =
+        '<template name="T">\n<examples>\n  - input: "hi"\n</examples>\n</template>';
+      const offset = content.indexOf('"hi"') + 4;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+    });
+
+    it("indents next line with +tabSize after a YAML key ending with colon", () => {
+      const content = "<samples>\n  input:\n</samples>";
+      const offset = content.indexOf("input:") + 6;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("indents next line after YAML colon with comment", () => {
+      const content = "<samples>\n  input: # comment\n</samples>";
+      const offset = content.indexOf("# comment") + 9;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+    });
+
+    it("does NOT handle colon in prompt text outside YAML", () => {
+      const content = "<system>\n  Instructions:\n</system>";
+      const offset = content.indexOf("Instructions:") + "Instructions:".length;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, false);
+    });
+
+    it("indents next line with +tabSize when hitting Enter after open XML tag", () => {
+      const content = '<template name="Translate">\n</template>';
+      const offset = content.indexOf('">') + 2;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n  ");
+      assert.equal(res.targetCursorOffset, offset + "\n  ".length);
+    });
+
+    it("indents next line with +tabSize when hitting Enter after nested open XML tag", () => {
+      const content = '<template name="T">\n  <system>\n</template>';
+      const offset = content.indexOf("<system>") + "<system>".length;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("splits between open tag and closing tag with whitespace", () => {
+      const content = "  <system>   </system>";
+      const offset = content.indexOf("<system>") + "<system>".length;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    \n  ");
+      assert.equal(res.changes[0]?.from, offset);
+      assert.equal(res.changes[0]?.to, offset + 3);
+    });
+
+    it("indents next line with +tabSize when hitting Enter after open bracket {", () => {
+      const content = "<schema>\n  type Input = {\n</schema>";
+      const offset = content.indexOf("{") + 1;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("indents next line when hitting Enter after open bracket with comment", () => {
+      const content = "<schema>\n  type Input = { // comment\n</schema>";
+      const offset = content.indexOf("// comment") + "// comment".length;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+    });
+
+    it("splits between { and } with whitespace", () => {
+      const content = "  {  }";
+      const offset = content.indexOf("{") + 1;
+      const res = computeEnterAction(content, offset, { tabSize: 2 });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    \n  ");
+      assert.equal(res.changes[0]?.from, offset);
+      assert.equal(res.changes[0]?.to, offset + 2);
+    });
   });
 
   describe("getCommentTypeAtPosition", () => {

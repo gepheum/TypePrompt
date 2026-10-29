@@ -1,12 +1,4 @@
-import {
-  CONFIG,
-  parseAndValidateYaml,
-  type CompilationResult,
-  type InternalError,
-  type InternalErrors,
-  type SchemaType,
-  type StrictJsonValue,
-} from "@typeprompt/core";
+import { type CompilationResult } from "@typeprompt/core";
 import { css, html, LitElement, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./editor.js";
@@ -18,7 +10,6 @@ interface SampleTemplate {
   readonly path: string;
   readonly description: string;
   readonly content: string;
-  readonly schemaType?: SchemaType;
 }
 
 const sampleTemplates: readonly SampleTemplate[] = [
@@ -179,41 +170,6 @@ const sampleTemplates: readonly SampleTemplate[] = [
     Input is: <insert val="input.title" />
   </user>
 </template>`,
-  },
-  {
-    id: "config",
-    name: "TypePrompt Config (YAML)",
-    path: "typeprompt.yaml",
-    description:
-      "YAML configuration file with schema-aware autocompletion and realtime validation",
-    schemaType: CONFIG,
-    content: `include:
-  - prompts/*.tp
-
-gen:
-  typescript:
-    file: src/generated/prompts.ts
-`,
-  },
-  {
-    id: "config-errors",
-    name: "Config with Errors (YAML Diagnostics Demo)",
-    path: "typeprompt.yaml",
-    description:
-      "Demonstrates real-time YAML error detection, unknown properties, and quick-fix suggestions",
-    schemaType: CONFIG,
-    content: `include:
-  - prompts/*.tp
-
-gen:
-  typescript:
-    file: src/generated/prompts.ts
-    # Unknown generator property: triggers live red squiggles & quick-fix suggestions
-    destination: dist/prompts.ts
-
-# Unknown top-level property:
-invalidProperty: true
-`,
   },
 ];
 
@@ -511,9 +467,6 @@ export class App extends LitElement {
   private compilationResult: CompilationResult | null = null;
 
   @state()
-  private yamlValidationResult: StrictJsonValue | InternalErrors | null = null;
-
-  @state()
   private currentPath = "prompts/SummarizeDocument.tp";
 
   private get currentTemplate(): SampleTemplate {
@@ -523,51 +476,23 @@ export class App extends LitElement {
     );
   }
 
-  private get isCurrentYaml(): boolean {
-    return (
-      Boolean(this.currentTemplate.schemaType) ||
-      this.currentPath.endsWith(".yaml") ||
-      this.currentPath.endsWith(".yml")
-    );
-  }
-
   private handleTemplateSelect(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.selectedTemplateId = select.value;
     const template = this.currentTemplate;
     this.currentPath = template.path;
 
-    if (template.schemaType) {
-      this.yamlValidationResult = parseAndValidateYaml(
-        template.content,
-        template.path,
-        template.schemaType,
-      );
-    } else {
-      this.yamlValidationResult = null;
-    }
-
     const editorEl = this.renderRoot.querySelector(
       "code-mirror-editor",
     ) as Editor | null;
     if (editorEl) {
-      editorEl.setContent(
-        template.content,
-        template.path,
-        undefined,
-        template.schemaType ?? null,
-      );
+      editorEl.setContent(template.content, template.path);
     }
   }
 
   private handleEditorChange(e: CustomEvent): void {
     const { compilationResult } = e.detail;
     this.compilationResult = compilationResult;
-  }
-
-  private handleYamlChange(e: CustomEvent): void {
-    const { validationResult } = e.detail;
-    this.yamlValidationResult = validationResult;
   }
 
   private jumpToSpan(start: number): void {
@@ -585,23 +510,11 @@ export class App extends LitElement {
 
   override render(): TemplateResult {
     const template = this.currentTemplate;
-    const isYaml = this.isCurrentYaml;
 
     const errors = this.compilationResult?.finalErrors[this.currentPath] ?? [];
     const warnings = this.compilationResult?.warnings[this.currentPath] ?? [];
     const hasErrors = errors.length > 0;
     const isValid = this.compilationResult && !hasErrors;
-
-    const yamlErrors =
-      this.yamlValidationResult &&
-      "kind" in this.yamlValidationResult &&
-      this.yamlValidationResult.kind === "error"
-        ? this.yamlValidationResult.errors
-        : [];
-    const isYamlValid =
-      this.yamlValidationResult !== null &&
-      (!("kind" in this.yamlValidationResult) ||
-        this.yamlValidationResult.kind !== "error");
 
     const templates = this.compilationResult
       ? Object.values(this.compilationResult.templates)
@@ -626,62 +539,35 @@ export class App extends LitElement {
             />
           </svg>
           <h1 class="logo-title">TypePrompt CodeMirror</h1>
-          <span class="badge badge-cm">${isYaml ? "YAML" : "Extension"}</span>
+          <span class="badge badge-cm">Extension</span>
         </div>
 
         <div class="controls-group">
           ${
-            isYaml
-              ? isYamlValid
-                ? html`<span class="badge badge-valid">✓ Valid Config</span>`
-                : yamlErrors.length > 0
-                  ? html`<span class="badge badge-error"
-                      >✕ ${yamlErrors.length}
-                      Error${yamlErrors.length > 1 ? "s" : ""}</span
-                    >`
-                  : html`<span class="badge">Validating...</span>`
-              : isValid
-                ? html`<span class="badge badge-valid">✓ Valid Template</span>`
-                : hasErrors
-                  ? html`<span class="badge badge-error"
-                      >✕ ${errors.length}
-                      Error${errors.length > 1 ? "s" : ""}</span
-                    >`
-                  : html`<span class="badge">Compiling...</span>`
+            isValid
+              ? html`<span class="badge badge-valid">✓ Valid Template</span>`
+              : hasErrors
+                ? html`<span class="badge badge-error"
+                    >✕ ${errors.length}
+                    Error${errors.length > 1 ? "s" : ""}</span
+                  >`
+                : html`<span class="badge">Compiling...</span>`
           }
 
           <select
             @change="${this.handleTemplateSelect}"
             aria-label="Select sample file"
           >
-            <optgroup label="Prompt Templates (.tp)">
-              ${sampleTemplates
-                .filter((t) => !t.schemaType)
-                .map(
-                  (t) => html`
-                    <option
-                      value="${t.id}"
-                      ?selected="${t.id === this.selectedTemplateId}"
-                    >
-                      ${t.name}
-                    </option>
-                  `,
-                )}
-            </optgroup>
-            <optgroup label="YAML with Schema (.yaml)">
-              ${sampleTemplates
-                .filter((t) => Boolean(t.schemaType))
-                .map(
-                  (t) => html`
-                    <option
-                      value="${t.id}"
-                      ?selected="${t.id === this.selectedTemplateId}"
-                    >
-                      ${t.name}
-                    </option>
-                  `,
-                )}
-            </optgroup>
+            ${sampleTemplates.map(
+              (t) => html`
+                <option
+                  value="${t.id}"
+                  ?selected="${t.id === this.selectedTemplateId}"
+                >
+                  ${t.name}
+                </option>
+              `,
+            )}
           </select>
 
           <button @click="${this.toggleTheme}">
@@ -693,7 +579,7 @@ export class App extends LitElement {
       <div class="main-workspace">
         <div class="editor-pane">
           <div class="pane-header">
-            <span>${isYaml ? "YAML Config Editor" : "Template Editor"}</span>
+            <span>Template Editor</span>
             <span class="file-path">${this.currentPath}</span>
           </div>
 
@@ -701,11 +587,8 @@ export class App extends LitElement {
             .content="${template.content}"
             .path="${template.path}"
             .darkMode="${this.darkMode}"
-            .schemaType="${template.schemaType ?? null}"
             @typeprompt-change="${this.handleEditorChange}"
             @typeprompt-init="${this.handleEditorChange}"
-            @yaml-change="${this.handleYamlChange}"
-            @yaml-init="${this.handleYamlChange}"
           ></code-mirror-editor>
         </div>
 
@@ -721,8 +604,7 @@ export class App extends LitElement {
               class="tab-btn ${this.activeTab === "diagnostics" ? "active" : ""}"
               @click="${() => (this.activeTab = "diagnostics")}"
             >
-              Diagnostics
-              (${isYaml ? yamlErrors.length : errors.length + warnings.length})
+              Diagnostics (${errors.length + warnings.length})
             </button>
             <button
               class="tab-btn ${this.activeTab === "features" ? "active" : ""}"
@@ -734,160 +616,6 @@ export class App extends LitElement {
 
           <div class="inspector-content">
             ${(() => {
-              if (isYaml) {
-                if (this.activeTab === "overview") {
-                  return html`
-                    <div class="card">
-                      <div class="card-title">YAML Configuration Info</div>
-                      <div>
-                        <strong>File:</strong> ${this.currentPath}<br />
-                        <strong>Schema:</strong> TypePrompt Configuration
-                        (<code>CONFIG</code>)<br />
-                        <strong>Status:</strong>
-                        ${isYamlValid ? "Valid ✓" : "Has Issues ✕"}
-                      </div>
-                    </div>
-
-                    ${
-                      isYamlValid
-                        ? html`
-                            <div class="card">
-                              <div class="card-title">
-                                Parsed YAML JSON Structure
-                              </div>
-                              <pre>
-${JSON.stringify(this.yamlValidationResult, null, 2)}</pre>
-                            </div>
-                          `
-                        : ""
-                    }
-
-                    <div class="card">
-                      <div class="card-title">Quick Try-It Tips</div>
-                      <ul class="feature-list">
-                        <li>
-                          <span>💡</span>
-                          <span>
-                            Press <span class="kbd">Ctrl</span>+<span
-                              class="kbd"
-                              >Space</span
-                            >
-                            on an empty line to see
-                            <strong>schema-aware auto-completion</strong> fields
-                            (e.g. <code>include</code>, <code>gen</code>,
-                            <code>patch</code>).
-                          </span>
-                        </li>
-                        <li>
-                          <span>⚡</span>
-                          <span>
-                            Under <code>gen:</code>, indent and press
-                            <span class="kbd">Ctrl</span>+<span class="kbd"
-                              >Space</span
-                            >
-                            to see available generator targets
-                            (<code>typescript</code>, <code>python</code>,
-                            <code>rust</code>, etc.).
-                          </span>
-                        </li>
-                        <li>
-                          <span>🏷️</span>
-                          <span>
-                            Try introducing an unrecognized property or typo to
-                            see
-                            <strong>realtime red squiggles</strong> and
-                            quick-fix suggestions!
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
-                  `;
-                } else if (this.activeTab === "diagnostics") {
-                  return html`
-                    ${
-                      yamlErrors.length === 0
-                        ? html`
-                            <div class="card">
-                              <p style="color: #3fb950; margin: 0;">
-                                ✓ No diagnostics found. YAML config matches
-                                schema perfectly!
-                              </p>
-                            </div>
-                          `
-                        : ""
-                    }
-                    ${yamlErrors.map(
-                      (err: InternalError) => html`
-                        <div
-                          class="diagnostic-item error"
-                          @click="${() => this.jumpToSpan(err.span.start)}"
-                          title="Click to jump to location"
-                        >
-                          <span class="diag-msg">✕ ${err.message}</span>
-                          <span class="diag-pos">
-                            Offset: ${err.span.start}..${err.span.end} (Click to
-                            jump)
-                          </span>
-                          ${
-                            err.suggestions && err.suggestions.length > 0
-                              ? html`
-                                  <span class="diag-suggestions">
-                                    Suggestions: ${err.suggestions.join(", ")}
-                                  </span>
-                                `
-                              : ""
-                          }
-                        </div>
-                      `,
-                    )}
-                  `;
-                } else {
-                  return html`
-                    <div class="card">
-                      <div class="card-title">YAML CodeMirror Features</div>
-                      <ul class="feature-list">
-                        <li>
-                          <span>🎨</span>
-                          <div>
-                            <strong>Lezer YAML Language Support</strong><br />
-                            Full syntax highlighting, indentation, and folding
-                            via CodeMirror's official
-                            <code>@codemirror/lang-yaml</code>.
-                          </div>
-                        </li>
-                        <li>
-                          <span>⚡</span>
-                          <div>
-                            <strong>Realtime Schema Validation</strong><br />
-                            Validates document structure against the TypePrompt
-                            <code>SchemaType</code> on every keystroke with red
-                            squiggles, error tooltips, and lint gutter.
-                          </div>
-                        </li>
-                        <li>
-                          <span>💡</span>
-                          <div>
-                            <strong>Schema-Aware Auto-Completion</strong><br />
-                            Suggests valid root keys, nested fields, and
-                            language generators from the schema. Press
-                            <span class="kbd">Ctrl</span>+<span class="kbd"
-                              >Space</span
-                            >.
-                          </div>
-                        </li>
-                        <li>
-                          <span>🔧</span>
-                          <div>
-                            <strong>Quick-Fix Actions</strong><br />
-                            Diagnostic tooltips offer one-click replacements for
-                            misspelled or deprecated property names.
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  `;
-                }
-              }
               const validTemplateEntity =
                 primaryTemplate && "template" in primaryTemplate
                   ? primaryTemplate.template

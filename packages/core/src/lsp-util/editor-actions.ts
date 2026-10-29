@@ -1,6 +1,9 @@
 import { createLineFinder, findLine } from "../util/line-finder.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
-import { getPositionContext } from "./position-context.js";
+import {
+  getPositionContext,
+  type PositionContext,
+} from "./position-context.js";
 
 /**
  * Given the document content and cursor offset (immediately following a `>`),
@@ -173,9 +176,15 @@ export function computeBackspaceAction(
  * - Multiline comment continuation and splitting with star alignment
  * - Single-line comment avoidance (does not append star after a closed comment)
  * - Outdenting after end of comment delimiter on a closing comment line
- * - Splitting between opening and closing XML tags
- * - Splitting between opening and closing brackets
+ * - Splitting between XML comment open and close (`<!--|-->`)
+ * - XML tag indentation (<tag>|</tag> split with indentOutdent, or open tag indent)
+ * - Bracket indentation ({|}, [|], (|) split with indentOutdent, or open bracket indent)
+ * - YAML indentation (colon `:` blocks and lines starting with repeated `- `)
  */
+const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
+
+const OPEN_BRACKET_RE = /(?:[{[(])\s*$/;
+
 export function computeEnterAction(
   content: string,
   offset: number,
@@ -413,32 +422,124 @@ export function computeEnterAction(
     };
   }
 
-  // 2. Splitting between open and close XML tags (`<tag>|</tag>`)
-  if (ctx.isBetweenTags) {
-    const baseIndentStr = " ".repeat(ctx.lineIndent);
+  // 3. XML tag indentation on Enter (<tag>|</tag> split or open tag)
+  if (!ctx.comment && OPEN_TAG_RE.test(ctx.textBeforeOnLine)) {
+    const trailingSpaces =
+      ctx.textBeforeOnLine.length - ctx.textBeforeOnLine.trimEnd().length;
+    const leadingSpaces =
+      ctx.textAfterOnLine.length - ctx.textAfterOnLine.trimStart().length;
+    const from = offset - trailingSpaces;
+    const to = offset + leadingSpaces;
+
+    // If followed by a closing tag, split with indentOutdent
+    if (/^<\/[_a-zA-Z0-9\-:]+>/.test(ctx.textAfterOnLine.trimStart())) {
+      const baseIndentStr = " ".repeat(ctx.lineIndent);
+      const indentStr = " ".repeat(ctx.lineIndent + tabSize);
+      const insert = `\n${indentStr}\n${baseIndentStr}`;
+      const targetCursorPos = from + 1 + indentStr.length;
+
+      return {
+        changes: [{ from, to, insert }],
+        targetCursorOffset: targetCursorPos,
+        handled: true,
+      };
+    }
+
     const indentStr = " ".repeat(ctx.lineIndent + tabSize);
-    const insert = `\n${indentStr}\n${baseIndentStr}`;
-    const targetCursorPos = offset + 1 + indentStr.length;
+    const insert = `\n${indentStr}`;
+    const targetCursorPos = from + insert.length;
 
     return {
-      changes: [{ from: offset, to: offset, insert }],
+      changes: [{ from, to, insert }],
       targetCursorOffset: targetCursorPos,
       handled: true,
     };
   }
 
-  // 3. Splitting between open and close brackets (`{|}`, `[|]`, `(|)`)
-  if (ctx.isBetweenBrackets) {
-    const baseIndentStr = " ".repeat(ctx.lineIndent);
-    const indentStr = " ".repeat(ctx.lineIndent + tabSize);
-    const insert = `\n${indentStr}\n${baseIndentStr}`;
-    const targetCursorPos = offset + 1 + indentStr.length;
+  // 4. Bracket indentation on Enter ({|}, [|], (|) split or open bracket)
+  if (!ctx.comment || ctx.comment.kind === "line") {
+    const textBefore = ctx.textBeforeOnLine
+      .replace(/\/\*.*?\*\//g, "")
+      .replace(/(?:\/\/|#).*$/, "")
+      .trimEnd();
+    if (OPEN_BRACKET_RE.test(textBefore)) {
+      const trailingSpaces =
+        ctx.textBeforeOnLine.length - ctx.textBeforeOnLine.trimEnd().length;
+      const leadingSpaces =
+        ctx.textAfterOnLine.length - ctx.textAfterOnLine.trimStart().length;
+      const from = offset - trailingSpaces;
+      const to = offset + leadingSpaces;
 
-    return {
-      changes: [{ from: offset, to: offset, insert }],
-      targetCursorOffset: targetCursorPos,
-      handled: true,
-    };
+      // If followed by a closing bracket, split with indentOutdent
+      if (/^[}\])]/.test(ctx.textAfterOnLine.trimStart())) {
+        const baseIndentStr = " ".repeat(ctx.lineIndent);
+        const indentStr = " ".repeat(ctx.lineIndent + tabSize);
+        const insert = `\n${indentStr}\n${baseIndentStr}`;
+        const targetCursorPos = from + 1 + indentStr.length;
+
+        return {
+          changes: [{ from, to, insert }],
+          targetCursorOffset: targetCursorPos,
+          handled: true,
+        };
+      }
+
+      const indentStr = " ".repeat(ctx.lineIndent + tabSize);
+      const insert = `\n${indentStr}`;
+      const targetCursorPos = from + insert.length;
+
+      return {
+        changes: [{ from, to, insert }],
+        targetCursorOffset: targetCursorPos,
+        handled: true,
+      };
+    }
+  }
+
+  // 5. YAML indentation on Enter (colon `:` blocks and lines starting with repeated `- `)
+  if (
+    isYamlPosition(ctx, content, offset) &&
+    (!ctx.comment || ctx.comment.kind !== "xml")
+  ) {
+    const listMatch = /^([ \t]*)((?:-[ \t]+)+)(\S.*)$/.exec(ctx.lineText);
+    const textBefore = ctx.textBeforeOnLine.replace(/#.*$/, "").trimEnd();
+    const opensIndent = /(?:[{[(]|:)$/.test(textBefore);
+
+    let extraIndent = 0;
+    let baseIndent = ctx.lineIndent;
+
+    if (listMatch) {
+      const indentStrPrefix = listMatch[1]!;
+      const hyphensPrefix = listMatch[2]!;
+      const restOfLine = listMatch[3]!;
+      const minCol = indentStrPrefix.length + hyphensPrefix.length;
+      baseIndent = indentStrPrefix.length;
+
+      if (!restOfLine.trimStart().startsWith("#") && ctx.colNumber >= minCol) {
+        const hyphenCount = (hyphensPrefix.match(/-/g) ?? []).length;
+        extraIndent = hyphenCount * 2;
+      }
+    }
+
+    if (opensIndent || extraIndent > 0) {
+      const nextIndent = baseIndent + (opensIndent ? tabSize : 0) + extraIndent;
+      const indentStr = " ".repeat(nextIndent);
+
+      const trailingSpaces =
+        ctx.textBeforeOnLine.length - ctx.textBeforeOnLine.trimEnd().length;
+      const leadingSpaces =
+        ctx.textAfterOnLine.length - ctx.textAfterOnLine.trimStart().length;
+      const from = offset - trailingSpaces;
+      const to = offset + leadingSpaces;
+      const insert = `\n${indentStr}`;
+      const targetCursorPos = from + insert.length;
+
+      return {
+        changes: [{ from, to, insert }],
+        targetCursorOffset: targetCursorPos,
+        handled: true,
+      };
+    }
   }
 
   return {
@@ -446,6 +547,23 @@ export function computeEnterAction(
     targetCursorOffset: offset,
     handled: false,
   };
+}
+
+function isYamlPosition(
+  ctx: PositionContext,
+  content: string,
+  offset: number,
+): boolean {
+  return (
+    (ctx.contentFormat === "yaml" &&
+      Boolean(
+        ctx.currentElement &&
+        offset >= ctx.currentElement.contentStart &&
+        (!ctx.currentElement.closingTag ||
+          offset <= ctx.currentElement.closingTag.start),
+      )) ||
+    (!ctx.currentElement && !/<[a-zA-Z]/.test(content))
+  );
 }
 
 /**
@@ -460,15 +578,7 @@ export function getCommentTypeAtPosition(
   if (ctx.isInsideSchema) {
     return "javascript";
   }
-  const isInsideYaml =
-    ctx.contentFormat === "yaml" &&
-    Boolean(
-      ctx.currentElement &&
-      offset >= ctx.currentElement.contentStart &&
-      (!ctx.currentElement.closingTag ||
-        offset <= ctx.currentElement.closingTag.start),
-    );
-  if (isInsideYaml) {
+  if (isYamlPosition(ctx, content, offset)) {
     return "yaml";
   }
   return "xml";
