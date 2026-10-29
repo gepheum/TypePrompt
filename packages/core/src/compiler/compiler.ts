@@ -739,17 +739,14 @@ class CompilationResultImpl implements CompilationResult {
 
       const templateValidation = this.templates[id];
       if (!templateValidation) {
-        const availableTemplates = namespace.templates.map(
-          (t) => t.template.name.text,
-        );
+        const messageSuffix =
+          namespaceName === DEFAULT_NAMESPACE
+            ? ""
+            : ` in namespace '${namespaceName}'`;
         this.pushFinalError(playground.sourceFile.path, {
           span: playground.element.for,
-          message: `Template '${forTemplate}' not found${
-            namespaceName === DEFAULT_NAMESPACE
-              ? ""
-              : ` in namespace '${namespaceName}'`
-          }`,
-          suggestions: availableTemplates,
+          message: `Template '${forTemplate}' not found${messageSuffix}`,
+          suggestions: namespace.templates.map((t) => t.template.name.text),
         });
         continue;
       }

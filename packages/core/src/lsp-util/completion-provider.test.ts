@@ -192,6 +192,47 @@ describe("getCompletionItems", () => {
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["namespace"]);
   });
+
+  it("suggests available templates for playground for attribute", () => {
+    const templateXml = [
+      '<template name="Translate">',
+      "  <schema>",
+      "    type Input = { text: string; };",
+      "    type Output = string;",
+      "  </schema>",
+      "  <system></system>",
+      "  <user></user>",
+      "</template>",
+    ].join("\n");
+
+    const playgroundXml = [
+      '<playground for="Tr">',
+      "  <samples>",
+      "  - input:",
+      '      text: "hello"',
+      "  </samples>",
+      "</playground>",
+    ].join("\n");
+
+    const start = playgroundXml.indexOf('for="') + 'for="'.length;
+    const pos = start + 2; // after 'Tr'
+    const cache = compile(
+      {
+        "prompts/Translate.tp": templateXml,
+        "prompts/Translate.play.tp": playgroundXml,
+      },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: playgroundXml,
+      path: "prompts/Translate.play.tp",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["Translate"]);
+  });
 });
 
 describe("getYamlCompletionItems", () => {

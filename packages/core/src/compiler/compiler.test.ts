@@ -1681,6 +1681,16 @@ describe("compile - playground support", () => {
   it("reports an error when target template is not found", () => {
     const result = compile(
       {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Input = { text: string; };
+              type Output = string;
+            </schema>
+            <system>Translator</system>
+            <user><insert val="input.text"/></user>
+          </template>
+        `,
         "prompts/Unknown.play.tp": `
           <playground for="Unknown">
             <samples>
@@ -1697,6 +1707,46 @@ describe("compile - playground support", () => {
     expect(result.finalErrors["prompts/Unknown.play.tp"]).toMatch([
       {
         message: "Template 'Unknown' not found",
+        suggestions: ["Translate"],
+      },
+    ]);
+  });
+
+  it("reports an error with suggestions when target template is not found in custom namespace", () => {
+    const result = compile(
+      {
+        "prompts/Billing/shared.tp": `
+          <namespace name="Billing">
+            type Invoice = { id: string; };
+          </namespace>
+        `,
+        "prompts/Billing/Invoice.tp": `
+          <template name="Invoice" namespace="Billing">
+            <schema>
+              type Input = { id: string; };
+              type Output = string;
+            </schema>
+            <system>Invoice</system>
+            <user><insert val="input.id"/></user>
+          </template>
+        `,
+        "prompts/Billing/Unknown.play.tp": `
+          <playground for="Unknown" namespace="Billing">
+            <samples>
+            - input:
+                id: "1"
+            </samples>
+          </playground>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(true);
+    expect(result.finalErrors["prompts/Billing/Unknown.play.tp"]).toMatch([
+      {
+        message: "Template 'Unknown' not found in namespace 'Billing'",
+        suggestions: ["Invoice"],
       },
     ]);
   });
