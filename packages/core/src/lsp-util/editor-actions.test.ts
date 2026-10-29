@@ -402,6 +402,77 @@ describe("editor-actions", () => {
       assert.equal(res.changes[0]?.insert, "\n    ");
     });
 
+    it("preserves whitespace indent in YAML when >= first line indent", () => {
+      const content =
+        '<examples>\n    - input:\n        text: "hello"\n      output: "world"\n      \n</examples>';
+      const offset =
+        content.indexOf('"world"\n      ') + '"world"\n      '.length;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n      ");
+      assert.equal(res.targetCursorOffset, offset + "\n      ".length);
+    });
+
+    it("clamps whitespace indent in YAML to first line indent when < first line indent (e.g. 2 spaces clamped to 4)", () => {
+      const content =
+        '<examples>\n    - input:\n        text: "hello"\n      output: "world"\n  \n</examples>';
+      const offset = content.indexOf('"world"\n  ') + '"world"\n  '.length;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("clamps empty line (0 spaces) in YAML to first line indent", () => {
+      const content =
+        '<examples>\n    - input:\n        text: "hello"\n\n</examples>';
+      const offset = content.indexOf('"\n\n') + 2; // on empty line
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("indents next line with +tabSize after YAML block scalar indicators (|, |-, |+, >, >-, >+)", () => {
+      for (const indicator of ["|", "|-", "|+", ">", ">-", ">+"]) {
+        const content = `<samples>\n  text: ${indicator}\n</samples>`;
+        const offset =
+          content.indexOf(`text: ${indicator}`) + `text: ${indicator}`.length;
+        const res = computeEnterAction(content, offset);
+        assert.equal(res.handled, true, `failed for indicator ${indicator}`);
+        assert.equal(
+          res.changes[0]?.insert,
+          "\n    ",
+          `failed insert for indicator ${indicator}`,
+        );
+        assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+      }
+    });
+
+    it("respects explicit indentation indicator on YAML block scalar (e.g. |4)", () => {
+      const content = "<samples>\n  text: |4\n</samples>";
+      const offset = content.indexOf("|4") + 2;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n      "); // 2 (base) + 4 = 6
+    });
+
+    it("indents list item containing only block scalar indicator - | by 2 spaces", () => {
+      const content = "<samples>\n- |\n</samples>";
+      const offset = content.indexOf("- |") + 3;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n  "); // 0 (base) + 2 (extraIndent)
+    });
+
+    it("indents block scalar inside list item key - text: | by +tabSize (4 spaces total)", () => {
+      const content = "<samples>\n- text: |\n</samples>";
+      const offset = content.indexOf("- text: |") + 9;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    "); // 0 + 2 (extra) + 2 (tabSize)
+    });
+
     it("indents next line with +tabSize after a YAML key ending with colon", () => {
       const content = "<samples>\n  input:\n</samples>";
       const offset = content.indexOf("input:") + 6;

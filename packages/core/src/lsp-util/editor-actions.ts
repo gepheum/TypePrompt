@@ -179,7 +179,7 @@ export function computeBackspaceAction(
  * - Splitting between XML comment open and close (`<!--|-->`)
  * - XML tag indentation (<tag>|</tag> split with indentOutdent, or open tag indent)
  * - Bracket indentation ({|}, [|], (|) split with indentOutdent, or open bracket indent)
- * - YAML indentation (colon `:` blocks and lines starting with repeated `- `)
+ * - YAML indentation (colon `:` blocks, repeated `- `, and whitespace-line indent matching)
  */
 const OPEN_TAG_RE = /<(?!\?|!--|\/|[^>]*\/>)[_a-zA-Z0-9\-:]+(?:\s+[^>]*)?>\s*$/;
 
@@ -496,14 +496,58 @@ export function computeEnterAction(
     }
   }
 
-  // 5. YAML indentation on Enter (colon `:` blocks and lines starting with repeated `- `)
+  // 5. YAML indentation on Enter (colon `:` blocks, multiline block scalars `|`/`>`, repeated `- `, and whitespace line clamping)
   if (
     isYamlPosition(ctx, content, offset) &&
     (!ctx.comment || ctx.comment.kind !== "xml")
   ) {
+    // If the line only contains whitespaces, the indent of the new line is
+    // the max of the indent of the last line and the indent of the first line
+    // in the YAML section.
+    if (/^\s*$/.test(ctx.lineText)) {
+      const targetIndent = ctx.textBeforeOnLine.length;
+      const sectionStart =
+        ctx.currentElement && ctx.contentFormat === "yaml"
+          ? ctx.currentElement.contentStart
+          : 0;
+      const sectionEnd =
+        ctx.currentElement?.closingTag?.start ?? content.length;
+      const yamlSectionText = content.slice(sectionStart, sectionEnd);
+
+      let firstLineIndent: number | null = null;
+      for (const line of yamlSectionText.split("\n")) {
+        if (/\S/.test(line)) {
+          const match = /^[ \t]*/.exec(line);
+          firstLineIndent = match ? match[0].length : 0;
+          break;
+        }
+      }
+
+      if (firstLineIndent === null) {
+        firstLineIndent = ctx.currentElement
+          ? getLineIndentAt(content, ctx.currentElement.start) + tabSize
+          : 0;
+      }
+
+      const nextIndent = Math.max(targetIndent, firstLineIndent);
+      const trailingSpaces = ctx.textAfterOnLine.length;
+      const from = offset;
+      const to = offset + trailingSpaces;
+      const insert = `\n${" ".repeat(nextIndent)}`;
+      return {
+        changes: [{ from, to, insert }],
+        targetCursorOffset: from + insert.length,
+        handled: true,
+      };
+    }
+
     const listMatch = /^([ \t]*)((?:-[ \t]+)+)(\S.*)$/.exec(ctx.lineText);
     const textBefore = ctx.textBeforeOnLine.replace(/#.*$/, "").trimEnd();
-    const opensIndent = /(?:[{[(]|:)$/.test(textBefore);
+    const scalarMatch =
+      /(?:^|[\s:])([|>])(?:([+-])([1-9])|([1-9])([+-])|([+-])|([1-9]))?$/.exec(
+        textBefore,
+      );
+    const opensIndent = /(?:[{[(]|:)$/.test(textBefore) || scalarMatch !== null;
 
     let extraIndent = 0;
     let baseIndent = ctx.lineIndent;
@@ -522,7 +566,20 @@ export function computeEnterAction(
     }
 
     if (opensIndent || extraIndent > 0) {
-      const nextIndent = baseIndent + (opensIndent ? tabSize : 0) + extraIndent;
+      let indentIncrease = 0;
+      if (opensIndent) {
+        const explicitDigit =
+          scalarMatch?.[3] ?? scalarMatch?.[4] ?? scalarMatch?.[7];
+        const step = explicitDigit ? parseInt(explicitDigit, 10) : tabSize;
+        const isScalarOnlyList =
+          scalarMatch !== null &&
+          listMatch !== null &&
+          /^[|>](?:[+-][1-9]|[1-9][+-]|[+-]|[1-9])?$/.test(
+            listMatch[3]?.trim() ?? "",
+          );
+        indentIncrease = isScalarOnlyList ? 0 : step;
+      }
+      const nextIndent = baseIndent + indentIncrease + extraIndent;
       const indentStr = " ".repeat(nextIndent);
 
       const trailingSpaces =
@@ -564,6 +621,13 @@ function isYamlPosition(
       )) ||
     (!ctx.currentElement && !/<[a-zA-Z]/.test(content))
   );
+}
+
+function getLineIndentAt(content: string, offset: number): number {
+  const lineStart = content.lastIndexOf("\n", offset - 1) + 1;
+  const line = content.slice(lineStart);
+  const match = /^[ \t]*/.exec(line);
+  return match ? match[0].length : 0;
 }
 
 /**
