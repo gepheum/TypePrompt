@@ -47,34 +47,6 @@ export function validatePlayground(
     },
   ];
 
-  const { typeDeclarations } = templateValidation.schema;
-  if (!typeDeclarations["Input"]) {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: playground.for,
-          message: `Template '${playground.for.text}' is missing Input schema declaration`,
-        },
-      ],
-      definitionLinks: [],
-      playground,
-    };
-  }
-  if (!typeDeclarations["Output"]) {
-    return {
-      kind: "error",
-      errors: [
-        {
-          span: playground.for,
-          message: `Template '${playground.for.text}' is missing Output schema declaration`,
-        },
-      ],
-      definitionLinks: [],
-      playground,
-    };
-  }
-
   const playgroundType = makePlaygroundType(
     templateValidation.schema,
     templateValidation.tools,
