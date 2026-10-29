@@ -140,10 +140,10 @@ describe("generateFileTemplate", () => {
           "  <schema>\n" +
           "    type Input = {};\n" +
           "    type Output = {};\n" +
-          "  </schema>\n" +
+          "  </schema>\n\n" +
           "  <system>\n" +
           "    <!-- System prompt goes here. -->\n" +
-          "  </system>\n" +
+          "  </system>\n\n" +
           "  <user>\n" +
           "    <!-- User prompt goes here. -->\n" +
           "  </user>\n" +
@@ -163,10 +163,10 @@ describe("generateFileTemplate", () => {
           "  <schema>\n" +
           "    type Input = {};\n" +
           "    type Output = {};\n" +
-          "  </schema>\n" +
+          "  </schema>\n\n" +
           "  <system>\n" +
           "    <!-- System prompt goes here. -->\n" +
-          "  </system>\n" +
+          "  </system>\n\n" +
           "  <user>\n" +
           "    <!-- User prompt goes here. -->\n" +
           "  </user>\n" +
@@ -186,10 +186,10 @@ describe("generateFileTemplate", () => {
           "  <schema>\n" +
           "    type Input = {};\n" +
           "    type Output = {};\n" +
-          "  </schema>\n" +
+          "  </schema>\n\n" +
           "  <system>\n" +
           "    <!-- System prompt goes here. -->\n" +
-          "  </system>\n" +
+          "  </system>\n\n" +
           "  <user>\n" +
           "    <!-- User prompt goes here. -->\n" +
           "  </user>\n" +
@@ -210,7 +210,7 @@ describe("generateFileTemplate", () => {
         '<tool name="myTool">\n' +
           "  <description>\n" +
           "    <!-- Tool description goes here. -->\n" +
-          "  </description>\n" +
+          "  </description>\n\n" +
           "  <schema>\n" +
           "    type Input = {};\n" +
           "    type Output = {};\n" +
@@ -230,7 +230,7 @@ describe("generateFileTemplate", () => {
         '<tool name="myTool" namespace="Legal">\n' +
           "  <description>\n" +
           "    <!-- Tool description goes here. -->\n" +
-          "  </description>\n" +
+          "  </description>\n\n" +
           "  <schema>\n" +
           "    type Input = {};\n" +
           "    type Output = {};\n" +

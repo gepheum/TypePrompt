@@ -36,6 +36,7 @@ export {
   NAME_SCOPES,
   getNameDependencies,
   isLiteralType,
+  makeExampleValue,
   resolveType,
   unwrapNullable,
   type Field,

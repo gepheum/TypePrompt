@@ -22,3 +22,5 @@ export {
 } from "./schema-utils.js";
 
 export { resolveType } from "./type-resolver.js";
+
+export { makeExampleValue } from "./example-maker.js";
