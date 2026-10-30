@@ -363,3 +363,11 @@ export type SchemaType = {
   readonly type: Type | SyntheticType;
   readonly schema: Schema;
 };
+
+/** A {@link SyntheticType} associated with a TypeScript type. */
+export type Typed<T> = {
+  readonly type: SyntheticType;
+  readonly typeIdentity?: {
+    readonly type: T;
+  };
+};

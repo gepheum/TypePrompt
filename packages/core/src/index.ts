@@ -51,6 +51,7 @@ export {
   type Type,
   type TypeDeclarations,
   type TypeNameView,
+  type Typed,
   type Union,
 } from "./schema/index.js";
 

@@ -1,9 +1,8 @@
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { parseAndValidateYaml } from "../json/yaml-parser-validator.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
-import type { Constraint, SchemaType } from "../schema/schema-types.js";
+import type { Constraint, SchemaType, Typed } from "../schema/schema-types.js";
 import {
-  type Typed,
   typedArray,
   typedInterface,
   typedOptional,
