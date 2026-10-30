@@ -76,7 +76,7 @@ export function parseConfigYaml(
   if (parseResult.kind === "error") {
     return parseResult;
   }
-  const config = unwrapJsonValue(parseResult) as Config;
+  const config = unwrapJsonValue(parseResult, CONFIG);
   return { kind: "success", config };
 }
 
@@ -182,7 +182,8 @@ const CONFIG_TYPE: Typed<Config> = typedInterface({
   ),
 });
 
-export const CONFIG: SchemaType = {
+export const CONFIG: SchemaType<Config> = {
   type: CONFIG_TYPE.type,
   schema: EMPTY_SCHEMA,
+  typeIdentity: CONFIG_TYPE.typeIdentity,
 };

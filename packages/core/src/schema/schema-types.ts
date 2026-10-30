@@ -359,15 +359,14 @@ export type SyntheticUnionMembers =
       readonly discriminants: Discriminants;
     };
 
-export type SchemaType = {
-  readonly type: Type | SyntheticType;
-  readonly schema: Schema;
-};
-
 /** A {@link SyntheticType} associated with a TypeScript type. */
 export type Typed<T> = {
   readonly type: SyntheticType;
-  readonly typeIdentity?: {
-    readonly type: T;
-  };
+  readonly typeIdentity?: { readonly type: T };
+};
+
+export type SchemaType<T = unknown> = {
+  readonly type: Type | SyntheticType;
+  readonly schema: Schema;
+  readonly typeIdentity?: { readonly type: T };
 };
