@@ -1,11 +1,15 @@
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { parseAndValidateYaml } from "../json/yaml-parser-validator.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
-import type {
-  Constraint,
-  SchemaType,
-  SyntheticType,
-} from "../schema/schema-types.js";
+import type { Constraint, SchemaType } from "../schema/schema-types.js";
+import {
+  type Typed,
+  typedArray,
+  typedInterface,
+  typedOptional,
+  typedString,
+  typedStringLiteral,
+} from "../schema/typed.js";
 import type { InternalErrors } from "../util/shared-types.js";
 
 export type Config = {
@@ -77,81 +81,6 @@ export function parseConfigYaml(
   return { kind: "success", config };
 }
 
-type GenericType<T> = {
-  readonly type: SyntheticType;
-  readonly phantom?: T;
-};
-
-function string(constraint?: Constraint<string>): GenericType<string> {
-  return {
-    type: {
-      kind: "primitive",
-      primitive: {
-        text: "string",
-      },
-      constraint,
-    },
-  };
-}
-
-function stringLiteral<const S extends string>(value: S): GenericType<S> {
-  return {
-    type: {
-      kind: "string-literal",
-      value,
-    },
-  };
-}
-
-function optional<T>(innerType: GenericType<T>): GenericType<T | undefined> {
-  return {
-    type: {
-      kind: "optional",
-      innerType: innerType.type,
-    },
-  };
-}
-
-function array<E>(
-  innerType: GenericType<E>,
-  constraint?: Constraint<readonly unknown[]>,
-): GenericType<readonly E[]> {
-  return {
-    type: {
-      kind: "array",
-      elementType: innerType.type,
-      constraint,
-    },
-  };
-}
-
-type GenericFields = { readonly [name: string]: GenericType<unknown> };
-
-type Object<Fields extends GenericFields> = {
-  readonly [K in keyof Fields]: NonNullable<Fields[K]["phantom"]>;
-};
-
-function object<Fields extends GenericFields>(
-  fields: Fields,
-): GenericType<Object<Fields>> {
-  return {
-    type: {
-      kind: "interface",
-      fields: Object.fromEntries(
-        Object.entries(fields).map(([name, field]) => [
-          name,
-          {
-            name: {
-              text: name,
-            },
-            type: field.type,
-          },
-        ]),
-      ),
-    },
-  };
-}
-
 function endsWith(suffix: string): Constraint<string> {
   return {
     predicate: (value: string) => value.endsWith(suffix),
@@ -173,25 +102,25 @@ function notEmpty<T extends string | readonly unknown[]>(): Constraint<T> {
   };
 }
 
-const CONFIG_TYPE: GenericType<Config> = object({
-  include: array(string(notEmpty()), notEmpty()),
-  gen: optional(
-    object({
-      cpp: optional(
-        object({
-          file: string(endsWith(".h")),
-          rootNamespace: optional(
-            string(
+const CONFIG_TYPE: Typed<Config> = typedInterface({
+  include: typedArray(typedString(notEmpty()), notEmpty()),
+  gen: typedOptional(
+    typedInterface({
+      cpp: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".h")),
+          rootNamespace: typedOptional(
+            typedString(
               matches(/^[A-Za-z_][A-Za-z0-9_]*$/, "must be a valid identifier"),
             ),
           ),
         }),
       ),
-      csharp: optional(
-        object({
-          file: string(endsWith(".cs")),
-          rootNamespace: optional(
-            string(
+      csharp: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".cs")),
+          rootNamespace: typedOptional(
+            typedString(
               matches(
                 /^[A-Z][A-Za-z0-9_]*$/,
                 "must be a valid PascalCase identifier",
@@ -200,15 +129,15 @@ const CONFIG_TYPE: GenericType<Config> = object({
           ),
         }),
       ),
-      dart: optional(
-        object({
-          file: string(endsWith(".dart")),
+      dart: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".dart")),
         }),
       ),
-      kotlin: optional(
-        object({
-          file: string(endsWith(".kt")),
-          package: string(
+      kotlin: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".kt")),
+          package: typedString(
             matches(
               /^([a-z_$][a-z0-9_$]*)(\.[a-z_$][a-z0-9_$]*)*$/,
               "must be a valid snake_case identifier",
@@ -216,21 +145,21 @@ const CONFIG_TYPE: GenericType<Config> = object({
           ),
         }),
       ),
-      python: optional(
-        object({
-          file: string(endsWith(".py")),
+      python: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".py")),
         }),
       ),
-      rust: optional(
-        object({
-          file: string(endsWith(".rs")),
+      rust: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".rs")),
         }),
       ),
-      swift: optional(
-        object({
-          file: string(endsWith(".swift")),
-          rootNamespace: optional(
-            string(
+      swift: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".swift")),
+          rootNamespace: typedOptional(
+            typedString(
               matches(
                 /^[A-Z][A-Za-z0-9_]*$/,
                 "must be a valid PascalCase identifier",
@@ -239,22 +168,22 @@ const CONFIG_TYPE: GenericType<Config> = object({
           ),
         }),
       ),
-      typescript: optional(
-        object({
-          file: string(endsWith(".ts")),
+      typescript: typedOptional(
+        typedInterface({
+          file: typedString(endsWith(".ts")),
         }),
       ),
     }),
   ),
-  patch: optional(
-    object({
-      base: stringLiteral("patch-base.json"),
-      overrides: stringLiteral("overrides.json"),
+  patch: typedOptional(
+    typedInterface({
+      base: typedStringLiteral("patch-base.json"),
+      overrides: typedStringLiteral("overrides.json"),
     }),
   ),
 });
 
 export const CONFIG: SchemaType = {
-  type: CONFIG_TYPE.type,
+  type: CONFIG_TYPE,
   schema: EMPTY_SCHEMA,
 };
