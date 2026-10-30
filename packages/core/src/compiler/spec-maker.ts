@@ -122,7 +122,10 @@ function makeContents(
   } else {
     const variants: { [c: string]: Spec.TemplateContent } = {};
     for (const variant of input.variants) {
-      variants[variant.case.text] = makeContent(variant.content, context);
+      variants[variant.case.text] = makeContent(variant.content, {
+        ...context,
+        variantCase: variant.case.text,
+      });
     }
     return {
       kind: "variants",
@@ -134,7 +137,7 @@ function makeContents(
 
 function makeContent(
   input: Partial<TemplateContent>,
-  context: { readonly namespace: string },
+  context: { readonly namespace: string; readonly variantCase?: string },
 ): Spec.TemplateContent {
   return {
     meta: input.meta ? unwrapJsonValue(input.meta.value) : undefined,
@@ -146,7 +149,7 @@ function makeContent(
 
 function makeExamples(
   input: StrictJsonValue | undefined,
-  context: { readonly namespace: string },
+  context: { readonly namespace: string; readonly variantCase?: string },
 ): readonly Spec.FewShotExample[] {
   if (!input) return [];
 
@@ -186,8 +189,12 @@ function makeExamples(
     const inputEntry = entries["input"]!;
     const outputEntry = entries["output"]!;
     const steps = entries["steps"];
+    let inputValue = unwrapJsonValue(inputEntry.value);
+    if (context.variantCase) {
+      inputValue = { variant: context.variantCase, ...(inputValue as {}) }
+    }
     return {
-      input: unwrapJsonValue(inputEntry.value),
+      input: inputValue,
       output: unwrapJsonValue(outputEntry.value),
       steps: steps
         ? (steps.value as StrictJsonArray).elements.map(makeStep)

@@ -990,6 +990,133 @@ describe("makeTemplates - meta and examples", () => {
       templates: { "Main:T": { contents: { content: { examples: [] } } } },
     });
   });
+
+  it("injects variant case into few-shot example input when defined within a variant", () => {
+    const examplesJson = jsonArr([
+      jsonObj({
+        input: jsonObj({ prompt: str("hi") }),
+        output: str("hello"),
+        steps: jsonArr([]),
+      }),
+    ]);
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": {
+          kind: "success" as const,
+          schema: TEST_SCHEMA,
+          tools: {},
+          template: {
+            kind: "success" as const,
+            name: span("T"),
+            namespace: span("Main"),
+            outputFormat: null,
+            contents: {
+              kind: "variants",
+              variants: [
+                {
+                  case: span("casual"),
+                  content: {
+                    meta: undefined,
+                    system: emptyBody(),
+                    user: emptyBody(),
+                    examples: examplesJson,
+                  },
+                },
+              ],
+              defaultContent: {
+                meta: undefined,
+                system: emptyBody(),
+                user: emptyBody(),
+                examples: undefined,
+              },
+            },
+            snippets: [],
+            tools: null,
+            schema: null,
+            tag: { start: 0, end: 0 },
+          },
+        },
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            kind: "variants",
+            variants: {
+              casual: {
+                examples: [
+                  {
+                    input: { variant: "casual", prompt: "hi" },
+                    output: "hello",
+                    steps: [],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("injects variant into few-shot examples when compiling templates with variants", () => {
+    const compilationResult = compile(
+      {
+        "prompts/Greet.tp": `
+          <template name="Greet">
+            <schema>
+              type Input = {
+                variant: "formal" | "casual";
+                name: string;
+              };
+              type Output = string;
+            </schema>
+            <user>Hello</user>
+            <variant case="formal">
+              <system>Formal system</system>
+              <examples>
+                - input:
+                    name: "Alice"
+                  output: "Good day, Alice."
+              </examples>
+            </variant>
+            <variant case="casual">
+              <system>Casual system</system>
+              <examples>
+                - input:
+                    name: "Bob"
+                  output: "Hey Bob!"
+              </examples>
+            </variant>
+          </template>
+        `,
+      },
+      { cache: null, patchBase: null },
+    ) as ValidCompilationResult;
+    expect(compilationResult.anyErrors).toBe(false);
+
+    const compiledTemplates = makeTemplates(compilationResult);
+    const greet = compiledTemplates.templates["Main:Greet"]!;
+    expect(greet.contents.kind).toBe("variants");
+    if (greet.contents.kind === "variants") {
+      expect(greet.contents.variants["formal"]!.examples).toMatch([
+        {
+          input: { variant: "formal", name: "Alice" },
+          output: "Good day, Alice.",
+          steps: [],
+        },
+      ]);
+      expect(greet.contents.variants["casual"]!.examples).toMatch([
+        {
+          input: { variant: "casual", name: "Bob" },
+          output: "Hey Bob!",
+          steps: [],
+        },
+      ]);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
