@@ -184,6 +184,6 @@ const CONFIG_TYPE: Typed<Config> = typedInterface({
 });
 
 export const CONFIG: SchemaType = {
-  type: CONFIG_TYPE,
+  type: CONFIG_TYPE.type,
   schema: EMPTY_SCHEMA,
 };

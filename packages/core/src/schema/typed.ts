@@ -1,7 +1,8 @@
 import type { Constraint, SyntheticType } from "../schema/schema-types.js";
 
 /** A {@link SyntheticType} associated with a TypeScript type. */
-export type Typed<T> = SyntheticType & {
+export type Typed<T> = {
+  readonly type: SyntheticType;
   readonly typeIdentity?: {
     readonly type: T;
   };
@@ -9,25 +10,31 @@ export type Typed<T> = SyntheticType & {
 
 export function typedString(constraint?: Constraint<string>): Typed<string> {
   return {
-    kind: "primitive",
-    primitive: {
-      text: "string",
+    type: {
+      kind: "primitive",
+      primitive: {
+        text: "string",
+      },
+      constraint,
     },
-    constraint,
   };
 }
 
 export function typedStringLiteral<const S extends string>(value: S): Typed<S> {
   return {
-    kind: "string-literal",
-    value,
+    type: {
+      kind: "string-literal",
+      value,
+    },
   };
 }
 
 export function typedOptional<T>(innerType: Typed<T>): Typed<T | undefined> {
   return {
-    kind: "optional",
-    innerType: innerType,
+    type: {
+      kind: "optional",
+      innerType: innerType.type,
+    },
   };
 }
 
@@ -36,9 +43,11 @@ export function typedArray<E>(
   constraint?: Constraint<readonly unknown[]>,
 ): Typed<ReadonlyArray<E>> {
   return {
-    kind: "array",
-    elementType: innerType,
-    constraint,
+    type: {
+      kind: "array",
+      elementType: innerType.type,
+      constraint,
+    },
   };
 }
 
@@ -59,18 +68,20 @@ export function typedInterface<
     : T
 > {
   return {
-    kind: "interface",
-    fields: Object.fromEntries(
-      Object.entries(fields as { readonly [name: string]: Typed<unknown> }).map(
-        ([name, field]) => [
+    type: {
+      kind: "interface",
+      fields: Object.fromEntries(
+        Object.entries(
+          fields as { readonly [name: string]: Typed<unknown> },
+        ).map(([name, field]) => [
           name,
           {
             name: { text: name },
-            type: field,
+            type: field.type,
           },
-        ],
+        ]),
       ),
-    ),
+    },
   };
 }
 

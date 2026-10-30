@@ -51,7 +51,11 @@ export function getYamlCompletionItems(
   const insertions = computeInsertions(leftPart, rightPart, "yaml");
 
   return findCompletionItem(newContent, position, insertions, (content) => {
-    const parseResult = parseAndValidateYaml(content, "temp.yaml", schemaType);
+    const parseResult = parseAndValidateYaml(
+      content,
+      "typeprompt.yaml",
+      schemaType,
+    );
     return parseResult.kind === "error" ? parseResult.errors : [];
   });
 }
