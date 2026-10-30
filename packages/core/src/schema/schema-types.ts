@@ -205,12 +205,6 @@ export type SyntheticUnion = {
   readonly members: SyntheticUnionMembers;
 };
 
-export type HasName = {
-  readonly name: {
-    readonly text: string;
-  };
-};
-
 export type SyntheticType =
   | AnyTypeView
   | PrimitiveTypeView

@@ -8,7 +8,6 @@ import type {
 import { validateJson } from "../json/json-validator.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import type {
-  HasName,
   Schema,
   SyntheticArray,
   SyntheticField,
@@ -167,7 +166,7 @@ function parseSteps(
 function makePlaygroundType(
   templateSchema: Schema,
   tools: { readonly [name: string]: TemplateTool },
-): SyntheticArray & HasName {
+): SyntheticArray {
   const { typeDeclarations } = templateSchema;
   const inputType = typeDeclarations["Input"]!.valueType;
   const outputType = typeDeclarations["Output"]!.valueType;
@@ -284,9 +283,6 @@ function makePlaygroundType(
 
   return {
     kind: "array",
-    name: {
-      text: "samples",
-    },
     elementType: sampleType,
   };
 }

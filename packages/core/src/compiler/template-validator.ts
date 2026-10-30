@@ -8,7 +8,6 @@ import type {
 } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import type {
-  HasName,
   Schema,
   SyntheticArray,
   SyntheticField,
@@ -317,7 +316,7 @@ function makeExamplesType(
     readonly isVariantSpecialization: boolean;
     readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
   },
-): SyntheticArray & HasName {
+): SyntheticArray {
   const { typeDeclarations } = templateSchema;
 
   let inputType: Type | SyntheticInterface =
@@ -445,9 +444,6 @@ function makeExamplesType(
 
   return {
     kind: "array",
-    name: {
-      text: "Example[]",
-    },
     elementType: exampleType,
   };
 }

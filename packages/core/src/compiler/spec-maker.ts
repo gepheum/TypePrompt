@@ -189,9 +189,9 @@ function makeExamples(
     const inputEntry = entries["input"]!;
     const outputEntry = entries["output"]!;
     const steps = entries["steps"];
-    let inputValue = unwrapJsonValue(inputEntry.value);
+    const inputValue = unwrapJsonValue(inputEntry.value);
     if (context.variantCase) {
-      inputValue = { variant: context.variantCase, ...(inputValue as {}) }
+      (inputValue as Record<string, unknown>).variant = context.variantCase;
     }
     return {
       input: inputValue,
