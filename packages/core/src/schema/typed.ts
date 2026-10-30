@@ -1,5 +1,6 @@
 import type { Constraint, SyntheticType } from "../schema/schema-types.js";
 
+/** A {@link SyntheticType} associated with a TypeScript type. */
 export type Typed<T> = SyntheticType & {
   readonly typeIdentity?: {
     readonly type: T;
