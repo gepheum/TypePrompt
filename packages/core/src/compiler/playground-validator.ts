@@ -7,13 +7,15 @@ import type {
 } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
-import type {
-  Schema,
-  SyntheticArray,
-  SyntheticField,
-  SyntheticInterface,
-  SyntheticOptional,
-} from "../schema/schema-types.js";
+import type { Schema, SchemaType } from "../schema/schema-types.js";
+import {
+  typedAny,
+  typedArray,
+  typedInterface,
+  typedOptional,
+  typedString,
+  typedStringUnion,
+} from "../schema/typed.js";
 import type {
   DefinitionLink,
   TextSpan,
@@ -46,14 +48,14 @@ export function validatePlayground(
     },
   ];
 
-  const playgroundType = makePlaygroundType(
+  const playgroundSchema = makePlaygroundType(
     templateValidation.schema,
     templateValidation.tools,
   );
   const jsonResult = validateJson(
     playground.samples,
-    playgroundType,
-    templateValidation.schema,
+    playgroundSchema.type,
+    playgroundSchema.schema,
   );
   validationResult.push(jsonResult);
 
@@ -166,124 +168,56 @@ function parseSteps(
 function makePlaygroundType(
   templateSchema: Schema,
   tools: { readonly [name: string]: TemplateTool },
-): SyntheticArray {
+): SchemaType {
   const { typeDeclarations } = templateSchema;
   const inputType = typeDeclarations["Input"]!.valueType;
   const outputType = typeDeclarations["Output"]!.valueType;
 
-  const toolCallsField: SyntheticField = {
-    name: { text: "toolCalls" },
-    type: {
-      kind: "array",
-      elementType: {
-        kind: "interface",
-        fields: {
-          tool: {
-            name: { text: "tool" },
-            type: {
-              kind: "synthetic-union",
-              members: {
-                kind: "strings",
-                values: Object.fromEntries(
-                  Object.entries(tools).map(([k, t]) => [
-                    k,
-                    {
-                      kind: "unquoted",
-                      unquotedName: t.tool.tool.name,
-                    },
-                  ]),
-                ),
-              },
-            },
-          },
-          callId: {
-            name: { text: "callId" },
-            type: {
-              kind: "primitive",
-              primitive: { text: "string" },
-            },
-          },
-          input: {
-            name: { text: "input" },
-            type: { kind: "any" },
-          },
-          output: {
-            name: { text: "output" },
-            type: {
-              kind: "optional",
-              innerType: { kind: "any" },
-            },
-          },
-        },
-      },
-    },
-  };
+  const stepsType = typedOptional(
+    typedArray(
+      typedInterface({
+        toolCalls: typedArray(
+          typedInterface({
+            tool: typedStringUnion(
+              Object.fromEntries(
+                Object.entries(tools).map(([k, t]) => [
+                  k,
+                  {
+                    kind: "unquoted",
+                    unquotedName: t.tool.tool.name,
+                  },
+                ]),
+              ),
+            ),
+            callId: typedString(),
+            input: typedAny(),
+            output: typedOptional(typedAny()),
+          }),
+        ),
+      }),
+    ),
+  );
 
-  const stepsType: SyntheticOptional = {
-    kind: "optional",
-    innerType: {
-      kind: "array",
-      elementType: {
-        kind: "interface",
-        fields: {
-          toolCalls: toolCallsField,
-        },
-      },
-    },
-  };
-
-  const historyEntryType: SyntheticInterface = {
-    kind: "interface",
-    fields: {
-      input: {
-        name: { text: "input" },
-        type: inputType,
-      },
-      steps: {
-        name: { text: "steps" },
-        type: stepsType,
-      },
-      output: {
-        name: { text: "output" },
-        type: outputType,
-      },
-    },
-  };
-
-  const sampleType: SyntheticInterface = {
-    kind: "interface",
-    fields: {
-      name: {
-        name: { text: "name" },
-        type: {
-          kind: "optional",
-          innerType: { kind: "primitive", primitive: { text: "string" } },
-        },
-      },
-      history: {
-        name: { text: "history" },
-        type: {
-          kind: "optional",
-          innerType: {
-            kind: "array",
-            elementType: historyEntryType,
-          },
-        },
-      },
-      input: {
-        name: { text: "input" },
-        type: inputType,
-      },
-      steps: {
-        name: { text: "steps" },
-        type: stepsType,
-      },
-    },
-  };
+  const samplesType = typedArray(
+    typedInterface({
+      name: typedOptional(typedString()),
+      history: typedOptional(
+        typedArray(
+          typedInterface({
+            input: typedAny(inputType),
+            steps: stepsType,
+            output: typedAny(outputType),
+          }),
+        ),
+      ),
+      input: typedAny(inputType),
+      steps: stepsType,
+    }),
+  );
 
   return {
-    kind: "array",
-    elementType: sampleType,
+    type: samplesType.type,
+    schema: templateSchema,
   };
 }
 
