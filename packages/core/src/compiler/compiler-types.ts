@@ -112,6 +112,24 @@ export type TemplateMeta = {
   readonly value: StrictJsonValue;
 };
 
+/** Few-shot example as defined in a template file's <examples> block. */
+export type FewShotExample<Input = unknown, Output = unknown> = {
+  readonly input: Input;
+  readonly output: Output;
+  readonly steps?: readonly FewShotExampleStep[];
+};
+
+export type FewShotExampleStep = {
+  readonly toolCalls: readonly FewShotExampleToolCall[];
+};
+
+export type FewShotExampleToolCall = {
+  readonly tool: string;
+  readonly callId: string;
+  readonly input: unknown;
+  readonly output: unknown;
+};
+
 export type Body<HasValContext extends boolean = false> = ReadonlyArray<
   BodyPiece<HasValContext>
 >;

@@ -8,15 +8,25 @@ import type {
 } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import type {
+  FieldType,
   Schema,
-  SyntheticArray,
+  SchemaType,
   SyntheticField,
-  SyntheticInterface,
-  Type,
+  SyntheticType,
+  Typed,
 } from "../schema/schema-types.js";
 import { isLiteralType } from "../schema/schema-utils.js";
 import { validateSchema } from "../schema/schema-validator.js";
 import { resolveType } from "../schema/type-resolver.js";
+import {
+  typedAny,
+  typedArray,
+  typedInterface,
+  typedOptional,
+  typedSchemaType,
+  typedString,
+  typedStringUnion,
+} from "../schema/typed.js";
 import type {
   DefinitionLink,
   InternalError,
@@ -28,6 +38,9 @@ import { stripQuotes } from "../util/spans.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import { validateTemplateBody } from "./body-validator.js";
 import type {
+  FewShotExample,
+  FewShotExampleStep,
+  FewShotExampleToolCall,
   SchemaOrError,
   Snippet,
   Template,
@@ -289,12 +302,12 @@ function validateTemplateContent(
     );
   }
 
-  const examplesInterface = makeExamplesType(templateSchema, options);
+  const examplesSchema = makeExamplesType(templateSchema, options);
   if (content.examples) {
     const jsonResult = validateJson(
       content.examples,
-      examplesInterface,
-      templateSchema,
+      examplesSchema.type,
+      examplesSchema.schema,
     );
     validationResult.push(jsonResult);
     if (jsonResult.errors.length <= 0) {
@@ -316,10 +329,10 @@ function makeExamplesType(
     readonly isVariantSpecialization: boolean;
     readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
   },
-): SyntheticArray {
+): SchemaType<readonly FewShotExample[]> {
   const { typeDeclarations } = templateSchema;
 
-  let inputType: Type | SyntheticInterface =
+  let inputType: FieldType | SyntheticType =
     typeDeclarations["Input"]!.valueType;
   const outputType = typeDeclarations["Output"]!.valueType;
 
@@ -352,100 +365,38 @@ function makeExamplesType(
     }
   }
 
-  const exampleType: SyntheticInterface = {
-    kind: "interface",
-    fields: {
-      input: {
-        name: {
-          text: "input",
-        },
-        type: inputType,
-      },
-      output: {
-        name: {
-          text: "output",
-        },
-        type: outputType,
-      },
-      steps: {
-        name: {
-          text: "steps",
-        },
-        type: {
-          kind: "optional",
-          innerType: {
-            kind: "array",
-            elementType: {
-              kind: "interface",
-              fields: {
-                toolCalls: {
-                  name: {
-                    text: "toolCalls",
-                  },
-                  type: {
-                    kind: "array",
-                    elementType: {
-                      kind: "interface",
-                      fields: {
-                        tool: {
-                          name: {
-                            text: "tool",
-                          },
-                          type: {
-                            kind: "synthetic-union",
-                            members: {
-                              kind: "strings",
-                              values: Object.fromEntries(
-                                Object.entries(options.namespaceTools).map(
-                                  ([k, tool]) => [
-                                    k,
-                                    {
-                                      kind: "unquoted",
-                                      unquotedName: tool.tool.name,
-                                    },
-                                  ],
-                                ),
-                              ),
-                            },
-                          },
-                        },
-                        callId: {
-                          name: {
-                            text: "callId",
-                          },
-                          type: {
-                            kind: "primitive",
-                            primitive: { text: "string" },
-                          },
-                        },
-                        input: {
-                          name: {
-                            text: "input",
-                          },
-                          type: { kind: "any" },
-                        },
-                        output: {
-                          name: {
-                            text: "output",
-                          },
-                          type: { kind: "any" },
-                        },
+  const examplesType: Typed<readonly FewShotExample[]> = typedArray(
+    typedInterface<FewShotExample>({
+      input: typedAny(inputType),
+      output: typedAny(outputType),
+      steps: typedOptional(
+        typedArray(
+          typedInterface<FewShotExampleStep>({
+            toolCalls: typedArray(
+              typedInterface<FewShotExampleToolCall>({
+                tool: typedStringUnion(
+                  Object.fromEntries(
+                    Object.entries(options.namespaceTools).map(([k, tool]) => [
+                      k,
+                      {
+                        kind: "unquoted",
+                        unquotedName: tool.tool.name,
                       },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  };
+                    ]),
+                  ),
+                ),
+                callId: typedString(),
+                input: typedAny(),
+                output: typedAny(),
+              }),
+            ),
+          }),
+        ),
+      ),
+    }),
+  );
 
-  return {
-    kind: "array",
-    elementType: exampleType,
-  };
+  return typedSchemaType(examplesType, templateSchema);
 }
 
 function verifyVariantFieldNotSet(

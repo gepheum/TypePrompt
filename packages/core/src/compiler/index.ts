@@ -5,6 +5,9 @@ export {
 
 export {
   type CompilationResult,
+  type FewShotExample,
+  type FewShotExampleStep,
+  type FewShotExampleToolCall,
   type Playground,
   type PlaygroundValidationResult,
   type Sample,

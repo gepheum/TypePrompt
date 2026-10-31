@@ -6,6 +6,7 @@ import {
   typedArray,
   typedInterface,
   typedOptional,
+  typedSchemaType,
   typedString,
   typedStringLiteral,
 } from "../schema/typed.js";
@@ -182,8 +183,7 @@ const CONFIG_TYPE: Typed<Config> = typedInterface({
   ),
 });
 
-export const CONFIG: SchemaType<Config> = {
-  type: CONFIG_TYPE.type,
-  schema: EMPTY_SCHEMA,
-  typeIdentity: CONFIG_TYPE.typeIdentity,
-};
+export const CONFIG: SchemaType<Config> = typedSchemaType(
+  CONFIG_TYPE,
+  EMPTY_SCHEMA,
+);

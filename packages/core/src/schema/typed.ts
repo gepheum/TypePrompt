@@ -1,4 +1,29 @@
-import type { Constraint, Typed } from "./schema-types.js";
+import type {
+  Constraint,
+  Schema,
+  SchemaType,
+  SyntheticStringUnionValues,
+  SyntheticType,
+  Type,
+  Typed,
+} from "./schema-types.js";
+
+export function typedAny<T = unknown>(
+  type: Type | SyntheticType = { kind: "any" },
+): Typed<T> {
+  return { type };
+}
+
+export function typedSchemaType<T>(
+  typed: Typed<T>,
+  schema: Schema,
+): SchemaType<T> {
+  return {
+    type: typed.type,
+    schema,
+    typeIdentity: typed.typeIdentity,
+  };
+}
 
 export function typedString(constraint?: Constraint<string>): Typed<string> {
   return {
@@ -17,6 +42,20 @@ export function typedStringLiteral<const S extends string>(value: S): Typed<S> {
     type: {
       kind: "string-literal",
       value,
+    },
+  };
+}
+
+export function typedStringUnion<const S extends string = string>(
+  values: SyntheticStringUnionValues,
+): Typed<S> {
+  return {
+    type: {
+      kind: "synthetic-union",
+      members: {
+        kind: "strings",
+        values,
+      },
     },
   };
 }

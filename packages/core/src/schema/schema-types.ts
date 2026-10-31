@@ -319,27 +319,31 @@ export type CommonField = {
   readonly memberFields: readonly Field[];
 };
 
+export type SyntheticStringUnionMember =
+  | {
+      readonly kind: "string-literal";
+      readonly quotedName: TextSpan;
+    }
+  | {
+      readonly kind: "unquoted";
+      readonly unquotedName:
+        | TextSpan
+        | {
+            readonly text: string;
+            readonly start?: undefined;
+            readonly end?: undefined;
+          };
+    };
+
+export type SyntheticStringUnionValues = {
+  readonly [v: string]: SyntheticStringUnionMember;
+};
+
 export type SyntheticUnionMembers =
   | {
       readonly kind: "strings";
       /** Can be empty. */
-      readonly values: {
-        readonly [v: string]:
-          | {
-              readonly kind: "string-literal";
-              readonly quotedName: TextSpan;
-            }
-          | {
-              readonly kind: "unquoted";
-              readonly unquotedName:
-                | TextSpan
-                | {
-                    readonly text: string;
-                    readonly start?: undefined;
-                    readonly end?: undefined;
-                  };
-            };
-      };
+      readonly values: SyntheticStringUnionValues;
     }
   | {
       readonly kind: "interfaces";
@@ -353,9 +357,9 @@ export type SyntheticUnionMembers =
       readonly discriminants: Discriminants;
     };
 
-/** A {@link SyntheticType} associated with a TypeScript type. */
+/** A `Type` associated with a TypeScript type. */
 export type Typed<T> = {
-  readonly type: SyntheticType;
+  readonly type: Type | SyntheticType;
   readonly typeIdentity?: { readonly type: T };
 };
 

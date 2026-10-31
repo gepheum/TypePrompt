@@ -1,15 +1,11 @@
 import type { Expression } from "../expression/expression-types.js";
-import type {
-  JsonString,
-  StrictJsonArray,
-  StrictJsonObject,
-  StrictJsonValue,
-} from "../json/json-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { toJsonSchema } from "../schema/json-schema-org.js";
 import type { Schema } from "../schema/schema-types.js";
 import type {
   Body,
+  FewShotExample,
   Snippet,
   TemplateContent,
   TemplateContents,
@@ -153,56 +149,27 @@ function makeExamples(
 ): readonly Spec.FewShotExample[] {
   if (!input) return [];
 
-  const makeToolCall = (input: StrictJsonValue): Spec.ToolCallExample => {
-    const { entries } = input as StrictJsonObject;
-    const callIdEntry = entries["callId"]!;
-    const toolEntry = entries["tool"]!;
-    const inputEntry = entries["input"]!;
-    const outputEntry = entries["output"]!;
-    const toolName = (toolEntry.value as JsonString).value;
-    const toolId = context.namespace.concat(":", toolName);
-    return {
-      callId: (callIdEntry.value as JsonString).value,
-      toolId,
-      toolName,
-      input: unwrapJsonValue(inputEntry.value),
-      output: unwrapJsonValue(outputEntry.value),
-    };
-  };
-
-  const makeStep = (
-    input: StrictJsonValue,
-  ): {
-    readonly toolCalls: readonly Spec.ToolCallExample[];
-  } => {
-    const { entries } = input as StrictJsonObject;
-    const toolCallsEntry = entries["toolCalls"];
-    return {
-      toolCalls: (toolCallsEntry?.value as StrictJsonArray).elements.map(
-        makeToolCall,
-      ),
-    };
-  };
-
-  const makeExample = (input: StrictJsonValue): Spec.FewShotExample => {
-    const { entries } = input as StrictJsonObject;
-    const inputEntry = entries["input"]!;
-    const outputEntry = entries["output"]!;
-    const steps = entries["steps"];
-    const inputValue = unwrapJsonValue(inputEntry.value);
+  const examples = unwrapJsonValue(input) as readonly FewShotExample[];
+  return examples.map((example) => {
+    const inputValue = example.input;
     if (context.variantCase) {
       (inputValue as Record<string, unknown>).variant = context.variantCase;
     }
     return {
       input: inputValue,
-      output: unwrapJsonValue(outputEntry.value),
-      steps: steps
-        ? (steps.value as StrictJsonArray).elements.map(makeStep)
-        : [],
+      output: example.output,
+      steps:
+        example.steps?.map((step) => ({
+          toolCalls: step.toolCalls.map((tc) => ({
+            callId: tc.callId,
+            toolId: context.namespace.concat(":", tc.tool),
+            toolName: tc.tool,
+            input: tc.input,
+            output: tc.output,
+          })),
+        })) ?? [],
     };
-  };
-
-  return (input as StrictJsonArray).elements.map(makeExample);
+  });
 }
 
 type ValContext<HasValContext extends boolean> = HasValContext extends true
