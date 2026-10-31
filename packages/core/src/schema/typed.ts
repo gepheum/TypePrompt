@@ -1,7 +1,5 @@
 import type {
   Constraint,
-  Schema,
-  SchemaType,
   SyntheticStringUnionValues,
   SyntheticType,
   Type,
@@ -12,17 +10,6 @@ export function typedAny<T = unknown>(
   type: Type | SyntheticType = { kind: "any" },
 ): Typed<T> {
   return { type };
-}
-
-export function typedSchemaType<T>(
-  typed: Typed<T>,
-  schema: Schema,
-): SchemaType<T> {
-  return {
-    type: typed.type,
-    schema,
-    typeIdentity: typed.typeIdentity,
-  };
 }
 
 export function typedString(constraint?: Constraint<string>): Typed<string> {

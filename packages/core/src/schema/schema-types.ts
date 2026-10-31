@@ -363,8 +363,7 @@ export type Typed<T> = {
   readonly typeIdentity?: { readonly type: T };
 };
 
-export type SchemaType<T = unknown> = {
+export type SchemaType = {
   readonly type: Type | SyntheticType;
   readonly schema: Schema;
-  readonly typeIdentity?: { readonly type: T };
 };

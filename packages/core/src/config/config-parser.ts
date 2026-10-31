@@ -6,7 +6,6 @@ import {
   typedArray,
   typedInterface,
   typedOptional,
-  typedSchemaType,
   typedString,
   typedStringLiteral,
 } from "../schema/typed.js";
@@ -77,7 +76,7 @@ export function parseConfigYaml(
   if (parseResult.kind === "error") {
     return parseResult;
   }
-  const config = unwrapJsonValue(parseResult, CONFIG);
+  const config = unwrapJsonValue<Config>(parseResult);
   return { kind: "success", config };
 }
 
@@ -183,7 +182,7 @@ const CONFIG_TYPE: Typed<Config> = typedInterface({
   ),
 });
 
-export const CONFIG: SchemaType<Config> = typedSchemaType(
-  CONFIG_TYPE,
-  EMPTY_SCHEMA,
-);
+export const CONFIG: SchemaType = {
+  type: CONFIG_TYPE.type,
+  schema: EMPTY_SCHEMA,
+};

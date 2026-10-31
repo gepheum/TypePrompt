@@ -23,7 +23,6 @@ import {
   typedArray,
   typedInterface,
   typedOptional,
-  typedSchemaType,
   typedString,
   typedStringUnion,
 } from "../schema/typed.js";
@@ -329,7 +328,7 @@ function makeExamplesType(
     readonly isVariantSpecialization: boolean;
     readonly namespaceTools: { readonly [name: string]: ToolValidationResult };
   },
-): SchemaType<readonly FewShotExample[]> {
+): SchemaType {
   const { typeDeclarations } = templateSchema;
 
   let inputType: FieldType | SyntheticType =
@@ -396,7 +395,10 @@ function makeExamplesType(
     }),
   );
 
-  return typedSchemaType(examplesType, templateSchema);
+  return {
+    type: examplesType.type,
+    schema: templateSchema,
+  };
 }
 
 function verifyVariantFieldNotSet(

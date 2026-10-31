@@ -4,12 +4,7 @@ import type { StrictJsonValue } from "./json-types.js";
  * Unwraps a {@link StrictJsonValue} into a regular JavaScript value which can be
  * passed to {@link JSON.stringify}.
  */
-export function unwrapJsonValue<T>(
-  input: StrictJsonValue,
-  _typed?: {
-    readonly typeIdentity?: { readonly type: T };
-  },
-): T {
+export function unwrapJsonValue<T = unknown>(input: StrictJsonValue): T {
   const unwrap = (input: StrictJsonValue): unknown => {
     switch (input.kind) {
       case "string":
