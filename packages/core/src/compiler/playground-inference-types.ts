@@ -4,6 +4,7 @@ import type { PlaygroundModel } from "./playground-model-types.js";
  * Result of running inference across all samples in a `<samples>` element.
  */
 export type PlaygroundInferenceSet = {
+  readonly kind: "playground-inference-set";
   readonly model: PlaygroundModel;
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
