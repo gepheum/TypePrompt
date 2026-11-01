@@ -2,11 +2,7 @@ import { compile, type ValidCompilationResult } from "@typeprompt/core";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, it } from "mocha";
 import assert from "node:assert/strict";
-import {
-  collectTemplateFilesForTemplate,
-  resolveLanguageModel,
-  runPlaygroundInferences,
-} from "./inference-runner.js";
+import { runPlaygroundInferences } from "./inference-runner.js";
 
 function compileValid(
   files: ReadonlyArray<{ readonly path: string; readonly content: string }>,
@@ -25,84 +21,68 @@ function compileValid(
 }
 
 describe("inference-runner", () => {
-  describe("resolveLanguageModel", () => {
-    it("uses openaiApiKey when model is openai/* and openaiApiKey is present", () => {
-      const model = resolveLanguageModel("openai/gpt-4o", {
-        openaiApiKey: "sk-openai-test",
-        vercelGatewayApiKey: "vg-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "gpt-4o");
-      assert.ok((model as { provider: string }).provider.startsWith("openai"));
-    });
+  describe("API key resolution", () => {
+    it("throws when model is openai/* and neither openaiApiKey nor vercelGatewayApiKey is provided", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/t.tp",
+          content: `<template name="T">
+  <schema>
+    type Input = string;
+    type Output = string;
+  </schema>
+  <system>Sys</system>
+  <user><insert val="input"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/t.play.tp",
+          content: `<playground for="T">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - input: "hi"
+  </samples>
+</playground>`,
+        },
+      ]);
 
-    it("falls back to vercelGatewayApiKey when model is openai/* and openaiApiKey is absent", () => {
-      const model = resolveLanguageModel("openai/gpt-4o", {
-        vercelGatewayApiKey: "vg-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "openai/gpt-4o");
-      assert.ok((model as { provider: string }).provider.includes("gateway"));
-    });
-
-    it("throws when model is openai/* and neither openaiApiKey nor vercelGatewayApiKey is provided", () => {
-      assert.throws(
-        () => resolveLanguageModel("openai/gpt-4o", {}),
+      await assert.rejects(
+        () => runPlaygroundInferences(compilation, "Main:T", {}),
         /Missing API key for model 'openai\/gpt-4o'/,
       );
     });
 
-    it("uses anthropicApiKey when model is anthropic/* and anthropicApiKey is present", () => {
-      const model = resolveLanguageModel("anthropic/claude-sonnet-4.5", {
-        anthropicApiKey: "sk-ant-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "claude-sonnet-4.5");
-      assert.ok(
-        (model as { provider: string }).provider.startsWith("anthropic"),
-      );
-    });
+    it("throws when model is an unsupported direct provider and vercelGatewayApiKey is missing", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/t.tp",
+          content: `<template name="T">
+  <schema>
+    type Input = string;
+    type Output = string;
+  </schema>
+  <system>Sys</system>
+  <user><insert val="input"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/t.play.tp",
+          content: `<playground for="T">
+  <model>
+    model: deepseek/deepseek-r1
+  </model>
+  <samples>
+    - input: "hi"
+  </samples>
+</playground>`,
+        },
+      ]);
 
-    it("uses googleApiKey when model is google/* and googleApiKey is present", () => {
-      const model = resolveLanguageModel("google/gemini-2.5-pro", {
-        googleApiKey: "goog-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "gemini-2.5-pro");
-      assert.ok((model as { provider: string }).provider.startsWith("google"));
-    });
-
-    it("uses xaiApiKey when model is spacexai/* and xaiApiKey is present", () => {
-      const model = resolveLanguageModel("spacexai/grok-4.5", {
-        xaiApiKey: "xai-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "grok-4.5");
-      assert.ok((model as { provider: string }).provider.startsWith("xai"));
-    });
-
-    it("uses mistralApiKey when model is mistral/* and mistralApiKey is present", () => {
-      const model = resolveLanguageModel("mistral/mistral-large-4", {
-        mistralApiKey: "mistral-test",
-      });
-      assert.equal(typeof model, "object");
-      assert.equal((model as { modelId: string }).modelId, "mistral-large-4");
-      assert.ok((model as { provider: string }).provider.startsWith("mistral"));
-    });
-
-    it("always uses vercelGatewayApiKey for unsupported direct providers and errors if missing", () => {
-      const model = resolveLanguageModel("deepseek/deepseek-r1", {
-        openaiApiKey: "sk-openai-test",
-        vercelGatewayApiKey: "vg-test",
-      });
-      assert.equal(
-        (model as { modelId: string }).modelId,
-        "deepseek/deepseek-r1",
-      );
-
-      assert.throws(
+      await assert.rejects(
         () =>
-          resolveLanguageModel("deepseek/deepseek-r1", {
+          runPlaygroundInferences(compilation, "Main:T", {
             openaiApiKey: "sk-openai-test",
           }),
         /Missing 'vercelGatewayApiKey' for model 'deepseek\/deepseek-r1'/,
@@ -110,8 +90,8 @@ describe("inference-runner", () => {
     });
   });
 
-  describe("collectTemplateFilesForTemplate", () => {
-    it("includes only the template, its tools, namespace, meta, and playground files", () => {
+  describe("templateFiles filtering", () => {
+    it("includes only the template, its tools, namespace, meta, and playground files", async () => {
       const compilation = compileValid([
         {
           path: "prompts/_meta.tp",
@@ -187,11 +167,33 @@ describe("inference-runner", () => {
         },
       ]);
 
-      const files = collectTemplateFilesForTemplate(
+      const mockModel = new MockLanguageModelV4({
+        doGenerate: async () => ({
+          content: [{ type: "text", text: JSON.stringify({ approved: true }) }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: {
+              total: 5,
+              noCache: 5,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: 2,
+              text: 2,
+              reasoning: undefined,
+            },
+          },
+          warnings: [],
+        }),
+      });
+
+      const inferenceSet = await runPlaygroundInferences(
         compilation,
         "Billing:Refund",
+        { languageModel: mockModel },
       );
-      const paths = Object.keys(files).sort();
+      const paths = Object.keys(inferenceSet.templateFiles).sort();
       assert.deepEqual(paths, [
         "prompts/_meta.tp",
         "prompts/billing/_namespace.tp",
@@ -299,6 +301,10 @@ describe("inference-runner", () => {
         { languageModel: mockModel },
       );
 
+      assert.match(
+        inferenceSet.id,
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
       assert.equal(inferenceSet.templateId, "Main:Assist");
       assert.equal(inferenceSet.model.model, "openai/gpt-4o");
       assert.equal(inferenceSet.model.temperature, 0.2);
@@ -632,6 +638,109 @@ describe("inference-runner", () => {
         inferenceSet.inferences.map((inf) => inf.sampleIndex),
         [0, 1, 2, 3, 4],
       );
+    });
+
+    it("normalizes interface field order to match schema declaration order when rendering json, csv, and toon", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/report.tp",
+          content: `<template name="Report">
+  <schema>
+    type Row = {
+      firstCol: string;
+      secondCol: integer;
+      thirdCol: string;
+    };
+    type Event =
+      | { kind: "click"; x: integer; y: integer }
+      | { kind: "keypress"; key: string; code: integer };
+    type Input = {
+      rows: Row[];
+      event: Event;
+    };
+    type Output = string;
+  </schema>
+  <system>Sys</system>
+  <user>CSV:
+<insert val="input.rows" format="csv"/>
+JSON:
+<insert val="input.event" format="json"/>
+TOON:
+<insert val="input.rows" format="toon"/>
+</user>
+</template>`,
+        },
+        {
+          path: "prompts/report.play.tp",
+          content: `<playground for="Report">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - name: "out-of-order-yaml"
+      input:
+        event:
+          y: 20
+          x: 10
+          kind: "click"
+        rows:
+          - thirdCol: "c1"
+            firstCol: "a1"
+            secondCol: 1
+          - secondCol: 2
+            thirdCol: "c2"
+            firstCol: "a2"
+  </samples>
+</playground>`,
+        },
+      ]);
+
+      const mockModel = new MockLanguageModelV4({
+        doGenerate: async () => ({
+          content: [{ type: "text", text: "done" }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: {
+              total: 5,
+              noCache: 5,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: 2,
+              text: 2,
+              reasoning: undefined,
+            },
+          },
+          warnings: [],
+        }),
+      });
+
+      const inferenceSet = await runPlaygroundInferences(
+        compilation,
+        "Main:Report",
+        { languageModel: mockModel },
+      );
+
+      const userMsg = inferenceSet.inferences[0]!.request.messages[0]!;
+      assert.equal(userMsg.role, "user");
+      if (userMsg.role === "user") {
+        // Verify CSV header and row columns follow schema order (firstCol, secondCol, thirdCol)
+        assert.match(
+          userMsg.rendered,
+          /CSV:\nfirstCol,secondCol,thirdCol\na1,1,c1\na2,2,c2/,
+        );
+        // Verify JSON keys follow discriminated union member schema order (kind, x, y)
+        assert.match(
+          userMsg.rendered,
+          /JSON:\n\{\n {2}"kind": "click",\n {2}"x": 10,\n {2}"y": 20\n\}/,
+        );
+        // Verify normalized input object keys follow schema order (rows, event)
+        assert.deepEqual(
+          Object.keys(userMsg.input as Record<string, unknown>),
+          ["rows", "event"],
+        );
+      }
     });
   });
 });

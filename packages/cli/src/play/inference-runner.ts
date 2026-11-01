@@ -8,8 +8,10 @@ import {
   DEFAULT_NAMESPACE,
   makeTemplates,
   parseJson,
+  resolveType,
   unwrapJsonValue,
   validateJson,
+  type FieldType,
   type PlaygroundInference,
   type PlaygroundInferenceRequest,
   type PlaygroundInferenceResult,
@@ -21,6 +23,8 @@ import {
   type PlaygroundTokenUsage,
   type PlaygroundTool,
   type Sample,
+  type Schema,
+  type SchemaType,
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
@@ -105,6 +109,7 @@ export async function runPlaygroundInferences(
         sample,
         specTemplate,
         templatesSpec.tools,
+        validTemplate,
       );
       const result = await executeSampleInference(
         request,
@@ -123,6 +128,7 @@ export async function runPlaygroundInferences(
 
   return {
     kind: "playground-inference-set",
+    id: crypto.randomUUID(),
     model: validatedPlayground.model,
     templateId,
     isoTimestamp,
@@ -158,7 +164,7 @@ async function mapWithConcurrency<T, R>(
  *   models, uses the provider's SDK key if present, falling back to `vercelGatewayApiKey`.
  * - For all other providers, requires `vercelGatewayApiKey`.
  */
-export function resolveLanguageModel(
+function resolveLanguageModel(
   modelId: PlaygroundModelId,
   options: RunPlaygroundInferencesOptions,
 ): LanguageModel {
@@ -249,7 +255,7 @@ export function resolveLanguageModel(
  * Collects only the `.tp` files relevant to `templateId`:
  * the `<template>`, its `<tool>` files, `<namespace>`, `<meta>`, and `<playground>` file.
  */
-export function collectTemplateFilesForTemplate(
+function collectTemplateFilesForTemplate(
   compilationResult: ValidCompilationResult,
   templateId: string,
 ): { readonly [path: string]: string } {
@@ -302,18 +308,50 @@ export function collectTemplateFilesForTemplate(
 /**
  * Renders a {@link Sample} against `specTemplate` into a {@link PlaygroundInferenceRequest}.
  */
-export function buildPlaygroundInferenceRequest(
+function buildPlaygroundInferenceRequest(
   sample: Sample,
   specTemplate: Spec.Template,
   specTools: { readonly [id: string]: Spec.Tool },
+  validTemplate: ValidTemplate,
 ): PlaygroundInferenceRequest {
+  const inputSchemaType: SchemaType = {
+    type: validTemplate.schema.typeDeclarations["Input"]!.valueType,
+    schema: validTemplate.schema,
+  };
+  const outputSchemaType: SchemaType = {
+    type: validTemplate.schema.typeDeclarations["Output"]!.valueType,
+    schema: validTemplate.schema,
+  };
+  const normalizeToolInput = (toolName: string, value: unknown): unknown => {
+    const toolEntry = validTemplate.tools[toolName];
+    if (!toolEntry) return value;
+    const { schema } = toolEntry.tool;
+    return normalizeSchemaValue(value, {
+      type: schema.typeDeclarations["Input"]!.valueType,
+      schema,
+    });
+  };
+  const normalizeToolOutput = (toolName: string, value: unknown): unknown => {
+    const toolEntry = validTemplate.tools[toolName];
+    if (!toolEntry) return value;
+    const { schema } = toolEntry.tool;
+    return normalizeSchemaValue(value, {
+      type: schema.typeDeclarations["Output"]!.valueType,
+      schema,
+    });
+  };
+
+  const normalizedSampleInput = normalizeSchemaValue(
+    sample.input,
+    inputSchemaType,
+  );
   const mainContent = resolveTemplateContent(
     specTemplate.contents,
-    sample.input,
+    normalizedSampleInput,
   );
   const systemMessage = renderBody(
     mainContent.system,
-    sample.input,
+    normalizedSampleInput,
     specTemplate.snippets,
   );
 
@@ -347,16 +385,20 @@ export function buildPlaygroundInferenceRequest(
 
   // 1. Few-shot examples
   for (const example of mainContent.examples) {
+    const normalizedExampleInput = normalizeSchemaValue(
+      example.input,
+      inputSchemaType,
+    );
     const exampleContent = resolveTemplateContent(
       specTemplate.contents,
-      example.input,
+      normalizedExampleInput,
     );
     messages.push({
       role: "user",
-      input: example.input,
+      input: normalizedExampleInput,
       rendered: renderBody(
         exampleContent.user,
-        example.input,
+        normalizedExampleInput,
         specTemplate.snippets,
       ),
     });
@@ -367,7 +409,7 @@ export function buildPlaygroundInferenceRequest(
         toolCalls: step.toolCalls.map((tc) => ({
           callId: tc.callId,
           toolName: tc.toolName,
-          input: tc.input,
+          input: normalizeToolInput(tc.toolName, tc.input),
         })),
       });
       messages.push({
@@ -375,29 +417,36 @@ export function buildPlaygroundInferenceRequest(
         toolResults: step.toolCalls.map((tc) => ({
           callId: tc.callId,
           toolName: tc.toolName,
-          output: tc.output,
+          output:
+            tc.output !== undefined && tc.output !== null
+              ? normalizeToolOutput(tc.toolName, tc.output)
+              : tc.output,
         })),
       });
     }
 
     messages.push({
       role: "assistant",
-      output: example.output,
+      output: normalizeSchemaValue(example.output, outputSchemaType),
     });
   }
 
   // 2. Prior conversation history turns
   for (const historyEntry of sample.history ?? []) {
+    const normalizedHistoryInput = normalizeSchemaValue(
+      historyEntry.input,
+      inputSchemaType,
+    );
     const historyContent = resolveTemplateContent(
       specTemplate.contents,
-      historyEntry.input,
+      normalizedHistoryInput,
     );
     messages.push({
       role: "user",
-      input: historyEntry.input,
+      input: normalizedHistoryInput,
       rendered: renderBody(
         historyContent.user,
-        historyEntry.input,
+        normalizedHistoryInput,
         specTemplate.snippets,
       ),
     });
@@ -408,7 +457,10 @@ export function buildPlaygroundInferenceRequest(
         toolCalls: step.toolCalls.map((tc) => ({
           callId: tc.callId.text,
           toolName: tc.toolName.text,
-          input: unwrapJsonValue(tc.input),
+          input: normalizeToolInput(
+            tc.toolName.text,
+            unwrapJsonValue(tc.input),
+          ),
         })),
       });
       messages.push({
@@ -416,22 +468,32 @@ export function buildPlaygroundInferenceRequest(
         toolResults: step.toolCalls.map((tc) => ({
           callId: tc.callId.text,
           toolName: tc.toolName.text,
-          output: tc.output !== undefined ? unwrapJsonValue(tc.output) : null,
+          output:
+            tc.output !== undefined
+              ? normalizeToolOutput(
+                  tc.toolName.text,
+                  unwrapJsonValue(tc.output),
+                )
+              : null,
         })),
       });
     }
 
     messages.push({
       role: "assistant",
-      output: historyEntry.output,
+      output: normalizeSchemaValue(historyEntry.output, outputSchemaType),
     });
   }
 
   // 3. Current turn user message
   messages.push({
     role: "user",
-    input: sample.input,
-    rendered: renderBody(mainContent.user, sample.input, specTemplate.snippets),
+    input: normalizedSampleInput,
+    rendered: renderBody(
+      mainContent.user,
+      normalizedSampleInput,
+      specTemplate.snippets,
+    ),
   });
 
   // 4. Current turn intermediate steps
@@ -441,7 +503,7 @@ export function buildPlaygroundInferenceRequest(
       toolCalls: step.toolCalls.map((tc) => ({
         callId: tc.callId.text,
         toolName: tc.toolName.text,
-        input: unwrapJsonValue(tc.input),
+        input: normalizeToolInput(tc.toolName.text, unwrapJsonValue(tc.input)),
       })),
     });
     messages.push({
@@ -449,7 +511,10 @@ export function buildPlaygroundInferenceRequest(
       toolResults: step.toolCalls.map((tc) => ({
         callId: tc.callId.text,
         toolName: tc.toolName.text,
-        output: tc.output !== undefined ? unwrapJsonValue(tc.output) : null,
+        output:
+          tc.output !== undefined
+            ? normalizeToolOutput(tc.toolName.text, unwrapJsonValue(tc.output))
+            : null,
       })),
     });
   }
@@ -540,7 +605,7 @@ async function executeSampleInference(
 
   const latencyMs = Math.round(performance.now() - startTime);
   const telemetry = extractTelemetry(latencyMs, genResult.usage);
-  const reasoning = genResult.reasoningText || undefined;
+  const reasoning = genResult.finalStep.reasoningText || undefined;
 
   if (genResult.toolCalls && genResult.toolCalls.length > 0) {
     return {
@@ -633,11 +698,117 @@ async function executeSampleInference(
     response: {
       kind: "output",
       rawText,
-      output: unwrapJsonValue(parsedAst),
+      output: normalizeSchemaValue(unwrapJsonValue(parsedAst), {
+        type: outputType,
+        schema: validTemplate.schema,
+      }),
     },
     ...(reasoning ? { reasoning } : {}),
     telemetry,
   };
+}
+
+/**
+ * Recursively reorders object properties to match the field declaration order
+ * in `schemaType` (for interfaces, nested interfaces, arrays, records, and
+ * discriminated unions).
+ */
+function normalizeSchemaValue(
+  value: unknown,
+  schemaType: {
+    readonly type: FieldType | SchemaType["type"];
+    readonly schema: Schema;
+  },
+): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  const resolved = resolveType(schemaType.type, schemaType.schema);
+  switch (resolved.kind) {
+    case "any":
+    case "primitive":
+    case "string-literal":
+    case "boolean-literal": {
+      return value;
+    }
+    case "optional": {
+      return normalizeSchemaValue(value, {
+        type: resolved.innerType,
+        schema: schemaType.schema,
+      });
+    }
+    case "array": {
+      if (!Array.isArray(value)) {
+        return value;
+      }
+      return value.map((item) =>
+        normalizeSchemaValue(item, {
+          type: resolved.elementType,
+          schema: schemaType.schema,
+        }),
+      );
+    }
+    case "record": {
+      if (typeof value !== "object") {
+        return value;
+      }
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+          k,
+          normalizeSchemaValue(v, {
+            type: resolved.valueType,
+            schema: schemaType.schema,
+          }),
+        ]),
+      );
+    }
+    case "interface": {
+      if (typeof value !== "object") {
+        return value;
+      }
+      const obj = value as Record<string, unknown>;
+      const result: Record<string, unknown> = {};
+      for (const field of Object.values(resolved.fields)) {
+        const fieldName = field.name.text;
+        if (
+          Object.prototype.hasOwnProperty.call(obj, fieldName) &&
+          obj[fieldName] !== undefined
+        ) {
+          result[fieldName] = normalizeSchemaValue(obj[fieldName], {
+            type: field.type,
+            schema: schemaType.schema,
+          });
+        }
+      }
+      return result;
+    }
+    case "union":
+    case "synthetic-union": {
+      const members =
+        resolved.kind === "union"
+          ? schemaType.schema.unionToMembers.get(resolved)!
+          : resolved.members;
+      if (members.kind === "strings") {
+        return value;
+      }
+      if (typeof value !== "object") {
+        return value;
+      }
+      const obj = value as Record<string, unknown>;
+      const discriminant = obj[members.discriminator];
+      if (discriminant === undefined || discriminant === null) {
+        return value;
+      }
+      const member = members.members[String(discriminant)];
+      if (!member) {
+        return value;
+      }
+      return normalizeSchemaValue(value, {
+        type: member.resolved,
+        schema: schemaType.schema,
+      });
+    }
+  }
 }
 
 function toModelMessages(

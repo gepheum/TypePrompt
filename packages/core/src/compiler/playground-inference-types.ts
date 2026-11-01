@@ -5,6 +5,8 @@ import type { PlaygroundModel } from "./playground-model-types.js";
  */
 export type PlaygroundInferenceSet = {
   readonly kind: "playground-inference-set";
+  /** Unique identifier (UUID) for this inference set. */
+  readonly id: string;
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
