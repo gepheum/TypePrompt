@@ -31,6 +31,14 @@ export type PlaygroundInference = {
 export type PlaygroundInferenceRequest = {
   readonly systemMessage: string;
   readonly tools: readonly PlaygroundTool[];
+  readonly outputFormat:
+    | {
+        readonly kind: "json";
+        readonly jsonSchema: { readonly [k: string]: unknown };
+      }
+    | {
+        readonly kind: "text";
+      };
   /**
    * Conversation history leading up to the model call (few-shot examples,
    * prior `history` turns, current rendered user message, and intermediate `steps`).
@@ -45,7 +53,7 @@ export type PlaygroundTool = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly inputJsonSchema: unknown;
+  readonly inputJsonSchema: { readonly [k: string]: unknown };
 };
 
 /**
