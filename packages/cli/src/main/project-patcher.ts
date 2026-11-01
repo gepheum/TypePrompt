@@ -9,9 +9,9 @@ import { parseConfigYaml } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
+import { isDirectory, REAL_FILE_SYSTEM } from "../util/io.js";
 import { renderErrors } from "./error-renderer.js";
 import { ExitError } from "./exit-error.js";
-import { isDirectory, REAL_FILE_SYSTEM } from "../util/io.js";
 import {
   checkNoConfigInDirectory,
   readConfigInDirectory,

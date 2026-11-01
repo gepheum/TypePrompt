@@ -246,9 +246,12 @@ describe("parseConfigYaml", () => {
   });
 
   it("fails when play.envFile is empty", () => {
-    const yaml = ["include:", "  - prompts/*.tp", "play:", '  envFile: ""'].join(
-      "\n",
-    );
+    const yaml = [
+      "include:",
+      "  - prompts/*.tp",
+      "play:",
+      '  envFile: ""',
+    ].join("\n");
     const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",

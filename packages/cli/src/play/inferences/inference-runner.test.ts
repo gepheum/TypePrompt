@@ -4,6 +4,10 @@ import { describe, it } from "mocha";
 import assert from "node:assert/strict";
 import { runPlaygroundInferences } from "./inference-runner.js";
 
+type MockDoGenerateResult = Awaited<
+  ReturnType<MockLanguageModelV4["doGenerate"]>
+>;
+
 function compileValid(
   files: ReadonlyArray<{ readonly path: string; readonly content: string }>,
 ): ValidCompilationResult {
@@ -83,9 +87,9 @@ describe("inference-runner", () => {
       await assert.rejects(
         () =>
           runPlaygroundInferences(compilation, "Main:T", {
-            openaiApiKey: "sk-openai-test",
+            apiKeys: { openai: "sk-openai-test" },
           }),
-        /Missing 'vercelGatewayApiKey' for model 'deepseek\/deepseek-r1'/,
+        /Missing 'vercelGateway' API key for model 'deepseek\/deepseek-r1'/,
       );
     });
   });
@@ -168,7 +172,7 @@ describe("inference-runner", () => {
       ]);
 
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => ({
+        doGenerate: async (): Promise<MockDoGenerateResult> => ({
           content: [{ type: "text", text: JSON.stringify({ approved: true }) }],
           finishReason: { unified: "stop", raw: undefined },
           usage: {
@@ -269,7 +273,7 @@ describe("inference-runner", () => {
       ]);
 
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => ({
+        doGenerate: async (): Promise<MockDoGenerateResult> => ({
           content: [
             { type: "reasoning", text: "Checking tool result for London." },
             {
@@ -394,7 +398,7 @@ describe("inference-runner", () => {
       ]);
 
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => ({
+        doGenerate: async (): Promise<MockDoGenerateResult> => ({
           content: [
             {
               type: "tool-call",
@@ -479,7 +483,7 @@ describe("inference-runner", () => {
 
       let callCount = 0;
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => {
+        doGenerate: async (): Promise<MockDoGenerateResult> => {
           callCount++;
           if (callCount === 1) {
             return {
@@ -594,7 +598,7 @@ describe("inference-runner", () => {
       let maxObservedActive = 0;
 
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => {
+        doGenerate: async (): Promise<MockDoGenerateResult> => {
           active++;
           maxObservedActive = Math.max(maxObservedActive, active);
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -696,7 +700,7 @@ TOON:
       ]);
 
       const mockModel = new MockLanguageModelV4({
-        doGenerate: async () => ({
+        doGenerate: async (): Promise<MockDoGenerateResult> => ({
           content: [{ type: "text", text: "done" }],
           finishReason: { unified: "stop", raw: undefined },
           usage: {

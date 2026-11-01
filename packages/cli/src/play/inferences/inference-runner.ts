@@ -41,14 +41,10 @@ import {
   type ToolSet,
 } from "ai";
 import YAML from "yaml";
+import type { ApiKeyProvider, ApiKeys } from "./api-key-reader.js";
 
 export type RunPlaygroundInferencesOptions = {
-  readonly openaiApiKey?: string;
-  readonly anthropicApiKey?: string;
-  readonly googleApiKey?: string;
-  readonly xaiApiKey?: string;
-  readonly mistralApiKey?: string;
-  readonly vercelGatewayApiKey?: string;
+  readonly apiKeys?: ApiKeys;
   /**
    * Maximum number of sample inferences to run in parallel.
    * @default 5
@@ -157,12 +153,37 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+type DirectProvider = Exclude<ApiKeyProvider, "vercelGateway">;
+
+const DIRECT_PROVIDERS: {
+  readonly [P in DirectProvider]: (options: {
+    apiKey: string;
+  }) => (modelId: string) => LanguageModel;
+} = {
+  openai: createOpenAI,
+  anthropic: createAnthropic,
+  google: createGoogleGenerativeAI,
+  xai: createXai,
+  mistral: createMistral,
+};
+
+const MODEL_PREFIX_TO_PROVIDER: {
+  readonly [prefix: string]: DirectProvider;
+} = {
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google",
+  xai: "xai",
+  spacexai: "xai",
+  mistral: "mistral",
+};
+
 /**
  * Resolves a Vercel AI SDK {@link LanguageModel} from a {@link PlaygroundModelId}
  * and the configured API keys:
  * - For `openai/*`, `anthropic/*`, `google/*`, `xai/*` (`spacexai/*`), or `mistral/*`
- *   models, uses the provider's SDK key if present, falling back to `vercelGatewayApiKey`.
- * - For all other providers, requires `vercelGatewayApiKey`.
+ *   models, uses the provider's SDK key if present, falling back to `vercelGateway`.
+ * - For all other providers, requires `vercelGateway`.
  */
 function resolveLanguageModel(
   modelId: PlaygroundModelId,
@@ -173,82 +194,32 @@ function resolveLanguageModel(
   }
 
   const slashIndex = modelId.indexOf("/");
-  const provider = slashIndex >= 0 ? modelId.slice(0, slashIndex) : "";
+  const prefix = slashIndex >= 0 ? modelId.slice(0, slashIndex) : "";
   const providerModelName =
     slashIndex >= 0 ? modelId.slice(slashIndex + 1) : modelId;
 
-  switch (provider) {
-    case "openai": {
-      if (options.openaiApiKey) {
-        return createOpenAI({ apiKey: options.openaiApiKey })(
-          providerModelName,
-        );
-      }
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(
-        `Missing API key for model '${modelId}': provide 'openaiApiKey' or 'vercelGatewayApiKey'`,
+  const { apiKeys } = options;
+  const directProvider = MODEL_PREFIX_TO_PROVIDER[prefix];
+
+  if (directProvider !== undefined) {
+    const providerKey = apiKeys?.[directProvider];
+    if (providerKey) {
+      return DIRECT_PROVIDERS[directProvider]({ apiKey: providerKey })(
+        providerModelName,
       );
     }
-    case "anthropic": {
-      if (options.anthropicApiKey) {
-        return createAnthropic({ apiKey: options.anthropicApiKey })(
-          providerModelName,
-        );
-      }
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(
-        `Missing API key for model '${modelId}': provide 'anthropicApiKey' or 'vercelGatewayApiKey'`,
-      );
+    if (apiKeys?.vercelGateway) {
+      return createGateway({ apiKey: apiKeys.vercelGateway })(modelId);
     }
-    case "google": {
-      if (options.googleApiKey) {
-        return createGoogleGenerativeAI({ apiKey: options.googleApiKey })(
-          providerModelName,
-        );
-      }
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(
-        `Missing API key for model '${modelId}': provide 'googleApiKey' or 'vercelGatewayApiKey'`,
-      );
-    }
-    case "xai":
-    case "spacexai": {
-      if (options.xaiApiKey) {
-        return createXai({ apiKey: options.xaiApiKey })(providerModelName);
-      }
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(
-        `Missing API key for model '${modelId}': provide 'xaiApiKey' or 'vercelGatewayApiKey'`,
-      );
-    }
-    case "mistral": {
-      if (options.mistralApiKey) {
-        return createMistral({ apiKey: options.mistralApiKey })(
-          providerModelName,
-        );
-      }
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(
-        `Missing API key for model '${modelId}': provide 'mistralApiKey' or 'vercelGatewayApiKey'`,
-      );
-    }
-    default: {
-      if (options.vercelGatewayApiKey) {
-        return createGateway({ apiKey: options.vercelGatewayApiKey })(modelId);
-      }
-      throw new Error(`Missing 'vercelGatewayApiKey' for model '${modelId}'`);
-    }
+    throw new Error(
+      `Missing API key for model '${modelId}': provide '${directProvider}' or 'vercelGateway' API key`,
+    );
   }
+
+  if (apiKeys?.vercelGateway) {
+    return createGateway({ apiKey: apiKeys.vercelGateway })(modelId);
+  }
+  throw new Error(`Missing 'vercelGateway' API key for model '${modelId}'`);
 }
 
 /**
@@ -559,13 +530,21 @@ async function executeSampleInference(
             type: "json" as const,
             schema: request.outputFormat.jsonSchema,
           }),
-          async parseCompleteOutput({ text }: { text: string }) {
+          async parseCompleteOutput({
+            text,
+          }: {
+            text: string;
+          }): Promise<string> {
             return text;
           },
-          async parsePartialOutput({ text }: { text: string }) {
+          async parsePartialOutput({
+            text,
+          }: {
+            text: string;
+          }): Promise<{ partial: string }> {
             return { partial: text };
           },
-          createElementStreamTransform() {
+          createElementStreamTransform(): undefined {
             return undefined;
           },
         }
