@@ -8,7 +8,7 @@ export type PlaygroundInferenceSet = {
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
-  readonly samples: readonly PlaygroundInference[];
+  readonly inferences: readonly PlaygroundInference[];
 };
 
 /**
@@ -63,7 +63,7 @@ export type PlaygroundMessage =
   | {
       readonly role: "user";
       readonly input: unknown;
-      readonly formatted: string;
+      readonly rendered: string;
     }
   | {
       readonly role: "assistant";
@@ -104,7 +104,7 @@ export type PlaygroundToolResult = {
 export type PlaygroundInferenceResult =
   | {
       readonly kind: "success";
-      readonly response: PlaygroundModelResponse;
+      readonly response: PlaygroundInferenceResponse;
       /** Model reasoning / thinking text, if returned by the provider. */
       readonly reasoning?: string;
       readonly telemetry: PlaygroundInferenceTelemetry;
@@ -121,13 +121,13 @@ export type PlaygroundInferenceResult =
 /**
  * The parsed response returned by the model on a successful inference.
  */
-export type PlaygroundModelResponse =
+export type PlaygroundInferenceResponse =
   | {
       readonly kind: "output";
       /** Raw text returned by the model. */
       readonly rawText: string;
       /** Parsed and validated output value matching the template's `Output` type. */
-      readonly parsedOutput: unknown;
+      readonly output: unknown;
     }
   | {
       readonly kind: "tool-calls";
@@ -145,7 +145,7 @@ export type PlaygroundInferenceError =
       readonly rawText: string;
     }
   | {
-      readonly kind: "parse-error" | "validation-error";
+      readonly kind: "api-error";
       readonly message: string;
     };
 
