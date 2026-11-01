@@ -207,6 +207,9 @@ describe("getCompletionItems", () => {
 
     const playgroundXml = [
       '<playground for="Tr">',
+      "  <model>",
+      "    model: openai/gpt-4o",
+      "  </model>",
       "  <samples>",
       "  - input:",
       '      text: "hello"',

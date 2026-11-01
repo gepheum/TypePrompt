@@ -31,9 +31,12 @@ function parseElement(
 }
 
 describe("parsePlayground", () => {
-  it("parses a valid <playground> with 'for' attribute and <samples>", () => {
+  it("parses a valid <playground> with 'for' attribute, <model>, and <samples>", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - name: "Spanish greeting"
           input:
@@ -54,6 +57,9 @@ describe("parsePlayground", () => {
   it("parses a valid <playground> with 'for' and 'namespace' attributes", () => {
     const root = parseElement(`
       <playground for="DraftNda" namespace="Legal">
+        <model>
+          model: anthropic/claude-sonnet-4.5
+        </model>
         <samples>
         - name: "Standard NDA"
           input:
@@ -75,6 +81,9 @@ describe("parsePlayground", () => {
   it("reports an error when 'for' attribute is missing", () => {
     const root = parseElement(`
       <playground>
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -96,6 +105,9 @@ describe("parsePlayground", () => {
   it("reports an error when 'for' attribute is not PascalCase", () => {
     const root = parseElement(`
       <playground for="translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -118,6 +130,9 @@ describe("parsePlayground", () => {
   it("reports an error when unknown attribute is passed", () => {
     const root = parseElement(`
       <playground for="Translate" foo="bar">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -136,9 +151,79 @@ describe("parsePlayground", () => {
     });
   });
 
+  it("reports an error when <model> is missing", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <samples>
+        - input:
+            text: "Hello"
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Missing <model> element in <playground>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when duplicate <model> elements are present", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
+        <model>
+          model: anthropic/claude-3-5-sonnet
+        </model>
+        <samples>
+        - input:
+            text: "Hello"
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate <model> element in <playground>",
+        },
+      ],
+    });
+  });
+
+  it("reports an error when YAML content in <model> is invalid", () => {
+    const root = parseElement(`
+      <playground for="Translate">
+        <model>
+          model: { unclosed
+        </model>
+        <samples>
+        - input:
+            text: "Hello"
+        </samples>
+      </playground>
+    `);
+
+    const result = parsePlayground(root);
+    expect(result).toMatch({
+      kind: "error",
+    });
+  });
+
   it("reports an error when <samples> is missing", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
       </playground>
     `);
 
@@ -156,6 +241,9 @@ describe("parsePlayground", () => {
   it("reports an error when duplicate <samples> are present", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -181,6 +269,9 @@ describe("parsePlayground", () => {
   it("reports an error when unexpected element is inside <playground>", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <foo />
         <samples>
         - input:
@@ -203,6 +294,9 @@ describe("parsePlayground", () => {
   it("reports an error when YAML content in <samples> is invalid", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input: { unclosed
         </samples>
@@ -218,6 +312,9 @@ describe("parsePlayground", () => {
   it("warns when filename does not match 'TemplateName.play.tp'", () => {
     const root = parseElement(`
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"

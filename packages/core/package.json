@@ -27,6 +27,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@ai-sdk/gateway": "^4.0.127",
     "@typeprompt/formatter": "*"
   }
 }

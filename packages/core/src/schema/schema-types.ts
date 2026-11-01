@@ -311,6 +311,20 @@ export type Discriminants =
       readonly values: readonly BooleanLiteral[];
     };
 
+export type SyntheticDiscriminants =
+  | {
+      readonly type: "string";
+      readonly values: ReadonlyArray<{
+        readonly value: string;
+      }>;
+    }
+  | {
+      readonly type: "boolean";
+      readonly values: ReadonlyArray<{
+        readonly value: boolean;
+      }>;
+    };
+
 /** A field common to all members of a discriminated union. */
 export type CommonField = {
   readonly name: string;
@@ -354,13 +368,13 @@ export type SyntheticUnionMembers =
       };
       /** Name of the discriminator field, e.g. 'kind'. */
       readonly discriminator: string;
-      readonly discriminants: Discriminants;
+      readonly discriminants: SyntheticDiscriminants;
     };
 
 /** A `Type` associated with a TypeScript type. */
-export type Typed<T> = {
-  readonly type: Type | SyntheticType;
-  readonly typeIdentity?: { readonly type: T };
+export type Typed<TypescriptType, T = Type | SyntheticType> = {
+  readonly type: T;
+  readonly typeIdentity?: { readonly type: TypescriptType };
 };
 
 export type SchemaType = {

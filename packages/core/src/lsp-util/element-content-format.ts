@@ -24,6 +24,7 @@ export function getElementContentFormat(
     case "meta":
       return depth <= 0 ? "schema" : "yaml";
     case "examples":
+    case "model":
     case "samples":
       return "yaml";
     case "system":

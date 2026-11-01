@@ -1,5 +1,6 @@
 import type {
   Constraint,
+  SyntheticInterface,
   SyntheticStringUnionValues,
   SyntheticType,
   Type,
@@ -24,6 +25,28 @@ export function typedString(constraint?: Constraint<string>): Typed<string> {
   };
 }
 
+export function typedNumber(): Typed<number> {
+  return {
+    type: {
+      kind: "primitive",
+      primitive: {
+        text: "number",
+      },
+    },
+  };
+}
+
+export function typedBoolean(): Typed<boolean> {
+  return {
+    type: {
+      kind: "primitive",
+      primitive: {
+        text: "boolean",
+      },
+    },
+  };
+}
+
 export function typedStringLiteral<const S extends string>(value: S): Typed<S> {
   return {
     type: {
@@ -42,6 +65,49 @@ export function typedStringUnion<const S extends string = string>(
       members: {
         kind: "strings",
         values,
+      },
+    },
+  };
+}
+
+export function typedSimpleStringUnion<const S extends string = string>(
+  values: readonly S[],
+): Typed<S> {
+  return typedStringUnion(
+    Object.fromEntries(
+      values.map((v) => [
+        v,
+        {
+          kind: "unquoted",
+          unquotedName: { text: v },
+        },
+      ]),
+    ),
+  );
+}
+
+export function typedDiscriminatedUnion<T = unknown>(
+  discriminator: string,
+  members: {
+    readonly [discriminant: string]: Typed<unknown, SyntheticInterface>;
+  },
+): Typed<T> {
+  const memberKeys = Object.keys(members);
+  return {
+    type: {
+      kind: "synthetic-union",
+      members: {
+        kind: "interfaces",
+        discriminator,
+        discriminants: {
+          type: "string",
+          values: memberKeys.map((key) => ({ value: key })),
+        },
+        members: Object.fromEntries(
+          Object.entries(members).map(
+            ([key, typed]) => [key, { resolved: typed.type }] as const,
+          ),
+        ),
       },
     },
   };
@@ -83,7 +149,8 @@ export function typedInterface<
           Fields[K]["typeIdentity"]
         >["type"];
       }
-    : T
+    : T,
+  SyntheticInterface
 > {
   return {
     type: {

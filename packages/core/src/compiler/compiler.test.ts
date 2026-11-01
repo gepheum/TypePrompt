@@ -1595,6 +1595,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Translate.play.tp": `
           <playground for="Translate">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - name: "Spanish greeting"
               input:
@@ -1651,6 +1654,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Legal/DraftNda.play.tp": `
           <playground for="DraftNda" namespace="Legal">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - name: "Acme NDA"
               input:
@@ -1693,6 +1699,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Unknown.play.tp": `
           <playground for="Unknown">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - input:
                 text: "test"
@@ -1732,6 +1741,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Billing/Unknown.play.tp": `
           <playground for="Unknown" namespace="Billing">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - input:
                 id: "1"
@@ -1766,6 +1778,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Translate.play.tp": `
           <playground for="Translate">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - input:
                 text: "a"
@@ -1774,6 +1789,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/other/Translate.play.tp": `
           <playground for="Translate">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - input:
                 text: "b"
@@ -1813,6 +1831,9 @@ describe("compile - playground support", () => {
       `,
       "prompts/Translate.play.tp": `
         <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               text: "hello"
@@ -1867,6 +1888,9 @@ describe("compile - playground support", () => {
         `,
         "prompts/Translate.play.tp": `
           <playground for="Translate">
+            <model>
+              model: openai/gpt-4o
+            </model>
             <samples>
             - input:
                 text: "hello"

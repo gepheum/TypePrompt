@@ -15,6 +15,7 @@ export type KnownTag =
   | "enclosed"
   | "examples"
   | "meta"
+  | "model"
   | "namespace"
   | "insert"
   | "on"

@@ -278,6 +278,10 @@ describe("generateFileTemplate", () => {
       assert.equal(
         template,
         '<playground for="Translate">\n' +
+          "  <model>\n" +
+          "    model: openai/gpt-4o\n" +
+          "  </model>\n" +
+          "\n" +
           "  <samples>\n" +
           "    - input: {}\n" +
           "  </samples>\n" +
@@ -294,6 +298,10 @@ describe("generateFileTemplate", () => {
       assert.equal(
         template,
         '<playground for="DraftNda" namespace="Legal">\n' +
+          "  <model>\n" +
+          "    model: openai/gpt-4o\n" +
+          "  </model>\n" +
+          "\n" +
           "  <samples>\n" +
           "    - input: {}\n" +
           "  </samples>\n" +
@@ -310,6 +318,10 @@ describe("generateFileTemplate", () => {
       assert.equal(
         template,
         '<playground for="Translate">\n' +
+          "  <model>\n" +
+          "    model: openai/gpt-4o\n" +
+          "  </model>\n" +
+          "\n" +
           "  <samples>\n" +
           "    - input:\n" +
           '        text: ""\n' +
@@ -328,6 +340,10 @@ describe("generateFileTemplate", () => {
       assert.equal(
         template,
         '<playground for="DraftNda" namespace="Legal">\n' +
+          "  <model>\n" +
+          "    model: openai/gpt-4o\n" +
+          "  </model>\n" +
+          "\n" +
           "  <samples>\n" +
           "    - input:\n" +
           '        partyA: ""\n' +

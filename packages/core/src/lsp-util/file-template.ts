@@ -61,6 +61,10 @@ export function generateFileTemplate(
     const samplesYaml = makeSamplesYaml(name, namespaceName, compilationResult);
     return [
       `<playground for="${name}"${nsAttr}>`,
+      "  <model>",
+      "    model: openai/gpt-4o",
+      "  </model>",
+      "",
       "  <samples>",
       samplesYaml,
       "  </samples>",

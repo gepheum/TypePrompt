@@ -13,6 +13,7 @@ import type {
   ValidationResult,
 } from "../util/shared-types.js";
 import type { XmlDocument } from "../xml/xml-types.js";
+import type { PlaygroundModel } from "./playground-model-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };
@@ -282,6 +283,7 @@ export type Playground = {
   readonly tag: Span;
   readonly for: TextSpan;
   readonly namespace: TextSpan | null;
+  readonly model: StrictJsonValue;
   readonly samples: StrictJsonValue;
   readonly warnings: readonly InternalError[];
 };
@@ -290,6 +292,7 @@ export type ValidatedPlayground = {
   readonly kind: "playground";
   readonly playground: Playground;
   readonly templateId: string;
+  readonly model: PlaygroundModel;
   readonly samples: readonly Sample[];
   readonly definitionLinks: readonly DefinitionLink[];
 };

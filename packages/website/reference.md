@@ -582,7 +582,7 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 `<playground>` defines playground samples for a prompt template. Playgrounds live in their own `.tp` file alongside the template they target.
 
-Inside `<playground>`, samples are defined as a YAML array nested inside a `<samples>` element. Each sample provides an input, optional history of previous completed turns, and optional intermediate steps (tool calls) taken during the current turn.
+Inside `<playground>`, model configuration is defined in a `<model>` element, and test samples are defined as a YAML array nested inside a `<samples>` element. Each sample provides an input, optional history of previous completed turns, and optional intermediate steps (tool calls) taken during the current turn.
 
 **Attributes:**
 
@@ -590,6 +590,24 @@ Inside `<playground>`, samples are defined as a YAML array nested inside a `<sam
 |---|---|---|---|
 | `for` | Yes | `PascalCase` | Name of the template this playground targets |
 | `namespace` | No | `PascalCase` | Namespace of the target template; defaults to `Main` |
+
+### Model configuration
+
+The `<model>` element contains YAML configuration representing model options:
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `model` | Yes | `string` | Model identifier (e.g. `openai/gpt-4o`, `anthropic/claude-sonnet-4.5`) |
+| `temperature` | No | `number` | Sampling temperature |
+| `maxTokens` / `maxOutputTokens` | No | `number` | Maximum tokens to generate |
+| `topP` | No | `number` | Nucleus sampling probability threshold |
+| `topK` | No | `number` | Top-k sampling threshold |
+| `presencePenalty` | No | `number` | Presence penalty |
+| `frequencyPenalty` | No | `number` | Frequency penalty |
+| `stopSequences` | No | `string[]` | Stop sequences |
+| `seed` | No | `number` | Random seed |
+| `reasoning` | No | `string` | Reasoning effort (`provider-default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`) |
+| `providerOptions` | No | `object` | Provider-specific options for `openai`, `anthropic`, `google`, `xai`, `mistral` |
 
 ### Sample structure
 
@@ -637,6 +655,11 @@ You can define its playground samples in `prompts/Translate.play.tp`:
 ```xml
 <!-- Translate.play.tp -->
 <playground for="Translate">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.7
+  </model>
+
   <samples>
   - name: "Spanish greeting"
     input:
@@ -660,6 +683,10 @@ For multi-turn conversations or templates that use tools:
 ```xml
 <!-- MathAssistant.play.tp -->
 <playground for="MathAssistant">
+  <model>
+    model: anthropic/claude-sonnet-4.5
+  </model>
+
   <samples>
   - name: "Multi-turn math session"
     history:

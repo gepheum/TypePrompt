@@ -112,6 +112,7 @@ function mustReorderChildren(tagName: KnownTag): boolean {
     case "examples":
     case "insert":
     case "meta":
+    case "model":
     case "namespace":
     case "on":
     case "playground":

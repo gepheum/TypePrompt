@@ -1,5 +1,6 @@
 export {
   DEFAULT_NAMESPACE,
+  PLAYGROUND_MODEL_IDS,
   Spec,
   compile,
   getId,
@@ -11,7 +12,10 @@ export {
   type CompilationResult,
   type CompilationResultParseError,
   type Playground,
+  type PlaygroundModel,
+  type PlaygroundModelId,
   type PlaygroundValidationResult,
+  type ProviderOptions,
   type Sample,
   type SampleHistoryEntry,
   type SampleStep,

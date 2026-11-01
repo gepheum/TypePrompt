@@ -40,14 +40,24 @@ export function parsePlayground(
 
   const children = checkAllAreKnownElements(
     playgroundNode.children,
-    ["samples"] as const,
+    ["model", "samples"] as const,
     " in <playground>",
     errors,
   );
 
+  let modelNode: ElementNode | null = null;
   let samplesNode: ElementNode | null = null;
   for (const [tag, child] of children) {
-    if (tag === "samples") {
+    if (tag === "model") {
+      if (modelNode) {
+        errors.push({
+          span: child.tag,
+          message: "Duplicate <model> element in <playground>",
+        });
+      } else {
+        modelNode = child;
+      }
+    } else if (tag === "samples") {
       if (samplesNode) {
         errors.push({
           span: child.tag,
@@ -55,6 +65,30 @@ export function parsePlayground(
         });
       } else {
         samplesNode = child;
+      }
+    }
+  }
+
+  let model: StrictJsonValue | null = null;
+  if (!modelNode) {
+    errors.push({
+      span: playgroundNode.tag,
+      message: "Missing <model> element in <playground>",
+    });
+  } else {
+    const modelAttrs = checkKnownXmlAttributes(modelNode, {});
+    errors.push(...modelAttrs.errors);
+
+    const textContent = extractTextContent(modelNode, "yaml");
+    if (textContent.kind === "error") {
+      errors.push(...textContent.errors);
+    } else {
+      warnings.push(...textContent.warnings);
+      const parsed = parseYaml(textContent.text);
+      if (parsed.kind === "error") {
+        errors.push(...parsed.errors);
+      } else {
+        model = parsed;
       }
     }
   }
@@ -92,6 +126,7 @@ export function parsePlayground(
     tag: playgroundNode.tag,
     for: forTemplate.value,
     namespace: namespace?.value ?? null,
+    model: model!,
     samples: samples!,
     warnings,
   };

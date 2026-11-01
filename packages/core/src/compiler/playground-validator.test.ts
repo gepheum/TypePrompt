@@ -116,6 +116,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - name: "Spanish greeting"
           input:
@@ -150,6 +153,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "What time is it?"
@@ -180,6 +186,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - name: "Multi-turn conversation"
           history:
@@ -230,6 +239,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - history:
             - input:
@@ -262,6 +274,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - history:
             - input:
@@ -294,6 +309,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Bonjour"
@@ -323,6 +341,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: 12345
@@ -350,6 +371,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -383,6 +407,9 @@ describe("validatePlayground", () => {
     const node = parseElement(
       `
       <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
         <samples>
         - input:
             text: "Hello"
@@ -434,6 +461,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - name: "Arithmetic step"
             input:
@@ -482,6 +512,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - history:
               - input:
@@ -536,6 +569,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "Calculate"
@@ -571,6 +607,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "Calculate"
@@ -603,6 +642,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "Look up"
@@ -636,6 +678,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "Calculate"
@@ -671,6 +716,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "Calculate"
@@ -706,6 +754,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - history:
               - input:
@@ -746,6 +797,9 @@ describe("validatePlayground", () => {
       const node = parseElement(
         `
         <playground for="MathAssistant">
+          <model>
+            model: openai/gpt-4o
+          </model>
           <samples>
           - input:
               question: "What is 1+1?"
@@ -776,6 +830,367 @@ describe("validatePlayground", () => {
       if (!toolLink) throw new Error("Expected tool definition link");
       expect(toolLink.definition).toMatch({
         text: "calc",
+      });
+    });
+  });
+
+  describe("model validation", () => {
+    it("validates and unwraps model options into result.model", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+            temperature: 0.7
+            maxTokens: 1000
+            topP: 0.9
+            topK: 40
+            presencePenalty: 0.5
+            frequencyPenalty: 0.5
+            stopSequences:
+              - "END"
+              - "STOP"
+            seed: 42
+            reasoning: medium
+            providerOptions:
+              openai:
+                reasoningEffort: high
+                maxCompletionTokens: 500
+                strictJsonSchema: true
+                logprobs: 5
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result.kind).toBe("playground");
+      if (result.kind !== "playground") return;
+
+      expect(result.model).toMatch({
+        model: "openai/gpt-4o",
+        temperature: 0.7,
+        maxTokens: 1000,
+        topP: 0.9,
+        topK: 40,
+        presencePenalty: 0.5,
+        frequencyPenalty: 0.5,
+        stopSequences: ["END", "STOP"],
+        seed: 42,
+        reasoning: "medium",
+        providerOptions: {
+          openai: {
+            reasoningEffort: "high",
+            maxCompletionTokens: 500,
+            strictJsonSchema: true,
+            logprobs: 5,
+          },
+        },
+      });
+    });
+
+    it("validates all supported provider options", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: anthropic/claude-sonnet-4.5
+            providerOptions:
+              anthropic:
+                effort: high
+                sendReasoning: true
+                structuredOutputMode: auto
+                thinking:
+                  type: adaptive
+                  display: summarized
+              google:
+                structuredOutputs: true
+                threshold: BLOCK_NONE
+                thinkingConfig:
+                  thinkingBudget: 2048
+                  includeThoughts: true
+                  thinkingLevel: high
+                safetySettings:
+                  - category: HARM_CATEGORY_HATE_SPEECH
+                    threshold: BLOCK_LOW_AND_ABOVE
+              xai:
+                reasoningEffort: low
+                searchRecencyFilter: week
+                includeSearchInformation: true
+                sources: true
+              mistral:
+                safePrompt: true
+                structuredOutputs: true
+                reasoningEffort: medium
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result.kind).toBe("playground");
+      if (result.kind !== "playground") return;
+
+      expect(result.model.providerOptions?.anthropic).toMatch({
+        effort: "high",
+        sendReasoning: true,
+        structuredOutputMode: "auto",
+        thinking: {
+          type: "adaptive",
+          display: "summarized",
+        },
+      });
+      expect(result.model.providerOptions?.google?.safetySettings).toMatch([
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_LOW_AND_ABOVE",
+        },
+      ]);
+      expect(result.model.providerOptions?.xai).toMatch({
+        reasoningEffort: "low",
+        searchRecencyFilter: "week",
+        includeSearchInformation: true,
+        sources: true,
+      });
+      expect(result.model.providerOptions?.mistral).toMatch({
+        safePrompt: true,
+        structuredOutputs: true,
+        reasoningEffort: "medium",
+      });
+    });
+
+    it("reports an error when required 'model' field is missing in <model>", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            temperature: 0.7
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Missing required field 'model'",
+          },
+        ],
+      });
+    });
+
+    it("reports an error when unknown field is passed in <model>", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+            invalidOption: true
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unknown field 'invalidOption'",
+          },
+        ],
+      });
+    });
+
+    it("reports an error when property has wrong type", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+            temperature: "very hot"
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Expected number but got string",
+          },
+        ],
+      });
+    });
+
+    it("reports an error when enum property has invalid value", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+            reasoning: ultra
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message:
+              'Expected one of ["provider-default","none","minimal","low","medium","high","xhigh"]',
+          },
+        ],
+      });
+    });
+
+    it("reports an error when anthropic thinking has invalid type discriminator", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: anthropic/claude-sonnet-4.5
+            providerOptions:
+              anthropic:
+                thinking:
+                  type: unknownType
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: 'Expected one of ["adaptive","enabled","disabled"]',
+          },
+        ],
+      });
+    });
+
+    it("reports an error when model ID is not in the allowed list", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: unsupported/model-xyz
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result.kind).toBe("error");
+      if (result.kind !== "error") return;
+      expect(result.errors.length > 0).toBe(true);
+      expect(result.errors[0]!.message.startsWith("Expected one of")).toBe(
+        true,
+      );
+    });
+
+    it("reports an error when custom provider options are specified", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+            providerOptions:
+              customProvider:
+                someOption: true
+          </model>
+          <samples>
+          - input:
+              text: "Hello"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const result = validatePlayground(parsed, template);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unknown field 'customProvider'",
+          },
+        ],
       });
     });
   });
