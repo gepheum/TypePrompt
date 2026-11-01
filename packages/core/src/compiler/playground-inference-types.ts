@@ -5,10 +5,10 @@ import type { PlaygroundModel } from "./playground-model-types.js";
  */
 export type PlaygroundInferenceSet = {
   readonly kind: "playground-inference-set";
-  readonly model: PlaygroundModel;
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
+  readonly model: PlaygroundModel;
   readonly templateFiles: { readonly [path: string]: string };
   readonly inferences: readonly PlaygroundInference[];
 };
