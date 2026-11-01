@@ -1,0 +1,39 @@
+<playground for="TriageTicket">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: duplicate-invoice-charge
+      input:
+        subject: "Charged twice for October subscription"
+        body: "I noticed two identical charges of $49 on my corporate card this morning for invoice #INV-8821."
+        customerTier: pro
+        recentTickets:
+          - id: T-310
+            summary: Updated billing credit card on file
+            category: billing
+
+    - name: production-api-500-errors
+      input:
+        subject: "URGENT: Webhook ingestion returning 503s across all regions"
+        body: "Starting at 14:10 UTC all webhook POST requests are failing with 503 Service Unavailable. Customer events are being dropped."
+        customerTier: enterprise
+        recentTickets:
+          - id: T-402
+            summary: Increased webhook concurrency limit
+            category: technical-issue
+          - id: T-399
+            summary: SSO SAML certificate rotation
+            category: other
+
+    - name: dark-mode-request
+      input:
+        subject: "Dark mode for mobile web?"
+        body: "Love the app! Any chance we can get a dark theme on mobile browsers?"
+        customerTier: free
+        recentTickets: []
+  </samples>
+</playground>
+

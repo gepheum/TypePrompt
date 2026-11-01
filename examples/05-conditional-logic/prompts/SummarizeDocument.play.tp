@@ -1,0 +1,28 @@
+<playground for="SummarizeDocument">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: executive-overview-no-focus
+      input:
+        title: "Q3 Cloud Cost Optimization Initiative"
+        content: "By rightsizing idle Kubernetes nodes and migrating cold analytics tables to tiered object storage, engineering reduced monthly cloud spend by $140,000 (22%) without impacting SLA targets."
+        audience: executive
+
+    - name: technical-with-focus-topic
+      input:
+        title: "Zero-Downtime Auth Service Cutover"
+        content: "We replaced legacy session cookies with short-lived EdDSA JWTs backed by a distributed Redis revocation list. Token verification latency dropped from 8.4ms to 0.3ms at the edge."
+        focusTopic: "Token Revocation and Latency"
+        audience: technical
+
+    - name: general-audience
+      input:
+        title: "New Two-Factor Authentication Rollout"
+        content: "Starting next Monday, all user accounts will support passkeys and hardware security keys in addition to authenticator apps to better protect against phishing."
+        audience: general
+  </samples>
+</playground>
+

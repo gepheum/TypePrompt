@@ -1,0 +1,19 @@
+<playground for="Translate">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: japanese-polite-request
+      input:
+        text: "Could you please share the updated slide deck before tomorrow's keynote?"
+        targetLanguage: Japanese
+
+    - name: german-idiom
+      input:
+        text: "Let's not jump to conclusions before we see the benchmark numbers."
+        targetLanguage: German
+  </samples>
+</playground>
+

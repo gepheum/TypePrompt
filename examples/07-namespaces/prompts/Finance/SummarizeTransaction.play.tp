@@ -1,0 +1,27 @@
+<playground for="SummarizeTransaction" namespace="Finance">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: annual-domain-renewal
+      input:
+        description: "Annual renewal for corporate domain names and DNS hosting"
+        amount:
+          value: 240.0
+          currency: EUR
+        category: expense
+        date: "2026-10-15"
+
+    - name: quarterly-retainer-invoice
+      input:
+        description: "Q4 advisory retainer payment from Globex Ltd."
+        amount:
+          value: 12000.0
+          currency: GBP
+        category: income
+        date: "2026-10-16"
+  </samples>
+</playground>
+

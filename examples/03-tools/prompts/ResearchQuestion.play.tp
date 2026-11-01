@@ -1,0 +1,28 @@
+<playground for="ResearchQuestion">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: initial-search-step
+      input:
+        question: "What is the tallest mountain in South America and its elevation?"
+
+    - name: after-tool-call
+      input:
+        question: "When was the James Webb Space Telescope launched and from where?"
+      steps:
+        - toolCalls:
+            - callId: search_jwst_1
+              tool: webSearch
+              input:
+                query: "James Webb Space Telescope launch date and launch site"
+              output:
+                results:
+                  - title: "NASA — James Webb Space Telescope Overview"
+                    url: "https://science.nasa.gov/mission/webb/"
+                    snippet: "The James Webb Space Telescope launched on December 25, 2021, aboard an Ariane 5 rocket from Europe's Spaceport in Kourou, French Guiana."
+  </samples>
+</playground>
+

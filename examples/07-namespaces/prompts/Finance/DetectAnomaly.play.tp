@@ -1,0 +1,49 @@
+<playground for="DetectAnomaly" namespace="Finance">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: suspicious-wire-transfer
+      input:
+        recentTransactions:
+          - description: "Office Supplies Co."
+            amount:
+              value: 84.5
+              currency: USD
+            date: "2026-10-18"
+          - description: "Cloud Hosting Monthly"
+            amount:
+              value: 310.0
+              currency: USD
+            date: "2026-10-19"
+        newTransaction:
+          description: "Offshore Crypto Exchange"
+          amount:
+            value: 19500.0
+            currency: USD
+          date: "2026-10-20"
+
+    - name: routine-lunch-expense
+      input:
+        recentTransactions:
+          - description: "Downtown Deli"
+            amount:
+              value: 18.25
+              currency: USD
+            date: "2026-10-18"
+          - description: "Corner Bakery"
+            amount:
+              value: 14.0
+              currency: USD
+            date: "2026-10-19"
+        newTransaction:
+          description: "Salad Bar Express"
+          amount:
+            value: 16.75
+            currency: USD
+          date: "2026-10-20"
+  </samples>
+</playground>
+

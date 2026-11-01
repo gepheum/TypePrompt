@@ -1,0 +1,32 @@
+<playground for="TriageIncident">
+  <model>
+    model: google/gemini-2.5-flash
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: checkout-api-initial-alert
+      input:
+        service: "checkout-api"
+        reportedIssue: "Elevated 504 Gateway Timeouts during flash sale checkout."
+
+    - name: checkout-api-with-metrics
+      input:
+        service: "checkout-api"
+        reportedIssue: "Elevated 504 Gateway Timeouts during flash sale checkout."
+      steps:
+        - toolCalls:
+            - callId: call_metrics_checkout_1
+              tool: getServiceMetrics
+              input:
+                service: "checkout-api"
+              output:
+                cpuUsagePercent: 88.0
+                memoryUsagePercent: 94.7
+                p99LatencyMs: 4850
+                errorRatePercent: 14.2
+                status: degraded
+                activeReplicas: 3
+  </samples>
+</playground>
+

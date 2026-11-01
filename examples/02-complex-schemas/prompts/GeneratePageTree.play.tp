@@ -1,0 +1,73 @@
+<playground for="GeneratePageTree">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: database-comparison-developers
+      input:
+        useCase: "multi-region transactional workloads"
+        audience: developer
+        providers:
+          - name: AuroraDB
+            region: us-west
+            category: database
+            pricing:
+              model: perHour
+              basePrice: 0.24
+              overage: 0.05
+            benchmarks:
+              - name: write-latency-p99
+                score: 4.2
+                unit: ms
+              - name: read-throughput
+                score: 45000
+                unit: qps
+            pros:
+              - automatic failover
+              - zero-downtime schema migrations
+            cons:
+              - higher cold-start latency
+          - name: RoachScale
+            region: eu-central
+            category: database
+            pricing:
+              model: perMonth
+              basePrice: 149
+            benchmarks:
+              - name: write-latency-p99
+                score: 6.8
+                unit: ms
+              - name: read-throughput
+                score: 38000
+                unit: qps
+            pros:
+              - predictable monthly billing
+              - strong multi-region consistency
+            cons:
+              - manual shard rebalancing
+
+    - name: object-storage-decision-makers
+      input:
+        useCase: "long-term archival and compliance backups"
+        audience: businessDecisionMaker
+        providers:
+          - name: VaultStore
+            region: us-east
+            category: storage
+            pricing:
+              model: perMonth
+              basePrice: 25
+              overage: 0.004
+            benchmarks:
+              - name: durability
+                score: 99.999999999
+                unit: percent
+            pros:
+              - SOC2 and HIPAA certified
+              - immutable retention policies
+            cons:
+              - 4-hour retrieval window for cold tier
+  </samples>
+</playground>

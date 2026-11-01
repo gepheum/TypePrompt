@@ -1,0 +1,36 @@
+<playground for="WriteProductDescription">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.4
+  </model>
+
+  <samples>
+    - name: marketing-headphones
+      input:
+        productName: "SonicShield ANC Headphones"
+        features:
+          - "adaptive 45dB active noise cancellation"
+          - "40-hour battery life"
+          - "multipoint Bluetooth 5.4"
+        variant: marketing
+
+    - name: technical-headphones
+      input:
+        productName: "SonicShield ANC Headphones"
+        features:
+          - "adaptive 45dB active noise cancellation"
+          - "40-hour battery life"
+          - "multipoint Bluetooth 5.4"
+        variant: technical
+
+    - name: brief-headphones
+      input:
+        productName: "SonicShield ANC Headphones"
+        features:
+          - "adaptive 45dB active noise cancellation"
+          - "40-hour battery life"
+          - "multipoint Bluetooth 5.4"
+        variant: brief
+  </samples>
+</playground>
+

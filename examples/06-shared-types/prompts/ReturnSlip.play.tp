@@ -1,0 +1,34 @@
+<playground for="ReturnSlip">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: wrong-item-received
+      input:
+        customer:
+          name: "Clara Chen"
+          email: "clara.chen@example.com"
+          address:
+            street: "742 Evergreen Terrace"
+            city: "Portland"
+            country: "USA"
+            postalCode: "97205"
+        returnReason: wrongItem
+        orderNumber: "ORD-5519"
+
+    - name: changed-mind-international
+      input:
+        customer:
+          name: "Liam O'Connor"
+          email: "liam@example.ie"
+          address:
+            street: "14 Grafton Street"
+            city: "Dublin"
+            country: "Ireland"
+        returnReason: changedMind
+        orderNumber: "ORD-6102"
+  </samples>
+</playground>
+

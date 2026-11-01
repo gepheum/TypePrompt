@@ -1,0 +1,22 @@
+<playground for="DraftNda" namespace="Legal">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: vendor-security-audit-nda
+      input:
+        disclosingParty:
+          name: "Apex FinTech Corp."
+          role: client
+          jurisdiction: "New York"
+        receivingParty:
+          name: "RedShield Security Audits LLC"
+          role: counterparty
+          jurisdiction: "Delaware"
+        purposeOfDisclosure: "conducting an independent penetration test and SOC2 readiness review"
+        durationYears: 3
+  </samples>
+</playground>
+

@@ -1,0 +1,29 @@
+<playground for="ShippingConfirmation">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: multi-item-home-office-order
+      input:
+        recipient:
+          name: "Marcus Vance"
+          email: "marcus@example.com"
+          address:
+            street: "88 Colin P Kelly Jr St"
+            city: "San Francisco"
+            country: "USA"
+            postalCode: "94107"
+        orderNumber: "ORD-7734"
+        estimatedDelivery: "Tuesday, November 10"
+        items:
+          - name: "27-inch 4K Ergonomic Monitor"
+            quantity: 1
+          - name: "Aluminum Monitor Arm"
+            quantity: 1
+          - name: "DisplayPort 2.1 Cable"
+            quantity: 2
+  </samples>
+</playground>
+

@@ -1,0 +1,29 @@
+<playground for="PlanDay">
+  <model>
+    model: anthropic/claude-sonnet-4.5
+    temperature: 0.7
+  </model>
+
+  <samples>
+    - name: kyoto-initial-tool-call
+      input:
+        city: Kyoto
+        interests: "historic temples, matcha tea houses, and quiet gardens"
+
+    - name: kyoto-after-weather-tool
+      input:
+        city: Kyoto
+        interests: "historic temples, matcha tea houses, and quiet gardens"
+      steps:
+        - toolCalls:
+            - callId: call_weather_kyoto_1
+              tool: getWeather
+              input:
+                city: Kyoto
+              output:
+                temperatureC: 19
+                condition: sunny
+                forecast: "Clear autumn skies with a light breeze all day."
+  </samples>
+</playground>
+

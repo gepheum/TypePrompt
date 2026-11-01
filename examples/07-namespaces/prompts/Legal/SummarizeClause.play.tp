@@ -1,0 +1,25 @@
+<playground for="SummarizeClause" namespace="Legal">
+  <model>
+    model: openai/gpt-4o
+    temperature: 0.2
+  </model>
+
+  <samples>
+    - name: unilateral-indemnification-red-flag
+      input:
+        clauseText: "Client shall indemnify, defend, and hold harmless Vendor from any and all claims, damages, or losses of any kind, including those arising from Vendor's own gross negligence or willful misconduct."
+        reviewingParty:
+          name: "Horizon Retail Group"
+          role: client
+          jurisdiction: "California"
+
+    - name: mutual-governing-law
+      input:
+        clauseText: "This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws principles."
+        reviewingParty:
+          name: "Horizon Retail Group"
+          role: client
+          jurisdiction: "Delaware"
+  </samples>
+</playground>
+
