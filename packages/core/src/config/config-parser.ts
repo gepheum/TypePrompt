@@ -59,6 +59,18 @@ export type Config = {
     readonly base: "patch-base.json";
     readonly overrides: "overrides.json";
   };
+
+  readonly play?: {
+    readonly envFile?: string;
+    readonly apiKeyEnvVars?: {
+      readonly openai?: string;
+      readonly anthropic?: string;
+      readonly google?: string;
+      readonly xai?: string;
+      readonly mistral?: string;
+      readonly vercelGateway?: string;
+    };
+  };
 };
 
 export type ConfigParseSuccess = {
@@ -99,6 +111,17 @@ function notEmpty<T extends string | readonly unknown[]>(): Constraint<T> {
     predicate: (value: T) => value.length > 0,
     message: "Must not be empty",
   };
+}
+
+function envVarName(): Typed<string | undefined> {
+  return typedOptional(
+    typedString(
+      matches(
+        /^[A-Za-z_][A-Za-z0-9_]*$/,
+        "must be a valid environment variable name",
+      ),
+    ),
+  );
 }
 
 const CONFIG_TYPE: Typed<Config> = typedInterface({
@@ -178,6 +201,21 @@ const CONFIG_TYPE: Typed<Config> = typedInterface({
     typedInterface({
       base: typedStringLiteral("patch-base.json"),
       overrides: typedStringLiteral("overrides.json"),
+    }),
+  ),
+  play: typedOptional(
+    typedInterface({
+      envFile: typedOptional(typedString(notEmpty())),
+      apiKeyEnvVars: typedOptional(
+        typedInterface({
+          openai: envVarName(),
+          anthropic: envVarName(),
+          google: envVarName(),
+          xai: envVarName(),
+          mistral: envVarName(),
+          vercelGateway: envVarName(),
+        }),
+      ),
     }),
   ),
 });
