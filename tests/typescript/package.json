@@ -6,11 +6,15 @@
     "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\"",
     "format": "prettier --write \"src/**/*.ts\""
   },
+  "overrides": {
+    "glob": "^14.0.3",
+    "minimatch": "^11.0.3"
+  },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.39",
     "buckwheat": "^1.1.2",
-    "mocha": "^12.0.0-rc.5",
+    "mocha": "^12.0.3",
     "prettier": "^3.9.5",
     "prettier-plugin-organize-imports": "^4.2.0",
     "tsx": "^4.21.0",
@@ -19,6 +23,6 @@
   "dependencies": {
     "@toon-format/toon": "^4.1.0",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   }
 }

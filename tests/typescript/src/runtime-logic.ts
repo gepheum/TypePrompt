@@ -121,16 +121,16 @@ export type Tool<Input, Output> = {
 };
 
 /**
- * Describes how the LLM response for template `Id` should be structured and
- * parsed. When `kind === "logic"`, contains the Zod schema for the expected output.
+ * Describes how the LLM response for template `Id` should be structured and parser.
+ * When `format === "json"`, contains the JSON schema for the expected output.
  */
 export type OutputFormat<Id extends TemplateId> =
   | {
-      readonly kind: "json";
+      readonly format: "json";
       readonly schema: z.ZodType<Output<Id>>;
       readonly jsonSchema: { readonly [key: string]: unknown };
     }
-  | (Output<Id> extends string ? { readonly kind: "text" } : never);
+  | (Output<Id> extends string ? { readonly format: "text" } : never);
 
 /** Names of the tools available from the given template. */
 export type ToolNames<Id extends TemplateId> = Extract<keyof Tools<Id>, string>;
@@ -431,12 +431,12 @@ function renderTemplate<Id extends TemplateId>(
     executeToolsImpl(calls, tools, executor);
   const outputFormat = (
     template.outputFormat === "json"
-      ? {
-          kind: "json",
+      ? ({
+          format: "json",
           schema: outputSchema,
           jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-        }
-      : { kind: "text" }
+        } satisfies OutputFormat<any>)
+      : ({ format: "text" } satisfies OutputFormat<any>)
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>
     parseResponseImpl(c, outputFormat);
@@ -621,7 +621,7 @@ function parseResponseImpl<Id extends TemplateId>(
   response: string,
   outputFormat: OutputFormat<Id>,
 ): Output<Id> {
-  switch (outputFormat.kind) {
+  switch (outputFormat.format) {
     case "json": {
       response = response.trim();
       response = response.startsWith("```")

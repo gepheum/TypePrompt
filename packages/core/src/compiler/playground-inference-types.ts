@@ -33,11 +33,11 @@ export type PlaygroundInferenceRequest = {
   readonly tools: readonly PlaygroundTool[];
   readonly outputFormat:
     | {
-        readonly kind: "json";
+        readonly format: "json";
         readonly jsonSchema: { readonly [k: string]: unknown };
       }
     | {
-        readonly kind: "text";
+        readonly format: "text";
       };
   /**
    * Conversation history leading up to the model call (few-shot examples,

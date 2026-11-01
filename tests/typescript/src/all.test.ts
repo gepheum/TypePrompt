@@ -30,7 +30,7 @@ describe("01-basics / Translate", () => {
   });
 
   it("has text output format", () => {
-    expect(prompt.outputFormat).toMatch({ kind: "text" });
+    expect(prompt.outputFormat).toMatch({ format: "text" });
   });
 
   it("sets templateId", () => {
@@ -88,8 +88,8 @@ describe("02-complex-schemas / TriageTicket", () => {
   });
 
   it("has json output format", () => {
-    expect(prompt.outputFormat).toMatch({ kind: "json" });
-    if (prompt.outputFormat.kind === "json") {
+    expect(prompt.outputFormat).toMatch({ format: "json" });
+    if (prompt.outputFormat.format === "json") {
       expect(prompt.outputFormat.jsonSchema).toMatch({
         type: "object",
         properties: {
@@ -204,7 +204,7 @@ describe("02-complex-schemas / GeneratePageTree", () => {
   });
 
   it("has json output format", () => {
-    expect(prompt.outputFormat).toMatch({ kind: "json" });
+    expect(prompt.outputFormat).toMatch({ format: "json" });
   });
 
   it("templateId is Main:GeneratePageTree", () => {
@@ -295,7 +295,9 @@ describe("03-tools / ResearchQuestion", () => {
 
   it("registers webSearch tool", () => {
     expect(Boolean(prompt.tools["webSearch"])).toMatch(true);
-    expect(Boolean(prompt.tools["calculator"])).toMatch(false);
+    expect(
+      Boolean((prompt.tools as Record<string, unknown>)["calculator"]),
+    ).toMatch(false);
   });
 
   it("produces one example with one step", () => {
@@ -570,7 +572,7 @@ describe("06-shared-types", () => {
     });
 
     it("has text output format", () => {
-      expect(prompt.outputFormat).toMatch({ kind: "text" });
+      expect(prompt.outputFormat).toMatch({ format: "text" });
     });
 
     it("templateId is Main:ShippingConfirmation", () => {
@@ -598,7 +600,7 @@ describe("06-shared-types", () => {
     });
 
     it("has text output format", () => {
-      expect(prompt.outputFormat).toMatch({ kind: "text" });
+      expect(prompt.outputFormat).toMatch({ format: "text" });
     });
 
     it("templateId is Main:ReturnSlip", () => {
@@ -637,7 +639,7 @@ describe("07-namespaces", () => {
     });
 
     it("has json output format", () => {
-      expect(prompt.outputFormat).toMatch({ kind: "json" });
+      expect(prompt.outputFormat).toMatch({ format: "json" });
     });
 
     it("userMessage contains the transaction description", () => {
@@ -689,7 +691,7 @@ describe("07-namespaces", () => {
     });
 
     it("has text output format", () => {
-      expect(prompt.outputFormat).toMatch({ kind: "text" });
+      expect(prompt.outputFormat).toMatch({ format: "text" });
     });
 
     it("is accessible via prompts.legal.draftNda", () => {
@@ -717,7 +719,7 @@ describe("07-namespaces", () => {
     });
 
     it("has json output format", () => {
-      expect(prompt.outputFormat).toMatch({ kind: "json" });
+      expect(prompt.outputFormat).toMatch({ format: "json" });
     });
 
     it("userMessage contains the reviewing party name", () => {
