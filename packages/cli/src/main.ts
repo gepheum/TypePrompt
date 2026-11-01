@@ -15,7 +15,7 @@ import * as Paths from "path";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import { makeGray, makeRed, renderErrors } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
-import { isDirectory } from "./main/io.js";
+import { isDirectory } from "./util/io.js";
 import { readConfigInDirectory } from "./main/project-config.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";

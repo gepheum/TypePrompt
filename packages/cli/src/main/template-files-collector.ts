@@ -2,7 +2,7 @@ import type { Config } from "@typeprompt/core/config/config-parser.js";
 import { glob } from "glob/raw";
 import * as Paths from "path";
 import { ExitError } from "./exit-error.js";
-import { REAL_FILE_SYSTEM } from "./io.js";
+import { REAL_FILE_SYSTEM } from "../util/io.js";
 
 export async function collectTemplateFiles(
   project: string,

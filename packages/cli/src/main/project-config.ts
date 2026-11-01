@@ -1,6 +1,6 @@
 import * as Paths from "path";
 import { ExitError } from "./exit-error.js";
-import { REAL_FILE_SYSTEM } from "./io.js";
+import { REAL_FILE_SYSTEM } from "../util/io.js";
 
 export function findConfigInDirectory(projectDir: string): string | undefined {
   for (const name of CONFIG_FILE_NAMES) {
