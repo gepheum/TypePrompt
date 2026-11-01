@@ -2,8 +2,8 @@ import type { Config } from "@typeprompt/core";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import * as Paths from "node:path";
-import { ExitError } from "../main/exit-error.js";
-import type { AsyncFileReader } from "../util/io.js";
+import { ExitError } from "../../main/exit-error.js";
+import type { AsyncFileReader } from "../../util/io.js";
 import { resolveInferenceOptions } from "./inference-options-resolver.js";
 
 function makeFakeAsyncFileReader(files: {

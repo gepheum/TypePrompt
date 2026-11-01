@@ -1,8 +1,8 @@
 import type { Config } from "@typeprompt/core";
 import * as Paths from "node:path";
 import { parseEnv } from "node:util";
-import { ExitError } from "../main/exit-error.js";
-import { REAL_FILE_SYSTEM, type AsyncFileReader } from "../util/io.js";
+import { ExitError } from "../../main/exit-error.js";
+import { REAL_FILE_SYSTEM, type AsyncFileReader } from "../../util/io.js";
 import type { RunPlaygroundInferencesOptions } from "./inference-runner.js";
 
 /**
