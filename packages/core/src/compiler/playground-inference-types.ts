@@ -8,6 +8,7 @@ export type PlaygroundInferenceSet = {
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
+  readonly templateFiles: { readonly [path: string]: string };
   readonly inferences: readonly PlaygroundInference[];
 };
 

@@ -4,9 +4,7 @@ import { getPlaygroundFrontendDir } from "@typeprompt/playground";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { appRouter, type AppRouter, type PlayContext } from "./router.js";
-
-export type { AppRouter };
+import { appRouter, type PlayContext } from "./router.js";
 
 export type PlayServerOptions = {
   readonly port?: number;
