@@ -25,7 +25,10 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.89",
     "@ai-sdk/google": "^4.0.106",
+    "@ai-sdk/mistral": "^4.0.77",
     "@ai-sdk/openai": "^4.0.103",
+    "@ai-sdk/xai": "^5.0.35",
+    "@toon-format/toon": "^4.1.0",
     "@trpc/client": "^11.19.0",
     "@trpc/server": "^11.19.0",
     "@typeprompt/core": "*",
@@ -36,6 +39,7 @@
     "glob": "^13.0.6",
     "glob-parent": "^6.0.2",
     "minimatch": "^10.2.6",
-    "watcher": "^2.3.1"
+    "watcher": "^2.3.1",
+    "yaml": "^2.9.0"
   }
 }

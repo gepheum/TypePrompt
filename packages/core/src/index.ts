@@ -12,8 +12,20 @@ export {
   type CompilationResult,
   type CompilationResultParseError,
   type Playground,
+  type PlaygroundInference,
+  type PlaygroundInferenceError,
+  type PlaygroundInferenceRequest,
+  type PlaygroundInferenceResponse,
+  type PlaygroundInferenceResult,
+  type PlaygroundInferenceSet,
+  type PlaygroundInferenceTelemetry,
+  type PlaygroundMessage,
   type PlaygroundModel,
   type PlaygroundModelId,
+  type PlaygroundTokenUsage,
+  type PlaygroundTool,
+  type PlaygroundToolCall,
+  type PlaygroundToolResult,
   type PlaygroundValidationResult,
   type ProviderOptions,
   type Sample,
@@ -32,7 +44,13 @@ export {
 
 export { CONFIG, parseConfigYaml, type Config } from "./config/index.js";
 
-export { parseAndValidateYaml, type StrictJsonValue } from "./json/index.js";
+export {
+  parseAndValidateYaml,
+  parseJson,
+  unwrapJsonValue,
+  validateJson,
+  type StrictJsonValue,
+} from "./json/index.js";
 
 export * as Lsp from "./lsp-util/index.js";
 

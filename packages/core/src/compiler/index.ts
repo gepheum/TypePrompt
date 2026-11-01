@@ -24,6 +24,21 @@ export {
 } from "./compiler-types.js";
 
 export {
+  type PlaygroundInference,
+  type PlaygroundInferenceError,
+  type PlaygroundInferenceRequest,
+  type PlaygroundInferenceResponse,
+  type PlaygroundInferenceResult,
+  type PlaygroundInferenceSet,
+  type PlaygroundInferenceTelemetry,
+  type PlaygroundMessage,
+  type PlaygroundTokenUsage,
+  type PlaygroundTool,
+  type PlaygroundToolCall,
+  type PlaygroundToolResult,
+} from "./playground-inference-types.js";
+
+export {
   PLAYGROUND_MODEL_IDS,
   type AnthropicEffort,
   type AnthropicProviderOptions,
