@@ -127,8 +127,14 @@ export type Tool<Input, Output> = {
 export type OutputFormat<Id extends TemplateId> =
   | {
       readonly format: "json";
-      readonly schema: z.ZodType<Output<Id>>;
       readonly jsonSchema: { readonly [key: string]: unknown };
+      /**
+       * Zod schema for validating/parsing the LLM output.
+       *
+       * When passing a JSON schema to the model (e.g. for structured outputs),
+       * use the `jsonSchema` field instead of deriving one from this Zod schema.
+       */
+      readonly schema: z.ZodType<Output<Id>>;
     }
   | (Output<Id> extends string ? { readonly format: "text" } : never);
 
