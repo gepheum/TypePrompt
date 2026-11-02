@@ -908,6 +908,11 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       width: 100%;
     }
 
+    /* System message aligned to the left (with the same right margin as user) */
+    .system-message-wrap {
+      padding-right: 12%;
+    }
+
     /* User messages aligned to the left (with right margin) */
     .chat-bubble-wrap.role-user {
       justify-content: flex-start;
@@ -1079,8 +1084,14 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .hl-xml-attribute { color: var(--hl-xml-attribute); }
     .hl-schema-keyword { color: var(--hl-schema-keyword); font-weight: 600; }
 
+    .source-files-section {
+      margin-top: 3.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
     footer {
-      margin-top: 4rem;
+      margin-top: 3rem;
       text-align: center;
       font-size: 0.8rem;
       color: var(--text-soft);
@@ -1117,27 +1128,6 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       </div>
     </header>
 
-    <!-- Template Source Files (collapsible, highlighted with tokenize) -->
-    ${Object.keys(data.templateFiles).length > 0 ? html`
-      <div style="margin-bottom: 1.75rem;">
-        <details>
-          <summary>View source files (${Object.keys(data.templateFiles).length})</summary>
-          <div class="details-body" style="display: flex; flex-direction: column; gap: 0.65rem;">
-            ${Object.entries(data.templateFiles)
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([filePath, content]) => html`
-              <details class="source-file-item">
-                <summary class="source-file-header">
-                  <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;">${filePath}</span>
-                </summary>
-                <pre class="code-view is-active" style="padding: 0.9rem; background: #070a12; margin: 0;">${highlightTp(content)}</pre>
-              </details>
-            `)}
-          </div>
-        </details>
-      </div>
-    ` : ""}
-
     <!-- Samples Toolbar -->
     <div class="samples-toolbar">
       <div class="samples-count">${data.inferences.length} sample${data.inferences.length !== 1 ? "s" : ""}</div>
@@ -1158,6 +1148,27 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
         return renderInferenceCard(inf, isSingleSample, sampleYaml);
       })}
     </main>
+
+    <!-- Source Files Section (at the end with a clear separator) -->
+    ${Object.keys(data.templateFiles).length > 0 ? html`
+      <div class="source-files-section">
+        <details>
+          <summary>View source files (${Object.keys(data.templateFiles).length})</summary>
+          <div class="details-body" style="display: flex; flex-direction: column; gap: 0.65rem;">
+            ${Object.entries(data.templateFiles)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([filePath, content]) => html`
+              <details class="source-file-item">
+                <summary class="source-file-header">
+                  <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;">${filePath}</span>
+                </summary>
+                <pre class="code-view is-active" style="padding: 0.9rem; background: #070a12; margin: 0;">${highlightTp(content)}</pre>
+              </details>
+            `)}
+          </div>
+        </details>
+      </div>
+    ` : ""}
 
     <footer>
       Generated with <a href="https://typeprompt.dev" target="_blank" rel="noopener">TypePrompt</a>
@@ -1591,7 +1602,7 @@ function renderRequestContext(request: PlaygroundInferenceRequest): SafeHtml {
   return html`
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       ${request.systemMessage ? html`
-        <div>
+        <div class="system-message-wrap">
           <div class="section-title request" style="margin-bottom: 0.45rem;">System message</div>
           <pre class="code-view is-active" style="background: #070a12; border: 1px solid var(--section-request-border); border-radius: 6px;">${request.systemMessage}</pre>
         </div>
