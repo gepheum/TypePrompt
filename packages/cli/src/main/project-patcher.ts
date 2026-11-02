@@ -59,7 +59,7 @@ export async function patchProject(args: {
       jsonContent = await response.text();
     } else {
       const baseFilePath = Paths.resolve(base);
-      const content = REAL_FILE_SYSTEM.readTextFile(baseFilePath);
+      const content = await REAL_FILE_SYSTEM.readTextFileAsync(baseFilePath);
       if (content === undefined) {
         throw new ExitError(`Cannot find ${base}`);
       }
@@ -77,7 +77,7 @@ export async function patchProject(args: {
       throw new ExitError(`Not a directory: ${base}`);
     }
 
-    const { configPath, configContent } = readConfigInDirectory(baseDir);
+    const { configPath, configContent } = await readConfigInDirectory(baseDir);
 
     const configResult = parseConfigYaml(configContent, configPath);
     if (configResult.kind === "error") {
@@ -137,7 +137,7 @@ export async function patchProject(args: {
     "patch-base.json": JSON.stringify(templates, undefined, 2),
   };
 
-  checkNoConfigInDirectory(output);
+  await checkNoConfigInDirectory(output);
 
   const existingFiles = (
     await Promise.all(

@@ -309,9 +309,7 @@ function buildPlayCommand(options: ParsedOptions): ParsedArgs {
 function buildRunCommand(options: ParsedOptions): ParsedArgs {
   validateAllowedOptions(options, "run", [], true);
   if (options.positional.length <= 0) {
-    throw new CommandLineParseError(
-      "Missing file argument for 'run' command",
-    );
+    throw new CommandLineParseError("Missing file argument for 'run' command");
   }
   if (options.positional.length > 1) {
     throw new CommandLineParseError(

@@ -56,8 +56,8 @@ describe("initializeProject", () => {
     }
   });
 
-  it("generates typeprompt.yaml and prompts/hello-world.tp in a temporary directory", () => {
-    initializeProject(tempDir);
+  it("generates typeprompt.yaml and prompts/hello-world.tp in a temporary directory", async () => {
+    await initializeProject(tempDir);
 
     const configPath = join(tempDir, "typeprompt.yaml");
     const templatePath = join(tempDir, "prompts", "hello-world.tp");
@@ -124,31 +124,31 @@ describe("initializeProject", () => {
     expect(compileResult.templates["Main:SayHello"]?.kind).toBe("template");
   });
 
-  it("does not overwrite existing config or template files", () => {
+  it("does not overwrite existing config or template files", async () => {
     const configPath = join(tempDir, "typeprompt.yaml");
     const promptsDir = join(tempDir, "prompts");
     const templatePath = join(promptsDir, "hello-world.tp");
 
     writeFileSync(configPath, "custom config", "utf8");
 
-    initializeProject(tempDir);
+    await initializeProject(tempDir);
 
     expect(readFileSync(configPath, "utf8")).toBe("custom config");
     expect(existsSync(templatePath)).toBe(true);
 
     writeFileSync(templatePath, "custom template", "utf8");
-    initializeProject(tempDir);
+    await initializeProject(tempDir);
 
     expect(readFileSync(templatePath, "utf8")).toBe("custom template");
   });
 
-  it("does not overwrite existing typeprompt.yml with typeprompt.yaml", () => {
+  it("does not overwrite existing typeprompt.yml with typeprompt.yaml", async () => {
     const ymlConfigPath = join(tempDir, "typeprompt.yml");
     const yamlConfigPath = join(tempDir, "typeprompt.yaml");
 
     writeFileSync(ymlConfigPath, "custom yml config", "utf8");
 
-    initializeProject(tempDir);
+    await initializeProject(tempDir);
 
     expect(readFileSync(ymlConfigPath, "utf8")).toBe("custom yml config");
     expect(existsSync(yamlConfigPath)).toBe(false);

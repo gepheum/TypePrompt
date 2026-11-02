@@ -2,18 +2,18 @@ import * as Paths from "path";
 import { REAL_FILE_SYSTEM } from "../util/io.js";
 import { ExitError } from "./exit-error.js";
 
-export type FoundConfig = {
+export type ConfigMatch = {
   readonly projectDir: string;
   readonly configPath: string;
   readonly configContent: string;
 };
 
-export function findConfigInDirectory(
+export async function findConfigInDirectory(
   projectDir: string,
-): FoundConfig | undefined {
+): Promise<ConfigMatch | undefined> {
   for (const name of CONFIG_FILE_NAMES) {
     const configPath = Paths.join(projectDir, name);
-    const configContent = REAL_FILE_SYSTEM.readTextFile(configPath);
+    const configContent = await REAL_FILE_SYSTEM.readTextFileAsync(configPath);
     if (configContent !== undefined) {
       return { projectDir, configPath, configContent };
     }
@@ -21,8 +21,10 @@ export function findConfigInDirectory(
   return undefined;
 }
 
-export function readConfigInDirectory(projectDir: string): FoundConfig {
-  const found = findConfigInDirectory(projectDir);
+export async function readConfigInDirectory(
+  projectDir: string,
+): Promise<ConfigMatch> {
+  const found = await findConfigInDirectory(projectDir);
   if (found !== undefined) {
     return found;
   }
@@ -30,8 +32,10 @@ export function readConfigInDirectory(projectDir: string): FoundConfig {
   throw new ExitError(`Cannot find ${defaultPath}`);
 }
 
-export function checkNoConfigInDirectory(projectDir: string): void {
-  const existingConfig = findConfigInDirectory(projectDir);
+export async function checkNoConfigInDirectory(
+  projectDir: string,
+): Promise<void> {
+  const existingConfig = await findConfigInDirectory(projectDir);
   if (existingConfig !== undefined) {
     const rel =
       Paths.relative(process.cwd(), existingConfig.configPath) ||
@@ -40,14 +44,20 @@ export function checkNoConfigInDirectory(projectDir: string): void {
   }
 }
 
-export function findProjectForFile(filePath: string): FoundConfig {
+/**
+ * Walks up parent directories starting from `filePath`'s directory until a
+ * TypePrompt config file (`typeprompt.yaml` or `typeprompt.yml`) is found.
+ */
+export async function findProjectForFile(
+  filePath: string,
+): Promise<ConfigMatch> {
   const resolvedFile = Paths.resolve(filePath);
-  if (REAL_FILE_SYSTEM.readTextFile(resolvedFile) === undefined) {
+  if ((await REAL_FILE_SYSTEM.readTextFileAsync(resolvedFile)) === undefined) {
     throw new ExitError(`Cannot find ${filePath}`);
   }
   let currentDir = Paths.dirname(resolvedFile);
   while (true) {
-    const found = findConfigInDirectory(currentDir);
+    const found = await findConfigInDirectory(currentDir);
     if (found !== undefined) {
       return found;
     }

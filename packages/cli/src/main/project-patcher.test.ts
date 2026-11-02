@@ -39,7 +39,7 @@ describe("patchProject", () => {
   });
 
   it("patches from a project directory", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     const targetProject = join(tempPatchDir, "my-patch");
     await patchProject({
@@ -74,7 +74,7 @@ describe("patchProject", () => {
   });
 
   it("patches from a .json spec file", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     const target1 = join(tempPatchDir, "target1");
     await patchProject({
@@ -111,7 +111,7 @@ describe("patchProject", () => {
   });
 
   it("fails if target project already contains a generated file", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     const targetProject = join(tempPatchDir, "existing-target");
     mkdirSync(targetProject, { recursive: true });
@@ -136,7 +136,7 @@ describe("patchProject", () => {
   });
 
   it("fails if target project already contains typeprompt.yml", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     const targetProject = join(tempPatchDir, "existing-yml-target");
     mkdirSync(targetProject, { recursive: true });
@@ -203,7 +203,7 @@ describe("patchProject", () => {
   });
 
   it("fails if parent directory of project does not exist", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     let error: unknown;
     try {
@@ -222,7 +222,7 @@ describe("patchProject", () => {
   });
 
   it("patches from a base spec served over HTTP", async () => {
-    initializeProject(tempBaseDir);
+    await initializeProject(tempBaseDir);
 
     const target1 = join(tempPatchDir, "target1");
     await patchProject({

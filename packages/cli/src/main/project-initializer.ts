@@ -2,13 +2,13 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findConfigInDirectory } from "./project-config.js";
 
-export function initializeProject(projectDir: string): void {
+export async function initializeProject(projectDir: string): Promise<void> {
   if (!existsSync(projectDir)) {
     mkdirSync(projectDir);
     console.log(`Created ${projectDir}`);
   }
 
-  const existingConfig = findConfigInDirectory(projectDir);
+  const existingConfig = await findConfigInDirectory(projectDir);
 
   const promptsDir = join(projectDir, "prompts");
   const helloWorldPath = join(promptsDir, "hello-world.tp");

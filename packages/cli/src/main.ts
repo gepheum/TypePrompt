@@ -19,7 +19,7 @@ import { ExitError } from "./main/exit-error.js";
 import {
   findProjectForFile,
   readConfigInDirectory,
-  type FoundConfig,
+  type ConfigMatch,
 } from "./main/project-config.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
@@ -196,7 +196,9 @@ async function runPlaygroundFile(
 
   const playgroundEntry = Object.entries(
     validCompilationResult.playgrounds,
-  ).find(([, playground]) => playground.playground.tag.path === relativeFilePath);
+  ).find(
+    ([, playground]) => playground.playground.tag.path === relativeFilePath,
+  );
   if (!playgroundEntry) {
     throw new ExitError(`File '${file}' is not a <playground> file`);
   }
@@ -225,7 +227,7 @@ async function main(): Promise<void> {
 
   switch (args.kind) {
     case "init": {
-      initializeProject(args.project ?? ".");
+      await initializeProject(args.project ?? ".");
       return;
     }
     case "patch": {
@@ -245,7 +247,7 @@ async function main(): Promise<void> {
     projectDir: resolvedProject,
     configPath,
     configContent,
-  } = await (async (): Promise<FoundConfig> => {
+  } = await (async (): Promise<ConfigMatch> => {
     if (args.kind === "run") {
       if (await isDirectory(args.file)) {
         throw new ExitError(`Expected a file, got directory: ${args.file}`);
