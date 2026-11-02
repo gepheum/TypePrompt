@@ -166,6 +166,9 @@ async function main(): Promise<void> {
       });
       return;
     }
+    case "run": {
+      return;
+    }
     case "help":
     case "error": {
       return;

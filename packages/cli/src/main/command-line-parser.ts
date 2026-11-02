@@ -24,6 +24,10 @@ export type ParsedArgs =
       port?: number;
     }
   | {
+      kind: "run";
+      file: string;
+    }
+  | {
       kind: "help";
       project?: undefined;
     }
@@ -59,7 +63,7 @@ export function parseCommandLine(args: string[]): ParsedArgs {
     return { kind: "version" };
   }
 
-  const validCommands = ["gen", "format", "init", "patch", "play"];
+  const validCommands = ["gen", "format", "init", "patch", "play", "run"];
   const normalizedCommand = command === "--play" ? "play" : command;
   if (!normalizedCommand || !validCommands.includes(normalizedCommand)) {
     printError(`Unknown command: ${command}`);
@@ -81,6 +85,8 @@ export function parseCommandLine(args: string[]): ParsedArgs {
         return buildPatchCommand(options);
       case "play":
         return buildPlayCommand(options);
+      case "run":
+        return buildRunCommand(options);
       default:
         throw new CommandLineParseError(`Unexpected command: ${command}`);
     }
@@ -104,6 +110,7 @@ Commands:
   format       Format all template files
   patch        Initialize a patch project against a base project
   play         Start the prompt playground server on localhost
+  run <file>   Run playground inferences for a .play.tp file
   help         Display this help message
 
 Options:
@@ -123,6 +130,7 @@ Examples:
   ${COMMAND_BASE} patch -b path/to/base -o path/to/patch
   ${COMMAND_BASE} play
   ${COMMAND_BASE} play --port 3000
+  ${COMMAND_BASE} run prompts/Translate.play.tp
 `;
 
 export class CommandLineParseError extends Error {
@@ -139,11 +147,13 @@ type ParsedOptions = {
   port?: string;
   watch?: boolean;
   ci?: boolean;
+  positional: string[];
   unknown: string[];
 };
 
 function parseOptions(args: string[]): ParsedOptions {
   const options: ParsedOptions = {
+    positional: [],
     unknown: [],
   };
 
@@ -206,15 +216,14 @@ function parseOptions(args: string[]): ParsedOptions {
     if (arg.startsWith("-")) {
       options.unknown.push(arg);
     } else {
-      // Positional argument - not allowed anymore
-      throw new CommandLineParseError(`Unexpected argument: ${arg}`);
+      options.positional.push(arg);
     }
   }
 
   return options;
 }
 
-type OptionKey = keyof Omit<ParsedOptions, "unknown">;
+type OptionKey = keyof Omit<ParsedOptions, "positional" | "unknown">;
 
 const OPTION_FLAGS: Record<OptionKey, string> = {
   project: "--project",
@@ -229,6 +238,7 @@ function validateAllowedOptions(
   options: ParsedOptions,
   command: string,
   allowed: readonly OptionKey[],
+  allowPositional = false,
 ): void {
   validateNoUnknownOptions(options, command);
 
@@ -242,6 +252,12 @@ function validateAllowedOptions(
         `Option ${flag} is not valid for '${command}' command`,
       );
     }
+  }
+
+  if (!allowPositional && options.positional.length >= 1) {
+    throw new CommandLineParseError(
+      `Unexpected argument: ${options.positional[0]}`,
+    );
   }
 }
 
@@ -287,6 +303,24 @@ function buildPlayCommand(options: ParsedOptions): ParsedArgs {
     kind: "play",
     project: options.project,
     port,
+  };
+}
+
+function buildRunCommand(options: ParsedOptions): ParsedArgs {
+  validateAllowedOptions(options, "run", [], true);
+  if (options.positional.length <= 0) {
+    throw new CommandLineParseError(
+      "Missing file argument for 'run' command",
+    );
+  }
+  if (options.positional.length > 1) {
+    throw new CommandLineParseError(
+      `Unexpected argument: ${options.positional[1]}`,
+    );
+  }
+  return {
+    kind: "run",
+    file: options.positional[0]!,
   };
 }
 

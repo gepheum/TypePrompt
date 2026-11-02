@@ -330,6 +330,48 @@ describe("command-line-parser", () => {
     });
   });
 
+  describe("run command", () => {
+    it("parses run with a file positional argument", () => {
+      expect(parseCommandLine(["run", "prompts/Translate.play.tp"])).toMatch({
+        kind: "run",
+        file: "prompts/Translate.play.tp",
+      });
+    });
+
+    it("returns error when file argument is missing for run", () => {
+      const { result, errors } = parseAndCapture(["run"]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe(
+        "Error: Missing file argument for 'run' command",
+      );
+    });
+
+    it("returns error when multiple positional arguments are passed to run", () => {
+      const { result, errors } = parseAndCapture([
+        "run",
+        "prompts/A.play.tp",
+        "prompts/B.play.tp",
+      ]);
+      expect(result).toMatch({ kind: "error" });
+      expect(errors[0]?.trim()).toBe(
+        "Error: Unexpected argument: prompts/B.play.tp",
+      );
+    });
+
+    it("returns error if invalid flags are passed to run", () => {
+      const projectTest = parseAndCapture([
+        "run",
+        "prompts/A.play.tp",
+        "-p",
+        "my-project",
+      ]);
+      expect(projectTest.result).toMatch({ kind: "error" });
+      expect(projectTest.errors[0]?.trim()).toBe(
+        "Error: Option --project is not valid for 'run' command",
+      );
+    });
+  });
+
   describe("error handling", () => {
     it("returns error for unknown commands", () => {
       const { result, errors } = parseAndCapture(["unknown"]);
