@@ -402,7 +402,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       color: var(--text);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
-      padding: 2.5rem 1.5rem 5rem;
+      padding: 2rem 1.25rem 4rem;
     }
 
     .container {
@@ -414,9 +414,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     header {
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.75rem 2rem;
-      margin-bottom: 2rem;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
       box-shadow: var(--shadow-sm);
     }
 
@@ -424,25 +424,25 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 1.5rem;
+      gap: 1.25rem;
       flex-wrap: wrap;
     }
 
     .title-group h1 {
-      font-size: 1.45rem;
+      font-size: 1.35rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       color: var(--text);
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.5rem;
     }
 
     .badge-tag {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.03em;
-      padding: 0.2rem 0.55rem;
+      padding: 0.15rem 0.45rem;
       border-radius: 4px;
       background: #1e293b;
       color: #94a3b8;
@@ -452,31 +452,31 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .timestamp {
       font-size: 0.82rem;
       color: var(--text-muted);
-      margin-top: 0.35rem;
+      margin-top: 0.3rem;
     }
 
     /* Model Config YAML Box */
     .model-yaml-card {
       background: var(--bg-inset);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
-      min-width: 280px;
+      min-width: 260px;
     }
 
     .model-yaml-header {
       background: #151d2f;
-      padding: 0.35rem 0.75rem;
-      font-size: 0.72rem;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border);
     }
 
     .model-yaml-body {
-      padding: 0.65rem 0.85rem;
+      padding: 0.5rem 0.75rem;
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       line-height: 1.45;
       color: #e2e8f0;
       white-space: pre;
@@ -487,8 +487,8 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
-      padding: 0 0.25rem;
+      margin-bottom: 0.75rem;
+      padding: 0 0.2rem;
     }
 
     .samples-count {
@@ -499,17 +499,17 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
 
     .toolbar-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .btn-action {
       background: var(--bg-surface);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      font-size: 0.75rem;
+      font-size: 0.78rem;
       font-weight: 600;
-      padding: 0.35rem 0.7rem;
-      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+      border-radius: 5px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
@@ -524,13 +524,13 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .inferences-section {
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: 0.85rem;
     }
 
     .inference-card {
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
       box-shadow: var(--shadow-sm);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -543,13 +543,13 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     /* Top Bar Header */
     .card-header-bar {
       width: 100%;
-      padding: 1.1rem 1.5rem;
+      padding: 0.85rem 1.25rem;
       background: var(--bg-surface);
       border: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
       cursor: pointer;
       text-align: left;
       user-select: none;
@@ -567,7 +567,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .card-title-group {
       display: flex;
       align-items: center;
-      gap: 0.85rem;
+      gap: 0.75rem;
       flex-wrap: wrap;
     }
 
@@ -591,8 +591,8 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       font-family: var(--font-mono);
       background: #1e293b;
       color: var(--text-muted);
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -600,7 +600,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .sample-name {
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 600;
       color: var(--text);
     }
@@ -611,7 +611,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       gap: 0.35rem;
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.25rem 0.65rem;
+      padding: 0.22rem 0.6rem;
       border-radius: 9999px;
       line-height: 1;
     }
@@ -638,7 +638,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .telemetry-strip {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
       font-size: 0.8rem;
       color: var(--text-muted);
       font-family: var(--font-mono);
@@ -654,7 +654,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .telemetry-label {
       font-family: var(--font-sans);
       color: var(--text-soft);
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -662,9 +662,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     /* Expandable Body */
     .card-body {
       display: none;
-      padding: 1.5rem;
+      padding: 1.1rem 1.25rem;
       flex-direction: column;
-      gap: 1.75rem;
+      gap: 1.1rem;
       background: var(--bg-surface);
     }
 
@@ -676,11 +676,11 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .section-block {
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
+      gap: 0.55rem;
     }
 
     .section-title {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       font-weight: 600;
       letter-spacing: 0.02em;
       display: flex;
@@ -712,8 +712,8 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .request-summary {
-      padding: 0.75rem 1rem;
-      font-size: 0.8rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
       font-weight: 600;
       color: var(--section-request-label);
       background: var(--section-request-header);
@@ -735,7 +735,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .request-tab-bar {
-      padding: 0.55rem 1rem;
+      padding: 0.45rem 0.9rem;
       background: #0f1424;
       border-bottom: 1px solid var(--section-request-border);
     }
@@ -772,7 +772,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
     }
 
     .output-card.error .output-card-header {
@@ -781,13 +781,13 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .panel-tab-bar {
-      padding: 0.65rem 1rem;
+      padding: 0.45rem 0.9rem;
       background: #101726;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
     }
 
     .panel-tabs,
@@ -802,9 +802,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       border: 1px solid transparent;
       color: var(--text-muted);
       font-family: var(--font-mono);
-      font-size: 0.75rem;
+      font-size: 0.78rem;
       font-weight: 600;
-      padding: 0.25rem 0.65rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -835,9 +835,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       background: #1e293b;
       border: 1px solid #334155;
       color: #cbd5e1;
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.25rem 0.65rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 5px;
       cursor: pointer;
       display: inline-flex;
@@ -860,9 +860,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
 
     .code-view {
       font-family: var(--font-mono);
-      font-size: 0.82rem;
-      line-height: 1.55;
-      padding: 1.1rem;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      padding: 0.85rem 1rem;
       overflow-x: auto;
       white-space: pre-wrap;
       word-break: break-word;
@@ -878,29 +878,29 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .reasoning-box {
       background: #0f1624;
       border: 1px dashed #243554;
-      border-radius: 8px;
-      padding: 1rem 1.15rem;
+      border-radius: 6px;
+      padding: 0.8rem 1rem;
       font-size: 0.85rem;
       color: #cbd5e1;
-      line-height: 1.6;
+      line-height: 1.55;
     }
 
     .reasoning-box em {
       display: block;
       font-style: normal;
       font-weight: 600;
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       letter-spacing: 0.02em;
       color: #7dd3fc;
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.35rem;
     }
 
     /* Chat Messages Layout (Messaging app style) */
     .chat-stream {
       display: flex;
       flex-direction: column;
-      gap: 1.1rem;
-      padding: 1rem 0;
+      gap: 0.85rem;
+      padding: 0.5rem 0;
     }
 
     .chat-bubble-wrap {
@@ -933,7 +933,7 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
 
     .chat-bubble {
       width: 100%;
-      border-radius: 10px;
+      border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--border);
       box-shadow: var(--shadow-sm);
@@ -955,8 +955,8 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .chat-bubble-header {
-      padding: 0.45rem 0.9rem;
-      font-size: 0.72rem;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.02em;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -981,14 +981,14 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .chat-bubble-body {
-      padding: 0.9rem 1rem;
+      padding: 0.75rem 0.9rem;
       font-size: 0.85rem;
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
     .chat-bubble-body pre {
       font-family: var(--font-mono);
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       white-space: pre-wrap;
       word-break: break-word;
       color: #e2e8f0;
@@ -998,28 +998,28 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .tool-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.35rem;
       font-family: var(--font-mono);
       font-size: 0.78rem;
       background: #311d4d;
       color: #d8b4fe;
       border: 1px solid #581c87;
-      padding: 0.25rem 0.6rem;
-      border-radius: 6px;
-      margin-bottom: 0.4rem;
+      padding: 0.22rem 0.55rem;
+      border-radius: 5px;
+      margin-bottom: 0.35rem;
     }
 
     /* Collapsible Details */
     details {
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       background: var(--bg-inset);
       overflow: hidden;
     }
 
     details summary {
-      padding: 0.75rem 1rem;
-      font-size: 0.8rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
@@ -1041,21 +1041,21 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     }
 
     .details-body {
-      padding: 1.1rem;
+      padding: 0.85rem 1rem;
     }
 
     .source-file-item {
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 5px;
       background: #090d16;
       overflow: hidden;
     }
 
     .source-file-header {
-      padding: 0.5rem 0.85rem;
+      padding: 0.45rem 0.85rem;
       background: #172136;
       color: #94a3b8;
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
       user-select: none;
@@ -1085,15 +1085,15 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
     .hl-schema-keyword { color: var(--hl-schema-keyword); font-weight: 600; }
 
     .source-files-section {
-      margin-top: 3.5rem;
-      padding-top: 2rem;
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
       border-top: 1px solid var(--border);
     }
 
     footer {
-      margin-top: 3rem;
+      margin-top: 2.5rem;
       text-align: center;
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       color: var(--text-soft);
     }
 
@@ -1160,9 +1160,9 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
               .map(([filePath, content]) => html`
               <details class="source-file-item">
                 <summary class="source-file-header">
-                  <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;">${filePath}</span>
+                  <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;">${filePath}</span>
                 </summary>
-                <pre class="code-view is-active" style="padding: 0.9rem; background: #070a12; margin: 0;">${highlightTp(content)}</pre>
+                <pre class="code-view is-active" style="padding: 0.85rem 1rem; background: #070a12; margin: 0;">${highlightTp(content)}</pre>
               </details>
             `)}
           </div>
@@ -1404,7 +1404,7 @@ function renderInferenceCard(
               id="${cardId}-request-yaml"
               class="code-view is-active"
               data-raw="${escapeHtml(sampleYaml)}"
-              style="margin: 0; background: #070a12; padding: 1.1rem;"
+              style="margin: 0; background: #070a12; padding: 0.85rem 1rem;"
             >${highlightYaml(sampleYaml)}</pre>
           </div>
 
@@ -1557,9 +1557,9 @@ function renderSuccessResponse(
   return html`
     <div class="output-card">
       <div class="output-card-header">
-        <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted);">Tool calls (${response.toolCalls.length})</span>
+        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Tool calls (${response.toolCalls.length})</span>
       </div>
-      <div style="padding: 1.1rem;">
+      <div style="padding: 0.85rem 1rem;">
         ${response.toolCalls.map((tc) => renderToolCall(tc))}
       </div>
     </div>
@@ -1570,13 +1570,13 @@ function renderErrorResponse(error: PlaygroundInferenceError): SafeHtml {
   return html`
     <div class="output-card error">
       <div class="output-card-header">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--error-text);">Error: ${error.kind}</span>
+        <span style="font-size: 0.82rem; font-weight: 700; color: var(--error-text);">Error: ${error.kind}</span>
       </div>
-      <div style="padding: 1.1rem;">
+      <div style="padding: 0.85rem 1rem;">
         <p style="color: var(--error-text); font-weight: 600; margin-bottom: 0.75rem;">${error.message}</p>
         ${"rawText" in error && error.rawText ? html`
           <div>
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.35rem;">Raw model output:</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">Raw model output:</div>
             <pre class="code-view is-active" style="background: #070a12; border: 1px solid var(--border);">${error.rawText}</pre>
           </div>
         ` : ""}
@@ -1593,14 +1593,14 @@ function renderToolCall(tc: PlaygroundToolCall): SafeHtml {
         <strong>${tc.toolName}</strong>
         <span style="color: #a855f7">(${tc.callId})</span>
       </span>
-      <pre class="code-view is-active" style="background: #070a12; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; margin-top: 0.35rem;">${highlightJson(jsonStr)}</pre>
+      <pre class="code-view is-active" style="background: #070a12; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 0.9rem; margin-top: 0.35rem;">${highlightJson(jsonStr)}</pre>
     </div>
   `;
 }
 
 function renderRequestContext(request: PlaygroundInferenceRequest): SafeHtml {
   return html`
-    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
       ${request.systemMessage ? html`
         <div class="system-message-wrap">
           <div class="section-title request" style="margin-bottom: 0.45rem;">System message</div>
