@@ -49,6 +49,8 @@ export {
   parseJson,
   unwrapJsonValue,
   validateJson,
+  type JsonObjectEntry,
+  type JsonValue,
   type StrictJsonValue,
 } from "./json/index.js";
 
