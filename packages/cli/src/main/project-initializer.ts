@@ -8,17 +8,17 @@ export function initializeProject(projectDir: string): void {
     console.log(`Created ${projectDir}`);
   }
 
-  const existingConfigPath = findConfigInDirectory(projectDir);
+  const existingConfig = findConfigInDirectory(projectDir);
 
   const promptsDir = join(projectDir, "prompts");
   const helloWorldPath = join(promptsDir, "hello-world.tp");
 
-  if (!existingConfigPath) {
+  if (!existingConfig) {
     const yamlConfigPath = join(projectDir, "typeprompt.yaml");
     writeFileSync(yamlConfigPath, DEFAULT_CONFIG_YAML, "utf8");
     console.log(`Created ${yamlConfigPath}`);
   } else {
-    console.log(`Config already exists: ${existingConfigPath}`);
+    console.log(`Config already exists: ${existingConfig.configPath}`);
   }
 
   if (!existsSync(promptsDir)) {

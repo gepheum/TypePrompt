@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import type {
-  CompilationResult,
-  ValidCompilationResult,
+import {
+  parseCompilationResult,
+  type CompilationResult,
+  type ValidCompilationResult,
 } from "@typeprompt/core";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
 import {
@@ -15,7 +16,11 @@ import * as Paths from "path";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import { makeGray, makeRed, renderErrors } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
-import { readConfigInDirectory } from "./main/project-config.js";
+import {
+  findProjectForFile,
+  readConfigInDirectory,
+  type FoundConfig,
+} from "./main/project-config.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";
@@ -27,6 +32,8 @@ import {
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
 import { PlayServer } from "./play/backend/server.js";
+import { readApiKeys } from "./play/inferences/api-key-reader.js";
+import { runPlaygroundInferences } from "./play/inferences/inference-runner.js";
 import { isDirectory } from "./util/io.js";
 export { formatTemplateFile };
 
@@ -142,6 +149,68 @@ async function startPlayground(
   await watchPromise;
 }
 
+async function runPlaygroundFile(
+  resolvedProject: string,
+  config: Config,
+  file: string,
+): Promise<void> {
+  const resolvedFile = Paths.resolve(file);
+  const relativeFilePath = Paths.relative(
+    resolvedProject,
+    resolvedFile,
+  ).replace(/\\/g, "/");
+
+  let patchBase: ValidCompilationResult | null = null;
+  if (config.patch) {
+    const basePath = Paths.join(resolvedProject, "patch-base.json");
+    const jsonContent = await FileSystem.readFile(basePath, "utf-8");
+    const parsedPatchBase = parseCompilationResult(jsonContent, basePath);
+    if (parsedPatchBase.anyErrors) {
+      throw new ExitError(parsedPatchBase.error);
+    }
+    patchBase = parsedPatchBase;
+  }
+
+  const templateFiles = await collectTemplateFiles(resolvedProject, config);
+  const compilationResult = compile(templateFiles, {
+    cache: null,
+    patchBase,
+  });
+  const pathNormalizer = makePathNormalizer(resolvedProject);
+  if (compilationResult.anyErrors) {
+    const errors = makeRenderableErrors(
+      compilationResult.finalErrors,
+      compilationResult.sourceFiles,
+      pathNormalizer,
+    );
+    renderErrors(errors, "error");
+    process.exit(1);
+  }
+  const validCompilationResult = compilationResult as ValidCompilationResult;
+
+  if (!(relativeFilePath in validCompilationResult.sourceFiles)) {
+    throw new ExitError(
+      `File '${file}' is not matched by project include patterns`,
+    );
+  }
+
+  const playgroundEntry = Object.entries(
+    validCompilationResult.playgrounds,
+  ).find(([, playground]) => playground.playground.tag.path === relativeFilePath);
+  if (!playgroundEntry) {
+    throw new ExitError(`File '${file}' is not a <playground> file`);
+  }
+  const [templateId] = playgroundEntry;
+
+  const apiKeys = await readApiKeys(config, resolvedProject);
+  const inferenceSet = await runPlaygroundInferences(
+    validCompilationResult,
+    templateId,
+    { apiKeys },
+  );
+  console.log(JSON.stringify(inferenceSet, null, 2));
+}
+
 async function main(): Promise<void> {
   const args = parseCommandLine(process.argv.slice(2));
 
@@ -166,24 +235,30 @@ async function main(): Promise<void> {
       });
       return;
     }
-    case "run": {
-      return;
-    }
     case "help":
     case "error": {
       return;
     }
   }
 
-  const project = args.project ?? ".";
-
-  if (!(await isDirectory(project))) {
-    console.error(makeRed(`Not a directory: ${project}`));
-    process.exit(1);
-  }
-
-  const resolvedProject = Paths.resolve(project);
-  const { configPath, configContent } = readConfigInDirectory(resolvedProject);
+  const {
+    projectDir: resolvedProject,
+    configPath,
+    configContent,
+  } = await (async (): Promise<FoundConfig> => {
+    if (args.kind === "run") {
+      if (await isDirectory(args.file)) {
+        throw new ExitError(`Expected a file, got directory: ${args.file}`);
+      }
+      return findProjectForFile(args.file);
+    }
+    const project = args.project ?? ".";
+    if (!(await isDirectory(project))) {
+      console.error(makeRed(`Not a directory: ${project}`));
+      process.exit(1);
+    }
+    return readConfigInDirectory(Paths.resolve(project));
+  })();
 
   const configResult = parseConfigYaml(configContent, configPath);
   if (configResult.kind === "error") {
@@ -201,7 +276,7 @@ async function main(): Promise<void> {
     case "format": {
       // Check or fix the formatting of the template files.
       const mode = args.subcommand === "ci" ? "check" : "fix";
-      await format(project, config, mode);
+      await format(args.project ?? ".", config, mode);
       break;
     }
     case "gen": {
@@ -210,6 +285,10 @@ async function main(): Promise<void> {
     }
     case "play": {
       await startPlayground(resolvedProject, config, args.port);
+      break;
+    }
+    case "run": {
+      await runPlaygroundFile(resolvedProject, config, args.file);
       break;
     }
     default: {

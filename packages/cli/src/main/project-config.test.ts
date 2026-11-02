@@ -1,12 +1,19 @@
 import { expect } from "buckwheat";
 import { afterEach, beforeEach, describe, it } from "mocha";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+   existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ExitError } from "./exit-error.js";
 import {
   checkNoConfigInDirectory,
   findConfigInDirectory,
+  findProjectForFile,
   readConfigInDirectory,
 } from "./project-config.js";
 
@@ -31,13 +38,19 @@ describe("project-config", () => {
     it("finds typeprompt.yaml when present", () => {
       const yamlPath = join(tempDir, "typeprompt.yaml");
       writeFileSync(yamlPath, "include: []\n", "utf8");
-      expect(findConfigInDirectory(tempDir)).toBe(yamlPath);
+      expect(findConfigInDirectory(tempDir)).toMatch({
+        configPath: yamlPath,
+        configContent: "include: []\n",
+      });
     });
 
     it("finds typeprompt.yml when present", () => {
       const ymlPath = join(tempDir, "typeprompt.yml");
       writeFileSync(ymlPath, "include: []\n", "utf8");
-      expect(findConfigInDirectory(tempDir)).toBe(ymlPath);
+      expect(findConfigInDirectory(tempDir)).toMatch({
+        configPath: ymlPath,
+        configContent: "include: []\n",
+      });
     });
 
     it("prefers typeprompt.yaml over typeprompt.yml when both exist", () => {
@@ -45,7 +58,10 @@ describe("project-config", () => {
       const ymlPath = join(tempDir, "typeprompt.yml");
       writeFileSync(yamlPath, "include: [yaml]\n", "utf8");
       writeFileSync(ymlPath, "include: [yml]\n", "utf8");
-      expect(findConfigInDirectory(tempDir)).toBe(yamlPath);
+      expect(findConfigInDirectory(tempDir)).toMatch({
+        configPath: yamlPath,
+        configContent: "include: [yaml]\n",
+      });
     });
   });
 
@@ -120,6 +136,34 @@ describe("project-config", () => {
       expect(error instanceof ExitError).toBe(true);
       expect((error as ExitError).message).toMatch(/File already exists/);
       expect((error as ExitError).message).toMatch(/typeprompt\.yml/);
+    });
+  });
+
+  describe("findProjectForFile", () => {
+    it("walks up parent directories to find the directory and config content", () => {
+      const yamlPath = join(tempDir, "typeprompt.yaml");
+      writeFileSync(yamlPath, "include:\n  - prompts/**/*.tp\n", "utf8");
+      const nestedDir = join(tempDir, "prompts", "Finance");
+      mkdirSync(nestedDir, { recursive: true });
+      const playFile = join(nestedDir, "DetectAnomaly.play.tp");
+      writeFileSync(playFile, "<playground for=\"DetectAnomaly\" />\n", "utf8");
+
+      expect(findProjectForFile(playFile)).toMatch({
+        projectDir: tempDir,
+        configPath: yamlPath,
+        configContent: "include:\n  - prompts/**/*.tp\n",
+      });
+    });
+
+    it("throws ExitError when the file does not exist", () => {
+      let error: unknown;
+      try {
+        findProjectForFile(join(tempDir, "missing.play.tp"));
+      } catch (e) {
+        error = e;
+      }
+      expect(error instanceof ExitError).toBe(true);
+      expect((error as ExitError).message).toMatch(/Cannot find/);
     });
   });
 });
