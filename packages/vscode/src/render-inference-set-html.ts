@@ -464,22 +464,16 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
       min-width: 260px;
     }
 
-    .model-yaml-header {
-      background: #151d2f;
-      padding: 0.3rem 0.65rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-    }
-
     .model-yaml-body {
-      padding: 0.5rem 0.75rem;
+      padding: 0.45rem 0.65rem;
       font-family: var(--font-mono);
       font-size: 0.82rem;
       line-height: 1.45;
       color: #e2e8f0;
       white-space: pre;
+      max-height: calc(2.9em + 0.9rem);
+      overflow: auto;
+      scrollbar-width: thin;
     }
 
     /* Toolbar for expanding/collapsing all */
@@ -1122,7 +1116,6 @@ export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
 
         <!-- Model YAML block -->
         <div class="model-yaml-card">
-          <div class="model-yaml-header">Model config</div>
           <pre class="model-yaml-body">${highlightYaml(modelYaml)}</pre>
         </div>
       </div>
