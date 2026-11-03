@@ -13,6 +13,7 @@ import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
+import { openProjectStorage } from "./main.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import { makeGray, makeRed, renderErrors } from "./main/error-renderer.js";
 import { ExitError } from "./main/exit-error.js";
@@ -35,6 +36,7 @@ import { PlayServer } from "./play/backend/server.js";
 import { readApiKeys } from "./play/inferences/api-key-reader.js";
 import { runPlaygroundInferences } from "./play/inferences/inference-runner.js";
 import { isDirectory } from "./util/io.js";
+export * from "./storage/index.js";
 export { formatTemplateFile };
 
 type ModuleFormatResult = {
@@ -205,10 +207,11 @@ async function runPlaygroundFile(
   const [templateId] = playgroundEntry;
 
   const apiKeys = await readApiKeys(config, resolvedProject);
+  const storage = openProjectStorage(resolvedProject);
   const inferenceSet = await runPlaygroundInferences(
     validCompilationResult,
     templateId,
-    { apiKeys },
+    { apiKeys, storage },
   );
   console.log(JSON.stringify(inferenceSet, null, 2));
 }

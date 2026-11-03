@@ -2,6 +2,7 @@ import { compile, type ValidCompilationResult } from "@typeprompt/core";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, it } from "mocha";
 import assert from "node:assert/strict";
+import { openProjectStorage } from "../../storage/index.js";
 import { runPlaygroundInferences } from "./inference-runner.js";
 
 type MockDoGenerateResult = Awaited<
@@ -745,6 +746,63 @@ TOON:
           ["rows", "event"],
         );
       }
+    });
+
+    it("saves inference set to storage when options.storage is provided", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/test.tp",
+          content: `<template name="Test">
+  <schema>
+    type Input = { message: string; };
+    type Output = string;
+  </schema>
+  <system>System test</system>
+  <user><insert val="input.message"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/test.play.tp",
+          content: `<playground for="Test">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - input:
+        message: "hello"
+  </samples>
+</playground>`,
+        },
+      ]);
+
+      const storage = openProjectStorage(":memory:");
+      const mockModel = new MockLanguageModelV4({
+        doGenerate: async (): Promise<MockDoGenerateResult> =>
+          ({
+            text: "response message",
+            finishReason: { unified: "stop", raw: undefined },
+            usage: {
+              inputTokens: { total: 10 },
+              outputTokens: { total: 5 },
+            },
+          }) as unknown as MockDoGenerateResult,
+      });
+
+      const inferenceSet = await runPlaygroundInferences(
+        compilation,
+        "Main:Test",
+        {
+          languageModel: mockModel,
+          storage,
+        },
+      );
+
+      const saved = storage.getInferenceSet(inferenceSet.id);
+      assert.deepEqual(saved, inferenceSet);
+      assert.equal(saved?.id, inferenceSet.id);
+      assert.equal(saved?.templateId, "Main:Test");
+
+      storage.close();
     });
   });
 });

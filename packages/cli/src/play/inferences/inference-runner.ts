@@ -41,6 +41,7 @@ import {
   type ToolSet,
 } from "ai";
 import YAML from "yaml";
+import { type ProjectStorage } from "../../storage/index.js";
 import type { ApiKeyProvider, ApiKeys } from "./api-key-reader.js";
 
 export type RunPlaygroundInferencesOptions = {
@@ -56,6 +57,10 @@ export type RunPlaygroundInferencesOptions = {
    * and the provided API keys.
    */
   readonly languageModel?: LanguageModel;
+  /**
+   * Optional storage instance or project directory to save the resulting PlaygroundInferenceSet into.
+   */
+  readonly storage?: ProjectStorage;
 };
 
 /**
@@ -122,7 +127,7 @@ export async function runPlaygroundInferences(
     },
   );
 
-  return {
+  const inferenceSet: PlaygroundInferenceSet = {
     kind: "playground-inference-set",
     id: crypto.randomUUID(),
     model: validatedPlayground.model,
@@ -131,6 +136,10 @@ export async function runPlaygroundInferences(
     templateFiles,
     inferences,
   };
+
+  options.storage?.saveInferenceSet(inferenceSet);
+
+  return inferenceSet;
 }
 
 async function mapWithConcurrency<T, R>(
