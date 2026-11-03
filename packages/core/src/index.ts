@@ -45,6 +45,12 @@ export {
 export { CONFIG, parseConfigYaml, type Config } from "./config/index.js";
 
 export {
+  parseSecretsYaml,
+  type Secrets,
+  type SecretsParseResult,
+} from "./secrets/index.js";
+
+export {
   parseAndValidateYaml,
   parseJson,
   unwrapJsonValue,

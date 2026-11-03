@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findConfigInDirectory } from "./project-config.js";
+import { findConfigInDirectory } from "./config-reader.js";
 
 export async function initializeProject(projectDir: string): Promise<void> {
   if (!existsSync(projectDir)) {

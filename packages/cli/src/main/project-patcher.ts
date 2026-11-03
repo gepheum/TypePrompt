@@ -15,7 +15,7 @@ import { ExitError } from "./exit-error.js";
 import {
   checkNoConfigInDirectory,
   readConfigInDirectory,
-} from "./project-config.js";
+} from "./config-reader.js";
 import type { RenderableError } from "./renderable-error.js";
 import {
   makePathNormalizer,

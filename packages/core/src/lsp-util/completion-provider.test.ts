@@ -243,7 +243,7 @@ describe("getYamlCompletionItems", () => {
     const yaml = "include:\n  - prompts/*.tp\n";
     const result = getYamlCompletionItems(yaml, yaml.length, CONFIG);
     expect(result !== null).toBe(true);
-    expect(result!.suggestions).toMatch(["gen", "patch", "play"]);
+    expect(result!.suggestions).toMatch(["gen", "patch"]);
     expect(result!.span).toMatch({ start: yaml.length, end: yaml.length });
   });
 
@@ -306,7 +306,7 @@ describe("getYamlCompletionItems", () => {
     const pos = yaml.indexOf("\n\n") + 1;
     const result = getYamlCompletionItems(yaml, pos, CONFIG);
     expect(result !== null).toBe(true);
-    expect(result!.suggestions).toMatch(["patch", "play"]);
+    expect(result!.suggestions).toMatch(["patch"]);
     expect(result!.span).toMatch({ start: pos, end: pos });
   });
 });

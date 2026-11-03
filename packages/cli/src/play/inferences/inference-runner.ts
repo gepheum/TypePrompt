@@ -28,6 +28,7 @@ import {
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
+  type Secrets,
 } from "@typeprompt/core";
 import {
   createGateway,
@@ -42,7 +43,9 @@ import {
 } from "ai";
 import YAML from "yaml";
 import { type ProjectStorage } from "../../storage/index.js";
-import type { ApiKeyProvider, ApiKeys } from "./api-key-reader.js";
+
+export type ApiKeys = NonNullable<Secrets["apiKeys"]>;
+export type ApiKeyProvider = keyof ApiKeys;
 
 export type RunPlaygroundInferencesOptions = {
   readonly apiKeys?: ApiKeys;
@@ -162,10 +165,8 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-type DirectProvider = Exclude<ApiKeyProvider, "vercelGateway">;
-
 const DIRECT_PROVIDERS: {
-  readonly [P in DirectProvider]: (options: {
+  readonly [P in "openai" | "anthropic" | "google" | "xai" | "mistral"]: (options: {
     apiKey: string;
   }) => (modelId: string) => LanguageModel;
 } = {
@@ -175,6 +176,8 @@ const DIRECT_PROVIDERS: {
   xai: createXai,
   mistral: createMistral,
 };
+
+type DirectProvider = keyof typeof DIRECT_PROVIDERS;
 
 const MODEL_PREFIX_TO_PROVIDER: {
   readonly [prefix: string]: DirectProvider;

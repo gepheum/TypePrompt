@@ -211,94 +211,20 @@ describe("parseConfigYaml", () => {
     });
   });
 
-  it("parses play.envFile and play.apiKeyEnvVars with custom environment variable names", () => {
+  it("fails on unknown top-level field play", () => {
     const yaml = [
       "include:",
       "  - prompts/*.tp",
       "play:",
-      "  envFile: ../../.env.local",
-      "  apiKeyEnvVars:",
-      "    openai: MY_OPENAI_KEY",
-      "    anthropic: MY_ANTHROPIC_KEY",
-      "    google: MY_GOOGLE_API_KEY",
-      "    xai: MY_XAI_KEY",
-      "    mistral: MY_MISTRAL_KEY",
-      "    vercelGateway: MY_VERCEL_GATEWAY_API_KEY",
-    ].join("\n");
-    const result = parse(yaml);
-    expect(result).toMatch({
-      kind: "success",
-      config: {
-        include: ["prompts/*.tp"],
-        play: {
-          envFile: "../../.env.local",
-          apiKeyEnvVars: {
-            openai: "MY_OPENAI_KEY",
-            anthropic: "MY_ANTHROPIC_KEY",
-            google: "MY_GOOGLE_API_KEY",
-            xai: "MY_XAI_KEY",
-            mistral: "MY_MISTRAL_KEY",
-            vercelGateway: "MY_VERCEL_GATEWAY_API_KEY",
-          },
-        },
-      },
-    });
-  });
-
-  it("fails when play.envFile is empty", () => {
-    const yaml = [
-      "include:",
-      "  - prompts/*.tp",
-      "play:",
-      '  envFile: ""',
+      "  envFile: .env",
     ].join("\n");
     const result = parse(yaml);
     expect(result).toMatch({
       kind: "error",
       errors: [
         {
-          span: { start: yaml.indexOf('""') },
-          message: "Must not be empty",
-        },
-      ],
-    });
-  });
-
-  it("fails when play.apiKeyEnvVars value is not a valid environment variable name", () => {
-    const yaml = [
-      "include:",
-      "  - prompts/*.tp",
-      "play:",
-      "  apiKeyEnvVars:",
-      "    google: sk-invalid-env-var-name",
-    ].join("\n");
-    const result = parse(yaml);
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          span: { start: yaml.indexOf("sk-invalid-env-var-name") },
-          message: "must be a valid environment variable name",
-        },
-      ],
-    });
-  });
-
-  it("fails on unknown provider in play.apiKeyEnvVars", () => {
-    const yaml = [
-      "include:",
-      "  - prompts/*.tp",
-      "play:",
-      "  apiKeyEnvVars:",
-      "    unknownProvider: MY_KEY",
-    ].join("\n");
-    const result = parse(yaml);
-    expect(result).toMatch({
-      kind: "error",
-      errors: [
-        {
-          span: { start: yaml.indexOf("unknownProvider") },
-          message: "Unknown field 'unknownProvider'",
+          span: { start: yaml.indexOf("play") },
+          message: "Unknown field 'play'",
         },
       ],
     });

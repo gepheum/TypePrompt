@@ -20,8 +20,9 @@ import { ExitError } from "./main/exit-error.js";
 import {
   findProjectForFile,
   readConfigInDirectory,
+  readSecretsInDirectory,
   type ConfigMatch,
-} from "./main/project-config.js";
+} from "./main/config-reader.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";
@@ -33,7 +34,6 @@ import {
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
 import { PlayServer } from "./play/backend/server.js";
-import { readApiKeys } from "./play/inferences/api-key-reader.js";
 import { runPlaygroundInferences } from "./play/inferences/inference-runner.js";
 import { isDirectory } from "./util/io.js";
 export * from "./storage/index.js";
@@ -206,12 +206,12 @@ async function runPlaygroundFile(
   }
   const [templateId] = playgroundEntry;
 
-  const apiKeys = await readApiKeys(config, resolvedProject);
+  const secrets = await readSecretsInDirectory(resolvedProject);
   const storage = openProjectStorage(resolvedProject);
   const inferenceSet = await runPlaygroundInferences(
     validCompilationResult,
     templateId,
-    { apiKeys, storage },
+    { apiKeys: secrets.apiKeys, storage },
   );
   console.log(JSON.stringify(inferenceSet, null, 2));
 }
