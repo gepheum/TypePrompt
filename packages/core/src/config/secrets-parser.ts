@@ -55,3 +55,4 @@ const SECRETS: SchemaType = {
   }).type,
   schema: EMPTY_SCHEMA,
 };
+

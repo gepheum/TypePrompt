@@ -42,13 +42,14 @@ export {
   type ValidatedTool,
 } from "./compiler/index.js";
 
-export { CONFIG, parseConfigYaml, type Config } from "./config/index.js";
-
 export {
+  CONFIG,
+  parseConfigYaml,
   parseSecretsYaml,
+  type Config,
   type Secrets,
   type SecretsParseResult,
-} from "./secrets/index.js";
+} from "./config/index.js";
 
 export {
   parseAndValidateYaml,

@@ -1,6 +1,6 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import type { InternalErrors } from "../../dist/index.js";
+import type { InternalErrors } from "../util/shared-types.js";
 import { type SecretsParseResult, parseSecretsYaml } from "./secrets-parser.js";
 
 function parse(
@@ -130,3 +130,4 @@ describe("parseSecretsYaml", () => {
     });
   });
 });
+
