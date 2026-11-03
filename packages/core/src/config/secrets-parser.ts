@@ -11,14 +11,16 @@ export type SecretsParseResult = {
 };
 
 export type Secrets = {
-  readonly apiKeys?: {
-    readonly openai?: string;
-    readonly anthropic?: string;
-    readonly google?: string;
-    readonly xai?: string;
-    readonly mistral?: string;
-    readonly vercelGateway?: string;
-  };
+  readonly apiKeys?: ApiKeys;
+};
+
+export type ApiKeys = {
+  readonly openai?: string;
+  readonly anthropic?: string;
+  readonly google?: string;
+  readonly xai?: string;
+  readonly mistral?: string;
+  readonly vercelGateway?: string;
 };
 
 export function parseSecretsYaml(
@@ -55,4 +57,3 @@ const SECRETS: SchemaType = {
   }).type,
   schema: EMPTY_SCHEMA,
 };
-

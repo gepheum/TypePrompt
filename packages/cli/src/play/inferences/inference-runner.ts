@@ -11,6 +11,7 @@ import {
   resolveType,
   unwrapJsonValue,
   validateJson,
+  type ApiKeys,
   type FieldType,
   type PlaygroundInference,
   type PlaygroundInferenceRequest,
@@ -28,7 +29,6 @@ import {
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
-  type Secrets,
 } from "@typeprompt/core";
 import {
   createGateway,
@@ -43,9 +43,6 @@ import {
 } from "ai";
 import YAML from "yaml";
 import { type ProjectStorage } from "../../storage/index.js";
-
-export type ApiKeys = NonNullable<Secrets["apiKeys"]>;
-export type ApiKeyProvider = keyof ApiKeys;
 
 export type RunPlaygroundInferencesOptions = {
   readonly apiKeys?: ApiKeys;
@@ -166,9 +163,9 @@ async function mapWithConcurrency<T, R>(
 }
 
 const DIRECT_PROVIDERS: {
-  readonly [P in "openai" | "anthropic" | "google" | "xai" | "mistral"]: (options: {
-    apiKey: string;
-  }) => (modelId: string) => LanguageModel;
+  readonly [
+    P in "openai" | "anthropic" | "google" | "xai" | "mistral"
+  ]: (options: { apiKey: string }) => (modelId: string) => LanguageModel;
 } = {
   openai: createOpenAI,
   anthropic: createAnthropic,

@@ -10,12 +10,12 @@ import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
 import { isDirectory, REAL_FILE_SYSTEM } from "../util/io.js";
-import { renderErrors } from "./error-renderer.js";
-import { ExitError } from "./exit-error.js";
 import {
   checkNoConfigInDirectory,
   readConfigInDirectory,
 } from "./config-reader.js";
+import { renderErrors } from "./error-renderer.js";
+import { ExitError } from "./exit-error.js";
 import type { RenderableError } from "./renderable-error.js";
 import {
   makePathNormalizer,

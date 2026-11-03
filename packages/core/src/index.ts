@@ -46,6 +46,7 @@ export {
   CONFIG,
   parseConfigYaml,
   parseSecretsYaml,
+  type ApiKeys,
   type Config,
   type Secrets,
   type SecretsParseResult,

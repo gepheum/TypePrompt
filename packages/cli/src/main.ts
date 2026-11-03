@@ -15,14 +15,14 @@ import * as FileSystem from "fs/promises";
 import * as Paths from "path";
 import { openProjectStorage } from "./main.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
-import { makeGray, makeRed, renderErrors } from "./main/error-renderer.js";
-import { ExitError } from "./main/exit-error.js";
 import {
   findProjectForFile,
   readConfigInDirectory,
   readSecretsInDirectory,
   type ConfigMatch,
 } from "./main/config-reader.js";
+import { makeGray, makeRed, renderErrors } from "./main/error-renderer.js";
+import { ExitError } from "./main/exit-error.js";
 import { initializeProject } from "./main/project-initializer.js";
 import { patchProject } from "./main/project-patcher.js";
 import type { RenderableError } from "./main/renderable-error.js";

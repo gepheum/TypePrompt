@@ -104,4 +104,3 @@ const SECRETS_FILE_NAMES = [
   ".typeprompt.secrets.yaml",
   ".typeprompt.secrets.yml",
 ] as const;
-
