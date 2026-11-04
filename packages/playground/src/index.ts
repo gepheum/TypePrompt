@@ -15,7 +15,6 @@ export {
 } from "./model/playground-store.js";
 export { createPlayClient, trpc } from "./trpc.js";
 export { PlayApp } from "./view/play-app.js";
-export { StepTemplate } from "./view/step-template.js";
 export { TypePromptEditor } from "./view/typeprompt-editor.js";
 
 export function getPlaygroundFrontendDir(): string {

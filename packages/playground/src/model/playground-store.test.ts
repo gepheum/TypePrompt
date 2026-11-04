@@ -40,8 +40,8 @@ const META_TP = `<meta>
 </meta>
 `;
 
-describe("PlaygroundStore jumpToFile", () => {
-  it("switches to new file within template group and preserves template", () => {
+describe("PlaygroundStore", () => {
+  it("initializes with sorted files and selects the first file", () => {
     const store = new PlaygroundStore();
     const response: PullSourcesResponse = {
       timestampMillis: 1000,
@@ -53,36 +53,74 @@ describe("PlaygroundStore jumpToFile", () => {
     };
 
     store.init(response);
-    const initialModel = store.model;
-    assert.ok(initialModel !== null);
-    assert.strictEqual(
-      initialModel.selectedTemplatePath,
-      "prompts/ResearchQuestion.tp",
-    );
-    assert.strictEqual(
-      initialModel.selectedFilePath,
-      "prompts/ResearchQuestion.tp",
-    );
+    const model = store.model;
+    assert.ok(model !== null);
+    assert.strictEqual(model.selectedFilePath, "prompts/meta.tp");
+    assert.strictEqual(model.activeActivity, "files");
+  });
 
-    // Jump to webSearch.tp at offset 12..21
+  it("selectFile changes the selected file", () => {
+    const store = new PlaygroundStore();
+    const response: PullSourcesResponse = {
+      timestampMillis: 1000,
+      sourceFiles: {
+        "prompts/ResearchQuestion.tp": RESEARCH_QUESTION_TP,
+        "prompts/webSearch.tp": WEB_SEARCH_TP,
+        "prompts/meta.tp": META_TP,
+      },
+    };
+
+    store.init(response);
+    store.selectFile("prompts/meta.tp");
+
+    const model = store.model;
+    assert.ok(model !== null);
+    assert.strictEqual(model.selectedFilePath, "prompts/meta.tp");
+  });
+
+  it("setActivity changes the active activity", () => {
+    const store = new PlaygroundStore();
+    const response: PullSourcesResponse = {
+      timestampMillis: 1000,
+      sourceFiles: {
+        "prompts/ResearchQuestion.tp": RESEARCH_QUESTION_TP,
+      },
+    };
+
+    store.init(response);
+    store.setActivity("inferences");
+
+    const model = store.model;
+    assert.ok(model !== null);
+    assert.strictEqual(model.activeActivity, "inferences");
+  });
+
+  it("jumpToFile switches selected file and sets selection range", () => {
+    const store = new PlaygroundStore();
+    const response: PullSourcesResponse = {
+      timestampMillis: 1000,
+      sourceFiles: {
+        "prompts/ResearchQuestion.tp": RESEARCH_QUESTION_TP,
+        "prompts/webSearch.tp": WEB_SEARCH_TP,
+        "prompts/meta.tp": META_TP,
+      },
+    };
+
+    store.init(response);
     store.jumpToFile("prompts/webSearch.tp", { start: 12, end: 21 });
 
-    const updatedModel = store.model;
-    assert.ok(updatedModel !== null);
-    assert.strictEqual(
-      updatedModel.selectedTemplatePath,
-      "prompts/ResearchQuestion.tp",
-    );
-    assert.strictEqual(updatedModel.selectedFilePath, "prompts/webSearch.tp");
+    const model = store.model;
+    assert.ok(model !== null);
+    assert.strictEqual(model.selectedFilePath, "prompts/webSearch.tp");
+    assert.strictEqual(model.activeActivity, "files");
 
-    // Verify selection was updated in the target file's editor state
-    const targetSource = updatedModel.editedSources["prompts/webSearch.tp"];
+    const targetSource = model.editedSources["prompts/webSearch.tp"];
     assert.ok(targetSource);
     assert.strictEqual(targetSource.editorState.selection.main.anchor, 12);
     assert.strictEqual(targetSource.editorState.selection.main.head, 21);
   });
 
-  it("handles jumpToFile within the same file by updating selection", () => {
+  it("jumpToFile within the same file updates selection", () => {
     const store = new PlaygroundStore();
     const response: PullSourcesResponse = {
       timestampMillis: 1000,
@@ -96,14 +134,11 @@ describe("PlaygroundStore jumpToFile", () => {
     store.init(response);
     store.jumpToFile("prompts/ResearchQuestion.tp", { start: 40, end: 48 });
 
-    const updatedModel = store.model;
-    assert.ok(updatedModel !== null);
-    assert.strictEqual(
-      updatedModel.selectedFilePath,
-      "prompts/ResearchQuestion.tp",
-    );
+    const model = store.model;
+    assert.ok(model !== null);
+    assert.strictEqual(model.selectedFilePath, "prompts/ResearchQuestion.tp");
 
-    const source = updatedModel.editedSources["prompts/ResearchQuestion.tp"];
+    const source = model.editedSources["prompts/ResearchQuestion.tp"];
     assert.ok(source);
     assert.strictEqual(source.editorState.selection.main.anchor, 40);
     assert.strictEqual(source.editorState.selection.main.head, 48);

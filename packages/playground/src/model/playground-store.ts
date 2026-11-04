@@ -3,14 +3,12 @@ import { compile, type ValidCompilationResult } from "@typeprompt/core";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import type { PullSourcesResponse } from "../contract.js";
 import { createPlaygroundEditorState } from "./editor-state-factory.js";
-import {
-  buildTemplateGroups,
-  getTemplateGroupPaths,
-  type EditedSource,
-  type MaybeModel,
-  type Model,
-  type PulledSources,
-  type TemplateSelection,
+import type {
+  Activity,
+  EditedSource,
+  MaybeModel,
+  Model,
+  PulledSources,
 } from "./model.js";
 
 export type PlaygroundEvents = {
@@ -46,39 +44,19 @@ export class PlaygroundStore {
       patchBase: null,
     }) as ValidCompilationResult;
 
-    const templateGroups = buildTemplateGroups(baseCompilationResult);
-    const sortedTemplatePaths = Object.keys(templateGroups).sort((a, b) =>
+    const filePaths = Object.keys(response.sourceFiles).sort((a, b) =>
       a.localeCompare(b),
     );
 
     const prevModel = this.model;
-    const selectedTemplatePath =
-      prevModel && templateGroups[prevModel.selectedTemplatePath]
-        ? prevModel.selectedTemplatePath
-        : (sortedTemplatePaths[0] ?? "");
-
-    const selectedGroup = templateGroups[selectedTemplatePath];
-    const defaultFile = selectedGroup
-      ? selectedGroup.templatePath
-      : (Object.keys(response.sourceFiles)[0] ?? "");
-
-    const templateSelections: Record<string, TemplateSelection> = {};
-    for (const [tplPath, group] of Object.entries(templateGroups)) {
-      const prevSel = prevModel?.templateSelections[tplPath];
-      templateSelections[tplPath] = {
-        templateGroup: group,
-        selectedFilePath: prevSel
-          ? prevSel.selectedFilePath
-          : group.templatePath,
-        datasetSelection: { todo: null },
-        modelSelection: { todo: null },
-      };
-    }
+    const selectedFilePath =
+      prevModel && filePaths.includes(prevModel.selectedFilePath)
+        ? prevModel.selectedFilePath
+        : (filePaths[0] ?? "");
 
     const pulledSources: PulledSources = {
       response,
       baseCompilationResult,
-      templateGroups,
     };
 
     const editedSources: Record<string, EditedSource> = {};
@@ -107,18 +85,13 @@ export class PlaygroundStore {
       };
     }
 
-    const selectedFilePath =
-      templateSelections[selectedTemplatePath]?.selectedFilePath ?? defaultFile;
-
     const newModel: Model = {
       pulledSources,
       latestPullSourcesResponse: response,
       editedSources,
       compilationResult: baseCompilationResult,
-      templateSelections,
-      selectedTemplatePath,
       selectedFilePath,
-      activeStep: prevModel ? prevModel.activeStep : 1,
+      activeActivity: prevModel ? prevModel.activeActivity : "files",
     };
 
     this.maybeModel = {
@@ -130,23 +103,17 @@ export class PlaygroundStore {
   }
 
   /**
-   * Selects a template.
+   * Selects a file to edit.
    */
-  selectTemplate(templatePath: string): void {
+  selectFile(filePath: string): void {
     const current = this.model;
     if (!current) return;
-    if (current.selectedTemplatePath === templatePath) return;
-
-    const sel = current.templateSelections[templatePath];
-    const group = current.pulledSources.templateGroups[templatePath];
-    const selectedFilePath = sel
-      ? sel.selectedFilePath
-      : (group?.templatePath ?? templatePath);
+    if (current.selectedFilePath === filePath) return;
+    if (!current.editedSources[filePath]) return;
 
     const updatedModel: Model = {
       ...current,
-      selectedTemplatePath: templatePath,
-      selectedFilePath,
+      selectedFilePath: filePath,
     };
 
     this.maybeModel = { initialized: true, model: updatedModel };
@@ -154,32 +121,15 @@ export class PlaygroundStore {
   }
 
   /**
-   * Selects a file within the current template's group.
+   * Sets the active activity in the left activity rail ("files" | "inferences").
    */
-  selectFile(filePath: string): void {
+  setActivity(activity: Activity): void {
     const current = this.model;
-    if (!current) return;
-    if (current.selectedFilePath === filePath) return;
-
-    const currentTpl = current.selectedTemplatePath;
-    const currentSel = current.templateSelections[currentTpl];
-
-    const updatedSelections = {
-      ...current.templateSelections,
-      ...(currentSel
-        ? {
-            [currentTpl]: {
-              ...currentSel,
-              selectedFilePath: filePath,
-            },
-          }
-        : {}),
-    };
+    if (!current || current.activeActivity === activity) return;
 
     const updatedModel: Model = {
       ...current,
-      selectedFilePath: filePath,
-      templateSelections: updatedSelections,
+      activeActivity: activity,
     };
 
     this.maybeModel = { initialized: true, model: updatedModel };
@@ -196,38 +146,6 @@ export class PlaygroundStore {
     const current = this.model;
     if (!current) return;
 
-    // Check if targetPath is in current template group
-    const currentGroup =
-      current.pulledSources.templateGroups[current.selectedTemplatePath];
-    const inCurrentGroup =
-      currentGroup && getTemplateGroupPaths(currentGroup).includes(targetPath);
-
-    let nextTemplatePath = current.selectedTemplatePath;
-    if (!inCurrentGroup) {
-      for (const [tplPath, group] of Object.entries(
-        current.pulledSources.templateGroups,
-      )) {
-        if (getTemplateGroupPaths(group).includes(targetPath)) {
-          nextTemplatePath = tplPath;
-          break;
-        }
-      }
-    }
-
-    const currentSel = current.templateSelections[nextTemplatePath];
-    const updatedSelections = {
-      ...current.templateSelections,
-      ...(currentSel
-        ? {
-            [nextTemplatePath]: {
-              ...currentSel,
-              selectedFilePath: targetPath,
-            },
-          }
-        : {}),
-    };
-
-    // Update target file's editorState selection if selection is provided
     let updatedEditedSources = current.editedSources;
     const targetSource = current.editedSources[targetPath];
     if (targetSource && selection) {
@@ -249,26 +167,9 @@ export class PlaygroundStore {
 
     const updatedModel: Model = {
       ...current,
-      selectedTemplatePath: nextTemplatePath,
       selectedFilePath: targetPath,
-      templateSelections: updatedSelections,
+      activeActivity: "files",
       editedSources: updatedEditedSources,
-    };
-
-    this.maybeModel = { initialized: true, model: updatedModel };
-    this.emitter.emit("change", updatedModel);
-  }
-
-  /**
-   * Sets the active step in the 4-stage pipeline flow.
-   */
-  setStep(step: number): void {
-    const current = this.model;
-    if (!current || current.activeStep === step) return;
-
-    const updatedModel: Model = {
-      ...current,
-      activeStep: step,
     };
 
     this.maybeModel = { initialized: true, model: updatedModel };
