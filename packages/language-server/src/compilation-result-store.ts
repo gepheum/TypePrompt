@@ -10,10 +10,8 @@ import type {
  * from the language server.
  */
 export class CompilationResultStore {
-  /** Map from project folder URI/path to its latest compilation result. */
-  public get projects(): ReadonlyMap<string, WireCompilationResult> {
-    return this.mutableProjects;
-  }
+  /** Map from project folder URI to its latest compilation result. */
+  public readonly projects = new Map<string, WireCompilationResult>();
 
   /**
    * Updates the store from an incoming LSP notification:
@@ -21,39 +19,34 @@ export class CompilationResultStore {
    * - Updates non-null compilation results for changed projects.
    */
   public handleNotification(results: WireCompilationResults): void {
-    for (const projectPath of this.mutableProjects.keys()) {
-      if (!(projectPath in results.projects)) {
-        this.mutableProjects.delete(projectPath);
+    for (const folderUri of this.projects.keys()) {
+      if (!(folderUri in results.projects)) {
+        this.projects.delete(folderUri);
       }
     }
 
-    for (const [projectPath, result] of Object.entries(results.projects)) {
+    for (const [folderUri, result] of Object.entries(results.projects)) {
       if (result) {
-        this.mutableProjects.set(projectPath, result);
+        this.projects.set(folderUri, result);
       }
     }
   }
 
   /**
-   * Finds the compilation result for a given file URI or filesystem path
+   * Finds the compilation result for a given file URI
    * by matching the longest matching project folder prefix.
    */
-  public getForFile(uriOrPath: string): WireCompilationResult | undefined {
+  public getForFile(fileUri: string): WireCompilationResult | undefined {
     let bestMatch: WireCompilationResult | undefined;
     let longestPrefix = -1;
 
-    for (const [projectPath, result] of this.projects) {
-      if (
-        uriOrPath.startsWith(projectPath) &&
-        projectPath.length > longestPrefix
-      ) {
+    for (const [folderUri, result] of this.projects) {
+      if (fileUri.startsWith(folderUri) && folderUri.length > longestPrefix) {
         bestMatch = result;
-        longestPrefix = projectPath.length;
+        longestPrefix = folderUri.length;
       }
     }
 
     return bestMatch;
   }
-
-  private readonly mutableProjects = new Map<string, WireCompilationResult>();
 }

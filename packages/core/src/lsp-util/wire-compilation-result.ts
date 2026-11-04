@@ -9,12 +9,14 @@ import type { InternalError } from "../util/shared-types.js";
  * Container of compilation results across all active projects.
  *
  * Sent via LSP notification `typeprompt/compilationResult`. The `projects` object
- * contains all known project paths as keys. Only the project that just changed has
+ * contains all known project folder URIs as keys. Only the project that just changed has
  * a non-null `WireCompilationResult`, allowing subscribers to maintain a complete map
  * of projects while minimizing IPC serialization overhead.
  */
 export type WireCompilationResults = {
-  readonly projects: { readonly [path: string]: WireCompilationResult | null };
+  readonly projects: {
+    readonly [projectFolderUri: string]: WireCompilationResult | null;
+  };
 };
 
 /**
