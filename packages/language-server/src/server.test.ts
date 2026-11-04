@@ -23,6 +23,7 @@ import {
   SEMANTIC_TOKEN_TYPES,
   TypePromptLanguageExtension,
   uriToFsPath,
+  type WireCompilationResults,
 } from "./server.js";
 
 describe("TypePrompt Language Server", () => {
@@ -2176,6 +2177,81 @@ comment here -->
       expect(
         template?.includes('<template name="DraftNda" namespace="Legal">'),
       ).toBe(true);
+    });
+  });
+
+  describe("WireCompilationResult notification and query", () => {
+    it("notifies listener with WireCompilationResult when project compiles", async () => {
+      const tempDir = await fs.mkdtemp(
+        path.join(os.tmpdir(), "typeprompt-wire-test-"),
+      );
+      const tempDirUri = fsPathToUri(tempDir);
+
+      const receivedNotifications: WireCompilationResults[] = [];
+
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+        (results) => {
+          receivedNotifications.push(results);
+        },
+      );
+
+      await fs.writeFile(
+        path.join(tempDir, "typeprompt.yml"),
+        "include:\n  - prompts/**/*.tp\n",
+        "utf-8",
+      );
+
+      const promptsDir = path.join(tempDir, "prompts");
+      await fs.mkdir(promptsDir, { recursive: true });
+      await fs.writeFile(
+        path.join(promptsDir, "Translate.tp"),
+        `<template name="Translate">
+  <schema output-format="text">
+    interface Input { text: string; }
+    type Output = string;
+  </schema>
+  <system>You are a translator.</system>
+  <user><insert val="input.text" /></user>
+</template>`,
+        "utf-8",
+      );
+
+      await fs.writeFile(
+        path.join(promptsDir, "TranslatePlay.tp"),
+        `<playground for="Translate">
+  <model>
+    model: "openai/gpt-4o"
+  </model>
+  <samples>
+    - input:
+        text: "hello"
+  </samples>
+</playground>`,
+        "utf-8",
+      );
+
+      extension.addWorkspaceFolder(tempDirUri);
+      await extension.runScan();
+
+      expect(receivedNotifications.length > 0).toBe(true);
+      const last = receivedNotifications[receivedNotifications.length - 1]!;
+      const projectPaths = Object.keys(last.projects);
+      expect(projectPaths.length).toBe(1);
+      const projectResult = last.projects[projectPaths[0]!];
+      expect(projectResult !== null).toBe(true);
+      expect(projectResult?.anyErrors).toBe(false);
+
+      const playFile = projectResult?.sourceFiles["prompts/TranslatePlay.tp"];
+      expect(playFile?.entity?.kind).toBe("playground");
+
+      const templateKeys = Object.keys(projectResult?.templates ?? {});
+      expect(templateKeys.length).toBe(1);
+      const template = projectResult?.templates[templateKeys[0]!];
+      expect(template !== undefined).toBe(true);
+      expect(template?.name).toBe("Translate");
+      expect(template?.isValid).toBe(true);
     });
   });
 });

@@ -23,3 +23,15 @@ export {
 export { generateFileTemplate } from "./file-template.js";
 
 export { tokenize, type SemanticToken } from "./semantic-token.js";
+
+export {
+  toWireCompilationResult,
+  type WireCompilationResults,
+  type WireCompilationResult,
+  type WireSourceFile,
+  type WireSourceFileEntity,
+  type WireTemplate,
+  type WireTool,
+  type WirePlayground,
+} from "./wire-compilation-result.js";
+

@@ -1,3 +1,7 @@
+import {
+  CompilationResultStore,
+  type WireCompilationResults,
+} from "@typeprompt/language-server";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionContext } from "vscode";
@@ -12,9 +16,14 @@ import { activateEnterHandler } from "./enter-handler.js";
 import { activateNewFileScaffolding } from "./new-file-scaffolding.js";
 import { activateToggleComment } from "./toggle-comment.js";
 
-let client: LanguageClient | undefined;
+export interface TypePromptExtensionApi {
+  readonly compilationStore: CompilationResultStore;
+}
 
-export function activate(context: ExtensionContext): void {
+let client: LanguageClient | undefined;
+export const compilationStore = new CompilationResultStore();
+
+export function activate(context: ExtensionContext): TypePromptExtensionApi {
   activateAutoCloseTag(context);
   activateEnterHandler(context);
   activateToggleComment(context);
@@ -69,7 +78,18 @@ export function activate(context: ExtensionContext): void {
     clientOptions,
   );
 
+  client.onNotification(
+    "typeprompt/compilationResult",
+    (params: WireCompilationResults) => {
+      compilationStore.handleNotification(params);
+    },
+  );
+
   client.start();
+
+  return {
+    compilationStore,
+  };
 }
 
 export function deactivate(): Thenable<void> | undefined {

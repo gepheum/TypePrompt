@@ -18,6 +18,9 @@ import {
   type Span,
   type TextSpan,
 } from "@typeprompt/core";
+
+export * from "./wire-compilation-result.js";
+export { CompilationResultStore } from "./compilation-result-store.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
 import fastDiff from "fast-diff";
 import { glob } from "glob";
@@ -477,7 +480,30 @@ export class TypePromptLanguageExtension {
       diagnostics: Diagnostic[],
     ) => void,
     private readonly getDocument: (uri: string) => TextDocument | undefined,
+    private readonly sendCompilationResult?: (
+      results: Lsp.WireCompilationResults,
+    ) => void,
   ) {}
+
+  private notifyCompilationResults(
+    changed: {
+      readonly changedProject: Project;
+      readonly changedResult: CompilationResult;
+    } | null,
+  ): void {
+    if (!this.sendCompilationResult) return;
+    const changedWireResult = changed
+      ? Lsp.toWireCompilationResult(changed.changedResult)
+      : undefined;
+    const projects: { [path: string]: Lsp.WireCompilationResult | null } = {};
+    for (const project of this.projects.values()) {
+      projects[project.folderUri] =
+        changed && project === changed.changedProject && changedWireResult
+          ? changedWireResult
+          : null;
+    }
+    this.sendCompilationResult({ projects });
+  }
 
   public setWorkspaceFolders(uris: string[]): void {
     this.workspaceFolders.clear();
@@ -690,6 +716,9 @@ export class TypePromptLanguageExtension {
             this.sendDiagnostics(uri, []);
             this.reassignTemplateFilesToProjects();
           } else {
+            if (this.projects.delete(uri)) {
+              this.notifyCompilationResults(null);
+            }
             const doc = this.getDocument(uri);
             const diagnostics = configResult.errors.map((err): Diagnostic =>
               internalErrorToDiagnostic(
@@ -703,6 +732,7 @@ export class TypePromptLanguageExtension {
           }
         } else {
           if (this.projects.delete(uri)) {
+            this.notifyCompilationResults(null);
             this.reassignTemplateFilesToProjects();
           }
         }
@@ -969,6 +999,10 @@ export class TypePromptLanguageExtension {
 
   public compileAndSendDiagnosticsForProject(project: Project): void {
     const result = project.compile();
+    this.notifyCompilationResults({
+      changedProject: project,
+      changedResult: result,
+    });
     for (const [relPath, templateFile] of project.templateFiles) {
       const errors = result.finalErrors[relPath] ?? [];
       const warnings = result.warnings[relPath] ?? [];
@@ -1400,6 +1434,9 @@ export function createLanguageServer(
   const extension = new TypePromptLanguageExtension(
     (uri, diagnostics) => connection.sendDiagnostics({ uri, diagnostics }),
     (uri) => documents.get(uri),
+    (results) => {
+      void connection.sendNotification("typeprompt/compilationResult", results);
+    },
   );
 
   let hasWorkspaceFolderCapability = false;
