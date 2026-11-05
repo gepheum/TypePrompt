@@ -21,6 +21,8 @@
   "activationEvents": [
     "workspaceContains:**/typeprompt.yaml",
     "workspaceContains:**/typeprompt.yml",
+    "workspaceContains:**/.typeprompt.secrets.yaml",
+    "workspaceContains:**/.typeprompt.secrets.yml",
     "workspaceContains:**/*.tp"
   ],
   "main": "./dist/extension.js",

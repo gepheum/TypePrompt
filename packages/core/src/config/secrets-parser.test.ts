@@ -1,7 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import type { InternalErrors } from "../util/shared-types.js";
-import { type SecretsParseResult, parseSecretsYaml } from "./secrets-parser.js";
+import {
+  DEFAULT_SECRETS_YAML,
+  type SecretsParseResult,
+  parseSecretsYaml,
+} from "./secrets-parser.js";
 
 function parse(
   content: string,
@@ -130,3 +134,54 @@ describe("parseSecretsYaml", () => {
     });
   });
 });
+
+describe("DEFAULT_SECRETS_YAML", () => {
+  it("parses as a valid secrets file as-is", () => {
+    const result = parseSecretsYaml(
+      DEFAULT_SECRETS_YAML,
+      ".typeprompt.secrets.yaml",
+    );
+    expect(result).toMatch({
+      kind: "success",
+      secrets: {
+        apiKeys: {
+          vercelGateway: "...",
+        },
+      },
+    });
+  });
+
+  it("parses valid secrets when all commented provider keys are uncommented", () => {
+    const lines = DEFAULT_SECRETS_YAML.split("\n");
+    const apiKeysIndex = lines.findIndex((line) => line.trim() === "apiKeys:");
+    expect(apiKeysIndex >= 0).toBe(true);
+
+    const uncommentedLines = lines.map((line, idx) => {
+      if (idx > apiKeysIndex && line.startsWith("  #")) {
+        return line.replace(/^ {2}# ?/, "  ");
+      }
+      return line;
+    });
+    const uncommentedSecrets = uncommentedLines.join("\n");
+
+    const result = parseSecretsYaml(
+      uncommentedSecrets,
+      ".typeprompt.secrets.yaml",
+    );
+    if (result.kind !== "success") {
+      throw new Error(
+        `Secrets validation failed:\n${result.errors.map((e) => e.message).join("\n")}`,
+      );
+    }
+
+    expect(result.secrets.apiKeys).toMatch({
+      vercelGateway: "...",
+      openai: "sk-...",
+      anthropic: "sk-...",
+      google: "AIzaSy...",
+      xai: "xai-...",
+      mistral: "...",
+    });
+  });
+});
+

@@ -1,7 +1,11 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { type ConfigParseResult, parseConfigYaml } from "./config-parser.js";
+import {
+  DEFAULT_CONFIG_YAML,
+  type ConfigParseResult,
+  parseConfigYaml,
+} from "./config-parser.js";
 
 function parse(content: string, path = "typeprompt.yml"): ConfigParseResult {
   return parseConfigYaml(content, path);
@@ -230,3 +234,55 @@ describe("parseConfigYaml", () => {
     });
   });
 });
+
+describe("DEFAULT_CONFIG_YAML", () => {
+  it("parses as a valid config as-is", () => {
+    const result = parseConfigYaml(DEFAULT_CONFIG_YAML, "typeprompt.yaml");
+    expect(result).toMatch({
+      kind: "success",
+      config: {
+        include: ["prompts/**/*.tp"],
+        gen: {
+          typescript: { file: "./prompts.gen.ts" },
+        },
+      },
+    });
+  });
+
+  it("parses valid config when all commented generators are uncommented", () => {
+    const lines = DEFAULT_CONFIG_YAML.split("\n");
+    const genIndex = lines.findIndex((line) => line.trim() === "gen:");
+    expect(genIndex >= 0).toBe(true);
+
+    const uncommentedLines = lines.map((line, idx) => {
+      if (idx > genIndex && line.startsWith("  #")) {
+        return line.replace(/^ {2}# ?/, "  ");
+      }
+      return line;
+    });
+    const uncommentedConfig = uncommentedLines.join("\n");
+
+    const result = parseConfigYaml(uncommentedConfig, "typeprompt.yaml");
+    if (result.kind !== "success") {
+      throw new Error(
+        `Config validation failed:\n${result.errors.map((e) => e.message).join("\n")}`,
+      );
+    }
+
+    expect(result.config.include).toMatch(["prompts/**/*.tp"]);
+    expect(result.config.gen).toMatch({
+      cpp: { file: "./prompts.gen.h" },
+      csharp: { file: "./Prompts.generated.cs" },
+      dart: { file: "./lib/prompts.g.dart" },
+      kotlin: {
+        file: "./src/main/kotlin/Prompts_Generated.kt",
+        package: "com.example.prompts",
+      },
+      python: { file: "./prompts_gen.py" },
+      rust: { file: "./src/generated/prompts.rs" },
+      swift: { file: "./Sources/Prompts.Generated.swift" },
+      typescript: { file: "./prompts.gen.ts" },
+    });
+  });
+});
+

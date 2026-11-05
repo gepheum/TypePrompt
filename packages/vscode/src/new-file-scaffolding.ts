@@ -1,10 +1,12 @@
 import { Lsp } from "@typeprompt/core";
+import * as path from "node:path";
 import type { ExtensionContext, FileCreateEvent, Uri } from "vscode";
 import { Position, workspace, WorkspaceEdit } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node.js";
 
 /**
- * Automatically populates newly created empty .tp files with initial skeleton templates.
+ * Automatically populates newly created empty .tp and configuration files with initial
+ * skeleton templates.
  */
 export function activateNewFileScaffolding(
   context: ExtensionContext,
@@ -24,11 +26,22 @@ async function onDidCreateFiles(
   }
 }
 
+function isScaffoldableFile(file: Uri): boolean {
+  const base = path.basename(file.fsPath);
+  return (
+    base.endsWith(".tp") ||
+    base === "typeprompt.yaml" ||
+    base === "typeprompt.yml" ||
+    base === ".typeprompt.secrets.yaml" ||
+    base === ".typeprompt.secrets.yml"
+  );
+}
+
 async function scaffoldNewFile(
   file: Uri,
   getClient: () => LanguageClient | undefined,
 ): Promise<void> {
-  if (!file.path.endsWith(".tp")) return;
+  if (!isScaffoldableFile(file)) return;
 
   try {
     // Skip if the file already has content on disk (e.g. copied or created externally)

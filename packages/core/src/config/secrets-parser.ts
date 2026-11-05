@@ -57,3 +57,20 @@ export const SECRETS: SchemaType = {
   }).type,
   schema: EMPTY_SCHEMA,
 };
+
+export const DEFAULT_SECRETS_YAML = [
+  "# API keys for model providers used in TypePrompt playgrounds.",
+  "# Keep this file secret and do not commit to version control.",
+  "",
+  "# Use a Vercel AI Gateway key to access all model providers,",
+  "# or configure keys for individual providers directly below.",
+  "apiKeys:",
+  "  vercelGateway: ...",
+  "  # openai: sk-...",
+  "  # anthropic: sk-...",
+  "  # google: AIzaSy...",
+  "  # xai: xai-...",
+  "  # mistral: ...",
+  "",
+].join("\n");
+

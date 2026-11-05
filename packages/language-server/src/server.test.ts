@@ -1,6 +1,8 @@
 import {
   compile,
   createLineFinder,
+  DEFAULT_CONFIG_YAML,
+  DEFAULT_SECRETS_YAML,
   makeTemplates,
   type ValidCompilationResult,
 } from "@typeprompt/core";
@@ -2209,6 +2211,26 @@ comment here -->
       expect(
         template?.includes('<template name="DraftNda" namespace="Legal">'),
       ).toBe(true);
+    });
+
+    it("generates default config for typeprompt.yaml", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      const uri = fsPathToUri(path.join(tempDir, "typeprompt.yaml"));
+      const template = await extension.getFileTemplate(uri);
+      expect(template).toBe(DEFAULT_CONFIG_YAML);
+    });
+
+    it("generates default secrets for .typeprompt.secrets.yaml", async () => {
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        () => undefined,
+      );
+      const uri = fsPathToUri(path.join(tempDir, ".typeprompt.secrets.yaml"));
+      const template = await extension.getFileTemplate(uri);
+      expect(template).toBe(DEFAULT_SECRETS_YAML);
     });
   });
 

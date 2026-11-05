@@ -1,12 +1,16 @@
 import { stringify } from "yaml";
 import type { CompilationResult } from "../compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
+import { DEFAULT_CONFIG_YAML } from "../config/config-parser.js";
+import { DEFAULT_SECRETS_YAML } from "../config/secrets-parser.js";
 import { makeExampleValue } from "../schema/example-maker.js";
 
 /**
  * Generates initial skeleton content for newly created TypePrompt files.
  *
  * Rules:
+ * - "typeprompt.yaml" / "typeprompt.yml" -> DEFAULT_CONFIG_YAML
+ * - ".typeprompt.secrets.yaml" / ".typeprompt.secrets.yml" -> DEFAULT_SECRETS_YAML
  * - "meta.tp" -> <meta>
  * - ".../${dirname}/shared.tp" -> <namespace name="${dirname}"> (or "Main" if dirname is not PascalCase)
  * - "Foo.tp" (PascalCase) -> <template name="Foo"[ namespace="${dirname}"]>
@@ -14,7 +18,7 @@ import { makeExampleValue } from "../schema/example-maker.js";
  * - "Foo.play.tp" -> <playground for="Foo"[ namespace="${dirname}"]>
  *
  * A namespace attribute is added when `dirname` exists in `compilationResult.namespaces` (and is not Main).
- * If the filename does not match PascalCase.tp or camelCase.tp, returns null.
+ * If the filename does not match any recognized TypePrompt file, returns null.
  */
 export function generateFileTemplate(
   filePath: string,
@@ -27,6 +31,17 @@ export function generateFileTemplate(
   const parent = lastSlash >= 0 ? normalized.slice(0, lastSlash) : "";
   const prevSlash = parent.lastIndexOf("/");
   const dirname = prevSlash >= 0 ? parent.slice(prevSlash + 1) : parent;
+
+  if (fileName === "typeprompt.yaml" || fileName === "typeprompt.yml") {
+    return DEFAULT_CONFIG_YAML;
+  }
+
+  if (
+    fileName === ".typeprompt.secrets.yaml" ||
+    fileName === ".typeprompt.secrets.yml"
+  ) {
+    return DEFAULT_SECRETS_YAML;
+  }
 
   if (fileName === "meta.tp") {
     return [

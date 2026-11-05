@@ -8,6 +8,8 @@ import { parseNamespace } from "../compiler/namespace-parser.js";
 import { parsePlayground } from "../compiler/playground-parser.js";
 import { parseTemplate } from "../compiler/template-parser.js";
 import { parseTool } from "../compiler/tool-parser.js";
+import { DEFAULT_CONFIG_YAML, parseConfigYaml } from "../config/config-parser.js";
+import { DEFAULT_SECRETS_YAML, parseSecretsYaml } from "../config/secrets-parser.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import { generateFileTemplate } from "./file-template.js";
 
@@ -352,6 +354,56 @@ describe("generateFileTemplate", () => {
           "  </samples>\n" +
           "</playground>\n",
       );
+    });
+  });
+
+  describe("typeprompt.yaml and typeprompt.yml", () => {
+    it("generates default config template for typeprompt.yaml", () => {
+      const template = generateFileTemplate("typeprompt.yaml", null);
+      assert.equal(template, DEFAULT_CONFIG_YAML);
+    });
+
+    it("generates default config template for typeprompt.yml", () => {
+      const template = generateFileTemplate("typeprompt.yml", null);
+      assert.equal(template, DEFAULT_CONFIG_YAML);
+    });
+
+    it("generates default config template for nested paths", () => {
+      const template = generateFileTemplate("foo/bar/typeprompt.yaml", null);
+      assert.equal(template, DEFAULT_CONFIG_YAML);
+    });
+
+    it("generates valid config that parses without errors", () => {
+      const result = parseConfigYaml(DEFAULT_CONFIG_YAML, "typeprompt.yaml");
+      assert.equal(result.kind, "success");
+    });
+  });
+
+  describe(".typeprompt.secrets.yaml and .typeprompt.secrets.yml", () => {
+    it("generates default secrets template for .typeprompt.secrets.yaml", () => {
+      const template = generateFileTemplate(".typeprompt.secrets.yaml", null);
+      assert.equal(template, DEFAULT_SECRETS_YAML);
+    });
+
+    it("generates default secrets template for .typeprompt.secrets.yml", () => {
+      const template = generateFileTemplate(".typeprompt.secrets.yml", null);
+      assert.equal(template, DEFAULT_SECRETS_YAML);
+    });
+
+    it("generates default secrets template for nested paths", () => {
+      const template = generateFileTemplate(
+        "foo/bar/.typeprompt.secrets.yaml",
+        null,
+      );
+      assert.equal(template, DEFAULT_SECRETS_YAML);
+    });
+
+    it("generates valid secrets that parse without errors", () => {
+      const result = parseSecretsYaml(
+        DEFAULT_SECRETS_YAML,
+        ".typeprompt.secrets.yaml",
+      );
+      assert.equal(result.kind, "success");
     });
   });
 

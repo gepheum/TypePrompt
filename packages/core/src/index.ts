@@ -44,6 +44,8 @@ export {
 
 export {
   CONFIG,
+  DEFAULT_CONFIG_YAML,
+  DEFAULT_SECRETS_YAML,
   SECRETS,
   parseConfigYaml,
   parseSecretsYaml,

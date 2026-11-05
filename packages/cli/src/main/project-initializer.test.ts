@@ -11,9 +11,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { compile } from "@typeprompt/core/compiler/compiler.js";
-import { parseConfigYaml } from "@typeprompt/core/config/config-parser.js";
 import {
   DEFAULT_CONFIG_YAML,
+  parseConfigYaml,
+} from "@typeprompt/core/config/config-parser.js";
+import {
   HELLO_WORLD_TEMPLATE,
   initializeProject,
 } from "./project-initializer.js";

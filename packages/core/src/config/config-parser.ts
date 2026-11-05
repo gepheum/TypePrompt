@@ -186,3 +186,33 @@ export const CONFIG: SchemaType = {
   type: CONFIG_TYPE.type,
   schema: EMPTY_SCHEMA,
 };
+
+export const DEFAULT_CONFIG_YAML = [
+  "# TypePrompt configuration. Run 'npx typeprompt gen' to generate code.",
+  "# Docs: https://typeprompt.dev",
+  "",
+  "include:",
+  "  - prompts/**/*.tp",
+  "",
+  "# Uncomment and configure the generators for your target language(s).",
+  "gen:",
+  "  # cpp:",
+  "  #   file: ./prompts.gen.h",
+  "  # csharp:",
+  "  #   file: ./Prompts.generated.cs",
+  "  # dart:",
+  "  #   file: ./lib/prompts.g.dart",
+  "  # kotlin:",
+  "  #   file: ./src/main/kotlin/Prompts_Generated.kt",
+  "  #   package: com.example.prompts",
+  "  # python:",
+  "  #   file: ./prompts_gen.py",
+  "  # rust:",
+  "  #   file: ./src/generated/prompts.rs",
+  "  # swift:",
+  "  #   file: ./Sources/Prompts.Generated.swift",
+  "  typescript:",
+  "    file: ./prompts.gen.ts",
+  "",
+].join("\n");
+
