@@ -3,6 +3,8 @@ import type {
   WireCompilationResults,
 } from "./wire-compilation-result.js";
 
+export type Project = WireCompilationResult;
+
 /**
  * Client-side store that maintains the latest `WireCompilationResult` for each project.
  *
@@ -33,17 +35,29 @@ export class CompilationResultStore {
   }
 
   /**
-   * Finds the compilation result for a given file URI
+   * Finds the project compilation result and relative path for a given file URI
    * by matching the longest matching project folder prefix.
    */
-  public getForFile(fileUri: string): WireCompilationResult | undefined {
-    let bestMatch: WireCompilationResult | undefined;
+  public findByUri(
+    fileUri: string,
+  ): { project: Project; relativePath: string } | undefined {
+    let bestMatch:
+      | { project: Project; relativePath: string }
+      | undefined;
     let longestPrefix = -1;
 
     for (const [folderUri, result] of this.projects) {
-      if (fileUri.startsWith(folderUri) && folderUri.length > longestPrefix) {
-        bestMatch = result;
-        longestPrefix = folderUri.length;
+      const normalizedFolderUri = folderUri.endsWith("/")
+        ? folderUri
+        : `${folderUri}/`;
+
+      if (
+        fileUri.startsWith(normalizedFolderUri) &&
+        normalizedFolderUri.length > longestPrefix
+      ) {
+        const relativePath = fileUri.slice(normalizedFolderUri.length);
+        bestMatch = { project: result, relativePath };
+        longestPrefix = normalizedFolderUri.length;
       }
     }
 

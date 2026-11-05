@@ -18,9 +18,6 @@ import {
   type Span,
   type TextSpan,
 } from "@typeprompt/core";
-
-export * from "./wire-compilation-result.js";
-export { CompilationResultStore } from "./compilation-result-store.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
 import fastDiff from "fast-diff";
 import { glob } from "glob";
@@ -58,6 +55,12 @@ import {
   TextEdit,
   type _Connection,
 } from "vscode-languageserver/node.js";
+
+export {
+  CompilationResultStore,
+  type Project,
+} from "./compilation-result-store.js";
+export * from "./wire-compilation-result.js";
 
 type FileType =
   "typeprompt.yaml" | "typeprompt.yml" | "*.tp" | "patch-base.json" | null;

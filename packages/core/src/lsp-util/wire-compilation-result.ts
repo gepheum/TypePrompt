@@ -1,7 +1,4 @@
-import type {
-  CompilationResult,
-  Sample,
-} from "../compiler/compiler-types.js";
+import type { CompilationResult, Sample } from "../compiler/compiler-types.js";
 import type { PlaygroundModel } from "../compiler/playground-model-types.js";
 import type { InternalError } from "../util/shared-types.js";
 

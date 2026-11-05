@@ -267,12 +267,7 @@ export class PlayApp extends LitElement {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-family:
-        ui-monospace,
-        SFMono-Regular,
-        Menlo,
-        Monaco,
-        Consolas,
-        monospace;
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.78rem;
     }
 
@@ -284,12 +279,7 @@ export class PlayApp extends LitElement {
       border-radius: 3px;
       text-transform: lowercase;
       font-family:
-        ui-monospace,
-        SFMono-Regular,
-        Menlo,
-        Monaco,
-        Consolas,
-        monospace;
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       flex-shrink: 0;
     }
 
@@ -393,12 +383,7 @@ export class PlayApp extends LitElement {
 
     .active-file-label {
       font-family:
-        ui-monospace,
-        SFMono-Regular,
-        Menlo,
-        Monaco,
-        Consolas,
-        monospace;
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-weight: 600;
       color: #f8fafc;
       font-size: 0.82rem;
@@ -663,9 +648,9 @@ export class PlayApp extends LitElement {
         <nav class="activity-bar" aria-label="Activity rail">
           <div class="activity-top-group">
             <button
-              class="activity-icon-btn ${model.activeActivity === "files"
-                ? "active"
-                : ""}"
+              class="activity-icon-btn ${
+                model.activeActivity === "files" ? "active" : ""
+              }"
               title="Project files"
               aria-label="Project files"
               @click=${(): void => this.handleActivityClick("files")}
@@ -696,9 +681,9 @@ export class PlayApp extends LitElement {
             </button>
 
             <button
-              class="activity-icon-btn ${model.activeActivity === "inferences"
-                ? "active"
-                : ""}"
+              class="activity-icon-btn ${
+                model.activeActivity === "inferences" ? "active" : ""
+              }"
               title="Inferences"
               aria-label="Inferences"
               @click=${(): void => this.handleActivityClick("inferences")}
@@ -754,12 +739,14 @@ export class PlayApp extends LitElement {
                             </span>
                             <span class="file-path">${filePath}</span>
                           </div>
-                          ${isEdited
-                            ? html`<span
-                                class="dirty-dot"
-                                title="Modified locally"
-                              ></span>`
-                            : ""}
+                          ${
+                            isEdited
+                              ? html`<span
+                                  class="dirty-dot"
+                                  title="Modified locally"
+                                ></span>`
+                              : ""
+                          }
                         </div>
                       `;
                     })}
@@ -789,31 +776,37 @@ export class PlayApp extends LitElement {
                       <span class="active-file-label"
                         >${model.selectedFilePath}</span
                       >
-                      ${isCurrentFileEdited
-                        ? html`<span class="dirty-pill">Modified</span>`
-                        : ""}
+                      ${
+                        isCurrentFileEdited
+                          ? html`<span class="dirty-pill">Modified</span>`
+                          : ""
+                      }
                     </div>
 
                     <div class="editor-toolbar-right">
-                      ${isCurrentFileEdited
-                        ? html`
-                            <button
-                              class="btn btn-warning"
-                              @click=${this.handleRevertClick}
-                              title="Revert modifications to original disk content"
-                            >
-                              ↺ Revert
-                            </button>
-                          `
-                        : ""}
+                      ${
+                        isCurrentFileEdited
+                          ? html`
+                              <button
+                                class="btn btn-warning"
+                                @click=${this.handleRevertClick}
+                                title="Revert modifications to original disk content"
+                              >
+                                ↺ Revert
+                              </button>
+                            `
+                          : ""
+                      }
 
                       <div
-                        class="pill-status ${hasAnyErrors
-                          ? "error"
-                          : "success"}"
+                        class="pill-status ${
+                          hasAnyErrors ? "error" : "success"
+                        }"
                       >
                         <span class="status-dot"></span>
-                        <span>${hasAnyErrors ? "Errors detected" : "Valid"}</span>
+                        <span
+                          >${hasAnyErrors ? "Errors detected" : "Valid"}</span
+                        >
                       </div>
                     </div>
                   </div>

@@ -63,21 +63,27 @@ describe("CompilationResultStore", () => {
     expect(store.projects.has("file:///projectB/")).toBe(false);
   });
 
-  it("finds compilation result for file by prefix matching", () => {
+  it("finds project and relative path by URI with prefix matching", () => {
     const store = new CompilationResultStore();
     const resA = makeFakeResult(1);
+    const resB = makeFakeResult(2);
 
     store.handleNotification({
       projects: {
         "file:///workspace/app/": resA,
+        "file:///workspace/lib": resB,
       },
     });
 
-    const match = store.getForFile("file:///workspace/app/prompts/hello.tp");
-    expect(match?.edition).toBe(1);
+    const matchA = store.findByUri("file:///workspace/app/prompts/hello.tp");
+    expect(matchA?.project.edition).toBe(1);
+    expect(matchA?.relativePath).toBe("prompts/hello.tp");
 
-    const nonMatch = store.getForFile("file:///workspace/other/hello.tp");
+    const matchB = store.findByUri("file:///workspace/lib/prompts/shared.tp");
+    expect(matchB?.project.edition).toBe(2);
+    expect(matchB?.relativePath).toBe("prompts/shared.tp");
+
+    const nonMatch = store.findByUri("file:///workspace/other/hello.tp");
     expect(nonMatch === undefined).toBe(true);
   });
 });
-

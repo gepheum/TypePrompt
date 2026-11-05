@@ -8,12 +8,7 @@ import type { PullSourcesResponse } from "../contract.js";
 export type Activity = "files" | "inferences";
 
 export type FileRole =
-  | "template"
-  | "playground"
-  | "tool"
-  | "shared"
-  | "meta"
-  | "other";
+  "template" | "playground" | "tool" | "shared" | "meta" | "other";
 
 export type MaybeModel =
   | { readonly initialized: false }
@@ -77,7 +72,11 @@ export function getFileRole(
     if (entity.kind === "meta") return "meta";
   }
   if (path.endsWith(".play.tp")) return "playground";
-  if (path.endsWith(".meta.tp") || path.endsWith("/meta.tp") || path === "meta.tp") {
+  if (
+    path.endsWith(".meta.tp") ||
+    path.endsWith("/meta.tp") ||
+    path === "meta.tp"
+  ) {
     return "meta";
   }
   return "other";

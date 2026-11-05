@@ -58,14 +58,24 @@ describe("WireCompilationResult", () => {
     // Check sourceFiles
     expect(wire.sourceFiles["Legal/play.tp"]?.entity?.kind).toBe("playground");
     if (wire.sourceFiles["Legal/play.tp"]?.entity?.kind === "playground") {
-      expect(wire.sourceFiles["Legal/play.tp"].entity.forTemplate).toBe("ReviewContract");
+      expect(wire.sourceFiles["Legal/play.tp"].entity.forTemplate).toBe(
+        "ReviewContract",
+      );
       expect(wire.sourceFiles["Legal/play.tp"].entity.namespace).toBe("Legal");
     }
 
-    expect(wire.sourceFiles["Legal/ReviewContract.tp"]?.entity?.kind).toBe("template");
-    if (wire.sourceFiles["Legal/ReviewContract.tp"]?.entity?.kind === "template") {
-      expect(wire.sourceFiles["Legal/ReviewContract.tp"].entity.name).toBe("ReviewContract");
-      expect(wire.sourceFiles["Legal/ReviewContract.tp"].entity.namespace).toBe("Legal");
+    expect(wire.sourceFiles["Legal/ReviewContract.tp"]?.entity?.kind).toBe(
+      "template",
+    );
+    if (
+      wire.sourceFiles["Legal/ReviewContract.tp"]?.entity?.kind === "template"
+    ) {
+      expect(wire.sourceFiles["Legal/ReviewContract.tp"].entity.name).toBe(
+        "ReviewContract",
+      );
+      expect(wire.sourceFiles["Legal/ReviewContract.tp"].entity.namespace).toBe(
+        "Legal",
+      );
     }
 
     expect(wire.sourceFiles["Legal/shared.tp"]?.entity?.kind).toBe("namespace");
