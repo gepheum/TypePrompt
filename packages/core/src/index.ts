@@ -44,6 +44,7 @@ export {
 
 export {
   CONFIG,
+  SECRETS,
   parseConfigYaml,
   parseSecretsYaml,
   type ApiKeys,

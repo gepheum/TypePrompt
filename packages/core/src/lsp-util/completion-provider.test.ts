@@ -2,6 +2,7 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import { compile } from "../compiler/compiler.js";
 import { CONFIG } from "../config/config-parser.js";
+import { SECRETS } from "../config/secrets-parser.js";
 import {
   getCompletionItems,
   getYamlCompletionItems,
@@ -308,5 +309,26 @@ describe("getYamlCompletionItems", () => {
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["patch"]);
     expect(result!.span).toMatch({ start: pos, end: pos });
+  });
+
+  it("suggests top-level apiKeys for SECRETS", () => {
+    const yaml = "";
+    const result = getYamlCompletionItems(yaml, 0, SECRETS);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["apiKeys"]);
+  });
+
+  it("suggests provider keys under apiKeys for SECRETS", () => {
+    const yaml = "apiKeys:\n  ";
+    const result = getYamlCompletionItems(yaml, yaml.length, SECRETS);
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch([
+      "openai",
+      "anthropic",
+      "google",
+      "xai",
+      "mistral",
+      "vercelGateway",
+    ]);
   });
 });

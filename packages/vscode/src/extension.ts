@@ -72,10 +72,12 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
       { scheme: "file", pattern: "**/*.tp" },
       { scheme: "file", pattern: "**/typeprompt.yaml" },
       { scheme: "file", pattern: "**/typeprompt.yml" },
+      { scheme: "file", pattern: "**/.typeprompt.secrets.yaml" },
+      { scheme: "file", pattern: "**/.typeprompt.secrets.yml" },
     ],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/{*.tp,typeprompt.yaml,typeprompt.yml}",
+        "**/{*.tp,typeprompt.yaml,typeprompt.yml,.typeprompt.secrets.yaml,.typeprompt.secrets.yml}",
       ),
     },
   };

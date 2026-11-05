@@ -10,11 +10,16 @@ import {
   Lsp,
   parseCompilationResult,
   parseConfigYaml,
+  parseSecretsYaml,
+  SECRETS,
   type CompilationResult,
   type Config,
   type DefinitionLink,
   type InternalError,
+  type InternalErrors,
   type LineFinderData,
+  type Secrets,
+  type SecretsParseResult,
   type Span,
   type TextSpan,
 } from "@typeprompt/core";
@@ -56,11 +61,18 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
+export type { ApiKeys, Secrets } from "@typeprompt/core";
 export { CompilationResultStore } from "./compilation-result-store.js";
 export * from "./wire-compilation-result.js";
 
 type FileType =
-  "typeprompt.yaml" | "typeprompt.yml" | "*.tp" | "patch-base.json" | null;
+  | "typeprompt.yaml"
+  | "typeprompt.yml"
+  | ".typeprompt.secrets.yaml"
+  | ".typeprompt.secrets.yml"
+  | "*.tp"
+  | "patch-base.json"
+  | null;
 
 interface FileContent {
   readonly content: string;
@@ -73,6 +85,10 @@ function getFileType(uri: string): FileType {
     return "typeprompt.yaml";
   } else if (uri.endsWith("/typeprompt.yml")) {
     return "typeprompt.yml";
+  } else if (uri.endsWith("/.typeprompt.secrets.yaml")) {
+    return ".typeprompt.secrets.yaml";
+  } else if (uri.endsWith("/.typeprompt.secrets.yml")) {
+    return ".typeprompt.secrets.yml";
   } else if (uri.endsWith(".tp")) {
     return "*.tp";
   } else if (uri.endsWith("/patch-base.json")) {
@@ -119,6 +135,15 @@ interface PatchBase {
   content: FileContent;
   compilationResult: ValidCompilationResult | CompilationResultParseError;
   /** The project this patch base belongs to, or undefined if outside any project. */
+  project?: Project;
+}
+
+interface SecretsFile {
+  /** The absolute file URI (e.g. "file:///path/to/project/.typeprompt.secrets.yaml"). */
+  readonly uri: string;
+  content: FileContent;
+  secretsResult: SecretsParseResult | InternalErrors;
+  /** The project this secrets file belongs to, or undefined if outside any project. */
   project?: Project;
 }
 
@@ -317,10 +342,9 @@ export function computeSemanticTokens(doc: TextDocument): SemanticTokens {
 /** A TypePrompt project corresponding to a `typeprompt.yaml` file. */
 class Project {
   /** Template files in this project. Key: relative path. */
-  public readonly templateFiles = new Map<string, TemplateFile>();
+  readonly templateFiles = new Map<string, TemplateFile>();
 
-  public patchBase:
-    ValidCompilationResult | CompilationResultParseError | null = null;
+  patchBase: ValidCompilationResult | CompilationResultParseError | null = null;
 
   get patchBaseOrNull(): ValidCompilationResult | null {
     const { patchBase } = this;
@@ -328,26 +352,33 @@ class Project {
     return patchBase;
   }
 
+  /** The loaded secrets for this project. */
+  secrets: Secrets;
+
   /** Cached compilation result for this project. */
-  public compilationResult: CompilationResult | null = null;
+  compilationResult: CompilationResult | null = null;
 
   constructor(
     /**
      * The absolute file URI of the directory containing `typeprompt.yaml` or `typeprompt.yml`
      * (e.g. "file:///path/to/project").
      */
-    public readonly folderUri: string,
+    readonly folderUri: string,
     /** The loaded configuration bundle for this project. */
     public configBundle: TypePromptConfigBundle,
     /** The URI of the config file itself. */
-    public readonly configUri: string,
-  ) {}
+    readonly configUri: string,
+    /** The loaded secrets for this project. */
+    secrets: Secrets = {},
+  ) {
+    this.secrets = secrets;
+  }
 
-  public get config(): Config {
+  get config(): Config {
     return this.configBundle.config;
   }
 
-  public matchesInclude(relativePath: string): boolean {
+  matchesInclude(relativePath: string): boolean {
     return this.config.include.some((p) => minimatch(relativePath, p));
   }
 
@@ -355,7 +386,7 @@ class Project {
    * Computes the project-relative path of a file given its URI, or returns null if not
    * inside this project folder.
    */
-  public getRelativePath(fileUri: string): string | null {
+  getRelativePath(fileUri: string): string | null {
     if (!fileUri.startsWith(this.folderUri)) {
       return null;
     }
@@ -367,7 +398,7 @@ class Project {
    * Finds a template file belonging to this project by its project-relative path
    * (e.g. "prompts/hello-world.tp") or by its full URI (e.g. "file:///path/to/project/prompts/hello-world.tp").
    */
-  public getTemplateFile(pathOrUri: string): TemplateFile | undefined {
+  getTemplateFile(pathOrUri: string): TemplateFile | undefined {
     const direct = this.templateFiles.get(pathOrUri);
     if (direct) {
       return direct;
@@ -380,7 +411,7 @@ class Project {
   }
 
   /** Converts a compiler span into an LSP Range. */
-  public spanToRange(
+  spanToRange(
     span: Span,
     getDocument: (uri: string) => TextDocument | undefined,
   ): Range | null {
@@ -410,7 +441,7 @@ class Project {
   }
 
   /** Compiles all template files in this project into a `CompilationResult`. */
-  public compile(): CompilationResult {
+  compile(): CompilationResult {
     const pathToContent: { [path: string]: string } = {};
     for (const [relPath, templateFile] of this.templateFiles) {
       pathToContent[relPath] = templateFile.content.content;
@@ -423,7 +454,7 @@ class Project {
   }
 
   /** Registers a template file with a project under its project-relative path. */
-  public static addTemplateFile(
+  static addTemplateFile(
     templateFile: TemplateFile,
     project: Project,
     relativePath: string,
@@ -434,13 +465,13 @@ class Project {
   }
 
   /** Registers a patch base with a project. */
-  public static addPatchBase(patchBase: PatchBase, project: Project): void {
+  static addPatchBase(patchBase: PatchBase, project: Project): void {
     patchBase.project = project;
     project.patchBase = patchBase.compilationResult;
   }
 
   /** Unregisters a template file from its project. */
-  public static removeTemplateFile(templateFile: TemplateFile): void {
+  static removeTemplateFile(templateFile: TemplateFile): void {
     if (!templateFile.project) return;
     if (templateFile.relativePath) {
       templateFile.project.templateFiles.delete(templateFile.relativePath);
@@ -450,20 +481,38 @@ class Project {
   }
 
   /** Unregisters a patch base from its project. */
-  public static removePatchBase(patchBase: PatchBase): void {
+  static removePatchBase(patchBase: PatchBase): void {
     if (!patchBase.project) return;
     patchBase.project.patchBase = null;
     patchBase.project = undefined;
+  }
+
+  /** Registers a secrets file with a project. */
+  static addSecrets(secretsFile: SecretsFile, project: Project): void {
+    secretsFile.project = project;
+    project.secrets =
+      secretsFile.secretsResult.kind === "success"
+        ? secretsFile.secretsResult.secrets
+        : {};
+  }
+
+  /** Unregisters a secrets file from its project. */
+  static removeSecrets(secretsFile: SecretsFile): void {
+    if (!secretsFile.project) return;
+    secretsFile.project.secrets = {};
+    secretsFile.project = undefined;
   }
 }
 
 export class TypePromptLanguageExtension {
   /** Map of projects indexed by their project folder URI. */
-  public readonly projects = new Map<string, Project>();
+  readonly projects = new Map<string, Project>();
   /** Map of all discovered or open template files indexed by their absolute file URI. */
-  public readonly templateFiles = new Map<string, TemplateFile>();
+  readonly templateFiles = new Map<string, TemplateFile>();
   /** Map of all discovered or open patch bases indexed by their absolute file URI. */
-  public readonly patchBases = new Map<string, PatchBase>();
+  readonly patchBases = new Map<string, PatchBase>();
+  /** Map of all discovered or open secrets files indexed by their absolute file URI. */
+  readonly secretsFiles = new Map<string, SecretsFile>();
   /** Set of workspace root folder URIs configured in the client. */
   private readonly workspaceFolders = new Set<string>();
   /**
@@ -505,22 +554,22 @@ export class TypePromptLanguageExtension {
     this.sendCompilationResult({ projects });
   }
 
-  public setWorkspaceFolders(uris: string[]): void {
+  setWorkspaceFolders(uris: string[]): void {
     this.workspaceFolders.clear();
     for (const uri of uris) {
       this.workspaceFolders.add(uri);
     }
   }
 
-  public addWorkspaceFolder(uri: string): void {
+  addWorkspaceFolder(uri: string): void {
     this.workspaceFolders.add(uri);
   }
 
-  public removeWorkspaceFolder(uri: string): void {
+  removeWorkspaceFolder(uri: string): void {
     this.workspaceFolders.delete(uri);
   }
 
-  public async runScan(): Promise<void> {
+  async runScan(): Promise<void> {
     if (this.disposed) return;
 
     for (const folderUri of this.workspaceFolders) {
@@ -532,10 +581,11 @@ export class TypePromptLanguageExtension {
       let files: string[];
       try {
         files = await glob(
-          "**/{typeprompt.yaml,typeprompt.yml,patch-base.json,*.tp}",
+          "**/{typeprompt.yaml,typeprompt.yml,.typeprompt.secrets.yaml,.typeprompt.secrets.yml,patch-base.json,*.tp}",
           {
             cwd: folderPath,
             nodir: true,
+            dot: true,
             absolute: true,
             ignore: [
               "**/node_modules/**",
@@ -562,15 +612,19 @@ export class TypePromptLanguageExtension {
             return 1;
           case "typeprompt.yml":
             return 2;
-          case "patch-base.json":
+          case ".typeprompt.secrets.yaml":
             return 3;
-          case "*.tp":
+          case ".typeprompt.secrets.yml":
             return 4;
-          case null:
+          case "patch-base.json":
             return 5;
+          case "*.tp":
+            return 6;
+          case null:
+            return 7;
           default: {
             const _: never = fileType;
-            return 5;
+            return 7;
           }
         }
       };
@@ -617,7 +671,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public async runGarbageCollection(): Promise<void> {
+  async runGarbageCollection(): Promise<void> {
     if (this.disposed) return;
     const uris = new Set<string>();
     for (const uri of this.templateFiles.keys()) {
@@ -627,6 +681,9 @@ export class TypePromptLanguageExtension {
       uris.add(uri);
     }
     for (const uri of this.patchBases.keys()) {
+      uris.add(uri);
+    }
+    for (const uri of this.secretsFiles.keys()) {
       uris.add(uri);
     }
 
@@ -654,7 +711,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public scheduleScanLoop(delayMilliseconds = 5000): void {
+  scheduleScanLoop(delayMilliseconds = 5000): void {
     if (this.disposed) return;
     if (this.scanLoopTimeout) {
       clearTimeout(this.scanLoopTimeout);
@@ -676,7 +733,7 @@ export class TypePromptLanguageExtension {
     this.scheduleScanLoop(delayMilliseconds);
   }
 
-  public dispose(): void {
+  dispose(): void {
     this.disposed = true;
     if (this.scanLoopTimeout) {
       clearTimeout(this.scanLoopTimeout);
@@ -688,7 +745,7 @@ export class TypePromptLanguageExtension {
     this.uriToTimeout.clear();
   }
 
-  public setFileContent(uri: string, content: FileContent | undefined): void {
+  setFileContent(uri: string, content: FileContent | undefined): void {
     const fileType = getFileType(uri);
 
     if (fileType && !content) {
@@ -796,6 +853,67 @@ export class TypePromptLanguageExtension {
         }
         break;
       }
+      case ".typeprompt.secrets.yaml":
+      case ".typeprompt.secrets.yml": {
+        const timeout = this.uriToTimeout.get(uri);
+        if (timeout) {
+          clearTimeout(timeout);
+          this.uriToTimeout.delete(uri);
+        }
+
+        if (content) {
+          let secretsFile = this.secretsFiles.get(uri);
+          const oldProject = secretsFile?.project;
+
+          const secretsResult = parseSecretsYaml(content.content, uri);
+
+          if (secretsFile) {
+            secretsFile.content = content;
+            secretsFile.secretsResult = secretsResult;
+          } else {
+            secretsFile = { uri, content, secretsResult };
+            this.secretsFiles.set(uri, secretsFile);
+          }
+
+          if (secretsResult.kind === "success") {
+            this.sendDiagnostics(uri, []);
+          } else {
+            const doc = this.getDocument(uri);
+            const diagnostics = secretsResult.errors.map((err): Diagnostic =>
+              internalErrorToDiagnostic(
+                err,
+                DiagnosticSeverity.Error,
+                doc,
+                content.lineFinder,
+              ),
+            );
+            this.sendDiagnostics(uri, diagnostics);
+          }
+
+          const match = this.findProjectByUri(uri);
+          if (match) {
+            if (secretsFile.project !== match.project) {
+              Project.removeSecrets(secretsFile);
+              Project.addSecrets(secretsFile, match.project);
+            } else {
+              match.project.secrets =
+                secretsResult.kind === "success" ? secretsResult.secrets : {};
+            }
+          } else {
+            if (oldProject) {
+              Project.removeSecrets(secretsFile);
+            }
+          }
+        } else {
+          const existingSecretsFile = this.secretsFiles.get(uri);
+          if (existingSecretsFile) {
+            Project.removeSecrets(existingSecretsFile);
+            this.secretsFiles.delete(uri);
+            this.sendDiagnostics(uri, []);
+          }
+        }
+        break;
+      }
       case "patch-base.json": {
         const timeout = this.uriToTimeout.get(uri);
         if (timeout) {
@@ -860,13 +978,16 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public getFileContent(uri: string): FileContent | undefined {
+  getFileContent(uri: string): FileContent | undefined {
     const fileType = getFileType(uri);
     switch (fileType) {
       case "*.tp":
         return this.templateFiles.get(uri)?.content;
       case "patch-base.json":
         return this.patchBases.get(uri)?.content;
+      case ".typeprompt.secrets.yaml":
+      case ".typeprompt.secrets.yml":
+        return this.secretsFiles.get(uri)?.content;
       case "typeprompt.yaml":
       case "typeprompt.yml":
         return this.projects.get(uri)?.configBundle.yamlContent;
@@ -879,7 +1000,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public scheduleSetFileContent(uri: string, document: TextDocument): void {
+  scheduleSetFileContent(uri: string, document: TextDocument): void {
     const oldTimeout = this.uriToTimeout.get(uri);
     if (oldTimeout) {
       clearTimeout(oldTimeout);
@@ -901,7 +1022,7 @@ export class TypePromptLanguageExtension {
     this.uriToTimeout.set(uri, timeout);
   }
 
-  public findProjectByUri(
+  findProjectByUri(
     uri: string,
   ): { project: Project; relativePath: string } | undefined {
     const fileType = getFileType(uri);
@@ -914,7 +1035,11 @@ export class TypePromptLanguageExtension {
       const matches =
         fileType === "patch-base.json"
           ? relPath === "patch-base.json"
-          : project.matchesInclude(relPath);
+          : fileType === ".typeprompt.secrets.yaml" ||
+              fileType === ".typeprompt.secrets.yml"
+            ? relPath === ".typeprompt.secrets.yaml" ||
+              relPath === ".typeprompt.secrets.yml"
+            : project.matchesInclude(relPath);
       if (matches) {
         const isBetter =
           !bestMatch ||
@@ -930,12 +1055,32 @@ export class TypePromptLanguageExtension {
     return bestMatch;
   }
 
-  public getTemplateFile(uri: string): TemplateFile | undefined {
+  getTemplateFile(uri: string): TemplateFile | undefined {
     return this.templateFiles.get(uri);
   }
 
-  public reassignTemplateFilesToProjects(): void {
+  reassignTemplateFilesToProjects(): void {
     const affectedProjects = new Set<Project>();
+
+    for (const secretsFile of this.secretsFiles.values()) {
+      const match = this.findProjectByUri(secretsFile.uri);
+
+      if (match) {
+        if (secretsFile.project !== match.project) {
+          Project.removeSecrets(secretsFile);
+          Project.addSecrets(secretsFile, match.project);
+        } else {
+          match.project.secrets =
+            secretsFile.secretsResult.kind === "success"
+              ? secretsFile.secretsResult.secrets
+              : {};
+        }
+      } else {
+        if (secretsFile.project) {
+          Project.removeSecrets(secretsFile);
+        }
+      }
+    }
 
     for (const patchBase of this.patchBases.values()) {
       const oldProject = patchBase.project;
@@ -997,7 +1142,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public compileAndSendDiagnosticsForProject(project: Project): void {
+  compileAndSendDiagnosticsForProject(project: Project): void {
     const result = project.compile();
     this.notifyCompilationResults({
       changedProject: project,
@@ -1029,7 +1174,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public async formatDocument(uri: string): Promise<TextEdit[]> {
+  async formatDocument(uri: string): Promise<TextEdit[]> {
     if (this.disposed) return [];
     const fileType = getFileType(uri);
     if (fileType !== "*.tp") {
@@ -1055,7 +1200,7 @@ export class TypePromptLanguageExtension {
     }
   }
 
-  public getSemanticTokens(uri: string): SemanticTokens {
+  getSemanticTokens(uri: string): SemanticTokens {
     if (this.disposed) {
       return { data: [] };
     }
@@ -1076,18 +1221,29 @@ export class TypePromptLanguageExtension {
     return computeSemanticTokens(doc);
   }
 
-  public getCompletionItems(uri: string, position: Position): CompletionItem[] {
+  getCompletionItems(uri: string, position: Position): CompletionItem[] {
     if (this.disposed) {
       return [];
     }
     const fileType = getFileType(uri);
-    if (fileType === "typeprompt.yaml" || fileType === "typeprompt.yml") {
+    const isConfig =
+      fileType === "typeprompt.yaml" || fileType === "typeprompt.yml";
+    const isSecrets =
+      fileType === ".typeprompt.secrets.yaml" ||
+      fileType === ".typeprompt.secrets.yml";
+
+    if (isConfig || isSecrets) {
       const doc = this.getDocument(uri);
       if (!doc) {
         return [];
       }
       const offset = doc.offsetAt(position);
-      const result = Lsp.getYamlCompletionItems(doc.getText(), offset, CONFIG);
+      const schemaType = isConfig ? CONFIG : SECRETS;
+      const result = Lsp.getYamlCompletionItems(
+        doc.getText(),
+        offset,
+        schemaType,
+      );
       if (!result || result.suggestions.length === 0) {
         return [];
       }
@@ -1201,7 +1357,7 @@ export class TypePromptLanguageExtension {
     return null;
   }
 
-  public getDefinition(uri: string, position: Position): Location | null {
+  getDefinition(uri: string, position: Position): Location | null {
     if (this.disposed) {
       return null;
     }
@@ -1241,7 +1397,7 @@ export class TypePromptLanguageExtension {
     };
   }
 
-  public getReferences(
+  getReferences(
     uri: string,
     position: Position,
     context?: ReferenceContext,
@@ -1307,7 +1463,7 @@ export class TypePromptLanguageExtension {
     return locations;
   }
 
-  public renameSymbol(
+  renameSymbol(
     uri: string,
     position: Position,
     newName: string,
@@ -1387,7 +1543,7 @@ export class TypePromptLanguageExtension {
     return { changes };
   }
 
-  public async getFileTemplate(uri: string): Promise<string | null> {
+  async getFileTemplate(uri: string): Promise<string | null> {
     const fsPath = uriToFsPath(uri);
     if (!fsPath) return null;
 

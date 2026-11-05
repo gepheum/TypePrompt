@@ -1332,6 +1332,38 @@ comment here -->
       expect(items[0]?.kind).toBe(CompletionItemKind.Property);
     });
 
+    it("returns completion items for .typeprompt.secrets.yaml when editing secrets", () => {
+      const openDocs = new Map<string, TextDocument>();
+      const extension = new TypePromptLanguageExtension(
+        () => {},
+        (uri) => openDocs.get(uri),
+      );
+
+      const yaml = "apiKeys:\n  ";
+      const secretsUri = fsPathToUri(
+        path.join(tempDir, ".typeprompt.secrets.yaml"),
+      );
+      const doc = TextDocument.create(secretsUri, "yaml", 1, yaml);
+      openDocs.set(secretsUri, doc);
+
+      const items = extension.getCompletionItems(secretsUri, {
+        line: 1,
+        character: 2,
+      });
+
+      expect(items.length > 0).toBe(true);
+      const labels = items.map((i) => i.label);
+      expect(labels).toMatch([
+        "openai",
+        "anthropic",
+        "google",
+        "xai",
+        "mistral",
+        "vercelGateway",
+      ]);
+      expect(items[0]?.kind).toBe(CompletionItemKind.Property);
+    });
+
     it("returns empty completions for unsupported files", () => {
       const openDocs = new Map<string, TextDocument>();
       const extension = new TypePromptLanguageExtension(
@@ -2252,6 +2284,88 @@ comment here -->
       expect(template !== undefined).toBe(true);
       expect(template?.name).toBe("Translate");
       expect(template?.isValid).toBe(true);
+    });
+
+    it("scans workspace directory, discovers .typeprompt.secrets.yaml, and stores secrets in Project", async () => {
+      const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+        [];
+      const extension = new TypePromptLanguageExtension(
+        (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+        () => undefined,
+      );
+
+      await fs.writeFile(
+        path.join(tempDir, "typeprompt.yaml"),
+        "include:\n  - prompts/**/*.tp\n",
+        "utf-8",
+      );
+
+      await fs.writeFile(
+        path.join(tempDir, ".typeprompt.secrets.yaml"),
+        "apiKeys:\n  openai: sk-test-12345\n  anthropic: sk-ant-67890\n",
+        "utf-8",
+      );
+
+      extension.addWorkspaceFolder(tempDirUri);
+      await extension.runScan();
+
+      expect(extension.projects.size).toBe(1);
+      const project = Array.from(extension.projects.values())[0]!;
+      expect(project.secrets.apiKeys?.openai).toBe("sk-test-12345");
+      expect(project.secrets.apiKeys?.anthropic).toBe("sk-ant-67890");
+
+      // Now update secrets in-memory
+      const secretsUri = fsPathToUri(
+        path.join(tempDir, ".typeprompt.secrets.yaml"),
+      );
+      const updatedSecrets = "apiKeys:\n  openai: sk-new-key\n";
+      extension.setFileContent(secretsUri, {
+        content: updatedSecrets,
+        lineFinder: createLineFinder(updatedSecrets),
+        lastModified: Date.now(),
+      });
+
+      expect(project.secrets.apiKeys?.openai).toBe("sk-new-key");
+      expect(project.secrets.apiKeys?.anthropic).toBe(undefined);
+
+      // Now delete secrets
+      extension.setFileContent(secretsUri, undefined);
+      expect(project.secrets.apiKeys).toBe(undefined);
+    });
+
+    it("produces diagnostics for invalid .typeprompt.secrets.yaml and clears project.secrets", async () => {
+      const sentDiagnostics: Array<{ uri: string; diagnostics: Diagnostic[] }> =
+        [];
+      const extension = new TypePromptLanguageExtension(
+        (uri, diagnostics) => sentDiagnostics.push({ uri, diagnostics }),
+        () => undefined,
+      );
+
+      const configUri = fsPathToUri(path.join(tempDir, "typeprompt.yaml"));
+      const configContent = "include:\n  - prompts/**/*.tp\n";
+      extension.setFileContent(configUri, {
+        content: configContent,
+        lineFinder: createLineFinder(configContent),
+        lastModified: Date.now(),
+      });
+
+      const secretsUri = fsPathToUri(
+        path.join(tempDir, ".typeprompt.secrets.yaml"),
+      );
+      const invalidSecrets = "apiKeys:\n  openai:\n    nested: bad\n";
+      extension.setFileContent(secretsUri, {
+        content: invalidSecrets,
+        lineFinder: createLineFinder(invalidSecrets),
+        lastModified: Date.now(),
+      });
+
+      const project = extension.projects.get(configUri)!;
+      expect(project.secrets.apiKeys).toBe(undefined);
+
+      const secretsDiags = sentDiagnostics.filter((d) => d.uri === secretsUri);
+      expect(secretsDiags.length > 0).toBe(true);
+      const lastDiag = secretsDiags[secretsDiags.length - 1]!;
+      expect(lastDiag.diagnostics.length > 0).toBe(true);
     });
   });
 });

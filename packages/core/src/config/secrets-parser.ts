@@ -42,7 +42,7 @@ function notEmpty<T extends string | readonly unknown[]>(): Constraint<T> {
   };
 }
 
-const SECRETS: SchemaType = {
+export const SECRETS: SchemaType = {
   type: typedInterface({
     apiKeys: typedOptional(
       typedInterface({
