@@ -73,3 +73,6 @@ node_modules
 *.iml
 *.tsbuildinfo
 .venv
+*.secrets.yaml
+*.secrets.yml
+
