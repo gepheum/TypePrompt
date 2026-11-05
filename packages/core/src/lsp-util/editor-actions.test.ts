@@ -482,6 +482,24 @@ describe("editor-actions", () => {
       assert.equal(res.targetCursorOffset, offset + "\n    ".length);
     });
 
+    it("indents next line with +tabSize after a YAML key ending with colon in pure YAML", () => {
+      const content = "apiKeys:\n  openai:";
+      const offset = content.length;
+      const res = computeEnterAction(content, offset);
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n    ");
+      assert.equal(res.targetCursorOffset, offset + "\n    ".length);
+    });
+
+    it("handles enter in pure YAML with format: 'yaml' even if content contains XML-like tags", () => {
+      const content = 'prompt: "<foo>bar</foo>"\napiKeys:';
+      const offset = content.length;
+      const res = computeEnterAction(content, offset, { format: "yaml" });
+      assert.equal(res.handled, true);
+      assert.equal(res.changes[0]?.insert, "\n  ");
+      assert.equal(res.targetCursorOffset, offset + "\n  ".length);
+    });
+
     it("indents next line after YAML colon with comment", () => {
       const content = "<samples>\n  input: # comment\n</samples>";
       const offset = content.indexOf("# comment") + 9;
@@ -667,6 +685,22 @@ describe("editor-actions", () => {
       );
       const uncommented = applyChanges(commented, uncommentAction.changes);
       assert.equal(uncommented, doc);
+    });
+
+    it("toggles comments in pure YAML with format: 'yaml' even if content contains XML-like tags", () => {
+      const doc = 'prompt: "<foo>bar</foo>"\napiKeys:\n  openai: test';
+      const offset = doc.indexOf("openai");
+      const action = computeToggleComment(
+        doc,
+        { from: offset, to: offset },
+        { format: "yaml" },
+      );
+      assert.equal(action.commentType, "yaml");
+      const commented = applyChanges(doc, action.changes);
+      assert.equal(
+        commented,
+        'prompt: "<foo>bar</foo>"\napiKeys:\n  # openai: test',
+      );
     });
 
     it("toggles comments in XML with <!-- -->", () => {

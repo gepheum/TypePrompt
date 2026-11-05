@@ -91,13 +91,13 @@
       {
         "command": "typeprompt.onEnterKey",
         "key": "enter",
-        "when": "editorTextFocus && !editorHasSelection && !editorReadonly && !suggestWidgetVisible && (editorLangId == 'typeprompt' || resourceExtname == '.tp')"
+        "when": "editorTextFocus && !editorHasSelection && !editorReadonly && !suggestWidgetVisible && (editorLangId == 'typeprompt' || resourceExtname == '.tp' || resourceFilename =~ /^(typeprompt|\\.typeprompt\\.secrets)\\.ya?ml$/)"
       },
       {
         "command": "typeprompt.toggleComment",
         "key": "ctrl+/",
         "mac": "cmd+/",
-        "when": "editorTextFocus && !editorReadonly && (editorLangId == 'typeprompt' || resourceExtname == '.tp')"
+        "when": "editorTextFocus && !editorReadonly && (editorLangId == 'typeprompt' || resourceExtname == '.tp' || resourceFilename =~ /^(typeprompt|\\.typeprompt\\.secrets)\\.ya?ml$/)"
       }
     ]
   },

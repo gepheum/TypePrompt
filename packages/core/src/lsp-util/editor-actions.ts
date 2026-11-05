@@ -191,6 +191,7 @@ export function computeEnterAction(
   options?: {
     readonly tabSize?: number;
     readonly insertSpaces?: boolean;
+    readonly format?: "template" | "yaml";
   },
 ): {
   readonly changes: readonly {
@@ -202,7 +203,7 @@ export function computeEnterAction(
   readonly handled: boolean;
 } {
   const tabSize = options?.tabSize ?? 2;
-  const ctx = getPositionContext(content, offset);
+  const ctx = getPositionContext(content, offset, options);
 
   // 1. Multiline comment continuation and splitting (only inside schema zone)
   if (ctx.isInsideSchema) {
@@ -611,13 +612,16 @@ function isYamlPosition(
   content: string,
   offset: number,
 ): boolean {
+  if (ctx.contentFormat === "yaml" && !ctx.currentElement) {
+    return true;
+  }
   return (
     (ctx.contentFormat === "yaml" &&
       Boolean(
         ctx.currentElement &&
-        offset >= ctx.currentElement.contentStart &&
-        (!ctx.currentElement.closingTag ||
-          offset <= ctx.currentElement.closingTag.start),
+          offset >= ctx.currentElement.contentStart &&
+          (!ctx.currentElement.closingTag ||
+            offset <= ctx.currentElement.closingTag.start),
       )) ||
     (!ctx.currentElement && !/<[a-zA-Z]/.test(content))
   );
@@ -637,8 +641,12 @@ function getLineIndentAt(content: string, offset: number): number {
 export function getCommentTypeAtPosition(
   content: string,
   offset: number,
+  options?: { readonly format?: "template" | "yaml" },
 ): "xml" | "javascript" | "yaml" {
-  const ctx = getPositionContext(content, offset);
+  if (options?.format === "yaml") {
+    return "yaml";
+  }
+  const ctx = getPositionContext(content, offset, options);
   if (ctx.isInsideSchema) {
     return "javascript";
   }
@@ -687,6 +695,9 @@ export function computeToggleComment(
   selection: {
     readonly from: number;
     readonly to: number;
+  },
+  options?: {
+    readonly format?: "template" | "yaml";
   },
 ): {
   readonly changes: readonly {
@@ -742,7 +753,7 @@ export function computeToggleComment(
   const checkOffset = nonWsMatch
     ? startLineStart + startLineText.indexOf(nonWsMatch[1]!)
     : selFrom;
-  const commentType = getCommentTypeAtPosition(content, checkOffset);
+  const commentType = getCommentTypeAtPosition(content, checkOffset, options);
 
   type LineData = {
     lineNumber: number;

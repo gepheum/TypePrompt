@@ -66,6 +66,7 @@ const BRACKET_PAIRS: { readonly [left: string]: string } = {
 export function getPositionContext(
   content: string,
   offset: number,
+  options?: { readonly format?: "template" | "yaml" },
 ): PositionContext {
   offset = Math.max(0, Math.min(offset, content.length));
   const lineFinder = createLineFinder(content);
@@ -96,6 +97,52 @@ export function getPositionContext(
       prevNonEmptyLineIndent = match ? match[0].length : 0;
       break;
     }
+  }
+
+  if (options?.format === "yaml") {
+    // Check isBetweenBrackets: e.g. `{|}`, `[|]`, `(|)`
+    const trimmedBefore = textBeforeOnLine.trimEnd();
+    const trimmedAfter = textAfterOnLine.trimStart();
+    const lastChar = trimmedBefore.slice(-1);
+    const firstChar = trimmedAfter.slice(0, 1);
+    let isBetweenBrackets: {
+      readonly open: string;
+      readonly close: string;
+    } | null = null;
+    if (lastChar && BRACKET_PAIRS[lastChar] === firstChar) {
+      const afterLastChar = textBeforeOnLine.slice(
+        textBeforeOnLine.lastIndexOf(lastChar) + 1,
+      );
+      const beforeFirstChar = textAfterOnLine.slice(
+        0,
+        textAfterOnLine.indexOf(firstChar),
+      );
+      if (/^\s*$/.test(afterLastChar) && /^\s*$/.test(beforeFirstChar)) {
+        isBetweenBrackets = { open: lastChar, close: firstChar };
+      }
+    }
+
+    return {
+      offset,
+      lineNumber,
+      colNumber,
+      lineText,
+      textBeforeOnLine,
+      textAfterOnLine,
+      lineIndent,
+      prevNonEmptyLineText,
+      prevNonEmptyLineIndent,
+      currentElement: null,
+      parentElements: [],
+      depth: 0,
+      contentFormat: "yaml",
+      isInsideSchema: false,
+      isSchemaZone: false,
+      comment: null,
+      isBetweenTags: null,
+      isBetweenBrackets,
+      isBetweenXmlComment: false,
+    };
   }
 
   // XML Element hierarchy

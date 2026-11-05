@@ -1,10 +1,27 @@
 import { Lsp } from "@typeprompt/core";
-import type { ExtensionContext } from "vscode";
+import * as path from "node:path";
+import type { ExtensionContext, TextDocument } from "vscode";
 import { commands, Range, Selection, window } from "vscode";
 
 export function activateEnterHandler(context: ExtensionContext): void {
   context.subscriptions.push(
     commands.registerCommand("typeprompt.onEnterKey", onEnterKey),
+  );
+}
+
+function isHandledDocument(document: TextDocument): boolean {
+  if (
+    document.languageId === "typeprompt" ||
+    document.fileName.endsWith(".tp")
+  ) {
+    return true;
+  }
+  const base = path.basename(document.fileName);
+  return (
+    base === "typeprompt.yaml" ||
+    base === "typeprompt.yml" ||
+    base === ".typeprompt.secrets.yaml" ||
+    base === ".typeprompt.secrets.yml"
   );
 }
 
@@ -15,10 +32,7 @@ async function onEnterKey(): Promise<void> {
   }
 
   const document = editor.document;
-  if (
-    document.languageId !== "typeprompt" &&
-    !document.fileName.endsWith(".tp")
-  ) {
+  if (!isHandledDocument(document)) {
     await commands.executeCommand("type", { text: "\n" });
     return;
   }
@@ -35,9 +49,13 @@ async function onEnterKey(): Promise<void> {
     typeof editor.options.tabSize === "number" ? editor.options.tabSize : 2;
   const insertSpaces = editor.options.insertSpaces !== false;
 
+  const isYaml =
+    document.fileName.endsWith(".yaml") || document.fileName.endsWith(".yml");
+
   const action = Lsp.computeEnterAction(document.getText(), offset, {
     tabSize,
     insertSpaces,
+    format: isYaml ? "yaml" : "template",
   });
 
   if (action.handled) {
