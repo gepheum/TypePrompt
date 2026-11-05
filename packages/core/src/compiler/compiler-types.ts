@@ -299,6 +299,7 @@ export type ValidatedPlayground = {
 
 export type Sample = {
   readonly name?: TextSpan;
+  readonly note?: string;
   readonly history?: readonly SampleHistoryEntry[];
   readonly input: unknown;
   readonly steps?: readonly SampleStep[];

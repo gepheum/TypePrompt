@@ -119,6 +119,7 @@ export function validatePlayground(
   ).elements.map((el) => {
     const obj = el as StrictJsonObject;
     const nameEntry = obj.entries["name"];
+    const noteEntry = obj.entries["note"];
     const historyEntry = obj.entries["history"];
     const inputEntry = obj.entries["input"]!;
     const stepsEntry = obj.entries["steps"];
@@ -147,6 +148,10 @@ export function validatePlayground(
       name:
         nameEntry?.value.kind === "string"
           ? jsonStringToTextSpan(nameEntry.value)
+          : undefined,
+      note:
+        noteEntry?.value.kind === "string"
+          ? noteEntry.value.value
           : undefined,
       history,
       input: unwrapJsonValue(inputEntry.value),
@@ -243,6 +248,7 @@ function makePlaygroundType(
   const samplesType = typedArray(
     typedInterface({
       name: typedOptional(typedString()),
+      note: typedOptional(typedString()),
       history: typedOptional(
         typedArray(
           typedInterface({

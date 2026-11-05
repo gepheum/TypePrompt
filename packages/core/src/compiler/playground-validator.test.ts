@@ -149,6 +149,45 @@ describe("validatePlayground", () => {
     });
   });
 
+  it("validates a playground with optional note field", () => {
+    const node = parseElement(
+      `
+      <playground for="Translate">
+        <model>
+          model: openai/gpt-4o
+        </model>
+        <samples>
+        - name: "Spanish greeting"
+          note: "Important test case for greeting"
+          input:
+            text: "Hello"
+            targetLanguage: "es"
+        </samples>
+      </playground>
+    `,
+      "prompts/Translate.play.tp",
+    );
+
+    const parsed = parsePlayground(node);
+    if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+    const result = validatePlayground(parsed, template);
+    expect(result).toMatch({
+      kind: "playground",
+      templateId: "Main:Translate",
+      samples: [
+        {
+          name: { text: "Spanish greeting" },
+          note: "Important test case for greeting",
+          input: {
+            text: "Hello",
+            targetLanguage: "es",
+          },
+        },
+      ],
+    });
+  });
+
   it("validates a playground where name is omitted", () => {
     const node = parseElement(
       `
