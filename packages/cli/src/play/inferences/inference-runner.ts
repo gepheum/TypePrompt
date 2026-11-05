@@ -51,9 +51,17 @@ export type RunPlaygroundInferencesOptions = {
    */
   readonly languageModel?: LanguageModel;
   /**
-   * Optional storage instance or project directory to save the resulting Inferences.InferenceSet into.
+   * Optional storage instance or project directory to save the resulting
+   * `Inferences.InferenceSet` into.
    */
   readonly storage?: ProjectStorage;
+  /**
+   * Optional callback invoked as inferences arrive, immediately before any are
+   * computed, and once all inferences have been computed.
+   */
+  readonly callback?: (
+    inferenceSet: Inferences.InferenceSet<Inferences.Pending>,
+  ) => void;
 };
 
 /**
@@ -94,40 +102,71 @@ export async function runPlaygroundInferences(
     templateId,
   );
   const isoTimestamp = now.toISOString();
+  const id = crypto.randomUUID();
 
-  const inferences = await mapWithConcurrency(
-    validatedPlayground.samples,
-    maxConcurrency,
-    async (sample, sampleIndex): Promise<Inferences.Inference> => {
+  const inferences: Inferences.Inference<Inferences.Pending>[] =
+    validatedPlayground.samples.map((sample, sampleIndex) => {
       const request = buildInferenceRequest(
         sample,
         specTemplate,
         templatesSpec.tools,
         validTemplate,
       );
-      const result = await executeSampleInference(
-        request,
-        validatedPlayground.model,
-        languageModel,
-        validTemplate,
-      );
       return {
         sampleIndex,
         ...(sample.name ? { name: sample.name } : {}),
         request,
-        result,
+        result: { kind: "pending" },
       };
-    },
-  );
+    });
+
+  const emit = (): void => {
+    options.callback?.({
+      kind: "playground-inference-set",
+      id,
+      model: validatedPlayground.model,
+      templateId,
+      isoTimestamp,
+      templateFiles,
+      inferences: [...inferences],
+    });
+  };
+
+  emit();
+
+  if (validatedPlayground.samples.length > 0) {
+    await mapWithConcurrency(
+      validatedPlayground.samples,
+      maxConcurrency,
+      async (sample, sampleIndex): Promise<void> => {
+        const request = inferences[sampleIndex]!.request;
+        const result = await executeSampleInference(
+          request,
+          validatedPlayground.model,
+          languageModel,
+          validTemplate,
+        );
+        inferences[sampleIndex] = {
+          sampleIndex,
+          ...(sample.name ? { name: sample.name } : {}),
+          request,
+          result,
+        };
+        emit();
+      },
+    );
+  } else {
+    emit();
+  }
 
   const inferenceSet: Inferences.InferenceSet = {
     kind: "playground-inference-set",
-    id: crypto.randomUUID(),
+    id,
     model: validatedPlayground.model,
     templateId,
     isoTimestamp,
     templateFiles,
-    inferences,
+    inferences: inferences as Inferences.Inference[],
   };
 
   options.storage?.saveInferenceSet(inferenceSet);

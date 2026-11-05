@@ -1,3 +1,4 @@
+import type { Inferences } from "@typeprompt/core";
 import { compile, type ValidCompilationResult } from "@typeprompt/core";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, it } from "mocha";
@@ -803,6 +804,154 @@ TOON:
       assert.equal(saved?.templateId, "Main:Test");
 
       storage.close();
+    });
+
+    it("invokes callback immediately with pending inferences, progressively as results arrive, and upon completion", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/test.tp",
+          content: `<template name="Test">
+  <schema>
+    type Input = { message: string; };
+    type Output = string;
+  </schema>
+  <system>Echo</system>
+  <user><insert val="input.message"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/test.play.tp",
+          content: `<playground for="Test">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - name: "first"
+      input:
+        message: "hello 1"
+    - name: "second"
+      input:
+        message: "hello 2"
+  </samples>
+</playground>`,
+        },
+      ]);
+
+      const mockModel = new MockLanguageModelV4({
+        doGenerate: async (): Promise<MockDoGenerateResult> => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify("output text"),
+            },
+          ],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: {
+              total: 10,
+              noCache: 10,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+          warnings: [],
+        }),
+      });
+
+      const snapshots: Inferences.InferenceSet<Inferences.Pending>[] = [];
+      const inferenceSet = await runPlaygroundInferences(
+        compilation,
+        "Main:Test",
+        {
+          languageModel: mockModel,
+          maxConcurrency: 1,
+          callback: (snapshot) => {
+            snapshots.push(snapshot);
+          },
+        },
+      );
+
+      // Snapshots:
+      // 0: Initial call (both pending)
+      // 1: After sample 0 completes (sample 0 computed, sample 1 pending)
+      // 2: After sample 1 completes (both computed)
+      assert.equal(snapshots.length, 3);
+
+      // Snapshot 0: all pending
+      assert.equal(snapshots[0]!.inferences.length, 2);
+      assert.equal(snapshots[0]!.inferences[0]!.name, "first");
+      assert.equal(snapshots[0]!.inferences[0]!.result.kind, "pending");
+      assert.equal(snapshots[0]!.inferences[1]!.name, "second");
+      assert.equal(snapshots[0]!.inferences[1]!.result.kind, "pending");
+
+      // Snapshot 1: first computed, second pending
+      assert.equal(snapshots[1]!.inferences[0]!.result.kind, "success");
+      assert.equal(snapshots[1]!.inferences[1]!.result.kind, "pending");
+
+      // Snapshot 2: all computed
+      assert.equal(snapshots[2]!.inferences[0]!.result.kind, "success");
+      assert.equal(snapshots[2]!.inferences[1]!.result.kind, "success");
+
+      // ID and metadata match throughout
+      assert.equal(snapshots[0]!.id, inferenceSet.id);
+      assert.equal(snapshots[1]!.id, inferenceSet.id);
+      assert.equal(snapshots[2]!.id, inferenceSet.id);
+      assert.deepEqual(snapshots[2], inferenceSet);
+    });
+
+    it("invokes callback immediately and once completed when samples list is empty", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/test.tp",
+          content: `<template name="Test">
+  <schema>
+    type Input = { message: string; };
+    type Output = string;
+  </schema>
+  <system>Echo</system>
+  <user><insert val="input.message"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/test.play.tp",
+          content: `<playground for="Test">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>[]</samples>
+</playground>`,
+        },
+      ]);
+
+      const mockModel = new MockLanguageModelV4({
+        doGenerate: async (): Promise<MockDoGenerateResult> =>
+          ({
+            text: JSON.stringify("output text"),
+            finishReason: { unified: "stop", raw: undefined },
+            usage: { inputTokens: { total: 0 }, outputTokens: { total: 0 } },
+          }) as unknown as MockDoGenerateResult,
+      });
+
+      const snapshots: Inferences.InferenceSet<Inferences.Pending>[] = [];
+      const inferenceSet = await runPlaygroundInferences(
+        compilation,
+        "Main:Test",
+        {
+          languageModel: mockModel,
+          callback: (snapshot) => {
+            snapshots.push(snapshot);
+          },
+        },
+      );
+
+      // Called immediately and once completed
+      assert.equal(snapshots.length, 2);
+      assert.equal(snapshots[0]!.inferences.length, 0);
+      assert.equal(snapshots[1]!.inferences.length, 0);
+      assert.equal(snapshots[0]!.id, inferenceSet.id);
+      assert.equal(snapshots[1]!.id, inferenceSet.id);
+      assert.deepEqual(snapshots[1], inferenceSet);
     });
   });
 });
