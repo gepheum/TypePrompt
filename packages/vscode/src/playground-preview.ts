@@ -208,7 +208,7 @@ function renderPlaygroundPreviewHtml(
   let targetTemplate: string | null = null;
   let targetNamespace: string | null = null;
   let modelName = "gpt-4o";
-  let sampleCount = 0;
+  let sampleList: readonly PreviewSample[] = [];
   let diagnosticErrors: readonly string[] = [];
 
   const match = compilationStore.findByUri(document.uri.toString());
@@ -217,20 +217,11 @@ function renderPlaygroundPreviewHtml(
   if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
     targetTemplate = sourceFile.entity.forTemplate;
     targetNamespace = sourceFile.entity.namespace;
-    const model = sourceFile.entity.model;
-    if (typeof model === "string") {
-      modelName = model;
-    } else if (
-      model &&
-      typeof model === "object" &&
-      "model" in model &&
-      typeof (model as { model: unknown }).model === "string"
-    ) {
-      modelName = (model as { model: string }).model;
-    }
-    const samples = sourceFile.entity.samples;
-    sampleCount = Array.isArray(samples) ? samples.length : 0;
+    modelName = extractModelName(sourceFile.entity.model);
+    sampleList = extractSamples(sourceFile.entity.samples);
   }
+
+  const sampleCount = sampleList.length;
 
   if (match) {
     const errors = match.project.finalErrors[match.relativePath];
@@ -526,12 +517,12 @@ function renderPlaygroundPreviewHtml(
     <div class="section-body">
       ${
         sampleCount > 0
-          ? Array.from({ length: sampleCount })
+          ? sampleList
               .map(
-                (_, i) => `
+                (sample, i) => `
       <div class="sample-card">
         <div class="sample-title">
-          <span>Sample ${i + 1}</span>
+          <span>${escapeHtml(sample.name ? `Sample ${i + 1}: ${sample.name}` : `Sample ${i + 1}`)}</span>
           <span style="font-size: 10px; opacity: 0.6; font-weight: normal;">• Ready</span>
         </div>
         <div style="font-size: 11.5px; opacity: 0.75; margin-bottom: 4px;">Target Template: <strong>${escapeHtml(targetTemplate ?? "—")}</strong></div>
@@ -543,8 +534,8 @@ function renderPlaygroundPreviewHtml(
               )
               .join("")
           : `<div class="empty-state">
-        <p>No &lt;sample&gt; elements found in this playground.</p>
-        <p style="font-size: 11px; margin-top: 4px; opacity: 0.7;">Add &lt;sample&gt; blocks to configure live test inputs.</p>
+        <p>No samples found in this playground.</p>
+        <p style="font-size: 11px; margin-top: 4px; opacity: 0.7;">Add samples under &lt;samples&gt; to configure live test inputs.</p>
       </div>`
       }
     </div>
@@ -555,4 +546,76 @@ function renderPlaygroundPreviewHtml(
   </div>
 </body>
 </html>`;
+}
+
+interface PreviewSample {
+  readonly name?: string;
+  readonly input?: unknown;
+}
+
+function extractSamples(samples: unknown): readonly PreviewSample[] {
+  if (Array.isArray(samples)) {
+    return samples.map((s, idx) => {
+      if (s && typeof s === "object") {
+        const name =
+          "name" in s && typeof (s as { name: unknown }).name === "string"
+            ? (s as { name: string }).name
+            : undefined;
+        return { name, input: (s as { input?: unknown }).input };
+      }
+      return { name: `Sample ${idx + 1}` };
+    });
+  }
+  if (
+    samples &&
+    typeof samples === "object" &&
+    "elements" in samples &&
+    Array.isArray((samples as { elements: unknown[] }).elements)
+  ) {
+    const elements = (samples as { elements: unknown[] }).elements;
+    return elements.map((elem, idx) => {
+      if (elem && typeof elem === "object" && "entries" in elem) {
+        const entries = (
+          elem as {
+            entries: Record<string, { value?: { value?: unknown } }>;
+          }
+        ).entries;
+        const nameVal = entries.name?.value?.value;
+        return {
+          name: typeof nameVal === "string" ? nameVal : undefined,
+        };
+      }
+      return { name: `Sample ${idx + 1}` };
+    });
+  }
+  return [];
+}
+
+function extractModelName(model: unknown): string {
+  if (typeof model === "string") {
+    return model;
+  }
+  if (model && typeof model === "object") {
+    if (
+      "model" in model &&
+      typeof (model as { model: unknown }).model === "string"
+    ) {
+      return (model as { model: string }).model;
+    }
+    if (
+      "entries" in model &&
+      typeof (model as { entries: unknown }).entries === "object"
+    ) {
+      const entries = (
+        model as {
+          entries: Record<string, { value?: { value?: unknown } }>;
+        }
+      ).entries;
+      const modelVal = entries.model?.value?.value;
+      if (typeof modelVal === "string") {
+        return modelVal;
+      }
+    }
+  }
+  return "gpt-4o";
 }

@@ -1,5 +1,7 @@
 import type { CompilationResult, Sample } from "../compiler/compiler-types.js";
 import type { PlaygroundModel } from "../compiler/playground-model-types.js";
+import type { StrictJsonValue } from "../json/json-types.js";
+import { unwrapJsonValue } from "../json/unwrapper.js";
 import type { InternalError } from "../util/shared-types.js";
 
 /**
@@ -132,8 +134,8 @@ export function toWireCompilationResult(
             kind: "playground",
             forTemplate: sf.entity.for.text,
             namespace: sf.entity.namespace?.text ?? null,
-            model: sf.entity.model,
-            samples: sf.entity.samples,
+            model: safeUnwrapJson(sf.entity.model),
+            samples: safeUnwrapJson(sf.entity.samples),
           };
           break;
       }
@@ -194,8 +196,8 @@ export function toWireCompilationResult(
         forTemplate: p.playground.for.text,
         namespace: p.playground.namespace?.text ?? null,
         isValid: false,
-        model: p.playground.model,
-        samples: p.playground.samples,
+        model: safeUnwrapJson(p.playground.model),
+        samples: safeUnwrapJson(p.playground.samples),
       };
     }
   }
@@ -212,4 +214,15 @@ export function toWireCompilationResult(
     warnings: result.warnings,
     timestampMillis: result.timestampMillis,
   };
+}
+
+function safeUnwrapJson(value: unknown): unknown {
+  if (value && typeof value === "object" && "kind" in value) {
+    try {
+      return unwrapJsonValue(value as StrictJsonValue);
+    } catch {
+      return value;
+    }
+  }
+  return value;
 }
