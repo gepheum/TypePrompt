@@ -1,7 +1,4 @@
 import type {
-  JsonString,
-  StrictJsonArray,
-  StrictJsonObject,
   StrictJsonObjectEntry,
   StrictJsonValue,
 } from "../json/json-types.js";
@@ -21,20 +18,12 @@ import {
   typedStringLiteral,
   typedStringUnion,
 } from "../schema/typed.js";
-import type {
-  DefinitionLink,
-  TextSpan,
-  ValidationResult,
-} from "../util/shared-types.js";
-import { stripQuotes } from "../util/spans.js";
+import type { DefinitionLink, ValidationResult } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import type {
   Playground,
   PlaygroundValidationResult,
   Sample,
-  SampleHistoryEntry,
-  SampleStep,
-  SampleToolCall,
   TemplateTool,
   ValidatedTemplate,
 } from "./compiler-types.js";
@@ -114,49 +103,7 @@ export function validatePlayground(
     };
   }
 
-  const samples: Sample[] = (
-    playground.samples as StrictJsonArray
-  ).elements.map((el) => {
-    const obj = el as StrictJsonObject;
-    const nameEntry = obj.entries["name"];
-    const noteEntry = obj.entries["note"];
-    const historyEntry = obj.entries["history"];
-    const inputEntry = obj.entries["input"]!;
-    const stepsEntry = obj.entries["steps"];
-
-    const history: SampleHistoryEntry[] | undefined =
-      historyEntry && historyEntry.value.kind === "array"
-        ? historyEntry.value.elements.map((histEl) => {
-            const histObj = histEl as StrictJsonObject;
-            const histInput = histObj.entries["input"]!;
-            const histOutput = histObj.entries["output"]!;
-            const histSteps = parseSteps(
-              histObj.entries["steps"],
-              templateValidation,
-            );
-            return {
-              input: unwrapJsonValue(histInput.value),
-              steps: histSteps,
-              output: unwrapJsonValue(histOutput.value),
-            };
-          })
-        : undefined;
-
-    const steps = parseSteps(stepsEntry, templateValidation);
-
-    return {
-      name:
-        nameEntry?.value.kind === "string"
-          ? jsonStringToTextSpan(nameEntry.value)
-          : undefined,
-      note:
-        noteEntry?.value.kind === "string" ? noteEntry.value.value : undefined,
-      history,
-      input: unwrapJsonValue(inputEntry.value),
-      steps,
-    };
-  });
-
+  const samples = unwrapJsonValue<readonly Sample[]>(playground.samples);
   const namespace =
     templateValidation.template.namespace?.text ?? DEFAULT_NAMESPACE;
   const templateId = `${namespace}:${templateValidation.template.name.text}`;
@@ -172,42 +119,6 @@ export function validatePlayground(
     samples,
     definitionLinks,
   };
-}
-
-function parseSteps(
-  stepsEntry: StrictJsonObjectEntry | undefined,
-  templateValidation: ValidatedTemplate,
-): SampleStep[] | undefined {
-  if (!stepsEntry || stepsEntry.value.kind !== "array") {
-    return undefined;
-  }
-  return (stepsEntry.value as StrictJsonArray).elements.map((stepEl) => {
-    const stepObj = stepEl as StrictJsonObject;
-    const toolCallsEntry = stepObj.entries["toolCalls"];
-    const toolCalls: SampleToolCall[] =
-      toolCallsEntry && toolCallsEntry.value.kind === "array"
-        ? toolCallsEntry.value.elements.map((tcEl) => {
-            const tcObj = tcEl as StrictJsonObject;
-            const toolNameNode = tcObj.entries["tool"]!.value as JsonString;
-            const toolName = jsonStringToTextSpan(toolNameNode);
-            const callIdNode = tcObj.entries["callId"]!.value as JsonString;
-            const callId = jsonStringToTextSpan(callIdNode);
-            const outputEntry = tcObj.entries["output"];
-            const toolObj = templateValidation.tools[toolName.text];
-            const toolNamespace =
-              toolObj?.tool.tool.namespace?.text ?? DEFAULT_NAMESPACE;
-            const toolId = `${toolNamespace}:${toolName.text}`;
-            return {
-              callId,
-              toolId,
-              toolName,
-              input: tcObj.entries["input"]!.value,
-              output: outputEntry?.value,
-            };
-          })
-        : [];
-    return { toolCalls };
-  });
 }
 
 function makePlaygroundType(
@@ -498,12 +409,4 @@ function validateStepsToolCalls(
       }
     }
   }
-}
-
-function jsonStringToTextSpan(node: JsonString): TextSpan {
-  const span = node.quoted ? stripQuotes(node.firstToken) : node.firstToken;
-  return {
-    ...span,
-    text: node.value,
-  };
 }

@@ -298,7 +298,7 @@ export type ValidatedPlayground = {
 };
 
 export type Sample = {
-  readonly name?: TextSpan;
+  readonly name?: string;
   readonly note?: string;
   readonly history?: readonly SampleHistoryEntry[];
   readonly input: unknown;
@@ -312,11 +312,10 @@ export type SampleHistoryEntry = {
 };
 
 export type SampleToolCall = {
-  readonly callId: TextSpan;
-  readonly toolId: string;
-  readonly toolName: TextSpan;
-  readonly input: StrictJsonValue;
-  readonly output?: StrictJsonValue;
+  readonly tool: string;
+  readonly callId: string;
+  readonly input: unknown;
+  readonly output?: unknown;
 };
 
 export type SampleStep = {

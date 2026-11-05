@@ -120,7 +120,7 @@ export async function runPlaygroundInferences(
       );
       return {
         sampleIndex,
-        ...(sample.name ? { name: sample.name.text } : {}),
+        ...(sample.name ? { name: sample.name } : {}),
         request,
         result,
       };
@@ -435,26 +435,20 @@ function buildPlaygroundInferenceRequest(
       messages.push({
         role: "assistant",
         toolCalls: step.toolCalls.map((tc) => ({
-          callId: tc.callId.text,
-          toolName: tc.toolName.text,
-          input: normalizeToolInput(
-            tc.toolName.text,
-            unwrapJsonValue(tc.input),
-          ),
+          callId: tc.callId,
+          toolName: tc.tool,
+          input: normalizeToolInput(tc.tool, tc.input),
         })),
       });
       messages.push({
         role: "tool",
         toolResults: step.toolCalls.map((tc) => ({
-          callId: tc.callId.text,
-          toolName: tc.toolName.text,
+          callId: tc.callId,
+          toolName: tc.tool,
           output:
-            tc.output !== undefined
-              ? normalizeToolOutput(
-                  tc.toolName.text,
-                  unwrapJsonValue(tc.output),
-                )
-              : null,
+            tc.output !== undefined && tc.output !== null
+              ? normalizeToolOutput(tc.tool, tc.output)
+              : tc.output,
         })),
       });
     }
@@ -481,19 +475,19 @@ function buildPlaygroundInferenceRequest(
     messages.push({
       role: "assistant",
       toolCalls: step.toolCalls.map((tc) => ({
-        callId: tc.callId.text,
-        toolName: tc.toolName.text,
-        input: normalizeToolInput(tc.toolName.text, unwrapJsonValue(tc.input)),
+        callId: tc.callId,
+        toolName: tc.tool,
+        input: normalizeToolInput(tc.tool, tc.input),
       })),
     });
     messages.push({
       role: "tool",
       toolResults: step.toolCalls.map((tc) => ({
-        callId: tc.callId.text,
-        toolName: tc.toolName.text,
+        callId: tc.callId,
+        toolName: tc.tool,
         output:
-          tc.output !== undefined
-            ? normalizeToolOutput(tc.toolName.text, unwrapJsonValue(tc.output))
+          tc.output !== undefined && tc.output !== null
+            ? normalizeToolOutput(tc.tool, tc.output)
             : null,
       })),
     });

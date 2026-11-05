@@ -1,7 +1,6 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { unwrapJsonValue } from "../json/unwrapper.js";
 import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
 import { parseSchema } from "../schema/schema-parser.js";
 import type { Schema } from "../schema/schema-types.js";
@@ -139,7 +138,7 @@ describe("validatePlayground", () => {
       templateId: "Main:Translate",
       samples: [
         {
-          name: { text: "Spanish greeting" },
+          name: "Spanish greeting",
           input: {
             text: "Hello",
             targetLanguage: "es",
@@ -177,7 +176,7 @@ describe("validatePlayground", () => {
       templateId: "Main:Translate",
       samples: [
         {
-          name: { text: "Spanish greeting" },
+          name: "Spanish greeting",
           note: "Important test case for greeting",
           input: {
             text: "Hello",
@@ -255,7 +254,7 @@ describe("validatePlayground", () => {
       kind: "playground",
       samples: [
         {
-          name: { text: "Multi-turn conversation" },
+          name: "Multi-turn conversation",
           history: [
             {
               input: { text: "Hello" },
@@ -531,20 +530,17 @@ describe("validatePlayground", () => {
       expect(result.templateId).toBe("Main:MathAssistant");
       expect(result.samples).toMatch([
         {
-          name: { text: "Arithmetic step" },
+          name: "Arithmetic step",
           input: {
             question: "What is 2+2?",
           },
         },
       ]);
       const toolCall = result.samples[0]!.steps![0]!.toolCalls[0]!;
-      expect(toolCall.callId.text).toBe("call-1");
-      expect(toolCall.toolId).toBe("Main:calc");
-      expect(toolCall.toolName.text).toBe("calc");
-      expect(toolCall.input.kind).toBe("object");
-      expect(unwrapJsonValue(toolCall.input)).toMatch({ expr: "2+2" });
-      expect(toolCall.output?.kind).toBe("object");
-      expect(unwrapJsonValue(toolCall.output!)).toMatch({ result: 4 });
+      expect(toolCall.callId).toBe("call-1");
+      expect(toolCall.tool).toBe("calc");
+      expect(toolCall.input).toMatch({ expr: "2+2" });
+      expect(toolCall.output).toMatch({ result: 4 });
     });
 
     it("validates steps inside history entries", () => {
@@ -594,14 +590,14 @@ describe("validatePlayground", () => {
       const sample = result.samples[0]!;
       expect(sample.history?.length).toBe(1);
       const histStep = sample.history![0]!.steps![0]!.toolCalls[0]!;
-      expect(histStep.callId.text).toBe("c1");
-      expect(histStep.toolId).toBe("Main:calc");
-      expect(unwrapJsonValue(histStep.input)).toMatch({ expr: "1+1" });
+      expect(histStep.callId).toBe("c1");
+      expect(histStep.tool).toBe("calc");
+      expect(histStep.input).toMatch({ expr: "1+1" });
 
       const currentStep = sample.steps![0]!.toolCalls[0]!;
-      expect(currentStep.callId.text).toBe("c2");
-      expect(currentStep.toolId).toBe("Main:calc");
-      expect(unwrapJsonValue(currentStep.input)).toMatch({ expr: "2*3" });
+      expect(currentStep.callId).toBe("c2");
+      expect(currentStep.tool).toBe("calc");
+      expect(currentStep.input).toMatch({ expr: "2*3" });
     });
 
     it("allows omitting tool call output (callId is required)", () => {
@@ -634,12 +630,10 @@ describe("validatePlayground", () => {
       if (result.kind !== "playground") return;
 
       const toolCall = result.samples[0]!.steps![0]!.toolCalls[0]!;
-      expect(toolCall.callId.text).toBe("call-2");
-      expect(toolCall.toolId).toBe("Main:calc");
-      expect(toolCall.toolName.text).toBe("calc");
+      expect(toolCall.callId).toBe("call-2");
+      expect(toolCall.tool).toBe("calc");
       expect(toolCall.output).toBe(undefined);
-      expect(toolCall.input.kind).toBe("object");
-      expect(unwrapJsonValue(toolCall.input)).toMatch({ expr: "10 * 10" });
+      expect(toolCall.input).toMatch({ expr: "10 * 10" });
     });
 
     it("reports an error when tool call callId is missing", () => {

@@ -1618,11 +1618,11 @@ describe("compile - playground support", () => {
       templateId: "Main:Translate",
       samples: [
         {
-          name: { text: "Spanish greeting" },
+          name: "Spanish greeting",
           input: { text: "Hello" },
         },
         {
-          name: { text: "Second test" },
+          name: "Second test",
           input: { text: "Goodbye" },
         },
       ],
@@ -1675,7 +1675,7 @@ describe("compile - playground support", () => {
       templateId: "Legal:DraftNda",
       samples: [
         {
-          name: { text: "Acme NDA" },
+          name: "Acme NDA",
           input: {
             party: { name: "Acme Corp" },
           },
