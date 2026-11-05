@@ -1,4 +1,4 @@
-import type { PlaygroundInferenceSet } from "@typeprompt/core";
+import type { Inferences } from "@typeprompt/core";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,29 +23,29 @@ export interface ProjectStorage {
   readonly db: Database.Database;
 
   /**
-   * Saves a PlaygroundInferenceSet into the SQLite database.
+   * Saves a Inferences.InferenceSet into the SQLite database.
    * If an inference set with the same ID already exists, replaces it.
    */
-  saveInferenceSet(inferenceSet: PlaygroundInferenceSet): void;
+  saveInferenceSet(inferenceSet: Inferences.InferenceSet): void;
 
   /**
-   * Saves multiple PlaygroundInferenceSets in a single transaction.
+   * Saves multiple Inferences.InferenceSets in a single transaction.
    */
-  saveInferenceSets(inferenceSets: readonly PlaygroundInferenceSet[]): void;
+  saveInferenceSets(inferenceSets: readonly Inferences.InferenceSet[]): void;
 
   /**
-   * Retrieves a PlaygroundInferenceSet by its ID. Returns null if not found.
+   * Retrieves a Inferences.InferenceSet by its ID. Returns null if not found.
    */
-  getInferenceSet(id: string): PlaygroundInferenceSet | null;
+  getInferenceSet(id: string): Inferences.InferenceSet | null;
 
   /**
-   * Retrieves all PlaygroundInferenceSets for the specified template ID,
+   * Retrieves all Inferences.InferenceSets for the specified template ID,
    * sorted by timestamp DESC.
    */
   listInferenceSetsForTemplate(
     templateId: string,
     options?: ListInferenceSetsOptions,
-  ): readonly PlaygroundInferenceSet[];
+  ): readonly Inferences.InferenceSet[];
 
   /**
    * Retrieves lightweight summaries (id, templateId, timestamp) for the specified
@@ -57,12 +57,12 @@ export interface ProjectStorage {
   ): readonly StoredInferenceSummary[];
 
   /**
-   * Retrieves recent PlaygroundInferenceSets across all templates,
+   * Retrieves recent Inferences.InferenceSets across all templates,
    * sorted by timestamp DESC.
    */
   listRecentInferenceSets(
     options?: ListInferenceSetsOptions,
-  ): readonly PlaygroundInferenceSet[];
+  ): readonly Inferences.InferenceSet[];
 
   /**
    * Deletes an inference set by its ID.
@@ -163,7 +163,7 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
   `);
 
   const saveBatchTransaction = db.transaction(
-    (inferenceSets: readonly PlaygroundInferenceSet[]) => {
+    (inferenceSets: readonly Inferences.InferenceSet[]) => {
       for (const set of inferenceSets) {
         insertStmt.run(
           set.id,
@@ -178,7 +178,7 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
   return {
     db,
 
-    saveInferenceSet(inferenceSet: PlaygroundInferenceSet): void {
+    saveInferenceSet(inferenceSet: Inferences.InferenceSet): void {
       insertStmt.run(
         inferenceSet.id,
         inferenceSet.templateId,
@@ -187,11 +187,11 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
       );
     },
 
-    saveInferenceSets(inferenceSets: readonly PlaygroundInferenceSet[]): void {
+    saveInferenceSets(inferenceSets: readonly Inferences.InferenceSet[]): void {
       saveBatchTransaction(inferenceSets);
     },
 
-    getInferenceSet(id: string): PlaygroundInferenceSet | null {
+    getInferenceSet(id: string): Inferences.InferenceSet | null {
       const row = getByIdStmt.get(id);
       if (!row) {
         return null;
@@ -202,7 +202,7 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
     listInferenceSetsForTemplate(
       templateId: string,
       options?: ListInferenceSetsOptions,
-    ): readonly PlaygroundInferenceSet[] {
+    ): readonly Inferences.InferenceSet[] {
       const limit = options?.limit ?? -1;
       const offset = options?.offset ?? 0;
       const rows = listByTemplateStmt.all(templateId, limit, offset);
@@ -220,7 +220,7 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
 
     listRecentInferenceSets(
       options?: ListInferenceSetsOptions,
-    ): readonly PlaygroundInferenceSet[] {
+    ): readonly Inferences.InferenceSet[] {
       const limit = options?.limit ?? -1;
       const offset = options?.offset ?? 0;
       const rows = listRecentStmt.all(limit, offset);
@@ -253,7 +253,7 @@ export function openProjectStorage(
   return createProjectStorage(db);
 }
 
-function parseStoredInferenceSet(rawJson: string): PlaygroundInferenceSet {
+function parseStoredInferenceSet(rawJson: string): Inferences.InferenceSet {
   const parsed = JSON.parse(rawJson);
   if (
     typeof parsed !== "object" ||
@@ -264,9 +264,9 @@ function parseStoredInferenceSet(rawJson: string): PlaygroundInferenceSet {
     typeof parsed.isoTimestamp !== "string" ||
     !Array.isArray(parsed.inferences)
   ) {
-    throw new Error("Invalid stored PlaygroundInferenceSet JSON format");
+    throw new Error("Invalid stored InferenceSet JSON format");
   }
-  return parsed as PlaygroundInferenceSet;
+  return parsed as Inferences.InferenceSet;
 }
 
 type StoredInferenceRow = {

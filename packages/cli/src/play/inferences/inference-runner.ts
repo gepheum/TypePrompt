@@ -4,6 +4,7 @@ import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import { encode as encodeToon } from "@toon-format/toon";
+import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
   makeTemplates,
@@ -13,16 +14,8 @@ import {
   validateJson,
   type ApiKeys,
   type FieldType,
-  type PlaygroundInference,
-  type PlaygroundInferenceRequest,
-  type PlaygroundInferenceResult,
-  type PlaygroundInferenceSet,
-  type PlaygroundInferenceTelemetry,
-  type PlaygroundMessage,
   type PlaygroundModel,
   type PlaygroundModelId,
-  type PlaygroundTokenUsage,
-  type PlaygroundTool,
   type Sample,
   type Schema,
   type SchemaType,
@@ -58,21 +51,21 @@ export type RunPlaygroundInferencesOptions = {
    */
   readonly languageModel?: LanguageModel;
   /**
-   * Optional storage instance or project directory to save the resulting PlaygroundInferenceSet into.
+   * Optional storage instance or project directory to save the resulting Inferences.InferenceSet into.
    */
   readonly storage?: ProjectStorage;
 };
 
 /**
  * Runs inference across all samples in the `<playground>` associated with `templateId`
- * and returns a {@link PlaygroundInferenceSet}.
+ * and returns a {@link Inferences.InferenceSet}.
  */
 export async function runPlaygroundInferences(
   compilationResult: ValidCompilationResult,
   templateId: string,
   options: RunPlaygroundInferencesOptions = {},
   now = new Date(),
-): Promise<PlaygroundInferenceSet> {
+): Promise<Inferences.InferenceSet> {
   const validTemplate = compilationResult.templates[templateId];
   if (!validTemplate) {
     throw new Error(`Template not found: ${templateId}`);
@@ -105,8 +98,8 @@ export async function runPlaygroundInferences(
   const inferences = await mapWithConcurrency(
     validatedPlayground.samples,
     maxConcurrency,
-    async (sample, sampleIndex): Promise<PlaygroundInference> => {
-      const request = buildPlaygroundInferenceRequest(
+    async (sample, sampleIndex): Promise<Inferences.Inference> => {
+      const request = buildInferenceRequest(
         sample,
         specTemplate,
         templatesSpec.tools,
@@ -127,7 +120,7 @@ export async function runPlaygroundInferences(
     },
   );
 
-  const inferenceSet: PlaygroundInferenceSet = {
+  const inferenceSet: Inferences.InferenceSet = {
     kind: "playground-inference-set",
     id: crypto.randomUUID(),
     model: validatedPlayground.model,
@@ -286,14 +279,15 @@ function collectTemplateFilesForTemplate(
 }
 
 /**
- * Renders a {@link Sample} against `specTemplate` into a {@link PlaygroundInferenceRequest}.
+ * Renders a {@link Sample} against `specTemplate` into a
+ * {@link Inferences.InferenceRequest}.
  */
-function buildPlaygroundInferenceRequest(
+function buildInferenceRequest(
   sample: Sample,
   specTemplate: Spec.Template,
   specTools: { readonly [id: string]: Spec.Tool },
   validTemplate: ValidTemplate,
-): PlaygroundInferenceRequest {
+): Inferences.InferenceRequest {
   const inputSchemaType: SchemaType = {
     type: validTemplate.schema.typeDeclarations["Input"]!.valueType,
     schema: validTemplate.schema,
@@ -335,7 +329,7 @@ function buildPlaygroundInferenceRequest(
     specTemplate.snippets,
   );
 
-  const tools: readonly PlaygroundTool[] = specTemplate.tools.map(
+  const tools: readonly Inferences.Tool[] = specTemplate.tools.map(
     ({ id, name }) => {
       const toolSpec = specTools[id]!;
       return {
@@ -349,7 +343,7 @@ function buildPlaygroundInferenceRequest(
     },
   );
 
-  const outputFormat: PlaygroundInferenceRequest["outputFormat"] =
+  const outputFormat: Inferences.InferenceRequest["outputFormat"] =
     specTemplate.outputFormat === "json"
       ? {
           format: "json",
@@ -361,7 +355,7 @@ function buildPlaygroundInferenceRequest(
           format: "text",
         };
 
-  const messages: PlaygroundMessage[] = [];
+  const messages: Inferences.Message[] = [];
 
   // 1. Few-shot examples
   for (const example of mainContent.examples) {
@@ -502,11 +496,11 @@ function buildPlaygroundInferenceRequest(
 }
 
 async function executeSampleInference(
-  request: PlaygroundInferenceRequest,
+  request: Inferences.InferenceRequest,
   playgroundModel: PlaygroundModel,
   languageModel: LanguageModel,
   validTemplate: ValidTemplate,
-): Promise<PlaygroundInferenceResult> {
+): Promise<Inferences.InferenceResult> {
   const modelMessages = toModelMessages(
     request.messages,
     request.outputFormat.format,
@@ -794,7 +788,7 @@ function normalizeSchemaValue(
 }
 
 function toModelMessages(
-  messages: readonly PlaygroundMessage[],
+  messages: readonly Inferences.Message[],
   outputFormat: Spec.OutputFormat,
 ): ModelMessage[] {
   return messages.map((msg): ModelMessage => {
@@ -855,7 +849,7 @@ function extractTelemetry(
         };
       }
     | undefined,
-): PlaygroundInferenceTelemetry {
+): Inferences.InferenceTelemetry {
   if (
     !usage ||
     usage.inputTokens === undefined ||
@@ -863,7 +857,7 @@ function extractTelemetry(
   ) {
     return { latencyMs };
   }
-  const tokenUsage: PlaygroundTokenUsage = {
+  const tokenUsage: Inferences.TokenUsage = {
     inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
     ...(usage.outputTokenDetails?.reasoningTokens !== undefined

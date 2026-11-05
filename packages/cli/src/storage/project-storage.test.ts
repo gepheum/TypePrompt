@@ -1,4 +1,4 @@
-import type { PlaygroundInferenceSet } from "@typeprompt/core";
+import type { Inferences } from "@typeprompt/core";
 import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
@@ -9,7 +9,7 @@ function createMockInferenceSet(overrides?: {
   id?: string;
   templateId?: string;
   isoTimestamp?: string;
-}): PlaygroundInferenceSet {
+}): Inferences.InferenceSet {
   return {
     kind: "playground-inference-set",
     id: overrides?.id ?? crypto.randomUUID(),

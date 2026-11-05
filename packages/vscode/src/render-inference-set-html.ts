@@ -1,19 +1,11 @@
 // Run with:
 // npx tsx packages/vscode/src/render-inference-set-html.ts /Users/clementroux/Documents/Gepheum/typeprompt/playground/inference-set.json /Users/clementroux/Documents/Gepheum/typeprompt/playground/inference-set.html
 
+import type { Inferences } from "@typeprompt/core";
 import {
   parseJson,
   type JsonObjectEntry,
   type JsonValue,
-  type PlaygroundInference,
-  type PlaygroundInferenceError,
-  type PlaygroundInferenceRequest,
-  type PlaygroundInferenceResponse,
-  type PlaygroundInferenceResult,
-  type PlaygroundInferenceSet,
-  type PlaygroundInferenceTelemetry,
-  type PlaygroundMessage,
-  type PlaygroundToolCall,
 } from "@typeprompt/core";
 import { tokenizeYaml } from "@typeprompt/core/json/yaml-parser.js";
 import { tokenize } from "@typeprompt/core/lsp-util/semantic-token.js";
@@ -313,7 +305,7 @@ function stringifyAsYaml(value: unknown): string {
 // HTML Page Rendering
 // -----------------------------------------------------------------------------
 
-export function renderInferenceSetHtml(data: PlaygroundInferenceSet): string {
+export function renderInferenceSetHtml(data: Inferences.InferenceSet): string {
   const modelYaml = YAML.stringify(data.model).trimEnd();
   const isSingleSample = data.inferences.length === 1;
   const displayTemplateId = data.templateId.startsWith("Main:")
@@ -1342,7 +1334,7 @@ ${highlightTp(content)}</pre>
 }
 
 function extractSampleYaml(
-  inference: PlaygroundInference,
+  inference: Inferences.Inference,
   templateFiles: { readonly [path: string]: string } | undefined,
   templateId: string,
 ): string {
@@ -1426,7 +1418,7 @@ function extractSampleYaml(
 }
 
 function renderInferenceCard(
-  inference: PlaygroundInference,
+  inference: Inferences.Inference,
   isSingleSample: boolean,
   sampleYaml: string,
 ): SafeHtml {
@@ -1528,7 +1520,7 @@ ${highlightYaml(sampleYaml)}</pre>
 }
 
 function renderTelemetryStrip(
-  telemetry: PlaygroundInferenceTelemetry,
+  telemetry: Inferences.InferenceTelemetry,
 ): SafeHtml {
   const { latencyMs, usage } = telemetry;
 
@@ -1567,7 +1559,7 @@ function renderTelemetryStrip(
 
 function renderResultOutput(
   cardId: string,
-  result: PlaygroundInferenceResult,
+  result: Inferences.InferenceResult,
   outputFormat: "json" | "text",
 ): SafeHtml {
   if (result.kind === "success") {
@@ -1578,7 +1570,7 @@ function renderResultOutput(
 
 function renderSuccessResponse(
   cardId: string,
-  response: PlaygroundInferenceResponse,
+  response: Inferences.InferenceResponse,
   outputFormat: "json" | "text",
 ): SafeHtml {
   if (response.kind === "output") {
@@ -1680,7 +1672,7 @@ ${response.rawText}</pre>
   `;
 }
 
-function renderErrorResponse(error: PlaygroundInferenceError): SafeHtml {
+function renderErrorResponse(error: Inferences.InferenceError): SafeHtml {
   return html`
     <div class="output-card error">
       <div class="output-card-header">
@@ -1718,7 +1710,7 @@ ${error.rawText}</pre>
   `;
 }
 
-function renderToolCall(tc: PlaygroundToolCall): SafeHtml {
+function renderToolCall(tc: Inferences.ToolCall): SafeHtml {
   const jsonStr = stringifyAsJson(tc.input);
   return html`
     <div style="margin-bottom: 0.85rem;">
@@ -1735,7 +1727,7 @@ ${highlightJson(jsonStr)}</pre>
   `;
 }
 
-function renderRequestContext(request: PlaygroundInferenceRequest): SafeHtml {
+function renderRequestContext(request: Inferences.InferenceRequest): SafeHtml {
   return html`
     <div style="display: flex; flex-direction: column; gap: 1rem;">
       ${
@@ -1793,7 +1785,7 @@ ${request.systemMessage}</pre>
   `;
 }
 
-function renderChatMessage(message: PlaygroundMessage): SafeHtml {
+function renderChatMessage(message: Inferences.Message): SafeHtml {
   const role = message.role;
 
   return html`
@@ -1870,7 +1862,7 @@ function main(): void {
     : inputPath.replace(/\.json$/i, ".html");
 
   const rawJson = readFileSync(inputPath, "utf-8");
-  const inferenceSet: PlaygroundInferenceSet = JSON.parse(rawJson);
+  const inferenceSet: Inferences.InferenceSet = JSON.parse(rawJson);
 
   if (inferenceSet.kind !== "playground-inference-set") {
     console.error(

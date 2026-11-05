@@ -1,9 +1,7 @@
 import type { PlaygroundModel } from "./playground-model-types.js";
 
-/**
- * Result of running inference across all samples in a `<samples>` element.
- */
-export type PlaygroundInferenceSet = {
+/** Result of running inference across all samples in a `<samples>` element. */
+export type InferenceSet<Pending = never> = {
   readonly kind: "playground-inference-set";
   /** Unique identifier (UUID) for this inference set. */
   readonly id: string;
@@ -12,29 +10,25 @@ export type PlaygroundInferenceSet = {
   readonly isoTimestamp: string;
   readonly model: PlaygroundModel;
   readonly templateFiles: { readonly [path: string]: string };
-  readonly inferences: readonly PlaygroundInference[];
+  readonly inferences: ReadonlyArray<Inference<Pending>>;
 };
 
-/**
- * Result of running inference on a single {@link Sample} in `<samples>`.
- */
-export type PlaygroundInference = {
+/** Result of running inference on a single {@link Sample} in `<samples>`. */
+export type Inference<Pending = never> = {
   /** 0-based index of the sample in `<samples>`. */
   readonly sampleIndex: number;
   /** Optional display name from the sample's `name` field. */
   readonly name?: string;
   /** The prompt and conversation history leading up to the inference. */
-  readonly request: PlaygroundInferenceRequest;
+  readonly request: InferenceRequest;
   /** The outcome of the model call (generated output/tool calls or error) and telemetry. */
-  readonly result: PlaygroundInferenceResult;
+  readonly result: InferenceResult<Pending>;
 };
 
-/**
- * The prompt and conversation context for a sample inference.
- */
-export type PlaygroundInferenceRequest = {
+/** The prompt and conversation context for a sample inference. */
+export type InferenceRequest = {
   readonly systemMessage: string;
-  readonly tools: readonly PlaygroundTool[];
+  readonly tools: readonly Tool[];
   readonly outputFormat:
     | {
         readonly format: "json";
@@ -47,23 +41,19 @@ export type PlaygroundInferenceRequest = {
    * Conversation history leading up to the model call (few-shot examples,
    * prior `history` turns, current rendered user message, and intermediate `steps`).
    */
-  readonly messages: readonly PlaygroundMessage[];
+  readonly messages: readonly Message[];
 };
 
-/**
- * A tool definition available to the model during inference.
- */
-export type PlaygroundTool = {
+/** A tool definition available to the model during inference. */
+export type Tool = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly inputJsonSchema: { readonly [k: string]: unknown };
 };
 
-/**
- * A message in the conversation history.
- */
-export type PlaygroundMessage =
+/** A message in the conversation history. */
+export type Message =
   | {
       readonly role: "user";
       readonly input: unknown;
@@ -77,55 +67,48 @@ export type PlaygroundMessage =
   | {
       readonly role: "assistant";
       readonly output?: undefined;
-      readonly toolCalls: readonly PlaygroundToolCall[];
+      readonly toolCalls: readonly ToolCall[];
     }
   | {
       readonly role: "tool";
-      readonly toolResults: readonly PlaygroundToolResult[];
+      readonly toolResults: readonly ToolResult[];
     };
 
-/**
- * A tool call emitted by the model or replayed in conversation history.
- */
-export type PlaygroundToolCall = {
+/** A tool call emitted by the model or replayed in conversation history. */
+export type ToolCall = {
   readonly callId: string;
   readonly toolName: string;
   readonly input: unknown;
 };
 
-/**
- * A tool execution result replayed in conversation history.
- */
-export type PlaygroundToolResult = {
+/** A tool execution result replayed in conversation history. */
+export type ToolResult = {
   readonly callId: string;
   readonly toolName: string;
   readonly output: unknown;
 };
 
-/**
- * The outcome of a single sample inference.
- */
-export type PlaygroundInferenceResult =
+/** The outcome of a single sample inference. */
+export type InferenceResult<Pending = never> =
   | {
       readonly kind: "success";
-      readonly response: PlaygroundInferenceResponse;
+      readonly response: InferenceResponse;
       /** Model reasoning / thinking text, if returned by the provider. */
       readonly reasoning?: string;
-      readonly telemetry: PlaygroundInferenceTelemetry;
+      readonly telemetry: InferenceTelemetry;
     }
   | {
       readonly kind: "error";
-      readonly error: PlaygroundInferenceError;
+      readonly error: InferenceError;
       /** Model reasoning / thinking text, if any was produced before failure. */
       readonly reasoning?: string;
       /** Present when the LLM call completed but output parsing/validation failed. */
-      readonly telemetry?: PlaygroundInferenceTelemetry;
-    };
+      readonly telemetry?: InferenceTelemetry;
+    }
+  | Pending;
 
-/**
- * The parsed response returned by the model on a successful inference.
- */
-export type PlaygroundInferenceResponse =
+/** The parsed response returned by the model on a successful inference. */
+export type InferenceResponse =
   | {
       readonly kind: "output";
       /** Raw text returned by the model. */
@@ -136,13 +119,11 @@ export type PlaygroundInferenceResponse =
   | {
       readonly kind: "tool-calls";
       /** Tool calls requested by the model. */
-      readonly toolCalls: readonly PlaygroundToolCall[];
+      readonly toolCalls: readonly ToolCall[];
     };
 
-/**
- * Details of a failed inference.
- */
-export type PlaygroundInferenceError =
+/** Details of a failed inference. */
+export type InferenceError =
   | {
       readonly kind: "parse-error" | "validation-error";
       readonly message: string;
@@ -153,22 +134,20 @@ export type PlaygroundInferenceError =
       readonly message: string;
     };
 
-/**
- * Latency and token usage metadata for a single LLM call.
- */
-export type PlaygroundInferenceTelemetry = {
+/** Latency and token usage metadata for a single LLM call. */
+export type InferenceTelemetry = {
   /** End-to-end duration of the LLM call in milliseconds. */
   readonly latencyMs: number;
-  readonly usage?: PlaygroundTokenUsage;
+  readonly usage?: TokenUsage;
 };
 
-/**
- * Token consumption breakdown for a single LLM call.
- */
-export type PlaygroundTokenUsage = {
+/** Token consumption breakdown for a single LLM call. */
+export type TokenUsage = {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly reasoningTokens?: number;
   readonly cachedInputTokens?: number;
   readonly totalTokens: number;
 };
+
+export type Pending = { readonly kind: "pending" };
