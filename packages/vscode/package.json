@@ -57,8 +57,36 @@
       {
         "command": "typeprompt.toggleComment",
         "title": "TypePrompt: Toggle Comment"
+      },
+      {
+        "command": "typeprompt.openPlayground",
+        "title": "TypePrompt: Open Playground",
+        "icon": "$(play)"
       }
     ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "typeprompt.openPlayground",
+          "when": "resourceFilename =~ /\\.play\\.tp$/",
+          "group": "2_open"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "typeprompt.openPlayground",
+          "when": "resourceFilename =~ /\\.play\\.tp$/ || editorLangId == 'typeprompt'",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "typeprompt.openPlayground",
+          "when": "resourceFilename =~ /\\.play\\.tp$/ || editorLangId == 'typeprompt'",
+          "group": "1_run"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "typeprompt.onEnterKey",

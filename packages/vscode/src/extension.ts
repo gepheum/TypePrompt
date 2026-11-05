@@ -14,10 +14,15 @@ import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
 import { activateAutoCloseTag } from "./auto-close-tag.js";
 import { activateEnterHandler } from "./enter-handler.js";
 import { activateNewFileScaffolding } from "./new-file-scaffolding.js";
+import {
+  activatePlaygroundPreview,
+  type PlaygroundPreviewController,
+} from "./playground-preview.js";
 import { activateToggleComment } from "./toggle-comment.js";
 
 export interface TypePromptExtensionApi {
   readonly compilationStore: CompilationResultStore;
+  readonly playgroundPreview: PlaygroundPreviewController;
 }
 
 let client: LanguageClient | undefined;
@@ -28,6 +33,10 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
   activateEnterHandler(context);
   activateToggleComment(context);
   activateNewFileScaffolding(context, () => client);
+  const playgroundPreview = activatePlaygroundPreview(
+    context,
+    compilationStore,
+  );
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),
@@ -82,6 +91,7 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
     "typeprompt/compilationResult",
     (params: WireCompilationResults) => {
       compilationStore.handleNotification(params);
+      playgroundPreview.notifyCompilationUpdate();
     },
   );
 
@@ -89,6 +99,7 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
 
   return {
     compilationStore,
+    playgroundPreview,
   };
 }
 

@@ -39,9 +39,10 @@ export class CompilationResultStore {
   public findByUri(
     fileUri: string,
   ): { project: WireCompilationResult; relativePath: string } | null {
-    let bestMatch:
-      | { project: WireCompilationResult; relativePath: string }
-      | null = null;
+    let bestMatch: {
+      project: WireCompilationResult;
+      relativePath: string;
+    } | null = null;
     let longestPrefix = -1;
 
     for (const [folderUri, result] of this.projects) {
