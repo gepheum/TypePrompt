@@ -63,7 +63,7 @@ export type RunPlaygroundInferencesOptions = {
 export async function runPlaygroundInferences(
   compilationResult: ValidCompilationResult,
   templateId: string,
-  options: RunPlaygroundInferencesOptions = {},
+  options: RunPlaygroundInferencesOptions,
   now = new Date(),
 ): Promise<Inferences.InferenceSet> {
   const validTemplate = compilationResult.templates[templateId];
