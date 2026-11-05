@@ -3,8 +3,6 @@ import type {
   WireCompilationResults,
 } from "./wire-compilation-result.js";
 
-export type Project = WireCompilationResult;
-
 /**
  * Client-side store that maintains the latest `WireCompilationResult` for each project.
  *
@@ -40,8 +38,10 @@ export class CompilationResultStore {
    */
   public findByUri(
     fileUri: string,
-  ): { project: Project; relativePath: string } | null {
-    let bestMatch: { project: Project; relativePath: string } | null = null;
+  ): { project: WireCompilationResult; relativePath: string } | null {
+    let bestMatch:
+      | { project: WireCompilationResult; relativePath: string }
+      | null = null;
     let longestPrefix = -1;
 
     for (const [folderUri, result] of this.projects) {

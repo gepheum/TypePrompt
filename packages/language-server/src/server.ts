@@ -56,10 +56,7 @@ import {
   type _Connection,
 } from "vscode-languageserver/node.js";
 
-export {
-  CompilationResultStore,
-  type Project,
-} from "./compilation-result-store.js";
+export { CompilationResultStore } from "./compilation-result-store.js";
 export * from "./wire-compilation-result.js";
 
 type FileType =
