@@ -3,8 +3,8 @@ import { describe, it } from "mocha";
 
 import {
   DEFAULT_CONFIG_YAML,
-  type ConfigParseResult,
   parseConfigYaml,
+  type ConfigParseResult,
 } from "./config-parser.js";
 
 function parse(content: string, path = "typeprompt.yml"): ConfigParseResult {
@@ -285,4 +285,3 @@ describe("DEFAULT_CONFIG_YAML", () => {
     });
   });
 });
-

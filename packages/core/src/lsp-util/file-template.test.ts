@@ -8,8 +8,14 @@ import { parseNamespace } from "../compiler/namespace-parser.js";
 import { parsePlayground } from "../compiler/playground-parser.js";
 import { parseTemplate } from "../compiler/template-parser.js";
 import { parseTool } from "../compiler/tool-parser.js";
-import { DEFAULT_CONFIG_YAML, parseConfigYaml } from "../config/config-parser.js";
-import { DEFAULT_SECRETS_YAML, parseSecretsYaml } from "../config/secrets-parser.js";
+import {
+  DEFAULT_CONFIG_YAML,
+  parseConfigYaml,
+} from "../config/config-parser.js";
+import {
+  DEFAULT_SECRETS_YAML,
+  parseSecretsYaml,
+} from "../config/secrets-parser.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import { generateFileTemplate } from "./file-template.js";
 

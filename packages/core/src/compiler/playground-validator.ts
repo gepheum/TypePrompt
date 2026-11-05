@@ -150,9 +150,7 @@ export function validatePlayground(
           ? jsonStringToTextSpan(nameEntry.value)
           : undefined,
       note:
-        noteEntry?.value.kind === "string"
-          ? noteEntry.value.value
-          : undefined,
+        noteEntry?.value.kind === "string" ? noteEntry.value.value : undefined,
       history,
       input: unwrapJsonValue(inputEntry.value),
       steps,

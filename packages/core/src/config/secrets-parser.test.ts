@@ -184,4 +184,3 @@ describe("DEFAULT_SECRETS_YAML", () => {
     });
   });
 });
-

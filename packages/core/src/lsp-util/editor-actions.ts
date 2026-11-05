@@ -619,9 +619,9 @@ function isYamlPosition(
     (ctx.contentFormat === "yaml" &&
       Boolean(
         ctx.currentElement &&
-          offset >= ctx.currentElement.contentStart &&
-          (!ctx.currentElement.closingTag ||
-            offset <= ctx.currentElement.closingTag.start),
+        offset >= ctx.currentElement.contentStart &&
+        (!ctx.currentElement.closingTag ||
+          offset <= ctx.currentElement.closingTag.start),
       )) ||
     (!ctx.currentElement && !/<[a-zA-Z]/.test(content))
   );

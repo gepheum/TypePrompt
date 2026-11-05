@@ -215,4 +215,3 @@ export const DEFAULT_CONFIG_YAML = [
   "    file: ./prompts.gen.ts",
   "",
 ].join("\n");
-

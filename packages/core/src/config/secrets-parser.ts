@@ -73,4 +73,3 @@ export const DEFAULT_SECRETS_YAML = [
   "  # mistral: ...",
   "",
 ].join("\n");
-

@@ -616,6 +616,7 @@ Each sample in the `<samples>` YAML array has the following structure:
 | Field | Required | Type | Description |
 |---|---|---|---|
 | `name` | No | `string` | Optional label or description for the sample |
+| `note` | No | `string` | Optional note or commentary about the sample |
 | `history` | No | `HistoryEntry[]` | Previous completed turns in multi-turn conversations |
 | `input` | Yes | `Input` | Current turn inputs matching the target template's `Input` schema |
 | `steps` | No | `Step[]` | Tool calls made during the current turn |
@@ -662,6 +663,7 @@ You can define its playground samples in `prompts/Translate.play.tp`:
 
   <samples>
   - name: "Spanish greeting"
+    note: "Informal greeting"
     input:
       text: "Hello, how are you?"
       targetLanguage: "Spanish"
