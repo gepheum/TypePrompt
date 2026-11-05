@@ -40,10 +40,8 @@ export class CompilationResultStore {
    */
   public findByUri(
     fileUri: string,
-  ): { project: Project; relativePath: string } | undefined {
-    let bestMatch:
-      | { project: Project; relativePath: string }
-      | undefined;
+  ): { project: Project; relativePath: string } | null {
+    let bestMatch: { project: Project; relativePath: string } | null = null;
     let longestPrefix = -1;
 
     for (const [folderUri, result] of this.projects) {

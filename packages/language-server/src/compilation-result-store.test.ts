@@ -84,6 +84,6 @@ describe("CompilationResultStore", () => {
     expect(matchB?.relativePath).toBe("prompts/shared.tp");
 
     const nonMatch = store.findByUri("file:///workspace/other/hello.tp");
-    expect(nonMatch === undefined).toBe(true);
+    expect(nonMatch).toBe(null);
   });
 });
