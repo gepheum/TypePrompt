@@ -30,8 +30,6 @@ import {
   type Output,
   type ToolSet,
 } from "ai";
-import { type ProjectStorage } from "../../storage/index.js";
-
 export type RunPlaygroundInferencesOptions = {
   readonly apiKeys?: ApiKeys;
   /**
@@ -45,11 +43,6 @@ export type RunPlaygroundInferencesOptions = {
    * and the provided API keys.
    */
   readonly languageModel?: LanguageModel;
-  /**
-   * Optional storage instance or project directory to save the resulting
-   * `Inferences.InferenceSet` into.
-   */
-  readonly storage?: ProjectStorage;
   /**
    * Optional callback invoked as inferences arrive, immediately before any are
    * computed, and once all inferences have been computed.
@@ -163,8 +156,6 @@ export async function runPlaygroundInferences(
     templateFiles,
     inferences: inferences as Inferences.Inference[],
   };
-
-  options.storage?.saveInferenceSet(inferenceSet);
 
   return inferenceSet;
 }

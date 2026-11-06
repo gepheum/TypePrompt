@@ -11,6 +11,7 @@ import {
 } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
+import { runPlaygroundInferences } from "@typeprompt/inference-runner";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
 import { openProjectStorage } from "./main.js";
@@ -34,7 +35,6 @@ import {
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
 import { PlayServer } from "./play/backend/server.js";
-import { runPlaygroundInferences } from "./play/inferences/inference-runner.js";
 import { isDirectory } from "./util/io.js";
 export * from "./storage/index.js";
 export { formatTemplateFile };
@@ -211,8 +211,9 @@ async function runPlaygroundFile(
   const inferenceSet = await runPlaygroundInferences(
     validCompilationResult,
     templateId,
-    { apiKeys: secrets.apiKeys, storage },
+    { apiKeys: secrets.apiKeys },
   );
+  storage.saveInferenceSet(inferenceSet);
   console.log(JSON.stringify(inferenceSet, null, 2));
 }
 

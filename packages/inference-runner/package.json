@@ -1,0 +1,35 @@
+{
+  "name": "@typeprompt/inference-runner",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./*": {
+      "types": "./dist/*",
+      "import": "./dist/*",
+      "default": "./dist/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.89",
+    "@ai-sdk/google": "^4.0.106",
+    "@ai-sdk/mistral": "^4.0.77",
+    "@ai-sdk/openai": "^4.0.103",
+    "@ai-sdk/xai": "^5.0.35",
+    "@typeprompt/core": "*",
+    "ai": "^7.0.154"
+  }
+}
+
