@@ -1,6 +1,13 @@
-import type { CompilationResult, Sample } from "../compiler/compiler-types.js";
-import type { PlaygroundModel } from "../compiler/playground-model-types.js";
+import type {
+  CompilationResult,
+  Sample,
+  ValidCompilationResult,
+} from "../compiler/compiler-types.js";
+import { makeTemplates } from "../compiler/spec-maker.js";
 import type { SecretsParseResult } from "../config/secrets-parser.js";
+import { renderInferenceRequest } from "../inference/inference-request-renderer.js";
+import type * as Inferences from "../inference/inference-types.js";
+import type { PlaygroundModel } from "../inference/model-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import type { InternalError, InternalErrors } from "../util/shared-types.js";
@@ -94,13 +101,17 @@ export type WireTool = {
   readonly isValid: boolean;
 };
 
+export type WirePlaygroundSample = Sample & {
+  readonly request?: Inferences.InferenceRequest;
+};
+
 export type WirePlayground = {
   readonly id: string;
   readonly forTemplate: string;
   readonly namespace: string | null;
   readonly isValid: boolean;
   readonly model?: PlaygroundModel | unknown;
-  readonly samples?: readonly Sample[] | unknown;
+  readonly samples?: readonly WirePlaygroundSample[] | unknown;
 };
 
 /**
@@ -189,16 +200,44 @@ export function toWireCompilationResult(
     };
   }
 
+  const validResult = !result.anyErrors
+    ? (result as ValidCompilationResult)
+    : undefined;
+  const templatesSpec = validResult ? makeTemplates(validResult) : undefined;
   const playgrounds: { [id: string]: WirePlayground } = {};
   for (const [id, p] of Object.entries(result.playgrounds)) {
     if ("templateId" in p) {
+      const specTemplate = templatesSpec?.templates[p.templateId];
+      const validTemplate = validResult?.templates[p.templateId];
+      const samplesWithRequests: WirePlaygroundSample[] = p.samples.map(
+        (sample) => {
+          let request: Inferences.InferenceRequest | undefined;
+          if (specTemplate && templatesSpec && validTemplate) {
+            try {
+              request = renderInferenceRequest(
+                sample,
+                specTemplate,
+                templatesSpec.tools,
+                validTemplate,
+              );
+            } catch {
+              // Ignore request generation error
+            }
+          }
+          return {
+            ...sample,
+            ...(request ? { request } : {}),
+          };
+        },
+      );
+
       playgrounds[id] = {
         id,
         forTemplate: p.templateId,
         namespace: p.playground.namespace?.text ?? null,
         isValid: true,
         model: p.model,
-        samples: p.samples,
+        samples: samplesWithRequests,
       };
     } else {
       playgrounds[id] = {

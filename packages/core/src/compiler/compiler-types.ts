@@ -1,5 +1,6 @@
 import type { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
+import type { PlaygroundModel } from "../inference/model-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
 import type { LineFinderData } from "../util/line-finder.js";
@@ -13,7 +14,6 @@ import type {
   ValidationResult,
 } from "../util/shared-types.js";
 import type { XmlDocument } from "../xml/xml-types.js";
-import type { PlaygroundModel } from "./playground-model-types.js";
 
 export type CompilationResult = {
   readonly sourceFiles: { readonly [path: string]: SourceFileParseResult };

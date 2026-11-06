@@ -3,22 +3,18 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
-import { encode as encodeToon } from "@toon-format/toon";
 import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
   makeTemplates,
+  normalizeSchemaValue,
   parseJson,
-  resolveType,
+  renderInferenceRequest,
   unwrapJsonValue,
   validateJson,
   type ApiKeys,
-  type FieldType,
   type PlaygroundModel,
   type PlaygroundModelId,
-  type Sample,
-  type Schema,
-  type SchemaType,
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
@@ -34,7 +30,6 @@ import {
   type Output,
   type ToolSet,
 } from "ai";
-import YAML from "yaml";
 import { type ProjectStorage } from "../../storage/index.js";
 
 export type RunPlaygroundInferencesOptions = {
@@ -106,7 +101,7 @@ export async function runPlaygroundInferences(
 
   const inferences: Inferences.Inference<Inferences.Pending>[] =
     validatedPlayground.samples.map((sample, sampleIndex) => {
-      const request = buildInferenceRequest(
+      const request = renderInferenceRequest(
         sample,
         specTemplate,
         templatesSpec.tools,
@@ -317,223 +312,6 @@ function collectTemplateFilesForTemplate(
   return result;
 }
 
-/**
- * Renders a {@link Sample} against `specTemplate` into a
- * {@link Inferences.InferenceRequest}.
- */
-function buildInferenceRequest(
-  sample: Sample,
-  specTemplate: Spec.Template,
-  specTools: { readonly [id: string]: Spec.Tool },
-  validTemplate: ValidTemplate,
-): Inferences.InferenceRequest {
-  const inputSchemaType: SchemaType = {
-    type: validTemplate.schema.typeDeclarations["Input"]!.valueType,
-    schema: validTemplate.schema,
-  };
-  const outputSchemaType: SchemaType = {
-    type: validTemplate.schema.typeDeclarations["Output"]!.valueType,
-    schema: validTemplate.schema,
-  };
-  const normalizeToolInput = (toolName: string, value: unknown): unknown => {
-    const toolEntry = validTemplate.tools[toolName];
-    if (!toolEntry) return value;
-    const { schema } = toolEntry.tool;
-    return normalizeSchemaValue(value, {
-      type: schema.typeDeclarations["Input"]!.valueType,
-      schema,
-    });
-  };
-  const normalizeToolOutput = (toolName: string, value: unknown): unknown => {
-    const toolEntry = validTemplate.tools[toolName];
-    if (!toolEntry) return value;
-    const { schema } = toolEntry.tool;
-    return normalizeSchemaValue(value, {
-      type: schema.typeDeclarations["Output"]!.valueType,
-      schema,
-    });
-  };
-
-  const normalizedSampleInput = normalizeSchemaValue(
-    sample.input,
-    inputSchemaType,
-  );
-  const mainContent = resolveTemplateContent(
-    specTemplate.contents,
-    normalizedSampleInput,
-  );
-  const systemMessage = renderBody(
-    mainContent.system,
-    normalizedSampleInput,
-    specTemplate.snippets,
-  );
-
-  const tools: readonly Inferences.Tool[] = specTemplate.tools.map(
-    ({ id, name }) => {
-      const toolSpec = specTools[id]!;
-      return {
-        id,
-        name,
-        description: toolSpec.description,
-        inputJsonSchema: toolSpec.inputJsonSchema as {
-          readonly [k: string]: unknown;
-        },
-      };
-    },
-  );
-
-  const outputFormat: Inferences.InferenceRequest["outputFormat"] =
-    specTemplate.outputFormat === "json"
-      ? {
-          format: "json",
-          jsonSchema: specTemplate.outputJsonSchema as {
-            readonly [k: string]: unknown;
-          },
-        }
-      : {
-          format: "text",
-        };
-
-  const messages: Inferences.Message[] = [];
-
-  // 1. Few-shot examples
-  for (const example of mainContent.examples) {
-    const normalizedExampleInput = normalizeSchemaValue(
-      example.input,
-      inputSchemaType,
-    );
-    const exampleContent = resolveTemplateContent(
-      specTemplate.contents,
-      normalizedExampleInput,
-    );
-    messages.push({
-      role: "user",
-      input: normalizedExampleInput,
-      rendered: renderBody(
-        exampleContent.user,
-        normalizedExampleInput,
-        specTemplate.snippets,
-      ),
-    });
-
-    for (const step of example.steps) {
-      messages.push({
-        role: "assistant",
-        toolCalls: step.toolCalls.map((tc) => ({
-          callId: tc.callId,
-          toolName: tc.toolName,
-          input: normalizeToolInput(tc.toolName, tc.input),
-        })),
-      });
-      messages.push({
-        role: "tool",
-        toolResults: step.toolCalls.map((tc) => ({
-          callId: tc.callId,
-          toolName: tc.toolName,
-          output:
-            tc.output !== undefined && tc.output !== null
-              ? normalizeToolOutput(tc.toolName, tc.output)
-              : tc.output,
-        })),
-      });
-    }
-
-    messages.push({
-      role: "assistant",
-      output: normalizeSchemaValue(example.output, outputSchemaType),
-    });
-  }
-
-  // 2. Prior conversation history turns
-  for (const historyEntry of sample.history ?? []) {
-    const normalizedHistoryInput = normalizeSchemaValue(
-      historyEntry.input,
-      inputSchemaType,
-    );
-    const historyContent = resolveTemplateContent(
-      specTemplate.contents,
-      normalizedHistoryInput,
-    );
-    messages.push({
-      role: "user",
-      input: normalizedHistoryInput,
-      rendered: renderBody(
-        historyContent.user,
-        normalizedHistoryInput,
-        specTemplate.snippets,
-      ),
-    });
-
-    for (const step of historyEntry.steps ?? []) {
-      messages.push({
-        role: "assistant",
-        toolCalls: step.toolCalls.map((tc) => ({
-          callId: tc.callId,
-          toolName: tc.tool,
-          input: normalizeToolInput(tc.tool, tc.input),
-        })),
-      });
-      messages.push({
-        role: "tool",
-        toolResults: step.toolCalls.map((tc) => ({
-          callId: tc.callId,
-          toolName: tc.tool,
-          output:
-            tc.output !== undefined && tc.output !== null
-              ? normalizeToolOutput(tc.tool, tc.output)
-              : tc.output,
-        })),
-      });
-    }
-
-    messages.push({
-      role: "assistant",
-      output: normalizeSchemaValue(historyEntry.output, outputSchemaType),
-    });
-  }
-
-  // 3. Current turn user message
-  messages.push({
-    role: "user",
-    input: normalizedSampleInput,
-    rendered: renderBody(
-      mainContent.user,
-      normalizedSampleInput,
-      specTemplate.snippets,
-    ),
-  });
-
-  // 4. Current turn intermediate steps
-  for (const step of sample.steps ?? []) {
-    messages.push({
-      role: "assistant",
-      toolCalls: step.toolCalls.map((tc) => ({
-        callId: tc.callId,
-        toolName: tc.tool,
-        input: normalizeToolInput(tc.tool, tc.input),
-      })),
-    });
-    messages.push({
-      role: "tool",
-      toolResults: step.toolCalls.map((tc) => ({
-        callId: tc.callId,
-        toolName: tc.tool,
-        output:
-          tc.output !== undefined && tc.output !== null
-            ? normalizeToolOutput(tc.tool, tc.output)
-            : null,
-      })),
-    });
-  }
-
-  return {
-    systemMessage,
-    tools,
-    outputFormat,
-    messages,
-  };
-}
-
 async function executeSampleInference(
   request: Inferences.InferenceRequest,
   playgroundModel: PlaygroundModel,
@@ -723,109 +501,6 @@ async function executeSampleInference(
   };
 }
 
-/**
- * Recursively reorders object properties to match the field declaration order
- * in `schemaType` (for interfaces, nested interfaces, arrays, records, and
- * discriminated unions).
- */
-function normalizeSchemaValue(
-  value: unknown,
-  schemaType: {
-    readonly type: FieldType | SchemaType["type"];
-    readonly schema: Schema;
-  },
-): unknown {
-  if (value === null || value === undefined) {
-    return value;
-  }
-  const resolved = resolveType(schemaType.type, schemaType.schema);
-  switch (resolved.kind) {
-    case "any":
-    case "primitive":
-    case "string-literal":
-    case "boolean-literal": {
-      return value;
-    }
-    case "optional": {
-      return normalizeSchemaValue(value, {
-        type: resolved.innerType,
-        schema: schemaType.schema,
-      });
-    }
-    case "array": {
-      if (!Array.isArray(value)) {
-        return value;
-      }
-      return value.map((item) =>
-        normalizeSchemaValue(item, {
-          type: resolved.elementType,
-          schema: schemaType.schema,
-        }),
-      );
-    }
-    case "record": {
-      if (typeof value !== "object") {
-        return value;
-      }
-      return Object.fromEntries(
-        Object.entries(value as Record<string, unknown>).map(([k, v]) => [
-          k,
-          normalizeSchemaValue(v, {
-            type: resolved.valueType,
-            schema: schemaType.schema,
-          }),
-        ]),
-      );
-    }
-    case "interface": {
-      if (typeof value !== "object") {
-        return value;
-      }
-      const obj = value as Record<string, unknown>;
-      const result: Record<string, unknown> = {};
-      for (const field of Object.values(resolved.fields)) {
-        const fieldName = field.name.text;
-        if (
-          Object.prototype.hasOwnProperty.call(obj, fieldName) &&
-          obj[fieldName] !== undefined
-        ) {
-          result[fieldName] = normalizeSchemaValue(obj[fieldName], {
-            type: field.type,
-            schema: schemaType.schema,
-          });
-        }
-      }
-      return result;
-    }
-    case "union":
-    case "synthetic-union": {
-      const members =
-        resolved.kind === "union"
-          ? schemaType.schema.unionToMembers.get(resolved)!
-          : resolved.members;
-      if (members.kind === "strings") {
-        return value;
-      }
-      if (typeof value !== "object") {
-        return value;
-      }
-      const obj = value as Record<string, unknown>;
-      const discriminant = obj[members.discriminator];
-      if (discriminant === undefined || discriminant === null) {
-        return value;
-      }
-      const member = members.members[String(discriminant)];
-      if (!member) {
-        return value;
-      }
-      return normalizeSchemaValue(value, {
-        type: member.resolved,
-        schema: schemaType.schema,
-      });
-    }
-  }
-}
-
 function toModelMessages(
   messages: readonly Inferences.Message[],
   outputFormat: Spec.OutputFormat,
@@ -852,7 +527,10 @@ function toModelMessages(
         }
         return {
           role: "assistant",
-          content: format(msg.output, outputFormat),
+          content:
+            outputFormat === "json"
+              ? JSON.stringify(msg.output, undefined, 2)
+              : String(msg.output),
         };
       }
       case "tool": {
@@ -911,173 +589,6 @@ function extractTelemetry(
     latencyMs,
     usage: tokenUsage,
   };
-}
-
-function resolveTemplateContent(
-  contents: Spec.TemplateContents,
-  input: unknown,
-): {
-  readonly system: Spec.Body;
-  readonly user: Spec.Body;
-  readonly examples: readonly Spec.FewShotExample[];
-} {
-  if (contents.kind === "no-variants") {
-    const { content } = contents;
-    return {
-      system: content.system!,
-      user: content.user!,
-      examples: content.examples ?? [],
-    };
-  }
-  const { defaultContent, variants } = contents;
-  const { variant } = input as { readonly variant: string };
-  const variantContent = variants[variant]!;
-  return {
-    system: (variantContent.system ?? defaultContent.system)!,
-    user: (variantContent.user ?? defaultContent.user)!,
-    examples: variantContent.examples ?? defaultContent.examples ?? [],
-  };
-}
-
-function renderBody<Input>(
-  body: Spec.Body,
-  input: Input,
-  snippets: { readonly [c: string]: Spec.Snippet },
-): string {
-  const renderPiece = (piece: Spec.BodyPiece): string => {
-    switch (piece.kind) {
-      case "text": {
-        return piece.text;
-      }
-      case "insert-snippet": {
-        const snippet = snippets[piece.snippet];
-        if (!snippet) {
-          throw new Error(`Snippet not found: ${piece.snippet}`);
-        }
-        return indent(renderSnippet(snippet, input, snippets), piece.indent);
-      }
-      case "insert-val": {
-        const val = evaluate(input, piece.val);
-        return indent(format(val, piece.format), piece.indent);
-      }
-    }
-  };
-  return body.map(renderPiece).join("");
-}
-
-function renderSnippet<Input>(
-  snippet: Spec.Snippet,
-  input: Input,
-  snippets: { readonly [c: string]: Spec.Snippet },
-): string {
-  switch (snippet.kind) {
-    case "snippet": {
-      return renderBody(snippet.body, input, snippets);
-    }
-    case "snippet-if": {
-      const { expression, then: thenBody, else: elseBody } = snippet;
-      const evalResult = evaluate(input, expression);
-      const condition = ((): boolean => {
-        switch (snippet.is) {
-          case "not-empty": {
-            return (evalResult as { readonly length: number }).length >= 1;
-          }
-          case "not-null": {
-            return evalResult !== undefined && evalResult !== null;
-          }
-          case "true": {
-            return !!evalResult;
-          }
-        }
-      })();
-      const body = condition ? thenBody : elseBody;
-      return renderBody(body, input, snippets);
-    }
-    case "snippet-switch": {
-      const { expression, branches } = snippet;
-      const evalResult = evaluate(input, expression);
-      const branch = branches[evalResult as string];
-      if (!branch) {
-        throw new Error(`Branch not found: ${evalResult as string}`);
-      }
-      return renderBody(branch, input, snippets);
-    }
-  }
-}
-
-function indent(text: string, spaces: string): string {
-  if (spaces.length <= 0) {
-    return text;
-  } else {
-    return text.replace(/\n/g, "\n".concat(spaces));
-  }
-}
-
-function evaluate<Input>(input: Input, expression: Spec.Expression): unknown {
-  switch (expression.kind) {
-    case "input": {
-      return input;
-    }
-    case "property": {
-      const parent = evaluate(input, expression.left);
-      return (parent as Record<string, unknown>)[expression.property];
-    }
-  }
-}
-
-function format(input: unknown, format?: Spec.InsertFormat): string {
-  switch (format) {
-    case undefined:
-    case "text": {
-      return String(input);
-    }
-    case "json": {
-      return JSON.stringify(input, undefined, 2);
-    }
-    case "yaml": {
-      // Remove trailing newline if present.
-      return YAML.stringify(input).replace(/\n$/, "");
-    }
-    case "toon": {
-      return encodeToon(input);
-    }
-    case "csv":
-    case "tsv": {
-      const separator = format === "csv" ? "," : "\t";
-      const array = input as ReadonlyArray<{ [k: string]: string | number }>;
-      if (array.length <= 0) {
-        return "";
-      }
-      const firstElement = array[0]!;
-      const headerRow = Object.keys(firstElement).join(separator);
-      const rows: string[] = [
-        headerRow,
-        ...array.map((e) => {
-          return Object.values(e)
-            .map((cell) => {
-              const str = String(cell);
-              if (separator === ",") {
-                // CSV per RFC 4180: wrap in double quotes if the cell contains a
-                // double quote, a comma, a newline, or a carriage return.
-                return /[",\n\r]/.test(str)
-                  ? '"'.concat(str.replace(/"/g, '""')).concat('"')
-                  : str;
-              } else {
-                // TSV: no standard quoting; escape special characters with
-                // backslash so the value remains a single field.
-                return str
-                  .replace(/\\/g, "\\\\")
-                  .replace(/\t/g, "\\t")
-                  .replace(/\n/g, "\\n")
-                  .replace(/\r/g, "\\r");
-              }
-            })
-            .join(separator);
-        }),
-      ];
-      return rows.join("\n");
-    }
-  }
 }
 
 const DEFAULT_MAX_CONCURRENCY = 5;

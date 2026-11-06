@@ -1,7 +1,12 @@
+import type { Lsp } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
+import {
+  escapeHtml,
+  renderRequestContext,
+} from "./render-inference-set-html.js";
 
 export interface PlaygroundPreviewController {
   openPlayground(docOrUri?: TextDocument | Uri): Promise<void>;
@@ -9,9 +14,25 @@ export interface PlaygroundPreviewController {
   dispose(): void;
 }
 
+interface PlaygroundDocumentState {
+  lastSuccessfulHtml?: string;
+  selectedSampleKey?: string;
+}
+
+const documentStates = new Map<string, PlaygroundDocumentState>();
+
+function getOrCreateState(uri: string): PlaygroundDocumentState {
+  let state = documentStates.get(uri);
+  if (!state) {
+    state = {};
+    documentStates.set(uri, state);
+  }
+  return state;
+}
+
 /**
  * Checks whether the document is a TypePrompt playground file according to the
- * project store.
+ * project store or filename convention.
  */
 export function isPlaygroundDocument(
   document: TextDocument,
@@ -80,6 +101,21 @@ export function activatePlaygroundPreview(
 
       const iconUri = Uri.file(context.asAbsolutePath("icon.svg"));
       currentPanel.iconPath = iconUri;
+
+      currentPanel.webview.onDidReceiveMessage(
+        (message: { type: string; key?: string; index?: number }) => {
+          if (message.type === "selectSample" && message.key && currentDoc) {
+            const state = getOrCreateState(currentDoc.uri.toString());
+            state.selectedSampleKey = message.key;
+            if (state.lastSuccessfulHtml && typeof message.index === "number") {
+              state.lastSuccessfulHtml = updateSelectedSampleInHtml(
+                state.lastSuccessfulHtml,
+                message.index,
+              );
+            }
+          }
+        },
+      );
 
       currentPanel.onDidDispose(() => {
         currentPanel = undefined;
@@ -198,74 +234,298 @@ export function activatePlaygroundPreview(
 }
 
 /**
- * Escapes HTML entities for safe inclusion in the webview.
+ * Updates the HTML string to mark the specified sample index as selected
+ * in both the <select> element and the discussion views.
  */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function updateSelectedSampleInHtml(
+  html: string,
+  selectedIndex: number,
+): string {
+  let updated = html.replace(/(<option[^>]*?)\sselected([^>]*?>)/gi, "$1$2");
+  updated = updated.replace(
+    new RegExp(`(<option[^>]*?value="${selectedIndex}"[^>]*?)>`),
+    "$1 selected>",
+  );
+  updated = updated.replace(
+    /(<div[^>]*?class="[^"]*sample-discussion-view[^"]*"[^>]*?style=")[^"]*(")/gi,
+    "$1display: none;$2",
+  );
+  updated = updated.replace(
+    new RegExp(
+      `(<div[^>]*?id="sample-discussion-${selectedIndex}"[^>]*?style=")[^"]*(")`,
+    ),
+    "$1display: block;$2",
+  );
+  return updated;
+}
+
+/**
+ * Injects or activates the thin compilation error overlay on top of the given HTML.
+ */
+function injectErrorOverlay(html: string): string {
+  if (html.includes('id="compilation-error-overlay"')) {
+    return html.replace(
+      /id="compilation-error-overlay"[^>]*style="[^"]*"/,
+      'id="compilation-error-overlay" class="compilation-error-overlay" style="display: flex;"',
+    );
+  }
+  return html.replace(
+    "</body>",
+    `<div id="compilation-error-overlay" class="compilation-error-overlay" style="display: flex;">
+      <div class="error-banner">
+        <span class="error-banner-icon">⚠️</span>
+        <span class="error-banner-text">Address the TypePrompt errors</span>
+      </div>
+    </div></body>`,
+  );
+}
+
+/**
+ * Builds a placeholder HTML shell when no successful compilation exists yet.
+ */
+function buildInitialErrorHtml(fileName: string): string {
+  return buildPageShell({
+    fileName,
+    bodyContent: `
+      <div class="sample-picker-bar">
+        <label for="sample-select" class="sample-picker-label">Sample</label>
+        <select id="sample-select" class="sample-select" disabled>
+          <option>No samples available</option>
+        </select>
+      </div>
+      <div class="empty-state">
+        <p>No preview available yet.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.35rem; opacity: 0.7;">
+          Fix the TypePrompt errors in the editor to view the live playground.
+        </p>
+      </div>
+    `,
+    hasErrors: true,
+  });
 }
 
 /**
  * Generates the preview HTML for the playground file.
  */
-function renderPlaygroundPreviewHtml(
+export function renderPlaygroundPreviewHtml(
   document: TextDocument,
   projectStore: ProjectStore,
 ): string {
+  const uri = document.uri.toString();
+  const state = getOrCreateState(uri);
   const fileName = path.basename(document.fileName);
 
-  let targetTemplate: string | null = null;
-  let targetNamespace: string | null = null;
-  let modelName = "gpt-4o";
-  let sampleList: readonly PreviewSample[] = [];
-  let diagnosticErrors: readonly string[] = [];
-
-  const match = projectStore.findByUri(document.uri.toString());
+  const match = projectStore.findByUri(uri);
   const sourceFile =
     match?.project.compilationResult.sourceFiles[match.relativePath];
 
-  if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
-    targetTemplate = sourceFile.entity.forTemplate;
-    targetNamespace = sourceFile.entity.namespace;
-    modelName = extractModelName(sourceFile.entity.model);
-    sampleList = extractSamples(sourceFile.entity.samples);
+  const anyErrors = match ? match.project.compilationResult.anyErrors : true;
+  const fileErrors =
+    match?.project.compilationResult.finalErrors[match.relativePath] ?? [];
+
+  let wirePlayground: Lsp.WirePlayground | undefined;
+  if (match && sourceFile?.entity && sourceFile.entity.kind === "playground") {
+    const forTemplate = sourceFile.entity.forTemplate;
+    const ns = sourceFile.entity.namespace;
+    const expectedId = ns ? `${ns}:${forTemplate}` : forTemplate;
+    wirePlayground =
+      match.project.compilationResult.playgrounds[expectedId] ??
+      match.project.compilationResult.playgrounds[forTemplate] ??
+      Object.values(match.project.compilationResult.playgrounds).find(
+        (p) => p.forTemplate === forTemplate,
+      );
   }
 
-  const sampleCount = sampleList.length;
+  const hasErrors =
+    anyErrors || fileErrors.length > 0 || !wirePlayground?.isValid;
 
-  if (match) {
-    const errors =
-      match.project.compilationResult.finalErrors[match.relativePath];
-    if (errors && errors.length > 0) {
-      diagnosticErrors = errors.map((e) => e.message);
+  if (!hasErrors && wirePlayground) {
+    const rawSamples = Array.isArray(wirePlayground.samples)
+      ? wirePlayground.samples
+      : [];
+    const samples = rawSamples as readonly Lsp.WirePlaygroundSample[];
+
+    // Determine selected index:
+    // If the currently selected sample is no longer in the actual list of <samples>, default back to first sample.
+    let selectedIndex = 0;
+    if (state.selectedSampleKey && samples.length > 0) {
+      const idx = samples.findIndex((s, i) => {
+        const key = s.name ? `name:${s.name}` : `index:${i}`;
+        return key === state.selectedSampleKey;
+      });
+      if (idx >= 0) {
+        selectedIndex = idx;
+      } else if (state.selectedSampleKey.startsWith("index:")) {
+        const parsedIdx = parseInt(
+          state.selectedSampleKey.slice("index:".length),
+          10,
+        );
+        if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < samples.length) {
+          selectedIndex = parsedIdx;
+        }
+      }
     }
+
+    if (samples.length > 0) {
+      const sel = samples[selectedIndex];
+      state.selectedSampleKey = sel?.name
+        ? `name:${sel.name}`
+        : `index:${selectedIndex}`;
+    }
+
+    const bodyContent = buildSuccessfulPlaygroundBody({
+      samples,
+      selectedIndex,
+    });
+
+    const htmlContent = buildPageShell({
+      fileName,
+      bodyContent,
+      hasErrors: false,
+    });
+
+    state.lastSuccessfulHtml = htmlContent;
+    return htmlContent;
   }
 
-  const hasErrors = diagnosticErrors.length > 0;
+  // When compilation has errors:
+  // Add a thin overlay (with low opacity) on top of the HTML saying to address the TypePrompt errors;
+  // the user will still be able to see the HTML (generated for the last time compilation was successful) underneath.
+  if (state.lastSuccessfulHtml) {
+    return injectErrorOverlay(state.lastSuccessfulHtml);
+  }
+
+  return buildInitialErrorHtml(fileName);
+}
+
+function buildSuccessfulPlaygroundBody(params: {
+  readonly samples: readonly Lsp.WirePlaygroundSample[];
+  readonly selectedIndex: number;
+}): string {
+  const { samples, selectedIndex } = params;
+
+  if (samples.length === 0) {
+    return `
+      <div class="sample-picker-bar">
+        <label for="sample-select" class="sample-picker-label">Sample</label>
+        <select id="sample-select" class="sample-select" disabled>
+          <option>No samples available</option>
+        </select>
+      </div>
+      <div class="empty-state">
+        <p>No samples found in this playground.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.35rem; opacity: 0.7;">
+          Add samples under &lt;samples&gt; to preview conversations.
+        </p>
+      </div>
+    `;
+  }
+
+  const selectOptions = samples
+    .map((s, idx) => {
+      const isSelected = idx === selectedIndex;
+      const label = s.name ? s.name : String(idx + 1);
+      return `<option value="${idx}" data-name="${escapeHtml(s.name ?? "")}" ${isSelected ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+
+  const discussions = samples
+    .map((s, idx) => {
+      const isSelected = idx === selectedIndex;
+      const noteHtml = s.note
+        ? `
+        <div class="sample-note-card">
+          <div class="sample-note-header">
+            <span class="sample-note-title">Note</span>
+          </div>
+          <div class="sample-note-body">${escapeHtml(s.note)}</div>
+        </div>
+      `
+        : "";
+
+      const discussionHtml = s.request
+        ? renderRequestContext(s.request).toString()
+        : '<div class="empty-discussion">No conversation preview available for this sample.</div>';
+
+      return `
+        <div id="sample-discussion-${idx}" class="sample-discussion-view" style="display: ${isSelected ? "block" : "none"};">
+          ${noteHtml}
+          ${discussionHtml}
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="sample-picker-bar">
+      <label for="sample-select" class="sample-picker-label">Sample</label>
+      <select id="sample-select" class="sample-select">
+        ${selectOptions}
+      </select>
+    </div>
+    <div class="sample-discussions-container">
+      ${discussions}
+    </div>
+  `;
+}
+
+function buildPageShell(params: {
+  readonly fileName: string;
+  readonly bodyContent: string;
+  readonly hasErrors: boolean;
+}): string {
+  const { fileName, bodyContent, hasErrors } = params;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TypePrompt Playground Preview</title>
+  <title>${escapeHtml(fileName)} · Playground Preview</title>
   <style>
     :root {
-      --bg: var(--vscode-editor-background, #090d16);
-      --fg: var(--vscode-editor-foreground, #f8fafc);
-      --surface: var(--vscode-sideBar-background, #101625);
-      --border: var(--vscode-panel-border, #1e2a42);
-      --badge-bg: var(--vscode-badge-background, #38bdf8);
-      --badge-fg: var(--vscode-badge-foreground, #090d16);
-      --accent: #38bdf8;
-      --success: #34d399;
-      --error: #f87171;
-      --font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-      --font-mono: var(--vscode-editor-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "SF Mono", Monaco, "Cascadia Code", "Liberation Mono", Menlo, Courier, monospace;
+
+      --bg: #0b0f19;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1a2234;
+      --bg-inset: #070a12;
+
+      --border: #1f293d;
+      --border-subtle: #162032;
+      --border-focus: #38bdf8;
+
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-soft: #64748b;
+
+      --section-request: #121828;
+      --section-request-bg: #0a0e19;
+      --section-request-header: #121828;
+      --section-request-border: #1e263c;
+      --section-request-label: #94a3b8;
+
+      --user-bg: #1e293b;
+      --user-border: #334155;
+      --user-label: #94a3b8;
+
+      --assistant-bg: #0f2c42;
+      --assistant-border: #164e63;
+      --assistant-label: #38bdf8;
+
+      --tool-bg: #281a3d;
+      --tool-border: #4c1d95;
+      --tool-label: #c084fc;
+
+      --hl-key: #7dd3fc;
+      --hl-string: #a7f3d0;
+      --hl-number: #fde047;
+      --hl-boolean: #f472b6;
+      --hl-comment: #64748b;
+      --hl-xml-tag: #38bdf8;
+      --hl-xml-attribute: #c084fc;
+      --hl-schema-keyword: #f472b6;
     }
 
     * {
@@ -275,362 +535,320 @@ function renderPlaygroundPreviewHtml(
     }
 
     body {
-      background: var(--bg);
-      color: var(--fg);
-      font-family: var(--font-family);
-      font-size: 13px;
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
       line-height: 1.5;
-      padding: 16px;
-      overflow-y: auto;
+      padding: 1.25rem 1.5rem 3rem;
+      position: relative;
+      min-height: 100vh;
     }
 
-    header {
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Sample Picker */
+    .sample-picker-bar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 16px;
-      gap: 12px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .brand-tag {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 4px;
-      background: rgba(56, 189, 248, 0.15);
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-    }
-
-    .brand-title {
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: -0.2px;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      background: rgba(52, 211, 153, 0.12);
-      border: 1px solid rgba(52, 211, 153, 0.3);
-      color: var(--success);
-    }
-
-    .status-pill-error {
-      background: rgba(248, 113, 113, 0.12);
-      border: 1px solid rgba(248, 113, 113, 0.3);
-      color: var(--error);
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 6px var(--success);
-    }
-
-    .status-dot-error {
-      background: var(--error);
-      box-shadow: 0 0 6px var(--error);
-    }
-
-    .diagnostic-alert {
-      background: rgba(248, 113, 113, 0.1);
-      border: 1px solid rgba(248, 113, 113, 0.3);
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      color: var(--error);
-      font-size: 12px;
-    }
-
-    .diagnostic-alert ul {
-      margin-left: 18px;
-      margin-top: 4px;
-    }
-
-    .meta-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .meta-card {
-      background: var(--surface);
+      gap: 0.85rem;
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
-    .meta-label {
-      font-size: 10.5px;
-      font-weight: 600;
+    .sample-picker-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.65;
-    }
-
-    .meta-val {
-      font-size: 13px;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--accent);
-      overflow: hidden;
-      text-overflow: ellipsis;
+      letter-spacing: 0.04em;
       white-space: nowrap;
     }
 
-    .preview-section {
-      background: var(--surface);
+    .sample-select {
+      flex: 1;
+      background: var(--bg-inset);
+      color: var(--text);
       border: 1px solid var(--border);
       border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 16px;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
     }
 
-    .section-header {
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-bottom: 1px solid var(--border);
-      font-size: 11.5px;
+    .sample-select:focus {
+      border-color: var(--border-focus);
+    }
+
+    /* Sample Note */
+    .sample-note-card {
+      background: rgba(56, 189, 248, 0.07);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .sample-note-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .sample-note-title {
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      letter-spacing: 0.05em;
+      color: #38bdf8;
     }
 
-    .section-body {
-      padding: 14px;
-    }
-
-    .sample-card {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 10px;
-    }
-
-    .sample-card:last-child {
-      margin-bottom: 0;
-    }
-
-    .sample-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .sample-block {
-      background: rgba(0, 0, 0, 0.35);
-      border-radius: 4px;
-      padding: 8px 10px;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
+    .sample-note-body {
+      font-size: 0.85rem;
+      color: #e2e8f0;
       line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    /* Chat Messages & Stream */
+    .chat-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding: 0.5rem 0;
+    }
+
+    .chat-bubble-wrap {
+      display: flex;
+      width: 100%;
+    }
+
+    .system-message-wrap {
+      padding-right: 12%;
+    }
+
+    .chat-bubble-wrap.role-user {
+      justify-content: flex-start;
+      padding-right: 12%;
+    }
+
+    .chat-bubble-wrap.role-assistant {
+      justify-content: flex-end;
+      padding-left: 12%;
+    }
+
+    .chat-bubble-wrap.role-tool {
+      justify-content: center;
+      padding: 0 6%;
+    }
+
+    .chat-bubble {
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .chat-bubble-wrap.role-user .chat-bubble {
+      background: var(--user-bg);
+      border-color: var(--user-border);
+    }
+
+    .chat-bubble-wrap.role-assistant .chat-bubble {
+      background: var(--assistant-bg);
+      border-color: var(--assistant-border);
+    }
+
+    .chat-bubble-wrap.role-tool .chat-bubble {
+      background: var(--tool-bg);
+      border-color: var(--tool-border);
+    }
+
+    .chat-bubble-header {
+      padding: 0.4rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-bubble-wrap.role-user .chat-bubble-header {
+      color: var(--user-label);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .chat-bubble-wrap.role-assistant .chat-bubble-header {
+      color: var(--assistant-label);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .chat-bubble-wrap.role-tool .chat-bubble-header {
+      color: var(--tool-label);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .chat-bubble-body {
+      padding: 0.75rem 0.9rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .chat-bubble-body pre {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #e2e8f0;
+    }
+
+    /* Tool Badges */
+    .tool-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: #311d4d;
+      color: #d8b4fe;
+      border: 1px solid #581c87;
+      padding: 0.22rem 0.55rem;
+      border-radius: 5px;
+      margin-bottom: 0.35rem;
+    }
+
+    .code-view {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.5;
+      padding: 0.85rem 1rem;
       overflow-x: auto;
-      margin-top: 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #e2e8f0;
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-title.request {
+      color: var(--section-request-label);
+    }
+
+    /* Syntax Highlighting */
+    .hl-key { color: var(--hl-key); }
+    .hl-string { color: var(--hl-string); }
+    .hl-number { color: var(--hl-number); }
+    .hl-boolean { color: var(--hl-boolean); }
+    .hl-comment { color: var(--hl-comment); font-style: italic; }
+
+    /* Overlay */
+    .compilation-error-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 15, 25, 0.45);
+      backdrop-filter: blur(1.5px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 1.5rem;
+      pointer-events: none;
+    }
+
+    .error-banner {
+      pointer-events: auto;
+      background: rgba(24, 16, 22, 0.95);
+      border: 1px solid rgba(248, 113, 113, 0.6);
+      color: #fca5a5;
+      border-radius: 8px;
+      padding: 0.65rem 1.25rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      font-weight: 600;
     }
 
     .empty-state {
       text-align: center;
-      padding: 24px 16px;
-      color: rgba(255, 255, 255, 0.5);
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
     }
 
-    .footer-note {
-      font-size: 11px;
-      opacity: 0.5;
+    .empty-discussion {
       text-align: center;
-      margin-top: 20px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <span class="brand-tag">⚡ TypePrompt</span>
-      <span class="brand-title">Playground Preview</span>
-    </div>
-    <div class="status-pill ${hasErrors ? "status-pill-error" : ""}">
-      <span class="status-dot ${hasErrors ? "status-dot-error" : ""}"></span>
-      <span>${hasErrors ? `${diagnosticErrors.length} Issue${diagnosticErrors.length > 1 ? "s" : ""}` : "Live Sync"}</span>
-    </div>
-  </header>
+  <div class="container">
+    ${bodyContent}
+  </div>
 
-  ${
-    hasErrors
-      ? `<div class="diagnostic-alert">
-    <strong>Validation Issues:</strong>
-    <ul>
-      ${diagnosticErrors.map((err) => `<li>${escapeHtml(err)}</li>`).join("")}
-    </ul>
-  </div>`
-      : ""
-  }
+  <div id="compilation-error-overlay" class="compilation-error-overlay" style="display: ${hasErrors ? "flex" : "none"};">
+    <div class="error-banner">
+      <span class="error-banner-icon">⚠️</span>
+      <span class="error-banner-text">Address the TypePrompt errors</span>
+    </div>
+  </div>
 
-  <div class="meta-cards">
-    <div class="meta-card">
-      <span class="meta-label">File</span>
-      <span class="meta-val" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</span>
-    </div>
-    <div class="meta-card">
-      <span class="meta-label">Template</span>
-      <span class="meta-val" title="${escapeHtml(targetTemplate ?? "Not set")}">${escapeHtml(targetTemplate ?? "None")}</span>
-    </div>
-    ${
-      targetNamespace
-        ? `<div class="meta-card">
-      <span class="meta-label">Namespace</span>
-      <span class="meta-val" title="${escapeHtml(targetNamespace)}">${escapeHtml(targetNamespace)}</span>
-    </div>`
-        : ""
+  <script>
+    const vscode = acquireVsCodeApi();
+    const select = document.getElementById('sample-select');
+
+    function showSample(idx) {
+      const views = document.querySelectorAll('.sample-discussion-view');
+      views.forEach((view, i) => {
+        view.style.display = (i === idx) ? 'block' : 'none';
+      });
     }
-    <div class="meta-card">
-      <span class="meta-label">Model</span>
-      <span class="meta-val" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>
-    </div>
-    <div class="meta-card">
-      <span class="meta-label">Samples</span>
-      <span class="meta-val">${sampleCount}</span>
-    </div>
-  </div>
 
-  <div class="preview-section">
-    <div class="section-header">
-      <span>Live Inferences & Output</span>
-      <span style="font-size: 10px; opacity: 0.6;">Live preview</span>
-    </div>
-    <div class="section-body">
-      ${
-        sampleCount > 0
-          ? sampleList
-              .map(
-                (sample, i) => `
-      <div class="sample-card">
-        <div class="sample-title">
-          <span>${escapeHtml(sample.name ? `Sample ${i + 1}: ${sample.name}` : `Sample ${i + 1}`)}</span>
-          <span style="font-size: 10px; opacity: 0.6; font-weight: normal;">• Ready</span>
-        </div>
-        <div style="font-size: 11.5px; opacity: 0.75; margin-bottom: 4px;">Target Template: <strong>${escapeHtml(targetTemplate ?? "—")}</strong></div>
-        <div class="sample-block">
-// Live rendered prompt and simulated LLM inferences will appear here.
-// Edit the &lt;playground&gt; file to watch parameters update live.
-        </div>
-      </div>`,
-              )
-              .join("")
-          : `<div class="empty-state">
-        <p>No samples found in this playground.</p>
-        <p style="font-size: 11px; margin-top: 4px; opacity: 0.7;">Add samples under &lt;samples&gt; to configure live test inputs.</p>
-      </div>`
-      }
-    </div>
-  </div>
-
-  <div class="footer-note">
-    Connected to the editor on the left. Changes update this preview automatically.
-  </div>
+    if (select) {
+      select.addEventListener('change', () => {
+        const idx = Number(select.value);
+        showSample(idx);
+        const selectedOption = select.options[select.selectedIndex];
+        const name = selectedOption ? selectedOption.getAttribute('data-name') : '';
+        const key = name ? 'name:' + name : 'index:' + idx;
+        vscode.setState({ selectedSampleKey: key });
+        vscode.postMessage({ type: 'selectSample', key: key, index: idx });
+      });
+    }
+  </script>
 </body>
 </html>`;
-}
-
-interface PreviewSample {
-  readonly name?: string;
-  readonly input?: unknown;
-}
-
-function extractSamples(samples: unknown): readonly PreviewSample[] {
-  if (Array.isArray(samples)) {
-    return samples.map((s, idx) => {
-      if (s && typeof s === "object") {
-        const name =
-          "name" in s && typeof (s as { name: unknown }).name === "string"
-            ? (s as { name: string }).name
-            : undefined;
-        return { name, input: (s as { input?: unknown }).input };
-      }
-      return { name: `Sample ${idx + 1}` };
-    });
-  }
-  if (
-    samples &&
-    typeof samples === "object" &&
-    "elements" in samples &&
-    Array.isArray((samples as { elements: unknown[] }).elements)
-  ) {
-    const elements = (samples as { elements: unknown[] }).elements;
-    return elements.map((elem, idx) => {
-      if (elem && typeof elem === "object" && "entries" in elem) {
-        const entries = (
-          elem as {
-            entries: Record<string, { value?: { value?: unknown } }>;
-          }
-        ).entries;
-        const nameVal = entries.name?.value?.value;
-        return {
-          name: typeof nameVal === "string" ? nameVal : undefined,
-        };
-      }
-      return { name: `Sample ${idx + 1}` };
-    });
-  }
-  return [];
-}
-
-function extractModelName(model: unknown): string {
-  if (typeof model === "string") {
-    return model;
-  }
-  if (model && typeof model === "object") {
-    if (
-      "model" in model &&
-      typeof (model as { model: unknown }).model === "string"
-    ) {
-      return (model as { model: string }).model;
-    }
-    if (
-      "entries" in model &&
-      typeof (model as { entries: unknown }).entries === "object"
-    ) {
-      const entries = (
-        model as {
-          entries: Record<string, { value?: { value?: unknown } }>;
-        }
-      ).entries;
-      const modelVal = entries.model?.value?.value;
-      if (typeof modelVal === "string") {
-        return modelVal;
-      }
-    }
-  }
-  return "gpt-4o";
 }

@@ -1,3 +1,26 @@
+import {
+  PLAYGROUND_MODEL_IDS,
+  type AnthropicEffort,
+  type AnthropicProviderOptions,
+  type AnthropicStructuredOutputMode,
+  type AnthropicThinking,
+  type GoogleHarmBlockThreshold,
+  type GoogleHarmCategory,
+  type GoogleProviderOptions,
+  type GoogleSafetySetting,
+  type GoogleThinkingConfig,
+  type MistralProviderOptions,
+  type MistralReasoningEffort,
+  type OpenAIProviderOptions,
+  type OpenAIReasoningEffort,
+  type PlaygroundModel,
+  type PlaygroundModelId,
+  type PlaygroundModelReasoning,
+  type ProviderOptions,
+  type XAIProviderOptions,
+  type XAIReasoningEffort,
+  type XAISearchRecencyFilter,
+} from "../inference/model-types.js";
 import type {
   StrictJsonObjectEntry,
   StrictJsonValue,
@@ -28,29 +51,6 @@ import type {
   ValidatedTemplate,
 } from "./compiler-types.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
-import {
-  PLAYGROUND_MODEL_IDS,
-  type AnthropicEffort,
-  type AnthropicProviderOptions,
-  type AnthropicStructuredOutputMode,
-  type AnthropicThinking,
-  type GoogleHarmBlockThreshold,
-  type GoogleHarmCategory,
-  type GoogleProviderOptions,
-  type GoogleSafetySetting,
-  type GoogleThinkingConfig,
-  type MistralProviderOptions,
-  type MistralReasoningEffort,
-  type OpenAIProviderOptions,
-  type OpenAIReasoningEffort,
-  type PlaygroundModel,
-  type PlaygroundModelId,
-  type PlaygroundModelReasoning,
-  type ProviderOptions,
-  type XAIProviderOptions,
-  type XAIReasoningEffort,
-  type XAISearchRecencyFilter,
-} from "./playground-model-types.js";
 
 /** Validates a top-level <playground> element against its target template. */
 export function validatePlayground(

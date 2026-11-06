@@ -279,7 +279,7 @@ function formatTimestamp(isoString: string): string {
   }
 }
 
-function stringifyAsJson(value: unknown): string {
+export function stringifyAsJson(value: unknown): string {
   if (typeof value === "string") {
     try {
       return JSON.stringify(JSON.parse(value), null, 2);
@@ -1710,7 +1710,7 @@ ${error.rawText}</pre>
   `;
 }
 
-function renderToolCall(tc: Inferences.ToolCall): SafeHtml {
+export function renderToolCall(tc: Inferences.ToolCall): SafeHtml {
   const jsonStr = stringifyAsJson(tc.input);
   return html`
     <div style="margin-bottom: 0.85rem;">
@@ -1727,7 +1727,9 @@ ${highlightJson(jsonStr)}</pre>
   `;
 }
 
-function renderRequestContext(request: Inferences.InferenceRequest): SafeHtml {
+export function renderRequestContext(
+  request: Inferences.InferenceRequest,
+): SafeHtml {
   return html`
     <div style="display: flex; flex-direction: column; gap: 1rem;">
       ${
@@ -1785,7 +1787,7 @@ ${request.systemMessage}</pre>
   `;
 }
 
-function renderChatMessage(message: Inferences.Message): SafeHtml {
+export function renderChatMessage(message: Inferences.Message): SafeHtml {
   const role = message.role;
 
   return html`

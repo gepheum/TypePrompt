@@ -23,6 +23,7 @@
     "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@toon-format/toon": "^4.1.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },

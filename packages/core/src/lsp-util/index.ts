@@ -28,6 +28,7 @@ export {
   toWireCompilationResult,
   type WireCompilationResult,
   type WirePlayground,
+  type WirePlaygroundSample,
   type WireProject,
   type WireProjects,
   type WireSourceFile,

@@ -25,3 +25,5 @@ export {
 export { resolveType } from "./type-resolver.js";
 
 export { makeExampleValue } from "./example-maker.js";
+
+export { normalizeSchemaValue } from "./value-normalizer.js";

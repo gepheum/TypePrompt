@@ -1,4 +1,4 @@
-import type { PlaygroundModel } from "./playground-model-types.js";
+import type { PlaygroundModel } from "./model-types.js";
 
 /** Result of running inference across all samples in a `<samples>` element. */
 export type InferenceSet<Pending = never> = {
@@ -25,7 +25,7 @@ export type Inference<Pending = never> = {
   readonly result: InferenceResult<Pending>;
 };
 
-/** The prompt and conversation context for a sample inference. */
+/** The rendered prompt and conversation context for a sample inference. */
 export type InferenceRequest = {
   readonly systemMessage: string;
   readonly tools: readonly Tool[];
