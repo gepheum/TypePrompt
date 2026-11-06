@@ -197,6 +197,13 @@ export function renderPlaygroundPreviewHtml(
   const isPlaygroundValid = wirePlayground?.isValid === true;
   const hasErrors = anyErrors || fileErrors.length > 0 || !isPlaygroundValid;
 
+  const rawSecrets = match.project.secrets;
+  const apiKeys =
+    rawSecrets && rawSecrets.kind === "success" && rawSecrets.secrets.apiKeys
+      ? rawSecrets.secrets.apiKeys
+      : {};
+  const hasApiKeys = Object.keys(apiKeys).length > 0;
+
   if (wirePlayground && isPlaygroundValid) {
     const rawSamples = Array.isArray(wirePlayground.samples)
       ? wirePlayground.samples
@@ -234,6 +241,7 @@ export function renderPlaygroundPreviewHtml(
     const bodyContent = buildSuccessfulPlaygroundBody({
       samples,
       selectedIndex,
+      hasApiKeys,
     });
 
     const htmlContent = buildPageShell({
@@ -261,11 +269,25 @@ export function renderPlaygroundPreviewHtml(
 function buildSuccessfulPlaygroundBody(params: {
   readonly samples: readonly Lsp.WirePlaygroundSample[];
   readonly selectedIndex: number;
+  readonly hasApiKeys: boolean;
 }): string {
-  const { samples, selectedIndex } = params;
+  const { samples, selectedIndex, hasApiKeys } = params;
+
+  const noApiKeysBanner = !hasApiKeys
+    ? `
+    <div class="no-api-keys-banner">
+      <span class="no-api-keys-icon">🔑</span>
+      <div class="no-api-keys-content">
+        <span class="no-api-keys-text">Inference cannot be run because no API key is available.</span>
+        <a href="#" id="create-secrets-link" class="create-secrets-link">Create .typeprompt.secrets.yaml</a>
+      </div>
+    </div>
+  `
+    : "";
 
   if (samples.length === 0) {
     return `
+      ${noApiKeysBanner}
       <div class="sample-picker-bar">
         <label for="sample-select" class="sample-picker-label">Sample</label>
         <select id="sample-select" class="sample-select" disabled>
@@ -317,6 +339,7 @@ function buildSuccessfulPlaygroundBody(params: {
     .join("");
 
   return `
+    ${noApiKeysBanner}
     <div class="sample-picker-bar">
       <label for="sample-select" class="sample-picker-label">Sample</label>
       <select id="sample-select" class="sample-select">
@@ -407,6 +430,51 @@ function buildPageShell(params: {
     .container {
       max-width: 900px;
       margin: 0 auto;
+    }
+
+    /* No API Keys Banner */
+    .no-api-keys-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .no-api-keys-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .no-api-keys-content {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .no-api-keys-text {
+      color: #fde68a;
+      font-weight: 500;
+    }
+
+    .create-secrets-link {
+      color: #38bdf8;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .create-secrets-link:hover {
+      color: #7dd3fc;
     }
 
     /* Sample Picker */
@@ -708,8 +776,15 @@ function buildPageShell(params: {
         vscode.postMessage({ type: 'selectSample', key: key, index: idx });
       });
     }
+
+    const createSecretsLink = document.getElementById('create-secrets-link');
+    if (createSecretsLink) {
+      createSecretsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        vscode.postMessage({ type: 'createSecretsFile' });
+      });
+    }
   </script>
 </body>
 </html>`;
 }
-

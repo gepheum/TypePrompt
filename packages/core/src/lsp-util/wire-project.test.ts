@@ -101,6 +101,7 @@ describe("WireCompilationResult", () => {
 
     // Check WireProjects container
     const project: WireProject = {
+      folderUri: "file:///workspace/",
       compilationResult: wire,
       secrets: { kind: "success", secrets: {} },
     };
@@ -112,6 +113,9 @@ describe("WireCompilationResult", () => {
     };
     const resultsJson = JSON.parse(JSON.stringify(results));
     expect(resultsJson.projects["file:///workspace/"] !== null).toBe(true);
+    expect(resultsJson.projects["file:///workspace/"].folderUri).toBe(
+      "file:///workspace/",
+    );
     expect(
       resultsJson.projects["file:///workspace/"].compilationResult.anyErrors,
     ).toBe(false);

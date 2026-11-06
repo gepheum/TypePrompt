@@ -33,9 +33,10 @@ export class ProjectStore {
    * Finds the project data and relative path for a given file URI
    * by matching the longest matching project folder prefix.
    */
-  public findByUri(
-    fileUri: string,
-  ): { project: Lsp.WireProject; relativePath: string } | null {
+  public findByUri(fileUri: string): {
+    project: Lsp.WireProject;
+    relativePath: string;
+  } | null {
     let bestMatch: {
       project: Lsp.WireProject;
       relativePath: string;
@@ -52,7 +53,10 @@ export class ProjectStore {
         normalizedFolderUri.length > longestPrefix
       ) {
         const relativePath = fileUri.slice(normalizedFolderUri.length);
-        bestMatch = { project, relativePath };
+        bestMatch = {
+          project,
+          relativePath,
+        };
         longestPrefix = normalizedFolderUri.length;
       }
     }

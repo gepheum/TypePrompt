@@ -1,3 +1,4 @@
+import { DEFAULT_SECRETS_YAML } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
@@ -87,7 +88,7 @@ export function activatePlaygroundPreview(
       currentPanel.iconPath = iconUri;
 
       currentPanel.webview.onDidReceiveMessage(
-        (message: { type: string; key?: string; index?: number }) => {
+        async (message: { type: string; key?: string; index?: number }) => {
           if (message.type === "selectSample" && message.key && currentDoc) {
             const state = getOrCreateState(currentDoc.uri.toString());
             state.selectedSampleKey = message.key;
@@ -97,6 +98,8 @@ export function activatePlaygroundPreview(
                 message.index,
               );
             }
+          } else if (message.type === "createSecretsFile" && currentDoc) {
+            await handleCreateSecretsFile(currentDoc, projectStore);
           }
         },
       );
@@ -217,3 +220,36 @@ export function activatePlaygroundPreview(
   };
 }
 
+export async function handleCreateSecretsFile(
+  doc: TextDocument,
+  projectStore: ProjectStore,
+): Promise<void> {
+  const match = projectStore.findByUri(doc.uri.toString());
+  let projectFolderUri: Uri;
+  if (match?.project.folderUri) {
+    projectFolderUri = Uri.parse(match.project.folderUri);
+  } else {
+    const workspaceFolder = workspace.getWorkspaceFolder(doc.uri);
+    if (workspaceFolder) {
+      projectFolderUri = workspaceFolder.uri;
+    } else {
+      projectFolderUri = Uri.file(path.dirname(doc.fileName));
+    }
+  }
+
+  const secretsUri = Uri.joinPath(projectFolderUri, ".typeprompt.secrets.yaml");
+  try {
+    await workspace.fs.stat(secretsUri);
+  } catch {
+    await workspace.fs.writeFile(
+      secretsUri,
+      Buffer.from(DEFAULT_SECRETS_YAML, "utf-8"),
+    );
+  }
+
+  const secretsDoc = await workspace.openTextDocument(secretsUri);
+  await window.showTextDocument(secretsDoc, {
+    viewColumn: ViewColumn.One,
+    preserveFocus: false,
+  });
+}

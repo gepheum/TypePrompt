@@ -551,6 +551,7 @@ export class TypePromptLanguageExtension {
       projects[project.folderUri] =
         project === changedProject && changedWireResult
           ? {
+              folderUri: project.folderUri,
               compilationResult: changedWireResult,
               secrets: project.secretsResult,
             }

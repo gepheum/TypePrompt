@@ -17,6 +17,7 @@ import type { InternalError, InternalErrors } from "../util/shared-types.js";
  * containing its compilation result and secrets.
  */
 export type WireProject = {
+  readonly folderUri: string;
   readonly compilationResult: WireCompilationResult;
   readonly secrets: SecretsParseResult | InternalErrors;
 };

@@ -3,8 +3,12 @@ import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 import { ProjectStore } from "./project-store.js";
 
-function makeFakeProject(edition: number): Lsp.WireProject {
+function makeFakeProject(
+  edition: number,
+  folderUri = "file:///project/",
+): Lsp.WireProject {
   return {
+    folderUri,
     compilationResult: {
       sourceFiles: {},
       templates: {},
@@ -78,8 +82,8 @@ describe("ProjectStore", () => {
 
   it("finds project and relative path by URI with prefix matching", () => {
     const store = new ProjectStore();
-    const resA = makeFakeProject(1);
-    const resB = makeFakeProject(2);
+    const resA = makeFakeProject(1, "file:///workspace/app/");
+    const resB = makeFakeProject(2, "file:///workspace/lib/");
 
     store.handleNotification({
       projects: {
@@ -91,10 +95,12 @@ describe("ProjectStore", () => {
     const matchA = store.findByUri("file:///workspace/app/prompts/hello.tp");
     expect(matchA?.project.compilationResult.edition).toBe(1);
     expect(matchA?.relativePath).toBe("prompts/hello.tp");
+    expect(matchA?.project.folderUri).toBe("file:///workspace/app/");
 
     const matchB = store.findByUri("file:///workspace/lib/prompts/shared.tp");
     expect(matchB?.project.compilationResult.edition).toBe(2);
     expect(matchB?.relativePath).toBe("prompts/shared.tp");
+    expect(matchB?.project.folderUri).toBe("file:///workspace/lib/");
 
     const nonMatch = store.findByUri("file:///workspace/other/hello.tp");
     expect(nonMatch).toBe(null);

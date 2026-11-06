@@ -2295,6 +2295,7 @@ comment here -->
       expect(projectPaths.length).toBe(1);
       const project = last.projects[projectPaths[0]!];
       expect(project !== null).toBe(true);
+      expect(project?.folderUri).toBe(projectPaths[0]);
       expect(project?.compilationResult.anyErrors).toBe(false);
       expect(project?.secrets.kind).toBe("success");
       if (project?.secrets.kind === "success") {
