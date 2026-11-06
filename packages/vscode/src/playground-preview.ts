@@ -1,4 +1,4 @@
-import type { Lsp } from "@typeprompt/core";
+import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
@@ -305,6 +305,27 @@ function buildInitialErrorHtml(fileName: string): string {
 }
 
 /**
+ * Builds a placeholder HTML shell while waiting for project compilation data.
+ */
+function buildLoadingHtml(fileName: string): string {
+  return buildPageShell({
+    fileName,
+    bodyContent: `
+      <div class="sample-picker-bar">
+        <label for="sample-select" class="sample-picker-label">Sample</label>
+        <select id="sample-select" class="sample-select" disabled>
+          <option>Loading samples...</option>
+        </select>
+      </div>
+      <div class="empty-state">
+        <p>Loading playground preview...</p>
+      </div>
+    `,
+    hasErrors: false,
+  });
+}
+
+/**
  * Generates the preview HTML for the playground file.
  */
 export function renderPlaygroundPreviewHtml(
@@ -316,30 +337,78 @@ export function renderPlaygroundPreviewHtml(
   const fileName = path.basename(document.fileName);
 
   const match = projectStore.findByUri(uri);
-  const sourceFile =
-    match?.project.compilationResult.sourceFiles[match.relativePath];
+  if (!match) {
+    if (state.lastSuccessfulHtml) {
+      return state.lastSuccessfulHtml;
+    }
+    return buildLoadingHtml(fileName);
+  }
 
-  const anyErrors = match ? match.project.compilationResult.anyErrors : true;
-  const fileErrors =
-    match?.project.compilationResult.finalErrors[match.relativePath] ?? [];
+  const sourceFile =
+    match.project.compilationResult.sourceFiles[match.relativePath] ??
+    Object.values(match.project.compilationResult.sourceFiles).find(
+      (sf) =>
+        sf.path === match.relativePath ||
+        match.relativePath.endsWith(`/${sf.path}`) ||
+        sf.path.endsWith(fileName),
+    );
 
   let wirePlayground: Lsp.WirePlayground | undefined;
-  if (match && sourceFile?.entity && sourceFile.entity.kind === "playground") {
+  if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
     const forTemplate = sourceFile.entity.forTemplate;
-    const ns = sourceFile.entity.namespace;
-    const expectedId = ns ? `${ns}:${forTemplate}` : forTemplate;
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    const expectedId = `${ns}:${forTemplate}`;
     wirePlayground =
       match.project.compilationResult.playgrounds[expectedId] ??
       match.project.compilationResult.playgrounds[forTemplate] ??
       Object.values(match.project.compilationResult.playgrounds).find(
-        (p) => p.forTemplate === forTemplate,
+        (p) =>
+          p.id === expectedId ||
+          p.id === forTemplate ||
+          p.forTemplate === expectedId ||
+          p.forTemplate === forTemplate ||
+          p.forTemplate.endsWith(`:${forTemplate}`) ||
+          p.id.endsWith(`:${forTemplate}`),
       );
   }
 
-  const hasErrors =
-    anyErrors || fileErrors.length > 0 || !wirePlayground?.isValid;
+  if (!wirePlayground) {
+    const baseName = fileName.replace(/\.play\.tp$/, "").replace(/\.tp$/, "");
+    const expectedId = `${DEFAULT_NAMESPACE}:${baseName}`;
+    wirePlayground =
+      match.project.compilationResult.playgrounds[expectedId] ??
+      match.project.compilationResult.playgrounds[baseName] ??
+      Object.values(match.project.compilationResult.playgrounds).find(
+        (p) =>
+          p.id === expectedId ||
+          p.id === baseName ||
+          p.forTemplate === expectedId ||
+          p.forTemplate === baseName ||
+          p.forTemplate.endsWith(`:${baseName}`) ||
+          p.id.endsWith(`:${baseName}`),
+      );
+    if (!wirePlayground) {
+      const allPlaygrounds = Object.values(
+        match.project.compilationResult.playgrounds,
+      );
+      if (allPlaygrounds.length === 1) {
+        wirePlayground = allPlaygrounds[0];
+      }
+    }
+  }
 
-  if (!hasErrors && wirePlayground) {
+  const anyErrors = match.project.compilationResult.anyErrors;
+  const fileErrors =
+    match.project.compilationResult.finalErrors[match.relativePath] ??
+    (sourceFile
+      ? match.project.compilationResult.finalErrors[sourceFile.path]
+      : []) ??
+    [];
+
+  const isPlaygroundValid = wirePlayground?.isValid === true;
+  const hasErrors = anyErrors || fileErrors.length > 0 || !isPlaygroundValid;
+
+  if (wirePlayground && isPlaygroundValid) {
     const rawSamples = Array.isArray(wirePlayground.samples)
       ? wirePlayground.samples
       : [];
@@ -381,10 +450,12 @@ export function renderPlaygroundPreviewHtml(
     const htmlContent = buildPageShell({
       fileName,
       bodyContent,
-      hasErrors: false,
+      hasErrors,
     });
 
-    state.lastSuccessfulHtml = htmlContent;
+    if (!hasErrors) {
+      state.lastSuccessfulHtml = htmlContent;
+    }
     return htmlContent;
   }
 
