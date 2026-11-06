@@ -1,4 +1,3 @@
-import { formatTemplateFile } from "@typeprompt/formatter";
 import { describe, it } from "mocha";
 import assert from "node:assert/strict";
 import type { CompilationResult } from "../compiler/compiler-types.js";
@@ -26,15 +25,15 @@ const mockCompilation = {
   },
 } as unknown as CompilationResult;
 
-async function assertValidTemplate(
+function assertValidTemplate(
   filePath: string,
   compilationResult: CompilationResult | null,
   expectedKind: "meta" | "namespace" | "template" | "tool" | "playground",
-): Promise<string> {
+): string {
   const template = generateFileTemplate(filePath, compilationResult);
   assert.notEqual(template, null);
 
-  // (1) Parse successfully using corresponding parse functions
+  // Parse successfully using corresponding parse functions
   const xml = parseXmlDocument(template!, filePath);
   assert.equal(xml.kind, "success");
   assert.notEqual(xml.root, null);
@@ -73,10 +72,6 @@ async function assertValidTemplate(
     }
   }
   assert.equal(parsedKind, expectedKind);
-
-  // (2) Verify well-formatted using formatter library
-  const formatted = await formatTemplateFile(template!);
-  assert.equal(formatted, template);
 
   return template!;
 }

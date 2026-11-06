@@ -1,17 +1,17 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
+import type { Expression } from "../expression/expression-types.js";
+import { EMPTY_SCHEMA } from "../schema/empty-schema.js";
+import { parseSchema } from "../schema/schema-parser.js";
+import type { Schema } from "../schema/schema-types.js";
+import { validateSchema } from "../schema/schema-validator.js";
+import type { TextSpan } from "../util/shared-types.js";
 import type {
   Body,
   Snippet,
   ValidCompilationResult,
-} from "@typeprompt/core/compiler/compiler-types.js";
-import type { Expression } from "@typeprompt/core/expression/expression-types.js";
-import { EMPTY_SCHEMA } from "@typeprompt/core/schema/empty-schema.js";
-import { parseSchema } from "@typeprompt/core/schema/schema-parser.js";
-import type { Schema } from "@typeprompt/core/schema/schema-types.js";
-import { validateSchema } from "@typeprompt/core/schema/schema-validator.js";
-import type { TextSpan } from "@typeprompt/core/util/shared-types.js";
+} from "./compiler-types.js";
 import { compile } from "./compiler.js";
 import { makeTemplateOverrides, makeTemplates } from "./spec-maker.js";
 
