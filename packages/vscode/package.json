@@ -130,6 +130,7 @@
     "@typeprompt/core": "*",
     "@typeprompt/inference-runner": "*",
     "@typeprompt/language-server": "*",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "yaml": "^2.9.0"
   }
 }

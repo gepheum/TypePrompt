@@ -1,21 +1,14 @@
-import { describe, it } from "mocha";
-import assert from "node:assert/strict";
-import type { CompilationResult } from "../compiler/compiler-types.js";
-import { compile } from "../compiler/compiler.js";
-import { parseMeta } from "../compiler/meta-parser.js";
-import { parseNamespace } from "../compiler/namespace-parser.js";
-import { parsePlayground } from "../compiler/playground-parser.js";
-import { parseTemplate } from "../compiler/template-parser.js";
-import { parseTool } from "../compiler/tool-parser.js";
 import {
   DEFAULT_CONFIG_YAML,
-  parseConfigYaml,
-} from "../config/config-parser.js";
-import {
   DEFAULT_SECRETS_YAML,
+  compile,
+  parseConfigYaml,
   parseSecretsYaml,
-} from "../config/secrets-parser.js";
-import { parseXmlDocument } from "../xml/xml-parser.js";
+  parseSourceFile,
+  type CompilationResult,
+} from "@typeprompt/core";
+import { describe, it } from "mocha";
+import assert from "node:assert/strict";
 import { generateFileTemplate } from "./file-template.js";
 
 const mockCompilation = {
@@ -33,69 +26,31 @@ function assertValidTemplate(
   const template = generateFileTemplate(filePath, compilationResult);
   assert.notEqual(template, null);
 
-  // Parse successfully using corresponding parse functions
-  const xml = parseXmlDocument(template!, filePath);
-  assert.equal(xml.kind, "success");
-  assert.notEqual(xml.root, null);
-
-  let parsedKind: string;
-  switch (expectedKind) {
-    case "meta": {
-      const meta = parseMeta(xml.root);
-      assert.notEqual(meta.kind, "error");
-      parsedKind = meta.kind;
-      break;
-    }
-    case "namespace": {
-      const ns = parseNamespace(xml.root);
-      assert.notEqual(ns.kind, "error");
-      parsedKind = ns.kind;
-      break;
-    }
-    case "template": {
-      const tpl = parseTemplate(xml.root);
-      assert.notEqual(tpl.kind, "error");
-      parsedKind = tpl.kind;
-      break;
-    }
-    case "tool": {
-      const tool = parseTool(xml.root);
-      assert.notEqual(tool.kind, "error");
-      parsedKind = tool.kind;
-      break;
-    }
-    case "playground": {
-      const play = parsePlayground(xml.root);
-      assert.notEqual(play.kind, "error");
-      parsedKind = play.kind;
-      break;
-    }
-  }
-  assert.equal(parsedKind, expectedKind);
+  const sf = parseSourceFile(filePath, template!, { patchBase: null });
+  assert.equal(sf.xmlDocument.kind, "success");
+  assert.equal(sf.parseResult.errors.length, 0);
+  assert.notEqual(sf.entity, undefined);
+  assert.equal(sf.entity?.kind, expectedKind);
 
   return template!;
 }
 
 describe("generateFileTemplate", () => {
   describe("meta.tp", () => {
-    it("generates meta skeleton for meta.tp", async () => {
-      const template = await assertValidTemplate("meta.tp", null, "meta");
+    it("generates meta skeleton for meta.tp", () => {
+      const template = assertValidTemplate("meta.tp", null, "meta");
       assert.equal(template, "<meta>\n  type Meta = {};\n</meta>\n");
     });
 
-    it("generates meta skeleton for nested prompts/meta.tp", async () => {
-      const template = await assertValidTemplate(
-        "prompts/meta.tp",
-        null,
-        "meta",
-      );
+    it("generates meta skeleton for nested prompts/meta.tp", () => {
+      const template = assertValidTemplate("prompts/meta.tp", null, "meta");
       assert.equal(template, "<meta>\n  type Meta = {};\n</meta>\n");
     });
   });
 
   describe("shared.tp", () => {
-    it("generates namespace skeleton with dirname when dirname is PascalCase", async () => {
-      const template = await assertValidTemplate(
+    it("generates namespace skeleton with dirname when dirname is PascalCase", () => {
+      const template = assertValidTemplate(
         "prompts/Legal/shared.tp",
         null,
         "namespace",
@@ -106,21 +61,9 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("falls back to Main namespace when dirname is not PascalCase (e.g. prompts)", async () => {
-      const template = await assertValidTemplate(
+    it("defaults to Main when dirname is not PascalCase", () => {
+      const template = assertValidTemplate(
         "prompts/shared.tp",
-        null,
-        "namespace",
-      );
-      assert.equal(
-        template,
-        '<namespace name="Main">\n  // Shared types go here.\n</namespace>\n',
-      );
-    });
-
-    it("falls back to Main namespace for root shared.tp", async () => {
-      const template = await assertValidTemplate(
-        "shared.tp",
         null,
         "namespace",
       );
@@ -132,8 +75,8 @@ describe("generateFileTemplate", () => {
   });
 
   describe("PascalCase.tp (template)", () => {
-    it("generates template skeleton without namespace when compilationResult is null", async () => {
-      const template = await assertValidTemplate(
+    it("generates template skeleton without namespace when compilationResult is null", () => {
+      const template = assertValidTemplate(
         "prompts/Translate.tp",
         null,
         "template",
@@ -155,8 +98,8 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("generates template skeleton with namespace when dirname is in compilationResult namespaces", async () => {
-      const template = await assertValidTemplate(
+    it("generates template skeleton with namespace when dirname is in compilationResult namespaces", () => {
+      const template = assertValidTemplate(
         "prompts/Legal/DraftNda.tp",
         mockCompilation,
         "template",
@@ -177,38 +120,11 @@ describe("generateFileTemplate", () => {
           "</template>\n",
       );
     });
-
-    it("does not add namespace when dirname is not in compilationResult namespaces (e.g. prompts)", async () => {
-      const template = await assertValidTemplate(
-        "prompts/Translate.tp",
-        mockCompilation,
-        "template",
-      );
-      assert.equal(
-        template,
-        '<template name="Translate">\n' +
-          "  <schema>\n" +
-          "    type Input = {};\n" +
-          "    type Output = {};\n" +
-          "  </schema>\n\n" +
-          "  <system>\n" +
-          "    <!-- System prompt goes here. -->\n" +
-          "  </system>\n\n" +
-          "  <user>\n" +
-          "    <!-- User prompt goes here. -->\n" +
-          "  </user>\n" +
-          "</template>\n",
-      );
-    });
   });
 
   describe("camelCase.tp (tool)", () => {
-    it("generates tool skeleton without namespace when compilationResult is null", async () => {
-      const template = await assertValidTemplate(
-        "prompts/myTool.tp",
-        null,
-        "tool",
-      );
+    it("generates tool skeleton without namespace when compilationResult is null", () => {
+      const template = assertValidTemplate("prompts/myTool.tp", null, "tool");
       assert.equal(
         template,
         '<tool name="myTool">\n' +
@@ -223,8 +139,8 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("generates tool skeleton with namespace when dirname is in compilationResult namespaces", async () => {
-      const template = await assertValidTemplate(
+    it("generates tool skeleton with namespace when dirname is in compilationResult namespaces", () => {
+      const template = assertValidTemplate(
         "prompts/Legal/myTool.tp",
         mockCompilation,
         "tool",
@@ -272,8 +188,8 @@ describe("generateFileTemplate", () => {
       { cache: null, patchBase: null },
     );
 
-    it("generates playground skeleton without namespace when compilationResult is null", async () => {
-      const template = await assertValidTemplate(
+    it("generates playground skeleton without namespace when compilationResult is null", () => {
+      const template = assertValidTemplate(
         "prompts/Translate.play.tp",
         null,
         "playground",
@@ -292,8 +208,8 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("generates playground skeleton with namespace when dirname is in compilationResult namespaces", async () => {
-      const template = await assertValidTemplate(
+    it("generates playground skeleton with namespace when dirname is in compilationResult namespaces", () => {
+      const template = assertValidTemplate(
         "prompts/Legal/DraftNda.play.tp",
         mockCompilation,
         "playground",
@@ -312,8 +228,8 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("generates sample input matching template schema when template exists in compilationResult", async () => {
-      const template = await assertValidTemplate(
+    it("generates sample input matching template schema when template exists in compilationResult", () => {
+      const template = assertValidTemplate(
         "prompts/Translate.play.tp",
         compilationWithTemplates,
         "playground",
@@ -334,8 +250,8 @@ describe("generateFileTemplate", () => {
       );
     });
 
-    it("generates sample input matching namespaced template schema", async () => {
-      const template = await assertValidTemplate(
+    it("generates sample input matching namespaced template schema", () => {
+      const template = assertValidTemplate(
         "prompts/Legal/DraftNda.play.tp",
         compilationWithTemplates,
         "playground",

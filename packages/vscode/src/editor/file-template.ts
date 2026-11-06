@@ -1,9 +1,23 @@
+import {
+  DEFAULT_CONFIG_YAML,
+  DEFAULT_NAMESPACE,
+  DEFAULT_SECRETS_YAML,
+  compile,
+  makeExampleValue,
+  type CompilationResult,
+} from "@typeprompt/core";
+import type { ProjectStore } from "@typeprompt/language-server";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { stringify } from "yaml";
-import type { CompilationResult } from "../compiler/compiler-types.js";
-import { DEFAULT_NAMESPACE } from "../compiler/default-namespace.js";
-import { DEFAULT_CONFIG_YAML } from "../config/config-parser.js";
-import { DEFAULT_SECRETS_YAML } from "../config/secrets-parser.js";
-import { makeExampleValue } from "../schema/example-maker.js";
+
+export interface GenerateFileTemplateOptions {
+  readonly projectStore?: ProjectStore | null;
+  readonly compilationResult?: CompilationResult | null;
+}
+
+const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
+const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
 
 /**
  * Generates initial skeleton content for newly created TypePrompt files.
@@ -17,12 +31,13 @@ import { makeExampleValue } from "../schema/example-maker.js";
  * - "foo.tp" (camelCase) -> <tool name="foo"[ namespace="${dirname}"]>
  * - "Foo.play.tp" -> <playground for="Foo"[ namespace="${dirname}"]>
  *
- * A namespace attribute is added when `dirname` exists in `compilationResult.namespaces` (and is not Main).
+ * A namespace attribute is added when `dirname` exists in `compilationResult.namespaces` (and is not Main),
+ * or when a sibling `shared.tp` exists in a PascalCase dirname.
  * If the filename does not match any recognized TypePrompt file, returns null.
  */
 export function generateFileTemplate(
   filePath: string,
-  compilationResult: CompilationResult | null,
+  options?: GenerateFileTemplateOptions | CompilationResult | null,
 ): string | null {
   const normalized = filePath.replace(/\\/g, "/");
   const lastSlash = normalized.lastIndexOf("/");
@@ -44,12 +59,7 @@ export function generateFileTemplate(
   }
 
   if (fileName === "meta.tp") {
-    return [
-      //
-      "<meta>",
-      "  type Meta = {};",
-      "</meta>\n",
-    ].join("\n");
+    return ["<meta>", "  type Meta = {};", "</meta>\n"].join("\n");
   }
 
   if (fileName === "shared.tp") {
@@ -61,10 +71,44 @@ export function generateFileTemplate(
     ].join("\n");
   }
 
-  const isNamespace =
-    compilationResult &&
-    dirname in compilationResult.namespaces &&
-    dirname !== DEFAULT_NAMESPACE;
+  const resolvedOptions: GenerateFileTemplateOptions =
+    options && "namespaces" in options
+      ? { compilationResult: options as CompilationResult }
+      : (options ?? {});
+
+  const compilationResult = resolvedOptions.compilationResult ?? null;
+  const projectStore = resolvedOptions.projectStore ?? null;
+
+  let isNamespace = false;
+  if (compilationResult?.namespaces) {
+    isNamespace =
+      dirname in compilationResult.namespaces && dirname !== DEFAULT_NAMESPACE;
+  } else if (projectStore) {
+    for (const project of projectStore.projects.values()) {
+      const hasNs = Object.values(project.compilationResult.sourceFiles).some(
+        (sf) =>
+          sf.entity?.kind === "namespace" &&
+          sf.entity.name === dirname &&
+          dirname !== DEFAULT_NAMESPACE,
+      );
+      if (hasNs) {
+        isNamespace = true;
+        break;
+      }
+    }
+  }
+
+  if (
+    !isNamespace &&
+    dirname !== DEFAULT_NAMESPACE &&
+    PASCAL_CASE_RE.test(dirname)
+  ) {
+    const sharedPath = path.join(parent, "shared.tp");
+    if (fs.existsSync(sharedPath)) {
+      isNamespace = true;
+    }
+  }
+
   const nsAttr = isNamespace ? ` namespace="${dirname}"` : "";
 
   if (fileName.endsWith(".play.tp")) {
@@ -73,7 +117,12 @@ export function generateFileTemplate(
       return null;
     }
     const namespaceName = isNamespace ? dirname : DEFAULT_NAMESPACE;
-    const samplesYaml = makeSamplesYaml(name, namespaceName, compilationResult);
+    const samplesYaml = makeSamplesYaml(
+      name,
+      namespaceName,
+      compilationResult,
+      parent,
+    );
     return [
       `<playground for="${name}"${nsAttr}>`,
       "  <model>",
@@ -128,18 +177,44 @@ export function generateFileTemplate(
   return null;
 }
 
-const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
-const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
-
 function makeSamplesYaml(
   templateName: string,
   namespaceName: string,
   compilationResult: CompilationResult | null,
+  parent: string,
 ): string {
   let inputExample: unknown = {};
-  if (compilationResult?.templates) {
+  let compilation = compilationResult;
+
+  if (!compilation && parent) {
+    const templatePath = path.join(parent, `${templateName}.tp`);
+    if (fs.existsSync(templatePath)) {
+      try {
+        const files: { [p: string]: string } = {};
+        const sharedPath = path.join(parent, "shared.tp");
+        if (fs.existsSync(sharedPath)) {
+          files[`prompts/${namespaceName}/shared.tp`] = fs.readFileSync(
+            sharedPath,
+            "utf8",
+          );
+          files[`prompts/${namespaceName}/${templateName}.tp`] =
+            fs.readFileSync(templatePath, "utf8");
+        } else {
+          files[`prompts/${templateName}.tp`] = fs.readFileSync(
+            templatePath,
+            "utf8",
+          );
+        }
+        compilation = compile(files, { cache: null, patchBase: null });
+      } catch {
+        // Fall back to empty input if template fails to compile
+      }
+    }
+  }
+
+  if (compilation?.templates) {
     const templateId = `${namespaceName}:${templateName}`;
-    const templateValidation = compilationResult.templates[templateId];
+    const templateValidation = compilation.templates[templateId];
     if (templateValidation && templateValidation.kind === "template") {
       const inputDecl = templateValidation.schema.typeDeclarations["Input"];
       if (inputDecl) {

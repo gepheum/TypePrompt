@@ -1547,18 +1547,6 @@ export class TypePromptLanguageExtension {
 
     return { changes };
   }
-
-  async getFileTemplate(uri: string): Promise<string | null> {
-    const fsPath = uriToFsPath(uri);
-    if (!fsPath) return null;
-
-    const match = this.findProjectByUri(uri);
-    const compilation = match
-      ? (match.project.compilationResult ?? match.project.compile())
-      : null;
-
-    return Lsp.generateFileTemplate(fsPath, compilation);
-  }
 }
 
 export interface ServerOptions {
@@ -1734,13 +1722,6 @@ export function createLanguageServer(
       params.newName,
     );
   });
-
-  connection.onRequest(
-    "typeprompt/getFileTemplate",
-    async (params: { uri: string }): Promise<string | null> => {
-      return extension.getFileTemplate(params.uri);
-    },
-  );
 
   connection.onShutdown(() => {
     extension.dispose();

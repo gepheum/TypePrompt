@@ -35,13 +35,9 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
   activateAutoCloseTag(context);
   activateEnterHandler(context);
   activateToggleComment(context);
-  activateNewFileScaffolding(context, () => client);
+  activateNewFileScaffolding(context, projectStore);
   const playgroundPreview = activatePlaygroundPreview(context, projectStore);
-  const createPlayground = activateCreatePlayground(
-    context,
-    projectStore,
-    () => client,
-  );
+  const createPlayground = activateCreatePlayground(context, projectStore);
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),

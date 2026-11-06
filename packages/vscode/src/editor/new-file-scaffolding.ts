@@ -1,8 +1,8 @@
-import { Lsp } from "@typeprompt/core";
+import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, FileCreateEvent, Uri } from "vscode";
 import { Position, workspace, WorkspaceEdit } from "vscode";
-import type { LanguageClient } from "vscode-languageclient/node.js";
+import { generateFileTemplate } from "./file-template.js";
 
 /**
  * Automatically populates newly created empty .tp and configuration files with initial
@@ -10,19 +10,21 @@ import type { LanguageClient } from "vscode-languageclient/node.js";
  */
 export function activateNewFileScaffolding(
   context: ExtensionContext,
-  getClient: () => LanguageClient | undefined,
+  projectStore: ProjectStore,
 ): void {
   context.subscriptions.push(
-    workspace.onDidCreateFiles((event) => onDidCreateFiles(event, getClient)),
+    workspace.onDidCreateFiles((event) =>
+      onDidCreateFiles(event, projectStore),
+    ),
   );
 }
 
 async function onDidCreateFiles(
   event: FileCreateEvent,
-  getClient: () => LanguageClient | undefined,
+  projectStore: ProjectStore,
 ): Promise<void> {
   for (const file of event.files) {
-    await scaffoldNewFile(file, getClient);
+    await scaffoldNewFile(file, projectStore);
   }
 }
 
@@ -39,7 +41,7 @@ function isScaffoldableFile(file: Uri): boolean {
 
 async function scaffoldNewFile(
   file: Uri,
-  getClient: () => LanguageClient | undefined,
+  projectStore: ProjectStore,
 ): Promise<void> {
   if (!isScaffoldableFile(file)) return;
 
@@ -47,7 +49,7 @@ async function scaffoldNewFile(
     // Skip if the file already has content on disk (e.g. copied or created externally)
     if ((await workspace.fs.stat(file)).size > 0) return;
 
-    const template = await getTemplateForFile(file, getClient);
+    const template = generateFileTemplate(file.fsPath, { projectStore });
     if (template === null) return;
 
     const doc = workspace.textDocuments.find(
@@ -71,25 +73,4 @@ async function scaffoldNewFile(
   } catch {
     // Ignore filesystem errors during scaffolding
   }
-}
-
-async function getTemplateForFile(
-  file: Uri,
-  getClient: () => LanguageClient | undefined,
-): Promise<string | null> {
-  const client = getClient();
-  if (client) {
-    try {
-      // Prefer language server to take workspace compilation context into account
-      const template = await client.sendRequest<string | null>(
-        "typeprompt/getFileTemplate",
-        { uri: file.toString() },
-      );
-      if (template !== null) return template;
-    } catch {
-      // Fall back to local template generation if LSP is not ready
-    }
-  }
-
-  return Lsp.generateFileTemplate(file.fsPath, null);
 }

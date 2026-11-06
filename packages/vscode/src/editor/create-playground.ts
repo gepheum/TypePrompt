@@ -1,8 +1,7 @@
-import { Lsp } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import type { ExtensionContext, TextEditor } from "vscode";
 import { commands, Uri, window, workspace } from "vscode";
-import type { LanguageClient } from "vscode-languageclient/node.js";
+import { generateFileTemplate } from "./file-template.js";
 import { isPlaygroundFile, isTemplateFile } from "./is-template.js";
 
 export interface CreatePlaygroundController {
@@ -13,7 +12,6 @@ export interface CreatePlaygroundController {
 export function activateCreatePlayground(
   context: ExtensionContext,
   projectStore: ProjectStore,
-  getClient: () => LanguageClient | undefined,
 ): CreatePlaygroundController {
   const updateContext = (editor = window.activeTextEditor): void => {
     if (!editor?.document) {
@@ -50,7 +48,7 @@ export function activateCreatePlayground(
 
   context.subscriptions.push(
     commands.registerCommand("typeprompt.createPlayground", (uri?: Uri) =>
-      handleCreatePlayground(uri, getClient, projectStore),
+      handleCreatePlayground(uri, projectStore),
     ),
   );
 
@@ -72,8 +70,7 @@ export function activateCreatePlayground(
 
 async function handleCreatePlayground(
   uri: Uri | undefined,
-  getClient: () => LanguageClient | undefined,
-  _projectStore: ProjectStore,
+  projectStore: ProjectStore,
 ): Promise<void> {
   let doc: { uri: Uri; fileName: string } | undefined;
   if (uri) {
@@ -104,20 +101,7 @@ async function handleCreatePlayground(
     // File does not exist yet, proceed with creation
   }
 
-  let content: string | null = null;
-  const client = getClient();
-  if (client) {
-    try {
-      content = await client.sendRequest<string | null>(
-        "typeprompt/getFileTemplate",
-        { uri: playUri.toString() },
-      );
-    } catch {
-      // Ignore LSP error and fall back
-    }
-  }
-
-  content = content ?? Lsp.generateFileTemplate(playUri.fsPath, null) ?? "";
+  const content = generateFileTemplate(playUri.fsPath, { projectStore }) ?? "";
 
   await workspace.fs.writeFile(playUri, Buffer.from(content, "utf8"));
   const openedDoc = await workspace.openTextDocument(playUri);
