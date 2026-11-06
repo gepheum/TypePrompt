@@ -24,6 +24,10 @@ export function isPlaygroundDocument(
     return false;
   }
 
+  if (document.fileName.endsWith(".play.tp")) {
+    return true;
+  }
+
   const match = projectStore.findByUri(document.uri.toString());
   if (match) {
     const sourceFile =
@@ -37,7 +41,7 @@ export function isPlaygroundDocument(
 }
 
 /**
- * Activates on-demand split-screen playground preview for VS Code.
+ * Activates on-demand playground preview for VS Code.
  */
 export function activatePlaygroundPreview(
   context: ExtensionContext,
@@ -49,6 +53,7 @@ export function activatePlaygroundPreview(
 
   const openPlaygroundForDocument = async (
     doc: TextDocument,
+    preserveFocus = true,
   ): Promise<void> => {
     if (!isPlaygroundDocument(doc, projectStore)) {
       void window.showInformationMessage(
@@ -57,6 +62,7 @@ export function activatePlaygroundPreview(
       return;
     }
 
+    const sameDoc = currentDoc?.uri.toString() === doc.uri.toString();
     currentDoc = doc;
     const fileName = path.basename(doc.fileName);
     const title = `Playground: ${fileName}`;
@@ -65,7 +71,7 @@ export function activatePlaygroundPreview(
       currentPanel = window.createWebviewPanel(
         "typeprompt.playgroundPreview",
         title,
-        { viewColumn: ViewColumn.Beside, preserveFocus: true },
+        { viewColumn: ViewColumn.Active, preserveFocus },
         {
           enableScripts: true,
           retainContextWhenHidden: true,
@@ -81,10 +87,15 @@ export function activatePlaygroundPreview(
       });
     } else {
       currentPanel.title = title;
-      currentPanel.reveal(ViewColumn.Beside, true);
+      currentPanel.reveal(undefined, preserveFocus);
     }
 
-    currentPanel.webview.html = renderPlaygroundPreviewHtml(doc, projectStore);
+    if (!sameDoc || !currentPanel.webview.html) {
+      currentPanel.webview.html = renderPlaygroundPreviewHtml(
+        doc,
+        projectStore,
+      );
+    }
   };
 
   const handleOpenPlayground = async (
@@ -95,7 +106,7 @@ export function activatePlaygroundPreview(
     if (docOrUri instanceof Uri) {
       doc = await workspace.openTextDocument(docOrUri);
       await window.showTextDocument(doc, {
-        viewColumn: ViewColumn.One,
+        viewColumn: ViewColumn.Active,
         preserveFocus: false,
       });
     } else if (docOrUri && "uri" in docOrUri) {
@@ -108,7 +119,7 @@ export function activatePlaygroundPreview(
       return;
     }
 
-    await openPlaygroundForDocument(doc);
+    await openPlaygroundForDocument(doc, false);
   };
 
   const notifyCompilationUpdate = (): void => {
@@ -138,8 +149,11 @@ export function activatePlaygroundPreview(
         return;
       }
       const doc = editor.document;
-      if (isPlaygroundDocument(doc, projectStore)) {
-        void openPlaygroundForDocument(doc);
+      if (
+        isPlaygroundDocument(doc, projectStore) &&
+        doc.uri.toString() !== currentDoc?.uri.toString()
+      ) {
+        void openPlaygroundForDocument(doc, true);
       }
     }),
   );
@@ -513,7 +527,7 @@ function renderPlaygroundPreviewHtml(
   <div class="preview-section">
     <div class="section-header">
       <span>Live Inferences & Output</span>
-      <span style="font-size: 10px; opacity: 0.6;">Split screen mode</span>
+      <span style="font-size: 10px; opacity: 0.6;">Live preview</span>
     </div>
     <div class="section-body">
       ${
@@ -529,7 +543,7 @@ function renderPlaygroundPreviewHtml(
         <div style="font-size: 11.5px; opacity: 0.75; margin-bottom: 4px;">Target Template: <strong>${escapeHtml(targetTemplate ?? "—")}</strong></div>
         <div class="sample-block">
 // Live rendered prompt and simulated LLM inferences will appear here.
-// Edit the &lt;playground&gt; file on the left to watch parameters update live.
+// Edit the &lt;playground&gt; file to watch parameters update live.
         </div>
       </div>`,
               )

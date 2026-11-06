@@ -77,14 +77,14 @@
       "editor/title": [
         {
           "command": "typeprompt.openPlayground",
-          "when": "resourceFilename =~ /\\.play\\.tp$/ || editorLangId == 'typeprompt'",
+          "when": "resourceFilename =~ /\\.play\\.tp$/",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "typeprompt.openPlayground",
-          "when": "resourceFilename =~ /\\.play\\.tp$/ || editorLangId == 'typeprompt'",
+          "when": "resourceFilename =~ /\\.play\\.tp$/",
           "group": "1_run"
         }
       ]
