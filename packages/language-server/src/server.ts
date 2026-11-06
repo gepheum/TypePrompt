@@ -62,8 +62,7 @@ import {
 } from "vscode-languageserver/node.js";
 
 export type { ApiKeys, Secrets } from "@typeprompt/core";
-export { CompilationResultStore } from "./compilation-result-store.js";
-export * from "./wire-compilation-result.js";
+export { ProjectStore } from "./project-store.js";
 
 type FileType =
   | "typeprompt.yaml"
@@ -352,8 +351,23 @@ class Project {
     return patchBase;
   }
 
-  /** The loaded secrets for this project. */
-  secrets: Secrets;
+  /** The associated secrets file for this project, if any. */
+  secretsFile?: SecretsFile;
+
+  get secretsResult(): SecretsParseResult | InternalErrors {
+    return (
+      this.secretsFile?.secretsResult ?? {
+        kind: "success",
+        secrets: {},
+      }
+    );
+  }
+
+  get secrets(): Secrets {
+    return this.secretsResult.kind === "success"
+      ? this.secretsResult.secrets
+      : {};
+  }
 
   /** Cached compilation result for this project. */
   compilationResult: CompilationResult | null = null;
@@ -368,11 +382,7 @@ class Project {
     public configBundle: TypePromptConfigBundle,
     /** The URI of the config file itself. */
     readonly configUri: string,
-    /** The loaded secrets for this project. */
-    secrets: Secrets = {},
-  ) {
-    this.secrets = secrets;
-  }
+  ) {}
 
   get config(): Config {
     return this.configBundle.config;
@@ -490,16 +500,13 @@ class Project {
   /** Registers a secrets file with a project. */
   static addSecrets(secretsFile: SecretsFile, project: Project): void {
     secretsFile.project = project;
-    project.secrets =
-      secretsFile.secretsResult.kind === "success"
-        ? secretsFile.secretsResult.secrets
-        : {};
+    project.secretsFile = secretsFile;
   }
 
   /** Unregisters a secrets file from its project. */
   static removeSecrets(secretsFile: SecretsFile): void {
     if (!secretsFile.project) return;
-    secretsFile.project.secrets = {};
+    secretsFile.project.secretsFile = undefined;
     secretsFile.project = undefined;
   }
 }
@@ -530,25 +537,23 @@ export class TypePromptLanguageExtension {
     ) => void,
     private readonly getDocument: (uri: string) => TextDocument | undefined,
     private readonly sendCompilationResult?: (
-      results: Lsp.WireCompilationResults,
+      results: Lsp.WireProjects,
     ) => void,
   ) {}
 
-  private notifyCompilationResults(
-    changed: {
-      readonly changedProject: Project;
-      readonly changedResult: CompilationResult;
-    } | null,
-  ): void {
+  private notifyCompilationResults(changedProject: Project | null): void {
     if (!this.sendCompilationResult) return;
-    const changedWireResult = changed
-      ? Lsp.toWireCompilationResult(changed.changedResult)
+    const changedWireResult = changedProject?.compilationResult
+      ? Lsp.toWireCompilationResult(changedProject.compilationResult)
       : undefined;
-    const projects: { [path: string]: Lsp.WireCompilationResult | null } = {};
+    const projects: { [path: string]: Lsp.WireProject | null } = {};
     for (const project of this.projects.values()) {
       projects[project.folderUri] =
-        changed && project === changed.changedProject && changedWireResult
-          ? changedWireResult
+        project === changedProject && changedWireResult
+          ? {
+              compilationResult: changedWireResult,
+              secrets: project.secretsResult,
+            }
           : null;
     }
     this.sendCompilationResult({ projects });
@@ -895,21 +900,28 @@ export class TypePromptLanguageExtension {
             if (secretsFile.project !== match.project) {
               Project.removeSecrets(secretsFile);
               Project.addSecrets(secretsFile, match.project);
-            } else {
-              match.project.secrets =
-                secretsResult.kind === "success" ? secretsResult.secrets : {};
+            }
+            if (match.project.compilationResult) {
+              this.notifyCompilationResults(match.project);
             }
           } else {
             if (oldProject) {
               Project.removeSecrets(secretsFile);
+              if (oldProject.compilationResult) {
+                this.notifyCompilationResults(oldProject);
+              }
             }
           }
         } else {
           const existingSecretsFile = this.secretsFiles.get(uri);
           if (existingSecretsFile) {
+            const oldProject = existingSecretsFile.project;
             Project.removeSecrets(existingSecretsFile);
             this.secretsFiles.delete(uri);
             this.sendDiagnostics(uri, []);
+            if (oldProject?.compilationResult) {
+              this.notifyCompilationResults(oldProject);
+            }
           }
         }
         break;
@@ -1069,11 +1081,6 @@ export class TypePromptLanguageExtension {
         if (secretsFile.project !== match.project) {
           Project.removeSecrets(secretsFile);
           Project.addSecrets(secretsFile, match.project);
-        } else {
-          match.project.secrets =
-            secretsFile.secretsResult.kind === "success"
-              ? secretsFile.secretsResult.secrets
-              : {};
         }
       } else {
         if (secretsFile.project) {
@@ -1144,10 +1151,7 @@ export class TypePromptLanguageExtension {
 
   compileAndSendDiagnosticsForProject(project: Project): void {
     const result = project.compile();
-    this.notifyCompilationResults({
-      changedProject: project,
-      changedResult: result,
-    });
+    this.notifyCompilationResults(project);
     for (const [relPath, templateFile] of project.templateFiles) {
       const errors = result.finalErrors[relPath] ?? [];
       const warnings = result.warnings[relPath] ?? [];

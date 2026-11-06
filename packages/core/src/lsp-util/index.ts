@@ -27,10 +27,11 @@ export { tokenize, type SemanticToken } from "./semantic-token.js";
 export {
   toWireCompilationResult,
   type WireCompilationResult,
-  type WireCompilationResults,
   type WirePlayground,
+  type WireProject,
+  type WireProjects,
   type WireSourceFile,
   type WireSourceFileEntity,
   type WireTemplate,
   type WireTool,
-} from "./wire-compilation-result.js";
+} from "./wire-project.js";

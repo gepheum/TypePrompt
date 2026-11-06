@@ -3,6 +3,7 @@ import {
   createLineFinder,
   DEFAULT_CONFIG_YAML,
   DEFAULT_SECRETS_YAML,
+  type Lsp,
   makeTemplates,
   type ValidCompilationResult,
 } from "@typeprompt/core";
@@ -25,7 +26,6 @@ import {
   SEMANTIC_TOKEN_TYPES,
   TypePromptLanguageExtension,
   uriToFsPath,
-  type WireCompilationResults,
 } from "./server.js";
 
 describe("TypePrompt Language Server", () => {
@@ -2241,7 +2241,7 @@ comment here -->
       );
       const tempDirUri = fsPathToUri(tempDir);
 
-      const receivedNotifications: WireCompilationResults[] = [];
+      const receivedNotifications: Lsp.WireProjects[] = [];
 
       const extension = new TypePromptLanguageExtension(
         () => {},
@@ -2293,16 +2293,23 @@ comment here -->
       const last = receivedNotifications[receivedNotifications.length - 1]!;
       const projectPaths = Object.keys(last.projects);
       expect(projectPaths.length).toBe(1);
-      const projectResult = last.projects[projectPaths[0]!];
-      expect(projectResult !== null).toBe(true);
-      expect(projectResult?.anyErrors).toBe(false);
+      const project = last.projects[projectPaths[0]!];
+      expect(project !== null).toBe(true);
+      expect(project?.compilationResult.anyErrors).toBe(false);
+      expect(project?.secrets.kind).toBe("success");
+      if (project?.secrets.kind === "success") {
+        expect(project.secrets.secrets).toMatch({});
+      }
 
-      const playFile = projectResult?.sourceFiles["prompts/TranslatePlay.tp"];
+      const playFile =
+        project?.compilationResult.sourceFiles["prompts/TranslatePlay.tp"];
       expect(playFile?.entity?.kind).toBe("playground");
 
-      const templateKeys = Object.keys(projectResult?.templates ?? {});
+      const templateKeys = Object.keys(
+        project?.compilationResult.templates ?? {},
+      );
       expect(templateKeys.length).toBe(1);
-      const template = projectResult?.templates[templateKeys[0]!];
+      const template = project?.compilationResult.templates[templateKeys[0]!];
       expect(template !== undefined).toBe(true);
       expect(template?.name).toBe("Translate");
       expect(template?.isValid).toBe(true);

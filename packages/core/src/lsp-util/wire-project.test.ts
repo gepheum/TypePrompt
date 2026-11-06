@@ -2,8 +2,9 @@ import { expect } from "buckwheat";
 import { compile } from "../compiler/compiler.js";
 import {
   toWireCompilationResult,
-  type WireCompilationResults,
-} from "./wire-compilation-result.js";
+  type WireProject,
+  type WireProjects,
+} from "./wire-project.js";
 
 describe("WireCompilationResult", () => {
   it("converts CompilationResult to JSON-safe WireCompilationResult", () => {
@@ -98,15 +99,25 @@ describe("WireCompilationResult", () => {
     expect(template.namespace).toBe("Legal");
     expect(template.isValid).toBe(true);
 
-    // Check WireCompilationResults container
-    const results: WireCompilationResults = {
+    // Check WireProjects container
+    const project: WireProject = {
+      compilationResult: wire,
+      secrets: { kind: "success", secrets: {} },
+    };
+    const results: WireProjects = {
       projects: {
-        "file:///workspace/": wire,
+        "file:///workspace/": project,
         "file:///other/": null,
       },
     };
     const resultsJson = JSON.parse(JSON.stringify(results));
     expect(resultsJson.projects["file:///workspace/"] !== null).toBe(true);
+    expect(
+      resultsJson.projects["file:///workspace/"].compilationResult.anyErrors,
+    ).toBe(false);
+    expect(resultsJson.projects["file:///workspace/"].secrets.kind).toBe(
+      "success",
+    );
     expect(resultsJson.projects["file:///other/"]).toBe(null);
   });
 });

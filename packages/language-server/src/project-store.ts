@@ -1,51 +1,48 @@
-import type {
-  WireCompilationResult,
-  WireCompilationResults,
-} from "./wire-compilation-result.js";
+import type { Lsp } from "@typeprompt/core";
 
 /**
- * Client-side store that maintains the latest `WireCompilationResult` for each project.
+ * Client-side store that maintains the latest `Lsp.WireProject` for each project.
  *
  * Updated reactively whenever `typeprompt/compilationResult` notifications are received
  * from the language server.
  */
-export class CompilationResultStore {
-  /** Map from project folder URI to its latest compilation result. */
-  public readonly projects = new Map<string, WireCompilationResult>();
+export class ProjectStore {
+  /** Map from project folder URI to its latest project data. */
+  public readonly projects = new Map<string, Lsp.WireProject>();
 
   /**
    * Updates the store from an incoming LSP notification:
    * - Prunes projects that are no longer present in `results.projects`.
-   * - Updates non-null compilation results for changed projects.
+   * - Updates non-null projects for changed projects.
    */
-  public handleNotification(results: WireCompilationResults): void {
+  public handleNotification(results: Lsp.WireProjects): void {
     for (const folderUri of this.projects.keys()) {
       if (!(folderUri in results.projects)) {
         this.projects.delete(folderUri);
       }
     }
 
-    for (const [folderUri, result] of Object.entries(results.projects)) {
-      if (result) {
-        this.projects.set(folderUri, result);
+    for (const [folderUri, project] of Object.entries(results.projects)) {
+      if (project) {
+        this.projects.set(folderUri, project);
       }
     }
   }
 
   /**
-   * Finds the project compilation result and relative path for a given file URI
+   * Finds the project data and relative path for a given file URI
    * by matching the longest matching project folder prefix.
    */
   public findByUri(
     fileUri: string,
-  ): { project: WireCompilationResult; relativePath: string } | null {
+  ): { project: Lsp.WireProject; relativePath: string } | null {
     let bestMatch: {
-      project: WireCompilationResult;
+      project: Lsp.WireProject;
       relativePath: string;
     } | null = null;
     let longestPrefix = -1;
 
-    for (const [folderUri, result] of this.projects) {
+    for (const [folderUri, project] of this.projects) {
       const normalizedFolderUri = folderUri.endsWith("/")
         ? folderUri
         : `${folderUri}/`;
@@ -55,7 +52,7 @@ export class CompilationResultStore {
         normalizedFolderUri.length > longestPrefix
       ) {
         const relativePath = fileUri.slice(normalizedFolderUri.length);
-        bestMatch = { project: result, relativePath };
+        bestMatch = { project, relativePath };
         longestPrefix = normalizedFolderUri.length;
       }
     }

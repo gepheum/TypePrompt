@@ -1,28 +1,31 @@
+import type { Lsp } from "@typeprompt/core";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { CompilationResultStore } from "./compilation-result-store.js";
-import type { WireCompilationResult } from "./wire-compilation-result.js";
+import { ProjectStore } from "./project-store.js";
 
-function makeFakeResult(edition: number): WireCompilationResult {
+function makeFakeProject(edition: number): Lsp.WireProject {
   return {
-    sourceFiles: {},
-    templates: {},
-    tools: {},
-    playgrounds: {},
-    edition,
-    signature: `sig-${edition}`,
-    anyErrors: false,
-    finalErrors: {},
-    warnings: {},
-    timestampMillis: Date.now(),
+    compilationResult: {
+      sourceFiles: {},
+      templates: {},
+      tools: {},
+      playgrounds: {},
+      edition,
+      signature: `sig-${edition}`,
+      anyErrors: false,
+      finalErrors: {},
+      warnings: {},
+      timestampMillis: Date.now(),
+    },
+    secrets: { kind: "success", secrets: {} },
   };
 }
 
-describe("CompilationResultStore", () => {
+describe("ProjectStore", () => {
   it("populates new projects and prunes removed projects", () => {
-    const store = new CompilationResultStore();
-    const resA = makeFakeResult(1);
-    const resB = makeFakeResult(1);
+    const store = new ProjectStore();
+    const resA = makeFakeProject(1);
+    const resB = makeFakeProject(1);
 
     store.handleNotification({
       projects: {
@@ -32,12 +35,16 @@ describe("CompilationResultStore", () => {
     });
 
     expect(store.projects.size).toBe(2);
-    expect(store.projects.get("file:///projectA/")?.edition).toBe(1);
-    expect(store.projects.get("file:///projectB/")?.edition).toBe(1);
+    expect(
+      store.projects.get("file:///projectA/")?.compilationResult.edition,
+    ).toBe(1);
+    expect(
+      store.projects.get("file:///projectB/")?.compilationResult.edition,
+    ).toBe(1);
 
     // Project A updates, Project B unchanged (null), Project C added
-    const resA2 = makeFakeResult(2);
-    const resC = makeFakeResult(1);
+    const resA2 = makeFakeProject(2);
+    const resC = makeFakeProject(1);
     store.handleNotification({
       projects: {
         "file:///projectA/": resA2,
@@ -47,9 +54,15 @@ describe("CompilationResultStore", () => {
     });
 
     expect(store.projects.size).toBe(3);
-    expect(store.projects.get("file:///projectA/")?.edition).toBe(2);
-    expect(store.projects.get("file:///projectB/")?.edition).toBe(1);
-    expect(store.projects.get("file:///projectC/")?.edition).toBe(1);
+    expect(
+      store.projects.get("file:///projectA/")?.compilationResult.edition,
+    ).toBe(2);
+    expect(
+      store.projects.get("file:///projectB/")?.compilationResult.edition,
+    ).toBe(1);
+    expect(
+      store.projects.get("file:///projectC/")?.compilationResult.edition,
+    ).toBe(1);
 
     // Project B removed
     store.handleNotification({
@@ -64,9 +77,9 @@ describe("CompilationResultStore", () => {
   });
 
   it("finds project and relative path by URI with prefix matching", () => {
-    const store = new CompilationResultStore();
-    const resA = makeFakeResult(1);
-    const resB = makeFakeResult(2);
+    const store = new ProjectStore();
+    const resA = makeFakeProject(1);
+    const resB = makeFakeProject(2);
 
     store.handleNotification({
       projects: {
@@ -76,11 +89,11 @@ describe("CompilationResultStore", () => {
     });
 
     const matchA = store.findByUri("file:///workspace/app/prompts/hello.tp");
-    expect(matchA?.project.edition).toBe(1);
+    expect(matchA?.project.compilationResult.edition).toBe(1);
     expect(matchA?.relativePath).toBe("prompts/hello.tp");
 
     const matchB = store.findByUri("file:///workspace/lib/prompts/shared.tp");
-    expect(matchB?.project.edition).toBe(2);
+    expect(matchB?.project.compilationResult.edition).toBe(2);
     expect(matchB?.relativePath).toBe("prompts/shared.tp");
 
     const nonMatch = store.findByUri("file:///workspace/other/hello.tp");

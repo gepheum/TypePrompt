@@ -1,20 +1,30 @@
 import type { CompilationResult, Sample } from "../compiler/compiler-types.js";
 import type { PlaygroundModel } from "../compiler/playground-model-types.js";
+import type { SecretsParseResult } from "../config/secrets-parser.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
-import type { InternalError } from "../util/shared-types.js";
+import type { InternalError, InternalErrors } from "../util/shared-types.js";
 
 /**
- * Container of compilation results across all active projects.
+ * A lightweight, JSON-RPC-safe snapshot of a TypePrompt project,
+ * containing its compilation result and secrets.
+ */
+export type WireProject = {
+  readonly compilationResult: WireCompilationResult;
+  readonly secrets: SecretsParseResult | InternalErrors;
+};
+
+/**
+ * Container of projects across all active workspace folders.
  *
  * Sent via LSP notification `typeprompt/compilationResult`. The `projects` object
- * contains all known project folder URIs as keys. Only the project that just changed has
- * a non-null `WireCompilationResult`, allowing subscribers to maintain a complete map
- * of projects while minimizing IPC serialization overhead.
+ * contains all known project folder URIs as keys. Only the project that just changed
+ * has a non-null `WireProject`, allowing subscribers to maintain a complete map of
+ * projects while minimizing IPC serialization overhead.
  */
-export type WireCompilationResults = {
+export type WireProjects = {
   readonly projects: {
-    readonly [projectFolderUri: string]: WireCompilationResult | null;
+    readonly [projectFolderUri: string]: WireProject | null;
   };
 };
 

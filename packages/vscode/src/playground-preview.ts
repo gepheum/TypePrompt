@@ -1,4 +1,4 @@
-import type { CompilationResultStore } from "@typeprompt/language-server";
+import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
@@ -10,11 +10,12 @@ export interface PlaygroundPreviewController {
 }
 
 /**
- * Checks whether the document is a TypePrompt playground file according to the compilation store.
+ * Checks whether the document is a TypePrompt playground file according to the
+ * project store.
  */
 export function isPlaygroundDocument(
   document: TextDocument,
-  compilationStore: CompilationResultStore,
+  projectStore: ProjectStore,
 ): boolean {
   if (
     document.languageId !== "typeprompt" &&
@@ -23,9 +24,10 @@ export function isPlaygroundDocument(
     return false;
   }
 
-  const match = compilationStore.findByUri(document.uri.toString());
+  const match = projectStore.findByUri(document.uri.toString());
   if (match) {
-    const sourceFile = match.project.sourceFiles[match.relativePath];
+    const sourceFile =
+      match.project.compilationResult.sourceFiles[match.relativePath];
     if (sourceFile?.entity) {
       return sourceFile.entity.kind === "playground";
     }
@@ -39,7 +41,7 @@ export function isPlaygroundDocument(
  */
 export function activatePlaygroundPreview(
   context: ExtensionContext,
-  compilationStore: CompilationResultStore,
+  projectStore: ProjectStore,
 ): PlaygroundPreviewController {
   let currentPanel: WebviewPanel | undefined;
   let currentDoc: TextDocument | undefined;
@@ -48,7 +50,7 @@ export function activatePlaygroundPreview(
   const openPlaygroundForDocument = async (
     doc: TextDocument,
   ): Promise<void> => {
-    if (!isPlaygroundDocument(doc, compilationStore)) {
+    if (!isPlaygroundDocument(doc, projectStore)) {
       void window.showInformationMessage(
         "Selected file is not a TypePrompt playground.",
       );
@@ -82,10 +84,7 @@ export function activatePlaygroundPreview(
       currentPanel.reveal(ViewColumn.Beside, true);
     }
 
-    currentPanel.webview.html = renderPlaygroundPreviewHtml(
-      doc,
-      compilationStore,
-    );
+    currentPanel.webview.html = renderPlaygroundPreviewHtml(doc, projectStore);
   };
 
   const handleOpenPlayground = async (
@@ -116,7 +115,7 @@ export function activatePlaygroundPreview(
     if (currentPanel && currentDoc) {
       currentPanel.webview.html = renderPlaygroundPreviewHtml(
         currentDoc,
-        compilationStore,
+        projectStore,
       );
     }
   };
@@ -139,7 +138,7 @@ export function activatePlaygroundPreview(
         return;
       }
       const doc = editor.document;
-      if (isPlaygroundDocument(doc, compilationStore)) {
+      if (isPlaygroundDocument(doc, projectStore)) {
         void openPlaygroundForDocument(doc);
       }
     }),
@@ -161,7 +160,7 @@ export function activatePlaygroundPreview(
         if (currentPanel && currentDoc) {
           currentPanel.webview.html = renderPlaygroundPreviewHtml(
             currentDoc,
-            compilationStore,
+            projectStore,
           );
         }
       }, 150);
@@ -201,7 +200,7 @@ function escapeHtml(text: string): string {
  */
 function renderPlaygroundPreviewHtml(
   document: TextDocument,
-  compilationStore: CompilationResultStore,
+  projectStore: ProjectStore,
 ): string {
   const fileName = path.basename(document.fileName);
 
@@ -211,8 +210,9 @@ function renderPlaygroundPreviewHtml(
   let sampleList: readonly PreviewSample[] = [];
   let diagnosticErrors: readonly string[] = [];
 
-  const match = compilationStore.findByUri(document.uri.toString());
-  const sourceFile = match?.project.sourceFiles[match.relativePath];
+  const match = projectStore.findByUri(document.uri.toString());
+  const sourceFile =
+    match?.project.compilationResult.sourceFiles[match.relativePath];
 
   if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
     targetTemplate = sourceFile.entity.forTemplate;
@@ -224,7 +224,8 @@ function renderPlaygroundPreviewHtml(
   const sampleCount = sampleList.length;
 
   if (match) {
-    const errors = match.project.finalErrors[match.relativePath];
+    const errors =
+      match.project.compilationResult.finalErrors[match.relativePath];
     if (errors && errors.length > 0) {
       diagnosticErrors = errors.map((e) => e.message);
     }

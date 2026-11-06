@@ -1,7 +1,5 @@
-import {
-  CompilationResultStore,
-  type WireCompilationResults,
-} from "@typeprompt/language-server";
+import type { Lsp } from "@typeprompt/core";
+import { ProjectStore } from "@typeprompt/language-server";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionContext } from "vscode";
@@ -21,22 +19,19 @@ import {
 import { activateToggleComment } from "./toggle-comment.js";
 
 export interface TypePromptExtensionApi {
-  readonly compilationStore: CompilationResultStore;
+  readonly projectStore: ProjectStore;
   readonly playgroundPreview: PlaygroundPreviewController;
 }
 
 let client: LanguageClient | undefined;
-export const compilationStore = new CompilationResultStore();
+export const projectStore = new ProjectStore();
 
 export function activate(context: ExtensionContext): TypePromptExtensionApi {
   activateAutoCloseTag(context);
   activateEnterHandler(context);
   activateToggleComment(context);
   activateNewFileScaffolding(context, () => client);
-  const playgroundPreview = activatePlaygroundPreview(
-    context,
-    compilationStore,
-  );
+  const playgroundPreview = activatePlaygroundPreview(context, projectStore);
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),
@@ -91,8 +86,8 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
 
   client.onNotification(
     "typeprompt/compilationResult",
-    (params: WireCompilationResults) => {
-      compilationStore.handleNotification(params);
+    (params: Lsp.WireProjects) => {
+      projectStore.handleNotification(params);
       playgroundPreview.notifyCompilationUpdate();
     },
   );
@@ -100,7 +95,7 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
   client.start();
 
   return {
-    compilationStore,
+    projectStore,
     playgroundPreview,
   };
 }
