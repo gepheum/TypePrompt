@@ -9,14 +9,14 @@ import type {
   ServerOptions,
 } from "vscode-languageclient/node.js";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
-import { activateAutoCloseTag } from "./auto-close-tag.js";
-import { activateEnterHandler } from "./enter-handler.js";
-import { activateNewFileScaffolding } from "./new-file-scaffolding.js";
+import { activateAutoCloseTag } from "./editor/auto-close-tag.js";
+import { activateEnterHandler } from "./editor/enter-handler.js";
+import { activateNewFileScaffolding } from "./editor/new-file-scaffolding.js";
+import { activateToggleComment } from "./editor/toggle-comment.js";
 import {
   activatePlaygroundPreview,
   type PlaygroundPreviewController,
-} from "./playground-preview.js";
-import { activateToggleComment } from "./toggle-comment.js";
+} from "./preview/playground/playground-preview.js";
 
 export interface TypePromptExtensionApi {
   readonly projectStore: ProjectStore;
