@@ -1,9 +1,19 @@
-import { DEFAULT_SECRETS_YAML } from "@typeprompt/core";
+import {
+  compile,
+  DEFAULT_NAMESPACE,
+  DEFAULT_SECRETS_YAML,
+  parseCompilationResult,
+  parseSecretsYaml,
+  type ApiKeys,
+  type ValidCompilationResult,
+} from "@typeprompt/core";
+import { runPlaygroundInferences } from "@typeprompt/inference-runner";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { commands, Uri, ViewColumn, window, workspace } from "vscode";
 import { canOpenPreview } from "../../editor/is-template.js";
+import { renderInferencesPageHtml } from "../inferences/render-inferences-page.js";
 import {
   getOrCreateState,
   renderPlaygroundPreviewHtml,
@@ -84,6 +94,8 @@ export function activatePlaygroundPreview(
             }
           } else if (message.type === "createSecretsFile" && currentDoc) {
             await handleCreateSecretsFile(currentDoc, projectStore);
+          } else if (message.type === "runInferences" && currentDoc) {
+            await handleRunInferences(context, currentDoc, projectStore);
           }
         },
       );
@@ -238,5 +250,145 @@ export async function handleCreateSecretsFile(
   await window.showTextDocument(secretsDoc, {
     viewColumn: ViewColumn.One,
     preserveFocus: false,
+  });
+}
+
+export async function handleRunInferences(
+  context: ExtensionContext,
+  doc: TextDocument,
+  projectStore: ProjectStore,
+): Promise<void> {
+  const match = projectStore.findByUri(doc.uri.toString());
+  if (!match) {
+    void window.showErrorMessage("TypePrompt project not found.");
+    return;
+  }
+
+  const fileName = path.basename(doc.fileName);
+  const sourceFile =
+    match.project.compilationResult.sourceFiles[match.relativePath];
+  let templateId: string;
+  if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    templateId = `${ns}:${sourceFile.entity.forTemplate}`;
+  } else if (sourceFile?.entity && sourceFile.entity.kind === "template") {
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    templateId = `${ns}:${sourceFile.entity.name}`;
+  } else {
+    const baseName = fileName.replace(/\.play\.tp$/, "").replace(/\.tp$/, "");
+    templateId = `${DEFAULT_NAMESPACE}:${baseName}`;
+  }
+
+  // Compile project snapshot using current in-memory documents
+  const projectFolderUri = Uri.parse(match.project.folderUri);
+  const pathToContent: { [path: string]: string } = {};
+  for (const relPath of Object.keys(
+    match.project.compilationResult.sourceFiles,
+  )) {
+    const fileUri = Uri.joinPath(projectFolderUri, relPath);
+    const openDoc = workspace.textDocuments.find(
+      (d) => d.uri.toString() === fileUri.toString(),
+    );
+    if (openDoc) {
+      pathToContent[relPath] = openDoc.getText();
+    } else {
+      try {
+        const bytes = await workspace.fs.readFile(fileUri);
+        pathToContent[relPath] = Buffer.from(bytes).toString("utf-8");
+      } catch {
+        // Ignore deleted or missing files
+      }
+    }
+  }
+
+  let patchBase: ValidCompilationResult | null = null;
+  try {
+    const patchBaseUri = Uri.joinPath(projectFolderUri, "patch-base.json");
+    const bytes = await workspace.fs.readFile(patchBaseUri);
+    const content = Buffer.from(bytes).toString("utf-8");
+    const parsed = parseCompilationResult(content, patchBaseUri.fsPath);
+    if (!parsed.anyErrors) {
+      patchBase = parsed;
+    }
+  } catch {
+    // No patch-base.json
+  }
+
+  const compilation = compile(pathToContent, { cache: null, patchBase });
+  if (compilation.anyErrors) {
+    void window.showErrorMessage(
+      "Cannot run inferences: playground has compilation errors.",
+    );
+    return;
+  }
+  const validCompilation = compilation as ValidCompilationResult;
+
+  if (!validCompilation.playgrounds[templateId]) {
+    const entry = Object.entries(validCompilation.playgrounds).find(
+      ([id, p]) => id === templateId || p.templateId === templateId,
+    );
+    if (entry) {
+      templateId = entry[0];
+    } else {
+      void window.showErrorMessage(`No playground found for '${templateId}'.`);
+      return;
+    }
+  }
+
+  const apiKeys: ApiKeys = {};
+  if (
+    match.project.secrets.kind === "success" &&
+    match.project.secrets.secrets.apiKeys
+  ) {
+    Object.assign(apiKeys, match.project.secrets.secrets.apiKeys);
+  }
+  const secretsYamlUri = Uri.joinPath(
+    projectFolderUri,
+    ".typeprompt.secrets.yaml",
+  );
+  const secretsYmlUri = Uri.joinPath(
+    projectFolderUri,
+    ".typeprompt.secrets.yml",
+  );
+  const openSecretsDoc = workspace.textDocuments.find(
+    (d) =>
+      d.uri.toString() === secretsYamlUri.toString() ||
+      d.uri.toString() === secretsYmlUri.toString(),
+  );
+  if (openSecretsDoc) {
+    const parsed = parseSecretsYaml(
+      openSecretsDoc.getText(),
+      openSecretsDoc.fileName,
+    );
+    if (parsed.kind === "success" && parsed.secrets.apiKeys) {
+      Object.assign(apiKeys, parsed.secrets.apiKeys);
+    }
+  }
+
+  const shortName = templateId.startsWith(`${DEFAULT_NAMESPACE}:`)
+    ? templateId.slice(`${DEFAULT_NAMESPACE}:`.length)
+    : templateId;
+
+  const inferencesPanel = window.createWebviewPanel(
+    "typeprompt.inferences",
+    `Inferences: ${shortName}`,
+    ViewColumn.Active,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    },
+  );
+  inferencesPanel.iconPath = Uri.file(context.asAbsolutePath("icon.svg"));
+
+  void runPlaygroundInferences(validCompilation, templateId, {
+    apiKeys,
+    callback: (pendingInferenceSet) => {
+      inferencesPanel.webview.html =
+        renderInferencesPageHtml(pendingInferenceSet);
+    },
+  }).catch((err: unknown) => {
+    void window.showErrorMessage(
+      `Inference run failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   });
 }

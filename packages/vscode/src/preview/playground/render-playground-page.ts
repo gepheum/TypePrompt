@@ -4,7 +4,7 @@ import * as path from "node:path";
 import {
   escapeHtml,
   renderRequestContext,
-} from "../common/render-inference-set-html.js";
+} from "../inferences/render-inferences-page.js";
 
 export interface PlaygroundDocumentState {
   lastSuccessfulHtml?: string;
@@ -265,9 +265,26 @@ function buildSuccessfulPlaygroundBody(params: {
   `
     : "";
 
+  const runInferencesBar = hasApiKeys
+    ? `
+    <div class="run-inferences-bar">
+      <button
+        type="button"
+        id="run-inferences-button"
+        class="run-inferences-button"
+        title="Running Inferences"
+      >
+        <span class="run-icon">▶</span> Run Inferences
+      </button>
+    </div>
+  `
+    : "";
+
+  const topSectionHtml = hasApiKeys ? runInferencesBar : noApiKeysBanner;
+
   if (samples.length === 0) {
     return `
-      ${noApiKeysBanner}
+      ${topSectionHtml}
       <div class="sample-picker-bar">
         <label for="sample-select" class="sample-picker-label">Sample</label>
         <select id="sample-select" class="sample-select" disabled>
@@ -319,7 +336,7 @@ function buildSuccessfulPlaygroundBody(params: {
     .join("");
 
   return `
-    ${noApiKeysBanner}
+    ${topSectionHtml}
     <div class="sample-picker-bar">
       <label for="sample-select" class="sample-picker-label">Sample</label>
       <select id="sample-select" class="sample-select">
@@ -410,6 +427,44 @@ function buildPageShell(params: {
     .container {
       max-width: 900px;
       margin: 0 auto;
+    }
+
+    /* Run Inferences Bar */
+    .run-inferences-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .run-inferences-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #0284c7;
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      border-radius: 6px;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+    }
+
+    .run-inferences-button:hover {
+      background: #0369a1;
+      border-color: #7dd3fc;
+    }
+
+    .run-inferences-button:active {
+      transform: scale(0.98);
+    }
+
+    .run-inferences-button .run-icon {
+      font-size: 0.75rem;
+      line-height: 1;
     }
 
     /* No API Keys Banner */
@@ -762,6 +817,13 @@ function buildPageShell(params: {
       createSecretsLink.addEventListener('click', (e) => {
         e.preventDefault();
         vscode.postMessage({ type: 'createSecretsFile' });
+      });
+    }
+
+    const runInferencesBtn = document.getElementById('run-inferences-button');
+    if (runInferencesBtn) {
+      runInferencesBtn.addEventListener('click', () => {
+        vscode.postMessage({ type: 'runInferences' });
       });
     }
   </script>

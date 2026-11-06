@@ -110,6 +110,7 @@ describe("renderPlaygroundPreviewHtml", () => {
     ).toBe(true);
     expect(html.includes('id="create-secrets-link"')).toBe(true);
     expect(html.includes("Create .typeprompt.secrets.yaml")).toBe(true);
+    expect(html.includes('id="run-inferences-button"')).toBe(false);
     // Should not show error overlay
     expect(html.includes('style="display: none;"')).toBe(true);
   });
@@ -138,6 +139,8 @@ describe("renderPlaygroundPreviewHtml", () => {
       html.includes("Inference cannot be run because no API key is available."),
     ).toBe(false);
     expect(html.includes('id="create-secrets-link"')).toBe(false);
+    expect(html.includes('id="run-inferences-button"')).toBe(true);
+    expect(html.includes("Run Inferences")).toBe(true);
     expect(html.includes('style="display: none;"')).toBe(true);
   });
 
