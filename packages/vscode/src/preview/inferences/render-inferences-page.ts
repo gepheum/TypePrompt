@@ -1,6 +1,3 @@
-// Run with:
-// npx tsx packages/vscode/src/render-inference-set-html.ts /Users/clementroux/Documents/Gepheum/typeprompt/playground/inference-set.json /Users/clementroux/Documents/Gepheum/typeprompt/playground/inference-set.html
-
 import type { Inferences } from "@typeprompt/core";
 import {
   parseJson,
@@ -9,8 +6,6 @@ import {
 } from "@typeprompt/core";
 import { tokenizeYaml } from "@typeprompt/core/json/yaml-parser.js";
 import { tokenize } from "@typeprompt/core/lsp-util/semantic-token.js";
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import YAML from "yaml";
 
 // -----------------------------------------------------------------------------
@@ -305,7 +300,9 @@ function stringifyAsYaml(value: unknown): string {
 // HTML Page Rendering
 // -----------------------------------------------------------------------------
 
-export function renderInferenceSetHtml(data: Inferences.InferenceSet): string {
+export function renderInferencesPageHtml(
+  data: Inferences.InferenceSet<Inferences.Pending>,
+): string {
   const modelYaml = YAML.stringify(data.model).trimEnd();
   const isSingleSample = data.inferences.length === 1;
   const displayTemplateId = data.templateId.startsWith("Main:")
@@ -375,6 +372,10 @@ export function renderInferenceSetHtml(data: Inferences.InferenceSet): string {
             --error-text: #f87171;
             --error-bg: rgba(248, 113, 113, 0.1);
             --error-border: rgba(248, 113, 113, 0.3);
+
+            --pending-text: #fbbf24;
+            --pending-bg: rgba(251, 191, 36, 0.1);
+            --pending-border: rgba(251, 191, 36, 0.3);
 
             /* Syntax Highlighting */
             --hl-key: #7dd3fc;
@@ -622,6 +623,104 @@ export function renderInferenceSetHtml(data: Inferences.InferenceSet): string {
             background: var(--error-bg);
             color: var(--error-text);
             border: 1px solid var(--error-border);
+          }
+
+          .status-badge.pending {
+            background: var(--pending-bg);
+            color: var(--pending-text);
+            border: 1px solid var(--pending-border);
+          }
+
+          .status-badge.pending .status-dot {
+            animation: pulse-dot 1.5s infinite ease-in-out;
+          }
+
+          @keyframes pulse-dot {
+            0%,
+            100% {
+              opacity: 0.3;
+              transform: scale(0.85);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.15);
+            }
+          }
+
+          .pending-output {
+            padding: 1rem 1.25rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            background: var(--bg-inset);
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+          }
+
+          .pending-spinner {
+            display: inline-block;
+            animation: spin 2s linear infinite;
+          }
+
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+
+          .status-badge.pending {
+            background: var(--pending-bg);
+            color: var(--pending-text);
+            border: 1px solid var(--pending-border);
+          }
+
+          .status-badge.pending .status-dot {
+            animation: pulse-dot 1.5s infinite ease-in-out;
+          }
+
+          @keyframes pulse-dot {
+            0%,
+            100% {
+              opacity: 0.3;
+              transform: scale(0.85);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.15);
+            }
+          }
+
+          .pending-output {
+            padding: 1rem 1.25rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            background: var(--bg-inset);
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+          }
+
+          .pending-spinner {
+            display: inline-block;
+            animation: spin 2s linear infinite;
+          }
+
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
           }
 
           .status-dot {
@@ -1239,21 +1338,52 @@ ${highlightTp(content)}</pre>
         </div>
 
         <script>
+          const vscode =
+            typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
+
+          if (vscode) {
+            const savedState = vscode.getState() || {};
+            if (savedState.expanded) {
+              Object.keys(savedState.expanded).forEach((id) => {
+                const card = document.getElementById(id);
+                if (card) {
+                  if (savedState.expanded[id]) {
+                    card.classList.add("is-expanded");
+                  } else {
+                    card.classList.remove("is-expanded");
+                  }
+                }
+              });
+            }
+          }
+
           function toggleSample(cardId) {
             const card = document.getElementById(cardId);
             if (!card) return;
             card.classList.toggle("is-expanded");
+            if (vscode) {
+              const state = vscode.getState() || {};
+              state.expanded = state.expanded || {};
+              state.expanded[cardId] = card.classList.contains("is-expanded");
+              vscode.setState(state);
+            }
           }
 
           function toggleAllSamples(expanded) {
             const cards = document.querySelectorAll(".inference-card");
+            const state = (vscode && vscode.getState()) || {};
+            state.expanded = {};
             cards.forEach((c) => {
               if (expanded) {
                 c.classList.add("is-expanded");
+                state.expanded[c.id] = true;
               } else {
                 c.classList.remove("is-expanded");
               }
             });
+            if (vscode) {
+              vscode.setState(state);
+            }
           }
 
           function switchRequestTab(cardId, tabName) {
@@ -1334,7 +1464,7 @@ ${highlightTp(content)}</pre>
 }
 
 function extractSampleYaml(
-  inference: Inferences.Inference,
+  inference: Inferences.Inference<Inferences.Pending>,
   templateFiles: { readonly [path: string]: string } | undefined,
   templateId: string,
 ): string {
@@ -1418,14 +1548,21 @@ function extractSampleYaml(
 }
 
 function renderInferenceCard(
-  inference: Inferences.Inference,
+  inference: Inferences.Inference<Inferences.Pending>,
   isSingleSample: boolean,
   sampleYaml: string,
 ): SafeHtml {
   const { sampleIndex, name, request, result } = inference;
   const isSuccess = result.kind === "success";
+  const isPending = result.kind === "pending";
   const cardId = `sample-${sampleIndex}`;
   const expandedClass = isSingleSample ? "is-expanded" : "";
+  const statusClass = isSuccess ? "success" : isPending ? "pending" : "error";
+  const statusLabel = isSuccess
+    ? "Success"
+    : isPending
+      ? "Pending"
+      : result.error.kind;
 
   return html`
     <article id="${cardId}" class="inference-card ${expandedClass}">
@@ -1441,13 +1578,13 @@ function renderInferenceCard(
           <span class="sample-name"
             >${name ?? `Sample ${sampleIndex + 1}`}</span
           >
-          <span class="status-badge ${isSuccess ? "success" : "error"}">
+          <span class="status-badge ${statusClass}">
             <span class="status-dot"></span>
-            ${isSuccess ? "Success" : result.error.kind}
+            ${statusLabel}
           </span>
         </div>
 
-        ${result.telemetry ? renderTelemetryStrip(result.telemetry) : ""}
+        ${!isPending && result.telemetry ? renderTelemetryStrip(result.telemetry) : ""}
       </button>
 
       <div class="card-body">
@@ -1499,7 +1636,7 @@ ${highlightYaml(sampleYaml)}</pre>
 
         <!-- Optional Reasoning / Thinking Box -->
         ${
-          result.reasoning
+          !isPending && result.reasoning
             ? html`
                 <div class="reasoning-box">
                   <em>Thinking / reasoning</em>
@@ -1559,9 +1696,16 @@ function renderTelemetryStrip(
 
 function renderResultOutput(
   cardId: string,
-  result: Inferences.InferenceResult,
+  result: Inferences.InferenceResult<Inferences.Pending>,
   outputFormat: "json" | "text",
 ): SafeHtml {
+  if (result.kind === "pending") {
+    return html`
+      <div class="pending-output">
+        <span class="pending-spinner">⏳</span> Inference pending...
+      </div>
+    `;
+  }
   if (result.kind === "success") {
     return renderSuccessResponse(cardId, result.response, outputFormat);
   }
@@ -1843,46 +1987,4 @@ ${highlightJson(stringifyAsJson(tr.output))}</pre>
       </div>
     </div>
   `;
-}
-
-// -----------------------------------------------------------------------------
-// CLI Execution
-// -----------------------------------------------------------------------------
-
-function main(): void {
-  const args = process.argv.slice(2);
-  if (args.length < 1) {
-    console.error(
-      "Usage: npx tsx packages/vscode/src/render-inference-set-html.ts <input-json-path> [output-html-path]",
-    );
-    process.exit(1);
-  }
-
-  const inputPath = resolve(args[0]!);
-  const outputPath = args[1]
-    ? resolve(args[1])
-    : inputPath.replace(/\.json$/i, ".html");
-
-  const rawJson = readFileSync(inputPath, "utf-8");
-  const inferenceSet: Inferences.InferenceSet = JSON.parse(rawJson);
-
-  if (inferenceSet.kind !== "playground-inference-set") {
-    console.error(
-      `Error: Expected JSON with kind 'playground-inference-set', got '${inferenceSet.kind}'`,
-    );
-    process.exit(1);
-  }
-
-  const renderedHtml = renderInferenceSetHtml(inferenceSet);
-  writeFileSync(outputPath, renderedHtml, "utf-8");
-  console.log(`Rendered HTML written to: ${outputPath}`);
-}
-
-const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith("render-inference-set-html.ts") ||
-    process.argv[1].endsWith("render-inference-set-html.js"));
-
-if (isDirectRun) {
-  main();
 }
