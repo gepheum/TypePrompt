@@ -104,6 +104,7 @@ describe("renderPlaygroundPreviewHtml", () => {
     };
 
     const html = renderPlaygroundPreviewHtml(doc, store);
+    expect(html.includes("<title>Preview: test</title>")).toBe(true);
     expect(
       html.includes("Inference cannot be run because no API key is available."),
     ).toBe(true);

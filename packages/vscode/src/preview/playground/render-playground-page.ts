@@ -72,9 +72,9 @@ function injectErrorOverlay(html: string): string {
 /**
  * Builds a placeholder HTML shell when no successful compilation exists yet.
  */
-function buildInitialErrorHtml(fileName: string): string {
+function buildInitialErrorHtml(titleName: string): string {
   return buildPageShell({
-    fileName,
+    titleName,
     bodyContent: `
       <div class="sample-picker-bar">
         <label for="sample-select" class="sample-picker-label">Sample</label>
@@ -96,9 +96,9 @@ function buildInitialErrorHtml(fileName: string): string {
 /**
  * Builds a placeholder HTML shell while waiting for project compilation data.
  */
-function buildLoadingHtml(fileName: string): string {
+function buildLoadingHtml(titleName: string): string {
   return buildPageShell({
-    fileName,
+    titleName,
     bodyContent: `
       <div class="sample-picker-bar">
         <label for="sample-select" class="sample-picker-label">Sample</label>
@@ -124,13 +124,14 @@ export function renderPlaygroundPreviewHtml(
   const uri = document.uri.toString();
   const state = getOrCreateState(uri);
   const fileName = path.basename(document.fileName);
+  const displayName = fileName.replace(/\.play\.tp$/, "");
 
   const match = projectStore.findByUri(uri);
   if (!match) {
     if (state.lastSuccessfulHtml) {
       return state.lastSuccessfulHtml;
     }
-    return buildLoadingHtml(fileName);
+    return buildLoadingHtml(displayName);
   }
 
   const sourceFile =
@@ -245,7 +246,7 @@ export function renderPlaygroundPreviewHtml(
     });
 
     const htmlContent = buildPageShell({
-      fileName,
+      titleName: displayName,
       bodyContent,
       hasErrors,
     });
@@ -263,7 +264,7 @@ export function renderPlaygroundPreviewHtml(
     return injectErrorOverlay(state.lastSuccessfulHtml);
   }
 
-  return buildInitialErrorHtml(fileName);
+  return buildInitialErrorHtml(displayName);
 }
 
 function buildSuccessfulPlaygroundBody(params: {
@@ -353,18 +354,18 @@ function buildSuccessfulPlaygroundBody(params: {
 }
 
 function buildPageShell(params: {
-  readonly fileName: string;
+  readonly titleName: string;
   readonly bodyContent: string;
   readonly hasErrors: boolean;
 }): string {
-  const { fileName, bodyContent, hasErrors } = params;
+  const { titleName, bodyContent, hasErrors } = params;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(fileName)} · Playground Preview</title>
+  <title>Preview: ${escapeHtml(titleName)}</title>
   <style>
     :root {
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;

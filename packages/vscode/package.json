@@ -62,7 +62,7 @@
       },
       {
         "command": "typeprompt.openPlayground",
-        "title": "TypePrompt: Open Playground",
+        "title": "TypePrompt: Open Preview",
         "icon": "$(play)"
       }
     ],

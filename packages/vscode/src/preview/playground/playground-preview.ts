@@ -71,7 +71,8 @@ export function activatePlaygroundPreview(
     const sameDoc = currentDoc?.uri.toString() === doc.uri.toString();
     currentDoc = doc;
     const fileName = path.basename(doc.fileName);
-    const title = `Playground: ${fileName}`;
+    const displayName = fileName.replace(/\.play\.tp$/, "");
+    const title = `Preview: ${displayName}`;
 
     if (!currentPanel) {
       currentPanel = window.createWebviewPanel(
@@ -157,6 +158,9 @@ export function activatePlaygroundPreview(
   // Register command to trigger playground preview (from explorer context menu, editor title, or command palette)
   context.subscriptions.push(
     commands.registerCommand("typeprompt.openPlayground", handleOpenPlayground),
+  );
+  context.subscriptions.push(
+    commands.registerCommand("typeprompt.openPreview", handleOpenPlayground),
   );
   context.subscriptions.push(
     commands.registerCommand(
