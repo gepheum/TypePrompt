@@ -155,4 +155,71 @@ describe("renderPlaygroundPreviewHtml", () => {
     expect(html.includes("Loading playground preview...")).toBe(true);
     expect(html.includes('style="display: none;"')).toBe(true);
   });
+
+  it("renders preview when given a template document that has a playground", () => {
+    const store = new ProjectStore();
+    const fakeProject: Lsp.WireProject = {
+      folderUri: "file:///workspace/project/",
+      compilationResult: {
+        sourceFiles: {
+          "prompts/Translate.tp": {
+            path: "prompts/Translate.tp",
+            hasErrors: false,
+            entity: {
+              kind: "template",
+              name: "Translate",
+              namespace: null,
+            },
+          },
+        },
+        templates: {},
+        tools: {},
+        playgrounds: {
+          "Main:Translate": {
+            id: "Main:Translate",
+            forTemplate: "Translate",
+            namespace: null,
+            isValid: true,
+            samples: [
+              {
+                index: 0,
+                name: "Greeting sample",
+                variables: { text: "hello" },
+                tools: [],
+              },
+            ],
+          },
+        },
+        edition: 1,
+        signature: undefined,
+        anyErrors: false,
+        finalErrors: {},
+        warnings: {},
+        timestampMillis: Date.now(),
+      },
+      secrets: {
+        kind: "success",
+        secrets: {
+          apiKeys: { openai: "sk-test" },
+        },
+      },
+    };
+    store.handleNotification({
+      projects: {
+        "file:///workspace/project/": fakeProject,
+      },
+    });
+
+    const doc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/Translate.tp",
+      },
+      fileName: "/workspace/project/prompts/Translate.tp",
+    };
+
+    const html = renderPlaygroundPreviewHtml(doc, store);
+    expect(html.includes("<title>Preview: Translate</title>")).toBe(true);
+    expect(html.includes("Greeting sample")).toBe(true);
+  });
 });

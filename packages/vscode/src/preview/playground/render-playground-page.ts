@@ -124,7 +124,7 @@ export function renderPlaygroundPreviewHtml(
   const uri = document.uri.toString();
   const state = getOrCreateState(uri);
   const fileName = path.basename(document.fileName);
-  const displayName = fileName.replace(/\.play\.tp$/, "");
+  const displayName = fileName.replace(/\.play\.tp$/, "").replace(/\.tp$/, "");
 
   const match = projectStore.findByUri(uri);
   if (!match) {
@@ -145,46 +145,25 @@ export function renderPlaygroundPreviewHtml(
 
   let wirePlayground: Lsp.WirePlayground | undefined;
   if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
-    const forTemplate = sourceFile.entity.forTemplate;
     const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-    const expectedId = `${ns}:${forTemplate}`;
     wirePlayground =
-      match.project.compilationResult.playgrounds[expectedId] ??
-      match.project.compilationResult.playgrounds[forTemplate] ??
-      Object.values(match.project.compilationResult.playgrounds).find(
-        (p) =>
-          p.id === expectedId ||
-          p.id === forTemplate ||
-          p.forTemplate === expectedId ||
-          p.forTemplate === forTemplate ||
-          p.forTemplate.endsWith(`:${forTemplate}`) ||
-          p.id.endsWith(`:${forTemplate}`),
-      );
+      match.project.compilationResult.playgrounds[
+        `${ns}:${sourceFile.entity.forTemplate}`
+      ];
+  } else if (sourceFile?.entity && sourceFile.entity.kind === "template") {
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    wirePlayground =
+      match.project.compilationResult.playgrounds[
+        `${ns}:${sourceFile.entity.name}`
+      ];
   }
 
   if (!wirePlayground) {
     const baseName = fileName.replace(/\.play\.tp$/, "").replace(/\.tp$/, "");
-    const expectedId = `${DEFAULT_NAMESPACE}:${baseName}`;
     wirePlayground =
-      match.project.compilationResult.playgrounds[expectedId] ??
-      match.project.compilationResult.playgrounds[baseName] ??
-      Object.values(match.project.compilationResult.playgrounds).find(
-        (p) =>
-          p.id === expectedId ||
-          p.id === baseName ||
-          p.forTemplate === expectedId ||
-          p.forTemplate === baseName ||
-          p.forTemplate.endsWith(`:${baseName}`) ||
-          p.id.endsWith(`:${baseName}`),
-      );
-    if (!wirePlayground) {
-      const allPlaygrounds = Object.values(
-        match.project.compilationResult.playgrounds,
-      );
-      if (allPlaygrounds.length === 1) {
-        wirePlayground = allPlaygrounds[0];
-      }
-    }
+      match.project.compilationResult.playgrounds[
+        `${DEFAULT_NAMESPACE}:${baseName}`
+      ];
   }
 
   const anyErrors = match.project.compilationResult.anyErrors;

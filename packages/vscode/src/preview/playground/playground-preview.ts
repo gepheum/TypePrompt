@@ -2,7 +2,8 @@ import { DEFAULT_SECRETS_YAML } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
-import { Uri, ViewColumn, commands, window, workspace } from "vscode";
+import { commands, Uri, ViewColumn, window, workspace } from "vscode";
+import { canOpenPreview } from "../../editor/is-template.js";
 import {
   getOrCreateState,
   renderPlaygroundPreviewHtml,
@@ -16,34 +17,14 @@ export interface PlaygroundPreviewController {
 }
 
 /**
- * Checks whether the document is a TypePrompt playground file according to the
- * project store or filename convention.
+ * Checks whether the document is a TypePrompt playground file or a template
+ * with an associated playground according to the project store.
  */
 export function isPlaygroundDocument(
   document: TextDocument,
   projectStore: ProjectStore,
 ): boolean {
-  if (
-    document.languageId !== "typeprompt" &&
-    !document.fileName.endsWith(".tp")
-  ) {
-    return false;
-  }
-
-  if (document.fileName.endsWith(".play.tp")) {
-    return true;
-  }
-
-  const match = projectStore.findByUri(document.uri.toString());
-  if (match) {
-    const sourceFile =
-      match.project.compilationResult.sourceFiles[match.relativePath];
-    if (sourceFile?.entity) {
-      return sourceFile.entity.kind === "playground";
-    }
-  }
-
-  return false;
+  return canOpenPreview(document, projectStore);
 }
 
 /**
@@ -63,7 +44,7 @@ export function activatePlaygroundPreview(
   ): Promise<void> => {
     if (!isPlaygroundDocument(doc, projectStore)) {
       void window.showInformationMessage(
-        "Selected file is not a TypePrompt playground.",
+        "No playground preview available for this file.",
       );
       return;
     }
@@ -71,7 +52,9 @@ export function activatePlaygroundPreview(
     const sameDoc = currentDoc?.uri.toString() === doc.uri.toString();
     currentDoc = doc;
     const fileName = path.basename(doc.fileName);
-    const displayName = fileName.replace(/\.play\.tp$/, "");
+    const displayName = fileName
+      .replace(/\.play\.tp$/, "")
+      .replace(/\.tp$/, "");
     const title = `Preview: ${displayName}`;
 
     if (!currentPanel) {

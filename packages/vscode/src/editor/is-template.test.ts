@@ -1,7 +1,11 @@
 import type { Lsp } from "@typeprompt/core";
 import { ProjectStore } from "@typeprompt/language-server";
 import { expect } from "buckwheat";
-import { isTemplateWithoutPlayground } from "./is-template-without-playground.js";
+import {
+  canOpenPreview,
+  isPlaygroundFile,
+  isTemplateFile,
+} from "./is-template.js";
 
 function makeFakeProject(params: {
   sourceFiles?: { [path: string]: Lsp.WireSourceFile };
@@ -30,82 +34,22 @@ function makeFakeProject(params: {
   };
 }
 
-describe("isTemplateWithoutPlayground", () => {
-  it("returns false for non-.tp files", () => {
-    const store = new ProjectStore();
-    const doc = {
-      uri: { toString: (): string => "file:///workspace/project/foo.ts" },
-      fileName: "/workspace/project/foo.ts",
-    };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(false);
-  });
-
-  it("returns false for .play.tp files", () => {
-    const store = new ProjectStore();
-    const doc = {
-      uri: {
-        toString: (): string =>
-          "file:///workspace/project/prompts/Translate.play.tp",
-      },
-      fileName: "/workspace/project/prompts/Translate.play.tp",
-    };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(false);
-  });
-
-  it("returns false for meta.tp and shared.tp", () => {
-    const store = new ProjectStore();
-    const metaDoc = {
-      uri: {
-        toString: (): string => "file:///workspace/project/prompts/meta.tp",
-      },
-      fileName: "/workspace/project/prompts/meta.tp",
-    };
-    const sharedDoc = {
-      uri: {
-        toString: (): string => "file:///workspace/project/prompts/shared.tp",
-      },
-      fileName: "/workspace/project/prompts/shared.tp",
-    };
-    expect(isTemplateWithoutPlayground(metaDoc, store)).toBe(false);
-    expect(isTemplateWithoutPlayground(sharedDoc, store)).toBe(false);
-  });
-
-  it("returns false for tool entities in compilationResult", () => {
+describe("isPlaygroundFile", () => {
+  it("determines playground from compilationResult entity kind", () => {
     const store = new ProjectStore();
     store.handleNotification({
       projects: {
         "file:///workspace/project/": makeFakeProject({
           sourceFiles: {
-            "prompts/getWeather.tp": {
-              path: "prompts/getWeather.tp",
+            "prompts/CustomName.tp": {
+              path: "prompts/CustomName.tp",
               hasErrors: false,
               entity: {
-                kind: "tool",
-                name: "getWeather",
+                kind: "playground",
+                forTemplate: "Translate",
                 namespace: null,
               },
             },
-          },
-        }),
-      },
-    });
-
-    const doc = {
-      uri: {
-        toString: (): string =>
-          "file:///workspace/project/prompts/getWeather.tp",
-      },
-      fileName: "/workspace/project/prompts/getWeather.tp",
-    };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(false);
-  });
-
-  it("returns false if playground file already exists in sourceFiles", () => {
-    const store = new ProjectStore();
-    store.handleNotification({
-      projects: {
-        "file:///workspace/project/": makeFakeProject({
-          sourceFiles: {
             "prompts/Translate.tp": {
               path: "prompts/Translate.tp",
               hasErrors: false,
@@ -115,31 +59,42 @@ describe("isTemplateWithoutPlayground", () => {
                 namespace: null,
               },
             },
-            "prompts/Translate.play.tp": {
-              path: "prompts/Translate.play.tp",
-              hasErrors: false,
-              entity: {
-                kind: "playground",
-                forTemplate: "Translate",
-                namespace: null,
-              },
-            },
           },
         }),
       },
     });
 
-    const doc = {
+    const playgroundDoc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/CustomName.tp",
+      },
+      fileName: "/workspace/project/prompts/CustomName.tp",
+    };
+    const templateDoc = {
       uri: {
         toString: (): string =>
           "file:///workspace/project/prompts/Translate.tp",
       },
       fileName: "/workspace/project/prompts/Translate.tp",
     };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(false);
+
+    expect(isPlaygroundFile(playgroundDoc, store)).toBe(true);
+    expect(isPlaygroundFile(templateDoc, store)).toBe(false);
   });
 
-  it("returns false if playground already exists in compilationResult playgrounds map", () => {
+  it("returns false for non-.tp files", () => {
+    const store = new ProjectStore();
+    const doc = {
+      uri: { toString: (): string => "file:///workspace/project/foo.ts" },
+      fileName: "/workspace/project/foo.ts",
+    };
+    expect(isPlaygroundFile(doc, store)).toBe(false);
+  });
+});
+
+describe("isTemplate", () => {
+  it("returns 'with-playground' for template with playground in playgrounds map", () => {
     const store = new ProjectStore();
     store.handleNotification({
       projects: {
@@ -174,10 +129,11 @@ describe("isTemplateWithoutPlayground", () => {
       },
       fileName: "/workspace/project/prompts/Translate.tp",
     };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(false);
+    expect(isTemplateFile(doc, store)).toBe("with-playground");
+    expect(canOpenPreview(doc, store)).toBe(true);
   });
 
-  it("returns true for template without playground in projectStore", () => {
+  it("returns 'no-playground' for template without playground", () => {
     const store = new ProjectStore();
     store.handleNotification({
       projects: {
@@ -204,6 +160,49 @@ describe("isTemplateWithoutPlayground", () => {
       },
       fileName: "/workspace/project/prompts/NewTemplate.tp",
     };
-    expect(isTemplateWithoutPlayground(doc, store)).toBe(true);
+    expect(isTemplateFile(doc, store)).toBe("no-playground");
+    expect(canOpenPreview(doc, store)).toBe(false);
+  });
+
+  it("returns false for tool, meta, and shared files", () => {
+    const store = new ProjectStore();
+    store.handleNotification({
+      projects: {
+        "file:///workspace/project/": makeFakeProject({
+          sourceFiles: {
+            "prompts/getWeather.tp": {
+              path: "prompts/getWeather.tp",
+              hasErrors: false,
+              entity: {
+                kind: "tool",
+                name: "getWeather",
+                namespace: null,
+              },
+            },
+            "prompts/meta.tp": {
+              path: "prompts/meta.tp",
+              hasErrors: false,
+              entity: { kind: "meta" },
+            },
+            "prompts/shared.tp": {
+              path: "prompts/shared.tp",
+              hasErrors: false,
+              entity: { kind: "namespace", name: "Main" },
+            },
+          },
+        }),
+      },
+    });
+
+    for (const name of ["getWeather.tp", "meta.tp", "shared.tp"]) {
+      const doc = {
+        uri: {
+          toString: (): string => `file:///workspace/project/prompts/${name}`,
+        },
+        fileName: `/workspace/project/prompts/${name}`,
+      };
+      expect(isTemplateFile(doc, store)).toBe(false);
+      expect(canOpenPreview(doc, store)).toBe(false);
+    }
   });
 });

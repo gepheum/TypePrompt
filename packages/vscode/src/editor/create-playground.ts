@@ -3,7 +3,7 @@ import type { ProjectStore } from "@typeprompt/language-server";
 import type { ExtensionContext, TextEditor } from "vscode";
 import { commands, Uri, window, workspace } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node.js";
-import { isTemplateWithoutPlayground } from "./is-template-without-playground.js";
+import { isPlaygroundFile, isTemplateFile } from "./is-template.js";
 
 export interface CreatePlaygroundController {
   updateContext(editor?: TextEditor): void;
@@ -22,18 +22,29 @@ export function activateCreatePlayground(
         IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT,
         false,
       );
+      void commands.executeCommand(
+        "setContext",
+        CAN_OPEN_PREVIEW_CONTEXT,
+        false,
+      );
       return;
     }
 
-    const isEligible = isTemplateWithoutPlayground(
-      editor.document,
-      projectStore,
-    );
+    const templateStatus = isTemplateFile(editor.document, projectStore);
+    const isWithoutPlayground = templateStatus === "no-playground";
+    const canPreview =
+      isPlaygroundFile(editor.document, projectStore) ||
+      templateStatus === "with-playground";
 
     void commands.executeCommand(
       "setContext",
       IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT,
-      isEligible,
+      isWithoutPlayground,
+    );
+    void commands.executeCommand(
+      "setContext",
+      CAN_OPEN_PREVIEW_CONTEXT,
+      canPreview,
     );
   };
 
@@ -115,3 +126,4 @@ async function handleCreatePlayground(
 
 const IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT =
   "typeprompt.isTemplateWithoutPlayground";
+const CAN_OPEN_PREVIEW_CONTEXT = "typeprompt.canOpenPreview";

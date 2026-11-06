@@ -82,7 +82,7 @@
       "editor/title": [
         {
           "command": "typeprompt.openPlayground",
-          "when": "resourceFilename =~ /\\.play\\.tp$/",
+          "when": "typeprompt.canOpenPreview",
           "group": "navigation"
         },
         {
@@ -94,7 +94,7 @@
       "editor/context": [
         {
           "command": "typeprompt.openPlayground",
-          "when": "resourceFilename =~ /\\.play\\.tp$/",
+          "when": "typeprompt.canOpenPreview",
           "group": "1_run"
         },
         {
