@@ -64,6 +64,11 @@
         "command": "typeprompt.openPlayground",
         "title": "TypePrompt: Open Preview",
         "icon": "$(play)"
+      },
+      {
+        "command": "typeprompt.createPlayground",
+        "title": "TypePrompt: Create Playground",
+        "icon": "$(beaker)"
       }
     ],
     "menus": {
@@ -79,12 +84,22 @@
           "command": "typeprompt.openPlayground",
           "when": "resourceFilename =~ /\\.play\\.tp$/",
           "group": "navigation"
+        },
+        {
+          "command": "typeprompt.createPlayground",
+          "when": "typeprompt.isTemplateWithoutPlayground",
+          "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "typeprompt.openPlayground",
           "when": "resourceFilename =~ /\\.play\\.tp$/",
+          "group": "1_run"
+        },
+        {
+          "command": "typeprompt.createPlayground",
+          "when": "typeprompt.isTemplateWithoutPlayground",
           "group": "1_run"
         }
       ]

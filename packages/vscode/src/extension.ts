@@ -10,6 +10,10 @@ import type {
 } from "vscode-languageclient/node.js";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node.js";
 import { activateAutoCloseTag } from "./editor/auto-close-tag.js";
+import {
+  activateCreatePlayground,
+  type CreatePlaygroundController,
+} from "./editor/create-playground.js";
 import { activateEnterHandler } from "./editor/enter-handler.js";
 import { activateNewFileScaffolding } from "./editor/new-file-scaffolding.js";
 import { activateToggleComment } from "./editor/toggle-comment.js";
@@ -21,6 +25,7 @@ import {
 export interface TypePromptExtensionApi {
   readonly projectStore: ProjectStore;
   readonly playgroundPreview: PlaygroundPreviewController;
+  readonly createPlayground: CreatePlaygroundController;
 }
 
 let client: LanguageClient | undefined;
@@ -32,6 +37,11 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
   activateToggleComment(context);
   activateNewFileScaffolding(context, () => client);
   const playgroundPreview = activatePlaygroundPreview(context, projectStore);
+  const createPlayground = activateCreatePlayground(
+    context,
+    projectStore,
+    () => client,
+  );
 
   const devServerModule = context.asAbsolutePath(
     path.join("..", "language-server", "dist", "main.js"),
@@ -89,6 +99,7 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
     (params: Lsp.WireProjects) => {
       projectStore.handleNotification(params);
       playgroundPreview.notifyCompilationUpdate();
+      createPlayground.notifyCompilationUpdate();
     },
   );
 
@@ -97,6 +108,7 @@ export function activate(context: ExtensionContext): TypePromptExtensionApi {
   return {
     projectStore,
     playgroundPreview,
+    createPlayground,
   };
 }
 
