@@ -137,4 +137,3 @@ ${highlightYaml(sampleYaml)}</pre>
     </article>
   `;
 }
-

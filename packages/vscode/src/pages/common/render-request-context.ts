@@ -137,4 +137,3 @@ ${highlightJson(stringifyAsJson(tr.output))}</pre>
     </div>
   `;
 }
-

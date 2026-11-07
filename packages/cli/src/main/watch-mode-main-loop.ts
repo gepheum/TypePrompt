@@ -58,32 +58,6 @@ export class WatchModeMainLoop {
     this.startWatcherLoop(options);
   }
 
-  async startForPlayground(): Promise<{
-    readonly compilationResult: ValidCompilationResult | null;
-    readonly watch: (
-      callback: (r: CompilationResult) => Promise<void> | void,
-    ) => Promise<void>;
-  }> {
-    const compilationResult = await this.generateInternal({
-      watch: true,
-      play: true,
-      initial: true,
-    });
-    return {
-      compilationResult,
-      watch: async (
-        callback: (r: CompilationResult) => Promise<void> | void,
-      ): Promise<void> => {
-        this.startWatcherLoop({
-          watch: true,
-          play: true,
-          initial: false,
-          callback,
-        });
-      },
-    };
-  }
-
   private startWatcherLoop(options: WatchOptions): void {
     const watchDirs = Array.from(
       new Set(this.includes.map((inc) => globParent(inc))),
@@ -162,9 +136,6 @@ export class WatchModeMainLoop {
         }
       }
       maybeClear();
-      if (options.watch && options.play && !options.initial) {
-        await options.callback(compilationResult);
-      }
       const pathNormalizer = makePathNormalizer(this.resolvedProject);
       if (compilationResult.anyErrors) {
         const errors = makeRenderableErrors(
@@ -183,19 +154,17 @@ export class WatchModeMainLoop {
         renderErrors(warnings, "warning");
         const result = compilationResult as ValidCompilationResult;
         if (options.watch) {
-          if (!options.play) {
-            await this.doGenerate(result);
-            console.log(
-              makeGreen(
-                "Generation succeeded at ".concat(
-                  new Date(result.timestampMillis).toLocaleTimeString("en-US"),
-                ),
+          await this.doGenerate(result);
+          console.log(
+            makeGreen(
+              "Generation succeeded at ".concat(
+                new Date(result.timestampMillis).toLocaleTimeString("en-US"),
               ),
-            );
-            console.log("\nWatching for changes in files matching:");
-            for (const inc of this.includes) {
-              console.log(`  ${inc}`);
-            }
+            ),
+          );
+          console.log("\nWatching for changes in files matching:");
+          for (const inc of this.includes) {
+            console.log(`  ${inc}`);
           }
         } else {
           await this.doGenerate(result);
@@ -228,26 +197,12 @@ export class WatchModeMainLoop {
   }
 }
 
-type WatchOptions =
-  | {
-      readonly watch: true;
-      readonly play?: undefined;
-    }
-  | {
-      readonly watch: true;
-      readonly play: true;
-      readonly initial: true;
-    }
-  | {
-      readonly watch: true;
-      readonly play: true;
-      readonly initial: false;
-      readonly callback: (r: CompilationResult) => Promise<void> | void;
-    };
+type WatchOptions = {
+  readonly watch: true;
+};
 
 type LoopOptions =
   | {
       readonly watch: false;
-      readonly play?: false;
     }
   | WatchOptions;

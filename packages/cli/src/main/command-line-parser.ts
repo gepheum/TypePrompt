@@ -19,11 +19,6 @@ export type ParsedArgs =
       base: string;
     }
   | {
-      kind: "play";
-      project?: string;
-      port?: number;
-    }
-  | {
       kind: "run";
       file: string;
     }
@@ -63,9 +58,8 @@ export function parseCommandLine(args: string[]): ParsedArgs {
     return { kind: "version" };
   }
 
-  const validCommands = ["gen", "format", "init", "patch", "play", "run"];
-  const normalizedCommand = command === "--play" ? "play" : command;
-  if (!normalizedCommand || !validCommands.includes(normalizedCommand)) {
+  const validCommands = ["gen", "format", "init", "patch", "run"];
+  if (!command || !validCommands.includes(command)) {
     printError(`Unknown command: ${command}`);
     printHelp();
     return { kind: "error" };
@@ -74,7 +68,7 @@ export function parseCommandLine(args: string[]): ParsedArgs {
   try {
     const options = parseOptions(args.slice(1));
 
-    switch (normalizedCommand) {
+    switch (command) {
       case "gen":
         return buildGenCommand(options);
       case "format":
@@ -83,8 +77,6 @@ export function parseCommandLine(args: string[]): ParsedArgs {
         return buildInitCommand(options);
       case "patch":
         return buildPatchCommand(options);
-      case "play":
-        return buildPlayCommand(options);
       case "run":
         return buildRunCommand(options);
       default:
@@ -109,7 +101,6 @@ Commands:
   gen          Generate code from template files to target languages
   format       Format all template files
   patch        Initialize a patch project against a base project
-  play         Start the prompt playground server on localhost
   run <file>   Run playground inferences for a .play.tp file
   help         Display this help message
 
@@ -128,8 +119,6 @@ Examples:
   ${COMMAND_BASE} format -p path/to/project
   ${COMMAND_BASE} format --ci -p path/to/project
   ${COMMAND_BASE} patch -b path/to/base -o path/to/patch
-  ${COMMAND_BASE} play
-  ${COMMAND_BASE} play --port 3000
   ${COMMAND_BASE} run prompts/Translate.play.tp
 `;
 
@@ -144,7 +133,6 @@ type ParsedOptions = {
   project?: string;
   output?: string;
   base?: string;
-  port?: string;
   watch?: boolean;
   ci?: boolean;
   positional: string[];
@@ -229,7 +217,6 @@ const OPTION_FLAGS: Record<OptionKey, string> = {
   project: "--project",
   output: "--output",
   base: "--base",
-  port: "--port",
   watch: "--watch",
   ci: "--ci",
 };
@@ -284,25 +271,6 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
   return {
     kind: "init",
     project: options.project,
-  };
-}
-
-function buildPlayCommand(options: ParsedOptions): ParsedArgs {
-  validateAllowedOptions(options, "play", ["project", "port"]);
-  let port: number | undefined;
-  if (options.port !== undefined) {
-    const parsed = Number.parseInt(options.port, 10);
-    if (Number.isNaN(parsed) || parsed < 1 || parsed > 65535) {
-      throw new CommandLineParseError(
-        "Option --port must be a valid port number (1-65535)",
-      );
-    }
-    port = parsed;
-  }
-  return {
-    kind: "play",
-    project: options.project,
-    port,
   };
 }
 
@@ -364,7 +332,6 @@ const STRING_OPTIONS = [
   ["project", ["--project", "-p"] as const],
   ["output", ["--output", "-o"] as const],
   ["base", ["--base", "-b"] as const],
-  ["port", ["--port"] as const],
 ] as const;
 
 const BOOLEAN_OPTIONS = [

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import {
   parseCompilationResult,
-  type CompilationResult,
   type ValidCompilationResult,
 } from "@typeprompt/core";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
@@ -34,7 +33,6 @@ import {
 } from "./main/renderable-error.js";
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
-import { PlayServer } from "./play/backend/server.js";
 import { isDirectory } from "./util/io.js";
 export * from "./storage/index.js";
 export { formatTemplateFile };
@@ -122,33 +120,6 @@ async function runGeneration(
     const success: boolean = await watchModeMainLoop.generate();
     process.exit(success ? 0 : 1);
   }
-}
-
-async function startPlayground(
-  resolvedProject: string,
-  config: Config,
-  port?: number,
-): Promise<void> {
-  const watchModeMainLoop = new WatchModeMainLoop(resolvedProject, config);
-  await watchModeMainLoop.maybeReadPatchBase();
-  const { compilationResult: initialCompilationResult, watch } =
-    await watchModeMainLoop.startForPlayground();
-  if (!initialCompilationResult) {
-    process.exit(1);
-  }
-  let compilationResult = initialCompilationResult;
-  const playServer = await PlayServer.start({
-    port,
-    project: resolvedProject,
-    getCompilationResult: () => compilationResult,
-  });
-  const watchPromise = watch((r: CompilationResult): void => {
-    playServer.logLocalhostUrl();
-    if (!r.anyErrors) {
-      compilationResult = r as ValidCompilationResult;
-    }
-  });
-  await watchPromise;
 }
 
 async function runPlaygroundFile(
@@ -287,10 +258,6 @@ async function main(): Promise<void> {
     }
     case "gen": {
       await runGeneration(resolvedProject, config, args.subcommand ?? "once");
-      break;
-    }
-    case "play": {
-      await startPlayground(resolvedProject, config, args.port);
       break;
     }
     case "run": {
