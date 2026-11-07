@@ -2,7 +2,7 @@ import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import { escapeHtml } from "../common/html.js";
-import { renderRequestContext } from "../inferences/render-inferences-page.js";
+import { renderRequestContext } from "../common/render-request-context.js";
 
 export interface PlaygroundDocumentState {
   lastSuccessfulHtml?: string;

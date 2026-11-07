@@ -24,4 +24,3 @@ export function stringifyAsJson(value: unknown): string {
 export function stringifyAsYaml(value: unknown): string {
   return YAML.stringify(value).trimEnd();
 }
-
