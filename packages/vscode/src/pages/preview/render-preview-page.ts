@@ -1,8 +1,10 @@
 import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
+import YAML from "yaml";
 import { escapeHtml } from "../common/html.js";
 import { renderRequestContext } from "../common/render-request-context.js";
+import { highlightYaml } from "../common/token-highlighting.js";
 
 export interface PlaygroundDocumentState {
   lastSuccessfulHtml?: string;
@@ -220,6 +222,7 @@ export function renderPlaygroundPreviewHtml(
       samples,
       selectedIndex,
       hasApiKeys,
+      model: wirePlayground.model,
     });
 
     const htmlContent = buildPageShell({
@@ -248,8 +251,9 @@ function buildSuccessfulPlaygroundBody(params: {
   readonly samples: readonly Lsp.WirePlaygroundSample[];
   readonly selectedIndex: number;
   readonly hasApiKeys: boolean;
+  readonly model?: unknown;
 }): string {
-  const { samples, selectedIndex, hasApiKeys } = params;
+  const { samples, selectedIndex, hasApiKeys, model } = params;
 
   const noApiKeysBanner = !hasApiKeys
     ? `
@@ -263,6 +267,14 @@ function buildSuccessfulPlaygroundBody(params: {
   `
     : "";
 
+  const modelYaml = model ? YAML.stringify(model).trimEnd() : "";
+  const modelCardHtml = modelYaml
+    ? `
+      <div class="model-yaml-card">
+        <pre class="model-yaml-body">${highlightYaml(modelYaml)}</pre>
+      </div>`
+    : "";
+
   const runInferencesBar = hasApiKeys
     ? `
     <div class="run-inferences-bar">
@@ -274,6 +286,7 @@ function buildSuccessfulPlaygroundBody(params: {
       >
         <span class="run-icon">▶</span> Run Inferences
       </button>
+      ${modelCardHtml}
     </div>
   `
     : "";
@@ -471,9 +484,32 @@ function buildPageShell(params: {
     /* Run Inferences Bar */
     .run-inferences-bar {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
       margin-bottom: 1.25rem;
+    }
+
+    .model-yaml-card {
+      background: var(--bg-inset);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      min-width: 260px;
+    }
+
+    .model-yaml-body {
+      padding: 0.45rem 0.65rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: var(--text);
+      white-space: pre;
+      max-height: calc(2.9em + 0.9rem);
+      overflow: auto;
+      scrollbar-width: thin;
+      margin: 0;
     }
 
     .run-inferences-button {

@@ -282,4 +282,55 @@ describe("renderPlaygroundPreviewHtml", () => {
     expect(html.includes("Anonymous 1/2")).toBe(true);
     expect(html.includes("Named Sample")).toBe(true);
   });
+
+  it("renders model YAML config card next to Run Inferences button when API keys exist", () => {
+    const store = new ProjectStore();
+    const fakeProject = makeFakeProject({
+      folderUri: "file:///workspace/project/",
+      apiKeys: { openai: "sk-test" },
+    });
+    store.handleNotification({
+      projects: {
+        "file:///workspace/project/": fakeProject,
+      },
+    });
+
+    const doc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/test.play.tp",
+      },
+      fileName: "/workspace/project/prompts/test.play.tp",
+    };
+
+    const html = renderPlaygroundPreviewHtml(doc, store);
+    expect(html.includes('class="model-yaml-card"')).toBe(true);
+    expect(html.includes("openai/gpt-4o")).toBe(true);
+    expect(html.includes("run-inferences-button")).toBe(true);
+  });
+
+  it("does not render model YAML config card when API keys are missing", () => {
+    const store = new ProjectStore();
+    const fakeProject = makeFakeProject({
+      folderUri: "file:///workspace/project/",
+      apiKeys: {},
+    });
+    store.handleNotification({
+      projects: {
+        "file:///workspace/project/": fakeProject,
+      },
+    });
+
+    const doc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/test.play.tp",
+      },
+      fileName: "/workspace/project/prompts/test.play.tp",
+    };
+
+    const html = renderPlaygroundPreviewHtml(doc, store);
+    expect(html.includes('class="model-yaml-card"')).toBe(false);
+    expect(html.includes("no-api-keys-banner")).toBe(true);
+  });
 });
