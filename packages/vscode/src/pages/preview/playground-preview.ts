@@ -18,7 +18,7 @@ import {
   getOrCreateState,
   renderPlaygroundPreviewHtml,
   updateSelectedSampleInHtml,
-} from "./render-playground-page.js";
+} from "./render-preview-page.js";
 
 export interface PlaygroundPreviewController {
   openPlayground(docOrUri?: TextDocument | Uri): Promise<void>;

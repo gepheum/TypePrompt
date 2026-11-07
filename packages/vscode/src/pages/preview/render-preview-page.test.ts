@@ -2,7 +2,7 @@ import type { Lsp } from "@typeprompt/core";
 import { ProjectStore } from "@typeprompt/language-server";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { renderPlaygroundPreviewHtml } from "./render-playground-page.js";
+import { renderPlaygroundPreviewHtml } from "./render-preview-page.js";
 
 function makeFakeProject(params: {
   readonly folderUri?: string;
