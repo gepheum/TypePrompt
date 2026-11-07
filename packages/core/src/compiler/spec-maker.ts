@@ -3,6 +3,7 @@ import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { toJsonSchema } from "../schema/json-schema-org.js";
 import type { Schema } from "../schema/schema-types.js";
+import { normalizeSchemaValue } from "../schema/value-normalizer.js";
 import type {
   Body,
   FewShotExample,
@@ -12,6 +13,7 @@ import type {
   ValidatedTool,
   ValidCompilationResult,
   ValidTemplate,
+  ValidTemplateTool,
 } from "./compiler-types.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import type * as Spec from "./spec-types.js";
@@ -88,6 +90,13 @@ function makeTool(input: ValidatedTool, id: string): Spec.Tool {
   };
 }
 
+type TemplateContext = {
+  readonly namespace: string;
+  readonly schema: Schema;
+  readonly tools: { readonly [name: string]: ValidTemplateTool };
+  readonly variantCase: string | null;
+};
+
 function makeTemplate(input: ValidTemplate): Spec.Template {
   const { template } = input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
@@ -100,7 +109,12 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
       id: namespace.concat(":", tool.tool.name.text),
       name,
     })),
-    contents: makeContents(template.contents, { namespace: namespace }),
+    contents: makeContents(template.contents, {
+      namespace,
+      schema: input.schema,
+      tools: input.tools,
+      variantCase: null,
+    }),
     snippets: makeSnippets(template.snippets),
     outputJsonSchema,
   };
@@ -108,7 +122,7 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
 
 function makeContents(
   input: TemplateContents,
-  context: { readonly namespace: string },
+  context: TemplateContext,
 ): Spec.TemplateContents {
   if (input.kind === "no-variants") {
     return {
@@ -133,7 +147,7 @@ function makeContents(
 
 function makeContent(
   input: Partial<TemplateContent>,
-  context: { readonly namespace: string; readonly variantCase?: string },
+  context: TemplateContext,
 ): Spec.TemplateContent {
   return {
     meta: input.meta ? unwrapJsonValue(input.meta.value) : undefined,
@@ -145,28 +159,49 @@ function makeContent(
 
 function makeExamples(
   input: StrictJsonValue | undefined,
-  context: { readonly namespace: string; readonly variantCase?: string },
+  context: TemplateContext,
 ): readonly Spec.FewShotExample[] {
   if (!input) return [];
 
+  const inputType = context.schema.typeDeclarations["Input"]!.valueType;
   const examples = unwrapJsonValue(input) as readonly FewShotExample[];
   return examples.map((example) => {
-    const inputValue = example.input;
+    const rawInputValue = example.input;
     if (context.variantCase) {
-      (inputValue as Record<string, unknown>).variant = context.variantCase;
+      (rawInputValue as Record<string, unknown>).variant = context.variantCase;
     }
+    const inputValue = normalizeSchemaValue(rawInputValue, {
+      type: inputType,
+      schema: context.schema,
+    });
+
     return {
       input: inputValue,
       output: example.output,
       steps:
         example.steps?.map((step) => ({
-          toolCalls: step.toolCalls.map((tc) => ({
-            callId: tc.callId,
-            toolId: context.namespace.concat(":", tc.tool),
-            toolName: tc.tool,
-            input: tc.input,
-            output: tc.output,
-          })),
+          toolCalls: step.toolCalls.map((tc) => {
+            const tool = context.tools[tc.tool]!.tool;
+            const toolInputType =
+              tool.schema.typeDeclarations["Input"]!.valueType;
+            const toolOutputType =
+              tool.schema.typeDeclarations["Output"]!.valueType;
+            const inputVal = normalizeSchemaValue(tc.input, {
+              type: toolInputType,
+              schema: tool.schema,
+            });
+            const outputVal = normalizeSchemaValue(tc.output, {
+              type: toolOutputType,
+              schema: tool.schema,
+            });
+            return {
+              callId: tc.callId,
+              toolId: context.namespace.concat(":", tc.tool),
+              toolName: tc.tool,
+              input: inputVal,
+              output: outputVal,
+            };
+          }),
         })) ?? [],
     };
   });

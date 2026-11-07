@@ -912,6 +912,16 @@ describe("makeTemplates - meta and examples", () => {
   });
 
   it("converts few-shot examples with intermediate tool-call steps", () => {
+    const toolSchema = parseSchema(
+      {
+        path: "tool_schema.ts",
+        text: "type Input = { query: string; };\ntype Output = string;",
+        offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+      },
+      "tool",
+    );
+    if (toolSchema.kind !== "success") throw new Error("parse failed");
+
     const examplesJson = jsonArr([
       jsonObj({
         input: str("q"),
@@ -933,12 +943,25 @@ describe("makeTemplates - meta and examples", () => {
     const result = {
       ...emptyResult(),
       templates: {
-        "Main:T": templateWithContent({
-          meta: undefined,
-          system: emptyBody(),
-          user: emptyBody(),
-          examples: examplesJson,
-        }),
+        "Main:T": {
+          ...(templateWithContent({
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: examplesJson,
+          }) as Record<string, unknown>),
+          tools: {
+            search: {
+              tool: {
+                schema: toolSchema,
+                tool: {
+                  name: span("search"),
+                  description: [],
+                },
+              },
+            },
+          },
+        },
       },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
@@ -986,6 +1009,101 @@ describe("makeTemplates - meta and examples", () => {
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { contents: { content: { examples: [] } } } },
+    });
+  });
+
+  it("normalizes example input, tool call input, and tool call output values with optional fields", () => {
+    const templateSchema = parseSchema(
+      {
+        path: "schema.ts",
+        text: "type Input = { prompt: string; extra?: string; };\ntype Output = { answer: string; confidence?: number; };",
+        offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+      },
+      "template",
+    );
+    if (templateSchema.kind !== "success") throw new Error("parse failed");
+
+    const toolSchema = parseSchema(
+      {
+        path: "tool_schema.ts",
+        text: "type Input = { query: string; maxResults?: number; }\ntype Output = { status: string; debug?: string; };",
+        offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
+      },
+      "tool",
+    );
+    if (toolSchema.kind !== "success") throw new Error("parse failed");
+
+    const examplesJson = jsonArr([
+      jsonObj({
+        input: jsonObj({ prompt: str("what is the weather?") }),
+        output: jsonObj({ answer: str("sunny") }),
+        steps: jsonArr([
+          jsonObj({
+            toolCalls: jsonArr([
+              jsonObj({
+                callId: str("c1"),
+                tool: str("search"),
+                input: jsonObj({ query: str("weather") }),
+                output: jsonObj({ status: str("sunny, 72F") }),
+              }),
+            ]),
+          }),
+        ]),
+      }),
+    ]);
+
+    const result = {
+      ...emptyResult(),
+      tools: {
+        "Main:search": {
+          schema: toolSchema,
+          tool: {
+            name: { text: "search" },
+            description: [],
+          },
+        },
+      },
+      templates: {
+        "Main:T": {
+          ...(templateWithContent({
+            meta: undefined,
+            system: emptyBody(),
+            user: emptyBody(),
+            examples: examplesJson,
+          }) as Record<string, unknown>),
+          schema: templateSchema,
+          tools: {
+            search: {
+              tool: {
+                schema: toolSchema,
+                tool: {
+                  name: { text: "search" },
+                  description: [],
+                },
+              },
+            },
+          },
+        },
+      },
+    } as unknown as ValidCompilationResult;
+
+    const templates = makeTemplates(result);
+    const example = (templates.templates["Main:T"]!.contents as any).content
+      .examples[0];
+    expect(example.input).toMatch({
+      prompt: "what is the weather?",
+      extra: null,
+    });
+    expect(example.output).toMatch({
+      answer: "sunny",
+    });
+    expect(example.steps[0].toolCalls[0].input).toMatch({
+      query: "weather",
+      maxResults: null,
+    });
+    expect(example.steps[0].toolCalls[0].output).toMatch({
+      status: "sunny, 72F",
+      debug: null,
     });
   });
 

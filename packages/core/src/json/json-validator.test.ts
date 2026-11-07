@@ -286,6 +286,23 @@ describe("validateJson - exact match", () => {
     ).toMatch({ errors: [] });
   });
 
+  it("accepts an object when an optional field is explicit null", () => {
+    const schema = parseSchemaOrThrow(
+      "type Response = { name: string; nickname?: string; };",
+    );
+    const type = schema.typeDeclarations["Response"]!.valueType;
+    expect(
+      validateJson(
+        objStrict([
+          ["name", str("Alice")],
+          ["nickname", nullVal()],
+        ]),
+        type,
+        schema,
+      ),
+    ).toMatch({ errors: [] });
+  });
+
   it("accepts an array of strings for a string array type", () => {
     const schema = parseSchemaOrThrow("type Response = string[]");
     const type = schema.typeDeclarations["Response"]!.valueType;

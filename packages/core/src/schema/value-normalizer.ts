@@ -75,6 +75,8 @@ export function normalizeSchemaValue(
             type: field.type,
             schema: schemaType.schema,
           });
+        } else if (field.type.kind === "optional") {
+          result[fieldName] = null;
         }
       }
       return result;

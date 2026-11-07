@@ -66,4 +66,27 @@ describe("normalizeSchemaValue", () => {
       undefined,
     );
   });
+
+  it("sets missing optional fields to null", () => {
+    const schema = parse(`
+      type Input = {
+        name: string;
+        bio?: string;
+        details?: {
+          nickname?: string;
+        };
+      };
+    `);
+    const normalized = normalizeSchemaValue(
+      { name: "Alice", details: {} },
+      toSchemaType(schema),
+    );
+    expect(normalized).toMatch({
+      name: "Alice",
+      bio: null,
+      details: {
+        nickname: null,
+      },
+    });
+  });
 });
