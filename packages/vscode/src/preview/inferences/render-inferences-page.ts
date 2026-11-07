@@ -8,12 +8,6 @@ import { tokenizeYaml } from "@typeprompt/core/json/yaml-parser.js";
 import { tokenize } from "@typeprompt/core/lsp-util/semantic-token.js";
 import YAML from "yaml";
 import { escapeHtml, html, rawHtml, type SafeHtml } from "../common/html.js";
-import {
-  escapeHtml,
-  html,
-  rawHtml,
-  type SafeHtml,
-} from "../common/html.js";
 
 // -----------------------------------------------------------------------------
 // Token Highlighting using AST / Semantic Tokenizers

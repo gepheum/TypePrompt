@@ -47,4 +47,3 @@ export function html(
   }
   return new SafeHtml(result);
 }
-
