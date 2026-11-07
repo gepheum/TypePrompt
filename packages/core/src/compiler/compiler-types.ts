@@ -72,7 +72,6 @@ export type Template = {
   readonly namespace: TextSpan | null;
   readonly schema: SchemaParseResult<"template">;
   readonly tools: readonly ToolReference[];
-  readonly outputFormat: TextSpan<OutputFormat> | null;
   readonly contents: TemplateContents;
   readonly snippets: readonly Snippet[];
   readonly warnings: readonly InternalError[];
@@ -255,6 +254,7 @@ export type ToolValidationResult =
 export type ValidatedTemplate = {
   readonly kind: "template";
   readonly template: Template;
+  readonly outputFormat: OutputFormat;
   /** Guaranteed to contain Input and Output. */
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };

@@ -5,7 +5,7 @@
     temperature: 0.2
   </meta>
 
-  <schema output-format="text">
+  <schema>
     interface Input {
       customer: shared.ContactInfo;
       returnReason: "defective" | "wrongItem" | "changedMind" | "other";

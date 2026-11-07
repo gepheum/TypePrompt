@@ -25,7 +25,6 @@ import type {
   Body,
   BodyInContext,
   InsertFormat,
-  OutputFormat,
   Snippet,
   Template,
   TemplateContent,
@@ -115,7 +114,6 @@ class TemplateParser {
       namespace: namespace?.value ?? null,
       schema: this.schema as SchemaParseResult<"template">,
       tools: this.tools ?? [],
-      outputFormat: this.outputFormat,
       contents: contents!,
       snippets: this.snippets,
       warnings: this.warnings,
@@ -181,19 +179,7 @@ class TemplateParser {
         message: "Multiple <schema> elements in <template>",
       });
     }
-    const attrs = checkKnownXmlAttributes(schemaNode, {
-      "output-format": expectOneOf({
-        values: ["json", "text"],
-        optional: true,
-      }),
-    });
-    this.errors.push(...attrs.errors);
-    if (attrs.kind !== "error") {
-      const outputFormat = attrs.attributes["output-format"];
-      if (outputFormat) {
-        this.outputFormat = outputFormat.value;
-      }
-    }
+    this.errors.push(...checkKnownXmlAttributes(schemaNode, {}).errors);
     const textContent = extractTextContent(schemaNode, "typescript");
     if (textContent.kind === "error") {
       this.errors.push(...textContent.errors);
@@ -725,7 +711,6 @@ class TemplateParser {
   private readonly errors: InternalError[] = [];
   private schema: SchemaParseResult<"template"> | InternalErrors | null = null;
   private tools: ReadonlyArray<ToolReference> | null = null;
-  private outputFormat: TextSpan<OutputFormat> | null = null;
   private readonly topLevelContent = new ContentBuilder();
   private readonly variants: VariantBuilder[] = [];
   private readonly snippets: Snippet[] = [];

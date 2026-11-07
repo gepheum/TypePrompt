@@ -27,7 +27,7 @@ const initialDoc = `<template name="Translate">
     temperature: 0.2
   </meta>
 
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
       targetLanguage: string;

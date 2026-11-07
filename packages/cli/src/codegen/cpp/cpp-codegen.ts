@@ -321,8 +321,7 @@ function writeTemplatesSignatures(
         }
         lines.push(lines.pop()!.slice(0, -1).concat(">;"));
       }
-      const outputFormat =
-        template.template.outputFormat?.text === "text" ? "kText" : "kJson";
+      const outputFormat = template.outputFormat === "text" ? "kText" : "kJson";
       lines.push(
         "",
         ` using input_type = ${inputType};`,

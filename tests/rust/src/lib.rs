@@ -218,9 +218,9 @@ mod tests {
     assert!(prompt.tools.is_empty());
 
     let result = prompt.parse_response(
-            r#"{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}"#,
+            r#"{"root":{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}}"#,
         ).unwrap();
-    match result {
+    match result.root {
       gen::prompts_02::schema::generate_page_tree::PageNode::KindSection(section) => {
         assert_eq!(section.title, Some("Overview".to_string()));
         assert_eq!(section.children.len(), 3);

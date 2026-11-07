@@ -5,7 +5,7 @@ import { formatTemplateFile } from "./formatter.js";
 describe("formatTemplateFile", () => {
   it("formats a standard template with schema, tools, system, and user tags", async () => {
     const unformatted = `<template name="Translate">
-<schema output-format="text">
+<schema>
 interface Input{text:string;}
 type Output=string;
 </schema>
@@ -17,7 +17,7 @@ type Output=string;
     const formatted = await formatTemplateFile(unformatted);
     expect(formatted).toBe(
       `<template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
     }
@@ -45,7 +45,7 @@ type Output=string;
 
   it("returns unformatted content when comments are in TypeScript code", async () => {
     const xmlWithCommentInCode = `<template name="Test">
-<schema output-format="text">
+<schema>
 <!-- A comment in schema -->
 interface Input {
   text: string;
@@ -63,7 +63,7 @@ type Output = string;
 <user><insert val="input.text"/></user>
 <system>You are an assistant.</system>
 <tools><tool name="webSearch" /></tools>
-<schema output-format="text">
+<schema>
 interface Input{text:string;}
 type Output=string;
 </schema>
@@ -78,7 +78,7 @@ model: gpt-4o
   <meta>
     model: gpt-4o
   </meta>
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
     }
@@ -126,7 +126,7 @@ type Output=string;
 
   it("reorders elements inside variant tags when formatting", async () => {
     const unformatted = `<template name="VariantTest">
-<schema output-format="text">
+<schema>
 interface Input{}
 type Output=string;
 </schema>
@@ -139,7 +139,7 @@ type Output=string;
     const formatted = await formatTemplateFile(unformatted);
     expect(formatted).toBe(
       `<template name="VariantTest">
-  <schema output-format="text">
+  <schema>
     interface Input {}
     type Output = string;
   </schema>
@@ -158,7 +158,7 @@ type Output=string;
 
   it("reorders attributes when formatting", async () => {
     const unformatted = `<template name="AttrTest">
-<schema output-format="text">
+<schema>
 interface Input{
   flag?: string;
 }
@@ -177,7 +177,7 @@ type Output=string;
     const formatted = await formatTemplateFile(unformatted);
     expect(formatted).toBe(
       `<template name="AttrTest">
-  <schema output-format="text">
+  <schema>
     interface Input {
       flag?: string;
     }
@@ -202,7 +202,7 @@ type Output=string;
 
   it("escapes < and & when inserting formatted TypeScript code into schema", async () => {
     const unformatted = `<template name="TypescriptEscaping">
-<schema output-format="text">
+<schema>
 interface Input{
   // Check if a < b and c > d
   category: "rock &amp; roll" | "pop &lt; rock" | "hip > hop";
@@ -216,7 +216,7 @@ type Output=string;
     const formatted = await formatTemplateFile(unformatted);
     expect(formatted).toBe(
       `<template name="TypescriptEscaping">
-  <schema output-format="text">
+  <schema>
     interface Input {
       // Check if a &lt; b and c > d
       category: "rock &amp; roll" | "pop &lt; rock" | "hip > hop";
@@ -240,7 +240,7 @@ type Output=string;
 
   it("escapes < and & when inserting formatted YAML code into meta and examples", async () => {
     const unformatted = `<template name="YamlEscaping">
-<schema output-format="text">
+<schema>
 type Output=string;
 </schema>
 <meta>
@@ -260,7 +260,7 @@ summary: "Rock & Roll < Pop > Jazz"
   <meta>
     summary: "Rock &amp; Roll &lt; Pop > Jazz"
   </meta>
-  <schema output-format="text">
+  <schema>
     type Output = string;
   </schema>
   <system>
@@ -287,7 +287,7 @@ summary: "Rock & Roll < Pop > Jazz"
 <meta>
 summary: "Rock &gt; Pop"
 </meta>
-<schema output-format="text">
+<schema>
 interface Input {
   // 5 &gt; 3
   level: "high &gt; low";
@@ -308,7 +308,7 @@ type Output = string;
   <meta>
     summary: "Rock > Pop"
   </meta>
-  <schema output-format="text">
+  <schema>
     interface Input {
       // 5 > 3
       level: "high > low";

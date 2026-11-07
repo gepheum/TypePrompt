@@ -95,7 +95,7 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
   return {
     name: template.name.text,
     namespace: namespace,
-    outputFormat: template.outputFormat?.text ?? "json",
+    outputFormat: input.outputFormat,
     tools: Object.entries(input.tools).map(([name, { tool }]) => ({
       id: namespace.concat(":", tool.tool.name.text),
       name,

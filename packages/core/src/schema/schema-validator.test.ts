@@ -174,6 +174,152 @@ describe("validateSchema - required type", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Template Output and Tool Input restrictions
+// ---------------------------------------------------------------------------
+
+describe("validateSchema - template Output and tool Input restrictions", () => {
+  it("accepts string for template Output", () => {
+    const result = validateSchema(
+      parseDeclarations("type Input = {}; type Output = string;", "template"),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts interface for template Output", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = {}; interface Output { count: number; }",
+        "template",
+      ),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts type alias pointing to interface for template Output", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = {}; interface Result { count: number; } type Output = Result;",
+        "template",
+      ),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts type alias pointing to string for template Output", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Input = {}; type MyString = string; type Output = MyString;",
+        "template",
+      ),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("rejects non-string non-interface for template Output", () => {
+    const cases = [
+      "type Output = number;",
+      "type Output = boolean;",
+      "type Output = integer;",
+      "type Output = any;",
+      "type Output = string[];",
+      'type Output = "a" | "b";',
+      'type Output = { kind: "a" } | { kind: "b" };',
+    ];
+    for (const code of cases) {
+      const result = validateSchema(
+        parseDeclarations(`type Input = {}; ${code}`, "template"),
+        EMPTY_SCHEMA,
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [{ message: "Output type must be 'string' or an interface" }],
+      });
+    }
+  });
+
+  it("accepts interface for tool Input", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "interface Input { query: string; } type Output = number;",
+        "tool",
+      ),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("accepts type alias pointing to interface for tool Input", () => {
+    const result = validateSchema(
+      parseDeclarations(
+        "type Query = { query: string; }; type Input = Query; type Output = number;",
+        "tool",
+      ),
+      EMPTY_SCHEMA,
+    );
+    expect(result).toMatch({ kind: "success" });
+  });
+
+  it("rejects non-interface for tool Input", () => {
+    const cases = [
+      "type Input = string;",
+      "type Input = number;",
+      "type Input = boolean;",
+      "type Input = integer;",
+      "type Input = any;",
+      "type Input = string[];",
+      'type Input = "a" | "b";',
+      'type Input = { kind: "a" } | { kind: "b" };',
+    ];
+    for (const code of cases) {
+      const result = validateSchema(
+        parseDeclarations(`${code} type Output = number;`, "tool"),
+        EMPTY_SCHEMA,
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [{ message: "Input type must be an interface" }],
+      });
+    }
+  });
+
+  it("allows arbitrary types for tool Output", () => {
+    const cases = [
+      "type Output = number;",
+      "type Output = boolean;",
+      "type Output = string[];",
+      'type Output = "a" | "b";',
+    ];
+    for (const code of cases) {
+      const result = validateSchema(
+        parseDeclarations(`type Input = {}; ${code}`, "tool"),
+        EMPTY_SCHEMA,
+      );
+      expect(result).toMatch({ kind: "success" });
+    }
+  });
+
+  it("allows arbitrary types for template Input", () => {
+    const cases = [
+      "type Input = number;",
+      "type Input = boolean;",
+      "type Input = string[];",
+      'type Input = "a" | "b";',
+    ];
+    for (const code of cases) {
+      const result = validateSchema(
+        parseDeclarations(`${code} type Output = string;`, "template"),
+        EMPTY_SCHEMA,
+      );
+      expect(result).toMatch({ kind: "success" });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Naming errors
 // ---------------------------------------------------------------------------
 
@@ -305,7 +451,7 @@ describe("validateSchema - type references", () => {
         [
           "type Output = { name: string; };",
           "type Unused = string;",
-          "type Input = integer;",
+          "type Input = string;",
         ].join("\n"),
         "template",
       ),
@@ -323,7 +469,7 @@ describe("validateSchema - type references", () => {
         [
           "type Output = { name: string; };",
           "type Unused = string;",
-          "type Input = integer;",
+          "type Input = {};",
         ].join("\n"),
         "tool",
       ),
@@ -620,15 +766,15 @@ describe("validateSchema - shared type names", () => {
   it("flattens a shared union member into a template union", () => {
     const result = validateSchema(
       parseDeclarations(
-        "type Input = string;\ntype Output = shared.Status | 'custom';",
+        "type Input = shared.Status | 'custom';\ntype Output = string;",
         "template",
       ),
       makeTemplateContext("type Status = 'active' | 'inactive';"),
     );
     expect(result).toMatch({ kind: "success" });
     if (result.kind !== "success") throw new Error();
-    const outputUnion = result.typeDeclarations["Output"]!.valueType as Union;
-    const unionMembers = result.unionToMembers.get(outputUnion)!;
+    const inputUnion = result.typeDeclarations["Input"]!.valueType as Union;
+    const unionMembers = result.unionToMembers.get(inputUnion)!;
     expect(unionMembers.kind).toBe("strings");
     if (unionMembers.kind === "strings") {
       expect(Object.keys(unionMembers.values).sort()).toMatch([
@@ -642,7 +788,7 @@ describe("validateSchema - shared type names", () => {
   it("accepts a recursive discriminated union in namespace schema used in template", () => {
     const result = validateSchema(
       parseDeclarations(
-        "type Input = string;\ntype Output = shared.Node;",
+        "type Input = shared.Node;\ntype Output = string;",
         "template",
       ),
       makeTemplateContext(

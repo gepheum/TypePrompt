@@ -207,7 +207,6 @@ function computeSourceFileHash(
         hashString(entity.name.text),
         hashString(entity.namespace?.text ?? DEFAULT_NAMESPACE),
         hashSchema(entity.schema.typeDeclarations),
-        hashString(entity.outputFormat?.text ?? "json"),
       ]);
     }
     case "tool": {

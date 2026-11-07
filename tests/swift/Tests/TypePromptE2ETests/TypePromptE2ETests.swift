@@ -239,9 +239,9 @@ struct GeneratePageTreeTests {
 
   @Test func parseResponse() throws {
     let result = try prompt.parseResponse(
-      #"{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}"#
+      #"{"root":{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}}"#
     )
-    if case .kindSection(let s) = result {
+    if case .kindSection(let s) = result.root {
       #expect(s.title == "Overview")
       #expect(s.children.count == 3)
     } else {

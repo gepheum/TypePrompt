@@ -1532,4 +1532,46 @@ describe("validateTemplate - definition links", () => {
       ],
     });
   });
+
+  it("infers outputFormat as 'text' when Output is string", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="TextPrompt">
+          <schema>
+            type Input = { text: string; };
+            type Output = string;
+          </schema>
+          <system>You are a helper.</system>
+          <user>Hello</user>
+        </template>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      outputFormat: "text",
+    });
+  });
+
+  it("infers outputFormat as 'json' when Output is an interface", () => {
+    const result = testValidateTemplate({
+      templateXml: `
+        <template name="JsonPrompt">
+          <schema>
+            type Input = { text: string; };
+            interface Output {
+              result: string;
+            }
+          </schema>
+          <system>You are a helper.</system>
+          <user>Hello</user>
+        </template>
+      `,
+    });
+
+    expect(result).toMatch({
+      kind: "template",
+      outputFormat: "json",
+    });
+  });
 });

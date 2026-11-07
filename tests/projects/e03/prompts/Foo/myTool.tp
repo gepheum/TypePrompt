@@ -3,7 +3,9 @@
     Hello
   </description>
   <schema>
-    type Input = shared.Foos;
+    type Input = {
+      foos: shared.Foos;
+    };
 
     interface Output {
       shared: Shared;

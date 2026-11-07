@@ -3339,14 +3339,14 @@ void Test02ComplexSchemas_GeneratePageTree() {
 
   // testParseResponseParsesPageNodeTree
   auto result = typeprompt_02::ParseResponse<typeprompt_02::templates::GeneratePageTree>(
-      "{\"kind\":\"section\",\"title\":\"Overview\",\"children\":["
+      "{\"root\":{\"kind\":\"section\",\"title\":\"Overview\",\"children\":["
       "{\"kind\":\"heading\",\"level\":\"h1\",\"text\":\"CloudX\"},"
       "{\"kind\":\"paragraph\",\"text\":\"Fast compute provider.\"},"
-      "{\"kind\":\"button\",\"label\":\"Sign Up\",\"url\":\"https://cloudx.example.com\"}]}");
+      "{\"kind\":\"button\",\"label\":\"Sign Up\",\"url\":\"https://cloudx.example.com\"}]}}");
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result->kind() ==
+  ASSERT_TRUE(result->root.kind() ==
               typeprompt_02::schema::generate_page_tree::PageNode::kind::kSection);
-  const auto& sec = result->as_kind_section();
+  const auto& sec = result->root.as_kind_section();
   ASSERT_TRUE(sec.title.has_value());
   ASSERT_EQ(*sec.title, "Overview");
   ASSERT_EQ(sec.children.size(), 3);

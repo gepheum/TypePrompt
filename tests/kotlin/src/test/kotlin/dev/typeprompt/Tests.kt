@@ -285,9 +285,9 @@ class Test02_GeneratePageTree {
     fun testParseResponse() {
         val result =
             prompt.parseResponse(
-                """{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}""",
+                """{"root":{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}}""",
             )
-        val section = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindSection>(result)
+        val section = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindSection>(result.root)
         assertEquals("Overview", section.title)
         assertEquals(3, section.children.size)
         val heading = assertIs<com.example.prompts02.Schema.GeneratePageTree.PageNode_KindHeading>(section.children[0])

@@ -2,10 +2,12 @@
   <schema>
     type Input = shared.Square[];
 
-    type Output = {
-      reversedText: string;
-      shape: shared.Square | { kind: "circle"; radius: number };
-    }[];
+    interface Output {
+      items: {
+        reversedText: string;
+        shape: shared.Square | { kind: "circle"; radius: number };
+      }[];
+    }
   </schema>
 
   <tools>

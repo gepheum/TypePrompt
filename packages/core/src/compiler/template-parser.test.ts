@@ -55,7 +55,6 @@ describe("parseTemplate - basic template parsing", () => {
       kind: "template",
       name: { text: "Translate" },
       namespace: null,
-      outputFormat: null,
       tools: [],
       contents: {
         kind: "no-variants",
@@ -249,7 +248,7 @@ describe("parseTemplate - attributes and naming validation", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseTemplate - <schema> element", () => {
-  it("parses schema with output-format='text'", () => {
+  it("reports an error if attributes are present on <schema>", () => {
     const root = parseElement(`
       <template name="Translate">
         <schema output-format="text">
@@ -262,29 +261,10 @@ describe("parseTemplate - <schema> element", () => {
     `);
 
     expect(parseTemplate(root, "Translate.tp")).toMatch({
-      kind: "template",
-      outputFormat: { text: "text" },
-      warnings: [],
-    });
-  });
-
-  it("reports an error for invalid output-format attribute", () => {
-    const root = parseElement(`
-      <template name="Translate">
-        <schema output-format="yaml">
-          type Input = {}; type Output = {};
-        </schema>
-        <system>Sys</system>
-        <user>Usr</user>
-      </template>
-    `);
-
-    expect(parseTemplate(root, "Translate.tp")).toMatch({
       kind: "error",
       errors: [
         {
-          message:
-            "Invalid value for attribute 'output-format': expected one of: 'json', 'text'",
+          message: "Unexpected attribute 'output-format'",
         },
       ],
     });

@@ -201,19 +201,17 @@ describe("makeTemplates - template basic fields", () => {
   function minimalTemplate(
     name: string,
     namespace: string | null,
-    outputFormat: string | null,
+    outputFormat: "json" | "text" = "json",
   ): unknown {
     return {
-      kind: "success" as const,
+      kind: "template" as const,
       schema: TEST_SCHEMA,
       tools: {},
+      outputFormat,
       template: {
-        kind: "success" as const,
+        kind: "template" as const,
         name: span(name),
         namespace: namespace ? span(namespace) : null,
-        outputFormat: outputFormat
-          ? span(outputFormat as "json" | "text")
-          : null,
         contents: {
           kind: "no-variants" as const,
           content: {
@@ -234,7 +232,7 @@ describe("makeTemplates - template basic fields", () => {
   it("copies name and namespace from the template", () => {
     const result = {
       ...emptyResult(),
-      templates: { "Geo:Greet": minimalTemplate("Greet", "Geo", null) },
+      templates: { "Geo:Greet": minimalTemplate("Greet", "Geo") },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
       templates: { "Geo:Greet": { name: "Greet", namespace: "Geo" } },
@@ -244,14 +242,14 @@ describe("makeTemplates - template basic fields", () => {
   it("defaults namespace to 'Main' when null", () => {
     const result = {
       ...emptyResult(),
-      templates: { "Main:Hello": minimalTemplate("Hello", null, null) },
+      templates: { "Main:Hello": minimalTemplate("Hello", null) },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
       templates: { "Main:Hello": { namespace: "Main" } },
     });
   });
 
-  it("copies outputFormat when specified", () => {
+  it("copies outputFormat from validated template", () => {
     const result = {
       ...emptyResult(),
       templates: { "Main:T": minimalTemplate("T", null, "text") },
@@ -261,10 +259,10 @@ describe("makeTemplates - template basic fields", () => {
     });
   });
 
-  it("defaults outputFormat to 'json' when null", () => {
+  it("uses json outputFormat when specified", () => {
     const result = {
       ...emptyResult(),
-      templates: { "Main:T": minimalTemplate("T", null, null) },
+      templates: { "Main:T": minimalTemplate("T", null, "json") },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
       templates: { "Main:T": { outputFormat: "json" } },
@@ -293,11 +291,11 @@ describe("makeTemplates - template basic fields", () => {
               },
             },
           },
+          outputFormat: "json",
           template: {
-            kind: "success" as const,
+            kind: "template" as const,
             name: span("T"),
             namespace: span("Geo"),
-            outputFormat: null,
             contents: {
               kind: "no-variants" as const,
               content: {
@@ -330,14 +328,14 @@ describe("makeTemplates - template basic fields", () => {
 describe("makeTemplates - contents", () => {
   function templateWithContents(contents: unknown): unknown {
     return {
-      kind: "success" as const,
+      kind: "template" as const,
       schema: TEST_SCHEMA,
       tools: {},
+      outputFormat: "json",
       template: {
-        kind: "success" as const,
+        kind: "template" as const,
         name: span("T"),
         namespace: span("Main"),
-        outputFormat: null,
         contents,
         snippets: [],
         tools: null,
@@ -585,14 +583,14 @@ describe("makeTemplates - body pieces", () => {
 describe("makeTemplates - expressions", () => {
   function templateWithExprPiece(val: Expression<false>): unknown {
     return {
-      kind: "success" as const,
+      kind: "template" as const,
       schema: TEST_SCHEMA,
       tools: {},
+      outputFormat: "json",
       template: {
-        kind: "success" as const,
+        kind: "template" as const,
         name: span("T"),
         namespace: span("Main"),
-        outputFormat: null,
         contents: {
           kind: "no-variants",
           content: {
@@ -659,14 +657,14 @@ describe("makeTemplates - expressions", () => {
 describe("makeTemplates - snippets", () => {
   function templateWithSnippets(snippets: readonly Snippet[]): unknown {
     return {
-      kind: "success" as const,
+      kind: "template" as const,
       schema: TEST_SCHEMA,
       tools: {},
+      outputFormat: "json",
       template: {
-        kind: "success" as const,
+        kind: "template" as const,
         name: span("T"),
         namespace: span("Main"),
-        outputFormat: null,
         contents: {
           kind: "no-variants",
           content: {
@@ -812,14 +810,14 @@ describe("makeTemplates - snippets", () => {
 describe("makeTemplates - meta and examples", () => {
   function templateWithContent(content: unknown): unknown {
     return {
-      kind: "success" as const,
+      kind: "template" as const,
       schema: TEST_SCHEMA,
       tools: {},
+      outputFormat: "json",
       template: {
-        kind: "success" as const,
+        kind: "template" as const,
         name: span("T"),
         namespace: span("Main"),
-        outputFormat: null,
         contents: { kind: "no-variants", content },
         snippets: [],
         tools: null,
@@ -1003,14 +1001,14 @@ describe("makeTemplates - meta and examples", () => {
       ...emptyResult(),
       templates: {
         "Main:T": {
-          kind: "success" as const,
+          kind: "template" as const,
           schema: TEST_SCHEMA,
           tools: {},
+          outputFormat: "json",
           template: {
-            kind: "success" as const,
+            kind: "template" as const,
             name: span("T"),
             namespace: span("Main"),
-            outputFormat: null,
             contents: {
               kind: "variants",
               variants: [
@@ -1125,7 +1123,8 @@ describe("makeTemplates - meta and examples", () => {
 
 describe("makeTemplates - JSON schemas", () => {
   it("includes JSON schemas", () => {
-    const schemaSource = "type Input = string\ntype Output = number";
+    const schemaSource =
+      "type Input = string\ninterface Output { count: number; }";
     const sourceSpan = {
       path: "schema.ts",
       text: schemaSource,
@@ -1140,14 +1139,14 @@ describe("makeTemplates - JSON schemas", () => {
       ...emptyResult(),
       templates: {
         "Main:T": {
-          kind: "success" as const,
+          kind: "template" as const,
           schema,
           tools: {},
+          outputFormat: "json",
           template: {
-            kind: "success" as const,
+            kind: "template" as const,
             name: span("T"),
             namespace: span("Main"),
-            outputFormat: null,
             contents: {
               kind: "no-variants",
               content: {
@@ -1168,7 +1167,10 @@ describe("makeTemplates - JSON schemas", () => {
 
     const spec = makeTemplates(result);
     expect(spec.templates["Main:T"]!.outputJsonSchema).toMatch({
-      type: "number",
+      type: "object",
+      properties: {
+        count: { type: "number" },
+      },
     });
   });
 });

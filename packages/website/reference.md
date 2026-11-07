@@ -85,6 +85,8 @@ When a top-level `<meta>` is declared, every `<template>` must include a `<meta>
 
 Defines the `Input` and `Output` types for the template using TypePrompt's SDL. Both types are required.
 
+The `Output` type must be either `string` for unstructured text responses, or an `interface` type for structured JSON responses.
+
 ```xml
 <!-- ClassifyEmail.tp -->
 <template name="ClassifyEmail">
@@ -108,12 +110,6 @@ Defines the `Input` and `Output` types for the template using TypePrompt's SDL. 
   ...
 </template>
 ```
-
-**Attributes:**
-
-| Attribute | Values | Default | Description |
-|---|---|---|---|
-| `output-format` | `json`, `text` | `json` | How the model's response is parsed. Use `text` when `Output` is `string`. |
 
 ---
 
@@ -500,7 +496,7 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 | Element | Required | Description |
 |---|---|---|
 | `<description>` | Yes | Human/model-readable description of what the tool does |
-| `<schema>` | Yes | `Input` and `Output` types |
+| `<schema>` | Yes | `Input` and `Output` types; `Input` must be an `interface` |
 
 ```xml
 <!-- getWeather.tp -->

@@ -179,7 +179,7 @@ function writePromptsClass(compilationResult: ValidCompilationResult): string {
         t.schema,
         options,
       );
-      const isJsonOutput = (t.template.outputFormat?.text ?? "json") === "json";
+      const isJsonOutput = t.outputFormat === "json";
 
       if (isJsonOutput) {
         lines.push(

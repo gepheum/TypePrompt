@@ -23,6 +23,7 @@ import type {
 } from "./schema-types.js";
 import type { NameDependencies } from "./schema-utils.js";
 import { getNameDependencies } from "./schema-utils.js";
+import { resolveType } from "./type-resolver.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema<Context extends SchemaContext>(
@@ -91,6 +92,34 @@ export function validateSchema<Context extends SchemaContext>(
           end: schema.source.start,
         },
         message: `Missing required type '${requiredTypeName}'`,
+      });
+    }
+  }
+
+  if (errors.length >= 1) {
+    return validationResult.asErrors();
+  }
+
+  if (schema.context === "template") {
+    const outputDecl = typeDeclarations["Output"]!;
+    const resolved = resolveType(outputDecl.valueType, schemaView);
+    const isString =
+      resolved.kind === "primitive" && resolved.primitive.text === "string";
+    const isInterface = resolved.kind === "interface";
+    if (!isString && !isInterface) {
+      errors.push({
+        span: outputDecl.name,
+        message: "Output type must be 'string' or an interface",
+      });
+    }
+  } else if (schema.context === "tool") {
+    const inputDecl = typeDeclarations["Input"]!;
+    const resolved = resolveType(inputDecl.valueType, schemaView);
+    const isInterface = resolved.kind === "interface";
+    if (!isInterface) {
+      errors.push({
+        span: inputDecl.name,
+        message: "Input type must be an interface",
       });
     }
   }

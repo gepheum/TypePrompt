@@ -99,7 +99,7 @@ function getTemplateTypes(
     options,
   );
   const outputType =
-    template.template.outputFormat?.text === "text"
+    template.outputFormat === "text"
       ? "String"
       : writeType(
           { kind: "type-name", name: { text: "Output" } },

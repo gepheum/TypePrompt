@@ -1,5 +1,5 @@
 <template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
       targetLanguage: string;

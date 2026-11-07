@@ -341,27 +341,29 @@ class TestGeneratePageTree:
         result = _page_tree_prompt.parse_response(
             json.dumps(
                 {
-                    "kind": "section",
-                    "title": "Overview",
-                    "children": [
-                        {"kind": "heading", "level": "h1", "text": "CloudX"},
-                        {"kind": "paragraph", "text": "Fast compute provider."},
-                        {
-                            "kind": "button",
-                            "label": "Sign Up",
-                            "url": "https://cloudx.example.com",
-                        },
-                    ],
+                    "root": {
+                        "kind": "section",
+                        "title": "Overview",
+                        "children": [
+                            {"kind": "heading", "level": "h1", "text": "CloudX"},
+                            {"kind": "paragraph", "text": "Fast compute provider."},
+                            {
+                                "kind": "button",
+                                "label": "Sign Up",
+                                "url": "https://cloudx.example.com",
+                            },
+                        ],
+                    }
                 }
             )
         )
-        assert isinstance(result, s02.generate_page_tree.PageNode_KindSection)
-        assert result.title == "Overview"
-        assert len(result.children) == 3
+        assert isinstance(result.root, s02.generate_page_tree.PageNode_KindSection)
+        assert result.root.title == "Overview"
+        assert len(result.root.children) == 3
         assert isinstance(
-            result.children[0], s02.generate_page_tree.PageNode_KindHeading
+            result.root.children[0], s02.generate_page_tree.PageNode_KindHeading
         )
-        assert result.children[0].text == "CloudX"
+        assert result.root.children[0].text == "CloudX"
 
 
 # ─── 03 Tools: tool registration, execute_tools, example with intermediate steps

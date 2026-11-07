@@ -54,7 +54,7 @@ describe("compile - basic compilation and empty results", () => {
         },
       },
       tools: {},
-      signature: "7d6199f8",
+      signature: "569e70f0",
       finalErrors: {
         "prompts/Translate.tp": [],
       },
@@ -142,7 +142,7 @@ describe("compile - basic compilation and empty results", () => {
           },
         },
       },
-      signature: "a8985639",
+      signature: "1232dbaf",
       finalErrors: {
         "prompts/meta.tp": [],
         "prompts/Legal/shared.tp": [],
@@ -479,7 +479,7 @@ describe("compile - name conflicts within namespaces", () => {
         "prompts/searchTool.tp": `
           <tool name="search">
             <description>Search tool</description>
-            <schema>type Input = string; type Output = string;</schema>
+            <schema>type Input = {}; type Output = string;</schema>
           </tool>
         `,
       },
@@ -1358,8 +1358,8 @@ describe("SourceFileParseResult hash", () => {
     );
 
     // Exact deterministic hash snapshots
-    expect(templateDefaultNs.hash).toBe(2103548408);
-    expect(templateCustomNs.hash).toBe(-828742231);
+    expect(templateDefaultNs.hash).toBe(1453224176);
+    expect(templateCustomNs.hash).toBe(942992159);
     expect(toolFile.hash).toBe(1830807043);
     expect(namespaceFile.hash).toBe(-2055341980);
     expect(metaFile.hash).toBe(-413134295);

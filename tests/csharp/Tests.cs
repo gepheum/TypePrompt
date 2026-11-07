@@ -214,7 +214,7 @@ public class Test02StructuredOutput_TriageTicket
 
 public class Test02ComplexSchemas_GeneratePageTree
 {
-    private readonly TypePrompt02.Prompt<TypePrompt02.Schema.GeneratePageTree.PageNode, TypePrompt02.NoTools> _prompt;
+    private readonly TypePrompt02.Prompt<TypePrompt02.Schema.GeneratePageTree.Output, TypePrompt02.NoTools> _prompt;
 
     public Test02ComplexSchemas_GeneratePageTree()
     {
@@ -288,9 +288,9 @@ public class Test02ComplexSchemas_GeneratePageTree
     [Fact]
     public void TestParseResponseParsesPageNode()
     {
-        var json = "{\"kind\":\"section\",\"title\":\"Overview\",\"children\":[{\"kind\":\"heading\",\"level\":\"h1\",\"text\":\"Cloud Comparison\"},{\"kind\":\"paragraph\",\"text\":\"Summary here\"},{\"kind\":\"button\",\"label\":\"Get Started\",\"url\":\"https://example.com\"}]}";
+        var json = "{\"root\":{\"kind\":\"section\",\"title\":\"Overview\",\"children\":[{\"kind\":\"heading\",\"level\":\"h1\",\"text\":\"Cloud Comparison\"},{\"kind\":\"paragraph\",\"text\":\"Summary here\"},{\"kind\":\"button\",\"label\":\"Get Started\",\"url\":\"https://example.com\"}]}}";
         var result = _prompt.ParseResponse(json);
-        var section = Assert.IsType<TypePrompt02.Schema.GeneratePageTree.PageNode_KindSection>(result);
+        var section = Assert.IsType<TypePrompt02.Schema.GeneratePageTree.PageNode_KindSection>(result.Root);
         Assert.Equal("Overview", section.Title);
         Assert.Equal(3, section.Children.Count);
         var heading = Assert.IsType<TypePrompt02.Schema.GeneratePageTree.PageNode_KindHeading>(section.Children[0]);

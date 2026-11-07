@@ -247,10 +247,10 @@ void main() {
 
     test('parseResponse parses PageNode', () {
       final result = prompt.parseResponse(
-        '{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}',
+        '{"root":{"kind":"section","title":"Overview","children":[{"kind":"heading","level":"h1","text":"CloudX"},{"kind":"paragraph","text":"Fast compute provider."},{"kind":"button","label":"Sign Up","url":"https://cloudx.example.com"}]}}',
       );
-      expect(result, isA<p02.GeneratePageTree_PageNode_KindSection>());
-      final section = result as p02.GeneratePageTree_PageNode_KindSection;
+      expect(result.root, isA<p02.GeneratePageTree_PageNode_KindSection>());
+      final section = result.root as p02.GeneratePageTree_PageNode_KindSection;
       expect(section.title, equals("Overview"));
       expect(section.children.length, equals(3));
     });

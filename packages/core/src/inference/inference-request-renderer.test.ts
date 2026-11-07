@@ -37,7 +37,7 @@ describe("inference-request-renderer", () => {
   it("renders a simple text prompt with system and user messages", () => {
     const compilation = compileValid({
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     type Input = { message: string; };
     type Output = string;
   </schema>
@@ -106,7 +106,7 @@ describe("inference-request-renderer", () => {
   it("renders inserts with json, yaml, toon, csv, and tsv formatting", () => {
     const compilation = compileValid({
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     type Row = { id: integer; name: string; };
     type Input = {
       obj: { key: string; count: number; };
@@ -165,7 +165,7 @@ TSV:
   it("evaluates if and switch branches inside snippets", () => {
     const compilation = compileValid({
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     type Input = {
       isAdmin: boolean;
       role: "admin" | "user";
@@ -212,7 +212,7 @@ TSV:
   it("renders variants correctly based on input.variant", () => {
     const compilation = compileValid({
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     interface Input {
       variant: "friendly" | "concise";
       name: string;
@@ -258,7 +258,7 @@ TSV:
   </schema>
 </tool>`,
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     type Input = { expression: string; };
     type Output = string;
   </schema>
@@ -331,7 +331,7 @@ TSV:
   it("renders few-shot examples and conversation history before current user message", () => {
     const compilation = compileValid({
       "prompts/t.tp": `<template name="T">
-  <schema output-format="text">
+  <schema>
     type Input = { text: string; };
     type Output = string;
   </schema>

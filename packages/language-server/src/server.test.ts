@@ -67,7 +67,7 @@ describe("TypePrompt Language Server", () => {
     await fs.writeFile(
       path.join(promptsDir, "Translate.tp"),
       `<template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input { text: string; }
     type Output = string;
   </schema>
@@ -170,7 +170,7 @@ describe("TypePrompt Language Server", () => {
     await fs.writeFile(
       path.join(financeDir, "Invoice.tp"),
       `<template name="Invoice" namespace="Finance">
-  <schema output-format="text">
+  <schema>
     interface Input {
       item: shared.Item;
     }
@@ -251,7 +251,7 @@ describe("TypePrompt Language Server", () => {
     await fs.writeFile(
       templatePath,
       `<template name="Temp">
-  <schema output-format="text">
+  <schema>
     interface Input {}
     type Output = string;
   </schema>
@@ -553,7 +553,7 @@ describe("TypePrompt Language Server", () => {
     await fs.writeFile(
       path.join(promptsDir, "Translate.tp"),
       `<template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input { text: string; }
     type Output = string;
   </schema>
@@ -601,7 +601,7 @@ describe("TypePrompt Language Server", () => {
     await fs.writeFile(
       path.join(promptsDir, "Test.tp"),
       `<template name="Test">
-  <schema output-format="text">
+  <schema>
     interface Input { text: string; }
     type Output = string;
   </schema>
@@ -693,9 +693,9 @@ describe("TypePrompt Language Server", () => {
 
     it("computes complex multi-line formatting diffs cleanly", () => {
       const original =
-        '<template name="Test"><schema output-format="text">interface Input{text:string;}type Output=string;</schema><system>You are a helper.</system><user><insert val="input.text"/></user></template>';
+        '<template name="Test"><schema>interface Input{text:string;}type Output=string;</schema><system>You are a helper.</system><user><insert val="input.text"/></user></template>';
       const formatted = `<template name="Test">
-  <schema output-format="text">
+  <schema>
     interface Input {
       text: string;
     }
@@ -751,7 +751,7 @@ describe("TypePrompt Language Server", () => {
       });
 
       const unformattedXml = `<template name="Translate">
-<schema output-format="text">
+<schema>
 interface Input{text:string;}
 type Output=string;
 </schema>
@@ -959,8 +959,8 @@ type Output=string;
 
     it("computes semantic tokens for XML tags, attributes, comments, and schemas", () => {
       const xml = `<!-- Header comment -->
-<template name="Translate">
-  <schema output-format="text">
+<template name="Translate" namespace="Translation">
+  <schema>
     /** schema comment */
     interface Input {
       text: string;
@@ -1013,7 +1013,7 @@ type Output=string;
         decoded.some((t) => t.type === "string" && t.text === "Translate"),
       ).toBe(true);
       expect(
-        decoded.some((t) => t.type === "string" && t.text === "text"),
+        decoded.some((t) => t.type === "string" && t.text === "Translation"),
       ).toBe(true);
       expect(
         decoded.some((t) => t.type === "string" && t.text === "input.text"),
@@ -2175,7 +2175,7 @@ comment here -->
       await fs.writeFile(
         path.join(promptsDir, "Translate.tp"),
         `<template name="Translate">
-  <schema output-format="text">
+  <schema>
     interface Input { text: string; }
     type Output = string;
   </schema>

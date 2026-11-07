@@ -171,7 +171,7 @@ function writePromptsStruct(compilationResult: ValidCompilationResult): string {
         Object.keys(t.tools).length >= 1
           ? getToolExecutorRef(t, compilationResult)
           : "NoTools";
-      const isJsonOutput = (t.template.outputFormat?.text ?? "json") === "json";
+      const isJsonOutput = t.outputFormat === "json";
 
       lines.push(`// Defined in '${t.template.sourcePath}'`);
       if (isJsonOutput) {

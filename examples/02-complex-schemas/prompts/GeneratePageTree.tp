@@ -61,7 +61,9 @@
       audience: "developer" | "architect" | "businessDecisionMaker";
     }
 
-    type Output = PageNode;
+    interface Output {
+      root: PageNode;
+    }
   </schema>
 
   <system>
@@ -110,21 +112,22 @@
             cons:
               - pricey
       output:
-        kind: section
-        title: "Cloud Provider Comparison: ML Inference"
-        children:
-          - kind: heading
-            level: h1
-            text: "Cloud Infrastructure Comparison"
-          - kind: paragraph
-            text: "An architectural evaluation of compute providers optimized for real-time machine learning inference."
-          - kind: section
-            title: "CloudX Overview"
-            children:
-              - kind: paragraph
-                text: "CloudX delivers 1000 rps throughput in us-east at $0.10/hour, ideal for high-throughput low-latency inference."
-              - kind: button
-                label: "View Benchmark Details"
-                url: "https://example.com/benchmarks/cloudx"
+        root:
+          kind: section
+          title: "Cloud Provider Comparison: ML Inference"
+          children:
+            - kind: heading
+              level: h1
+              text: "Cloud Infrastructure Comparison"
+            - kind: paragraph
+              text: "An architectural evaluation of compute providers optimized for real-time machine learning inference."
+            - kind: section
+              title: "CloudX Overview"
+              children:
+                - kind: paragraph
+                  text: "CloudX delivers 1000 rps throughput in us-east at $0.10/hour, ideal for high-throughput low-latency inference."
+                - kind: button
+                  label: "View Benchmark Details"
+                  url: "https://example.com/benchmarks/cloudx"
   </examples>
 </template>

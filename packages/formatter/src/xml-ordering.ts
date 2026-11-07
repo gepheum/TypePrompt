@@ -160,7 +160,6 @@ function getAttributeZIndex(attribute: Attribute): number {
     case "case":
     case "if":
     case "namespace":
-    case "output-format":
     case "snippet":
     case "switch":
     case "tag":

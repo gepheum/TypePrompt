@@ -40,6 +40,7 @@ import type {
   FewShotExample,
   FewShotExampleStep,
   FewShotExampleToolCall,
+  OutputFormat,
   SchemaOrError,
   Snippet,
   Template,
@@ -118,12 +119,21 @@ export function validateTemplate(args: {
   }
 
   if (errors.length <= 0) {
+    const outputType = templateSchema.typeDeclarations["Output"]!;
+    const resolvedOutput = resolveType(outputType.valueType, templateSchema);
+    const outputFormat: OutputFormat =
+      resolvedOutput.kind === "primitive" &&
+      resolvedOutput.primitive.text === "string"
+        ? "text"
+        : "json";
+
     return {
       kind: "template",
       template,
       schema: templateSchema,
       tools: tools.kind === "success" ? tools.tools : {},
       definitionLinks: validationResult.definitionLinks,
+      outputFormat,
     };
   } else {
     return validationResult.asErrors();

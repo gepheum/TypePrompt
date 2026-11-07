@@ -38,7 +38,6 @@ export type KnownAttribute =
   | "format"
   | "if"
   | "is"
-  | "output-format"
   | "switch"
   | "name"
   | "namespace"

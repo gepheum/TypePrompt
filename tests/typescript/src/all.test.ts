@@ -236,6 +236,23 @@ describe("02-complex-schemas / GeneratePageTree", () => {
   it("parseResponse parses PageNode recursive tree", () => {
     const result = prompt.parseResponse(
       JSON.stringify({
+        root: {
+          kind: "section",
+          title: "Overview",
+          children: [
+            { kind: "heading", level: "h1", text: "CloudX" },
+            { kind: "paragraph", text: "Fast compute provider." },
+            {
+              kind: "button",
+              label: "Sign Up",
+              url: "https://cloudx.example.com",
+            },
+          ],
+        },
+      }),
+    );
+    expect(result).toMatch({
+      root: {
         kind: "section",
         title: "Overview",
         children: [
@@ -247,20 +264,7 @@ describe("02-complex-schemas / GeneratePageTree", () => {
             url: "https://cloudx.example.com",
           },
         ],
-      }),
-    );
-    expect(result).toMatch({
-      kind: "section",
-      title: "Overview",
-      children: [
-        { kind: "heading", level: "h1", text: "CloudX" },
-        { kind: "paragraph", text: "Fast compute provider." },
-        {
-          kind: "button",
-          label: "Sign Up",
-          url: "https://cloudx.example.com",
-        },
-      ],
+      },
     });
   });
 });
