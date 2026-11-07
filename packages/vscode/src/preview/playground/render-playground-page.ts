@@ -364,31 +364,40 @@ function buildPageShell(params: {
   <title>Preview: ${escapeHtml(titleName)}</title>
   <style>
     :root {
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: "SF Mono", Monaco, "Cascadia Code", "Liberation Mono", Menlo, Courier, monospace;
+      --font-sans: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+      --font-mono: var(--vscode-editor-font-family, "SF Mono", Monaco, "Cascadia Code", "Liberation Mono", Menlo, Courier, monospace);
+      --font-size: var(--vscode-font-size, 13px);
 
-      --bg: #0b0f19;
-      --bg-surface: #111827;
-      --bg-surface-elevated: #1a2234;
-      --bg-inset: #070a12;
+      --bg: var(--vscode-editor-background, #0b0f19);
+      --bg-surface: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, #111827));
+      --bg-surface-elevated: var(--vscode-list-hoverBackground, var(--vscode-toolbar-hoverBackground, #1a2234));
+      --bg-inset: var(--vscode-textCodeBlock-background, var(--vscode-editor-background, #070a12));
 
-      --border: #1f293d;
-      --border-subtle: #162032;
-      --border-focus: #38bdf8;
+      --border: var(--vscode-panel-border, var(--vscode-widget-border, var(--vscode-editorWidget-border, #1f293d)));
+      --border-subtle: var(--vscode-tree-tableColumnsBorder, var(--vscode-editorGroup-border, #162032));
+      --border-focus: var(--vscode-focusBorder, #38bdf8);
 
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-soft: #64748b;
+      --text: var(--vscode-editor-foreground, var(--vscode-foreground, #f1f5f9));
+      --text-muted: var(--vscode-descriptionForeground, #94a3b8);
+      --text-soft: var(--vscode-disabledForeground, #64748b);
+
+      --button-bg: var(--vscode-button-background, #0284c7);
+      --button-fg: var(--vscode-button-foreground, #ffffff);
+      --button-hover: var(--vscode-button-hoverBackground, #0369a1);
+
+      --dropdown-bg: var(--vscode-dropdown-background, var(--vscode-input-background, var(--bg-inset)));
+      --dropdown-fg: var(--vscode-dropdown-foreground, var(--vscode-input-foreground, var(--text)));
+      --dropdown-border: var(--vscode-dropdown-border, var(--vscode-input-border, var(--border)));
 
       --section-request: #121828;
-      --section-request-bg: #0a0e19;
-      --section-request-header: #121828;
-      --section-request-border: #1e263c;
-      --section-request-label: #94a3b8;
+      --section-request-bg: var(--bg-inset);
+      --section-request-header: var(--bg-surface-elevated);
+      --section-request-border: var(--border);
+      --section-request-label: var(--text-muted);
 
       --user-bg: #1e293b;
       --user-border: #334155;
-      --user-label: #94a3b8;
+      --user-label: var(--text-muted);
 
       --assistant-bg: #0f2c42;
       --assistant-border: #164e63;
@@ -402,10 +411,42 @@ function buildPageShell(params: {
       --hl-string: #a7f3d0;
       --hl-number: #fde047;
       --hl-boolean: #f472b6;
-      --hl-comment: #64748b;
+      --hl-comment: var(--text-soft);
       --hl-xml-tag: #38bdf8;
       --hl-xml-attribute: #c084fc;
       --hl-schema-keyword: #f472b6;
+    }
+
+    body.vscode-light {
+      --hl-key: #0284c7;
+      --hl-string: #059669;
+      --hl-number: #d97706;
+      --hl-boolean: #db2777;
+      --hl-comment: #6b7280;
+      --hl-xml-tag: #0284c7;
+      --hl-xml-attribute: #7c3aed;
+      --hl-schema-keyword: #db2777;
+
+      --user-bg: #f1f5f9;
+      --user-border: #cbd5e1;
+      --user-label: #475569;
+
+      --assistant-bg: #f0f9ff;
+      --assistant-border: #bae6fd;
+      --assistant-label: #0284c7;
+
+      --tool-bg: #faf5ff;
+      --tool-border: #e9d5ff;
+      --tool-label: #7c3aed;
+
+      --section-request: #f8fafc;
+      --section-request-border: #e2e8f0;
+      --section-request-label: #64748b;
+    }
+
+    body.vscode-high-contrast {
+      --border: var(--vscode-contrastBorder, #ffffff);
+      --border-subtle: var(--vscode-contrastBorder, #ffffff);
     }
 
     * {
@@ -441,21 +482,20 @@ function buildPageShell(params: {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: #0284c7;
-      color: #ffffff;
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 0.5rem 1.1rem;
+      background: var(--button-bg);
+      color: var(--button-fg);
+      border: 1px solid var(--vscode-button-border, transparent);
+      border-radius: 4px;
+      padding: 0.45rem 1rem;
       font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
     }
 
     .run-inferences-button:hover {
-      background: #0369a1;
-      border-color: #7dd3fc;
+      background: var(--button-hover);
     }
 
     .run-inferences-button:active {
@@ -472,8 +512,8 @@ function buildPageShell(params: {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      background: rgba(245, 158, 11, 0.08);
-      border: 1px solid rgba(245, 158, 11, 0.35);
+      background: var(--vscode-inputValidation-warningBackground, rgba(245, 158, 11, 0.08));
+      border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(245, 158, 11, 0.35));
       border-radius: 8px;
       padding: 0.75rem 1rem;
       margin-bottom: 1.25rem;
@@ -496,12 +536,12 @@ function buildPageShell(params: {
     }
 
     .no-api-keys-text {
-      color: #fde68a;
+      color: var(--vscode-editorWarning-foreground, #fde68a);
       font-weight: 500;
     }
 
     .create-secrets-link {
-      color: #38bdf8;
+      color: var(--vscode-textLink-foreground, #38bdf8);
       font-weight: 600;
       text-decoration: underline;
       cursor: pointer;
@@ -509,7 +549,7 @@ function buildPageShell(params: {
     }
 
     .create-secrets-link:hover {
-      color: #7dd3fc;
+      color: var(--vscode-textLink-activeForeground, #7dd3fc);
     }
 
     /* Sample Picker */
@@ -522,7 +562,7 @@ function buildPageShell(params: {
       border-radius: 8px;
       padding: 0.75rem 1rem;
       margin-bottom: 1.25rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
 
     .sample-picker-label {
@@ -536,10 +576,10 @@ function buildPageShell(params: {
 
     .sample-select {
       flex: 1;
-      background: var(--bg-inset);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      background: var(--dropdown-bg);
+      color: var(--dropdown-fg);
+      border: 1px solid var(--dropdown-border);
+      border-radius: 4px;
       padding: 0.5rem 0.85rem;
       font-size: 0.88rem;
       font-weight: 500;
@@ -554,8 +594,8 @@ function buildPageShell(params: {
 
     /* Sample Note */
     .sample-note-card {
-      background: rgba(56, 189, 248, 0.07);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      background: var(--vscode-inputValidation-infoBackground, rgba(56, 189, 248, 0.07));
+      border: 1px solid var(--vscode-inputValidation-infoBorder, rgba(56, 189, 248, 0.25));
       border-radius: 8px;
       padding: 0.75rem 1rem;
       margin-bottom: 1.25rem;
@@ -573,12 +613,12 @@ function buildPageShell(params: {
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #38bdf8;
+      color: var(--vscode-editorInfo-foreground, #38bdf8);
     }
 
     .sample-note-body {
       font-size: 0.85rem;
-      color: #e2e8f0;
+      color: var(--text);
       line-height: 1.5;
       white-space: pre-wrap;
     }
@@ -675,7 +715,7 @@ function buildPageShell(params: {
       font-size: 0.84rem;
       white-space: pre-wrap;
       word-break: break-word;
-      color: #e2e8f0;
+      color: var(--text);
     }
 
     /* Tool Badges */
@@ -685,9 +725,9 @@ function buildPageShell(params: {
       gap: 0.35rem;
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      background: #311d4d;
-      color: #d8b4fe;
-      border: 1px solid #581c87;
+      background: var(--tool-bg);
+      color: var(--tool-label);
+      border: 1px solid var(--tool-border);
       padding: 0.22rem 0.55rem;
       border-radius: 5px;
       margin-bottom: 0.35rem;
@@ -701,7 +741,8 @@ function buildPageShell(params: {
       overflow-x: auto;
       white-space: pre-wrap;
       word-break: break-word;
-      color: #e2e8f0;
+      color: var(--text);
+      background: var(--bg-inset);
     }
 
     .section-title {
@@ -743,9 +784,9 @@ function buildPageShell(params: {
 
     .error-banner {
       pointer-events: auto;
-      background: rgba(24, 16, 22, 0.95);
-      border: 1px solid rgba(248, 113, 113, 0.6);
-      color: #fca5a5;
+      background: var(--vscode-inputValidation-errorBackground, rgba(24, 16, 22, 0.95));
+      border: 1px solid var(--vscode-inputValidation-errorBorder, rgba(248, 113, 113, 0.6));
+      color: var(--vscode-errorForeground, #fca5a5);
       border-radius: 8px;
       padding: 0.65rem 1.25rem;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);

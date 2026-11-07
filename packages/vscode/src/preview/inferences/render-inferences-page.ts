@@ -317,44 +317,97 @@ export function renderInferencesPageHtml(
         <title>${displayTemplateId} · TypePrompt inferences</title>
         <style>
           :root {
-            --font-sans:
-              -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-              Arial, sans-serif;
-            --font-mono:
-              "SF Mono", Monaco, "Cascadia Code", "Liberation Mono", Menlo,
-              Courier, monospace;
+            --font-sans: var(
+              --vscode-font-family,
+              -apple-system,
+              BlinkMacSystemFont,
+              "Segoe UI",
+              Roboto,
+              Helvetica,
+              Arial,
+              sans-serif
+            );
+            --font-mono: var(
+              --vscode-editor-font-family,
+              "SF Mono",
+              Monaco,
+              "Cascadia Code",
+              "Liberation Mono",
+              Menlo,
+              Courier,
+              monospace
+            );
+            --font-size: var(--vscode-font-size, 13px);
 
-            /* Dark Slate Minimalist Palette */
-            --bg: #0b0f19;
-            --bg-surface: #111827;
-            --bg-surface-elevated: #1a2234;
-            --bg-inset: #070a12;
+            /* Theme-aware Palette */
+            --bg: var(--vscode-editor-background, #0b0f19);
+            --bg-surface: var(
+              --vscode-sideBar-background,
+              var(--vscode-editorWidget-background, #111827)
+            );
+            --bg-surface-elevated: var(
+              --vscode-list-hoverBackground,
+              var(--vscode-toolbar-hoverBackground, #1a2234)
+            );
+            --bg-inset: var(
+              --vscode-textCodeBlock-background,
+              var(--vscode-editor-background, #070a12)
+            );
 
-            --border: #1f293d;
-            --border-subtle: #162032;
-            --border-focus: #38bdf8;
+            --border: var(
+              --vscode-panel-border,
+              var(
+                --vscode-widget-border,
+                var(--vscode-editorWidget-border, #1f293d)
+              )
+            );
+            --border-subtle: var(
+              --vscode-tree-tableColumnsBorder,
+              var(--vscode-editorGroup-border, #162032)
+            );
+            --border-focus: var(--vscode-focusBorder, #38bdf8);
 
-            --text: #f1f5f9;
-            --text-muted: #94a3b8;
-            --text-soft: #64748b;
+            --text: var(
+              --vscode-editor-foreground,
+              var(--vscode-foreground, #f1f5f9)
+            );
+            --text-muted: var(--vscode-descriptionForeground, #94a3b8);
+            --text-soft: var(--vscode-disabledForeground, #64748b);
+
+            /* Buttons */
+            --button-bg: var(--vscode-button-background, #0284c7);
+            --button-fg: var(--vscode-button-foreground, #ffffff);
+            --button-hover: var(--vscode-button-hoverBackground, #0369a1);
+            --button-secondary-bg: var(
+              --vscode-button-secondaryBackground,
+              var(--bg-surface-elevated)
+            );
+            --button-secondary-fg: var(
+              --vscode-button-secondaryForeground,
+              var(--text-muted)
+            );
+            --button-secondary-hover: var(
+              --vscode-button-secondaryHoverBackground,
+              var(--bg-surface)
+            );
 
             /* Distinct Sections */
             --section-result: #0d1e35;
-            --section-result-bg: #070c18;
+            --section-result-bg: var(--bg-inset);
             --section-result-border: #1e3a5f;
             --section-result-label: #38bdf8;
 
             --section-request: #121828;
-            --section-request-bg: #0a0e19;
-            --section-request-header: #121828;
-            --section-request-border: #1e263c;
-            --section-request-label: #94a3b8;
+            --section-request-bg: var(--bg-inset);
+            --section-request-header: var(--bg-surface-elevated);
+            --section-request-border: var(--border);
+            --section-request-label: var(--text-muted);
             --section-request-opacity: 0.88;
 
             /* Messaging Roles */
             --user-bg: #1e293b;
             --user-border: #334155;
-            --user-label: #94a3b8;
+            --user-label: var(--text-muted);
 
             --assistant-bg: #0f2c42;
             --assistant-border: #164e63;
@@ -365,30 +418,81 @@ export function renderInferencesPageHtml(
             --tool-label: #c084fc;
 
             /* Status */
-            --success-text: #34d399;
-            --success-bg: rgba(52, 211, 153, 0.1);
-            --success-border: rgba(52, 211, 153, 0.3);
+            --success-text: var(--vscode-testing-iconPassed, #34d399);
+            --success-bg: rgba(52, 211, 153, 0.12);
+            --success-border: rgba(52, 211, 153, 0.35);
 
-            --error-text: #f87171;
-            --error-bg: rgba(248, 113, 113, 0.1);
-            --error-border: rgba(248, 113, 113, 0.3);
+            --error-text: var(--vscode-errorForeground, #f87171);
+            --error-bg: var(
+              --vscode-inputValidation-errorBackground,
+              rgba(248, 113, 113, 0.12)
+            );
+            --error-border: var(
+              --vscode-inputValidation-errorBorder,
+              rgba(248, 113, 113, 0.35)
+            );
 
-            --pending-text: #fbbf24;
-            --pending-bg: rgba(251, 191, 36, 0.1);
-            --pending-border: rgba(251, 191, 36, 0.3);
+            --pending-text: var(--vscode-editorWarning-foreground, #fbbf24);
+            --pending-bg: var(
+              --vscode-inputValidation-warningBackground,
+              rgba(251, 191, 36, 0.12)
+            );
+            --pending-border: var(
+              --vscode-inputValidation-warningBorder,
+              rgba(251, 191, 36, 0.35)
+            );
 
             /* Syntax Highlighting */
             --hl-key: #7dd3fc;
             --hl-string: #a7f3d0;
             --hl-number: #fde047;
             --hl-boolean: #f472b6;
-            --hl-comment: #64748b;
+            --hl-comment: var(--text-soft);
             --hl-xml-tag: #38bdf8;
             --hl-xml-attribute: #c084fc;
             --hl-schema-keyword: #f472b6;
 
-            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
-            --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.5);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.4);
+          }
+
+          body.vscode-light {
+            --hl-key: #0284c7;
+            --hl-string: #059669;
+            --hl-number: #d97706;
+            --hl-boolean: #db2777;
+            --hl-comment: #6b7280;
+            --hl-xml-tag: #0284c7;
+            --hl-xml-attribute: #7c3aed;
+            --hl-schema-keyword: #db2777;
+
+            --user-bg: #f1f5f9;
+            --user-border: #cbd5e1;
+            --user-label: #475569;
+
+            --assistant-bg: #f0f9ff;
+            --assistant-border: #bae6fd;
+            --assistant-label: #0284c7;
+
+            --tool-bg: #faf5ff;
+            --tool-border: #e9d5ff;
+            --tool-label: #7c3aed;
+
+            --section-result: #f0f9ff;
+            --section-result-border: #bae6fd;
+            --section-result-label: #0284c7;
+
+            --section-request: #f8fafc;
+            --section-request-border: #e2e8f0;
+            --section-request-label: #64748b;
+
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
+          }
+
+          body.vscode-high-contrast {
+            --border: var(--vscode-contrastBorder, #ffffff);
+            --border-subtle: var(--vscode-contrastBorder, #ffffff);
           }
 
           * {
@@ -445,8 +549,8 @@ export function renderInferencesPageHtml(
             letter-spacing: 0.03em;
             padding: 0.15rem 0.45rem;
             border-radius: 4px;
-            background: #1e293b;
-            color: #94a3b8;
+            background: var(--bg-surface-elevated);
+            color: var(--text-muted);
             border: 1px solid var(--border);
           }
 
@@ -470,7 +574,7 @@ export function renderInferencesPageHtml(
             font-family: var(--font-mono);
             font-size: 0.82rem;
             line-height: 1.45;
-            color: #e2e8f0;
+            color: var(--text);
             white-space: pre;
             max-height: calc(2.9em + 0.9rem);
             overflow: auto;
@@ -498,21 +602,21 @@ export function renderInferencesPageHtml(
           }
 
           .btn-action {
-            background: var(--bg-surface);
+            background: var(--button-secondary-bg);
             border: 1px solid var(--border);
-            color: var(--text-muted);
+            color: var(--button-secondary-fg);
             font-size: 0.78rem;
             font-weight: 600;
             padding: 0.25rem 0.6rem;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.15s ease;
           }
 
           .btn-action:hover {
-            background: var(--bg-surface-elevated);
+            background: var(--button-secondary-hover);
             color: var(--text);
-            border-color: #334155;
+            border-color: var(--border-focus);
           }
 
           /* Inferences List */
@@ -534,7 +638,7 @@ export function renderInferencesPageHtml(
           }
 
           .inference-card:hover {
-            border-color: #2e3e5c;
+            border-color: var(--border-focus);
           }
 
           /* Top Bar Header */
@@ -586,7 +690,7 @@ export function renderInferencesPageHtml(
             font-size: 0.75rem;
             font-weight: 700;
             font-family: var(--font-mono);
-            background: #1e293b;
+            background: var(--bg-surface-elevated);
             color: var(--text-muted);
             width: 24px;
             height: 24px;
@@ -825,8 +929,8 @@ export function renderInferencesPageHtml(
           }
 
           .request-summary:hover {
-            background: #19223c;
-            color: #e0e7ff;
+            background: var(--bg-surface-elevated);
+            color: var(--text);
           }
 
           .request-details[open] .request-summary {
@@ -835,19 +939,22 @@ export function renderInferencesPageHtml(
 
           .request-tab-bar {
             padding: 0.45rem 0.9rem;
-            background: #0f1424;
+            background: var(--bg-surface-elevated);
             border-bottom: 1px solid var(--section-request-border);
           }
 
           .request-tab-btn:hover {
-            color: #e0e7ff;
-            background: rgba(129, 140, 248, 0.1);
+            color: var(--text);
+            background: var(
+              --vscode-list-hoverBackground,
+              rgba(129, 140, 248, 0.1)
+            );
           }
 
           .request-tab-btn.is-active {
-            color: #c7d2fe;
-            background: #242c4e;
-            border-color: #6366f1;
+            color: var(--vscode-tab-activeForeground, var(--text));
+            background: var(--vscode-tab-activeBackground, var(--bg-surface));
+            border-color: var(--border-focus);
           }
 
           /* Output Card (Crisp Cyan / Sky - Full Opacity) */
@@ -856,12 +963,12 @@ export function renderInferencesPageHtml(
             border: 1px solid var(--section-result-border);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--shadow-sm);
           }
 
           .output-card.error {
             border-color: var(--error-border);
-            background: #140b0f;
+            background: var(--error-bg);
           }
 
           .output-card-header {
@@ -875,13 +982,13 @@ export function renderInferencesPageHtml(
           }
 
           .output-card.error .output-card-header {
-            background: #2a1118;
+            background: var(--error-bg);
             border-color: var(--error-border);
           }
 
           .panel-tab-bar {
             padding: 0.45rem 0.9rem;
-            background: #101726;
+            background: var(--bg-surface-elevated);
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
@@ -912,14 +1019,17 @@ export function renderInferencesPageHtml(
           .panel-tab-btn:hover,
           .output-tab-btn:hover {
             color: var(--text);
-            background: rgba(255, 255, 255, 0.05);
+            background: var(
+              --vscode-list-hoverBackground,
+              rgba(255, 255, 255, 0.05)
+            );
           }
 
           .panel-tab-btn.is-active,
           .output-tab-btn.is-active {
-            color: #38bdf8;
-            background: #1e3a5f;
-            border-color: #38bdf8;
+            color: var(--vscode-tab-activeForeground, var(--text));
+            background: var(--vscode-tab-activeBackground, var(--bg-surface));
+            border-color: var(--border-focus);
           }
 
           .request-tab-view {
@@ -931,13 +1041,13 @@ export function renderInferencesPageHtml(
           }
 
           .btn-copy {
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: #cbd5e1;
+            background: var(--button-secondary-bg);
+            border: 1px solid var(--border);
+            color: var(--button-secondary-fg);
             font-size: 0.75rem;
             font-weight: 600;
             padding: 0.25rem 0.6rem;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -946,9 +1056,9 @@ export function renderInferencesPageHtml(
           }
 
           .btn-copy:hover {
-            background: #334155;
-            color: #ffffff;
-            border-color: #475569;
+            background: var(--button-secondary-hover);
+            color: var(--text);
+            border-color: var(--border-focus);
           }
 
           .btn-copy.copied {
@@ -965,7 +1075,8 @@ export function renderInferencesPageHtml(
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-word;
-            color: #e2e8f0;
+            color: var(--text);
+            background: var(--bg-inset);
             display: none;
           }
 
@@ -975,12 +1086,12 @@ export function renderInferencesPageHtml(
 
           /* Reasoning box */
           .reasoning-box {
-            background: #0f1624;
-            border: 1px dashed #243554;
+            background: var(--bg-surface-elevated);
+            border: 1px dashed var(--border);
             border-radius: 6px;
             padding: 0.8rem 1rem;
             font-size: 0.85rem;
-            color: #cbd5e1;
+            color: var(--text);
             line-height: 1.55;
           }
 
@@ -990,7 +1101,7 @@ export function renderInferencesPageHtml(
             font-weight: 600;
             font-size: 0.75rem;
             letter-spacing: 0.02em;
-            color: #7dd3fc;
+            color: var(--vscode-editorInfo-foreground, #38bdf8);
             margin-bottom: 0.35rem;
           }
 
@@ -1090,7 +1201,7 @@ export function renderInferencesPageHtml(
             font-size: 0.84rem;
             white-space: pre-wrap;
             word-break: break-word;
-            color: #e2e8f0;
+            color: var(--text);
           }
 
           /* Tool Call Badges */
@@ -1100,9 +1211,9 @@ export function renderInferencesPageHtml(
             gap: 0.35rem;
             font-family: var(--font-mono);
             font-size: 0.78rem;
-            background: #311d4d;
-            color: #d8b4fe;
-            border: 1px solid #581c87;
+            background: var(--tool-bg);
+            color: var(--tool-label);
+            border: 1px solid var(--tool-border);
             padding: 0.22rem 0.55rem;
             border-radius: 5px;
             margin-bottom: 0.35rem;
@@ -1126,14 +1237,17 @@ export function renderInferencesPageHtml(
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            background: #131b2e;
+            background: var(--bg-surface-elevated);
             transition:
               background 0.15s ease,
               color 0.15s ease;
           }
 
           details summary:hover {
-            background: #1a253d;
+            background: var(
+              --vscode-list-hoverBackground,
+              rgba(255, 255, 255, 0.08)
+            );
             color: var(--text);
           }
 
@@ -1148,14 +1262,14 @@ export function renderInferencesPageHtml(
           .source-file-item {
             border: 1px solid var(--border);
             border-radius: 5px;
-            background: #090d16;
+            background: var(--bg-inset);
             overflow: hidden;
           }
 
           .source-file-header {
             padding: 0.45rem 0.85rem;
-            background: #172136;
-            color: #94a3b8;
+            background: var(--bg-surface-elevated);
+            color: var(--text-muted);
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
@@ -1169,8 +1283,11 @@ export function renderInferencesPageHtml(
           }
 
           .source-file-header:hover {
-            background: #1e2c47;
-            color: #e2e8f0;
+            background: var(
+              --vscode-list-hoverBackground,
+              rgba(255, 255, 255, 0.08)
+            );
+            color: var(--text);
           }
 
           .source-file-item[open] .source-file-header {
@@ -1316,7 +1433,7 @@ export function renderInferencesPageHtml(
                                 </summary>
                                 <pre
                                   class="code-view is-active"
-                                  style="padding: 0.85rem 1rem; background: #070a12; margin: 0;"
+                                  style="padding: 0.85rem 1rem; background: var(--bg-inset); margin: 0;"
                                 >
 ${highlightTp(content)}</pre>
                               </details>
@@ -1623,7 +1740,7 @@ function renderInferenceCard(
               id="${cardId}-request-yaml"
               class="code-view is-active"
               data-raw="${escapeHtml(sampleYaml)}"
-              style="margin: 0; background: #070a12; padding: 0.85rem 1rem;"
+              style="margin: 0; background: var(--bg-inset); padding: 0.85rem 1rem;"
             >
 ${highlightYaml(sampleYaml)}</pre>
           </div>
@@ -1842,7 +1959,7 @@ function renderErrorResponse(error: Inferences.InferenceError): SafeHtml {
                   </div>
                   <pre
                     class="code-view is-active"
-                    style="background: #070a12; border: 1px solid var(--border);"
+                    style="background: var(--bg-inset); border: 1px solid var(--border);"
                   >
 ${error.rawText}</pre>
                 </div>
@@ -1860,11 +1977,11 @@ export function renderToolCall(tc: Inferences.ToolCall): SafeHtml {
     <div style="margin-bottom: 0.85rem;">
       <span class="tool-badge">
         <strong>${tc.toolName}</strong>
-        <span style="color: #a855f7">(${tc.callId})</span>
+        <span style="color: var(--tool-label)">(${tc.callId})</span>
       </span>
       <pre
         class="code-view is-active"
-        style="background: #070a12; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 0.9rem; margin-top: 0.35rem;"
+        style="background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 0.9rem; margin-top: 0.35rem;"
       >
 ${highlightJson(jsonStr)}</pre>
     </div>
@@ -1888,7 +2005,7 @@ export function renderRequestContext(
                 </div>
                 <pre
                   class="code-view is-active"
-                  style="background: #070a12; border: 1px solid var(--section-request-border); border-radius: 6px;"
+                  style="background: var(--bg-inset); border: 1px solid var(--section-request-border); border-radius: 6px;"
                 >
 ${request.systemMessage}</pre>
               </div>
@@ -1967,13 +2084,13 @@ ${highlightJson(stringifyAsJson(message.output))}</pre>
                             <div style="margin-bottom: 0.65rem;">
                               <span
                                 class="tool-badge"
-                                style="background: #14352b; color: #6ee7b7; border-color: #065f46;"
+                                style="background: var(--success-bg); color: var(--success-text); border-color: var(--success-border);"
                               >
                                 ${tr.toolName} · result (${tr.callId})
                               </span>
                               <pre
                                 class="code-view is-active"
-                                style="background: #070a12; border: 1px solid var(--border); border-radius: 6px; margin-top: 0.35rem;"
+                                style="background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; margin-top: 0.35rem;"
                               >
 ${highlightJson(stringifyAsJson(tr.output))}</pre>
                             </div>
