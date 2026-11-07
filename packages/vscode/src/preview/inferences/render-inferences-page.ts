@@ -1,5 +1,12 @@
 import type { Inferences } from "@typeprompt/core";
 import YAML from "yaml";
+import {
+  formatDuration,
+  formatNumber,
+  formatTimestamp,
+  stringifyAsJson,
+  stringifyAsYaml,
+} from "../common/formatters.js";
 import { escapeHtml, html, type SafeHtml } from "../common/html.js";
 import {
   highlightJson,
@@ -1750,51 +1757,4 @@ ${highlightJson(stringifyAsJson(tr.output))}</pre>
       </div>
     </div>
   `;
-}
-
-// -----------------------------------------------------------------------------
-// Formatters & Helpers
-// -----------------------------------------------------------------------------
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function formatNumber(num: number): string {
-  return new Intl.NumberFormat("en-US").format(num);
-}
-
-function formatTimestamp(isoString: string): string {
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return isoString;
-  }
-}
-
-export function stringifyAsJson(value: unknown): string {
-  if (typeof value === "string") {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2);
-    } catch {
-      return value;
-    }
-  }
-  return JSON.stringify(value, null, 2);
-}
-
-function stringifyAsYaml(value: unknown): string {
-  if (typeof value === "string") {
-    try {
-      return YAML.stringify(JSON.parse(value)).trimEnd();
-    } catch {
-      return value;
-    }
-  }
-  return YAML.stringify(value).trimEnd();
 }
