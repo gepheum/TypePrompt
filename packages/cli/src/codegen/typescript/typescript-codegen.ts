@@ -351,6 +351,7 @@ function writeType(
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
+          field.type.kind === "optional" ? "?" : "",
           ": ",
           writeType(field.type, options),
           ";\n",
