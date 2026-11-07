@@ -103,6 +103,7 @@ export async function runPlaygroundInferences(
       return {
         sampleIndex,
         ...(sample.name ? { name: sample.name } : {}),
+        ...(sample.note ? { note: sample.note } : {}),
         request,
         result: { kind: "pending" },
       };
@@ -137,6 +138,7 @@ export async function runPlaygroundInferences(
         inferences[sampleIndex] = {
           sampleIndex,
           ...(sample.name ? { name: sample.name } : {}),
+          ...(sample.note ? { note: sample.note } : {}),
           request,
           result,
         };

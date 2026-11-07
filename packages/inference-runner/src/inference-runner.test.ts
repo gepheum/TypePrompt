@@ -252,6 +252,7 @@ describe("inference-runner", () => {
   </model>
   <samples>
     - name: "london-with-step"
+      note: "Test note for London"
       history:
         - input:
             city: "Berlin"
@@ -317,6 +318,7 @@ describe("inference-runner", () => {
 
       const inf = inferenceSet.inferences[0]!;
       assert.equal(inf.name, "london-with-step");
+      assert.equal(inf.note, "Test note for London");
       assert.equal(
         inf.request.systemMessage,
         "You are a weather assistant using getWeather.",

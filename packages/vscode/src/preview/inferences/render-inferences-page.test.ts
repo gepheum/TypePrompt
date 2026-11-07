@@ -112,24 +112,44 @@ describe("renderInferencesPageHtml", () => {
     expect(html.includes("Rate limit exceeded")).toBe(true);
   });
 
-  it("renders valid JavaScript in the script tag that parses without syntax error", () => {
+  it("extracts sample YAML from inference including name, note, and input", () => {
     const data: Inferences.InferenceSet<Inferences.Pending> = {
       kind: "playground-inference-set",
-      id: "test-inference-set-3",
+      id: "test-inference-set-samples",
       templateId: "Main:Greeting",
       isoTimestamp: "2026-11-06T12:00:00.000Z",
       model: { model: "openai/gpt-4o" },
       templateFiles: {},
-      inferences: [],
+      inferences: [
+        {
+          sampleIndex: 0,
+          name: "Bob Sample",
+          note: "This is a test note for Bob",
+          request: {
+            systemMessage: "System prompt",
+            tools: [],
+            outputFormat: { format: "text" },
+            messages: [
+              {
+                role: "user",
+                input: { name: "Bob", tone: "casual" },
+                rendered: "Hi Bob",
+              },
+            ],
+          },
+          result: { kind: "pending" },
+        },
+      ],
     };
     const html = renderInferencesPageHtml(data);
-    const scriptMatch = /<script>([\s\S]*?)<\/script>/.exec(html);
-    expect(Boolean(scriptMatch)).toBe(true);
-    // Validate script parses with Function constructor without throwing SyntaxError
-    const scriptContent = scriptMatch?.[1];
-    expect(Boolean(scriptContent)).toBe(true);
-    if (scriptContent) {
-      new Function(scriptContent);
-    }
+    const yamlPreMatch =
+      /<pre[\s\S]*?id="sample-0-request-yaml"[^>]*>([\s\S]*?)<\/pre>/.exec(
+        html,
+      );
+    expect(Boolean(yamlPreMatch)).toBe(true);
+    const yamlContent = yamlPreMatch?.[1] ?? "";
+    expect(yamlContent.includes("Bob Sample")).toBe(true);
+    expect(yamlContent.includes("This is a test note for Bob")).toBe(true);
+    expect(yamlContent.includes("casual")).toBe(true);
   });
 });

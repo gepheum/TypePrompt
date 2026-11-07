@@ -19,6 +19,8 @@ export type Inference<Pending = never> = {
   readonly sampleIndex: number;
   /** Optional display name from the sample's `name` field. */
   readonly name?: string;
+  /** Optional note from the sample's `note` field. */
+  readonly note?: string;
   /** The prompt and conversation history leading up to the inference. */
   readonly request: InferenceRequest;
   /** The outcome of the model call (generated output/tool calls or error) and telemetry. */

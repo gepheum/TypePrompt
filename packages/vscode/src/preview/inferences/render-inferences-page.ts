@@ -8,53 +8,6 @@ import {
 } from "../common/token-highlighting.js";
 
 // -----------------------------------------------------------------------------
-// Formatters & Helpers
-// -----------------------------------------------------------------------------
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function formatNumber(num: number): string {
-  return new Intl.NumberFormat("en-US").format(num);
-}
-
-function formatTimestamp(isoString: string): string {
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return isoString;
-  }
-}
-
-export function stringifyAsJson(value: unknown): string {
-  if (typeof value === "string") {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2);
-    } catch {
-      return value;
-    }
-  }
-  return JSON.stringify(value, null, 2);
-}
-
-function stringifyAsYaml(value: unknown): string {
-  if (typeof value === "string") {
-    try {
-      return YAML.stringify(JSON.parse(value)).trimEnd();
-    } catch {
-      return value;
-    }
-  }
-  return YAML.stringify(value).trimEnd();
-}
-
-// -----------------------------------------------------------------------------
 // HTML Page Rendering
 // -----------------------------------------------------------------------------
 
@@ -1155,11 +1108,7 @@ export function renderInferencesPageHtml(
           <!-- Inferences List -->
           <main class="inferences-section">
             ${data.inferences.map((inf) => {
-              const sampleYaml = extractSampleYaml(
-                inf,
-                data.templateFiles,
-                data.templateId,
-              );
+              const sampleYaml = extractSampleYaml(inf);
               return renderInferenceCard(inf, isSingleSample, sampleYaml);
             })}
           </main>
@@ -1340,74 +1289,13 @@ ${highlightTp(content)}</pre>
 
 function extractSampleYaml(
   inference: Inferences.Inference<Inferences.Pending>,
-  templateFiles: { readonly [path: string]: string } | undefined,
-  templateId: string,
 ): string {
-  if (templateFiles) {
-    const shortTemplateId = templateId.split(":").pop() ?? templateId;
-    let targetSamplesYaml: string | null = null;
-
-    // 1. Look for playground matching templateId
-    for (const content of Object.values(templateFiles)) {
-      const playMatch =
-        /<playground\s+[^>]*for=["']([^"']+)["'][^>]*>([\s\S]*?)<\/playground>/.exec(
-          content,
-        );
-      if (playMatch) {
-        const forAttr = playMatch[1];
-        if (forAttr === templateId || forAttr === shortTemplateId) {
-          const samplesMatch = /<samples>([\s\S]*?)<\/samples>/.exec(
-            playMatch[2] ?? "",
-          );
-          if (samplesMatch) {
-            targetSamplesYaml = samplesMatch[1] ?? null;
-            break;
-          }
-        }
-      }
-    }
-
-    // 2. Fallback: look for any <samples> in template files
-    if (!targetSamplesYaml) {
-      for (const content of Object.values(templateFiles)) {
-        const match = /<samples>([\s\S]*?)<\/samples>/.exec(content);
-        if (match) {
-          targetSamplesYaml = match[1] ?? null;
-          break;
-        }
-      }
-    }
-
-    if (targetSamplesYaml) {
-      try {
-        const doc = YAML.parseDocument(targetSamplesYaml);
-        if (YAML.isSeq(doc.contents)) {
-          if (inference.name) {
-            const found = doc.contents.items.find((it) => {
-              if (YAML.isMap(it)) {
-                return it.get("name") === inference.name;
-              }
-              return false;
-            });
-            if (found) {
-              return YAML.stringify(found).trim();
-            }
-          }
-          const itemByIndex = doc.contents.items[inference.sampleIndex];
-          if (itemByIndex) {
-            return YAML.stringify(itemByIndex).trim();
-          }
-        }
-      } catch {
-        // Fall back to reconstructed sample
-      }
-    }
-  }
-
-  // Fallback: reconstruct from inference request messages
   const sampleObj: Record<string, unknown> = {};
   if (inference.name) {
     sampleObj.name = inference.name;
+  }
+  if (inference.note) {
+    sampleObj.note = inference.note;
   }
   const lastUserMsg = [...inference.request.messages]
     .reverse()
@@ -1862,4 +1750,51 @@ ${highlightJson(stringifyAsJson(tr.output))}</pre>
       </div>
     </div>
   `;
+}
+
+// -----------------------------------------------------------------------------
+// Formatters & Helpers
+// -----------------------------------------------------------------------------
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function formatNumber(num: number): string {
+  return new Intl.NumberFormat("en-US").format(num);
+}
+
+function formatTimestamp(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return isoString;
+  }
+}
+
+export function stringifyAsJson(value: unknown): string {
+  if (typeof value === "string") {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return value;
+    }
+  }
+  return JSON.stringify(value, null, 2);
+}
+
+function stringifyAsYaml(value: unknown): string {
+  if (typeof value === "string") {
+    try {
+      return YAML.stringify(JSON.parse(value)).trimEnd();
+    } catch {
+      return value;
+    }
+  }
+  return YAML.stringify(value).trimEnd();
 }
