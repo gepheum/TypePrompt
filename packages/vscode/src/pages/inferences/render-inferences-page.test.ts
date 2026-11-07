@@ -112,7 +112,7 @@ describe("renderInferencesPageHtml", () => {
     expect(html.includes("Rate limit exceeded")).toBe(true);
   });
 
-  it("extracts sample YAML from inference including name, note, and input", () => {
+  it("renders sample details including name, note, and conversation", () => {
     const data: Inferences.InferenceSet<Inferences.Pending> = {
       kind: "playground-inference-set",
       id: "test-inference-set-samples",
@@ -142,14 +142,8 @@ describe("renderInferencesPageHtml", () => {
       ],
     };
     const html = renderInferencesPageHtml(data);
-    const yamlPreMatch =
-      /<pre[\s\S]*?id="sample-0-request-yaml"[^>]*>([\s\S]*?)<\/pre>/.exec(
-        html,
-      );
-    expect(Boolean(yamlPreMatch)).toBe(true);
-    const yamlContent = yamlPreMatch?.[1] ?? "";
-    expect(yamlContent.includes("Bob Sample")).toBe(true);
-    expect(yamlContent.includes("This is a test note for Bob")).toBe(true);
-    expect(yamlContent.includes("casual")).toBe(true);
+    expect(html.includes("Bob Sample")).toBe(true);
+    expect(html.includes("This is a test note for Bob")).toBe(true);
+    expect(html.includes("Hi Bob")).toBe(true);
   });
 });

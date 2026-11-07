@@ -1013,6 +1013,34 @@ export const INFERENCES_PAGE_STYLES = `
     border-top: 1px solid var(--border);
   }
 
+  .sample-note-card {
+    background: var(--vscode-inputValidation-infoBackground, rgba(56, 189, 248, 0.07));
+    border: 1px solid var(--vscode-inputValidation-infoBorder, rgba(56, 189, 248, 0.25));
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .sample-note-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .sample-note-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--vscode-editorInfo-foreground, #38bdf8);
+  }
+
+  .sample-note-body {
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
   footer {
     margin-top: 2.5rem;
     text-align: center;

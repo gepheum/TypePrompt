@@ -5,10 +5,7 @@ import { html, rawHtml } from "../common/html.js";
 import { highlightTp, highlightYaml } from "../common/token-highlighting.js";
 import { INFERENCES_PAGE_SCRIPT } from "./inferences-page-script.js";
 import { INFERENCES_PAGE_STYLES } from "./inferences-page-styles.js";
-import {
-  extractSampleYaml,
-  renderInferenceCard,
-} from "./render-inference-card.js";
+import { renderInferenceCard } from "./render-inference-card.js";
 
 // -----------------------------------------------------------------------------
 // HTML Page Rendering
@@ -82,10 +79,9 @@ export function renderInferencesPageHtml(
 
           <!-- Inferences List -->
           <main class="inferences-section">
-            ${data.inferences.map((inf) => {
-              const sampleYaml = extractSampleYaml(inf);
-              return renderInferenceCard(inf, isSingleSample, sampleYaml);
-            })}
+            ${data.inferences.map((inf) =>
+              renderInferenceCard(inf, isSingleSample),
+            )}
           </main>
 
           <!-- Source Files Section (at the end with a clear separator) -->

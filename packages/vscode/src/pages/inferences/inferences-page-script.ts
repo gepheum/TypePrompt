@@ -47,29 +47,6 @@ export const INFERENCES_PAGE_SCRIPT = `
     }
   }
 
-  function switchRequestTab(cardId, tabName) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
-
-    const buttons = card.querySelectorAll(".request-tab-btn");
-    buttons.forEach((btn) => {
-      if (btn.getAttribute("data-tab") === tabName) {
-        btn.classList.add("is-active");
-      } else {
-        btn.classList.remove("is-active");
-      }
-    });
-
-    const views = card.querySelectorAll(".request-tab-view");
-    views.forEach((v) => {
-      if (v.getAttribute("data-view") === tabName) {
-        v.classList.add("is-active");
-      } else {
-        v.classList.remove("is-active");
-      }
-    });
-  }
-
   function switchOutputTab(cardId, tabName) {
     const card = document.getElementById(cardId);
     if (!card) return;

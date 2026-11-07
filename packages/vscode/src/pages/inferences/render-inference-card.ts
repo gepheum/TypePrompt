@@ -1,40 +1,14 @@
 import type { Inferences } from "@typeprompt/core";
-import YAML from "yaml";
-import { escapeHtml, html, type SafeHtml } from "../common/html.js";
+import { html, type SafeHtml } from "../common/html.js";
 import { renderRequestContext } from "../common/render-request-context.js";
-import { highlightYaml } from "../common/token-highlighting.js";
 import { renderResultOutput } from "./render-result-output.js";
 import { renderTelemetryStrip } from "./render-telemetry.js";
-
-export function extractSampleYaml(
-  inference: Inferences.Inference<Inferences.Pending>,
-): string {
-  const sampleObj: Record<string, unknown> = {};
-  if (inference.name) {
-    sampleObj.name = inference.name;
-  }
-  if (inference.note) {
-    sampleObj.note = inference.note;
-  }
-  const lastUserMsg = [...inference.request.messages]
-    .reverse()
-    .find((m) => m.role === "user");
-  if (
-    lastUserMsg &&
-    "input" in lastUserMsg &&
-    lastUserMsg.input !== undefined
-  ) {
-    sampleObj.input = lastUserMsg.input;
-  }
-  return YAML.stringify(sampleObj).trim();
-}
 
 export function renderInferenceCard(
   inference: Inferences.Inference<Inferences.Pending>,
   isSingleSample: boolean,
-  sampleYaml: string,
 ): SafeHtml {
-  const { sampleIndex, name, request, result } = inference;
+  const { sampleIndex, name, note, request, result } = inference;
   const isSuccess = result.kind === "success";
   const isPending = result.kind === "pending";
   const cardId = `sample-${sampleIndex}`;
@@ -78,41 +52,20 @@ export function renderInferenceCard(
               message${request.messages.length !== 1 ? "s" : ""})</span
             >
           </summary>
-          <div class="panel-tab-bar request-tab-bar">
-            <div class="panel-tabs">
-              <button
-                type="button"
-                class="panel-tab-btn request-tab-btn is-active"
-                data-tab="yaml"
-                onclick="switchRequestTab('${cardId}', 'yaml')"
-              >
-                YAML
-              </button>
-              <button
-                type="button"
-                class="panel-tab-btn request-tab-btn"
-                data-tab="rendered"
-                onclick="switchRequestTab('${cardId}', 'rendered')"
-              >
-                Rendered
-              </button>
-            </div>
-          </div>
-
-          <!-- YAML View (Default Active) -->
-          <div class="request-tab-view is-active" data-view="yaml">
-            <pre
-              id="${cardId}-request-yaml"
-              class="code-view is-active"
-              data-raw="${escapeHtml(sampleYaml)}"
-              style="margin: 0; background: var(--bg-inset); padding: 0.85rem 1rem;"
-            >
-${highlightYaml(sampleYaml)}</pre>
-          </div>
-
-          <!-- Rendered View -->
-          <div class="request-tab-view" data-view="rendered">
-            <div class="details-body">${renderRequestContext(request)}</div>
+          <div class="details-body">
+            ${
+              note
+                ? html`
+                    <div class="sample-note-card">
+                      <div class="sample-note-header">
+                        <span class="sample-note-title">Note</span>
+                      </div>
+                      <div class="sample-note-body">${note}</div>
+                    </div>
+                  `
+                : ""
+            }
+            ${renderRequestContext(request)}
           </div>
         </details>
 
