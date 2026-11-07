@@ -163,18 +163,17 @@ describe("toJsonSchema - interface types", () => {
     });
   });
 
-  it("does not include required when all fields are optional", () => {
+  it("includes all fields in required and uses anyOf with null for optional fields", () => {
     const result = gen("type Output = { name?: string; age?: number; };");
     expect(result).toMatch({
       type: "object",
       properties: {
-        name: { type: "string" },
-        age: { type: "number" },
+        name: { anyOf: [{ type: "string" }, { type: "null" }] },
+        age: { anyOf: [{ type: "number" }, { type: "null" }] },
       },
+      required: ["name", "age"],
       additionalProperties: false,
     });
-    // No required array should be emitted when all fields are optional.
-    expect(result.required).toBe(undefined);
   });
 
   it("lists all non-optional fields in required", () => {
@@ -189,17 +188,17 @@ describe("toJsonSchema - interface types", () => {
     });
   });
 
-  it("excludes optional fields from required", () => {
+  it("includes optional fields in required with anyOf with null", () => {
     expect(
       gen("type Output = { name: string; age?: number; id: string; };"),
     ).toMatch({
       type: "object",
       properties: {
         name: { type: "string" },
-        age: { type: "number" },
+        age: { anyOf: [{ type: "number" }, { type: "null" }] },
         id: { type: "string" },
       },
-      required: ["name", "id"],
+      required: ["name", "age", "id"],
       additionalProperties: false,
     });
   });
@@ -295,13 +294,13 @@ describe("toJsonSchema - string literal unions", () => {
 // ---------------------------------------------------------------------------
 
 describe("toJsonSchema - discriminated interface unions", () => {
-  it("generates oneOf for a two-member discriminated union", () => {
+  it("generates anyOf for a two-member discriminated union", () => {
     expect(
       gen(
         'type Output = { kind: "circle"; radius: number } | { kind: "rect"; width: number; height: number };',
       ),
     ).toMatch({
-      oneOf: [
+      anyOf: [
         {
           type: "object",
           properties: {
@@ -325,12 +324,12 @@ describe("toJsonSchema - discriminated interface unions", () => {
     });
   });
 
-  it("preserves member order in oneOf", () => {
+  it("preserves member order in anyOf", () => {
     const result = gen(
       'type Output = { kind: "a" } | { kind: "b" } | { kind: "c" };',
     );
     expect(result).toMatch({
-      oneOf: [
+      anyOf: [
         { properties: { kind: { const: "a" } } },
         { properties: { kind: { const: "b" } } },
         { properties: { kind: { const: "c" } } },
@@ -344,13 +343,13 @@ describe("toJsonSchema - discriminated interface unions", () => {
 // ---------------------------------------------------------------------------
 
 describe("toJsonSchema - boolean-discriminated unions", () => {
-  it("generates oneOf with boolean const fields", () => {
+  it("generates anyOf with boolean const fields", () => {
     expect(
       gen(
         "type Output = { success: true; value: string } | { success: false; error: string };",
       ),
     ).toMatch({
-      oneOf: [
+      anyOf: [
         {
           type: "object",
           properties: {

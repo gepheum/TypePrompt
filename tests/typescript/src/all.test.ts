@@ -98,7 +98,13 @@ describe("02-complex-schemas / TriageTicket", () => {
             enum: ["low", "medium", "high", "critical"],
           },
         },
-        required: ["category", "urgency", "summary", "suggestedActions"],
+        required: [
+          "category",
+          "urgency",
+          "summary",
+          "suggestedActions",
+          "suggestedReply",
+        ],
       });
     }
   });
@@ -146,13 +152,13 @@ describe("02-complex-schemas / TriageTicket", () => {
     expect(result).toMatch({ category: "other" });
   });
 
-  it("optional field suggestedReply is absent when omitted from output", () => {
+  it("optional field suggestedReply is null when omitted from output", () => {
     const result = prompt.parseResponse(
       '{"category":"feature-request","urgency":"low","summary":"Dark mode","suggestedActions":["Log request"]}',
     );
     expect(result).toMatch({
       category: "feature-request",
-      suggestedReply: undefined,
+      suggestedReply: null,
     });
   });
 
@@ -191,7 +197,7 @@ describe("02-complex-schemas / GeneratePageTree", () => {
     name: "CloudX",
     region: "us-east",
     category: "compute",
-    pricing: { model: "perHour", basePrice: 0.1 },
+    pricing: { model: "perHour", basePrice: 0.1, overage: null },
     benchmarks: [{ name: "throughput", score: 1000, unit: "rps" }],
     pros: ["fast", "reliable"],
     cons: ["pricey"],
@@ -229,7 +235,7 @@ describe("02-complex-schemas / GeneratePageTree", () => {
 
   it("toon: exact userMessage", () => {
     expect(prompt.userMessage).toMatch(
-      "Generate a comparison page layout framed around this use case: serving ML inference workloads\n\nTarget audience: architect\n\nHere is the data for each provider:\n\n[1]:\n  - name: CloudX\n    region: us-east\n    category: compute\n    pricing:\n      model: perHour\n      basePrice: 0.1\n    benchmarks[1]{name,score,unit}:\n      throughput,1000,rps\n    pros[2]: fast,reliable\n    cons[1]: pricey",
+      "Generate a comparison page layout framed around this use case: serving ML inference workloads\n\nTarget audience: architect\n\nHere is the data for each provider:\n\n[1]:\n  - name: CloudX\n    region: us-east\n    category: compute\n    pricing:\n      model: perHour\n      basePrice: 0.1\n      overage: null\n    benchmarks[1]{name,score,unit}:\n      throughput,1000,rps\n    pros[2]: fast,reliable\n    cons[1]: pricey",
     );
   });
 
@@ -1026,7 +1032,7 @@ describe("e01 / JSON serialization & deserialization", () => {
     const parsedFull: SchemaE01.Shared.ComplexType = JSON.parse(fullJson);
     expect(parsedFull).toMatch(full);
 
-    // Omitted optional fields
+    // Omitted optional fields (explicitly null)
     const omitted: SchemaE01.Shared.ComplexType = {
       stringField: "hello",
       intField: 42,
@@ -1044,36 +1050,48 @@ describe("e01 / JSON serialization & deserialization", () => {
         [3, 4],
       ],
       mapField: { key1: 10, key2: 20 },
+      optString: null,
+      optInt: null,
+      optNum: null,
+      optBool: null,
+      optEnum: null,
+      optStringUnion: null,
+      optUnion: null,
+      optStruct: null,
+      optStringList: null,
+      optStructList: null,
+      optMatrix: null,
+      optMap: null,
     };
 
     const omittedJson = JSON.stringify(omitted);
-    expect(omittedJson.includes("optString")).toMatch(false);
-    expect(omittedJson.includes("optInt")).toMatch(false);
-    expect(omittedJson.includes("optNum")).toMatch(false);
-    expect(omittedJson.includes("optBool")).toMatch(false);
-    expect(omittedJson.includes("optEnum")).toMatch(false);
-    expect(omittedJson.includes("optStringUnion")).toMatch(false);
-    expect(omittedJson.includes("optUnion")).toMatch(false);
-    expect(omittedJson.includes("optStruct")).toMatch(false);
-    expect(omittedJson.includes("optStringList")).toMatch(false);
-    expect(omittedJson.includes("optStructList")).toMatch(false);
-    expect(omittedJson.includes("optMatrix")).toMatch(false);
-    expect(omittedJson.includes("optMap")).toMatch(false);
+    expect(omittedJson.includes('"optString":null')).toMatch(true);
+    expect(omittedJson.includes('"optInt":null')).toMatch(true);
+    expect(omittedJson.includes('"optNum":null')).toMatch(true);
+    expect(omittedJson.includes('"optBool":null')).toMatch(true);
+    expect(omittedJson.includes('"optEnum":null')).toMatch(true);
+    expect(omittedJson.includes('"optStringUnion":null')).toMatch(true);
+    expect(omittedJson.includes('"optUnion":null')).toMatch(true);
+    expect(omittedJson.includes('"optStruct":null')).toMatch(true);
+    expect(omittedJson.includes('"optStringList":null')).toMatch(true);
+    expect(omittedJson.includes('"optStructList":null')).toMatch(true);
+    expect(omittedJson.includes('"optMatrix":null')).toMatch(true);
+    expect(omittedJson.includes('"optMap":null')).toMatch(true);
 
     const parsedOmitted: SchemaE01.Shared.ComplexType = JSON.parse(omittedJson);
     expect(parsedOmitted).toMatch(omitted);
-    expect(parsedOmitted.optString).toMatch(undefined);
-    expect(parsedOmitted.optInt).toMatch(undefined);
-    expect(parsedOmitted.optNum).toMatch(undefined);
-    expect(parsedOmitted.optBool).toMatch(undefined);
-    expect(parsedOmitted.optEnum).toMatch(undefined);
-    expect(parsedOmitted.optStringUnion).toMatch(undefined);
-    expect(parsedOmitted.optUnion).toMatch(undefined);
-    expect(parsedOmitted.optStruct).toMatch(undefined);
-    expect(parsedOmitted.optStringList).toMatch(undefined);
-    expect(parsedOmitted.optStructList).toMatch(undefined);
-    expect(parsedOmitted.optMatrix).toMatch(undefined);
-    expect(parsedOmitted.optMap).toMatch(undefined);
+    expect(parsedOmitted.optString).toMatch(null);
+    expect(parsedOmitted.optInt).toMatch(null);
+    expect(parsedOmitted.optNum).toMatch(null);
+    expect(parsedOmitted.optBool).toMatch(null);
+    expect(parsedOmitted.optEnum).toMatch(null);
+    expect(parsedOmitted.optStringUnion).toMatch(null);
+    expect(parsedOmitted.optUnion).toMatch(null);
+    expect(parsedOmitted.optStruct).toMatch(null);
+    expect(parsedOmitted.optStringList).toMatch(null);
+    expect(parsedOmitted.optStructList).toMatch(null);
+    expect(parsedOmitted.optMatrix).toMatch(null);
+    expect(parsedOmitted.optMap).toMatch(null);
   });
 });
 

@@ -709,8 +709,14 @@ function writeTypepromptInterface(
       const val = primary ? "val " : "";
       const isOptional = type.kind === "optional";
       const defaultVal = isOptional ? " = null" : "";
+      const encodeDefault =
+        primary && isOptional
+          ? "@property:kotlinx.serialization.EncodeDefault "
+          : "";
       lines.push(...wrapKDoc(field.doc));
-      lines.push(`${override}${val}${ktName}: ${fieldType}${defaultVal},`);
+      lines.push(
+        `${override}${encodeDefault}${val}${ktName}: ${fieldType}${defaultVal},`,
+      );
     }
   };
   writeCtorParams(true);

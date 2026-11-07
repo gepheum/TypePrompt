@@ -17,6 +17,7 @@ import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.j
 import { getId } from "@typeprompt/core/compiler/ids.js";
 import type { Config } from "@typeprompt/core/config/config-parser.js";
 import type {
+  FieldType,
   Literal,
   Schema,
   Type,
@@ -318,7 +319,7 @@ function writeSchema(
 }
 
 function writeType(
-  type: Type | Literal,
+  type: FieldType,
   options: {
     readonly sharedTypePrefix: string;
   },
@@ -346,18 +347,20 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
-        const { type, isOptional } = unwrapOptional(field.type);
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
-          isOptional ? "?: " : ": ",
-          writeType(type, options),
+          ": ",
+          writeType(field.type, options),
           ";\n",
         ].join("");
       }
       result += "}";
       return result;
+    }
+    case "optional": {
+      return `${writeType(type.innerType, options)} | null`;
     }
     case "primitive": {
       if (type.primitive.text === "integer") {
@@ -495,7 +498,7 @@ function writeZodType(
               field.name.text,
               ": ",
               write(type, scope),
-              isOptional ? ".optional()" : "",
+              isOptional ? ".nullable().default(null)" : "",
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",
             ].join(""),

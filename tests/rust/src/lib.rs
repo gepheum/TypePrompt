@@ -875,18 +875,18 @@ mod tests {
     };
 
     let omitted_json = serde_json::to_string(&omitted).unwrap();
-    assert!(!omitted_json.contains("optString"));
-    assert!(!omitted_json.contains("optInt"));
-    assert!(!omitted_json.contains("optNum"));
-    assert!(!omitted_json.contains("optBool"));
-    assert!(!omitted_json.contains("optEnum"));
-    assert!(!omitted_json.contains("optStringUnion"));
-    assert!(!omitted_json.contains("optUnion"));
-    assert!(!omitted_json.contains("optStruct"));
-    assert!(!omitted_json.contains("optStringList"));
-    assert!(!omitted_json.contains("optStructList"));
-    assert!(!omitted_json.contains("optMatrix"));
-    assert!(!omitted_json.contains("optMap"));
+    assert!(omitted_json.contains("\"optString\":null"));
+    assert!(omitted_json.contains("\"optInt\":null"));
+    assert!(omitted_json.contains("\"optNum\":null"));
+    assert!(omitted_json.contains("\"optBool\":null"));
+    assert!(omitted_json.contains("\"optEnum\":null"));
+    assert!(omitted_json.contains("\"optStringUnion\":null"));
+    assert!(omitted_json.contains("\"optUnion\":null"));
+    assert!(omitted_json.contains("\"optStruct\":null"));
+    assert!(omitted_json.contains("\"optStringList\":null"));
+    assert!(omitted_json.contains("\"optStructList\":null"));
+    assert!(omitted_json.contains("\"optMatrix\":null"));
+    assert!(omitted_json.contains("\"optMap\":null"));
 
     let parsed_omitted: ComplexType = serde_json::from_str(&omitted_json).unwrap();
     assert_eq!(parsed_omitted, omitted);

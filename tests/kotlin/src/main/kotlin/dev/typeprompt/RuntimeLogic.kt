@@ -657,7 +657,6 @@ private object JsonConfig {
         Json {
             ignoreUnknownKeys = true
             isLenient = true
-            explicitNulls = false
         }
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -665,7 +664,6 @@ private object JsonConfig {
         Json {
             prettyPrint = true
             prettyPrintIndent = "  "
-            explicitNulls = false
         }
 }
 

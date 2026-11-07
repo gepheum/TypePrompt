@@ -866,7 +866,7 @@ function writeTypepromptInterface(
       serdeAttrs.push(`rename = "${rawFieldName}"`);
     }
     if (type.kind === "optional") {
-      serdeAttrs.push("default", 'skip_serializing_if = "Option::is_none"');
+      serdeAttrs.push("default");
     }
     if (serdeAttrs.length > 0) {
       lines.push(`#[serde(${serdeAttrs.join(", ")})]`);
@@ -891,17 +891,9 @@ function writeTypepromptInterface(
         );
       } else {
         const rustName = toRustName(toSnakeCase(rawFieldName));
-        if (type.kind === "optional") {
-          lines.push(
-            `if self.${rustName}.is_some() {`,
-            `  serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
-            "}",
-          );
-        } else {
-          lines.push(
-            `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
-          );
-        }
+        lines.push(
+          `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
+        );
       }
     }
     lines.push("serde::ser::SerializeStruct::end(state)");

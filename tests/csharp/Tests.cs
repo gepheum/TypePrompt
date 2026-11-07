@@ -1175,18 +1175,18 @@ public class TestE01_JsonSerialization
         };
 
         var omittedJson = JsonSerializer.Serialize(omitted);
-        Assert.DoesNotContain("optString", omittedJson);
-        Assert.DoesNotContain("optInt", omittedJson);
-        Assert.DoesNotContain("optNum", omittedJson);
-        Assert.DoesNotContain("optBool", omittedJson);
-        Assert.DoesNotContain("optEnum", omittedJson);
-        Assert.DoesNotContain("optStringUnion", omittedJson);
-        Assert.DoesNotContain("optUnion", omittedJson);
-        Assert.DoesNotContain("optStruct", omittedJson);
-        Assert.DoesNotContain("optStringList", omittedJson);
-        Assert.DoesNotContain("optStructList", omittedJson);
-        Assert.DoesNotContain("optMatrix", omittedJson);
-        Assert.DoesNotContain("optMap", omittedJson);
+        Assert.Contains("\"optString\":null", omittedJson);
+        Assert.Contains("\"optInt\":null", omittedJson);
+        Assert.Contains("\"optNum\":null", omittedJson);
+        Assert.Contains("\"optBool\":null", omittedJson);
+        Assert.Contains("\"optEnum\":null", omittedJson);
+        Assert.Contains("\"optStringUnion\":null", omittedJson);
+        Assert.Contains("\"optUnion\":null", omittedJson);
+        Assert.Contains("\"optStruct\":null", omittedJson);
+        Assert.Contains("\"optStringList\":null", omittedJson);
+        Assert.Contains("\"optStructList\":null", omittedJson);
+        Assert.Contains("\"optMatrix\":null", omittedJson);
+        Assert.Contains("\"optMap\":null", omittedJson);
 
         var parsedOmitted = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.ComplexType>(omittedJson);
         Assert.NotNull(parsedOmitted);

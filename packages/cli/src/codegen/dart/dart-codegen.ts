@@ -796,7 +796,13 @@ function writeTypepromptInterface(
         options,
       );
       if (isOptional) {
-        lines.push(`if (${dartName} != null) "${rawName}": ${toJsonExpr},`);
+        if (toJsonExpr === dartName) {
+          lines.push(`"${rawName}": ${dartName},`);
+        } else {
+          lines.push(
+            `"${rawName}": ${dartName} == null ? null : ${toJsonExpr},`,
+          );
+        }
       } else {
         lines.push(`"${rawName}": ${toJsonExpr},`);
       }

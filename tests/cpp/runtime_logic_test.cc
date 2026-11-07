@@ -2807,7 +2807,7 @@ void TestUserDefinedStructs() {
   ASSERT_EQ(*parsed_ticket_output->suggested_reply, "Here is your invoice.");
 
   // Top-level serialization formats test
-  ASSERT_EQ(typeprompt_02::ToJson(m2), "{\"model\":\"gpt-4o-mini\"}");
+  ASSERT_EQ(typeprompt_02::ToJson(m2), "{\"model\":\"gpt-4o-mini\",\"temperature\":null}");
   ASSERT_EQ(typeprompt_02::ToYaml(b1),
             "name: Latency\n"
             "score: 15.2\n"
@@ -4206,18 +4206,18 @@ void TestE01_JsonSerialization() {
   };
 
   std::string omitted_json = typeprompt_e01::ToJson(omitted);
-  ASSERT_TRUE(omitted_json.find("optString") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optInt") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optNum") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optBool") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optEnum") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optStringUnion") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optUnion") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optStruct") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optStringList") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optStructList") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optMatrix") == std::string::npos);
-  ASSERT_TRUE(omitted_json.find("optMap") == std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optString\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optInt\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optNum\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optBool\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optEnum\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optStringUnion\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optUnion\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optStruct\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optStringList\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optStructList\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optMatrix\":null") != std::string::npos);
+  ASSERT_TRUE(omitted_json.find("\"optMap\":null") != std::string::npos);
 
   auto parsed_omitted_res = typeprompt_e01::ParseJson<ComplexType>(omitted_json);
   ASSERT_TRUE(parsed_omitted_res.ok());

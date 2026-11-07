@@ -331,6 +331,7 @@ class TestGeneratePageTree:
             "    pricing:\n"
             "      model: perHour\n"
             "      basePrice: 0.1\n"
+            "      overage: null\n"
             "    benchmarks[1,]{name,score,unit}:\n"
             "      throughput,1000.0,rps\n"
             "    pros[2]: fast,reliable\n"
@@ -884,7 +885,7 @@ class TestE01JsonSerialization:
         )
 
         adapter = pydantic.TypeAdapter(s_e01.shared.ComplexType)
-        full_json = adapter.dump_json(full, exclude_none=True).decode("utf-8")
+        full_json = adapter.dump_json(full).decode("utf-8")
         parsed_full = adapter.validate_json(full_json)
         assert parsed_full.string_field == "hello"
         assert parsed_full.int_field == 42
@@ -937,19 +938,19 @@ class TestE01JsonSerialization:
             map_field={"key1": 10, "key2": 20},
         )
 
-        omitted_json = adapter.dump_json(omitted, exclude_none=True).decode("utf-8")
-        assert "optString" not in omitted_json
-        assert "optInt" not in omitted_json
-        assert "optNum" not in omitted_json
-        assert "optBool" not in omitted_json
-        assert "optEnum" not in omitted_json
-        assert "optStringUnion" not in omitted_json
-        assert "optUnion" not in omitted_json
-        assert "optStruct" not in omitted_json
-        assert "optStringList" not in omitted_json
-        assert "optStructList" not in omitted_json
-        assert "optMatrix" not in omitted_json
-        assert "optMap" not in omitted_json
+        omitted_json = adapter.dump_json(omitted, by_alias=True).decode("utf-8")
+        assert '"optString":null' in omitted_json
+        assert '"optInt":null' in omitted_json
+        assert '"optNum":null' in omitted_json
+        assert '"optBool":null' in omitted_json
+        assert '"optEnum":null' in omitted_json
+        assert '"optStringUnion":null' in omitted_json
+        assert '"optUnion":null' in omitted_json
+        assert '"optStruct":null' in omitted_json
+        assert '"optStringList":null' in omitted_json
+        assert '"optStructList":null' in omitted_json
+        assert '"optMatrix":null' in omitted_json
+        assert '"optMap":null' in omitted_json
 
         parsed_omitted = adapter.validate_json(omitted_json)
         assert parsed_omitted.string_field == "hello"

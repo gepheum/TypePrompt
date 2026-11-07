@@ -1,8 +1,7 @@
 import type {
+  FieldType,
   Interface,
-  Literal,
   SchemaView,
-  Type,
   Union,
   UnionMembers,
 } from "./schema-types.js";
@@ -30,7 +29,7 @@ class Generator {
     private readonly unionToMembers: ReadonlyMap<Union, UnionMembers>,
   ) {}
 
-  typeToSchema(type: Type | Literal): Record<string, unknown> {
+  typeToSchema(type: FieldType): Record<string, unknown> {
     switch (type.kind) {
       case "any": {
         return {};
@@ -43,6 +42,11 @@ class Generator {
       }
       case "interface": {
         return this.interfaceToSchema(type);
+      }
+      case "optional": {
+        return {
+          anyOf: [this.typeToSchema(type.innerType), { type: "null" }],
+        };
       }
       case "primitive": {
         return { type: type.primitive.text };
@@ -98,13 +102,8 @@ class Generator {
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
     for (const [fieldName, field] of Object.entries(iface.fields)) {
-      let type = field.type;
-      if (type.kind === "optional") {
-        type = type.innerType;
-      } else {
-        required.push(fieldName);
-      }
-      const fieldSchema = this.typeToSchema(type);
+      required.push(fieldName);
+      const fieldSchema = this.typeToSchema(field.type);
       if (field.doc) {
         fieldSchema.description = field.doc;
       }
@@ -125,7 +124,7 @@ class Generator {
     }
     // Discriminated interface union
     return {
-      oneOf: Object.values(members.members).map((iface) =>
+      anyOf: Object.values(members.members).map((iface) =>
         this.interfaceToSchema(iface.resolved),
       ),
     };

@@ -2328,7 +2328,6 @@ inline JsonNode MakeJsonObject(std::vector<std::pair<std::string_view, JsonNode>
   JsonNode::Object object;
   object.reserve(entries.size());
   for (auto& [k, v] : entries) {
-    if (v.type() == JsonNode::Type::kNull) continue;
     object.push_back({std::string(k), std::move(v)});
   }
   return object;

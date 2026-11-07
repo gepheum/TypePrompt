@@ -838,7 +838,44 @@ function writeTypepromptInterface(
       lines.push(`self.${swiftName} = ${swiftName}`);
     }
   }
-  lines.push("}", "}");
+  lines.push("}");
+
+  const hasOptionalField = fields.some(
+    (f) => resolveType(f.type, schema).kind === "optional",
+  );
+
+  if (hasOptionalField) {
+    lines.push("", "private enum CodingKeys: String, CodingKey {");
+    for (const field of fields) {
+      const rawFieldName = field.name.text;
+      const swiftName = toSwiftName(rawFieldName);
+      lines.push(`case ${swiftName} = "${rawFieldName}"`);
+    }
+    lines.push("}", "");
+
+    lines.push("public func encode(to encoder: any Encoder) throws {");
+    lines.push("var container = encoder.container(keyedBy: CodingKeys.self)");
+    for (const field of fields) {
+      const swiftName = toSwiftName(field.name.text);
+      const isOptional = resolveType(field.type, schema).kind === "optional";
+      if (isOptional) {
+        lines.push(
+          `if let value = self.${swiftName} {`,
+          `  try container.encode(value, forKey: .${swiftName})`,
+          "} else {",
+          `  try container.encodeNil(forKey: .${swiftName})`,
+          "}",
+        );
+      } else {
+        lines.push(
+          `try container.encode(self.${swiftName}, forKey: .${swiftName})`,
+        );
+      }
+    }
+    lines.push("}");
+  }
+
+  lines.push("}");
   return lines.join("\n");
 }
 
