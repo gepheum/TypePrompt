@@ -146,4 +146,52 @@ describe("renderInferencesPageHtml", () => {
     expect(html.includes("This is a test note for Bob")).toBe(true);
     expect(html.includes("Hi Bob")).toBe(true);
   });
+
+  it("names unnamed samples as Anonymous ${index + 1}/${total}", () => {
+    const data: Inferences.InferenceSet<Inferences.Pending> = {
+      kind: "playground-inference-set",
+      id: "test-inference-set-unnamed",
+      templateId: "Main:Greeting",
+      isoTimestamp: "2026-11-06T12:00:00.000Z",
+      model: { model: "openai/gpt-4o" },
+      templateFiles: {},
+      inferences: [
+        {
+          sampleIndex: 0,
+          request: {
+            systemMessage: "System prompt",
+            tools: [],
+            outputFormat: { format: "text" },
+            messages: [],
+          },
+          result: { kind: "pending" },
+        },
+        {
+          sampleIndex: 1,
+          name: "Explicit Name",
+          request: {
+            systemMessage: "System prompt",
+            tools: [],
+            outputFormat: { format: "text" },
+            messages: [],
+          },
+          result: { kind: "pending" },
+        },
+        {
+          sampleIndex: 2,
+          request: {
+            systemMessage: "System prompt",
+            tools: [],
+            outputFormat: { format: "text" },
+            messages: [],
+          },
+          result: { kind: "pending" },
+        },
+      ],
+    };
+    const html = renderInferencesPageHtml(data);
+    expect(html.includes("Anonymous 1/3")).toBe(true);
+    expect(html.includes("Explicit Name")).toBe(true);
+    expect(html.includes("Anonymous 3/3")).toBe(true);
+  });
 });

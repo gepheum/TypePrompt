@@ -8,11 +8,30 @@ function makeFakeProject(params: {
   readonly folderUri?: string;
   readonly hasErrors?: boolean;
   readonly apiKeys?: Record<string, string>;
+  readonly samples?: readonly Lsp.WirePlaygroundSample[];
 }): Lsp.WireProject {
   const {
     folderUri = "file:///workspace/project/",
     hasErrors = false,
     apiKeys = {},
+    samples = [
+      {
+        name: "sample-1",
+        input: "hello",
+        request: {
+          systemMessage: "You are a helpful assistant.",
+          tools: [],
+          messages: [
+            {
+              role: "user",
+              input: { text: "hello" },
+              rendered: "hello",
+            },
+          ],
+          outputFormat: { format: "text" },
+        },
+      },
+    ],
   } = params;
   return {
     folderUri,
@@ -26,7 +45,7 @@ function makeFakeProject(params: {
             forTemplate: "Test",
             namespace: null,
             model: { model: "openai/gpt-4o" },
-            samples: [{ name: "sample-1", input: "hello" }],
+            samples,
           },
         },
       },
@@ -47,26 +66,7 @@ function makeFakeProject(params: {
           namespace: null,
           isValid: true,
           model: { model: "openai/gpt-4o" },
-          samples: [
-            {
-              name: "sample-1",
-              input: "hello",
-              request: {
-                tools: [],
-                messages: [
-                  {
-                    role: "user",
-                    content: {
-                      kind: "text",
-                      text: "hello",
-                    },
-                    rendered: "hello",
-                  },
-                ],
-                outputFormat: { format: "text" },
-              },
-            },
-          ],
+          samples,
         },
       },
       edition: 1,
@@ -224,5 +224,62 @@ describe("renderPlaygroundPreviewHtml", () => {
     const html = renderPlaygroundPreviewHtml(doc, store);
     expect(html.includes("<title>Preview: Translate</title>")).toBe(true);
     expect(html.includes("Greeting sample")).toBe(true);
+  });
+
+  it("labels unnamed samples as Anonymous ${index + 1}/${total} in select dropdown", () => {
+    const store = new ProjectStore();
+    const fakeProject = makeFakeProject({
+      folderUri: "file:///workspace/project/",
+      samples: [
+        {
+          input: "unnamed sample 1",
+          request: {
+            systemMessage: "",
+            tools: [],
+            messages: [
+              {
+                role: "user",
+                input: { message: "hello" },
+                rendered: "hello",
+              },
+            ],
+            outputFormat: { format: "text" },
+          },
+        },
+        {
+          name: "Named Sample",
+          input: "named sample 2",
+          request: {
+            systemMessage: "",
+            tools: [],
+            messages: [
+              {
+                role: "user",
+                input: { message: "world" },
+                rendered: "world",
+              },
+            ],
+            outputFormat: { format: "text" },
+          },
+        },
+      ],
+    });
+    store.handleNotification({
+      projects: {
+        "file:///workspace/project/": fakeProject,
+      },
+    });
+
+    const doc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/test.play.tp",
+      },
+      fileName: "/workspace/project/prompts/test.play.tp",
+    };
+
+    const html = renderPlaygroundPreviewHtml(doc, store);
+    expect(html.includes("Anonymous 1/2")).toBe(true);
+    expect(html.includes("Named Sample")).toBe(true);
   });
 });

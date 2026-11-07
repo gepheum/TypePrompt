@@ -301,7 +301,7 @@ function buildSuccessfulPlaygroundBody(params: {
   const selectOptions = samples
     .map((s, idx) => {
       const isSelected = idx === selectedIndex;
-      const label = s.name ? s.name : String(idx + 1);
+      const label = s.name ? s.name : `Anonymous ${idx + 1}/${samples.length}`;
       return `<option value="${idx}" data-name="${escapeHtml(s.name ?? "")}" ${isSelected ? "selected" : ""}>${escapeHtml(label)}</option>`;
     })
     .join("");

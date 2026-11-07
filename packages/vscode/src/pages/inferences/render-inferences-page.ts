@@ -15,7 +15,6 @@ export function renderInferencesPageHtml(
   data: Inferences.InferenceSet<Inferences.Pending>,
 ): string {
   const modelYaml = YAML.stringify(data.model).trimEnd();
-  const isSingleSample = data.inferences.length === 1;
   const displayTemplateId = data.templateId.startsWith("Main:")
     ? data.templateId.slice("Main:".length)
     : data.templateId;
@@ -80,7 +79,7 @@ export function renderInferencesPageHtml(
           <!-- Inferences List -->
           <main class="inferences-section">
             ${data.inferences.map((inf) =>
-              renderInferenceCard(inf, isSingleSample),
+              renderInferenceCard(inf, data.inferences.length),
             )}
           </main>
 

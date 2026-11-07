@@ -6,19 +6,20 @@ import { renderTelemetryStrip } from "./render-telemetry.js";
 
 export function renderInferenceCard(
   inference: Inferences.Inference<Inferences.Pending>,
-  isSingleSample: boolean,
+  totalSamples: number,
 ): SafeHtml {
   const { sampleIndex, name, note, request, result } = inference;
   const isSuccess = result.kind === "success";
   const isPending = result.kind === "pending";
   const cardId = `sample-${sampleIndex}`;
-  const expandedClass = isSingleSample ? "is-expanded" : "";
+  const expandedClass = totalSamples === 1 ? "is-expanded" : "";
   const statusClass = isSuccess ? "success" : isPending ? "pending" : "error";
   const statusLabel = isSuccess
     ? "Success"
     : isPending
       ? "Pending"
       : result.error.kind;
+  const displayName = name ?? `Anonymous ${sampleIndex + 1}/${totalSamples}`;
 
   return html`
     <article id="${cardId}" class="inference-card ${expandedClass}">
@@ -31,9 +32,7 @@ export function renderInferenceCard(
         <div class="card-title-group">
           <span class="toggle-arrow">▶</span>
           <span class="sample-index">${sampleIndex + 1}</span>
-          <span class="sample-name"
-            >${name ?? `Sample ${sampleIndex + 1}`}</span
-          >
+          <span class="sample-name">${displayName}</span>
           <span class="status-badge ${statusClass}">
             <span class="status-dot"></span>
             ${statusLabel}
