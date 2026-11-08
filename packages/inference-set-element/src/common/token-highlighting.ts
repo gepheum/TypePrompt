@@ -6,16 +6,26 @@ import {
 import { tokenizeYaml } from "@typeprompt/core/json/yaml-parser.js";
 import { tokenize } from "@typeprompt/core/lsp-util/semantic-token.js";
 import YAML from "yaml";
-import { escapeHtml, rawHtml, type SafeHtml } from "./html.js";
 
-// -----------------------------------------------------------------------------
-// Token Highlighting using AST / Semantic Tokenizers
-// -----------------------------------------------------------------------------
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+type SpanToken = {
+  readonly start: number;
+  readonly end: number;
+  readonly kind: string;
+};
 
 /**
  * Highlights a `.tp` file using `tokenize` from `semantic-token.ts`.
  */
-export function highlightTp(content: string): SafeHtml {
+export function highlightTp(content: string): string {
   try {
     const tokens = tokenize(content);
     return applyTokens(
@@ -27,14 +37,14 @@ export function highlightTp(content: string): SafeHtml {
       })),
     );
   } catch {
-    return rawHtml(escapeHtml(content));
+    return escapeHtml(content);
   }
 }
 
 /**
- * Highlights JSON using `parseJson` from `json-parser.ts` by collecting the AST token spans.
+ * Highlights JSON using `parseJson` by collecting AST token spans.
  */
-export function highlightJson(json: string): SafeHtml {
+export function highlightJson(json: string): string {
   try {
     const parsed = parseJson(
       {
@@ -46,7 +56,7 @@ export function highlightJson(json: string): SafeHtml {
     );
 
     if (parsed.kind === "error") {
-      return rawHtml(escapeHtml(json));
+      return escapeHtml(json);
     }
 
     const tokens: SpanToken[] = [];
@@ -111,18 +121,17 @@ export function highlightJson(json: string): SafeHtml {
     collectTokens(parsed);
     return applyTokens(json, tokens);
   } catch {
-    return rawHtml(escapeHtml(json));
+    return escapeHtml(json);
   }
 }
 
 /**
- * Highlights YAML using `tokenizeYaml` from `yaml-parser.ts` alongside mapping key spans.
+ * Highlights YAML using `tokenizeYaml` alongside mapping key spans.
  */
-export function highlightYaml(yaml: string): SafeHtml {
+export function highlightYaml(yaml: string): string {
   try {
     const tokens: SpanToken[] = [];
 
-    // 1. Semantic tokens from tokenizeYaml (strings, numbers, booleans, comments)
     const semanticTokens = tokenizeYaml({
       path: "output.yaml",
       text: yaml,
@@ -137,7 +146,6 @@ export function highlightYaml(yaml: string): SafeHtml {
       });
     }
 
-    // 2. Collect mapping keys from YAML document AST
     const docs = YAML.parseAllDocuments(yaml, { logLevel: "silent" });
     for (const doc of docs) {
       YAML.visit(doc, {
@@ -158,20 +166,14 @@ export function highlightYaml(yaml: string): SafeHtml {
 
     return applyTokens(yaml, tokens);
   } catch {
-    return rawHtml(escapeHtml(yaml));
+    return escapeHtml(yaml);
   }
 }
-
-type SpanToken = {
-  readonly start: number;
-  readonly end: number;
-  readonly kind: string;
-};
 
 /**
  * Injects `<span class="hl-${kind}">` tags into `text` according to non-overlapping spans.
  */
-function applyTokens(text: string, tokens: readonly SpanToken[]): SafeHtml {
+function applyTokens(text: string, tokens: readonly SpanToken[]): string {
   const sorted = [...tokens]
     .filter((t) => t.start >= 0 && t.end <= text.length && t.start < t.end)
     .sort((a, b) => a.start - b.start || b.end - a.end);
@@ -181,7 +183,6 @@ function applyTokens(text: string, tokens: readonly SpanToken[]): SafeHtml {
 
   for (const token of sorted) {
     if (token.start < cursor) {
-      // Skip overlapping tokens
       continue;
     }
     if (token.start > cursor) {
@@ -196,5 +197,5 @@ function applyTokens(text: string, tokens: readonly SpanToken[]): SafeHtml {
     result += escapeHtml(text.slice(cursor));
   }
 
-  return rawHtml(result);
+  return result;
 }

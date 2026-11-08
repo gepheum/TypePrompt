@@ -1,18 +1,23 @@
 import type { Inferences } from "@typeprompt/core";
-import { html, type SafeHtml } from "../common/html.js";
+import { html, type TemplateResult } from "lit";
 import { renderRequestContext } from "../common/render-request-context.js";
-import { renderResultOutput } from "./render-result-output.js";
-import { renderTelemetryStrip } from "./render-telemetry.js";
+import { renderResultOutput } from "./result-output.js";
+import { renderTelemetryStrip } from "./telemetry.js";
 
 export function renderInferenceCard(
   inference: Inferences.Inference<Inferences.Pending>,
   totalSamples: number,
-): SafeHtml {
+  isExpanded: boolean,
+  onToggleExpand: () => void,
+  activeTab: "yaml" | "json" | "text",
+  onTabChange: (tab: "yaml" | "json" | "text") => void,
+  onCopy: (text: string) => void,
+  isCopied: boolean,
+): TemplateResult {
   const { sampleIndex, name, note, request, result } = inference;
   const isSuccess = result.kind === "success";
   const isPending = result.kind === "pending";
   const cardId = `sample-${sampleIndex}`;
-  const expandedClass = totalSamples === 1 ? "is-expanded" : "";
   const statusClass = isSuccess ? "success" : isPending ? "pending" : "error";
   const statusLabel = isSuccess
     ? "Success"
@@ -22,11 +27,11 @@ export function renderInferenceCard(
   const displayName = name ?? `Anonymous ${sampleIndex + 1}/${totalSamples}`;
 
   return html`
-    <article id="${cardId}" class="inference-card ${expandedClass}">
+    <article class="inference-card ${isExpanded ? "is-expanded" : ""}">
       <button
         type="button"
         class="card-header-bar"
-        onclick="toggleSample('${cardId}')"
+        @click=${onToggleExpand}
         aria-label="Toggle sample details"
       >
         <div class="card-title-group">
@@ -39,7 +44,11 @@ export function renderInferenceCard(
           </span>
         </div>
 
-        ${!isPending && result.telemetry ? renderTelemetryStrip(result.telemetry) : ""}
+        ${
+          !isPending && result.telemetry
+            ? renderTelemetryStrip(result.telemetry)
+            : ""
+        }
       </button>
 
       <div class="card-body">
@@ -83,7 +92,15 @@ export function renderInferenceCard(
         <!-- Result / Output Section -->
         <div class="section-block">
           <div class="section-title result">Output</div>
-          ${renderResultOutput(cardId, result, request.outputFormat.format)}
+          ${renderResultOutput(
+            cardId,
+            result,
+            request.outputFormat.format,
+            activeTab,
+            onTabChange,
+            onCopy,
+            isCopied,
+          )}
         </div>
       </div>
     </article>

@@ -20,7 +20,7 @@ import { activateToggleComment } from "./editor/toggle-comment.js";
 import {
   activatePlaygroundPreview,
   type PlaygroundPreviewController,
-} from "./pages/preview/playground-preview.js";
+} from "./preview/playground-preview.js";
 
 export interface TypePromptExtensionApi {
   readonly projectStore: ProjectStore;

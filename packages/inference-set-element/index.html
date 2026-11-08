@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TypePrompt IDE Frontend Dev</title>
+    <style>
+      :root {
+        --vscode-editor-background: #0b0f19;
+        --vscode-editor-foreground: #f1f5f9;
+        --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --vscode-editor-font-family: "SF Mono", Monaco, Menlo, monospace;
+      }
+      body {
+        margin: 0;
+        background: #070a12;
+        color: #f1f5f9;
+        font-family: var(--vscode-font-family);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      nav.dev-bar {
+        background: #111827;
+        border-bottom: 1px solid #1f293d;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .tab-btn {
+        background: transparent;
+        border: 1px solid #334155;
+        color: #94a3b8;
+        padding: 0.4rem 0.85rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .tab-btn.active {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #fff;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+      }
+      .controls button, .controls select {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        padding: 0.35rem 0.65rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      main.view-container {
+        flex: 1;
+        padding: 1.5rem;
+        background: var(--vscode-editor-background);
+      }
+      aside.event-logger {
+        background: #0f172a;
+        border-top: 1px solid #1e293b;
+        padding: 0.75rem 1.25rem;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.78rem;
+        max-height: 140px;
+        overflow-y: auto;
+      }
+      .log-title {
+        font-weight: 700;
+        color: #38bdf8;
+        margin-bottom: 0.35rem;
+      }
+      .log-entry {
+        color: #a7f3d0;
+        margin-bottom: 0.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="dev-bar">
+      <div class="tabs">
+        <button id="btn-preview" class="tab-btn active">&lt;playground-preview&gt;</button>
+        <button id="btn-inferences" class="tab-btn">&lt;inference-set&gt;</button>
+      </div>
+
+      <div class="controls" id="preview-controls">
+        <span>Scenario:</span>
+        <select id="select-project-scenario">
+          <option value="with-keys">With API Keys</option>
+          <option value="no-keys">No API Keys</option>
+          <option value="errors">With Compilation Errors</option>
+        </select>
+      </div>
+
+      <div class="controls" id="inference-controls" style="display: none;">
+        <button id="btn-simulate-complete">Simulate Pending -> Success</button>
+      </div>
+    </nav>
+
+    <main class="view-container">
+      <div id="preview-section">
+        <playground-preview id="playground-preview-el"></playground-preview>
+      </div>
+      <div id="inference-section" style="display: none;">
+        <inference-set id="inference-set-el"></inference-set>
+      </div>
+    </main>
+
+    <aside class="event-logger">
+      <div class="log-title">Live Nanoevents Log:</div>
+      <div id="log-entries"></div>
+    </aside>
+
+    <script type="module">
+      import {
+        events as playgroundEvents,
+      } from "./src/index.ts";
+      import {
+        mockValidProjectWithKeys,
+        mockProjectWithoutKeys,
+        mockProjectWithErrors,
+        mockInferenceSet,
+      } from "./dev/mock-data.ts";
+
+      const previewEl = document.getElementById("playground-preview-el");
+      const inferenceEl = document.getElementById("inference-set-el");
+      const logEntries = document.getElementById("log-entries");
+
+      function addLog(msg) {
+        const div = document.createElement("div");
+        div.className = "log-entry";
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logEntries.prepend(div);
+      }
+
+      // Listen to nanoevents
+      playgroundEvents.on("createSecrets", () => {
+        addLog("Event fired: 'createSecrets'");
+      });
+      playgroundEvents.on("runInferences", () => {
+        addLog("Event fired: 'runInferences'");
+      });
+      playgroundEvents.on("selectSample", (key, idx) => {
+        addLog(`Event fired: 'selectSample' -> key: "${key}", index: ${idx}`);
+      });
+
+      // Initialize preview
+      previewEl.wireProject = mockValidProjectWithKeys;
+      previewEl.relativePath = "prompts/SummarizeDocument.play.tp";
+
+      // Initialize inference set
+      let currentInferenceSet = JSON.parse(JSON.stringify(mockInferenceSet));
+      inferenceEl.inferenceSet = currentInferenceSet;
+
+      // Tab switcher
+      const btnPreview = document.getElementById("btn-preview");
+      const btnInferences = document.getElementById("btn-inferences");
+      const previewControls = document.getElementById("preview-controls");
+      const inferenceControls = document.getElementById("inference-controls");
+      const previewSection = document.getElementById("preview-section");
+      const inferenceSection = document.getElementById("inference-section");
+
+      btnPreview.addEventListener("click", () => {
+        btnPreview.classList.add("active");
+        btnInferences.classList.remove("active");
+        previewSection.style.display = "block";
+        inferenceSection.style.display = "none";
+        previewControls.style.display = "flex";
+        inferenceControls.style.display = "none";
+      });
+
+      btnInferences.addEventListener("click", () => {
+        btnInferences.classList.add("active");
+        btnPreview.classList.remove("active");
+        previewSection.style.display = "none";
+        inferenceSection.style.display = "block";
+        previewControls.style.display = "none";
+        inferenceControls.style.display = "flex";
+      });
+
+      // Project scenario dropdown
+      const selectScenario = document.getElementById("select-project-scenario");
+      selectScenario.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (val === "with-keys") {
+          previewEl.wireProject = mockValidProjectWithKeys;
+        } else if (val === "no-keys") {
+          previewEl.wireProject = mockProjectWithoutKeys;
+        } else if (val === "errors") {
+          previewEl.wireProject = mockProjectWithErrors;
+        }
+        addLog(`Changed WireProject scenario to: ${val}`);
+      });
+
+      // Simulate streaming update
+      document.getElementById("btn-simulate-complete").addEventListener("click", () => {
+        const updated = JSON.parse(JSON.stringify(currentInferenceSet));
+        const sample1 = updated.inferences[1];
+        if (sample1) {
+          sample1.result = {
+            kind: "success",
+            response: {
+              kind: "output",
+              rawText: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
+              output: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
+            },
+            telemetry: {
+              latencyMs: 980,
+              usage: { inputTokens: 180, outputTokens: 35, totalTokens: 215 },
+            },
+          };
+        }
+        currentInferenceSet = updated;
+        inferenceEl.inferenceSet = updated;
+        addLog("Simulated update: Sample 1 transitioned from pending to success!");
+      });
+    </script>
+  </body>
+</html>
+

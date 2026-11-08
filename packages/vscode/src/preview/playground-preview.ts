@@ -12,13 +12,11 @@ import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { commands, Uri, ViewColumn, window, workspace } from "vscode";
-import { canOpenPreview } from "../../editor/is-template.js";
-import { renderInferencesPageHtml } from "../inferences/render-inferences-page.js";
+import { canOpenPreview } from "../editor/is-template.js";
 import {
-  getOrCreateState,
-  renderPlaygroundPreviewHtml,
-  updateSelectedSampleInHtml,
-} from "./render-preview-page.js";
+  getInferencesPageHtml,
+  getPlaygroundPreviewHtml,
+} from "./preview-html.js";
 
 export interface PlaygroundPreviewController {
   openPlayground(docOrUri?: TextDocument | Uri): Promise<void>;
@@ -38,7 +36,7 @@ export function isPlaygroundDocument(
 }
 
 /**
- * Activates on-demand playground preview for VS Code.
+ * Activates on-demand playground preview for VS Code using Lit components.
  */
 export function activatePlaygroundPreview(
   context: ExtensionContext,
@@ -47,6 +45,22 @@ export function activatePlaygroundPreview(
   let currentPanel: WebviewPanel | undefined;
   let currentDoc: TextDocument | undefined;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const renderPreviewHtml = (panel: WebviewPanel, doc: TextDocument): void => {
+    const fileName = path.basename(doc.fileName);
+    const displayName = fileName
+      .replace(/\.play\.tp$/, "")
+      .replace(/\.tp$/, "");
+    const match = projectStore.findByUri(doc.uri.toString());
+    const scriptUri = panel.webview
+      .asWebviewUri(Uri.joinPath(context.extensionUri, "dist", "webview.js"))
+      .toString();
+    panel.webview.html = getPlaygroundPreviewHtml(
+      scriptUri,
+      match,
+      displayName,
+    );
+  };
 
   const openPlaygroundForDocument = async (
     doc: TextDocument,
@@ -75,6 +89,7 @@ export function activatePlaygroundPreview(
         {
           enableScripts: true,
           retainContextWhenHidden: true,
+          localResourceRoots: [context.extensionUri],
         },
       );
 
@@ -83,16 +98,13 @@ export function activatePlaygroundPreview(
 
       currentPanel.webview.onDidReceiveMessage(
         async (message: { type: string; key?: string; index?: number }) => {
-          if (message.type === "selectSample" && message.key && currentDoc) {
-            const state = getOrCreateState(currentDoc.uri.toString());
-            state.selectedSampleKey = message.key;
-            if (state.lastSuccessfulHtml && typeof message.index === "number") {
-              state.lastSuccessfulHtml = updateSelectedSampleInHtml(
-                state.lastSuccessfulHtml,
-                message.index,
-              );
-            }
-          } else if (message.type === "createSecretsFile" && currentDoc) {
+          if (message.type === "selectSample") {
+            // Handled
+          } else if (
+            (message.type === "createSecretsFile" ||
+              message.type === "createSecrets") &&
+            currentDoc
+          ) {
             await handleCreateSecretsFile(currentDoc, projectStore);
           } else if (message.type === "runInferences" && currentDoc) {
             await handleRunInferences(context, currentDoc, projectStore);
@@ -110,10 +122,7 @@ export function activatePlaygroundPreview(
     }
 
     if (!sameDoc || !currentPanel.webview.html) {
-      currentPanel.webview.html = renderPlaygroundPreviewHtml(
-        doc,
-        projectStore,
-      );
+      renderPreviewHtml(currentPanel, doc);
     }
   };
 
@@ -143,14 +152,10 @@ export function activatePlaygroundPreview(
 
   const notifyCompilationUpdate = (): void => {
     if (currentPanel && currentDoc) {
-      currentPanel.webview.html = renderPlaygroundPreviewHtml(
-        currentDoc,
-        projectStore,
-      );
+      renderPreviewHtml(currentPanel, currentDoc);
     }
   };
 
-  // Register command to trigger playground preview (from explorer context menu, editor title, or command palette)
   context.subscriptions.push(
     commands.registerCommand("typeprompt.openPlayground", handleOpenPlayground),
   );
@@ -164,7 +169,6 @@ export function activatePlaygroundPreview(
     ),
   );
 
-  // If the preview panel is open and the active text editor switches to another playground, update the preview
   context.subscriptions.push(
     window.onDidChangeActiveTextEditor((editor) => {
       if (!currentPanel || !editor) {
@@ -180,7 +184,6 @@ export function activatePlaygroundPreview(
     }),
   );
 
-  // Debounced update on text changes in the actively previewed playground document
   context.subscriptions.push(
     workspace.onDidChangeTextDocument((event) => {
       if (!currentPanel || !currentDoc) {
@@ -194,10 +197,7 @@ export function activatePlaygroundPreview(
       }
       debounceTimer = setTimeout(() => {
         if (currentPanel && currentDoc) {
-          currentPanel.webview.html = renderPlaygroundPreviewHtml(
-            currentDoc,
-            projectStore,
-          );
+          renderPreviewHtml(currentPanel, currentDoc);
         }
       }, 150);
     }),
@@ -279,7 +279,6 @@ export async function handleRunInferences(
     templateId = `${DEFAULT_NAMESPACE}:${baseName}`;
   }
 
-  // Compile project snapshot using current in-memory documents
   const projectFolderUri = Uri.parse(match.project.folderUri);
   const pathToContent: { [path: string]: string } = {};
   for (const relPath of Object.keys(
@@ -376,15 +375,34 @@ export async function handleRunInferences(
     {
       enableScripts: true,
       retainContextWhenHidden: true,
+      localResourceRoots: [context.extensionUri],
     },
   );
   inferencesPanel.iconPath = Uri.file(context.asAbsolutePath("icon.svg"));
 
+  let hasSetInitialHtml = false;
+
   void runPlaygroundInferences(validCompilation, templateId, {
     apiKeys,
     callback: (pendingInferenceSet) => {
-      inferencesPanel.webview.html =
-        renderInferencesPageHtml(pendingInferenceSet);
+      if (!hasSetInitialHtml) {
+        hasSetInitialHtml = true;
+        const scriptUri = inferencesPanel.webview
+          .asWebviewUri(
+            Uri.joinPath(context.extensionUri, "dist", "webview.js"),
+          )
+          .toString();
+        inferencesPanel.webview.html = getInferencesPageHtml(
+          scriptUri,
+          pendingInferenceSet,
+          shortName,
+        );
+      } else {
+        void inferencesPanel.webview.postMessage({
+          type: "updateInferenceSet",
+          inferenceSet: pendingInferenceSet,
+        });
+      }
     },
   }).catch((err: unknown) => {
     void window.showErrorMessage(

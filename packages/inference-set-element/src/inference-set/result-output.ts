@@ -1,6 +1,7 @@
 import type { Inferences } from "@typeprompt/core";
+import { html, type TemplateResult } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { stringifyAsJson, stringifyAsYaml } from "../common/formatters.js";
-import { escapeHtml, html, type SafeHtml } from "../common/html.js";
 import { renderToolCall } from "../common/render-request-context.js";
 import { highlightJson, highlightYaml } from "../common/token-highlighting.js";
 
@@ -8,7 +9,11 @@ export function renderResultOutput(
   cardId: string,
   result: Inferences.InferenceResult<Inferences.Pending>,
   outputFormat: "json" | "text",
-): SafeHtml {
+  activeTab: "yaml" | "json" | "text",
+  onTabChange: (tab: "yaml" | "json" | "text") => void,
+  onCopy: (text: string) => void,
+  isCopied: boolean,
+): TemplateResult {
   if (result.kind === "pending") {
     return html`
       <div class="pending-output">
@@ -17,7 +22,15 @@ export function renderResultOutput(
     `;
   }
   if (result.kind === "success") {
-    return renderSuccessResponse(cardId, result.response, outputFormat);
+    return renderSuccessResponse(
+      cardId,
+      result.response,
+      outputFormat,
+      activeTab,
+      onTabChange,
+      onCopy,
+      isCopied,
+    );
   }
   return renderErrorResponse(result.error);
 }
@@ -26,11 +39,17 @@ export function renderSuccessResponse(
   cardId: string,
   response: Inferences.InferenceResponse,
   outputFormat: "json" | "text",
-): SafeHtml {
+  activeTab: "yaml" | "json" | "text",
+  onTabChange: (tab: "yaml" | "json" | "text") => void,
+  onCopy: (text: string) => void,
+  isCopied: boolean,
+): TemplateResult {
   if (response.kind === "output") {
     if (outputFormat === "json") {
       const jsonRaw = stringifyAsJson(response.output);
       const yamlRaw = stringifyAsYaml(response.output);
+      const currentTab = activeTab === "text" ? "yaml" : activeTab;
+      const textToCopy = currentTab === "yaml" ? yamlRaw : jsonRaw;
 
       return html`
         <div class="output-card">
@@ -38,17 +57,15 @@ export function renderSuccessResponse(
             <div class="output-tabs">
               <button
                 type="button"
-                class="output-tab-btn is-active"
-                data-tab="yaml"
-                onclick="switchOutputTab('${cardId}', 'yaml')"
+                class="output-tab-btn ${currentTab === "yaml" ? "is-active" : ""}"
+                @click=${(): void => onTabChange("yaml")}
               >
                 YAML
               </button>
               <button
                 type="button"
-                class="output-tab-btn"
-                data-tab="json"
-                onclick="switchOutputTab('${cardId}', 'json')"
+                class="output-tab-btn ${currentTab === "json" ? "is-active" : ""}"
+                @click=${(): void => onTabChange("json")}
               >
                 JSON
               </button>
@@ -56,29 +73,27 @@ export function renderSuccessResponse(
 
             <button
               type="button"
-              class="btn-copy"
-              onclick="copyActiveOutput(this, '${cardId}')"
+              class="btn-copy ${isCopied ? "copied" : ""}"
+              @click=${(): void => onCopy(textToCopy)}
               title="Copy code to clipboard"
             >
-              Copy
+              ${isCopied ? "Copied!" : "Copy"}
             </button>
           </div>
 
-          <!-- YAML View (Default Active) -->
-          <pre
-            class="code-view output-code-view is-active"
-            data-view="yaml"
-            data-raw="${escapeHtml(yamlRaw)}"
-          >
-${highlightYaml(yamlRaw)}</pre>
-
-          <!-- JSON View -->
-          <pre
-            class="code-view output-code-view"
-            data-view="json"
-            data-raw="${escapeHtml(jsonRaw)}"
-          >
-${highlightJson(jsonRaw)}</pre>
+          ${
+            currentTab === "yaml"
+              ? html`
+                  <pre
+                    class="code-view output-code-view is-active"
+                  ><code>${unsafeHTML(highlightYaml(yamlRaw))}</code></pre>
+                `
+              : html`
+                  <pre
+                    class="code-view output-code-view is-active"
+                  ><code>${unsafeHTML(highlightJson(jsonRaw))}</code></pre>
+                `
+          }
         </div>
       `;
     }
@@ -93,19 +108,16 @@ ${highlightJson(jsonRaw)}</pre>
           >
           <button
             type="button"
-            class="btn-copy"
-            onclick="copyActiveOutput(this, '${cardId}')"
+            class="btn-copy ${isCopied ? "copied" : ""}"
+            @click=${(): void => onCopy(response.rawText)}
             title="Copy code to clipboard"
           >
-            Copy
+            ${isCopied ? "Copied!" : "Copy"}
           </button>
         </div>
         <pre
           class="code-view output-code-view is-active"
-          data-view="text"
-          data-raw="${escapeHtml(response.rawText)}"
-        >
-${response.rawText}</pre>
+        ><code>${response.rawText}</code></pre>
       </div>
     `;
   }
@@ -128,18 +140,18 @@ ${response.rawText}</pre>
 
 export function renderErrorResponse(
   error: Inferences.InferenceError,
-): SafeHtml {
+): TemplateResult {
   return html`
     <div class="output-card error">
       <div class="output-card-header">
         <span
-          style="font-size: 0.82rem; font-weight: 700; color: var(--error-text);"
+          style="font-size: 0.82rem; font-weight: 700; color: var(--error-text, #f87171);"
           >Error: ${error.kind}</span
         >
       </div>
       <div style="padding: 0.85rem 1rem;">
         <p
-          style="color: var(--error-text); font-weight: 600; margin-bottom: 0.75rem;"
+          style="color: var(--error-text, #f87171); font-weight: 600; margin-bottom: 0.75rem;"
         >
           ${error.message}
         </p>
@@ -155,8 +167,7 @@ export function renderErrorResponse(
                   <pre
                     class="code-view is-active"
                     style="background: var(--bg-inset); border: 1px solid var(--border);"
-                  >
-${error.rawText}</pre>
+                  ><code>${error.rawText}</code></pre>
                 </div>
               `
             : ""

@@ -1,0 +1,44 @@
+{
+  "name": "@typeprompt/inference-set-element",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./playground-preview": {
+      "types": "./dist/playground-preview.d.ts",
+      "import": "./dist/playground-preview.js",
+      "default": "./dist/playground-preview.js"
+    },
+    "./inference-set": {
+      "types": "./dist/inference-set.d.ts",
+      "import": "./dist/inference-set.js",
+      "default": "./dist/inference-set.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "format": "prettier \"{src,dev}/**/*.{cjs,html,js,json,md,ts}\" --write",
+    "format:check": "prettier \"{src,dev}/**/*.{cjs,html,js,json,md,ts}\" --check",
+    "dev": "vite",
+    "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@typeprompt/core": "*",
+    "lit": "^3.2.0",
+    "nanoevents": "^10.0.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "vite": "^6.4.5"
+  }
+}
+

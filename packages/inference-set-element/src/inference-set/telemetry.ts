@@ -1,10 +1,10 @@
 import type { Inferences } from "@typeprompt/core";
+import { html, type TemplateResult } from "lit";
 import { formatDuration, formatNumber } from "../common/formatters.js";
-import { html, type SafeHtml } from "../common/html.js";
 
 export function renderTelemetryStrip(
   telemetry: Inferences.InferenceTelemetry,
-): SafeHtml {
+): TemplateResult {
   const { latencyMs, usage } = telemetry;
 
   return html`
