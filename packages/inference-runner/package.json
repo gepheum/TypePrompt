@@ -29,7 +29,11 @@
     "@ai-sdk/openai": "^4.0.103",
     "@ai-sdk/xai": "^5.0.35",
     "@typeprompt/core": "*",
-    "ai": "^7.0.154"
+    "ai": "^7.0.154",
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
   }
 }
 

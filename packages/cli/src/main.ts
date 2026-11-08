@@ -10,10 +10,12 @@ import {
 } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
-import { runPlaygroundInferences } from "@typeprompt/inference-runner";
+import {
+  openProjectStorage,
+  runPlaygroundInferences,
+} from "@typeprompt/inference-runner";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
-import { openProjectStorage } from "./main.js";
 import { parseCommandLine } from "./main/command-line-parser.js";
 import {
   findProjectForFile,
@@ -34,7 +36,16 @@ import {
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
 import { isDirectory } from "./util/io.js";
-export * from "./storage/index.js";
+export {
+  createProjectStorage,
+  getDatabasePath,
+  openProjectStorage,
+  resolveDatabasePath,
+  type ListInferenceSetsOptions,
+  type OpenStorageOptions,
+  type ProjectStorage,
+  type StoredInferenceSummary,
+} from "@typeprompt/inference-runner";
 export { formatTemplateFile };
 
 type ModuleFormatResult = {

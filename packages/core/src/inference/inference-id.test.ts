@@ -21,4 +21,3 @@ describe("generateInferenceSetId", () => {
     expect(ids.size).toBe(count);
   });
 });
-
