@@ -40,8 +40,7 @@ export function renderInferencesPageHtml(
                   <span class="badge-tag">playground</span>
                 </h1>
                 <div class="timestamp">
-                  Run at ${formatTimestamp(data.isoTimestamp)} · ID:
-                  ${data.id.slice(0, 8)}
+                  ${formatTimestamp(data.isoTimestamp)} · ID: ${data.id}
                 </div>
               </div>
 

@@ -37,6 +37,7 @@ describe("renderInferencesPageHtml", () => {
 
     const html = renderInferencesPageHtml(data);
     expect(html.includes("Greeting · TypePrompt inferences")).toBe(true);
+    expect(html.includes(data.id)).toBe(true);
     expect(html.includes("status-badge pending")).toBe(true);
     expect(html.includes("Pending")).toBe(true);
     expect(html.includes("pending-output")).toBe(true);

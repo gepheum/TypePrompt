@@ -6,6 +6,7 @@ import { createXai } from "@ai-sdk/xai";
 import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
+  generateInferenceSetId,
   makeTemplates,
   normalizeSchemaValue,
   parseJson,
@@ -91,7 +92,7 @@ export async function runPlaygroundInferences(
     templateId,
   );
   const isoTimestamp = now.toISOString();
-  const id = crypto.randomUUID();
+  const id = generateInferenceSetId();
 
   const inferences: Inferences.Inference<Inferences.Pending>[] =
     validatedPlayground.samples.map((sample, sampleIndex) => {

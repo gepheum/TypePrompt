@@ -3,7 +3,7 @@ import type { PlaygroundModel } from "./model-types.js";
 /** Result of running inference across all samples in a `<samples>` element. */
 export type InferenceSet<Pending = never> = {
   readonly kind: "playground-inference-set";
-  /** Unique identifier (UUID) for this inference set. */
+  /** Unique 8-character Base62 identifier for this inference set. */
   readonly id: string;
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */

@@ -307,10 +307,7 @@ describe("inference-runner", () => {
         { languageModel: mockModel },
       );
 
-      assert.match(
-        inferenceSet.id,
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-      );
+      assert.match(inferenceSet.id, /^[0-9a-zA-Z]{8}$/);
       assert.equal(inferenceSet.templateId, "Main:Assist");
       assert.equal(inferenceSet.model.model, "openai/gpt-4o");
       assert.equal(inferenceSet.model.temperature, 0.2);

@@ -55,6 +55,7 @@ export * as Lsp from "./lsp-util/index.js";
 export {
   Inferences,
   PLAYGROUND_MODEL_IDS,
+  generateInferenceSetId,
   renderInferenceRequest,
   type AnthropicEffort,
   type AnthropicProviderOptions,
