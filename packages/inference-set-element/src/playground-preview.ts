@@ -182,12 +182,12 @@ const playgroundPreviewStyles = css`
 
   .error-banner {
     pointer-events: auto;
-    background: rgba(24, 16, 22, 0.95);
-    border: 1px solid rgba(248, 113, 113, 0.6);
-    color: #fca5a5;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error-text);
     border-radius: 8px;
     padding: 0.65rem 1.25rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;

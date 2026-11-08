@@ -3,7 +3,7 @@ import { css } from "lit";
 export const commonStyles = css`
   :host {
     --font-sans: var(
-      --vscode-font-family,
+      --tp-font-family,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
@@ -13,7 +13,7 @@ export const commonStyles = css`
       sans-serif
     );
     --font-mono: var(
-      --vscode-editor-font-family,
+      --tp-font-mono,
       "SF Mono",
       Monaco,
       "Cascadia Code",
@@ -22,91 +22,81 @@ export const commonStyles = css`
       Courier,
       monospace
     );
-    --font-size: var(--vscode-font-size, 13px);
+    --font-size: var(--tp-font-size, 13px);
 
-    --bg: var(--vscode-editor-background, #0b0f19);
-    --bg-surface: var(
-      --vscode-sideBar-background,
-      var(--vscode-editorWidget-background, #111827)
+    --bg: var(--tp-bg, #0b0f19);
+    --bg-surface: var(--tp-bg-surface, #111827);
+    --bg-surface-elevated: var(--tp-bg-surface-elevated, #1a2234);
+    --bg-inset: var(--tp-bg-inset, #070a12);
+
+    --border: var(--tp-border, #1f293d);
+    --border-subtle: var(--tp-border-subtle, #162032);
+    --border-focus: var(--tp-border-focus, #38bdf8);
+
+    --text: var(--tp-text, #f1f5f9);
+    --text-muted: var(--tp-text-muted, #94a3b8);
+    --text-soft: var(--tp-text-soft, #64748b);
+
+    --button-bg: var(--tp-button-bg, #0284c7);
+    --button-fg: var(--tp-button-fg, #ffffff);
+    --button-hover: var(--tp-button-hover, #0369a1);
+
+    --dropdown-bg: var(--tp-dropdown-bg, var(--bg-inset));
+    --dropdown-fg: var(--tp-dropdown-fg, var(--text));
+    --dropdown-border: var(--tp-dropdown-border, var(--border));
+
+    --success-bg: var(--tp-success-bg, rgba(34, 197, 94, 0.15));
+    --success-border: var(--tp-success-border, rgba(34, 197, 94, 0.4));
+    --success-text: var(--tp-success-text, #4ade80);
+
+    --pending-bg: var(--tp-pending-bg, rgba(234, 179, 8, 0.15));
+    --pending-border: var(--tp-pending-border, rgba(234, 179, 8, 0.4));
+    --pending-text: var(--tp-pending-text, #facc15);
+
+    --error-bg: var(--tp-error-bg, rgba(239, 68, 68, 0.15));
+    --error-border: var(--tp-error-border, rgba(239, 68, 68, 0.4));
+    --error-text: var(--tp-error-text, #f87171);
+
+    --section-request-bg: var(--tp-section-request-bg, var(--bg-inset));
+    --section-request-header: var(
+      --tp-section-request-header,
+      var(--bg-surface-elevated)
     );
-    --bg-surface-elevated: var(
-      --vscode-list-hoverBackground,
-      var(--vscode-toolbar-hoverBackground, #1a2234)
+    --section-request-border: var(--tp-section-request-border, var(--border));
+    --section-request-label: var(--tp-section-request-label, var(--text-muted));
+
+    --user-bg: var(--tp-user-bg, color-mix(in srgb, var(--text) 5%, var(--bg)));
+    --user-border: var(
+      --tp-user-border,
+      color-mix(in srgb, var(--text) 14%, var(--border))
     );
-    --bg-inset: var(
-      --vscode-textCodeBlock-background,
-      var(--vscode-editor-background, #070a12)
+    --user-label: var(--tp-user-label, var(--text-muted));
+
+    --assistant-bg: var(
+      --tp-assistant-bg,
+      color-mix(in srgb, var(--border-focus) 8%, var(--bg))
     );
-
-    --border: var(
-      --vscode-panel-border,
-      var(--vscode-widget-border, var(--vscode-editorWidget-border, #1f293d))
+    --assistant-border: var(
+      --tp-assistant-border,
+      color-mix(in srgb, var(--border-focus) 28%, var(--border))
     );
-    --border-subtle: var(
-      --vscode-tree-tableColumnsBorder,
-      var(--vscode-editorGroup-border, #162032)
+    --assistant-label: var(--tp-assistant-label, var(--border-focus));
+
+    --tool-bg: var(--tp-tool-bg, color-mix(in srgb, #a855f7 9%, var(--bg)));
+    --tool-border: var(
+      --tp-tool-border,
+      color-mix(in srgb, #a855f7 28%, var(--border))
     );
-    --border-focus: var(--vscode-focusBorder, #38bdf8);
+    --tool-label: var(--tp-tool-label, #c084fc);
 
-    --text: var(--vscode-editor-foreground, var(--vscode-foreground, #f1f5f9));
-    --text-muted: var(--vscode-descriptionForeground, #94a3b8);
-    --text-soft: var(--vscode-disabledForeground, #64748b);
-
-    --button-bg: var(--vscode-button-background, #0284c7);
-    --button-fg: var(--vscode-button-foreground, #ffffff);
-    --button-hover: var(--vscode-button-hoverBackground, #0369a1);
-
-    --dropdown-bg: var(
-      --vscode-dropdown-background,
-      var(--vscode-input-background, var(--bg-inset))
-    );
-    --dropdown-fg: var(
-      --vscode-dropdown-foreground,
-      var(--vscode-input-foreground, var(--text))
-    );
-    --dropdown-border: var(
-      --vscode-dropdown-border,
-      var(--vscode-input-border, var(--border))
-    );
-
-    --success-bg: rgba(34, 197, 94, 0.15);
-    --success-border: rgba(34, 197, 94, 0.4);
-    --success-text: #4ade80;
-
-    --pending-bg: rgba(234, 179, 8, 0.15);
-    --pending-border: rgba(234, 179, 8, 0.4);
-    --pending-text: #facc15;
-
-    --error-bg: rgba(239, 68, 68, 0.15);
-    --error-border: rgba(239, 68, 68, 0.4);
-    --error-text: #f87171;
-
-    --section-request: #121828;
-    --section-request-bg: var(--bg-inset);
-    --section-request-header: var(--bg-surface-elevated);
-    --section-request-border: var(--border);
-    --section-request-label: var(--text-muted);
-
-    --user-bg: #1e293b;
-    --user-border: #334155;
-    --user-label: var(--text-muted);
-
-    --assistant-bg: #0f2c42;
-    --assistant-border: #164e63;
-    --assistant-label: #38bdf8;
-
-    --tool-bg: #281a3d;
-    --tool-border: #4c1d95;
-    --tool-label: #c084fc;
-
-    --hl-key: #7dd3fc;
-    --hl-string: #a7f3d0;
-    --hl-number: #fde047;
-    --hl-boolean: #f472b6;
-    --hl-comment: var(--text-soft);
-    --hl-xml-tag: #38bdf8;
-    --hl-xml-attribute: #c084fc;
-    --hl-schema-keyword: #f472b6;
+    --hl-key: var(--tp-hl-key, #7dd3fc);
+    --hl-string: var(--tp-hl-string, #a7f3d0);
+    --hl-number: var(--tp-hl-number, #fde047);
+    --hl-boolean: var(--tp-hl-boolean, #f472b6);
+    --hl-comment: var(--tp-hl-comment, var(--text-soft));
+    --hl-xml-tag: var(--tp-hl-xml-tag, var(--border-focus));
+    --hl-xml-attribute: var(--tp-hl-xml-attribute, #c084fc);
+    --hl-schema-keyword: var(--tp-hl-schema-keyword, #f472b6);
 
     display: block;
     font-family: var(--font-sans);

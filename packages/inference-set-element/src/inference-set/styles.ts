@@ -296,7 +296,7 @@ export const inferenceSetStyles = css`
   }
 
   .section-title.result {
-    color: #38bdf8;
+    color: var(--border-focus);
   }
 
   .output-card {
