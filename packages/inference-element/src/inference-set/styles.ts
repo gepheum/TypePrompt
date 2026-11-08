@@ -419,9 +419,20 @@ export const inferenceSetStyles = css`
   }
 
   .source-file-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 0.5rem 0.75rem;
     cursor: pointer;
     user-select: none;
+  }
+
+  .source-file-item[open] .source-file-header {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .source-file-item:not([open]) .btn-copy {
+    display: none;
   }
 
   footer {

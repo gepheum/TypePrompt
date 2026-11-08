@@ -34,11 +34,13 @@ describe("preview-html (vscode extension)", () => {
     );
 
     assert.ok(
-      html.includes('<playground-preview id="preview"></playground-preview>'),
+      html.includes(
+        '<tp-playground-preview id="preview"></tp-playground-preview>',
+      ),
     );
-    assert.ok(html.includes('events.on("createSecrets"'));
-    assert.ok(html.includes('events.on("runInferences"'));
-    assert.ok(html.includes('events.on("selectSample"'));
+    assert.ok(html.includes('playgroundPreviewEvents.on("createSecrets"'));
+    assert.ok(html.includes('playgroundPreviewEvents.on("runInferences"'));
+    assert.ok(html.includes('playgroundPreviewEvents.on("selectSample"'));
     assert.ok(html.includes("preview.wireProject = "));
   });
 
@@ -55,7 +57,9 @@ describe("preview-html (vscode extension)", () => {
 
     const html = getInferencesPageHtml(fakeScriptUri, fakeInferenceSet, "Test");
 
-    assert.ok(html.includes('<inference-set id="inferences"></inference-set>'));
+    assert.ok(
+      html.includes('<tp-inference-set id="inferences"></tp-inference-set>'),
+    );
     assert.ok(html.includes("inferences.inferenceSet = "));
     assert.ok(html.includes("updateInferenceSet"));
   });

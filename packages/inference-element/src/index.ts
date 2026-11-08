@@ -1,12 +1,12 @@
 export {
   PlaygroundPreviewElement,
-  playgroundPreviewEvents as events,
-  playgroundPreviewEvents as playgroundEvents,
+  playgroundPreviewEvents,
   type PlaygroundPreviewEvents,
 } from "./playground-preview.js";
 
 export {
+  InferenceSampleElement,
   InferenceSetElement,
-  inferenceSetEvents as inferenceSetEvents,
+  inferenceSetEvents,
   type InferenceSetEvents,
 } from "./inference-set.js";

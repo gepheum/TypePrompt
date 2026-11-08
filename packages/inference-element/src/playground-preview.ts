@@ -196,7 +196,7 @@ const playgroundPreviewStyles = css`
   }
 `;
 
-@customElement("playground-preview")
+@customElement("tp-playground-preview")
 export class PlaygroundPreviewElement extends LitElement {
   static override styles = [commonStyles, playgroundPreviewStyles];
 

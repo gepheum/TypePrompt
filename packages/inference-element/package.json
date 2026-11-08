@@ -1,5 +1,5 @@
 {
-  "name": "@typeprompt/inference-set-element",
+  "name": "@typeprompt/inference-element",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

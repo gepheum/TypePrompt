@@ -10,7 +10,7 @@ describe("PlaygroundPreviewElement", () => {
   it("initializes component instance", () => {
     const el = new PlaygroundPreviewElement();
     assert.ok(el);
-    assert.strictEqual(el.tagName.toLowerCase(), "playground-preview");
+    assert.strictEqual(el.tagName.toLowerCase(), "tp-playground-preview");
   });
 
   it("exports events nanoevents emitter and fires createSecrets, runInferences, selectSample", () => {

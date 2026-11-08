@@ -12,15 +12,17 @@ import YAML from "yaml";
 import { formatTimestamp } from "./common/formatters.js";
 import { commonStyles } from "./common/styles.js";
 import { highlightTp, highlightYaml } from "./common/token-highlighting.js";
-import { renderInferenceCard } from "./inference-set/inference-card.js";
+import "./inference-set/inference-sample.js";
 import { inferenceSetStyles } from "./inference-set/styles.js";
+
+export { InferenceSampleElement } from "./inference-set/inference-sample.js";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface InferenceSetEvents {}
 
 export const inferenceSetEvents = createNanoEvents<InferenceSetEvents>();
 
-@customElement("inference-set")
+@customElement("tp-inference-set")
 export class InferenceSetElement extends LitElement {
   static override styles = [commonStyles, inferenceSetStyles];
 
@@ -67,9 +69,6 @@ export class InferenceSetElement extends LitElement {
   private expandedCardIds = new Set<string>();
 
   @state()
-  private activeTabs = new Map<string, "yaml" | "json" | "text">();
-
-  @state()
   private copiedCardId?: string;
 
   override willUpdate(changedProps: PropertyValues): void {
@@ -105,12 +104,6 @@ export class InferenceSetElement extends LitElement {
     }
   }
 
-  private switchTab(cardId: string, tab: "yaml" | "json" | "text"): void {
-    const next = new Map(this.activeTabs);
-    next.set(cardId, tab);
-    this.activeTabs = next;
-  }
-
   private async copyText(cardId: string, text: string): Promise<void> {
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -144,6 +137,15 @@ export class InferenceSetElement extends LitElement {
       ? data.templateId.slice("Main:".length)
       : data.templateId;
 
+    const isMetaFile = (filePath: string): boolean =>
+      filePath === "meta.tp" ||
+      filePath.endsWith("/meta.tp") ||
+      filePath.endsWith("\\meta.tp");
+
+    const sourceFiles = Object.entries(data.templateFiles)
+      .filter(([filePath]) => !isMetaFile(filePath))
+      .sort(([a], [b]) => a.localeCompare(b));
+
     return html`
       <div class="container">
         <!-- Header -->
@@ -152,7 +154,6 @@ export class InferenceSetElement extends LitElement {
             <div class="title-group">
               <h1>
                 <span>${displayTemplateId}</span>
-                <span class="badge-tag">playground</span>
               </h1>
               <div class="timestamp">
                 ${formatTimestamp(data.isoTimestamp)} · ID: ${data.id}
@@ -203,54 +204,68 @@ export class InferenceSetElement extends LitElement {
           ${data.inferences.map((inf) => {
             const cardId = `sample-${inf.sampleIndex}`;
             const isExpanded = this.expandedCardIds.has(cardId);
-            const activeTab = this.activeTabs.get(cardId) ?? "yaml";
-            const isCopied = this.copiedCardId === cardId;
 
-            return renderInferenceCard(
-              inf,
-              data.inferences.length,
-              isExpanded,
-              () => this.toggleCard(cardId),
-              activeTab,
-              (tab) => this.switchTab(cardId, tab),
-              (text) => void this.copyText(cardId, text),
-              isCopied,
-            );
+            return html`
+              <tp-inference-sample
+                .inference=${inf}
+                .totalSamples=${data.inferences.length}
+                .isExpanded=${isExpanded}
+                @toggle-expand=${(): void => this.toggleCard(cardId)}
+              ></tp-inference-sample>
+            `;
           })}
         </main>
 
         <!-- Source Files Section -->
         ${
-          Object.keys(data.templateFiles).length > 0
+          sourceFiles.length > 0
             ? html`
                 <div class="source-files-section">
                   <details>
-                    <summary>
-                      View source files
-                      (${Object.keys(data.templateFiles).length})
-                    </summary>
+                    <summary>View source files (${sourceFiles.length})</summary>
                     <div
                       class="details-body"
                       style="display: flex; flex-direction: column; gap: 0.65rem;"
                     >
-                      ${Object.entries(data.templateFiles)
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(
-                          ([filePath, content]) => html`
-                            <details class="source-file-item">
-                              <summary class="source-file-header">
-                                <span
-                                  style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"
-                                  >${filePath}</span
-                                >
-                              </summary>
-                              <pre
-                                class="code-view is-active"
-                                style="padding: 0.85rem 1rem; background: var(--bg-inset); margin: 0;"
-                              ><code>${unsafeHTML(highlightTp(content))}</code></pre>
-                            </details>
-                          `,
-                        )}
+                      ${sourceFiles.map(
+                        ([filePath, content]) => html`
+                          <details class="source-file-item">
+                            <summary class="source-file-header">
+                              <span
+                                style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"
+                                >${filePath}</span
+                              >
+                              <button
+                                type="button"
+                                class="btn-copy ${
+                                  this.copiedCardId === `file:${filePath}`
+                                    ? "copied"
+                                    : ""
+                                }"
+                                @click=${(e: MouseEvent): void => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  void this.copyText(
+                                    `file:${filePath}`,
+                                    content,
+                                  );
+                                }}
+                                title="Copy file contents to clipboard"
+                              >
+                                ${
+                                  this.copiedCardId === `file:${filePath}`
+                                    ? "Copied!"
+                                    : "Copy"
+                                }
+                              </button>
+                            </summary>
+                            <pre
+                              class="code-view is-active"
+                              style="padding: 0.85rem 1rem; background: var(--bg-inset); margin: 0;"
+                            ><code>${unsafeHTML(highlightTp(content))}</code></pre>
+                          </details>
+                        `,
+                      )}
                     </div>
                   </details>
                 </div>

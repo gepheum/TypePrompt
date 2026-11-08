@@ -128,22 +128,22 @@ export function getPlaygroundPreviewHtml(
   </style>
 </head>
 <body>
-  <playground-preview id="preview"></playground-preview>
+  <tp-playground-preview id="preview"></tp-playground-preview>
 
   <script type="module">
-    import { events } from "${scriptUri}";
+    import { playgroundPreviewEvents } from "${scriptUri}";
 
     const vscode = acquireVsCodeApi();
 
-    events.on("createSecrets", () => {
+    playgroundPreviewEvents.on("createSecrets", () => {
       vscode.postMessage({ type: "createSecretsFile" });
     });
 
-    events.on("runInferences", () => {
+    playgroundPreviewEvents.on("runInferences", () => {
       vscode.postMessage({ type: "runInferences" });
     });
 
-    events.on("selectSample", (key, index) => {
+    playgroundPreviewEvents.on("selectSample", (key, index) => {
       vscode.postMessage({ type: "selectSample", key, index });
     });
 
@@ -185,7 +185,7 @@ export function getInferencesPageHtml(
   </style>
 </head>
 <body>
-  <inference-set id="inferences"></inference-set>
+  <tp-inference-set id="inferences"></tp-inference-set>
 
   <script type="module">
     import "${scriptUri}";

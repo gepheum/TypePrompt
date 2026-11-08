@@ -94,8 +94,8 @@
   <body>
     <nav class="dev-bar">
       <div class="tabs">
-        <button id="btn-preview" class="tab-btn active">&lt;playground-preview&gt;</button>
-        <button id="btn-inferences" class="tab-btn">&lt;inference-set&gt;</button>
+        <button id="btn-preview" class="tab-btn active">&lt;tp-playground-preview&gt;</button>
+        <button id="btn-inferences" class="tab-btn">&lt;tp-inference-set&gt;</button>
       </div>
 
       <div class="controls" id="preview-controls">
@@ -114,10 +114,10 @@
 
     <main class="view-container">
       <div id="preview-section">
-        <playground-preview id="playground-preview-el"></playground-preview>
+        <tp-playground-preview id="playground-preview-el"></tp-playground-preview>
       </div>
       <div id="inference-section" style="display: none;">
-        <inference-set id="inference-set-el"></inference-set>
+        <tp-inference-set id="inference-set-el"></tp-inference-set>
       </div>
     </main>
 
@@ -128,7 +128,7 @@
 
     <script type="module">
       import {
-        events as playgroundEvents,
+        playgroundPreviewEvents,
       } from "./src/index.ts";
       import {
         mockValidProjectWithKeys,
@@ -149,13 +149,13 @@
       }
 
       // Listen to nanoevents
-      playgroundEvents.on("createSecrets", () => {
+      playgroundPreviewEvents.on("createSecrets", () => {
         addLog("Event fired: 'createSecrets'");
       });
-      playgroundEvents.on("runInferences", () => {
+      playgroundPreviewEvents.on("runInferences", () => {
         addLog("Event fired: 'runInferences'");
       });
-      playgroundEvents.on("selectSample", (key, idx) => {
+      playgroundPreviewEvents.on("selectSample", (key, idx) => {
         addLog(`Event fired: 'selectSample' -> key: "${key}", index: ${idx}`);
       });
 
