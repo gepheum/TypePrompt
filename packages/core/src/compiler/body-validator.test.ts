@@ -79,6 +79,8 @@ function makeValidatedTool(name: string, schemaSource: string): TemplateTool {
     tool: {
       kind: "tool",
       tool,
+      inputType: schema.typeDeclarations["Input"],
+      outputType: schema.typeDeclarations["Output"],
       schema,
       definitionLinks: [],
     },

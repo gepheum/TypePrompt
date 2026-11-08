@@ -73,6 +73,8 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
   return {
     kind: "tool",
     tool,
+    inputType: schema.typeDeclarations["Input"],
+    outputType: schema.typeDeclarations["Output"],
     schema,
     definitionLinks: [],
   };
@@ -1225,6 +1227,39 @@ describe("validatePlayground", () => {
           },
         ],
       });
+    });
+
+    it("validates playground when template inputType and outputType are undefined using any", () => {
+      const node = parseElement(
+        `
+        <playground for="Translate">
+          <model>
+            model: openai/gpt-4o
+          </model>
+          <samples>
+          - input:
+              customAnyField: 123
+            history:
+            - input:
+                foo: "bar"
+              output: "anything goes"
+          </samples>
+        </playground>
+      `,
+        "prompts/Translate.play.tp",
+      );
+
+      const parsed = parsePlayground(node);
+      if (parsed.kind === "error") throw new Error("parsePlayground failed");
+
+      const templateWithoutTypes: ValidatedTemplate = {
+        ...template,
+        inputType: undefined,
+        outputType: undefined,
+      };
+
+      const result = validatePlayground(parsed, templateWithoutTypes);
+      expect(result.kind).toBe("playground");
     });
   });
 });

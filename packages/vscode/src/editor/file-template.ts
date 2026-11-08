@@ -216,7 +216,7 @@ function makeSamplesYaml(
     const templateId = `${namespaceName}:${templateName}`;
     const templateValidation = compilation.templates[templateId];
     if (templateValidation && templateValidation.kind === "template") {
-      const inputDecl = templateValidation.schema.typeDeclarations["Input"];
+      const inputDecl = templateValidation.inputType;
       if (inputDecl) {
         inputExample = makeExampleValue({
           type: inputDecl.valueType,

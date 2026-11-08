@@ -76,6 +76,8 @@ function makeTool(name: string, schemaSource: string): ToolValidationResult {
   return {
     kind: "tool",
     tool,
+    inputType: schema.typeDeclarations["Input"],
+    outputType: schema.typeDeclarations["Output"],
     schema,
     definitionLinks: [],
   };

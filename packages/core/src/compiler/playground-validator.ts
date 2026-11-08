@@ -75,10 +75,7 @@ export function validatePlayground(
   );
   validationResult.push(modelJsonResult);
 
-  const playgroundSchema = makePlaygroundType(
-    templateValidation.schema,
-    templateValidation.tools,
-  );
+  const playgroundSchema = makePlaygroundType(templateValidation);
   const jsonResult = validateJson(
     playground.samples,
     playgroundSchema.type,
@@ -121,13 +118,14 @@ export function validatePlayground(
   };
 }
 
-function makePlaygroundType(
-  templateSchema: Schema,
-  tools: { readonly [name: string]: TemplateTool },
-): SchemaType {
-  const { typeDeclarations } = templateSchema;
-  const inputType = typeDeclarations["Input"]!.valueType;
-  const outputType = typeDeclarations["Output"]!.valueType;
+function makePlaygroundType(templateValidation: ValidatedTemplate): SchemaType {
+  const { tools, schema: templateSchema } = templateValidation;
+  const inputType = templateValidation.inputType?.valueType ?? {
+    kind: "any" as const,
+  };
+  const outputType = templateValidation.outputType?.valueType ?? {
+    kind: "any" as const,
+  };
 
   const stepsType = typedOptional(
     typedArray(
@@ -394,9 +392,7 @@ function validateStepsToolCalls(
       const templateTool = tools[toolName];
       if (!templateTool || templateTool.tool.kind === "error") continue;
 
-      const { schema } = templateTool.tool;
-      const inputType = schema.typeDeclarations["Input"];
-      const outputType = schema.typeDeclarations["Output"];
+      const { schema, inputType, outputType } = templateTool.tool;
       if (inputType) {
         validationResult.push(
           validateJson(inputEntry.value, inputType.valueType, schema),

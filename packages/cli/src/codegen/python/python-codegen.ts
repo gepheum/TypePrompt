@@ -12,6 +12,7 @@ import type {
   ValidCompilationResult,
   ValidNamespaceResult,
   ValidTemplate,
+  ValidTool,
 } from "@typeprompt/core/compiler/compiler-types.js";
 import { DEFAULT_NAMESPACE } from "@typeprompt/core/compiler/default-namespace.js";
 import { getId } from "@typeprompt/core/compiler/ids.js";
@@ -329,7 +330,7 @@ function writePydanticTypeAdapters(
 ): string {
   const { templates, tools } = validationResult;
   const lines = ["_type_adapters: Final = {"];
-  const writeEntry = (input: ValidTemplate | ValidatedTool): void => {
+  const writeEntry = (input: ValidTemplate | ValidTool): void => {
     const id = getId(input.kind === "template" ? input.template : input.tool);
     const { input: inputType, output: outputType } = writeInputOutputTypes(
       input,
@@ -583,13 +584,13 @@ function writeType(
 }
 
 function writeInputOutputTypes(
-  input: ValidTemplate | ValidatedTool,
+  input: ValidTemplate | ValidTool,
   compilationResult: ValidCompilationResult,
 ): {
   readonly input: string;
   readonly output: string;
 } {
-  const { schema } = input;
+  const { schema, inputType, outputType } = input;
 
   const options: {
     readonly typePrefix: string;
@@ -618,13 +619,9 @@ function writeInputOutputTypes(
     };
   })();
 
-  const write = (name: string): string => {
-    const declaration = schema.typeDeclarations[name]!;
-    return writeType(declaration.valueType, schema, options);
-  };
   return {
-    input: write("Input"),
-    output: write("Output"),
+    input: writeType(inputType.valueType, schema, options),
+    output: writeType(outputType.valueType, schema, options),
   };
 }
 

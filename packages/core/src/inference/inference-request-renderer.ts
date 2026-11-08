@@ -16,29 +16,29 @@ export function renderInferenceRequest(
   validTemplate: ValidTemplate,
 ): Inferences.InferenceRequest {
   const inputSchemaType = {
-    type: validTemplate.schema.typeDeclarations["Input"]!.valueType,
+    type: validTemplate.inputType.valueType,
     schema: validTemplate.schema,
   };
   const outputSchemaType = {
-    type: validTemplate.schema.typeDeclarations["Output"]!.valueType,
+    type: validTemplate.outputType.valueType,
     schema: validTemplate.schema,
   };
   const normalizeToolInput = (toolName: string, value: unknown): unknown => {
     const toolEntry = validTemplate.tools[toolName];
     if (!toolEntry) return value;
-    const { schema } = toolEntry.tool;
+    const { tool } = toolEntry;
     return normalizeSchemaValue(value, {
-      type: schema.typeDeclarations["Input"]!.valueType,
-      schema,
+      type: tool.inputType.valueType,
+      schema: tool.schema,
     });
   };
   const normalizeToolOutput = (toolName: string, value: unknown): unknown => {
     const toolEntry = validTemplate.tools[toolName];
     if (!toolEntry) return value;
-    const { schema } = toolEntry.tool;
+    const { tool } = toolEntry;
     return normalizeSchemaValue(value, {
-      type: schema.typeDeclarations["Output"]!.valueType,
-      schema,
+      type: tool.outputType.valueType,
+      schema: tool.schema,
     });
   };
 

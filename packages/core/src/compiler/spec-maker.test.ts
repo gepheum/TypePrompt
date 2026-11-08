@@ -131,6 +131,8 @@ describe("makeTemplates - tool", () => {
     return {
       kind: "success" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tool: {
         kind: "success" as const,
         name: span(name),
@@ -161,6 +163,8 @@ describe("makeTemplates - tool", () => {
     const toolResult = {
       kind: "success" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tool: {
         kind: "success" as const,
         name: span("tool"),
@@ -206,6 +210,8 @@ describe("makeTemplates - template basic fields", () => {
     return {
       kind: "template" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       outputFormat,
       template: {
@@ -276,11 +282,15 @@ describe("makeTemplates - template basic fields", () => {
         "Geo:T": {
           kind: "success" as const,
           schema: TEST_SCHEMA,
+          inputType: TEST_SCHEMA.typeDeclarations["Input"],
+          outputType: TEST_SCHEMA.typeDeclarations["Output"],
           tools: {
             myTool: {
               tool: {
                 kind: "success" as const,
                 schema: TEST_SCHEMA,
+                inputType: TEST_SCHEMA.typeDeclarations["Input"],
+                outputType: TEST_SCHEMA.typeDeclarations["Output"],
                 tool: {
                   kind: "success" as const,
                   name: span("search"),
@@ -330,6 +340,8 @@ describe("makeTemplates - contents", () => {
     return {
       kind: "template" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       outputFormat: "json",
       template: {
@@ -414,6 +426,8 @@ describe("makeTemplates - body pieces", () => {
     return {
       kind: "success" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       template: {
         kind: "success" as const,
@@ -585,6 +599,8 @@ describe("makeTemplates - expressions", () => {
     return {
       kind: "template" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       outputFormat: "json",
       template: {
@@ -659,6 +675,8 @@ describe("makeTemplates - snippets", () => {
     return {
       kind: "template" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       outputFormat: "json",
       template: {
@@ -812,6 +830,8 @@ describe("makeTemplates - meta and examples", () => {
     return {
       kind: "template" as const,
       schema: TEST_SCHEMA,
+      inputType: TEST_SCHEMA.typeDeclarations["Input"],
+      outputType: TEST_SCHEMA.typeDeclarations["Output"],
       tools: {},
       outputFormat: "json",
       template: {
@@ -954,6 +974,8 @@ describe("makeTemplates - meta and examples", () => {
             search: {
               tool: {
                 schema: toolSchema,
+                inputType: toolSchema.typeDeclarations["Input"],
+                outputType: toolSchema.typeDeclarations["Output"],
                 tool: {
                   name: span("search"),
                   description: [],
@@ -1057,6 +1079,8 @@ describe("makeTemplates - meta and examples", () => {
       tools: {
         "Main:search": {
           schema: toolSchema,
+          inputType: toolSchema.typeDeclarations["Input"],
+          outputType: toolSchema.typeDeclarations["Output"],
           tool: {
             name: { text: "search" },
             description: [],
@@ -1072,10 +1096,14 @@ describe("makeTemplates - meta and examples", () => {
             examples: examplesJson,
           }) as Record<string, unknown>),
           schema: templateSchema,
+          inputType: templateSchema.typeDeclarations["Input"],
+          outputType: templateSchema.typeDeclarations["Output"],
           tools: {
             search: {
               tool: {
                 schema: toolSchema,
+                inputType: toolSchema.typeDeclarations["Input"],
+                outputType: toolSchema.typeDeclarations["Output"],
                 tool: {
                   name: { text: "search" },
                   description: [],
@@ -1122,6 +1150,8 @@ describe("makeTemplates - meta and examples", () => {
         "Main:T": {
           kind: "template" as const,
           schema: TEST_SCHEMA,
+          inputType: TEST_SCHEMA.typeDeclarations["Input"],
+          outputType: TEST_SCHEMA.typeDeclarations["Output"],
           tools: {},
           outputFormat: "json",
           template: {

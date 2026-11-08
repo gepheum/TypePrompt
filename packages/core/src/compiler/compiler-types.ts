@@ -2,7 +2,11 @@ import type { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
 import type { PlaygroundModel } from "../inference/model-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
-import type { Schema, SchemaParseResult } from "../schema/schema-types.js";
+import type {
+  Schema,
+  SchemaParseResult,
+  TypeDeclaration,
+} from "../schema/schema-types.js";
 import type { LineFinderData } from "../util/line-finder.js";
 import type {
   DefinitionLink,
@@ -44,7 +48,7 @@ export type ValidCompilationResult = CompilationResult & {
   readonly namespaces: { readonly [name: string]: ValidNamespaceResult };
   readonly singleNamespace: ValidNamespaceResult | null;
   readonly templates: { readonly [id: string]: ValidTemplate };
-  readonly tools: { readonly [id: string]: ValidatedTool };
+  readonly tools: { readonly [id: string]: ValidTool };
   readonly playgrounds: { readonly [id: string]: ValidatedPlayground };
   readonly anyErrors: false;
 };
@@ -231,7 +235,7 @@ export type NamespaceResult = {
 export type ValidNamespaceResult = NamespaceResult & {
   /** Name of the namespace. */
   readonly schema: Schema;
-  readonly tools: { readonly [name: string]: ValidatedTool };
+  readonly tools: { readonly [name: string]: ValidTool };
   readonly templates: readonly ValidTemplate[];
   readonly playgrounds: { readonly [forTemplate: string]: ValidatedPlayground };
 };
@@ -244,8 +248,16 @@ export type SchemaOrError =
 export type ValidatedTool = {
   readonly kind: "tool";
   readonly tool: Tool;
+  readonly inputType: TypeDeclaration | undefined;
+  readonly outputType: TypeDeclaration | undefined;
   readonly schema: Schema;
   readonly definitionLinks: readonly DefinitionLink[];
+};
+
+/** A {@link ValidatedTool} known not to have any errors. */
+export type ValidTool = ValidatedTool & {
+  readonly inputType: TypeDeclaration;
+  readonly outputType: TypeDeclaration;
 };
 
 export type ToolValidationResult =
@@ -255,6 +267,8 @@ export type ValidatedTemplate = {
   readonly kind: "template";
   readonly template: Template;
   readonly outputFormat: OutputFormat;
+  readonly inputType: TypeDeclaration | undefined;
+  readonly outputType: TypeDeclaration | undefined;
   /** Guaranteed to contain Input and Output. */
   readonly schema: Schema;
   readonly tools: { readonly [name: string]: TemplateTool };
@@ -263,6 +277,8 @@ export type ValidatedTemplate = {
 
 /** A {@link ValidatedTemplate} known not to have any errors. */
 export type ValidTemplate = ValidatedTemplate & {
+  readonly inputType: TypeDeclaration;
+  readonly outputType: TypeDeclaration;
   readonly tools: { readonly [name: string]: ValidTemplateTool };
 };
 
@@ -272,7 +288,7 @@ export type TemplateTool = {
 };
 
 export type ValidTemplateTool = TemplateTool & {
-  readonly tool: ValidatedTool;
+  readonly tool: ValidTool;
 };
 
 export type TemplateValidationResult = ValidatedTemplate | ValidationErrors;

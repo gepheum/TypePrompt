@@ -2,7 +2,7 @@ import type { Expression } from "../expression/expression-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { toJsonSchema } from "../schema/json-schema-org.js";
-import type { Schema } from "../schema/schema-types.js";
+import type { Schema, TypeDeclaration } from "../schema/schema-types.js";
 import { normalizeSchemaValue } from "../schema/value-normalizer.js";
 import type {
   Body,
@@ -10,10 +10,10 @@ import type {
   Snippet,
   TemplateContent,
   TemplateContents,
-  ValidatedTool,
   ValidCompilationResult,
   ValidTemplate,
   ValidTemplateTool,
+  ValidTool,
 } from "./compiler-types.js";
 import { DEFAULT_NAMESPACE } from "./default-namespace.js";
 import type * as Spec from "./spec-types.js";
@@ -79,7 +79,7 @@ export function makeTemplateOverrides(
   };
 }
 
-function makeTool(input: ValidatedTool, id: string): Spec.Tool {
+function makeTool(input: ValidTool, id: string): Spec.Tool {
   const { inputJsonSchema } = makeJsonSchemas(input.schema);
   const { tool } = input;
   return {
@@ -93,6 +93,8 @@ function makeTool(input: ValidatedTool, id: string): Spec.Tool {
 type TemplateContext = {
   readonly namespace: string;
   readonly schema: Schema;
+  readonly inputType: TypeDeclaration;
+  readonly outputType: TypeDeclaration;
   readonly tools: { readonly [name: string]: ValidTemplateTool };
   readonly variantCase: string | null;
 };
@@ -112,6 +114,8 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
     contents: makeContents(template.contents, {
       namespace,
       schema: input.schema,
+      inputType: input.inputType,
+      outputType: input.outputType,
       tools: input.tools,
       variantCase: null,
     }),
@@ -163,8 +167,8 @@ function makeExamples(
 ): readonly Spec.FewShotExample[] {
   if (!input) return [];
 
-  const inputType = context.schema.typeDeclarations["Input"]!.valueType;
-  const outputType = context.schema.typeDeclarations["Output"]!.valueType;
+  const inputType = context.inputType.valueType;
+  const outputType = context.outputType.valueType;
   const examples = unwrapJsonValue(input) as readonly FewShotExample[];
   return examples.map((example) => {
     const rawInputValue = example.input;
@@ -187,10 +191,8 @@ function makeExamples(
         example.steps?.map((step) => ({
           toolCalls: step.toolCalls.map((tc) => {
             const tool = context.tools[tc.tool]!.tool;
-            const toolInputType =
-              tool.schema.typeDeclarations["Input"]!.valueType;
-            const toolOutputType =
-              tool.schema.typeDeclarations["Output"]!.valueType;
+            const toolInputType = tool.inputType.valueType;
+            const toolOutputType = tool.outputType.valueType;
             const inputVal = normalizeSchemaValue(tc.input, {
               type: toolInputType,
               schema: tool.schema,

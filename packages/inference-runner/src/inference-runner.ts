@@ -465,7 +465,7 @@ async function executeSampleInference(
     };
   }
 
-  const outputType = validTemplate.schema.typeDeclarations["Output"]!.valueType;
+  const outputType = validTemplate.outputType.valueType;
   const validation = validateJson(parsedAst, outputType, validTemplate.schema);
   if (validation.errors.length > 0) {
     return {

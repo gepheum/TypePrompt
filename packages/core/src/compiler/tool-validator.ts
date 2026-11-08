@@ -31,6 +31,8 @@ export function validateTool(args: {
     return {
       kind: "tool",
       tool: tool,
+      inputType: toolSchema.typeDeclarations["Input"],
+      outputType: toolSchema.typeDeclarations["Output"],
       schema: toolSchema,
       definitionLinks: validationResult.definitionLinks,
     };

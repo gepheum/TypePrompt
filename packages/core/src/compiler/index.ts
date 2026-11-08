@@ -19,6 +19,7 @@ export {
   type ValidCompilationResult,
   type ValidNamespaceResult,
   type ValidTemplate,
+  type ValidTool,
   type ValidatedPlayground,
   type ValidatedTool,
 } from "./compiler-types.js";

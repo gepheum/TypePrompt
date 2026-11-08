@@ -119,8 +119,9 @@ export function validateTemplate(args: {
   }
 
   if (errors.length <= 0) {
-    const outputType = templateSchema.typeDeclarations["Output"]!;
-    const resolvedOutput = resolveType(outputType.valueType, templateSchema);
+    const inputType = templateSchema.typeDeclarations["Input"];
+    const outputType = templateSchema.typeDeclarations["Output"];
+    const resolvedOutput = resolveType(outputType!.valueType, templateSchema);
     const outputFormat: OutputFormat =
       resolvedOutput.kind === "primitive" &&
       resolvedOutput.primitive.text === "string"
@@ -130,6 +131,8 @@ export function validateTemplate(args: {
     return {
       kind: "template",
       template,
+      inputType,
+      outputType,
       schema: templateSchema,
       tools: tools.kind === "success" ? tools.tools : {},
       definitionLinks: validationResult.definitionLinks,
@@ -468,9 +471,7 @@ function validateToolCallExamples(
         const tool = namespaceTools[toolName];
         if (!tool || tool.kind === "error") continue;
 
-        const { schema } = tool;
-        const inputType = schema.typeDeclarations["Input"];
-        const outputType = schema.typeDeclarations["Output"];
+        const { schema, inputType, outputType } = tool;
         if (inputType) {
           validationResult.push(
             validateJson(inputEntry.value, inputType.valueType, schema),

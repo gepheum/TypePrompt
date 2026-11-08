@@ -1763,6 +1763,40 @@ describe("compile - playground support", () => {
     ]);
   });
 
+  it("skips playground sample validation cleanly without throwing when target template has schema errors", () => {
+    const result = compile(
+      {
+        "prompts/Translate.tp": `
+          <template name="Translate">
+            <schema>
+              type Output = string;
+            </schema>
+            <system>Translator</system>
+            <user>Hi</user>
+          </template>
+        `,
+        "prompts/Translate.play.tp": `
+          <playground for="Translate">
+            <model>
+              model: openai/gpt-4o
+            </model>
+            <samples>
+            - input:
+                text: "Hello"
+            </samples>
+          </playground>
+        `,
+      },
+      { cache: null, patchBase: null },
+    );
+
+    expect(result.anyErrors).toBe(true);
+    expect(result.finalErrors["prompts/Translate.tp"]).toMatch([
+      { message: "Missing required type 'Input'" },
+    ]);
+    expect(result.playgrounds["Main:Translate"]).toBe(undefined);
+  });
+
   it("reports an error when multiple playgrounds target the same template", () => {
     const result = compile(
       {
