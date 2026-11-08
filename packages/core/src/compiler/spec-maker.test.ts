@@ -1012,7 +1012,7 @@ describe("makeTemplates - meta and examples", () => {
     });
   });
 
-  it("normalizes example input, tool call input, and tool call output values with optional fields", () => {
+  it("normalizes example input, example output, tool call input, and tool call output values with optional fields", () => {
     const templateSchema = parseSchema(
       {
         path: "schema.ts",
@@ -1096,6 +1096,7 @@ describe("makeTemplates - meta and examples", () => {
     });
     expect(example.output).toMatch({
       answer: "sunny",
+      confidence: null,
     });
     expect(example.steps[0].toolCalls[0].input).toMatch({
       query: "weather",

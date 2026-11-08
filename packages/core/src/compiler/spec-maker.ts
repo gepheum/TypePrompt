@@ -164,6 +164,7 @@ function makeExamples(
   if (!input) return [];
 
   const inputType = context.schema.typeDeclarations["Input"]!.valueType;
+  const outputType = context.schema.typeDeclarations["Output"]!.valueType;
   const examples = unwrapJsonValue(input) as readonly FewShotExample[];
   return examples.map((example) => {
     const rawInputValue = example.input;
@@ -174,10 +175,14 @@ function makeExamples(
       type: inputType,
       schema: context.schema,
     });
+    const outputValue = normalizeSchemaValue(example.output, {
+      type: outputType,
+      schema: context.schema,
+    });
 
     return {
       input: inputValue,
-      output: example.output,
+      output: outputValue,
       steps:
         example.steps?.map((step) => ({
           toolCalls: step.toolCalls.map((tc) => {
