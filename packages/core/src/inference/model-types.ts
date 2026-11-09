@@ -6,60 +6,27 @@ export interface PlaygroundModel {
    * The model identifier to use (e.g. 'openai/gpt-4o', 'anthropic/claude-sonnet-4.5').
    */
   model: PlaygroundModelId;
-
-  /**
-   * Maximum number of tokens to generate.
-   */
+  /** Maximum number of tokens to generate. */
   maxOutputTokens?: number;
-
-  /**
-   * Alias for `maxOutputTokens`.
-   */
+  /** Alias for `maxOutputTokens`. */
   maxTokens?: number;
-
-  /**
-   * Sampling temperature. Usually between 0 and 2.
-   */
+  /** Sampling temperature. Usually between 0 and 2. */
   temperature?: number;
-
-  /**
-   * Nucleus sampling probability threshold (top-p).
-   */
+  /** Nucleus sampling probability threshold (top-p). */
   topP?: number;
-
-  /**
-   * Top-k sampling threshold.
-   */
+  /** Top-k sampling threshold. */
   topK?: number;
-
-  /**
-   * Presence penalty setting (-2 to 2 or -1 to 1 depending on provider).
-   */
+  /** Presence penalty setting (-2 to 2 or -1 to 1 depending on provider). */
   presencePenalty?: number;
-
-  /**
-   * Frequency penalty setting (-2 to 2 or -1 to 1 depending on provider).
-   */
+  /** Frequency penalty setting (-2 to 2 or -1 to 1 depending on provider). */
   frequencyPenalty?: number;
-
-  /**
-   * Stop sequences that will halt generation when encountered.
-   */
+  /** Stop sequences that will halt generation when encountered. */
   stopSequences?: string[];
-
-  /**
-   * Random seed for deterministic generation.
-   */
+  /** Random seed for deterministic generation. */
   seed?: number;
-
-  /**
-   * Reasoning effort level for reasoning models.
-   */
+  /** Reasoning effort level for reasoning models. */
   reasoning?: PlaygroundModelReasoning;
-
-  /**
-   * Provider-specific options for openai, anthropic, google, xai, mistral, etc.
-   */
+  /** Provider-specific options for openai, anthropic, google, xai, mistral, etc. */
   providerOptions?: ProviderOptions;
 }
 
@@ -78,23 +45,15 @@ export interface ProviderOptions {
  * Options specific to the OpenAI provider.
  */
 export interface OpenAIProviderOptions {
-  /**
-   * Reasoning effort level for reasoning models (e.g. o1, o3, o4).
-   */
+  /** Reasoning effort level for reasoning models (e.g. o1, o3, o4). */
   reasoningEffort?: OpenAIReasoningEffort;
-
-  /**
-   * Maximum number of completion tokens to generate.
-   */
+  /** Maximum number of completion tokens to generate. */
   maxCompletionTokens?: number;
-
-  /**
-   * Whether to enable strict JSON schema enforcement for structured outputs.
-   */
+  /** Whether to enable strict JSON schema enforcement for structured outputs. */
   strictJsonSchema?: boolean;
-
   /**
-   * Whether to return log probabilities of the output tokens or number of top logprobs.
+   * Whether to return log probabilities of the output tokens or number of top
+   * logprobs.
    */
   logprobs?: number | boolean;
 }
@@ -103,24 +62,13 @@ export interface OpenAIProviderOptions {
  * Options specific to the Anthropic (Claude) provider.
  */
 export interface AnthropicProviderOptions {
-  /**
-   * Reasoning effort level for Claude models.
-   */
+  /** Reasoning effort level for Claude models. */
   effort?: AnthropicEffort;
-
-  /**
-   * Whether to return thinking/reasoning blocks in the response.
-   */
+  /** Whether to return thinking/reasoning blocks in the response. */
   sendReasoning?: boolean;
-
-  /**
-   * Thinking configuration for Claude models.
-   */
+  /** Thinking configuration for Claude models. */
   thinking?: AnthropicThinking;
-
-  /**
-   * How structured outputs should be guided.
-   */
+  /** How structured outputs should be guided. */
   structuredOutputMode?: AnthropicStructuredOutputMode;
 }
 
@@ -128,24 +76,13 @@ export interface AnthropicProviderOptions {
  * Options specific to the Google (Gemini) provider.
  */
 export interface GoogleProviderOptions {
-  /**
-   * Thinking budget and configuration for Gemini models.
-   */
+  /** Thinking budget and configuration for Gemini models. */
   thinkingConfig?: GoogleThinkingConfig;
-
-  /**
-   * Whether to enforce structured JSON outputs adhering to the response schema.
-   */
+  /** Whether to enforce structured JSON outputs adhering to the response schema. */
   structuredOutputs?: boolean;
-
-  /**
-   * Safety settings to override default safety thresholds.
-   */
+  /** Safety settings to override default safety thresholds. */
   safetySettings?: GoogleSafetySetting[];
-
-  /**
-   * Default harm block threshold across all categories.
-   */
+  /** Default harm block threshold across all categories. */
   threshold?: GoogleHarmBlockThreshold;
 }
 
@@ -153,24 +90,13 @@ export interface GoogleProviderOptions {
  * Options specific to the xAI (Grok) provider.
  */
 export interface XAIProviderOptions {
-  /**
-   * Reasoning effort level for Grok reasoning models.
-   */
+  /** Reasoning effort level for Grok reasoning models. */
   reasoningEffort?: XAIReasoningEffort;
-
-  /**
-   * Search recency filter when live search is enabled.
-   */
+  /** Search recency filter when live search is enabled. */
   searchRecencyFilter?: XAISearchRecencyFilter;
-
-  /**
-   * Whether to include search query and source metadata in the response.
-   */
+  /** Whether to include search query and source metadata in the response. */
   includeSearchInformation?: boolean;
-
-  /**
-   * Whether to cite web sources in responses.
-   */
+  /** Whether to cite web sources in responses. */
   sources?: boolean;
 }
 
@@ -178,19 +104,13 @@ export interface XAIProviderOptions {
  * Options specific to the Mistral provider.
  */
 export interface MistralProviderOptions {
-  /**
-   * Whether to inject Mistral's safety prompt before conversations.
-   */
+  /** Whether to inject Mistral's safety prompt before conversations. */
   safePrompt?: boolean;
 
-  /**
-   * Whether to enable strict structured outputs following provided schemas.
-   */
+  /** Whether to enable strict structured outputs following provided schemas. */
   structuredOutputs?: boolean;
 
-  /**
-   * Reasoning effort level for Mistral reasoning models.
-   */
+  /** Reasoning effort level for Mistral reasoning models. */
   reasoningEffort?: MistralReasoningEffort;
 }
 
