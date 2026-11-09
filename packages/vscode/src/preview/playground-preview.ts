@@ -14,7 +14,7 @@ import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { commands, Uri, ViewColumn, window, workspace } from "vscode";
 import { canOpenPreview } from "../editor/is-template.js";
 import {
-  getInferencesPageHtml,
+  getInferencePageHtml,
   getPlaygroundPreviewHtml,
 } from "./preview-html.js";
 
@@ -106,8 +106,8 @@ export function activatePlaygroundPreview(
             currentDoc
           ) {
             await handleCreateSecretsFile(currentDoc, projectStore);
-          } else if (message.type === "runInferences" && currentDoc) {
-            await handleRunInferences(context, currentDoc, projectStore);
+          } else if (message.type === "runInference" && currentDoc) {
+            await handleRunInference(context, currentDoc, projectStore);
           }
         },
       );
@@ -253,7 +253,7 @@ export async function handleCreateSecretsFile(
   });
 }
 
-export async function handleRunInferences(
+export async function handleRunInference(
   context: ExtensionContext,
   doc: TextDocument,
   projectStore: ProjectStore,
@@ -316,7 +316,7 @@ export async function handleRunInferences(
   const compilation = compile(pathToContent, { cache: null, patchBase });
   if (compilation.anyErrors) {
     void window.showErrorMessage(
-      "Cannot run inferences: playground has compilation errors.",
+      "Cannot run inference: playground has compilation errors.",
     );
     return;
   }
@@ -368,9 +368,9 @@ export async function handleRunInferences(
     ? templateId.slice(`${DEFAULT_NAMESPACE}:`.length)
     : templateId;
 
-  const inferencesPanel = window.createWebviewPanel(
-    "typeprompt.inferences",
-    `Inferences: ${shortName}`,
+  const inferencePanel = window.createWebviewPanel(
+    "typeprompt.inferenceRun",
+    `Inference: ${shortName}`,
     ViewColumn.Active,
     {
       enableScripts: true,
@@ -378,7 +378,7 @@ export async function handleRunInferences(
       localResourceRoots: [context.extensionUri],
     },
   );
-  inferencesPanel.iconPath = Uri.file(context.asAbsolutePath("icon.svg"));
+  inferencePanel.iconPath = Uri.file(context.asAbsolutePath("icon.svg"));
 
   let hasSetInitialHtml = false;
 
@@ -387,18 +387,18 @@ export async function handleRunInferences(
     callback: (pendingInferenceRun) => {
       if (!hasSetInitialHtml) {
         hasSetInitialHtml = true;
-        const scriptUri = inferencesPanel.webview
+        const scriptUri = inferencePanel.webview
           .asWebviewUri(
             Uri.joinPath(context.extensionUri, "dist", "webview.js"),
           )
           .toString();
-        inferencesPanel.webview.html = getInferencesPageHtml(
+        inferencePanel.webview.html = getInferencePageHtml(
           scriptUri,
           pendingInferenceRun,
           shortName,
         );
       } else {
-        void inferencesPanel.webview.postMessage({
+        void inferencePanel.webview.postMessage({
           type: "updateInferenceRun",
           inferenceRun: pendingInferenceRun,
         });

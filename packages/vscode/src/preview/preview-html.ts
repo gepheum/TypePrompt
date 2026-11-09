@@ -141,8 +141,8 @@ export function getPlaygroundPreviewHtml(
       vscode.postMessage({ type: "createSecretsFile" });
     });
 
-    playgroundPreviewEvents.on("runInferences", () => {
-      vscode.postMessage({ type: "runInferences" });
+    playgroundPreviewEvents.on("runInference", () => {
+      vscode.postMessage({ type: "runInference" });
     });
 
     playgroundPreviewEvents.on("selectSample", (key, index) => {
@@ -158,10 +158,10 @@ export function getPlaygroundPreviewHtml(
 }
 
 /**
- * Builds the HTML content for the inferences webview, mounting <tp-inference-run>
+ * Builds the HTML content for the inference webview, mounting <tp-inference-run>
  * and listening for reactive updates.
  */
-export function getInferencesPageHtml(
+export function getInferencePageHtml(
   scriptUri: string,
   initialData: Inferences.InferenceRun<Inferences.Pending>,
   title: string,
@@ -171,7 +171,7 @@ export function getInferencesPageHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)} · TypePrompt inferences</title>
+  <title>${escapeHtml(title)} · TypePrompt Inference</title>
   <style>
     body {
       margin: 0;
@@ -187,17 +187,17 @@ export function getInferencesPageHtml(
   </style>
 </head>
 <body>
-  <tp-inference-run id="inferences"></tp-inference-run>
+  <tp-inference-run id="inference-run"></tp-inference-run>
 
   <script type="module">
     import "${scriptUri}";
 
-    const inferences = document.getElementById("inferences");
-    inferences.inferenceRun = ${JSON.stringify(initialData)};
+    const inferenceRun = document.getElementById("inference-run");
+    inferenceRun.inferenceRun = ${JSON.stringify(initialData)};
 
     window.addEventListener("message", (event) => {
       if (event.data && event.data.type === "updateInferenceRun") {
-        inferences.inferenceRun = event.data.inferenceRun;
+        inferenceRun.inferenceRun = event.data.inferenceRun;
       }
     });
   </script>

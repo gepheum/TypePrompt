@@ -13,17 +13,17 @@ describe("PlaygroundPreviewElement", () => {
     assert.strictEqual(el.tagName.toLowerCase(), "tp-playground-preview");
   });
 
-  it("exports events nanoevents emitter and fires createSecrets, runInferences, selectSample", () => {
+  it("exports events nanoevents emitter and fires createSecrets, runInference, selectSample", () => {
     let createSecretsCalled = false;
-    let runInferencesCalled = false;
+    let runInferenceCalled = false;
     let selectedKey = "";
     let selectedIndex = -1;
 
     const unbind1 = playgroundPreviewEvents.on("createSecrets", () => {
       createSecretsCalled = true;
     });
-    const unbind2 = playgroundPreviewEvents.on("runInferences", () => {
-      runInferencesCalled = true;
+    const unbind2 = playgroundPreviewEvents.on("runInference", () => {
+      runInferenceCalled = true;
     });
     const unbind3 = playgroundPreviewEvents.on("selectSample", (key, idx) => {
       selectedKey = key;
@@ -33,8 +33,8 @@ describe("PlaygroundPreviewElement", () => {
     playgroundPreviewEvents.emit("createSecrets");
     assert.strictEqual(createSecretsCalled, true);
 
-    playgroundPreviewEvents.emit("runInferences");
-    assert.strictEqual(runInferencesCalled, true);
+    playgroundPreviewEvents.emit("runInference");
+    assert.strictEqual(runInferenceCalled, true);
 
     playgroundPreviewEvents.emit("selectSample", "name:test", 2);
     assert.strictEqual(selectedKey, "name:test");
@@ -127,13 +127,13 @@ describe("PlaygroundPreviewElement", () => {
     assert.ok(renderedStr.includes("header-actions"));
     assert.ok(renderedStr.includes("Greeting"));
     assert.ok(renderedStr.includes("Playground Preview · 1 sample"));
-    assert.ok(renderedStr.includes("run-inferences-button"));
+    assert.ok(renderedStr.includes("run-inference-button"));
     assert.ok(renderedStr.includes("model-yaml-card"));
     assert.ok(renderedStr.includes("sample-segmented-control"));
     assert.ok(renderedStr.includes("sample-segment-btn"));
   });
 
-  it("renders no-api-keys banner and hides run-inferences-button when api keys are missing", () => {
+  it("renders no-api-keys banner and hides run-inference-button when api keys are missing", () => {
     const el = new PlaygroundPreviewElement();
     const fakeProject: Lsp.WireProject = {
       folderUri: "file:///mock-workspace",
@@ -191,7 +191,7 @@ describe("PlaygroundPreviewElement", () => {
 
     const renderedStr = flattenTemplate(template);
     assert.ok(renderedStr.includes("no-api-keys-banner"));
-    assert.ok(!renderedStr.includes("run-inferences-button"));
+    assert.ok(!renderedStr.includes("run-inference-button"));
     assert.ok(renderedStr.includes("Playground Preview · 0 samples"));
   });
 });

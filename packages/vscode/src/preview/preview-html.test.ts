@@ -2,7 +2,7 @@ import type { Inferences, Lsp } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
-  getInferencesPageHtml,
+  getInferencePageHtml,
   getPlaygroundPreviewHtml,
 } from "./preview-html.js";
 
@@ -39,12 +39,12 @@ describe("preview-html (vscode extension)", () => {
       ),
     );
     assert.ok(html.includes('playgroundPreviewEvents.on("createSecrets"'));
-    assert.ok(html.includes('playgroundPreviewEvents.on("runInferences"'));
+    assert.ok(html.includes('playgroundPreviewEvents.on("runInference"'));
     assert.ok(html.includes('playgroundPreviewEvents.on("selectSample"'));
     assert.ok(html.includes("preview.wireProject = "));
   });
 
-  it("generates inferences page HTML mounting <tp-inference-run>", () => {
+  it("generates inference page HTML mounting <tp-inference-run>", () => {
     const fakeInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
       kind: "playground-inference-run",
       id: "12345678",
@@ -55,12 +55,12 @@ describe("preview-html (vscode extension)", () => {
       inferences: [],
     };
 
-    const html = getInferencesPageHtml(fakeScriptUri, fakeInferenceRun, "Test");
+    const html = getInferencePageHtml(fakeScriptUri, fakeInferenceRun, "Test");
 
     assert.ok(
-      html.includes('<tp-inference-run id="inferences"></tp-inference-run>'),
+      html.includes('<tp-inference-run id="inference-run"></tp-inference-run>'),
     );
-    assert.ok(html.includes("inferences.inferenceRun = "));
+    assert.ok(html.includes("inferenceRun.inferenceRun = "));
     assert.ok(html.includes("updateInferenceRun"));
   });
 });

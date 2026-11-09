@@ -10,7 +10,7 @@ import { highlightYaml } from "./common/token-highlighting.js";
 
 export interface PlaygroundPreviewEvents {
   createSecrets: () => void;
-  runInferences: () => void;
+  runInference: () => void;
   selectSample: (key: string, index: number) => void;
 }
 
@@ -113,7 +113,7 @@ const playgroundPreviewStyles = css`
     text-decoration: underline;
   }
 
-  .run-inferences-button {
+  .run-inference-button {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -131,7 +131,7 @@ const playgroundPreviewStyles = css`
     transition: background 0.15s ease;
   }
 
-  .run-inferences-button:hover {
+  .run-inference-button:hover {
     background: var(--button-hover);
   }
 
@@ -378,8 +378,8 @@ export class PlaygroundPreviewElement extends LitElement {
     playgroundPreviewEvents.emit("createSecrets");
   }
 
-  private handleRunInferencesClick(): void {
-    playgroundPreviewEvents.emit("runInferences");
+  private handleRunInferenceClick(): void {
+    playgroundPreviewEvents.emit("runInference");
   }
 
   private selectSample(
@@ -485,9 +485,9 @@ export class PlaygroundPreviewElement extends LitElement {
                         <div class="header-actions">
                           <button
                             type="button"
-                            class="run-inferences-button"
+                            class="run-inference-button"
                             title="Run inference across all samples"
-                            @click=${this.handleRunInferencesClick}
+                            @click=${this.handleRunInferenceClick}
                           >
                             <span class="run-icon">▶</span> Run Inference
                           </button>
