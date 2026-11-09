@@ -61,7 +61,11 @@ export const inferenceSetStyles = css`
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 0.5rem 0.75rem;
-    max-width: 320px;
+    max-width: 240px;
+    max-height: 5.5rem;
+    overflow: auto;
+    scrollbar-width: thin;
+    box-sizing: border-box;
   }
 
   .model-yaml-body {

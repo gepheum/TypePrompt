@@ -143,8 +143,12 @@ const playgroundPreviewStyles = css`
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    max-width: 320px;
+    padding: 0.45rem 0.75rem;
+    max-width: 240px;
+    max-height: 5.5rem;
+    overflow: auto;
+    scrollbar-width: thin;
+    box-sizing: border-box;
     flex-shrink: 0;
   }
 
@@ -464,6 +468,8 @@ export class PlaygroundPreviewElement extends LitElement {
         : 0;
     const activeSample = samples[activeIndex];
 
+    const subtitleText = `Playground Preview · ${samples.length} sample${samples.length !== 1 ? "s" : ""}`;
+
     return html`
       <div class="container">
         <div class="sticky-header">
@@ -472,10 +478,7 @@ export class PlaygroundPreviewElement extends LitElement {
             <div class="header-top">
               <div class="title-group">
                 <h1><span>${displayTemplateId}</span></h1>
-                <div class="subtitle">
-                  Playground Preview · ${samples.length}
-                  sample${samples.length !== 1 ? "s" : ""}
-                </div>
+                <div class="subtitle">${subtitleText}</div>
                 ${
                   hasApiKeys
                     ? html`
@@ -483,10 +486,10 @@ export class PlaygroundPreviewElement extends LitElement {
                           <button
                             type="button"
                             class="run-inferences-button"
-                            title="Run inferences across all samples"
+                            title="Run inference across all samples"
                             @click=${this.handleRunInferencesClick}
                           >
-                            <span class="run-icon">▶</span> Run Inferences
+                            <span class="run-icon">▶</span> Run Inference
                           </button>
                         </div>
                       `
