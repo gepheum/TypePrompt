@@ -71,6 +71,9 @@ export class InferenceSetElement extends LitElement {
   @state()
   private copiedCardId?: string;
 
+  @state()
+  private statusFilter: "all" | "success" | "error" | "pending" = "all";
+
   override willUpdate(changedProps: PropertyValues): void {
     if (changedProps.has("inferenceSet") && this.inferenceSet) {
       // Auto-expand if there is only 1 sample
@@ -93,14 +96,33 @@ export class InferenceSetElement extends LitElement {
     this.expandedCardIds = next;
   }
 
-  private toggleAll(expanded: boolean): void {
-    if (!this.inferenceSet) return;
+  private toggleAll(
+    expanded: boolean,
+    currentInferences: readonly Inferences.Inference<Inferences.Pending>[],
+  ): void {
     if (expanded) {
-      this.expandedCardIds = new Set(
-        this.inferenceSet.inferences.map((inf) => `sample-${inf.sampleIndex}`),
-      );
+      const next = new Set(this.expandedCardIds);
+      for (const inf of currentInferences) {
+        next.add(`sample-${inf.sampleIndex}`);
+      }
+      this.expandedCardIds = next;
     } else {
-      this.expandedCardIds = new Set();
+      const next = new Set(this.expandedCardIds);
+      for (const inf of currentInferences) {
+        next.delete(`sample-${inf.sampleIndex}`);
+      }
+      this.expandedCardIds = next;
+    }
+  }
+
+  private setStatusFilter(filter: "all" | "success" | "error" | "pending"): void {
+    this.statusFilter = filter;
+    if (filter === "error" && this.inferenceSet) {
+      // Auto-expand error samples when filtering to errors
+      const errorIds = this.inferenceSet.inferences
+        .filter((inf) => inf.result.kind === "error")
+        .map((inf) => `sample-${inf.sampleIndex}`);
+      this.expandedCardIds = new Set([...this.expandedCardIds, ...errorIds]);
     }
   }
 
@@ -146,6 +168,29 @@ export class InferenceSetElement extends LitElement {
       .filter(([filePath]) => !isMetaFile(filePath))
       .sort(([a], [b]) => a.localeCompare(b));
 
+    const totalCount = data.inferences.length;
+    const successCount = data.inferences.filter(
+      (i) => i.result.kind === "success",
+    ).length;
+    const errorCount = data.inferences.filter(
+      (i) => i.result.kind === "error",
+    ).length;
+    const pendingCount = data.inferences.filter(
+      (i) => i.result.kind === "pending",
+    ).length;
+
+    const completedCount = successCount + errorCount;
+    const completionPct =
+      totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const successPct = totalCount > 0 ? (successCount / totalCount) * 100 : 0;
+    const errorPct = totalCount > 0 ? (errorCount / totalCount) * 100 : 0;
+    const pendingPct = totalCount > 0 ? (pendingCount / totalCount) * 100 : 0;
+
+    const filteredInferences = data.inferences.filter((inf) => {
+      if (this.statusFilter === "all") return true;
+      return inf.result.kind === this.statusFilter;
+    });
+
     return html`
       <div class="container">
         <!-- Header -->
@@ -175,24 +220,112 @@ export class InferenceSetElement extends LitElement {
           </div>
         </header>
 
+        <!-- Progress Bar (compact, no total stats) -->
+        <div class="progress-section">
+          <div class="progress-header">
+            <div class="progress-status-counts">
+              <span class="progress-count-item">
+                <span class="status-dot success"></span> ${successCount} passed
+              </span>
+              ${
+                errorCount > 0
+                  ? html`
+                      <span class="progress-count-item">
+                        <span class="status-dot error"></span> ${errorCount} failed
+                      </span>
+                    `
+                  : ""
+              }
+              ${
+                pendingCount > 0
+                  ? html`
+                      <span class="progress-count-item">
+                        <span class="status-dot pending"></span> ${pendingCount} pending
+                      </span>
+                    `
+                  : ""
+              }
+            </div>
+            <span>${completionPct}% complete</span>
+          </div>
+          <div class="progress-bar-track">
+            <div
+              class="progress-bar-fill success"
+              style="width: ${successPct}%"
+            ></div>
+            <div
+              class="progress-bar-fill error"
+              style="width: ${errorPct}%"
+            ></div>
+            <div
+              class="progress-bar-fill pending"
+              style="width: ${pendingPct}%"
+            ></div>
+          </div>
+        </div>
+
         <!-- Samples Toolbar -->
         <div class="samples-toolbar">
-          <div class="samples-count">
-            ${data.inferences.length}
-            sample${data.inferences.length !== 1 ? "s" : ""}
+          <div class="toolbar-left">
+            <div class="samples-count">
+              ${data.inferences.length}
+              sample${data.inferences.length !== 1 ? "s" : ""}
+            </div>
+            <div class="filter-group" role="tablist">
+              <button
+                type="button"
+                class="btn-filter ${this.statusFilter === "all" ? "active" : ""}"
+                @click=${(): void => this.setStatusFilter("all")}
+              >
+                All (${totalCount})
+              </button>
+              <button
+                type="button"
+                class="btn-filter success ${this.statusFilter === "success" ? "active" : ""}"
+                @click=${(): void => this.setStatusFilter("success")}
+              >
+                Passed (${successCount})
+              </button>
+              ${
+                errorCount > 0
+                  ? html`
+                      <button
+                        type="button"
+                        class="btn-filter error ${this.statusFilter === "error" ? "active" : ""}"
+                        @click=${(): void => this.setStatusFilter("error")}
+                      >
+                        Failed (${errorCount})
+                      </button>
+                    `
+                  : ""
+              }
+              ${
+                pendingCount > 0
+                  ? html`
+                      <button
+                        type="button"
+                        class="btn-filter pending ${this.statusFilter === "pending" ? "active" : ""}"
+                        @click=${(): void => this.setStatusFilter("pending")}
+                      >
+                        Pending (${pendingCount})
+                      </button>
+                    `
+                  : ""
+              }
+            </div>
           </div>
           <div class="toolbar-actions">
             <button
               type="button"
               class="btn-action"
-              @click=${(): void => this.toggleAll(true)}
+              @click=${(): void => this.toggleAll(true, filteredInferences)}
             >
               Expand all
             </button>
             <button
               type="button"
               class="btn-action"
-              @click=${(): void => this.toggleAll(false)}
+              @click=${(): void => this.toggleAll(false, filteredInferences)}
             >
               Collapse all
             </button>
@@ -201,19 +334,27 @@ export class InferenceSetElement extends LitElement {
 
         <!-- Inferences List -->
         <main class="inferences-section">
-          ${data.inferences.map((inf) => {
-            const cardId = `sample-${inf.sampleIndex}`;
-            const isExpanded = this.expandedCardIds.has(cardId);
+          ${
+            filteredInferences.length === 0
+              ? html`
+                  <div class="empty-filter-state">
+                    No samples matching filter "${this.statusFilter}".
+                  </div>
+                `
+              : filteredInferences.map((inf) => {
+                  const cardId = `sample-${inf.sampleIndex}`;
+                  const isExpanded = this.expandedCardIds.has(cardId);
 
-            return html`
-              <tp-inference-sample
-                .inference=${inf}
-                .totalSamples=${data.inferences.length}
-                .isExpanded=${isExpanded}
-                @toggle-expand=${(): void => this.toggleCard(cardId)}
-              ></tp-inference-sample>
-            `;
-          })}
+                  return html`
+                    <tp-inference-sample
+                      .inference=${inf}
+                      .totalSamples=${data.inferences.length}
+                      .isExpanded=${isExpanded}
+                      @toggle-expand=${(): void => this.toggleCard(cardId)}
+                    ></tp-inference-sample>
+                  `;
+                })
+          }
         </main>
 
         <!-- Source Files Section -->

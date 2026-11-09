@@ -111,6 +111,19 @@ const playgroundPreviewStyles = css`
     font-family: var(--font-mono);
   }
 
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    padding: 1rem 1.25rem 0.85rem;
+    margin: -1rem -1.25rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
   .sample-picker-bar {
     display: flex;
     align-items: center;
@@ -121,6 +134,45 @@ const playgroundPreviewStyles = css`
     font-size: 0.84rem;
     font-weight: 600;
     color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .sample-segmented-control {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px;
+    overflow-x: auto;
+    flex: 1;
+  }
+
+  .sample-segment-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+    font-family: inherit;
+    padding: 0.35rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .sample-segment-btn:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+  }
+
+  .sample-segment-btn.active {
+    background: var(--bg);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .sample-select {
@@ -171,7 +223,6 @@ const playgroundPreviewStyles = css`
     right: 0;
     bottom: 0;
     background: rgba(11, 15, 25, 0.45);
-    backdrop-filter: blur(1.5px);
     z-index: 99999;
     display: flex;
     justify-content: center;
@@ -276,12 +327,10 @@ export class PlaygroundPreviewElement extends LitElement {
     playgroundPreviewEvents.emit("runInferences");
   }
 
-  private handleSampleChange(
-    e: Event,
+  private selectSample(
+    idx: number,
     samples: readonly Lsp.WirePlaygroundSample[],
   ): void {
-    const select = e.target as HTMLSelectElement;
-    const idx = Number(select.value);
     this.selectedIndex = idx;
     const s = samples[idx];
     const key = s?.name ? `name:${s.name}` : `index:${idx}`;
@@ -289,15 +338,26 @@ export class PlaygroundPreviewElement extends LitElement {
     playgroundPreviewEvents.emit("selectSample", key, idx);
   }
 
+  private handleSampleChange(
+    e: Event,
+    samples: readonly Lsp.WirePlaygroundSample[],
+  ): void {
+    const select = e.target as HTMLSelectElement;
+    const idx = Number(select.value);
+    this.selectSample(idx, samples);
+  }
+
   override render(): TemplateResult {
     if (!this.wireProject) {
       return html`
         <div class="container">
-          <div class="sample-picker-bar">
-            <label class="sample-picker-label">Sample</label>
-            <select class="sample-select" disabled>
-              <option>Loading samples...</option>
-            </select>
+          <div class="sticky-header">
+            <div class="sample-picker-bar">
+              <label class="sample-picker-label">Sample</label>
+              <select class="sample-select" disabled>
+                <option>Loading samples...</option>
+              </select>
+            </div>
           </div>
           <div class="empty-state">
             <p>Loading playground preview...</p>
@@ -331,62 +391,112 @@ export class PlaygroundPreviewElement extends LitElement {
 
     return html`
       <div class="container">
-        <!-- Top Section: API Keys banner or Run Inferences button -->
-        ${
-          !hasApiKeys
-            ? html`
-                <div class="no-api-keys-banner">
-                  <span class="no-api-keys-icon">🔑</span>
-                  <div class="no-api-keys-content">
-                    <span class="no-api-keys-text"
-                      >Inference cannot be run because no API key is
-                      available.</span
-                    >
-                    <a
-                      href="#"
-                      class="create-secrets-link"
-                      @click=${this.handleCreateSecretsClick}
-                    >
-                      Create .typeprompt.secrets.yaml
-                    </a>
+        <div class="sticky-header">
+          <!-- Top Section: API Keys banner or Run Inferences button -->
+          ${
+            !hasApiKeys
+              ? html`
+                  <div class="no-api-keys-banner">
+                    <span class="no-api-keys-icon">🔑</span>
+                    <div class="no-api-keys-content">
+                      <span class="no-api-keys-text"
+                        >Inference cannot be run because no API key is
+                        available.</span
+                      >
+                      <a
+                        href="#"
+                        class="create-secrets-link"
+                        @click=${this.handleCreateSecretsClick}
+                      >
+                        Create .typeprompt.secrets.yaml
+                      </a>
+                    </div>
                   </div>
-                </div>
-              `
-            : html`
-                <div class="run-inferences-bar">
-                  <button
-                    type="button"
-                    class="run-inferences-button"
-                    title="Running Inferences"
-                    @click=${this.handleRunInferencesClick}
-                  >
-                    <span class="run-icon">▶</span> Run Inferences
-                  </button>
-                  ${
-                    modelYaml
-                      ? html`
-                          <div class="model-yaml-card">
-                            <pre
-                              class="model-yaml-body"
-                            ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
-                          </div>
-                        `
-                      : ""
-                  }
-                </div>
-              `
-        }
+                `
+              : html`
+                  <div class="run-inferences-bar">
+                    <button
+                      type="button"
+                      class="run-inferences-button"
+                      title="Running Inferences"
+                      @click=${this.handleRunInferencesClick}
+                    >
+                      <span class="run-icon">▶</span> Run Inferences
+                    </button>
+                    ${
+                      modelYaml
+                        ? html`
+                            <div class="model-yaml-card">
+                              <pre
+                                class="model-yaml-body"
+                              ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
+                            </div>
+                          `
+                        : ""
+                    }
+                  </div>
+                `
+          }
 
-        <!-- Sample Picker -->
+          <!-- Sample Picker -->
+          ${
+            samples.length === 0
+              ? html`
+                  <div class="sample-picker-bar">
+                    <label class="sample-picker-label">Sample</label>
+                    <select class="sample-select" disabled>
+                      <option>No samples available</option>
+                    </select>
+                  </div>
+                `
+              : samples.length <= 4
+                ? html`
+                    <div class="sample-picker-bar">
+                      <label class="sample-picker-label">Sample</label>
+                      <div class="sample-segmented-control" role="tablist">
+                        ${samples.map((s, idx) => {
+                          const label = s.name ? s.name : `Sample ${idx + 1}`;
+                          return html`
+                            <button
+                              type="button"
+                              class="sample-segment-btn ${idx === activeIndex ? "active" : ""}"
+                              role="tab"
+                              aria-selected=${idx === activeIndex ? "true" : "false"}
+                              @click=${(): void => this.selectSample(idx, samples)}
+                            >
+                              ${label}
+                            </button>
+                          `;
+                        })}
+                      </div>
+                    </div>
+                  `
+                : html`
+                    <div class="sample-picker-bar">
+                      <label class="sample-picker-label">Sample</label>
+                      <select
+                        class="sample-select"
+                        @change=${(e: Event): void => this.handleSampleChange(e, samples)}
+                      >
+                        ${samples.map((s, idx) => {
+                          const label = s.name
+                            ? s.name
+                            : `Anonymous ${idx + 1}/${samples.length}`;
+                          return html`
+                            <option value="${idx}" ?selected=${idx === activeIndex}>
+                              ${label}
+                            </option>
+                          `;
+                        })}
+                      </select>
+                    </div>
+                  `
+          }
+        </div>
+
         ${
           samples.length === 0
             ? html`
-                <div class="sample-picker-bar">
-                  <label class="sample-picker-label">Sample</label>
-                  <select class="sample-select" disabled>
-                    <option>No samples available</option>
-                  </select>
-                </div>
                 <div class="empty-state">
                   <p>No samples found in this playground.</p>
                   <p
@@ -397,25 +507,6 @@ export class PlaygroundPreviewElement extends LitElement {
                 </div>
               `
             : html`
-                <div class="sample-picker-bar">
-                  <label class="sample-picker-label">Sample</label>
-                  <select
-                    class="sample-select"
-                    @change=${(e: Event): void => this.handleSampleChange(e, samples)}
-                  >
-                    ${samples.map((s, idx) => {
-                      const label = s.name
-                        ? s.name
-                        : `Anonymous ${idx + 1}/${samples.length}`;
-                      return html`
-                        <option value="${idx}" ?selected=${idx === activeIndex}>
-                          ${label}
-                        </option>
-                      `;
-                    })}
-                  </select>
-                </div>
-
                 <!-- Active Sample Discussion View -->
                 <div class="sample-discussion-view">
                   ${

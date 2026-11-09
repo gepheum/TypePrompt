@@ -71,6 +71,83 @@ export const inferenceSetStyles = css`
     font-family: var(--font-mono);
   }
 
+  /* Progress Section */
+  .progress-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .progress-status-counts {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+  }
+
+  .progress-count-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .status-dot.success {
+    background: var(--success-text);
+  }
+
+  .status-dot.error {
+    background: var(--error-text);
+  }
+
+  .status-dot.pending {
+    background: var(--border-focus);
+  }
+
+  .progress-bar-track {
+    height: 6px;
+    background: var(--bg-inset);
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    width: 100%;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  .progress-bar-fill.success {
+    background: var(--success-text);
+  }
+
+  .progress-bar-fill.error {
+    background: var(--error-text);
+  }
+
+  .progress-bar-fill.pending {
+    background: var(--border-focus);
+    opacity: 0.7;
+  }
+
   .samples-toolbar {
     display: flex;
     justify-content: space-between;
@@ -79,12 +156,63 @@ export const inferenceSetStyles = css`
     border: 1px solid var(--border);
     padding: 0.55rem 0.85rem;
     border-radius: 6px;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .samples-count {
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-muted);
+  }
+
+  .filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--bg-inset);
+    padding: 2px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .btn-filter {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+
+  .btn-filter:hover {
+    color: var(--text);
+  }
+
+  .btn-filter.active {
+    background: var(--bg-surface);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-filter.error.active {
+    color: var(--error-text);
+  }
+
+  .btn-filter.success.active {
+    color: var(--success-text);
   }
 
   .toolbar-actions {
@@ -112,6 +240,16 @@ export const inferenceSetStyles = css`
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .empty-filter-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
   }
 
   .inference-card {
@@ -266,27 +404,56 @@ export const inferenceSetStyles = css`
     border-top: 1px solid var(--border-subtle);
   }
 
-  .reasoning-box {
+  .reasoning-details {
     background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-left: 3px solid var(--border-focus);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .reasoning-summary {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.15s ease;
+  }
+
+  .reasoning-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .reasoning-summary::before {
+    content: "▶";
+    font-size: 0.65rem;
+    color: var(--text-soft);
+    transition: transform 0.15s ease;
+  }
+
+  .reasoning-details[open] > .reasoning-summary::before {
+    transform: rotate(90deg);
+  }
+
+  .reasoning-summary:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text);
+  }
+
+  .reasoning-body {
     padding: 0.75rem 1rem;
-    border-radius: 0 6px 6px 0;
     font-size: 0.82rem;
     color: var(--text-muted);
     font-style: italic;
     white-space: pre-wrap;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .reasoning-box em {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--border-focus);
-    font-style: normal;
-    font-weight: 700;
+    border-top: 1px solid var(--border);
+    line-height: 1.5;
   }
 
   .section-block {

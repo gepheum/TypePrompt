@@ -99,5 +99,30 @@ describe("PlaygroundPreviewElement", () => {
     el.wireProject = fakeProject;
     const template = el.render();
     assert.ok(template);
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    const renderedStr = flattenTemplate(template);
+    assert.ok(renderedStr.includes("sticky-header"));
+    assert.ok(renderedStr.includes("sample-segmented-control"));
+    assert.ok(renderedStr.includes("sample-segment-btn"));
   });
 });

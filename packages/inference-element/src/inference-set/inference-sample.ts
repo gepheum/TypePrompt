@@ -126,10 +126,12 @@ export class InferenceSampleElement extends LitElement {
           ${
             !isPending && result.reasoning
               ? html`
-                  <div class="reasoning-box">
-                    <em>Thinking / reasoning</em>
-                    ${result.reasoning}
-                  </div>
+                  <details class="reasoning-details">
+                    <summary class="reasoning-summary">
+                      <span class="reasoning-summary-title">Thought process</span>
+                    </summary>
+                    <div class="reasoning-body">${result.reasoning}</div>
+                  </details>
                 `
               : ""
           }
