@@ -148,11 +148,90 @@ describe("InferenceSetElement", () => {
     assert.ok(!renderedStr.includes("badge-tag"));
     assert.ok(!renderedStr.includes(">playground<"));
     assert.ok(renderedStr.includes("btn-copy"));
-    assert.ok(renderedStr.includes("progress-section"));
-    assert.ok(renderedStr.includes("progress-bar-track"));
-    assert.ok(renderedStr.includes("1 passed"));
+    // Completed runs (pendingCount === 0) do not show the progress bar
+    assert.ok(!renderedStr.includes("progress-section"));
     assert.ok(!renderedStr.includes("ms"));
     assert.ok(renderedStr.includes("btn-filter"));
+  });
+
+  it("renders progress bar while inferences are pending and hides when completed", () => {
+    const el = new InferenceSetElement();
+    const runningInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
+      kind: "playground-inference-set",
+      id: "run12345",
+      templateId: "Main:Greeting",
+      isoTimestamp: new Date().toISOString(),
+      model: { model: "google/gemini-2.5-flash" },
+      templateFiles: {
+        "prompts/greeting.tp": '<template name="Greeting">\nHello\n</template>',
+      },
+      inferences: [
+        {
+          sampleIndex: 0,
+          name: "Sample 1",
+          request: {
+            systemMessage: "You are a greeter.",
+            outputFormat: { format: "text" },
+            tools: [],
+            messages: [{ role: "user", input: {}, rendered: "Hi" }],
+          },
+          result: {
+            kind: "success",
+            response: {
+              kind: "output",
+              rawText: "Hello!",
+              output: "Hello!",
+            },
+            telemetry: {
+              latencyMs: 120,
+              usage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 },
+            },
+          },
+        },
+        {
+          sampleIndex: 1,
+          name: "Sample 2",
+          request: {
+            systemMessage: "You are a greeter.",
+            outputFormat: { format: "text" },
+            tools: [],
+            messages: [{ role: "user", input: {}, rendered: "Hi again" }],
+          },
+          result: {
+            kind: "pending",
+          },
+        },
+      ],
+    };
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if ("strings" in t && Array.isArray((t as { strings: unknown }).strings)) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if ("values" in t && Array.isArray((t as { values: unknown[] }).values)) {
+        return (t as { values: unknown[] }).values.map(flattenTemplate).join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    el.inferenceSet = runningInferenceSet;
+    const runningTpl = el.render();
+    const runningStr = flattenTemplate(runningTpl);
+    assert.ok(runningStr.includes("progress-section"));
+    assert.ok(runningStr.includes("progress-bar-track"));
+    assert.ok(runningStr.includes("1 passed"));
+    assert.ok(runningStr.includes("1 pending"));
+    assert.ok(runningStr.includes("50% complete"));
   });
 
   it("renders reasoning in collapsible details inside InferenceSampleElement", () => {

@@ -26,6 +26,8 @@ export const inferenceSetEvents = createNanoEvents<InferenceSetEvents>();
 export class InferenceSetElement extends LitElement {
   static override styles = [commonStyles, inferenceSetStyles];
 
+  private _inferenceSet?: Inferences.InferenceSet<Inferences.Pending>;
+
   @property({
     type: Object,
     attribute: "data",
@@ -43,7 +45,15 @@ export class InferenceSetElement extends LitElement {
       },
     },
   })
-  inferenceSet?: Inferences.InferenceSet<Inferences.Pending>;
+  get inferenceSet(): Inferences.InferenceSet<Inferences.Pending> | undefined {
+    return this._inferenceSet;
+  }
+  set inferenceSet(val: Inferences.InferenceSet<Inferences.Pending> | undefined) {
+    const oldVal = this._inferenceSet;
+    this._inferenceSet = val;
+    this.handleInferenceSetChange();
+    this.requestUpdate("inferenceSet", oldVal);
+  }
 
   @property({ type: String, attribute: "inference-set" })
   set rawInferenceSetAttribute(val: string | null) {
@@ -74,15 +84,65 @@ export class InferenceSetElement extends LitElement {
   @state()
   private statusFilter: "all" | "success" | "error" | "pending" = "all";
 
-  override willUpdate(changedProps: PropertyValues): void {
-    if (changedProps.has("inferenceSet") && this.inferenceSet) {
-      // Auto-expand if there is only 1 sample
-      if (
-        this.inferenceSet.inferences.length === 1 &&
-        this.expandedCardIds.size === 0
-      ) {
-        this.expandedCardIds.add("sample-0");
+  @state()
+  private showProgressBar = false;
+
+  @state()
+  private isProgressCollapsing = false;
+
+  private collapseTimeoutId?: ReturnType<typeof setTimeout>;
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.collapseTimeoutId) {
+      clearTimeout(this.collapseTimeoutId);
+      this.collapseTimeoutId = undefined;
+    }
+  }
+
+  private handleInferenceSetChange(): void {
+    if (!this._inferenceSet) {
+      this.showProgressBar = false;
+      this.isProgressCollapsing = false;
+      return;
+    }
+
+    // Auto-expand if there is only 1 sample
+    if (
+      this._inferenceSet.inferences.length === 1 &&
+      this.expandedCardIds.size === 0
+    ) {
+      this.expandedCardIds.add("sample-0");
+    }
+
+    const pendingCount = this._inferenceSet.inferences.filter(
+      (i) => i.result.kind === "pending",
+    ).length;
+
+    if (pendingCount > 0) {
+      if (this.collapseTimeoutId) {
+        clearTimeout(this.collapseTimeoutId);
+        this.collapseTimeoutId = undefined;
       }
+      this.showProgressBar = true;
+      this.isProgressCollapsing = false;
+    } else if (this.showProgressBar && !this.isProgressCollapsing) {
+      if (!this.collapseTimeoutId) {
+        this.collapseTimeoutId = setTimeout(() => {
+          this.isProgressCollapsing = true;
+          this.collapseTimeoutId = setTimeout(() => {
+            this.showProgressBar = false;
+            this.isProgressCollapsing = false;
+            this.collapseTimeoutId = undefined;
+          }, 350);
+        }, 400);
+      }
+    }
+  }
+
+  override willUpdate(changedProps: PropertyValues): void {
+    if (changedProps.has("inferenceSet")) {
+      this.handleInferenceSetChange();
     }
   }
 
@@ -220,49 +280,61 @@ export class InferenceSetElement extends LitElement {
           </div>
         </header>
 
-        <!-- Progress Bar (compact, no total stats) -->
-        <div class="progress-section">
-          <div class="progress-header">
-            <div class="progress-status-counts">
-              <span class="progress-count-item">
-                <span class="status-dot success"></span> ${successCount} passed
-              </span>
-              ${
-                errorCount > 0
-                  ? html`
-                      <span class="progress-count-item">
-                        <span class="status-dot error"></span> ${errorCount} failed
-                      </span>
-                    `
-                  : ""
-              }
-              ${
-                pendingCount > 0
-                  ? html`
-                      <span class="progress-count-item">
-                        <span class="status-dot pending"></span> ${pendingCount} pending
-                      </span>
-                    `
-                  : ""
-              }
-            </div>
-            <span>${completionPct}% complete</span>
-          </div>
-          <div class="progress-bar-track">
-            <div
-              class="progress-bar-fill success"
-              style="width: ${successPct}%"
-            ></div>
-            <div
-              class="progress-bar-fill error"
-              style="width: ${errorPct}%"
-            ></div>
-            <div
-              class="progress-bar-fill pending"
-              style="width: ${pendingPct}%"
-            ></div>
-          </div>
-        </div>
+        <!-- Progress Bar (shown while pending, then smoothly collapses on completion) -->
+        ${
+          this.showProgressBar
+            ? html`
+                <div
+                  class="progress-section-wrapper ${this.isProgressCollapsing ? "is-collapsing" : ""}"
+                >
+                  <div class="progress-section-wrapper-inner">
+                    <div class="progress-section">
+                      <div class="progress-header">
+                        <div class="progress-status-counts">
+                          <span class="progress-count-item">
+                            <span class="status-dot success"></span> ${successCount} passed
+                          </span>
+                          ${
+                            errorCount > 0
+                              ? html`
+                                  <span class="progress-count-item">
+                                    <span class="status-dot error"></span> ${errorCount} failed
+                                  </span>
+                                `
+                              : ""
+                          }
+                          ${
+                            pendingCount > 0
+                              ? html`
+                                  <span class="progress-count-item">
+                                    <span class="status-dot pending"></span> ${pendingCount} pending
+                                  </span>
+                                `
+                              : ""
+                          }
+                        </div>
+                        <span>${completionPct}% complete</span>
+                      </div>
+                      <div class="progress-bar-track">
+                        <div
+                          class="progress-bar-fill success"
+                          style="width: ${successPct}%"
+                        ></div>
+                        <div
+                          class="progress-bar-fill error"
+                          style="width: ${errorPct}%"
+                        ></div>
+                        <div
+                          class="progress-bar-fill pending"
+                          style="width: ${pendingPct}%"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `
+            : ""
+        }
 
         <!-- Samples Toolbar -->
         <div class="samples-toolbar">

@@ -72,6 +72,24 @@ export const inferenceSetStyles = css`
   }
 
   /* Progress Section */
+  .progress-section-wrapper {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.35s ease, opacity 0.35s ease, margin-bottom 0.35s ease;
+    opacity: 1;
+  }
+
+  .progress-section-wrapper.is-collapsing {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    margin-bottom: -1.5rem;
+    pointer-events: none;
+  }
+
+  .progress-section-wrapper-inner {
+    overflow: hidden;
+  }
+
   .progress-section {
     display: flex;
     flex-direction: column;
