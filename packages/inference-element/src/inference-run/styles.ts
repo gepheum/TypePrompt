@@ -50,10 +50,15 @@ export const inferenceRunStyles = css`
     color: var(--text-muted);
   }
 
-  .timestamp {
+  .subtitle {
     font-size: 0.78rem;
     color: var(--text-soft);
-    font-family: var(--font-mono);
+  }
+
+  .run-metadata,
+  .timestamp {
+    font-size: 0.76rem;
+    color: var(--text-soft);
   }
 
   .model-yaml-card {

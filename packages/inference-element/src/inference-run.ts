@@ -255,6 +255,8 @@ export class InferenceRunElement extends LitElement {
       return inf.result.kind === this.statusFilter;
     });
 
+    const sampleCountText = `${totalCount} sample${totalCount !== 1 ? "s" : ""}`;
+
     return html`
       <div class="container">
         <!-- Header -->
@@ -264,7 +266,8 @@ export class InferenceRunElement extends LitElement {
               <h1>
                 <span>${displayTemplateId}</span>
               </h1>
-              <div class="timestamp">
+              <div class="subtitle">Inference Run · ${sampleCountText}</div>
+              <div class="run-metadata">
                 ${formatTimestamp(data.isoTimestamp)} · ID: ${data.id}
               </div>
             </div>

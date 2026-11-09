@@ -147,6 +147,8 @@ describe("InferenceRunElement", () => {
     }
 
     const renderedStr = flattenTemplate(template);
+    assert.ok(renderedStr.includes("Inference Run · 1 sample"));
+    assert.ok(renderedStr.includes("ID: abc12345"));
     assert.ok(renderedStr.includes("tp-inference-sample"));
     assert.ok(renderedStr.includes("prompts/greeting.tp"));
     assert.ok(!renderedStr.includes(">meta.tp<"));
