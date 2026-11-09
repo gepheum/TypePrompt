@@ -2,9 +2,6 @@
   <model>
     model: openai/gpt-4o
     temperature: 0.2
-    maxOutputTokens: 100
-    maxTokens: 100
-    topP: 100
   </model>
 
   <samples>
