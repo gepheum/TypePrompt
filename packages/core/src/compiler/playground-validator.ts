@@ -20,7 +20,7 @@ import {
   type XAIProviderOptions,
   type XAIReasoningEffort,
   type XAISearchRecencyFilter,
-} from "../inference/model-types.js";
+} from "../inference/playground-types.js";
 import type {
   StrictJsonObjectEntry,
   StrictJsonValue,

@@ -500,3 +500,32 @@ export type PlaygroundModelId = (typeof PLAYGROUND_MODEL_IDS)[number];
 
 export type GatewayModelId = PlaygroundModelId;
 export type ModelId = PlaygroundModelId;
+
+// =============================================================================
+// Sample types
+// =============================================================================
+
+export type Sample = {
+  readonly name?: string;
+  readonly note?: string;
+  readonly history?: readonly SampleHistoryEntry[];
+  readonly input: unknown;
+  readonly steps?: readonly SampleStep[];
+};
+
+export type SampleHistoryEntry = {
+  readonly input: unknown;
+  readonly steps?: readonly SampleStep[];
+  readonly output: unknown;
+};
+
+export type SampleToolCall = {
+  readonly tool: string;
+  readonly callId: string;
+  readonly input: unknown;
+  readonly output?: unknown;
+};
+
+export type SampleStep = {
+  readonly toolCalls: readonly SampleToolCall[];
+};

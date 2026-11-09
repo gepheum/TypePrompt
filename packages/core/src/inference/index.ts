@@ -24,7 +24,11 @@ export {
   type PlaygroundModelId,
   type PlaygroundModelReasoning,
   type ProviderOptions,
+  type Sample,
+  type SampleHistoryEntry,
+  type SampleStep,
+  type SampleToolCall,
   type XAIProviderOptions,
   type XAIReasoningEffort,
   type XAISearchRecencyFilter,
-} from "./model-types.js";
+} from "./playground-types.js";

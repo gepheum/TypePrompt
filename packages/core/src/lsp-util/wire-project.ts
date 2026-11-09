@@ -7,7 +7,7 @@ import { makeTemplates } from "../compiler/spec-maker.js";
 import type { SecretsParseResult } from "../config/secrets-parser.js";
 import { renderInferenceRequest } from "../inference/inference-request-renderer.js";
 import type * as Inferences from "../inference/inference-types.js";
-import type { PlaygroundModel } from "../inference/model-types.js";
+import type { PlaygroundModel } from "../inference/playground-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import type { InternalError, InternalErrors } from "../util/shared-types.js";

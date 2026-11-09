@@ -1,6 +1,6 @@
 import type { CTag } from "../ctag/ctag-types.js";
 import type { Expression } from "../expression/expression-types.js";
-import type { PlaygroundModel } from "../inference/model-types.js";
+import type { PlaygroundModel, Sample } from "../inference/playground-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import type {
   Schema,
@@ -313,30 +313,12 @@ export type ValidatedPlayground = {
   readonly definitionLinks: readonly DefinitionLink[];
 };
 
-export type Sample = {
-  readonly name?: string;
-  readonly note?: string;
-  readonly history?: readonly SampleHistoryEntry[];
-  readonly input: unknown;
-  readonly steps?: readonly SampleStep[];
-};
-
-export type SampleHistoryEntry = {
-  readonly input: unknown;
-  readonly steps?: readonly SampleStep[];
-  readonly output: unknown;
-};
-
-export type SampleToolCall = {
-  readonly tool: string;
-  readonly callId: string;
-  readonly input: unknown;
-  readonly output?: unknown;
-};
-
-export type SampleStep = {
-  readonly toolCalls: readonly SampleToolCall[];
-};
+export type {
+  Sample,
+  SampleHistoryEntry,
+  SampleStep,
+  SampleToolCall,
+} from "../inference/playground-types.js";
 
 export type PlaygroundValidationResult =
   | ValidatedPlayground

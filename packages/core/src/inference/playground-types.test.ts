@@ -2,7 +2,10 @@ import type { GatewayModelId } from "@ai-sdk/gateway";
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
 
-import { PLAYGROUND_MODEL_IDS, type PlaygroundModelId } from "./model-types.js";
+import {
+  PLAYGROUND_MODEL_IDS,
+  type PlaygroundModelId,
+} from "./playground-types.js";
 
 // Distributive conditional type: removes `(string & {})` while preserving literal string types.
 // For string literals, `string extends "model"` is false (so the literal is kept).

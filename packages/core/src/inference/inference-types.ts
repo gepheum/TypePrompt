@@ -1,4 +1,4 @@
-import type { PlaygroundModel } from "./model-types.js";
+import type { PlaygroundModel } from "./playground-types.js";
 
 /** Result of running inference across all samples in a `<samples>` element. */
 export type InferenceSet<Pending = never> = {
