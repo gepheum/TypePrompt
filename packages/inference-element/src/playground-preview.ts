@@ -146,7 +146,8 @@ const playgroundPreviewStyles = css`
     border-radius: 6px;
     padding: 3px;
     overflow-x: auto;
-    flex: 1;
+    width: fit-content;
+    max-width: 100%;
   }
 
   .sample-segment-btn {
@@ -176,7 +177,8 @@ const playgroundPreviewStyles = css`
   }
 
   .sample-select {
-    flex: 1;
+    width: auto;
+    max-width: 100%;
     background: var(--dropdown-bg);
     color: var(--dropdown-fg);
     border: 1px solid var(--dropdown-border);
