@@ -9,6 +9,7 @@ import type { MappedText } from "../util/shared-types.js";
 import { parseXmlDocument } from "../xml/xml-parser.js";
 import type { ElementNode } from "../xml/xml-types.js";
 import type {
+  PlaygroundValidationResult,
   Tool,
   ToolValidationResult,
   ValidatedTemplate,
@@ -1260,6 +1261,158 @@ describe("validatePlayground", () => {
 
       const result = validatePlayground(parsed, templateWithoutTypes);
       expect(result.kind).toBe("playground");
+    });
+
+    describe("model numeric constraints", () => {
+      function validateModelYaml(
+        modelYaml: string,
+      ): PlaygroundValidationResult {
+        const indented = modelYaml
+          .split("\n")
+          .map((line) => `          ${line}`)
+          .join("\n");
+        const node = parseElement(
+          `
+          <playground for="Translate">
+            <model>
+${indented}
+            </model>
+            <samples>
+            - input:
+                text: "Hello"
+                targetLanguage: "es"
+            </samples>
+          </playground>
+        `,
+          "prompts/Translate.play.tp",
+        );
+        const parsed = parsePlayground(node);
+        if (parsed.kind === "error") {
+          throw new Error(
+            `parsePlayground failed: ${parsed.errors.map((e) => e.message).join("; ")}`,
+          );
+        }
+        return validatePlayground(parsed, template);
+      }
+
+      it("rejects temperature out of [0, 2] range", () => {
+        const resultLow = validateModelYaml(
+          "model: openai/gpt-4o\ntemperature: -0.1",
+        );
+        expect(resultLow).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be between 0 and 2" }],
+        });
+
+        const resultHigh = validateModelYaml(
+          "model: openai/gpt-4o\ntemperature: 2.1",
+        );
+        expect(resultHigh).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be between 0 and 2" }],
+        });
+
+        const resultValid = validateModelYaml(
+          "model: openai/gpt-4o\ntemperature: 0.7",
+        );
+        expect(resultValid.kind).toBe("playground");
+      });
+
+      it("rejects topP out of [0, 1] range", () => {
+        const resultHigh = validateModelYaml("model: openai/gpt-4o\ntopP: 1.5");
+        expect(resultHigh).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be between 0 and 1" }],
+        });
+
+        const resultValid = validateModelYaml(
+          "model: openai/gpt-4o\ntopP: 0.95",
+        );
+        expect(resultValid.kind).toBe("playground");
+      });
+
+      it("rejects non-integer or non-positive maxOutputTokens and maxTokens", () => {
+        const resultZero = validateModelYaml(
+          "model: openai/gpt-4o\nmaxOutputTokens: 0",
+        );
+        expect(resultZero).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer >= 1" }],
+        });
+
+        const resultFloat = validateModelYaml(
+          "model: openai/gpt-4o\nmaxTokens: 100.5",
+        );
+        expect(resultFloat).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer >= 1" }],
+        });
+
+        const resultValid = validateModelYaml(
+          "model: openai/gpt-4o\nmaxOutputTokens: 4096",
+        );
+        expect(resultValid.kind).toBe("playground");
+      });
+
+      it("rejects penalties out of [-2, 2] range", () => {
+        const resultPresence = validateModelYaml(
+          "model: openai/gpt-4o\npresencePenalty: 2.5",
+        );
+        expect(resultPresence).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be between -2 and 2" }],
+        });
+
+        const resultFrequency = validateModelYaml(
+          "model: openai/gpt-4o\nfrequencyPenalty: -2.1",
+        );
+        expect(resultFrequency).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be between -2 and 2" }],
+        });
+
+        const resultValid = validateModelYaml(
+          "model: openai/gpt-4o\npresencePenalty: 0.5\nfrequencyPenalty: -1.0",
+        );
+        expect(resultValid.kind).toBe("playground");
+      });
+
+      it("rejects non-integer seed", () => {
+        const result = validateModelYaml("model: openai/gpt-4o\nseed: 42.5");
+        expect(result).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer" }],
+        });
+
+        const resultValid = validateModelYaml("model: openai/gpt-4o\nseed: 42");
+        expect(resultValid.kind).toBe("playground");
+      });
+
+      it("rejects invalid provider numeric options", () => {
+        const resultOpenAI = validateModelYaml(
+          "model: openai/gpt-4o\nproviderOptions:\n  openai:\n    maxCompletionTokens: 0",
+        );
+        expect(resultOpenAI).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer >= 1" }],
+        });
+
+        const resultAnthropic = validateModelYaml(
+          "model: anthropic/claude-sonnet-4.5\nproviderOptions:\n  anthropic:\n    thinking:\n      type: enabled\n      budgetTokens: 0",
+        );
+        expect(resultAnthropic).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer >= 1" }],
+        });
+
+        const resultGoogle = validateModelYaml(
+          "model: google/gemini-2.5-flash\nproviderOptions:\n  google:\n    thinkingConfig:\n      thinkingBudget: -1",
+        );
+        expect(resultGoogle).toMatch({
+          kind: "error",
+          errors: [{ message: "Must be an integer >= 0" }],
+        });
+      });
     });
   });
 });

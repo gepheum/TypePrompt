@@ -1,4 +1,5 @@
 import type {
+  Constraint,
   ResolvedFieldType,
   Schema,
   SyntheticType,
@@ -292,7 +293,14 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
         value.kind === "string" &&
         type.primitive.text === "string" &&
         type.constraint &&
-        !type.constraint.predicate(value.value)
+        !(type.constraint as Constraint<string>).predicate(value.value)
+      ) {
+        return mismatch(mode, value.firstToken, type.constraint.message, 1.0);
+      } else if (
+        value.kind === "number" &&
+        type.primitive.text === "number" &&
+        type.constraint &&
+        !(type.constraint as Constraint<number>).predicate(value.value)
       ) {
         return mismatch(mode, value.firstToken, type.constraint.message, 1.0);
       } else if (value.kind === type.primitive.text) {
@@ -303,6 +311,17 @@ export function jsonMatchesType<const Mode extends "fast" | "thorough">(
           -2147483648 <= value.value &&
           value.value <= 2147483647
         ) {
+          if (
+            type.constraint &&
+            !(type.constraint as Constraint<number>).predicate(value.value)
+          ) {
+            return mismatch(
+              mode,
+              value.firstToken,
+              type.constraint.message,
+              1.0,
+            );
+          }
           return MATCH;
         } else {
           return mismatch(

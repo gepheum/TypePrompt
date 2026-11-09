@@ -25,13 +25,14 @@ export function typedString(constraint?: Constraint<string>): Typed<string> {
   };
 }
 
-export function typedNumber(): Typed<number> {
+export function typedNumber(constraint?: Constraint<number>): Typed<number> {
   return {
     type: {
       kind: "primitive",
       primitive: {
         text: "number",
       },
+      constraint,
     },
   };
 }

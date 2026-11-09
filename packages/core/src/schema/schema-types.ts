@@ -119,6 +119,15 @@ export type SyntheticStringType = {
   readonly constraint?: Constraint<string>;
 };
 
+/** Number type with an optional constraint. */
+export type SyntheticNumberType = {
+  readonly kind: "primitive";
+  readonly primitive: {
+    readonly text: "number";
+  };
+  readonly constraint?: Constraint<number>;
+};
+
 export type RecordType = {
   readonly kind: "record";
   readonly leftCurlyBracket: Span;
@@ -212,6 +221,7 @@ export type SyntheticType =
   | SyntheticArray
   | SyntheticInterface
   | SyntheticOptional
+  | SyntheticNumberType
   | SyntheticStringType
   | SyntheticUnion;
 

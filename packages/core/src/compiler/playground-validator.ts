@@ -27,7 +27,12 @@ import type {
 } from "../json/json-types.js";
 import { validateJson } from "../json/json-validator.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
-import type { Schema, SchemaType, Typed } from "../schema/schema-types.js";
+import type {
+  Constraint,
+  Schema,
+  SchemaType,
+  Typed,
+} from "../schema/schema-types.js";
 import {
   typedAny,
   typedArray,
@@ -176,6 +181,37 @@ function makePlaygroundType(templateValidation: ValidatedTemplate): SchemaType {
   };
 }
 
+function isInteger(options?: {
+  min?: number;
+  max?: number;
+}): Constraint<number> {
+  const min = options?.min;
+  const max = options?.max;
+  return {
+    predicate: (value: number): boolean => {
+      if (!Number.isInteger(value)) return false;
+      if (min !== undefined && value < min) return false;
+      if (max !== undefined && value > max) return false;
+      return true;
+    },
+    message:
+      min !== undefined && max !== undefined
+        ? `Must be an integer between ${min} and ${max}`
+        : min !== undefined
+          ? `Must be an integer >= ${min}`
+          : max !== undefined
+            ? `Must be an integer <= ${max}`
+            : "Must be an integer",
+  };
+}
+
+function isBetween(min: number, max: number): Constraint<number> {
+  return {
+    predicate: (value: number): boolean => value >= min && value <= max,
+    message: `Must be between ${min} and ${max}`,
+  };
+}
+
 function makePlaygroundModelType(templateSchema: Schema): SchemaType {
   const openAIOptions = typedInterface<OpenAIProviderOptions>({
     reasoningEffort: typedOptional(
@@ -189,7 +225,7 @@ function makePlaygroundModelType(templateSchema: Schema): SchemaType {
         "max",
       ]),
     ),
-    maxCompletionTokens: typedOptional(typedNumber()),
+    maxCompletionTokens: typedOptional(typedNumber(isInteger({ min: 1 }))),
     strictJsonSchema: typedOptional(typedBoolean()),
     logprobs: typedOptional(typedAny()),
   });
@@ -203,7 +239,7 @@ function makePlaygroundModelType(templateSchema: Schema): SchemaType {
     }),
     enabled: typedInterface({
       type: typedStringLiteral("enabled"),
-      budgetTokens: typedOptional(typedNumber()),
+      budgetTokens: typedOptional(typedNumber(isInteger({ min: 1 }))),
     }),
     disabled: typedInterface({
       type: typedStringLiteral("disabled"),
@@ -254,7 +290,7 @@ function makePlaygroundModelType(templateSchema: Schema): SchemaType {
   });
 
   const googleThinkingConfig = typedInterface<GoogleThinkingConfig>({
-    thinkingBudget: typedOptional(typedNumber()),
+    thinkingBudget: typedOptional(typedNumber(isInteger({ min: 0 }))),
     includeThoughts: typedOptional(typedBoolean()),
     thinkingLevel: typedOptional(
       typedSimpleStringUnion(["minimal", "low", "medium", "high"]),
@@ -315,15 +351,15 @@ function makePlaygroundModelType(templateSchema: Schema): SchemaType {
 
   const modelType = typedInterface<PlaygroundModel>({
     model: typedSimpleStringUnion<PlaygroundModelId>(PLAYGROUND_MODEL_IDS),
-    maxOutputTokens: typedOptional(typedNumber()),
-    maxTokens: typedOptional(typedNumber()),
-    temperature: typedOptional(typedNumber()),
-    topP: typedOptional(typedNumber()),
-    topK: typedOptional(typedNumber()),
-    presencePenalty: typedOptional(typedNumber()),
-    frequencyPenalty: typedOptional(typedNumber()),
+    maxOutputTokens: typedOptional(typedNumber(isInteger({ min: 1 }))),
+    maxTokens: typedOptional(typedNumber(isInteger({ min: 1 }))),
+    temperature: typedOptional(typedNumber(isBetween(0, 2))),
+    topP: typedOptional(typedNumber(isBetween(0, 1))),
+    topK: typedOptional(typedNumber(isInteger({ min: 0 }))),
+    presencePenalty: typedOptional(typedNumber(isBetween(-2, 2))),
+    frequencyPenalty: typedOptional(typedNumber(isBetween(-2, 2))),
     stopSequences: typedOptional(typedArray(typedString()) as Typed<string[]>),
-    seed: typedOptional(typedNumber()),
+    seed: typedOptional(typedNumber(isInteger())),
     reasoning: typedOptional(
       typedSimpleStringUnion<PlaygroundModelReasoning>([
         "provider-default",
