@@ -1,10 +1,5 @@
 import type { Inferences } from "@typeprompt/core";
-import {
-  html,
-  LitElement,
-  type PropertyValues,
-  type TemplateResult,
-} from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
@@ -52,10 +47,7 @@ export class InferenceRunElement extends LitElement {
   private statusFilter: "all" | "success" | "error" | "pending" = "all";
 
   @state()
-  private showProgressBar = false;
-
-  @state()
-  private isProgressCollapsing = false;
+  private progressBarStatus: "hidden" | "visible" | "collapsing" = "hidden";
 
   private collapseTimeoutId?: ReturnType<typeof setTimeout>;
 
@@ -69,8 +61,7 @@ export class InferenceRunElement extends LitElement {
 
   private handleInferenceRunChange(): void {
     if (!this._inferenceRun) {
-      this.showProgressBar = false;
-      this.isProgressCollapsing = false;
+      this.progressBarStatus = "hidden";
       return;
     }
 
@@ -91,25 +82,17 @@ export class InferenceRunElement extends LitElement {
         clearTimeout(this.collapseTimeoutId);
         this.collapseTimeoutId = undefined;
       }
-      this.showProgressBar = true;
-      this.isProgressCollapsing = false;
-    } else if (this.showProgressBar && !this.isProgressCollapsing) {
+      this.progressBarStatus = "visible";
+    } else if (this.progressBarStatus === "visible") {
       if (!this.collapseTimeoutId) {
         this.collapseTimeoutId = setTimeout(() => {
-          this.isProgressCollapsing = true;
+          this.progressBarStatus = "collapsing";
           this.collapseTimeoutId = setTimeout(() => {
-            this.showProgressBar = false;
-            this.isProgressCollapsing = false;
+            this.progressBarStatus = "hidden";
             this.collapseTimeoutId = undefined;
           }, 350);
         }, 400);
       }
-    }
-  }
-
-  override willUpdate(changedProps: PropertyValues): void {
-    if (changedProps.has("inferenceRun")) {
-      this.handleInferenceRunChange();
     }
   }
 
@@ -254,10 +237,10 @@ export class InferenceRunElement extends LitElement {
 
         <!-- Progress Bar (shown while pending, then smoothly collapses on completion) -->
         ${
-          this.showProgressBar
+          this.progressBarStatus !== "hidden"
             ? html`
                 <div
-                  class="progress-section-wrapper ${this.isProgressCollapsing ? "is-collapsing" : ""}"
+                  class="progress-section-wrapper ${this.progressBarStatus === "collapsing" ? "is-collapsing" : ""}"
                 >
                   <div class="progress-section-wrapper-inner">
                     <div class="progress-section">
