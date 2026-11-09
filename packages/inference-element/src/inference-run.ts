@@ -29,23 +29,7 @@ export class InferenceRunElement extends LitElement {
 
   private _inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
 
-  @property({
-    type: Object,
-    attribute: "data",
-    converter: {
-      fromAttribute(value: string | null) {
-        if (!value) return undefined;
-        try {
-          return JSON.parse(value);
-        } catch {
-          return undefined;
-        }
-      },
-      toAttribute(value: unknown) {
-        return value ? JSON.stringify(value) : null;
-      },
-    },
-  })
+  @property({ attribute: false })
   get inferenceRun(): Inferences.InferenceRun<Inferences.Pending> | undefined {
     return this._inferenceRun;
   }
@@ -56,26 +40,6 @@ export class InferenceRunElement extends LitElement {
     this._inferenceRun = val;
     this.handleInferenceRunChange();
     this.requestUpdate("inferenceRun", oldVal);
-  }
-
-  @property({ type: String, attribute: "inference-run" })
-  set rawInferenceRunAttribute(val: string | null) {
-    if (!val) {
-      this.inferenceRun = undefined;
-      return;
-    }
-    try {
-      this.inferenceRun = JSON.parse(val);
-    } catch {
-      // ignore
-    }
-  }
-
-  get data(): Inferences.InferenceRun<Inferences.Pending> | undefined {
-    return this.inferenceRun;
-  }
-  set data(val: Inferences.InferenceRun<Inferences.Pending> | undefined) {
-    this.inferenceRun = val;
   }
 
   @state()
