@@ -550,6 +550,8 @@ export const inferenceSetStyles = css`
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
+    line-height: 1.2;
+    box-sizing: border-box;
   }
 
   .btn-copy:hover {
@@ -624,14 +626,23 @@ export const inferenceSetStyles = css`
     padding: 0.5rem 0.75rem;
     cursor: pointer;
     user-select: none;
+    border-bottom: 1px solid transparent;
+    box-sizing: border-box;
   }
 
-  .source-file-item[open] .source-file-header {
-    border-bottom: 1px solid var(--border);
+  .source-file-item[open] > .source-file-header {
+    border-bottom-color: var(--border);
   }
 
   .source-file-item:not([open]) .btn-copy {
-    display: none;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .source-file-item .code-view {
+    border: none;
+    border-radius: 0;
+    margin: 0;
   }
 
   footer {
