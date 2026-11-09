@@ -173,6 +173,50 @@ export const commonStyles = css`
     font-family: var(--font-mono);
   }
 
+  .tools-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tools-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tool-card {
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    margin-right: var(--message-margin, 2.5rem);
+    margin-left: 0;
+  }
+
+  .tool-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tool-icon {
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+
+  .tool-card-description {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   .section-title {
     font-size: 0.75rem;
     font-weight: 700;

@@ -72,6 +72,24 @@ export function renderChatMessage(message: Inferences.Message): TemplateResult {
   `;
 }
 
+export function renderToolCard(tool: Inferences.Tool): TemplateResult {
+  return html`
+    <div class="tool-card">
+      <div class="tool-card-header">
+        <span class="tool-badge">
+          <span class="tool-icon">⬡</span>
+          <strong>${tool.name}</strong>
+        </span>
+      </div>
+      ${
+        tool.description
+          ? html`<div class="tool-card-description">${tool.description}</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
 export function renderRequestContext(
   request: Inferences.InferenceRequest,
 ): TemplateResult {
@@ -98,21 +116,15 @@ export function renderRequestContext(
       ${
         request.tools.length > 0
           ? html`
-              <div>
+              <div class="tools-section">
                 <div
                   class="section-title request"
-                  style="margin-bottom: 0.45rem;"
+                  style="margin-bottom: 0.5rem;"
                 >
-                  Available tools (${request.tools.length})
+                  Tools (${request.tools.length})
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                  ${request.tools.map(
-                    (t) => html`
-                      <span class="tool-badge" title="${t.description}">
-                        ${t.name}
-                      </span>
-                    `,
-                  )}
+                <div class="tools-list">
+                  ${request.tools.map((t) => renderToolCard(t))}
                 </div>
               </div>
             `

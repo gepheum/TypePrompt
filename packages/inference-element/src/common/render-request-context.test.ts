@@ -9,6 +9,26 @@ import {
 } from "./render-request-context.js";
 import { commonStyles } from "./styles.js";
 
+function flattenTemplate(t: unknown): string {
+  if (!t || typeof t !== "object") return String(t ?? "");
+  if ("strings" in t && Array.isArray((t as { strings: unknown }).strings)) {
+    const values = (t as { values?: unknown[] }).values ?? [];
+    return (t as { strings: string[] }).strings
+      .map(
+        (str: string, i: number) =>
+          str + (i < values.length ? flattenTemplate(values[i]) : ""),
+      )
+      .join("");
+  }
+  if ("values" in t && Array.isArray((t as { values: unknown[] }).values)) {
+    return (t as { values: unknown[] }).values.map(flattenTemplate).join("");
+  }
+  if (Array.isArray(t)) {
+    return t.map(flattenTemplate).join("");
+  }
+  return "";
+}
+
 describe("render-request-context", () => {
   it("renders a tool call with toolName and arguments", () => {
     const tc: Inferences.ToolCall = {
@@ -42,6 +62,47 @@ describe("render-request-context", () => {
     };
     const result = renderRequestContext(req);
     assert.ok(result);
+
+    const rendered = flattenTemplate(result);
+    assert.ok(rendered.includes("Tools (1)"));
+    assert.ok(rendered.includes("tool-card"));
+    assert.ok(rendered.includes("search"));
+    assert.ok(
+      rendered.includes(
+        '<div class="tool-card-description">Search the web</div>',
+      ),
+    );
+  });
+
+  it("renders tool card without indentation whitespace in tool description", () => {
+    const req: Inferences.InferenceRequest = {
+      systemMessage: "",
+      outputFormat: { format: "text" },
+      tools: [
+        {
+          id: "weather",
+          name: "weather",
+          description: "Get the weather forecast.",
+          inputJsonSchema: {},
+        },
+      ],
+      messages: [],
+    };
+    const result = renderRequestContext(req);
+    const rendered = flattenTemplate(result);
+    assert.ok(
+      rendered.includes(
+        '<div class="tool-card-description">Get the weather forecast.</div>',
+      ),
+    );
+  });
+
+  it("styles tool cards with monospace typography and message margin", () => {
+    const cssText = commonStyles.cssText;
+    assert.ok(cssText.includes(".tool-card {"));
+    assert.ok(cssText.includes(".tool-card-description {"));
+    assert.ok(cssText.includes("font-family: var(--font-mono)"));
+    assert.ok(cssText.includes("margin-right: var(--message-margin"));
   });
 
   it("renders chat message for user role", () => {
