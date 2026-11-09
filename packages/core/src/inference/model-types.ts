@@ -1,10 +1,6 @@
-/**
- * Configuration options for the model used in the playground.
- */
+/** Configuration options for the model used in the playground. */
 export interface PlaygroundModel {
-  /**
-   * The model identifier to use (e.g. 'openai/gpt-4o', 'anthropic/claude-sonnet-4.5').
-   */
+  /** The model identifier to use (e.g. 'openai/gpt-4o'). */
   model: PlaygroundModelId;
   /** Maximum number of tokens to generate. */
   maxOutputTokens?: number;
@@ -30,9 +26,7 @@ export interface PlaygroundModel {
   providerOptions?: ProviderOptions;
 }
 
-/**
- * Provider-specific option configurations for supported AI model providers.
- */
+/** Provider-specific option configurations for supported AI model providers. */
 export interface ProviderOptions {
   openai?: OpenAIProviderOptions;
   anthropic?: AnthropicProviderOptions;
@@ -41,9 +35,7 @@ export interface ProviderOptions {
   mistral?: MistralProviderOptions;
 }
 
-/**
- * Options specific to the OpenAI provider.
- */
+/** Options specific to the OpenAI provider. */
 export interface OpenAIProviderOptions {
   /** Reasoning effort level for reasoning models (e.g. o1, o3, o4). */
   reasoningEffort?: OpenAIReasoningEffort;
@@ -58,9 +50,7 @@ export interface OpenAIProviderOptions {
   logprobs?: number | boolean;
 }
 
-/**
- * Options specific to the Anthropic (Claude) provider.
- */
+/** Options specific to the Anthropic (Claude) provider. */
 export interface AnthropicProviderOptions {
   /** Reasoning effort level for Claude models. */
   effort?: AnthropicEffort;
@@ -72,9 +62,7 @@ export interface AnthropicProviderOptions {
   structuredOutputMode?: AnthropicStructuredOutputMode;
 }
 
-/**
- * Options specific to the Google (Gemini) provider.
- */
+/** Options specific to the Google (Gemini) provider. */
 export interface GoogleProviderOptions {
   /** Thinking budget and configuration for Gemini models. */
   thinkingConfig?: GoogleThinkingConfig;
@@ -86,9 +74,7 @@ export interface GoogleProviderOptions {
   threshold?: GoogleHarmBlockThreshold;
 }
 
-/**
- * Options specific to the xAI (Grok) provider.
- */
+/** Options specific to the xAI (Grok) provider. */
 export interface XAIProviderOptions {
   /** Reasoning effort level for Grok reasoning models. */
   reasoningEffort?: XAIReasoningEffort;
@@ -100,9 +86,7 @@ export interface XAIProviderOptions {
   sources?: boolean;
 }
 
-/**
- * Options specific to the Mistral provider.
- */
+/** Options specific to the Mistral provider. */
 export interface MistralProviderOptions {
   /** Whether to inject Mistral's safety prompt before conversations. */
   safePrompt?: boolean;
@@ -114,9 +98,7 @@ export interface MistralProviderOptions {
   reasoningEffort?: MistralReasoningEffort;
 }
 
-/**
- * Thinking configuration for Anthropic models.
- */
+/** Thinking configuration for Anthropic models. */
 export type AnthropicThinking =
   | {
       type: "adaptive";
@@ -130,32 +112,24 @@ export type AnthropicThinking =
       type: "disabled";
     };
 
-/**
- * Thinking configuration for Google Gemini models.
- */
+/** Thinking configuration for Google Gemini models. */
 export interface GoogleThinkingConfig {
   thinkingBudget?: number;
   includeThoughts?: boolean;
   thinkingLevel?: "minimal" | "low" | "medium" | "high";
 }
 
-/**
- * Safety setting override for Google Gemini models.
- */
+/** Safety setting override for Google Gemini models. */
 export interface GoogleSafetySetting {
   category: GoogleHarmCategory;
   threshold: GoogleHarmBlockThreshold;
 }
 
-/**
- * Structured output guidance mode for Anthropic models.
- */
+/** Structured output guidance mode for Anthropic models. */
 export type AnthropicStructuredOutputMode =
   "outputFormat" | "jsonTool" | "auto";
 
-/**
- * Harm categories for Google safety settings.
- */
+/** Harm categories for Google safety settings. */
 export type GoogleHarmCategory =
   | "HARM_CATEGORY_UNSPECIFIED"
   | "HARM_CATEGORY_HATE_SPEECH"
@@ -164,9 +138,7 @@ export type GoogleHarmCategory =
   | "HARM_CATEGORY_SEXUALLY_EXPLICIT"
   | "HARM_CATEGORY_CIVIC_INTEGRITY";
 
-/**
- * Harm block thresholds for Google safety settings.
- */
+/** Harm block thresholds for Google safety settings. */
 export type GoogleHarmBlockThreshold =
   | "HARM_BLOCK_THRESHOLD_UNSPECIFIED"
   | "BLOCK_LOW_AND_ABOVE"
@@ -175,35 +147,23 @@ export type GoogleHarmBlockThreshold =
   | "BLOCK_NONE"
   | "OFF";
 
-/**
- * Recency filter for xAI live search.
- */
+/** Recency filter for xAI live search. */
 export type XAISearchRecencyFilter = "month" | "week" | "day" | "hour";
 
-/**
- * Reasoning effort for OpenAI reasoning models.
- */
+/** Reasoning effort for OpenAI reasoning models. */
 export type OpenAIReasoningEffort =
   "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
-/**
- * Reasoning effort for Anthropic models.
- */
+/** Reasoning effort for Anthropic models. */
 export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
-/**
- * Reasoning effort for xAI reasoning models.
- */
+/** Reasoning effort for xAI reasoning models. */
 export type XAIReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
 
-/**
- * Reasoning effort for Mistral reasoning models.
- */
+/** Reasoning effort for Mistral reasoning models. */
 export type MistralReasoningEffort = "none" | "low" | "medium" | "high";
 
-/**
- * Reasoning effort level for models supporting reasoning.
- */
+/** Reasoning effort level for models supporting reasoning. */
 export type PlaygroundModelReasoning =
   | "provider-default"
   | "none"
@@ -214,9 +174,7 @@ export type PlaygroundModelReasoning =
   | "xhigh"
   | "max";
 
-/**
- * Model identifiers supported by the Vercel AI SDK Gateway.
- */
+/** Model identifiers supported by the Vercel AI SDK Gateway. */
 export const PLAYGROUND_MODEL_IDS = [
   "alibaba/qwen-3-14b",
   "alibaba/qwen-3-235b",
