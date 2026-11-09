@@ -27,7 +27,7 @@ export function renderChatMessage(message: Inferences.Message): TemplateResult {
     <div class="chat-bubble-wrap role-${role}">
       <div class="chat-bubble">
         <div class="chat-bubble-header">
-          <span>${role}</span>
+          <span>${role === "tool" ? "tool result" : role}</span>
         </div>
         <div class="chat-bubble-body">
           ${

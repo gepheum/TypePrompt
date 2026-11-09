@@ -115,6 +115,23 @@ describe("render-request-context", () => {
     assert.ok(result);
   });
 
+  it("renders chat message for tool role with 'tool result' title", () => {
+    const msg: Inferences.Message = {
+      role: "tool",
+      toolResults: [
+        {
+          toolName: "getWeather",
+          callId: "call_1",
+          output: { temp: 20 },
+        },
+      ],
+    };
+    const result = renderChatMessage(msg);
+    const rendered = flattenTemplate(result);
+    assert.ok(rendered.includes("tool result"));
+    assert.ok(rendered.includes("getWeather"));
+  });
+
   it("applies messaging margins to distinguish user and assistant messages", () => {
     const cssText = commonStyles.cssText;
     // User messages and tool responses float to the left (have right margin)
