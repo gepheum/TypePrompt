@@ -1,13 +1,13 @@
 import type { Inferences } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert";
-import { commonStyles } from "./styles.js";
 import { inferenceSetStyles } from "../inference-set/styles.js";
 import {
   renderChatMessage,
   renderRequestContext,
   renderToolCall,
 } from "./render-request-context.js";
+import { commonStyles } from "./styles.js";
 
 describe("render-request-context", () => {
   it("renders a tool call with toolName and arguments", () => {

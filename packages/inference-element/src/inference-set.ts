@@ -48,7 +48,9 @@ export class InferenceSetElement extends LitElement {
   get inferenceSet(): Inferences.InferenceSet<Inferences.Pending> | undefined {
     return this._inferenceSet;
   }
-  set inferenceSet(val: Inferences.InferenceSet<Inferences.Pending> | undefined) {
+  set inferenceSet(
+    val: Inferences.InferenceSet<Inferences.Pending> | undefined,
+  ) {
     const oldVal = this._inferenceSet;
     this._inferenceSet = val;
     this.handleInferenceSetChange();
@@ -175,7 +177,9 @@ export class InferenceSetElement extends LitElement {
     }
   }
 
-  private setStatusFilter(filter: "all" | "success" | "error" | "pending"): void {
+  private setStatusFilter(
+    filter: "all" | "success" | "error" | "pending",
+  ): void {
     this.statusFilter = filter;
     if (filter === "error" && this.inferenceSet) {
       // Auto-expand error samples when filtering to errors
@@ -292,13 +296,15 @@ export class InferenceSetElement extends LitElement {
                       <div class="progress-header">
                         <div class="progress-status-counts">
                           <span class="progress-count-item">
-                            <span class="status-dot success"></span> ${successCount} passed
+                            <span class="status-dot success"></span>
+                            ${successCount} passed
                           </span>
                           ${
                             errorCount > 0
                               ? html`
                                   <span class="progress-count-item">
-                                    <span class="status-dot error"></span> ${errorCount} failed
+                                    <span class="status-dot error"></span>
+                                    ${errorCount} failed
                                   </span>
                                 `
                               : ""
@@ -307,7 +313,8 @@ export class InferenceSetElement extends LitElement {
                             pendingCount > 0
                               ? html`
                                   <span class="progress-count-item">
-                                    <span class="status-dot pending"></span> ${pendingCount} pending
+                                    <span class="status-dot pending"></span>
+                                    ${pendingCount} pending
                                   </span>
                                 `
                               : ""

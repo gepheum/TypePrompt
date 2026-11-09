@@ -28,26 +28,74 @@ const playgroundPreviewStyles = css`
     position: relative;
   }
 
+  .preview-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .subtitle {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    margin-top: 0.25rem;
+  }
+
   .no-api-keys-banner {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     background: rgba(234, 179, 8, 0.1);
     border: 1px solid var(--pending-border);
     border-radius: 8px;
-    padding: 0.85rem 1.15rem;
+    padding: 0.55rem 0.85rem;
+    margin-top: 0.25rem;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .no-api-keys-icon {
     font-size: 1.25rem;
+    flex-shrink: 0;
   }
 
   .no-api-keys-content {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
-    font-size: 0.86rem;
+    font-size: 0.84rem;
+    min-width: 0;
   }
 
   .no-api-keys-text {
@@ -65,13 +113,6 @@ const playgroundPreviewStyles = css`
     text-decoration: underline;
   }
 
-  .run-inferences-bar {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
   .run-inferences-button {
     display: inline-flex;
     align-items: center;
@@ -80,9 +121,10 @@ const playgroundPreviewStyles = css`
     color: var(--button-fg);
     border: none;
     border-radius: 6px;
-    padding: 0.55rem 1.15rem;
-    font-size: 0.88rem;
+    padding: 0.42rem 0.95rem;
+    font-size: 0.84rem;
     font-weight: 600;
+    line-height: 1.25;
     font-family: inherit;
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
@@ -94,18 +136,20 @@ const playgroundPreviewStyles = css`
   }
 
   .run-icon {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
 
   .model-yaml-card {
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 0.45rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    max-width: 320px;
+    flex-shrink: 0;
   }
 
   .model-yaml-body {
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     line-height: 1.35;
     margin: 0;
     font-family: var(--font-mono);
@@ -121,7 +165,7 @@ const playgroundPreviewStyles = css`
     border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.75rem;
   }
 
   .sample-picker-bar {
@@ -129,6 +173,8 @@ const playgroundPreviewStyles = css`
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
   }
 
   .sample-picker-label {
@@ -160,7 +206,10 @@ const playgroundPreviewStyles = css`
     white-space: nowrap;
     box-sizing: border-box;
     vertical-align: middle;
-    transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    transition:
+      background 0.1s ease,
+      border-color 0.1s ease,
+      color 0.1s ease;
   }
 
   .sample-segment-btn:hover {
@@ -354,6 +403,14 @@ export class PlaygroundPreviewElement extends LitElement {
       return html`
         <div class="container">
           <div class="sticky-header">
+            <header class="preview-header">
+              <div class="header-top">
+                <div class="title-group">
+                  <h1><span>Playground</span></h1>
+                  <div class="subtitle">Playground Preview</div>
+                </div>
+              </div>
+            </header>
             <div class="sample-picker-bar">
               <label class="sample-picker-label">Sample</label>
               <select class="sample-select" disabled>
@@ -381,6 +438,22 @@ export class PlaygroundPreviewElement extends LitElement {
       ? YAML.stringify(playground.model).trimEnd()
       : "";
 
+    const rawTemplateId =
+      playground?.forTemplate ||
+      (playground?.id
+        ? playground.id.startsWith("Main:")
+          ? playground.id.slice("Main:".length)
+          : playground.id
+        : this.templateId
+          ? this.templateId.startsWith("Main:")
+            ? this.templateId.slice("Main:".length)
+            : this.templateId
+          : "Playground");
+
+    const displayTemplateId = rawTemplateId.startsWith("Main:")
+      ? rawTemplateId.slice("Main:".length)
+      : rawTemplateId;
+
     const rawSamples = playground?.samples ?? [];
     const samples = rawSamples as readonly Lsp.WirePlaygroundSample[];
 
@@ -394,51 +467,68 @@ export class PlaygroundPreviewElement extends LitElement {
     return html`
       <div class="container">
         <div class="sticky-header">
-          <!-- Top Section: API Keys banner or Run Inferences button -->
-          ${
-            !hasApiKeys
-              ? html`
-                  <div class="no-api-keys-banner">
-                    <span class="no-api-keys-icon">🔑</span>
-                    <div class="no-api-keys-content">
-                      <span class="no-api-keys-text"
-                        >Inference cannot be run because no API key is
-                        available.</span
-                      >
-                      <a
-                        href="#"
-                        class="create-secrets-link"
-                        @click=${this.handleCreateSecretsClick}
-                      >
-                        Create .typeprompt.secrets.yaml
-                      </a>
-                    </div>
-                  </div>
-                `
-              : html`
-                  <div class="run-inferences-bar">
-                    <button
-                      type="button"
-                      class="run-inferences-button"
-                      title="Running Inferences"
-                      @click=${this.handleRunInferencesClick}
-                    >
-                      <span class="run-icon">▶</span> Run Inferences
-                    </button>
-                    ${
-                      modelYaml
-                        ? html`
-                            <div class="model-yaml-card">
-                              <pre
-                                class="model-yaml-body"
-                              ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
-                            </div>
-                          `
-                        : ""
-                    }
-                  </div>
-                `
-          }
+          <!-- Top Section: Title, Subtitle, Action button, and Model YAML -->
+          <header class="preview-header">
+            <div class="header-top">
+              <div class="title-group">
+                <h1><span>${displayTemplateId}</span></h1>
+                <div class="subtitle">
+                  Playground Preview · ${samples.length}
+                  sample${samples.length !== 1 ? "s" : ""}
+                </div>
+                ${
+                  hasApiKeys
+                    ? html`
+                        <div class="header-actions">
+                          <button
+                            type="button"
+                            class="run-inferences-button"
+                            title="Run inferences across all samples"
+                            @click=${this.handleRunInferencesClick}
+                          >
+                            <span class="run-icon">▶</span> Run Inferences
+                          </button>
+                        </div>
+                      `
+                    : ""
+                }
+                ${
+                  !hasApiKeys
+                    ? html`
+                        <div class="no-api-keys-banner">
+                          <span class="no-api-keys-icon">🔑</span>
+                          <div class="no-api-keys-content">
+                            <span class="no-api-keys-text"
+                              >Inference cannot be run because no API key is
+                              available.</span
+                            >
+                            <a
+                              href="#"
+                              class="create-secrets-link"
+                              @click=${this.handleCreateSecretsClick}
+                            >
+                              Create .typeprompt.secrets.yaml
+                            </a>
+                          </div>
+                        </div>
+                      `
+                    : ""
+                }
+              </div>
+
+              ${
+                modelYaml
+                  ? html`
+                      <div class="model-yaml-card">
+                        <pre
+                          class="model-yaml-body"
+                        ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
+                      </div>
+                    `
+                  : ""
+              }
+            </div>
+          </header>
 
           <!-- Sample Picker -->
           ${
@@ -485,7 +575,10 @@ export class PlaygroundPreviewElement extends LitElement {
                             ? s.name
                             : `Anonymous ${idx + 1}/${samples.length}`;
                           return html`
-                            <option value="${idx}" ?selected=${idx === activeIndex}>
+                            <option
+                              value="${idx}"
+                              ?selected=${idx === activeIndex}
+                            >
                               ${label}
                             </option>
                           `;

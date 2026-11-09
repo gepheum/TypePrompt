@@ -75,7 +75,10 @@ export const inferenceSetStyles = css`
   .progress-section-wrapper {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 0.35s ease, opacity 0.35s ease, margin-bottom 0.35s ease;
+    transition:
+      grid-template-rows 0.35s ease,
+      opacity 0.35s ease,
+      margin-bottom 0.35s ease;
     opacity: 1;
   }
 
@@ -214,7 +217,9 @@ export const inferenceSetStyles = css`
     font-family: inherit;
     box-sizing: border-box;
     vertical-align: middle;
-    transition: background 0.1s ease, color 0.1s ease;
+    transition:
+      background 0.1s ease,
+      color 0.1s ease;
   }
 
   .btn-filter:hover {

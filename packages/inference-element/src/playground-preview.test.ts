@@ -122,7 +122,76 @@ describe("PlaygroundPreviewElement", () => {
 
     const renderedStr = flattenTemplate(template);
     assert.ok(renderedStr.includes("sticky-header"));
+    assert.ok(renderedStr.includes("preview-header"));
+    assert.ok(renderedStr.includes("header-top"));
+    assert.ok(renderedStr.includes("header-actions"));
+    assert.ok(renderedStr.includes("Greeting"));
+    assert.ok(renderedStr.includes("Playground Preview · 1 sample"));
+    assert.ok(renderedStr.includes("run-inferences-button"));
+    assert.ok(renderedStr.includes("model-yaml-card"));
     assert.ok(renderedStr.includes("sample-segmented-control"));
     assert.ok(renderedStr.includes("sample-segment-btn"));
+  });
+
+  it("renders no-api-keys banner and hides run-inferences-button when api keys are missing", () => {
+    const el = new PlaygroundPreviewElement();
+    const fakeProject: Lsp.WireProject = {
+      folderUri: "file:///mock-workspace",
+      compilationResult: {
+        edition: 1,
+        sourceFiles: {},
+        templates: {},
+        tools: {},
+        playgrounds: {
+          "Main:Test": {
+            id: "Main:Test",
+            namespace: "Main",
+            forTemplate: "Test",
+            isValid: true,
+            model: { model: "anthropic/claude-3-5-sonnet" },
+            samples: [],
+          },
+        },
+        signature: undefined,
+        anyErrors: false,
+        finalErrors: {},
+        warnings: {},
+        timestampMillis: Date.now(),
+      },
+      secrets: {
+        kind: "success",
+        secrets: {
+          apiKeys: {},
+        },
+      },
+    };
+
+    el.wireProject = fakeProject;
+    const template = el.render();
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    const renderedStr = flattenTemplate(template);
+    assert.ok(renderedStr.includes("no-api-keys-banner"));
+    assert.ok(!renderedStr.includes("run-inferences-button"));
+    assert.ok(renderedStr.includes("Playground Preview · 0 samples"));
   });
 });

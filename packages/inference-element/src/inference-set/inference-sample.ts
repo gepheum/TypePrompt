@@ -128,7 +128,9 @@ export class InferenceSampleElement extends LitElement {
               ? html`
                   <details class="reasoning-details">
                     <summary class="reasoning-summary">
-                      <span class="reasoning-summary-title">Thought process</span>
+                      <span class="reasoning-summary-title"
+                        >Thought process</span
+                      >
                     </summary>
                     <div class="reasoning-body">${result.reasoning}</div>
                   </details>
