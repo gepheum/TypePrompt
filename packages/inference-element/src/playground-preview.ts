@@ -1,9 +1,10 @@
 import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import { css, html, LitElement, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
+import { registerCustomElement } from "./common/register-custom-element.js";
 import { renderRequestContext } from "./common/render-request-context.js";
 import { commonStyles } from "./common/styles.js";
 import { highlightYaml } from "./common/token-highlighting.js";
@@ -302,7 +303,7 @@ const playgroundPreviewStyles = css`
   }
 `;
 
-@customElement("tp-playground-preview")
+@registerCustomElement("tp-playground-preview")
 export class PlaygroundPreviewElement extends LitElement {
   static override styles = [commonStyles, playgroundPreviewStyles];
 

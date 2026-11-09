@@ -1,13 +1,14 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
+import { registerCustomElement } from "../common/register-custom-element.js";
 import { renderRequestContext } from "../common/render-request-context.js";
 import { commonStyles } from "../common/styles.js";
 import { renderResultOutput } from "./result-output.js";
 import { inferenceRunStyles } from "./styles.js";
 import { renderTelemetryStrip } from "./telemetry.js";
 
-@customElement("tp-inference-sample")
+@registerCustomElement("tp-inference-sample")
 export class InferenceSampleElement extends LitElement {
   static override styles = [commonStyles, inferenceRunStyles];
 

@@ -5,11 +5,12 @@ import {
   type PropertyValues,
   type TemplateResult,
 } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
 import { formatTimestamp } from "./common/formatters.js";
+import { registerCustomElement } from "./common/register-custom-element.js";
 import { commonStyles } from "./common/styles.js";
 import { highlightTp, highlightYaml } from "./common/token-highlighting.js";
 import "./inference-run/inference-sample.js";
@@ -22,7 +23,7 @@ export interface InferenceRunEvents {}
 
 export const inferenceRunEvents = createNanoEvents<InferenceRunEvents>();
 
-@customElement("tp-inference-run")
+@registerCustomElement("tp-inference-run")
 export class InferenceRunElement extends LitElement {
   static override styles = [commonStyles, inferenceRunStyles];
 

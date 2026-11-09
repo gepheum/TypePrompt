@@ -21,6 +21,11 @@
       "import": "./dist/inference-run.js",
       "default": "./dist/inference-run.js"
     },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "import": "./dist/theme.js",
+      "default": "./dist/theme.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

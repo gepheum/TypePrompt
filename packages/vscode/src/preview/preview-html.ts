@@ -1,4 +1,9 @@
 import type { Inferences, Lsp } from "@typeprompt/core";
+import {
+  formatThemeVariables,
+  type PartialThemeVariables,
+  type ThemeVariables,
+} from "@typeprompt/inference-element";
 
 /**
  * Escapes characters for HTML text and attribute interpolation.
@@ -12,91 +17,116 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
-const vscodeThemeVariables = `
-      --tp-font-family: var(--vscode-font-family);
-      --tp-font-mono: var(--vscode-editor-font-family);
-      --tp-font-size: var(--vscode-font-size);
+export const vscodeThemeVariables: ThemeVariables = {
+  "--tp-font-family": "var(--vscode-font-family)",
+  "--tp-font-mono": "var(--vscode-editor-font-family)",
+  "--tp-font-size": "var(--vscode-font-size)",
 
-      --tp-bg: var(--vscode-editor-background);
-      --tp-bg-surface: var(--vscode-sideBar-background, var(--vscode-editorWidget-background));
-      --tp-bg-surface-elevated: var(--vscode-list-hoverBackground, var(--vscode-toolbar-hoverBackground));
-      --tp-bg-inset: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+  "--tp-bg": "var(--vscode-editor-background)",
+  "--tp-bg-surface":
+    "var(--vscode-sideBar-background, var(--vscode-editorWidget-background))",
+  "--tp-bg-surface-elevated":
+    "var(--vscode-list-hoverBackground, var(--vscode-toolbar-hoverBackground))",
+  "--tp-bg-inset":
+    "var(--vscode-textCodeBlock-background, var(--vscode-editor-background))",
 
-      --tp-border: var(--vscode-panel-border, var(--vscode-widget-border, var(--vscode-editorWidget-border)));
-      --tp-border-subtle: var(--vscode-tree-tableColumnsBorder, var(--vscode-editorGroup-border));
-      --tp-border-focus: var(--vscode-focusBorder);
+  "--tp-border":
+    "var(--vscode-panel-border, var(--vscode-widget-border, var(--vscode-editorWidget-border)))",
+  "--tp-border-subtle":
+    "var(--vscode-tree-tableColumnsBorder, var(--vscode-editorGroup-border))",
+  "--tp-border-focus": "var(--vscode-focusBorder)",
 
-      --tp-text: var(--vscode-editor-foreground, var(--vscode-foreground));
-      --tp-text-muted: var(--vscode-descriptionForeground);
-      --tp-text-soft: var(--vscode-disabledForeground);
+  "--tp-text": "var(--vscode-editor-foreground, var(--vscode-foreground))",
+  "--tp-text-muted": "var(--vscode-descriptionForeground)",
+  "--tp-text-soft": "var(--vscode-disabledForeground)",
 
-      --tp-button-bg: var(--vscode-button-background);
-      --tp-button-fg: var(--vscode-button-foreground);
-      --tp-button-hover: var(--vscode-button-hoverBackground);
+  "--tp-button-bg": "var(--vscode-button-background)",
+  "--tp-button-fg": "var(--vscode-button-foreground)",
+  "--tp-button-hover": "var(--vscode-button-hoverBackground)",
 
-      --tp-dropdown-bg: var(--vscode-dropdown-background, var(--vscode-input-background));
-      --tp-dropdown-fg: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
-      --tp-dropdown-border: var(--vscode-dropdown-border, var(--vscode-input-border));
+  "--tp-dropdown-bg":
+    "var(--vscode-dropdown-background, var(--vscode-input-background))",
+  "--tp-dropdown-fg":
+    "var(--vscode-dropdown-foreground, var(--vscode-input-foreground))",
+  "--tp-dropdown-border":
+    "var(--vscode-dropdown-border, var(--vscode-input-border))",
 
-      --tp-user-bg: var(--vscode-chat-requestBackground, color-mix(in srgb, var(--vscode-editor-foreground, #ffffff) 5%, var(--vscode-editor-background, #0b0f19)));
-      --tp-user-border: var(--vscode-chat-requestBorder, color-mix(in srgb, var(--vscode-editor-foreground, #ffffff) 14%, var(--vscode-panel-border, #1f293d)));
-      --tp-user-label: var(--vscode-descriptionForeground);
+  "--tp-user-bg":
+    "var(--vscode-chat-requestBackground, color-mix(in srgb, var(--vscode-editor-foreground, #ffffff) 5%, var(--vscode-editor-background, #0b0f19)))",
+  "--tp-user-border":
+    "var(--vscode-chat-requestBorder, color-mix(in srgb, var(--vscode-editor-foreground, #ffffff) 14%, var(--vscode-panel-border, #1f293d)))",
+  "--tp-user-label": "var(--vscode-descriptionForeground)",
 
-      --tp-assistant-bg: color-mix(in srgb, var(--vscode-focusBorder, #38bdf8) 8%, var(--vscode-editor-background, #0b0f19));
-      --tp-assistant-border: color-mix(in srgb, var(--vscode-focusBorder, #38bdf8) 28%, var(--vscode-panel-border, #1f293d));
-      --tp-assistant-label: var(--vscode-focusBorder, #38bdf8);
+  "--tp-assistant-bg":
+    "color-mix(in srgb, var(--vscode-focusBorder, #38bdf8) 8%, var(--vscode-editor-background, #0b0f19))",
+  "--tp-assistant-border":
+    "color-mix(in srgb, var(--vscode-focusBorder, #38bdf8) 28%, var(--vscode-panel-border, #1f293d))",
+  "--tp-assistant-label": "var(--vscode-focusBorder, #38bdf8)",
 
-      --tp-tool-bg: color-mix(in srgb, #a855f7 9%, var(--vscode-editor-background, #0b0f19));
-      --tp-tool-border: color-mix(in srgb, #a855f7 28%, var(--vscode-panel-border, #1f293d));
-      --tp-tool-label: #c084fc;
+  "--tp-tool-bg":
+    "color-mix(in srgb, #a855f7 9%, var(--vscode-editor-background, #0b0f19))",
+  "--tp-tool-border":
+    "color-mix(in srgb, #a855f7 28%, var(--vscode-panel-border, #1f293d))",
+  "--tp-tool-label": "#c084fc",
 
-      --tp-message-margin: 2.5rem;
-`;
+  "--tp-message-margin": "2.5rem",
+};
+
+const vscodeLightVariables: PartialThemeVariables = {
+  "--tp-user-bg": "var(--vscode-chat-requestBackground, #f1f5f9)",
+  "--tp-user-border": "var(--vscode-chat-requestBorder, #cbd5e1)",
+  "--tp-user-label": "#475569",
+
+  "--tp-assistant-bg": "#f0f9ff",
+  "--tp-assistant-border": "#bae6fd",
+  "--tp-assistant-label": "#0284c7",
+
+  "--tp-tool-bg": "#faf5ff",
+  "--tp-tool-border": "#e9d5ff",
+  "--tp-tool-label": "#7c3aed",
+
+  "--tp-success-bg": "rgba(22, 163, 74, 0.12)",
+  "--tp-success-border": "rgba(22, 163, 74, 0.35)",
+  "--tp-success-text": "#16a34a",
+
+  "--tp-pending-bg": "rgba(217, 119, 6, 0.12)",
+  "--tp-pending-border": "rgba(217, 119, 6, 0.35)",
+  "--tp-pending-text": "#d97706",
+
+  "--tp-error-bg": "rgba(220, 38, 38, 0.1)",
+  "--tp-error-border": "rgba(220, 38, 38, 0.35)",
+  "--tp-error-text": "#dc2626",
+
+  "--tp-hl-key": "#0284c7",
+  "--tp-hl-string": "#059669",
+  "--tp-hl-number": "#d97706",
+  "--tp-hl-boolean": "#db2777",
+  "--tp-hl-comment": "#64748b",
+  "--tp-hl-xml-tag": "#0284c7",
+  "--tp-hl-xml-attribute": "#7c3aed",
+  "--tp-hl-schema-keyword": "#db2777",
+};
+
+const vscodeHighContrastVariables: PartialThemeVariables = {
+  "--tp-border": "var(--vscode-contrastBorder, #ffffff)",
+  "--tp-border-subtle": "var(--vscode-contrastBorder, #ffffff)",
+  "--tp-border-focus":
+    "var(--vscode-focusBorder, var(--vscode-contrastBorder, #ffffff))",
+  "--tp-user-border": "var(--vscode-contrastBorder, #ffffff)",
+  "--tp-assistant-border": "var(--vscode-contrastBorder, #ffffff)",
+  "--tp-tool-border": "var(--vscode-contrastBorder, #ffffff)",
+};
+
+const vscodeThemeVariablesCss = formatThemeVariables(vscodeThemeVariables);
 
 const vscodeThemeRules = `
     body.vscode-light {
-      --tp-user-bg: var(--vscode-chat-requestBackground, #f1f5f9);
-      --tp-user-border: var(--vscode-chat-requestBorder, #cbd5e1);
-      --tp-user-label: #475569;
-
-      --tp-assistant-bg: #f0f9ff;
-      --tp-assistant-border: #bae6fd;
-      --tp-assistant-label: #0284c7;
-
-      --tp-tool-bg: #faf5ff;
-      --tp-tool-border: #e9d5ff;
-      --tp-tool-label: #7c3aed;
-
-      --tp-success-bg: rgba(22, 163, 74, 0.12);
-      --tp-success-border: rgba(22, 163, 74, 0.35);
-      --tp-success-text: #16a34a;
-
-      --tp-pending-bg: rgba(217, 119, 6, 0.12);
-      --tp-pending-border: rgba(217, 119, 6, 0.35);
-      --tp-pending-text: #d97706;
-
-      --tp-error-bg: rgba(220, 38, 38, 0.1);
-      --tp-error-border: rgba(220, 38, 38, 0.35);
-      --tp-error-text: #dc2626;
-
-      --tp-hl-key: #0284c7;
-      --tp-hl-string: #059669;
-      --tp-hl-number: #d97706;
-      --tp-hl-boolean: #db2777;
-      --tp-hl-comment: #64748b;
-      --tp-hl-xml-tag: #0284c7;
-      --tp-hl-xml-attribute: #7c3aed;
-      --tp-hl-schema-keyword: #db2777;
+${formatThemeVariables(vscodeLightVariables)}
     }
 
     body.vscode-high-contrast,
     body.vscode-high-contrast-light {
-      --tp-border: var(--vscode-contrastBorder, #ffffff);
-      --tp-border-subtle: var(--vscode-contrastBorder, #ffffff);
-      --tp-border-focus: var(--vscode-focusBorder, var(--vscode-contrastBorder, #ffffff));
-      --tp-user-border: var(--vscode-contrastBorder, #ffffff);
-      --tp-assistant-border: var(--vscode-contrastBorder, #ffffff);
-      --tp-tool-border: var(--vscode-contrastBorder, #ffffff);
+${formatThemeVariables(vscodeHighContrastVariables)}
     }
 `;
 
@@ -124,7 +154,7 @@ export function getPlaygroundPreviewHtml(
       font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
       height: 100vh;
       overflow-y: auto;
-      ${vscodeThemeVariables}
+${vscodeThemeVariablesCss}
     }
     ${vscodeThemeRules}
   </style>
@@ -181,7 +211,7 @@ export function getInferencePageHtml(
       font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
       height: 100vh;
       overflow-y: auto;
-      ${vscodeThemeVariables}
+${vscodeThemeVariablesCss}
     }
     ${vscodeThemeRules}
   </style>
