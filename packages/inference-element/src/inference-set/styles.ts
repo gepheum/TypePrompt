@@ -432,6 +432,9 @@ export const inferenceSetStyles = css`
     overflow: hidden;
   }
 
+  .reasoning-box {
+  }
+
   .reasoning-summary {
     padding: 0.5rem 0.85rem;
     font-size: 0.8rem;

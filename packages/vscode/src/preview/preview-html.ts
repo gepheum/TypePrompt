@@ -49,6 +49,8 @@ const vscodeThemeVariables = `
       --tp-tool-bg: color-mix(in srgb, #a855f7 9%, var(--vscode-editor-background, #0b0f19));
       --tp-tool-border: color-mix(in srgb, #a855f7 28%, var(--vscode-panel-border, #1f293d));
       --tp-tool-label: #c084fc;
+
+      --tp-message-margin: 2.5rem;
 `;
 
 const vscodeThemeRules = `

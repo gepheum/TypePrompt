@@ -89,6 +89,8 @@ export const commonStyles = css`
     );
     --tool-label: var(--tp-tool-label, #c084fc);
 
+    --message-margin: var(--tp-message-margin, 2.5rem);
+
     --hl-key: var(--tp-hl-key, #7dd3fc);
     --hl-string: var(--tp-hl-string, #a7f3d0);
     --hl-number: var(--tp-hl-number, #fde047);
@@ -182,6 +184,12 @@ export const commonStyles = css`
     color: var(--section-request-label);
   }
 
+  @media (max-width: 480px) {
+    :host {
+      --message-margin: 1.25rem;
+    }
+  }
+
   .chat-stream {
     display: flex;
     flex-direction: column;
@@ -191,6 +199,22 @@ export const commonStyles = css`
   .chat-bubble-wrap {
     display: flex;
     flex-direction: column;
+  }
+
+  .chat-bubble-wrap.role-user,
+  .chat-bubble-wrap.role-tool {
+    margin-right: var(--message-margin, 2.5rem);
+    margin-left: 0;
+  }
+
+  .chat-bubble-wrap.role-assistant {
+    margin-left: var(--message-margin, 2.5rem);
+    margin-right: 0;
+  }
+
+  .system-message-wrap {
+    margin-right: var(--message-margin, 2.5rem);
+    margin-left: 0;
   }
 
   .chat-bubble {
@@ -232,6 +256,9 @@ export const commonStyles = css`
   .role-tool .chat-bubble {
     background: var(--bg-inset);
     border-color: var(--border);
+  }
+  .role-tool .chat-bubble-header {
+    color: var(--tool-label);
   }
 
   .sample-note-card {
