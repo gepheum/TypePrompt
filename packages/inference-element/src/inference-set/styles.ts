@@ -207,11 +207,14 @@ export const inferenceSetStyles = css`
     color: var(--text-muted);
     font-size: 0.75rem;
     font-weight: 500;
+    line-height: 1.25;
     padding: 0.25rem 0.6rem;
     border-radius: 4px;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.15s ease;
+    box-sizing: border-box;
+    vertical-align: middle;
+    transition: background 0.1s ease, color 0.1s ease;
   }
 
   .btn-filter:hover {
@@ -221,8 +224,7 @@ export const inferenceSetStyles = css`
   .btn-filter.active {
     background: var(--bg-surface);
     color: var(--text);
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    font-weight: 500;
   }
 
   .btn-filter.error.active {

@@ -128,6 +128,7 @@ const playgroundPreviewStyles = css`
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .sample-picker-label {
@@ -140,40 +141,39 @@ const playgroundPreviewStyles = css`
   .sample-segmented-control {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 3px;
-    overflow-x: auto;
-    width: fit-content;
+    gap: 0.4rem;
+    flex-wrap: wrap;
     max-width: 100%;
   }
 
   .sample-segment-btn {
-    border: none;
-    background: transparent;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
     color: var(--text-muted);
     font-size: 0.82rem;
     font-weight: 500;
+    line-height: 1.25;
     font-family: inherit;
     padding: 0.35rem 0.75rem;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.15s ease;
+    box-sizing: border-box;
+    vertical-align: middle;
+    transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
   }
 
   .sample-segment-btn:hover {
     color: var(--text);
-    background: var(--bg-hover);
+    background: var(--bg-surface-elevated);
+    border-color: var(--border-focus);
   }
 
   .sample-segment-btn.active {
-    background: var(--bg);
+    background: var(--bg-surface-elevated);
     color: var(--text);
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-color: var(--border-focus);
+    font-weight: 500;
   }
 
   .sample-select {
