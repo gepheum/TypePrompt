@@ -152,8 +152,8 @@ export const mockProjectWithErrors: Lsp.WireProject = {
   },
 };
 
-export const mockInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
-  kind: "playground-inference-set",
+export const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+  kind: "playground-inference-run",
   id: "x9K2p7mL",
   templateId: "Main:SummarizeDocument",
   isoTimestamp: new Date().toISOString(),
@@ -176,8 +176,11 @@ export const mockInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
   inferences: [
     {
       sampleIndex: 0,
-      name: "Quarterly Cloud Report",
-      note: "Testing with real financial and engineering cloud cost breakdown",
+      sample: {
+        name: "Quarterly Cloud Report",
+        note: "Testing with real financial and engineering cloud cost breakdown",
+        input: { title: "Q3 Report" },
+      },
       request: {
         systemMessage: "You are an expert document summarizer.",
         outputFormat: { format: "json", jsonSchema: {} },
@@ -218,7 +221,10 @@ export const mockInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
     },
     {
       sampleIndex: 1,
-      name: "Security Audit Findings",
+      sample: {
+        name: "Security Audit Findings",
+        input: { title: "Security report" },
+      },
       request: {
         systemMessage: "You are an expert document summarizer.",
         outputFormat: { format: "text" },

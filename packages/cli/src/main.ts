@@ -41,7 +41,7 @@ export {
   getDatabasePath,
   openProjectStorage,
   resolveDatabasePath,
-  type ListInferenceSetsOptions,
+  type ListInferenceRunsOptions,
   type OpenStorageOptions,
   type ProjectStorage,
   type StoredInferenceSummary,
@@ -190,13 +190,13 @@ async function runPlaygroundFile(
 
   const secrets = await readSecretsInDirectory(resolvedProject);
   const storage = openProjectStorage(resolvedProject);
-  const inferenceSet = await runPlaygroundInferences(
+  const inferenceRun = await runPlaygroundInferences(
     validCompilationResult,
     templateId,
     { apiKeys: secrets.apiKeys },
   );
-  storage.saveInferenceSet(inferenceSet);
-  console.log(JSON.stringify(inferenceSet, null, 2));
+  storage.saveInferenceRun(inferenceRun);
+  console.log(JSON.stringify(inferenceRun, null, 2));
 }
 
 async function main(): Promise<void> {

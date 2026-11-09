@@ -6,7 +6,7 @@ const MAX_VALID = 62n ** 8n; // 218_340_105_584_896n (62^8)
  * Uses 6 random bytes (48 bits) with rejection sampling to eliminate modulo bias,
  * selecting uniformly from 62^8 (~2.18 * 10^14) combinations.
  */
-export function generateInferenceSetId(): string {
+export function generateInferenceRunId(): string {
   const bytes = new Uint8Array(6);
   while (true) {
     crypto.getRandomValues(bytes);

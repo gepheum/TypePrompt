@@ -6,7 +6,7 @@ import { createXai } from "@ai-sdk/xai";
 import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
-  generateInferenceSetId,
+  generateInferenceRunId,
   makeTemplates,
   normalizeSchemaValue,
   parseJson,
@@ -50,20 +50,20 @@ export type RunPlaygroundInferencesOptions = {
    * computed, and once all inferences have been computed.
    */
   readonly callback?: (
-    inferenceSet: Inferences.InferenceSet<Inferences.Pending>,
+    inferenceRun: Inferences.InferenceRun<Inferences.Pending>,
   ) => void;
 };
 
 /**
  * Runs inference across all samples in the `<playground>` associated with `templateId`
- * and returns a {@link Inferences.InferenceSet}.
+ * and returns a {@link Inferences.InferenceRun}.
  */
 export async function runPlaygroundInferences(
   compilationResult: ValidCompilationResult,
   templateId: string,
   options: RunPlaygroundInferencesOptions,
   now = new Date(),
-): Promise<Inferences.InferenceSet> {
+): Promise<Inferences.InferenceRun> {
   const validTemplate = compilationResult.templates[templateId];
   if (!validTemplate) {
     throw new Error(`Template not found: ${templateId}`);
@@ -92,9 +92,9 @@ export async function runPlaygroundInferences(
     templateId,
   );
   const isoTimestamp = now.toISOString();
-  const id = generateInferenceSetId();
+  const id = generateInferenceRunId();
 
-  const inferences: Inferences.Inference<Inferences.Pending>[] =
+  const inferences: Inferences.SampleInference<Inferences.Pending>[] =
     validatedPlayground.samples.map((sample, sampleIndex) => {
       const request = renderInferenceRequest(
         sample,
@@ -104,8 +104,7 @@ export async function runPlaygroundInferences(
       );
       return {
         sampleIndex,
-        ...(sample.name ? { name: sample.name } : {}),
-        ...(sample.note ? { note: sample.note } : {}),
+        sample,
         request,
         result: { kind: "pending" },
       };
@@ -113,7 +112,7 @@ export async function runPlaygroundInferences(
 
   const emit = (): void => {
     options.callback?.({
-      kind: "playground-inference-set",
+      kind: "playground-inference-run",
       id,
       model: validatedPlayground.model,
       templateId,
@@ -139,8 +138,7 @@ export async function runPlaygroundInferences(
         );
         inferences[sampleIndex] = {
           sampleIndex,
-          ...(sample.name ? { name: sample.name } : {}),
-          ...(sample.note ? { note: sample.note } : {}),
+          sample,
           request,
           result,
         };
@@ -151,17 +149,17 @@ export async function runPlaygroundInferences(
     emit();
   }
 
-  const inferenceSet: Inferences.InferenceSet = {
-    kind: "playground-inference-set",
+  const inferenceRun: Inferences.InferenceRun = {
+    kind: "playground-inference-run",
     id,
     model: validatedPlayground.model,
     templateId,
     isoTimestamp,
     templateFiles,
-    inferences: inferences as Inferences.Inference[],
+    inferences: inferences as Inferences.SampleInference[],
   };
 
-  return inferenceSet;
+  return inferenceRun;
 }
 
 async function mapWithConcurrency<T, R>(

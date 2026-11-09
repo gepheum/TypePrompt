@@ -9,7 +9,7 @@ export type StoredInferenceSummary = {
   readonly timestamp: string;
 };
 
-export type ListInferenceSetsOptions = {
+export type ListInferenceRunsOptions = {
   readonly limit?: number;
   readonly offset?: number;
 };
@@ -23,29 +23,29 @@ export interface ProjectStorage {
   readonly db: Database.Database;
 
   /**
-   * Saves a Inferences.InferenceSet into the SQLite database.
-   * If an inference set with the same ID already exists, replaces it.
+   * Saves an Inferences.InferenceRun into the SQLite database.
+   * If an inference run with the same ID already exists, replaces it.
    */
-  saveInferenceSet(inferenceSet: Inferences.InferenceSet): void;
+  saveInferenceRun(inferenceRun: Inferences.InferenceRun): void;
 
   /**
-   * Saves multiple Inferences.InferenceSets in a single transaction.
+   * Saves multiple Inferences.InferenceRuns in a single transaction.
    */
-  saveInferenceSets(inferenceSets: readonly Inferences.InferenceSet[]): void;
+  saveInferenceRuns(inferenceRuns: readonly Inferences.InferenceRun[]): void;
 
   /**
-   * Retrieves a Inferences.InferenceSet by its ID. Returns null if not found.
+   * Retrieves an Inferences.InferenceRun by its ID. Returns null if not found.
    */
-  getInferenceSet(id: string): Inferences.InferenceSet | null;
+  getInferenceRun(id: string): Inferences.InferenceRun | null;
 
   /**
-   * Retrieves all Inferences.InferenceSets for the specified template ID,
+   * Retrieves all Inferences.InferenceRuns for the specified template ID,
    * sorted by timestamp DESC.
    */
-  listInferenceSetsForTemplate(
+  listInferenceRunsForTemplate(
     templateId: string,
-    options?: ListInferenceSetsOptions,
-  ): readonly Inferences.InferenceSet[];
+    options?: ListInferenceRunsOptions,
+  ): readonly Inferences.InferenceRun[];
 
   /**
    * Retrieves lightweight summaries (id, templateId, timestamp) for the specified
@@ -53,22 +53,22 @@ export interface ProjectStorage {
    */
   listInferenceSummariesForTemplate(
     templateId: string,
-    options?: ListInferenceSetsOptions,
+    options?: ListInferenceRunsOptions,
   ): readonly StoredInferenceSummary[];
 
   /**
-   * Retrieves recent Inferences.InferenceSets across all templates,
+   * Retrieves recent Inferences.InferenceRuns across all templates,
    * sorted by timestamp DESC.
    */
-  listRecentInferenceSets(
-    options?: ListInferenceSetsOptions,
-  ): readonly Inferences.InferenceSet[];
+  listRecentInferenceRuns(
+    options?: ListInferenceRunsOptions,
+  ): readonly Inferences.InferenceRun[];
 
   /**
-   * Deletes an inference set by its ID.
+   * Deletes an inference run by its ID.
    * Returns true if a record was deleted, false otherwise.
    */
-  deleteInferenceSet(id: string): boolean;
+  deleteInferenceRun(id: string): boolean;
 
   /**
    * Closes the SQLite database connection.
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS inferences (
 CREATE INDEX IF NOT EXISTS idx_inferences_templateId_timestamp 
 ON inferences (templateId, timestamp DESC);
 
-CREATE VIEW IF NOT EXISTS inference_sets AS SELECT * FROM inferences;
+CREATE VIEW IF NOT EXISTS inference_runs AS SELECT * FROM inferences;
 `.trim();
 
 export function getDatabasePath(projectDir: string): string {
@@ -163,8 +163,8 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
   `);
 
   const saveBatchTransaction = db.transaction(
-    (inferenceSets: readonly Inferences.InferenceSet[]) => {
-      for (const set of inferenceSets) {
+    (inferenceRuns: readonly Inferences.InferenceRun[]) => {
+      for (const set of inferenceRuns) {
         insertStmt.run(
           set.id,
           set.templateId,
@@ -175,59 +175,59 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
     },
   );
 
-  return {
+  const storage: ProjectStorage = {
     db,
 
-    saveInferenceSet(inferenceSet: Inferences.InferenceSet): void {
+    saveInferenceRun(inferenceRun: Inferences.InferenceRun): void {
       insertStmt.run(
-        inferenceSet.id,
-        inferenceSet.templateId,
-        inferenceSet.isoTimestamp,
-        JSON.stringify(inferenceSet),
+        inferenceRun.id,
+        inferenceRun.templateId,
+        inferenceRun.isoTimestamp,
+        JSON.stringify(inferenceRun),
       );
     },
 
-    saveInferenceSets(inferenceSets: readonly Inferences.InferenceSet[]): void {
-      saveBatchTransaction(inferenceSets);
+    saveInferenceRuns(inferenceRuns: readonly Inferences.InferenceRun[]): void {
+      saveBatchTransaction(inferenceRuns);
     },
 
-    getInferenceSet(id: string): Inferences.InferenceSet | null {
+    getInferenceRun(id: string): Inferences.InferenceRun | null {
       const row = getByIdStmt.get(id);
       if (!row) {
         return null;
       }
-      return parseStoredInferenceSet(row.data);
+      return parseStoredInferenceRun(row.data);
     },
 
-    listInferenceSetsForTemplate(
+    listInferenceRunsForTemplate(
       templateId: string,
-      options?: ListInferenceSetsOptions,
-    ): readonly Inferences.InferenceSet[] {
+      options?: ListInferenceRunsOptions,
+    ): readonly Inferences.InferenceRun[] {
       const limit = options?.limit ?? -1;
       const offset = options?.offset ?? 0;
       const rows = listByTemplateStmt.all(templateId, limit, offset);
-      return rows.map((row) => parseStoredInferenceSet(row.data));
+      return rows.map((row) => parseStoredInferenceRun(row.data));
     },
 
     listInferenceSummariesForTemplate(
       templateId: string,
-      options?: ListInferenceSetsOptions,
+      options?: ListInferenceRunsOptions,
     ): readonly StoredInferenceSummary[] {
       const limit = options?.limit ?? -1;
       const offset = options?.offset ?? 0;
       return listSummariesByTemplateStmt.all(templateId, limit, offset);
     },
 
-    listRecentInferenceSets(
-      options?: ListInferenceSetsOptions,
-    ): readonly Inferences.InferenceSet[] {
+    listRecentInferenceRuns(
+      options?: ListInferenceRunsOptions,
+    ): readonly Inferences.InferenceRun[] {
       const limit = options?.limit ?? -1;
       const offset = options?.offset ?? 0;
       const rows = listRecentStmt.all(limit, offset);
-      return rows.map((row) => parseStoredInferenceSet(row.data));
+      return rows.map((row) => parseStoredInferenceRun(row.data));
     },
 
-    deleteInferenceSet(id: string): boolean {
+    deleteInferenceRun(id: string): boolean {
       const result = deleteByIdStmt.run(id);
       return result.changes > 0;
     },
@@ -236,6 +236,8 @@ export function createProjectStorage(db: Database.Database): ProjectStorage {
       db.close();
     },
   };
+
+  return storage;
 }
 
 export function openProjectStorage(
@@ -253,20 +255,20 @@ export function openProjectStorage(
   return createProjectStorage(db);
 }
 
-function parseStoredInferenceSet(rawJson: string): Inferences.InferenceSet {
+function parseStoredInferenceRun(rawJson: string): Inferences.InferenceRun {
   const parsed = JSON.parse(rawJson);
   if (
     typeof parsed !== "object" ||
     parsed === null ||
-    parsed.kind !== "playground-inference-set" ||
+    parsed.kind !== "playground-inference-run" ||
     typeof parsed.id !== "string" ||
     typeof parsed.templateId !== "string" ||
     typeof parsed.isoTimestamp !== "string" ||
     !Array.isArray(parsed.inferences)
   ) {
-    throw new Error("Invalid stored InferenceSet JSON format");
+    throw new Error("Invalid stored InferenceRun JSON format");
   }
-  return parsed as Inferences.InferenceSet;
+  return parsed as Inferences.InferenceRun;
 }
 
 type StoredInferenceRow = {

@@ -8,7 +8,7 @@ export {
   getDatabasePath,
   openProjectStorage,
   resolveDatabasePath,
-  type ListInferenceSetsOptions,
+  type ListInferenceRunsOptions,
   type OpenStorageOptions,
   type ProjectStorage,
   type StoredInferenceSummary,

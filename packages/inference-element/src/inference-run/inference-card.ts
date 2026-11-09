@@ -5,7 +5,7 @@ import { renderResultOutput } from "./result-output.js";
 import { renderTelemetryStrip } from "./telemetry.js";
 
 export function renderInferenceCard(
-  inference: Inferences.Inference<Inferences.Pending>,
+  inference: Inferences.SampleInference<Inferences.Pending>,
   totalSamples: number,
   isExpanded: boolean,
   onToggleExpand: () => void,
@@ -14,7 +14,7 @@ export function renderInferenceCard(
   onCopy: (text: string) => void,
   isCopied: boolean,
 ): TemplateResult {
-  const { sampleIndex, name, note, request, result } = inference;
+  const { sampleIndex, sample, request, result } = inference;
   const isSuccess = result.kind === "success";
   const isPending = result.kind === "pending";
   const cardId = `sample-${sampleIndex}`;
@@ -24,7 +24,8 @@ export function renderInferenceCard(
     : isPending
       ? "Pending"
       : result.error.kind;
-  const displayName = name ?? `Anonymous ${sampleIndex + 1}/${totalSamples}`;
+  const displayName =
+    sample.name ?? `Anonymous ${sampleIndex + 1}/${totalSamples}`;
 
   return html`
     <article class="inference-card ${isExpanded ? "is-expanded" : ""}">
@@ -62,13 +63,13 @@ export function renderInferenceCard(
           </summary>
           <div class="details-body">
             ${
-              note
+              sample.note
                 ? html`
                     <div class="sample-note-card">
                       <div class="sample-note-header">
                         <span class="sample-note-title">Note</span>
                       </div>
-                      <div class="sample-note-body">${note}</div>
+                      <div class="sample-note-body">${sample.note}</div>
                     </div>
                   `
                 : ""

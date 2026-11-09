@@ -44,9 +44,9 @@ describe("preview-html (vscode extension)", () => {
     assert.ok(html.includes("preview.wireProject = "));
   });
 
-  it("generates inferences page HTML mounting <inference-set>", () => {
-    const fakeInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
-      kind: "playground-inference-set",
+  it("generates inferences page HTML mounting <tp-inference-run>", () => {
+    const fakeInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
       id: "12345678",
       templateId: "Main:Test",
       isoTimestamp: new Date().toISOString(),
@@ -55,12 +55,12 @@ describe("preview-html (vscode extension)", () => {
       inferences: [],
     };
 
-    const html = getInferencesPageHtml(fakeScriptUri, fakeInferenceSet, "Test");
+    const html = getInferencesPageHtml(fakeScriptUri, fakeInferenceRun, "Test");
 
     assert.ok(
-      html.includes('<tp-inference-set id="inferences"></tp-inference-set>'),
+      html.includes('<tp-inference-run id="inferences"></tp-inference-run>'),
     );
-    assert.ok(html.includes("inferences.inferenceSet = "));
-    assert.ok(html.includes("updateInferenceSet"));
+    assert.ok(html.includes("inferences.inferenceRun = "));
+    assert.ok(html.includes("updateInferenceRun"));
   });
 });

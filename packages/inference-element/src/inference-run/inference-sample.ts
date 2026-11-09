@@ -4,15 +4,15 @@ import { customElement, property, state } from "lit/decorators.js";
 import { renderRequestContext } from "../common/render-request-context.js";
 import { commonStyles } from "../common/styles.js";
 import { renderResultOutput } from "./result-output.js";
-import { inferenceSetStyles } from "./styles.js";
+import { inferenceRunStyles } from "./styles.js";
 import { renderTelemetryStrip } from "./telemetry.js";
 
 @customElement("tp-inference-sample")
 export class InferenceSampleElement extends LitElement {
-  static override styles = [commonStyles, inferenceSetStyles];
+  static override styles = [commonStyles, inferenceRunStyles];
 
   @property({ type: Object })
-  inference?: Inferences.Inference<Inferences.Pending>;
+  inference?: Inferences.SampleInference<Inferences.Pending>;
 
   @property({ type: Number })
   totalSamples: number = 1;
@@ -58,7 +58,7 @@ export class InferenceSampleElement extends LitElement {
       return html``;
     }
 
-    const { sampleIndex, name, note, request, result } = this.inference;
+    const { sampleIndex, sample, request, result } = this.inference;
     const isSuccess = result.kind === "success";
     const isPending = result.kind === "pending";
     const cardId = `sample-${sampleIndex}`;
@@ -69,7 +69,7 @@ export class InferenceSampleElement extends LitElement {
         ? "Pending"
         : result.error.kind;
     const displayName =
-      name ?? `Anonymous ${sampleIndex + 1}/${this.totalSamples}`;
+      sample.name ?? `Anonymous ${sampleIndex + 1}/${this.totalSamples}`;
 
     return html`
       <article class="inference-card ${this.isExpanded ? "is-expanded" : ""}">
@@ -107,13 +107,13 @@ export class InferenceSampleElement extends LitElement {
             </summary>
             <div class="details-body">
               ${
-                note
+                sample.note
                   ? html`
                       <div class="sample-note-card">
                         <div class="sample-note-header">
                           <span class="sample-note-title">Note</span>
                         </div>
-                        <div class="sample-note-body">${note}</div>
+                        <div class="sample-note-body">${sample.note}</div>
                       </div>
                     `
                   : ""

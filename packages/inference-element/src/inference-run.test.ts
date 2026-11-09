@@ -2,16 +2,16 @@ import type { Inferences } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert";
 import {
+  InferenceRunElement,
+  inferenceRunEvents,
   InferenceSampleElement,
-  InferenceSetElement,
-  inferenceSetEvents,
-} from "./inference-set.js";
+} from "./inference-run.js";
 
-describe("InferenceSetElement", () => {
+describe("InferenceRunElement", () => {
   it("initializes component instance", () => {
-    const el = new InferenceSetElement();
+    const el = new InferenceRunElement();
     assert.ok(el);
-    assert.strictEqual(el.tagName.toLowerCase(), "tp-inference-set");
+    assert.strictEqual(el.tagName.toLowerCase(), "tp-inference-run");
   });
 
   it("initializes sample component instance with default activeTab", () => {
@@ -22,15 +22,15 @@ describe("InferenceSetElement", () => {
   });
 
   it("exports events emitter", () => {
-    assert.ok(inferenceSetEvents);
-    assert.strictEqual(typeof inferenceSetEvents.emit, "function");
-    assert.strictEqual(typeof inferenceSetEvents.on, "function");
+    assert.ok(inferenceRunEvents);
+    assert.strictEqual(typeof inferenceRunEvents.emit, "function");
+    assert.strictEqual(typeof inferenceRunEvents.on, "function");
   });
 
-  it("renders with mock InferenceSet", () => {
-    const el = new InferenceSetElement();
-    const mockInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
-      kind: "playground-inference-set",
+  it("renders with mock InferenceRun", () => {
+    const el = new InferenceRunElement();
+    const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
       id: "abc12345",
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
@@ -41,7 +41,10 @@ describe("InferenceSetElement", () => {
       inferences: [
         {
           sampleIndex: 0,
-          name: "Test greeting",
+          sample: {
+            name: "Test greeting",
+            input: {},
+          },
           request: {
             systemMessage: "You are a greeter.",
             outputFormat: { format: "text" },
@@ -68,15 +71,15 @@ describe("InferenceSetElement", () => {
       ],
     };
 
-    el.inferenceSet = mockInferenceSet;
+    el.inferenceRun = mockInferenceRun;
     const template = el.render();
     assert.ok(template);
   });
 
   it("excludes meta.tp from source files and omits playground pill", () => {
-    const el = new InferenceSetElement();
-    const mockInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
-      kind: "playground-inference-set",
+    const el = new InferenceRunElement();
+    const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
       id: "abc12345",
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
@@ -89,7 +92,10 @@ describe("InferenceSetElement", () => {
       inferences: [
         {
           sampleIndex: 0,
-          name: "Test greeting",
+          sample: {
+            name: "Test greeting",
+            input: {},
+          },
           request: {
             systemMessage: "You are a greeter.",
             outputFormat: { format: "text" },
@@ -116,7 +122,7 @@ describe("InferenceSetElement", () => {
       ],
     };
 
-    el.inferenceSet = mockInferenceSet;
+    el.inferenceRun = mockInferenceRun;
     const template = el.render();
 
     // Recursively extract all strings from Lit TemplateResult
@@ -155,9 +161,9 @@ describe("InferenceSetElement", () => {
   });
 
   it("renders progress bar while inferences are pending and hides when completed", () => {
-    const el = new InferenceSetElement();
-    const runningInferenceSet: Inferences.InferenceSet<Inferences.Pending> = {
-      kind: "playground-inference-set",
+    const el = new InferenceRunElement();
+    const runningInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
       id: "run12345",
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
@@ -168,7 +174,10 @@ describe("InferenceSetElement", () => {
       inferences: [
         {
           sampleIndex: 0,
-          name: "Sample 1",
+          sample: {
+            name: "Sample 1",
+            input: {},
+          },
           request: {
             systemMessage: "You are a greeter.",
             outputFormat: { format: "text" },
@@ -190,7 +199,10 @@ describe("InferenceSetElement", () => {
         },
         {
           sampleIndex: 1,
-          name: "Sample 2",
+          sample: {
+            name: "Sample 2",
+            input: {},
+          },
           request: {
             systemMessage: "You are a greeter.",
             outputFormat: { format: "text" },
@@ -229,7 +241,7 @@ describe("InferenceSetElement", () => {
       return "";
     }
 
-    el.inferenceSet = runningInferenceSet;
+    el.inferenceRun = runningInferenceRun;
     const runningTpl = el.render();
     const runningStr = flattenTemplate(runningTpl);
     assert.ok(runningStr.includes("progress-section"));
@@ -243,7 +255,10 @@ describe("InferenceSetElement", () => {
     const sampleEl = new InferenceSampleElement();
     sampleEl.inference = {
       sampleIndex: 0,
-      name: "Reasoning test",
+      sample: {
+        name: "Reasoning test",
+        input: {},
+      },
       request: {
         systemMessage: "You are a helpful assistant.",
         outputFormat: { format: "text" },

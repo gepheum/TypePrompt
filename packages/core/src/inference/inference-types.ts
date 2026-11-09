@@ -1,26 +1,24 @@
-import type { PlaygroundModel } from "./playground-types.js";
+import type { PlaygroundModel, Sample } from "./playground-types.js";
 
 /** Result of running inference across all samples in a `<samples>` element. */
-export type InferenceSet<Pending = never> = {
-  readonly kind: "playground-inference-set";
-  /** Unique 8-character Base62 identifier for this inference set. */
+export type InferenceRun<Pending = never> = {
+  readonly kind: "playground-inference-run";
+  /** Unique 8-character Base62 identifier for this inference run. */
   readonly id: string;
   readonly templateId: string;
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
   readonly model: PlaygroundModel;
   readonly templateFiles: { readonly [path: string]: string };
-  readonly inferences: ReadonlyArray<Inference<Pending>>;
+  readonly inferences: ReadonlyArray<SampleInference<Pending>>;
 };
 
 /** Result of running inference on a single {@link Sample} in `<samples>`. */
-export type Inference<Pending = never> = {
+export type SampleInference<Pending = never> = {
   /** 0-based index of the sample in `<samples>`. */
   readonly sampleIndex: number;
-  /** Optional display name from the sample's `name` field. */
-  readonly name?: string;
-  /** Optional note from the sample's `note` field. */
-  readonly note?: string;
+  /** The sample definition from `<samples>`. */
+  readonly sample: Sample;
   /** The prompt and conversation history leading up to the inference. */
   readonly request: InferenceRequest;
   /** The outcome of the model call (generated output/tool calls or error) and telemetry. */

@@ -1,4 +1,4 @@
-export { generateInferenceSetId } from "./inference-id.js";
+export { generateInferenceRunId } from "./inference-id.js";
 export { renderInferenceRequest } from "./inference-request-renderer.js";
 
 export * as Inferences from "./inference-types.js";

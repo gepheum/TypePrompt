@@ -5,8 +5,8 @@ export {
 } from "./playground-preview.js";
 
 export {
+  InferenceRunElement,
   InferenceSampleElement,
-  InferenceSetElement,
-  inferenceSetEvents,
-  type InferenceSetEvents,
-} from "./inference-set.js";
+  inferenceRunEvents,
+  type InferenceRunEvents,
+} from "./inference-run.js";

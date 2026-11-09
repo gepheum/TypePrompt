@@ -16,10 +16,10 @@
       "import": "./dist/playground-preview.js",
       "default": "./dist/playground-preview.js"
     },
-    "./inference-set": {
-      "types": "./dist/inference-set.d.ts",
-      "import": "./dist/inference-set.js",
-      "default": "./dist/inference-set.js"
+    "./inference-run": {
+      "types": "./dist/inference-run.d.ts",
+      "import": "./dist/inference-run.js",
+      "default": "./dist/inference-run.js"
     },
     "./package.json": "./package.json"
   },

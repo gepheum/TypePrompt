@@ -95,7 +95,7 @@
     <nav class="dev-bar">
       <div class="tabs">
         <button id="btn-preview" class="tab-btn active">&lt;tp-playground-preview&gt;</button>
-        <button id="btn-inferences" class="tab-btn">&lt;tp-inference-set&gt;</button>
+        <button id="btn-inferences" class="tab-btn">&lt;tp-inference-run&gt;</button>
       </div>
 
       <div class="controls" id="preview-controls">
@@ -117,7 +117,7 @@
         <tp-playground-preview id="playground-preview-el"></tp-playground-preview>
       </div>
       <div id="inference-section" style="display: none;">
-        <tp-inference-set id="inference-set-el"></tp-inference-set>
+        <tp-inference-run id="inference-run-el"></tp-inference-run>
       </div>
     </main>
 
@@ -134,11 +134,11 @@
         mockValidProjectWithKeys,
         mockProjectWithoutKeys,
         mockProjectWithErrors,
-        mockInferenceSet,
+        mockInferenceRun,
       } from "./dev/mock-data.ts";
 
       const previewEl = document.getElementById("playground-preview-el");
-      const inferenceEl = document.getElementById("inference-set-el");
+      const inferenceEl = document.getElementById("inference-run-el");
       const logEntries = document.getElementById("log-entries");
 
       function addLog(msg) {
@@ -163,9 +163,9 @@
       previewEl.wireProject = mockValidProjectWithKeys;
       previewEl.relativePath = "prompts/SummarizeDocument.play.tp";
 
-      // Initialize inference set
-      let currentInferenceSet = JSON.parse(JSON.stringify(mockInferenceSet));
-      inferenceEl.inferenceSet = currentInferenceSet;
+      // Initialize inference run
+      let currentInferenceRun = JSON.parse(JSON.stringify(mockInferenceRun));
+      inferenceEl.inferenceRun = currentInferenceRun;
 
       // Tab switcher
       const btnPreview = document.getElementById("btn-preview");
@@ -209,7 +209,7 @@
 
       // Simulate streaming update
       document.getElementById("btn-simulate-complete").addEventListener("click", () => {
-        const updated = JSON.parse(JSON.stringify(currentInferenceSet));
+        const updated = JSON.parse(JSON.stringify(currentInferenceRun));
         const sample1 = updated.inferences[1];
         if (sample1) {
           sample1.result = {
@@ -225,8 +225,8 @@
             },
           };
         }
-        currentInferenceSet = updated;
-        inferenceEl.inferenceSet = updated;
+        currentInferenceRun = updated;
+        inferenceEl.inferenceRun = updated;
         addLog("Simulated update: Sample 1 transitioned from pending to success!");
       });
     </script>

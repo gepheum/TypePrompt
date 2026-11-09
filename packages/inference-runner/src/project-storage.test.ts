@@ -5,13 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import { openProjectStorage, type ProjectStorage } from "./project-storage.js";
 
-function createMockInferenceSet(overrides?: {
+function createMockInferenceRun(overrides?: {
   id?: string;
   templateId?: string;
   isoTimestamp?: string;
-}): Inferences.InferenceSet {
+}): Inferences.InferenceRun {
   return {
-    kind: "playground-inference-set",
+    kind: "playground-inference-run",
     id: overrides?.id ?? crypto.randomUUID(),
     templateId: overrides?.templateId ?? "Main:Greeting",
     isoTimestamp: overrides?.isoTimestamp ?? new Date().toISOString(),
@@ -25,7 +25,10 @@ function createMockInferenceSet(overrides?: {
     inferences: [
       {
         sampleIndex: 0,
-        name: "World greeting",
+        sample: {
+          name: "World greeting",
+          input: { name: "World" },
+        },
         request: {
           systemMessage: "You are a greeter.",
           tools: [],
@@ -118,77 +121,77 @@ describe("ProjectStorage", () => {
       );
     });
 
-    it("creates the inference_sets view", () => {
-      const result = storage.db.prepare("SELECT * FROM inference_sets").all();
-      assert.deepEqual(result, []);
+    it("creates the inference_runs view", () => {
+      const runs = storage.db.prepare("SELECT * FROM inference_runs").all();
+      assert.deepEqual(runs, []);
     });
   });
 
   describe("CRUD operations", () => {
-    it("saves and retrieves an inference set by ID", () => {
-      const set = createMockInferenceSet({ id: "inf-123" });
-      storage.saveInferenceSet(set);
+    it("saves and retrieves an inference run by ID", () => {
+      const run = createMockInferenceRun({ id: "inf-123" });
+      storage.saveInferenceRun(run);
 
-      const retrieved = storage.getInferenceSet("inf-123");
-      assert.deepEqual(retrieved, set);
+      const retrieved = storage.getInferenceRun("inf-123");
+      assert.deepEqual(retrieved, run);
     });
 
-    it("returns null when inference set is not found", () => {
-      const retrieved = storage.getInferenceSet("non-existent");
+    it("returns null when inference run is not found", () => {
+      const retrieved = storage.getInferenceRun("non-existent");
       assert.equal(retrieved, null);
     });
 
-    it("replaces existing record when saving an inference set with identical ID", () => {
-      const set1 = createMockInferenceSet({
+    it("replaces existing record when saving an inference run with identical ID", () => {
+      const run1 = createMockInferenceRun({
         id: "inf-dup",
         isoTimestamp: "2026-11-01T00:00:00.000Z",
       });
-      const set2 = createMockInferenceSet({
+      const run2 = createMockInferenceRun({
         id: "inf-dup",
         isoTimestamp: "2026-11-02T00:00:00.000Z",
       });
 
-      storage.saveInferenceSet(set1);
-      storage.saveInferenceSet(set2);
+      storage.saveInferenceRun(run1);
+      storage.saveInferenceRun(run2);
 
-      const retrieved = storage.getInferenceSet("inf-dup");
+      const retrieved = storage.getInferenceRun("inf-dup");
       assert.equal(retrieved?.isoTimestamp, "2026-11-02T00:00:00.000Z");
 
-      const all = storage.listRecentInferenceSets();
+      const all = storage.listRecentInferenceRuns();
       assert.equal(all.length, 1);
     });
 
-    it("lists inference sets for a template in timestamp DESC order", () => {
-      const setOld = createMockInferenceSet({
+    it("lists inference runs for a template in timestamp DESC order", () => {
+      const runOld = createMockInferenceRun({
         id: "inf-old",
         templateId: "Main:T1",
         isoTimestamp: "2026-11-01T10:00:00.000Z",
       });
-      const setNew = createMockInferenceSet({
+      const runNew = createMockInferenceRun({
         id: "inf-new",
         templateId: "Main:T1",
         isoTimestamp: "2026-11-02T10:00:00.000Z",
       });
-      const setOther = createMockInferenceSet({
+      const runOther = createMockInferenceRun({
         id: "inf-other",
         templateId: "Main:T2",
         isoTimestamp: "2026-11-03T10:00:00.000Z",
       });
 
-      storage.saveInferenceSet(setOld);
-      storage.saveInferenceSet(setNew);
-      storage.saveInferenceSet(setOther);
+      storage.saveInferenceRun(runOld);
+      storage.saveInferenceRun(runNew);
+      storage.saveInferenceRun(runOther);
 
-      const t1Sets = storage.listInferenceSetsForTemplate("Main:T1");
-      assert.equal(t1Sets.length, 2);
-      assert.equal(t1Sets[0]?.id, "inf-new");
-      assert.equal(t1Sets[1]?.id, "inf-old");
+      const t1Runs = storage.listInferenceRunsForTemplate("Main:T1");
+      assert.equal(t1Runs.length, 2);
+      assert.equal(t1Runs[0]?.id, "inf-new");
+      assert.equal(t1Runs[1]?.id, "inf-old");
     });
 
-    it("supports pagination in listInferenceSetsForTemplate", () => {
+    it("supports pagination in listInferenceRunsForTemplate", () => {
       for (let i = 1; i <= 5; i++) {
-        storage.saveInferenceSet(
-          createMockInferenceSet({
+        storage.saveInferenceRun(
+          createMockInferenceRun({
             id: `inf-${i}`,
             templateId: "Main:T",
             isoTimestamp: `2026-11-0${i}T00:00:00.000Z`,
@@ -196,7 +199,7 @@ describe("ProjectStorage", () => {
         );
       }
 
-      const paged = storage.listInferenceSetsForTemplate("Main:T", {
+      const paged = storage.listInferenceRunsForTemplate("Main:T", {
         limit: 2,
         offset: 1,
       });
@@ -206,12 +209,12 @@ describe("ProjectStorage", () => {
     });
 
     it("retrieves lightweight summaries without parsing full payloads", () => {
-      const set = createMockInferenceSet({
+      const run = createMockInferenceRun({
         id: "inf-summary-test",
         templateId: "Main:Summary",
         isoTimestamp: "2026-11-02T12:00:00.000Z",
       });
-      storage.saveInferenceSet(set);
+      storage.saveInferenceRun(run);
 
       const summaries =
         storage.listInferenceSummariesForTemplate("Main:Summary");
@@ -223,45 +226,45 @@ describe("ProjectStorage", () => {
       });
     });
 
-    it("lists recent inference sets across all templates", () => {
-      const set1 = createMockInferenceSet({
+    it("lists recent inference runs across all templates", () => {
+      const run1 = createMockInferenceRun({
         id: "s1",
         templateId: "T1",
         isoTimestamp: "2026-11-01T00:00:00.000Z",
       });
-      const set2 = createMockInferenceSet({
+      const run2 = createMockInferenceRun({
         id: "s2",
         templateId: "T2",
         isoTimestamp: "2026-11-02T00:00:00.000Z",
       });
 
-      storage.saveInferenceSet(set1);
-      storage.saveInferenceSet(set2);
+      storage.saveInferenceRun(run1);
+      storage.saveInferenceRun(run2);
 
-      const recent = storage.listRecentInferenceSets();
-      assert.equal(recent.length, 2);
-      assert.equal(recent[0]?.id, "s2");
-      assert.equal(recent[1]?.id, "s1");
+      const recentRuns = storage.listRecentInferenceRuns();
+      assert.equal(recentRuns.length, 2);
+      assert.equal(recentRuns[0]?.id, "s2");
+      assert.equal(recentRuns[1]?.id, "s1");
     });
 
-    it("saves multiple inference sets in batch", () => {
-      const sets = [
-        createMockInferenceSet({ id: "batch-1" }),
-        createMockInferenceSet({ id: "batch-2" }),
+    it("saves multiple inference runs in batch", () => {
+      const runs = [
+        createMockInferenceRun({ id: "batch-1" }),
+        createMockInferenceRun({ id: "batch-2" }),
       ];
-      storage.saveInferenceSets(sets);
+      storage.saveInferenceRuns(runs);
 
-      assert.ok(storage.getInferenceSet("batch-1"));
-      assert.ok(storage.getInferenceSet("batch-2"));
+      assert.ok(storage.getInferenceRun("batch-1"));
+      assert.ok(storage.getInferenceRun("batch-2"));
     });
 
-    it("deletes an inference set by ID", () => {
-      const set = createMockInferenceSet({ id: "to-delete" });
-      storage.saveInferenceSet(set);
+    it("deletes an inference run by ID", () => {
+      const run = createMockInferenceRun({ id: "to-delete" });
+      storage.saveInferenceRun(run);
 
-      assert.equal(storage.deleteInferenceSet("to-delete"), true);
-      assert.equal(storage.getInferenceSet("to-delete"), null);
-      assert.equal(storage.deleteInferenceSet("to-delete"), false);
+      assert.equal(storage.deleteInferenceRun("to-delete"), true);
+      assert.equal(storage.getInferenceRun("to-delete"), null);
+      assert.equal(storage.deleteInferenceRun("to-delete"), false);
     });
   });
 
@@ -272,8 +275,8 @@ describe("ProjectStorage", () => {
       );
       try {
         const fileStorage = openProjectStorage(tempDir);
-        const set = createMockInferenceSet({ id: "disk-test" });
-        fileStorage.saveInferenceSet(set);
+        const run = createMockInferenceRun({ id: "disk-test" });
+        fileStorage.saveInferenceRun(run);
         fileStorage.close();
 
         const dbFilePath = path.join(tempDir, "typeprompt.sqlite");
@@ -284,8 +287,8 @@ describe("ProjectStorage", () => {
 
         // Re-open and verify persistence
         const reopened = openProjectStorage(tempDir);
-        const retrieved = reopened.getInferenceSet("disk-test");
-        assert.deepEqual(retrieved, set);
+        const retrieved = reopened.getInferenceRun("disk-test");
+        assert.deepEqual(retrieved, run);
         reopened.close();
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });

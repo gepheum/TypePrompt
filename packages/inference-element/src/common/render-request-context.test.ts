@@ -1,7 +1,7 @@
 import type { Inferences } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert";
-import { inferenceSetStyles } from "../inference-set/styles.js";
+import { inferenceRunStyles } from "../inference-run/styles.js";
 import {
   renderChatMessage,
   renderRequestContext,
@@ -69,7 +69,7 @@ describe("render-request-context", () => {
     assert.ok(cssText.includes(".system-message-wrap"));
 
     // Inference set output and reasoning are full-width without messaging margins
-    const infCssText = inferenceSetStyles.cssText;
+    const infCssText = inferenceRunStyles.cssText;
     assert.ok(infCssText.includes(".output-card"));
     assert.ok(infCssText.includes(".reasoning-details"));
     assert.ok(!infCssText.includes(".output-card {\n    margin-left"));

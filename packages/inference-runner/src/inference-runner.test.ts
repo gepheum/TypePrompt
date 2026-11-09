@@ -193,12 +193,12 @@ describe("inference-runner", () => {
         }),
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Billing:Refund",
         { languageModel: mockModel },
       );
-      const paths = Object.keys(inferenceSet.templateFiles).sort();
+      const paths = Object.keys(inferenceRun.templateFiles).sort();
       assert.deepEqual(paths, [
         "prompts/_meta.tp",
         "prompts/billing/_namespace.tp",
@@ -301,21 +301,21 @@ describe("inference-runner", () => {
         }),
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Assist",
         { languageModel: mockModel },
       );
 
-      assert.match(inferenceSet.id, /^[0-9a-zA-Z]{8}$/);
-      assert.equal(inferenceSet.templateId, "Main:Assist");
-      assert.equal(inferenceSet.model.model, "openai/gpt-4o");
-      assert.equal(inferenceSet.model.temperature, 0.2);
-      assert.equal(inferenceSet.inferences.length, 1);
+      assert.match(inferenceRun.id, /^[0-9a-zA-Z]{8}$/);
+      assert.equal(inferenceRun.templateId, "Main:Assist");
+      assert.equal(inferenceRun.model.model, "openai/gpt-4o");
+      assert.equal(inferenceRun.model.temperature, 0.2);
+      assert.equal(inferenceRun.inferences.length, 1);
 
-      const inf = inferenceSet.inferences[0]!;
-      assert.equal(inf.name, "london-with-step");
-      assert.equal(inf.note, "Test note for London");
+      const inf = inferenceRun.inferences[0]!;
+      assert.equal(inf.sample.name, "london-with-step");
+      assert.equal(inf.sample.note, "Test note for London");
       assert.equal(
         inf.request.systemMessage,
         "You are a weather assistant using getWeather.",
@@ -425,13 +425,13 @@ describe("inference-runner", () => {
         }),
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Assist",
         { languageModel: mockModel },
       );
 
-      const inf = inferenceSet.inferences[0]!;
+      const inf = inferenceRun.inferences[0]!;
       assert.equal(inf.result.kind, "success");
       if (inf.result.kind === "success") {
         assert.deepEqual(inf.result.response, {
@@ -531,7 +531,7 @@ describe("inference-runner", () => {
         },
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Check",
         {
@@ -539,7 +539,7 @@ describe("inference-runner", () => {
         },
       );
 
-      const [badJson, badSchema, apiFail] = inferenceSet.inferences;
+      const [badJson, badSchema, apiFail] = inferenceRun.inferences;
       assert.equal(badJson!.result.kind, "error");
       if (badJson!.result.kind === "error") {
         assert.equal(badJson!.result.error.kind, "parse-error");
@@ -624,7 +624,7 @@ describe("inference-runner", () => {
         },
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Echo",
         {
@@ -635,11 +635,11 @@ describe("inference-runner", () => {
 
       assert.equal(maxObservedActive, 2);
       assert.deepEqual(
-        inferenceSet.inferences.map((inf) => inf.name),
+        inferenceRun.inferences.map((inf) => inf.sample.name),
         ["s0", "s1", "s2", "s3", "s4"],
       );
       assert.deepEqual(
-        inferenceSet.inferences.map((inf) => inf.sampleIndex),
+        inferenceRun.inferences.map((inf) => inf.sampleIndex),
         [0, 1, 2, 3, 4],
       );
     });
@@ -720,13 +720,13 @@ TOON:
         }),
       });
 
-      const inferenceSet = await runPlaygroundInferences(
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Report",
         { languageModel: mockModel },
       );
 
-      const userMsg = inferenceSet.inferences[0]!.request.messages[0]!;
+      const userMsg = inferenceRun.inferences[0]!.request.messages[0]!;
       assert.equal(userMsg.role, "user");
       if (userMsg.role === "user") {
         // Verify CSV header and row columns follow schema order (firstCol, secondCol, thirdCol)
@@ -800,8 +800,8 @@ TOON:
         }),
       });
 
-      const snapshots: Inferences.InferenceSet<Inferences.Pending>[] = [];
-      const inferenceSet = await runPlaygroundInferences(
+      const snapshots: Inferences.InferenceRun<Inferences.Pending>[] = [];
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Test",
         {
@@ -821,9 +821,9 @@ TOON:
 
       // Snapshot 0: all pending
       assert.equal(snapshots[0]!.inferences.length, 2);
-      assert.equal(snapshots[0]!.inferences[0]!.name, "first");
+      assert.equal(snapshots[0]!.inferences[0]!.sample.name, "first");
       assert.equal(snapshots[0]!.inferences[0]!.result.kind, "pending");
-      assert.equal(snapshots[0]!.inferences[1]!.name, "second");
+      assert.equal(snapshots[0]!.inferences[1]!.sample.name, "second");
       assert.equal(snapshots[0]!.inferences[1]!.result.kind, "pending");
 
       // Snapshot 1: first computed, second pending
@@ -835,10 +835,10 @@ TOON:
       assert.equal(snapshots[2]!.inferences[1]!.result.kind, "success");
 
       // ID and metadata match throughout
-      assert.equal(snapshots[0]!.id, inferenceSet.id);
-      assert.equal(snapshots[1]!.id, inferenceSet.id);
-      assert.equal(snapshots[2]!.id, inferenceSet.id);
-      assert.deepEqual(snapshots[2], inferenceSet);
+      assert.equal(snapshots[0]!.id, inferenceRun.id);
+      assert.equal(snapshots[1]!.id, inferenceRun.id);
+      assert.equal(snapshots[2]!.id, inferenceRun.id);
+      assert.deepEqual(snapshots[2], inferenceRun);
     });
 
     it("invokes callback immediately and once completed when samples list is empty", async () => {
@@ -874,8 +874,8 @@ TOON:
           }) as unknown as MockDoGenerateResult,
       });
 
-      const snapshots: Inferences.InferenceSet<Inferences.Pending>[] = [];
-      const inferenceSet = await runPlaygroundInferences(
+      const snapshots: Inferences.InferenceRun<Inferences.Pending>[] = [];
+      const inferenceRun = await runPlaygroundInferences(
         compilation,
         "Main:Test",
         {
@@ -890,9 +890,9 @@ TOON:
       assert.equal(snapshots.length, 2);
       assert.equal(snapshots[0]!.inferences.length, 0);
       assert.equal(snapshots[1]!.inferences.length, 0);
-      assert.equal(snapshots[0]!.id, inferenceSet.id);
-      assert.equal(snapshots[1]!.id, inferenceSet.id);
-      assert.deepEqual(snapshots[1], inferenceSet);
+      assert.equal(snapshots[0]!.id, inferenceRun.id);
+      assert.equal(snapshots[1]!.id, inferenceRun.id);
+      assert.deepEqual(snapshots[1], inferenceRun);
     });
   });
 });

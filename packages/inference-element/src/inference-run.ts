@@ -12,21 +12,21 @@ import YAML from "yaml";
 import { formatTimestamp } from "./common/formatters.js";
 import { commonStyles } from "./common/styles.js";
 import { highlightTp, highlightYaml } from "./common/token-highlighting.js";
-import "./inference-set/inference-sample.js";
-import { inferenceSetStyles } from "./inference-set/styles.js";
+import "./inference-run/inference-sample.js";
+import { inferenceRunStyles } from "./inference-run/styles.js";
 
-export { InferenceSampleElement } from "./inference-set/inference-sample.js";
+export { InferenceSampleElement } from "./inference-run/inference-sample.js";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface InferenceSetEvents {}
+export interface InferenceRunEvents {}
 
-export const inferenceSetEvents = createNanoEvents<InferenceSetEvents>();
+export const inferenceRunEvents = createNanoEvents<InferenceRunEvents>();
 
-@customElement("tp-inference-set")
-export class InferenceSetElement extends LitElement {
-  static override styles = [commonStyles, inferenceSetStyles];
+@customElement("tp-inference-run")
+export class InferenceRunElement extends LitElement {
+  static override styles = [commonStyles, inferenceRunStyles];
 
-  private _inferenceSet?: Inferences.InferenceSet<Inferences.Pending>;
+  private _inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
 
   @property({
     type: Object,
@@ -45,36 +45,36 @@ export class InferenceSetElement extends LitElement {
       },
     },
   })
-  get inferenceSet(): Inferences.InferenceSet<Inferences.Pending> | undefined {
-    return this._inferenceSet;
+  get inferenceRun(): Inferences.InferenceRun<Inferences.Pending> | undefined {
+    return this._inferenceRun;
   }
-  set inferenceSet(
-    val: Inferences.InferenceSet<Inferences.Pending> | undefined,
+  set inferenceRun(
+    val: Inferences.InferenceRun<Inferences.Pending> | undefined,
   ) {
-    const oldVal = this._inferenceSet;
-    this._inferenceSet = val;
-    this.handleInferenceSetChange();
-    this.requestUpdate("inferenceSet", oldVal);
+    const oldVal = this._inferenceRun;
+    this._inferenceRun = val;
+    this.handleInferenceRunChange();
+    this.requestUpdate("inferenceRun", oldVal);
   }
 
-  @property({ type: String, attribute: "inference-set" })
-  set rawInferenceSetAttribute(val: string | null) {
+  @property({ type: String, attribute: "inference-run" })
+  set rawInferenceRunAttribute(val: string | null) {
     if (!val) {
-      this.inferenceSet = undefined;
+      this.inferenceRun = undefined;
       return;
     }
     try {
-      this.inferenceSet = JSON.parse(val);
+      this.inferenceRun = JSON.parse(val);
     } catch {
       // ignore
     }
   }
 
-  get data(): Inferences.InferenceSet<Inferences.Pending> | undefined {
-    return this.inferenceSet;
+  get data(): Inferences.InferenceRun<Inferences.Pending> | undefined {
+    return this.inferenceRun;
   }
-  set data(val: Inferences.InferenceSet<Inferences.Pending> | undefined) {
-    this.inferenceSet = val;
+  set data(val: Inferences.InferenceRun<Inferences.Pending> | undefined) {
+    this.inferenceRun = val;
   }
 
   @state()
@@ -102,8 +102,8 @@ export class InferenceSetElement extends LitElement {
     }
   }
 
-  private handleInferenceSetChange(): void {
-    if (!this._inferenceSet) {
+  private handleInferenceRunChange(): void {
+    if (!this._inferenceRun) {
       this.showProgressBar = false;
       this.isProgressCollapsing = false;
       return;
@@ -111,13 +111,13 @@ export class InferenceSetElement extends LitElement {
 
     // Auto-expand if there is only 1 sample
     if (
-      this._inferenceSet.inferences.length === 1 &&
+      this._inferenceRun.inferences.length === 1 &&
       this.expandedCardIds.size === 0
     ) {
       this.expandedCardIds.add("sample-0");
     }
 
-    const pendingCount = this._inferenceSet.inferences.filter(
+    const pendingCount = this._inferenceRun.inferences.filter(
       (i) => i.result.kind === "pending",
     ).length;
 
@@ -143,8 +143,8 @@ export class InferenceSetElement extends LitElement {
   }
 
   override willUpdate(changedProps: PropertyValues): void {
-    if (changedProps.has("inferenceSet")) {
-      this.handleInferenceSetChange();
+    if (changedProps.has("inferenceRun")) {
+      this.handleInferenceRunChange();
     }
   }
 
@@ -160,7 +160,7 @@ export class InferenceSetElement extends LitElement {
 
   private toggleAll(
     expanded: boolean,
-    currentInferences: readonly Inferences.Inference<Inferences.Pending>[],
+    currentInferences: readonly Inferences.SampleInference<Inferences.Pending>[],
   ): void {
     if (expanded) {
       const next = new Set(this.expandedCardIds);
@@ -181,9 +181,9 @@ export class InferenceSetElement extends LitElement {
     filter: "all" | "success" | "error" | "pending",
   ): void {
     this.statusFilter = filter;
-    if (filter === "error" && this.inferenceSet) {
+    if (filter === "error" && this.inferenceRun) {
       // Auto-expand error samples when filtering to errors
-      const errorIds = this.inferenceSet.inferences
+      const errorIds = this.inferenceRun.inferences
         .filter((inf) => inf.result.kind === "error")
         .map((inf) => `sample-${inf.sampleIndex}`);
       this.expandedCardIds = new Set([...this.expandedCardIds, ...errorIds]);
@@ -207,7 +207,7 @@ export class InferenceSetElement extends LitElement {
   }
 
   override render(): TemplateResult {
-    const data = this.inferenceSet;
+    const data = this.inferenceRun;
     if (!data) {
       return html`
         <div class="container">
@@ -501,5 +501,11 @@ export class InferenceSetElement extends LitElement {
         </footer>
       </div>
     `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "tp-inference-run": InferenceRunElement;
   }
 }

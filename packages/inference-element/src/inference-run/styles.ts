@@ -1,6 +1,6 @@
 import { css } from "lit";
 
-export const inferenceSetStyles = css`
+export const inferenceRunStyles = css`
   .container {
     max-width: 900px;
     margin: 0 auto;

@@ -384,7 +384,7 @@ export async function handleRunInferences(
 
   void runPlaygroundInferences(validCompilation, templateId, {
     apiKeys,
-    callback: (pendingInferenceSet) => {
+    callback: (pendingInferenceRun) => {
       if (!hasSetInitialHtml) {
         hasSetInitialHtml = true;
         const scriptUri = inferencesPanel.webview
@@ -394,13 +394,13 @@ export async function handleRunInferences(
           .toString();
         inferencesPanel.webview.html = getInferencesPageHtml(
           scriptUri,
-          pendingInferenceSet,
+          pendingInferenceRun,
           shortName,
         );
       } else {
         void inferencesPanel.webview.postMessage({
-          type: "updateInferenceSet",
-          inferenceSet: pendingInferenceSet,
+          type: "updateInferenceRun",
+          inferenceRun: pendingInferenceRun,
         });
       }
     },

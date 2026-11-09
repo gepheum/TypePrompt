@@ -158,12 +158,12 @@ export function getPlaygroundPreviewHtml(
 }
 
 /**
- * Builds the HTML content for the inferences webview, mounting <inference-set>
+ * Builds the HTML content for the inferences webview, mounting <tp-inference-run>
  * and listening for reactive updates.
  */
 export function getInferencesPageHtml(
   scriptUri: string,
-  initialData: Inferences.InferenceSet<Inferences.Pending>,
+  initialData: Inferences.InferenceRun<Inferences.Pending>,
   title: string,
 ): string {
   return `<!DOCTYPE html>
@@ -187,17 +187,17 @@ export function getInferencesPageHtml(
   </style>
 </head>
 <body>
-  <tp-inference-set id="inferences"></tp-inference-set>
+  <tp-inference-run id="inferences"></tp-inference-run>
 
   <script type="module">
     import "${scriptUri}";
 
     const inferences = document.getElementById("inferences");
-    inferences.inferenceSet = ${JSON.stringify(initialData)};
+    inferences.inferenceRun = ${JSON.stringify(initialData)};
 
     window.addEventListener("message", (event) => {
-      if (event.data && event.data.type === "updateInferenceSet") {
-        inferences.inferenceSet = event.data.inferenceSet;
+      if (event.data && event.data.type === "updateInferenceRun") {
+        inferences.inferenceRun = event.data.inferenceRun;
       }
     });
   </script>
