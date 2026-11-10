@@ -396,6 +396,10 @@ export const inferenceRunStyles = css`
     text-transform: uppercase;
   }
 
+  .telemetry-detail {
+    color: var(--text-soft);
+  }
+
   .card-body {
     display: none;
     padding: 1rem;
@@ -508,6 +512,10 @@ export const inferenceRunStyles = css`
     background: rgba(239, 68, 68, 0.05);
   }
 
+  .output-card-body {
+    padding: 0.85rem 1rem;
+  }
+
   .output-card-header {
     display: flex;
     justify-content: space-between;
@@ -515,6 +523,35 @@ export const inferenceRunStyles = css`
     padding: 0.4rem 0.75rem;
     background: var(--bg-surface-elevated);
     border-bottom: 1px solid var(--border);
+  }
+
+  .output-card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .output-card-label.error {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--error-text);
+  }
+
+  .error-message {
+    color: var(--error-text);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .raw-output-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .raw-output-code {
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
   }
 
   .output-tabs {
@@ -586,6 +623,13 @@ export const inferenceRunStyles = css`
     user-select: none;
   }
 
+  .source-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+  }
+
   .source-file-item {
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -602,6 +646,12 @@ export const inferenceRunStyles = css`
     user-select: none;
     border-bottom: 1px solid transparent;
     box-sizing: border-box;
+  }
+
+  .source-file-path {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
   }
 
   .source-file-item[open] > .source-file-header {

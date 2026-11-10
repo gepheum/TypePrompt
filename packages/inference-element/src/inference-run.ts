@@ -337,18 +337,12 @@ export class InferenceRunElement extends LitElement {
                 <div class="source-files-section">
                   <details>
                     <summary>View source files (${sourceFiles.length})</summary>
-                    <div
-                      class="details-body"
-                      style="display: flex; flex-direction: column; gap: 0.65rem;"
-                    >
+                    <div class="details-body source-files-list">
                       ${sourceFiles.map(
                         ([filePath, file]) => html`
                           <details class="source-file-item">
                             <summary class="source-file-header">
-                              <span
-                                style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"
-                                >${filePath}</span
-                              >
+                              <span class="source-file-path">${filePath}</span>
                               <tp-copy-button
                                 .text=${file.content}
                               ></tp-copy-button>

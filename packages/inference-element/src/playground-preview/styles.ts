@@ -253,6 +253,12 @@ export const playgroundPreviewStyles = css`
     border-radius: 8px;
   }
 
+  .empty-state-subtext {
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+    opacity: 0.7;
+  }
+
   .empty-discussion {
     text-align: center;
     padding: 2rem 1rem;

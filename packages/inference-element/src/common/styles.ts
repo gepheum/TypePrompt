@@ -168,6 +168,35 @@ export const commonStyles = css`
     color: var(--success-text, #4ade80);
   }
 
+  .tool-call-item {
+    margin-bottom: 0.85rem;
+  }
+
+  .tool-call-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .tool-call-id {
+    color: var(--tool-label, #c084fc);
+  }
+
+  .tool-call-code {
+    padding: 0.75rem 0.9rem;
+    margin-top: 0.35rem;
+  }
+
+  .tool-result-item {
+    margin-bottom: 0.65rem;
+  }
+
+  .tool-result-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .tool-result-code {
+    margin-top: 0.35rem;
+  }
+
   .tools-section {
     display: flex;
     flex-direction: column;
@@ -221,6 +250,17 @@ export const commonStyles = css`
 
   .section-title.request {
     color: var(--section-request-label);
+    margin-bottom: 0.5rem;
+  }
+
+  .request-context-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .system-message-code {
+    border-color: var(--section-request-border);
   }
 
   @media (max-width: 480px) {

@@ -90,10 +90,7 @@ export function renderSuccessResponse(
     return html`
       <div class="output-card">
         <div class="output-card-header">
-          <span
-            style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted);"
-            >Text</span
-          >
+          <span class="output-card-label">Text</span>
           <tp-copy-button .text=${response.rawText}></tp-copy-button>
         </div>
         <tp-code
@@ -109,12 +106,11 @@ export function renderSuccessResponse(
   return html`
     <div class="output-card">
       <div class="output-card-header">
-        <span
-          style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);"
+        <span class="output-card-label"
           >Tool calls (${response.toolCalls.length})</span
         >
       </div>
-      <div style="padding: 0.85rem 1rem;">
+      <div class="output-card-body">
         ${response.toolCalls.map((tc) => renderToolCall(tc))}
       </div>
     </div>
@@ -127,30 +123,19 @@ export function renderErrorResponse(
   return html`
     <div class="output-card error">
       <div class="output-card-header">
-        <span
-          style="font-size: 0.82rem; font-weight: 700; color: var(--error-text, #f87171);"
-          >Error: ${error.kind}</span
-        >
+        <span class="output-card-label error">Error: ${error.kind}</span>
       </div>
-      <div style="padding: 0.85rem 1rem;">
-        <p
-          style="color: var(--error-text, #f87171); font-weight: 600; margin-bottom: 0.75rem;"
-        >
-          ${error.message}
-        </p>
+      <div class="output-card-body">
+        <p class="error-message">${error.message}</p>
         ${
           "rawText" in error && error.rawText
             ? html`
                 <div>
-                  <div
-                    style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;"
-                  >
-                    Raw model output:
-                  </div>
+                  <div class="raw-output-label">Raw model output:</div>
                   <tp-code
+                    class="raw-output-code"
                     .code=${error.rawText}
                     language="text"
-                    style="background: var(--bg-inset); border: 1px solid var(--border);"
                   ></tp-code>
                 </div>
               `

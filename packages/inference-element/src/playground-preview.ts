@@ -265,9 +265,7 @@ export class PlaygroundPreviewElement extends LitElement {
             ? html`
                 <div class="empty-state">
                   <p>No samples found in this playground.</p>
-                  <p
-                    style="font-size: 0.8rem; margin-top: 0.35rem; opacity: 0.7;"
-                  >
+                  <p class="empty-state-subtext">
                     Add samples under &lt;samples&gt; to preview conversations.
                   </p>
                 </div>

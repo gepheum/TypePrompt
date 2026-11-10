@@ -19,7 +19,7 @@ export function renderTelemetryStrip(
               <span class="telemetry-item" title="Total Tokens (In / Out)">
                 <span class="telemetry-label">tokens</span>
                 <strong>${formatNumber(usage.totalTokens)}</strong>
-                <span style="color: var(--text-soft)"
+                <span class="telemetry-detail"
                   >(${usage.inputTokens} in / ${usage.outputTokens} out)</span
                 >
               </span>
