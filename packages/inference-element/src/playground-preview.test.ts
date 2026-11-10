@@ -51,7 +51,17 @@ describe("PlaygroundPreviewElement", () => {
       folderUri: "file:///mock-workspace",
       compilationResult: {
         edition: 1,
-        sourceFiles: {},
+        sourceFiles: {
+          "prompts/Greeting.play.tp": {
+            path: "prompts/Greeting.play.tp",
+            hasErrors: false,
+            entity: {
+              kind: "playground",
+              namespace: "Main",
+              forTemplate: "Greeting",
+            },
+          },
+        },
         templates: {},
         tools: {},
         playgrounds: {
@@ -96,7 +106,7 @@ describe("PlaygroundPreviewElement", () => {
       },
     };
 
-    el.setProjectData(fakeProject, "Main:Greeting");
+    el.setProjectData(fakeProject, "prompts/Greeting.play.tp");
     const template = el.render();
     assert.ok(template);
 
@@ -139,7 +149,17 @@ describe("PlaygroundPreviewElement", () => {
       folderUri: "file:///mock-workspace",
       compilationResult: {
         edition: 1,
-        sourceFiles: {},
+        sourceFiles: {
+          "prompts/Test.play.tp": {
+            path: "prompts/Test.play.tp",
+            hasErrors: false,
+            entity: {
+              kind: "playground",
+              namespace: "Main",
+              forTemplate: "Test",
+            },
+          },
+        },
         templates: {},
         tools: {},
         playgrounds: {
@@ -166,7 +186,7 @@ describe("PlaygroundPreviewElement", () => {
       },
     };
 
-    el.setProjectData(fakeProject, "Main:Test");
+    el.setProjectData(fakeProject, "prompts/Test.play.tp");
     const template = el.render();
 
     function flattenTemplate(t: unknown): string {
@@ -201,7 +221,17 @@ describe("PlaygroundPreviewElement", () => {
       folderUri: "file:///mock-workspace",
       compilationResult: {
         edition: 1,
-        sourceFiles: {},
+        sourceFiles: {
+          "prompts/Greeting.play.tp": {
+            path: "prompts/Greeting.play.tp",
+            hasErrors: false,
+            entity: {
+              kind: "playground",
+              namespace: "Main",
+              forTemplate: "Greeting",
+            },
+          },
+        },
         templates: {},
         tools: {},
         playgrounds: {
@@ -265,7 +295,7 @@ describe("PlaygroundPreviewElement", () => {
     }
 
     // Set initial valid project
-    el.setProjectData(validProject, "Main:Greeting");
+    el.setProjectData(validProject, "prompts/Greeting.play.tp");
     let renderedStr = flattenTemplate(el.render());
     assert.ok(renderedStr.includes("Greeting Sample"));
     assert.ok(!renderedStr.includes("Address the TypePrompt errors"));
@@ -278,7 +308,7 @@ describe("PlaygroundPreviewElement", () => {
         anyErrors: true,
       },
     };
-    el.setProjectData(projectWithErrors, "Main:Greeting");
+    el.setProjectData(projectWithErrors, "prompts/Greeting.play.tp");
 
     renderedStr = flattenTemplate(el.render());
     // Retains last successful rendering under the overlay!
@@ -286,8 +316,29 @@ describe("PlaygroundPreviewElement", () => {
     // AND shows the error banner
     assert.ok(renderedStr.includes("Address the TypePrompt errors"));
 
+    // Also test syntax error where sourceFile.entity is undefined and sourceFile.hasErrors is true
+    const projectWithParseError: Lsp.WireProject = {
+      ...validProject,
+      compilationResult: {
+        ...validProject.compilationResult,
+        anyErrors: true,
+        sourceFiles: {
+          "prompts/Greeting.play.tp": {
+            path: "prompts/Greeting.play.tp",
+            hasErrors: true,
+            entity: undefined,
+          },
+        },
+      },
+    };
+    el.setProjectData(projectWithParseError, "prompts/Greeting.play.tp");
+
+    renderedStr = flattenTemplate(el.render());
+    assert.ok(renderedStr.includes("Greeting Sample"));
+    assert.ok(renderedStr.includes("Address the TypePrompt errors"));
+
     // Now resolve errors
-    el.setProjectData(validProject, "Main:Greeting");
+    el.setProjectData(validProject, "prompts/Greeting.play.tp");
     renderedStr = flattenTemplate(el.render());
     assert.ok(renderedStr.includes("Greeting Sample"));
     assert.ok(!renderedStr.includes("Address the TypePrompt errors"));

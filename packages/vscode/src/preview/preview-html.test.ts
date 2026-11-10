@@ -48,6 +48,8 @@ describe("preview-html (vscode extension)", () => {
     assert.ok(html.includes('playgroundPreviewEvents.on("runInference"'));
     assert.ok(html.includes('playgroundPreviewEvents.on("selectSample"'));
     assert.ok(html.includes("preview.setProjectData("));
+    assert.ok(html.includes('"prompts/test.play.tp"'));
+    assert.ok(html.includes("event.data.relativePath"));
   });
 
   it("generates inference page HTML mounting <tp-inference-run>", () => {

@@ -1,21 +1,9 @@
-import { DEFAULT_NAMESPACE, type Inferences, type Lsp } from "@typeprompt/core";
+import type { Inferences, Lsp } from "@typeprompt/core";
 import {
   formatThemeVariables,
   type PartialThemeVariables,
   type ThemeVariables,
 } from "@typeprompt/inference-element";
-
-/**
- * Escapes characters for HTML text and attribute interpolation.
- */
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 export const vscodeThemeVariables: ThemeVariables = {
   "--tp-font-family": "var(--vscode-font-family)",
@@ -131,27 +119,6 @@ ${formatThemeVariables(vscodeHighContrastVariables)}
 `;
 
 /**
- * Builds the HTML content for the playground preview webview, mounting <playground-preview>
- * and wiring nanoevents to VSCode postMessage.
- */
-export function resolveTemplateIdFromMatch(
-  match: { project: Lsp.WireProject; relativePath: string } | null,
-): string {
-  if (!match) return "";
-  const sourceFile =
-    match.project.compilationResult.sourceFiles[match.relativePath];
-  if (sourceFile?.entity?.kind === "playground") {
-    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-    return `${ns}:${sourceFile.entity.forTemplate}`;
-  }
-  if (sourceFile?.entity?.kind === "template") {
-    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-    return `${ns}:${sourceFile.entity.name}`;
-  }
-  return "";
-}
-
-/**
  * Builds the HTML content for the playground preview webview, mounting <tp-playground-preview>
  * and wiring nanoevents to VSCode postMessage.
  */
@@ -160,7 +127,6 @@ export function getPlaygroundPreviewHtml(
   match: { project: Lsp.WireProject; relativePath: string } | null,
   title: string,
 ): string {
-  const templateId = resolveTemplateIdFromMatch(match);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -203,9 +169,9 @@ ${vscodeThemeVariablesCss}
 
     const preview = document.getElementById("preview");
     const initialProject = ${JSON.stringify(match?.project ?? null)};
-    const initialTemplateId = ${JSON.stringify(templateId)};
-    if (initialProject && initialTemplateId) {
-      preview.setProjectData(initialProject, initialTemplateId);
+    const initialRelativePath = ${JSON.stringify(match?.relativePath ?? "")};
+    if (initialProject && initialRelativePath) {
+      preview.setProjectData(initialProject, initialRelativePath);
     }
 
     window.addEventListener("message", (event) => {
@@ -213,9 +179,9 @@ ${vscodeThemeVariablesCss}
         event.data &&
         event.data.type === "updateProject" &&
         event.data.project &&
-        event.data.templateId
+        event.data.relativePath
       ) {
-        preview.setProjectData(event.data.project, event.data.templateId);
+        preview.setProjectData(event.data.project, event.data.relativePath);
       }
     });
   </script>
@@ -269,4 +235,16 @@ ${vscodeThemeVariablesCss}
   </script>
 </body>
 </html>`;
+}
+
+/**
+ * Escapes characters for HTML text and attribute interpolation.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

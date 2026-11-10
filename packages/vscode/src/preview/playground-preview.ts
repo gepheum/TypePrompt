@@ -16,7 +16,6 @@ import { canOpenPreview } from "../editor/is-template.js";
 import {
   getInferencePageHtml,
   getPlaygroundPreviewHtml,
-  resolveTemplateIdFromMatch,
 } from "./preview-html.js";
 
 export interface PlaygroundPreviewController {
@@ -65,14 +64,24 @@ export function activatePlaygroundPreview(
 
   const updatePreview = (panel: WebviewPanel, doc: TextDocument): void => {
     const match = projectStore.findByUri(doc.uri.toString());
-    const templateId = resolveTemplateIdFromMatch(match);
-    if (match?.project && templateId) {
-      void panel.webview.postMessage({
-        type: "updateProject",
-        project: match.project,
-        templateId,
-      });
+    if (!match?.project || !match.relativePath) {
+      panel.dispose();
+      return;
     }
+
+    const sourceFile =
+      match.project.compilationResult.sourceFiles[match.relativePath];
+
+    if (!sourceFile) {
+      panel.dispose();
+      return;
+    }
+
+    void panel.webview.postMessage({
+      type: "updateProject",
+      project: match.project,
+      relativePath: match.relativePath,
+    });
   };
 
   const openPlaygroundForDocument = async (

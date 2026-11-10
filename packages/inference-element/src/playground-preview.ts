@@ -1,4 +1,4 @@
-import type { Lsp } from "@typeprompt/core";
+import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
 import { state } from "lit/decorators.js";
 import { createNanoEvents } from "nanoevents";
@@ -25,6 +25,7 @@ export class PlaygroundPreviewElement extends LitElement {
   @state()
   private projectData?: {
     readonly wireProject: Lsp.WireProject;
+    readonly relativePath: string;
     readonly templateId: string;
   };
 
@@ -34,19 +35,36 @@ export class PlaygroundPreviewElement extends LitElement {
   @state()
   private selectedIndex = 0;
 
-  setProjectData(wireProject: Lsp.WireProject, templateId: string): void {
-    if (this.projectData && this.projectData.templateId !== templateId) {
+  setProjectData(wireProject: Lsp.WireProject, relativePath: string): void {
+    if (this.projectData && this.projectData.relativePath !== relativePath) {
       this.projectData = undefined;
     }
     const { compilationResult } = wireProject;
-    const playground = compilationResult.playgrounds[templateId];
-    const isPlaygroundValid = playground?.isValid === true;
+    const sourceFile = compilationResult.sourceFiles[relativePath];
     const hasErrors =
-      Boolean(compilationResult.anyErrors) || !isPlaygroundValid;
+      Boolean(compilationResult.anyErrors) ||
+      sourceFile === undefined ||
+      sourceFile.hasErrors;
 
     this.anyErrors = hasErrors;
     if (!hasErrors) {
-      this.projectData = { wireProject, templateId };
+      let templateId: string | undefined;
+      if (sourceFile.entity?.kind === "playground") {
+        const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+        templateId = `${ns}:${sourceFile.entity.forTemplate}`;
+      } else if (sourceFile.entity?.kind === "template") {
+        const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+        templateId = `${ns}:${sourceFile.entity.name}`;
+      }
+
+      if (templateId) {
+        const playground = compilationResult.playgrounds[templateId];
+        if (playground?.isValid) {
+          this.projectData = { wireProject, relativePath, templateId };
+          return;
+        }
+      }
+      this.anyErrors = true;
     }
   }
 
