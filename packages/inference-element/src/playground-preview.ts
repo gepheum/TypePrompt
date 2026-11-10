@@ -29,9 +29,6 @@ export class PlaygroundPreviewElement extends LitElement {
   relativePath?: string;
 
   @property({ type: String })
-  filePath?: string;
-
-  @property({ type: String })
   templateId?: string;
 
   @state()
@@ -49,7 +46,7 @@ export class PlaygroundPreviewElement extends LitElement {
     let targetTemplateId = this.templateId;
 
     if (!targetTemplateId) {
-      const relPath = this.relativePath || this.filePath;
+      const relPath = this.relativePath;
       if (relPath) {
         const sourceFile =
           compilationResult.sourceFiles[relPath] ??
