@@ -443,13 +443,6 @@ export class InferenceRunElement extends LitElement {
               `
             : ""
         }
-
-        <footer>
-          Generated with
-          <a href="https://typeprompt.dev" target="_blank" rel="noopener"
-            >TypePrompt</a
-          >
-        </footer>
       </div>
     `;
   }

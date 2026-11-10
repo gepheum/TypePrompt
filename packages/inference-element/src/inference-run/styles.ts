@@ -650,23 +650,6 @@ export const inferenceRunStyles = css`
     margin: 0;
   }
 
-  footer {
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--text-soft);
-    padding-top: 2rem;
-    border-top: 1px solid var(--border-subtle);
-  }
-
-  footer a {
-    color: var(--text-muted);
-    text-decoration: none;
-  }
-
-  footer a:hover {
-    text-decoration: underline;
-  }
-
   .empty-state {
     text-align: center;
     padding: 3rem 1.5rem;
