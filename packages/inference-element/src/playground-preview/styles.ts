@@ -293,4 +293,3 @@ export const playgroundPreviewStyles = css`
     font-weight: 600;
   }
 `;
-

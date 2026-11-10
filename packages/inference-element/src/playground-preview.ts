@@ -37,9 +37,6 @@ export class PlaygroundPreviewElement extends LitElement {
   @state()
   private selectedIndex = 0;
 
-  @state()
-  private selectedKey?: string;
-
   private getResolvedPlayground(): {
     playground?: Lsp.WirePlayground;
     hasErrors: boolean;
@@ -105,7 +102,6 @@ export class PlaygroundPreviewElement extends LitElement {
     this.selectedIndex = idx;
     const s = samples[idx];
     const key = s?.name ? `name:${s.name}` : `index:${idx}`;
-    this.selectedKey = key;
     playgroundPreviewEvents.emit("selectSample", key, idx);
   }
 
