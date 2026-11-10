@@ -47,11 +47,8 @@ export function activatePlaygroundPreview(
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   const renderPreviewHtml = (panel: WebviewPanel, doc: TextDocument): void => {
-    const fileName = path.basename(doc.fileName);
-    const displayName = fileName
-      .replace(/\.play\.tp$/, "")
-      .replace(/\.tp$/, "");
     const match = projectStore.findByUri(doc.uri.toString());
+    const displayName = getDisplayName(doc, match);
     const scriptUri = panel.webview
       .asWebviewUri(Uri.joinPath(context.extensionUri, "dist", "webview.js"))
       .toString();
@@ -97,10 +94,8 @@ export function activatePlaygroundPreview(
 
     const sameDoc = currentDoc?.uri.toString() === doc.uri.toString();
     currentDoc = doc;
-    const fileName = path.basename(doc.fileName);
-    const displayName = fileName
-      .replace(/\.play\.tp$/, "")
-      .replace(/\.tp$/, "");
+    const match = projectStore.findByUri(doc.uri.toString());
+    const displayName = getDisplayName(doc, match);
     const title = `Preview: ${displayName}`;
 
     if (!currentPanel) {
@@ -256,7 +251,10 @@ export async function handleCreateSecretsFile(
     if (workspaceFolder) {
       projectFolderUri = workspaceFolder.uri;
     } else {
-      projectFolderUri = Uri.file(path.dirname(doc.fileName));
+      void window.showErrorMessage(
+        "Cannot create secrets: document is not part of a workspace.",
+      );
+      return;
     }
   }
 
@@ -286,21 +284,6 @@ export async function handleRunInference(
   if (!match) {
     void window.showErrorMessage("TypePrompt project not found.");
     return;
-  }
-
-  const fileName = path.basename(doc.fileName);
-  const sourceFile =
-    match.project.compilationResult.sourceFiles[match.relativePath];
-  let templateId: string;
-  if (sourceFile?.entity && sourceFile.entity.kind === "playground") {
-    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-    templateId = `${ns}:${sourceFile.entity.forTemplate}`;
-  } else if (sourceFile?.entity && sourceFile.entity.kind === "template") {
-    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-    templateId = `${ns}:${sourceFile.entity.name}`;
-  } else {
-    const baseName = fileName.replace(/\.play\.tp$/, "").replace(/\.tp$/, "");
-    templateId = `${DEFAULT_NAMESPACE}:${baseName}`;
   }
 
   const projectFolderUri = Uri.parse(match.project.folderUri);
@@ -346,16 +329,21 @@ export async function handleRunInference(
   }
   const validCompilation = compilation as ValidCompilationResult;
 
-  if (!validCompilation.playgrounds[templateId]) {
-    const entry = Object.entries(validCompilation.playgrounds).find(
-      ([id, p]) => id === templateId || p.templateId === templateId,
+  const compiledSource = validCompilation.sourceFiles[match.relativePath];
+  let templateId: string | undefined;
+  if (compiledSource?.entity?.kind === "playground") {
+    const ns = compiledSource.entity.namespace?.text ?? DEFAULT_NAMESPACE;
+    templateId = `${ns}:${compiledSource.entity.for.text}`;
+  } else if (compiledSource?.entity?.kind === "template") {
+    const ns = compiledSource.entity.namespace?.text ?? DEFAULT_NAMESPACE;
+    templateId = `${ns}:${compiledSource.entity.name.text}`;
+  }
+
+  if (!templateId || !validCompilation.playgrounds[templateId]) {
+    void window.showErrorMessage(
+      "Cannot run inference: no playground found for this file.",
     );
-    if (entry) {
-      templateId = entry[0];
-    } else {
-      void window.showErrorMessage(`No playground found for '${templateId}'.`);
-      return;
-    }
+    return;
   }
 
   const apiKeys: ApiKeys = {};
@@ -433,4 +421,38 @@ export async function handleRunInference(
       `Inference run failed: ${err instanceof Error ? err.message : String(err)}`,
     );
   });
+}
+
+function getDisplayName(
+  doc: TextDocument,
+  match: {
+    project: {
+      compilationResult: {
+        sourceFiles: {
+          readonly [path: string]: {
+            entity?: {
+              readonly kind: string;
+              readonly name?: string;
+              readonly forTemplate?: string;
+            };
+          };
+        };
+      };
+    };
+    relativePath: string;
+  } | null,
+): string {
+  const sourceFile = match?.relativePath
+    ? match.project.compilationResult.sourceFiles[match.relativePath]
+    : undefined;
+  if (
+    sourceFile?.entity?.kind === "playground" &&
+    sourceFile.entity.forTemplate
+  ) {
+    return sourceFile.entity.forTemplate;
+  }
+  if (sourceFile?.entity?.kind === "template" && sourceFile.entity.name) {
+    return sourceFile.entity.name;
+  }
+  return path.basename(doc.fileName);
 }
