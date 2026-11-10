@@ -1,8 +1,7 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, type TemplateResult } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import "./code.js";
 import { stringifyAsJson } from "./formatters.js";
-import { highlightJson } from "./token-highlighting.js";
 
 export function renderToolCall(tc: Inferences.ToolCall): TemplateResult {
   const jsonStr = stringifyAsJson(tc.input);
@@ -12,10 +11,11 @@ export function renderToolCall(tc: Inferences.ToolCall): TemplateResult {
         <strong>${tc.toolName}</strong>
         <span style="color: var(--tool-label, #c084fc)">(${tc.callId})</span>
       </span>
-      <pre
-        class="code-view is-active"
-        style="background: var(--bg-inset, #070a12); border: 1px solid var(--border, #1f293d); border-radius: 6px; padding: 0.75rem 0.9rem; margin-top: 0.35rem;"
-      ><code>${unsafeHTML(highlightJson(jsonStr))}</code></pre>
+      <tp-code
+        .code=${jsonStr}
+        language="json"
+        style="padding: 0.75rem 0.9rem; margin-top: 0.35rem;"
+      ></tp-code>
     </div>
   `;
 }
@@ -40,7 +40,10 @@ export function renderChatMessage(message: Inferences.Message): TemplateResult {
                         ? html`<div>
                             ${message.toolCalls.map((tc) => renderToolCall(tc))}
                           </div>`
-                        : html`<pre><code>${unsafeHTML(highlightJson(stringifyAsJson(message.output)))}</code></pre>`
+                        : html`<tp-code
+                            .code=${stringifyAsJson(message.output)}
+                            language="json"
+                          ></tp-code>`
                     }
                   `
                 : role === "tool"
@@ -55,10 +58,11 @@ export function renderChatMessage(message: Inferences.Message): TemplateResult {
                               >
                                 ${tr.toolName} · result (${tr.callId})
                               </span>
-                              <pre
-                                class="code-view is-active"
-                                style="background: var(--bg-inset, #070a12); border: 1px solid var(--border, #1f293d); border-radius: 6px; margin-top: 0.35rem;"
-                              ><code>${unsafeHTML(highlightJson(stringifyAsJson(tr.output)))}</code></pre>
+                              <tp-code
+                                .code=${stringifyAsJson(tr.output)}
+                                language="json"
+                                style="margin-top: 0.35rem;"
+                              ></tp-code>
                             </div>
                           `,
                         )}
@@ -105,10 +109,11 @@ export function renderRequestContext(
                 >
                   System message
                 </div>
-                <pre
-                  class="code-view is-active"
-                  style="background: var(--bg-inset, #070a12); border: 1px solid var(--section-request-border, #1f293d); border-radius: 6px;"
-                ><code>${request.systemMessage}</code></pre>
+                <tp-code
+                  .code=${request.systemMessage}
+                  language="text"
+                  style="border-color: var(--section-request-border, #1f293d);"
+                ></tp-code>
               </div>
             `
           : ""

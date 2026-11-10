@@ -1,10 +1,9 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, type TemplateResult } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import "../common/code.js";
 import "../common/copy-button.js";
 import { stringifyAsJson, stringifyAsYaml } from "../common/formatters.js";
 import { renderToolCall } from "../common/render-request-context.js";
-import { highlightJson, highlightYaml } from "../common/token-highlighting.js";
 
 export function renderResultOutput(
   cardId: string,
@@ -72,14 +71,18 @@ export function renderSuccessResponse(
           ${
             currentTab === "yaml"
               ? html`
-                  <pre
-                    class="code-view output-code-view is-active"
-                  ><code>${unsafeHTML(highlightYaml(yamlRaw))}</code></pre>
+                  <tp-code
+                    class="output-code-view"
+                    .code=${yamlRaw}
+                    language="yaml"
+                  ></tp-code>
                 `
               : html`
-                  <pre
-                    class="code-view output-code-view is-active"
-                  ><code>${unsafeHTML(highlightJson(jsonRaw))}</code></pre>
+                  <tp-code
+                    class="output-code-view"
+                    .code=${jsonRaw}
+                    language="json"
+                  ></tp-code>
                 `
           }
         </div>
@@ -96,9 +99,11 @@ export function renderSuccessResponse(
           >
           <tp-copy-button .text=${response.rawText}></tp-copy-button>
         </div>
-        <pre
-          class="code-view output-code-view is-active"
-        ><code>${response.rawText}</code></pre>
+        <tp-code
+          class="output-code-view"
+          .code=${response.rawText}
+          language="text"
+        ></tp-code>
       </div>
     `;
   }

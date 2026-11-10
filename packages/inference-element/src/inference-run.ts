@@ -6,14 +6,13 @@ import {
   type TemplateResult,
 } from "lit";
 import { property, state } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
+import "./common/code.js";
 import "./common/copy-button.js";
 import { formatTimestamp } from "./common/formatters.js";
 import { registerCustomElement } from "./common/register-custom-element.js";
 import { commonStyles } from "./common/styles.js";
-import { highlightTp, highlightYaml } from "./common/token-highlighting.js";
 import "./inference-run/sample-inference-card.js";
 import { SampleInferenceCard } from "./inference-run/sample-inference-card.js";
 import { inferenceRunStyles } from "./inference-run/styles.js";
@@ -183,9 +182,11 @@ export class InferenceRunElement extends LitElement {
               modelYaml
                 ? html`
                     <div class="model-yaml-card">
-                      <pre
+                      <tp-code
                         class="model-yaml-body"
-                      ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
+                        .code=${modelYaml}
+                        language="yaml"
+                      ></tp-code>
                     </div>
                   `
                 : ""
@@ -364,10 +365,10 @@ export class InferenceRunElement extends LitElement {
                                 .text=${file.content}
                               ></tp-copy-button>
                             </summary>
-                            <pre
-                              class="code-view is-active"
-                              style="padding: 0.85rem 1rem; background: var(--bg-inset); margin: 0;"
-                            ><code>${unsafeHTML(highlightTp(file.content))}</code></pre>
+                            <tp-code
+                              .code=${file.content}
+                              language="tp"
+                            ></tp-code>
                           </details>
                         `,
                       )}

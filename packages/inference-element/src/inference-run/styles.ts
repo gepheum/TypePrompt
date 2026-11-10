@@ -73,6 +73,15 @@ export const inferenceRunStyles = css`
     box-sizing: border-box;
   }
 
+  .model-yaml-card tp-code {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+
   .model-yaml-body {
     font-size: 0.74rem;
     line-height: 1.35;
@@ -620,6 +629,7 @@ export const inferenceRunStyles = css`
     pointer-events: none;
   }
 
+  .source-file-item tp-code,
   .source-file-item .code-view {
     border: none;
     border-radius: 0;

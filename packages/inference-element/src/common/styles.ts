@@ -281,6 +281,12 @@ export const commonStyles = css`
     font-size: 0.84rem;
   }
 
+  .chat-bubble-body tp-code {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
   .role-user .chat-bubble {
     background: var(--user-bg);
     border-color: var(--user-border);

@@ -1,13 +1,12 @@
 import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
 import { css, html, LitElement, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
+import "./common/code.js";
 import { registerCustomElement } from "./common/register-custom-element.js";
 import { renderRequestContext } from "./common/render-request-context.js";
 import { commonStyles } from "./common/styles.js";
-import { highlightYaml } from "./common/token-highlighting.js";
 
 export interface PlaygroundPreviewEvents {
   createSecrets: () => void;
@@ -151,6 +150,15 @@ const playgroundPreviewStyles = css`
     scrollbar-width: thin;
     box-sizing: border-box;
     flex-shrink: 0;
+  }
+
+  .model-yaml-card tp-code {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: 0.74rem;
+    line-height: 1.35;
   }
 
   .model-yaml-body {
@@ -524,9 +532,11 @@ export class PlaygroundPreviewElement extends LitElement {
                 modelYaml
                   ? html`
                       <div class="model-yaml-card">
-                        <pre
+                        <tp-code
                           class="model-yaml-body"
-                        ><code>${unsafeHTML(highlightYaml(modelYaml))}</code></pre>
+                          .code=${modelYaml}
+                          language="yaml"
+                        ></tp-code>
                       </div>
                     `
                   : ""
