@@ -546,30 +546,6 @@ export const inferenceRunStyles = css`
     color: var(--text);
   }
 
-  .btn-copy {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    line-height: 1.2;
-    box-sizing: border-box;
-  }
-
-  .btn-copy:hover {
-    background: var(--bg-surface);
-    color: var(--text);
-  }
-
-  .btn-copy.copied {
-    background: var(--success-bg);
-    border-color: var(--success-border);
-    color: var(--success-text);
-  }
-
   .output-code-view {
     border: none;
     border-radius: 0;
@@ -639,7 +615,7 @@ export const inferenceRunStyles = css`
     border-bottom-color: var(--border);
   }
 
-  .source-file-item:not([open]) .btn-copy {
+  .source-file-item:not([open]) tp-copy-button {
     visibility: hidden;
     pointer-events: none;
   }

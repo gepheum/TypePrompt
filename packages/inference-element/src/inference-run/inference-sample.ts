@@ -1,6 +1,6 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
 import { registerCustomElement } from "../common/register-custom-element.js";
 import { renderRequestContext } from "../common/render-request-context.js";
 import { commonStyles } from "../common/styles.js";
@@ -24,9 +24,6 @@ export class InferenceSampleElement extends LitElement {
   @property({ type: String })
   activeTab: "yaml" | "json" | "text" = "yaml";
 
-  @state()
-  private isCopied: boolean = false;
-
   private onToggleExpand(): void {
     this.dispatchEvent(
       new CustomEvent("toggle-expand", {
@@ -38,20 +35,6 @@ export class InferenceSampleElement extends LitElement {
 
   private onTabChange(tab: "yaml" | "json" | "text"): void {
     this.activeTab = tab;
-  }
-
-  private async onCopy(text: string): Promise<void> {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        this.isCopied = true;
-        setTimeout(() => {
-          this.isCopied = false;
-        }, 1500);
-      }
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
   }
 
   override render(): TemplateResult {
@@ -148,8 +131,6 @@ export class InferenceSampleElement extends LitElement {
               request.outputFormat.format,
               this.activeTab,
               (tab) => this.onTabChange(tab),
-              (text) => void this.onCopy(text),
-              this.isCopied,
             )}
           </div>
         </div>

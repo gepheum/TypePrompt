@@ -11,6 +11,8 @@ export {
   type InferenceRunEvents,
 } from "./inference-run.js";
 
+export { CopyButtonElement } from "./common/copy-button.js";
+
 export {
   ALL_THEME_VARIABLES,
   OPTIONAL_THEME_VARIABLES,

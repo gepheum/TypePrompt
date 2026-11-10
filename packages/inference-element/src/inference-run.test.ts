@@ -155,7 +155,7 @@ describe("InferenceRunElement", () => {
     assert.ok(!renderedStr.includes(">prompts/meta.tp<"));
     assert.ok(!renderedStr.includes("badge-tag"));
     assert.ok(!renderedStr.includes(">playground<"));
-    assert.ok(renderedStr.includes("btn-copy"));
+    assert.ok(renderedStr.includes("tp-copy-button"));
     // Completed runs (pendingCount === 0) do not show the progress bar
     assert.ok(!renderedStr.includes("progress-section"));
     assert.ok(!renderedStr.includes("ms"));

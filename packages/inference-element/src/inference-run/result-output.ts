@@ -1,6 +1,7 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, type TemplateResult } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import "../common/copy-button.js";
 import { stringifyAsJson, stringifyAsYaml } from "../common/formatters.js";
 import { renderToolCall } from "../common/render-request-context.js";
 import { highlightJson, highlightYaml } from "../common/token-highlighting.js";
@@ -11,8 +12,6 @@ export function renderResultOutput(
   outputFormat: "json" | "text",
   activeTab: "yaml" | "json" | "text",
   onTabChange: (tab: "yaml" | "json" | "text") => void,
-  onCopy: (text: string) => void,
-  isCopied: boolean,
 ): TemplateResult {
   if (result.kind === "pending") {
     return html`
@@ -28,8 +27,6 @@ export function renderResultOutput(
       outputFormat,
       activeTab,
       onTabChange,
-      onCopy,
-      isCopied,
     );
   }
   return renderErrorResponse(result.error);
@@ -41,8 +38,6 @@ export function renderSuccessResponse(
   outputFormat: "json" | "text",
   activeTab: "yaml" | "json" | "text",
   onTabChange: (tab: "yaml" | "json" | "text") => void,
-  onCopy: (text: string) => void,
-  isCopied: boolean,
 ): TemplateResult {
   if (response.kind === "output") {
     if (outputFormat === "json") {
@@ -71,14 +66,7 @@ export function renderSuccessResponse(
               </button>
             </div>
 
-            <button
-              type="button"
-              class="btn-copy ${isCopied ? "copied" : ""}"
-              @click=${(): void => onCopy(textToCopy)}
-              title="Copy code to clipboard"
-            >
-              ${isCopied ? "Copied!" : "Copy"}
-            </button>
+            <tp-copy-button .text=${textToCopy}></tp-copy-button>
           </div>
 
           ${
@@ -106,14 +94,7 @@ export function renderSuccessResponse(
             style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted);"
             >Text</span
           >
-          <button
-            type="button"
-            class="btn-copy ${isCopied ? "copied" : ""}"
-            @click=${(): void => onCopy(response.rawText)}
-            title="Copy code to clipboard"
-          >
-            ${isCopied ? "Copied!" : "Copy"}
-          </button>
+          <tp-copy-button .text=${response.rawText}></tp-copy-button>
         </div>
         <pre
           class="code-view output-code-view is-active"

@@ -9,6 +9,7 @@ import { property, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
+import "./common/copy-button.js";
 import { formatTimestamp } from "./common/formatters.js";
 import { registerCustomElement } from "./common/register-custom-element.js";
 import { commonStyles } from "./common/styles.js";
@@ -32,9 +33,6 @@ export class InferenceRunElement extends LitElement {
 
   @state()
   private expandedCardIds = new Set<string>();
-
-  @state()
-  private copiedCardId?: string;
 
   @state()
   private statusFilter: "all" | "success" | "error" | "pending" = "all";
@@ -90,7 +88,9 @@ export class InferenceRunElement extends LitElement {
   }
 
   override willUpdate(changedProperties: PropertyValues<this>): void {
-    if (changedProperties.has("inferenceRun" satisfies keyof InferenceRunElement)) {
+    if (
+      changedProperties.has("inferenceRun" satisfies keyof InferenceRunElement)
+    ) {
       this.handleInferenceRunChange();
     }
   }
@@ -134,22 +134,6 @@ export class InferenceRunElement extends LitElement {
         .filter((inf) => inf.result.kind === "error")
         .map((inf) => `sample-${inf.sampleIndex}`);
       this.expandedCardIds = new Set([...this.expandedCardIds, ...errorIds]);
-    }
-  }
-
-  private async copyText(cardId: string, text: string): Promise<void> {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        this.copiedCardId = cardId;
-        setTimeout(() => {
-          if (this.copiedCardId === cardId) {
-            this.copiedCardId = undefined;
-          }
-        }, 1500);
-      }
-    } catch (err) {
-      console.error("Failed to copy:", err);
     }
   }
 
@@ -406,29 +390,7 @@ export class InferenceRunElement extends LitElement {
                                 style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"
                                 >${filePath}</span
                               >
-                              <button
-                                type="button"
-                                class="btn-copy ${
-                                  this.copiedCardId === `file:${filePath}`
-                                    ? "copied"
-                                    : ""
-                                }"
-                                @click=${(e: MouseEvent): void => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  void this.copyText(
-                                    `file:${filePath}`,
-                                    content,
-                                  );
-                                }}
-                                title="Copy file contents to clipboard"
-                              >
-                                ${
-                                  this.copiedCardId === `file:${filePath}`
-                                    ? "Copied!"
-                                    : "Copy"
-                                }
-                              </button>
+                              <tp-copy-button .text=${content}></tp-copy-button>
                             </summary>
                             <pre
                               class="code-view is-active"
