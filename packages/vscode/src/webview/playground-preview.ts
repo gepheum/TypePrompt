@@ -74,6 +74,8 @@ export function activatePlaygroundPreview(
       return;
     }
 
+    panel.title = `Preview: ${getDisplayName(doc, match)}`;
+
     void panel.webview.postMessage({
       type: "updateProject",
       project: match.project,
@@ -95,8 +97,7 @@ export function activatePlaygroundPreview(
     const sameDoc = currentDoc?.uri.toString() === doc.uri.toString();
     currentDoc = doc;
     const match = projectStore.findByUri(doc.uri.toString());
-    const displayName = getDisplayName(doc, match);
-    const title = `Preview: ${displayName}`;
+    const title = `Preview: ${getDisplayName(doc, match)}`;
 
     if (!currentPanel) {
       currentPanel = window.createWebviewPanel(
@@ -434,6 +435,7 @@ function getDisplayName(
               readonly kind: string;
               readonly name?: string;
               readonly forTemplate?: string;
+              readonly namespace?: string | null;
             };
           };
         };
@@ -449,10 +451,16 @@ function getDisplayName(
     sourceFile?.entity?.kind === "playground" &&
     sourceFile.entity.forTemplate
   ) {
-    return sourceFile.entity.forTemplate;
+    const ns = sourceFile.entity.namespace;
+    return ns && ns !== DEFAULT_NAMESPACE
+      ? `${ns}:${sourceFile.entity.forTemplate}`
+      : sourceFile.entity.forTemplate;
   }
   if (sourceFile?.entity?.kind === "template" && sourceFile.entity.name) {
-    return sourceFile.entity.name;
+    const ns = sourceFile.entity.namespace;
+    return ns && ns !== DEFAULT_NAMESPACE
+      ? `${ns}:${sourceFile.entity.name}`
+      : sourceFile.entity.name;
   }
   return path.basename(doc.fileName);
 }
