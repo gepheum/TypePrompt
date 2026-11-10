@@ -1,11 +1,8 @@
 import type { Inferences } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert";
-import {
-  InferenceRunElement,
-  inferenceRunEvents,
-  InferenceSampleElement,
-} from "./inference-run.js";
+import { InferenceRunElement, inferenceRunEvents } from "./inference-run.js";
+import { SampleInferenceCard } from "./inference-run/sample-inference-card.js";
 
 describe("InferenceRunElement", () => {
   it("initializes component instance", () => {
@@ -15,10 +12,14 @@ describe("InferenceRunElement", () => {
   });
 
   it("initializes sample component instance with default activeTab", () => {
-    const sampleEl = new InferenceSampleElement();
+    const sampleEl = new SampleInferenceCard();
     assert.ok(sampleEl);
-    assert.strictEqual(sampleEl.tagName.toLowerCase(), "tp-inference-sample");
+    assert.strictEqual(
+      sampleEl.tagName.toLowerCase(),
+      "tp-sample-inference-card",
+    );
     assert.strictEqual(sampleEl.activeTab, "yaml");
+    assert.strictEqual(sampleEl.expanded, false);
   });
 
   it("exports events emitter", () => {
@@ -169,7 +170,7 @@ describe("InferenceRunElement", () => {
     const renderedStr = flattenTemplate(template);
     assert.ok(renderedStr.includes("Inference Run · 1 sample"));
     assert.ok(renderedStr.includes("ID: abc12345"));
-    assert.ok(renderedStr.includes("tp-inference-sample"));
+    assert.ok(renderedStr.includes("tp-sample-inference-card"));
     assert.ok(renderedStr.includes("prompts/greeting.tp"));
     assert.ok(renderedStr.includes("prompts/greeting.play.tp"));
     assert.ok(!renderedStr.includes(">meta.tp<"));
@@ -278,8 +279,8 @@ describe("InferenceRunElement", () => {
     assert.ok(runningStr.includes("50% complete"));
   });
 
-  it("renders reasoning in collapsible details inside InferenceSampleElement", () => {
-    const sampleEl = new InferenceSampleElement();
+  it("renders reasoning in collapsible details inside SampleInferenceCard", () => {
+    const sampleEl = new SampleInferenceCard();
     sampleEl.inference = {
       sampleIndex: 0,
       sample: {

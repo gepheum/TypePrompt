@@ -1,17 +1,14 @@
 export {
-  PlaygroundPreviewElement,
   playgroundPreviewEvents,
+  type PlaygroundPreviewElement,
   type PlaygroundPreviewEvents,
 } from "./playground-preview.js";
 
 export {
-  InferenceRunElement,
-  InferenceSampleElement,
   inferenceRunEvents,
+  type InferenceRunElement,
   type InferenceRunEvents,
 } from "./inference-run.js";
-
-export { CopyButtonElement } from "./common/copy-button.js";
 
 export {
   ALL_THEME_VARIABLES,

@@ -14,10 +14,9 @@ import { formatTimestamp } from "./common/formatters.js";
 import { registerCustomElement } from "./common/register-custom-element.js";
 import { commonStyles } from "./common/styles.js";
 import { highlightTp, highlightYaml } from "./common/token-highlighting.js";
-import "./inference-run/inference-sample.js";
+import "./inference-run/sample-inference-card.js";
+import { SampleInferenceCard } from "./inference-run/sample-inference-card.js";
 import { inferenceRunStyles } from "./inference-run/styles.js";
-
-export { InferenceSampleElement } from "./inference-run/inference-sample.js";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface InferenceRunEvents {}
@@ -30,9 +29,6 @@ export class InferenceRunElement extends LitElement {
 
   @property({ attribute: false })
   inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
-
-  @state()
-  private expandedCardIds = new Set<string>();
 
   @state()
   private statusFilter: "all" | "success" | "error" | "pending" = "all";
@@ -54,14 +50,6 @@ export class InferenceRunElement extends LitElement {
     if (!this.inferenceRun) {
       this.progressBarStatus = "hidden";
       return;
-    }
-
-    // Auto-expand if there is only 1 sample
-    if (
-      this.inferenceRun.inferences.length === 1 &&
-      this.expandedCardIds.size === 0
-    ) {
-      this.expandedCardIds.add("sample-0");
     }
 
     const pendingCount = this.inferenceRun.inferences.filter(
@@ -95,32 +83,13 @@ export class InferenceRunElement extends LitElement {
     }
   }
 
-  private toggleCard(cardId: string): void {
-    const next = new Set(this.expandedCardIds);
-    if (next.has(cardId)) {
-      next.delete(cardId);
-    } else {
-      next.add(cardId);
-    }
-    this.expandedCardIds = next;
-  }
-
-  private toggleAll(
-    expanded: boolean,
-    currentInferences: readonly Inferences.SampleInference<Inferences.Pending>[],
-  ): void {
-    if (expanded) {
-      const next = new Set(this.expandedCardIds);
-      for (const inf of currentInferences) {
-        next.add(`sample-${inf.sampleIndex}`);
+  private toggleAll(expanded: boolean): void {
+    const container = this.renderRoot.querySelector("main.inferences-section");
+    if (!container) return;
+    for (const child of container.children) {
+      if (child instanceof SampleInferenceCard) {
+        child.expanded = expanded;
       }
-      this.expandedCardIds = next;
-    } else {
-      const next = new Set(this.expandedCardIds);
-      for (const inf of currentInferences) {
-        next.delete(`sample-${inf.sampleIndex}`);
-      }
-      this.expandedCardIds = next;
     }
   }
 
@@ -128,12 +97,19 @@ export class InferenceRunElement extends LitElement {
     filter: "all" | "success" | "error" | "pending",
   ): void {
     this.statusFilter = filter;
-    if (filter === "error" && this.inferenceRun) {
-      // Auto-expand error samples when filtering to errors
-      const errorIds = this.inferenceRun.inferences
-        .filter((inf) => inf.result.kind === "error")
-        .map((inf) => `sample-${inf.sampleIndex}`);
-      this.expandedCardIds = new Set([...this.expandedCardIds, ...errorIds]);
+    if (filter === "error") {
+      const container = this.renderRoot.querySelector(
+        "main.inferences-section",
+      );
+      if (!container) return;
+      for (const child of container.children) {
+        if (
+          child instanceof SampleInferenceCard &&
+          child.inference?.result.kind === "error"
+        ) {
+          child.expanded = true;
+        }
+      }
     }
   }
 
@@ -330,14 +306,14 @@ export class InferenceRunElement extends LitElement {
             <button
               type="button"
               class="btn-action"
-              @click=${(): void => this.toggleAll(true, filteredInferences)}
+              @click=${(): void => this.toggleAll(true)}
             >
               Expand all
             </button>
             <button
               type="button"
               class="btn-action"
-              @click=${(): void => this.toggleAll(false, filteredInferences)}
+              @click=${(): void => this.toggleAll(false)}
             >
               Collapse all
             </button>
@@ -353,19 +329,15 @@ export class InferenceRunElement extends LitElement {
                     No samples matching filter "${this.statusFilter}".
                   </div>
                 `
-              : filteredInferences.map((inf) => {
-                  const cardId = `sample-${inf.sampleIndex}`;
-                  const isExpanded = this.expandedCardIds.has(cardId);
-
-                  return html`
-                    <tp-inference-sample
+              : filteredInferences.map(
+                  (inf) => html`
+                    <tp-sample-inference-card
                       .inference=${inf}
                       .totalSamples=${data.inferences.length}
-                      .isExpanded=${isExpanded}
-                      @toggle-expand=${(): void => this.toggleCard(cardId)}
-                    ></tp-inference-sample>
-                  `;
-                })
+                      .expanded=${data.inferences.length === 1}
+                    ></tp-sample-inference-card>
+                  `,
+                )
           }
         </main>
 
