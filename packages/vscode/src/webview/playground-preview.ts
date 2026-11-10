@@ -16,7 +16,7 @@ import { canOpenPreview } from "../editor/is-template.js";
 import {
   getInferencePageHtml,
   getPlaygroundPreviewHtml,
-} from "./preview-html.js";
+} from "./webview-html.js";
 
 export interface PlaygroundPreviewController {
   openPlayground(docOrUri?: TextDocument | Uri): Promise<void>;

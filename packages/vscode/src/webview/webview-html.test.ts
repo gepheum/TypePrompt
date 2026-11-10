@@ -10,9 +10,9 @@ import {
   getInferencePageHtml,
   getPlaygroundPreviewHtml,
   vscodeThemeVariables,
-} from "./preview-html.js";
+} from "./webview-html.js";
 
-describe("preview-html (vscode extension)", () => {
+describe("webview-html (vscode extension)", () => {
   const fakeScriptUri = "https://webview.local/dist/webview.js";
 
   it("generates playground preview HTML mounting <playground-preview>", () => {
