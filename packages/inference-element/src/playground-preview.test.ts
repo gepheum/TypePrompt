@@ -45,7 +45,7 @@ describe("PlaygroundPreviewElement", () => {
     unbind3();
   });
 
-  it("renders with wireProject", () => {
+  it("renders with wireProject via setProjectData", () => {
     const el = new PlaygroundPreviewElement();
     const fakeProject: Lsp.WireProject = {
       folderUri: "file:///mock-workspace",
@@ -96,8 +96,7 @@ describe("PlaygroundPreviewElement", () => {
       },
     };
 
-    el.wireProject = fakeProject;
-    el.templateId = "Main:Greeting";
+    el.setProjectData(fakeProject, "Main:Greeting");
     const template = el.render();
     assert.ok(template);
 
@@ -167,8 +166,7 @@ describe("PlaygroundPreviewElement", () => {
       },
     };
 
-    el.wireProject = fakeProject;
-    el.templateId = "Main:Greeting";
+    el.setProjectData(fakeProject, "Main:Test");
     const template = el.render();
 
     function flattenTemplate(t: unknown): string {
@@ -195,5 +193,103 @@ describe("PlaygroundPreviewElement", () => {
     assert.ok(renderedStr.includes("no-api-keys-banner"));
     assert.ok(!renderedStr.includes("run-inference-button"));
     assert.ok(renderedStr.includes("Playground Preview · 0 samples"));
+  });
+
+  it("retains last successful projectData when updated with errors and displays error banner", () => {
+    const el = new PlaygroundPreviewElement();
+    const validProject: Lsp.WireProject = {
+      folderUri: "file:///mock-workspace",
+      compilationResult: {
+        edition: 1,
+        sourceFiles: {},
+        templates: {},
+        tools: {},
+        playgrounds: {
+          "Main:Greeting": {
+            id: "Main:Greeting",
+            namespace: "Main",
+            forTemplate: "Greeting",
+            isValid: true,
+            model: { model: "openai/gpt-4o" },
+            samples: [
+              {
+                name: "Greeting Sample",
+                request: {
+                  systemMessage: "You are a greeter.",
+                  outputFormat: { format: "text" },
+                  tools: [],
+                  messages: [
+                    {
+                      role: "user",
+                      input: {},
+                      rendered: "Hi there!",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        signature: undefined,
+        anyErrors: false,
+        finalErrors: {},
+        warnings: {},
+        timestampMillis: Date.now(),
+      },
+      secrets: {
+        kind: "success",
+        secrets: {
+          apiKeys: { openai: "sk-mock" },
+        },
+      },
+    };
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    // Set initial valid project
+    el.setProjectData(validProject, "Main:Greeting");
+    let renderedStr = flattenTemplate(el.render());
+    assert.ok(renderedStr.includes("Greeting Sample"));
+    assert.ok(!renderedStr.includes("Address the TypePrompt errors"));
+
+    // Now send project with compilation errors
+    const projectWithErrors: Lsp.WireProject = {
+      ...validProject,
+      compilationResult: {
+        ...validProject.compilationResult,
+        anyErrors: true,
+      },
+    };
+    el.setProjectData(projectWithErrors, "Main:Greeting");
+
+    renderedStr = flattenTemplate(el.render());
+    // Retains last successful rendering under the overlay!
+    assert.ok(renderedStr.includes("Greeting Sample"));
+    // AND shows the error banner
+    assert.ok(renderedStr.includes("Address the TypePrompt errors"));
+
+    // Now resolve errors
+    el.setProjectData(validProject, "Main:Greeting");
+    renderedStr = flattenTemplate(el.render());
+    assert.ok(renderedStr.includes("Greeting Sample"));
+    assert.ok(!renderedStr.includes("Address the TypePrompt errors"));
   });
 });

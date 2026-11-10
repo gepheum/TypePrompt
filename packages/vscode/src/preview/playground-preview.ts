@@ -16,6 +16,7 @@ import { canOpenPreview } from "../editor/is-template.js";
 import {
   getInferencePageHtml,
   getPlaygroundPreviewHtml,
+  resolveTemplateIdFromMatch,
 } from "./preview-html.js";
 
 export interface PlaygroundPreviewController {
@@ -60,6 +61,18 @@ export function activatePlaygroundPreview(
       match,
       displayName,
     );
+  };
+
+  const updatePreview = (panel: WebviewPanel, doc: TextDocument): void => {
+    const match = projectStore.findByUri(doc.uri.toString());
+    const templateId = resolveTemplateIdFromMatch(match);
+    if (match?.project && templateId) {
+      void panel.webview.postMessage({
+        type: "updateProject",
+        project: match.project,
+        templateId,
+      });
+    }
   };
 
   const openPlaygroundForDocument = async (
@@ -123,6 +136,8 @@ export function activatePlaygroundPreview(
 
     if (!sameDoc || !currentPanel.webview.html) {
       renderPreviewHtml(currentPanel, doc);
+    } else {
+      updatePreview(currentPanel, doc);
     }
   };
 
@@ -152,7 +167,7 @@ export function activatePlaygroundPreview(
 
   const notifyCompilationUpdate = (): void => {
     if (currentPanel && currentDoc) {
-      renderPreviewHtml(currentPanel, currentDoc);
+      updatePreview(currentPanel, currentDoc);
     }
   };
 
@@ -197,7 +212,7 @@ export function activatePlaygroundPreview(
       }
       debounceTimer = setTimeout(() => {
         if (currentPanel && currentDoc) {
-          renderPreviewHtml(currentPanel, currentDoc);
+          updatePreview(currentPanel, currentDoc);
         }
       }, 150);
     }),

@@ -275,23 +275,24 @@ export const playgroundPreviewStyles = css`
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(11, 15, 25, 0.45);
+    background: rgba(11, 15, 25, 0.6);
+    backdrop-filter: blur(2px);
     z-index: 99999;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 1.5rem;
+    align-items: center;
     pointer-events: none;
   }
 
   .error-banner {
     pointer-events: auto;
-    background: var(--error-bg);
+    background-color: var(--bg-surface);
+    background-image: linear-gradient(var(--error-bg), var(--error-bg));
     border: 1px solid var(--error-border);
     color: var(--error-text);
     border-radius: 8px;
-    padding: 0.65rem 1.25rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    padding: 0.75rem 1.4rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;

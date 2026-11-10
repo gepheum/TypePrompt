@@ -160,8 +160,7 @@
       });
 
       // Initialize preview
-      previewEl.wireProject = mockValidProjectWithKeys;
-      previewEl.templateId = "Main:SummarizeDocument";
+      previewEl.setProjectData(mockValidProjectWithKeys, "Main:SummarizeDocument");
 
       // Initialize inference run
       let currentInferenceRun = JSON.parse(JSON.stringify(mockInferenceRun));
@@ -198,11 +197,11 @@
       selectScenario.addEventListener("change", (e) => {
         const val = e.target.value;
         if (val === "with-keys") {
-          previewEl.wireProject = mockValidProjectWithKeys;
+          previewEl.setProjectData(mockValidProjectWithKeys, "Main:SummarizeDocument");
         } else if (val === "no-keys") {
-          previewEl.wireProject = mockProjectWithoutKeys;
+          previewEl.setProjectData(mockProjectWithoutKeys, "Main:SummarizeDocument");
         } else if (val === "errors") {
-          previewEl.wireProject = mockProjectWithErrors;
+          previewEl.setProjectData(mockProjectWithErrors, "Main:SummarizeDocument");
         }
         addLog(`Changed WireProject scenario to: ${val}`);
       });

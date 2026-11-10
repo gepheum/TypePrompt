@@ -202,8 +202,22 @@ ${vscodeThemeVariablesCss}
     });
 
     const preview = document.getElementById("preview");
-    preview.wireProject = ${JSON.stringify(match?.project ?? null)};
-    preview.templateId = ${JSON.stringify(templateId)};
+    const initialProject = ${JSON.stringify(match?.project ?? null)};
+    const initialTemplateId = ${JSON.stringify(templateId)};
+    if (initialProject && initialTemplateId) {
+      preview.setProjectData(initialProject, initialTemplateId);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (
+        event.data &&
+        event.data.type === "updateProject" &&
+        event.data.project &&
+        event.data.templateId
+      ) {
+        preview.setProjectData(event.data.project, event.data.templateId);
+      }
+    });
   </script>
 </body>
 </html>`;

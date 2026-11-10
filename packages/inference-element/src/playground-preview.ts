@@ -1,6 +1,6 @@
 import type { Lsp } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
+import { state } from "lit/decorators.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
 import "./common/code.js";
@@ -22,31 +22,32 @@ export const playgroundPreviewEvents =
 export class PlaygroundPreviewElement extends LitElement {
   static override styles = [commonStyles, playgroundPreviewStyles];
 
-  @property({ type: Object })
-  wireProject?: Lsp.WireProject;
+  @state()
+  private projectData?: {
+    readonly wireProject: Lsp.WireProject;
+    readonly templateId: string;
+  };
 
-  @property({ type: String })
-  templateId?: string;
+  @state()
+  private anyErrors = false;
 
   @state()
   private selectedIndex = 0;
 
-  private getResolvedPlayground(): {
-    playground?: Lsp.WirePlayground;
-    hasErrors: boolean;
-  } {
-    if (!this.wireProject || !this.templateId) {
-      return { hasErrors: false };
+  setProjectData(wireProject: Lsp.WireProject, templateId: string): void {
+    if (this.projectData && this.projectData.templateId !== templateId) {
+      this.projectData = undefined;
     }
-
-    const { compilationResult } = this.wireProject;
-    const playground = compilationResult.playgrounds[this.templateId];
-
+    const { compilationResult } = wireProject;
+    const playground = compilationResult.playgrounds[templateId];
     const isPlaygroundValid = playground?.isValid === true;
     const hasErrors =
       Boolean(compilationResult.anyErrors) || !isPlaygroundValid;
 
-    return { playground, hasErrors };
+    this.anyErrors = hasErrors;
+    if (!hasErrors) {
+      this.projectData = { wireProject, templateId };
+    }
   }
 
   private handleCreateSecretsClick(e: Event): void {
@@ -78,7 +79,7 @@ export class PlaygroundPreviewElement extends LitElement {
   }
 
   override render(): TemplateResult {
-    if (!this.wireProject) {
+    if (!this.projectData) {
       return html`
         <div class="container">
           <div class="sticky-header">
@@ -100,13 +101,28 @@ export class PlaygroundPreviewElement extends LitElement {
           <div class="empty-state">
             <p>Loading playground preview...</p>
           </div>
+          ${
+            this.anyErrors
+              ? html`
+                  <div class="compilation-error-overlay">
+                    <div class="error-banner">
+                      <span class="error-banner-icon">⚠️</span>
+                      <span class="error-banner-text"
+                        >Address the TypePrompt errors</span
+                      >
+                    </div>
+                  </div>
+                `
+              : ""
+          }
         </div>
       `;
     }
 
-    const { playground, hasErrors } = this.getResolvedPlayground();
+    const { wireProject, templateId } = this.projectData;
+    const playground = wireProject.compilationResult.playgrounds[templateId];
 
-    const rawSecrets = this.wireProject.secrets;
+    const rawSecrets = wireProject.secrets;
     const apiKeys =
       rawSecrets && rawSecrets.kind === "success" && rawSecrets.secrets.apiKeys
         ? rawSecrets.secrets.apiKeys
@@ -117,7 +133,7 @@ export class PlaygroundPreviewElement extends LitElement {
       ? YAML.stringify(playground.model).trimEnd()
       : "";
 
-    const rawId = playground?.forTemplate ?? playground?.id ?? this.templateId;
+    const rawId = playground?.forTemplate ?? playground?.id ?? templateId;
     const displayTemplateId = rawId
       ? rawId.startsWith("Main:")
         ? rawId.slice("Main:".length)
@@ -298,7 +314,7 @@ export class PlaygroundPreviewElement extends LitElement {
 
         <!-- Error Overlay when there are compilation errors -->
         ${
-          hasErrors
+          this.anyErrors
             ? html`
                 <div class="compilation-error-overlay">
                   <div class="error-banner">
