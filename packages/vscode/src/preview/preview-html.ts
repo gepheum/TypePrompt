@@ -1,4 +1,4 @@
-import type { Inferences, Lsp } from "@typeprompt/core";
+import { DEFAULT_NAMESPACE, type Inferences, type Lsp } from "@typeprompt/core";
 import {
   formatThemeVariables,
   type PartialThemeVariables,
@@ -134,11 +134,33 @@ ${formatThemeVariables(vscodeHighContrastVariables)}
  * Builds the HTML content for the playground preview webview, mounting <playground-preview>
  * and wiring nanoevents to VSCode postMessage.
  */
+export function resolveTemplateIdFromMatch(
+  match: { project: Lsp.WireProject; relativePath: string } | null,
+): string {
+  if (!match) return "";
+  const sourceFile =
+    match.project.compilationResult.sourceFiles[match.relativePath];
+  if (sourceFile?.entity?.kind === "playground") {
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    return `${ns}:${sourceFile.entity.forTemplate}`;
+  }
+  if (sourceFile?.entity?.kind === "template") {
+    const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
+    return `${ns}:${sourceFile.entity.name}`;
+  }
+  return "";
+}
+
+/**
+ * Builds the HTML content for the playground preview webview, mounting <tp-playground-preview>
+ * and wiring nanoevents to VSCode postMessage.
+ */
 export function getPlaygroundPreviewHtml(
   scriptUri: string,
   match: { project: Lsp.WireProject; relativePath: string } | null,
   title: string,
 ): string {
+  const templateId = resolveTemplateIdFromMatch(match);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -181,7 +203,7 @@ ${vscodeThemeVariablesCss}
 
     const preview = document.getElementById("preview");
     preview.wireProject = ${JSON.stringify(match?.project ?? null)};
-    preview.relativePath = ${JSON.stringify(match?.relativePath ?? "")};
+    preview.templateId = ${JSON.stringify(templateId)};
   </script>
 </body>
 </html>`;

@@ -97,6 +97,7 @@ describe("PlaygroundPreviewElement", () => {
     };
 
     el.wireProject = fakeProject;
+    el.templateId = "Main:Greeting";
     const template = el.render();
     assert.ok(template);
 
@@ -167,6 +168,7 @@ describe("PlaygroundPreviewElement", () => {
     };
 
     el.wireProject = fakeProject;
+    el.templateId = "Main:Greeting";
     const template = el.render();
 
     function flattenTemplate(t: unknown): string {

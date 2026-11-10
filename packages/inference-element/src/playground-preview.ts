@@ -1,4 +1,4 @@
-import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
+import type { Lsp } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { createNanoEvents } from "nanoevents";
@@ -26,9 +26,6 @@ export class PlaygroundPreviewElement extends LitElement {
   wireProject?: Lsp.WireProject;
 
   @property({ type: String })
-  relativePath?: string;
-
-  @property({ type: String })
   templateId?: string;
 
   @state()
@@ -38,43 +35,12 @@ export class PlaygroundPreviewElement extends LitElement {
     playground?: Lsp.WirePlayground;
     hasErrors: boolean;
   } {
-    if (!this.wireProject) {
+    if (!this.wireProject || !this.templateId) {
       return { hasErrors: false };
     }
 
     const { compilationResult } = this.wireProject;
-    let targetTemplateId = this.templateId;
-
-    if (!targetTemplateId) {
-      const relPath = this.relativePath;
-      if (relPath) {
-        const sourceFile =
-          compilationResult.sourceFiles[relPath] ??
-          Object.values(compilationResult.sourceFiles).find(
-            (sf) =>
-              sf.path === relPath ||
-              relPath.endsWith(`/${sf.path}`) ||
-              (sf.path && relPath.endsWith(sf.path)),
-          );
-
-        if (sourceFile?.entity?.kind === "playground") {
-          const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-          targetTemplateId = `${ns}:${sourceFile.entity.forTemplate}`;
-        } else if (sourceFile?.entity?.kind === "template") {
-          const ns = sourceFile.entity.namespace ?? DEFAULT_NAMESPACE;
-          targetTemplateId = `${ns}:${sourceFile.entity.name}`;
-        }
-      }
-    }
-
-    let playground: Lsp.WirePlayground | undefined;
-    if (targetTemplateId) {
-      playground = compilationResult.playgrounds[targetTemplateId];
-    }
-
-    if (!playground) {
-      playground = Object.values(compilationResult.playgrounds)[0];
-    }
+    const playground = compilationResult.playgrounds[this.templateId];
 
     const isPlaygroundValid = playground?.isValid === true;
     const hasErrors =
