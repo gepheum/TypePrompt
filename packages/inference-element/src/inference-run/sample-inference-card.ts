@@ -1,6 +1,6 @@
 import type { Inferences } from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { registerCustomElement } from "../common/register-custom-element.js";
 import { renderRequestContext } from "../common/render-request-context.js";
 import { commonStyles } from "../common/styles.js";
@@ -21,7 +21,7 @@ export class SampleInferenceCard extends LitElement {
   @property({ type: Boolean })
   expanded: boolean = false;
 
-  @property({ type: String })
+  @state()
   activeTab: "yaml" | "json" | "text" = "yaml";
 
   private onToggleExpand(): void {
@@ -47,7 +47,6 @@ export class SampleInferenceCard extends LitElement {
     const { sampleIndex, sample, request, result } = this.inference;
     const isSuccess = result.kind === "success";
     const isPending = result.kind === "pending";
-    const cardId = `sample-${sampleIndex}`;
     const statusClass = isSuccess ? "success" : isPending ? "pending" : "error";
     const statusLabel = isSuccess
       ? "Success"
@@ -128,7 +127,6 @@ export class SampleInferenceCard extends LitElement {
           <div class="section-block">
             <div class="section-title result">Output</div>
             ${renderResultOutput(
-              cardId,
               result,
               request.outputFormat.format,
               this.activeTab,

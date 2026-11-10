@@ -149,17 +149,6 @@ export const commonStyles = css`
     word-break: break-word;
   }
 
-  .code-view {
-    padding: 0.85rem 1rem;
-    background: var(--bg-inset);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: var(--font-mono);
-    font-size: 0.84rem;
-    line-height: 1.5;
-    overflow-x: auto;
-  }
-
   .tool-badge {
     display: inline-flex;
     align-items: center;
@@ -171,6 +160,12 @@ export const commonStyles = css`
     border-radius: 4px;
     font-size: 0.76rem;
     font-family: var(--font-mono);
+  }
+
+  .tool-badge.success {
+    background: var(--success-bg, rgba(34, 197, 94, 0.15));
+    border-color: var(--success-border, rgba(34, 197, 94, 0.4));
+    color: var(--success-text, #4ade80);
   }
 
   .tools-section {

@@ -38,25 +38,12 @@ export const inferenceRunStyles = css`
     gap: 0.5rem;
   }
 
-  .badge-tag {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border);
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    color: var(--text-muted);
-  }
-
   .subtitle {
     font-size: 0.78rem;
     color: var(--text-soft);
   }
 
-  .run-metadata,
-  .timestamp {
+  .run-metadata {
     font-size: 0.76rem;
     color: var(--text-soft);
   }
@@ -455,9 +442,6 @@ export const inferenceRunStyles = css`
     overflow: hidden;
   }
 
-  .reasoning-box {
-  }
-
   .reasoning-summary {
     padding: 0.5rem 0.85rem;
     font-size: 0.8rem;
@@ -629,8 +613,7 @@ export const inferenceRunStyles = css`
     pointer-events: none;
   }
 
-  .source-file-item tp-code,
-  .source-file-item .code-view {
+  .source-file-item tp-code {
     border: none;
     border-radius: 0;
     margin: 0;

@@ -52,10 +52,7 @@ export function renderChatMessage(message: Inferences.Message): TemplateResult {
                         ${message.toolResults.map(
                           (tr) => html`
                             <div style="margin-bottom: 0.65rem;">
-                              <span
-                                class="tool-badge"
-                                style="background: var(--success-bg, rgba(34,197,94,0.15)); color: var(--success-text, #4ade80); border-color: var(--success-border, rgba(34,197,94,0.4));"
-                              >
+                              <span class="tool-badge success">
                                 ${tr.toolName} · result (${tr.callId})
                               </span>
                               <tp-code

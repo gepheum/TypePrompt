@@ -117,21 +117,12 @@ export class PlaygroundPreviewElement extends LitElement {
       ? YAML.stringify(playground.model).trimEnd()
       : "";
 
-    const rawTemplateId =
-      playground?.forTemplate ||
-      (playground?.id
-        ? playground.id.startsWith("Main:")
-          ? playground.id.slice("Main:".length)
-          : playground.id
-        : this.templateId
-          ? this.templateId.startsWith("Main:")
-            ? this.templateId.slice("Main:".length)
-            : this.templateId
-          : "Playground");
-
-    const displayTemplateId = rawTemplateId.startsWith("Main:")
-      ? rawTemplateId.slice("Main:".length)
-      : rawTemplateId;
+    const rawId = playground?.forTemplate ?? playground?.id ?? this.templateId;
+    const displayTemplateId = rawId
+      ? rawId.startsWith("Main:")
+        ? rawId.slice("Main:".length)
+        : rawId
+      : "Playground";
 
     const rawSamples = playground?.samples ?? [];
     const samples = rawSamples as readonly Lsp.WirePlaygroundSample[];

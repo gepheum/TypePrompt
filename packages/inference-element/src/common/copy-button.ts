@@ -41,9 +41,6 @@ export class CopyButtonElement extends LitElement {
   @property({ type: String })
   text = "";
 
-  @property({ attribute: false })
-  getText?: () => string;
-
   @state()
   private copied = false;
 
@@ -60,10 +57,9 @@ export class CopyButtonElement extends LitElement {
   private async copy(e: MouseEvent): Promise<void> {
     e.preventDefault();
     e.stopPropagation();
-    const content = this.getText ? this.getText() : this.text;
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(content);
+        await navigator.clipboard.writeText(this.text);
         this.copied = true;
         if (this.timeoutId) clearTimeout(this.timeoutId);
         this.timeoutId = setTimeout(() => {

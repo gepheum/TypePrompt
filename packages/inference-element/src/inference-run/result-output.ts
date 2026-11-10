@@ -6,7 +6,6 @@ import { stringifyAsJson, stringifyAsYaml } from "../common/formatters.js";
 import { renderToolCall } from "../common/render-request-context.js";
 
 export function renderResultOutput(
-  cardId: string,
   result: Inferences.InferenceResult<Inferences.Pending>,
   outputFormat: "json" | "text",
   activeTab: "yaml" | "json" | "text",
@@ -21,7 +20,6 @@ export function renderResultOutput(
   }
   if (result.kind === "success") {
     return renderSuccessResponse(
-      cardId,
       result.response,
       outputFormat,
       activeTab,
@@ -32,7 +30,6 @@ export function renderResultOutput(
 }
 
 export function renderSuccessResponse(
-  cardId: string,
   response: Inferences.InferenceResponse,
   outputFormat: "json" | "text",
   activeTab: "yaml" | "json" | "text",
@@ -150,10 +147,11 @@ export function renderErrorResponse(
                   >
                     Raw model output:
                   </div>
-                  <pre
-                    class="code-view is-active"
+                  <tp-code
+                    .code=${error.rawText}
+                    language="text"
                     style="background: var(--bg-inset); border: 1px solid var(--border);"
-                  ><code>${error.rawText}</code></pre>
+                  ></tp-code>
                 </div>
               `
             : ""

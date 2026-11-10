@@ -1,10 +1,5 @@
 import type { Inferences } from "@typeprompt/core";
-import {
-  html,
-  LitElement,
-  type PropertyValues,
-  type TemplateResult,
-} from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
@@ -26,8 +21,21 @@ export const inferenceRunEvents = createNanoEvents<InferenceRunEvents>();
 export class InferenceRunElement extends LitElement {
   static override styles = [commonStyles, inferenceRunStyles];
 
+  private _inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
+
   @property({ attribute: false })
-  inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
+  get inferenceRun(): Inferences.InferenceRun<Inferences.Pending> | undefined {
+    return this._inferenceRun;
+  }
+
+  set inferenceRun(
+    val: Inferences.InferenceRun<Inferences.Pending> | undefined,
+  ) {
+    const oldVal = this._inferenceRun;
+    this._inferenceRun = val;
+    this.handleInferenceRunChange();
+    this.requestUpdate("inferenceRun", oldVal);
+  }
 
   @state()
   private statusFilter: "all" | "success" | "error" | "pending" = "all";
@@ -74,20 +82,11 @@ export class InferenceRunElement extends LitElement {
     }
   }
 
-  override willUpdate(changedProperties: PropertyValues<this>): void {
-    if (
-      changedProperties.has("inferenceRun" satisfies keyof InferenceRunElement)
-    ) {
-      this.handleInferenceRunChange();
-    }
-  }
-
   private toggleAll(expanded: boolean): void {
-    const container = this.renderRoot.querySelector("main.inferences-section");
-    if (!container) return;
-    for (const child of container.children) {
-      if (child instanceof SampleInferenceCard) {
-        child.expanded = expanded;
+    const cards = this.renderRoot.querySelectorAll("tp-sample-inference-card");
+    for (const card of cards) {
+      if (card instanceof SampleInferenceCard) {
+        card.expanded = expanded;
       }
     }
   }
@@ -96,24 +95,9 @@ export class InferenceRunElement extends LitElement {
     filter: "all" | "success" | "error" | "pending",
   ): void {
     this.statusFilter = filter;
-    if (filter === "error") {
-      const container = this.renderRoot.querySelector(
-        "main.inferences-section",
-      );
-      if (!container) return;
-      for (const child of container.children) {
-        if (
-          child instanceof SampleInferenceCard &&
-          child.inference?.result.kind === "error"
-        ) {
-          child.expanded = true;
-        }
-      }
-    }
   }
 
   override render(): TemplateResult {
-    this.handleInferenceRunChange();
     const data = this.inferenceRun;
     if (!data) {
       return html`
@@ -335,7 +319,11 @@ export class InferenceRunElement extends LitElement {
                     <tp-sample-inference-card
                       .inference=${inf}
                       .totalSamples=${data.inferences.length}
-                      .expanded=${data.inferences.length === 1}
+                      .expanded=${
+                        data.inferences.length === 1 ||
+                        (this.statusFilter === "error" &&
+                          inf.result.kind === "error")
+                      }
                     ></tp-sample-inference-card>
                   `,
                 )
