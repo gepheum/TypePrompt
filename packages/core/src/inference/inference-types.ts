@@ -9,8 +9,13 @@ export type InferenceRun<Pending = never> = {
   /** ISO 8601 timestamp of when the inferences were run. */
   readonly isoTimestamp: string;
   readonly model: PlaygroundModel;
-  readonly templateFiles: { readonly [path: string]: string };
+  readonly sourceFiles: { readonly [path: string]: InferenceSourceFile };
   readonly inferences: ReadonlyArray<SampleInference<Pending>>;
+};
+
+export type InferenceSourceFile = {
+  readonly kind: "meta" | "namespace" | "playground" | "template" | "tool";
+  readonly content: string;
 };
 
 /** Result of running inference on a single {@link Sample} in `<samples>`. */

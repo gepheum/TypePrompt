@@ -162,8 +162,9 @@ export const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
     temperature: 0.2,
     maxTokens: 1024,
   },
-  templateFiles: {
-    "prompts/SummarizeDocument.tp": `<template name="SummarizeDocument">
+  sourceFiles: {
+    "prompts/SummarizeDocument.tp": {
+      content: `<template name="SummarizeDocument">
   <meta>
     model: gpt-4o
     temperature: 0.2
@@ -172,6 +173,8 @@ export const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
     You are an expert document summarizer.
   </system>
 </template>`,
+      kind: "template",
+    },
   },
   inferences: [
     {

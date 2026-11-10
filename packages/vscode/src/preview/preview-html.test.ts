@@ -57,7 +57,7 @@ describe("preview-html (vscode extension)", () => {
       templateId: "Main:Test",
       isoTimestamp: new Date().toISOString(),
       model: { model: "openai/gpt-4o" },
-      templateFiles: {},
+      sourceFiles: {},
       inferences: [],
     };
 

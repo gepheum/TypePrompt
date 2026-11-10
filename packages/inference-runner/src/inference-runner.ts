@@ -87,7 +87,7 @@ export async function runPlaygroundInferences(
   );
   const templatesSpec = makeTemplates(compilationResult);
   const specTemplate = templatesSpec.templates[templateId]!;
-  const templateFiles = collectTemplateFilesForTemplate(
+  const sourceFiles = collectSourceFilesForTemplate(
     compilationResult,
     templateId,
   );
@@ -117,7 +117,7 @@ export async function runPlaygroundInferences(
       model: validatedPlayground.model,
       templateId,
       isoTimestamp,
-      templateFiles,
+      sourceFiles,
       inferences: [...inferences],
     });
   };
@@ -155,7 +155,7 @@ export async function runPlaygroundInferences(
     model: validatedPlayground.model,
     templateId,
     isoTimestamp,
-    templateFiles,
+    sourceFiles,
     inferences: inferences as Inferences.SampleInference[],
   };
 
@@ -255,10 +255,10 @@ function resolveLanguageModel(
  * Collects only the `.tp` files relevant to `templateId`:
  * the `<template>`, its `<tool>` files, `<namespace>`, `<meta>`, and `<playground>` file.
  */
-function collectTemplateFilesForTemplate(
+function collectSourceFilesForTemplate(
   compilationResult: ValidCompilationResult,
   templateId: string,
-): { readonly [path: string]: string } {
+): { readonly [path: string]: Inferences.InferenceSourceFile } {
   const validTemplate = compilationResult.templates[templateId];
   if (!validTemplate) {
     throw new Error(`Template not found: ${templateId}`);
@@ -295,12 +295,13 @@ function collectTemplateFilesForTemplate(
     paths.add(validatedPlayground.playground.tag.path);
   }
 
-  const result: Record<string, string> = {};
+  const result: { [path: string]: Inferences.InferenceSourceFile } = {};
   for (const filePath of paths) {
-    const sourceFile = compilationResult.sourceFiles[filePath];
-    if (sourceFile) {
-      result[filePath] = sourceFile.content;
-    }
+    const sourceFile = compilationResult.sourceFiles[filePath]!;
+    result[filePath] = {
+      content: sourceFile.content,
+      kind: sourceFile.entity!.kind,
+    };
   }
   return result;
 }

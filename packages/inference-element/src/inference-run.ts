@@ -155,13 +155,11 @@ export class InferenceRunElement extends LitElement {
       ? data.templateId.slice("Main:".length)
       : data.templateId;
 
-    const isMetaFile = (filePath: string): boolean =>
-      filePath === "meta.tp" ||
-      filePath.endsWith("/meta.tp") ||
-      filePath.endsWith("\\meta.tp");
-
-    const sourceFiles = Object.entries(data.templateFiles)
-      .filter(([filePath]) => !isMetaFile(filePath))
+    const sourceFiles = Object.entries(data.sourceFiles ?? {})
+      .filter(([, file]) => {
+        const { kind } = file;
+        return kind === "template" || kind === "tool" || kind === "playground";
+      })
       .sort(([a], [b]) => a.localeCompare(b));
 
     const totalCount = data.inferences.length;
@@ -383,19 +381,21 @@ export class InferenceRunElement extends LitElement {
                       style="display: flex; flex-direction: column; gap: 0.65rem;"
                     >
                       ${sourceFiles.map(
-                        ([filePath, content]) => html`
+                        ([filePath, file]) => html`
                           <details class="source-file-item">
                             <summary class="source-file-header">
                               <span
                                 style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"
                                 >${filePath}</span
                               >
-                              <tp-copy-button .text=${content}></tp-copy-button>
+                              <tp-copy-button
+                                .text=${file.content}
+                              ></tp-copy-button>
                             </summary>
                             <pre
                               class="code-view is-active"
                               style="padding: 0.85rem 1rem; background: var(--bg-inset); margin: 0;"
-                            ><code>${unsafeHTML(highlightTp(content))}</code></pre>
+                            ><code>${unsafeHTML(highlightTp(file.content))}</code></pre>
                           </details>
                         `,
                       )}

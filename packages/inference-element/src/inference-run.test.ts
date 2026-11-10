@@ -35,8 +35,11 @@ describe("InferenceRunElement", () => {
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
       model: { model: "google/gemini-2.5-flash" },
-      templateFiles: {
-        "prompts/greeting.tp": '<template name="Greeting">\nHello\n</template>',
+      sourceFiles: {
+        "prompts/greeting.tp": {
+          content: '<template name="Greeting">\nHello\n</template>',
+          kind: "template",
+        },
       },
       inferences: [
         {
@@ -76,7 +79,7 @@ describe("InferenceRunElement", () => {
     assert.ok(template);
   });
 
-  it("excludes meta.tp from source files and omits playground pill", () => {
+  it("excludes meta and namespace from source files and includes template, tool, playground", () => {
     const el = new InferenceRunElement();
     const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
       kind: "playground-inference-run",
@@ -84,10 +87,27 @@ describe("InferenceRunElement", () => {
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
       model: { model: "google/gemini-2.5-flash" },
-      templateFiles: {
-        "prompts/greeting.tp": '<template name="Greeting">\nHello\n</template>',
-        "meta.tp": "<meta>model: google/gemini-2.5-flash</meta>",
-        "prompts/meta.tp": "<meta>model: google/gemini-2.5-flash</meta>",
+      sourceFiles: {
+        "prompts/greeting.tp": {
+          content: '<template name="Greeting">\nHello\n</template>',
+          kind: "template",
+        },
+        "meta.tp": {
+          content: "<meta>model: google/gemini-2.5-flash</meta>",
+          kind: "meta",
+        },
+        "prompts/meta.tp": {
+          content: "<meta>model: google/gemini-2.5-flash</meta>",
+          kind: "meta",
+        },
+        "shared.tp": {
+          content: "<namespace name='Main'/>",
+          kind: "namespace",
+        },
+        "prompts/greeting.play.tp": {
+          content: "<playground></playground>",
+          kind: "playground",
+        },
       },
       inferences: [
         {
@@ -151,8 +171,10 @@ describe("InferenceRunElement", () => {
     assert.ok(renderedStr.includes("ID: abc12345"));
     assert.ok(renderedStr.includes("tp-inference-sample"));
     assert.ok(renderedStr.includes("prompts/greeting.tp"));
+    assert.ok(renderedStr.includes("prompts/greeting.play.tp"));
     assert.ok(!renderedStr.includes(">meta.tp<"));
     assert.ok(!renderedStr.includes(">prompts/meta.tp<"));
+    assert.ok(!renderedStr.includes(">shared.tp<"));
     assert.ok(!renderedStr.includes("badge-tag"));
     assert.ok(!renderedStr.includes(">playground<"));
     assert.ok(renderedStr.includes("tp-copy-button"));
@@ -170,8 +192,11 @@ describe("InferenceRunElement", () => {
       templateId: "Main:Greeting",
       isoTimestamp: new Date().toISOString(),
       model: { model: "google/gemini-2.5-flash" },
-      templateFiles: {
-        "prompts/greeting.tp": '<template name="Greeting">\nHello\n</template>',
+      sourceFiles: {
+        "prompts/greeting.tp": {
+          content: '<template name="Greeting">\nHello\n</template>',
+          kind: "template",
+        },
       },
       inferences: [
         {

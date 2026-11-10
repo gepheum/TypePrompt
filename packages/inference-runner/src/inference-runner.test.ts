@@ -95,8 +95,8 @@ describe("inference-runner", () => {
     });
   });
 
-  describe("templateFiles filtering", () => {
-    it("includes only the template, its tools, namespace, meta, and playground files", async () => {
+  describe("sourceFiles filtering", () => {
+    it("includes only the template, its tools, namespace, meta, and playground files with kinds", async () => {
       const compilation = compileValid([
         {
           path: "prompts/_meta.tp",
@@ -198,7 +198,7 @@ describe("inference-runner", () => {
         "Billing:Refund",
         { languageModel: mockModel },
       );
-      const paths = Object.keys(inferenceRun.templateFiles).sort();
+      const paths = Object.keys(inferenceRun.sourceFiles).sort();
       assert.deepEqual(paths, [
         "prompts/_meta.tp",
         "prompts/billing/_namespace.tp",
@@ -206,6 +206,26 @@ describe("inference-runner", () => {
         "prompts/billing/refund.play.tp",
         "prompts/billing/refund.tp",
       ]);
+      assert.strictEqual(
+        inferenceRun.sourceFiles["prompts/_meta.tp"]?.kind,
+        "meta",
+      );
+      assert.strictEqual(
+        inferenceRun.sourceFiles["prompts/billing/_namespace.tp"]?.kind,
+        "namespace",
+      );
+      assert.strictEqual(
+        inferenceRun.sourceFiles["prompts/billing/lookup.tp"]?.kind,
+        "tool",
+      );
+      assert.strictEqual(
+        inferenceRun.sourceFiles["prompts/billing/refund.play.tp"]?.kind,
+        "playground",
+      );
+      assert.strictEqual(
+        inferenceRun.sourceFiles["prompts/billing/refund.tp"]?.kind,
+        "template",
+      );
     });
   });
 

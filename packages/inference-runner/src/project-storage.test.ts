@@ -19,8 +19,11 @@ function createMockInferenceRun(overrides?: {
       model: "google/gemini-2.5-flash",
       temperature: 0.2,
     },
-    templateFiles: {
-      "prompts/greeting.tp": '<template name="Greeting"></template>',
+    sourceFiles: {
+      "prompts/greeting.tp": {
+        content: '<template name="Greeting"></template>',
+        kind: "template",
+      },
     },
     inferences: [
       {
