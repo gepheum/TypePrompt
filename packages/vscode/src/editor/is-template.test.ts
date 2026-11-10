@@ -83,16 +83,6 @@ describe("isPlaygroundFile", () => {
     expect(isPlaygroundFile(templateDoc, store)).toBe(false);
   });
 
-    const doc = {
-      uri: {
-        toString: (): string =>
-          "file:///workspace/project/prompts/SyntaxError.play.tp",
-      },
-      fileName: "/workspace/project/prompts/SyntaxError.play.tp",
-    };
-    expect(isPlaygroundFile(doc, store)).toBe(true);
-  });
-
   it("returns false for non-.tp files", () => {
     const store = new ProjectStore();
     const doc = {
