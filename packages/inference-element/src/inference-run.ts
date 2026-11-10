@@ -1,5 +1,10 @@
 import type { Inferences } from "@typeprompt/core";
-import { html, LitElement, type TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { property, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { createNanoEvents } from "nanoevents";
@@ -22,20 +27,8 @@ export const inferenceRunEvents = createNanoEvents<InferenceRunEvents>();
 export class InferenceRunElement extends LitElement {
   static override styles = [commonStyles, inferenceRunStyles];
 
-  private _inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
-
   @property({ attribute: false })
-  get inferenceRun(): Inferences.InferenceRun<Inferences.Pending> | undefined {
-    return this._inferenceRun;
-  }
-  set inferenceRun(
-    val: Inferences.InferenceRun<Inferences.Pending> | undefined,
-  ) {
-    const oldVal = this._inferenceRun;
-    this._inferenceRun = val;
-    this.handleInferenceRunChange();
-    this.requestUpdate("inferenceRun", oldVal);
-  }
+  inferenceRun?: Inferences.InferenceRun<Inferences.Pending>;
 
   @state()
   private expandedCardIds = new Set<string>();
@@ -60,20 +53,20 @@ export class InferenceRunElement extends LitElement {
   }
 
   private handleInferenceRunChange(): void {
-    if (!this._inferenceRun) {
+    if (!this.inferenceRun) {
       this.progressBarStatus = "hidden";
       return;
     }
 
     // Auto-expand if there is only 1 sample
     if (
-      this._inferenceRun.inferences.length === 1 &&
+      this.inferenceRun.inferences.length === 1 &&
       this.expandedCardIds.size === 0
     ) {
       this.expandedCardIds.add("sample-0");
     }
 
-    const pendingCount = this._inferenceRun.inferences.filter(
+    const pendingCount = this.inferenceRun.inferences.filter(
       (i) => i.result.kind === "pending",
     ).length;
 
@@ -93,6 +86,12 @@ export class InferenceRunElement extends LitElement {
           }, 350);
         }, 400);
       }
+    }
+  }
+
+  override willUpdate(changedProperties: PropertyValues<this>): void {
+    if (changedProperties.has("inferenceRun" satisfies keyof InferenceRunElement)) {
+      this.handleInferenceRunChange();
     }
   }
 
@@ -155,6 +154,7 @@ export class InferenceRunElement extends LitElement {
   }
 
   override render(): TemplateResult {
+    this.handleInferenceRunChange();
     const data = this.inferenceRun;
     if (!data) {
       return html`
