@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { fileURLToPath } from "node:url";
 import { Lsp } from "@typeprompt/core";
 
 const TOKEN_VARIABLE_MAP: Record<string, string> = {
@@ -110,6 +111,7 @@ const docsSidebar = [
 ];
 
 export default defineConfig({
+  srcDir: "../../docs",
   title: "TypePrompt",
   description: "End-to-end type safety for LLM prompts.",
   lang: "en-US",
@@ -117,6 +119,9 @@ export default defineConfig({
   lastUpdated: true,
   sitemap: {
     hostname: "https://typeprompt.dev",
+  },
+  vite: {
+    publicDir: fileURLToPath(new URL("../public", import.meta.url)),
   },
   head: [
     ["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
@@ -179,7 +184,7 @@ export default defineConfig({
 
     editLink: {
       pattern:
-        "https://github.com/gepheum/typeprompt/edit/main/packages/website/:path",
+        "https://github.com/gepheum/typeprompt/edit/main/docs/:path",
       text: "Edit this page on GitHub",
     },
   },
