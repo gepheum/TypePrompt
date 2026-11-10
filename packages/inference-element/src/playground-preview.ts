@@ -40,11 +40,10 @@ export class PlaygroundPreviewElement extends LitElement {
     }
 
     const { compilationResult } = this.wireProject;
-    const playground = compilationResult.playgrounds[this.templateId];
+    const playground = compilationResult.playgrounds[this.templateId]!;
 
-    const isPlaygroundValid = playground?.isValid === true;
     const hasErrors =
-      Boolean(compilationResult.anyErrors) || !isPlaygroundValid;
+      Boolean(compilationResult.anyErrors) || !playground.isValid;
 
     return { playground, hasErrors };
   }
