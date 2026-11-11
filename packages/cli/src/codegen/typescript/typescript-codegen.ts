@@ -348,7 +348,8 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
-        const isOptional = field.type.kind === "optional" || field.omitDefault !== null;
+        const isOptional =
+          field.type.kind === "optional" || field.omitDefault !== null;
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
@@ -391,6 +392,64 @@ function writeType(
         )
         .concat(")");
     }
+  }
+}
+
+function getDefaultValueJs(
+  type: FieldType,
+  schema: Schema,
+): { readonly defaultValueJs: string; readonly mutable: boolean } {
+  if (type.kind === "optional") {
+    return { defaultValueJs: "null", mutable: false };
+  }
+  const resolved = resolveType(type, schema);
+  switch (resolved.kind) {
+    case "any":
+    case "optional":
+      return { defaultValueJs: "null", mutable: false };
+    case "array":
+      return { defaultValueJs: "[] as const", mutable: true };
+    case "boolean-literal": {
+      return {
+        defaultValueJs: resolved.value ? "true" : "false",
+        mutable: false,
+      };
+    }
+    case "interface": {
+      const fieldEntries = Object.values(resolved.fields).map((f) => {
+        return `${JSON.stringify(f.name.text)}: ${getDefaultValueJs(f.type, schema).defaultValueJs}`;
+      });
+      return {
+        defaultValueJs:
+          fieldEntries.length <= 0
+            ? "{} as const"
+            : `{ ${fieldEntries.join(", ")} } as const`,
+        mutable: true,
+      };
+    }
+    case "primitive": {
+      switch (resolved.primitive.text) {
+        case "string":
+          return { defaultValueJs: '""', mutable: false };
+        case "integer":
+        case "number":
+          return { defaultValueJs: "0", mutable: false };
+        case "boolean":
+          return { defaultValueJs: "false", mutable: false };
+        default:
+          return { defaultValueJs: "null", mutable: false };
+      }
+    }
+    case "record":
+      return { defaultValueJs: "{} as const", mutable: true };
+    case "string-literal": {
+      return {
+        defaultValueJs: JSON.stringify(resolved.value),
+        mutable: false,
+      };
+    }
+    case "union":
+      return getDefaultValueJs(resolved.firstMember, schema);
   }
 }
 
@@ -486,7 +545,7 @@ function writeZodType(
         return "z.any()";
       }
       case "array": {
-        return write(type.elementType, scope).concat(".array()");
+        return write(type.elementType, scope).concat(".array().readonly()");
       }
       case "boolean-literal": {
         return `z.literal(${type.value satisfies boolean})`;
@@ -525,8 +584,18 @@ function writeZodType(
                 }
               }
             }
-          } else if (isOptional) {
-            defaultModifier = ".nullable().default(null)";
+          } else {
+            if (isOptional) {
+              defaultModifier = ".nullable().default(null)";
+            } else {
+              const { defaultValueJs, mutable } = getDefaultValueJs(
+                field.type,
+                schema,
+              );
+              defaultModifier = mutable
+                ? `.default(() => (${defaultValueJs}))`
+                : `.default(${defaultValueJs})`;
+            }
           }
           fieldDefs.push(
             [

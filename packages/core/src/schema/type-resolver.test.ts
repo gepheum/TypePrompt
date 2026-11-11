@@ -93,6 +93,7 @@ const ARRAY: Array = {
 const UNION: Union = {
   kind: "union",
   members: [STRING_LITERAL, INACTIVE_LITERAL],
+  firstMember: STRING_LITERAL,
 };
 
 // ---------------------------------------------------------------------------

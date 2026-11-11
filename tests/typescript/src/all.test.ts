@@ -1230,6 +1230,45 @@ describe("e01 / JSON serialization & deserialization", () => {
       expect(serializedOutput.includes('"plainOpt":null')).toMatch(true);
       expect(serializedOutput.includes('"plainString":"test"')).toMatch(true);
 
+      const parsedEmptyOutput = outputFormat.schema.parse({
+        reversedText: "olleh",
+        shape: {
+          kind: "square",
+          size: 10,
+          fromJson: "a",
+          self: "b",
+          foo: "foo",
+        },
+        omitDefault: {},
+      });
+      expect(parsedEmptyOutput.omitDefault?.plainString).toMatch("");
+      expect(parsedEmptyOutput.omitDefault?.plainInt).toMatch(0);
+      expect(parsedEmptyOutput.omitDefault?.plainBool).toMatch(false);
+      expect(parsedEmptyOutput.omitDefault?.plainList).toMatch([]);
+      expect(parsedEmptyOutput.omitDefault?.plainOpt).toMatch(null);
+
+      // Verify deserialization when missing value has type union / interface / literal
+      const parsedAllOmitted = outputFormat.schema.parse({});
+      expect(parsedAllOmitted.reversedText).toMatch("");
+      expect(parsedAllOmitted.shape).toMatch({
+        kind: "square",
+        size: 0,
+        fromJson: "",
+        self: "",
+        foo: "foo",
+      });
+      expect(parsedAllOmitted.omitDefault).toMatch(null);
+
+      // When shape is passed as an empty object {}, it matches Square and all its fields default
+      const parsedWithEmptyShape = outputFormat.schema.parse({ shape: {} });
+      expect(parsedWithEmptyShape.shape).toMatch({
+        kind: "square",
+        size: 0,
+        fromJson: "",
+        self: "",
+        foo: "foo",
+      });
+
       const parsedPopulatedOutput = outputFormat.schema.parse({
         reversedText: "olleh",
         shape: {
