@@ -600,7 +600,7 @@ describe("parseSchema - comments and JSDoc", () => {
           span: { path: "schema.ts", start: 4, end: 21 },
           message:
             "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
-          suggestions: ["@"],
+          suggestions: ["@omitDefault"],
         },
       ],
     });
@@ -1346,7 +1346,7 @@ describe("parseSchema - boolean literals", () => {
           {
             span: { start: 21, end: 21 },
             message: "Expected decorator in '///' comment",
-            suggestions: [" @"],
+            suggestions: [" @omitDefault"],
           },
         ],
       });
@@ -1363,7 +1363,7 @@ describe("parseSchema - boolean literals", () => {
           {
             span: { start: 22, end: 22 },
             message: "Expected decorator in '///' comment",
-            suggestions: ["@"],
+            suggestions: ["@omitDefault"],
           },
         ],
       });

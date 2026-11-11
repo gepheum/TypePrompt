@@ -750,12 +750,16 @@ class SchemaParser<Context extends SchemaContext> {
   ): DirectiveDecorator | undefined {
     const [_, spaces = "", raw = ""] = /^\/\/\/(\s*)(.*)$/s.exec(text) ?? [];
     const content = raw.trimEnd();
+
+    const suggestAtDecorators = DECORATORS.map((d) =>
+      spaces.length <= 0 ? ` @${d}` : `@${d}`,
+    );
     if (content === "") {
       this.pushTokenizerError({
         start: end,
         end,
         message: "Expected decorator in '///' comment",
-        suggestions: [spaces === "" ? " @" : "@"],
+        suggestions: suggestAtDecorators,
       });
       return undefined;
     }
@@ -769,7 +773,7 @@ class SchemaParser<Context extends SchemaContext> {
         message:
           "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         hint: "Use '/** */' for documentation comments",
-        suggestions: [spaces === "" ? " @" : "@"],
+        suggestions: suggestAtDecorators,
       });
       return undefined;
     }
@@ -912,8 +916,10 @@ type Token = {
   readonly decorator?: DirectiveDecorator;
 };
 
+const DECORATORS = ["omitDefault"] as const;
+
 type DirectiveDecorator = {
-  readonly name: "omitDefault";
+  readonly name: (typeof DECORATORS)[number];
   readonly textStart: number;
   readonly textEnd: number;
 };

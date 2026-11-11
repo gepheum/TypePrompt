@@ -264,7 +264,7 @@ describe("getCompletionItems", () => {
     });
 
     expect(result !== null).toBe(true);
-    expect(result!.suggestions).toMatch([" @"]);
+    expect(result!.suggestions).toMatch([" @omitDefault"]);
     expect(result!.span).toMatch({ start: pos, end: pos });
   });
 
@@ -294,7 +294,7 @@ describe("getCompletionItems", () => {
     });
 
     expect(result !== null).toBe(true);
-    expect(result!.suggestions).toMatch(["@"]);
+    expect(result!.suggestions).toMatch(["@omitDefault"]);
     expect(result!.span).toMatch({ start: pos, end: pos });
   });
 
