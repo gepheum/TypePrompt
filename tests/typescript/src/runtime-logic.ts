@@ -437,12 +437,12 @@ function renderTemplate<Id extends TemplateId>(
     executeToolsImpl(calls, tools, executor);
   const outputFormat = (
     template.outputFormat === "json"
-      ? ({
+      ? {
           format: "json",
           schema: outputSchema,
           jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-        } satisfies OutputFormat<any>)
-      : ({ format: "text" } satisfies OutputFormat<any>)
+        }
+      : { format: "text" }
   ) as OutputFormat<Id>;
   const parseResponse = (c: string): Output<Id> =>
     parseResponseImpl(c, outputFormat);

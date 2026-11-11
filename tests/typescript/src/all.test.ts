@@ -326,7 +326,7 @@ describe("03-tools / ResearchQuestion", () => {
     expect(call.stringifiedInput).toMatch(/Tokyo population 2024/);
   });
 
-  const mockExecutor: ToolExecutor03.ResearchQuestion = {
+  const mockExecutor: ToolExecutor03<"Main:ResearchQuestion"> = {
     webSearch: async (input: Schema03.WebSearch.Input) => ({
       results: [
         {
@@ -1092,6 +1092,170 @@ describe("e01 / JSON serialization & deserialization", () => {
     expect(parsedOmitted.optStructList).toMatch(null);
     expect(parsedOmitted.optMatrix).toMatch(null);
     expect(parsedOmitted.optMap).toMatch(null);
+  });
+
+  it("serializes and deserializes OmitDefaultType with omitted and non-default values", () => {
+    // 1. Instance with default/omitted values
+    const omitted: SchemaE01.Shared.OmitDefaultType = {
+      plainOpt: null,
+      plainString: "test",
+      plainInt: 123,
+      plainBool: true,
+      plainList: ["item"],
+    };
+    const omittedJson = JSON.stringify(omitted);
+
+    expect(omittedJson.includes('"optString"')).toMatch(false);
+    expect(omittedJson.includes('"optInt"')).toMatch(false);
+    expect(omittedJson.includes('"optNum"')).toMatch(false);
+    expect(omittedJson.includes('"optBool"')).toMatch(false);
+    expect(omittedJson.includes('"stringList"')).toMatch(false);
+    expect(omittedJson.includes('"stringField"')).toMatch(false);
+    expect(omittedJson.includes('"intField"')).toMatch(false);
+    expect(omittedJson.includes('"numField"')).toMatch(false);
+    expect(omittedJson.includes('"boolField"')).toMatch(false);
+
+    expect(omittedJson.includes('"plainOpt":null')).toMatch(true);
+    expect(omittedJson.includes('"plainString":"test"')).toMatch(true);
+    expect(omittedJson.includes('"plainInt":123')).toMatch(true);
+    expect(omittedJson.includes('"plainBool":true')).toMatch(true);
+    expect(omittedJson.includes('"plainList":["item"]')).toMatch(true);
+
+    const parsedOmitted: SchemaE01.Shared.OmitDefaultType =
+      JSON.parse(omittedJson);
+    expect(parsedOmitted.plainOpt).toMatch(null);
+    expect(parsedOmitted.plainString).toMatch("test");
+    expect(parsedOmitted.plainInt).toMatch(123);
+    expect(parsedOmitted.plainBool).toMatch(true);
+    expect(parsedOmitted.plainList).toMatch(["item"]);
+
+    // 2. Instance with non-default values
+    const populated: SchemaE01.Shared.OmitDefaultType = {
+      optString: "hello",
+      optInt: 42,
+      optNum: 3.14,
+      optBool: true,
+      stringList: ["a", "b"],
+      stringField: "world",
+      intField: 7,
+      numField: 2.5,
+      boolField: true,
+      plainOpt: "plain",
+      plainString: "test3",
+      plainInt: 789,
+      plainBool: true,
+      plainList: ["x"],
+    };
+    const populatedJson = JSON.stringify(populated);
+    expect(populatedJson.includes('"optString":"hello"')).toMatch(true);
+    expect(populatedJson.includes('"optInt":42')).toMatch(true);
+    expect(populatedJson.includes('"optNum":3.14')).toMatch(true);
+    expect(populatedJson.includes('"optBool":true')).toMatch(true);
+    expect(populatedJson.includes('"stringList":["a","b"]')).toMatch(true);
+    expect(populatedJson.includes('"stringField":"world"')).toMatch(true);
+    expect(populatedJson.includes('"intField":7')).toMatch(true);
+    expect(populatedJson.includes('"numField":2.5')).toMatch(true);
+    expect(populatedJson.includes('"boolField":true')).toMatch(true);
+    expect(populatedJson.includes('"plainOpt":"plain"')).toMatch(true);
+    expect(populatedJson.includes('"plainString":"test3"')).toMatch(true);
+    expect(populatedJson.includes('"plainInt":789')).toMatch(true);
+    expect(populatedJson.includes('"plainBool":true')).toMatch(true);
+    expect(populatedJson.includes('"plainList":["x"]')).toMatch(true);
+
+    const parsedPopulated: SchemaE01.Shared.OmitDefaultType =
+      JSON.parse(populatedJson);
+    expect(parsedPopulated).toMatch(populated);
+
+    // 3. Schema validation and serialization with explicit default values
+    const explicitDefaults: SchemaE01.Shared.OmitDefaultType = {
+      optString: null,
+      optInt: null,
+      optNum: null,
+      optBool: null,
+      stringList: [],
+      stringField: "",
+      intField: 0,
+      numField: 0,
+      boolField: false,
+      plainOpt: null,
+      plainString: "test",
+      plainInt: 123,
+      plainBool: true,
+      plainList: ["item"],
+    };
+
+    const prompt = pe01.myTemplate.render({
+      text: "hello",
+      omitDefault: explicitDefaults,
+    });
+    const serializedRendered = JSON.stringify(prompt.templateInput.omitDefault);
+
+    expect(serializedRendered.includes('"optString"')).toMatch(false);
+    expect(serializedRendered.includes('"optInt"')).toMatch(false);
+    expect(serializedRendered.includes('"optNum"')).toMatch(false);
+    expect(serializedRendered.includes('"optBool"')).toMatch(false);
+    expect(serializedRendered.includes('"stringList"')).toMatch(false);
+    expect(serializedRendered.includes('"stringField"')).toMatch(false);
+    expect(serializedRendered.includes('"intField"')).toMatch(false);
+    expect(serializedRendered.includes('"numField"')).toMatch(false);
+    expect(serializedRendered.includes('"boolField"')).toMatch(false);
+
+    expect(serializedRendered.includes('"plainOpt":null')).toMatch(true);
+    expect(serializedRendered.includes('"plainString":"test"')).toMatch(true);
+    expect(serializedRendered.includes('"plainInt":123')).toMatch(true);
+    expect(serializedRendered.includes('"plainBool":true')).toMatch(true);
+    expect(serializedRendered.includes('"plainList":["item"]')).toMatch(true);
+
+    // 4. Output schema validation and serialization
+    const outputFormat = prompt.outputFormat;
+    if (outputFormat.format === "json") {
+      const parsedOutput = outputFormat.schema.parse({
+        reversedText: "olleh",
+        shape: {
+          kind: "square",
+          size: 10,
+          fromJson: "a",
+          self: "b",
+          foo: "foo",
+        },
+        omitDefault: explicitDefaults,
+      });
+      const serializedOutput = JSON.stringify(parsedOutput.omitDefault);
+      expect(serializedOutput.includes('"optString"')).toMatch(false);
+      expect(serializedOutput.includes('"stringField"')).toMatch(false);
+      expect(serializedOutput.includes('"intField"')).toMatch(false);
+      expect(serializedOutput.includes('"numField"')).toMatch(false);
+      expect(serializedOutput.includes('"boolField"')).toMatch(false);
+      expect(serializedOutput.includes('"stringList"')).toMatch(false);
+      expect(serializedOutput.includes('"plainOpt":null')).toMatch(true);
+      expect(serializedOutput.includes('"plainString":"test"')).toMatch(true);
+
+      const parsedPopulatedOutput = outputFormat.schema.parse({
+        reversedText: "olleh",
+        shape: {
+          kind: "square",
+          size: 10,
+          fromJson: "a",
+          self: "b",
+          foo: "foo",
+        },
+        omitDefault: populated,
+      });
+      const serializedPopOutput = JSON.stringify(
+        parsedPopulatedOutput.omitDefault,
+      );
+      expect(serializedPopOutput.includes('"optString":"hello"')).toMatch(true);
+      expect(serializedPopOutput.includes('"stringField":"world"')).toMatch(
+        true,
+      );
+      expect(serializedPopOutput.includes('"intField":7')).toMatch(true);
+      expect(serializedPopOutput.includes('"numField":2.5')).toMatch(true);
+      expect(serializedPopOutput.includes('"boolField":true')).toMatch(true);
+      expect(serializedPopOutput.includes('"stringList":["a","b"]')).toMatch(
+        true,
+      );
+      expect(serializedPopOutput.includes('"plainOpt":"plain"')).toMatch(true);
+    }
   });
 });
 

@@ -1,6 +1,7 @@
 import {
   capitalize,
   makeTemplates,
+  resolveType,
   runtimeTypesSchema,
   type Spec,
   uncapitalize,
@@ -347,11 +348,12 @@ function writeType(
       }
       let result = "{\n";
       for (const [fieldName, field] of fields) {
+        const isOptional = field.type.kind === "optional" || field.omitDefault !== null;
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
           fieldName,
-          field.type.kind === "optional" ? "?" : "",
+          isOptional ? "?" : "",
           ": ",
           writeType(field.type, options),
           ";\n",
@@ -494,12 +496,44 @@ function writeZodType(
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
           const { type, isOptional } = unwrapOptional(field.type);
+          let defaultModifier = "";
+          if (field.omitDefault !== null) {
+            const resolved = resolveType(field.type, schema);
+            if (isOptional) {
+              defaultModifier =
+                ".nullable().default(null).transform((val) => val ?? undefined).optional()";
+            } else if (resolved.kind === "array") {
+              defaultModifier =
+                ".default([]).transform((val) => (val.length <= 0 ? undefined : val)).optional()";
+            } else if (resolved.kind === "primitive") {
+              switch (resolved.primitive.text) {
+                case "string": {
+                  defaultModifier =
+                    '.default("").transform((val) => val || undefined).optional()';
+                  break;
+                }
+                case "integer":
+                case "number": {
+                  defaultModifier =
+                    ".default(0).transform((val) => (val === 0 ? undefined : val)).optional()";
+                  break;
+                }
+                case "boolean": {
+                  defaultModifier =
+                    ".default(false).transform((val) => val || undefined).optional()";
+                  break;
+                }
+              }
+            }
+          } else if (isOptional) {
+            defaultModifier = ".nullable().default(null)";
+          }
           fieldDefs.push(
             [
               field.name.text,
               ": ",
               write(type, scope),
-              isOptional ? ".nullable().default(null)" : "",
+              defaultModifier,
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",
             ].join(""),
@@ -544,14 +578,11 @@ function writeZodType(
         const members = schema.unionToMembers.get(type)!;
         if (members.kind === "interfaces") {
           return [
-            "z.discriminatedUnion(",
-            JSON.stringify(members.discriminator).concat(","),
-            "[",
+            "z.union([",
             ...Object.values(type.members).map((m) =>
               write(m, scope).concat(","),
             ),
-            "],",
-            ")",
+            "])",
           ].join("\n");
         } else {
           return [

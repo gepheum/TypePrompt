@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\""
   },
   "overrides": {

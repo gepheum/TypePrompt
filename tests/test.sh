@@ -67,6 +67,7 @@ if [ "$FAST" != true ]; then
   # Run TypeScript unit tests
   cd typescript
   npm i
+  npm run typecheck
   npm run test
   cd ..
 
