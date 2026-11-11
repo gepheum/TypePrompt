@@ -1,5 +1,6 @@
 import type {
   FieldType,
+  ResolvedFieldType,
   Schema,
   SyntheticType,
   TypeNameView,
@@ -9,6 +10,11 @@ import { resolveType } from "./type-resolver.js";
 /**
  * Recursively reorders object properties to match the field declaration order
  * in `schemaType`.
+ *
+ * In 'user' mode, fields annotated with `@omitDefault` are omitted if they
+ * hold the default value for their type: null for optional, [] for array,
+ * 0/false/"" for primitive.
+ * In 'assistant' mode, every field is output.
  */
 export function normalizeSchemaValue(
   value: unknown,
@@ -16,6 +22,7 @@ export function normalizeSchemaValue(
     readonly type: FieldType | SyntheticType | TypeNameView;
     readonly schema: Schema;
   },
+  mode: "user" | "assistant",
 ): unknown {
   if (value === null || value === undefined) {
     return value;
@@ -29,20 +36,28 @@ export function normalizeSchemaValue(
       return value;
     }
     case "optional": {
-      return normalizeSchemaValue(value, {
-        type: resolved.innerType,
-        schema: schemaType.schema,
-      });
+      return normalizeSchemaValue(
+        value,
+        {
+          type: resolved.innerType,
+          schema: schemaType.schema,
+        },
+        mode,
+      );
     }
     case "array": {
       if (!Array.isArray(value)) {
         return value;
       }
       return value.map((item) =>
-        normalizeSchemaValue(item, {
-          type: resolved.elementType,
-          schema: schemaType.schema,
-        }),
+        normalizeSchemaValue(
+          item,
+          {
+            type: resolved.elementType,
+            schema: schemaType.schema,
+          },
+          mode,
+        ),
       );
     }
     case "record": {
@@ -52,10 +67,14 @@ export function normalizeSchemaValue(
       return Object.fromEntries(
         Object.entries(value as Record<string, unknown>).map(([k, v]) => [
           k,
-          normalizeSchemaValue(v, {
-            type: resolved.valueType,
-            schema: schemaType.schema,
-          }),
+          normalizeSchemaValue(
+            v,
+            {
+              type: resolved.valueType,
+              schema: schemaType.schema,
+            },
+            mode,
+          ),
         ]),
       );
     }
@@ -67,17 +86,24 @@ export function normalizeSchemaValue(
       const result: Record<string, unknown> = {};
       for (const field of Object.values(resolved.fields)) {
         const fieldName = field.name.text;
-        if (
-          Object.prototype.hasOwnProperty.call(obj, fieldName) &&
-          obj[fieldName] !== undefined
-        ) {
-          result[fieldName] = normalizeSchemaValue(obj[fieldName], {
+        const normalizedValue = normalizeSchemaValue(
+          obj[fieldName] ?? null,
+          {
             type: field.type,
             schema: schemaType.schema,
-          });
-        } else if (field.type.kind === "optional") {
-          result[fieldName] = null;
+          },
+          mode,
+        );
+
+        if (mode === "user" && field.omitDefault !== null) {
+          const fieldType = resolveType(field.type, schemaType.schema);
+          const isDefaultValue = isDefaultValueForFieldType(
+            normalizedValue,
+            fieldType,
+          );
+          if (isDefaultValue) continue;
         }
+        result[fieldName] = normalizedValue;
       }
       return result;
     }
@@ -98,10 +124,41 @@ export function normalizeSchemaValue(
       if (!member) {
         return value;
       }
-      return normalizeSchemaValue(value, {
-        type: member.resolved,
-        schema: schemaType.schema,
-      });
+      return normalizeSchemaValue(
+        value,
+        {
+          type: member.resolved,
+          schema: schemaType.schema,
+        },
+        mode,
+      );
     }
+  }
+}
+
+function isDefaultValueForFieldType(
+  value: unknown,
+  resolvedType: ResolvedFieldType,
+): boolean {
+  switch (resolvedType.kind) {
+    case "optional":
+      return value === null;
+    case "array":
+      return Array.isArray(value) && value.length <= 0;
+    case "primitive": {
+      switch (resolvedType.primitive.text) {
+        case "boolean":
+          return value === false;
+        case "integer":
+        case "number":
+          return value === 0;
+        case "string":
+          return value === "";
+        default:
+          return false;
+      }
+    }
+    default:
+      return false;
   }
 }

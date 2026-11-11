@@ -175,14 +175,22 @@ function makeExamples(
     if (context.variantCase) {
       (rawInputValue as Record<string, unknown>).variant = context.variantCase;
     }
-    const inputValue = normalizeSchemaValue(rawInputValue, {
-      type: inputType,
-      schema: context.schema,
-    });
-    const outputValue = normalizeSchemaValue(example.output, {
-      type: outputType,
-      schema: context.schema,
-    });
+    const inputValue = normalizeSchemaValue(
+      rawInputValue,
+      {
+        type: inputType,
+        schema: context.schema,
+      },
+      "user",
+    );
+    const outputValue = normalizeSchemaValue(
+      example.output,
+      {
+        type: outputType,
+        schema: context.schema,
+      },
+      "assistant",
+    );
 
     return {
       input: inputValue,
@@ -193,14 +201,22 @@ function makeExamples(
             const tool = context.tools[tc.tool]!.tool;
             const toolInputType = tool.inputType.valueType;
             const toolOutputType = tool.outputType.valueType;
-            const inputVal = normalizeSchemaValue(tc.input, {
-              type: toolInputType,
-              schema: tool.schema,
-            });
-            const outputVal = normalizeSchemaValue(tc.output, {
-              type: toolOutputType,
-              schema: tool.schema,
-            });
+            const inputVal = normalizeSchemaValue(
+              tc.input,
+              {
+                type: toolInputType,
+                schema: tool.schema,
+              },
+              "assistant",
+            );
+            const outputVal = normalizeSchemaValue(
+              tc.output,
+              {
+                type: toolOutputType,
+                schema: tool.schema,
+              },
+              "user",
+            );
             return {
               callId: tc.callId,
               toolId: context.namespace.concat(":", tc.tool),

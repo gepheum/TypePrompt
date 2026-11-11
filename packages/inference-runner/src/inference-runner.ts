@@ -485,10 +485,14 @@ async function executeSampleInference(
     response: {
       kind: "output",
       rawText,
-      output: normalizeSchemaValue(unwrapJsonValue(parsedAst), {
-        type: outputType,
-        schema: validTemplate.schema,
-      }),
+      output: normalizeSchemaValue(
+        unwrapJsonValue(parsedAst),
+        {
+          type: outputType,
+          schema: validTemplate.schema,
+        },
+        "assistant",
+      ),
     },
     ...(reasoning ? { reasoning } : {}),
     telemetry,

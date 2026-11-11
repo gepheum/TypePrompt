@@ -27,24 +27,33 @@ export function renderInferenceRequest(
     const toolEntry = validTemplate.tools[toolName];
     if (!toolEntry) return value;
     const { tool } = toolEntry;
-    return normalizeSchemaValue(value, {
-      type: tool.inputType.valueType,
-      schema: tool.schema,
-    });
+    return normalizeSchemaValue(
+      value,
+      {
+        type: tool.inputType.valueType,
+        schema: tool.schema,
+      },
+      "assistant",
+    );
   };
   const normalizeToolOutput = (toolName: string, value: unknown): unknown => {
     const toolEntry = validTemplate.tools[toolName];
     if (!toolEntry) return value;
     const { tool } = toolEntry;
-    return normalizeSchemaValue(value, {
-      type: tool.outputType.valueType,
-      schema: tool.schema,
-    });
+    return normalizeSchemaValue(
+      value,
+      {
+        type: tool.outputType.valueType,
+        schema: tool.schema,
+      },
+      "user",
+    );
   };
 
   const normalizedSampleInput = normalizeSchemaValue(
     sample.input,
     inputSchemaType,
+    "user",
   );
   const mainContent = resolveTemplateContent(
     specTemplate.contents,
@@ -89,6 +98,7 @@ export function renderInferenceRequest(
     const normalizedExampleInput = normalizeSchemaValue(
       example.input,
       inputSchemaType,
+      "user",
     );
     const exampleContent = resolveTemplateContent(
       specTemplate.contents,
@@ -128,7 +138,11 @@ export function renderInferenceRequest(
 
     messages.push({
       role: "assistant",
-      output: normalizeSchemaValue(example.output, outputSchemaType),
+      output: normalizeSchemaValue(
+        example.output,
+        outputSchemaType,
+        "assistant",
+      ),
     });
   }
 
@@ -137,6 +151,7 @@ export function renderInferenceRequest(
     const normalizedHistoryInput = normalizeSchemaValue(
       historyEntry.input,
       inputSchemaType,
+      "user",
     );
     const historyContent = resolveTemplateContent(
       specTemplate.contents,
@@ -176,7 +191,11 @@ export function renderInferenceRequest(
 
     messages.push({
       role: "assistant",
-      output: normalizeSchemaValue(historyEntry.output, outputSchemaType),
+      output: normalizeSchemaValue(
+        historyEntry.output,
+        outputSchemaType,
+        "assistant",
+      ),
     });
   }
 
