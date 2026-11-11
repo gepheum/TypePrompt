@@ -586,6 +586,48 @@ describe("validateTemplateBody - format='csv' and format='tsv'", () => {
       definitionLinks: [{ definition: { text: "rows" } }],
     });
   });
+
+  it("rejects format='csv' and format='tsv' on array of interfaces when a field has @omitDefault", () => {
+    const csvArgs = {
+      bodyXml: '<system><insert val="input.rows" format="csv"/></system>',
+      schemaSource: `
+        type Row = {
+          name: string;
+          /// @omitDefault
+          count?: integer;
+        };
+        type Input = { rows: Row[]; };
+      `,
+    };
+    expect(testValidateBody(csvArgs)).toMatch({
+      errors: [
+        {
+          message: "'csv' can only be used with tabular types",
+        },
+      ],
+      definitionLinks: [{ definition: { text: "rows" } }],
+    });
+
+    const tsvArgs = {
+      bodyXml: '<system><insert val="input.rows" format="tsv"/></system>',
+      schemaSource: `
+        type Row = {
+          /// @omitDefault
+          name: string;
+          count: integer;
+        };
+        type Input = { rows: Row[]; };
+      `,
+    };
+    expect(testValidateBody(tsvArgs)).toMatch({
+      errors: [
+        {
+          message: "'tsv' can only be used with tabular types",
+        },
+      ],
+      definitionLinks: [{ definition: { text: "rows" } }],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

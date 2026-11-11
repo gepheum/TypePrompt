@@ -1,6 +1,6 @@
 import { expect } from "buckwheat";
 import { describe, it } from "mocha";
-import { formatTemplateFile } from "./formatter.js";
+import { formatDirectivesInSchema, formatTemplateFile } from "./formatter.js";
 
 describe("formatTemplateFile", () => {
   it("formats a standard template with schema, tools, system, and user tags", async () => {
@@ -332,5 +332,239 @@ type Output = string;
     // Verify idempotency: formatting again produces the exact same result
     const reformatting = await formatTemplateFile(formatted);
     expect(reformatting).toBe(formatted);
+  });
+
+  it("formats directive comments in schema sections properly", async () => {
+    const unformatted = `<template name="Directives">
+<schema>
+interface Input {
+  retries: integer; ///@omitDefault
+
+  timeout: integer;
+  ///   @omitDefault   
+
+  debug?: boolean;
+}
+</schema>
+<system>You are a helper.</system>
+<user>Run</user>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="Directives">
+  <schema>
+    interface Input {
+      retries: integer;
+      /// @omitDefault
+      timeout: integer;
+      /// @omitDefault
+      debug?: boolean;
+    }
+  </schema>
+  <system>
+    You are a helper.
+  </system>
+  <user>
+    Run
+  </user>
+</template>
+`,
+    );
+
+    // Verify idempotency
+    const reformatting = await formatTemplateFile(formatted);
+    expect(reformatting).toBe(formatted);
+  });
+
+  it("preserves empty lines before directive comments between fields in schema", async () => {
+    const unformatted = `<template name="DirectivesSpacing">
+<schema>
+interface Input {
+  retries: integer;
+
+  /// @omitDefault
+  timeout: integer;
+}
+</schema>
+<system>You are a helper.</system>
+<user>Run</user>
+</template>`;
+
+    const formatted = await formatTemplateFile(unformatted);
+    expect(formatted).toBe(
+      `<template name="DirectivesSpacing">
+  <schema>
+    interface Input {
+      retries: integer;
+
+      /// @omitDefault
+      timeout: integer;
+    }
+  </schema>
+  <system>
+    You are a helper.
+  </system>
+  <user>
+    Run
+  </user>
+</template>
+`,
+    );
+
+    // Verify idempotency
+    const reformatting = await formatTemplateFile(formatted);
+    expect(reformatting).toBe(formatted);
+  });
+});
+
+describe("formatDirectivesInSchema", () => {
+  describe("line breaking before '///'", () => {
+    it("breaks a line before '///' when non-whitespace chars precede it", () => {
+      const input =
+        "interface Foo {\n  foo: string; /// @omitDefault\n  bar: string;\n}";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "interface Foo {\n  foo: string;\n/// @omitDefault\n  bar: string;\n}",
+      );
+    });
+
+    it("breaks a line when '///' is attached without space", () => {
+      const input =
+        "interface Foo {\n  foo: string;/// @omitDefault\n  bar: string;\n}";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "interface Foo {\n  foo: string;\n/// @omitDefault\n  bar: string;\n}",
+      );
+    });
+
+    it("breaks a line when '///' follows an open brace", () => {
+      const input = "interface Foo { /// @omitDefault\n  bar: string;\n}";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "interface Foo {\n/// @omitDefault\n  bar: string;\n}",
+      );
+    });
+
+    it("does not break a line when '///' is already on its own line", () => {
+      const input = "interface Foo {\n  /// @omitDefault\n  bar: string;\n}";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "interface Foo {\n  /// @omitDefault\n  bar: string;\n}",
+      );
+    });
+
+    it("breaks multiple '///' comments on the same line into separate lines", () => {
+      const input = "foo: string; /// @first /// @second\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "foo: string;\n/// @first\n/// @second\nbar: string;",
+      );
+    });
+  });
+
+  describe("decorator spacing formatting", () => {
+    it("formats '///@decorator' with one space after '///'", () => {
+      const input = "///@omitDefault\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("formats multiple spaces between '///' and '@'", () => {
+      const input = "///   @omitDefault\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("removes space between '@' and decorator name", () => {
+      const input = "/// @  omitDefault\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("removes trailing whitespace after decorator name", () => {
+      const input = "/// @omitDefault   \nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("handles combinations of messy spacing", () => {
+      const input = "  ///   @   omitDefault   \nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("  /// @omitDefault\nbar: string;");
+    });
+  });
+
+  describe("empty line removal after '///'", () => {
+    it("removes a single empty line immediately after '///'", () => {
+      const input = "/// @omitDefault\n\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("removes multiple empty lines (including whitespace-only) after '///'", () => {
+      const input = "/// @omitDefault\n\n   \n\t\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\nbar: string;");
+    });
+
+    it("preserves empty lines before '///' to separate fields", () => {
+      const input =
+        "interface Foo {\n  foo: string;\n\n  /// @omitDefault\n  bar: string;\n}";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe(
+        "interface Foo {\n  foo: string;\n\n  /// @omitDefault\n  bar: string;\n}",
+      );
+    });
+
+    it("removes empty lines after each directive when multiple are present", () => {
+      const input = "/// @first\n\n/// @second\n\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @first\n/// @second\nbar: string;");
+    });
+
+    it("removes trailing empty lines at end of file after '///'", () => {
+      const input = "/// @omitDefault\n\n   \n";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/// @omitDefault\n");
+    });
+  });
+
+  describe("preservation of strings and other comments", () => {
+    it("does not modify '///' inside double-quoted string literals", () => {
+      const input = 'type S = "/// @omitDefault";';
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe('type S = "/// @omitDefault";');
+    });
+
+    it("does not modify '///' inside single-quoted string literals", () => {
+      const input = "type S = '/// @omitDefault';";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("type S = '/// @omitDefault';");
+    });
+
+    it("does not modify '///' inside template literals", () => {
+      const input = "type S = `/// @omitDefault`;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("type S = `/// @omitDefault`;");
+    });
+
+    it("does not modify '///' inside block comments", () => {
+      const input = "/*\n  /// @omitDefault\n*/\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("/*\n  /// @omitDefault\n*/\nbar: string;");
+    });
+
+    it("does not modify regular '//' comments", () => {
+      const input = "foo: string; // normal comment\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("foo: string; // normal comment\nbar: string;");
+    });
+
+    it("does not modify regular '//' comments containing '///' (e.g. '// ///')", () => {
+      const input = "foo: string; // /// not a directive\nbar: string;";
+      const output = formatDirectivesInSchema(input);
+      expect(output).toBe("foo: string; // /// not a directive\nbar: string;");
+    });
   });
 });

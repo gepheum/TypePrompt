@@ -186,7 +186,10 @@ async function formatTypescriptAndYaml(
   const formattedList = await Promise.all(
     targetSlices.map(async (slice) => {
       const { placeholder, content } = slice;
-      const unescaped = content.text;
+      let unescaped = content.text;
+      if (slice.content.format === "typescript") {
+        unescaped = formatDirectivesInSchema(unescaped);
+      }
       const formatted = await prettierFormat(unescaped, {
         parser: slice.content.format,
         printWidth: 86 - slice.depth * 2,
@@ -204,6 +207,93 @@ async function formatTypescriptAndYaml(
     });
   }
   return content;
+}
+
+/**
+ * Formats directive comments (e.g. `/// @omitDefault`) in a schema section
+ * before calling Prettier.
+ *
+ * Rules:
+ * 1. If a "///" is not on its own line (non-whitespace characters precede it on the
+ *    line), break a line before it.
+ * 2. Remove empty lines (lines containing only whitespace) immediately following a
+ *    "///" line.
+ * 3. Ensure decorators are formatted as "/// @{decoratorName}" with one space after
+ *    "///", no space after "@", and no space after the decorator name.
+ */
+export function formatDirectivesInSchema(text: string): string {
+  // Matches (1) double-quote strings, (2) single-quote strings, (3) template literals,
+  // (4) block comments, and (5) single-line comments.
+  // Matching strings and block comments first ensures that any "///" inside them
+  // is ignored and not mistaken for a directive comment.
+  const tokenRegex =
+    /("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(`(?:\\.|[^`\\])*`)|(\/\*[\s\S]*?\*\/)|(\/\/[^\r\n]*)/g;
+
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    const matchStart = match.index;
+    const matchText = match[0];
+
+    // If it is not a line comment starting with "///", skip it.
+    if (match[5] === undefined || !matchText.startsWith("///")) {
+      continue;
+    }
+
+    const preComment = text.slice(lastIndex, matchStart);
+    lastIndex = tokenRegex.lastIndex;
+
+    // Check if there are non-whitespace chars before this "///" on the line.
+    const combinedBefore = result + preComment;
+    const lastNl = combinedBefore.lastIndexOf("\n");
+    const lineBefore =
+      lastNl === -1 ? combinedBefore : combinedBefore.slice(lastNl + 1);
+
+    if (/\S/.test(lineBefore)) {
+      result = (result + preComment).trimEnd() + "\n";
+    } else {
+      result += preComment;
+    }
+
+    // Split any multiple "///" on the same line (e.g. "/// @first /// @second").
+    const parts = matchText.split(/(?=\/\/\/)/);
+    const formattedParts = parts.map((part) => {
+      const decoratorMatch = part.match(
+        /^\/\/\/[ \t]*@[ \t]*([A-Za-z0-9_]+)[ \t]*$/,
+      );
+      if (decoratorMatch) {
+        return `/// @${decoratorMatch[1]}`;
+      }
+      return part.trimEnd();
+    });
+
+    result += formattedParts.join("\n");
+
+    // Consume the newline immediately following the single line comment if present.
+    let afterIndex = lastIndex;
+    if (text[afterIndex] === "\r" && text[afterIndex + 1] === "\n") {
+      result += "\r\n";
+      afterIndex += 2;
+    } else if (text[afterIndex] === "\n") {
+      result += "\n";
+      afterIndex += 1;
+    }
+
+    // Remove empty lines (lines only containing whitespace) immediately following this "///".
+    const rest = text.slice(afterIndex);
+    const emptyLinesMatch = /^([ \t]*\r?\n)+/.exec(rest);
+    if (emptyLinesMatch) {
+      afterIndex += emptyLinesMatch[0].length;
+    }
+
+    tokenRegex.lastIndex = afterIndex;
+    lastIndex = afterIndex;
+  }
+
+  result += text.slice(lastIndex);
+  return result;
 }
 
 async function formatWhitespaceSensitiveXml(
