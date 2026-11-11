@@ -95,11 +95,11 @@ export type Field = {
   readonly type: FieldType;
   readonly doc: string;
   /**
-   * If true, tells JSON serializers to omit this field from the generated
-   * object if the field has a default value. If the field is optional, the
-   * default value is null.
+   * If non-null, tells JSON serializers to omit this field from the generated object
+   * if the field has a default value. If the field is optional, the default value is
+   * null.
    */
-  readonly omitDefault: boolean;
+  readonly omitDefault: Span | null;
 };
 
 export type PrimitiveType = {

@@ -1168,12 +1168,12 @@ describe("parseSchema - boolean literals", () => {
               fields: {
                 timeout: {
                   name: { text: "timeout" },
-                  omitDefault: true,
+                  omitDefault: { start: 25, end: 37 },
                   type: { kind: "primitive", primitive: { text: "integer" } },
                 },
                 retries: {
                   name: { text: "retries" },
-                  omitDefault: false,
+                  omitDefault: null,
                   type: { kind: "primitive", primitive: { text: "integer" } },
                 },
               },
@@ -1199,7 +1199,7 @@ describe("parseSchema - boolean literals", () => {
               fields: {
                 timeout: {
                   name: { text: "timeout" },
-                  omitDefault: true,
+                  omitDefault: { start: 25, end: 37 },
                 },
               },
             },
@@ -1224,7 +1224,7 @@ describe("parseSchema - boolean literals", () => {
               fields: {
                 timeout: {
                   name: { text: "timeout" },
-                  omitDefault: true,
+                  omitDefault: { start: 24, end: 36 },
                 },
               },
             },
@@ -1247,7 +1247,7 @@ describe("parseSchema - boolean literals", () => {
               fields: {
                 nickname: {
                   name: { text: "nickname" },
-                  omitDefault: true,
+                  omitDefault: { start: 20, end: 32 },
                   type: {
                     kind: "optional",
                     innerType: {
@@ -1288,11 +1288,11 @@ describe("parseSchema - boolean literals", () => {
               fields: {
                 fieldA: {
                   doc: "doc before",
-                  omitDefault: true,
+                  omitDefault: { start: 46, end: 58 },
                 },
                 fieldB: {
                   doc: "doc after",
-                  omitDefault: true,
+                  omitDefault: { start: 83, end: 95 },
                 },
               },
             },

@@ -23,7 +23,7 @@ import type {
 } from "./schema-types.js";
 import type { NameDependencies } from "./schema-utils.js";
 import { getNameDependencies } from "./schema-utils.js";
-import { resolveType } from "./type-resolver.js";
+import { resolveMaybeInvalidType, resolveType } from "./type-resolver.js";
 import { computeUnionMembers } from "./unions.js";
 
 export function validateSchema<Context extends SchemaContext>(
@@ -191,6 +191,21 @@ function validateType(
             });
           }
           validate(field.type);
+          if (field.omitDefault) {
+            const resolved = resolveMaybeInvalidType(field.type, schema);
+            if (
+              resolved &&
+              resolved.kind !== "optional" &&
+              resolved.kind !== "array" &&
+              resolved.kind !== "primitive"
+            ) {
+              errors.push({
+                span: field.omitDefault,
+                message:
+                  "'@omitDefault' can only be applied to optional, array, or primitive fields",
+              });
+            }
+          }
         }
         return null;
       }

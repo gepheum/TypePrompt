@@ -252,7 +252,7 @@ class SchemaParser<Context extends SchemaContext> {
 
   private tryParseField(): Field | null {
     let jsdoc: Token | undefined;
-    let omitDefault = false;
+    let omitDefault: Span | null = null;
 
     while (true) {
       const token = this.peekToken();
@@ -267,16 +267,17 @@ class SchemaParser<Context extends SchemaContext> {
         this.moveNext();
       } else if (token.kind === "directive") {
         if (token.decorator?.name === "omitDefault") {
+          const decoratorSpan = this.textRangeToSpan(
+            token.decorator.textStart,
+            token.decorator.textEnd,
+          );
           if (omitDefault) {
             this.parserErrors.push({
-              span: this.textRangeToSpan(
-                token.decorator.textStart,
-                token.decorator.textEnd,
-              ),
+              span: decoratorSpan,
               message: "Duplicate decorator '@omitDefault'",
             });
           }
-          omitDefault = true;
+          omitDefault = decoratorSpan;
         }
         this.moveNext();
       } else {

@@ -102,7 +102,7 @@ export function typesAreEquivalent(a: FieldType, b: FieldType): boolean {
         if (
           aFieldName !== bFieldName ||
           aField.name.text !== bField.name.text ||
-          aField.omitDefault !== bField.omitDefault ||
+          Boolean(aField.omitDefault) !== Boolean(bField.omitDefault) ||
           !typesAreEquivalent(aField.type, bField.type)
         ) {
           return false;

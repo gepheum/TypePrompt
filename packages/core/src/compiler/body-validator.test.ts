@@ -788,7 +788,7 @@ describe("validateTemplateBody - with ExpressionContext (hasValContext=true)", (
           name: { text: "name", start: 0, end: 4, path: "" },
           type: prim("string"),
           doc: "",
-          omitDefault: false,
+          omitDefault: null,
         },
       },
     };

@@ -1262,4 +1262,215 @@ describe("validateSchema - definition links", () => {
       ],
     });
   });
+
+  describe("@omitDefault decorator validation", () => {
+    it("allows @omitDefault on primitive fields", () => {
+      const result = validateSchema(
+        parseDeclarations(
+          `type Output = {
+            /// @omitDefault
+            str: string;
+            /// @omitDefault
+            num: number;
+            /// @omitDefault
+            int: integer;
+            /// @omitDefault
+            bool: boolean;
+          };`,
+          "namespace",
+        ),
+        null,
+      );
+      expect([result]).toMatch([{ kind: "success" }]);
+    });
+
+    it("allows @omitDefault on array fields", () => {
+      const result = validateSchema(
+        parseDeclarations(
+          `type Output = {
+            /// @omitDefault
+            tags: string[];
+            /// @omitDefault
+            matrix: number[][];
+          };`,
+          "namespace",
+        ),
+        null,
+      );
+      expect([result]).toMatch([{ kind: "success" }]);
+    });
+
+    it("allows @omitDefault on optional fields", () => {
+      const result = validateSchema(
+        parseDeclarations(
+          `type Status = "active" | "inactive";
+          type Output = {
+            /// @omitDefault
+            optStr?: string;
+            /// @omitDefault
+            optUnion?: Status;
+            /// @omitDefault
+            optNested?: { a: string };
+          };`,
+          "namespace",
+        ),
+        null,
+      );
+      expect([result]).toMatch([{ kind: "success" }]);
+    });
+
+    it("allows @omitDefault on type aliases resolving to primitive or array", () => {
+      const result = validateSchema(
+        parseDeclarations(
+          `type Text = string;
+          type List = number[];
+          type Output = {
+            /// @omitDefault
+            name: Text;
+            /// @omitDefault
+            items: List;
+          };`,
+          "namespace",
+        ),
+        null,
+      );
+      expect([result]).toMatch([{ kind: "success" }]);
+    });
+
+    it("rejects @omitDefault on string literal fields", () => {
+      const source = `type Output = {
+        /// @omitDefault
+        kind: "fixed";
+      };`;
+      const result = validateSchema(
+        parseDeclarations(source, "namespace"),
+        null,
+      );
+      const start = source.indexOf("@omitDefault");
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start, end: start + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects @omitDefault on boolean literal fields", () => {
+      const source = `type Output = {
+        /// @omitDefault
+        enabled: true;
+      };`;
+      const result = validateSchema(
+        parseDeclarations(source, "namespace"),
+        null,
+      );
+      const start = source.indexOf("@omitDefault");
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start, end: start + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects @omitDefault on required interface fields", () => {
+      const source = `type Child = { a: string };
+      type Output = {
+        /// @omitDefault
+        inline: { a: string };
+        /// @omitDefault
+        named: Child;
+      };`;
+      const result = validateSchema(
+        parseDeclarations(source, "namespace"),
+        null,
+      );
+      const first = source.indexOf("@omitDefault");
+      const second = source.indexOf("@omitDefault", first + 1);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start: first, end: first + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+          {
+            span: { start: second, end: second + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects @omitDefault on required union fields", () => {
+      const source = `type Status = "active" | "inactive";
+      type Output = {
+        /// @omitDefault
+        status: Status;
+        /// @omitDefault
+        inlineStatus: "yes" | "no";
+      };`;
+      const result = validateSchema(
+        parseDeclarations(source, "namespace"),
+        null,
+      );
+      const first = source.indexOf("@omitDefault");
+      const second = source.indexOf("@omitDefault", first + 1);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start: first, end: first + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+          {
+            span: { start: second, end: second + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects @omitDefault on record and any fields", () => {
+      const source = `type Output = {
+        /// @omitDefault
+        map: { [k: string]: number };
+        /// @omitDefault
+        data: any;
+      };`;
+      const result = validateSchema(
+        parseDeclarations(source, "namespace"),
+        null,
+      );
+      const first = source.indexOf("@omitDefault");
+      const second = source.indexOf("@omitDefault", first + 1);
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start: first, end: first + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+          {
+            span: { start: second, end: second + "@omitDefault".length },
+            message:
+              "'@omitDefault' can only be applied to optional, array, or primitive fields",
+          },
+        ],
+      });
+    });
+  });
 });

@@ -40,9 +40,19 @@ export function resolveType(
 export function resolveMaybeInvalidType(
   type: UnionMemberType,
   schema: SchemaView,
-): ResolvedType | Literal | null {
+): ResolvedType | Literal | null;
+
+export function resolveMaybeInvalidType(
+  type: FieldType,
+  schema: SchemaView,
+): ResolvedFieldType | null;
+
+export function resolveMaybeInvalidType(
+  type: FieldType | UnionMemberType,
+  schema: SchemaView,
+): ResolvedFieldType | null {
   const seenNames = new Set<string>();
-  return doResolveType(type, schema, seenNames) as ResolvedType | null;
+  return doResolveType(type, schema, seenNames) as ResolvedFieldType | null;
 }
 
 function doResolveType(
