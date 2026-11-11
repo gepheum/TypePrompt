@@ -23,6 +23,7 @@ import {
   toScreamCase,
   toSnakeCase,
 } from "@typeprompt/core";
+import { resolveTypeWithOmitDefault } from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -430,7 +431,7 @@ function writeSchema(schema: Schema, options: WriteSchemaOptions): string {
         defineType(field.type);
       }
     } else {
-      const firstMember = type.members[0]!;
+      const firstMember = type.firstMember;
       defineType(firstMember);
     }
 
@@ -759,23 +760,52 @@ function writeMethodImplsForInterface(
   lines.push(
     `inline JsonNode ToJsonNode(const ${typeCName}& input) {`,
     ` using ::${rootNamespace}::ToJsonNode;`,
-    " return internal::MakeJsonObject({",
+    " std::vector<std::pair<std::string_view, JsonNode>> entries;",
+    ` entries.reserve(${fields.length});`,
   );
   for (const field of fields) {
     const rawFieldName = field.name.text;
-    const type = resolveType(field.type, schema);
-    let value: string;
-    if (isLiteralType(type)) {
-      value = JSON.stringify(type.value satisfies string | boolean);
+    const cFieldName = toCName(toSnakeCase(rawFieldName));
+    if (field.omitDefault !== null) {
+      const type = resolveTypeWithOmitDefault(field.type, schema);
+      const value = `input.${cFieldName}`;
+      if (type.kind === "optional") {
+        lines.push(` if (${value}.has_value()) {`);
+      } else if (type.kind === "array") {
+        lines.push(` if (!${value}.empty()) {`);
+      } else if (type.kind === "primitive") {
+        if (type.primitive.text === "string") {
+          lines.push(` if (!${value}.empty()) {`);
+        } else if (type.primitive.text === "integer") {
+          lines.push(` if (${value} != 0) {`);
+        } else if (type.primitive.text === "number") {
+          lines.push(` if (${value} != 0.0) {`);
+        } else if (type.primitive.text === "boolean") {
+          lines.push(` if (${value}) {`);
+        } else {
+          const _: never = type.primitive.text;
+        }
+        lines.push(
+          `  entries.push_back({"${rawFieldName}", ToJsonNode(${value})});`,
+          " }",
+        );
+      }
     } else {
-      const cFieldName = toCName(toSnakeCase(rawFieldName));
-      value = `input.${cFieldName}`;
+      const type = resolveType(field.type, schema);
+      const isLiteral = isLiteralType(type);
+      const value = isLiteral
+        ? JSON.stringify(type.value satisfies string | boolean)
+        : `input.${cFieldName}`;
+      lines.push(
+        ` entries.push_back({"${rawFieldName}", ToJsonNode(${value})});`,
+      );
     }
-    lines.push(`  {"${rawFieldName}", ToJsonNode(${value})},`);
   }
   lines.push(
-    " });", // return MakeJsonObject({...});
+    " return internal::MakeJsonObject(std::move(entries));",
     "}", // ToJsonNode
+  );
+  lines.push(
     "",
     `inline Status ParseValue(const JsonNode& node, const JsonPath& context, ${typeCName}& out) {`,
     " internal::StructParser parser(&node, context);",
@@ -788,7 +818,12 @@ function writeMethodImplsForInterface(
   for (const field of parseFields) {
     const rawFieldName = field.name.text;
     const cFieldName = toCName(toSnakeCase(rawFieldName));
-    const method = field.type.kind === "optional" ? "ParseOptional" : "Parse";
+    const resolved = resolveType(field.type, schema);
+    const hasDefault =
+      field.type.kind === "optional" ||
+      resolved.kind === "primitive" ||
+      resolved.kind === "array";
+    const method = hasDefault ? "ParseOptional" : "Parse";
     lines.push(` parser.${method}("${rawFieldName}", out.${cFieldName});`);
   }
   lines.push(

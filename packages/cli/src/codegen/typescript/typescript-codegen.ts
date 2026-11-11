@@ -30,10 +30,10 @@ import {
   NAME_SCOPES,
   unwrapNullable as unwrapOptional,
 } from "@typeprompt/core/schema/schema-utils.js";
+import { resolveTypeWithOmitDefault } from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
-import { resolveTypeWithOmitDefault } from "@typeprompt/core/schema/type-resolver.js";
 
 export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,

@@ -52,7 +52,7 @@ export function resolveTypeWithOmitDefault(
   ) {
     return resolved;
   } else {
-    throw new Error(JSON.stringify(type));
+    throw new Error(type.kind);
   }
 }
 

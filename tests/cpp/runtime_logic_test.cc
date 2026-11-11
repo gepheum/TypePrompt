@@ -2834,10 +2834,9 @@ void TestUserDefinedStructs() {
   ASSERT_TRUE(parsed_page_input->audience == Input_Audience::kDeveloper);
 
   // 4. Error reporting with JsonPath context
-  auto missing_field_err =
-      typeprompt_02::ParseJson<Benchmark>("{\"score\": 10.0, \"unit\": \"s\"}");
-  ASSERT_FALSE(missing_field_err.ok());
-  ASSERT_EQ(missing_field_err.error().message, "Missing key: name at json");
+  auto defaulted_field = typeprompt_02::ParseJson<Benchmark>("{\"score\": 10.0, \"unit\": \"s\"}");
+  ASSERT_TRUE(defaulted_field.ok());
+  ASSERT_EQ(defaulted_field->name, "");
 
   auto field_type_err = typeprompt_02::ParseJson<Benchmark>(
       "{\"name\": \"test\", \"score\": \"not_a_num\", \"unit\": \"s\"}");
@@ -3133,10 +3132,10 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
   ASSERT_FALSE(err_s_payload_type.ok());
   ASSERT_EQ(err_s_payload_type.error().message, "Expected number at json.z");
 
-  auto err_payload_missing_field =
+  auto parsed_payload_missing_field =
       typeprompt_e01::ParseJson<EnumWithCommonFields>("{\"success\": true, \"x\": 1, \"y\": 2.0}");
-  ASSERT_FALSE(err_payload_missing_field.ok());
-  ASSERT_EQ(err_payload_missing_field.error().message, "Missing key: z at json");
+  ASSERT_TRUE(parsed_payload_missing_field.ok());
+  ASSERT_EQ(parsed_payload_missing_field->as_success().z, 0);
 }
 
 void Test01Basics_Translate() {
@@ -3494,17 +3493,18 @@ void TestMakeToolExecutor() {
   ASSERT_TRUE(resp_bad_json.stringified_output.find("Failed to parse tool input") !=
               std::string::npos);
 
-  // Schema validation failure (missing required 'query' field)
-  typeprompt_03::ToolCall call_missing_field{
-      .call_id = "c_missing",
+  // Schema validation failure (invalid type for 'query' field)
+  typeprompt_03::ToolCall call_bad_field_type{
+      .call_id = "c_bad_type",
       .tool_name = "webSearch",
-      .stringified_input = "{}",
+      .stringified_input = "{\"query\": 123}",
   };
-  auto resp_missing = executor->Execute(call_missing_field);
-  ASSERT_EQ(resp_missing.call_id, "c_missing");
-  ASSERT_TRUE(resp_missing.error.has_value());
-  ASSERT_TRUE(resp_missing.error->find("Missing key: query") != std::string::npos);
-  ASSERT_TRUE(resp_missing.stringified_output.find("Missing key: query") != std::string::npos);
+  auto resp_bad_type = executor->Execute(call_bad_field_type);
+  ASSERT_EQ(resp_bad_type.call_id, "c_bad_type");
+  ASSERT_TRUE(resp_bad_type.error.has_value());
+  ASSERT_TRUE(resp_bad_type.error->find("Expected string at json.query") != std::string::npos);
+  ASSERT_TRUE(resp_bad_type.stringified_output.find("Expected string at json.query") !=
+              std::string::npos);
 
   // Unknown tool error
   typeprompt_03::ToolCall call3{
@@ -4235,6 +4235,127 @@ void TestE01_JsonSerialization() {
   ASSERT_FALSE(parsed_omitted.opt_struct_list.has_value());
   ASSERT_FALSE(parsed_omitted.opt_matrix.has_value());
   ASSERT_FALSE(parsed_omitted.opt_map.has_value());
+
+  // testOmitDefaultSerializationAndDeserialization
+  OmitDefaultType omitted_od = *OmitDefaultType::whole{
+      .bool_field = false,
+      .int_field = 0,
+      .num_field = 0.0,
+      .opt_bool = std::nullopt,
+      .opt_int = std::nullopt,
+      .opt_num = std::nullopt,
+      .opt_string = std::nullopt,
+      .plain_bool = true,
+      .plain_int = 123,
+      .plain_list = std::vector<std::string>{"item"},
+      .plain_opt = std::nullopt,
+      .plain_string = "test",
+      .string_field = "",
+      .string_list = std::vector<std::string>{},
+  };
+  std::string json_omitted_od = typeprompt_e01::ToJson(omitted_od);
+
+  ASSERT_TRUE(json_omitted_od.find("\"optString\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"optInt\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"optNum\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"optBool\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"stringList\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"stringField\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"intField\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"numField\"") == std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"boolField\"") == std::string::npos);
+
+  ASSERT_TRUE(json_omitted_od.find("\"plainOpt\":null") != std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"plainString\":\"test\"") != std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"plainInt\":123") != std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"plainBool\":true") != std::string::npos);
+  ASSERT_TRUE(json_omitted_od.find("\"plainList\":[\"item\"]") != std::string::npos);
+
+  auto parsed_omitted_od = typeprompt_e01::ParseJson<OmitDefaultType>(json_omitted_od);
+  ASSERT_TRUE(parsed_omitted_od.ok());
+  ASSERT_FALSE(parsed_omitted_od->opt_string.has_value());
+  ASSERT_FALSE(parsed_omitted_od->opt_int.has_value());
+  ASSERT_FALSE(parsed_omitted_od->opt_num.has_value());
+  ASSERT_FALSE(parsed_omitted_od->opt_bool.has_value());
+  ASSERT_TRUE(parsed_omitted_od->string_list.empty());
+  ASSERT_EQ(parsed_omitted_od->string_field, "");
+  ASSERT_EQ(parsed_omitted_od->int_field, 0);
+  ASSERT_EQ(parsed_omitted_od->num_field, 0.0);
+  ASSERT_FALSE(parsed_omitted_od->bool_field);
+  ASSERT_FALSE(parsed_omitted_od->plain_opt.has_value());
+  ASSERT_EQ(parsed_omitted_od->plain_string, "test");
+  ASSERT_EQ(parsed_omitted_od->plain_int, 123);
+  ASSERT_TRUE(parsed_omitted_od->plain_bool);
+  ASSERT_EQ(parsed_omitted_od->plain_list.size(), 1);
+  ASSERT_EQ(parsed_omitted_od->plain_list[0], "item");
+
+  auto parsed_empty_od = typeprompt_e01::ParseJson<OmitDefaultType>("{}");
+  ASSERT_TRUE(parsed_empty_od.ok());
+  ASSERT_FALSE(parsed_empty_od->opt_string.has_value());
+  ASSERT_FALSE(parsed_empty_od->opt_int.has_value());
+  ASSERT_FALSE(parsed_empty_od->opt_num.has_value());
+  ASSERT_FALSE(parsed_empty_od->opt_bool.has_value());
+  ASSERT_TRUE(parsed_empty_od->string_list.empty());
+  ASSERT_EQ(parsed_empty_od->string_field, "");
+  ASSERT_EQ(parsed_empty_od->int_field, 0);
+  ASSERT_EQ(parsed_empty_od->num_field, 0.0);
+  ASSERT_FALSE(parsed_empty_od->bool_field);
+  ASSERT_FALSE(parsed_empty_od->plain_opt.has_value());
+  ASSERT_EQ(parsed_empty_od->plain_string, "");
+  ASSERT_EQ(parsed_empty_od->plain_int, 0);
+  ASSERT_FALSE(parsed_empty_od->plain_bool);
+  ASSERT_TRUE(parsed_empty_od->plain_list.empty());
+
+  // Non-default values
+  OmitDefaultType populated_od = *OmitDefaultType::whole{
+      .bool_field = true,
+      .int_field = 7,
+      .num_field = 2.5,
+      .opt_bool = true,
+      .opt_int = 42,
+      .opt_num = 3.14,
+      .opt_string = "hello",
+      .plain_bool = true,
+      .plain_int = 789,
+      .plain_list = std::vector<std::string>{"x"},
+      .plain_opt = "plain",
+      .plain_string = "test3",
+      .string_field = "world",
+      .string_list = std::vector<std::string>{"a", "b"},
+  };
+  std::string json_populated_od = typeprompt_e01::ToJson(populated_od);
+  ASSERT_TRUE(json_populated_od.find("\"optString\":\"hello\"") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"optInt\":42") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"optNum\":3.14") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"optBool\":true") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"stringList\":[\"a\",\"b\"]") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"stringField\":\"world\"") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"intField\":7") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"numField\":2.5") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"boolField\":true") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"plainOpt\":\"plain\"") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"plainString\":\"test3\"") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"plainInt\":789") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"plainBool\":true") != std::string::npos);
+  ASSERT_TRUE(json_populated_od.find("\"plainList\":[\"x\"]") != std::string::npos);
+
+  auto parsed_populated_od = typeprompt_e01::ParseJson<OmitDefaultType>(json_populated_od);
+  ASSERT_TRUE(parsed_populated_od.ok());
+  ASSERT_EQ(*parsed_populated_od->opt_string, "hello");
+  ASSERT_EQ(*parsed_populated_od->opt_int, 42);
+  ASSERT_EQ(*parsed_populated_od->opt_num, 3.14);
+  ASSERT_TRUE(*parsed_populated_od->opt_bool);
+  ASSERT_EQ(parsed_populated_od->string_list.size(), 2);
+  ASSERT_EQ(parsed_populated_od->string_field, "world");
+  ASSERT_EQ(parsed_populated_od->int_field, 7);
+  ASSERT_EQ(parsed_populated_od->num_field, 2.5);
+  ASSERT_TRUE(parsed_populated_od->bool_field);
+  ASSERT_EQ(*parsed_populated_od->plain_opt, "plain");
+  ASSERT_EQ(parsed_populated_od->plain_string, "test3");
+  ASSERT_EQ(parsed_populated_od->plain_int, 789);
+  ASSERT_TRUE(parsed_populated_od->plain_bool);
+  ASSERT_EQ(parsed_populated_od->plain_list.size(), 1);
+  ASSERT_EQ(parsed_populated_od->plain_list[0], "x");
 }
 
 void TestTemplateOverrider() {
