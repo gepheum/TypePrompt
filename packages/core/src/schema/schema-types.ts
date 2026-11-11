@@ -145,6 +145,7 @@ export type Union = {
   readonly kind: "union";
   /** Guaranteed to contain 2+ elements. */
   readonly members: readonly UnionMemberType[];
+  readonly firstMember: UnionMemberType;
 };
 
 export type UnionMemberType = Exclude<Type, Union> | Literal;

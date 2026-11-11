@@ -91,6 +91,7 @@ export function resolveExpressionType<HasValContext extends boolean>(
             type: {
               kind: "union",
               members: members.discriminants.values,
+              firstMember: members.discriminants.values[0]!,
             },
             definitionLinks,
           };

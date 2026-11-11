@@ -105,7 +105,7 @@ export function getNameDependencies(
       case "union": {
         if (mode === "cycle-detection") {
           // Only look at the first member.
-          return collect(type.members[0]!, scope);
+          return collect(type.firstMember, scope);
         }
         for (const member of Object.values(type.members)) {
           collect(member, scope);

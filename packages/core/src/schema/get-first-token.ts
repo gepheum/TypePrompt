@@ -23,6 +23,6 @@ export function getFirstToken(type: FieldType): Span {
     case "type-name":
       return type.name;
     case "union":
-      return getFirstToken(type.members[0]!);
+      return getFirstToken(type.firstMember);
   }
 }

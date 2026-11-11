@@ -977,29 +977,19 @@ function getDocText(jsdoc: Token | undefined): string {
 }
 
 function joinTypes(a: Type | Literal, b: Type | Literal): Union {
-  if (a.kind === "union") {
-    if (b.kind === "union") {
-      return {
-        kind: "union",
-        members: [...a.members, ...b.members],
-      };
-    } else {
-      return {
-        kind: "union",
-        members: [...a.members, b],
-      };
-    }
-  } else if (b.kind === "union") {
-    return {
-      kind: "union",
-      members: [a, ...b.members],
-    };
-  } else {
-    return {
-      kind: "union",
-      members: [a, b],
-    };
-  }
+  const members =
+    a.kind === "union"
+      ? b.kind === "union"
+        ? [...a.members, ...b.members]
+        : [...a.members, b]
+      : b.kind === "union"
+        ? [a, ...b.members]
+        : [a, b];
+  return {
+    kind: "union",
+    members,
+    firstMember: members[0]!,
+  };
 }
 
 function makeLiteralTypeNotAllowedError(type: Literal): InternalError {

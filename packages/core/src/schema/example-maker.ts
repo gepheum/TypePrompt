@@ -51,7 +51,7 @@ function generateValue(
       return {};
     }
     case "union": {
-      const firstMember = type.members[0]!;
+      const firstMember = type.firstMember;
       return generateValue(firstMember, schema);
     }
     case "synthetic-union": {
