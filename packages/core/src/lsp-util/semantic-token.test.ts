@@ -152,6 +152,42 @@ describe("tokenize", () => {
     ]);
   });
 
+  it("tokenizes schema directives (/// @omitDefault) with comment and schema-directive kinds", () => {
+    const input = [
+      "<schema>",
+      "  interface User {",
+      "    /// @omitDefault",
+      "    name: string;",
+      "  }",
+      "</schema>",
+    ].join("\n");
+
+    const tokens = tokenize(input);
+
+    const directiveToken = tokens.find((t) => t.kind === "schema-directive");
+    expect(directiveToken).toMatch({
+      kind: "schema-directive",
+      span: {
+        start: input.indexOf("@omitDefault"),
+        end: input.indexOf("@omitDefault") + "@omitDefault".length,
+      },
+    });
+
+    const slashToken = tokens.find(
+      (t) =>
+        t.kind === "comment" &&
+        t.span.start === input.indexOf("///") &&
+        t.span.end === input.indexOf("///") + 3,
+    );
+    expect(slashToken).toMatch({
+      kind: "comment",
+      span: {
+        start: input.indexOf("///"),
+        end: input.indexOf("///") + 3,
+      },
+    });
+  });
+
   it("tokenizes YAML inside <template><meta>", () => {
     const input = [
       "<template name='demo'>",

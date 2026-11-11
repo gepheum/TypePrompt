@@ -241,6 +241,7 @@ export const SEMANTIC_TOKEN_TYPES = [
   "number",
   "type",
   "property",
+  "decorator",
 ] as const;
 
 const SEMANTIC_TOKEN_MODIFIERS: string[] = [];
@@ -263,6 +264,8 @@ function tokenKindToType(
     case "boolean":
     case "schema-keyword":
       return "keyword";
+    case "schema-directive":
+      return "decorator";
     case "xml-tag":
       return "type";
     case "xml-attribute":

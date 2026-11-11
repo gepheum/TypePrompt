@@ -93,6 +93,7 @@ const vscodeLightVariables: PartialThemeVariables = {
   "--tp-hl-xml-tag": "#0284c7",
   "--tp-hl-xml-attribute": "#7c3aed",
   "--tp-hl-schema-keyword": "#db2777",
+  "--tp-hl-schema-directive": "#7c3aed",
 };
 
 const vscodeHighContrastVariables: PartialThemeVariables = {

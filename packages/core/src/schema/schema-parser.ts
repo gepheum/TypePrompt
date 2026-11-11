@@ -829,7 +829,7 @@ class SchemaParser<Context extends SchemaContext> {
               span: this.textRangeToSpan(token.textStart, token.textStart + 3),
             });
             result.push({
-              kind: "schema-keyword",
+              kind: "schema-directive",
               span: this.textRangeToSpan(
                 token.decorator.textStart,
                 token.decorator.textEnd,

@@ -14,8 +14,8 @@ describe("theme contract", () => {
     assert.strictEqual(THEME_VARIABLES.length, 29);
   });
 
-  it("defines 21 optional theme variables", () => {
-    assert.strictEqual(OPTIONAL_THEME_VARIABLES.length, 21);
+  it("defines 22 optional theme variables", () => {
+    assert.strictEqual(OPTIONAL_THEME_VARIABLES.length, 22);
   });
 
   it("combines required and optional into ALL_THEME_VARIABLES without duplicates", () => {

@@ -78,6 +78,10 @@ div[class*="language-"] {
   color: var(--shiki-token-keyword);
 }
 
+.vp-code .tp-schema-directive {
+  color: var(--shiki-token-function);
+}
+
 .vp-code .tp-string {
   color: var(--shiki-token-string);
 }

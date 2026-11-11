@@ -83,6 +83,7 @@ export const OPTIONAL_THEME_VARIABLES = [
   "--tp-hl-xml-tag",
   "--tp-hl-xml-attribute",
   "--tp-hl-schema-keyword",
+  "--tp-hl-schema-directive",
 ] as const;
 
 /**

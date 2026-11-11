@@ -12,6 +12,7 @@ export type SemanticToken = {
     | "xml-tag"
     | "xml-attribute"
     | "schema-keyword" // "type" or "interface"
+    | "schema-directive" // @decorator
     | "string" // string literal
     | "boolean" // boolean literal
     | "number"; // number literal

@@ -1599,7 +1599,7 @@ describe("tokenizeSchema", () => {
     ]);
   });
 
-  it("identifies /// as comment and @omitDefault as schema-keyword", () => {
+  it("identifies /// as comment and @omitDefault as schema-directive", () => {
     const input = "interface Foo {\n  /// @omitDefault\n  bar: string;\n}";
     const tokens = tokenizeSchema(textNode(input));
     const slashToken = tokens.find(
@@ -1613,12 +1613,12 @@ describe("tokenizeSchema", () => {
       (t) => t.span.start === 22 && t.span.end === 34,
     );
     expect(decoratorToken).toMatch({
-      kind: "schema-keyword",
+      kind: "schema-directive",
       span: { start: 22, end: 34 },
     });
   });
 
-  it("identifies ///@omitDefault without space as comment and schema-keyword", () => {
+  it("identifies ///@omitDefault without space as comment and schema-directive", () => {
     const input = "interface Foo {\n  ///@omitDefault\n  bar: string;\n}";
     const tokens = tokenizeSchema(textNode(input));
     const slashToken = tokens.find(
@@ -1632,12 +1632,12 @@ describe("tokenizeSchema", () => {
       (t) => t.span.start === 21 && t.span.end === 33,
     );
     expect(decoratorToken).toMatch({
-      kind: "schema-keyword",
+      kind: "schema-directive",
       span: { start: 21, end: 33 },
     });
   });
 
-  it("identifies /// @omitDefault with trailing spaces as comment and schema-keyword", () => {
+  it("identifies /// @omitDefault with trailing spaces as comment and schema-directive", () => {
     const input = "interface Foo {\n  /// @omitDefault   \n  bar: string;\n}";
     const tokens = tokenizeSchema(textNode(input));
     const slashToken = tokens.find(
@@ -1651,7 +1651,7 @@ describe("tokenizeSchema", () => {
       (t) => t.span.start === 22 && t.span.end === 34,
     );
     expect(decoratorToken).toMatch({
-      kind: "schema-keyword",
+      kind: "schema-directive",
       span: { start: 22, end: 34 },
     });
   });

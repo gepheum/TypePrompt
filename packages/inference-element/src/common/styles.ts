@@ -99,6 +99,7 @@ export const commonStyles = css`
     --hl-xml-tag: var(--tp-hl-xml-tag, var(--border-focus));
     --hl-xml-attribute: var(--tp-hl-xml-attribute, #c084fc);
     --hl-schema-keyword: var(--tp-hl-schema-keyword, #f472b6);
+    --hl-schema-directive: var(--tp-hl-schema-directive, #c084fc);
 
     display: block;
     font-family: var(--font-sans);
@@ -140,6 +141,9 @@ export const commonStyles = css`
   .hl-schema-keyword {
     color: var(--hl-schema-keyword);
     font-weight: 600;
+  }
+  .hl-schema-directive {
+    color: var(--hl-schema-directive);
   }
 
   pre {

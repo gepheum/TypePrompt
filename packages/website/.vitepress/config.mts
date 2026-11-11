@@ -6,6 +6,7 @@ const TOKEN_VARIABLE_MAP: Record<string, string> = {
   "xml-tag": "--shiki-token-tag",
   "xml-attribute": "--shiki-token-attribute",
   "schema-keyword": "--shiki-token-keyword",
+  "schema-directive": "--shiki-token-function",
   string: "--shiki-token-string",
   number: "--shiki-token-constant",
   boolean: "--shiki-token-constant",

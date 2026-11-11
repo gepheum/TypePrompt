@@ -23,6 +23,7 @@ const tokenTags: Record<Lsp.SemanticToken["kind"], Tag> = {
   "xml-tag": t.tagName,
   "xml-attribute": t.attributeName,
   "schema-keyword": t.keyword,
+  "schema-directive": t.annotation,
   string: t.string,
   boolean: t.bool,
   number: t.number,
