@@ -1470,8 +1470,8 @@ describe("SourceFileParseResult hash", () => {
   });
 });
 
-describe("compile - schema warnings", () => {
-  it("collects schema warnings from a template", () => {
+describe("compile - schema errors with invalid triple-slash comments", () => {
+  it("collects schema errors from a template", () => {
     const result = compile(
       {
         "prompts/Translate.tp": `
@@ -1489,9 +1489,10 @@ describe("compile - schema warnings", () => {
       { cache: null, patchBase: null },
     );
 
-    expect(result.warnings["prompts/Translate.tp"]).toMatch([
+    expect(result.finalErrors["prompts/Translate.tp"]).toMatch([
       {
-        message: "Use '/** */' instead of '///' for documentation comments",
+        message:
+          "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         span: {
           path: "prompts/Translate.tp",
         },
@@ -1499,7 +1500,7 @@ describe("compile - schema warnings", () => {
     ]);
   });
 
-  it("collects schema warnings from a tool", () => {
+  it("collects schema errors from a tool", () => {
     const result = compile(
       {
         "tools/search.tp": `
@@ -1516,9 +1517,10 @@ describe("compile - schema warnings", () => {
       { cache: null, patchBase: null },
     );
 
-    expect(result.warnings["tools/search.tp"]).toMatch([
+    expect(result.finalErrors["tools/search.tp"]).toMatch([
       {
-        message: "Use '/** */' instead of '///' for documentation comments",
+        message:
+          "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         span: {
           path: "tools/search.tp",
         },
@@ -1526,7 +1528,7 @@ describe("compile - schema warnings", () => {
     ]);
   });
 
-  it("collects schema warnings from a namespace", () => {
+  it("collects schema errors from a namespace", () => {
     const result = compile(
       {
         "shared.tp": `
@@ -1539,9 +1541,10 @@ describe("compile - schema warnings", () => {
       { cache: null, patchBase: null },
     );
 
-    expect(result.warnings["shared.tp"]).toMatch([
+    expect(result.finalErrors["shared.tp"]).toMatch([
       {
-        message: "Use '/** */' instead of '///' for documentation comments",
+        message:
+          "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         span: {
           path: "shared.tp",
         },
@@ -1549,7 +1552,7 @@ describe("compile - schema warnings", () => {
     ]);
   });
 
-  it("collects schema warnings from meta", () => {
+  it("collects schema errors from meta", () => {
     const result = compile(
       {
         "meta.tp": `
@@ -1564,9 +1567,10 @@ describe("compile - schema warnings", () => {
       { cache: null, patchBase: null },
     );
 
-    expect(result.warnings["meta.tp"]).toMatch([
+    expect(result.finalErrors["meta.tp"]).toMatch([
       {
-        message: "Use '/** */' instead of '///' for documentation comments",
+        message:
+          "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         span: {
           path: "meta.tp",
         },

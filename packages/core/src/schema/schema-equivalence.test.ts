@@ -63,6 +63,22 @@ describe("schemasAreEquivalent", () => {
     );
   });
 
+  it("returns false when omitDefault differs on a field", () => {
+    const a = parse("type Foo = {\n  /// @omitDefault\n  name: string;\n};");
+    const b = parse("type Foo = { name: string; };");
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      false,
+    );
+  });
+
+  it("returns true when both schemas have omitDefault on the same field", () => {
+    const a = parse("type Foo = {\n  /// @omitDefault\n  name: string;\n};");
+    const b = parse("type Foo = {\n  /// @omitDefault\n  name: string;\n};");
+    expect(schemasAreEquivalent(a.typeDeclarations, b.typeDeclarations)).toBe(
+      true,
+    );
+  });
+
   it("returns true for different type docs", () => {
     const a = parse("/** Doc A */ type Foo = { name: string; };");
     const b = parse("/** Doc B */ type Foo = { name: string; };");
@@ -170,6 +186,14 @@ describe("hashSchema", () => {
     ).toBe(false);
     expect(
       hashSchema(a.typeDeclarations) === hashSchema(c.typeDeclarations),
+    ).toBe(false);
+  });
+
+  it("produces different hashes when omitDefault is set on a field", () => {
+    const a = parse("type Foo = {\n  /// @omitDefault\n  name: string;\n};");
+    const b = parse("type Foo = { name: string; };");
+    expect(
+      hashSchema(a.typeDeclarations) === hashSchema(b.typeDeclarations),
     ).toBe(false);
   });
 });

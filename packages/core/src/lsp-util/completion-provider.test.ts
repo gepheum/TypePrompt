@@ -237,6 +237,127 @@ describe("getCompletionItems", () => {
     expect(result !== null).toBe(true);
     expect(result!.suggestions).toMatch(["Translate"]);
   });
+
+  it("suggests ' @' right after /// in schema", () => {
+    const xml = [
+      '<template name="Test">',
+      "  <schema>",
+      "    type Input = {",
+      "      ///",
+      "      name: string;",
+      "    };",
+      "    type Output = {};",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const pos = xml.indexOf("      ///") + "      ///".length;
+    const cache = compile(
+      { "prompts/test.tp": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.tp",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch([" @"]);
+    expect(result!.span).toMatch({ start: pos, end: pos });
+  });
+
+  it("suggests @ after /// with space in schema", () => {
+    const xml = [
+      '<template name="Test">',
+      "  <schema>",
+      "    type Input = {",
+      "      /// ",
+      "      name: string;",
+      "    };",
+      "    type Output = {};",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const pos = xml.indexOf("      /// ") + "      /// ".length;
+    const cache = compile(
+      { "prompts/test.tp": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.tp",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["@"]);
+    expect(result!.span).toMatch({ start: pos, end: pos });
+  });
+
+  it("suggests omitDefault after /// @ in schema", () => {
+    const xml = [
+      '<template name="Test">',
+      "  <schema>",
+      "    type Input = {",
+      "      /// @",
+      "      name: string;",
+      "    };",
+      "    type Output = {};",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const pos = xml.indexOf("      /// @") + "      /// @".length;
+    const cache = compile(
+      { "prompts/test.tp": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.tp",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["omitDefault"]);
+    expect(result!.span).toMatch({ start: pos, end: pos });
+  });
+
+  it("suggests omitDefault when partially typed after /// @ in schema", () => {
+    const xml = [
+      '<template name="Test">',
+      "  <schema>",
+      "    type Input = {",
+      "      /// @omi",
+      "      name: string;",
+      "    };",
+      "    type Output = {};",
+      "  </schema>",
+      "</template>",
+    ].join("\n");
+
+    const start = xml.indexOf("@omi") + 1;
+    const pos = start + 3;
+    const cache = compile(
+      { "prompts/test.tp": xml },
+      { cache: null, patchBase: null },
+    );
+    const result = getCompletionItems({
+      newContent: xml,
+      path: "prompts/test.tp",
+      position: pos,
+      cache,
+    });
+
+    expect(result !== null).toBe(true);
+    expect(result!.suggestions).toMatch(["omitDefault"]);
+    expect(result!.span).toMatch({ start, end: pos });
+  });
 });
 
 describe("getYamlCompletionItems", () => {

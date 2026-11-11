@@ -154,6 +154,7 @@ function ifaceType(
             ? { kind: "optional", innerType: primType(text) }
             : primType(text),
           doc: "",
+          omitDefault: false,
         },
       ]),
     ),

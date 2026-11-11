@@ -94,6 +94,12 @@ export type Field = {
   readonly name: TextSpan;
   readonly type: FieldType;
   readonly doc: string;
+  /**
+   * If true, tells JSON serializers to omit this field from the generated
+   * object if the field has a default value. If the field is optional, the
+   * default value is null.
+   */
+  readonly omitDefault: boolean;
 };
 
 export type PrimitiveType = {
@@ -207,6 +213,7 @@ export type SyntheticField = {
   };
   readonly type: FieldType | SyntheticType;
   readonly doc?: string;
+  readonly omitDefault?: undefined;
 };
 
 export type SyntheticUnion = {
@@ -341,6 +348,7 @@ export type CommonField = {
   readonly type: FieldType;
   readonly doc?: string;
   readonly memberFields: readonly Field[];
+  readonly omitDefault?: boolean;
 };
 
 export type SyntheticStringUnionMember =

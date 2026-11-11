@@ -102,6 +102,7 @@ export function typesAreEquivalent(a: FieldType, b: FieldType): boolean {
         if (
           aFieldName !== bFieldName ||
           aField.name.text !== bField.name.text ||
+          aField.omitDefault !== bField.omitDefault ||
           !typesAreEquivalent(aField.type, bField.type)
         ) {
           return false;
@@ -178,6 +179,7 @@ export function hashType(type: FieldType): number {
         ...Object.entries(type.fields).flatMap(([fieldName, field]) => [
           hashString(fieldName),
           hashString(field.name.text),
+          ...(field.omitDefault ? [1] : []),
           hashType(field.type),
         ]),
       ]);

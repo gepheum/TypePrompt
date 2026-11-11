@@ -5,6 +5,7 @@ import type {
   InternalError,
   InternalErrors,
   MappedText,
+  Span,
   TextSpan,
 } from "../util/shared-types.js";
 import { toMappedSpan } from "../util/spans.js";
@@ -125,8 +126,21 @@ class SchemaParser<Context extends SchemaContext> {
     }
 
     let jsdoc: Token | undefined;
-    if (token.kind === "jsdoc") {
-      jsdoc = token;
+    while (token.kind === "jsdoc" || token.kind === "directive") {
+      if (token.kind === "jsdoc") {
+        if (jsdoc) {
+          this.parserErrors.push({
+            span: this.tokenToSpan(token),
+            message: "Duplicate documentation comment",
+          });
+        }
+        jsdoc = token;
+      } else if (token.kind === "directive") {
+        this.parserErrors.push({
+          span: this.tokenToSpan(token),
+          message: "Decorators are only allowed on interface fields",
+        });
+      }
       this.moveNext();
       token = this.peekToken();
     }
@@ -237,17 +251,43 @@ class SchemaParser<Context extends SchemaContext> {
   }
 
   private tryParseField(): Field | null {
-    let token = this.peekToken();
     let jsdoc: Token | undefined;
-    if (token.kind === "jsdoc") {
-      jsdoc = token;
-      this.moveNext();
-      token = this.peekToken();
+    let omitDefault = false;
+
+    while (true) {
+      const token = this.peekToken();
+      if (token.kind === "jsdoc") {
+        if (jsdoc) {
+          this.parserErrors.push({
+            span: this.tokenToSpan(token),
+            message: "Duplicate documentation comment",
+          });
+        }
+        jsdoc = token;
+        this.moveNext();
+      } else if (token.kind === "directive") {
+        if (token.decorator?.name === "omitDefault") {
+          if (omitDefault) {
+            this.parserErrors.push({
+              span: this.textRangeToSpan(
+                token.decorator.textStart,
+                token.decorator.textEnd,
+              ),
+              message: "Duplicate decorator '@omitDefault'",
+            });
+          }
+          omitDefault = true;
+        }
+        this.moveNext();
+      } else {
+        break;
+      }
     }
-    const name = token;
+
+    const name = this.peekToken();
     if (name.kind !== "identifier") {
-      if (jsdoc) {
-        // jsdoc was attached to nothing — report the error.
+      if (jsdoc || omitDefault) {
+        // jsdoc or directive was attached to nothing — report the error.
         this.parserErrors.push({
           span: this.tokenToSpan(name),
           message: "Expected: identifier",
@@ -257,7 +297,7 @@ class SchemaParser<Context extends SchemaContext> {
     }
     const doc = getDocText(jsdoc);
     this.moveNext();
-    token = this.peekToken();
+    let token = this.peekToken();
     const optional = token.text === "?";
     if (optional) {
       this.moveNext();
@@ -282,7 +322,12 @@ class SchemaParser<Context extends SchemaContext> {
       // Will always push an error.
       this.expectExactThenMove(";", token);
     }
-    return { name: this.tokenToSpan(name), type, doc };
+    return {
+      name: this.tokenToSpan(name),
+      type,
+      doc,
+      omitDefault,
+    };
   }
 
   private parseTypeRef(context: {
@@ -502,6 +547,7 @@ class SchemaParser<Context extends SchemaContext> {
 
       const text = group[0]!;
       let tokenKind: Token["kind"];
+      let decorator: DirectiveDecorator | undefined;
       if (group[1] !== undefined) {
         if (!text.endsWith("*/")) {
           this.pushTokenizerError({
@@ -520,13 +566,15 @@ class SchemaParser<Context extends SchemaContext> {
       } else if (group[4] !== undefined) {
         // Single-line comment
         if (text.startsWith("///")) {
-          this.pushWarning({
-            start: position,
-            end: re.lastIndex,
-            message: "Use '/** */' instead of '///' for documentation comments",
-          });
+          tokenKind = "directive";
+          decorator = this.validateDirectiveComment(
+            text,
+            position,
+            re.lastIndex,
+          );
+        } else {
+          tokenKind = "comment";
         }
-        tokenKind = "comment";
       } else if (group[5] !== undefined) {
         // Validate identifier.
         if (/^[0-9]/.test(text)) {
@@ -577,6 +625,7 @@ class SchemaParser<Context extends SchemaContext> {
         textStart: position,
         textEnd: re.lastIndex,
         newLine: newLine,
+        decorator,
       });
       newLine = false;
 
@@ -642,10 +691,21 @@ class SchemaParser<Context extends SchemaContext> {
     };
   }
 
+  private textRangeToSpan(textStart: number, textEnd: number): Span {
+    const { content, path } = this;
+    return {
+      path,
+      start: textToSourcePosition(content, textStart),
+      end: textToSourcePosition(content, textEnd),
+    };
+  }
+
   private pushTokenizerError(args: {
     start: number;
     end: number;
     message: string;
+    hint?: string;
+    suggestions?: readonly string[];
   }): void {
     const { content, path, tokenizerErrors } = this;
     tokenizerErrors.push({
@@ -655,6 +715,8 @@ class SchemaParser<Context extends SchemaContext> {
         end: textToSourcePosition(content, args.end),
       },
       message: args.message,
+      hint: args.hint,
+      suggestions: args.suggestions,
     });
   }
 
@@ -674,12 +736,113 @@ class SchemaParser<Context extends SchemaContext> {
     });
   }
 
+  /**
+   * Validates a triple-slash directive comment (e.g. `/// @omitDefault`).
+   *
+   * @param text The full raw text of the comment (including the leading `///`).
+   * @param start The offset of the first slash in `content.text`.
+   * @param end The offset immediately following the end of `text` in `content.text`.
+   */
+  private validateDirectiveComment(
+    text: string,
+    start: number,
+    end: number,
+  ): DirectiveDecorator | undefined {
+    const [_, spaces = "", raw = ""] = /^\/\/\/(\s*)(.*)$/s.exec(text) ?? [];
+    const content = raw.trimEnd();
+    if (content === "") {
+      this.pushTokenizerError({
+        start: end,
+        end,
+        message: "Expected decorator in '///' comment",
+        suggestions: [spaces === "" ? " @" : "@"],
+      });
+      return undefined;
+    }
+
+    const contentStart = start + 3 + spaces.length;
+    const contentEnd = contentStart + content.length;
+    if (!content.startsWith("@")) {
+      this.pushTokenizerError({
+        start: contentStart,
+        end: contentEnd,
+        message:
+          "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
+        hint: "Use '/** */' for documentation comments",
+        suggestions: [spaces === "" ? " @" : "@"],
+      });
+      return undefined;
+    }
+
+    const match = /^@([A-Za-z0-9_]*)(.*)$/s.exec(content);
+    const decoratorName = match?.[1];
+    if (!decoratorName) {
+      this.pushTokenizerError({
+        start: contentStart + 1,
+        end: contentEnd,
+        message:
+          content === "@"
+            ? "Expected decorator after '@'"
+            : "Invalid decorator",
+        suggestions: ["omitDefault"],
+      });
+      return undefined;
+    }
+
+    if (decoratorName !== "omitDefault") {
+      this.pushTokenizerError({
+        start: contentStart + 1,
+        end: contentStart + 1 + decoratorName.length,
+        message: `Unknown decorator '${decoratorName}'`,
+        suggestions: ["omitDefault"],
+      });
+      return undefined;
+    }
+
+    const remainder = match[2]!.trim();
+    if (remainder !== "") {
+      this.pushTokenizerError({
+        start: contentEnd - remainder.length,
+        end: contentEnd,
+        message: "Unexpected content after decorator",
+      });
+      return undefined;
+    }
+
+    return {
+      name: "omitDefault",
+      textStart: contentStart,
+      textEnd: contentStart + 1 + decoratorName.length,
+    };
+  }
+
   getSemanticTokens(): readonly SemanticToken[] {
     const { tokens } = this;
     const result: SemanticToken[] = [];
     for (let i = 0; i < tokens.length; ++i) {
       const token = tokens[i]!;
       switch (token.kind) {
+        case "directive": {
+          if (token.decorator) {
+            result.push({
+              kind: "comment",
+              span: this.textRangeToSpan(token.textStart, token.textStart + 3),
+            });
+            result.push({
+              kind: "schema-keyword",
+              span: this.textRangeToSpan(
+                token.decorator.textStart,
+                token.decorator.textEnd,
+              ),
+            });
+          } else {
+            result.push({
+              kind: "comment",
+              span: this.tokenToSpan(token),
+            });
+          }
+          break;
+        }
         case "identifier": {
           let semanticKind: "schema-keyword" | "boolean" | undefined;
           switch (token.text) {
@@ -734,6 +897,7 @@ type Token = {
     | "string-literal"
     | "jsdoc"
     | "comment"
+    | "directive"
     | "string-end";
   readonly text: string;
   /** Position of the start of the token in `content.text`. */
@@ -745,6 +909,13 @@ type Token = {
    * previous token.
    */
   readonly newLine: boolean;
+  readonly decorator?: DirectiveDecorator;
+};
+
+type DirectiveDecorator = {
+  readonly name: "omitDefault";
+  readonly textStart: number;
+  readonly textEnd: number;
 };
 
 type TokenMatcher = {

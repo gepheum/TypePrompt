@@ -588,23 +588,25 @@ describe("parseSchema - comments and JSDoc", () => {
     expect(result).toMatch({ kind: "success", warnings: [] });
   });
 
-  it("warns when a single-line comment starts with ///", () => {
+  it("rejects when a single-line comment starts with /// and is not a decorator", () => {
     const result = parseSchema(
       textNode("/// This is a comment\ntype Response = { name: string; };"),
       "template",
     );
     expect(result).toMatch({
-      kind: "success",
-      warnings: [
+      kind: "error",
+      errors: [
         {
-          span: { path: "schema.ts", start: 0, end: 21 },
-          message: "Use '/** */' instead of '///' for documentation comments",
+          span: { path: "schema.ts", start: 4, end: 21 },
+          message:
+            "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
+          suggestions: ["@"],
         },
       ],
     });
   });
 
-  it("warns for inline comments starting with /// inside an interface body", () => {
+  it("rejects inline comments starting with /// inside an interface body if not a decorator", () => {
     const result = parseSchema(
       textNode(
         ["type Response = {", "  /// Field doc", "  name: string;", "};"].join(
@@ -614,16 +616,17 @@ describe("parseSchema - comments and JSDoc", () => {
       "template",
     );
     expect(result).toMatch({
-      kind: "success",
-      warnings: [
+      kind: "error",
+      errors: [
         {
-          message: "Use '/** */' instead of '///' for documentation comments",
+          message:
+            "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
         },
       ],
     });
   });
 
-  it("reports warnings for multiple comments starting with ///", () => {
+  it("reports errors for multiple comments starting with /// if not decorators", () => {
     const result = parseSchema(
       textNode(
         [
@@ -635,15 +638,18 @@ describe("parseSchema - comments and JSDoc", () => {
       "template",
     );
     expect(result).toMatch({
-      kind: "success",
-      warnings: [
-        { message: "Use '/** */' instead of '///' for documentation comments" },
-        { message: "Use '/** */' instead of '///' for documentation comments" },
+      kind: "error",
+      errors: [
+        {
+          message:
+            "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
+        },
+        {
+          message:
+            "Invalid decorator in '///' comment. Expected '/// @<decorator>'",
+        },
       ],
     });
-    if (result.kind === "success") {
-      expect(result.warnings.length).toBe(2);
-    }
   });
 
   it("accepts a non-JSDoc block comment", () => {
@@ -706,6 +712,74 @@ describe("parseSchema - comments and JSDoc", () => {
           valueType: { fields: { name: { doc: "The user's name." } } },
         },
       },
+    });
+  });
+
+  it("rejects duplicate JSDoc comments on a field", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = {",
+          "  /** First doc */",
+          "  /** Second doc */",
+          "  name: string;",
+          "};",
+        ].join("\n"),
+      ),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate documentation comment",
+        },
+      ],
+    });
+  });
+
+  it("rejects duplicate JSDoc comments on a field with decorator interleaved", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "type Response = {",
+          "  /** First doc */",
+          "  /// @omitDefault",
+          "  /** Second doc */",
+          "  name: string;",
+          "};",
+        ].join("\n"),
+      ),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate documentation comment",
+        },
+      ],
+    });
+  });
+
+  it("rejects duplicate JSDoc comments before a type declaration", () => {
+    const result = parseSchema(
+      textNode(
+        [
+          "/** First doc */",
+          "/** Second doc */",
+          "type Response = { name: string; };",
+        ].join("\n"),
+      ),
+      "template",
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          message: "Duplicate documentation comment",
+        },
+      ],
     });
   });
 
@@ -1077,6 +1151,351 @@ describe("parseSchema - boolean literals", () => {
       },
     });
   });
+  describe("/// @omitDefault decorator", () => {
+    it("parses fields with /// @omitDefault decorator", () => {
+      const result = parseSchema(
+        textNode(
+          "interface Config {\n  /// @omitDefault\n  timeout: integer;\n  retries: integer;\n}",
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "success",
+        typeDeclarations: {
+          Config: {
+            valueType: {
+              kind: "interface",
+              fields: {
+                timeout: {
+                  name: { text: "timeout" },
+                  omitDefault: true,
+                  type: { kind: "primitive", primitive: { text: "integer" } },
+                },
+                retries: {
+                  name: { text: "retries" },
+                  omitDefault: false,
+                  type: { kind: "primitive", primitive: { text: "integer" } },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("parses fields with /// @omitDefault with trailing spaces", () => {
+      const result = parseSchema(
+        textNode(
+          "interface Config {\n  /// @omitDefault   \n  timeout: integer;\n}",
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "success",
+        typeDeclarations: {
+          Config: {
+            valueType: {
+              kind: "interface",
+              fields: {
+                timeout: {
+                  name: { text: "timeout" },
+                  omitDefault: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("parses ///@omitDefault without space after slashes", () => {
+      const result = parseSchema(
+        textNode(
+          "interface Config {\n  ///@omitDefault\n  timeout: integer;\n}",
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "success",
+        typeDeclarations: {
+          Config: {
+            valueType: {
+              kind: "interface",
+              fields: {
+                timeout: {
+                  name: { text: "timeout" },
+                  omitDefault: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("parses /// @omitDefault on optional fields and inline object types", () => {
+      const result = parseSchema(
+        textNode("type User = {\n  /// @omitDefault\n  nickname?: string;\n};"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "success",
+        typeDeclarations: {
+          User: {
+            valueType: {
+              kind: "interface",
+              fields: {
+                nickname: {
+                  name: { text: "nickname" },
+                  omitDefault: true,
+                  type: {
+                    kind: "optional",
+                    innerType: {
+                      kind: "primitive",
+                      primitive: { text: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("parses /// @omitDefault with JSDoc before and after the decorator", () => {
+      const result = parseSchema(
+        textNode(
+          [
+            "interface Options {",
+            "  /** doc before */",
+            "  /// @omitDefault",
+            "  fieldA: string;",
+            "  /// @omitDefault",
+            "  /** doc after */",
+            "  fieldB: boolean;",
+            "}",
+          ].join("\n"),
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "success",
+        typeDeclarations: {
+          Options: {
+            valueType: {
+              kind: "interface",
+              fields: {
+                fieldA: {
+                  doc: "doc before",
+                  omitDefault: true,
+                },
+                fieldB: {
+                  doc: "doc after",
+                  omitDefault: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("rejects duplicate /// @omitDefault decorator on the same field", () => {
+      const result = parseSchema(
+        textNode(
+          "interface Foo {\n  /// @omitDefault\n  /// @omitDefault\n  bar: string;\n}",
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Duplicate decorator '@omitDefault'",
+            span: { start: 41, end: 53 },
+          },
+        ],
+      });
+    });
+
+    it("rejects unknown decorators in ///", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  /// @unknownDecorator\n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unknown decorator 'unknownDecorator'",
+            suggestions: ["omitDefault"],
+          },
+        ],
+      });
+    });
+
+    it("rejects empty /// decorator comment and suggests ' @'", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  ///\n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start: 21, end: 21 },
+            message: "Expected decorator in '///' comment",
+            suggestions: [" @"],
+          },
+        ],
+      });
+    });
+
+    it("rejects empty /// decorator comment with trailing space and suggests '@'", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  /// \n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            span: { start: 22, end: 22 },
+            message: "Expected decorator in '///' comment",
+            suggestions: ["@"],
+          },
+        ],
+      });
+    });
+
+    it("rejects missing decorator name after @ in ///", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  /// @\n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Expected decorator after '@'",
+            suggestions: ["omitDefault"],
+          },
+        ],
+      });
+    });
+
+    it("rejects unexpected content after @omitDefault in ///", () => {
+      const result = parseSchema(
+        textNode(
+          "interface Foo {\n  /// @omitDefault extra content\n  bar: string;\n}",
+        ),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unexpected content after decorator",
+            span: { start: 35, end: 48 },
+          },
+        ],
+      });
+    });
+
+    it("rejects parentheses after @omitDefault in ///", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  /// @omitDefault()\n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Unexpected content after decorator",
+            span: { start: 34, end: 36 },
+          },
+        ],
+      });
+    });
+
+    it("rejects invalid non-identifier characters after @ in ///", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  /// @-foo\n  bar: string;\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Invalid decorator",
+            suggestions: ["omitDefault"],
+          },
+        ],
+      });
+    });
+
+    it("rejects misplaced decorator before a type alias", () => {
+      const result = parseSchema(
+        textNode("/// @omitDefault\ntype Foo = string;"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Decorators are only allowed on interface fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects misplaced decorator before an interface declaration", () => {
+      const result = parseSchema(
+        textNode("/// @omitDefault\ninterface Foo { bar: string; }"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Decorators are only allowed on interface fields",
+          },
+        ],
+      });
+    });
+
+    it("rejects misplaced decorator inside a type union", () => {
+      const result = parseSchema(
+        textNode("type Foo = string | /// @omitDefault\nnumber;"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message:
+              "Expected one of: '(', '{', 'shared', string literal, identifier",
+          },
+        ],
+      });
+    });
+
+    it("rejects decorator at the end of an interface without a field", () => {
+      const result = parseSchema(
+        textNode("interface Foo {\n  a: string;\n  /// @omitDefault\n}"),
+        "template",
+      );
+      expect(result).toMatch({
+        kind: "error",
+        errors: [
+          {
+            message: "Expected: identifier",
+          },
+        ],
+      });
+    });
+  });
 });
 
 describe("tokenizeSchema", () => {
@@ -1178,6 +1597,75 @@ describe("tokenizeSchema", () => {
         span: { start: 40, end: 60 },
       },
     ]);
+  });
+
+  it("identifies /// as comment and @omitDefault as schema-keyword", () => {
+    const input = "interface Foo {\n  /// @omitDefault\n  bar: string;\n}";
+    const tokens = tokenizeSchema(textNode(input));
+    const slashToken = tokens.find(
+      (t) => t.span.start === 18 && t.span.end === 21,
+    );
+    expect(slashToken).toMatch({
+      kind: "comment",
+      span: { start: 18, end: 21 },
+    });
+    const decoratorToken = tokens.find(
+      (t) => t.span.start === 22 && t.span.end === 34,
+    );
+    expect(decoratorToken).toMatch({
+      kind: "schema-keyword",
+      span: { start: 22, end: 34 },
+    });
+  });
+
+  it("identifies ///@omitDefault without space as comment and schema-keyword", () => {
+    const input = "interface Foo {\n  ///@omitDefault\n  bar: string;\n}";
+    const tokens = tokenizeSchema(textNode(input));
+    const slashToken = tokens.find(
+      (t) => t.span.start === 18 && t.span.end === 21,
+    );
+    expect(slashToken).toMatch({
+      kind: "comment",
+      span: { start: 18, end: 21 },
+    });
+    const decoratorToken = tokens.find(
+      (t) => t.span.start === 21 && t.span.end === 33,
+    );
+    expect(decoratorToken).toMatch({
+      kind: "schema-keyword",
+      span: { start: 21, end: 33 },
+    });
+  });
+
+  it("identifies /// @omitDefault with trailing spaces as comment and schema-keyword", () => {
+    const input = "interface Foo {\n  /// @omitDefault   \n  bar: string;\n}";
+    const tokens = tokenizeSchema(textNode(input));
+    const slashToken = tokens.find(
+      (t) => t.span.start === 18 && t.span.end === 21,
+    );
+    expect(slashToken).toMatch({
+      kind: "comment",
+      span: { start: 18, end: 21 },
+    });
+    const decoratorToken = tokens.find(
+      (t) => t.span.start === 22 && t.span.end === 34,
+    );
+    expect(decoratorToken).toMatch({
+      kind: "schema-keyword",
+      span: { start: 22, end: 34 },
+    });
+  });
+
+  it("treats invalid directive comment as a plain comment token in tokenizeSchema", () => {
+    const input = "interface Foo {\n  /// @unknownDecorator\n  bar: string;\n}";
+    const tokens = tokenizeSchema(textNode(input));
+    const commentToken = tokens.find(
+      (t) => t.span.start === 18 && t.span.end === 39,
+    );
+    expect(commentToken).toMatch({
+      kind: "comment",
+      span: { start: 18, end: 39 },
+    });
   });
 
   it("preserves source offsets across mapped text segments", () => {
