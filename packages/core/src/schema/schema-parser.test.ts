@@ -1335,7 +1335,7 @@ describe("parseSchema - boolean literals", () => {
       });
     });
 
-    it("rejects empty /// decorator comment and suggests ' @'", () => {
+    it("rejects empty /// decorator comment and suggests ' @omitDefault'", () => {
       const result = parseSchema(
         textNode("interface Foo {\n  ///\n  bar: string;\n}"),
         "template",
@@ -1352,7 +1352,7 @@ describe("parseSchema - boolean literals", () => {
       });
     });
 
-    it("rejects empty /// decorator comment with trailing space and suggests '@'", () => {
+    it("rejects empty /// decorator comment with trailing space and suggests '@omitDefault'", () => {
       const result = parseSchema(
         textNode("interface Foo {\n  /// \n  bar: string;\n}"),
         "template",

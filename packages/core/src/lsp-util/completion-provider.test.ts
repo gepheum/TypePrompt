@@ -238,7 +238,7 @@ describe("getCompletionItems", () => {
     expect(result!.suggestions).toMatch(["Translate"]);
   });
 
-  it("suggests ' @' right after /// in schema", () => {
+  it("suggests ' @omitDefault' right after /// in schema", () => {
     const xml = [
       '<template name="Test">',
       "  <schema>",
@@ -268,7 +268,7 @@ describe("getCompletionItems", () => {
     expect(result!.span).toMatch({ start: pos, end: pos });
   });
 
-  it("suggests @ after /// with space in schema", () => {
+  it("suggests @omitDefault after /// with space in schema", () => {
     const xml = [
       '<template name="Test">',
       "  <schema>",
