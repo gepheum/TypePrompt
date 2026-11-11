@@ -1,6 +1,9 @@
 import type {
+  Array,
   FieldType,
   Literal,
+  Optional,
+  PrimitiveType,
   ResolvedFieldType,
   ResolvedType,
   SchemaView,
@@ -35,6 +38,22 @@ export function resolveType(
   schema: SchemaView,
 ): ResolvedFieldType | SyntheticType {
   return doResolveType(type, schema, null)!;
+}
+
+export function resolveTypeWithOmitDefault(
+  type: FieldType,
+  schema: SchemaView,
+): Array | Optional | PrimitiveType {
+  const resolved = resolveType(type, schema);
+  if (
+    resolved.kind === "array" ||
+    resolved.kind === "optional" ||
+    resolved.kind === "primitive"
+  ) {
+    return resolved;
+  } else {
+    throw new Error(JSON.stringify(type));
+  }
 }
 
 export function resolveMaybeInvalidType(

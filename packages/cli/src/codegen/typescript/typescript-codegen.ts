@@ -33,6 +33,7 @@ import {
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
+import { resolveTypeWithOmitDefault } from "@typeprompt/core/schema/type-resolver.js";
 
 export function generateTypescriptCode(
   compilationResult: ValidCompilationResult,
@@ -555,9 +556,9 @@ function writeZodType(
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
           const { type, isOptional } = unwrapOptional(field.type);
-          let defaultModifier = "";
+          let defaultModifier;
           if (field.omitDefault !== null) {
-            const resolved = resolveType(field.type, schema);
+            const resolved = resolveTypeWithOmitDefault(field.type, schema);
             if (isOptional) {
               defaultModifier =
                 ".nullable().default(null).transform((val) => val ?? undefined).optional()";
