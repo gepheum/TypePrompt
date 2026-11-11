@@ -1264,6 +1264,211 @@ describe("makeTemplates - meta and examples", () => {
       ]);
     }
   });
+
+  it("normalizes input and output values in few-shot examples (honoring @omitDefault in user mode)", () => {
+    const compilationResult = compile(
+      {
+        "prompts/Classify.tp": `
+          <template name="Classify">
+            <schema>
+              type Input = {
+                title: string;
+                /// @omitDefault
+                tag?: string;
+                /// @omitDefault
+                tags: string[];
+                /// @omitDefault
+                priority: integer;
+                description: string;
+              };
+              type Output = {
+                category: string;
+                /// @omitDefault
+                confidence: number;
+                /// @omitDefault
+                explanation?: string;
+              };
+            </schema>
+            <system>System prompt</system>
+            <user>Classify <insert val="input.title" /></user>
+            <examples>
+              - input:
+                  description: "A bug report"
+                  title: "Fix crash"
+                  tag: null
+                  tags: []
+                  priority: 0
+                output:
+                  confidence: 0
+                  category: "bug"
+                  explanation: null
+              - input:
+                  title: "Feature request"
+                  description: "Add dark mode"
+                  tag: "ui"
+                  tags: ["frontend"]
+                  priority: 2
+                output:
+                  category: "feature"
+                  confidence: 0.95
+                  explanation: "Clear feature request"
+            </examples>
+          </template>
+        `,
+      },
+      { cache: null, patchBase: null },
+    ) as ValidCompilationResult;
+    expect(compilationResult.anyErrors).toBe(false);
+
+    const compiledTemplates = makeTemplates(compilationResult);
+    const classify = compiledTemplates.templates["Main:Classify"]!;
+    expect(classify.contents.kind).toBe("no-variants");
+    if (classify.contents.kind === "no-variants") {
+      const examples = classify.contents.content.examples!;
+      expect(examples.length).toBe(2);
+
+      // Example 1: default values for @omitDefault fields
+      const ex1 = examples[0]!;
+      // Input (mode: "user"):
+      // 1. Fields reordered to declaration order: title, description
+      // 2. @omitDefault fields with default values are omitted
+      expect(ex1.input).toMatch({
+        title: "Fix crash",
+        description: "A bug report",
+      });
+      const ex1InputObj = ex1.input as Record<string, unknown>;
+      expect("tag" in ex1InputObj).toBe(false);
+      expect("tags" in ex1InputObj).toBe(false);
+      expect("priority" in ex1InputObj).toBe(false);
+      expect(Object.keys(ex1InputObj)).toMatch(["title", "description"]);
+
+      // Output (mode: "assistant"):
+      // 1. Fields reordered to declaration order: category, confidence, explanation
+      // 2. @omitDefault is NOT omitted in assistant mode; all fields retained
+      expect(ex1.output).toMatch({
+        category: "bug",
+        confidence: 0,
+        explanation: null,
+      });
+      const ex1OutputObj = ex1.output as Record<string, unknown>;
+      expect(Object.keys(ex1OutputObj)).toMatch([
+        "category",
+        "confidence",
+        "explanation",
+      ]);
+
+      // Example 2: non-default values for @omitDefault fields are preserved
+      const ex2 = examples[1]!;
+      expect(ex2.input).toMatch({
+        title: "Feature request",
+        tag: "ui",
+        tags: ["frontend"],
+        priority: 2,
+        description: "Add dark mode",
+      });
+      expect(ex2.output).toMatch({
+        category: "feature",
+        confidence: 0.95,
+        explanation: "Clear feature request",
+      });
+    }
+  });
+
+  it("normalizes tool call inputs (assistant mode) and outputs (user mode) in few-shot example steps", () => {
+    const compilationResult = compile(
+      {
+        "prompts/calc.tp": `
+          <tool name="calc">
+            <schema>
+              type Input = {
+                expr: string;
+                /// @omitDefault
+                precision: integer;
+              };
+              type Output = {
+                result: number;
+                /// @omitDefault
+                cached: boolean;
+                /// @omitDefault
+                warning?: string;
+              };
+            </schema>
+            <description>Calculator tool</description>
+          </tool>
+        `,
+        "prompts/MathAssistant.tp": `
+          <template name="MathAssistant">
+            <tools>
+              <tool name="calc" />
+            </tools>
+            <schema>
+              type Input = {
+                query: string;
+              };
+              type Output = {
+                answer: string;
+              };
+            </schema>
+            <system>Math system</system>
+            <user><insert val="input.query" /></user>
+            <examples>
+              - input:
+                  query: "2 + 2"
+                steps:
+                  - toolCalls:
+                      - tool: "calc"
+                        callId: "call-1"
+                        input:
+                          precision: 0
+                          expr: "2 + 2"
+                        output:
+                          cached: false
+                          result: 4
+                          warning: null
+                output:
+                  answer: "4"
+            </examples>
+          </template>
+        `,
+      },
+      { cache: null, patchBase: null },
+    ) as ValidCompilationResult;
+    expect(compilationResult.anyErrors).toBe(false);
+
+    const compiledTemplates = makeTemplates(compilationResult);
+    const mathAssistant = compiledTemplates.templates["Main:MathAssistant"]!;
+    expect(mathAssistant.contents.kind).toBe("no-variants");
+    if (mathAssistant.contents.kind === "no-variants") {
+      const examples = mathAssistant.contents.content.examples!;
+      expect(examples.length).toBe(1);
+      const ex = examples[0]!;
+      expect(ex.steps.length).toBe(1);
+
+      const tc = ex.steps[0]!.toolCalls[0]!;
+      expect(tc.callId).toBe("call-1");
+      expect(tc.toolName).toBe("calc");
+
+      // Tool call input (mode: "assistant"):
+      // 1. Fields reordered to declaration order: expr, precision
+      // 2. precision (0) has @omitDefault, but assistant mode retains all fields
+      expect(tc.input).toMatch({
+        expr: "2 + 2",
+        precision: 0,
+      });
+      const tcInputObj = tc.input as Record<string, unknown>;
+      expect(Object.keys(tcInputObj)).toMatch(["expr", "precision"]);
+
+      // Tool call output (mode: "user"):
+      // 1. cached (false) and warning (null) have @omitDefault, so they are omitted in user mode
+      expect(tc.output).toMatch({
+        result: 4,
+      });
+      const tcOutputObj = tc.output as Record<string, unknown>;
+      expect("cached" in tcOutputObj).toBe(false);
+      expect("warning" in tcOutputObj).toBe(false);
+      expect(Object.keys(tcOutputObj)).toMatch(["result"]);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
