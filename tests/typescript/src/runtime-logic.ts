@@ -116,12 +116,21 @@ export type Tool<Input, Output> = {
   readonly name: string;
   readonly description: string;
   readonly inputJsonSchema: { readonly [key: string]: unknown };
+  /**
+   * Zod schema for validating/parsing tool inputs.
+   *
+   * When passing a JSON schema to the model for tool definitions, use the
+   * `inputJsonSchema` field instead of deriving one from this Zod schema.
+   * A JSON schema derived from Zod is not guaranteed to satisfy all constraints
+   * expected by major model APIs (such as OpenAI's strict mode), whereas
+   * `inputJsonSchema` is.
+   */
   readonly inputSchema: z.ZodType<Input>;
   readonly outputSchema: z.ZodType<Output>;
 };
 
 /**
- * Describes how the LLM response for template `Id` should be structured and parser.
+ * Describes how the LLM response for template `Id` should be structured and parsed.
  * When `format === "json"`, contains the JSON schema for the expected output.
  */
 export type OutputFormat<Id extends TemplateId> =
@@ -133,6 +142,9 @@ export type OutputFormat<Id extends TemplateId> =
        *
        * When passing a JSON schema to the model (e.g. for structured outputs),
        * use the `jsonSchema` field instead of deriving one from this Zod schema.
+       * A JSON schema derived from Zod is not guaranteed to satisfy all constraints
+       * expected by major model APIs (such as OpenAI's strict mode), whereas
+       * `jsonSchema` is.
        */
       readonly schema: z.ZodType<Output<Id>>;
     }

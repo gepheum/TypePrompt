@@ -154,6 +154,13 @@ class Tool[Input, Output]:
     name: str
     description: str
     input_json_schema: dict[str, Any]
+    # TypeAdapter for validating/parsing tool inputs.
+    #
+    # When passing a JSON schema to the model for tool definitions, use the
+    # `input_json_schema` field instead of deriving one from this adapter.
+    # A JSON schema derived from Pydantic is not guaranteed to satisfy all constraints
+    # expected by major model APIs (such as OpenAI's strict mode), whereas
+    # `input_json_schema` is.
     input_adapter: pydantic.TypeAdapter[Input]
     output_adapter: pydantic.TypeAdapter[Output]
 
@@ -162,6 +169,13 @@ class Tool[Input, Output]:
 class JsonOutputFormat[Output]:
     format: Literal["json"]
     json_schema: dict[str, Any]
+    # TypeAdapter for validating/parsing the LLM output.
+    #
+    # When passing a JSON schema to the model (e.g. for structured outputs), use the
+    # `json_schema` field instead of deriving one from this adapter.
+    # A JSON schema derived from Pydantic is not guaranteed to satisfy all constraints
+    # expected by major model APIs (such as OpenAI's strict mode), whereas
+    # `json_schema` is.
     type_adapter: pydantic.TypeAdapter[Output]
 
 
