@@ -916,9 +916,6 @@ function writeTypepromptInterface(
         );
       } else if (field.omitDefault) {
         const resolved = resolveTypeWithOmitDefault(type, schema);
-        if (resolved.kind === "optional") {
-          throw new Error();
-        }
         let fallback: string;
         let decodeType: string;
         if (resolved.kind === "array") {

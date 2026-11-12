@@ -468,11 +468,10 @@ function writeSchema(
             '  if getattr(info, "mode", None) == "json" and isinstance(data, dict):',
           );
           for (const field of nonOptionalDefaultFields) {
+            if (field.type.kind === "optional") continue;
             const type = resolveTypeWithOmitDefault(field.type, schema);
             let defVal: string;
-            if (type.kind === "optional") {
-              throw new Error();
-            } else if (type.kind === "array") {
+            if (type.kind === "array") {
               defVal = "[]";
             } else if (type.primitive.text === "boolean") {
               defVal = "False";

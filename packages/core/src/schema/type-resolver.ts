@@ -41,6 +41,16 @@ export function resolveType(
 }
 
 export function resolveTypeWithOmitDefault(
+  type: Type | Literal,
+  schema: SchemaView,
+): Array | PrimitiveType;
+
+export function resolveTypeWithOmitDefault(
+  type: FieldType,
+  schema: SchemaView,
+): Array | Optional | PrimitiveType;
+
+export function resolveTypeWithOmitDefault(
   type: FieldType,
   schema: SchemaView,
 ): Array | Optional | PrimitiveType {
