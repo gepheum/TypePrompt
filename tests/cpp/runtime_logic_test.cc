@@ -2834,9 +2834,10 @@ void TestUserDefinedStructs() {
   ASSERT_TRUE(parsed_page_input->audience == Input_Audience::kDeveloper);
 
   // 4. Error reporting with JsonPath context
-  auto defaulted_field = typeprompt_02::ParseJson<Benchmark>("{\"score\": 10.0, \"unit\": \"s\"}");
-  ASSERT_TRUE(defaulted_field.ok());
-  ASSERT_EQ(defaulted_field->name, "");
+  auto missing_field_err =
+      typeprompt_02::ParseJson<Benchmark>("{\"score\": 10.0, \"unit\": \"s\"}");
+  ASSERT_FALSE(missing_field_err.ok());
+  ASSERT_EQ(missing_field_err.error().message, "Missing key: name at json");
 
   auto field_type_err = typeprompt_02::ParseJson<Benchmark>(
       "{\"name\": \"test\", \"score\": \"not_a_num\", \"unit\": \"s\"}");
@@ -3132,10 +3133,10 @@ void TestUserDefinedDiscriminatedUnionEnumWithCommonFields() {
   ASSERT_FALSE(err_s_payload_type.ok());
   ASSERT_EQ(err_s_payload_type.error().message, "Expected number at json.z");
 
-  auto parsed_payload_missing_field =
+  auto err_payload_missing_field =
       typeprompt_e01::ParseJson<EnumWithCommonFields>("{\"success\": true, \"x\": 1, \"y\": 2.0}");
-  ASSERT_TRUE(parsed_payload_missing_field.ok());
-  ASSERT_EQ(parsed_payload_missing_field->as_success().z, 0);
+  ASSERT_FALSE(err_payload_missing_field.ok());
+  ASSERT_EQ(err_payload_missing_field.error().message, "Missing key: z at json");
 }
 
 void Test01Basics_Translate() {
@@ -3493,18 +3494,17 @@ void TestMakeToolExecutor() {
   ASSERT_TRUE(resp_bad_json.stringified_output.find("Failed to parse tool input") !=
               std::string::npos);
 
-  // Schema validation failure (invalid type for 'query' field)
-  typeprompt_03::ToolCall call_bad_field_type{
-      .call_id = "c_bad_type",
+  // Schema validation failure (missing required 'query' field)
+  typeprompt_03::ToolCall call_missing_field{
+      .call_id = "c_missing",
       .tool_name = "webSearch",
-      .stringified_input = "{\"query\": 123}",
+      .stringified_input = "{}",
   };
-  auto resp_bad_type = executor->Execute(call_bad_field_type);
-  ASSERT_EQ(resp_bad_type.call_id, "c_bad_type");
-  ASSERT_TRUE(resp_bad_type.error.has_value());
-  ASSERT_TRUE(resp_bad_type.error->find("Expected string at json.query") != std::string::npos);
-  ASSERT_TRUE(resp_bad_type.stringified_output.find("Expected string at json.query") !=
-              std::string::npos);
+  auto resp_missing = executor->Execute(call_missing_field);
+  ASSERT_EQ(resp_missing.call_id, "c_missing");
+  ASSERT_TRUE(resp_missing.error.has_value());
+  ASSERT_TRUE(resp_missing.error->find("Missing key: query") != std::string::npos);
+  ASSERT_TRUE(resp_missing.stringified_output.find("Missing key: query") != std::string::npos);
 
   // Unknown tool error
   typeprompt_03::ToolCall call3{
@@ -4289,22 +4289,9 @@ void TestE01_JsonSerialization() {
   ASSERT_EQ(parsed_omitted_od->plain_list.size(), 1);
   ASSERT_EQ(parsed_omitted_od->plain_list[0], "item");
 
+  // Missing required plain* fields in JSON must fail
   auto parsed_empty_od = typeprompt_e01::ParseJson<OmitDefaultType>("{}");
-  ASSERT_TRUE(parsed_empty_od.ok());
-  ASSERT_FALSE(parsed_empty_od->opt_string.has_value());
-  ASSERT_FALSE(parsed_empty_od->opt_int.has_value());
-  ASSERT_FALSE(parsed_empty_od->opt_num.has_value());
-  ASSERT_FALSE(parsed_empty_od->opt_bool.has_value());
-  ASSERT_TRUE(parsed_empty_od->string_list.empty());
-  ASSERT_EQ(parsed_empty_od->string_field, "");
-  ASSERT_EQ(parsed_empty_od->int_field, 0);
-  ASSERT_EQ(parsed_empty_od->num_field, 0.0);
-  ASSERT_FALSE(parsed_empty_od->bool_field);
-  ASSERT_FALSE(parsed_empty_od->plain_opt.has_value());
-  ASSERT_EQ(parsed_empty_od->plain_string, "");
-  ASSERT_EQ(parsed_empty_od->plain_int, 0);
-  ASSERT_FALSE(parsed_empty_od->plain_bool);
-  ASSERT_TRUE(parsed_empty_od->plain_list.empty());
+  ASSERT_FALSE(parsed_empty_od.ok());
 
   // Non-default values
   OmitDefaultType populated_od = *OmitDefaultType::whole{
