@@ -1230,7 +1230,7 @@ describe("e01 / JSON serialization & deserialization", () => {
       expect(serializedOutput.includes('"plainOpt":null')).toMatch(true);
       expect(serializedOutput.includes('"plainString":"test"')).toMatch(true);
 
-      const parsedEmptyOutput = outputFormat.schema.parse({
+      const parsedOmitDefaultWithRequired = outputFormat.schema.parse({
         reversedText: "olleh",
         shape: {
           kind: "square",
@@ -1239,35 +1239,67 @@ describe("e01 / JSON serialization & deserialization", () => {
           self: "b",
           foo: "foo",
         },
-        omitDefault: {},
+        omitDefault: {
+          plainOpt: null,
+          plainString: "test",
+          plainInt: 123,
+          plainBool: true,
+          plainList: ["item"],
+        },
       });
-      expect(parsedEmptyOutput.omitDefault?.plainString).toMatch("");
-      expect(parsedEmptyOutput.omitDefault?.plainInt).toMatch(0);
-      expect(parsedEmptyOutput.omitDefault?.plainBool).toMatch(false);
-      expect(parsedEmptyOutput.omitDefault?.plainList).toMatch([]);
-      expect(parsedEmptyOutput.omitDefault?.plainOpt).toMatch(null);
+      expect(parsedOmitDefaultWithRequired.omitDefault?.stringField).toMatch(
+        undefined,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.intField).toMatch(
+        undefined,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.numField).toMatch(
+        undefined,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.boolField).toMatch(
+        undefined,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.stringList).toMatch(
+        undefined,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.plainString).toMatch(
+        "test",
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.plainInt).toMatch(123);
+      expect(parsedOmitDefaultWithRequired.omitDefault?.plainBool).toMatch(
+        true,
+      );
+      expect(parsedOmitDefaultWithRequired.omitDefault?.plainList).toMatch([
+        "item",
+      ]);
 
-      // Verify deserialization when missing value has type union / interface / literal
-      const parsedAllOmitted = outputFormat.schema.parse({});
-      expect(parsedAllOmitted.reversedText).toMatch("");
-      expect(parsedAllOmitted.shape).toMatch({
-        kind: "square",
-        size: 0,
-        fromJson: "",
-        self: "",
-        foo: "foo",
-      });
-      expect(parsedAllOmitted.omitDefault).toMatch(null);
+      // Missing required plain* fields in omitDefault causes validation failure
+      let omitDefaultError: Error | null = null;
+      try {
+        outputFormat.schema.parse({
+          reversedText: "olleh",
+          shape: {
+            kind: "square",
+            size: 10,
+            fromJson: "a",
+            self: "b",
+            foo: "foo",
+          },
+          omitDefault: {},
+        });
+      } catch (e) {
+        omitDefaultError = e as Error;
+      }
+      expect(omitDefaultError !== null).toBe(true);
 
-      // When shape is passed as an empty object {}, it matches Square and all its fields default
-      const parsedWithEmptyShape = outputFormat.schema.parse({ shape: {} });
-      expect(parsedWithEmptyShape.shape).toMatch({
-        kind: "square",
-        size: 0,
-        fromJson: "",
-        self: "",
-        foo: "foo",
-      });
+      // Missing required fields causes validation failure
+      let allOmittedError: Error | null = null;
+      try {
+        outputFormat.schema.parse({});
+      } catch (e) {
+        allOmittedError = e as Error;
+      }
+      expect(allOmittedError !== null).toBe(true);
 
       const parsedPopulatedOutput = outputFormat.schema.parse({
         reversedText: "olleh",
