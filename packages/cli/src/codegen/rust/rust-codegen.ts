@@ -24,7 +24,10 @@ import type {
   Union,
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
@@ -854,6 +857,7 @@ function writeTypepromptInterface(
     : "Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq";
   lines.push(`#[derive(${derives})]`);
   lines.push(`${vis}struct ${typeName} {`);
+  const needs = new Set<"isFalse" | "isZeroI32" | "isZeroF64">();
   for (const field of fields) {
     const type = resolveType(field.type, schema);
     if (isLiteralType(type)) continue;
@@ -865,8 +869,41 @@ function writeTypepromptInterface(
     if (rawFieldName !== rustName) {
       serdeAttrs.push(`rename = "${rawFieldName}"`);
     }
-    if (type.kind === "optional") {
+    const hasDefault =
+      type.kind === "optional" ||
+      type.kind === "primitive" ||
+      type.kind === "array";
+    if (hasDefault) {
       serdeAttrs.push("default");
+    }
+    if (field.omitDefault !== null) {
+      if (type.kind === "optional") {
+        serdeAttrs.push('skip_serializing_if = "Option::is_none"');
+      } else if (type.kind === "array") {
+        serdeAttrs.push('skip_serializing_if = "Vec::is_empty"');
+      } else if (type.kind === "primitive") {
+        switch (type.primitive.text) {
+          case "string": {
+            serdeAttrs.push('skip_serializing_if = "String::is_empty"');
+            break;
+          }
+          case "boolean": {
+            needs.add("isFalse");
+            serdeAttrs.push('skip_serializing_if = "Self::_is_false"');
+            break;
+          }
+          case "integer": {
+            needs.add("isZeroI32");
+            serdeAttrs.push('skip_serializing_if = "Self::_is_zero_i32"');
+            break;
+          }
+          case "number": {
+            needs.add("isZeroF64");
+            serdeAttrs.push('skip_serializing_if = "Self::_is_zero_f64"');
+            break;
+          }
+        }
+      }
     }
     if (serdeAttrs.length > 0) {
       lines.push(`#[serde(${serdeAttrs.join(", ")})]`);
@@ -874,6 +911,26 @@ function writeTypepromptInterface(
     lines.push(`${vis}${rustName}: ${fieldType},`);
   }
   lines.push("}"); // struct
+
+  if (!hasLiteralField && needs.size >= 1) {
+    lines.push("", `impl ${typeName} {`);
+    for (const need of needs) {
+      switch (need) {
+        case "isFalse":
+          lines.push("fn _is_false(v: &bool) -> bool { !*v }");
+          break;
+        case "isZeroI32":
+          lines.push("fn _is_zero_i32(v: &i32) -> bool { *v == 0 }");
+          break;
+        case "isZeroF64":
+          lines.push("fn _is_zero_f64(v: &f64) -> bool { *v == 0.0 }");
+          break;
+        default:
+          throw new Error(need as never);
+      }
+    }
+    lines.push("}");
+  }
 
   if (hasLiteralField) {
     lines.push(
@@ -891,9 +948,44 @@ function writeTypepromptInterface(
         );
       } else {
         const rustName = toRustName(toSnakeCase(rawFieldName));
-        lines.push(
-          `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
-        );
+        if (field.omitDefault !== null) {
+          const type = resolveTypeWithOmitDefault(field.type, schema);
+          if (type.kind === "optional") {
+            lines.push(`if self.${rustName}.is_some() {`);
+          } else if (type.kind === "array") {
+            lines.push(`if !self.${rustName}.is_empty() {`);
+          } else if (type.kind === "primitive") {
+            switch (type.primitive.text) {
+              case "string": {
+                lines.push(`if !self.${rustName}.is_empty() {`);
+                break;
+              }
+              case "boolean": {
+                lines.push(`if self.${rustName} {`);
+                break;
+              }
+              case "integer": {
+                lines.push(`if self.${rustName} != 0 {`);
+                break;
+              }
+              case "number": {
+                lines.push(`if self.${rustName} != 0.0 {`);
+                break;
+              }
+              default: {
+                const _: never = type.primitive.text;
+              }
+            }
+          }
+          lines.push(
+            `  serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
+            "}",
+          );
+        } else {
+          lines.push(
+            `serde::ser::SerializeStruct::serialize_field(&mut state, "${rawFieldName}", &self.${rustName})?;`,
+          );
+        }
       }
     }
     lines.push("serde::ser::SerializeStruct::end(state)");
