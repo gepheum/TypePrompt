@@ -776,25 +776,20 @@ function writeMethodImplsForInterface(
         condition = `!${value}.empty()`;
       } else if (type.kind === "primitive") {
         switch (type.primitive.text) {
-          case "string": {
+          case "string":
             condition = `!${value}.empty()`;
             break;
-          }
-          case "integer": {
+          case "integer":
             condition = `${value} != 0`;
             break;
-          }
-          case "number": {
+          case "number":
             condition = `${value} != 0.0`;
             break;
-          }
-          case "boolean": {
+          case "boolean":
             condition = value;
             break;
-          }
-          default: {
+          default:
             throw new Error(type.primitive.text as never);
-          }
         }
       } else {
         throw new Error(type as never);
