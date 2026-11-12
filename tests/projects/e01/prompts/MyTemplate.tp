@@ -2,11 +2,13 @@
   <schema>
     interface Input {
       text: string;
+      omitDefault?: shared.OmitDefaultType;
     }
 
     interface Output {
       reversedText: string;
       shape: shared.Square | { kind: "circle"; radius: number };
+      omitDefault?: shared.OmitDefaultType;
     }
   </schema>
   <system>

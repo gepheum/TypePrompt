@@ -98,4 +98,30 @@
     optMatrix?: integer[][];
     optMap?: { [x: string]: integer };
   };
+
+  type OmitDefaultType = {
+    /// @omitDefault
+    optString?: string;
+    /// @omitDefault
+    optInt?: integer;
+    /// @omitDefault
+    optNum?: number;
+    /// @omitDefault
+    optBool?: boolean;
+    /// @omitDefault
+    stringList: string[];
+    /// @omitDefault
+    stringField: string;
+    /// @omitDefault
+    intField: integer;
+    /// @omitDefault
+    numField: number;
+    /// @omitDefault
+    boolField: boolean;
+    plainOpt?: string;
+    plainString: string;
+    plainInt: integer;
+    plainBool: boolean;
+    plainList: string[];
+  };
 </namespace>
