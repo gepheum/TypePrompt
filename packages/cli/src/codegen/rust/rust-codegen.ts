@@ -876,7 +876,7 @@ function writeTypepromptInterface(
     if (hasDefault) {
       serdeAttrs.push("default");
     }
-    if (field.omitDefault !== null) {
+    if (field.omitDefault) {
       if (type.kind === "optional") {
         serdeAttrs.push('skip_serializing_if = "Option::is_none"');
       } else if (type.kind === "array") {
@@ -948,7 +948,7 @@ function writeTypepromptInterface(
         );
       } else {
         const rustName = toRustName(toSnakeCase(rawFieldName));
-        if (field.omitDefault !== null) {
+        if (field.omitDefault) {
           const type = resolveTypeWithOmitDefault(field.type, schema);
           if (type.kind === "optional") {
             lines.push(`if self.${rustName}.is_some() {`);

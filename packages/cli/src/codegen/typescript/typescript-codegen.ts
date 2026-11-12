@@ -349,7 +349,7 @@ function writeType(
       let result = "{\n";
       for (const [fieldName, field] of fields) {
         const isOptional =
-          field.type.kind === "optional" || field.omitDefault !== null;
+          field.type.kind === "optional" || !!field.omitDefault;
         result += [
           wrapJsdoc(field.doc),
           "readonly ",
@@ -555,7 +555,7 @@ function writeZodType(
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
           let defaultModifier: string;
-          if (field.omitDefault !== null) {
+          if (field.omitDefault) {
             const resolved = resolveTypeWithOmitDefault(field.type, schema);
             if (resolved.kind === "optional") {
               defaultModifier =

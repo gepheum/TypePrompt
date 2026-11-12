@@ -766,7 +766,7 @@ function writeMethodImplsForInterface(
   for (const field of fields) {
     const rawFieldName = field.name.text;
     const cFieldName = toCName(toSnakeCase(rawFieldName));
-    if (field.omitDefault !== null) {
+    if (field.omitDefault) {
       const type = resolveTypeWithOmitDefault(field.type, schema);
       const value = `input.${cFieldName}`;
       let condition: string;
