@@ -1115,6 +1115,77 @@ class TestE01JsonSerialization:
         assert decoded_populated.plain_bool is True
         assert decoded_populated.plain_list == ["x"]
 
+        # 4. Serialization and deserialization with by_alias=False
+        json_omitted_no_alias = adapter.dump_json(omitted, by_alias=False).decode(
+            "utf-8"
+        )
+        assert '"opt_string"' not in json_omitted_no_alias
+        assert '"opt_int"' not in json_omitted_no_alias
+        assert '"opt_num"' not in json_omitted_no_alias
+        assert '"opt_bool"' not in json_omitted_no_alias
+        assert '"string_list"' not in json_omitted_no_alias
+        assert '"string_field"' not in json_omitted_no_alias
+        assert '"int_field"' not in json_omitted_no_alias
+        assert '"num_field"' not in json_omitted_no_alias
+        assert '"bool_field"' not in json_omitted_no_alias
+        assert '"plain_opt":null' in json_omitted_no_alias
+        assert '"plain_string":"test"' in json_omitted_no_alias
+        assert '"plain_int":123' in json_omitted_no_alias
+        assert '"plain_bool":true' in json_omitted_no_alias
+        assert '"plain_list":["item"]' in json_omitted_no_alias
+        assert '"literal":"Literal"' in json_omitted_no_alias
+
+        decoded_no_alias = adapter.validate_json(json_omitted_no_alias)
+        assert decoded_no_alias.opt_string is None
+        assert decoded_no_alias.opt_int is None
+        assert decoded_no_alias.opt_num is None
+        assert decoded_no_alias.opt_bool is None
+        assert decoded_no_alias.string_list == []
+        assert decoded_no_alias.string_field == ""
+        assert decoded_no_alias.int_field == 0
+        assert decoded_no_alias.num_field == 0.0
+        assert decoded_no_alias.bool_field is False
+        assert decoded_no_alias.plain_opt is None
+        assert decoded_no_alias.plain_string == "test"
+        assert decoded_no_alias.plain_int == 123
+        assert decoded_no_alias.plain_bool is True
+        assert decoded_no_alias.plain_list == ["item"]
+        assert decoded_no_alias.literal == "Literal"
+
+        json_pop_no_alias = adapter.dump_json(populated, by_alias=False).decode("utf-8")
+        assert '"opt_string":"hello"' in json_pop_no_alias
+        assert '"opt_int":42' in json_pop_no_alias
+        assert '"opt_num":3.14' in json_pop_no_alias
+        assert '"opt_bool":true' in json_pop_no_alias
+        assert '"string_list":["a","b"]' in json_pop_no_alias
+        assert '"string_field":"world"' in json_pop_no_alias
+        assert '"int_field":7' in json_pop_no_alias
+        assert '"num_field":2.5' in json_pop_no_alias
+        assert '"bool_field":true' in json_pop_no_alias
+        assert '"plain_opt":"plain"' in json_pop_no_alias
+        assert '"plain_string":"test3"' in json_pop_no_alias
+        assert '"plain_int":789' in json_pop_no_alias
+        assert '"plain_bool":true' in json_pop_no_alias
+        assert '"plain_list":["x"]' in json_pop_no_alias
+        assert '"literal":"Literal"' in json_pop_no_alias
+
+        decoded_pop_no_alias = adapter.validate_json(json_pop_no_alias)
+        assert decoded_pop_no_alias.opt_string == "hello"
+        assert decoded_pop_no_alias.opt_int == 42
+        assert decoded_pop_no_alias.opt_num == 3.14
+        assert decoded_pop_no_alias.opt_bool is True
+        assert decoded_pop_no_alias.string_list == ["a", "b"]
+        assert decoded_pop_no_alias.string_field == "world"
+        assert decoded_pop_no_alias.int_field == 7
+        assert decoded_pop_no_alias.num_field == 2.5
+        assert decoded_pop_no_alias.bool_field is True
+        assert decoded_pop_no_alias.plain_opt == "plain"
+        assert decoded_pop_no_alias.plain_string == "test3"
+        assert decoded_pop_no_alias.plain_int == 789
+        assert decoded_pop_no_alias.plain_bool is True
+        assert decoded_pop_no_alias.plain_list == ["x"]
+        assert decoded_pop_no_alias.literal == "Literal"
+
 
 class TestTemplateOverrider:
     def test_templates_data(self) -> None:

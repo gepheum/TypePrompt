@@ -433,25 +433,30 @@ function writeSchema(
             "  if isinstance(data, dict):",
           );
           for (const omitDefaultField of omitDefaultFields) {
-            const key = omitDefaultField.name.text;
+            const rawName = omitDefaultField.name.text;
+            const fieldName = toPyName(rawName, "field_name");
+            const keys =
+              fieldName === rawName ? [rawName] : [rawName, fieldName];
             const type = resolveTypeWithOmitDefault(
               omitDefaultField.type,
               schema,
             );
-            let condition: string;
-            if (type.kind === "optional") {
-              condition = `'${key}' in data and data['${key}'] is None`;
-            } else if (type.kind === "array") {
-              condition = `data.get('${key}') == []`;
-            } else if (type.primitive.text === "string") {
-              condition = `data.get('${key}') == ""`;
-            } else if (type.primitive.text === "boolean") {
-              condition = `data.get('${key}') is False`;
-            } else {
-              const _: "number" | "integer" = type.primitive.text;
-              condition = `data.get('${key}') == 0`;
+            for (const key of keys) {
+              let condition: string;
+              if (type.kind === "optional") {
+                condition = `'${key}' in data and data['${key}'] is None`;
+              } else if (type.kind === "array") {
+                condition = `data.get('${key}') == []`;
+              } else if (type.primitive.text === "string") {
+                condition = `data.get('${key}') == ""`;
+              } else if (type.primitive.text === "boolean") {
+                condition = `data.get('${key}') is False`;
+              } else {
+                const _: "number" | "integer" = type.primitive.text;
+                condition = `data.get('${key}') == 0 and not isinstance(data.get('${key}'), bool)`;
+              }
+              lines.push(`   if ${condition}:`, `    del data['${key}']`);
             }
-            lines.push(`   if ${condition}:`, `    del data['${key}']`);
           }
           lines.push("  return data");
         }
@@ -469,6 +474,8 @@ function writeSchema(
           );
           for (const field of nonOptionalDefaultFields) {
             if (field.type.kind === "optional") continue;
+            const rawName = field.name.text;
+            const fieldName = toPyName(rawName, "field_name");
             const type = resolveTypeWithOmitDefault(field.type, schema);
             let defVal: string;
             if (type.kind === "array") {
@@ -483,10 +490,11 @@ function writeSchema(
               const _: "string" = type.primitive.text;
               defVal = '""';
             }
-            lines.push(
-              `   if '${field.name.text}' not in data:`,
-              `    data['${field.name.text}'] = ${defVal}`,
-            );
+            const check =
+              fieldName === rawName
+                ? `'${rawName}' not in data`
+                : `'${rawName}' not in data and '${fieldName}' not in data`;
+            lines.push(`   if ${check}:`, `    data['${rawName}'] = ${defVal}`);
           }
           lines.push("  return data");
         }
