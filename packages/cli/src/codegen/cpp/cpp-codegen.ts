@@ -827,11 +827,7 @@ function writeMethodImplsForInterface(
   for (const field of parseFields) {
     const rawFieldName = field.name.text;
     const cFieldName = toCName(toSnakeCase(rawFieldName));
-    const resolved = resolveType(field.type, schema);
-    const hasDefault =
-      field.type.kind === "optional" ||
-      resolved.kind === "primitive" ||
-      resolved.kind === "array";
+    const hasDefault = field.type.kind === "optional" || field.omitDefault;
     const method = hasDefault ? "ParseOptional" : "Parse";
     lines.push(` parser.${method}("${rawFieldName}", out.${cFieldName});`);
   }
