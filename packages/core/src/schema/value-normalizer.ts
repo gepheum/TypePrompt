@@ -95,7 +95,7 @@ export function normalizeSchemaValue(
           mode,
         );
 
-        if (mode === "user" && field.omitDefault !== null) {
+        if (mode === "user" && field.omitDefault) {
           const fieldType = resolveType(field.type, schemaType.schema);
           const isDefaultValue = isDefaultValueForFieldType(
             normalizedValue,

@@ -167,7 +167,7 @@ function isTabularType(type: ResolvedFieldType, schema: Schema): boolean {
     return false;
   }
   return Object.values(elementType.fields).every((field) => {
-    if (field.omitDefault !== null) return false;
+    if (field.omitDefault) return false;
     const fieldType = resolveType(field.type, schema);
     return isStringOrIntegerType(fieldType, schema);
   });
