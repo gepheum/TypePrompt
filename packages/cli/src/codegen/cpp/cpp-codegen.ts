@@ -769,27 +769,41 @@ function writeMethodImplsForInterface(
     if (field.omitDefault !== null) {
       const type = resolveTypeWithOmitDefault(field.type, schema);
       const value = `input.${cFieldName}`;
+      let condition: string;
       if (type.kind === "optional") {
-        lines.push(` if (${value}.has_value()) {`);
+        condition = `${value}.has_value()`;
       } else if (type.kind === "array") {
-        lines.push(` if (!${value}.empty()) {`);
+        condition = `!${value}.empty()`;
       } else if (type.kind === "primitive") {
-        if (type.primitive.text === "string") {
-          lines.push(` if (!${value}.empty()) {`);
-        } else if (type.primitive.text === "integer") {
-          lines.push(` if (${value} != 0) {`);
-        } else if (type.primitive.text === "number") {
-          lines.push(` if (${value} != 0.0) {`);
-        } else if (type.primitive.text === "boolean") {
-          lines.push(` if (${value}) {`);
-        } else {
-          const _: never = type.primitive.text;
+        switch (type.primitive.text) {
+          case "string": {
+            condition = `!${value}.empty()`;
+            break;
+          }
+          case "integer": {
+            condition = `${value} != 0`;
+            break;
+          }
+          case "number": {
+            condition = `${value} != 0.0`;
+            break;
+          }
+          case "boolean": {
+            condition = value;
+            break;
+          }
+          default: {
+            throw new Error(type.primitive.text as never);
+          }
         }
-        lines.push(
-          `  entries.push_back({"${rawFieldName}", ToJsonNode(${value})});`,
-          " }",
-        );
+      } else {
+        throw new Error(type as never);
       }
+      lines.push(
+        ` if (${condition}) {`,
+        `  entries.push_back({"${rawFieldName}", ToJsonNode(${value})});`,
+        " }",
+      );
     } else {
       const type = resolveType(field.type, schema);
       const isLiteral = isLiteralType(type);
