@@ -227,3 +227,32 @@ type Person = {
 ```
 
 JSDoc text is stored in the JSON schemas that are passed to the LLM, and is also used by code generators to emit documentation in the target language.
+
+---
+
+## The `@omitDefault` directive
+
+The `/// @omitDefault` directive instructs serialization and prompt rendering (in JSON, YAML or TOON format) to omit an interface field when it holds its default value:
+
+```ts
+type Filter = {
+  query: string;
+  /// @omitDefault
+  page?: integer;
+  /// @omitDefault
+  tags: string[];
+  /// @omitDefault
+  caseSensitive: boolean;
+};
+```
+
+It can be applied to optional, array, or primitive fields:
+
+| Field type | Omitted when |
+|---|---|---|
+| Optional (`T?`) | Value is `null` |
+| Array (`T[]`) | Array is empty |
+| `string` | String is empty |
+| `boolean` | Value is `false` |
+| `integer` | Value is `0` |
+| `number` | Value is `0` |
