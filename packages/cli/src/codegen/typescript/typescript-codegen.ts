@@ -28,7 +28,6 @@ import type { NameScope } from "@typeprompt/core/schema/schema-utils.js";
 import {
   getNameDependencies,
   NAME_SCOPES,
-  unwrapNullable as unwrapOptional,
 } from "@typeprompt/core/schema/schema-utils.js";
 import { resolveTypeWithOmitDefault } from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
@@ -555,11 +554,10 @@ function writeZodType(
         const fieldDefs: string[] = [];
         for (const field of Object.values(type.fields)) {
           const doc: string = field.doc;
-          const { type, isOptional } = unwrapOptional(field.type);
-          let defaultModifier;
+          let defaultModifier: string;
           if (field.omitDefault !== null) {
             const resolved = resolveTypeWithOmitDefault(field.type, schema);
-            if (isOptional) {
+            if (resolved.kind === "optional") {
               defaultModifier =
                 ".nullable().default(null).transform((val) => val ?? undefined).optional()";
             } else if (resolved.kind === "array") {
@@ -583,10 +581,15 @@ function writeZodType(
                     ".default(false).transform((val) => val || undefined).optional()";
                   break;
                 }
+                default: {
+                  throw new Error(resolved.primitive.text as never);
+                }
               }
+            } else {
+              throw new Error(resolved as never);
             }
           } else {
-            if (isOptional) {
+            if (field.type.kind === "optional") {
               defaultModifier = ".nullable().default(null)";
             } else {
               const { defaultValueJs, mutable } = getDefaultValueJs(
@@ -602,7 +605,12 @@ function writeZodType(
             [
               field.name.text,
               ": ",
-              write(type, scope),
+              write(
+                field.type.kind === "optional"
+                  ? field.type.innerType
+                  : field.type,
+                scope,
+              ),
               defaultModifier,
               doc ? `.describe(${JSON.stringify(doc)})` : "",
               ",",

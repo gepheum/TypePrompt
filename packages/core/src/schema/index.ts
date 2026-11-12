@@ -18,7 +18,6 @@ export {
   NAME_SCOPES,
   getNameDependencies,
   isLiteralType,
-  unwrapNullable,
   type NameScope,
 } from "./schema-utils.js";
 

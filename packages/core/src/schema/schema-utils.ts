@@ -12,23 +12,6 @@ export function isLiteralType(
   return type.kind === "string-literal" || type.kind === "boolean-literal";
 }
 
-export function unwrapNullable(type: FieldType): {
-  type: Type | Literal;
-  isOptional: boolean;
-} {
-  if (type.kind === "optional") {
-    return {
-      type: type.innerType,
-      isOptional: true,
-    };
-  } else {
-    return {
-      type,
-      isOptional: false,
-    };
-  }
-}
-
 export type NameScope = "defaultScope" | "shared";
 
 export type NameDependencies = {

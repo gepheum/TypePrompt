@@ -88,7 +88,6 @@ export {
   makeExampleValue,
   normalizeSchemaValue,
   resolveType,
-  unwrapNullable,
   type Field,
   type FieldType,
   type Interface,
