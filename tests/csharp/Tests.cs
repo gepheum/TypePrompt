@@ -1204,6 +1204,147 @@ public class TestE01_JsonSerialization
         Assert.Null(parsedOmitted.OptMatrix);
         Assert.Null(parsedOmitted.OptMap);
     }
+
+    [Fact]
+    public void TestOmitDefaultSerializationAndDeserialization()
+    {
+        // 1. Instance with default/omitted values
+        var omitted = new TypePrompt.Schema.Shared.OmitDefaultType
+        {
+            StringList = [],
+            StringField = "",
+            IntField = 0,
+            NumField = 0.0,
+            BoolField = false,
+            PlainOpt = null,
+            PlainString = "test",
+            PlainInt = 123,
+            PlainBool = true,
+            PlainList = new[] { "item" },
+        };
+        var jsonOmitted = JsonSerializer.Serialize(omitted);
+
+        Assert.DoesNotContain("\"optString\"", jsonOmitted);
+        Assert.DoesNotContain("\"optInt\"", jsonOmitted);
+        Assert.DoesNotContain("\"optNum\"", jsonOmitted);
+        Assert.DoesNotContain("\"optBool\"", jsonOmitted);
+        Assert.DoesNotContain("\"stringList\"", jsonOmitted);
+        Assert.DoesNotContain("\"stringField\"", jsonOmitted);
+        Assert.DoesNotContain("\"intField\"", jsonOmitted);
+        Assert.DoesNotContain("\"numField\"", jsonOmitted);
+        Assert.DoesNotContain("\"boolField\"", jsonOmitted);
+
+        Assert.Contains("\"plainOpt\":null", jsonOmitted);
+        Assert.Contains("\"plainString\":\"test\"", jsonOmitted);
+        Assert.Contains("\"plainInt\":123", jsonOmitted);
+        Assert.Contains("\"plainBool\":true", jsonOmitted);
+        Assert.Contains("\"plainList\":[\"item\"]", jsonOmitted);
+
+        var decodedOmitted = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.OmitDefaultType>(jsonOmitted);
+        Assert.NotNull(decodedOmitted);
+        Assert.Null(decodedOmitted.OptString);
+        Assert.Null(decodedOmitted.OptInt);
+        Assert.Null(decodedOmitted.OptNum);
+        Assert.Null(decodedOmitted.OptBool);
+        Assert.Empty(decodedOmitted.StringList);
+        Assert.Equal("", decodedOmitted.StringField);
+        Assert.Equal(0, decodedOmitted.IntField);
+        Assert.Equal(0.0, decodedOmitted.NumField);
+        Assert.False(decodedOmitted.BoolField);
+        Assert.Null(decodedOmitted.PlainOpt);
+        Assert.Equal("test", decodedOmitted.PlainString);
+        Assert.Equal(123, decodedOmitted.PlainInt);
+        Assert.True(decodedOmitted.PlainBool);
+        Assert.Equal(new[] { "item" }, decodedOmitted.PlainList);
+
+        Assert.Throws<JsonException>(() =>
+            JsonSerializer.Deserialize<TypePrompt.Schema.Shared.OmitDefaultType>("{}"));
+
+        // 2. Instance with explicitly assigned default values
+        var explicitDefaults = new TypePrompt.Schema.Shared.OmitDefaultType
+        {
+            OptString = null,
+            OptInt = null,
+            OptNum = null,
+            OptBool = null,
+            StringList = [],
+            StringField = "",
+            IntField = 0,
+            NumField = 0.0,
+            BoolField = false,
+            PlainOpt = null,
+            PlainString = "test2",
+            PlainInt = 456,
+            PlainBool = false,
+            PlainList = [],
+        };
+        var jsonExplicit = JsonSerializer.Serialize(explicitDefaults);
+        Assert.DoesNotContain("\"optString\"", jsonExplicit);
+        Assert.DoesNotContain("\"optInt\"", jsonExplicit);
+        Assert.DoesNotContain("\"optNum\"", jsonExplicit);
+        Assert.DoesNotContain("\"optBool\"", jsonExplicit);
+        Assert.DoesNotContain("\"stringList\"", jsonExplicit);
+        Assert.DoesNotContain("\"stringField\"", jsonExplicit);
+        Assert.DoesNotContain("\"intField\"", jsonExplicit);
+        Assert.DoesNotContain("\"numField\"", jsonExplicit);
+        Assert.DoesNotContain("\"boolField\"", jsonExplicit);
+        Assert.Contains("\"plainOpt\":null", jsonExplicit);
+        Assert.Contains("\"plainString\":\"test2\"", jsonExplicit);
+        Assert.Contains("\"plainInt\":456", jsonExplicit);
+        Assert.Contains("\"plainBool\":false", jsonExplicit);
+        Assert.Contains("\"plainList\":[]", jsonExplicit);
+
+        // 3. Instance with non-default values
+        var populated = new TypePrompt.Schema.Shared.OmitDefaultType
+        {
+            OptString = "hello",
+            OptInt = 42,
+            OptNum = 3.14,
+            OptBool = true,
+            StringList = new[] { "a", "b" },
+            StringField = "world",
+            IntField = 7,
+            NumField = 2.5,
+            BoolField = true,
+            PlainOpt = "plain",
+            PlainString = "test3",
+            PlainInt = 789,
+            PlainBool = true,
+            PlainList = new[] { "x" },
+        };
+        var jsonPopulated = JsonSerializer.Serialize(populated);
+        Assert.Contains("\"optString\":\"hello\"", jsonPopulated);
+        Assert.Contains("\"optInt\":42", jsonPopulated);
+        Assert.Contains("\"optNum\":3.14", jsonPopulated);
+        Assert.Contains("\"optBool\":true", jsonPopulated);
+        Assert.Contains("\"stringList\":[\"a\",\"b\"]", jsonPopulated);
+        Assert.Contains("\"stringField\":\"world\"", jsonPopulated);
+        Assert.Contains("\"intField\":7", jsonPopulated);
+        Assert.Contains("\"numField\":2.5", jsonPopulated);
+        Assert.Contains("\"boolField\":true", jsonPopulated);
+        Assert.Contains("\"plainOpt\":\"plain\"", jsonPopulated);
+        Assert.Contains("\"plainString\":\"test3\"", jsonPopulated);
+        Assert.Contains("\"plainInt\":789", jsonPopulated);
+        Assert.Contains("\"plainBool\":true", jsonPopulated);
+        Assert.Contains("\"plainList\":[\"x\"]", jsonPopulated);
+
+        var decodedPopulated = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.OmitDefaultType>(jsonPopulated);
+        Assert.NotNull(decodedPopulated);
+        Assert.Equal("hello", decodedPopulated.OptString);
+        Assert.Equal(42, decodedPopulated.OptInt);
+        Assert.Equal(3.14, decodedPopulated.OptNum);
+        Assert.True(decodedPopulated.OptBool);
+        Assert.Equal(new[] { "a", "b" }, decodedPopulated.StringList);
+        Assert.Equal("world", decodedPopulated.StringField);
+        Assert.Equal(7, decodedPopulated.IntField);
+        Assert.Equal(2.5, decodedPopulated.NumField);
+        Assert.True(decodedPopulated.BoolField);
+        Assert.Equal("plain", decodedPopulated.PlainOpt);
+        Assert.Equal("test3", decodedPopulated.PlainString);
+        Assert.Equal(789, decodedPopulated.PlainInt);
+        Assert.True(decodedPopulated.PlainBool);
+        Assert.Equal(new[] { "x" }, decodedPopulated.PlainList);
+    }
 }
 
 public class TestTemplateOverrider

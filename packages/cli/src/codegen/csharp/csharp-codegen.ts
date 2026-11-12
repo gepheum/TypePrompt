@@ -24,7 +24,10 @@ import type {
   Union,
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { reformatCFamilyCode } from "../formatters.js";
@@ -989,6 +992,7 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
+  const hasOmitDefault = fields.some((f) => f.omitDefault);
 
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
@@ -1003,47 +1007,239 @@ function writeTypepromptInterface(
       )
     : "";
 
-  const lines = [`public sealed record ${typeName}${implementsClause}`, "{"];
+  if (!hasOmitDefault) {
+    const lines = [`public sealed record ${typeName}${implementsClause}`, "{"];
 
-  for (const field of fields) {
+    for (const field of fields) {
+      const { type } = field;
+      const fieldType = writeType(type, schema, options);
+      const rawFieldName = field.name.text;
+      let propertyName = toCSharpName(capitalize(rawFieldName));
+      if (propertyName === typeName) {
+        // In C#, a record (like a class or struct) cannot contain a member—including a
+        // field, property, or method—that shares the exact same name as its enclosing
+        // type.
+        // Just use camelCase for the field name.
+        const camelCaseName = toCSharpName(rawFieldName);
+        if (unionContext.overrideFields.has(field)) {
+          for (const int of interfaces!) {
+            lines.push(
+              `${fieldType} ${int}.${propertyName} => ${camelCaseName};`,
+            );
+          }
+        }
+        propertyName = camelCaseName;
+      }
+      lines.push(...wrapXmlDoc(field.doc));
+      if (isLiteralType(type)) {
+        const quotedValue = JSON.stringify(type.value);
+        lines.push(
+          "[JsonInclude]",
+          `[JsonPropertyName("${rawFieldName}")]`,
+          `private readonly ${fieldType} ${propertyName} = ${quotedValue};`,
+        );
+      } else {
+        const resolved = resolveType(type, schema);
+        const isOptional = resolved.kind === "optional";
+        if (isOptional) {
+          lines.push(
+            `[JsonPropertyName("${rawFieldName}")]`,
+            `public ${fieldType} ${propertyName} { get; init; } = null;`,
+          );
+        } else {
+          lines.push(
+            `[JsonPropertyName("${rawFieldName}")]`,
+            `public required ${fieldType} ${propertyName} { get; init; }`,
+          );
+        }
+      }
+    }
+
+    lines.push("}");
+    return lines.join("\n");
+  }
+
+  const lines: string[] = [
+    `[JsonConverter(typeof(${typeName}__Converter))]`,
+    `public sealed record ${typeName}${implementsClause}`,
+    "{",
+  ];
+
+  const fieldInfos = fields.map((field) => {
     const { type } = field;
     const fieldType = writeType(type, schema, options);
     const rawFieldName = field.name.text;
     let propertyName = toCSharpName(capitalize(rawFieldName));
     if (propertyName === typeName) {
-      // In C#, a record (like a class or struct) cannot contain a member—including a
-      // field, property, or method—that shares the exact same name as its enclosing
-      // type.
-      // Just use camelCase for the field name.
-      const camelCaseName = toCSharpName(rawFieldName);
+      propertyName = toCSharpName(rawFieldName);
+    }
+    return {
+      field,
+      type,
+      fieldType,
+      rawFieldName,
+      propertyName,
+      resolved: resolveType(type, schema),
+    };
+  });
+
+  for (const info of fieldInfos) {
+    const { field, type, fieldType, rawFieldName, propertyName, resolved } =
+      info;
+    if (propertyName !== toCSharpName(capitalize(rawFieldName))) {
       if (unionContext.overrideFields.has(field)) {
         for (const int of interfaces!) {
           lines.push(
-            `${fieldType} ${int}.${propertyName} => ${camelCaseName};`,
+            `${fieldType} ${int}.${toCSharpName(capitalize(rawFieldName))} => ${propertyName};`,
           );
         }
       }
-      propertyName = camelCaseName;
     }
     lines.push(...wrapXmlDoc(field.doc));
     if (isLiteralType(type)) {
       const quotedValue = JSON.stringify(type.value);
       lines.push(
-        "[JsonInclude]",
-        `[JsonPropertyName("${rawFieldName}")]`,
         `private readonly ${fieldType} ${propertyName} = ${quotedValue};`,
       );
     } else {
-      const isOptional = resolveType(type, schema).kind === "optional";
-      const required = isOptional ? "" : "required ";
+      const isOptional = resolved.kind === "optional";
+      if (isOptional) {
+        lines.push(
+          `public ${fieldType} ${propertyName} { get; init; } = null;`,
+        );
+      } else {
+        lines.push(
+          `public required ${fieldType} ${propertyName} { get; init; }`,
+        );
+      }
+    }
+  }
+  lines.push("}", "", `internal sealed class ${typeName}__Surrogate`, "{");
+  for (const info of fieldInfos) {
+    const { field, type, fieldType, rawFieldName, propertyName, resolved } =
+      info;
+    lines.push(`[JsonPropertyName("${rawFieldName}")]`);
+
+    if (isLiteralType(type)) {
       lines.push(
-        `[JsonPropertyName("${rawFieldName}")]`,
-        `public ${required}${fieldType} ${propertyName} { get; init; }`,
+        `public ${fieldType} ${propertyName} { get; set; } = ${JSON.stringify(type.value)};`,
       );
+      continue;
+    }
+
+    if (!field.omitDefault) {
+      const isOptional = resolved.kind === "optional";
+      lines.push(
+        isOptional
+          ? `public ${fieldType} ${propertyName} { get; set; } = null;`
+          : `public required ${fieldType} ${propertyName} { get; set; }`,
+      );
+      continue;
+    }
+
+    if (resolved.kind === "optional") {
+      lines.push(
+        "[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]",
+        `public ${fieldType} ${propertyName} { get; set; } = null;`,
+      );
+    } else {
+      const resolvedWithOmit = resolveTypeWithOmitDefault(resolved, schema);
+      if (resolvedWithOmit.kind === "array") {
+        lines.push(
+          "[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]",
+          `public ${fieldType}? ${propertyName} { get; set; } = [];`,
+        );
+      } else if (resolvedWithOmit.primitive.text === "string") {
+        lines.push(
+          "[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]",
+          `public string? ${propertyName} { get; set; } = "";`,
+        );
+      } else {
+        const def =
+          resolvedWithOmit.primitive.text === "boolean"
+            ? "false"
+            : resolvedWithOmit.primitive.text === "integer"
+              ? "0"
+              : "0.0";
+        lines.push(
+          "[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]",
+          `public ${fieldType} ${propertyName} { get; set; } = ${def};`,
+        );
+      }
+    }
+  }
+  lines.push(
+    "}",
+    "",
+    `internal sealed class ${typeName}__Converter : JsonConverter<${typeName}>`,
+    "{",
+    `public override ${typeName}? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)`,
+    "{",
+    `var surrogate = JsonSerializer.Deserialize<${typeName}__Surrogate>(ref reader, options);`,
+    "if (surrogate == null) return null;",
+    `return new ${typeName}`,
+    "{",
+  );
+
+  for (const info of fieldInfos) {
+    if (isLiteralType(info.type)) continue;
+    const { field, propertyName, resolved } = info;
+    if (field.omitDefault) {
+      if (
+        resolved.kind === "primitive" &&
+        resolved.primitive.text === "string"
+      ) {
+        lines.push(`${propertyName} = surrogate.${propertyName} ?? "",`);
+      } else if (resolved.kind === "array") {
+        lines.push(`${propertyName} = surrogate.${propertyName} ?? [],`);
+      } else {
+        lines.push(`${propertyName} = surrogate.${propertyName},`);
+      }
+    } else {
+      lines.push(`${propertyName} = surrogate.${propertyName},`);
     }
   }
 
-  lines.push("}");
+  lines.push(
+    "};",
+    "}",
+    "",
+    `public override void Write(Utf8JsonWriter writer, ${typeName} value, JsonSerializerOptions options)`,
+    "{",
+    `var surrogate = new ${typeName}__Surrogate`,
+    "{",
+  );
+
+  for (const info of fieldInfos) {
+    if (isLiteralType(info.type)) continue;
+    const { field, propertyName, resolved } = info;
+    if (field.omitDefault) {
+      if (
+        resolved.kind === "primitive" &&
+        resolved.primitive.text === "string"
+      ) {
+        lines.push(
+          `${propertyName} = value.${propertyName} == "" ? null : value.${propertyName},`,
+        );
+      } else if (resolved.kind === "array") {
+        lines.push(
+          `${propertyName} = value.${propertyName}.Count == 0 ? null : value.${propertyName},`,
+        );
+      } else {
+        lines.push(`${propertyName} = value.${propertyName},`);
+      }
+    } else {
+      lines.push(`${propertyName} = value.${propertyName},`);
+    }
+  }
+
+  lines.push(
+    "};",
+    "JsonSerializer.Serialize(writer, surrogate, options);",
+    "}",
+    "}",
+  );
+
   return lines.join("\n");
 }
 
