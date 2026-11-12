@@ -939,21 +939,8 @@ mod tests {
     let decoded_minimal: OmitDefaultType = serde_json::from_str(minimal_json).unwrap();
     assert_eq!(decoded_minimal, omitted);
 
-    let decoded_empty: OmitDefaultType = serde_json::from_str("{}").unwrap();
-    assert_eq!(decoded_empty.opt_string, None);
-    assert_eq!(decoded_empty.opt_int, None);
-    assert_eq!(decoded_empty.opt_num, None);
-    assert_eq!(decoded_empty.opt_bool, None);
-    assert_eq!(decoded_empty.string_list, Vec::<String>::new());
-    assert_eq!(decoded_empty.string_field, "");
-    assert_eq!(decoded_empty.int_field, 0);
-    assert_eq!(decoded_empty.num_field, 0.0);
-    assert_eq!(decoded_empty.bool_field, false);
-    assert_eq!(decoded_empty.plain_opt, None);
-    assert_eq!(decoded_empty.plain_string, "");
-    assert_eq!(decoded_empty.plain_int, 0);
-    assert_eq!(decoded_empty.plain_bool, false);
-    assert_eq!(decoded_empty.plain_list, Vec::<String>::new());
+    // Missing required fields without @omitDefault must fail
+    assert!(serde_json::from_str::<OmitDefaultType>("{}").is_err());
 
     // 2. Instance with non-default values
     let populated = OmitDefaultType {

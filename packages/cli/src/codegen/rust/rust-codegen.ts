@@ -869,10 +869,7 @@ function writeTypepromptInterface(
     if (rawFieldName !== rustName) {
       serdeAttrs.push(`rename = "${rawFieldName}"`);
     }
-    const hasDefault =
-      type.kind === "optional" ||
-      type.kind === "primitive" ||
-      type.kind === "array";
+    const hasDefault = type.kind === "optional" || field.omitDefault;
     if (hasDefault) {
       serdeAttrs.push("default");
     }
