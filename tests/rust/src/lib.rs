@@ -718,7 +718,7 @@ mod tests {
   use gen::prompts_e01::schema::shared::{
     ComplexType, ComplexType_OptStringUnion, ComplexType_StringUnion, EnumWithCommonFields,
     EnumWithCommonFields_NotSuccess, EnumWithCommonFields_Success, Expr, Expr_KindAdd,
-    Expr_KindNumber, Matrix, Square, E,
+    Expr_KindNumber, Matrix, OmitDefaultType, Square, E,
   };
 
   #[test]
@@ -890,6 +890,106 @@ mod tests {
 
     let parsed_omitted: ComplexType = serde_json::from_str(&omitted_json).unwrap();
     assert_eq!(parsed_omitted, omitted);
+  }
+
+  #[test]
+  fn test_omit_default_serialization() {
+    // 1. Instance with default/omitted values
+    let omitted = OmitDefaultType {
+      opt_string: None,
+      opt_int: None,
+      opt_num: None,
+      opt_bool: None,
+      string_list: vec![],
+      string_field: "".to_string(),
+      int_field: 0,
+      num_field: 0.0,
+      bool_field: false,
+      plain_opt: None,
+      plain_string: "test".to_string(),
+      plain_int: 123,
+      plain_bool: true,
+      plain_list: vec!["item".to_string()],
+    };
+    let json_omitted = serde_json::to_string(&omitted).unwrap();
+
+    assert!(!json_omitted.contains("\"optString\""));
+    assert!(!json_omitted.contains("\"optInt\""));
+    assert!(!json_omitted.contains("\"optNum\""));
+    assert!(!json_omitted.contains("\"optBool\""));
+    assert!(!json_omitted.contains("\"stringList\""));
+    assert!(!json_omitted.contains("\"stringField\""));
+    assert!(!json_omitted.contains("\"intField\""));
+    assert!(!json_omitted.contains("\"numField\""));
+    assert!(!json_omitted.contains("\"boolField\""));
+
+    assert!(json_omitted.contains("\"plainOpt\":null"));
+    assert!(json_omitted.contains("\"plainString\":\"test\""));
+    assert!(json_omitted.contains("\"plainInt\":123"));
+    assert!(json_omitted.contains("\"plainBool\":true"));
+    assert!(json_omitted.contains("\"plainList\":[\"item\"]"));
+
+    // Deserialize and verify defaults
+    let decoded_omitted: OmitDefaultType = serde_json::from_str(&json_omitted).unwrap();
+    assert_eq!(decoded_omitted, omitted);
+
+    // Also test deserializing from minimal JSON without the omitted fields
+    let minimal_json =
+      r#"{"plainString":"test","plainInt":123,"plainBool":true,"plainList":["item"]}"#;
+    let decoded_minimal: OmitDefaultType = serde_json::from_str(minimal_json).unwrap();
+    assert_eq!(decoded_minimal, omitted);
+
+    let decoded_empty: OmitDefaultType = serde_json::from_str("{}").unwrap();
+    assert_eq!(decoded_empty.opt_string, None);
+    assert_eq!(decoded_empty.opt_int, None);
+    assert_eq!(decoded_empty.opt_num, None);
+    assert_eq!(decoded_empty.opt_bool, None);
+    assert_eq!(decoded_empty.string_list, Vec::<String>::new());
+    assert_eq!(decoded_empty.string_field, "");
+    assert_eq!(decoded_empty.int_field, 0);
+    assert_eq!(decoded_empty.num_field, 0.0);
+    assert_eq!(decoded_empty.bool_field, false);
+    assert_eq!(decoded_empty.plain_opt, None);
+    assert_eq!(decoded_empty.plain_string, "");
+    assert_eq!(decoded_empty.plain_int, 0);
+    assert_eq!(decoded_empty.plain_bool, false);
+    assert_eq!(decoded_empty.plain_list, Vec::<String>::new());
+
+    // 2. Instance with non-default values
+    let populated = OmitDefaultType {
+      opt_string: Some("hello".to_string()),
+      opt_int: Some(42),
+      opt_num: Some(3.14),
+      opt_bool: Some(true),
+      string_list: vec!["a".to_string(), "b".to_string()],
+      string_field: "world".to_string(),
+      int_field: 7,
+      num_field: 2.5,
+      bool_field: true,
+      plain_opt: Some("plain".to_string()),
+      plain_string: "test3".to_string(),
+      plain_int: 789,
+      plain_bool: true,
+      plain_list: vec!["x".to_string()],
+    };
+    let json_populated = serde_json::to_string(&populated).unwrap();
+    assert!(json_populated.contains("\"optString\":\"hello\""));
+    assert!(json_populated.contains("\"optInt\":42"));
+    assert!(json_populated.contains("\"optNum\":3.14"));
+    assert!(json_populated.contains("\"optBool\":true"));
+    assert!(json_populated.contains("\"stringList\":[\"a\",\"b\"]"));
+    assert!(json_populated.contains("\"stringField\":\"world\""));
+    assert!(json_populated.contains("\"intField\":7"));
+    assert!(json_populated.contains("\"numField\":2.5"));
+    assert!(json_populated.contains("\"boolField\":true"));
+    assert!(json_populated.contains("\"plainOpt\":\"plain\""));
+    assert!(json_populated.contains("\"plainString\":\"test3\""));
+    assert!(json_populated.contains("\"plainInt\":789"));
+    assert!(json_populated.contains("\"plainBool\":true"));
+    assert!(json_populated.contains("\"plainList\":[\"x\"]"));
+
+    let decoded_populated: OmitDefaultType = serde_json::from_str(&json_populated).unwrap();
+    assert_eq!(decoded_populated, populated);
   }
 
   // ─── TemplateOverrider ──────────────────────────────────────────────────────
