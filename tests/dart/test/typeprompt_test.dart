@@ -964,6 +964,144 @@ void main() {
       expect(parsedOmitted.optMatrix, isNull);
       expect(parsedOmitted.optMap, isNull);
     });
+
+    test('OmitDefaultType serialization & deserialization', () {
+      // 1. Instance with default/omitted values
+      final omitted = pe01.Shared_OmitDefaultType(
+        stringList: [],
+        stringField: "",
+        intField: 0,
+        numField: 0.0,
+        boolField: false,
+        plainOpt: null,
+        plainString: "test",
+        plainInt: 123,
+        plainBool: true,
+        plainList: ["item"],
+      );
+      final omittedJson = omitted.toJson();
+
+      expect(omittedJson.containsKey("optString"), isFalse);
+      expect(omittedJson.containsKey("optInt"), isFalse);
+      expect(omittedJson.containsKey("optNum"), isFalse);
+      expect(omittedJson.containsKey("optBool"), isFalse);
+      expect(omittedJson.containsKey("stringList"), isFalse);
+      expect(omittedJson.containsKey("stringField"), isFalse);
+      expect(omittedJson.containsKey("intField"), isFalse);
+      expect(omittedJson.containsKey("numField"), isFalse);
+      expect(omittedJson.containsKey("boolField"), isFalse);
+
+      expect(omittedJson.containsKey("plainOpt"), isTrue);
+      expect(omittedJson["plainOpt"], isNull);
+      expect(omittedJson["plainString"], equals("test"));
+      expect(omittedJson["plainInt"], equals(123));
+      expect(omittedJson["plainBool"], isTrue);
+      expect(omittedJson["plainList"], equals(["item"]));
+
+      final decodedOmitted = pe01.Shared_OmitDefaultType.fromJson(omittedJson);
+      expect(decodedOmitted.optString, isNull);
+      expect(decodedOmitted.optInt, isNull);
+      expect(decodedOmitted.optNum, isNull);
+      expect(decodedOmitted.optBool, isNull);
+      expect(decodedOmitted.stringList, equals([]));
+      expect(decodedOmitted.stringField, equals(""));
+      expect(decodedOmitted.intField, equals(0));
+      expect(decodedOmitted.numField, equals(0.0));
+      expect(decodedOmitted.boolField, isFalse);
+      expect(decodedOmitted.plainOpt, isNull);
+      expect(decodedOmitted.plainString, equals("test"));
+      expect(decodedOmitted.plainInt, equals(123));
+      expect(decodedOmitted.plainBool, isTrue);
+      expect(decodedOmitted.plainList, equals(["item"]));
+
+      // Missing required plain* fields in JSON must fail
+      expect(() => pe01.Shared_OmitDefaultType.fromJson({}),
+          throwsA(isA<TypeError>()));
+
+      // 2. Instance with explicitly assigned default values
+      final explicitDefaults = pe01.Shared_OmitDefaultType(
+        optString: null,
+        optInt: null,
+        optNum: null,
+        optBool: null,
+        stringList: [],
+        stringField: "",
+        intField: 0,
+        numField: 0.0,
+        boolField: false,
+        plainOpt: null,
+        plainString: "test2",
+        plainInt: 456,
+        plainBool: false,
+        plainList: [],
+      );
+      final explicitJson = explicitDefaults.toJson();
+      expect(explicitJson.containsKey("optString"), isFalse);
+      expect(explicitJson.containsKey("optInt"), isFalse);
+      expect(explicitJson.containsKey("optNum"), isFalse);
+      expect(explicitJson.containsKey("optBool"), isFalse);
+      expect(explicitJson.containsKey("stringList"), isFalse);
+      expect(explicitJson.containsKey("stringField"), isFalse);
+      expect(explicitJson.containsKey("intField"), isFalse);
+      expect(explicitJson.containsKey("numField"), isFalse);
+      expect(explicitJson.containsKey("boolField"), isFalse);
+      expect(explicitJson.containsKey("plainOpt"), isTrue);
+      expect(explicitJson["plainOpt"], isNull);
+      expect(explicitJson["plainString"], equals("test2"));
+      expect(explicitJson["plainInt"], equals(456));
+      expect(explicitJson["plainBool"], isFalse);
+      expect(explicitJson["plainList"], equals([]));
+
+      // 3. Instance with non-default values
+      final populated = pe01.Shared_OmitDefaultType(
+        optString: "hello",
+        optInt: 42,
+        optNum: 3.14,
+        optBool: true,
+        stringList: ["a", "b"],
+        stringField: "world",
+        intField: 7,
+        numField: 2.5,
+        boolField: true,
+        plainOpt: "plain",
+        plainString: "test3",
+        plainInt: 789,
+        plainBool: true,
+        plainList: ["x"],
+      );
+      final populatedJson = populated.toJson();
+      expect(populatedJson["optString"], equals("hello"));
+      expect(populatedJson["optInt"], equals(42));
+      expect(populatedJson["optNum"], equals(3.14));
+      expect(populatedJson["optBool"], isTrue);
+      expect(populatedJson["stringList"], equals(["a", "b"]));
+      expect(populatedJson["stringField"], equals("world"));
+      expect(populatedJson["intField"], equals(7));
+      expect(populatedJson["numField"], equals(2.5));
+      expect(populatedJson["boolField"], isTrue);
+      expect(populatedJson["plainOpt"], equals("plain"));
+      expect(populatedJson["plainString"], equals("test3"));
+      expect(populatedJson["plainInt"], equals(789));
+      expect(populatedJson["plainBool"], isTrue);
+      expect(populatedJson["plainList"], equals(["x"]));
+
+      final decodedPopulated =
+          pe01.Shared_OmitDefaultType.fromJson(populatedJson);
+      expect(decodedPopulated.optString, equals("hello"));
+      expect(decodedPopulated.optInt, equals(42));
+      expect(decodedPopulated.optNum, equals(3.14));
+      expect(decodedPopulated.optBool, isTrue);
+      expect(decodedPopulated.stringList, equals(["a", "b"]));
+      expect(decodedPopulated.stringField, equals("world"));
+      expect(decodedPopulated.intField, equals(7));
+      expect(decodedPopulated.numField, equals(2.5));
+      expect(decodedPopulated.boolField, isTrue);
+      expect(decodedPopulated.plainOpt, equals("plain"));
+      expect(decodedPopulated.plainString, equals("test3"));
+      expect(decodedPopulated.plainInt, equals(789));
+      expect(decodedPopulated.plainBool, isTrue);
+      expect(decodedPopulated.plainList, equals(["x"]));
+    });
   });
 
   group('TemplateOverrider', () {

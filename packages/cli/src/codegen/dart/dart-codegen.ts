@@ -27,7 +27,10 @@ import type {
   Union,
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { coalesceEmptyLines, reformatCFamilyCode } from "../formatters.js";
@@ -795,7 +798,37 @@ function writeTypepromptInterface(
         schema,
         options,
       );
-      if (isOptional) {
+      if (field.omitDefault) {
+        const type = resolveTypeWithOmitDefault(field.type, schema);
+        let condition: string;
+        if (type.kind === "optional") {
+          condition = `${dartName} != null`;
+        } else if (type.kind === "array") {
+          condition = `${dartName}.isNotEmpty`;
+        } else if (type.kind === "primitive") {
+          switch (type.primitive.text) {
+            case "string":
+              condition = `${dartName}.isNotEmpty`;
+              break;
+            case "integer":
+              condition = `${dartName} != 0`;
+              break;
+            case "number":
+              condition = `${dartName} != 0.0 && ${dartName} != 0`;
+              break;
+            case "boolean":
+              condition = dartName;
+              break;
+            default: {
+              const _: never = type.primitive.text;
+              throw new Error(`Unexpected primitive: ${type.primitive.text}`);
+            }
+          }
+        } else {
+          throw new Error(type as never);
+        }
+        lines.push(`if (${condition}) "${rawName}": ${toJsonExpr},`);
+      } else if (isOptional) {
         if (toJsonExpr === dartName) {
           lines.push(`"${rawName}": ${dartName},`);
         } else {
@@ -830,12 +863,34 @@ function writeTypepromptInterface(
     const rawName = field.name.text;
     const dartName = toDartName(rawName);
     const valueExpr = `json["${field.name.text}"]`;
-    const valueFromJsonExpr = writeFromJsonExpr(
-      type,
-      valueExpr,
-      schema,
-      options,
-    );
+    let valueFromJsonExpr: string;
+    if (type.kind === "optional") {
+      valueFromJsonExpr = writeFromJsonExpr(type, valueExpr, schema, options);
+    } else if (field.omitDefault) {
+      if (type.kind === "array") {
+        const elemExpr = writeFromJsonExpr(type, valueExpr, schema, options);
+        valueFromJsonExpr = `${valueExpr} == null ? const [] : ${elemExpr}`;
+      } else if (type.kind === "primitive") {
+        switch (type.primitive.text) {
+          case "string":
+            valueFromJsonExpr = `${valueExpr} as String? ?? ""`;
+            break;
+          case "integer":
+            valueFromJsonExpr = `(${valueExpr} as num?)?.toInt() ?? 0`;
+            break;
+          case "number":
+            valueFromJsonExpr = `(${valueExpr} as num?)?.toDouble() ?? 0.0`;
+            break;
+          case "boolean":
+            valueFromJsonExpr = `${valueExpr} as bool? ?? false`;
+            break;
+        }
+      } else {
+        valueFromJsonExpr = writeFromJsonExpr(type, valueExpr, schema, options);
+      }
+    } else {
+      valueFromJsonExpr = writeFromJsonExpr(type, valueExpr, schema, options);
+    }
     lines.push(`${dartName}: ${valueFromJsonExpr},`);
   }
   lines.push(");", "}");
