@@ -967,6 +967,147 @@ class TestE01JsonSerialization:
         assert parsed_omitted.opt_matrix is None
         assert parsed_omitted.opt_map is None
 
+    def test_omit_default_serialization_and_deserialization(self):
+        adapter = pydantic.TypeAdapter(s_e01.shared.OmitDefaultType)
+
+        # 1. Instance with default/omitted values
+        omitted = s_e01.shared.OmitDefaultType(
+            string_list=[],
+            string_field="",
+            int_field=0,
+            num_field=0.0,
+            bool_field=False,
+            plain_opt=None,
+            plain_string="test",
+            plain_int=123,
+            plain_bool=True,
+            plain_list=["item"],
+        )
+        json_omitted = adapter.dump_json(omitted, by_alias=True).decode("utf-8")
+
+        # Verify @omitDefault fields are omitted
+        assert '"optString"' not in json_omitted
+        assert '"optInt"' not in json_omitted
+        assert '"optNum"' not in json_omitted
+        assert '"optBool"' not in json_omitted
+        assert '"stringList"' not in json_omitted
+        assert '"stringField"' not in json_omitted
+        assert '"intField"' not in json_omitted
+        assert '"numField"' not in json_omitted
+        assert '"boolField"' not in json_omitted
+
+        # Verify plain fields are present
+        assert '"plainOpt":null' in json_omitted
+        assert '"plainString":"test"' in json_omitted
+        assert '"plainInt":123' in json_omitted
+        assert '"plainBool":true' in json_omitted
+        assert '"plainList":["item"]' in json_omitted
+
+        # Deserialize and verify defaults
+        decoded_omitted = adapter.validate_json(json_omitted)
+        assert decoded_omitted.opt_string is None
+        assert decoded_omitted.opt_int is None
+        assert decoded_omitted.opt_num is None
+        assert decoded_omitted.opt_bool is None
+        assert decoded_omitted.string_list == []
+        assert decoded_omitted.string_field == ""
+        assert decoded_omitted.int_field == 0
+        assert decoded_omitted.num_field == 0.0
+        assert decoded_omitted.bool_field is False
+        assert decoded_omitted.plain_opt is None
+        assert decoded_omitted.plain_string == "test"
+        assert decoded_omitted.plain_int == 123
+        assert decoded_omitted.plain_bool is True
+        assert decoded_omitted.plain_list == ["item"]
+
+        # Decoding JSON where required fields without @omitDefault are absent must fail
+        with pytest.raises(pydantic.ValidationError):
+            adapter.validate_json("{}")
+
+        # 2. Instance with explicitly assigned default values
+        explicit_defaults = s_e01.shared.OmitDefaultType(
+            opt_string=None,
+            opt_int=None,
+            opt_num=None,
+            opt_bool=None,
+            string_list=[],
+            string_field="",
+            int_field=0,
+            num_field=0.0,
+            bool_field=False,
+            plain_opt=None,
+            plain_string="test2",
+            plain_int=456,
+            plain_bool=False,
+            plain_list=[],
+        )
+        json_explicit = adapter.dump_json(explicit_defaults, by_alias=True).decode(
+            "utf-8"
+        )
+        assert '"optString"' not in json_explicit
+        assert '"optInt"' not in json_explicit
+        assert '"optNum"' not in json_explicit
+        assert '"optBool"' not in json_explicit
+        assert '"stringList"' not in json_explicit
+        assert '"stringField"' not in json_explicit
+        assert '"intField"' not in json_explicit
+        assert '"numField"' not in json_explicit
+        assert '"boolField"' not in json_explicit
+        assert '"plainOpt":null' in json_explicit
+        assert '"plainString":"test2"' in json_explicit
+        assert '"plainInt":456' in json_explicit
+        assert '"plainBool":false' in json_explicit
+        assert '"plainList":[]' in json_explicit
+
+        # 3. Instance with non-default values
+        populated = s_e01.shared.OmitDefaultType(
+            opt_string="hello",
+            opt_int=42,
+            opt_num=3.14,
+            opt_bool=True,
+            string_list=["a", "b"],
+            string_field="world",
+            int_field=7,
+            num_field=2.5,
+            bool_field=True,
+            plain_opt="plain",
+            plain_string="test3",
+            plain_int=789,
+            plain_bool=True,
+            plain_list=["x"],
+        )
+        json_populated = adapter.dump_json(populated, by_alias=True).decode("utf-8")
+        assert '"optString":"hello"' in json_populated
+        assert '"optInt":42' in json_populated
+        assert '"optNum":3.14' in json_populated
+        assert '"optBool":true' in json_populated
+        assert '"stringList":["a","b"]' in json_populated
+        assert '"stringField":"world"' in json_populated
+        assert '"intField":7' in json_populated
+        assert '"numField":2.5' in json_populated
+        assert '"boolField":true' in json_populated
+        assert '"plainOpt":"plain"' in json_populated
+        assert '"plainString":"test3"' in json_populated
+        assert '"plainInt":789' in json_populated
+        assert '"plainBool":true' in json_populated
+        assert '"plainList":["x"]' in json_populated
+
+        decoded_populated = adapter.validate_json(json_populated)
+        assert decoded_populated.opt_string == "hello"
+        assert decoded_populated.opt_int == 42
+        assert decoded_populated.opt_num == 3.14
+        assert decoded_populated.opt_bool is True
+        assert decoded_populated.string_list == ["a", "b"]
+        assert decoded_populated.string_field == "world"
+        assert decoded_populated.int_field == 7
+        assert decoded_populated.num_field == 2.5
+        assert decoded_populated.bool_field is True
+        assert decoded_populated.plain_opt == "plain"
+        assert decoded_populated.plain_string == "test3"
+        assert decoded_populated.plain_int == 789
+        assert decoded_populated.plain_bool is True
+        assert decoded_populated.plain_list == ["x"]
+
 
 class TestTemplateOverrider:
     def test_templates_data(self) -> None:

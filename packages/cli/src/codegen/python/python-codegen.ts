@@ -22,7 +22,10 @@ import type {
   NamingHint,
   Schema,
 } from "@typeprompt/core/schema/schema-types.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 
@@ -397,34 +400,96 @@ function writeSchema(
         } else if (Object.keys(type.fields).length <= 0) {
           lines.push(" pass");
         }
-        for (const field of Object.values(type.fields)) {
-          const type = writeType(
-            resolveType(field.type, schema),
-            schema,
-            options,
-          );
+        const fields = Object.values(type.fields);
+        const omitDefaultFields = fields.filter((f) => f.omitDefault);
+        for (const field of fields) {
+          const resolved = resolveType(field.type, schema);
+          const pyType = writeType(resolved, schema, options);
           lines.push(...writeComment(field.doc, " "));
           const fieldName = toPyName(field.name.text, "field_name");
-          if (fieldName === field.name.text) {
-            if (field.type.kind === "optional") {
-              lines.push(` ${fieldName}: ${type} = None`);
-            } else {
-              lines.push(` ${fieldName}: ${type}`);
-            }
-          } else {
-            lines.push(` ${fieldName}: ${type} = pydantic.Field(`);
-            if (field.type.kind === "optional") {
-              lines.push("  default=None,");
-            }
-            const aliasChoices = [field.name.text, fieldName]
-              .map((name) => `'${name}'`)
-              .join(", ");
+          const rawName = field.name.text;
+          const isAliased = fieldName !== rawName;
+          const isOptional = field.type.kind === "optional";
+          if (isAliased) {
             lines.push(
-              `  validation_alias=pydantic.AliasChoices(${aliasChoices}),`,
+              ` ${fieldName}: ${pyType} = pydantic.Field(`,
+              ...(isOptional ? ["  default=None,"] : []),
+              `  validation_alias=pydantic.AliasChoices('${rawName}', '${fieldName}'),`,
+              `  serialization_alias='${rawName}',`,
+              " )",
             );
-            lines.push(`  serialization_alias='${field.name.text}',`);
-            lines.push(" )");
+          } else {
+            lines.push(
+              ` ${fieldName}: ${pyType}${isOptional ? " = None" : ""}`,
+            );
           }
+        }
+        if (omitDefaultFields.length >= 1) {
+          lines.push(
+            "",
+            ' @pydantic.model_serializer(mode="wrap")',
+            " def _serialize(self, handler):",
+            "  data = handler(self)",
+            "  if isinstance(data, dict):",
+          );
+          for (const omitDefaultField of omitDefaultFields) {
+            const key = omitDefaultField.name.text;
+            const type = resolveTypeWithOmitDefault(
+              omitDefaultField.type,
+              schema,
+            );
+            let condition: string;
+            if (type.kind === "optional") {
+              condition = `'${key}' in data and data['${key}'] is None`;
+            } else if (type.kind === "array") {
+              condition = `data.get('${key}') == []`;
+            } else if (type.primitive.text === "string") {
+              condition = `data.get('${key}') == ""`;
+            } else if (type.primitive.text === "boolean") {
+              condition = `data.get('${key}') is False`;
+            } else {
+              const _: "number" | "integer" = type.primitive.text;
+              condition = `data.get('${key}') == 0`;
+            }
+            lines.push(`   if ${condition}:`, `    del data['${key}']`);
+          }
+          lines.push("  return data");
+        }
+
+        const nonOptionalDefaultFields = omitDefaultFields.filter(
+          (od) => od.type.kind !== "optional",
+        );
+        if (nonOptionalDefaultFields.length >= 1) {
+          lines.push(
+            "",
+            ' @pydantic.model_validator(mode="before")',
+            " @classmethod",
+            " def _fill_json_defaults(cls, data, info):",
+            '  if getattr(info, "mode", None) == "json" and isinstance(data, dict):',
+          );
+          for (const field of nonOptionalDefaultFields) {
+            const type = resolveTypeWithOmitDefault(field.type, schema);
+            let defVal: string;
+            if (type.kind === "optional") {
+              throw new Error();
+            } else if (type.kind === "array") {
+              defVal = "[]";
+            } else if (type.primitive.text === "boolean") {
+              defVal = "False";
+            } else if (type.primitive.text === "integer") {
+              defVal = "0";
+            } else if (type.primitive.text === "number") {
+              defVal = "0.0";
+            } else {
+              const _: "string" = type.primitive.text;
+              defVal = '""';
+            }
+            lines.push(
+              `   if '${field.name.text}' not in data:`,
+              `    data['${field.name.text}'] = ${defVal}`,
+            );
+          }
+          lines.push("  return data");
         }
         break;
       }
