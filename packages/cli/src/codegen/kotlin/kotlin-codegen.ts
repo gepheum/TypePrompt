@@ -708,14 +708,10 @@ function writeTypepromptInterface(
     return lines.join("\n");
   }
 
-  const lines = [
-    "@OptIn(ExperimentalSerializationApi::class)",
-    `@Serializable(with = ${typeName}__Serializer::class)`,
-  ];
-  if (discriminant) {
-    lines.push(`@SerialName("${discriminant}")`);
-  }
-  const nonLiteralFields = fields.filter((f) => !isLiteralType(f.type));
+  const hasLiteralOrOmitDefault = fields.some(
+    (f) => isLiteralType(f.type) || f.omitDefault,
+  );
+
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
@@ -728,6 +724,49 @@ function writeTypepromptInterface(
           .join(", "),
       )
     : "";
+
+  if (!hasLiteralOrOmitDefault) {
+    const lines = [
+      "@OptIn(ExperimentalSerializationApi::class)",
+      "@Serializable",
+    ];
+    if (discriminant) {
+      lines.push(`@SerialName("${discriminant}")`);
+    }
+    lines.push(`data class ${typeName}(`);
+    for (const field of fields) {
+      const type = resolveType(field.type, schema);
+      const ktName = toKotlinName(field.name.text);
+      const fieldType = writeType(type, schema, options);
+      const override = unionContext.overrideFields.has(field)
+        ? "override "
+        : "";
+      const isOptional = type.kind === "optional";
+      const defaultVal = isOptional ? " = null" : "";
+      const encodeDefault = isOptional
+        ? "@property:kotlinx.serialization.EncodeDefault "
+        : "";
+      const serialName =
+        field.name.text !== ktName
+          ? `@SerialName(${JSON.stringify(field.name.text)}) `
+          : "";
+      lines.push(...wrapKDoc(field.doc));
+      lines.push(
+        `${override}${encodeDefault}${serialName}val ${ktName}: ${fieldType}${defaultVal},`,
+      );
+    }
+    lines.push(`)${implementsClause}`);
+    return lines.join("\n");
+  }
+
+  const lines = [
+    "@OptIn(ExperimentalSerializationApi::class)",
+    `@Serializable(with = ${typeName}__Serializer::class)`,
+  ];
+  if (discriminant) {
+    lines.push(`@SerialName("${discriminant}")`);
+  }
+  const nonLiteralFields = fields.filter((f) => !isLiteralType(f.type));
 
   if (nonLiteralFields.length <= 0) {
     lines.push(`class ${typeName}()${implementsClause}`);
@@ -759,17 +798,16 @@ function writeTypepromptInterface(
   }
   lines.push(`private data class ${typeName}__Surrogate(`);
   for (const field of fields) {
-    const type = resolveType(field.type, schema);
     const ktName = toKotlinName(field.name.text);
     let defaultVal: string;
     let encodeDefault: string;
-    if (type.kind === "optional") {
+    if (field.type.kind === "optional") {
       defaultVal = " = null";
       encodeDefault = field.omitDefault
         ? "@property:kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) "
         : "@property:kotlinx.serialization.EncodeDefault ";
     } else if (field.omitDefault) {
-      const fieldType = resolveTypeWithOmitDefault(type, schema);
+      const fieldType = resolveTypeWithOmitDefault(field.type, schema);
       if (fieldType.kind === "array") {
         defaultVal = " = emptyList()";
       } else {
@@ -793,8 +831,8 @@ function writeTypepromptInterface(
       }
       encodeDefault =
         "@property:kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) ";
-    } else if (isLiteralType(type)) {
-      defaultVal = ` = ${JSON.stringify(type.value)}`;
+    } else if (isLiteralType(field.type)) {
+      defaultVal = ` = ${JSON.stringify(field.type.value)}`;
       encodeDefault = "@property:kotlinx.serialization.EncodeDefault ";
     } else {
       defaultVal = "";
@@ -804,7 +842,8 @@ function writeTypepromptInterface(
       field.name.text !== ktName
         ? `@SerialName(${JSON.stringify(field.name.text)}) `
         : "";
-    const kotlinType = writeType(type, schema, options);
+    const resolved = resolveType(field.type, schema);
+    const kotlinType = writeType(resolved, schema, options);
     lines.push(
       `${encodeDefault}${serialName}val ${ktName}: ${kotlinType}${defaultVal},`,
     );
