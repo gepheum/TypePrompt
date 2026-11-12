@@ -1191,6 +1191,147 @@ class TestE01_JsonSerialization {
         assertNull(parsedOmitted.optMatrix)
         assertNull(parsedOmitted.optMap)
     }
+
+    @Test
+    fun testOmitDefaultSerializationAndDeserialization() {
+        val omitted =
+            com.example.prompts_e01.Schema.Shared.OmitDefaultType(
+                stringList = emptyList(),
+                stringField = "",
+                intField = 0,
+                numField = 0.0,
+                boolField = false,
+                plainOpt = null,
+                plainString = "test",
+                plainInt = 123,
+                plainBool = true,
+                plainList = listOf("item"),
+            )
+        val omittedJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), omitted)
+
+        assertFalse(omittedJson.contains("\"optString\""))
+        assertFalse(omittedJson.contains("\"optInt\""))
+        assertFalse(omittedJson.contains("\"optNum\""))
+        assertFalse(omittedJson.contains("\"optBool\""))
+        assertFalse(omittedJson.contains("\"stringList\""))
+        assertFalse(omittedJson.contains("\"stringField\""))
+        assertFalse(omittedJson.contains("\"intField\""))
+        assertFalse(omittedJson.contains("\"numField\""))
+        assertFalse(omittedJson.contains("\"boolField\""))
+
+        assertTrue(omittedJson.contains("\"plainOpt\":null"))
+        assertTrue(omittedJson.contains("\"plainString\":\"test\""))
+        assertTrue(omittedJson.contains("\"plainInt\":123"))
+        assertTrue(omittedJson.contains("\"plainBool\":true"))
+        assertTrue(omittedJson.contains("\"plainList\":[\"item\"]"))
+
+        val decodedOmitted =
+            Json.decodeFromString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), omittedJson)
+        assertNull(decodedOmitted.optString)
+        assertNull(decodedOmitted.optInt)
+        assertNull(decodedOmitted.optNum)
+        assertNull(decodedOmitted.optBool)
+        assertEquals(emptyList<String>(), decodedOmitted.stringList)
+        assertEquals("", decodedOmitted.stringField)
+        assertEquals(0, decodedOmitted.intField)
+        assertEquals(0.0, decodedOmitted.numField, 0.0)
+        assertFalse(decodedOmitted.boolField)
+        assertNull(decodedOmitted.plainOpt)
+        assertEquals("test", decodedOmitted.plainString)
+        assertEquals(123, decodedOmitted.plainInt)
+        assertTrue(decodedOmitted.plainBool)
+        assertEquals(listOf("item"), decodedOmitted.plainList)
+
+        // Missing required plain* fields in JSON must fail
+        assertFailsWith<kotlinx.serialization.SerializationException> {
+            Json.decodeFromString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), "{}")
+        }
+
+        // 2. Instance with explicitly assigned default values
+        val explicitDefaults =
+            com.example.prompts_e01.Schema.Shared.OmitDefaultType(
+                optString = null,
+                optInt = null,
+                optNum = null,
+                optBool = null,
+                stringList = emptyList(),
+                stringField = "",
+                intField = 0,
+                numField = 0.0,
+                boolField = false,
+                plainOpt = null,
+                plainString = "test2",
+                plainInt = 456,
+                plainBool = false,
+                plainList = emptyList(),
+            )
+        val explicitJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), explicitDefaults)
+        assertFalse(explicitJson.contains("\"optString\""))
+        assertFalse(explicitJson.contains("\"optInt\""))
+        assertFalse(explicitJson.contains("\"optNum\""))
+        assertFalse(explicitJson.contains("\"optBool\""))
+        assertFalse(explicitJson.contains("\"stringList\""))
+        assertFalse(explicitJson.contains("\"stringField\""))
+        assertFalse(explicitJson.contains("\"intField\""))
+        assertFalse(explicitJson.contains("\"numField\""))
+        assertFalse(explicitJson.contains("\"boolField\""))
+        assertTrue(explicitJson.contains("\"plainOpt\":null"))
+        assertTrue(explicitJson.contains("\"plainString\":\"test2\""))
+        assertTrue(explicitJson.contains("\"plainInt\":456"))
+        assertTrue(explicitJson.contains("\"plainBool\":false"))
+        assertTrue(explicitJson.contains("\"plainList\":[]"))
+
+        // 3. Instance with non-default values
+        val populated =
+            com.example.prompts_e01.Schema.Shared.OmitDefaultType(
+                optString = "hello",
+                optInt = 42,
+                optNum = 3.14,
+                optBool = true,
+                stringList = listOf("a", "b"),
+                stringField = "world",
+                intField = 7,
+                numField = 2.5,
+                boolField = true,
+                plainOpt = "plain",
+                plainString = "test3",
+                plainInt = 789,
+                plainBool = true,
+                plainList = listOf("x"),
+            )
+        val populatedJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), populated)
+        assertTrue(populatedJson.contains("\"optString\":\"hello\""))
+        assertTrue(populatedJson.contains("\"optInt\":42"))
+        assertTrue(populatedJson.contains("\"optNum\":3.14"))
+        assertTrue(populatedJson.contains("\"optBool\":true"))
+        assertTrue(populatedJson.contains("\"stringList\":[\"a\",\"b\"]"))
+        assertTrue(populatedJson.contains("\"stringField\":\"world\""))
+        assertTrue(populatedJson.contains("\"intField\":7"))
+        assertTrue(populatedJson.contains("\"numField\":2.5"))
+        assertTrue(populatedJson.contains("\"boolField\":true"))
+        assertTrue(populatedJson.contains("\"plainOpt\":\"plain\""))
+        assertTrue(populatedJson.contains("\"plainString\":\"test3\""))
+        assertTrue(populatedJson.contains("\"plainInt\":789"))
+        assertTrue(populatedJson.contains("\"plainBool\":true"))
+        assertTrue(populatedJson.contains("\"plainList\":[\"x\"]"))
+
+        val decodedPopulated =
+            Json.decodeFromString(com.example.prompts_e01.Schema.Shared.OmitDefaultType.serializer(), populatedJson)
+        assertEquals("hello", decodedPopulated.optString)
+        assertEquals(42, decodedPopulated.optInt)
+        assertEquals(3.14, decodedPopulated.optNum!!, 0.0)
+        assertTrue(decodedPopulated.optBool == true)
+        assertEquals(listOf("a", "b"), decodedPopulated.stringList)
+        assertEquals("world", decodedPopulated.stringField)
+        assertEquals(7, decodedPopulated.intField)
+        assertEquals(2.5, decodedPopulated.numField, 0.0)
+        assertTrue(decodedPopulated.boolField)
+        assertEquals("plain", decodedPopulated.plainOpt)
+        assertEquals("test3", decodedPopulated.plainString)
+        assertEquals(789, decodedPopulated.plainInt)
+        assertTrue(decodedPopulated.plainBool)
+        assertEquals(listOf("x"), decodedPopulated.plainList)
+    }
 }
 
 class TestTemplateOverrider {

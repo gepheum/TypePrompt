@@ -26,7 +26,10 @@ import type {
   Union,
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { reformatCFamilyCode } from "../formatters.js";
@@ -679,47 +682,40 @@ function writeTypepromptInterface(
   unionContext: UnionContext,
 ): string {
   const fields = Object.values(type.fields);
-  const isDataClass = fields.length >= 1;
+  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
+
+  if (fields.length <= 0) {
+    const lines = [
+      "@OptIn(ExperimentalSerializationApi::class)",
+      "@Serializable",
+    ];
+    if (discriminant) {
+      lines.push(`@SerialName("${discriminant}")`);
+    }
+    const interfaces = unionContext.intMemberToUnionRefs.get(type);
+    const implementsClause = interfaces
+      ? " : ".concat(
+          interfaces
+            .map((i) =>
+              i.startsWith(options.typePrefix)
+                ? i.slice(options.typePrefix.length)
+                : i,
+            )
+            .join(", "),
+        )
+      : "";
+    lines.push(`class ${typeName}()${implementsClause}`);
+    return lines.join("\n");
+  }
+
   const lines = [
     "@OptIn(ExperimentalSerializationApi::class)",
-    "@Serializable",
+    `@Serializable(with = ${typeName}__Serializer::class)`,
   ];
-  const discriminant = unionContext.intMemberToStringDiscriminant.get(type);
   if (discriminant) {
     lines.push(`@SerialName("${discriminant}")`);
   }
-  const hasLiteralField = fields.some((f) => isLiteralType(f.type));
-  lines.push(
-    [
-      isDataClass ? "data class " : "class ",
-      typeName,
-      hasLiteralField ? " private constructor" : "",
-      "(",
-    ].join(""),
-  );
-
-  const writeCtorParams = (primary: boolean): void => {
-    for (const field of fields) {
-      const type = resolveType(field.type, schema);
-      if (isLiteralType(type) && !primary) continue;
-      const ktName = toKotlinName(field.name.text);
-      const fieldType = writeType(type, schema, options);
-      const override =
-        primary && unionContext.overrideFields.has(field) ? "override " : "";
-      const val = primary ? "val " : "";
-      const isOptional = type.kind === "optional";
-      const defaultVal = isOptional ? " = null" : "";
-      const encodeDefault =
-        primary && isOptional
-          ? "@property:kotlinx.serialization.EncodeDefault "
-          : "";
-      lines.push(...wrapKDoc(field.doc));
-      lines.push(
-        `${override}${encodeDefault}${val}${ktName}: ${fieldType}${defaultVal},`,
-      );
-    }
-  };
-  writeCtorParams(true);
+  const nonLiteralFields = fields.filter((f) => !isLiteralType(f.type));
   const interfaces = unionContext.intMemberToUnionRefs.get(type);
   const implementsClause = interfaces
     ? " : ".concat(
@@ -732,24 +728,117 @@ function writeTypepromptInterface(
           .join(", "),
       )
     : "";
-  lines.push(`)${implementsClause} {`);
-  if (hasLiteralField) {
-    lines.push("constructor(");
-    writeCtorParams(false);
-    lines.push(") : this(");
-    for (const field of fields) {
+
+  if (nonLiteralFields.length <= 0) {
+    lines.push(`class ${typeName}()${implementsClause}`);
+  } else {
+    lines.push(`data class ${typeName}(`);
+    for (const field of nonLiteralFields) {
       const type = resolveType(field.type, schema);
       const ktName = toKotlinName(field.name.text);
-      if (isLiteralType(type)) {
-        const literal = JSON.stringify(type.value);
-        lines.push(`${ktName} = ${literal},`);
-      } else {
-        lines.push(`${ktName} = ${ktName},`);
-      }
+      const fieldType = writeType(type, schema, options);
+      const override = unionContext.overrideFields.has(field)
+        ? "override "
+        : "";
+      const isOptional = type.kind === "optional";
+      const defaultVal = isOptional ? " = null" : "";
+      lines.push(...wrapKDoc(field.doc));
+      lines.push(`${override}val ${ktName}: ${fieldType}${defaultVal},`);
     }
-    lines.push(")");
+    lines.push(`)${implementsClause}`);
   }
-  lines.push("}");
+
+  // Surrogate and Serializer
+  lines.push(
+    "",
+    "@OptIn(ExperimentalSerializationApi::class)",
+    "@Serializable",
+  );
+  if (discriminant) {
+    lines.push(`@SerialName("${discriminant}")`);
+  }
+  lines.push(`private data class ${typeName}__Surrogate(`);
+  for (const field of fields) {
+    const type = resolveType(field.type, schema);
+    const ktName = toKotlinName(field.name.text);
+    let defaultVal: string;
+    let encodeDefault: string;
+    if (type.kind === "optional") {
+      defaultVal = " = null";
+      encodeDefault = field.omitDefault
+        ? "@property:kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) "
+        : "@property:kotlinx.serialization.EncodeDefault ";
+    } else if (field.omitDefault) {
+      const fieldType = resolveTypeWithOmitDefault(type, schema);
+      if (fieldType.kind === "array") {
+        defaultVal = " = emptyList()";
+      } else {
+        const _: "primitive" = fieldType.kind;
+        switch (fieldType.primitive.text) {
+          case "string":
+            defaultVal = ' = ""';
+            break;
+          case "integer":
+            defaultVal = " = 0";
+            break;
+          case "number":
+            defaultVal = " = 0.0";
+            break;
+          case "boolean":
+            defaultVal = " = false";
+            break;
+          default:
+            throw new Error(fieldType.primitive.text satisfies never);
+        }
+      }
+      encodeDefault =
+        "@property:kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) ";
+    } else if (isLiteralType(type)) {
+      defaultVal = ` = ${JSON.stringify(type.value)}`;
+      encodeDefault = "@property:kotlinx.serialization.EncodeDefault ";
+    } else {
+      defaultVal = "";
+      encodeDefault = "";
+    }
+    const serialName =
+      field.name.text !== ktName
+        ? `@SerialName(${JSON.stringify(field.name.text)}) `
+        : "";
+    const kotlinType = writeType(type, schema, options);
+    lines.push(
+      `${encodeDefault}${serialName}val ${ktName}: ${kotlinType}${defaultVal},`,
+    );
+  }
+  lines.push(
+    ")",
+    "",
+    `private object ${typeName}__Serializer : kotlinx.serialization.KSerializer<${typeName}> {`,
+    `override val descriptor = ${typeName}__Surrogate.serializer().descriptor`,
+    "",
+    `override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: ${typeName}) {`,
+    "encoder.encodeSerializableValue(",
+    `${typeName}__Surrogate.serializer(),`,
+    `${typeName}__Surrogate(`,
+    ...nonLiteralFields.map(
+      (f) =>
+        `${toKotlinName(f.name.text)} = value.${toKotlinName(f.name.text)},`,
+    ),
+    "),",
+    ")",
+    "}",
+    "",
+    `override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): ${typeName} {`,
+    `val surrogate = decoder.decodeSerializableValue(${typeName}__Surrogate.serializer())`,
+    `return ${typeName}(`,
+    ...nonLiteralFields.map(
+      (f) =>
+        `${toKotlinName(f.name.text)} = surrogate.${toKotlinName(f.name.text)},`,
+    ),
+    ")",
+    "}",
+    "}",
+  );
+
   return lines.join("\n");
 }
 
@@ -780,7 +869,7 @@ function writeTypepromptUnion(
     }
     case "interfaces": {
       const { discriminator } = members;
-      lines.push(`@Serializable(with = ${typeName}_Serializer::class)`);
+      lines.push(`@Serializable(with = ${typeName}__Serializer::class)`);
       lines.push(`sealed interface ${typeName} {`);
       for (const commonField of members.commonFields) {
         const name = toKotlinName(commonField.name);
@@ -794,7 +883,7 @@ function writeTypepromptUnion(
       lines.push(
         "\n",
         [
-          `private object ${typeName}_Serializer`,
+          `private object ${typeName}__Serializer`,
           `JsonContentPolymorphicSerializer<${typeName}>(${typeName}::class) {`,
         ].join(" : "),
         [
