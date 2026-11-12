@@ -123,5 +123,6 @@
     plainInt: integer;
     plainBool: boolean;
     plainList: string[];
+    literal: "Literal";
   };
 </namespace>

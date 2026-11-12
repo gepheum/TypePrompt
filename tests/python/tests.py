@@ -982,6 +982,7 @@ class TestE01JsonSerialization:
             plain_int=123,
             plain_bool=True,
             plain_list=["item"],
+            literal="Literal",
         )
         json_omitted = adapter.dump_json(omitted, by_alias=True).decode("utf-8")
 
@@ -1002,6 +1003,7 @@ class TestE01JsonSerialization:
         assert '"plainInt":123' in json_omitted
         assert '"plainBool":true' in json_omitted
         assert '"plainList":["item"]' in json_omitted
+        assert '"literal":"Literal"' in json_omitted
 
         # Deserialize and verify defaults
         decoded_omitted = adapter.validate_json(json_omitted)
@@ -1019,6 +1021,7 @@ class TestE01JsonSerialization:
         assert decoded_omitted.plain_int == 123
         assert decoded_omitted.plain_bool is True
         assert decoded_omitted.plain_list == ["item"]
+        assert decoded_omitted.literal == "Literal"
 
         # Decoding JSON where required fields without @omitDefault are absent must fail
         with pytest.raises(pydantic.ValidationError):
@@ -1040,6 +1043,7 @@ class TestE01JsonSerialization:
             plain_int=456,
             plain_bool=False,
             plain_list=[],
+            literal="Literal",
         )
         json_explicit = adapter.dump_json(explicit_defaults, by_alias=True).decode(
             "utf-8"
@@ -1058,6 +1062,7 @@ class TestE01JsonSerialization:
         assert '"plainInt":456' in json_explicit
         assert '"plainBool":false' in json_explicit
         assert '"plainList":[]' in json_explicit
+        assert '"literal":"Literal"' in json_explicit
 
         # 3. Instance with non-default values
         populated = s_e01.shared.OmitDefaultType(
@@ -1075,6 +1080,7 @@ class TestE01JsonSerialization:
             plain_int=789,
             plain_bool=True,
             plain_list=["x"],
+            literal="Literal",
         )
         json_populated = adapter.dump_json(populated, by_alias=True).decode("utf-8")
         assert '"optString":"hello"' in json_populated
@@ -1091,6 +1097,7 @@ class TestE01JsonSerialization:
         assert '"plainInt":789' in json_populated
         assert '"plainBool":true' in json_populated
         assert '"plainList":["x"]' in json_populated
+        assert '"literal":"Literal"' in json_populated
 
         decoded_populated = adapter.validate_json(json_populated)
         assert decoded_populated.opt_string == "hello"

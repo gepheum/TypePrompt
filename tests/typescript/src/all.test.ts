@@ -1102,6 +1102,7 @@ describe("e01 / JSON serialization & deserialization", () => {
       plainInt: 123,
       plainBool: true,
       plainList: ["item"],
+      literal: "Literal",
     };
     const omittedJson = JSON.stringify(omitted);
 
@@ -1145,6 +1146,7 @@ describe("e01 / JSON serialization & deserialization", () => {
       plainInt: 789,
       plainBool: true,
       plainList: ["x"],
+      literal: "Literal",
     };
     const populatedJson = JSON.stringify(populated);
     expect(populatedJson.includes('"optString":"hello"')).toMatch(true);
@@ -1182,6 +1184,7 @@ describe("e01 / JSON serialization & deserialization", () => {
       plainInt: 123,
       plainBool: true,
       plainList: ["item"],
+      literal: "Literal",
     };
 
     const prompt = pe01.myTemplate.render({
@@ -1245,6 +1248,7 @@ describe("e01 / JSON serialization & deserialization", () => {
           plainInt: 123,
           plainBool: true,
           plainList: ["item"],
+          literal: "Literal",
         },
       });
       expect(parsedOmitDefaultWithRequired.omitDefault?.stringField).toMatch(
