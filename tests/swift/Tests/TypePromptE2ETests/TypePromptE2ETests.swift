@@ -942,6 +942,151 @@ struct E01SpecSerializationTests {
     #expect(parsedOmitted.optMatrix == nil)
     #expect(parsedOmitted.optMap == nil)
   }
+
+  @Test func omitDefaultSerializationAndDeserialization() throws {
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+
+    // 1. Instance with default/omitted values
+    let omitted = TypePrompt.Schema.Shared.OmitDefaultType(
+      stringList: [],
+      stringField: "",
+      intField: 0,
+      numField: 0.0,
+      boolField: false,
+      plainOpt: nil,
+      plainString: "test",
+      plainInt: 123,
+      plainBool: true,
+      plainList: ["item"]
+    )
+
+    let omittedData = try encoder.encode(omitted)
+    let omittedJson = String(decoding: omittedData, as: UTF8.self)
+
+    #expect(!omittedJson.contains("\"optString\""))
+    #expect(!omittedJson.contains("\"optInt\""))
+    #expect(!omittedJson.contains("\"optNum\""))
+    #expect(!omittedJson.contains("\"optBool\""))
+    #expect(!omittedJson.contains("\"stringList\""))
+    #expect(!omittedJson.contains("\"stringField\""))
+    #expect(!omittedJson.contains("\"intField\""))
+    #expect(!omittedJson.contains("\"numField\""))
+    #expect(!omittedJson.contains("\"boolField\""))
+
+    #expect(omittedJson.contains("\"plainOpt\":null"))
+    #expect(omittedJson.contains("\"plainString\":\"test\""))
+    #expect(omittedJson.contains("\"plainInt\":123"))
+    #expect(omittedJson.contains("\"plainBool\":true"))
+    #expect(omittedJson.contains("\"plainList\":[\"item\"]"))
+
+    let decodedOmitted = try decoder.decode(
+      TypePrompt.Schema.Shared.OmitDefaultType.self, from: omittedData)
+    #expect(decodedOmitted.optString == nil)
+    #expect(decodedOmitted.optInt == nil)
+    #expect(decodedOmitted.optNum == nil)
+    #expect(decodedOmitted.optBool == nil)
+    #expect(decodedOmitted.stringList == [])
+    #expect(decodedOmitted.stringField == "")
+    #expect(decodedOmitted.intField == 0)
+    #expect(decodedOmitted.numField == 0.0)
+    #expect(decodedOmitted.boolField == false)
+    #expect(decodedOmitted.plainOpt == nil)
+    #expect(decodedOmitted.plainString == "test")
+    #expect(decodedOmitted.plainInt == 123)
+    #expect(decodedOmitted.plainBool == true)
+    #expect(decodedOmitted.plainList == ["item"])
+
+    // Missing required fields without @omitDefault must fail
+    #expect(throws: (any Error).self) {
+      try decoder.decode(TypePrompt.Schema.Shared.OmitDefaultType.self, from: Data("{}".utf8))
+    }
+
+    // 2. Instance with explicitly assigned default values
+    let explicitDefaults = TypePrompt.Schema.Shared.OmitDefaultType(
+      optString: nil,
+      optInt: nil,
+      optNum: nil,
+      optBool: nil,
+      stringList: [],
+      stringField: "",
+      intField: 0,
+      numField: 0.0,
+      boolField: false,
+      plainOpt: nil,
+      plainString: "test2",
+      plainInt: 456,
+      plainBool: false,
+      plainList: []
+    )
+    let explicitData = try encoder.encode(explicitDefaults)
+    let explicitJson = String(decoding: explicitData, as: UTF8.self)
+    #expect(!explicitJson.contains("\"optString\""))
+    #expect(!explicitJson.contains("\"optInt\""))
+    #expect(!explicitJson.contains("\"optNum\""))
+    #expect(!explicitJson.contains("\"optBool\""))
+    #expect(!explicitJson.contains("\"stringList\""))
+    #expect(!explicitJson.contains("\"stringField\""))
+    #expect(!explicitJson.contains("\"intField\""))
+    #expect(!explicitJson.contains("\"numField\""))
+    #expect(!explicitJson.contains("\"boolField\""))
+    #expect(explicitJson.contains("\"plainOpt\":null"))
+    #expect(explicitJson.contains("\"plainString\":\"test2\""))
+    #expect(explicitJson.contains("\"plainInt\":456"))
+    #expect(explicitJson.contains("\"plainBool\":false"))
+    #expect(explicitJson.contains("\"plainList\":[]"))
+
+    // 3. Instance with non-default values
+    let populated = TypePrompt.Schema.Shared.OmitDefaultType(
+      optString: "hello",
+      optInt: 42,
+      optNum: 3.14,
+      optBool: true,
+      stringList: ["a", "b"],
+      stringField: "world",
+      intField: 7,
+      numField: 2.5,
+      boolField: true,
+      plainOpt: "plain",
+      plainString: "test3",
+      plainInt: 789,
+      plainBool: true,
+      plainList: ["x"]
+    )
+    let populatedData = try encoder.encode(populated)
+    let populatedJson = String(decoding: populatedData, as: UTF8.self)
+    #expect(populatedJson.contains("\"optString\":\"hello\""))
+    #expect(populatedJson.contains("\"optInt\":42"))
+    #expect(populatedJson.contains("\"optNum\":3.14"))
+    #expect(populatedJson.contains("\"optBool\":true"))
+    #expect(populatedJson.contains("\"stringList\":[\"a\",\"b\"]"))
+    #expect(populatedJson.contains("\"stringField\":\"world\""))
+    #expect(populatedJson.contains("\"intField\":7"))
+    #expect(populatedJson.contains("\"numField\":2.5"))
+    #expect(populatedJson.contains("\"boolField\":true"))
+    #expect(populatedJson.contains("\"plainOpt\":\"plain\""))
+    #expect(populatedJson.contains("\"plainString\":\"test3\""))
+    #expect(populatedJson.contains("\"plainInt\":789"))
+    #expect(populatedJson.contains("\"plainBool\":true"))
+    #expect(populatedJson.contains("\"plainList\":[\"x\"]"))
+
+    let decodedPopulated = try decoder.decode(
+      TypePrompt.Schema.Shared.OmitDefaultType.self, from: populatedData)
+    #expect(decodedPopulated.optString == "hello")
+    #expect(decodedPopulated.optInt == 42)
+    #expect(decodedPopulated.optNum == 3.14)
+    #expect(decodedPopulated.optBool == true)
+    #expect(decodedPopulated.stringList == ["a", "b"])
+    #expect(decodedPopulated.stringField == "world")
+    #expect(decodedPopulated.intField == 7)
+    #expect(decodedPopulated.numField == 2.5)
+    #expect(decodedPopulated.boolField == true)
+    #expect(decodedPopulated.plainOpt == "plain")
+    #expect(decodedPopulated.plainString == "test3")
+    #expect(decodedPopulated.plainInt == 789)
+    #expect(decodedPopulated.plainBool == true)
+    #expect(decodedPopulated.plainList == ["x"])
+  }
 }
 
 @Suite("TemplateOverrider")

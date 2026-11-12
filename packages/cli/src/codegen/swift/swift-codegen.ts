@@ -25,7 +25,10 @@ import type {
   Union,
 } from "@typeprompt/core/schema/schema-types.js";
 import { isLiteralType } from "@typeprompt/core/schema/schema-utils.js";
-import { resolveType } from "@typeprompt/core/schema/type-resolver.js";
+import {
+  resolveType,
+  resolveTypeWithOmitDefault,
+} from "@typeprompt/core/schema/type-resolver.js";
 import { STATIC_SNIPPETS } from "../../static-snippets/static-snippets.gen.js";
 import type { OutputFile } from "../codegen-types.js";
 import { reformatCFamilyCode } from "../formatters.js";
@@ -840,11 +843,10 @@ function writeTypepromptInterface(
   }
   lines.push("}");
 
-  const hasOptionalField = fields.some(
-    (f) => resolveType(f.type, schema).kind === "optional",
-  );
+  const hasOptionalFields = fields.some((f) => f.type.kind === "optional");
+  const hasOmitDefault = fields.some((f) => !!f.omitDefault);
 
-  if (hasOptionalField) {
+  if (hasOptionalFields || hasOmitDefault) {
     lines.push("", "private enum CodingKeys: String, CodingKey {");
     for (const field of fields) {
       const rawFieldName = field.name.text;
@@ -857,8 +859,29 @@ function writeTypepromptInterface(
     lines.push("var container = encoder.container(keyedBy: CodingKeys.self)");
     for (const field of fields) {
       const swiftName = toSwiftName(field.name.text);
-      const isOptional = resolveType(field.type, schema).kind === "optional";
-      if (isOptional) {
+      if (field.omitDefault) {
+        const resolved = resolveTypeWithOmitDefault(field.type, schema);
+        let condition: string;
+        if (resolved.kind === "optional") {
+          condition = `self.${swiftName} != nil`;
+        } else if (resolved.kind === "array") {
+          condition = `!self.${swiftName}.isEmpty`;
+        } else if (resolved.primitive.text === "string") {
+          condition = `!self.${swiftName}.isEmpty`;
+        } else if (resolved.primitive.text === "integer") {
+          condition = `self.${swiftName} != 0`;
+        } else if (resolved.primitive.text === "number") {
+          condition = `self.${swiftName} != 0.0`;
+        } else {
+          const _: "boolean" = resolved.primitive.text;
+          condition = `self.${swiftName}`;
+        }
+        lines.push(
+          `if ${condition} {`,
+          `  try container.encode(self.${swiftName}, forKey: .${swiftName})`,
+          "}",
+        );
+      } else if (field.type.kind === "optional") {
         lines.push(
           `if let value = self.${swiftName} {`,
           `  try container.encode(value, forKey: .${swiftName})`,
@@ -869,6 +892,59 @@ function writeTypepromptInterface(
       } else {
         lines.push(
           `try container.encode(self.${swiftName}, forKey: .${swiftName})`,
+        );
+      }
+    }
+    lines.push("}");
+
+    lines.push(
+      "",
+      "public init(from decoder: any Decoder) throws {",
+      "let container = try decoder.container(keyedBy: CodingKeys.self)",
+    );
+    for (const field of fields) {
+      const swiftName = toSwiftName(field.name.text);
+      const { type } = field;
+      if (isLiteralType(type)) {
+        lines.push(`self.${swiftName} = ${JSON.stringify(type.value)}`);
+        continue;
+      }
+      if (type.kind === "optional") {
+        const innerSwiftType = writeType(type.innerType, schema, options);
+        lines.push(
+          `self.${swiftName} = try container.decodeIfPresent(${innerSwiftType}.self, forKey: .${swiftName})`,
+        );
+      } else if (field.omitDefault) {
+        const resolved = resolveTypeWithOmitDefault(type, schema);
+        if (resolved.kind === "optional") {
+          throw new Error();
+        }
+        let fallback: string;
+        let decodeType: string;
+        if (resolved.kind === "array") {
+          decodeType = writeType(type, schema, options);
+          fallback = "[]";
+        } else if (resolved.primitive.text === "string") {
+          decodeType = "String";
+          fallback = '""';
+        } else if (resolved.primitive.text === "integer") {
+          decodeType = "Int32";
+          fallback = "0";
+        } else if (resolved.primitive.text === "number") {
+          decodeType = "Double";
+          fallback = "0.0";
+        } else {
+          const _: "boolean" = resolved.primitive.text;
+          decodeType = "Bool";
+          fallback = "false";
+        }
+        lines.push(
+          `self.${swiftName} = try container.decodeIfPresent(${decodeType}.self, forKey: .${swiftName}) ?? ${fallback}`,
+        );
+      } else {
+        const fieldSwiftType = writeType(type, schema, options);
+        lines.push(
+          `self.${swiftName} = try container.decode(${fieldSwiftType}.self, forKey: .${swiftName})`,
         );
       }
     }
