@@ -112,8 +112,9 @@ if [ "$FAST" != true ]; then
   swift test
   cd ..
 
-  # Run Dart unit tests
+  # Run Dart unit tests and static analysis
   cd dart
+  dart analyze --fatal-infos
   dart test
   cd ..
 
