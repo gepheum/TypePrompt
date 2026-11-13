@@ -4,7 +4,6 @@
 //! and structured JSON output using Google's Gemini API (`generateContent`).
 
 #[path = "gen/prompts.rs"]
-#[allow(dead_code, unused_imports, non_snake_case, non_camel_case_types)]
 pub mod prompts;
 
 use prompts::{schema, tool_executor, Prompt, ToolCall, PROMPTS};

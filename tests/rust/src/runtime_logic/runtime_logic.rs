@@ -47,7 +47,8 @@
   non_snake_case,
   non_camel_case_types,
   non_upper_case_globals,
-  dead_code
+  dead_code,
+  clippy::all
 )]
 // </static:rust-imports>
 
@@ -532,7 +533,7 @@ fn render_snippet(
         spec::Snippet_KindSnippetIf_Is::True => match eval_result {
           serde_json::Value::Bool(b) => *b,
           serde_json::Value::String(str) => !str.is_empty(),
-          serde_json::Value::Number(n) => n.as_f64().map_or(false, |num| num != 0.0),
+          serde_json::Value::Number(n) => n.as_f64().is_some_and(|num| num != 0.0),
           serde_json::Value::Null => false,
           _ => true,
         },

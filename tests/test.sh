@@ -93,18 +93,20 @@ if [ "$FAST" != true ]; then
   npx pyright --pythonpath "$PY_BIN" src/
   cd ../../tests
 
-  # Build Rust e2e example
+  # Build and lint Rust e2e example
   cd ../examples/e2e-rust
-  cargo check
+  cargo clippy --all-targets -- -D warnings
   cd ../../tests
 
-  # Run C# unit tests
+  # Run C# unit tests and analysis
   cd csharp
-  dotnet test
+  dotnet format --verify-no-changes
+  dotnet test /warnaserror
   cd ..
 
-  # Run Rust unit tests
+  # Run Rust unit tests and static analysis
   cd rust
+  cargo clippy --all-targets -- -D warnings
   cargo test
   cd ..
 

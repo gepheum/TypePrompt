@@ -15,18 +15,17 @@ pub mod gen {
 pub mod runtime_logic;
 
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
   use super::*;
 
   fn block_on<F: std::future::Future>(f: F) -> F::Output {
     let waker = std::task::Waker::noop();
-    let mut cx = std::task::Context::from_waker(&waker);
+    let mut cx = std::task::Context::from_waker(waker);
     let mut f = std::pin::pin!(f);
-    loop {
-      match f.as_mut().poll(&mut cx) {
-        std::task::Poll::Ready(val) => return val,
-        std::task::Poll::Pending => panic!("Pending not supported"),
-      }
+    match f.as_mut().poll(&mut cx) {
+      std::task::Poll::Ready(val) => val,
+      std::task::Poll::Pending => panic!("Pending not supported"),
     }
   }
 
