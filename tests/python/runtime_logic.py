@@ -95,7 +95,7 @@ class Prompt[Output, ToolExecutor = None]:
     """
 
     # Metadata for this prompt.
-    meta: schema.meta.Meta
+    meta: Meta
     system_message: str
     user_message: str
     examples: Sequence[FewShotExample]
@@ -276,8 +276,8 @@ _TOOL_ID_TO_METHOD_NAME: Mapping[str, str] = {
 
 _type_adapters = {
     "Main:MyTemplate": (
-        pydantic.TypeAdapter(schema.main.my_template.Input),
-        pydantic.TypeAdapter(schema.main.my_template.Output),
+        pydantic.TypeAdapter(cast(Any, schema.main.my_template.Input)),
+        pydantic.TypeAdapter(cast(Any, schema.main.my_template.Output)),
     ),
     "Main:myTool": (
         pydantic.TypeAdapter(schema.main.my_tool.Input),

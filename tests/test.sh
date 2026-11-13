@@ -59,9 +59,10 @@ node ../packages/cli/dist/main.js gen -p ../examples/e2e-python
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-rust
 
 if [ "$FAST" != true ]; then
-  # Run Python unit tests
+  # Run Python unit tests and type checking
   cd python
   .venv/bin/pytest tests.py -v
+  npx pyright
   cd ..
 
   # Run TypeScript unit tests

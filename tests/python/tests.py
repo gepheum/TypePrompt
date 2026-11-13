@@ -8,7 +8,7 @@ import re
 import json
 import pydantic
 import pytest
-from typing import Any
+from typing import Any, cast
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -788,7 +788,7 @@ class TestLegalSummarizeClause:
 
 class TestE01JsonSerialization:
     def test_expr_serialization_and_deserialization(self):
-        adapter = pydantic.TypeAdapter(s_e01.shared.Expr)
+        adapter = pydantic.TypeAdapter(cast(Any, s_e01.shared.Expr))
         expr_num = s_e01.shared.Expr_KindNumber(kind="number", value=42.0)
         json_str = adapter.dump_json(expr_num).decode("utf-8")
         decoded_num = adapter.validate_json(json_str)
@@ -808,7 +808,7 @@ class TestE01JsonSerialization:
         assert any_decoded_add.right.value == 2.0
 
     def test_enum_with_common_fields_serialization(self):
-        adapter = pydantic.TypeAdapter(s_e01.shared.EnumWithCommonFields)
+        adapter = pydantic.TypeAdapter(cast(Any, s_e01.shared.EnumWithCommonFields))
         not_success = s_e01.shared.EnumWithCommonFields_NotSuccess(
             success=False, x=10, y=20.5, z="error"
         )

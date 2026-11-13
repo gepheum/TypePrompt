@@ -210,6 +210,7 @@ function writeUserDefinedDatatypes(
     "# Metadata associated with a prompt.",
     `type Meta = ${metaTypedef}`,
     "",
+    "",
     "@final",
     "class schema(_StaticClass):",
     ' """Contains the user-defined datatypes organized by namespace."""',
