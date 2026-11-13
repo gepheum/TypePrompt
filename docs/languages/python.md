@@ -11,7 +11,7 @@ This guide explains how to use TypePrompt-generated Python code in your applicat
 
 ## Installation & setup
 
-TypePrompt generates clean, standalone Python code that relies on these lightweight runtime dependencies:
+TypePrompt generates clean, standalone Python (3.13+) code that relies on these lightweight runtime dependencies:
 
 ```bash
 pip install pydantic pyyaml toon-format

@@ -65,21 +65,22 @@ if [ "$FAST" != true ]; then
   npx pyright
   cd ..
 
-  # Run TypeScript unit tests
+  # Run TypeScript unit tests and linting
   cd typescript
   npm i
   npm run typecheck
+  npm run lint
   npm run test
   cd ..
 
-  # Run Kotlin unit tests
+  # Run Kotlin unit tests and linting
   cd kotlin
-  ./gradlew test
+  ./gradlew test ktlintCheck
   cd ..
 
-  # Build Kotlin e2e example
+  # Build and lint Kotlin e2e example
   cd ../examples/e2e-kotlin
-  ./gradlew build
+  ./gradlew build ktlintCheck
   cd ../../tests
 
   # Build and typecheck Python e2e example

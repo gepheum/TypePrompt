@@ -139,25 +139,36 @@ function writeTemplateIdEnum(templates: readonly ValidTemplate[]): string {
 
 function writeToolsType(compilationResult: ValidCompilationResult): string {
   const { singleNamespace, templates } = compilationResult;
+  const docCommentLine = "/** The tools available from the given template. */";
+  if (Object.keys(templates).length === 0) {
+    return [
+      docCommentLine,
+      "export type Tools<Id extends TemplateId> = { [key: string]: never }[Id];",
+    ].join("\n");
+  }
   const lines = [
-    "/** The tools available from the given template. */",
+    docCommentLine,
     "export type Tools<Id extends TemplateId> = {",
   ];
   for (const template of Object.values(templates)) {
     const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
     const templateId = getId(template.template);
-    lines.push(`"${templateId}": {`);
-    for (const tool of Object.values(template.tools)) {
-      const toolName = tool.tool.tool.name.text;
-      const typePrefix = singleNamespace
-        ? `Schema.${capitalize(toolName)}.`
-        : `Schema.${namespace}.${capitalize(toolName)}.`;
-      lines.push(`${toolName}: Tool<`);
-      lines.push(`${typePrefix}Input,`);
-      lines.push(`${typePrefix}Output`);
-      lines.push(">,");
+    if (Object.keys(template.tools).length === 0) {
+      lines.push(`"${templateId}": { [key: string]: never },`);
+    } else {
+      lines.push(`"${templateId}": {`);
+      for (const tool of Object.values(template.tools)) {
+        const toolName = tool.tool.tool.name.text;
+        const typePrefix = singleNamespace
+          ? `Schema.${capitalize(toolName)}.`
+          : `Schema.${namespace}.${capitalize(toolName)}.`;
+        lines.push(`${toolName}: Tool<`);
+        lines.push(`${typePrefix}Input,`);
+        lines.push(`${typePrefix}Output`);
+        lines.push(">,");
+      }
+      lines.push("},");
     }
-    lines.push("},");
   }
   lines.push("}[Id];");
   return lines.join("\n");
@@ -170,6 +181,13 @@ function writeInputOutputTypes(
   const lines: string[] = [];
 
   for (const what of ["Input", "Output"]) {
+    if (Object.keys(templates).length === 0) {
+      lines.push(
+        `export type ${what}<Id extends TemplateId> = { [key: string]: never }[Id];`,
+        "",
+      );
+      continue;
+    }
     lines.push(`export type ${what}<Id extends TemplateId> = {`);
     for (const template of Object.values(templates)) {
       const namespace = template.template.namespace?.text ?? DEFAULT_NAMESPACE;
