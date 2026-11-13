@@ -190,21 +190,6 @@ export function activatePlaygroundPreview(
   );
 
   context.subscriptions.push(
-    window.onDidChangeActiveTextEditor((editor) => {
-      if (!currentPanel || !editor) {
-        return;
-      }
-      const doc = editor.document;
-      if (
-        isPlaygroundDocument(doc, projectStore) &&
-        doc.uri.toString() !== currentDoc?.uri.toString()
-      ) {
-        void openPlaygroundForDocument(doc, true);
-      }
-    }),
-  );
-
-  context.subscriptions.push(
     workspace.onDidChangeTextDocument((event) => {
       if (!currentPanel || !currentDoc) {
         return;

@@ -2525,17 +2525,17 @@ void TestIndirect() {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wself-assign-overloaded"
 #endif
-  #if defined(__clang__)
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wself-assign-overloaded"
-  #endif
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif
   ind_assigned = ind_assigned;
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
-  #if defined(__clang__)
-  #pragma clang diagnostic pop
-  #endif
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
   ASSERT_EQ(*ind_assigned, "world");
 
   // Move construction
