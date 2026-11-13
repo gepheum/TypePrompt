@@ -1,12 +1,50 @@
 #!/bin/bash
 set -e
 
+validate_lang() {
+  case "$1" in
+    cpp|csharp|dart|kotlin|python|rust|swift|typescript) ;;
+    *)
+      echo "Unknown language: $1" >&2
+      echo "Supported languages: cpp, csharp, dart, kotlin, python, rust, swift, typescript" >&2
+      exit 1
+      ;;
+  esac
+}
+
 FAST=false
-for arg in "$@"; do
-  if [ "$arg" = "--fast" ]; then
-    FAST=true
-  fi
+LANG_TARGET=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --fast)
+      FAST=true
+      shift
+      ;;
+    --lang)
+      if [ -z "$2" ]; then
+        echo "Error: --lang requires a language argument" >&2
+        exit 1
+      fi
+      validate_lang "$2"
+      LANG_TARGET="$2"
+      shift 2
+      ;;
+    --lang=*)
+      val="${1#--lang=}"
+      validate_lang "$val"
+      LANG_TARGET="$val"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
 done
+
+should_run() {
+  [ "$FAST" != true ] && { [ -z "$LANG_TARGET" ] || [ "$LANG_TARGET" = "$1" ]; }
+}
 
 cd ..
 npm run build
@@ -58,30 +96,12 @@ node ../packages/cli/dist/main.js gen -p ../examples/e2e-kotlin
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-python
 node ../packages/cli/dist/main.js gen -p ../examples/e2e-rust
 
-if [ "$FAST" != true ]; then
-  # Run Python unit tests and type checking
+# Run Python unit tests and type checking
+if should_run "python"; then
   cd python
   .venv/bin/pytest tests.py -v
   npx pyright
   cd ..
-
-  # Run TypeScript unit tests and linting
-  cd typescript
-  npm i
-  npm run typecheck
-  npm run lint
-  npm run test
-  cd ..
-
-  # Run Kotlin unit tests and linting
-  cd kotlin
-  ./gradlew test ktlintCheck
-  cd ..
-
-  # Build and lint Kotlin e2e example
-  cd ../examples/e2e-kotlin
-  ./gradlew build ktlintCheck
-  cd ../../tests
 
   # Build and typecheck Python e2e example
   cd ../examples/e2e-python
@@ -92,36 +112,68 @@ if [ "$FAST" != true ]; then
   "$PY_BIN" -m py_compile src/main.py src/gen/prompts.py
   npx pyright --pythonpath "$PY_BIN" src/
   cd ../../tests
+fi
 
-  # Build and lint Rust e2e example
-  cd ../examples/e2e-rust
-  cargo clippy --all-targets -- -D warnings
+# Run TypeScript unit tests and linting
+if should_run "typescript"; then
+  cd typescript
+  npm i
+  npm run typecheck
+  npm run lint
+  npm run test
+  cd ..
+fi
+
+# Run Kotlin unit tests and linting
+if should_run "kotlin"; then
+  cd kotlin
+  ./gradlew test ktlintCheck
+  cd ..
+
+  # Build and lint Kotlin e2e example
+  cd ../examples/e2e-kotlin
+  ./gradlew build ktlintCheck
   cd ../../tests
+fi
 
-  # Run C# unit tests and analysis
+# Run C# unit tests and analysis
+if should_run "csharp"; then
   cd csharp
   dotnet format --verify-no-changes
   dotnet test /warnaserror
   cd ..
+fi
 
-  # Run Rust unit tests and static analysis
+# Run Rust unit tests and static analysis
+if should_run "rust"; then
   cd rust
   cargo clippy --all-targets -- -D warnings
   cargo test
   cd ..
 
-  # Run Swift unit tests and static analysis
+  # Build and lint Rust e2e example
+  cd ../examples/e2e-rust
+  cargo clippy --all-targets -- -D warnings
+  cd ../../tests
+fi
+
+# Run Swift unit tests and static analysis
+if should_run "swift"; then
   cd swift
   swift test -Xswiftc -warnings-as-errors
   cd ..
+fi
 
-  # Run Dart unit tests and static analysis
+# Run Dart unit tests and static analysis
+if should_run "dart"; then
   cd dart
   dart analyze --fatal-infos
   dart test
   cd ..
+fi
 
-  # Run C++ unit tests
+# Run C++ unit tests
+if should_run "cpp"; then
   cd cpp
   ./test.sh
   cd ..
