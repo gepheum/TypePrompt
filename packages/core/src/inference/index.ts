@@ -1,5 +1,10 @@
 export { generateInferenceRunId } from "./inference-id.js";
 export { renderInferenceRequest } from "./inference-request-renderer.js";
+export {
+  tryResolveLanguageModel,
+  type LanguageModelResult,
+  type ModelProviderName,
+} from "./language-model-resolver.js";
 
 export * as Inferences from "./inference-types.js";
 

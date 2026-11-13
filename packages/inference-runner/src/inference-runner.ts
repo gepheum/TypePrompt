@@ -1,3 +1,8 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createMistral } from "@ai-sdk/mistral";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createXai } from "@ai-sdk/xai";
 import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
@@ -6,15 +11,18 @@ import {
   normalizeSchemaValue,
   parseJson,
   renderInferenceRequest,
+  tryResolveLanguageModel,
   unwrapJsonValue,
   validateJson,
   type ApiKeys,
+  type ModelProviderName,
   type PlaygroundModel,
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
 } from "@typeprompt/core";
 import {
+  createGateway,
   generateText,
   jsonSchema,
   tool,
@@ -24,7 +32,6 @@ import {
   type Output,
   type ToolSet,
 } from "ai";
-import { tryResolveLanguageModel } from "./language-model-resolver.js";
 
 export type RunPlaygroundInferencesOptions = {
   readonly apiKeys?: ApiKeys;
@@ -84,7 +91,9 @@ export async function runPlaygroundInferences(
     if (result.kind === "error") {
       throw new Error(result.detailedMessage);
     }
-    languageModel = result.languageModel;
+    languageModel = MODEL_PROVIDERS[result.provider]({
+      apiKey: result.apiKey,
+    })(result.modelId);
   }
   const templatesSpec = makeTemplates(compilationResult);
   const specTemplate = templatesSpec.templates[templateId]!;
@@ -183,6 +192,18 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+const MODEL_PROVIDERS: {
+  readonly [P in ModelProviderName]: (options: {
+    apiKey: string;
+  }) => (modelId: string) => LanguageModel;
+} = {
+  openai: createOpenAI,
+  anthropic: createAnthropic,
+  google: createGoogleGenerativeAI,
+  xai: createXai,
+  mistral: createMistral,
+  vercelGateway: createGateway,
+};
 
 /**
  * Collects only the `.tp` files relevant to `templateId`:

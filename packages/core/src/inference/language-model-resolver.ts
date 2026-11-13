@@ -1,15 +1,19 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createMistral } from "@ai-sdk/mistral";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createXai } from "@ai-sdk/xai";
-import type { ApiKeys, PlaygroundModel } from "@typeprompt/core";
-import { createGateway, type LanguageModel } from "ai";
+import type { ApiKeys } from "../config/secrets-parser.js";
+import type { PlaygroundModel } from "./playground-types.js";
 
-export type TryResolveLanguageModelResult =
+export type ModelProviderName =
+  "openai" | "anthropic" | "google" | "xai" | "mistral" | "vercelGateway";
+
+export type LanguageModelResult =
   | {
       readonly kind: "success";
-      readonly languageModel: LanguageModel;
+      readonly provider: ModelProviderName;
+      readonly apiKey: string;
+      /**
+       * The model identifier to pass to the provider: bare model name for direct
+       * SDK providers, or the full provider/model identifier for Vercel Gateway.
+       */
+      readonly modelId: string;
     }
   | {
       readonly kind: "error";
@@ -18,18 +22,18 @@ export type TryResolveLanguageModelResult =
     };
 
 /**
- * Attempts to resolve a Vercel AI SDK {@link LanguageModel} from a {@link PlaygroundModel}
+ * Attempts to resolve a provider name and API key from a {@link PlaygroundModel}
  * and configured {@link ApiKeys}:
  * - If `apiKeys` is not specified, returns an error instructing to create
- *     `.typeprompt.secrets.yaml`.
+ *   `.typeprompt.secrets.yaml`.
  * - For supported providers, uses the provider's SDK key if present, falling back to
- * `vercelGateway`.
+ *   `vercelGateway`.
  * - For all other providers, requires `vercelGateway`.
  */
 export function tryResolveLanguageModel(
   model: PlaygroundModel,
   apiKeys?: ApiKeys,
-): TryResolveLanguageModelResult {
+): LanguageModelResult {
   if (!apiKeys) {
     return {
       kind: "error",
@@ -68,17 +72,17 @@ export function tryResolveLanguageModel(
     if (providerKey) {
       return {
         kind: "success",
-        languageModel: DIRECT_PROVIDERS[directProvider]({
-          apiKey: providerKey,
-        })(providerModelName),
+        provider: directProvider,
+        apiKey: providerKey,
+        modelId: providerModelName,
       };
     }
     if (apiKeys.vercelGateway) {
       return {
         kind: "success",
-        languageModel: createGateway({ apiKey: apiKeys.vercelGateway })(
-          modelId,
-        ),
+        provider: "vercelGateway",
+        apiKey: apiKeys.vercelGateway,
+        modelId,
       };
     }
     const shortMessage = `Missing '${directProvider}' or 'vercelGateway' API key`;
@@ -93,7 +97,9 @@ export function tryResolveLanguageModel(
   if (apiKeys.vercelGateway) {
     return {
       kind: "success",
-      languageModel: createGateway({ apiKey: apiKeys.vercelGateway })(modelId),
+      provider: "vercelGateway",
+      apiKey: apiKeys.vercelGateway,
+      modelId,
     };
   }
 
@@ -106,22 +112,8 @@ export function tryResolveLanguageModel(
   };
 }
 
-const DIRECT_PROVIDERS: {
-  readonly [
-    P in "openai" | "anthropic" | "google" | "xai" | "mistral"
-  ]: (options: { apiKey: string }) => (modelId: string) => LanguageModel;
-} = {
-  openai: createOpenAI,
-  anthropic: createAnthropic,
-  google: createGoogleGenerativeAI,
-  xai: createXai,
-  mistral: createMistral,
-};
-
-type DirectProvider = keyof typeof DIRECT_PROVIDERS;
-
 const MODEL_PREFIX_TO_PROVIDER: {
-  readonly [prefix: string]: DirectProvider;
+  readonly [prefix: string]: ModelProviderName;
 } = {
   openai: "openai",
   anthropic: "anthropic",

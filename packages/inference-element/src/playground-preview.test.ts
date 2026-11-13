@@ -215,6 +215,84 @@ describe("PlaygroundPreviewElement", () => {
     assert.ok(renderedStr.includes("Playground Preview · 0 samples"));
   });
 
+  it("renders detailed error message in banner when API keys are present but model cannot be resolved", () => {
+    const el = new PlaygroundPreviewElement();
+    const fakeProject: Lsp.WireProject = {
+      folderUri: "file:///mock-workspace",
+      compilationResult: {
+        edition: 1,
+        sourceFiles: {
+          "prompts/Test.play.tp": {
+            path: "prompts/Test.play.tp",
+            hasErrors: false,
+            entity: {
+              kind: "playground",
+              namespace: "Main",
+              forTemplate: "Test",
+            },
+          },
+        },
+        templates: {},
+        tools: {},
+        playgrounds: {
+          "Main:Test": {
+            id: "Main:Test",
+            namespace: "Main",
+            forTemplate: "Test",
+            isValid: true,
+            model: { model: "openai/gpt-4o" },
+            samples: [],
+          },
+        },
+        signature: undefined,
+        anyErrors: false,
+        finalErrors: {},
+        warnings: {},
+        timestampMillis: Date.now(),
+      },
+      secrets: {
+        kind: "success",
+        secrets: {
+          apiKeys: {
+            anthropic: "sk-ant-test",
+          },
+        },
+      },
+    };
+
+    el.setProjectData(fakeProject, "prompts/Test.play.tp");
+    const template = el.render();
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    const renderedStr = flattenTemplate(template);
+    assert.ok(renderedStr.includes("no-api-keys-banner"));
+    assert.ok(
+      renderedStr.includes(
+        "Missing API key for model 'openai/gpt-4o': provide 'openai' or 'vercelGateway' API key",
+      ),
+    );
+    assert.ok(!renderedStr.includes("run-inference-button"));
+  });
+
   it("retains last successful projectData when updated with errors and displays error banner", () => {
     const el = new PlaygroundPreviewElement();
     const validProject: Lsp.WireProject = {

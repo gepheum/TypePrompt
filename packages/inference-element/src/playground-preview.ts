@@ -1,4 +1,9 @@
-import { DEFAULT_NAMESPACE, type Lsp } from "@typeprompt/core";
+import {
+  DEFAULT_NAMESPACE,
+  tryResolveLanguageModel,
+  type Lsp,
+  type PlaygroundModel,
+} from "@typeprompt/core";
 import { html, LitElement, type TemplateResult } from "lit";
 import { state } from "lit/decorators.js";
 import { createNanoEvents } from "nanoevents";
@@ -147,6 +152,11 @@ export class PlaygroundPreviewElement extends LitElement {
         : {};
     const hasApiKeys = Object.keys(apiKeys).length > 0;
 
+    const modelResolution =
+      hasApiKeys && playground?.model
+        ? tryResolveLanguageModel(playground.model as PlaygroundModel, apiKeys)
+        : undefined;
+
     const modelYaml = playground?.model
       ? YAML.stringify(playground.model).trimEnd()
       : "";
@@ -180,22 +190,6 @@ export class PlaygroundPreviewElement extends LitElement {
                 <h1><span>${displayTemplateId}</span></h1>
                 <div class="subtitle">${subtitleText}</div>
                 ${
-                  hasApiKeys
-                    ? html`
-                        <div class="header-actions">
-                          <button
-                            type="button"
-                            class="run-inference-button"
-                            title="Run inference across all samples"
-                            @click=${this.handleRunInferenceClick}
-                          >
-                            <span class="run-icon">▶</span> Run Inference
-                          </button>
-                        </div>
-                      `
-                    : ""
-                }
-                ${
                   !hasApiKeys
                     ? html`
                         <div class="no-api-keys-banner">
@@ -215,7 +209,29 @@ export class PlaygroundPreviewElement extends LitElement {
                           </div>
                         </div>
                       `
-                    : ""
+                    : modelResolution?.kind === "error"
+                      ? html`
+                          <div class="no-api-keys-banner">
+                            <span class="no-api-keys-icon">🔑</span>
+                            <div class="no-api-keys-content">
+                              <span class="no-api-keys-text"
+                                >${modelResolution.detailedMessage}</span
+                              >
+                            </div>
+                          </div>
+                        `
+                      : html`
+                          <div class="header-actions">
+                            <button
+                              type="button"
+                              class="run-inference-button"
+                              title="Run inference across all samples"
+                              @click=${this.handleRunInferenceClick}
+                            >
+                              <span class="run-icon">▶</span> Run Inference
+                            </button>
+                          </div>
+                        `
                 }
               </div>
 

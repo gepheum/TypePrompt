@@ -1,6 +1,6 @@
-import { parseSecretsYaml } from "@typeprompt/core";
 import { describe, it } from "mocha";
 import assert from "node:assert/strict";
+import { parseSecretsYaml } from "../config/secrets-parser.js";
 import { tryResolveLanguageModel } from "./language-model-resolver.js";
 
 describe("language-model-resolver", () => {
@@ -75,25 +75,29 @@ describe("language-model-resolver", () => {
     }
   });
 
-  it("resolves languageModel successfully when direct provider API key is provided", () => {
+  it("resolves provider name, API key, and modelId successfully when direct provider API key is provided", () => {
     const result = tryResolveLanguageModel(
       { model: "openai/gpt-4o" },
       { openai: "sk-test-key" },
     );
     assert.equal(result.kind, "success");
     if (result.kind === "success") {
-      assert.ok(result.languageModel);
+      assert.equal(result.provider, "openai");
+      assert.equal(result.apiKey, "sk-test-key");
+      assert.equal(result.modelId, "gpt-4o");
     }
   });
 
-  it("resolves languageModel successfully with vercelGateway API key", () => {
+  it("resolves provider name, API key, and modelId successfully with vercelGateway API key", () => {
     const result = tryResolveLanguageModel(
       { model: "deepseek/deepseek-r1" },
       { vercelGateway: "v-gw-test-key" },
     );
     assert.equal(result.kind, "success");
     if (result.kind === "success") {
-      assert.ok(result.languageModel);
+      assert.equal(result.provider, "vercelGateway");
+      assert.equal(result.apiKey, "v-gw-test-key");
+      assert.equal(result.modelId, "deepseek/deepseek-r1");
     }
   });
 });
