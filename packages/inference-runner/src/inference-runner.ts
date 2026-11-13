@@ -1,8 +1,3 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createMistral } from "@ai-sdk/mistral";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createXai } from "@ai-sdk/xai";
 import type { Inferences } from "@typeprompt/core";
 import {
   DEFAULT_NAMESPACE,
@@ -15,13 +10,11 @@ import {
   validateJson,
   type ApiKeys,
   type PlaygroundModel,
-  type PlaygroundModelId,
   type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
 } from "@typeprompt/core";
 import {
-  createGateway,
   generateText,
   jsonSchema,
   tool,
@@ -31,6 +24,7 @@ import {
   type Output,
   type ToolSet,
 } from "ai";
+import { tryResolveLanguageModel } from "./language-model-resolver.js";
 
 export type RunPlaygroundInferencesOptions = {
   readonly apiKeys?: ApiKeys;
@@ -81,10 +75,17 @@ export async function runPlaygroundInferences(
     );
   }
 
-  const languageModel = resolveLanguageModel(
-    validatedPlayground.model.model,
-    options,
-  );
+  let languageModel = options.languageModel;
+  if (!languageModel) {
+    const result = tryResolveLanguageModel(
+      validatedPlayground.model,
+      options.apiKeys,
+    );
+    if (result.kind === "error") {
+      throw new Error(result.detailedMessage);
+    }
+    languageModel = result.languageModel;
+  }
   const templatesSpec = makeTemplates(compilationResult);
   const specTemplate = templatesSpec.templates[templateId]!;
   const sourceFiles = collectSourceFilesForTemplate(
@@ -182,74 +183,6 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-const DIRECT_PROVIDERS: {
-  readonly [
-    P in "openai" | "anthropic" | "google" | "xai" | "mistral"
-  ]: (options: { apiKey: string }) => (modelId: string) => LanguageModel;
-} = {
-  openai: createOpenAI,
-  anthropic: createAnthropic,
-  google: createGoogleGenerativeAI,
-  xai: createXai,
-  mistral: createMistral,
-};
-
-type DirectProvider = keyof typeof DIRECT_PROVIDERS;
-
-const MODEL_PREFIX_TO_PROVIDER: {
-  readonly [prefix: string]: DirectProvider;
-} = {
-  openai: "openai",
-  anthropic: "anthropic",
-  google: "google",
-  xai: "xai",
-  spacexai: "xai",
-  mistral: "mistral",
-};
-
-/**
- * Resolves a Vercel AI SDK {@link LanguageModel} from a {@link PlaygroundModelId}
- * and the configured API keys:
- * - For `openai/*`, `anthropic/*`, `google/*`, `xai/*` (`spacexai/*`), or `mistral/*`
- *   models, uses the provider's SDK key if present, falling back to `vercelGateway`.
- * - For all other providers, requires `vercelGateway`.
- */
-function resolveLanguageModel(
-  modelId: PlaygroundModelId,
-  options: RunPlaygroundInferencesOptions,
-): LanguageModel {
-  if (options.languageModel) {
-    return options.languageModel;
-  }
-
-  const slashIndex = modelId.indexOf("/");
-  const prefix = slashIndex >= 0 ? modelId.slice(0, slashIndex) : "";
-  const providerModelName =
-    slashIndex >= 0 ? modelId.slice(slashIndex + 1) : modelId;
-
-  const { apiKeys } = options;
-  const directProvider = MODEL_PREFIX_TO_PROVIDER[prefix];
-
-  if (directProvider !== undefined) {
-    const providerKey = apiKeys?.[directProvider];
-    if (providerKey) {
-      return DIRECT_PROVIDERS[directProvider]({ apiKey: providerKey })(
-        providerModelName,
-      );
-    }
-    if (apiKeys?.vercelGateway) {
-      return createGateway({ apiKey: apiKeys.vercelGateway })(modelId);
-    }
-    throw new Error(
-      `Missing API key for model '${modelId}': provide '${directProvider}' or 'vercelGateway' API key`,
-    );
-  }
-
-  if (apiKeys?.vercelGateway) {
-    return createGateway({ apiKey: apiKeys.vercelGateway })(modelId);
-  }
-  throw new Error(`Missing 'vercelGateway' API key for model '${modelId}'`);
-}
 
 /**
  * Collects only the `.tp` files relevant to `templateId`:

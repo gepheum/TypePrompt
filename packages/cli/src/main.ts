@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {
   parseCompilationResult,
+  type Inferences,
   type ValidCompilationResult,
 } from "@typeprompt/core";
 import { compile } from "@typeprompt/core/compiler/compiler.js";
@@ -190,11 +191,19 @@ async function runPlaygroundFile(
 
   const secrets = await readSecretsInDirectory(resolvedProject);
   const storage = openProjectStorage(resolvedProject);
-  const inferenceRun = await runPlaygroundInferences(
-    validCompilationResult,
-    templateId,
-    { apiKeys: secrets.apiKeys },
-  );
+  let inferenceRun: Inferences.InferenceRun;
+  try {
+    inferenceRun = await runPlaygroundInferences(
+      validCompilationResult,
+      templateId,
+      { apiKeys: secrets.apiKeys },
+    );
+  } catch (e) {
+    if (e instanceof Error) {
+      throw ExitError.wrap(e);
+    }
+    throw e;
+  }
   storage.saveInferenceRun(inferenceRun);
   console.log(JSON.stringify(inferenceRun, null, 2));
 }

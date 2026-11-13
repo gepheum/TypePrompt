@@ -27,7 +27,7 @@ function compileValid(
 
 describe("inference-runner", () => {
   describe("API key resolution", () => {
-    it("throws when model is openai/* and neither openaiApiKey nor vercelGatewayApiKey is provided", async () => {
+    it("throws when apiKeys is not specified, instructing to create .typeprompt.secrets.yaml", async () => {
       const compilation = compileValid([
         {
           path: "prompts/t.tp",
@@ -55,6 +55,38 @@ describe("inference-runner", () => {
 
       await assert.rejects(
         () => runPlaygroundInferences(compilation, "Main:T", {}),
+        /create a \.typeprompt\.secrets\.yaml file in your project directory/i,
+      );
+    });
+
+    it("throws when model is openai/* and neither openaiApiKey nor vercelGatewayApiKey is provided", async () => {
+      const compilation = compileValid([
+        {
+          path: "prompts/t.tp",
+          content: `<template name="T">
+  <schema>
+    type Input = string;
+    type Output = string;
+  </schema>
+  <system>Sys</system>
+  <user><insert val="input"/></user>
+</template>`,
+        },
+        {
+          path: "prompts/t.play.tp",
+          content: `<playground for="T">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - input: "hi"
+  </samples>
+</playground>`,
+        },
+      ]);
+
+      await assert.rejects(
+        () => runPlaygroundInferences(compilation, "Main:T", { apiKeys: {} }),
         /Missing API key for model 'openai\/gpt-4o'/,
       );
     });

@@ -4,6 +4,11 @@ export {
 } from "./inference-runner.js";
 
 export {
+  tryResolveLanguageModel,
+  type TryResolveLanguageModelResult,
+} from "./language-model-resolver.js";
+
+export {
   createProjectStorage,
   getDatabasePath,
   openProjectStorage,
