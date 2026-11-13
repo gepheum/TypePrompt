@@ -110,9 +110,9 @@ if [ "$FAST" != true ]; then
   cargo test
   cd ..
 
-  # Run Swift unit tests
+  # Run Swift unit tests and static analysis
   cd swift
-  swift test
+  swift test -Xswiftc -warnings-as-errors
   cd ..
 
   # Run Dart unit tests and static analysis
