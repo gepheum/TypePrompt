@@ -110,7 +110,7 @@ export class PlaygroundPreviewElement extends LitElement {
               <div class="header-top">
                 <div class="title-group">
                   <h1><span>Playground</span></h1>
-                  <div class="subtitle">Playground Preview</div>
+                  <div class="subtitle">Playground preview</div>
                 </div>
               </div>
             </header>
@@ -178,7 +178,7 @@ export class PlaygroundPreviewElement extends LitElement {
         : 0;
     const activeSample = samples[activeIndex];
 
-    const subtitleText = `Playground Preview · ${samples.length} sample${samples.length !== 1 ? "s" : ""}`;
+    const subtitleText = `Playground preview · ${samples.length} sample${samples.length !== 1 ? "s" : ""}`;
 
     return html`
       <div class="container">

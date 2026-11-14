@@ -615,7 +615,8 @@ export const inferenceRunStyles = css`
     margin-top: 1rem;
   }
 
-  .source-files-section summary {
+  .source-files-section summary,
+  .run-data-section summary {
     cursor: pointer;
     font-size: 0.82rem;
     font-weight: 600;
@@ -667,6 +668,44 @@ export const inferenceRunStyles = css`
     border: none;
     border-radius: 0;
     margin: 0;
+  }
+
+  .run-data-section {
+    margin-top: 1rem;
+  }
+
+  .inferences-list + .run-data-section {
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+  }
+
+  .output-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-save-data {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  .btn-save-data:hover {
+    background: var(--bg-surface);
+    color: var(--text);
+  }
+
+  .run-data-body {
+    margin-top: 0.75rem;
   }
 
   .empty-state {

@@ -223,7 +223,13 @@ ${vscodeThemeVariablesCss}
   <tp-inference-run id="inference-run"></tp-inference-run>
 
   <script type="module">
-    import "${scriptUri}";
+    import { inferenceRunEvents } from "${scriptUri}";
+
+    const vscode = acquireVsCodeApi();
+
+    inferenceRunEvents.on("saveRun", (payload) => {
+      vscode.postMessage({ type: "saveRun", ...payload });
+    });
 
     const inferenceRun = document.getElementById("inference-run");
     inferenceRun.inferenceRun = ${JSON.stringify(initialData)};

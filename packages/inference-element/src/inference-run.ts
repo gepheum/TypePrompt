@@ -5,15 +5,23 @@ import { createNanoEvents } from "nanoevents";
 import YAML from "yaml";
 import "./common/code.js";
 import "./common/copy-button.js";
-import { formatTimestamp } from "./common/formatters.js";
+import {
+  formatTimestamp,
+  stringifyAsJson,
+  stringifyAsYaml,
+} from "./common/formatters.js";
 import { registerCustomElement } from "./common/register-custom-element.js";
 import { commonStyles } from "./common/styles.js";
 import "./inference-run/sample-inference-card.js";
 import { SampleInferenceCard } from "./inference-run/sample-inference-card.js";
 import { inferenceRunStyles } from "./inference-run/styles.js";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface InferenceRunEvents {}
+export interface InferenceRunEvents {
+  saveRun: (payload: {
+    data: Inferences.InferenceRun;
+    format: "json" | "yaml";
+  }) => void;
+}
 
 export const inferenceRunEvents = createNanoEvents<InferenceRunEvents>();
 
@@ -42,6 +50,9 @@ export class InferenceRunElement extends LitElement {
 
   @state()
   private progressBarStatus: "hidden" | "visible" | "collapsing" = "hidden";
+
+  @state()
+  private dataTab: "yaml" | "json" = "yaml";
 
   private collapseTimeoutId?: ReturnType<typeof setTimeout>;
 
@@ -97,6 +108,17 @@ export class InferenceRunElement extends LitElement {
     this.statusFilter = filter;
   }
 
+  private handleSaveRunClick(e: Event): void {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this._inferenceRun) {
+      inferenceRunEvents.emit("saveRun", {
+        data: this._inferenceRun as Inferences.InferenceRun,
+        format: this.dataTab,
+      });
+    }
+  }
+
   override render(): TemplateResult {
     const data = this.inferenceRun;
     if (!data) {
@@ -139,6 +161,11 @@ export class InferenceRunElement extends LitElement {
     const errorPct = totalCount > 0 ? (errorCount / totalCount) * 100 : 0;
     const pendingPct = totalCount > 0 ? (pendingCount / totalCount) * 100 : 0;
 
+    const allCompleted = pendingCount === 0;
+    const runYaml = allCompleted ? stringifyAsYaml(data) : "";
+    const runJson = allCompleted ? stringifyAsJson(data) : "";
+    const activeDataContent = this.dataTab === "yaml" ? runYaml : runJson;
+
     const filteredInferences = data.samples.filter((inf) => {
       if (this.statusFilter === "all") return true;
       if (this.statusFilter === "success") {
@@ -158,7 +185,7 @@ export class InferenceRunElement extends LitElement {
               <h1>
                 <span>${displayTemplateId}</span>
               </h1>
-              <div class="subtitle">Inference Run · ${sampleCountText}</div>
+              <div class="subtitle">Inference run · ${sampleCountText}</div>
               <div class="run-metadata">
                 ${formatTimestamp(data.isoTimestamp)} · ID: ${data.id}
               </div>
@@ -339,7 +366,7 @@ export class InferenceRunElement extends LitElement {
             ? html`
                 <div class="source-files-section">
                   <details>
-                    <summary>View source files (${sourceFiles.length})</summary>
+                    <summary>Source files (${sourceFiles.length})</summary>
                     <div class="details-body source-files-list">
                       ${sourceFiles.map(
                         ([filePath, file]) => html`
@@ -357,6 +384,67 @@ export class InferenceRunElement extends LitElement {
                           </details>
                         `,
                       )}
+                    </div>
+                  </details>
+                </div>
+              `
+            : ""
+        }
+
+        <!-- Inference Data Section (rendered once all inferences have completed) -->
+        ${
+          allCompleted
+            ? html`
+                <div class="run-data-section">
+                  <details>
+                    <summary>Raw inference data</summary>
+                    <div class="details-body run-data-body">
+                      <div class="output-card">
+                        <div class="output-card-header">
+                          <div class="output-tabs">
+                            <button
+                              type="button"
+                              class="output-tab-btn ${
+                                this.dataTab === "yaml" ? "is-active" : ""
+                              }"
+                              @click=${(): void => {
+                                this.dataTab = "yaml";
+                              }}
+                            >
+                              YAML
+                            </button>
+                            <button
+                              type="button"
+                              class="output-tab-btn ${
+                                this.dataTab === "json" ? "is-active" : ""
+                              }"
+                              @click=${(): void => {
+                                this.dataTab = "json";
+                              }}
+                            >
+                              JSON
+                            </button>
+                          </div>
+                          <div class="output-card-actions">
+                            <button
+                              type="button"
+                              class="btn-save-data"
+                              title="Save to disk"
+                              @click=${this.handleSaveRunClick}
+                            >
+                              Save to disk
+                            </button>
+                            <tp-copy-button
+                              .text=${activeDataContent}
+                            ></tp-copy-button>
+                          </div>
+                        </div>
+                        <tp-code
+                          class="output-code-view"
+                          .code=${activeDataContent}
+                          .language=${this.dataTab}
+                        ></tp-code>
+                      </div>
                     </div>
                   </details>
                 </div>

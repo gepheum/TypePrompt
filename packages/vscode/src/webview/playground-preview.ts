@@ -5,6 +5,7 @@ import {
   parseCompilationResult,
   parseSecretsYaml,
   type ApiKeys,
+  type Inferences,
   type ValidCompilationResult,
 } from "@typeprompt/core";
 import { runPlaygroundInferences } from "@typeprompt/inference-runner";
@@ -12,6 +13,7 @@ import type { ProjectStore } from "@typeprompt/language-server";
 import * as path from "node:path";
 import type { ExtensionContext, TextDocument, WebviewPanel } from "vscode";
 import { commands, Uri, ViewColumn, window, workspace } from "vscode";
+import YAML from "yaml";
 import { canOpenPreview } from "../editor/is-template.js";
 import {
   getInferencePageHtml,
@@ -378,6 +380,23 @@ export async function handleRunInference(
   );
   inferencePanel.iconPath = Uri.file(context.asAbsolutePath("icon.svg"));
 
+  inferencePanel.webview.onDidReceiveMessage(
+    async (message: {
+      type: string;
+      data?: Inferences.InferenceRun;
+      format?: "json" | "yaml";
+    }) => {
+      if (message.type === "saveRun" && message.data) {
+        await handleSaveInferenceRun(
+          message.data,
+          shortName,
+          message.format,
+          projectFolderUri,
+        );
+      }
+    },
+  );
+
   let hasSetInitialHtml = false;
 
   void runPlaygroundInferences(validCompilation, templateId, {
@@ -448,4 +467,48 @@ function getDisplayName(
       : sourceFile.entity.name;
   }
   return path.basename(doc.fileName);
+}
+
+export async function handleSaveInferenceRun(
+  data: Inferences.InferenceRun,
+  shortName: string,
+  format: "json" | "yaml" = "yaml",
+  projectFolderUri?: Uri,
+): Promise<void> {
+  const extension = format === "json" ? "json" : "yaml";
+  const defaultFileName = `${shortName}.run.${extension}`;
+  const defaultUri = projectFolderUri
+    ? Uri.joinPath(projectFolderUri, defaultFileName)
+    : undefined;
+
+  const filters =
+    format === "json"
+      ? {
+          "JSON Files": ["json"],
+          "YAML Files": ["yaml", "yml"],
+        }
+      : {
+          "YAML Files": ["yaml", "yml"],
+          "JSON Files": ["json"],
+        };
+
+  const targetUri = await window.showSaveDialog({
+    defaultUri,
+    filters,
+    saveLabel: "Save inference run",
+    title: "Save inference run to disk",
+  });
+
+  if (!targetUri) {
+    return;
+  }
+
+  const isJson = targetUri.fsPath.endsWith(".json");
+  const content = isJson
+    ? JSON.stringify(data, null, 2) + "\n"
+    : YAML.stringify(data).trimEnd() + "\n";
+  await workspace.fs.writeFile(targetUri, Buffer.from(content, "utf-8"));
+  void window.showInformationMessage(
+    `Saved inference run to ${targetUri.fsPath}`,
+  );
 }

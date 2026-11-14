@@ -136,7 +136,7 @@ describe("PlaygroundPreviewElement", () => {
     assert.ok(renderedStr.includes("header-top"));
     assert.ok(renderedStr.includes("header-actions"));
     assert.ok(renderedStr.includes("Greeting"));
-    assert.ok(renderedStr.includes("Playground Preview · 1 sample"));
+    assert.ok(renderedStr.includes("Playground preview · 1 sample"));
     assert.ok(renderedStr.includes("run-inference-button"));
     assert.ok(renderedStr.includes("model-yaml-card"));
     assert.ok(renderedStr.includes("sample-segmented-control"));
@@ -212,7 +212,7 @@ describe("PlaygroundPreviewElement", () => {
     const renderedStr = flattenTemplate(template);
     assert.ok(renderedStr.includes("no-api-keys-banner"));
     assert.ok(!renderedStr.includes("run-inference-button"));
-    assert.ok(renderedStr.includes("Playground Preview · 0 samples"));
+    assert.ok(renderedStr.includes("Playground preview · 0 samples"));
   });
 
   it("renders detailed error message in banner when API keys are present but model cannot be resolved", () => {

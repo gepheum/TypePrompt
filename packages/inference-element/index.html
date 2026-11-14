@@ -129,6 +129,7 @@
     <script type="module">
       import {
         playgroundPreviewEvents,
+        inferenceRunEvents,
       } from "./src/index.ts";
       import {
         mockValidProjectWithKeys,
@@ -157,6 +158,9 @@
       });
       playgroundPreviewEvents.on("selectSample", (key, idx) => {
         addLog(`Event fired: 'selectSample' -> key: "${key}", index: ${idx}`);
+      });
+      inferenceRunEvents.on("saveRun", ({ data, format }) => {
+        addLog(`Event fired: 'saveRun' -> ID: "${data.id}", format: "${format}"`);
       });
 
       // Initialize preview

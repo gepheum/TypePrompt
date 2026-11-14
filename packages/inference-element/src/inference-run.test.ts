@@ -162,7 +162,7 @@ describe("InferenceRunElement", () => {
     }
 
     const renderedStr = flattenTemplate(template);
-    assert.ok(renderedStr.includes("Inference Run · 1 sample"));
+    assert.ok(renderedStr.includes("Inference run · 1 sample"));
     assert.ok(renderedStr.includes("ID: abc12345"));
     assert.ok(renderedStr.includes("tp-sample-inference-card"));
     assert.ok(renderedStr.includes("prompts/greeting.tp"));
@@ -321,5 +321,190 @@ describe("InferenceRunElement", () => {
     assert.ok(renderedStr.includes("reasoning-details"));
     assert.ok(renderedStr.includes("Thought process"));
     assert.ok(renderedStr.includes("Step 1: 2+2=4"));
+  });
+
+  it("renders inference data section when all inferences have completed", () => {
+    const el = new InferenceRunElement();
+    const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
+      id: "abc12345",
+      templateId: "Main:Greeting",
+      isoTimestamp: new Date().toISOString(),
+      model: { model: "google/gemini-2.5-flash" },
+      sourceFiles: {
+        "prompts/greeting.tp": {
+          content: '<template name="Greeting">\nHello\n</template>',
+          kind: "template",
+        },
+      },
+      samples: [
+        {
+          sampleIndex: 0,
+          sample: {
+            name: "Test greeting",
+            input: {},
+          },
+          request: {
+            systemMessage: "You are a greeter.",
+            outputFormat: { format: "text" },
+            tools: [],
+            messages: [{ role: "user", input: {}, rendered: "Hi" }],
+          },
+          result: {
+            kind: "output",
+            rawText: "Hello there!",
+            output: "Hello there!",
+            telemetry: {
+              latencyMs: 350,
+              usage: {
+                inputTokens: 10,
+                outputTokens: 5,
+                totalTokens: 15,
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    el.inferenceRun = mockInferenceRun;
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    const template = el.render();
+    const renderedStr = flattenTemplate(template);
+    assert.ok(renderedStr.includes("Source files (1)"));
+    assert.ok(!renderedStr.includes("View source files"));
+    assert.ok(renderedStr.includes("run-data-section"));
+    assert.ok(renderedStr.includes("Raw inference data"));
+    assert.ok(renderedStr.includes("output-card"));
+    assert.ok(renderedStr.includes("output-tabs"));
+    assert.ok(renderedStr.includes("YAML"));
+    assert.ok(renderedStr.includes("JSON"));
+    assert.ok(renderedStr.includes("btn-save-data"));
+    assert.ok(renderedStr.includes("Save to disk"));
+    assert.ok(renderedStr.includes("tp-copy-button"));
+  });
+
+  it("does not render inference data section while inferences are pending", () => {
+    const el = new InferenceRunElement();
+    const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
+      id: "abc12345",
+      templateId: "Main:Greeting",
+      isoTimestamp: new Date().toISOString(),
+      model: { model: "google/gemini-2.5-flash" },
+      sourceFiles: {},
+      samples: [
+        {
+          sampleIndex: 0,
+          sample: {
+            name: "Test greeting",
+            input: {},
+          },
+          request: {
+            systemMessage: "You are a greeter.",
+            outputFormat: { format: "text" },
+            tools: [],
+            messages: [{ role: "user", input: {}, rendered: "Hi" }],
+          },
+          result: {
+            kind: "pending",
+          },
+        },
+      ],
+    };
+
+    el.inferenceRun = mockInferenceRun;
+
+    function flattenTemplate(t: unknown): string {
+      if (!t || typeof t !== "object") return String(t ?? "");
+      if (
+        "strings" in t &&
+        Array.isArray((t as { strings: unknown }).strings)
+      ) {
+        const values = (t as { values?: unknown[] }).values ?? [];
+        return (t as { strings: string[] }).strings
+          .map(
+            (str: string, i: number) =>
+              str + (i < values.length ? flattenTemplate(values[i]) : ""),
+          )
+          .join("");
+      }
+      if (Array.isArray(t)) {
+        return t.map(flattenTemplate).join("");
+      }
+      return "";
+    }
+
+    const template = el.render();
+    const renderedStr = flattenTemplate(template);
+    assert.ok(!renderedStr.includes("run-data-section"));
+    assert.ok(!renderedStr.includes("btn-save-data"));
+  });
+
+  it("emits saveRun event with InferenceRun data and format when save button clicked", () => {
+    const el = new InferenceRunElement();
+    const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
+      kind: "playground-inference-run",
+      id: "abc12345",
+      templateId: "Main:Greeting",
+      isoTimestamp: new Date().toISOString(),
+      model: { model: "google/gemini-2.5-flash" },
+      sourceFiles: {},
+      samples: [],
+    };
+
+    el.inferenceRun = mockInferenceRun;
+
+    let receivedPayload:
+      { data: Inferences.InferenceRun; format: "json" | "yaml" } | undefined;
+    const unbind = inferenceRunEvents.on("saveRun", (payload) => {
+      receivedPayload = payload;
+    });
+
+    try {
+      const mockEvent = {
+        preventDefault(): void {},
+        stopPropagation(): void {},
+      } as unknown as Event;
+
+      // Call handler directly with default yaml tab
+      (
+        el as unknown as { handleSaveRunClick: (e: Event) => void }
+      ).handleSaveRunClick(mockEvent);
+
+      assert.ok(receivedPayload);
+      assert.strictEqual(receivedPayload.data.id, "abc12345");
+      assert.strictEqual(receivedPayload.format, "yaml");
+
+      // Switch to json tab and test again
+      (el as unknown as { dataTab: "yaml" | "json" }).dataTab = "json";
+      (
+        el as unknown as { handleSaveRunClick: (e: Event) => void }
+      ).handleSaveRunClick(mockEvent);
+
+      assert.strictEqual(receivedPayload.format, "json");
+    } finally {
+      unbind();
+    }
   });
 });

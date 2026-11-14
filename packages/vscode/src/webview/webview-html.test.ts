@@ -68,6 +68,8 @@ describe("webview-html (vscode extension)", () => {
     assert.ok(
       html.includes('<tp-inference-run id="inference-run"></tp-inference-run>'),
     );
+    assert.ok(html.includes('inferenceRunEvents.on("saveRun"'));
+    assert.ok(html.includes('vscode.postMessage({ type: "saveRun"'));
     assert.ok(html.includes("inferenceRun.inferenceRun = "));
     assert.ok(html.includes("updateInferenceRun"));
   });
