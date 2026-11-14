@@ -11,10 +11,7 @@ import {
 } from "@typeprompt/core/config/config-parser.js";
 import { createLineFinder } from "@typeprompt/core/util/line-finder.js";
 import { formatTemplateFile } from "@typeprompt/formatter";
-import {
-  openProjectStorage,
-  runPlaygroundInferences,
-} from "@typeprompt/inference-runner";
+import { runPlaygroundInferences } from "@typeprompt/inference-runner";
 import * as FileSystem from "fs/promises";
 import * as Paths from "path";
 import { parseCommandLine } from "./main/command-line-parser.js";
@@ -37,16 +34,6 @@ import {
 import { collectTemplateFiles } from "./main/template-files-collector.js";
 import { WatchModeMainLoop } from "./main/watch-mode-main-loop.js";
 import { isDirectory } from "./util/io.js";
-export {
-  createProjectStorage,
-  getDatabasePath,
-  openProjectStorage,
-  resolveDatabasePath,
-  type ListInferenceRunsOptions,
-  type OpenStorageOptions,
-  type ProjectStorage,
-  type StoredInferenceSummary,
-} from "@typeprompt/inference-runner";
 export { formatTemplateFile };
 
 type ModuleFormatResult = {
@@ -190,7 +177,6 @@ async function runPlaygroundFile(
   const [templateId] = playgroundEntry;
 
   const secrets = await readSecretsInDirectory(resolvedProject);
-  const storage = openProjectStorage(resolvedProject);
   let inferenceRun: Inferences.InferenceRun;
   try {
     inferenceRun = await runPlaygroundInferences(
@@ -204,7 +190,6 @@ async function runPlaygroundFile(
     }
     throw e;
   }
-  storage.saveInferenceRun(inferenceRun);
   console.log(JSON.stringify(inferenceRun, null, 2));
 }
 
