@@ -107,11 +107,10 @@ Commands:
 
 Options:
   -p <path>    Path to the directory containing the typeprompt.yaml file
-  -b <path>    Path to base project directory or templates.json file (patch only)
-  -o <path>    Path to output patch project directory (patch) or output JSON file (run)
-  --watch, -w  Automatically run code generation when template files change
-                 (gen only)
-  --ci         Fail if code is not properly formatted (format only)
+  -b <path>    Path to base project directory or templates.json file (patch)
+  -o <path>    Path to output patch project directory (patch) or JSON file (run)
+  --watch, -w  Automatically run codegen when template files change (gen)
+  --ci         Fail if code is not properly formatted (format)
 
 Examples:
   ${COMMAND_BASE} init
