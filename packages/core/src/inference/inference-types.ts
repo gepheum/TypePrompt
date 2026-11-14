@@ -10,7 +10,7 @@ export type InferenceRun<Pending = never> = {
   readonly isoTimestamp: string;
   readonly model: PlaygroundModel;
   readonly sourceFiles: { readonly [path: string]: InferenceSourceFile };
-  readonly inferences: ReadonlyArray<SampleInference<Pending>>;
+  readonly samples: ReadonlyArray<SampleInference<Pending>>;
 };
 
 export type InferenceSourceFile = {

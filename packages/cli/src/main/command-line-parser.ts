@@ -21,6 +21,7 @@ export type ParsedArgs =
   | {
       kind: "run";
       file: string;
+      output?: string;
     }
   | {
       kind: "help";
@@ -107,7 +108,7 @@ Commands:
 Options:
   -p <path>    Path to the directory containing the typeprompt.yaml file
   -b <path>    Path to base project directory or templates.json file (patch only)
-  -o <path>    Path to output patch project directory (patch only)
+  -o <path>    Path to output patch project directory (patch) or output JSON file (run)
   --watch, -w  Automatically run code generation when template files change
                  (gen only)
   --ci         Fail if code is not properly formatted (format only)
@@ -120,6 +121,7 @@ Examples:
   ${COMMAND_BASE} format --ci -p path/to/project
   ${COMMAND_BASE} patch -b path/to/base -o path/to/patch
   ${COMMAND_BASE} run prompts/Translate.play.tp
+  ${COMMAND_BASE} run prompts/Translate.play.tp -o results.json
 `;
 
 export class CommandLineParseError extends Error {
@@ -275,7 +277,7 @@ function buildInitCommand(options: ParsedOptions): ParsedArgs {
 }
 
 function buildRunCommand(options: ParsedOptions): ParsedArgs {
-  validateAllowedOptions(options, "run", [], true);
+  validateAllowedOptions(options, "run", ["output"], true);
   if (options.positional.length <= 0) {
     throw new CommandLineParseError("Missing file argument for 'run' command");
   }
@@ -287,6 +289,7 @@ function buildRunCommand(options: ParsedOptions): ParsedArgs {
   return {
     kind: "run",
     file: options.positional[0]!,
+    output: options.output,
   };
 }
 

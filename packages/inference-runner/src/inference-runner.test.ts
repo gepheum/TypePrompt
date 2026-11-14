@@ -363,9 +363,9 @@ describe("inference-runner", () => {
       assert.equal(inferenceRun.templateId, "Main:Assist");
       assert.equal(inferenceRun.model.model, "openai/gpt-4o");
       assert.equal(inferenceRun.model.temperature, 0.2);
-      assert.equal(inferenceRun.inferences.length, 1);
+      assert.equal(inferenceRun.samples.length, 1);
 
-      const inf = inferenceRun.inferences[0]!;
+      const inf = inferenceRun.samples[0]!;
       assert.equal(inf.sample.name, "london-with-step");
       assert.equal(inf.sample.note, "Test note for London");
       assert.equal(
@@ -483,7 +483,7 @@ describe("inference-runner", () => {
         { languageModel: mockModel },
       );
 
-      const inf = inferenceRun.inferences[0]!;
+      const inf = inferenceRun.samples[0]!;
       assert.equal(inf.result.kind, "success");
       if (inf.result.kind === "success") {
         assert.deepEqual(inf.result.response, {
@@ -591,7 +591,7 @@ describe("inference-runner", () => {
         },
       );
 
-      const [badJson, badSchema, apiFail] = inferenceRun.inferences;
+      const [badJson, badSchema, apiFail] = inferenceRun.samples;
       assert.equal(badJson!.result.kind, "error");
       if (badJson!.result.kind === "error") {
         assert.equal(badJson!.result.error.kind, "parse-error");
@@ -687,11 +687,11 @@ describe("inference-runner", () => {
 
       assert.equal(maxObservedActive, 2);
       assert.deepEqual(
-        inferenceRun.inferences.map((inf) => inf.sample.name),
+        inferenceRun.samples.map((inf) => inf.sample.name),
         ["s0", "s1", "s2", "s3", "s4"],
       );
       assert.deepEqual(
-        inferenceRun.inferences.map((inf) => inf.sampleIndex),
+        inferenceRun.samples.map((inf) => inf.sampleIndex),
         [0, 1, 2, 3, 4],
       );
     });
@@ -778,7 +778,7 @@ TOON:
         { languageModel: mockModel },
       );
 
-      const userMsg = inferenceRun.inferences[0]!.request.messages[0]!;
+      const userMsg = inferenceRun.samples[0]!.request.messages[0]!;
       assert.equal(userMsg.role, "user");
       if (userMsg.role === "user") {
         // Verify CSV header and row columns follow schema order (firstCol, secondCol, thirdCol)
@@ -872,19 +872,19 @@ TOON:
       assert.equal(snapshots.length, 3);
 
       // Snapshot 0: all pending
-      assert.equal(snapshots[0]!.inferences.length, 2);
-      assert.equal(snapshots[0]!.inferences[0]!.sample.name, "first");
-      assert.equal(snapshots[0]!.inferences[0]!.result.kind, "pending");
-      assert.equal(snapshots[0]!.inferences[1]!.sample.name, "second");
-      assert.equal(snapshots[0]!.inferences[1]!.result.kind, "pending");
+      assert.equal(snapshots[0]!.samples.length, 2);
+      assert.equal(snapshots[0]!.samples[0]!.sample.name, "first");
+      assert.equal(snapshots[0]!.samples[0]!.result.kind, "pending");
+      assert.equal(snapshots[0]!.samples[1]!.sample.name, "second");
+      assert.equal(snapshots[0]!.samples[1]!.result.kind, "pending");
 
       // Snapshot 1: first computed, second pending
-      assert.equal(snapshots[1]!.inferences[0]!.result.kind, "success");
-      assert.equal(snapshots[1]!.inferences[1]!.result.kind, "pending");
+      assert.equal(snapshots[1]!.samples[0]!.result.kind, "success");
+      assert.equal(snapshots[1]!.samples[1]!.result.kind, "pending");
 
       // Snapshot 2: all computed
-      assert.equal(snapshots[2]!.inferences[0]!.result.kind, "success");
-      assert.equal(snapshots[2]!.inferences[1]!.result.kind, "success");
+      assert.equal(snapshots[2]!.samples[0]!.result.kind, "success");
+      assert.equal(snapshots[2]!.samples[1]!.result.kind, "success");
 
       // ID and metadata match throughout
       assert.equal(snapshots[0]!.id, inferenceRun.id);
@@ -940,8 +940,8 @@ TOON:
 
       // Called immediately and once completed
       assert.equal(snapshots.length, 2);
-      assert.equal(snapshots[0]!.inferences.length, 0);
-      assert.equal(snapshots[1]!.inferences.length, 0);
+      assert.equal(snapshots[0]!.samples.length, 0);
+      assert.equal(snapshots[1]!.samples.length, 0);
       assert.equal(snapshots[0]!.id, inferenceRun.id);
       assert.equal(snapshots[1]!.id, inferenceRun.id);
       assert.deepEqual(snapshots[1], inferenceRun);

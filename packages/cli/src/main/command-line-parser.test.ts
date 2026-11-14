@@ -246,6 +246,33 @@ describe("command-line-parser", () => {
       expect(parseCommandLine(["run", "prompts/Translate.play.tp"])).toMatch({
         kind: "run",
         file: "prompts/Translate.play.tp",
+        output: undefined,
+      });
+    });
+
+    it("parses run with -o / --output", () => {
+      expect(
+        parseCommandLine([
+          "run",
+          "prompts/Translate.play.tp",
+          "-o",
+          "results.json",
+        ]),
+      ).toMatch({
+        kind: "run",
+        file: "prompts/Translate.play.tp",
+        output: "results.json",
+      });
+      expect(
+        parseCommandLine([
+          "run",
+          "--output=results.json",
+          "prompts/Translate.play.tp",
+        ]),
+      ).toMatch({
+        kind: "run",
+        file: "prompts/Translate.play.tp",
+        output: "results.json",
       });
     });
 

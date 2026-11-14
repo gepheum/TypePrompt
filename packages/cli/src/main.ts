@@ -125,6 +125,7 @@ async function runPlaygroundFile(
   resolvedProject: string,
   config: Config,
   file: string,
+  output?: string,
 ): Promise<void> {
   const resolvedFile = Paths.resolve(file);
   const relativeFilePath = Paths.relative(
@@ -190,7 +191,14 @@ async function runPlaygroundFile(
     }
     throw e;
   }
-  console.log(JSON.stringify(inferenceRun, null, 2));
+  const jsonContent = JSON.stringify(inferenceRun, null, 2);
+  if (output !== undefined) {
+    const outputFilePath = Paths.resolve(output);
+    await FileSystem.mkdir(Paths.dirname(outputFilePath), { recursive: true });
+    await FileSystem.writeFile(outputFilePath, jsonContent + "\n", "utf-8");
+  } else {
+    console.log(jsonContent);
+  }
 }
 
 async function main(): Promise<void> {
@@ -266,7 +274,7 @@ async function main(): Promise<void> {
       break;
     }
     case "run": {
-      await runPlaygroundFile(resolvedProject, config, args.file);
+      await runPlaygroundFile(resolvedProject, config, args.file, args.output);
       break;
     }
     default: {

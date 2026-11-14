@@ -60,7 +60,7 @@ describe("webview-html (vscode extension)", () => {
       isoTimestamp: new Date().toISOString(),
       model: { model: "openai/gpt-4o" },
       sourceFiles: {},
-      inferences: [],
+      samples: [],
     };
 
     const html = getInferencePageHtml(fakeScriptUri, fakeInferenceRun, "Test");

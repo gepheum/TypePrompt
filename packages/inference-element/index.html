@@ -209,7 +209,7 @@
       // Simulate streaming update
       document.getElementById("btn-simulate-complete").addEventListener("click", () => {
         const updated = JSON.parse(JSON.stringify(currentInferenceRun));
-        const sample1 = updated.inferences[1];
+        const sample1 = updated.samples[1];
         if (sample1) {
           sample1.result = {
             kind: "success",

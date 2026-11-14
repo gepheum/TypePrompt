@@ -176,7 +176,7 @@ export const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
       kind: "template",
     },
   },
-  inferences: [
+  samples: [
     {
       sampleIndex: 0,
       sample: {

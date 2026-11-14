@@ -59,7 +59,7 @@ export class InferenceRunElement extends LitElement {
       return;
     }
 
-    const pendingCount = this.inferenceRun.inferences.filter(
+    const pendingCount = this.inferenceRun.samples.filter(
       (i) => i.result.kind === "pending",
     ).length;
 
@@ -121,14 +121,14 @@ export class InferenceRunElement extends LitElement {
       })
       .sort(([a], [b]) => a.localeCompare(b));
 
-    const totalCount = data.inferences.length;
-    const successCount = data.inferences.filter(
+    const totalCount = data.samples.length;
+    const successCount = data.samples.filter(
       (i) => i.result.kind === "success",
     ).length;
-    const errorCount = data.inferences.filter(
+    const errorCount = data.samples.filter(
       (i) => i.result.kind === "error",
     ).length;
-    const pendingCount = data.inferences.filter(
+    const pendingCount = data.samples.filter(
       (i) => i.result.kind === "pending",
     ).length;
 
@@ -139,7 +139,7 @@ export class InferenceRunElement extends LitElement {
     const errorPct = totalCount > 0 ? (errorCount / totalCount) * 100 : 0;
     const pendingPct = totalCount > 0 ? (pendingCount / totalCount) * 100 : 0;
 
-    const filteredInferences = data.inferences.filter((inf) => {
+    const filteredInferences = data.samples.filter((inf) => {
       if (this.statusFilter === "all") return true;
       return inf.result.kind === this.statusFilter;
     });
@@ -241,8 +241,8 @@ export class InferenceRunElement extends LitElement {
         <div class="samples-toolbar">
           <div class="toolbar-left">
             <div class="samples-count">
-              ${data.inferences.length}
-              sample${data.inferences.length !== 1 ? "s" : ""}
+              ${data.samples.length}
+              sample${data.samples.length !== 1 ? "s" : ""}
             </div>
             <div class="filter-group" role="tablist">
               <button
@@ -318,9 +318,9 @@ export class InferenceRunElement extends LitElement {
                   (inf) => html`
                     <tp-sample-inference-card
                       .inference=${inf}
-                      .totalSamples=${data.inferences.length}
+                      .totalSamples=${data.samples.length}
                       .expanded=${
-                        data.inferences.length === 1 ||
+                        data.samples.length === 1 ||
                         (this.statusFilter === "error" &&
                           inf.result.kind === "error")
                       }

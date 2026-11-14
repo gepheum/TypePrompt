@@ -128,7 +128,7 @@ export async function runPlaygroundInferences(
       templateId,
       isoTimestamp,
       sourceFiles,
-      inferences: [...inferences],
+      samples: [...inferences],
     });
   };
 
@@ -166,7 +166,7 @@ export async function runPlaygroundInferences(
     templateId,
     isoTimestamp,
     sourceFiles,
-    inferences: inferences as Inferences.SampleInference[],
+    samples: inferences as Inferences.SampleInference[],
   };
 
   return inferenceRun;

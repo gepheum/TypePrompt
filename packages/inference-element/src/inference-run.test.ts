@@ -42,7 +42,7 @@ describe("InferenceRunElement", () => {
           kind: "template",
         },
       },
-      inferences: [
+      samples: [
         {
           sampleIndex: 0,
           sample: {
@@ -110,7 +110,7 @@ describe("InferenceRunElement", () => {
           kind: "playground",
         },
       },
-      inferences: [
+      samples: [
         {
           sampleIndex: 0,
           sample: {
@@ -199,7 +199,7 @@ describe("InferenceRunElement", () => {
           kind: "template",
         },
       },
-      inferences: [
+      samples: [
         {
           sampleIndex: 0,
           sample: {
