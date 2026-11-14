@@ -97,7 +97,49 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
 
 `npx typeprompt gen` turns it into a native, type-safe API for your target language. In your application code:
 
-```kotlin
+::: code-group
+
+```typescript [TypeScript]
+// MyApp.ts
+
+import { prompts } from "./gen/prompts.js";
+
+// 1. Resolve the prompt template with typed input
+const prompt = prompts.decodeCatMood.render({
+  action: "Sit on keyboard",
+  bowlStatus: "half-empty",
+});
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+const result = prompt.parseResponse(rawResponse);
+console.log(result.humanAction);
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+```python [Python]
+# my_app.py
+
+from my_app.generated.prompts import prompts, schema
+
+# 1. Resolve the prompt template with typed input
+prompt = prompts.decode_cat_mood.render(
+    schema.decode_cat_mood.Input(
+        action="Sit on keyboard",
+        bowl_status="half-empty",
+    )
+)
+
+# ... send prompt to LLM ...
+
+# 2. Parse the LLM response into strongly-typed output
+result = prompt.parse_response(raw_response)
+print(result.human_action)
+# "Surrender the warm laptop and apologize for trying to work."
+```
+
+```kotlin [Kotlin]
 // MyApp.kt
 
 import ai.myapp.generated.prompts.prompts
@@ -118,6 +160,112 @@ val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 // "Surrender the warm laptop and apologize for trying to work."
 ```
+
+```rust [Rust]
+// main.rs
+
+use my_app::gen::prompts::{schema, PROMPTS};
+
+// 1. Resolve the prompt template with typed input
+let prompt = PROMPTS.render_decode_cat_mood(&schema::decode_cat_mood::Input {
+    action: "Sit on keyboard".to_string(),
+    bowl_status: schema::decode_cat_mood::Input_BowlStatus::HalfEmpty,
+});
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+let result = prompt.parse_response(raw_response)?;
+println!("{}", result.human_action);
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+```cpp [C++]
+// main.cc
+
+#include "gen/prompts.h"
+#include <iostream>
+
+using namespace typeprompt;
+using Template = templates::DecodeCatMood;
+
+// 1. Resolve the prompt template with typed input
+auto prompt = Render<Template>({
+    .action = "Sit on keyboard",
+    .bowl_status = schema::decode_cat_mood::Input_BowlStatus::kHalfEmpty,
+});
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+auto result = ParseResponse<Template>(raw_response);
+std::cout << result->human_action << "\n";
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+```swift [Swift]
+// MyApp.swift
+
+import MyPrompts
+
+// 1. Resolve the prompt template with typed input
+let prompt = prompts.renderDecodeCatMood(
+    Schema.DecodeCatMood.Input(
+        action: "Sit on keyboard",
+        bowlStatus: .halfEmpty
+    )
+)
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+let result = try prompt.parseResponse(rawResponse)
+print(result.humanAction)
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+```dart [Dart]
+// my_app.dart
+
+import 'package:my_app/gen/prompts.dart';
+
+// 1. Resolve the prompt template with typed input
+final prompt = prompts.renderDecodeCatMood(
+  DecodeCatMood_Input(
+    action: "Sit on keyboard",
+    bowlStatus: DecodeCatMood_Input_BowlStatus.halfEmpty,
+  ),
+);
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+final result = prompt.parseResponse(rawResponse);
+print(result.humanAction);
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+```csharp [C#]
+// Program.cs
+
+using MyApp.Prompts;
+
+// 1. Resolve the prompt template with typed input
+var prompt = Prompts.Default.RenderDecodeCatMood(new Schema.DecodeCatMood.Input
+{
+    Action = "Sit on keyboard",
+    BowlStatus = Schema.DecodeCatMood.Input_BowlStatus.HalfEmpty
+});
+
+// ... send prompt to LLM ...
+
+// 2. Parse the LLM response into strongly-typed output
+var result = prompt.ParseResponse(rawResponse);
+Console.WriteLine(result.HumanAction);
+// "Surrender the warm laptop and apologize for trying to work."
+```
+
+:::
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
 
