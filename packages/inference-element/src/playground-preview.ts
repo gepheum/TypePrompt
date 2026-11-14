@@ -235,7 +235,7 @@ export class PlaygroundPreviewElement extends LitElement {
                               title="Run inference across all samples"
                               @click=${this.handleRunInferenceClick}
                             >
-                              <span class="run-icon">▶</span> Run Inference
+                              <span class="run-icon">▶</span> Run inference
                             </button>
                           </div>
                         `

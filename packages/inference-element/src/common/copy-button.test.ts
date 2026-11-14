@@ -3,10 +3,15 @@ import assert from "node:assert";
 import { CopyButtonElement } from "./copy-button.js";
 
 describe("CopyButtonElement", () => {
-  it("initializes component instance", () => {
+  it("initializes component instance with transparent host background", () => {
     const el = new CopyButtonElement();
     assert.ok(el);
     assert.strictEqual(el.tagName.toLowerCase(), "tp-copy-button");
+    const styles = CopyButtonElement.styles;
+    const cssText = Array.isArray(styles)
+      ? styles.map((s) => s.cssText).join("\n")
+      : (styles as { cssText: string }).cssText;
+    assert.ok(cssText.includes("background: transparent"));
   });
 
   it("renders with default Copy label", () => {

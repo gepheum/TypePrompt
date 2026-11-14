@@ -6,6 +6,7 @@ import { commonStyles } from "./styles.js";
 const copyButtonStyles = css`
   :host {
     display: inline-block;
+    background: transparent;
   }
 
   .btn-copy {
