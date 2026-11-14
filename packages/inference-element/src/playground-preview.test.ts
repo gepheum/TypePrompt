@@ -290,6 +290,7 @@ describe("PlaygroundPreviewElement", () => {
         "Missing API key for model 'openai/gpt-4o': provide 'openai' or 'vercelGateway' API key",
       ),
     );
+    assert.ok(renderedStr.includes("Edit .typeprompt.secrets.yaml"));
     assert.ok(!renderedStr.includes("run-inference-button"));
   });
 

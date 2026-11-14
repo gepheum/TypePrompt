@@ -213,10 +213,17 @@ export class PlaygroundPreviewElement extends LitElement {
                       ? html`
                           <div class="no-api-keys-banner">
                             <span class="no-api-keys-icon">🔑</span>
-                            <div class="no-api-keys-content">
+                            <div class="no-api-keys-content stacked">
                               <span class="no-api-keys-text"
                                 >${modelResolution.detailedMessage}</span
                               >
+                              <a
+                                href="#"
+                                class="create-secrets-link"
+                                @click=${this.handleCreateSecretsClick}
+                              >
+                                Edit .typeprompt.secrets.yaml
+                              </a>
                             </div>
                           </div>
                         `

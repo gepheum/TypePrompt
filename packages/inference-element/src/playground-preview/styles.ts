@@ -81,6 +81,12 @@ export const playgroundPreviewStyles = css`
     min-width: 0;
   }
 
+  .no-api-keys-content.stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
   .no-api-keys-text {
     color: var(--text);
   }
