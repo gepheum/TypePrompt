@@ -212,12 +212,9 @@
         const sample1 = updated.samples[1];
         if (sample1) {
           sample1.result = {
-            kind: "success",
-            response: {
-              kind: "output",
-              rawText: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
-              output: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
-            },
+            kind: "output",
+            rawText: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
+            output: "Security audit findings summarized: Critical SSRF patched, CVE registered.",
             telemetry: {
               latencyMs: 980,
               usage: { inputTokens: 180, outputTokens: 35, totalTokens: 215 },

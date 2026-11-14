@@ -123,7 +123,7 @@ export class InferenceRunElement extends LitElement {
 
     const totalCount = data.samples.length;
     const successCount = data.samples.filter(
-      (i) => i.result.kind === "success",
+      (i) => i.result.kind === "output" || i.result.kind === "tool-calls",
     ).length;
     const errorCount = data.samples.filter(
       (i) => i.result.kind === "error",
@@ -141,6 +141,9 @@ export class InferenceRunElement extends LitElement {
 
     const filteredInferences = data.samples.filter((inf) => {
       if (this.statusFilter === "all") return true;
+      if (this.statusFilter === "success") {
+        return inf.result.kind === "output" || inf.result.kind === "tool-calls";
+      }
       return inf.result.kind === this.statusFilter;
     });
 

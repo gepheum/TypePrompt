@@ -18,27 +18,25 @@ export function renderResultOutput(
       </div>
     `;
   }
-  if (result.kind === "success") {
-    return renderSuccessResponse(
-      result.response,
-      outputFormat,
-      activeTab,
-      onTabChange,
-    );
+  if (result.kind === "output" || result.kind === "tool-calls") {
+    return renderSuccessResponse(result, outputFormat, activeTab, onTabChange);
   }
   return renderErrorResponse(result.error);
 }
 
 export function renderSuccessResponse(
-  response: Inferences.InferenceResponse,
+  result: Extract<
+    Inferences.InferenceResult,
+    { kind: "output" | "tool-calls" }
+  >,
   outputFormat: "json" | "text",
   activeTab: "yaml" | "json" | "text",
   onTabChange: (tab: "yaml" | "json" | "text") => void,
 ): TemplateResult {
-  if (response.kind === "output") {
+  if (result.kind === "output") {
     if (outputFormat === "json") {
-      const jsonRaw = stringifyAsJson(response.output);
-      const yamlRaw = stringifyAsYaml(response.output);
+      const jsonRaw = stringifyAsJson(result.output);
+      const yamlRaw = stringifyAsYaml(result.output);
       const currentTab = activeTab === "text" ? "yaml" : activeTab;
       const textToCopy = currentTab === "yaml" ? yamlRaw : jsonRaw;
 
@@ -91,11 +89,11 @@ export function renderSuccessResponse(
       <div class="output-card">
         <div class="output-card-header">
           <span class="output-card-label">Text</span>
-          <tp-copy-button .text=${response.rawText}></tp-copy-button>
+          <tp-copy-button .text=${result.rawText}></tp-copy-button>
         </div>
         <tp-code
           class="output-code-view"
-          .code=${response.rawText}
+          .code=${result.rawText}
           language="text"
         ></tp-code>
       </div>
@@ -107,11 +105,11 @@ export function renderSuccessResponse(
     <div class="output-card">
       <div class="output-card-header">
         <span class="output-card-label"
-          >Tool calls (${response.toolCalls.length})</span
+          >Tool calls (${result.toolCalls.length})</span
         >
       </div>
       <div class="output-card-body">
-        ${response.toolCalls.map((tc) => renderToolCall(tc))}
+        ${result.toolCalls.map((tc) => renderToolCall(tc))}
       </div>
     </div>
   `;

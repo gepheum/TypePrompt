@@ -56,12 +56,9 @@ describe("InferenceRunElement", () => {
             messages: [{ role: "user", input: {}, rendered: "Hi" }],
           },
           result: {
-            kind: "success",
-            response: {
-              kind: "output",
-              rawText: "Hello there!",
-              output: "Hello there!",
-            },
+            kind: "output",
+            rawText: "Hello there!",
+            output: "Hello there!",
             telemetry: {
               latencyMs: 350,
               usage: {
@@ -124,12 +121,9 @@ describe("InferenceRunElement", () => {
             messages: [{ role: "user", input: {}, rendered: "Hi" }],
           },
           result: {
-            kind: "success",
-            response: {
-              kind: "output",
-              rawText: "Hello there!",
-              output: "Hello there!",
-            },
+            kind: "output",
+            rawText: "Hello there!",
+            output: "Hello there!",
             telemetry: {
               latencyMs: 350,
               usage: {
@@ -213,12 +207,9 @@ describe("InferenceRunElement", () => {
             messages: [{ role: "user", input: {}, rendered: "Hi" }],
           },
           result: {
-            kind: "success",
-            response: {
-              kind: "output",
-              rawText: "Hello!",
-              output: "Hello!",
-            },
+            kind: "output",
+            rawText: "Hello!",
+            output: "Hello!",
             telemetry: {
               latencyMs: 120,
               usage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 },
@@ -294,13 +285,10 @@ describe("InferenceRunElement", () => {
         messages: [{ role: "user", input: {}, rendered: "Calculate 2+2" }],
       },
       result: {
-        kind: "success",
+        kind: "output",
         reasoning: "Step 1: 2+2=4",
-        response: {
-          kind: "output",
-          rawText: "4",
-          output: "4",
-        },
+        rawText: "4",
+        output: "4",
         telemetry: {
           latencyMs: 100,
           usage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 },

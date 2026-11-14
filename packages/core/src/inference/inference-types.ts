@@ -96,8 +96,19 @@ export type ToolResult = {
 /** The outcome of a single sample inference. */
 export type InferenceResult<Pending = never> =
   | {
-      readonly kind: "success";
-      readonly response: InferenceResponse;
+      readonly kind: "output";
+      /** Parsed and validated output value matching the template's `Output` type. */
+      readonly output: unknown;
+      /** Raw text returned by the model. */
+      readonly rawText: string;
+      /** Model reasoning / thinking text, if returned by the provider. */
+      readonly reasoning?: string;
+      readonly telemetry: InferenceTelemetry;
+    }
+  | {
+      readonly kind: "tool-calls";
+      /** Tool calls requested by the model. */
+      readonly toolCalls: readonly ToolCall[];
       /** Model reasoning / thinking text, if returned by the provider. */
       readonly reasoning?: string;
       readonly telemetry: InferenceTelemetry;
@@ -111,21 +122,6 @@ export type InferenceResult<Pending = never> =
       readonly telemetry?: InferenceTelemetry;
     }
   | Pending;
-
-/** The parsed response returned by the model on a successful inference. */
-export type InferenceResponse =
-  | {
-      readonly kind: "output";
-      /** Raw text returned by the model. */
-      readonly rawText: string;
-      /** Parsed and validated output value matching the template's `Output` type. */
-      readonly output: unknown;
-    }
-  | {
-      readonly kind: "tool-calls";
-      /** Tool calls requested by the model. */
-      readonly toolCalls: readonly ToolCall[];
-    };
 
 /** Details of a failed inference. */
 export type InferenceError =

@@ -350,15 +350,12 @@ async function executeSampleInference(
 
   if (genResult.toolCalls && genResult.toolCalls.length > 0) {
     return {
-      kind: "success",
-      response: {
-        kind: "tool-calls",
-        toolCalls: genResult.toolCalls.map((tc) => ({
-          callId: tc.toolCallId,
-          toolName: tc.toolName,
-          input: tc.input,
-        })),
-      },
+      kind: "tool-calls",
+      toolCalls: genResult.toolCalls.map((tc) => ({
+        callId: tc.toolCallId,
+        toolName: tc.toolName,
+        input: tc.input,
+      })),
       ...(reasoning ? { reasoning } : {}),
       telemetry,
     };
@@ -367,12 +364,9 @@ async function executeSampleInference(
   const rawText = genResult.text;
   if (request.outputFormat.format === "text") {
     return {
-      kind: "success",
-      response: {
-        kind: "output",
-        rawText,
-        output: rawText,
-      },
+      kind: "output",
+      rawText,
+      output: rawText,
       ...(reasoning ? { reasoning } : {}),
       telemetry,
     };
@@ -435,19 +429,16 @@ async function executeSampleInference(
   }
 
   return {
-    kind: "success",
-    response: {
-      kind: "output",
-      rawText,
-      output: normalizeSchemaValue(
-        unwrapJsonValue(parsedAst),
-        {
-          type: outputType,
-          schema: validTemplate.schema,
-        },
-        "assistant",
-      ),
-    },
+    kind: "output",
+    rawText,
+    output: normalizeSchemaValue(
+      unwrapJsonValue(parsedAst),
+      {
+        type: outputType,
+        schema: validTemplate.schema,
+      },
+      "assistant",
+    ),
     ...(reasoning ? { reasoning } : {}),
     telemetry,
   };

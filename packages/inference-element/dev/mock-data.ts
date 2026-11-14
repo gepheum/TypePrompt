@@ -197,17 +197,14 @@ export const mockInferenceRun: Inferences.InferenceRun<Inferences.Pending> = {
         ],
       },
       result: {
-        kind: "success",
-        response: {
-          kind: "output",
-          rawText:
-            '{"summary":"Engineering reduced monthly spend by $140k (22%) by rightsizing nodes.","keyPoints":["Node rightsizing","Cold analytics tiered storage"],"readingTimeMinutes":1}',
-          output: {
-            summary:
-              "Engineering reduced monthly spend by $140k (22%) by rightsizing nodes.",
-            keyPoints: ["Node rightsizing", "Cold analytics tiered storage"],
-            readingTimeMinutes: 1,
-          },
+        kind: "output",
+        rawText:
+          '{"summary":"Engineering reduced monthly spend by $140k (22%) by rightsizing nodes.","keyPoints":["Node rightsizing","Cold analytics tiered storage"],"readingTimeMinutes":1}',
+        output: {
+          summary:
+            "Engineering reduced monthly spend by $140k (22%) by rightsizing nodes.",
+          keyPoints: ["Node rightsizing", "Cold analytics tiered storage"],
+          readingTimeMinutes: 1,
         },
         reasoning:
           "Analyzing document content. Key metrics identified: $140,000 savings, 22% reduction, no SLA impact. Formulating concise executive summary.",

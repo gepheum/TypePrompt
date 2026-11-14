@@ -392,14 +392,11 @@ describe("inference-runner", () => {
       assert.ok("toolCalls" in inf.request.messages[5]!);
       assert.equal(inf.request.messages[6]!.role, "tool");
 
-      assert.equal(inf.result.kind, "success");
-      if (inf.result.kind === "success") {
+      assert.equal(inf.result.kind, "output");
+      if (inf.result.kind === "output") {
         assert.equal(inf.result.reasoning, "Checking tool result for London.");
-        assert.deepEqual(inf.result.response, {
-          kind: "output",
-          rawText: '{"summary":"Rainy","tempC":14}',
-          output: { summary: "Rainy", tempC: 14 },
-        });
+        assert.equal(inf.result.rawText, '{"summary":"Rainy","tempC":14}');
+        assert.deepEqual(inf.result.output, { summary: "Rainy", tempC: 14 });
         assert.equal(inf.result.telemetry.usage?.inputTokens, 100);
         assert.equal(inf.result.telemetry.usage?.cachedInputTokens, 20);
         assert.equal(inf.result.telemetry.usage?.outputTokens, 30);
@@ -484,18 +481,15 @@ describe("inference-runner", () => {
       );
 
       const inf = inferenceRun.samples[0]!;
-      assert.equal(inf.result.kind, "success");
-      if (inf.result.kind === "success") {
-        assert.deepEqual(inf.result.response, {
-          kind: "tool-calls",
-          toolCalls: [
-            {
-              callId: "tc_123",
-              toolName: "getWeather",
-              input: { city: "Tokyo" },
-            },
-          ],
-        });
+      assert.equal(inf.result.kind, "tool-calls");
+      if (inf.result.kind === "tool-calls") {
+        assert.deepEqual(inf.result.toolCalls, [
+          {
+            callId: "tc_123",
+            toolName: "getWeather",
+            input: { city: "Tokyo" },
+          },
+        ]);
       }
     });
 
@@ -879,12 +873,12 @@ TOON:
       assert.equal(snapshots[0]!.samples[1]!.result.kind, "pending");
 
       // Snapshot 1: first computed, second pending
-      assert.equal(snapshots[1]!.samples[0]!.result.kind, "success");
+      assert.equal(snapshots[1]!.samples[0]!.result.kind, "output");
       assert.equal(snapshots[1]!.samples[1]!.result.kind, "pending");
 
       // Snapshot 2: all computed
-      assert.equal(snapshots[2]!.samples[0]!.result.kind, "success");
-      assert.equal(snapshots[2]!.samples[1]!.result.kind, "success");
+      assert.equal(snapshots[2]!.samples[0]!.result.kind, "output");
+      assert.equal(snapshots[2]!.samples[1]!.result.kind, "output");
 
       // ID and metadata match throughout
       assert.equal(snapshots[0]!.id, inferenceRun.id);

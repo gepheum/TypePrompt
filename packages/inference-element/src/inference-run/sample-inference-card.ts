@@ -45,7 +45,7 @@ export class SampleInferenceCard extends LitElement {
     }
 
     const { sampleIndex, sample, request, result } = this.inference;
-    const isSuccess = result.kind === "success";
+    const isSuccess = result.kind === "output" || result.kind === "tool-calls";
     const isPending = result.kind === "pending";
     const statusClass = isSuccess ? "success" : isPending ? "pending" : "error";
     const statusLabel = isSuccess
