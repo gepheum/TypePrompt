@@ -30,13 +30,13 @@ features:
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
   - icon: 🔷
     title: TypeScript-based SDL
-    details: Define schemas with familiar TypeScript types and generate standard JSON Schemas for OpenAI, Gemini, and Anthropic.
+    details: Define schemas with familiar TypeScript syntax. TypePrompt transpiles them into native types across 8 languages, and generates standard JSON Schemas for all major LLM providers.
   - icon: ✅
     title: Validated few-shot examples
     details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.
   - icon: 🔀
     title: Prompt variants & template overrides
-    details: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
+    details: Author multiple prompt versions sharing identical schemas for A/B testing, or dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
   - icon: ⚡
     title: Developer experience & tooling
     details: Official VS Code extension, standalone Language Server, CLI watch mode, and built-in template formatter.
@@ -92,7 +92,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 </template>
 ```
 
-`npx typeprompt gen` compiles your templates into a native, type-safe API for your target language. In your application code:
+`npx typeprompt gen` compiles your templates into a lightweight, type-safe API in your target language. In your application code:
 
 ::: code-group
 
