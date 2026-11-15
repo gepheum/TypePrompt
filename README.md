@@ -23,6 +23,8 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 ## Example prompt template
 
 ```xml
+<!-- DecodeCatMood.tp -->
+
 <template name="DecodeCatMood">
   <meta>
     model: gpt-4o

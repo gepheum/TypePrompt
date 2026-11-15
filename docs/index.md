@@ -44,9 +44,11 @@ features:
 
 ## See it in action
 
-A template is plain XML, with a typed schema, instructions, and few-shot examples:
+Prompt templates are plain XML files that bring together typed schemas, prompt instructions, tools, and few-shot examples into a single source of truth:
 
 ```xml
+<!-- DecodeCatMood.tp -->
+
 <template name="DecodeCatMood">
   <meta>
     model: gpt-4o
@@ -90,7 +92,7 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
 </template>
 ```
 
-`npx typeprompt gen` turns it into a native, type-safe API for your target language. In your application code:
+`npx typeprompt gen` compiles your templates into a native, type-safe API for your target language. In your application code:
 
 ::: code-group
 
