@@ -107,9 +107,11 @@ const prompt = prompts.decodeCatMood.render({
   bowlStatus: "half-empty",
 });
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 const result = prompt.parseResponse(rawResponse);
 console.log(result.humanAction);
 // "Surrender the warm laptop and apologize for trying to work."
@@ -128,9 +130,11 @@ prompt = prompts.decode_cat_mood.render(
     )
 )
 
-# ... send prompt to LLM ...
+# 2. Send prompt to LLM using your preferred SDK.
+# The prompt provides system and user messages, tools,
+# few-shot examples, and the response's JSON Schema.
 
-# 2. Parse the LLM response into strongly-typed output
+# 3. Parse the LLM response into strongly-typed output
 result = prompt.parse_response(raw_response)
 print(result.human_action)
 # "Surrender the warm laptop and apologize for trying to work."
@@ -150,9 +154,11 @@ val prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 // "Surrender the warm laptop and apologize for trying to work."
@@ -169,9 +175,11 @@ let prompt = PROMPTS.render_decode_cat_mood(&schema::decode_cat_mood::Input {
     bowl_status: schema::decode_cat_mood::Input_BowlStatus::HalfEmpty,
 });
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 let result = prompt.parse_response(raw_response)?;
 println!("{}", result.human_action);
 // "Surrender the warm laptop and apologize for trying to work."
@@ -192,9 +200,11 @@ auto prompt = Render<Template>({
     .bowl_status = schema::decode_cat_mood::Input_BowlStatus::kHalfEmpty,
 });
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 auto result = ParseResponse<Template>(raw_response);
 std::cout << result->human_action << "\n";
 // "Surrender the warm laptop and apologize for trying to work."
@@ -213,9 +223,11 @@ let prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 let result = try prompt.parseResponse(rawResponse)
 print(result.humanAction)
 // "Surrender the warm laptop and apologize for trying to work."
@@ -234,9 +246,11 @@ final prompt = prompts.renderDecodeCatMood(
   ),
 );
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 final result = prompt.parseResponse(rawResponse);
 print(result.humanAction);
 // "Surrender the warm laptop and apologize for trying to work."
@@ -254,9 +268,11 @@ var prompt = Prompts.Default.RenderDecodeCatMood(new Schema.DecodeCatMood.Input
     BowlStatus = Schema.DecodeCatMood.Input_BowlStatus.HalfEmpty
 });
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 var result = prompt.ParseResponse(rawResponse);
 Console.WriteLine(result.HumanAction);
 // "Surrender the warm laptop and apologize for trying to work."

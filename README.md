@@ -84,9 +84,11 @@ val prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// ... send prompt to LLM ...
+// 2. Send prompt to LLM using your preferred SDK.
+// The prompt provides system and user messages, tools,
+// few-shot examples, and the response's JSON Schema.
 
-// 2. Parse the LLM response into strongly-typed output
+// 3. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 // "Surrender the warm laptop and apologize for trying to work."
