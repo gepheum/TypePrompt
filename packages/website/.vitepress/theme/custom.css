@@ -33,6 +33,29 @@ div[class*="language-"] {
   border-radius: 10px;
 }
 
+/* Feature cards: sleek top-right emoji badge */
+.VPFeature .box {
+  position: relative;
+}
+
+.VPFeature .icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  margin-bottom: 0;
+  width: 32px;
+  height: 32px;
+  background-color: transparent;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.VPFeature .title {
+  padding-right: 36px;
+}
+
 /*
  * In VitePress, <h2> elements already have a border-top divider.
  * Hide any <hr> that immediately precedes an <h2> to prevent duplicate divider lines.

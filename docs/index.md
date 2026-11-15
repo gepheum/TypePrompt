@@ -22,21 +22,23 @@ hero:
       link: https://github.com/gepheum/typeprompt
 
 features:
-  - title: Lightweight prompt management
+  - icon: 🍃
+    title: Lightweight prompt management
     details: Organize prompts in dedicated template files instead of hardcoding strings in application code, without locking you into a heavyweight framework.
-  - title: End-to-end type safety
+  - icon: 🛡️
+    title: End-to-end type safety
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
-  - title: TypeScript-based SDL
+  - icon: 🔷
+    title: TypeScript-based SDL
     details: Define schemas with familiar TypeScript types and generate standard JSON Schemas for OpenAI, Gemini, and Anthropic.
-  - title: Validated few-shot examples
+  - icon: ✅
+    title: Validated few-shot examples
     details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.
-  - title: Prompt variants & template overrides
+  - icon: 🔀
+    title: Prompt variants & template overrides
     details: Author multiple prompt versions sharing identical schemas for A/B testing, and dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
-  - title: Flexible input formatting
-    details: Format complex input types using JSON, YAML, CSV, or TOON without changing application code.
-  - title: Custom structured metadata (<meta>)
-    details: Define your own Meta schema to attach typed configuration (e.g., model, temperature, routing tags) to each template, tailored to any LLM SDK.
-  - title: Developer experience & tooling
+  - icon: ⚡
+    title: Developer experience & tooling
     details: Official VS Code extension, standalone Language Server, CLI watch mode, and built-in template formatter.
 ---
 
