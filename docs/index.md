@@ -44,7 +44,9 @@ features:
 
 ## See it in action
 
-Prompt templates are plain XML files that bring together typed schemas, prompt instructions, tools, and few-shot examples into a single source of truth:
+Prompt templates are plain XML files that bring together typed schemas, prompt instructions, tools, and few-shot examples into a single source of truth. `npx typeprompt gen` compiles your templates into a lightweight, type-safe API in your target language.
+
+<div class="home-code-columns">
 
 ```xml
 <!-- DecodeCatMood.tp -->
@@ -91,8 +93,6 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
   </examples>
 </template>
 ```
-
-`npx typeprompt gen` compiles your templates into a lightweight, type-safe API in your target language. Here's how you use it:
 
 ::: code-group
 
@@ -279,6 +279,8 @@ Console.WriteLine(result.HumanAction);
 ```
 
 :::
+
+</div>
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
 

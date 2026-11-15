@@ -56,6 +56,73 @@ div[class*="language-"] {
   padding-right: 36px;
 }
 
+/* Hide copy buttons on homepage code blocks */
+.VPHome button.copy {
+  display: none;
+}
+
+/* Homepage side-by-side 2-column code sections */
+@media (min-width: 960px) {
+  .home-code-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: stretch;
+    margin: 1.5rem 0;
+  }
+
+  .home-code-columns > div[class*="language-"],
+  .home-code-columns > .vp-code-group {
+    margin: 0 !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home-code-columns > div[class*="language-"] {
+    border-radius: 10px;
+  }
+
+  .home-code-columns > div[class*="language-"] pre {
+    flex-grow: 1;
+    margin: 0;
+  }
+
+  .home-code-columns > .vp-code-group {
+    background-color: var(--vp-code-block-bg);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .home-code-columns .vp-code-group .tabs {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .home-code-columns .vp-code-group .blocks {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  .home-code-columns .vp-code-group div[class*='language-'] {
+    margin: 0 !important;
+    border-radius: 0;
+    flex-grow: 1;
+    display: none;
+    flex-direction: column;
+  }
+
+  .home-code-columns .vp-code-group div[class*='language-'].active {
+    display: flex;
+  }
+
+  .home-code-columns .vp-code-group div[class*='language-'] pre {
+    flex-grow: 1;
+    margin: 0;
+  }
+}
+
 /*
  * In VitePress, <h2> elements already have a border-top divider.
  * Hide any <hr> that immediately precedes an <h2> to prevent duplicate divider lines.
