@@ -92,7 +92,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 </template>
 ```
 
-`npx typeprompt gen` compiles your templates into a lightweight, type-safe API in your target language. In your application code:
+`npx typeprompt gen` compiles your templates into a lightweight, type-safe API in your target language. Here's how you use it:
 
 ::: code-group
 
