@@ -93,8 +93,8 @@ describe("isPlaygroundFile", () => {
   });
 });
 
-describe("isTemplate", () => {
-  it("returns 'with-playground' for template with playground in playgrounds map", () => {
+describe("isTemplateFile", () => {
+  it("returns true for template files and false for non-template files", () => {
     const store = new ProjectStore();
     store.handleNotification({
       projects: {
@@ -109,42 +109,12 @@ describe("isTemplate", () => {
                 namespace: null,
               },
             },
-          },
-          playgrounds: {
-            "Main:Translate": {
-              id: "Main:Translate",
-              forTemplate: "Translate",
-              namespace: null,
-              isValid: true,
-            },
-          },
-        }),
-      },
-    });
-
-    const doc = {
-      uri: {
-        toString: (): string =>
-          "file:///workspace/project/prompts/Translate.tp",
-      },
-      fileName: "/workspace/project/prompts/Translate.tp",
-    };
-    expect(isTemplateFile(doc, store)).toBe("with-playground");
-    expect(canOpenPreview(doc, store)).toBe(true);
-  });
-
-  it("returns 'no-playground' for template without playground", () => {
-    const store = new ProjectStore();
-    store.handleNotification({
-      projects: {
-        "file:///workspace/project/": makeFakeProject({
-          sourceFiles: {
-            "prompts/NewTemplate.tp": {
-              path: "prompts/NewTemplate.tp",
+            "prompts/Translate.play.tp": {
+              path: "prompts/Translate.play.tp",
               hasErrors: false,
               entity: {
-                kind: "template",
-                name: "NewTemplate",
+                kind: "playground",
+                forTemplate: "Translate",
                 namespace: null,
               },
             },
@@ -153,15 +123,26 @@ describe("isTemplate", () => {
       },
     });
 
-    const doc = {
+    const templateDoc = {
       uri: {
         toString: (): string =>
-          "file:///workspace/project/prompts/NewTemplate.tp",
+          "file:///workspace/project/prompts/Translate.tp",
       },
-      fileName: "/workspace/project/prompts/NewTemplate.tp",
+      fileName: "/workspace/project/prompts/Translate.tp",
     };
-    expect(isTemplateFile(doc, store)).toBe("no-playground");
-    expect(canOpenPreview(doc, store)).toBe(false);
+    const playgroundDoc = {
+      uri: {
+        toString: (): string =>
+          "file:///workspace/project/prompts/Translate.play.tp",
+      },
+      fileName: "/workspace/project/prompts/Translate.play.tp",
+    };
+
+    expect(isTemplateFile(templateDoc, store)).toBe(true);
+    expect(canOpenPreview(templateDoc, store)).toBe(false);
+
+    expect(isTemplateFile(playgroundDoc, store)).toBe(false);
+    expect(canOpenPreview(playgroundDoc, store)).toBe(true);
   });
 
   it("returns false for tool, meta, and shared files", () => {

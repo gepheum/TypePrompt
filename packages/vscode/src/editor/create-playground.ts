@@ -2,7 +2,7 @@ import type { ProjectStore } from "@typeprompt/language-server";
 import type { ExtensionContext, TextEditor } from "vscode";
 import { commands, Uri, window, workspace } from "vscode";
 import { generateFileTemplate } from "./file-template.js";
-import { isPlaygroundFile, isTemplateFile } from "./is-template.js";
+import { canOpenPreview, isTemplateFile } from "./is-template.js";
 
 export interface CreatePlaygroundController {
   updateContext(editor?: TextEditor): void;
@@ -15,11 +15,7 @@ export function activateCreatePlayground(
 ): CreatePlaygroundController {
   const updateContext = (editor = window.activeTextEditor): void => {
     if (!editor?.document) {
-      void commands.executeCommand(
-        "setContext",
-        IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT,
-        false,
-      );
+      void commands.executeCommand("setContext", IS_TEMPLATE_CONTEXT, false);
       void commands.executeCommand(
         "setContext",
         CAN_OPEN_PREVIEW_CONTEXT,
@@ -28,23 +24,22 @@ export function activateCreatePlayground(
       return;
     }
 
-    const templateStatus = isTemplateFile(editor.document, projectStore);
-    const isWithoutPlayground = templateStatus === "no-playground";
-    const canPreview =
-      isPlaygroundFile(editor.document, projectStore) ||
-      templateStatus === "with-playground";
+    const isTemplate = isTemplateFile(editor.document, projectStore);
+    const canPreview = canOpenPreview(editor.document, projectStore);
 
-    void commands.executeCommand(
-      "setContext",
-      IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT,
-      isWithoutPlayground,
-    );
+    void commands.executeCommand("setContext", IS_TEMPLATE_CONTEXT, isTemplate);
     void commands.executeCommand(
       "setContext",
       CAN_OPEN_PREVIEW_CONTEXT,
       canPreview,
     );
   };
+
+  context.subscriptions.push(
+    commands.registerCommand("typeprompt.openPlaygroundFile", (uri?: Uri) =>
+      handleCreatePlayground(uri, projectStore),
+    ),
+  );
 
   context.subscriptions.push(
     commands.registerCommand("typeprompt.createPlayground", (uri?: Uri) =>
@@ -87,7 +82,10 @@ async function handleCreatePlayground(
     return;
   }
 
-  const playPath = doc.fileName.replace(/\.tp$/, ".play.tp");
+  let playPath = doc.fileName;
+  if (!playPath.endsWith(".play.tp")) {
+    playPath = playPath.replace(/\.tp$/, ".play.tp");
+  }
   const playUri = Uri.file(playPath);
 
   try {
@@ -108,6 +106,5 @@ async function handleCreatePlayground(
   await window.showTextDocument(openedDoc);
 }
 
-const IS_TEMPLATE_WITHOUT_PLAYGROUND_CONTEXT =
-  "typeprompt.isTemplateWithoutPlayground";
+const IS_TEMPLATE_CONTEXT = "typeprompt.isTemplate";
 const CAN_OPEN_PREVIEW_CONTEXT = "typeprompt.canOpenPreview";

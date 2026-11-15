@@ -66,8 +66,8 @@
         "icon": "$(play)"
       },
       {
-        "command": "typeprompt.createPlayground",
-        "title": "TypePrompt: Create Playground",
+        "command": "typeprompt.openPlaygroundFile",
+        "title": "TypePrompt: Open Playground",
         "icon": "$(beaker)"
       }
     ],
@@ -86,8 +86,8 @@
           "group": "navigation"
         },
         {
-          "command": "typeprompt.createPlayground",
-          "when": "typeprompt.isTemplateWithoutPlayground",
+          "command": "typeprompt.openPlaygroundFile",
+          "when": "typeprompt.isTemplate",
           "group": "navigation"
         }
       ],
@@ -98,8 +98,8 @@
           "group": "1_run"
         },
         {
-          "command": "typeprompt.createPlayground",
-          "when": "typeprompt.isTemplateWithoutPlayground",
+          "command": "typeprompt.openPlaygroundFile",
+          "when": "typeprompt.isTemplate",
           "group": "1_run"
         }
       ]
