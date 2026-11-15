@@ -283,9 +283,3 @@ Console.WriteLine(result.HumanAction);
 </div>
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
-
-## Works with your stack
-
-TypeScript · Python · Kotlin · Rust · C++ · Swift · Dart · C#
-
-Pick yours from the **Languages** menu above.
