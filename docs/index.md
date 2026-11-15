@@ -54,7 +54,7 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
   <schema>
     // Variables provided to render the prompt
     interface Input {
-      action: string;
+      catAction: string;
       bowlStatus: "empty" | "half-empty";
     }
 
@@ -78,7 +78,7 @@ A template is plain XML, with a typed schema, instructions, and few-shot example
 
   <examples>
     - input:
-        action: "Yowl at 3am"
+        catAction: "Yowl at 3am"
         bowlStatus: half-empty
       output:
         demand: feed-me
@@ -99,7 +99,7 @@ import { prompts } from "./gen/prompts.js";
 
 // 1. Resolve the prompt template with typed input
 const prompt = prompts.decodeCatMood.render({
-  action: "Sit on keyboard",
+  catAction: "Sit on keyboard",
   bowlStatus: "half-empty",
 });
 
@@ -119,7 +119,7 @@ from my_app.generated.prompts import prompts, schema
 # 1. Resolve the prompt template with typed input
 prompt = prompts.decode_cat_mood.render(
     schema.decode_cat_mood.Input(
-        action="Sit on keyboard",
+        cat_action="Sit on keyboard",
         bowl_status="half-empty",
     )
 )
@@ -141,7 +141,7 @@ import ai.myapp.generated.prompts.Schema.DecodeCatMood
 // 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
     DecodeCatMood.Input(
-        action = "Sit on keyboard",
+        catAction = "Sit on keyboard",
         bowlStatus = DecodeCatMood.Input_BowlStatus.HalfEmpty,
     )
 )
@@ -161,7 +161,7 @@ use my_app::gen::prompts::{schema, PROMPTS};
 
 // 1. Resolve the prompt template with typed input
 let prompt = PROMPTS.render_decode_cat_mood(&schema::decode_cat_mood::Input {
-    action: "Sit on keyboard".to_string(),
+    cat_action: "Sit on keyboard".to_string(),
     bowl_status: schema::decode_cat_mood::Input_BowlStatus::HalfEmpty,
 });
 
@@ -184,7 +184,7 @@ using Template = templates::DecodeCatMood;
 
 // 1. Resolve the prompt template with typed input
 auto prompt = Render<Template>({
-    .action = "Sit on keyboard",
+    .cat_action = "Sit on keyboard",
     .bowl_status = schema::decode_cat_mood::Input_BowlStatus::kHalfEmpty,
 });
 
@@ -204,7 +204,7 @@ import MyPrompts
 // 1. Resolve the prompt template with typed input
 let prompt = prompts.renderDecodeCatMood(
     Schema.DecodeCatMood.Input(
-        action: "Sit on keyboard",
+        catAction: "Sit on keyboard",
         bowlStatus: .halfEmpty
     )
 )
@@ -225,7 +225,7 @@ import 'package:my_app/gen/prompts.dart';
 // 1. Resolve the prompt template with typed input
 final prompt = prompts.renderDecodeCatMood(
   DecodeCatMood_Input(
-    action: "Sit on keyboard",
+    catAction: "Sit on keyboard",
     bowlStatus: DecodeCatMood_Input_BowlStatus.halfEmpty,
   ),
 );
@@ -246,7 +246,7 @@ using MyApp.Prompts;
 // 1. Resolve the prompt template with typed input
 var prompt = Prompts.Default.RenderDecodeCatMood(new Schema.DecodeCatMood.Input
 {
-    Action = "Sit on keyboard",
+    CatAction = "Sit on keyboard",
     BowlStatus = Schema.DecodeCatMood.Input_BowlStatus.HalfEmpty
 });
 

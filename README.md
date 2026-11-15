@@ -32,7 +32,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
   <schema>
     // Variables provided to render the prompt
     interface Input {
-      action: string;
+      catAction: string;
       bowlStatus: "empty" | "half-empty";
     }
 
@@ -56,7 +56,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
   <examples>
     - input:
-        action: "Yowl at 3am"
+        catAction: "Yowl at 3am"
         bowlStatus: half-empty
       output:
         demand: feed-me
@@ -77,7 +77,7 @@ import ai.myapp.generated.prompts.Schema.DecodeCatMood
 // 1. Resolve the prompt template with typed input
 val prompt = prompts.renderDecodeCatMood(
     DecodeCatMood.Input(
-        action = "Sit on keyboard",
+        catAction = "Sit on keyboard",
         bowlStatus = DecodeCatMood.Input_BowlStatus.HalfEmpty,
     )
 )
