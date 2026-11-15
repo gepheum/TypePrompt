@@ -37,9 +37,9 @@ features:
   - icon: 🔀
     title: Prompt variants & template overrides
     details: Author multiple prompt versions sharing identical schemas for A/B testing, or dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
-  - icon: ⚡
-    title: Developer experience & tooling
-    details: Official VS Code extension, standalone Language Server, CLI watch mode, and built-in template formatter.
+  - icon: 🔋
+    title: Batteries included
+    details: Ships with a first-class Language Server, a code formatter, and a VS Code extension that lets you try prompts on the fly in your IDE.
 ---
 
 ## See it in action
