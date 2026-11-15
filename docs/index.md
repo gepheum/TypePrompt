@@ -165,7 +165,7 @@ println(result.humanAction)
 ```
 
 ```rust [Rust]
-// main.rs
+// my_app.rs
 
 use my_app::gen::prompts::{schema, PROMPTS};
 
@@ -186,7 +186,7 @@ println!("{}", result.human_action);
 ```
 
 ```cpp [C++]
-// main.cc
+// my_app.cc
 
 #include "gen/prompts.h"
 #include <iostream>
@@ -257,7 +257,7 @@ print(result.humanAction);
 ```
 
 ```csharp [C#]
-// Program.cs
+// MyApp.cs
 
 using MyApp.Prompts;
 
