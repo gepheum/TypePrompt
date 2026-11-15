@@ -30,15 +30,17 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
   </meta>
 
   <schema>
+    // Variables provided to render the prompt
     interface Input {
-      /** What the cat was observed doing. */
       action: string;
       bowlStatus: "empty" | "half-empty";
     }
 
+    // Structured JSON response expected from the model
     interface Output {
       demand: "feed-me" | "kneel" | "chaos";
       urgency: "chill" | "crisis";
+      /** What the human servant must immediately do. */
       humanAction: string;
     }
   </schema>
@@ -49,8 +51,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
   </system>
 
   <user>
-    Action: <insert val="input.action" />
-    Food bowl: <insert val="input.bowlStatus" />
+    <insert val="input" format="yaml" />
   </user>
 
   <examples>
@@ -61,14 +62,6 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
         demand: feed-me
         urgency: crisis
         humanAction: "Shake the bowl to cover the bottom."
-
-    - input:
-        action: "Knock glass"
-        bowlStatus: empty
-      output:
-        demand: kneel
-        urgency: crisis
-        humanAction: "Apologize and refill the bowl."
   </examples>
 </template>
 ```
