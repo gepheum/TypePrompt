@@ -249,10 +249,9 @@ type Filter = {
 It can be applied to optional, array, or primitive fields:
 
 | Field type | Omitted when |
-|---|---|---|
+|---|---|
 | Optional (`T?`) | Value is `null` |
 | Array (`T[]`) | Array is empty |
 | `string` | String is empty |
 | `boolean` | Value is `false` |
-| `integer` | Value is `0` |
-| `number` | Value is `0` |
+| `integer` or `number` | Value is `0` |
