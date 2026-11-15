@@ -94,7 +94,10 @@ const languageItems = [
 const docsSidebar = [
   {
     text: "Getting started",
-    items: [{ text: "Introduction", link: "/guide/" }],
+    items: [
+      { text: "Introduction", link: "/guide/" },
+      { text: "VS Code extension", link: "/vscode" },
+    ],
   },
   {
     text: "Language specification",
@@ -147,7 +150,7 @@ export default defineConfig({
       {
         text: "Docs",
         link: "/guide/",
-        activeMatch: "^/(guide|reference|schema|template-overrides)",
+        activeMatch: "^/(guide|reference|schema|template-overrides|vscode)",
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
@@ -158,6 +161,7 @@ export default defineConfig({
       "/reference": docsSidebar,
       "/schema": docsSidebar,
       "/template-overrides": docsSidebar,
+      "/vscode": docsSidebar,
       "/languages/": [
         {
           text: "Supported languages",
