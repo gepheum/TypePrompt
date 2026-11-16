@@ -273,3 +273,9 @@ Console.WriteLine(result.HumanAction);
 </div>
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies. [Read the documentation →](/guide/#getting-started)
+
+## Test prompts on the fly in your IDE
+
+Tweak prompt templates, edit input samples, and run live inferences against any LLM without leaving your editor.
+
+<VSCodeShowcase />
