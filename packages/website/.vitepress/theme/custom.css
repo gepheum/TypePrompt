@@ -33,6 +33,11 @@ div[class*="language-"] {
   border-radius: 10px;
 }
 
+/* Hide language labels on the top-right of code blocks */
+span.lang {
+  display: none !important;
+}
+
 /* Feature cards: sleek top-right emoji badge */
 .VPFeature .box {
   position: relative;
@@ -54,76 +59,6 @@ div[class*="language-"] {
 
 .VPFeature .title {
   padding-right: 36px;
-}
-
-/* Hide copy buttons and language labels on the side-by-side comparison code blocks */
-.home-code-columns button.copy,
-.home-code-columns span.lang {
-  display: none;
-}
-
-/* Homepage side-by-side 2-column code sections */
-@media (min-width: 960px) {
-  .home-code-columns {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.25rem;
-    align-items: start;
-    margin: 1.5rem 0;
-  }
-
-  .home-code-columns > div[class*="language-"] {
-    margin: 0 !important;
-    border-radius: 10px;
-  }
-
-  .home-code-columns > div[class*="language-"] pre {
-    margin: 0;
-  }
-
-  /* Sleek scrollbar for the scrollable code block */
-  .home-code-columns pre {
-    scrollbar-width: thin;
-    scrollbar-color: var(--vp-c-divider) transparent;
-  }
-
-  .home-code-columns pre::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .home-code-columns pre::-webkit-scrollbar-thumb {
-    background-color: var(--vp-c-divider);
-    border-radius: 3px;
-  }
-
-  .home-code-columns pre::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .home-code-columns > .vp-code-group {
-    margin: 0 !important;
-    background-color: var(--vp-code-block-bg);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .home-code-columns .vp-code-group .tabs {
-    border-radius: 10px 10px 0 0;
-  }
-
-  .home-code-columns .vp-code-group .blocks {
-    margin: 0;
-  }
-
-  .home-code-columns .vp-code-group div[class*='language-'] {
-    margin: 0 !important;
-    border-radius: 0;
-  }
-
-  .home-code-columns .vp-code-group div[class*='language-'] pre {
-    margin: 0;
-  }
 }
 
 /*
