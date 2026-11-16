@@ -178,7 +178,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 
   <examples>
     - input:
-        useCase: "serving ML inference workloads"
+        useCase: serving ML inference workloads
         audience: architect
         providers:
           - name: CloudX
@@ -199,21 +199,26 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
       output:
         root:
           kind: section
-          title: "Cloud Provider Comparison: ML Inference"
+          title: Cloud Provider Comparison: ML Inference
           children:
             - kind: heading
               level: h1
-              text: "Cloud Infrastructure Comparison"
+              text: Cloud Infrastructure Comparison
             - kind: paragraph
-              text: "An architectural evaluation of compute providers optimized for real-time machine learning inference."
+              text: >-
+                An architectural evaluation of compute providers optimized
+                for real-time machine learning inference.
             - kind: section
-              title: "CloudX Overview"
+              title: CloudX Overview
               children:
                 - kind: paragraph
-                  text: "CloudX delivers 1000 rps throughput in us-east at $0.10/hour, ideal for high-throughput low-latency inference."
+                  text: >-
+                    CloudX delivers 1000 rps throughput in us-east at
+                    $0.10/hour, ideal for high-throughput low-latency
+                    inference.
                 - kind: button
-                  label: "View Benchmark Details"
-                  url: "https://example.com/benchmarks/cloudx"
+                  label: View Benchmark Details
+                  url: https://example.com/benchmarks/cloudx
   </examples>
 </template>
 ```
@@ -253,22 +258,22 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 
   <examples>
     - input:
-        question: "What is the current population of Tokyo?"
+        question: What is the current population of Tokyo?
       steps:
         - toolCalls:
             - callId: s1
               tool: webSearch
               input:
-                query: "Tokyo population 2024"
+                query: Tokyo population 2024
               output:
                 results:
-                  - title: "Tokyo Metropolitan Government"
-                    url: "https://www.metro.tokyo.lg.jp/english/"
-                    snippet: "As of 2024, the population of Tokyo is approximately 13.96 million."
+                  - title: Tokyo Metropolitan Government
+                    url: https://www.metro.tokyo.lg.jp/english/
+                    snippet: As of 2024, the population of Tokyo is approximately 13.96 million.
       output:
-        answer: "As of 2024, Tokyo's population is approximately 13.96 million."
+        answer: As of 2024, Tokyo's population is approximately 13.96 million.
         sources:
-          - "https://www.metro.tokyo.lg.jp/english/"
+          - https://www.metro.tokyo.lg.jp/english/
   </examples>
 </template>
 ```
@@ -306,7 +311,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
           # variant field must be omitted when inside a variant tag
@@ -325,7 +330,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
@@ -344,11 +349,13 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
-          description: "AquaFilter Pro delivers pure water with zero-tool installation and a 6-month filter life."
+          description: >-
+            AquaFilter Pro delivers pure water with zero-tool installation
+            and a 6-month filter life.
     </examples>
   </variant>
 </template>
@@ -391,27 +398,35 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 
   <examples>
     - input:
-        title: "Quarterly Platform Migration"
-        content: "We completed migrating our primary database cluster to PostgreSQL 16. Query latency dropped 30% and throughput increased by 40%."
+        title: Quarterly Platform Migration
+        content: >-
+          We completed migrating our primary database cluster to PostgreSQL 16.
+          Query latency dropped 30% and throughput increased by 40%.
         audience: executive
       output:
-        summary: "Primary database cluster successfully migrated to PostgreSQL 16, resulting in a 30% latency drop and 40% throughput increase."
+        summary: >-
+          Primary database cluster successfully migrated to PostgreSQL 16,
+          resulting in a 30% latency drop and 40% throughput increase.
         keyPoints:
-          - "Completed migration to PostgreSQL 16"
-          - "Query latency decreased by 30%"
-          - "System throughput increased by 40%"
+          - Completed migration to PostgreSQL 16
+          - Query latency decreased by 30%
+          - System throughput increased by 40%
 
     - input:
-        title: "API Gateway Redesign"
-        content: "The API gateway was updated with gRPC-Web proxying and Redis rate-limiting middleware. P99 latency is down 12ms."
-        focusTopic: "Rate Limiting"
+        title: API Gateway Redesign
+        content: >-
+          The API gateway was updated with gRPC-Web proxying and Redis
+          rate-limiting middleware. P99 latency is down 12ms.
+        focusTopic: Rate Limiting
         audience: technical
       output:
-        summary: "API gateway migration introduced Redis-backed token bucket rate limiting and gRPC-Web proxying, cutting P99 latency by 12ms."
+        summary: >-
+          API gateway migration introduced Redis-backed token bucket rate
+          limiting and gRPC-Web proxying, cutting P99 latency by 12ms.
         keyPoints:
-          - "Added Redis rate-limiting middleware"
-          - "Implemented gRPC-Web proxying"
-          - "Reduced P99 latency by 12ms"
+          - Added Redis rate-limiting middleware
+          - Implemented gRPC-Web proxying
+          - Reduced P99 latency by 12ms
   </examples>
 
   <!--

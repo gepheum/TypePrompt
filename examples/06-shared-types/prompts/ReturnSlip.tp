@@ -28,15 +28,15 @@
   <examples>
     - input:
         customer:
-          name: "Bob Jones"
-          email: "bob@example.com"
+          name: Bob Jones
+          email: bob@example.com
           address:
-            street: "456 Elm Ave"
-            city: "Seattle"
-            country: "USA"
+            street: 456 Elm Ave
+            city: Seattle
+            country: USA
             postalCode: "98101"
         returnReason: defective
-        orderNumber: "ORD-2045"
+        orderNumber: ORD-2045
       output: |
         RETURN AUTHORIZATION SLIP
         =========================

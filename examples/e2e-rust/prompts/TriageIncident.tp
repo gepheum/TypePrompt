@@ -45,14 +45,14 @@
 
   <examples>
     - input:
-        service: "order-processor"
-        reportedIssue: "Orders stuck in pending queue and webhook delivery delays."
+        service: order-processor
+        reportedIssue: Orders stuck in pending queue and webhook delivery delays.
       steps:
         - toolCalls:
             - callId: call_metrics_1
               tool: getServiceMetrics
               input:
-                service: "order-processor"
+                service: order-processor
               output:
                 cpuUsagePercent: 96.5
                 memoryUsagePercent: 91.2
@@ -61,19 +61,25 @@
                 status: degraded
                 activeReplicas: 2
       output:
-        service: "order-processor"
+        service: order-processor
         severity: high
-        rootCauseSummary: "Worker starvation under surge traffic: CPU saturated at 96.5% and queue processing latency spiked to 3.2s."
-        metricsAnalysis: "Service is degraded with 8.4% error rate and 2 replicas overwhelmed by pending order volume."
+        rootCauseSummary: >-
+          Worker starvation under surge traffic: CPU saturated at 96.5%
+          and queue processing latency spiked to 3.2s.
+        metricsAnalysis: >-
+          Service is degraded with 8.4% error rate and 2 replicas
+          overwhelmed by pending order volume.
         actionPlan:
           - priority: 1
-            action: "Scale up worker pods to absorb queue backlog."
-            suggestedCommand: "kubectl scale deployment/order-processor --replicas=8"
+            action: Scale up worker pods to absorb queue backlog.
+            suggestedCommand: kubectl scale deployment/order-processor --replicas=8
           - priority: 2
-            action: "Enable rate limiting on incoming order webhooks."
-            suggestedCommand: "kubectl annotate ingress/orders-ingress rate-limit=500"
+            action: Enable rate limiting on incoming order webhooks.
+            suggestedCommand: kubectl annotate ingress/orders-ingress rate-limit=500
           - priority: 3
-            action: "Monitor p99 latency recovery."
-        followUpRecommendation: "Configure Horizontal Pod Autoscaler (HPA) targeting 70% CPU utilization."
+            action: Monitor p99 latency recovery.
+        followUpRecommendation: >-
+          Configure Horizontal Pod Autoscaler (HPA) targeting 70% CPU
+          utilization.
   </examples>
 </template>

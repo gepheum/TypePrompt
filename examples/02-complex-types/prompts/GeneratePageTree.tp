@@ -93,7 +93,7 @@
 
   <examples>
     - input:
-        useCase: "serving ML inference workloads"
+        useCase: serving ML inference workloads
         audience: architect
         providers:
           - name: CloudX
@@ -114,20 +114,25 @@
       output:
         root:
           kind: section
-          title: "Cloud Provider Comparison: ML Inference"
+          title: Cloud Provider Comparison: ML Inference
           children:
             - kind: heading
               level: h1
-              text: "Cloud Infrastructure Comparison"
+              text: Cloud Infrastructure Comparison
             - kind: paragraph
-              text: "An architectural evaluation of compute providers optimized for real-time machine learning inference."
+              text: >-
+                An architectural evaluation of compute providers optimized
+                for real-time machine learning inference.
             - kind: section
-              title: "CloudX Overview"
+              title: CloudX Overview
               children:
                 - kind: paragraph
-                  text: "CloudX delivers 1000 rps throughput in us-east at $0.10/hour, ideal for high-throughput low-latency inference."
+                  text: >-
+                    CloudX delivers 1000 rps throughput in us-east at
+                    $0.10/hour, ideal for high-throughput low-latency
+                    inference.
                 - kind: button
-                  label: "View Benchmark Details"
-                  url: "https://example.com/benchmarks/cloudx"
+                  label: View Benchmark Details
+                  url: https://example.com/benchmarks/cloudx
   </examples>
 </template>

@@ -29,14 +29,14 @@
   <examples>
     - input:
         disclosingParty:
-          name: "Innovate AI Inc."
+          name: Innovate AI Inc.
           role: client
           jurisdiction: California
         receivingParty:
-          name: "Venture Partners LLC"
+          name: Venture Partners LLC
           role: counterparty
           jurisdiction: Delaware
-        purposeOfDisclosure: "evaluating a potential strategic investment"
+        purposeOfDisclosure: evaluating a potential strategic investment
         durationYears: 2
       output: |
         NON-DISCLOSURE AGREEMENT

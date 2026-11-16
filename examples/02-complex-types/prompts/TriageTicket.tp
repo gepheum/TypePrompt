@@ -52,8 +52,8 @@
 
   <examples>
     - input:
-        subject: "Dashboard won't load since yesterday"
-        body: "Our whole team is blocked — it just shows a spinner."
+        subject: Dashboard won't load since yesterday
+        body: Our whole team is blocked — it just shows a spinner.
         customerTier: enterprise
         recentTickets:
           - id: T-201
@@ -65,16 +65,20 @@
       output:
         category: technical-issue
         urgency: critical
-        summary: Enterprise customer's dashboard is completely unavailable, blocking the entire team.
+        summary: >-
+          Enterprise customer's dashboard is completely unavailable,
+          blocking the entire team.
         suggestedActions:
           - Escalate to on-call engineer immediately
           - Check recent deploy logs for regressions
           - Send acknowledgement within 15 minutes
-        suggestedReply: "We've escalated this to our engineering team as a top priority. You'll hear from us within 15 minutes."
+        suggestedReply: >-
+          We've escalated this to our engineering team as a top priority.
+          You'll hear from us within 15 minutes.
 
     - input:
-        subject: "Can you add CSV export to the reports page?"
-        body: "It would save us a lot of time if we could download reports as CSV."
+        subject: Can you add CSV export to the reports page?
+        body: It would save us a lot of time if we could download reports as CSV.
         customerTier: pro
         recentTickets: []
       output:

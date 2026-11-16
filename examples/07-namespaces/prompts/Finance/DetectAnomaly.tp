@@ -42,35 +42,37 @@
   <examples>
     - input:
         recentTransactions:
-          - description: "Coffee Shop"
+          - description: Coffee Shop
             amount:
               value: 5.5
               currency: USD
             date: "2026-10-10"
-          - description: "Grocery Store"
+          - description: Grocery Store
             amount:
               value: 62.1
               currency: USD
             date: "2026-10-11"
         newTransaction:
-          description: "Luxury Jewelry Boutique"
+          description: Luxury Jewelry Boutique
           amount:
             value: 4800.0
             currency: USD
           date: "2026-10-12"
       output:
         isAnomaly: true
-        reason: "Transaction amount of $4,800.00 is significantly higher than recent spending history, and the merchant is unfamiliar."
+        reason: >-
+          Transaction amount of $4,800.00 is significantly higher than
+          recent spending history, and the merchant is unfamiliar.
 
     - input:
         recentTransactions:
-          - description: "Gas Station"
+          - description: Gas Station
             amount:
               value: 45.0
               currency: USD
             date: "2026-10-09"
         newTransaction:
-          description: "Supermarket"
+          description: Supermarket
           amount:
             value: 52.3
             currency: USD

@@ -23,13 +23,13 @@
 
   <examples>
     - input:
-        text: "The meeting is scheduled for Monday at 3 PM."
+        text: The meeting is scheduled for Monday at 3 PM.
         targetLanguage: French
-      output: "La réunion est prévue pour lundi à 15h."
+      output: La réunion est prévue pour lundi à 15h.
 
     - input:
-        text: "Please review the attached document."
+        text: Please review the attached document.
         targetLanguage: Spanish
-      output: "Por favor, revise el documento adjunto."
+      output: Por favor, revise el documento adjunto.
   </examples>
 </template>

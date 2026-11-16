@@ -35,15 +35,21 @@
 
   <examples>
     - input:
-        clauseText: "Neither party shall be liable to the other for any indirect, incidental, or consequential damages arising out of this Agreement."
+        clauseText: >-
+          Neither party shall be liable to the other for any indirect,
+          incidental, or consequential damages arising out of this Agreement.
         reviewingParty:
-          name: "Acme Corp"
+          name: Acme Corp
           role: client
           jurisdiction: Delaware
       output:
-        plainEnglishSummary: "Neither party can recover indirect or consequential damages resulting from a contract breach."
+        plainEnglishSummary: >-
+          Neither party can recover indirect or consequential damages
+          resulting from a contract breach.
         potentialRisks:
-          - "Precludes recovery of lost profits or incidental damages even if caused directly by counterparty breach."
+          - >-
+            Precludes recovery of lost profits or incidental damages even if
+            caused directly by counterparty breach.
         assessment: standard
   </examples>
 </template>

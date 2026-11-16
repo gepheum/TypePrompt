@@ -31,19 +31,19 @@
 
   <examples>
     - input:
-        text: "The meeting is scheduled for Monday at 3 PM."
+        text: The meeting is scheduled for Monday at 3 PM.
         targetLanguage: French
       output:
-        translation: "La réunion est prévue pour lundi à 15h."
+        translation: La réunion est prévue pour lundi à 15h.
         detectedSourceLanguage: English
-        notes: "Standard business register."
+        notes: Standard business register.
 
     - input:
-        text: "Please review the attached document."
+        text: Please review the attached document.
         targetLanguage: Spanish
       output:
-        translation: "Por favor, revise el documento adjunto."
+        translation: Por favor, revise el documento adjunto.
         detectedSourceLanguage: English
-        notes: "Uses formal address (usted)."
+        notes: Uses formal address (usted).
   </examples>
 </template>

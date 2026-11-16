@@ -30,7 +30,7 @@
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
           # variant field must be omitted when inside a variant tag
@@ -49,7 +49,7 @@
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
@@ -68,11 +68,13 @@
     </system>
     <examples>
       - input:
-          productName: "AquaFilter Pro"
+          productName: AquaFilter Pro
           features:
             ["removes 99.9% of contaminants", "lasts 6 months", "easy installation"]
         output:
-          description: "AquaFilter Pro delivers pure water with zero-tool installation and a 6-month filter life."
+          description: >-
+            AquaFilter Pro delivers pure water with zero-tool installation
+            and a 6-month filter life.
     </examples>
   </variant>
 </template>

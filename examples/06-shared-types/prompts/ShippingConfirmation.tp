@@ -32,19 +32,19 @@
   <examples>
     - input:
         recipient:
-          name: "Alice Smith"
-          email: "alice@example.com"
+          name: Alice Smith
+          email: alice@example.com
           address:
-            street: "123 Market St"
-            city: "San Francisco"
-            country: "USA"
+            street: 123 Market St
+            city: San Francisco
+            country: USA
             postalCode: "94105"
-        orderNumber: "ORD-9481"
-        estimatedDelivery: "Friday, October 16"
+        orderNumber: ORD-9481
+        estimatedDelivery: Friday, October 16
         items:
-          - name: "Wireless Mechanical Keyboard"
+          - name: Wireless Mechanical Keyboard
             quantity: 1
-          - name: "USB-C Braided Cable"
+          - name: USB-C Braided Cable
             quantity: 2
       output: |
         Hi Alice,

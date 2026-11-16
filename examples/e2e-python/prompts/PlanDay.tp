@@ -45,7 +45,7 @@
   <examples>
     - input:
         city: Seattle
-        interests: "books and coffee"
+        interests: books and coffee
       steps:
         - toolCalls:
             - callId: call_weather_1
@@ -55,23 +55,23 @@
               output:
                 temperatureC: 13
                 condition: rainy
-                forecast: "Light rain throughout the day with overcast skies."
+                forecast: Light rain throughout the day with overcast skies.
       output:
         city: Seattle
-        weatherSummary: "13°C, rainy with overcast skies"
+        weatherSummary: 13°C, rainy with overcast skies
         activities:
-          - title: "Browse Elliott Bay Book Company"
+          - title: Browse Elliott Bay Book Company
             timeOfDay: morning
-            description: "Explore the multi-level stacks and cozy reading nooks in Pioneer Square."
+            description: Explore the multi-level stacks and cozy reading nooks in Pioneer Square.
             indoor: true
-          - title: "Coffee tasting at Ghost Alley Espresso"
+          - title: Coffee tasting at Ghost Alley Espresso
             timeOfDay: afternoon
-            description: "Warm up with artisan pour-overs tucked away near Pike Place Market."
+            description: Warm up with artisan pour-overs tucked away near Pike Place Market.
             indoor: true
-          - title: "Dinner and poetry reading in Capitol Hill"
+          - title: Dinner and poetry reading in Capitol Hill
             timeOfDay: evening
-            description: "Enjoy an evening meal and a quiet corner to read in Capitol Hill."
+            description: Enjoy an evening meal and a quiet corner to read in Capitol Hill.
             indoor: true
-        packingTip: "Bring a waterproof jacket and an umbrella for walking between stops."
+        packingTip: Bring a waterproof jacket and an umbrella for walking between stops.
   </examples>
 </template>
