@@ -1,6 +1,7 @@
 import DefaultTheme from "vitepress/theme";
 import { h } from "vue";
 import HeroQuickstart from "./HeroQuickstart.vue";
+import HeroTilly from "./HeroTilly.vue";
 import "./custom.css";
 
 export default {
@@ -8,6 +9,7 @@ export default {
   Layout: () => {
     return h(DefaultTheme.Layout, null, {
       "home-hero-actions-after": () => h(HeroQuickstart),
+      "home-hero-image": () => h(HeroTilly),
     });
   },
 };
