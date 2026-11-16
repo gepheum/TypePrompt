@@ -90,13 +90,13 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
   </meta>
 
   <schema>
-    interface Input {
+    type Input = {
       providers: Provider[];
       /** The use case this comparison should be framed around. */
       useCase: string;
       /** Target audience for the page. */
       audience: "developer" | "architect" | "businessDecisionMaker";
-    }
+    };
 
     type Provider = {
       name: string;
@@ -123,9 +123,9 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
       unit: string;
     };
 
-    interface Output {
+    type Output = {
       root: PageNode;
-    }
+    };
 
     /** A node in the rendered page tree. */
     type PageNode =
