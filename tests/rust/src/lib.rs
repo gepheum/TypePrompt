@@ -176,7 +176,7 @@ mod tests {
   }
 
   #[test]
-  fn test_02_complex_schemas_generate_page_tree() {
+  fn test_02_complex_types_generate_page_tree() {
     let provider = gen::prompts_02::schema::generate_page_tree::Provider {
       name: "CloudX".to_string(),
       region: "us-east".to_string(),

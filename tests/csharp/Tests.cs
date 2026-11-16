@@ -212,11 +212,11 @@ public class Test02StructuredOutput_TriageTicket
     }
 }
 
-public class Test02ComplexSchemas_GeneratePageTree
+public class Test02ComplexTypes_GeneratePageTree
 {
     private readonly TypePrompt02.Prompt<TypePrompt02.Schema.GeneratePageTree.Output, TypePrompt02.NoTools> _prompt;
 
-    public Test02ComplexSchemas_GeneratePageTree()
+    public Test02ComplexTypes_GeneratePageTree()
     {
         var provider = new TypePrompt02.Schema.GeneratePageTree.Provider
         {

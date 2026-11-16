@@ -77,9 +77,9 @@ describe("01-basics / Translate", () => {
   });
 });
 
-// ─── 02 Complex Schemas: TriageTicket & GeneratePageTree ─────────────────────
+// ─── 02 Complex Types: TriageTicket & GeneratePageTree ────────────────────────
 
-describe("02-complex-schemas / TriageTicket", () => {
+describe("02-complex-types / TriageTicket", () => {
   const prompt = p02.triageTicket.render({
     subject: "App crashes on login",
     body: "It crashes every time.",
@@ -192,7 +192,7 @@ describe("02-complex-schemas / TriageTicket", () => {
   });
 });
 
-describe("02-complex-schemas / GeneratePageTree", () => {
+describe("02-complex-types / GeneratePageTree", () => {
   const provider: Schema02.GeneratePageTree.Provider = {
     name: "CloudX",
     region: "us-east",

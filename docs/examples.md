@@ -12,7 +12,7 @@ The [`examples/`](https://github.com/gepheum/typeprompt/tree/main/examples) dire
 | Directory | Description | Key features |
 |---|---|---|
 | [01-basics](https://github.com/gepheum/typeprompt/tree/main/examples/01-basics) | Getting started with basic text generation | Simple prompt template with text output and few-shot examples |
-| [02-complex-schemas](https://github.com/gepheum/typeprompt/tree/main/examples/02-complex-schemas) | Complex input and output schemas | `<meta>`, structured object output, recursive discriminated unions (`PageNode`), TOON-formatted input (`format="toon"`), YAML-formatted input (`format="yaml"`) |
+| [02-complex-types](https://github.com/gepheum/typeprompt/tree/main/examples/02-complex-types) | Complex input and output types | `<meta>`, structured object output, recursive discriminated unions (`PageNode`), TOON-formatted input (`format="toon"`), YAML-formatted input (`format="yaml"`) |
 | [03-tools](https://github.com/gepheum/typeprompt/tree/main/examples/03-tools) | Typed tool definitions and multi-step execution | `<tool>`, `<tools>` registration, few-shot examples with intermediate tool calls |
 | [04-variants](https://github.com/gepheum/typeprompt/tree/main/examples/04-variants) | Multiple prompt variations sharing schemas | `<variant>`, per-variant system prompts and few-shot examples, runtime selection via `Input.variant` |
 | [05-conditional-logic](https://github.com/gepheum/typeprompt/tree/main/examples/05-conditional-logic) | Modular text composition and conditional logic | `<snippet>`, conditional snippets (`if`/`then`/`else`), `switch` snippets, `<insert snippet="...">` |

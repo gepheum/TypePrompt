@@ -184,7 +184,7 @@ struct StructuredOutputTests {
   }
 }
 
-@Suite("02 Complex Schemas: GeneratePageTree")
+@Suite("02 Complex Types: GeneratePageTree")
 struct GeneratePageTreeTests {
   static let provider = TypePrompt02.Schema.GeneratePageTree.Provider(
     name: "CloudX",

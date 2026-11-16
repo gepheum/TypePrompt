@@ -190,7 +190,7 @@ void main() {
     });
   });
 
-  group('02 Complex Schemas: GeneratePageTree', () {
+  group('02 Complex Types: GeneratePageTree', () {
     final provider = p02.GeneratePageTree_Provider(
       name: "CloudX",
       region: "us-east",

@@ -82,7 +82,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 </template>
 ```
 
-```xml [Complex schemas]
+```xml [Complex types]
 <template name="GeneratePageTree">
   <meta>
     model: gpt-4o

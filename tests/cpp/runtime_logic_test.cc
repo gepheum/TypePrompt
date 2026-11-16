@@ -3298,7 +3298,7 @@ void Test02StructuredOutput_TriageTicket() {
   ASSERT_EQ(*prompt.meta.temperature, 0.2);
 }
 
-void Test02ComplexSchemas_GeneratePageTree() {
+void Test02ComplexTypes_GeneratePageTree() {
   typeprompt_02::schema::generate_page_tree::Provider provider{
       .benchmarks = {{
           typeprompt_02::schema::generate_page_tree::Benchmark{
@@ -4505,7 +4505,7 @@ void TestRuntimeLogic() {
 
   Test01Basics_Translate();
   Test02StructuredOutput_TriageTicket();
-  Test02ComplexSchemas_GeneratePageTree();
+  Test02ComplexTypes_GeneratePageTree();
   Test03Tools_ResearchQuestion();
   TestMakeToolExecutor();
   Test04Snippets_SummarizeDocument();

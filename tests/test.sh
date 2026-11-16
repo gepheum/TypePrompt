@@ -52,7 +52,7 @@ cd tests
 
 # Format template files
 node ../packages/cli/dist/main.js format -p ../examples/01-basics
-node ../packages/cli/dist/main.js format -p ../examples/02-complex-schemas
+node ../packages/cli/dist/main.js format -p ../examples/02-complex-types
 node ../packages/cli/dist/main.js format -p ../examples/03-tools
 node ../packages/cli/dist/main.js format -p ../examples/04-variants
 node ../packages/cli/dist/main.js format -p ../examples/05-conditional-logic
@@ -61,7 +61,7 @@ node ../packages/cli/dist/main.js format -p ../examples/07-namespaces
 
 # Sync template files from examples
 rsync -a --delete ../examples/01-basics/prompts/ projects/01/prompts/
-rsync -a --delete ../examples/02-complex-schemas/prompts/ projects/02/prompts/
+rsync -a --delete ../examples/02-complex-types/prompts/ projects/02/prompts/
 rsync -a --delete ../examples/03-tools/prompts/ projects/03/prompts/
 rsync -a --delete ../examples/04-variants/prompts/ projects/04/prompts/
 rsync -a --delete ../examples/05-conditional-logic/prompts/ projects/05/prompts/
