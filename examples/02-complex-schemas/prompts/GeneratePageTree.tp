@@ -5,6 +5,24 @@
   </meta>
 
   <schema>
+    interface Input {
+      providers: Provider[];
+      /** The use case this comparison should be framed around. */
+      useCase: string;
+      /** Target audience for the page. */
+      audience: "developer" | "architect" | "businessDecisionMaker";
+    }
+
+    type Provider = {
+      name: string;
+      region: string;
+      category: ProductCategory;
+      pricing: Pricing;
+      benchmarks: Benchmark[];
+      pros: string[];
+      cons: string[];
+    };
+
     type ProductCategory = "storage" | "compute" | "database" | "networking";
 
     type Pricing = {
@@ -20,15 +38,9 @@
       unit: string;
     };
 
-    type Provider = {
-      name: string;
-      region: string;
-      category: ProductCategory;
-      pricing: Pricing;
-      benchmarks: Benchmark[];
-      pros: string[];
-      cons: string[];
-    };
+    interface Output {
+      root: PageNode;
+    }
 
     /** A node in the rendered page tree. */
     type PageNode =
@@ -52,18 +64,6 @@
           title?: string;
           children: PageNode[];
         };
-
-    interface Input {
-      providers: Provider[];
-      /** The use case this comparison should be framed around. */
-      useCase: string;
-      /** Target audience for the page. */
-      audience: "developer" | "architect" | "businessDecisionMaker";
-    }
-
-    interface Output {
-      root: PageNode;
-    }
   </schema>
 
   <system>

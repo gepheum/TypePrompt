@@ -5,8 +5,6 @@
   </meta>
 
   <schema>
-    type TicketCategory = "billing" | "technical-issue" | "feature-request" | "other";
-
     /** A support ticket to be triaged. */
     interface Input {
       subject: string;
@@ -19,6 +17,8 @@
         category: TicketCategory;
       }[];
     }
+
+    type TicketCategory = "billing" | "technical-issue" | "feature-request" | "other";
 
     interface Output {
       category: TicketCategory;
