@@ -72,12 +72,12 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 
   <examples>
     - input:
-        catAction: "Yowl at 3am"
+        catAction: Yowl at 3am
         bowlStatus: half-empty
       output:
         demand: feed-me
         urgency: crisis
-        humanAction: "Shake the bowl to cover the bottom."
+        humanAction: Shake the bowl to cover the bottom.
   </examples>
 </template>
 ```

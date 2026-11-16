@@ -58,12 +58,12 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
   <examples>
     - input:
-        catAction: "Yowl at 3am"
+        catAction: Yowl at 3am
         bowlStatus: half-empty
       output:
         demand: feed-me
         urgency: crisis
-        humanAction: "Shake the bowl to cover the bottom."
+        humanAction: Shake the bowl to cover the bottom.
   </examples>
 </template>
 ```
