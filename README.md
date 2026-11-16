@@ -91,7 +91,7 @@ val prompt = prompts.renderDecodeCatMood(
 // 3. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 [See more examples →](examples)

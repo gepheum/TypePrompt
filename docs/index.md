@@ -104,7 +104,7 @@ const prompt = prompts.decodeCatMood.render({
 // 3. Parse the LLM response into strongly-typed output
 const result = prompt.parseResponse(rawResponse);
 console.log(result.humanAction);
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```python [Python]
@@ -127,7 +127,7 @@ prompt = prompts.decode_cat_mood.render(
 # 3. Parse the LLM response into strongly-typed output
 result = prompt.parse_response(raw_response)
 print(result.human_action)
-# "Surrender the warm laptop and apologize for trying to work."
+# "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```kotlin [Kotlin]
@@ -151,7 +151,7 @@ val prompt = prompts.renderDecodeCatMood(
 // 3. Parse the LLM response into strongly-typed output
 val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```rust [Rust]
@@ -172,7 +172,7 @@ let prompt = PROMPTS.render_decode_cat_mood(&schema::decode_cat_mood::Input {
 // 3. Parse the LLM response into strongly-typed output
 let result = prompt.parse_response(raw_response)?;
 println!("{}", result.human_action);
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```cpp [C++]
@@ -197,7 +197,7 @@ auto prompt = Render<Template>({
 // 3. Parse the LLM response into strongly-typed output
 auto result = ParseResponse<Template>(raw_response);
 std::cout << result->human_action << "\n";
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```swift [Swift]
@@ -220,7 +220,7 @@ let prompt = prompts.renderDecodeCatMood(
 // 3. Parse the LLM response into strongly-typed output
 let result = try prompt.parseResponse(rawResponse)
 print(result.humanAction)
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```dart [Dart]
@@ -243,7 +243,7 @@ final prompt = prompts.renderDecodeCatMood(
 // 3. Parse the LLM response into strongly-typed output
 final result = prompt.parseResponse(rawResponse);
 print(result.humanAction);
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 ```csharp [C#]
@@ -265,7 +265,7 @@ var prompt = Prompts.Default.RenderDecodeCatMood(new Schema.DecodeCatMood.Input
 // 3. Parse the LLM response into strongly-typed output
 var result = prompt.ParseResponse(rawResponse);
 Console.WriteLine(result.HumanAction);
-// "Surrender the warm laptop and apologize for trying to work."
+// "Surrender warm laptop and apologize for trying to work."
 ```
 
 :::
