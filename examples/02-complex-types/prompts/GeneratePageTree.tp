@@ -114,7 +114,7 @@
       output:
         root:
           kind: section
-          title: Cloud Provider Comparison: ML Inference
+          title: "Cloud Provider Comparison: ML Inference"
           children:
             - kind: heading
               level: h1

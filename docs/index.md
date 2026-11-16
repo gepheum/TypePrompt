@@ -199,7 +199,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
       output:
         root:
           kind: section
-          title: Cloud Provider Comparison: ML Inference
+          title: "Cloud Provider Comparison: ML Inference"
           children:
             - kind: heading
               level: h1
