@@ -10,16 +10,6 @@ hero:
   image:
     src: /tilly.svg
     alt: Tilly
-  actions:
-    - theme: brand
-      text: Get started
-      link: /guide/#getting-started
-    - theme: alt
-      text: Why TypePrompt?
-      link: /guide/
-    - theme: alt
-      text: GitHub
-      link: https://github.com/gepheum/typeprompt
 
 features:
   - icon: 🍃

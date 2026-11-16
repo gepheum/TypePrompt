@@ -56,9 +56,9 @@ div[class*="language-"] {
   padding-right: 36px;
 }
 
-/* Hide copy buttons and language labels on homepage code blocks */
-.VPHome button.copy,
-.VPHome span.lang {
+/* Hide copy buttons and language labels on the side-by-side comparison code blocks */
+.home-code-columns button.copy,
+.home-code-columns span.lang {
   display: none;
 }
 
