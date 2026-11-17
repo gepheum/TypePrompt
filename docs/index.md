@@ -6,7 +6,7 @@ titleTemplate: End-to-end type safety for LLM prompts
 hero:
   name: TypePrompt
   text: End-to-end type safety for LLM prompts
-  tagline: Define your input and output schemas once in your prompt templates. TypePrompt keeps your prompts and application code in lockstep, catching mismatches at compile time.
+  tagline: Write prompt templates with schemas and few-shot examples in a dedicated format. TypePrompt compiles them into a type-safe API that drops into your stack.
   image:
     src: /tilly.svg
     alt: Tilly
