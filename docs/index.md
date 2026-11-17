@@ -25,7 +25,7 @@ features:
     title: Validated few-shot examples
     details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.
   - icon: 🔀
-    title: Prompt variants & template overrides
+    title: Prompt variants & overrides
     details: Author multiple prompt versions sharing identical schemas for A/B testing, or dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
   - icon: 🔋
     title: Batteries included
