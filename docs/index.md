@@ -658,6 +658,6 @@ If the schema and the template drift apart, this fails to compile — not at run
 
 ## Test prompts on the fly in your IDE
 
-Tweak prompt templates, edit input samples, and run live inferences against any LLM without leaving your editor.
+Store template input samples in dedicated `.play.tp` files, run them against any LLM, and inspect the model's output without leaving your editor.
 
 <VSCodeShowcase />
