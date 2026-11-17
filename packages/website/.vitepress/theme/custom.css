@@ -72,17 +72,11 @@ span.lang {
 /* Feature cards: sleek top-right emoji badge & subtle interactive hover */
 .VPFeature {
   border-color: var(--vp-c-gutter) !important;
-  transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease !important;
+  transition: border-color 0.25s ease !important;
 }
 
 .VPFeature:hover {
   border-color: var(--vp-c-brand-1) !important;
-  background-color: var(--vp-c-bg-mute) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-.dark .VPFeature:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .VPFeature .box {
