@@ -14,7 +14,7 @@ hero:
 features:
   - icon: 🍃
     title: Lightweight prompt management
-    details: Organize prompts in dedicated template files instead of hardcoding strings in application code. TypePrompt generates a lightweight API across 8 languages.
+    details: Organize prompts in dedicated template files instead of hardcoding strings in application code. TypePrompt generates a lightweight API that works with any LLM SDK across 8 languages.
   - icon: 🛡️
     title: End-to-end type safety
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
