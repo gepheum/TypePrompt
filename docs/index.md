@@ -12,21 +12,21 @@ hero:
     alt: Tilly
 
 features:
-  - icon: 🍃
-    title: Lightweight prompt management
-    details: Organize prompts in dedicated template files instead of hardcoding strings in application code. TypePrompt generates a lightweight API that works with any LLM SDK across 8 languages.
+  - icon: 🗂
+    title: Self-contained prompt files
+    details: Your prompt templates live in dedicated files that bundle the prompt instructions, model settings, schemas and few-shot examples. TypePrompt compiles them into a native API.
+  - icon: 🔌
+    title: Works with your stack
+    details: Compiles to 8 programming languages with zero framework lock-in. The generated API drops cleanly into whatever LLM SDK you already use.
   - icon: 🛡️
     title: End-to-end type safety
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
   - icon: 🔷
     title: TypeScript-based SDL
-    details: Define schemas with familiar TypeScript syntax. TypePrompt transpiles them into native types across 8 languages, and generates standard JSON Schemas for all major LLM providers.
+    details: Define schemas with familiar TypeScript syntax. TypePrompt translates them into native types across 8 languages, and generates standard JSON Schemas for all major LLM providers.
   - icon: ✅
     title: Validated few-shot examples
     details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.
-  - icon: 🔀
-    title: Prompt variants & overrides
-    details: Author multiple prompt versions sharing identical schemas for A/B testing, or dynamically inject template overrides at runtime for rapid experimentation and prompt tuning.
   - icon: 🔋
     title: Batteries included
     details: Ships with a first-class Language Server, a code formatter, and a VS Code extension that lets you try prompts on the fly in your IDE.
