@@ -33,6 +33,32 @@ div[class*="language-"] {
   border-radius: 10px;
 }
 
+/* Homepage code sections: compact max-height with sleek scrollbar */
+.VPHome .vp-code-group pre,
+.VPHome div[class*="language-"] pre {
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--vp-c-divider) transparent;
+}
+
+.VPHome .vp-code-group pre::-webkit-scrollbar,
+.VPHome div[class*="language-"] pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.VPHome .vp-code-group pre::-webkit-scrollbar-thumb,
+.VPHome div[class*="language-"] pre::-webkit-scrollbar-thumb {
+  background-color: var(--vp-c-divider);
+  border-radius: 3px;
+}
+
+.VPHome .vp-code-group pre::-webkit-scrollbar-track,
+.VPHome div[class*="language-"] pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Hide language labels on the top-right of code blocks */
 span.lang {
   display: none !important;
