@@ -38,6 +38,37 @@ span.lang {
   display: none !important;
 }
 
+/* Tighten homepage layout width by ~10% (content/features/hero aligned to 1036px, navbar to 1100px) */
+/* Align all homepage sections to the exact same 1036px width */
+@media (min-width: 960px) {
+  .VPHome .container {
+    max-width: 1036px !important;
+  }
+
+  .VPHomeHero .container,
+  .VPHomeFeatures .container,
+  .VPHomeFeatures .container {
+    max-width: 1036px !important;
+  }
+
+  /*
+   * In VitePress, .VPHomeHero and .VPHomeFeatures put their 64px padding on the
+   * outer wrapper (.VPHomeHero, .VPFeatures), leaving .container unpadded.
+   * But VPHomeContent puts its 64px padding INSIDE .container (.vp-doc.container),
+   * which made the content 128px narrower than the feature cards.
+   * By removing padding here, the content and feature cards line up edge-to-edge.
+   */
+  .VPHome .vp-doc.container {
+    max-width: 1036px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .VPNavBar .container {
+    max-width: 1036px !important;
+  }
+}
+
 /* Feature cards: sleek top-right emoji badge */
 .VPFeature .box {
   position: relative;
