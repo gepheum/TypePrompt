@@ -28,6 +28,13 @@
   max-width: 640px;
 }
 
+/* Ensure comfortable clearance between Tilly's legend and the hero text on smaller screens */
+@media (max-width: 959px) {
+  .VPHero .image {
+    margin-bottom: 2rem !important;
+  }
+}
+
 /* Slightly rounder code blocks to match the rounded feature cards. */
 div[class*="language-"] {
   border-radius: 10px;
