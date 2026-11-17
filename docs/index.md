@@ -287,7 +287,7 @@ Prompt templates are plain XML files that bring together typed schemas, prompt i
 
   <schema>
     interface Input {
-      // Selects the prompt variation; must match the variant cases below
+      // Selects the prompt variation; must be a string literal union
       variant: "marketing" | "technical" | "brief";
       productName: string;
       features: string[];
