@@ -24,6 +24,20 @@
   max-width: 760px;
 }
 
+@media (min-width: 640px) {
+  .VPHero .text {
+    font-size: 40px !important;
+    line-height: 48px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHero .text {
+    font-size: 44px !important;
+    line-height: 52px !important;
+  }
+}
+
 .VPHero .tagline {
   max-width: 640px;
 }
