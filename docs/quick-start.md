@@ -50,5 +50,5 @@ The generated code exposes a `prompts` object with one typed `render` method per
 
 ## Next steps
 
-- [Playground inference](/playground): try your templates against real LLMs while you write them.
-- [CLI and configuration](/cli): all commands and `typeprompt.yaml` options.
+- [Template syntax](/reference): everything a template can contain, from placeholders to few-shot examples, tools, and variants.
+- [Schema language](/schema): the type system used for inputs, outputs, and tools.
