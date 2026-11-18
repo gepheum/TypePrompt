@@ -119,7 +119,7 @@ span.lang {
   display: none !important;
 }
 
-/* Tighten homepage layout width by ~10% (content/features/hero aligned to 1036px, navbar to 1100px) */
+/* Tighten homepage layout width by ~10% (content, features, and hero aligned to 1036px) */
 /* Align all homepage sections to the exact same 1036px width */
 @media (min-width: 960px) {
   .VPHome .container {
@@ -145,9 +145,11 @@ span.lang {
     padding-right: 0 !important;
   }
 
-  .VPNavBar .container {
-    max-width: 1036px !important;
-  }
+  /*
+   * The navbar intentionally keeps VitePress's default width. Docs pages lay
+   * the navbar out around the sidebar, and only the default width keeps the
+   * nav items in the same place on every page (no jump when navigating).
+   */
 }
 
 /* Feature cards: sleek top-right emoji badge & subtle interactive hover */
