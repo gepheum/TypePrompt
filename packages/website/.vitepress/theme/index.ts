@@ -3,6 +3,7 @@ import { h } from "vue";
 import type { EnhanceAppContext } from "vitepress";
 import HeroQuickstart from "./HeroQuickstart.vue";
 import HeroTilly from "./HeroTilly.vue";
+import HomeClosingCta from "./HomeClosingCta.vue";
 import VSCodeShowcase from "./VSCodeShowcase.vue";
 import "./custom.css";
 
@@ -16,5 +17,6 @@ export default {
   },
   enhanceApp({ app }: EnhanceAppContext) {
     app.component("VSCodeShowcase", VSCodeShowcase);
+    app.component("HomeClosingCta", HomeClosingCta);
   },
 };

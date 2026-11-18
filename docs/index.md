@@ -659,3 +659,5 @@ If your application code and your templates drift apart, your compiler or type c
 Run sample inputs against a real model and see the output without leaving your IDE.
 
 <VSCodeShowcase />
+
+<HomeClosingCta />
