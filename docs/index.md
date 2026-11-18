@@ -658,7 +658,6 @@ If the schema and the template drift apart, this fails to compile — not at run
 
 ## Test prompts on the fly in your IDE
 
-Edit template input samples in dedicated `.play.tp` files, run them against any LLM in a couple of clicks, and visualize the model's output without leaving your editor.
 Edit template input samples in dedicated `.play.tp` files, run inference against any LLM in a couple of clicks, and visualize the model's output without leaving your editor.
 
 <VSCodeShowcase />
