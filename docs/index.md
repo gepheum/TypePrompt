@@ -652,7 +652,7 @@ Console.WriteLine(result.HumanAction);
 
 :::
 
-If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies.
+If your code and your templates drift apart, your compiler or type checker catches it — not at runtime, in production, after the model replies.
 
 [Read the documentation →](/quick-start)
 
