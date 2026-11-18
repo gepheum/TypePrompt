@@ -30,4 +30,14 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
 ## Comparison with other tools
 
-TypePrompt shares many similarities with [DotPrompt](https://github.com/google/dotprompt), but introduces **end-to-end type safety**. Tools like DotPrompt, LangChain, Semantic Kernel, and Promptfoo parse templates dynamically at runtime, allowing application types to drift from prompt definitions. TypePrompt eliminates this risk by treating your prompt schemas as the source of truth and transpiling them into native code at build time.
+TypePrompt gets its type safety from code generation. The schemas in your template files are the source of truth: TypePrompt translates them into native types in your application's language. The code that fills in a template and the code that reads the model's response are generated from the same definition as the prompt itself, so they can't drift apart. If they do, your compiler or type checker reports it.
+
+TypePrompt is not an LLM client, and doesn't wrap one. It only renders prompts and parses responses. You send the request with whichever SDK you already use.
+
+| | Prompt and schemas | Template inputs | Response types | Few-shot examples | Calls the model |
+|---|---|---|---|---|---|
+| **Strings in code + structured outputs**<br>(OpenAI SDK, Instructor, Vercel AI SDK) | Scattered across application code | Plain string interpolation | Defined in code, separately from the prompt | Hand-written, not checked | Yes |
+| **Frameworks**<br>(LangChain, Semantic Kernel) | In code or template files | Untyped variables, filled in at runtime | Defined in code, separately from the prompt | Plain data, not checked against the schemas | Yes, through the framework |
+| **Prompt files rendered at runtime**<br>(Dotprompt, Prompty) | Together in prompt files | Checked at runtime | Checked at runtime | Written into the prompt, not checked against the schemas | Yes, through their runtime |
+| **BAML** | Together in prompt files (custom language) | Generated types | Generated types | Written into the prompt, not checked against the schemas | Yes, through its own runtime |
+| **TypePrompt** | Together in prompt files (XML + TypeScript-style schemas) | Generated types | Generated types | Checked against the schemas at build time | No: use any LLM SDK |
