@@ -6,7 +6,7 @@ titleTemplate: End-to-end type safety for LLM prompts
 hero:
   name: TypePrompt
   text: End-to-end type safety for LLM prompts
-  tagline: Write prompt templates with schemas and few-shot examples in dedicated files. TypePrompt compiles them into a type-safe API that drops into your stack.
+  tagline: Write prompt templates with schemas and few-shot examples in dedicated files. TypePrompt compiles them into a type-safe API that works with any LLM SDK.
   image:
     src: /tilly.svg
     alt: Tilly
