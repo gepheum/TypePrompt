@@ -97,8 +97,8 @@ const docsSidebar = [
     items: [
       { text: "Introduction", link: "/guide/" },
       { text: "Quick start", link: "/quick-start" },
-      { text: "Examples", link: "/examples" },
       { text: "Project structure", link: "/project-structure" },
+      { text: "Examples", link: "/examples" },
     ],
   },
   {

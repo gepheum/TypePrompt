@@ -47,8 +47,3 @@ npx typeprompt gen --watch
 ```
 
 The generated code exposes a `prompts` object with one typed `render` method per template. Render it with typed input, send the result to your LLM, then parse the response back into a typed object — see the guide for your language for the exact API.
-
-## Next steps
-
-- [Template syntax](/reference): everything a template can contain, from placeholders to few-shot examples, tools, and variants.
-- [Schema language](/schema): the type system used for inputs, outputs, and tools.

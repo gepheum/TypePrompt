@@ -654,10 +654,10 @@ Console.WriteLine(result.HumanAction);
 
 If your code and your templates drift apart, your compiler or type checker catches it — not at runtime, in production, after the model replies.
 
-[Read the documentation →](/quick-start)
-
 ## Test your templates where you write them
 
 Run sample inputs against a real model and see the output without leaving your IDE.
 
 <VSCodeShowcase />
+
+[Get started →](/quick-start)
