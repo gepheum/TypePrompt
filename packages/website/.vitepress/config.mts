@@ -96,7 +96,7 @@ const docsSidebar = [
     text: "Getting started",
     items: [
       { text: "Introduction", link: "/guide/" },
-      { text: "VS Code extension", link: "/vscode" },
+      { text: "Playground inference", link: "/playground" },
     ],
   },
   {
@@ -150,7 +150,7 @@ export default defineConfig({
       {
         text: "Docs",
         link: "/guide/",
-        activeMatch: "^/(guide|reference|schema|template-overrides|vscode)",
+        activeMatch: "^/(guide|reference|schema|template-overrides|playground)",
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
@@ -161,7 +161,7 @@ export default defineConfig({
       "/reference": docsSidebar,
       "/schema": docsSidebar,
       "/template-overrides": docsSidebar,
-      "/vscode": docsSidebar,
+      "/playground": docsSidebar,
       "/languages/": [
         {
           text: "Supported languages",

@@ -576,7 +576,7 @@ If you don't declare any namespaces, all templates and tools belong to the impli
 
 ## The `<playground>` element
 
-`<playground>` defines playground samples for a prompt template. Playgrounds live in their own `.tp` file alongside the template they target.
+`<playground>` defines playground samples for a prompt template. Playgrounds live in their own `.tp` file alongside the template they target. See [Playground inference](/playground) for how to run them.
 
 Inside `<playground>`, model configuration is defined in a `<model>` element, and test samples are defined as a YAML array nested inside a `<samples>` element. Each sample provides an input, optional history of previous completed turns, and optional intermediate steps (tool calls) taken during the current turn.
 
