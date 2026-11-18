@@ -62,7 +62,7 @@ Calling `.render()` returns a `prompt` object with everything needed to interact
 | `prompt.meta` | Typed metadata defined in the template (e.g., `model`, `temperature`). |
 | `prompt.examples` | Array of few-shot examples (`{ userMessage, response }`), if defined. |
 | `prompt.tools` | Dictionary of available tool definitions and their JSON schemas. |
-| `prompt.outputFormat` | Output descriptor (`format: "json" | "text"`, plus `jsonSchema` if structured JSON). |
+| `prompt.outputFormat` | Output format (`"json" \| "text"`) and JSON schema if the format is `json`. |
 | `prompt.parseResponse(content)` | Parses and validates raw LLM response text into the typed `Output`. |
 | `prompt.executeTools(calls, executor)` | Concurrently executes tool calls using your tool executor implementation. |
 

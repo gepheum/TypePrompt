@@ -337,7 +337,7 @@ jq -n \
 
 | Language | Export default templates | Apply overrides |
 |---|---|---|
-| **Python** | `template_overrider.templates_data: dict[str, Any]` | `template_overrider.apply_overrides(overrides: dict[str, Any] | None): Prompts` |
+| **Python** | `template_overrider.templates_data: dict[str, Any]` | `template_overrider.apply_overrides(overrides: dict[str, Any] \| None): Prompts` |
 | **TypeScript** | `templateOverrider.templatesData` | `templateOverrider.applyOverrides(overrides: unknown): Prompts` |
 | **Kotlin** | `TemplateOverrider.templatesData: JsonElement` | `TemplateOverrider.applyOverrides(overrides: JsonElement?): Prompts` |
 | **C#** | `TemplateOverrider.TemplatesData` | `TemplateOverrider.ApplyOverrides(JsonElement? overrides)` |
