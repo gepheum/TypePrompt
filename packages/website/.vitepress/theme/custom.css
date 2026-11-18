@@ -54,6 +54,12 @@ div[class*="language-"] {
   border-radius: 10px;
 }
 
+/* Homepage transitional code intro paragraph */
+.VPHome .code-intro {
+  margin-top: 2rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
 /* Homepage code sections: compact max-height with sleek scrollbar */
 .VPHome .vp-code-group pre,
 .VPHome div[class*="language-"] pre {

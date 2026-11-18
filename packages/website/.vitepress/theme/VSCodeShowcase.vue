@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 2.5rem;
 }
 
 .vscode-marketplace-btn {
